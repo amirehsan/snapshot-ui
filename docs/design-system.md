@@ -1396,3 +1396,102 @@ and the error border wins there too.
 The five surfaces are canvas, lifted, bone, float and raised. Clay on float and
 error on bone were not in the contrast gate, so they are now: every text color
 a field part uses is gated on every surface.
+
+## TextField
+
+The document specifies one input, the nav search field, and Appendix A derived
+the settings input from it. The library keeps that input and changes a few
+things, each recorded here.
+
+- **Shape and fill** are the app's: 48px tall, `--radius-pill`, the Raised
+  fill, 24px by 12px padding, and the 16px body step at weight 450 in ink. 16px
+  also keeps iOS Safari from zooming the page when the field takes focus. The
+  radius is a token, so the pill follows the shape axis. The field fills its
+  column and `field` caps the column at `--container-field`, so the control has
+  no width limit of its own.
+- **The edge** is `--color-boundary`, 1px, the document's own 50% ink. The app
+  dropped it to 40%, which measures 2.58:1 on white ("Four colors added").
+- **Hover** darkens the edge to ink at 65%, the app's value, and only where
+  hover exists. It measures 5.72 against the Raised fill in light and 7.30 in
+  dark. The changed and invalid edges outrank it.
+- **The cursor** stays the text I-beam. The pointer rule is for controls that
+  are pressed. A disabled field takes `not-allowed`.
+- **Read-only looks like an enabled field.** The app draws no read-only input.
+  Its dashed "static" value is page text for a value another panel edits, not an
+  input. A read-only field keeps focus, selection and its place in the form,
+  so only the browser's `readonly` and React Aria's `data-readonly` on the
+  field's root mark it, and an app that wants a quieter look can draw one from
+  those.
+
+**Focus firms the edge and keeps the ring.** Section 7 says a dark input's
+focus "firms to 1.5px solid white with the outline removed", and Appendix A
+gives every control a 2px ink ring at 2px offset. The library does both, for a
+reason the section 7 sentence cannot cover: the changed and invalid edges are
+1.5px already and outrank the focus edge, so with no ring a focused changed or
+invalid field would look exactly like an unfocused one, on the two fields that
+most need attention. At rest, focus draws a 1.5px ink edge (white in dark,
+which is the document's value to the letter) inside the ring. A changed or
+invalid field keeps its own edge and the ring alone shows focus. The ring is
+the token ring in every state. The app drew it in the error color on an
+invalid field; one color means a theme recolors focus from `--focus-ring-color`
+alone and a reader learns one cue.
+
+**Placeholder is taupe, which is quiet by design.** Taupe measures 1.58 against
+the Raised fill in light and 3.68 in dark, under the 4.5 a sentence needs. It
+is the document's designated whisper, so a placeholder shows an example and
+never carries what the label does not: the label always names the field.
+Firefox dims a placeholder on its own, so opacity is set to 1 and taupe is the
+only color.
+
+**Disabled** uses the `disabled` fill, taupe text and an ink edge at 15%, the
+app's value and the same edge as a disabled Button. The edge measures 1.37
+against the fill in light and 1.59 in dark. An inactive control is outside the
+3:1 asked of a boundary, and in dark the recessed fill ("Four colors added") is
+what sets it apart. The changed and invalid edges outrank the disabled edge,
+because the chip and the changed border always show together.
+
+**Changed and invalid are borders on the control, keyed on the field's root.**
+The root carries `data-changed` and, from React Aria, `data-invalid`. Changed
+is Light Signal Orange at 1.5px and invalid is the error color at 1.5px. The
+invalid rule is declared after the changed one, so a field that is both shows
+the error edge (the app showed the orange one).
+
+| Edge | Lowest on the five surfaces, light | Dark |
+| --- | --- | --- |
+| Ink (the focus edge) | 16.25 | 15.36 |
+| Error (invalid) | 6.58 | 5.06 |
+| Light Signal Orange (changed) | 2.53 | 5.35 |
+
+Light Signal Orange is under the 3:1 that a boundary asks on every light
+surface (2.53 to 2.87), and while a field is changed it is the field's edge.
+That is the document's own choice of attention cue, kept and recorded rather
+than gated, since it would fail the gate. The cue is never alone: the clay chip
+carries the word and is gated, the chip is read with the field, and the label,
+the value and the ring still identify the control.
+
+**The length count counts what will be saved.** `budget` counts the value's
+length as typed. The app trimmed the value and collapsed runs of spaces first;
+the library's count is the value the form submits, so the figure never
+disagrees with what a server receives. Everything else about the count is the
+field parts' own: it advises, never blocks, and appears from 70% of the budget.
+
+**The Changed chip is announced.** The border and the chip are visual, so
+TextField passes the chip's id to React Aria as `aria-describedby` while the
+field is changed and shows its chip, merged with any `aria-describedby` the
+caller passes. A screen reader then reads the hint and then "Changed" with the
+field. An element named in `aria-describedby` is read even when `display: none`
+hides it, so the chip also leaves the page while the field is invalid by any
+cause and not only through `isInvalid`: a required field that was emptied and
+submitted is changed and invalid, and must read its error alone. The label
+row, the chip and this wiring are one internal helper (`FieldHead` and
+`useChangedDescription`) that every later field with a label row uses, so
+they all behave alike.
+
+**The input does not animate.** The app's has no transition, and core
+components never animate shape, so there is nothing for reduced motion to
+stop. The docs site keeps its own shape transition, which its global
+reduced-motion rule stops.
+
+No pairing was added to the contrast gate. Every color the input draws is
+gated already (ink, error, the boundary against its fill) or deliberately
+quiet and recorded above (taupe, Light Signal Orange in light).

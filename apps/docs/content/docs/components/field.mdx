@@ -38,10 +38,10 @@ A count advises and never blocks. It stays empty until the value reaches 70% of 
 
 ## Usage
 
-Inside a React Aria field the parts wire themselves: Label names the control, Description and FieldError become its description, and FieldError appears only while the field is invalid. Put the `field` class and `data-changed` on the field's root, and keep the chip in the label row, where the stylesheet shows or hides it.
+[Text field](/docs/components/text-field) renders all of this in one element. For a custom layout, put the parts inside a React Aria field: Label names the control, Description and FieldError become its description, and FieldError appears only while the field is invalid. Put the `field` class and `data-changed` on the field's root, and keep the chip in the label row, where the stylesheet shows or hides it.
 
-<Code code={`import { Input, TextField } from 'react-aria-components';
-import { Description, FieldChanged, FieldCounter, FieldError, Label } from '@snapshot-ui/react';
+<Code code={`import { TextField } from 'react-aria-components';
+import { Description, FieldChanged, FieldCounter, FieldError, Input, Label } from '@snapshot-ui/react';
 
 export function ShortDescription({
   value,
@@ -63,7 +63,7 @@ export function ShortDescription({
         <Label>Short description</Label>
         <FieldChanged />
       </div>
-      <Input className="input" />
+      <Input />
       <Description>One sentence, for search results.</Description>
       <FieldError />
       <FieldCounter count={value.length} budget={60} />
@@ -91,7 +91,7 @@ The count takes the numbers and the text. The chip takes its text as children. L
 
 ## Accessibility
 
-Label is a real label, so a click on it focuses the control. Description and FieldError join the control's accessible description. The chip sits beside the label, not inside it, so the control keeps its name. To have a screen reader read it with the field, give the chip an `id` and pass that id to the field as `aria-describedby` while the chip shows. A hidden element named in `aria-describedby` is still read.
+Label is a real label, so a click on it focuses the control. Description and FieldError join the control's accessible description. The chip sits beside the label, not inside it, so the control keeps its name. To have a screen reader read it with the field, give the chip an `id` and pass that id to the field as `aria-describedby` while the chip shows. A hidden element named in `aria-describedby` is still read, so Text field also leaves the chip out of the page while the field is invalid.
 
 The count is a polite status region that is in the page from the start and empty until it has something to say, so a screen reader announces it as it changes. To announce less often, pass it a count that settles after a pause.
 

@@ -3,9 +3,9 @@
  * mockups (docs/mockups/mockup.css) for parts the library does not ship yet.
  * Phase 1b deletes each stand-in in the same task that adds the real
  * component to @snapshot-ui/core: heading and text (the type-* and muted
- * rules), input, segmented, switch and card.
- * Button, Spinner, Eyebrow, Link, Kbd, Badge, IconButton and the field parts
- * come from @snapshot-ui/core and are not redrawn here.
+ * rules), segmented, switch and card.
+ * Button, Spinner, Eyebrow, Link, Kbd, Badge, IconButton, the field parts and
+ * TextField come from @snapshot-ui/core and are not redrawn here.
  */
 /* The site's own base. The library's base.css sets the page and body type
    but, as a library, leaves links and headings alone; a site resets them. */
@@ -219,24 +219,9 @@
   }
 
   /* ---- Form controls ---------------------------------------------------- */
+  /* The library's input does not animate; the docs recut theirs. */
   .input {
-    width: 100%;
-    height: 48px;
-    padding: 0 1.5rem;
-    border: 1px solid var(--color-boundary);
-    border-radius: var(--radius-pill);
-    background-color: var(--color-raised);
-    color: var(--color-ink);
-    font: inherit;
     transition: border-radius 200ms ease;
-  }
-
-  .input::placeholder {
-    color: var(--color-taupe);
-  }
-
-  .input-changed {
-    border: 1.5px solid var(--color-signal-light);
   }
 
   .segmented {

@@ -1,0 +1,66 @@
+/*
+ * The text input, derived in docs/design-system.md ("TextField"): a 48px pill
+ * on the raised fill. Its changed and invalid borders are keyed on the field's
+ * root, as the field contract in field.css says, and invalid is declared last
+ * so it outranks changed.
+ */
+@layer components {
+  .input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 48px;
+    margin: 0;
+    padding-block: 0.75rem;
+    padding-inline: 1.5rem;
+    border: 1px solid var(--color-boundary);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-raised);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+  }
+
+  /* Taupe is the whisper color. Firefox dims a placeholder by itself, so the
+     opacity is set and taupe is the only color. */
+  .input::placeholder {
+    color: var(--color-taupe);
+    opacity: 1;
+  }
+
+  @media (hover: hover) {
+    .input:is(:hover, [data-hovered]) {
+      border-color: color-mix(in srgb, var(--color-ink) 65%, transparent);
+    }
+  }
+
+  /* The document firms the edge on focus. The ring stays as well, because the
+     changed and invalid edges below are 1.5px already and outrank this one:
+     without it a focused changed field would look unfocused. */
+  .input:is(:focus-visible, [data-focus-visible]) {
+    border: 1.5px solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* After hover and focus, so a disabled field that is hovered stays disabled.
+     Only the edge color is set, so the changed and invalid edges still win. */
+  .input:is(:disabled, [data-disabled]) {
+    border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    background-color: var(--color-disabled);
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  /* The field's root carries data-changed and data-invalid. These rules are
+     more specific than the states above, so a changed or invalid edge holds
+     through hover, focus and disabled. Invalid comes second and wins. */
+  .field[data-changed] .input {
+    border: 1.5px solid var(--color-signal-light);
+  }
+
+  .field[data-invalid] .input {
+    border: 1.5px solid var(--color-error);
+  }
+}
