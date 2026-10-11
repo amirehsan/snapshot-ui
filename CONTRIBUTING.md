@@ -5,7 +5,7 @@ and what a finished component looks like.
 
 ## Setup
 
-You need Node 24 and pnpm 10, which corepack provides.
+You need Node 24.5 or later and pnpm 10, which corepack provides.
 
 ```bash
 corepack enable
@@ -18,9 +18,13 @@ pnpm install
 | `pnpm test` | Unit, behavior, accessibility and Storybook tests. |
 | `pnpm lint` / `pnpm typecheck` | ESLint, Stylelint and TypeScript. |
 | `pnpm verify` | Everything CI runs except the visual and end-to-end tests. |
-| `pnpm --filter @snapshot-ui/storybook dev` | The component workshop. |
-| `pnpm --filter @snapshot-ui/docs dev` | The docs site. |
+| `pnpm turbo run dev --filter=@snapshot-ui/storybook` | The component workshop. |
+| `pnpm turbo run dev --filter=@snapshot-ui/docs` | The docs site. |
 | `pnpm --filter @snapshot-ui/storybook visual:docker` | Regenerates visual baselines in the CI image. Needs Docker. |
+
+The two dev commands build the packages they depend on first, so they work on a
+fresh clone. They do not rebuild those packages while running: after editing
+`packages/core` or `packages/react`, run `pnpm build`.
 
 ## Design rules
 
