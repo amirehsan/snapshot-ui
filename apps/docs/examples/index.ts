@@ -15,6 +15,9 @@ import KbdKeys from './kbd-keys';
 import LinkInline from './link-inline';
 import LinkStates from './link-states';
 import SpinnerSizes from './spinner-sizes';
+import TextAreaBasic from './text-area-basic';
+import TextAreaCounter from './text-area-counter';
+import TextAreaStates from './text-area-states';
 import TextFieldBasic from './text-field-basic';
 import TextFieldStates from './text-field-states';
 import TextFieldValidation from './text-field-validation';
@@ -39,6 +42,9 @@ export const examples = {
   'link-inline': LinkInline,
   'link-states': LinkStates,
   'spinner-sizes': SpinnerSizes,
+  'text-area-basic': TextAreaBasic,
+  'text-area-counter': TextAreaCounter,
+  'text-area-states': TextAreaStates,
   'text-field-basic': TextFieldBasic,
   'text-field-states': TextFieldStates,
   'text-field-validation': TextFieldValidation,

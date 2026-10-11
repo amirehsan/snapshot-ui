@@ -1,4 +1,15 @@
 {
   "title": "Components",
-  "pages": ["badge", "button", "field", "icon-button", "kbd", "link", "spinner", "text-field", "typography"]
+  "pages": [
+    "badge",
+    "button",
+    "field",
+    "icon-button",
+    "kbd",
+    "link",
+    "spinner",
+    "text-area",
+    "text-field",
+    "typography"
+  ]
 }

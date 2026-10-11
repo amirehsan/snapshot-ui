@@ -31,3 +31,4 @@ export {
   type LabelProps,
 } from './field';
 export { Input, TextField, type InputProps, type TextFieldProps } from './text-field';
+export { TextArea, type TextAreaProps } from './text-area';

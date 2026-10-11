@@ -1495,3 +1495,66 @@ reduced-motion rule stops.
 No pairing was added to the contrast gate. Every color the input draws is
 gated already (ink, error, the boundary against its fill) or deliberately
 quiet and recorded above (taupe, Light Signal Orange in light).
+
+## TextArea
+
+The document says one thing about a textarea, in its dark-mode notes: it
+"keeps its 20px radius". The spec's shape table agrees, listing "textarea
+parts" under `--radius-control`, and the spec's catalog row for TextArea adds a
+6rem minimum height and vertical resize only. The library draws a textarea as
+the TextField control on a taller box and records each difference here.
+
+**One control, two classes.** The textarea carries `input textarea`, so the
+fill, the edge, hover, the focus edge and ring, the placeholder, disabled, and
+the changed and invalid borders keyed on the field's root all come from the
+input and are recorded under TextField. `textarea.css` is one rule,
+`.input.textarea`, and it sets seven properties: `height`, `min-height`,
+`border-radius`, `padding-block`, `padding-inline`, `line-height` and `resize`.
+It sets no edge, color, outline or cursor, so no state rule of the input can
+lose to it or beat it, and a test holds the two files to separate properties.
+It names both classes so it outranks the input's single class in any import
+order.
+
+- **Shape** is `--radius-control`, the document's 20px: 20px in Rounded, 10px in
+  Soft, square in Square, the corner a Button has, so a textarea and the
+  controls beside it share one. The document's dark-mode note and the spec's
+  shape table both give it. The spec's catalog row for TextArea names the surface
+  radius (24px), a number that came from the source app, and the document and
+  the shape table supersede it. The input's pill does not carry over: a box this
+  tall would read as a lozenge.
+- **Height** is auto with a floor of 6rem (96px), the source's value, so the box
+  is as tall as its rows and never shorter than the floor. Body text is 22.4px a
+  line (16px at 1.4), so three rows are 67.2px, plus 24px of padding and 2px of
+  edge, which is 93.2px: under the floor, so rows 1 to 3 look alike and `rows`
+  defaults to 3, the source's. Four rows are 115.6px and five are 138px. The box
+  does not grow with its text: it scrolls inside, as the source's does, and
+  `field-sizing: content`, which would grow it, is not available across the
+  browser floor.
+- **Resize is vertical only.** The field is one grid column capped at
+  `--container-field`, and a box dragged wider would break it. Shrinking stops
+  at the floor (dragged up to 20px from its top edge, a three-row box stays
+  96px). The handle is the browser's, drawn in the corner over the curve of the
+  radius, and is not restyled. A keyboard cannot resize, so `rows` is the way to
+  a taller box and the docs say so.
+- **Padding and line height** are the input's: 12px block and 24px inline, and
+  the 16px body step at 1.4. The source's override sets only the block padding
+  (`py-3`, the same 12px). They are restated in `textarea.css` so the height
+  arithmetic above sits in one file. The 24px inline padding is more than the
+  20px Rounded radius, so the first line of text clears the curve.
+- **A taller box can move by 1px.** The input is a fixed 48px, so its edge
+  growing from 1px to the 1.5px of the focus, changed and invalid edges moves
+  nothing. A box taller than the floor (four rows or more) is as tall as its
+  rows, so on a screen that draws a 1.5px edge it is 1px taller while it has
+  one. The default box sits on its floor and does not move. This is reasoned
+  from the box model and not measured: the headless browser the tests use draws
+  every edge at 1px. It is accepted: holding the height still would need a fixed
+  height, which is what a textarea is not.
+- **The count** counts the value's length, a line break as one character: that
+  is the value React Aria reports and `FormData` holds. A browser sends each
+  line break in a form request as two characters (CR and LF; measured as
+  `%0D%0A` in a posted body), so a server that measures the request sees one more
+  per line. Everything else about the count is TextField's: it advises, never
+  blocks, and appears from 70% of the budget.
+
+No pairing was added to the contrast gate. The fills, edges and text are the
+input's, and the textarea draws no color of its own.

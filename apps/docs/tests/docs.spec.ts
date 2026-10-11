@@ -473,6 +473,57 @@ test('a focused text field firms its edge and keeps the ring, and a changed one 
   await expect(changed).toHaveCSS('outline-style', 'solid');
 });
 
+test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
+  await visit(page, '/docs/components/text-area');
+  const field = fieldNamed(page, 'About the workspace');
+  const area = field.getByRole('textbox');
+  const counter = field.locator('.field-counter');
+  await expect(counter).toHaveText('93 of about 120');
+
+  // fill puts the caret at the end, so Enter starts a new line there and does not send the form.
+  const lines = 'A shared space for the design team.\nBriefs and reviews live here.';
+  await area.fill(lines);
+  await area.press('Enter');
+  await area.pressSequentially('Notes too, and a long tail of other words to pass the budget.');
+  const value = await area.inputValue();
+  expect(value).toBe(`${lines}\nNotes too, and a long tail of other words to pass the budget.`);
+  // A line break counts as one character.
+  await expect(counter).toHaveText(`${String(value.length)} of about 120`);
+  await expect(counter).toHaveAttribute('data-over');
+  await expect(counter).toHaveCSS('font-weight', '700');
+  await area.fill('Short');
+  await expect(counter).toHaveText('');
+});
+
+test('a text area draws a control corner, a 6rem floor and vertical resize, and keeps the field edges', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/text-area');
+  const plain = page.getByRole('textbox', { name: 'Short description' });
+  await expect(plain).toHaveCSS('border-top-left-radius', '20px');
+  await expect(plain).toHaveCSS('min-height', '96px');
+  await expect(plain).toHaveCSS('resize', 'vertical');
+  expect((await plain.boundingBox())?.height).toBeGreaterThanOrEqual(96);
+  await expect(plain).toHaveCSS('border-top-color', 'rgba(20, 20, 19, 0.5)');
+
+  // The changed and invalid edges of the field hold on the taller box.
+  const changed = page.getByRole('textbox', { name: 'Welcome message' });
+  await expect(changed).toHaveCSS('border-top-color', 'rgb(243, 115, 56)');
+  await expect(changed).toHaveCSS('border-top-left-radius', '20px');
+  const invalid = page.getByRole('textbox', { name: 'Invite note' });
+  await expect(invalid).toHaveCSS('border-top-color', 'rgb(163, 35, 27)');
+
+  // Focus firms the edge and draws the ring; a changed field keeps its own edge and shows the ring alone.
+  await plain.focus();
+  await expect(plain).toHaveCSS('border-top-color', 'rgb(20, 20, 19)');
+  await expect(plain).toHaveCSS('outline-style', 'solid');
+  await expect(plain).toHaveCSS('outline-width', '2px');
+  await changed.focus();
+  await expect(changed).toHaveCSS('border-top-color', 'rgb(243, 115, 56)');
+  await expect(changed).toHaveCSS('outline-style', 'solid');
+});
+
 test('the copy button reports that the code was copied', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await visit(page);

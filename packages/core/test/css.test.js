@@ -260,6 +260,65 @@ describe('src/components/input.css', () => {
   });
 });
 
+describe('src/components/textarea.css', () => {
+  /** The innermost blocks of a stylesheet, as { selector, properties }, comments left out. */
+  const blocks = (file) =>
+    [
+      ...read(file)
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .matchAll(/([^{}]+)\{([^{}]*)\}/g),
+    ].map(([, selector = '', body = '']) => ({
+      selector: selector.trim(),
+      properties: body
+        .split(';')
+        .map((declaration) => declaration.split(':')[0]?.trim() ?? '')
+        .filter(Boolean),
+    }));
+  const textarea = () => blocks('src/components/textarea.css');
+
+  it('is one rule on the input, so it outranks the input without depending on import order', () => {
+    expect(textarea().map(({ selector }) => selector)).toEqual(['.input.textarea']);
+  });
+
+  it('overrides only the six things a multi-line box changes', () => {
+    expect(textarea()[0]?.properties.sort()).toEqual([
+      'border-radius',
+      'height',
+      'line-height',
+      'min-height',
+      'padding-block',
+      'padding-inline',
+      'resize',
+    ]);
+  });
+
+  it('never sets what the input draws for its states, so no state rule wins or loses against it', () => {
+    // Everything but the base .input rule is a state: the placeholder, hover, focus, disabled, changed and invalid.
+    const states = blocks('src/components/input.css')
+      .filter(({ selector }) => selector !== '.input')
+      .flatMap(({ properties }) => properties);
+    expect(states).toContain('border');
+    expect(states).toContain('border-color');
+    const overrides = textarea()[0]?.properties ?? [];
+    expect(overrides.filter((property) => states.includes(property))).toEqual([]);
+  });
+
+  it('keeps the changed and invalid borders on the input, where the textarea inherits them', () => {
+    const selectors = blocks('src/components/input.css').map(({ selector }) => selector);
+    expect(selectors).toContain('.field[data-changed] .input');
+    expect(selectors).toContain('.field[data-invalid] .input');
+    expect(textarea().map(({ selector }) => selector)).not.toContain('.field[data-changed] .textarea');
+  });
+
+  it('is drawn in tokens: the control radius, a 6rem floor and vertical resize only', () => {
+    const source = read('src/components/textarea.css');
+    expect(source).toContain('border-radius: var(--radius-control);');
+    expect(source).toContain('min-height: 6rem;');
+    expect(source).toContain('resize: vertical;');
+    expect(source).toContain('height: auto;');
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 
