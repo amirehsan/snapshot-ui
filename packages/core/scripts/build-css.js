@@ -6,8 +6,11 @@ import path from 'node:path';
 import { bundleAsync, Features, transform } from 'lightningcss';
 
 const version = (major, minor = 0) => (major << 16) | (minor << 8);
+// iOS Safari is its own target: without ios_saf, Lightning CSS drops the
+// -webkit-text-size-adjust prefix that iOS Safari needs.
 const targets = {
   safari: version(16, 4),
+  ios_saf: version(16, 4),
   chrome: version(111),
   firefox: version(128),
 };

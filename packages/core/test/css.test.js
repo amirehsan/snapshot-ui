@@ -15,9 +15,9 @@ describe('src/styles.css', () => {
   });
 
   it('declares the layer order before anything else', () => {
-    expect(entry.indexOf('@layer theme, base, components, utilities;')).toBeLessThan(
-      entry.indexOf('@import'),
-    );
+    const statement = entry.indexOf('@layer theme, base, components, utilities;');
+    expect(statement).toBeGreaterThanOrEqual(0);
+    expect(statement).toBeLessThan(entry.indexOf('@import'));
   });
 });
 
@@ -44,16 +44,27 @@ describe.each(components)('src/components/%s', (file) => {
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 
-  it('keeps the layers in order', () => {
-    expect(built.indexOf('@layer theme')).toBeGreaterThan(-1);
-    if (components.length > 0) {
-      expect(built.indexOf('@layer theme')).toBeLessThan(built.indexOf('@layer components'));
+  it('keeps the layers in the order theme, base, components, utilities', () => {
+    // The bundler may split the order statement around the layer blocks, so
+    // read the order in which each layer name first appears.
+    const order = [];
+    for (const [, names = ''] of built.matchAll(/@layer\s+([\w\s,.-]+?)\s*[;{]/g)) {
+      for (const name of names.split(',').map((s) => s.trim())) if (!order.includes(name)) order.push(name);
     }
+    expect(order).toEqual(['theme', 'base', 'components', 'utilities']);
   });
 
   it('is lowered for the browser floor and keeps case-insensitive shape selectors', () => {
     expect(built).not.toMatch(/&[\s.:[]/);
     expect(built).toContain('[data-shape="soft" i]');
     expect(built).not.toContain('--lightningcss');
+  });
+});
+
+describe('dist/base.css', () => {
+  const built = read('dist/base.css');
+
+  it('keeps the WebKit text size adjust prefix that iOS Safari needs', () => {
+    expect(built).toContain('-webkit-text-size-adjust');
   });
 });
