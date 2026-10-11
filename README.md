@@ -40,8 +40,11 @@ Two attributes theme any element and everything inside it:
 ```bash
 corepack enable
 pnpm install
-pnpm --filter @snapshot-ui/docs dev
+pnpm turbo run dev --filter=@snapshot-ui/docs
 ```
+
+The packages are built first, so a fresh clone runs as is. Use
+`--filter=@snapshot-ui/storybook` for the component workshop.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The design rules live in
 [docs/design-system.md](docs/design-system.md).
