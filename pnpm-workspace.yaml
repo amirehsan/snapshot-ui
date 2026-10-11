@@ -9,6 +9,9 @@ packages:
 catalog:
   '@typescript/native': 'npm:typescript@^7.0.2'
   typescript: 'npm:@typescript/typescript6@^6.0.2'
+  # One Storybook version for the package that holds the stories and the workshop app.
+  storybook: '10.6.1'
+  '@storybook/react-vite': '10.6.1'
 
 # pnpm 10 blocks dependency install scripts unless they are listed.
 onlyBuiltDependencies:

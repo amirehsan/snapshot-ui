@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
-    "@storybook/react-vite": "10.6.1",
+    "@storybook/react-vite": "catalog:",
     "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
@@ -60,7 +60,7 @@
     "publint": "0.3.25",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "storybook": "10.6.1",
+    "storybook": "catalog:",
     "tsdown": "0.23.1",
     "typescript": "catalog:",
     "vitest": "5.0.3"
