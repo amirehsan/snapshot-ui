@@ -16,7 +16,8 @@ export default defineConfig({
     colorScheme: 'light',
   },
   expect: {
-    toHaveScreenshot: { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.001 },
+    // 16 px absorbs a stray anti-aliasing pixel from emulated amd64; tighten to 0 after a clean native CI run.
+    toHaveScreenshot: { animations: 'disabled', caret: 'hide', threshold: 0.1, maxDiffPixels: 16 },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {

@@ -1,17 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { ready } from './ready';
 
 const story = (id: string, theme: string, shape: string) =>
   `/iframe.html?id=${id}&viewMode=story&globals=theme:${theme};shape:${shape}`;
 
-const ready = async (page: import('@playwright/test').Page) => {
-  await page.waitForFunction(() => {
-    const phase = (window as { __STORYBOOK_PREVIEW__?: { currentRender?: { phase?: string } } })
-      .__STORYBOOK_PREVIEW__?.currentRender?.phase;
-    return phase === 'completed' || phase === 'finished';
-  });
-};
-
-test('a light card inside a dark page takes light text', async ({ page }) => {
+test('a light card inside a dark page takes the light ink and the page keeps the dark canvas', async ({
+  page,
+}) => {
   await page.goto(story('components-button--nested-themes', 'light', 'rounded'));
   await ready(page);
   const text = page.getByTestId('nested-text');
