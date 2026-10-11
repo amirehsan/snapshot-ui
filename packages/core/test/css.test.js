@@ -180,6 +180,36 @@ describe('src/components/link.css', () => {
   });
 });
 
+describe('src/components/button.css', () => {
+  const source = () => stripComments(read('src/components/button.css')).replace(/\s+/g, ' ');
+
+  it('draws a plain anchor with aria-disabled as disabled, but never a pending button', () => {
+    // React Aria marks a pending button aria-disabled too, and a pending button keeps its fill.
+    const disabled = ":is(:disabled, [data-disabled], :where([aria-disabled='true']:not([data-pending])))";
+    const css = source();
+    expect(css).toContain(`.button-tertiary${disabled} {`);
+    const rule = blockAfter(css, `.button${disabled} {`);
+    expect(rule).toContain('color: var(--color-taupe);');
+    expect(rule).toContain('cursor: not-allowed;');
+  });
+});
+
+describe('src/components/icon-button.css', () => {
+  const source = () => stripComments(read('src/components/icon-button.css')).replace(/\s+/g, ' ');
+
+  it('draws a plain anchor with aria-disabled as disabled, and leaves it no hover or press', () => {
+    const css = source();
+    const rule = blockAfter(css, ".icon-button:is(:disabled, [data-disabled], [aria-disabled='true']) {");
+    expect(rule).toContain('border-color: var(--icon-button-border-disabled);');
+    expect(rule).toContain('color: var(--color-taupe);');
+    expect(rule).toContain('cursor: not-allowed;');
+    // The hover and press rules skip the same three, so the two stay in step.
+    const skipped = ":not(:disabled, [data-disabled], [aria-disabled='true']) {";
+    expect(css).toContain(`.icon-button:is(:hover, [data-hovered])${skipped}`);
+    expect(css).toContain(`.icon-button:is(:active, [data-pressed])${skipped}`);
+  });
+});
+
 describe('src/components/badge.css', () => {
   const source = () => read('src/components/badge.css').replace(/\/\*[\s\S]*?\*\//g, '');
 

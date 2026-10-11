@@ -52,7 +52,6 @@
   }
 
   .icon-button svg {
-    flex: none;
     width: 20px;
     height: 20px;
   }
@@ -75,7 +74,7 @@
     outline-offset: var(--focus-ring-offset);
   }
 
-  .icon-button:is(:disabled, [data-disabled]) {
+  .icon-button:is(:disabled, [data-disabled], [aria-disabled='true']) {
     border-color: var(--icon-button-border-disabled);
     color: var(--color-taupe);
     cursor: not-allowed;

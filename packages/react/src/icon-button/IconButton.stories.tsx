@@ -24,6 +24,12 @@ export const Disabled: Story = {
     <div style={{ display: 'flex', gap: 12 }}>
       <IconButton {...args} isDisabled />
       <IconButton {...args} variant="outline" isDisabled />
+      <IconButton aria-label="Search" href="#search" isDisabled>
+        <Search />
+      </IconButton>
+      <IconButton aria-label="Search" href="#search" variant="outline" isDisabled>
+        <Search />
+      </IconButton>
     </div>
   ),
 };

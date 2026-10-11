@@ -1079,6 +1079,11 @@ presses are ignored while focus stays. In dark the primary hover fill is
 translucent, so the fill is clipped to the padding box: painted under the
 border as well, the border band would read brighter than the pill.
 
+A plain anchor or span that wears the `button` class and carries
+`aria-disabled="true"` is drawn disabled, as a `button` element with `disabled`
+is, and the one exception is a pending button, which React Aria marks
+`aria-disabled` too and which keeps its fill.
+
 ## Typography
 
 Heading, Text and Eyebrow are the document's hierarchy table with a class on
@@ -1303,6 +1308,9 @@ The rest follow the rules above:
 - The ring is the shared focus ring, outside the circle, so ink still reads
   against the page behind it.
 - The cursor is `pointer`. The app's header toggle and toast dismiss had none.
+- The disabled look matches `:disabled`, `data-disabled` and
+  `aria-disabled="true"`, so a plain anchor that wears the classes and says it
+  is disabled with `aria-disabled` is drawn disabled too, with no hover.
 - The button is 40px. The app's rail collapse button was 28px and its toast
   dismiss 32px, and neither is carried over: a control drawn smaller extends
   its hit area instead.
