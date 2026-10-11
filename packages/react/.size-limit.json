@@ -77,6 +77,20 @@
     "limit": "1.5 kB"
   },
   {
+    "name": "import { Checkbox } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Checkbox }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
+    "name": "import { CheckboxGroup } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ CheckboxGroup }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1.5 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

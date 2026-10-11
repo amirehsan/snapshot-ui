@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   CONTRAST_PAIRS,
+  NON_TEXT,
   TEXT,
   composite,
   contrastFailures,
@@ -73,6 +74,22 @@ describe('CONTRAST_PAIRS', () => {
       (pair) => pair.ground,
     );
     expect(surfaces.filter((surface) => !gated.includes(surface))).toEqual([]);
+  });
+
+  // A checkbox box sits on any surface a form can, in its Raised fill, and its
+  // empty edge is the boundary: so the boundary is gated on all five.
+  it('gates the control boundary on every surface', () => {
+    const gated = CONTRAST_PAIRS.filter((pair) => pair.text === 'boundary' && pair.minimum === NON_TEXT).map(
+      (pair) => pair.ground,
+    );
+    expect(surfaces.filter((surface) => !gated.includes(surface))).toEqual([]);
+  });
+
+  // The checked mark is canvas on the ink fill. The primary button label is the
+  // same pair, measured at the stricter text minimum.
+  it('gates canvas on ink, the checked mark and the primary label', () => {
+    const pair = CONTRAST_PAIRS.find((entry) => entry.text === 'canvas' && entry.ground === 'ink');
+    expect(pair?.minimum).toBe(TEXT);
   });
 });
 

@@ -93,6 +93,13 @@ export const CONTRAST_PAIRS = [
     minimum: NON_TEXT,
     shows: 'the switch thumb on its off track',
   },
+  {
+    text: 'boundary',
+    ground: 'bone',
+    fill: 'raised',
+    minimum: NON_TEXT,
+    shows: 'a control boundary against bone',
+  },
 ];
 
 /** Parses #rgb, #rrggbb, rgb(r g b), rgb(r g b / a), rgba(r, g, b, a) and transparent. */
