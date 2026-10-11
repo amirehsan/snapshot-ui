@@ -1,5 +1,6 @@
 'use client';
 
+import { IconButton } from '@snapshot-ui/react';
 import type { ReactElement } from 'react';
 import { useCopy } from '@/lib/use-copy';
 
@@ -9,11 +10,10 @@ export function CopyButton({ text }: { text: string }): ReactElement {
 
   return (
     <>
-      <button
-        className="icon-button icon-button-ghost code-copy"
-        type="button"
+      <IconButton
+        className="code-copy"
         aria-label="Copy code"
-        onClick={() => {
+        onPress={() => {
           void copy();
         }}
       >
@@ -24,7 +24,6 @@ export function CopyButton({ text }: { text: string }): ReactElement {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          aria-hidden
         >
           {outcome === 'Copied' ? (
             <path d="m5 12.5 5 5 9-10" />
@@ -35,7 +34,7 @@ export function CopyButton({ text }: { text: string }): ReactElement {
             </>
           )}
         </svg>
-      </button>
+      </IconButton>
       <span className="visually-hidden" role="status">
         {outcome}
       </span>

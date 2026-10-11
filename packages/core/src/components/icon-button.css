@@ -1,0 +1,89 @@
+/*
+ * IconButton: a button, or a link drawn the same way, that holds one icon and
+ * no text. It is 40px square, so it meets the touch target on its own, and a
+ * full circle in Rounded because --radius-pill follows the shape axis.
+ *
+ * Ghost is the base: no fill and no edge, a slate icon that turns ink. Outline
+ * is the design system's circle on cream: a transparent fill, a 1px ink edge
+ * and an ink icon. Each variant only sets the --icon-button-* properties; the
+ * states below read them, so a state never needs one rule per variant.
+ */
+@layer components {
+  .icon-button {
+    --icon-button-bg: transparent;
+    --icon-button-fg: var(--color-slate);
+    --icon-button-border: transparent;
+    --icon-button-border-disabled: transparent;
+    /* A wash of ink. The source stepped float to lifted, which are the same
+       color in dark, so its hover changed nothing there. */
+    --icon-button-bg-active: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    --icon-button-fg-active: var(--color-ink);
+
+    box-sizing: border-box;
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--icon-button-border);
+    border-radius: var(--radius-pill);
+    background-color: var(--icon-button-bg);
+    color: var(--icon-button-fg);
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+
+  .icon-button-outline {
+    --icon-button-fg: var(--color-ink);
+    --icon-button-border: var(--color-ink);
+    --icon-button-border-disabled: color-mix(in srgb, var(--color-ink) 15%, transparent);
+  }
+
+  /* The icon sits in a hidden wrapper so it is never announced; the wrapper adds no box of its own. */
+  .icon-button-icon {
+    display: contents;
+  }
+
+  .icon-button svg {
+    flex: none;
+    width: 20px;
+    height: 20px;
+  }
+
+  @media (hover: hover) {
+    .icon-button:is(:hover, [data-hovered]):not(:disabled, [data-disabled], [aria-disabled='true']) {
+      background-color: var(--icon-button-bg-active);
+      color: var(--icon-button-fg-active);
+    }
+  }
+
+  /* Pressed shows the same wash as hover, since touch has no hover to show it. */
+  .icon-button:is(:active, [data-pressed]):not(:disabled, [data-disabled], [aria-disabled='true']) {
+    background-color: var(--icon-button-bg-active);
+    color: var(--icon-button-fg-active);
+  }
+
+  .icon-button:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .icon-button:is(:disabled, [data-disabled]) {
+    border-color: var(--icon-button-border-disabled);
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .icon-button {
+      transition: none;
+    }
+  }
+}

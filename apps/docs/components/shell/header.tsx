@@ -1,5 +1,6 @@
 'use client';
 
+import { IconButton } from '@snapshot-ui/react';
 import { useTheme } from 'next-themes';
 import type { ReactElement } from 'react';
 import { useMounted, useShape } from '@/lib/document-state';
@@ -64,25 +65,18 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
   return (
     <header className="header">
       <div className="header-inner">
-        <button
-          className="icon-button header-menu"
-          type="button"
+        <IconButton
+          className="header-menu"
+          variant="outline"
           aria-label="Open the menu"
           aria-expanded={drawerOpen}
           aria-controls="rail"
-          onClick={openDrawer}
+          onPress={openDrawer}
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
-        </button>
+        </IconButton>
         <div className="header-titles">
           <p className="eyebrow">
             Docs <span className="eyebrow-sep">&#8250;</span> {group}

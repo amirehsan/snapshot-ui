@@ -1,5 +1,6 @@
 'use client';
 
+import { IconButton } from '@snapshot-ui/react';
 import Link from 'next/link';
 import { Eyebrow } from '@snapshot-ui/react';
 import { useTheme } from 'next-themes';
@@ -121,11 +122,9 @@ export function HomePage(): ReactElement {
             <a href="https://github.com/amirehsan/snapshot-ui/releases">Changelog</a>
           </div>
           <div className="nav-actions">
-            <button
-              className="icon-button icon-button-ghost"
-              type="button"
+            <IconButton
               aria-label="Search the docs"
-              onClick={() => {
+              onPress={() => {
                 setSearchOpen(true);
               }}
             >
@@ -139,13 +138,8 @@ export function HomePage(): ReactElement {
                 <circle cx="11" cy="11" r="6.5" />
                 <path d="m16 16 5 5" />
               </svg>
-            </button>
-            <button
-              className="icon-button icon-button-ghost"
-              type="button"
-              aria-label="Toggle dark mode"
-              onClick={toggleTheme}
-            >
+            </IconButton>
+            <IconButton aria-label="Toggle dark mode" onPress={toggleTheme}>
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -156,27 +150,22 @@ export function HomePage(): ReactElement {
               >
                 <path d="M20 14.5A8.2 8.2 0 0 1 9.5 4 8.2 8.2 0 1 0 20 14.5z" />
               </svg>
-            </button>
-            <a
-              className="icon-button icon-button-ghost"
-              href="https://github.com/amirehsan/snapshot-ui"
-              aria-label="GitHub"
-            >
+            </IconButton>
+            <IconButton href="https://github.com/amirehsan/snapshot-ui" aria-label="GitHub">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z" />
               </svg>
-            </a>
+            </IconButton>
             <Link className="button nav-cta" href="/docs/installation">
               Get started
             </Link>
-            <button
+            <IconButton
               ref={menuButton}
-              className="icon-button icon-button-ghost nav-menu"
-              type="button"
+              className="nav-menu"
               aria-label="Open menu"
               aria-expanded={menuOpen}
               aria-controls="nav-overlay"
-              onClick={() => {
+              onPress={() => {
                 setMenuOpen(true);
               }}
             >
@@ -189,7 +178,7 @@ export function HomePage(): ReactElement {
               >
                 <path d="M4 7h16M4 12h16M4 17h16" />
               </svg>
-            </button>
+            </IconButton>
           </div>
         </nav>
       </div>
@@ -209,19 +198,18 @@ export function HomePage(): ReactElement {
             </svg>
             snapshot ui
           </span>
-          <button
+          <IconButton
             ref={closeButton}
-            className="icon-button nav-close"
-            type="button"
+            variant="outline"
             aria-label="Close menu"
-            onClick={() => {
+            onPress={() => {
               setMenuOpen(false);
             }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M6 6l12 12M18 6 6 18" />
             </svg>
-          </button>
+          </IconButton>
         </div>
         <nav className="nav-overlay-links" aria-label="Menu">
           <Link className="type-h2" href="/docs">
@@ -265,11 +253,9 @@ export function HomePage(): ReactElement {
               <span className="install-command" role="group" aria-label="Install command">
                 <b>$</b> pnpm add @snapshot-ui/react @snapshot-ui/core
               </span>
-              <button
-                className="icon-button icon-button-ghost"
-                type="button"
+              <IconButton
                 aria-label="Copy install command"
-                onClick={() => {
+                onPress={() => {
                   void copy();
                 }}
               >
@@ -290,7 +276,7 @@ export function HomePage(): ReactElement {
                     </>
                   )}
                 </svg>
-              </button>
+              </IconButton>
               <span className="visually-hidden" role="status">
                 {outcome}
               </span>
@@ -551,7 +537,7 @@ export function HomePage(): ReactElement {
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
-                    <button className="icon-button" type="button" aria-label="Call">
+                    <IconButton variant="outline" aria-label="Call">
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -562,7 +548,7 @@ export function HomePage(): ReactElement {
                       >
                         <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
                       </svg>
-                    </button>
+                    </IconButton>
                     <button className="button" type="button">
                       Book a visit
                     </button>
@@ -580,7 +566,7 @@ export function HomePage(): ReactElement {
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
-                    <button className="icon-button" type="button" aria-label="Call">
+                    <IconButton variant="outline" aria-label="Call">
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -591,7 +577,7 @@ export function HomePage(): ReactElement {
                       >
                         <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
                       </svg>
-                    </button>
+                    </IconButton>
                     <button className="button" type="button">
                       Book a visit
                     </button>
@@ -609,7 +595,7 @@ export function HomePage(): ReactElement {
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
-                    <button className="icon-button" type="button" aria-label="Call">
+                    <IconButton variant="outline" aria-label="Call">
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -620,7 +606,7 @@ export function HomePage(): ReactElement {
                       >
                         <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
                       </svg>
-                    </button>
+                    </IconButton>
                     <button className="button" type="button">
                       Book a visit
                     </button>
@@ -638,7 +624,7 @@ export function HomePage(): ReactElement {
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
-                    <button className="icon-button" type="button" aria-label="Call">
+                    <IconButton variant="outline" aria-label="Call">
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -649,7 +635,7 @@ export function HomePage(): ReactElement {
                       >
                         <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
                       </svg>
-                    </button>
+                    </IconButton>
                     <button className="button" type="button">
                       Book a visit
                     </button>
@@ -667,7 +653,7 @@ export function HomePage(): ReactElement {
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
-                    <button className="icon-button" type="button" aria-label="Call">
+                    <IconButton variant="outline" aria-label="Call">
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -678,7 +664,7 @@ export function HomePage(): ReactElement {
                       >
                         <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
                       </svg>
-                    </button>
+                    </IconButton>
                     <button className="button" type="button">
                       Book a visit
                     </button>
@@ -696,7 +682,7 @@ export function HomePage(): ReactElement {
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
-                    <button className="icon-button" type="button" aria-label="Call">
+                    <IconButton variant="outline" aria-label="Call">
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -707,7 +693,7 @@ export function HomePage(): ReactElement {
                       >
                         <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
                       </svg>
-                    </button>
+                    </IconButton>
                     <button className="button" type="button">
                       Book a visit
                     </button>
@@ -736,7 +722,9 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/button">
                   Button
                 </Link>
-                <span className="chip">Icon button</span>
+                <Link className="chip" href="/docs/components/icon-button">
+                  Icon button
+                </Link>
                 <span className="chip">Text field</span>
                 <span className="chip">Text area</span>
                 <span className="chip">Checkbox</span>
@@ -827,6 +815,7 @@ export function HomePage(): ReactElement {
               <summary>Components</summary>
               <div className="footer-links">
                 <Link href="/docs/components/button">Button</Link>
+                <Link href="/docs/components/icon-button">Icon button</Link>
                 <Link href="/docs/components/spinner">Spinner</Link>
               </div>
             </details>

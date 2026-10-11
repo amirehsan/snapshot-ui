@@ -1,0 +1,84 @@
+---
+title: Icon button
+description: A button that holds one icon and no text. Ghost for bars and headers, outline when it needs an edge, and a link when it goes somewhere.
+icon: CircleDot
+---
+
+<Section>
+
+## Variants
+
+Ghost has no fill and no edge. Outline draws a 1px ink edge, for a button that has to show where it is.
+
+<Preview name="icon-button-variants" />
+
+</Section>
+
+<Section>
+
+## States
+
+Hover and press wash the circle with a little ink, in dark as well. Disabled turns the icon taupe and ignores presses.
+
+<Preview name="icon-button-states" />
+
+</Section>
+
+<Section>
+
+## As a link
+
+Give it an `href` and it renders an anchor with the same classes and the same need for a name. Use the link form for an icon that goes somewhere, and the button form for one that does something.
+
+<Preview name="icon-button-link" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+The child is the icon. It is hidden from assistive technology, so the name comes from `aria-label` or `aria-labelledby`, and the types require one of them.
+
+<Code code={`import { IconButton } from '@snapshot-ui/react';
+import { Settings } from 'lucide-react';
+
+export function SettingsButton({ onOpen }: { onOpen: () => void }) {
+  return (
+    <IconButton aria-label="Open settings" onPress={onOpen}>
+      <Settings />
+    </IconButton>
+  );
+}`} />
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria Button prop is accepted, or every Link prop when there is an `href`. These are the ones Snapshot UI adds or shapes.
+
+<PropsTable path="../../packages/react/src/icon-button/IconButton.tsx" type="Pick<IconButtonProps, 'variant' | 'aria-label' | 'aria-labelledby' | 'href' | 'onPress'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A native button element, or an anchor when there is an `href`, with React Aria handling press across mouse, touch and keyboard. It is 40px square, which meets the touch target on its own.
+
+<Keys rows={[['Space Enter', 'Activates the button.'], ['Enter', 'Follows the link, when it has an href.'], ['Tab', 'Moves focus to it. The 2px ink ring sits outside the circle.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps icon buttons in the system.
+
+<Rules dos={['Name every one for its action, such as Open the menu or Copy code.', 'Use ghost in bars and headers, and outline where the button needs an edge to read as a button.']} donts={['Never use one for the main action of a view. A Button with a label says what it does.', 'Never put text in it. If it needs words, use a Button.']} />
+
+</Section>

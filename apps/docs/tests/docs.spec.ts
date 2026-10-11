@@ -104,7 +104,7 @@ test('under 1024px the rail is a drawer that holds focus and Escape closes', asy
   // The page behind the drawer does not scroll.
   await expect(page.locator('html')).toHaveCSS('overflow', 'hidden');
   // Focus starts on the link to the current page, not on the first link.
-  await expect(page.getByRole('link', { name: 'Button' })).toBeFocused();
+  await expect(page.getByRole('link', { name: 'Button', exact: true })).toBeFocused();
 
   // Tab and Shift+Tab stay inside the drawer, past both ends of it.
   for (let press = 0; press < 12; press += 1) {
@@ -195,8 +195,8 @@ test('choosing the page that is already open closes the drawer', async ({ page }
   await visit(page);
   const menu = page.getByRole('button', { name: 'Open the menu' });
   await menu.click();
-  await expect(page.getByRole('link', { name: 'Button' })).toBeFocused();
-  await page.getByRole('link', { name: 'Button' }).click();
+  await expect(page.getByRole('link', { name: 'Button', exact: true })).toBeFocused();
+  await page.getByRole('link', { name: 'Button', exact: true }).click();
   await expect(page.locator('html')).not.toHaveAttribute('data-drawer', 'open');
   await expect(page).toHaveURL(/\/docs\/components\/button$/);
   await expect(menu).toBeFocused();
@@ -222,7 +222,7 @@ test('Back and Forward with the drawer open leave it closed', async ({ page }) =
   await visit(page, '/docs');
   // Two pages in the history, reached by a link and not a reload, so the shell keeps its state.
   await page.getByRole('button', { name: 'Open the menu' }).click();
-  await page.getByRole('link', { name: 'Button' }).click();
+  await page.getByRole('link', { name: 'Button', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Button' })).toBeVisible();
   await expectDrawerClosed(page);
 

@@ -5,6 +5,9 @@ import ButtonStates from './button-states';
 import ButtonVariants from './button-variants';
 import EyebrowHeading from './eyebrow-heading';
 import HeadingSizes from './heading-sizes';
+import IconButtonLink from './icon-button-link';
+import IconButtonStates from './icon-button-states';
+import IconButtonVariants from './icon-button-variants';
 import KbdKeys from './kbd-keys';
 import LinkInline from './link-inline';
 import LinkStates from './link-states';
@@ -20,6 +23,9 @@ export const examples = {
   'button-variants': ButtonVariants,
   'eyebrow-heading': EyebrowHeading,
   'heading-sizes': HeadingSizes,
+  'icon-button-link': IconButtonLink,
+  'icon-button-states': IconButtonStates,
+  'icon-button-variants': IconButtonVariants,
   'kbd-keys': KbdKeys,
   'link-inline': LinkInline,
   'link-states': LinkStates,
