@@ -106,15 +106,25 @@ export function parseColor(value) {
     const n = Number.parseInt(hex, 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 1 };
   }
-  match = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*(?:[/,]\s*([\d.]+%?))?\s*\)$/.exec(text);
+  match =
+    /^rgba?\(\s*(\d+(?:\.\d+)?|\.\d+)[\s,]+(\d+(?:\.\d+)?|\.\d+)[\s,]+(\d+(?:\.\d+)?|\.\d+)\s*(?:[/,]\s*(\d+(?:\.\d+)?%?|\.\d+%?))?\s*\)$/.exec(
+      text,
+    );
   if (match) {
-    const alpha =
+    const r = Number(match[1]);
+    const g = Number(match[2]);
+    const b = Number(match[3]);
+    const a =
       match[4] === undefined
         ? 1
         : match[4].endsWith('%')
           ? Number.parseFloat(match[4]) / 100
           : Number(match[4]);
-    return { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]), a: alpha };
+    const numbers = [r, g, b, a];
+    if (!numbers.every(Number.isFinite) || [r, g, b].some((c) => c > 255) || a > 1) {
+      throw new Error(`Cannot parse color "${value}"`);
+    }
+    return { r, g, b, a };
   }
   throw new Error(`Cannot parse color "${value}"`);
 }
@@ -161,7 +171,11 @@ export function contrastFailures(palette, mode) {
     const value = color(name);
     if (value.a === 1) return value;
     const base = over ?? 'canvas';
-    return composite(value, color(base));
+    const backdrop = color(base);
+    if (backdrop.a !== 1) {
+      throw new Error(`Color "${base}" in the ${mode} palette is not opaque and cannot be a base`);
+    }
+    return composite(value, backdrop);
   };
   const failures = [];
   for (const pair of CONTRAST_PAIRS) {
@@ -169,7 +183,7 @@ export function contrastFailures(palette, mode) {
     const textBase = pair.fill ? opaque(pair.fill) : ground;
     const text = composite(color(pair.text), textBase);
     const ratio = contrastRatio(text, ground);
-    if (ratio < pair.minimum) {
+    if (!(ratio >= pair.minimum)) {
       failures.push({
         mode,
         text: pair.text,
@@ -181,4 +195,21 @@ export function contrastFailures(palette, mode) {
     }
   }
   return failures;
+}
+
+/**
+ * The CSS value of every color token in one mode. Dark reads the token's dark
+ * override and falls back to the base value when it has none.
+ * @param {{ color: Record<string, any> }} tokens The parsed tokens.json.
+ * @param {'light' | 'dark'} mode
+ * @returns {Record<string, string>}
+ */
+export function paletteFor(tokens, mode) {
+  const palette = {};
+  for (const [name, token] of Object.entries(tokens.color)) {
+    if (name.startsWith('$')) continue;
+    palette[name] =
+      mode === 'dark' ? (token.$extensions?.['snapshot-ui']?.theme?.dark ?? token.$value) : token.$value;
+  }
+  return palette;
 }

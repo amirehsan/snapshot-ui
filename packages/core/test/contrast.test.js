@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { composite, contrastFailures, contrastRatio, parseColor } from '../scripts/contrast.js';
+import { composite, contrastFailures, contrastRatio, paletteFor, parseColor } from '../scripts/contrast.js';
 
+const tokens = JSON.parse(readFileSync(new URL('../tokens/tokens.json', import.meta.url), 'utf8'));
 const ratio = (a, b) => contrastRatio(parseColor(a), parseColor(b));
 
 describe('contrastRatio', () => {
@@ -30,6 +31,13 @@ describe('parseColor', () => {
   it('refuses what it cannot read', () => {
     expect(() => parseColor('oklch(0.5 0.1 200)')).toThrow(/Cannot parse/);
   });
+
+  it('refuses numbers that are malformed or out of range', () => {
+    expect(() => parseColor('rgb(1.2.3 0 0)')).toThrow(/Cannot parse/);
+    expect(() => parseColor('rgb(0 0 0 / .)')).toThrow(/Cannot parse/);
+    expect(() => parseColor('rgb(300 0 0)')).toThrow(/Cannot parse/);
+    expect(() => parseColor('rgb(0 0 0 / 1.5)')).toThrow(/Cannot parse/);
+  });
 });
 
 describe('composite', () => {
@@ -40,17 +48,15 @@ describe('composite', () => {
   });
 });
 
+describe('paletteFor', () => {
+  it('reads the dark override in dark and the base value in light', () => {
+    expect(paletteFor(tokens, 'dark').boundary).toBe('rgb(255 255 255 / 0.5)');
+    expect(paletteFor(tokens, 'light').boundary).toBe('rgb(20 20 19 / 0.5)');
+  });
+});
+
 describe('contrastFailures', () => {
-  const tokens = JSON.parse(readFileSync(new URL('../tokens/tokens.json', import.meta.url), 'utf8'));
-  const palette = (mode) =>
-    Object.fromEntries(
-      Object.entries(tokens.color)
-        .filter(([name]) => !name.startsWith('$'))
-        .map(([name, token]) => [
-          name,
-          mode === 'dark' ? (token.$extensions?.['snapshot-ui']?.theme?.dark ?? token.$value) : token.$value,
-        ]),
-    );
+  const palette = (mode) => paletteFor(tokens, mode);
 
   it('passes every documented pairing in light and dark', () => {
     expect([
@@ -69,5 +75,17 @@ describe('contrastFailures', () => {
     const broken = { ...palette('light'), boundary: 'rgb(20 20 19 / 0.4)' };
     const failures = contrastFailures(broken, 'light');
     expect(failures.some((f) => f.text === 'boundary' && f.ground === 'raised')).toBe(true);
+  });
+
+  it('throws on a malformed token instead of passing it', () => {
+    const broken = { ...palette('light'), ink: 'rgb(1.2.3 0 0)' };
+    expect(() => contrastFailures(broken, 'light')).toThrow(/Cannot parse/);
+  });
+
+  it('refuses a translucent canvas as the base of a composite', () => {
+    const broken = { ...palette('light'), canvas: 'rgb(243 240 238 / 0.5)' };
+    expect(() => contrastFailures(broken, 'light')).toThrow(
+      'Color "canvas" in the light palette is not opaque and cannot be a base',
+    );
   });
 });
