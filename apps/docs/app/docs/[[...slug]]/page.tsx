@@ -45,7 +45,7 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>): Promi
                 </div>
                 <div className="meta-row">
                   <span>Source</span>
-                  <a href={`${GITHUB}/tree/main/apps/docs/content/docs/${page.path}`}>Edit this page</a>
+                  <a href={`${GITHUB}/edit/main/apps/docs/content/docs/${page.path}`}>Edit this page</a>
                 </div>
                 <div className="meta-row">
                   <span>Built on</span>

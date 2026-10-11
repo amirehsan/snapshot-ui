@@ -31,22 +31,52 @@ export function DocsShell({
   const [drawerPath, setDrawerPath] = useState<string | null>(null);
   const drawerOpen = drawerPath === pathname;
 
+  // The open drawer is a modal dialog: it takes focus, holds the page still and
+  // closes on Escape, and everything behind it is inert (see the render below).
   useEffect(() => {
-    const root = document.documentElement;
-    if (drawerOpen) {
-      root.dataset.drawer = 'open';
-      document.querySelector<HTMLElement>('.rail .rail-link[aria-current="page"], .rail .rail-link')?.focus();
-    } else if (root.dataset.drawer === 'open') {
-      delete root.dataset.drawer;
-      document.querySelector<HTMLElement>('.header-menu')?.focus();
-    }
     if (!drawerOpen) return;
+    const root = document.documentElement;
+    const previousOverflow = root.style.overflow;
+    root.dataset.drawer = 'open';
+    root.style.overflow = 'hidden';
+    const current = document.querySelector<HTMLElement>('.rail .rail-link[aria-current="page"]');
+    (current ?? document.querySelector<HTMLElement>('.rail .rail-link'))?.focus();
+
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setDrawerPath(null);
+      // Search is a dialog above the drawer: it handles its own keys, Escape included.
+      if (event.defaultPrevented || document.querySelector('dialog[open]')) return;
+      if (event.key === 'Escape') {
+        setDrawerPath(null);
+      } else if (event.key === 'Tab') {
+        // Everything behind the drawer is inert, so Tab would leave the page for the
+        // browser's own controls. Wrap at both ends instead.
+        const stops = [
+          ...document.querySelectorAll<HTMLElement>('#rail a[href], #rail button:not([disabled])'),
+        ];
+        const first = stops[0];
+        const last = stops.at(-1);
+        if (!first || !last) return;
+        const active = document.activeElement;
+        const inside = active instanceof HTMLElement && active.closest('#rail') !== null;
+        if (!inside || (event.shiftKey && active === first) || (!event.shiftKey && active === last)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first).focus();
+        }
+      }
+    };
+    // Past 1024px the rail is no longer a drawer, so a window widened with it open closes it.
+    const wide = matchMedia('(width >= 1024px)');
+    const onWiden = (): void => {
+      if (wide.matches) setDrawerPath(null);
     };
     document.addEventListener('keydown', onKey);
+    wide.addEventListener('change', onWiden);
     return () => {
       document.removeEventListener('keydown', onKey);
+      wide.removeEventListener('change', onWiden);
+      delete root.dataset.drawer;
+      root.style.overflow = previousOverflow;
+      document.querySelector<HTMLElement>('.header-menu')?.focus();
     };
   }, [drawerOpen]);
 
@@ -66,6 +96,7 @@ export function DocsShell({
 
   const actions = useMemo<ShellActions>(
     () => ({
+      drawerOpen,
       openDrawer: () => {
         setDrawerPath(pathname);
       },
@@ -73,7 +104,7 @@ export function DocsShell({
         setSearchOpen(true);
       },
     }),
-    [pathname],
+    [pathname, drawerOpen],
   );
 
   const toggleCollapsed = (): void => {
@@ -82,11 +113,15 @@ export function DocsShell({
 
   return (
     <ShellContext value={actions}>
+      <a className="skip-link" href="#main" inert={drawerOpen}>
+        Skip to content
+      </a>
       <Rail
         tree={tree}
         pathname={pathname}
         version={version}
         collapsed={collapsed}
+        drawerOpen={drawerOpen}
         onToggleCollapsed={toggleCollapsed}
         onSearch={actions.openSearch}
       />
@@ -97,7 +132,9 @@ export function DocsShell({
           setDrawerPath(null);
         }}
       />
-      <div className="workspace">{children}</div>
+      <div className="workspace" inert={drawerOpen}>
+        {children}
+      </div>
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </ShellContext>
   );

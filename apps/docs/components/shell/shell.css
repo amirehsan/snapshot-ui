@@ -224,6 +224,7 @@
   }
 
   .tab {
+    position: relative;
     min-height: 36px;
     padding: 0 16px;
     border: 0;
@@ -233,6 +234,13 @@
     font-weight: 500;
     cursor: pointer;
     transition: border-radius 200ms ease;
+  }
+
+  /* Drawn at 36px, hit at 40px, with no layout shift. */
+  .tab::after {
+    content: '';
+    position: absolute;
+    inset: -2px 0;
   }
 
   .tab[aria-selected='true'] {
@@ -335,12 +343,20 @@
   }
 
   .toc a {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 10px;
     min-height: 34px;
     color: var(--color-slate);
     font-weight: 500;
+  }
+
+  /* Drawn at 34px, hit at 40px. The rows are 38px apart, so neighbors share 2px. */
+  .toc a::after {
+    content: '';
+    position: absolute;
+    inset: -3px 0;
   }
 
   .toc a::before {
@@ -412,18 +428,6 @@
     text-underline-offset: 4px;
   }
 
-  .footer-note {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 48px;
-    color: var(--color-slate);
-    font-size: var(--text-small);
-  }
-
-  .footer-note a {
-    color: var(--color-ink);
-    font-weight: 500;
-  }
   .rail-icon {
     flex: none;
     width: 20px;
@@ -635,13 +639,23 @@
       --rail-width: 0px;
     }
 
+    /* Closed, the drawer slides out and then leaves the tab order and the
+       accessibility tree: visibility waits for the slide, and open shows at once. */
     .rail {
       width: min(320px, calc(100vw - 32px));
       translate: calc(-100% - 24px) 0;
+      visibility: hidden;
+      transition:
+        width 200ms ease,
+        translate 200ms ease,
+        border-radius 200ms ease,
+        visibility 0s linear 200ms;
     }
 
     [data-drawer='open'] .rail {
       translate: 0 0;
+      visibility: visible;
+      transition-delay: 0s;
     }
 
     [data-drawer='open'] .scrim {
@@ -744,10 +758,6 @@
 
     .prop {
       padding: 16px;
-    }
-
-    .footer-note {
-      margin-top: 24px;
     }
   }
 }
@@ -869,6 +879,7 @@
   }
 
   .search-field {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -876,8 +887,17 @@
     border-bottom: 1px solid var(--color-divider);
   }
 
-  .search-field:has(.search-input:focus-visible) {
-    box-shadow: inset 0 -2px 0 var(--color-ink);
+  /* The focus line under the field, drawn above the divider. */
+  .search-field::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: var(--focus-ring-width);
+    background-color: transparent;
+  }
+
+  .search-field:has(.search-input:focus-visible)::after {
+    background-color: var(--color-ink);
   }
 
   .search-field svg {

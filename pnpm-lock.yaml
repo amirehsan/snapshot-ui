@@ -120,6 +120,9 @@ importers:
       '@typescript/native':
         specifier: 'catalog:'
         version: typescript@7.0.2
+      stylelint:
+        specifier: 17.16.0
+        version: 17.16.0(@typescript/typescript6@6.0.2)
       typescript:
         specifier: 'catalog:'
         version: '@typescript/typescript6@6.0.2'
