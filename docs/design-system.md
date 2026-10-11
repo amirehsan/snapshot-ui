@@ -942,7 +942,9 @@ Three values have no name in the document, so the library gives them one:
 - `--focus-ring-color` is ink, kept as one reference to `--color-ink` so every
   ring follows the theme and a theme can recolor them all from this one token.
   Each theme scope declares it again, since a variable that holds `var()`
-  resolves where it is declared.
+  resolves where it is declared. A scope that sets `--color-ink` itself,
+  outside the theme attribute, must set `--focus-ring-color` too, just as it
+  would set `color`.
 
 ## Four colors added
 

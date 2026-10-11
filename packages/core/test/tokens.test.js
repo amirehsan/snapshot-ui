@@ -1,14 +1,50 @@
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { tokens } from '../dist/tokens.js';
 
 const css = readFileSync(new URL('../dist/tokens.css', import.meta.url), 'utf8');
 
-/** The declarations of the first block whose selector is exactly `selector`. */
-function block(selector) {
-  const start = css.indexOf(`${selector} {`);
+/** The declarations of the first block in `source` whose selector is exactly `selector`. */
+function blockOf(source, selector) {
+  const start = source.indexOf(`${selector} {`);
   if (start === -1) throw new Error(`No block for ${selector}`);
-  return css.slice(start, css.indexOf('}', start));
+  return source.slice(start, source.indexOf('}', start));
+}
+
+/** The declarations of the first block in the built tokens.css for `selector`. */
+const block = (selector) => blockOf(css, selector);
+
+/** The names of the custom properties a block declares. */
+const declaredIn = (text) => [...text.matchAll(/^\s*(--[\w-]+):/gm)].map((match) => match[1]);
+
+const buildScript = fileURLToPath(new URL('../scripts/build-tokens.js', import.meta.url));
+
+/**
+ * Runs the real build script on a fixture, in a directory of its own. The
+ * script reads tokens/ and writes dist/ relative to its working directory, so
+ * the repository's own build is never touched. Returns the exit status, stderr
+ * and, when the build passed, the generated tokens.css and tokens.js.
+ */
+function buildFixture(fixture) {
+  const dir = mkdtempSync(path.join(tmpdir(), 'snapshot-ui-tokens-'));
+  try {
+    mkdirSync(path.join(dir, 'tokens'));
+    writeFileSync(path.join(dir, 'tokens', 'tokens.json'), JSON.stringify(fixture));
+    const run = spawnSync(process.execPath, [buildScript], { cwd: dir, encoding: 'utf8' });
+    const built = run.status === 0;
+    return {
+      status: run.status,
+      stderr: run.stderr,
+      css: built ? readFileSync(path.join(dir, 'dist', 'tokens.css'), 'utf8') : '',
+      js: built ? readFileSync(path.join(dir, 'dist', 'tokens.js'), 'utf8') : '',
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 describe('tokens.css', () => {
@@ -81,9 +117,14 @@ describe('tokens.css', () => {
       '--focus-ring-offset',
       '--focus-ring-color',
     ];
-    const declared = [...block(':root').matchAll(/^\s*(--[\w-]+):/gm)].map((match) => match[1]);
-    // Equality, not inclusion: a variable that leaks into :root fails too.
-    expect(declared.sort()).toEqual([...contract].sort());
+    const declared = declaredIn(block(':root'));
+    // Equality, not inclusion: a variable that leaks into :root fails too. The
+    // three lists name the culprit instead of printing a diff of every variable.
+    expect({
+      missing: contract.filter((name) => !declared.includes(name)),
+      extra: declared.filter((name) => !contract.includes(name)),
+      duplicates: declared.filter((name, index) => declared.indexOf(name) !== index),
+    }).toEqual({ missing: [], extra: [], duplicates: [] });
   });
 
   it('declares the light values on :root', () => {
@@ -118,6 +159,34 @@ describe('tokens.css', () => {
     for (const selector of ['[data-shape="soft" i]', '[data-shape="square" i]', '[data-shape="rounded" i]']) {
       expect(block(selector), selector).not.toContain('--focus-ring-color');
     }
+  });
+
+  it('declares every token that refers to a changing token in every scope of that axis', () => {
+    // The general rule behind the focus ring: a custom property that holds var()
+    // resolves where it is declared, so a root declaration that refers to a
+    // variable an axis redeclares must be redeclared in every scope of that axis.
+    const selectors = [...css.matchAll(/^\s*(.+?) \{$/gm)].map(([, selector = '']) => selector);
+    const axes = new Map();
+    for (const selector of selectors) {
+      const axis = /\[(data-[\w-]+)=/.exec(selector)?.[1];
+      if (axis) axes.set(axis, [...(axes.get(axis) ?? []), selector]);
+    }
+    expect([...axes.keys()].sort()).toEqual(['data-shape', 'data-theme']);
+    const checked = [];
+    for (const [axis, scopes] of axes) {
+      const declaredByScope = new Map(scopes.map((scope) => [scope, declaredIn(block(scope))]));
+      const changing = new Set([...declaredByScope.values()].flat());
+      for (const [, name, value] of block(':root').matchAll(/^\s*(--[\w-]+):\s*(.+);$/gm)) {
+        const refers = [...value.matchAll(/var\((--[\w-]+)\)/g)].some((match) => changing.has(match[1]));
+        if (!refers) continue;
+        checked.push(name);
+        for (const [scope, declared] of declaredByScope) {
+          expect(declared, `${name} in ${scope} (${axis})`).toContain(name);
+        }
+      }
+    }
+    // The rule must have found something to hold to.
+    expect(checked).toContain('--focus-ring-color');
   });
 
   it('keeps the alpha of translucent dark colors', () => {
@@ -175,5 +244,113 @@ describe('tokens.js', () => {
     expect(tokens.radius.pill.modes.shape.soft).toBe('12px');
     expect(tokens.text.body['line-height'].cssVar).toBe('--text-body--line-height');
     expect(tokens['focus-ring'].color.var).toBe('var(--focus-ring-color)');
+  });
+
+  it('gives a token that refers to ink the modes of ink', () => {
+    // Its CSS is var(--color-ink), so a reader of `modes.theme.dark ?? value`
+    // must get the dark ink, not the light value.
+    expect(tokens['focus-ring'].color.modes).toEqual(tokens.color.ink.modes);
+    expect(tokens['focus-ring'].color.modes.theme.dark).toBe('#ffffff');
+    expect(tokens['focus-ring'].color.value).toBe(tokens.color.ink.value);
+  });
+});
+
+describe('build-tokens.js', () => {
+  const ink = { $value: '#111111', $extensions: { 'snapshot-ui': { theme: { dark: '#eeeeee' } } } };
+  const px = (value) => ({ value, unit: 'px' });
+  const SOFT = '[data-shape="soft" i]';
+  const SQUARE = '[data-shape="square" i]';
+  const ROUNDED = '[data-shape="rounded" i]';
+  const THEME = ['[data-theme="dark"]', '[data-theme="light"]', ':root:not([data-theme="light"])'];
+
+  it('rejects a reference inside a composite value, naming the token', () => {
+    const run = buildFixture({
+      color: { $type: 'color', ink },
+      border: {
+        edge: {
+          $type: 'border',
+          $value: { color: '{color.ink}', width: '1px', style: 'solid' },
+        },
+      },
+    });
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain('border.edge');
+    expect(run.stderr).toContain('{color.ink}');
+  });
+
+  it('rejects a mode value that is a reference, naming the token, axis and variant', () => {
+    const run = buildFixture({
+      color: {
+        $type: 'color',
+        canvas: { $value: '#ffffff', $extensions: { 'snapshot-ui': { theme: { dark: '{color.canvas}' } } } },
+      },
+    });
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain('color.canvas');
+    expect(run.stderr).toContain('theme dark');
+    expect(run.stderr).toContain('{color.canvas}');
+  });
+
+  it('rejects a mode value that contains a reference', () => {
+    const run = buildFixture({
+      border: {
+        $type: 'border',
+        edge: {
+          $value: { color: '#000000', width: '1px', style: 'solid' },
+          $extensions: {
+            'snapshot-ui': {
+              shape: { soft: { color: '{border.edge}', width: '2px', style: 'solid' } },
+            },
+          },
+        },
+      },
+    });
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain('border.edge');
+    expect(run.stderr).toContain('shape soft');
+  });
+
+  it('builds a fixture whose references it can follow', () => {
+    const run = buildFixture({
+      color: {
+        $type: 'color',
+        // A follower of a follower, declared before the token it follows.
+        outer: { $value: '{color.middle}' },
+        middle: { $value: '{color.ink}' },
+        ink,
+      },
+      radius: {
+        $type: 'dimension',
+        control: {
+          $value: px(20),
+          $extensions: { 'snapshot-ui': { shape: { soft: px(10), square: px(0) } } },
+        },
+      },
+      ring: {
+        // A follower of a token the shape axis changes.
+        $type: 'dimension',
+        radius: { $value: '{radius.control}' },
+      },
+    });
+    expect(run.stderr).toBe('');
+    expect(run.status).toBe(0);
+
+    const colorLines = ['--color-outer: var(--color-middle);', '--color-middle: var(--color-ink);'];
+    const radiusLine = '--ring-radius: var(--radius-control);';
+    expect(blockOf(run.css, ':root')).toContain(radiusLine);
+    for (const selector of THEME) {
+      for (const line of colorLines) expect(blockOf(run.css, selector), selector).toContain(line);
+      expect(blockOf(run.css, selector), selector).not.toContain('--ring-radius');
+    }
+    for (const selector of [SOFT, SQUARE, ROUNDED]) {
+      expect(blockOf(run.css, selector), selector).toContain(radiusLine);
+      expect(blockOf(run.css, selector), selector).not.toContain('--color-');
+    }
+
+    // tokens.js reads the same way the CSS does, in each variant of the axis.
+    const fixtureTokens = JSON.parse(run.js.slice(run.js.indexOf('{'), run.js.lastIndexOf('}') + 1));
+    expect(fixtureTokens.color.outer.modes).toEqual({ theme: { dark: '#eeeeee' } });
+    expect(fixtureTokens.color.middle.modes).toEqual({ theme: { dark: '#eeeeee' } });
+    expect(fixtureTokens.ring.radius.modes).toEqual({ shape: { soft: '10px', square: '0px' } });
   });
 });

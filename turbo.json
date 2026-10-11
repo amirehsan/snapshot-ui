@@ -25,6 +25,7 @@
     },
     "test:e2e": {
       "dependsOn": ["build"],
+      "passThroughEnv": ["DOCS_E2E_PORT"],
       "outputs": []
     },
     "size": {

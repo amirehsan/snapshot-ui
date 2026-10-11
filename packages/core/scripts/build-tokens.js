@@ -11,11 +11,27 @@
 // A base $value may be a reference such as "{color.ink}". The CSS keeps it as
 // var(--color-ink) instead of resolving it, so it follows the mode it is read
 // in, and every scope of an axis that changes the target declares it again.
+// The build follows a reference only when it is the whole $value, a string. It
+// throws on a reference inside a composite $value, and on a mode value that is
+// or contains a reference, because it would otherwise resolve those silently
+// against the base value.
 import StyleDictionary from 'style-dictionary';
 import { fileHeader } from 'style-dictionary/utils';
 
 const EXT = 'snapshot-ui';
 const MODE_ROOT = '__mode';
+const REFERENCE = /\{([^{}]+)\}/g;
+
+/**
+ * Every "{path}" written in a token value, including strings nested in an
+ * object or an array. Only strings are read: a dimension such as
+ * { "value": 2, "unit": "px" } has braces of its own that are not a reference.
+ */
+function referencesIn(value) {
+  if (typeof value === 'string') return [...value.matchAll(REFERENCE)].map((m) => m[1]);
+  if (value !== null && typeof value === 'object') return Object.values(value).flatMap(referencesIn);
+  return [];
+}
 
 /**
  * Each axis maps to a data attribute. `base` is the variant that $value holds and
@@ -47,6 +63,15 @@ StyleDictionary.registerPreprocessor({
           for (const [variant, value] of Object.entries(variants)) {
             if (!AXES[axis].variants.includes(variant)) {
               throw new Error(`Unknown ${axis} variant "${variant}" on ${path.join('.')}`);
+            }
+            // Style Dictionary would resolve the reference against the base token,
+            // which is the base variant's value, not this variant's.
+            const [reference] = referencesIn(value);
+            if (reference !== undefined) {
+              throw new Error(
+                `The ${axis} ${variant} value of ${path.join('.')} contains the reference {${reference}}. ` +
+                  'A mode value must be a literal, because a reference resolves to the base value.',
+              );
             }
             let target = modeTree;
             for (const key of [axis, variant, ...path.slice(0, -1)]) target = target[key] ??= {};
@@ -101,13 +126,23 @@ StyleDictionary.registerTransformGroup({
   ],
 });
 
-const REFERENCE = /\{([^{}]+)\}/g;
-
-/** The paths a base token's $value refers to, as written: "{color.ink}" is color.ink. */
-const referencesOf = (token) =>
-  typeof token.original.$value === 'string'
-    ? [...token.original.$value.matchAll(REFERENCE)].map((m) => m[1])
-    : [];
+/**
+ * The paths a base token's $value refers to, as written: "{color.ink}" is color.ink.
+ * A reference is followed only when it is the whole $value, a string. Inside a
+ * composite value it would be resolved once and never repeated in a theme scope,
+ * so the build refuses it.
+ */
+function referencesOf(token) {
+  const { $value } = token.original;
+  const found = referencesIn($value);
+  if (found.length > 0 && typeof $value !== 'string') {
+    throw new Error(
+      `Token ${token.path.join('.')} has a composite $value that contains the reference {${found[0]}}. ` +
+        'Write the reference as the whole $value, a string.',
+    );
+  }
+  return found;
+}
 
 /** The base token a reference path names. */
 function target(path, byPath) {
@@ -249,14 +284,36 @@ StyleDictionary.registerFormat({
 });
 
 function buildTokenObject(dictionary) {
-  const { base, modes } = splitTokens(dictionary.allTokens);
+  const { base, modes, byPath } = splitTokens(dictionary.allTokens);
   const modeValues = new Map();
+  const setMode = (name, axis, variant, value) => {
+    const entry = modeValues.get(name) ?? {};
+    (entry[axis] ??= {})[variant] = value;
+    modeValues.set(name, entry);
+  };
   for (const [axis, variants] of Object.entries(modes)) {
     for (const [variant, decls] of Object.entries(variants)) {
-      for (const d of decls) {
-        const entry = modeValues.get(d.name) ?? {};
-        (entry[axis] ??= {})[variant] = d.value;
-        modeValues.set(d.name, entry);
+      for (const d of decls) setMode(d.name, axis, variant, d.value);
+    }
+  }
+  // A token that holds a reference reads as the token it names in every mode,
+  // as its var() does in the CSS. Without this, `modes.theme.dark ?? value` would
+  // hand a reader the light value. In a variant, its value is its original
+  // $value with each reference replaced by that token's value there: the
+  // variant's own value if it has one, else its base value.
+  const valueIn = (token, axis, variant) => {
+    const own = modeValues.get(token.name)?.[axis]?.[variant];
+    if (own !== undefined) return own;
+    if (referencesOf(token).length === 0) return token.$value;
+    return token.original.$value.replace(REFERENCE, (_, path) =>
+      valueIn(target(path, byPath), axis, variant),
+    );
+  };
+  for (const [axis, variants] of Object.entries(modes)) {
+    for (const [variant, decls] of Object.entries(variants)) {
+      const changed = new Set(decls.map((d) => d.name));
+      for (const t of followers(base, changed, byPath)) {
+        setMode(t.name, axis, variant, valueIn(t, axis, variant));
       }
     }
   }
