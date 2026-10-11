@@ -1,0 +1,41 @@
+/*
+ * Link, the inline link. The document names Link Blue for it and the app never
+ * used it, so the app's links had no hover and no focus style. This one is
+ * Link Blue and always underlined, thickens its underline on hover and press
+ * so the change is not color alone, and takes the standard focus ring.
+ * Derived in docs/design-system.md ("Link").
+ */
+@layer components {
+  .link {
+    /* The micro radius makes the focus ring follow the link in every shape. */
+    border-radius: var(--radius-micro);
+    color: var(--color-link);
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (hover: hover) {
+    .link:is(:hover, [data-hovered]):not([data-disabled]) {
+      text-decoration-thickness: 2px;
+    }
+  }
+
+  /* The same step as hover, since touch has no hover to show it. */
+  .link:is(:active, [data-pressed]):not([data-disabled]) {
+    text-decoration-thickness: 2px;
+  }
+
+  .link:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* Switched off, but still a link: the underline stays. */
+  .link[data-disabled] {
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+}

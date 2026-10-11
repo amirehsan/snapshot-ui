@@ -1162,3 +1162,95 @@ left edge as the content below it. An indented label reads as a different level
 of hierarchy, which is what the rail's group label learned. Where a label has
 no gutter beside it, a caller sets `margin-inline-start: 0` on
 `.eyebrow::before` to keep the dot inline.
+
+## Link
+
+The document names Link Blue for inline links. The app never used it for one:
+its inline links were Ink with an underline, written out again inside three
+panels, with no hover and no focus style, so keyboard focus showed only the
+browser's default ring. Link Blue appeared only in code highlighting. The
+library draws one link and gives it the states the app left out.
+
+- **Link Blue, underlined.** The text is `--color-link`, which is lifted in dark
+  as the document specifies. Color alone does not tell a link from the words
+  around it, so the underline always stays: 1px, offset 0.25em, which is 4px at
+  body size and the app's offset, and it scales with the type.
+- **Measured.** Link Blue is already in the contrast gate as text on canvas,
+  lifted, float and raised, so a link is held to 4.5:1 on every surface a page,
+  card or rail can be. It measures 5.16 to 5.86 in light and 4.81 to 6.05 in
+  dark. No new pair was needed.
+- **Hover and press thicken the underline to 2px.** The change is not
+  color-only and does not move the text. The color stays put, so the measured
+  pairs are the only ones in play. Press shows the same step as hover, because
+  touch has no hover to show it.
+- **Focus is the standard ring**, `--focus-ring-color` at the standard width
+  and offset. The link takes the micro radius so the ring follows the link in
+  every shape.
+- **A disabled link is Dust Taupe** with the `not-allowed` cursor. It keeps its
+  underline, so the word still reads as a link that is switched off, and hover
+  does nothing.
+- **An inline link is exempt from the 40px target.** WCAG 2.5.8 excepts a link
+  inside a sentence, and a 40px hit area would overlap the lines above and
+  below it. A link used alone as a control, such as a menu entry, takes its
+  height from the container it sits in.
+
+## Kbd
+
+The app drew its key hints twice: the rail's launcher key at 14px and the
+search palette's keys at 11px. 11px is under the 12px floor for short labels,
+so the library has one key, at 12px, that looks the same wherever it sits.
+
+- Slate on Bone, the app's pairing. Slate on Bone is already in the contrast
+  gate and measures 4.99 in light and 6.44 in dark.
+- `--radius-micro`, the step the shape table gives key hints, so a key follows
+  the shape axis.
+- Weight 700 with the overline tracking, and tabular figures, so a row of keys
+  such as the arrows and Enter keeps one width per key.
+- Sofia Sans. A browser gives `kbd` a monospace face; the library sets the sans
+  family back, since a key is a label and `--font-mono` is for code only.
+- The app hid its rail key from assistive technology, so the shortcut was not
+  announced there. A key inside a sentence should be read, so the library adds
+  no `aria-hidden`; a caller who does not want the key announced passes it.
+
+## Badge
+
+The document has no badge and the app drew none, so this one is derived. It
+labels a state or a count beside a name. It is not a control, so it has no
+hover, no focus ring and no touch target.
+
+- **Outlined, not filled.** A badge is a 1px border and a label in the same
+  color. A tinted fill would put the text on a ground of its own and add a
+  pair to measure for every tone on every surface. With no fill the text sits
+  on the surface behind the badge, and every pair is one the gate already
+  holds. The border is a hairline's weight: a badge labels, it is not a control
+  to be found, so it does not need the 1.5px edge a control gets.
+- **Four tones.** Neutral is Slate, info is Link Blue, success is the success
+  color and error is the error color. Neutral is the base, so it has no class
+  of its own. Clay is unsaved work and Signal Orange is consent, and Light
+  Signal Orange is an attention cue that a label has no use for, so none of the
+  three is a tone.
+- **A short uppercase label.** 12px, the floor for short uppercase text,
+  weight 700 and the overline tracking. Figures are tabular, so a column of
+  counts such as 12 and 8 lines up. The corners are `--radius-micro`, the step
+  the shape table gives badges, so the shape axis reaches them.
+- **Color is never the only signal.** The label says what the badge means. The
+  tone only repeats it.
+- **A long label wraps inside the badge.** It breaks anywhere, so no label can
+  push a narrow screen sideways.
+
+Measured as the text color on each surface a badge sits on, light then dark,
+for canvas, lifted, float and raised in that order. The 1px border is the same
+color as the text, so it clears the 3:1 that WCAG 1.4.11 asks of an edge by
+the same margin. The lowest text pair is 4.81, info on raised in dark.
+
+| Tone | Color | Light | Dark |
+| --- | --- | --- | --- |
+| Neutral | Slate | 4.84, 5.31, 5.49, 5.49 | 7.26, 6.94, 6.94, 6.44 |
+| Info | Link Blue | 5.16, 5.67, 5.86, 5.86 | 6.05, 5.46, 5.46, 4.81 |
+| Success | Success | 6.55, 7.20, 7.44, 7.44 | 7.03, 6.34, 6.34, 5.59 |
+| Error | Error | 6.58, 7.22, 7.46, 7.46 | 6.36, 5.73, 5.73, 5.06 |
+
+All sixteen pairs are in the contrast gate already, so Badge adds none. Slate
+is also measured on Bone, 4.99 and 6.44, so a neutral badge may sit there. The
+three colored tones are not measured on Bone, so they stay on the four
+surfaces above.

@@ -1,0 +1,79 @@
+---
+title: Link
+description: An inline link in Link Blue, always underlined, with a thicker underline on hover and press and the standard focus ring.
+icon: Link
+---
+
+<Section>
+
+## Examples
+
+Link Blue and an underline mark a link, so color is never the only cue. The underline thickens on hover and press.
+
+<Preview name="link-inline" />
+
+</Section>
+
+<Section>
+
+## States
+
+A disabled link is Dust Taupe and keeps its underline, so the word still reads as a link that is switched off.
+
+<Preview name="link-states" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Give it an `href`. For a link that opens a new tab, pass `target` and `rel` as you would to an anchor.
+
+<Code code={`import { Link } from '@snapshot-ui/react';
+
+export function Footnote() {
+  return (
+    <p>
+      Built on{' '}
+      <Link href="https://react-aria.adobe.com" target="_blank" rel="noreferrer">
+        React Aria
+      </Link>
+      .
+    </p>
+  );
+}`} />
+
+For client-side routing in a framework, wrap your app in React Aria's `RouterProvider`. Link then navigates through your router.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria Link prop is accepted. These are the ones Snapshot UI adds or shapes.
+
+<PropsTable path="../../packages/react/src/link/Link.tsx" type="Pick<LinkProps, 'href' | 'target' | 'rel' | 'isDisabled' | 'onPress' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A native anchor, with React Aria handling press across mouse, touch and keyboard. A disabled link is announced as disabled and cannot be followed.
+
+<Keys rows={[['Enter', 'Follows the link.'], ['Tab', 'Moves focus to it. The 2px ink ring sits outside the text.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps links in the system.
+
+<Rules dos={['Say where the link goes, such as Read the guide.', 'Keep the underline. It is what marks the link.']} donts={['Never use a link for an action. Something that does a job is a Button.', 'Never style a link by color alone.']} />
+
+</Section>

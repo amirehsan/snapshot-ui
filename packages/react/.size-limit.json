@@ -21,6 +21,27 @@
     "limit": "1 kB"
   },
   {
+    "name": "import { Link } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Link }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
+    "name": "import { Kbd } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Kbd }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
+    "name": "import { Badge } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Badge }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

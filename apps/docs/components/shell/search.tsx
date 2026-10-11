@@ -1,5 +1,6 @@
 'use client';
 
+import { Kbd } from '@snapshot-ui/react';
 import { useFetchSearch } from 'fumadocs-core/search/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -109,7 +110,7 @@ export function SearchDialog({
           }}
           onKeyDown={onInputKeyDown}
         />
-        <span className="kbd">esc</span>
+        <Kbd>esc</Kbd>
       </div>
       <p className={noMatch || failed ? 'search-empty' : 'visually-hidden'} role="status">
         {status}
@@ -128,10 +129,10 @@ export function SearchDialog({
       ) : null}
       <div className="search-foot">
         <span>
-          <span className="kbd">&#8593;</span> <span className="kbd">&#8595;</span> to move
+          <Kbd>&#8593;</Kbd> <Kbd>&#8595;</Kbd> to move
         </span>
         <span>
-          <span className="kbd">&#8629;</span> to open
+          <Kbd>&#8629;</Kbd> to open
         </span>
       </div>
     </dialog>

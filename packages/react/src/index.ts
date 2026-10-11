@@ -13,3 +13,6 @@ export {
   type TextSize,
   type TextTone,
 } from './typography';
+export { Link, type LinkProps } from './link';
+export { Kbd, type KbdProps } from './kbd';
+export { Badge, type BadgeProps, type BadgeTone } from './badge';

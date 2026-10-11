@@ -1,6 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { composite, contrastFailures, contrastRatio, paletteFor, parseColor } from '../scripts/contrast.js';
+import {
+  CONTRAST_PAIRS,
+  TEXT,
+  composite,
+  contrastFailures,
+  contrastRatio,
+  paletteFor,
+  parseColor,
+} from '../scripts/contrast.js';
 
 const tokens = JSON.parse(readFileSync(new URL('../tokens/tokens.json', import.meta.url), 'utf8'));
 const ratio = (a, b) => contrastRatio(parseColor(a), parseColor(b));
@@ -87,5 +95,19 @@ describe('contrastFailures', () => {
     expect(() => contrastFailures(broken, 'light')).toThrow(
       'Color "canvas" in the light palette is not opaque and cannot be a base',
     );
+  });
+});
+
+describe('the text colors Link and Badge draw', () => {
+  it('measures link, success, error and slate text on canvas, lifted, float and raised', () => {
+    // Badge has no fill and Link draws none, so these pairs are every pair they need.
+    const measured = new Set(
+      CONTRAST_PAIRS.filter((pair) => pair.minimum === TEXT).map((pair) => `${pair.text} on ${pair.ground}`),
+    );
+    for (const text of ['link', 'success', 'error', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float', 'raised']) {
+        expect(measured, `${text} on ${ground}`).toContain(`${text} on ${ground}`);
+      }
+    }
   });
 });

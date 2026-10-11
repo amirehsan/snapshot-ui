@@ -13,3 +13,6 @@
 @import './components/heading.css';
 @import './components/copy.css';
 @import './components/eyebrow.css';
+@import './components/link.css';
+@import './components/kbd.css';
+@import './components/badge.css';

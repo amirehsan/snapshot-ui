@@ -1,0 +1,42 @@
+/*
+ * Badge, a short label for a state or a count. New to the library, so it is
+ * derived in docs/design-system.md ("Badge"): a 1px border and a label in one
+ * color, with no fill. With no fill the text sits on the surface behind the
+ * badge, so every text pair is one the contrast gate already measures. Neutral
+ * is the base; info, success and error only change the color. It is never clay
+ * or signal orange, which mean unsaved work and consent.
+ */
+@layer components {
+  .badge {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding-block: 0.125rem;
+    padding-inline: 0.5rem;
+    /* The border takes the text color, so it passes wherever the text does. */
+    border: 1px solid currentColor;
+    border-radius: var(--radius-micro);
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    letter-spacing: var(--text-overline--letter-spacing);
+    font-weight: var(--text-overline--font-weight);
+    font-variant-numeric: tabular-nums;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  .badge-info {
+    color: var(--color-link);
+  }
+
+  .badge-success {
+    color: var(--color-success);
+  }
+
+  .badge-error {
+    color: var(--color-error);
+  }
+}

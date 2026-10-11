@@ -1,0 +1,71 @@
+---
+title: Badge
+description: A short outlined label for a state or a count, in neutral, info, success or error. Static, with no fill.
+icon: Tag
+---
+
+<Section>
+
+## Tones
+
+Neutral is the base. Info, success and error only change the color. Clay and signal orange are never tones: they mean unsaved work and consent.
+
+<Preview name="badge-tones" />
+
+</Section>
+
+<Section>
+
+## Counts
+
+Figures are tabular, so a column of counts lines up whatever the digits.
+
+<Preview name="badge-counts" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+A static `span` with no React Aria, so it works in a server component without `'use client'`.
+
+<Code code={`import { Badge } from '@snapshot-ui/react';
+
+export function Row() {
+  return (
+    <p>
+      Release notes <Badge tone="info">New</Badge>
+    </p>
+  );
+}`} />
+
+</Section>
+
+<Section>
+
+## Props
+
+A Badge accepts every attribute of an HTML element.
+
+<PropsTable path="../../packages/react/src/badge/Badge.tsx" type="Pick<BadgeProps, 'tone' | 'children' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+Color is never the only signal. The label says what the badge means, and the tone repeats it. A badge is not announced when it changes: if a count updates while the page is open, put it in a live region.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps badges in the system.
+
+<Rules dos={['Keep the label to a word or a number.', 'Put it on the page, a card, a rail or a raised surface, where its colors are measured.']} donts={['Never fill a badge or add a color of your own. A tinted fill puts the text on a ground nobody measured.', 'Never use a badge as a button. It is a label, not a control.']} />
+
+</Section>

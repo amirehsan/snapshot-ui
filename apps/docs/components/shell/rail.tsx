@@ -1,5 +1,6 @@
 'use client';
 
+import { Badge, Kbd } from '@snapshot-ui/react';
 import type { Item, Node, Root } from 'fumadocs-core/page-tree';
 import { X } from 'lucide-react';
 import Link from 'next/link';
@@ -130,7 +131,7 @@ export function Rail({
             </svg>
             <span className="rail-label">snapshot ui</span>
           </Link>
-          <span className="badge rail-version">v{version}</span>
+          <Badge className="rail-version">v{version}</Badge>
           {/* Only drawn while the rail is a drawer, where touch and screen reader users need a way out. */}
           <button
             className="icon-button icon-button-ghost rail-close"
@@ -160,7 +161,7 @@ export function Rail({
             <path d="m16 16 5 5" />
           </svg>
           <span className="rail-label">Search docs</span>
-          <span className="kbd rail-key">&#8984;K</span>
+          <Kbd className="rail-key">&#8984;K</Kbd>
         </button>
         <nav className="rail-nav" ref={nav}>
           {groupsOf(tree).map((group, index) => {
