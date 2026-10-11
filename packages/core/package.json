@@ -25,13 +25,25 @@
     "dist"
   ],
   "exports": {
+    "./styles.css": {
+      "types": "./dist/css.d.ts",
+      "default": "./dist/styles.css"
+    },
     "./tokens.css": {
       "types": "./dist/css.d.ts",
       "default": "./dist/tokens.css"
     },
+    "./base.css": {
+      "types": "./dist/css.d.ts",
+      "default": "./dist/base.css"
+    },
     "./tailwind.css": {
       "types": "./dist/css.d.ts",
       "default": "./dist/tailwind.css"
+    },
+    "./components/*.css": {
+      "types": "./dist/css.d.ts",
+      "default": "./dist/components/*.css"
     },
     "./tokens": {
       "types": "./dist/tokens.d.ts",
@@ -40,17 +52,24 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "node scripts/build-tokens.js",
+    "build": "node scripts/build-tokens.js && node scripts/build-css.js",
     "test": "vitest run",
     "check:contrast": "node scripts/check-contrast.js",
+    "lint": "stylelint \"src/**/*.css\" && eslint .",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "check:package": "publint && attw --pack . --profile esm-only"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
     "@tailwindcss/cli": "4.3.3",
     "@types/node": "24.19.2",
     "@typescript/native": "catalog:",
+    "color-name": "2.1.1",
+    "lightningcss": "1.33.0",
+    "postcss-value-parser": "4.2.0",
+    "publint": "0.3.25",
     "style-dictionary": "5.6.1",
+    "stylelint": "17.16.0",
     "tailwindcss": "4.3.3",
     "typescript": "catalog:",
     "vitest": "5.0.3"

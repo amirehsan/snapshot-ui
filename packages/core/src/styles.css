@@ -1,0 +1,10 @@
+/*
+ * The one-line setup: tokens and every component.
+ *   import '@snapshot-ui/core/styles.css';
+ * The layer order is declared here so it holds with or without Tailwind, whose
+ * own declaration names the same four layers in the same order.
+ * Every file in ./components must be imported below; test/css.test.js checks.
+ */
+@layer theme, base, components, utilities;
+
+@import '../dist/tokens.css';
