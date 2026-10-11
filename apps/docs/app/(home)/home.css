@@ -106,6 +106,12 @@
     transition: border-radius 200ms ease;
   }
 
+  .install-command:focus-visible {
+    border-radius: var(--radius-micro);
+    outline: var(--focus-ring-width) solid var(--color-ink);
+    outline-offset: var(--focus-ring-offset);
+  }
+
   .install b {
     color: var(--color-slate);
     font-weight: 400;
@@ -133,10 +139,6 @@
     transition: border-radius 200ms ease;
   }
 
-  .frame-light {
-    background-color: #2b2b2a;
-  }
-
   .frame .card {
     box-shadow: var(--shadow-float);
   }
@@ -149,7 +151,7 @@
     pointer-events: none;
   }
 
-  .toast {
+  .frame-toast {
     position: absolute;
     right: 56px;
     bottom: 40px;
@@ -165,7 +167,7 @@
     transition: border-radius 200ms ease;
   }
 
-  .toast-dot {
+  .frame-toast-dot {
     display: grid;
     place-items: center;
     width: 24px;
@@ -175,7 +177,7 @@
     color: var(--color-canvas);
   }
 
-  .toast-dot svg {
+  .frame-toast-dot svg {
     width: 14px;
     height: 14px;
   }
@@ -498,15 +500,6 @@
     font-size: 0.875rem;
   }
 
-  .footer-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    border: 1px solid rgb(255 255 255 / 0.4);
-    border-radius: var(--radius-pill);
-    color: #ffffff;
-  }
   .frame-card {
     position: relative;
   }
@@ -625,7 +618,7 @@
       margin-top: 0;
     }
 
-    .toast {
+    .frame-toast {
       position: relative;
       right: auto;
       bottom: auto;
@@ -694,8 +687,7 @@
     }
 
     .nav-cta,
-    .nav-actions [aria-label='GitHub'],
-    .nav-actions [data-toggle-theme] {
+    .nav-actions [aria-label='GitHub'] {
       display: none;
     }
 
@@ -715,7 +707,7 @@
       font-size: 0.8125rem;
     }
 
-    .install > span {
+    .install-command {
       min-width: 0;
       overflow-x: auto;
       white-space: nowrap;
@@ -746,7 +738,7 @@
       display: none;
     }
 
-    .toast {
+    .frame-toast {
       justify-self: stretch;
     }
 

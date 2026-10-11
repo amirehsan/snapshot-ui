@@ -1,39 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactElement } from 'react';
-
-type Outcome = 'Copied' | 'Copy failed' | '';
+import type { ReactElement } from 'react';
+import { useCopy } from '@/lib/use-copy';
 
 /** Copies the code. The outcome is announced by a status region that is always mounted, so a screen reader hears it. */
 export function CopyButton({ text }: { text: string }): ReactElement {
-  const [outcome, setOutcome] = useState<Outcome>('');
-  const timer = useRef(0);
-
-  useEffect(
-    () => () => {
-      window.clearTimeout(timer.current);
-    },
-    [],
-  );
-
-  const copy = async (): Promise<void> => {
-    // The Clipboard API is missing outside secure contexts, whatever its type says.
-    const clipboard = navigator.clipboard as Clipboard | undefined;
-    let result: Outcome = 'Copy failed';
-    try {
-      if (clipboard) {
-        await clipboard.writeText(text);
-        result = 'Copied';
-      }
-    } catch {
-      // Denied or unavailable: the status says so.
-    }
-    setOutcome(result);
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      setOutcome('');
-    }, 2000);
-  };
+  const { outcome, copy } = useCopy(text);
 
   return (
     <>

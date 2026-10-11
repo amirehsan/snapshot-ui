@@ -9,6 +9,22 @@ export const sideways = (page: Page): Promise<number> =>
 export const settled = (page: Page): Promise<void> =>
   expect(page.locator('.header input[type="radio"]:checked')).toHaveCount(2);
 
+/** The homepage's Corners switch settles after hydration: exactly one of its radios is checked. */
+export const cornersSettled = (page: Page): Promise<void> =>
+  expect(page.locator('.shape-switch input[type="radio"]:checked')).toHaveCount(1);
+
+/**
+ * Takes the clipboard away before the page loads: `missing` as outside a secure context, `refusing`
+ * as when permission is denied. Either way a copy button must report a failure rather than throw.
+ */
+export const withoutClipboard = async (page: Page, mode: 'missing' | 'refusing'): Promise<void> => {
+  await page.addInitScript((how) => {
+    const clipboard =
+      how === 'missing' ? undefined : { writeText: () => Promise.reject(new Error('denied')) };
+    Object.defineProperty(navigator, 'clipboard', { value: clipboard, configurable: true });
+  }, mode);
+};
+
 /** Every axe violation on the page, as "rule: selectors". An empty list is a pass. */
 export const axeViolations = async (page: Page): Promise<string[]> => {
   const { violations } = await new AxeBuilder({ page }).analyze();
