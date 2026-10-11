@@ -8,6 +8,15 @@ export default {
   plugins: ['./stylelint/token-only.js'],
   rules: {
     'snapshot-ui/token-only': true,
+    // light-dark() is excluded from lowering in build-css.js, so it would ship
+    // unlowered below the browser floor. Components switch on data-theme tokens.
+    'function-disallowed-list': [
+      ['light-dark'],
+      {
+        message:
+          'Use the data-theme tokens instead of light-dark(), which the browser floor does not support (function-disallowed-list)',
+      },
+    ],
     'selector-class-pattern': [
       `^(?!${UTILITY_PREFIX}-)[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`,
       {

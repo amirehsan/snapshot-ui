@@ -25,6 +25,24 @@ describe('snapshot-ui/token-only', () => {
     'box-shadow: var(--shadow-raised), var(--shadow-ring);',
     'animation-name: tomato;',
     'outline: 2px solid var(--color-ink);',
+    'border-radius: 0px;',
+    'border-radius: var(--radius-control, 0);',
+    'border-radius: var(--radius-control, var(--radius-surface));',
+    'border-radius: var(--radius-control, calc(var(--radius-surface) - 4px));',
+    'border-radius: min(var(--radius-control), calc(var(--radius-surface) - 4px));',
+    'border-radius: clamp(0px, var(--radius-control), var(--radius-surface));',
+    '--card-radius: var(--radius-control);',
+    '--card-shadow: var(--shadow-raised);',
+    'box-shadow: var(--shadow-lift, none);',
+    'box-shadow: var(--shadow-lift, var(--shadow-raised));',
+    'background-image: linear-gradient(var(--color-canvas), transparent);',
+    'background-image: repeating-linear-gradient(to right, var(--color-ink), currentColor);',
+    'filter: drop-shadow(0 0 4px var(--color-ink));',
+    'filter: blur(2px) brightness(1.1);',
+    'filter: url(#fade);',
+    'mask-image: url(#fade);',
+    'color: color-mix(in srgb, var(--color-ink) 50%, transparent);',
+    '-webkit-text-fill-color: transparent;',
   ])('allows %s', async (decl) => {
     expect(await lint(`a { ${decl} }`)).toEqual([]);
   });
@@ -40,10 +58,46 @@ describe('snapshot-ui/token-only', () => {
     ['color: var(--color-ink, black);', 'literal color "black"'],
     ['--my-color: oklch(0.5 0.1 200);', 'literal color'],
     ['box-shadow: 0 1px 2px var(--color-ink);', 'literal shadow'],
+    // Named colors inside gradients, filters and color functions, whatever the property.
+    ['background-image: linear-gradient(red, blue);', 'literal color "red"'],
+    ['background-image: radial-gradient(circle, var(--color-ink), tan);', 'literal color "tan"'],
+    ['background-image: repeating-conic-gradient(navy, transparent);', 'literal color "navy"'],
+    ['mask-image: linear-gradient(black, transparent);', 'literal color "black"'],
+    ['mask: linear-gradient(black, transparent);', 'literal color "black"'],
+    ['border-image-source: linear-gradient(red, blue);', 'literal color "red"'],
+    ['border-image: linear-gradient(red, blue) 1;', 'literal color "red"'],
+    ['list-style-image: linear-gradient(red, blue);', 'literal color "red"'],
+    ['filter: drop-shadow(0 0 4px black);', 'literal color "black"'],
+    ['color: color-mix(in srgb, var(--color-ink), white);', 'literal color "white"'],
+    ['color: light-dark(black, white);', 'literal color "black"'],
+    ['-webkit-text-fill-color: red;', 'literal color "red"'],
+    ['-webkit-text-stroke-color: red;', 'literal color "red"'],
+    ['-webkit-text-stroke: 1px red;', 'literal color "red"'],
+    // Radii hidden in var() fallbacks, comparison functions and custom properties.
+    ['border-radius: var(--radius-control, 20px);', 'literal radius "var(--radius-control, 20px)"'],
+    ['border-radius: var(--radius-control, calc(20px - 4px));', 'literal radius'],
+    ['border-radius: calc(var(--radius-control, 20px) - 4px);', 'literal radius'],
+    ['border-radius: min(20px, var(--radius-control));', 'literal radius'],
+    ['border-radius: min(var(--radius-control), 10px);', 'literal radius'],
+    ['border-radius: max(10px, 0px);', 'literal radius'],
+    ['border-radius: clamp(0px, 10px, var(--radius-control));', 'literal radius'],
+    ['--card-radius: 20px;', 'literal radius "20px" in "--card-radius"'],
+    ['--card-radius: min(20px, var(--radius-control));', 'literal radius'],
+    // Shadows hidden in var() fallbacks and custom properties.
+    ['box-shadow: var(--shadow-lift, 0 1px 2px var(--color-ink));', 'literal shadow'],
+    [
+      '--card-shadow: 0 1px 2px var(--color-ink);',
+      'literal shadow "0 1px 2px var(--color-ink)" in "--card-shadow"',
+    ],
   ])('rejects %s', async (decl, expected) => {
     const warnings = await lint(`a { ${decl} }`);
     expect(warnings.length).toBeGreaterThan(0);
     expect(warnings.join('\n')).toContain(expected);
+  });
+
+  it('keeps the deliberate nested-radius offset: a var() inside calc() may be adjusted by a length', async () => {
+    expect(await lint('a { border-radius: calc(var(--radius-surface) - 4px); }')).toEqual([]);
+    expect(await lint('a { border-radius: calc(var(--radius-surface) + var(--space-1)); }')).toEqual([]);
   });
 
   it('reports the exact message for border-radius: 20px', async () => {
@@ -63,6 +117,13 @@ describe('the shared config', () => {
   it('accepts kebab-case component classes', async () => {
     expect(await lintWith('.button-primary { color: var(--color-ink); }')).toEqual([]);
     expect(await lintWith('.field-label::before { color: var(--color-clay); }')).toEqual([]);
+  });
+
+  it('rejects light-dark(), which the browser floor does not support', async () => {
+    expect(await lintWith('a { color: light-dark(var(--color-ink), var(--color-canvas)); }')).toContain(
+      'function-disallowed-list',
+    );
+    expect(await lintWith('a { color: var(--color-ink); }')).not.toContain('function-disallowed-list');
   });
 
   it('rejects classes that collide with Tailwind utilities or are not kebab-case', async () => {
