@@ -3,6 +3,8 @@
 import { createContext, use } from 'react';
 
 export interface ShellActions {
+  /** Whether the rail is open as a drawer, for the menu button's aria-expanded. */
+  drawerOpen: boolean;
   openDrawer: () => void;
   openSearch: () => void;
 }

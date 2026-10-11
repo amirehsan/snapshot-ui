@@ -35,6 +35,7 @@
 
 @layer components {
   .brand {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 10px;
@@ -46,6 +47,57 @@
   .brand svg {
     width: 26px;
     height: 26px;
+  }
+
+  /* Drawn at 26px, hit at 40px: the touch target floor, with no layout shift. */
+  .brand::after {
+    content: '';
+    position: absolute;
+    inset: -7px;
+  }
+
+  /* ---- Hidden text and the skip link ------------------------------------ */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Out of sight until keyboard focus lands on it, then a pill over the page. */
+  .skip-link {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .skip-link:focus {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    width: auto;
+    height: auto;
+    min-height: 40px;
+    margin: 0;
+    padding: 0 20px;
+    overflow: visible;
+    clip-path: none;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+    font-weight: 500;
+    outline: var(--focus-ring-width) solid var(--color-canvas);
+    outline-offset: -4px;
   }
 
   /* ---- Type ----------------------------------------------------------- */
@@ -422,12 +474,6 @@
     background-color: var(--color-raised);
   }
 
-  .check-on {
-    border-color: var(--color-ink);
-    background-color: var(--color-ink);
-    color: var(--color-canvas);
-  }
-
   .check svg {
     width: 14px;
     height: 14px;
@@ -472,7 +518,8 @@
     flex-wrap: wrap;
   }
 
-  .row-between {
+  /* Spreads a row's children to its two ends. */
+  .spread {
     justify-content: space-between;
   }
 
@@ -562,5 +609,18 @@
   .code pre:focus-visible {
     outline: var(--focus-ring-width) solid var(--color-ink);
     outline-offset: var(--focus-ring-offset);
+  }
+}
+
+/*
+ * Reduced motion stops every transition. Unlayered on purpose: it then beats
+ * every layered rule whatever its specificity, the library's own included.
+ * A spinner is an animation, not a transition, and slows rather than stops.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none;
   }
 }

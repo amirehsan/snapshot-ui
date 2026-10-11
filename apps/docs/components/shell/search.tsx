@@ -2,6 +2,7 @@
 
 import { useFetchSearch } from 'fumadocs-core/search/client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, type KeyboardEvent, type ReactElement } from 'react';
 
 const KIND = { page: 'Page', heading: 'Section', text: 'Text' } as const;
@@ -15,6 +16,7 @@ export function SearchDialog({
   onOpenChange: (open: boolean) => void;
 }): ReactElement {
   const dialog = useRef<HTMLDialogElement>(null);
+  const router = useRouter();
   const { search, onSearchChange, data, isLoading } = useFetchSearch();
 
   useEffect(() => {
@@ -41,6 +43,27 @@ export function SearchDialog({
   const close = (): void => {
     onOpenChange(false);
   };
+
+  // Enter in the field opens the first result, as the footer promises. On a
+  // result, Enter is the link's own.
+  const first = results[0];
+  const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing || !first) return;
+    event.preventDefault();
+    router.push(first.url);
+    close();
+  };
+
+  // One status region, mounted before its text changes so that a screen reader
+  // announces the outcome of each search. It shows only when nothing matches.
+  const status =
+    search.length === 0
+      ? ''
+      : results.length > 0
+        ? `${String(results.length)} ${results.length === 1 ? 'result' : 'results'}`
+        : isLoading
+          ? 'Searching'
+          : `Nothing matches "${search}"`;
 
   return (
     // The dialog closes on Escape natively; a click on the backdrop lands on the dialog itself.
@@ -76,14 +99,17 @@ export function SearchDialog({
           onChange={(event) => {
             onSearchChange(event.target.value);
           }}
+          onKeyDown={onInputKeyDown}
         />
         <span className="kbd">esc</span>
       </div>
-      {search.length === 0 ? null : results.length === 0 ? (
-        <p className="search-empty" role="status">
-          {isLoading ? 'Searching' : `Nothing matches "${search}"`}
-        </p>
-      ) : (
+      <p
+        className={search.length > 0 && results.length === 0 ? 'search-empty' : 'visually-hidden'}
+        role="status"
+      >
+        {status}
+      </p>
+      {results.length > 0 ? (
         <ul className="search-results">
           {results.map((item) => (
             <li key={item.id}>
@@ -94,7 +120,7 @@ export function SearchDialog({
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
       <div className="search-foot">
         <span>
           <span className="kbd">&#8593;</span> <span className="kbd">&#8595;</span> to move

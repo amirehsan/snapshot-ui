@@ -39,6 +39,7 @@ export function Rail({
   pathname,
   version,
   collapsed,
+  drawerOpen,
   onToggleCollapsed,
   onSearch,
 }: {
@@ -46,6 +47,7 @@ export function Rail({
   pathname: string;
   version: string;
   collapsed: boolean;
+  drawerOpen: boolean;
   onToggleCollapsed: () => void;
   onSearch: () => void;
 }): ReactElement {
@@ -106,7 +108,17 @@ export function Rail({
 
   return (
     <>
-      <aside className="rail" id="rail" aria-label="Documentation">
+      {/*
+        The page's complementary landmark, and, open as a drawer, a modal dialog.
+        An aside may not take the dialog role, so this is a div with both roles in turn.
+      */}
+      <div
+        className="rail"
+        id="rail"
+        role={drawerOpen ? 'dialog' : 'complementary'}
+        aria-modal={drawerOpen ? true : undefined}
+        aria-label={drawerOpen ? 'Menu' : 'Documentation'}
+      >
         <div className="rail-head">
           <Link className="brand" href="/">
             <svg viewBox="0 0 26 26" fill="none" aria-hidden>
@@ -175,7 +187,7 @@ export function Rail({
             </svg>
           </a>
         </div>
-      </aside>
+      </div>
       <button
         className="rail-collapse"
         type="button"

@@ -55,7 +55,7 @@ const SHAPES = [
 ] as const;
 
 export function DocsHeader({ group, title }: { group: string; title: string }): ReactElement {
-  const { openDrawer } = useShell();
+  const { drawerOpen, openDrawer } = useShell();
   const { resolvedTheme, setTheme } = useTheme();
   // Both switches show values only the browser knows, so they settle after hydration.
   const mounted = useMounted();
@@ -68,6 +68,7 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
           className="icon-button header-menu"
           type="button"
           aria-label="Open the menu"
+          aria-expanded={drawerOpen}
           aria-controls="rail"
           onClick={openDrawer}
         >
