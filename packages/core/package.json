@@ -41,7 +41,7 @@
   },
   "scripts": {
     "build": "node scripts/build-tokens.js",
-    "test": "pnpm run build && vitest run",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },
