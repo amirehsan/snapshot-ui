@@ -22,7 +22,7 @@ describe('useValueLength', () => {
     expect(result.current.length).toBe(0);
   });
 
-  it('counts a line break as one character', () => {
+  it('counts every position of the string it is given, a line break included', () => {
     const { result } = renderHook(() => useValueLength({}));
     act(() => {
       result.current.onChange('one\ntwo');
@@ -30,7 +30,19 @@ describe('useValueLength', () => {
     expect(result.current.length).toBe(7);
   });
 
-  it('tells the caller what was typed, after it has counted it', () => {
+  it('counts UTF-16 code units: an emoji counts 2, and so does an accent built from two code points', () => {
+    const emoji = renderHook(() => useValueLength({ defaultValue: '\u{1F44D}' }));
+    expect(emoji.result.current.length).toBe(2);
+    const typed = renderHook(() => useValueLength({}));
+    act(() => {
+      typed.result.current.onChange('e\u0301');
+    });
+    expect(typed.result.current.length).toBe(2);
+    const controlled = renderHook(() => useValueLength({ value: 'a\u{1F44D}b' }));
+    expect(controlled.result.current.length).toBe(4);
+  });
+
+  it('tells the caller what was typed', () => {
     const calls: string[] = [];
     const onChange = vi.fn((value: string) => {
       calls.push(value);
@@ -64,5 +76,15 @@ describe('useValueLength', () => {
     expect(result.current.length).toBe(8);
     rerender({ value: 'abcdefghij' });
     expect(result.current.length).toBe(10);
+  });
+
+  it('counts an empty controlled value as empty, and not the length of what was typed', () => {
+    const { result } = renderHook((props) => useValueLength(props), {
+      initialProps: { value: '' },
+    });
+    act(() => {
+      result.current.onChange('abc');
+    });
+    expect(result.current.length).toBe(0);
   });
 });

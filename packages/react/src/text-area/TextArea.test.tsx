@@ -285,6 +285,24 @@ describe('TextArea', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('reads the hint and the error of an invalid field, and drops only the chip', async () => {
+    const { container } = render(
+      <TextArea
+        label="Notes"
+        description="Shown in search results."
+        isChanged
+        isInvalid
+        errorMessage="Write a note."
+        defaultValue="!"
+      />,
+    );
+    const textarea = screen.getByRole('textbox', { name: 'Notes' });
+    expect(textarea).toHaveAccessibleDescription('Shown in search results. Write a note.');
+    expect(textarea.getAttribute('aria-describedby')?.split(' ')).toHaveLength(2);
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    await expectNoA11yViolations(container);
+  });
+
   it('lets invalid outrank changed when React Aria finds the field invalid', async () => {
     const user = userEvent.setup();
     const { container } = render(

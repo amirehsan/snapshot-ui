@@ -52,9 +52,13 @@ export interface TextAreaProps extends Omit<
    */
   changedLabel?: string;
   /**
-   * About how long the value should be. Shows a count of the value's length,
-   * a line break counting as one character, from 70% of the budget on. It
-   * advises and never blocks typing.
+   * About how long the value should be. Shows a count of the value's length
+   * from 70% of the budget on. It advises and never blocks typing, so the count
+   * can pass the budget. The length is measured as JavaScript and `maxLength`
+   * measure it, in UTF-16 code units: a line break counts as one, and an emoji
+   * or an accented letter built from two code points can count as two.
+   * `maxLength` is a hard stop that the count does not read, so set `budget` at
+   * or below it.
    */
   budget?: number;
   /** A class name, or a function of the field's state, merged after the library's own class. */
