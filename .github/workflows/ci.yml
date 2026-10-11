@@ -1,0 +1,116 @@
+# Every action is pinned to a full commit SHA, with its release tag beside it.
+# Dependabot opens a pull request when a newer release is out.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  # Its own job, so a missing PRIVATE_NAMES secret fails only this check and the
+  # others still report. Pushes and pull requests from this repository must have
+  # the secret. A fork's pull request cannot read secrets, so it warns and passes.
+  public-names:
+    name: Public names
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Check for private names
+        run: node scripts/check-public.js
+        env:
+          PRIVATE_NAMES: ${{ secrets.PRIVATE_NAMES }}
+          CHECK_PUBLIC_REQUIRED: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Restore the Turborepo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+      - name: Install Chromium for story and end-to-end tests
+        run: pnpm --filter @snapshot-ui/storybook exec playwright install --with-deps chromium
+      - name: Public names, root tests, format, lint, types, build, tests, packages, size
+        run: pnpm verify
+        env:
+          PRIVATE_NAMES: ${{ secrets.PRIVATE_NAMES }}
+      - name: Docs end-to-end
+        run: pnpm --filter @snapshot-ui/docs test:e2e
+      - name: Keep the built Storybook for the visual job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: storybook-static
+          path: apps/storybook/storybook-static
+          retention-days: 7
+      - name: Upload the docs report on failure
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: docs-playwright-report
+          path: apps/docs/playwright-report
+          retention-days: 7
+
+  visual:
+    name: Visual regression
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The baselines were made in this image, so compare in it too.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
+      options: --user 1001
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: storybook-static
+          path: apps/storybook/storybook-static
+      - name: Compare against the baselines
+        run: pnpm --filter @snapshot-ui/storybook test:visual
+      - name: Upload the report on failure
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: visual-report
+          path: apps/storybook/playwright-report
+          retention-days: 7
