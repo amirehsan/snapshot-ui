@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { axeViolations, hitSize, hitsAt, settled, sideways } from './support';
+import { axeViolations, hitSize, hitsAt, settled, sideways, withoutClipboard } from './support';
 
 const PAGE = '/docs/components/button';
 
@@ -342,9 +342,7 @@ test('the copy button reports that the code was copied', async ({ page, context 
 });
 
 test('the copy button reports a failure when there is no clipboard', async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
-  });
+  await withoutClipboard(page, 'missing');
   await visit(page);
   const block = page.locator('.code').filter({ has: page.getByRole('button', { name: 'Copy code' }) });
   await block.getByRole('button', { name: 'Copy code' }).click();

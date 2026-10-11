@@ -4,6 +4,7 @@ import type { Root } from 'fumadocs-core/page-tree';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { useRailCollapsed } from '@/lib/document-state';
+import { wrapTab } from '@/lib/focus-trap';
 import { writeRailCollapsed } from '@/lib/prepaint';
 import { ShellContext, type ShellActions } from './context';
 import { Rail } from './rail';
@@ -48,20 +49,7 @@ export function DocsShell({
       if (event.key === 'Escape') {
         setDrawerPath(null);
       } else if (event.key === 'Tab') {
-        // Everything behind the drawer is inert, so Tab would leave the page for the
-        // browser's own controls. Wrap at both ends instead.
-        const stops = [
-          ...document.querySelectorAll<HTMLElement>('#rail a[href], #rail button:not([disabled])'),
-        ];
-        const first = stops[0];
-        const last = stops.at(-1);
-        if (!first || !last) return;
-        const active = document.activeElement;
-        const inside = active instanceof HTMLElement && active.closest('#rail') !== null;
-        if (!inside || (event.shiftKey && active === first) || (!event.shiftKey && active === last)) {
-          event.preventDefault();
-          (event.shiftKey ? last : first).focus();
-        }
+        wrapTab(event, '#rail');
       }
     };
     // Past 1024px the rail is no longer a drawer, so a window widened with it open closes it.

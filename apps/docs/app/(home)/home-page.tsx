@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { SearchDialog } from '@/components/shell/search';
-import { useShape } from '@/lib/document-state';
+import { useMounted, useShape } from '@/lib/document-state';
+import { wrapTab } from '@/lib/focus-trap';
 import { writeShape, type Shape } from '@/lib/prepaint';
+import { useCopy } from '@/lib/use-copy';
 
 const INSTALL = 'pnpm add @snapshot-ui/react @snapshot-ui/core';
 
@@ -30,35 +32,65 @@ export function HomePage(): ReactElement {
   const { resolvedTheme, setTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // The Corners switch shows a value only the browser knows, so it settles after hydration.
+  const mounted = useMounted();
   const shape = useShape();
-  const [copied, setCopied] = useState(false);
+  const { outcome, copy } = useCopy(INSTALL);
   const menuButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const wasOpen = useRef(false);
 
   useEffect(() => {
-    // The footer's columns fold on phones and stay open everywhere else.
-    if (matchMedia('(width < 768px)').matches) {
-      document.querySelectorAll('.footer-col').forEach((column) => {
-        column.removeAttribute('open');
+    // What changes at the phone width, whenever the width changes. The footer's columns fold on
+    // a phone and stay open everywhere else; where they cannot be folded their summaries are not
+    // focus stops either. The install command scrolls sideways on a phone, so there a keyboard
+    // must be able to reach it.
+    const phone = matchMedia('(width < 768px)');
+    const apply = (): void => {
+      document.querySelectorAll<HTMLElement>('.footer-col').forEach((column) => {
+        column.toggleAttribute('open', !phone.matches);
+        const summary = column.querySelector('summary');
+        if (phone.matches) summary?.removeAttribute('tabindex');
+        else if (summary) summary.tabIndex = -1;
       });
-    }
+      const command = document.querySelector<HTMLElement>('.install-command');
+      if (phone.matches) command?.setAttribute('tabindex', '0');
+      else command?.removeAttribute('tabindex');
+    };
+    apply();
+    phone.addEventListener('change', apply);
+    return () => {
+      phone.removeEventListener('change', apply);
+    };
   }, []);
 
+  // The open menu is a modal dialog: it takes focus, holds the page still, closes on Escape
+  // and keeps Tab inside, and everything behind it is inert (see the render below).
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
-    if (menuOpen) closeButton.current?.focus();
-    else if (wasOpen.current) menuButton.current?.focus();
-    wasOpen.current = menuOpen;
     if (!menuOpen) return;
+    const button = menuButton.current;
+    document.body.style.overflow = 'hidden';
+    closeButton.current?.focus();
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') setMenuOpen(false);
+      else if (event.key === 'Tab') wrapTab(event, '#nav-overlay');
+    };
+    // Past 1024px the menu button and the overlay are gone and the links are in the bar,
+    // so a window widened with the menu open closes it.
+    const wide = matchMedia('(width >= 1024px)');
+    const onWiden = (): void => {
+      if (wide.matches) setMenuOpen(false);
     };
     document.addEventListener('keydown', onKey);
+    wide.addEventListener('change', onWiden);
     return () => {
       document.removeEventListener('keydown', onKey);
+      wide.removeEventListener('change', onWiden);
       // Also on leaving the page with the menu open, so the next page can scroll.
       document.body.style.overflow = '';
+      // Focus goes back to the menu button, or to the first link in the bar when the
+      // window is wide enough to have hidden the button, and never to <body>.
+      if (button && button.getClientRects().length > 0) button.focus();
+      else document.querySelector<HTMLElement>('.nav-links a')?.focus();
     };
   }, [menuOpen]);
 
@@ -70,18 +102,9 @@ export function HomePage(): ReactElement {
     writeShape(next);
   };
 
-  const copyInstall = (): void => {
-    void navigator.clipboard.writeText(INSTALL).then(() => {
-      setCopied(true);
-      setTimeout(() => {
-        setCopied(false);
-      }, 2000);
-    });
-  };
-
   return (
     <>
-      <div className="nav-wrap">
+      <div className="nav-wrap" inert={menuOpen}>
         <nav className="nav" aria-label="Main">
           <Link className="brand" href="/">
             <svg viewBox="0 0 26 26" fill="none" aria-hidden>
@@ -169,7 +192,14 @@ export function HomePage(): ReactElement {
           </div>
         </nav>
       </div>
-      <div className="nav-overlay" id="nav-overlay" hidden={!menuOpen}>
+      <div
+        className="nav-overlay"
+        id="nav-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Site menu"
+        hidden={!menuOpen}
+      >
         <div className="nav-overlay-head">
           <span className="brand">
             <svg viewBox="0 0 26 26" fill="none" aria-hidden>
@@ -211,7 +241,7 @@ export function HomePage(): ReactElement {
         </Link>
       </div>
 
-      <main className="page">
+      <main className="page" inert={menuOpen}>
         <section className="hero">
           <div>
             <p className="eyebrow">Component library</p>
@@ -231,14 +261,16 @@ export function HomePage(): ReactElement {
               </Link>
             </div>
             <div className="install">
-              <span>
+              <span className="install-command" role="group" aria-label="Install command">
                 <b>$</b> pnpm add @snapshot-ui/react @snapshot-ui/core
               </span>
               <button
                 className="icon-button icon-button-ghost"
                 type="button"
-                aria-label={copied ? 'Copied' : 'Copy install command'}
-                onClick={copyInstall}
+                aria-label="Copy install command"
+                onClick={() => {
+                  void copy();
+                }}
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -248,10 +280,19 @@ export function HomePage(): ReactElement {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <rect x="9" y="9" width="11" height="11" rx="2" />
-                  <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                  {outcome === 'Copied' ? (
+                    <path d="m5 12.5 5 5 9-10" />
+                  ) : (
+                    <>
+                      <rect x="9" y="9" width="11" height="11" rx="2" />
+                      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                    </>
+                  )}
                 </svg>
               </button>
+              <span className="visually-hidden" role="status">
+                {outcome}
+              </span>
             </div>
             <div className="shape-switch">
               <span className="type-small muted">Corners</span>
@@ -261,7 +302,7 @@ export function HomePage(): ReactElement {
                     type="radio"
                     name="shape"
                     value="rounded"
-                    checked={shape === 'rounded'}
+                    checked={mounted && shape === 'rounded'}
                     onChange={() => {
                       changeShape('rounded');
                     }}
@@ -273,7 +314,7 @@ export function HomePage(): ReactElement {
                     type="radio"
                     name="shape"
                     value="soft"
-                    checked={shape === 'soft'}
+                    checked={mounted && shape === 'soft'}
                     onChange={() => {
                       changeShape('soft');
                     }}
@@ -285,7 +326,7 @@ export function HomePage(): ReactElement {
                     type="radio"
                     name="shape"
                     value="square"
-                    checked={shape === 'square'}
+                    checked={mounted && shape === 'square'}
                     onChange={() => {
                       changeShape('square');
                     }}
@@ -379,8 +420,8 @@ export function HomePage(): ReactElement {
               </div>
             </div>
           </div>
-          <div className="toast" data-theme="light" role="status">
-            <span className="toast-dot">
+          <div className="frame-toast" data-theme="light" role="status">
+            <span className="frame-toast-dot">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -768,7 +809,7 @@ export function HomePage(): ReactElement {
         </section>
       </main>
 
-      <footer className="footer" data-theme="dark">
+      <footer className="footer" data-theme="dark" inert={menuOpen}>
         <div className="page">
           <h2 className="type-h2">Everything you need to build a calm product, whenever you need it.</h2>
           <div className="footer-cols">
@@ -791,8 +832,12 @@ export function HomePage(): ReactElement {
             <details className="footer-col" open>
               <summary>Community</summary>
               <div className="footer-links">
-                <a href="https://github.com/amirehsan/snapshot-ui">GitHub &#8599;</a>
-                <a href="https://github.com/amirehsan/snapshot-ui/discussions">Discussions &#8599;</a>
+                <a href="https://github.com/amirehsan/snapshot-ui">
+                  GitHub <span aria-hidden="true">&#8599;</span>
+                </a>
+                <a href="https://github.com/amirehsan/snapshot-ui/discussions">
+                  Discussions <span aria-hidden="true">&#8599;</span>
+                </a>
                 <a href="https://github.com/amirehsan/snapshot-ui/blob/main/CONTRIBUTING.md">Contributing</a>
                 <a href="https://github.com/amirehsan/snapshot-ui/blob/main/CODE_OF_CONDUCT.md">
                   Code of conduct
