@@ -33,6 +33,7 @@
     border: 1.5px solid var(--button-border);
     border-radius: var(--radius-control);
     background-color: var(--button-bg);
+    background-clip: padding-box;
     color: var(--button-fg);
     font-family: var(--font-sans);
     font-size: var(--text-action);

@@ -1030,3 +1030,30 @@ the system's one moving shape.
   still spinner reads as finished.
 - It is announced as an indeterminate progress bar named "Loading" unless it is
   given a name.
+
+## Button
+
+The document's Ink Pill and Outlined Pill become `primary` and `secondary`.
+Two variants are added for an app:
+
+- **Tertiary** is a borderless slate label that turns ink on hover, for the
+  recessive action beside a primary, such as Cancel. It has no fill, so it
+  never competes with the pill beside it.
+- **Danger** fills with the error color for a destructive confirmation, such
+  as Delete. Error keeps its meaning: a destructive action is the one place a
+  button warns that something will be lost. Its canvas label is in the
+  contrast gate in both themes. Signal Orange is not a variant; it stays with
+  consent.
+
+The document's 6px by 24px padding makes a 31px pill, and its own touch target
+rule says no button drops below 40px, so the padding sets the shape and a 40px
+minimum height sets the target. Secondary fills with Float rather than White,
+so on a dark surface it is the document's dark secondary: the surface's own
+fill with a white outline. A press shows the same color step as hover rather
+than the document's compression, because touch has no hover to show it.
+
+Pending keeps the fill and the width. The label turns invisible but stays in
+the accessibility tree, a spinner named by `pendingLabel` sits over it, and
+presses are ignored while focus stays. In dark the primary hover fill is
+translucent, so the fill is clipped to the padding box: painted under the
+border as well, the border band would read brighter than the pill.
