@@ -1,0 +1,54 @@
+---
+title: Theming
+description: Two attributes theme any element and everything inside it, color mode and corner shape.
+icon: Contrast
+---
+
+<Section>
+
+## Color mode
+
+Set `data-theme="light"` or `data-theme="dark"` on any element. With no attribute on the page, dark follows the system setting.
+
+<Code code={`<html data-theme="dark">`} />
+
+With `next-themes`, use the attribute mode:
+
+<Code code={`<ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>`} />
+
+</Section>
+
+<Section>
+
+## Corner shape
+
+Set `data-shape` to `rounded`, `soft` or `square`. Every corner in the library comes from one scale, so one attribute recuts all of them. Dots, such as a radio's indicator, stay round in every shape, because there roundness carries meaning.
+
+<Preview name="theme-shapes" />
+
+</Section>
+
+<Section>
+
+## Nesting
+
+Both attributes work on any element, and the nearest one wins. A light card inside a dark page takes its own colors and its own text color.
+
+<Code code={`<main data-theme="dark">
+  <section data-theme="light" data-shape="square">...</section>
+</main>`} />
+
+</Section>
+
+<Section>
+
+## Tokens
+
+Every value is a CSS variable you can read, such as `var(--color-ink)`, `var(--radius-control)` or `var(--spacing-peer)`. The same tokens are available in JavaScript, with each mode's value:
+
+<Code code={`import { tokens } from '@snapshot-ui/core/tokens';
+
+tokens.color.slate.var; // 'var(--color-slate)'
+tokens.radius.pill.modes.shape.soft; // '12px'`} />
+
+</Section>

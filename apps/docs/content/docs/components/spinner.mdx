@@ -1,0 +1,45 @@
+---
+title: Spinner
+description: An indeterminate loading indicator that takes the color and size of the text around it.
+icon: LoaderCircle
+---
+
+<Section>
+
+## Sizes
+
+Inline, it follows the surrounding text. Medium is 24px and large is 40px.
+
+<Preview name="spinner-sizes" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Give it a name that says what is loading. A Button shows one by itself while `isPending`.
+
+<Code code={`import { Spinner } from '@snapshot-ui/react';
+
+<Spinner aria-label="Loading results" size="md" />`} />
+
+</Section>
+
+<Section>
+
+## Props
+
+The size, and React Aria ProgressBar's labelling props.
+
+<PropsTable path="../../packages/react/src/spinner/Spinner.tsx" type="Pick<SpinnerProps, 'size' | 'aria-label'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+Announced as an indeterminate progress bar. Under reduced motion it slows down rather than stopping, because a still spinner reads as finished.
+
+</Section>
