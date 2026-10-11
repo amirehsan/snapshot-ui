@@ -13,7 +13,10 @@ import { fileHeader } from 'style-dictionary/utils';
 const EXT = 'snapshot-ui';
 const MODE_ROOT = '__mode';
 
-/** Each axis maps to a data attribute. `base` is the variant that $value holds. */
+/**
+ * Each axis maps to a data attribute. `base` is the variant that $value holds and
+ * `variants` lists the other variants a token may set, so a typo fails the build.
+ */
 export const AXES = {
   theme: {
     attr: 'data-theme',
@@ -21,8 +24,9 @@ export const AXES = {
     caseInsensitive: false,
     colorScheme: true,
     media: { dark: '(prefers-color-scheme: dark)' },
+    variants: ['dark'],
   },
-  shape: { attr: 'data-shape', base: 'rounded', caseInsensitive: true },
+  shape: { attr: 'data-shape', base: 'rounded', caseInsensitive: true, variants: ['soft', 'square'] },
 };
 
 StyleDictionary.registerPreprocessor({
@@ -35,8 +39,11 @@ StyleDictionary.registerPreprocessor({
       if ('$value' in node) {
         const modes = node.$extensions?.[EXT] ?? {};
         for (const [axis, variants] of Object.entries(modes)) {
-          if (!(axis in AXES)) throw new Error(`Unknown mode axis "${axis}" on ${path.join('.')}`);
+          if (!Object.hasOwn(AXES, axis)) throw new Error(`Unknown mode axis "${axis}" on ${path.join('.')}`);
           for (const [variant, value] of Object.entries(variants)) {
+            if (!AXES[axis].variants.includes(variant)) {
+              throw new Error(`Unknown ${axis} variant "${variant}" on ${path.join('.')}`);
+            }
             let target = modeTree;
             for (const key of [axis, variant, ...path.slice(0, -1)]) target = target[key] ??= {};
             target[path.at(-1)] = { $value: value, $type: type };
@@ -244,7 +251,7 @@ StyleDictionary.registerFormat({
 const sd = new StyleDictionary({
   source: ['tokens/**/*.json'],
   preprocessors: ['snapshot-ui/modes'],
-  log: { verbosity: 'default' },
+  log: { verbosity: 'default', warnings: 'error' },
   platforms: {
     css: {
       transformGroup: 'snapshot-ui/css',
