@@ -30,3 +30,4 @@ export {
   type FieldErrorProps,
   type LabelProps,
 } from './field';
+export { Input, TextField, type InputProps, type TextFieldProps } from './text-field';

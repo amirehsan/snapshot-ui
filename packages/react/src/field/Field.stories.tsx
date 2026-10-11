@@ -8,10 +8,10 @@ import { FieldCounter } from './FieldCounter';
 import { FieldError } from './FieldError';
 import { Label } from './Label';
 
-// The library's TextField arrives with its own input. Until then these stories
-// compose the parts inside React Aria's TextField, which is exactly how a
-// custom layout uses them. The input gets a minimal look of its own, drawn in
-// tokens, so the parts are seen next to a control.
+// These stories compose the parts inside React Aria's TextField, which is how
+// a custom layout uses them, and not the library's TextField, so they show the
+// parts and the field contract on their own. The input gets a minimal look of
+// its own, drawn in tokens, with the contract's borders.
 const STORY_CSS = `
 .story-field-input {
   box-sizing: border-box;

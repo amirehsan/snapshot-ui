@@ -63,6 +63,20 @@ for (const theme of ['light', 'dark'] as const) {
   });
 }
 
+test('the workspace field is labelled, shows its Changed chip and reads it with the field', async ({
+  page,
+}) => {
+  await visit(page);
+  const input = page.getByRole('textbox', { name: 'Workspace name' });
+  await expect(input).toHaveValue('Northwind Studio');
+  await expect(input).toHaveAccessibleDescription('Pick a name your team will recognize. Changed');
+  await expect(page.locator('.field').filter({ has: input }).locator('.field-changed')).toBeVisible();
+  // The card is a light card on a dark frame: the edge is light signal orange in both themes.
+  await expect(input).toHaveCSS('border-top-color', 'rgb(243, 115, 56)');
+  // Each axis tile has a named input of its own.
+  await expect(page.getByRole('textbox', { name: 'Search settings' })).toHaveCount(6);
+});
+
 test('the homepage switches corners and remembers them', async ({ page }) => {
   await visit(page);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(

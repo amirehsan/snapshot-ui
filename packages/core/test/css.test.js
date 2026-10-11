@@ -240,6 +240,26 @@ describe('src/components/badge.css', () => {
   });
 });
 
+describe('src/components/input.css', () => {
+  // The rules without their comments, which quote selectors of their own.
+  const rules = () => read('src/components/input.css').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('declares the invalid border after the changed one, so invalid outranks changed', () => {
+    const source = rules();
+    const changed = source.indexOf('.field[data-changed] .input');
+    const invalid = source.indexOf('.field[data-invalid] .input');
+    expect(changed).toBeGreaterThan(-1);
+    expect(invalid).toBeGreaterThan(changed);
+  });
+
+  it('draws hover only where hover exists', () => {
+    const source = rules();
+    const media = source.indexOf('@media (hover: hover)');
+    expect(media).toBeGreaterThan(-1);
+    expect(source.indexOf(':hover')).toBeGreaterThan(media);
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

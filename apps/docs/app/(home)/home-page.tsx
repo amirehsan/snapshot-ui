@@ -1,6 +1,6 @@
 'use client';
 
-import { Description, Eyebrow, FieldChanged, IconButton, Label } from '@snapshot-ui/react';
+import { Description, Eyebrow, IconButton, Input, TextField } from '@snapshot-ui/react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
@@ -373,13 +373,12 @@ export function HomePage(): ReactElement {
               <p className="muted">Shown in the header and in every invite.</p>
             </div>
             <div className="stack">
-              <div className="field" data-changed="">
-                <div className="field-head">
-                  <Label htmlFor="workspace-name">Workspace name</Label>
-                  <FieldChanged />
-                </div>
-                <input id="workspace-name" className="input input-changed" defaultValue="Northwind Studio" />
-              </div>
+              <TextField
+                label="Workspace name"
+                description="Pick a name your team will recognize."
+                defaultValue="Northwind Studio"
+                isChanged
+              />
               <div className="field">
                 <span className="field-label">Theme</span>
                 <div className="segmented" role="radiogroup" aria-label="Theme">
@@ -533,7 +532,7 @@ export function HomePage(): ReactElement {
                 <span>Rounded</span>
               </div>
               <div className="card stack">
-                <input className="input" placeholder="Search settings" />
+                <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
@@ -562,7 +561,7 @@ export function HomePage(): ReactElement {
                 <span>Soft</span>
               </div>
               <div className="card stack">
-                <input className="input" placeholder="Search settings" />
+                <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
@@ -591,7 +590,7 @@ export function HomePage(): ReactElement {
                 <span>Square</span>
               </div>
               <div className="card stack">
-                <input className="input" placeholder="Search settings" />
+                <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
@@ -620,7 +619,7 @@ export function HomePage(): ReactElement {
                 <span>Rounded</span>
               </div>
               <div className="card stack">
-                <input className="input" placeholder="Search settings" />
+                <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
@@ -649,7 +648,7 @@ export function HomePage(): ReactElement {
                 <span>Soft</span>
               </div>
               <div className="card stack">
-                <input className="input" placeholder="Search settings" />
+                <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">
@@ -678,7 +677,7 @@ export function HomePage(): ReactElement {
                 <span>Square</span>
               </div>
               <div className="card stack">
-                <input className="input" placeholder="Search settings" />
+                <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <DemoSwitch label="Sample" defaultOn={true} />
                   <div className="row">

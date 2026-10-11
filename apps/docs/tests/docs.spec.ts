@@ -385,29 +385,38 @@ test('a server-rendered MDX page renders library components and props', async ({
   await expect(page.getByText("Default: 'primary'")).toBeVisible();
 });
 
+/** The field whose control has this name, on the page that is open. */
+const fieldNamed = (page: Page, name: string): Locator =>
+  page.locator('.field').filter({ has: page.getByRole('textbox', { name, exact: true }) });
+
 test('the field parts page shows the Changed chip on a changed field and hides it on an invalid one', async ({
   page,
 }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
   await visit(page, '/docs/components/field');
-  const edited = page.locator('.field', { has: page.locator('#field-parts-name') });
+  const edited = fieldNamed(page, 'Workspace name');
   await expect(edited.locator('.field-changed')).toBeHidden();
   await edited.getByRole('textbox').fill('Northwind Studio East');
   await expect(edited.locator('.field-changed')).toBeVisible();
   await edited.getByRole('textbox').fill('Northwind Studio');
   await expect(edited.locator('.field-changed')).toBeHidden();
 
-  const changed = page.locator('.field', { has: page.locator('#field-states-changed') });
+  // A changed field draws the light signal orange edge and its chip.
+  const changed = fieldNamed(page, 'Display name');
   await expect(changed.locator('.field-changed')).toBeVisible();
-  const invalid = page.locator('.field', { has: page.locator('#field-states-invalid') });
+  await expect(changed.getByRole('textbox')).toHaveCSS('border-top-color', 'rgb(243, 115, 56)');
+  // An invalid field draws the error edge and the error line, and no chip.
+  const invalid = fieldNamed(page, 'Short description');
   await expect(invalid.locator('.field-changed')).toBeHidden();
   await expect(invalid.locator('.field-error')).toBeVisible();
+  await expect(invalid.getByRole('textbox')).toHaveCSS('border-top-color', 'rgb(163, 35, 27)');
 });
 
 test('the length count on the field parts page appears near the budget and never blocks typing', async ({
   page,
 }) => {
   await visit(page, '/docs/components/field');
-  const field = page.locator('.field', { has: page.locator('#field-counter-text') });
+  const field = fieldNamed(page, 'About the workspace');
   const counter = field.locator('.field-counter');
   await expect(counter).toHaveText('34 of about 40');
   await expect(counter).not.toHaveAttribute('data-over');
@@ -420,6 +429,48 @@ test('the length count on the field parts page appears near the budget and never
   await expect(counter).toHaveCSS('font-weight', '700');
   await field.getByRole('textbox').fill('Short');
   await expect(counter).toHaveText('');
+});
+
+test('the text field page shows a failed submit as an error line and sends once the value is fixed', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/text-field');
+  const field = fieldNamed(page, 'Work email');
+  const input = field.getByRole('textbox');
+  const send = page.getByRole('button', { name: 'Send invite' });
+
+  await send.click();
+  await expect(field.locator('.field-error')).toHaveText('Enter your work email.');
+  await expect(field).toHaveAttribute('data-invalid');
+  await expect(input).toBeFocused();
+  await expect(input).toHaveCSS('border-top-color', 'rgb(163, 35, 27)');
+
+  await input.fill('ada@example.com');
+  await send.click();
+  await expect(field.locator('.field-error')).toHaveText('Use an address at northwind.studio.');
+
+  // Enter submits. A click would miss: the error line collapses when the field loses focus, and the button moves.
+  await input.fill('ada@northwind.studio');
+  await input.press('Enter');
+  await expect(page.getByText('Invite sent to ada@northwind.studio.')).toBeVisible();
+  await expect(field.locator('.field-error')).toHaveCount(0);
+});
+
+test('a focused text field firms its edge and keeps the ring, and a changed one keeps its own edge', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/text-field');
+  const plain = page.getByRole('textbox', { name: 'Workspace name' });
+  await plain.focus();
+  await expect(plain).toHaveCSS('border-top-color', 'rgb(20, 20, 19)');
+  await expect(plain).toHaveCSS('outline-style', 'solid');
+  await expect(plain).toHaveCSS('outline-width', '2px');
+  const changed = page.getByRole('textbox', { name: 'Display name', exact: true });
+  await changed.focus();
+  await expect(changed).toHaveCSS('border-top-color', 'rgb(243, 115, 56)');
+  await expect(changed).toHaveCSS('outline-style', 'solid');
 });
 
 test('the copy button reports that the code was copied', async ({ page, context }) => {

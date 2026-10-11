@@ -15,6 +15,9 @@ import KbdKeys from './kbd-keys';
 import LinkInline from './link-inline';
 import LinkStates from './link-states';
 import SpinnerSizes from './spinner-sizes';
+import TextFieldBasic from './text-field-basic';
+import TextFieldStates from './text-field-states';
+import TextFieldValidation from './text-field-validation';
 import TextTones from './text-tones';
 import ThemeShapes from './theme-shapes';
 
@@ -36,6 +39,9 @@ export const examples = {
   'link-inline': LinkInline,
   'link-states': LinkStates,
   'spinner-sizes': SpinnerSizes,
+  'text-field-basic': TextFieldBasic,
+  'text-field-states': TextFieldStates,
+  'text-field-validation': TextFieldValidation,
   'text-tones': TextTones,
   'theme-shapes': ThemeShapes,
 } satisfies Record<string, ComponentType>;
