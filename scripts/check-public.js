@@ -3,18 +3,20 @@
 // path. The names are private too, so they are never in this repository: they
 // come from .local/private-names.txt (gitignored) on a maintainer's machine, or
 // from the PRIVATE_NAMES secret in CI. One regular expression per line, written
-// as /source/flags; lines starting with # are comments. A failure reports the
-// file and line only, never the match, because CI logs are public. With no list
-// at all the check skips with a notice, except when CHECK_PUBLIC_REQUIRED is
-// "true": CI sets that where the secret must exist, and a missing list then
-// fails the run. A list with no rules always fails.
+// as /source/flags; lines starting with # are comments. A hit in a file's
+// contents is reported as file and line only, never the matched text, because
+// CI logs are public. A hit in a file's name has to print the path, which
+// contains the name; that path is already public in the commit being checked.
+// With no list at all the check skips with a notice, except when
+// CHECK_PUBLIC_REQUIRED is "true": CI sets that where the secret must exist,
+// and a missing list then fails the run. A list with no rules always fails.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const LOCAL_FILE = '.local/private-names.txt';
 
-/** Binaries and the lockfile hold no prose. */
+/** Binaries and the lockfile hold no prose: their names are checked, their contents are not. */
 const SKIP = [/\.(png|jpe?g|gif|webp|ico|woff2?|pdf)$/i, /^pnpm-lock\.yaml$/];
 
 /**
@@ -50,12 +52,14 @@ export function loadRules(file = LOCAL_FILE, env = process.env.PRIVATE_NAMES) {
   return null;
 }
 
+/** Every rule a path breaks, reported as line 0. */
+function findPathViolations(path, rules) {
+  return rules.filter(({ pattern }) => pattern.test(path)).map(({ rule }) => ({ path, line: 0, rule }));
+}
+
 /** Every rule a file breaks: by its path (line 0), then once per matching line. */
 export function findViolations(path, text, rules) {
-  const found = [];
-  for (const { rule, pattern } of rules) {
-    if (pattern.test(path)) found.push({ path, line: 0, rule });
-  }
+  const found = findPathViolations(path, rules);
   text.split('\n').forEach((line, index) => {
     for (const { rule, pattern } of rules) {
       if (pattern.test(line)) found.push({ path, line: index + 1, rule });
@@ -72,8 +76,7 @@ function candidateFiles() {
   const out = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
     encoding: 'utf8',
   });
-  const paths = out.split('\0').filter((path) => path && !SKIP.some((skip) => skip.test(path)));
-  return [...new Set(paths)];
+  return [...new Set(out.split('\0').filter(Boolean))];
 }
 
 /** Runs the check and returns the exit code. */
@@ -95,13 +98,14 @@ function main() {
   }
   let scanned = 0;
   const violations = candidateFiles().flatMap((path) => {
+    if (SKIP.some((skip) => skip.test(path))) return findPathViolations(path, rules);
     let text;
     try {
       text = readFileSync(path, 'utf8');
     } catch (error) {
       // A tracked file deleted in the working tree: nothing to read, but its name still counts.
       if (error.code !== 'ENOENT') throw error;
-      return findViolations(path, '', rules);
+      return findPathViolations(path, rules);
     }
     scanned += 1;
     return findViolations(path, text, rules);
@@ -118,7 +122,20 @@ function main() {
   return 0;
 }
 
-// import.meta.main needs Node 24.2, and engines allows 24.0, so compare real paths.
-if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
-  process.exitCode = main();
+/**
+ * Whether this file is the one node was started with. import.meta.main needs
+ * Node 24.2 and engines allows 24.0, so compare real paths. Importing the module
+ * from a process whose argv[1] is not a file (node -e, a REPL) is not an error.
+ */
+function isEntryPoint() {
+  try {
+    return (
+      Boolean(process.argv[1]) &&
+      realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+    );
+  } catch {
+    return false;
+  }
 }
+
+if (isEntryPoint()) process.exitCode = main();

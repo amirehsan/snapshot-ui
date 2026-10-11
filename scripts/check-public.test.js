@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { pathToFileURL } from 'node:url';
 import { findViolations, loadRules, parseRules } from './check-public.js';
 
 // Stand-in names: the real list never enters the repository.
@@ -67,7 +68,8 @@ test('loads rules from the local file first, then the environment, else nothing'
     writeFileSync(file, '/\\bacme\\b/i\n');
     assert.equal(loadRules(file, '/\\bother\\b/')?.length, 1);
     assert.equal(loadRules(path.join(dir, 'missing.txt'), '/\\bother\\b/\n/x/')?.length, 2);
-    assert.equal(loadRules(path.join(dir, 'missing.txt'), undefined), null);
+    // '' not undefined: undefined would fall back to the host's PRIVATE_NAMES.
+    assert.equal(loadRules(path.join(dir, 'missing.txt'), ''), null);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -75,24 +77,45 @@ test('loads rules from the local file first, then the environment, else nothing'
 
 const SCRIPT = path.join(import.meta.dirname, 'check-public.js');
 
+/** The host environment without what could steer the check or the git calls under test. */
+function cleanEnv(base) {
+  const scrubbed = new Set(['PRIVATE_NAMES', 'CI', 'CHECK_PUBLIC_REQUIRED']);
+  return Object.fromEntries(
+    Object.entries(base).filter(([key]) => !scrubbed.has(key) && !key.startsWith('GIT_')),
+  );
+}
+
+test('cli: the test environment drops the check settings and every GIT_ variable', () => {
+  const base = {
+    PATH: '/bin',
+    PRIVATE_NAMES: '/acme/',
+    CI: '1',
+    CHECK_PUBLIC_REQUIRED: 'true',
+    GIT_DIR: '/host/.git',
+    GIT_INDEX_FILE: '/host/.git/index',
+  };
+  assert.deepEqual(cleanEnv(base), { PATH: '/bin' });
+});
+
+/** Runs git in `cwd` without anything from the host's own git environment. */
+function git(cwd, ...args) {
+  return execFileSync('git', args, { cwd, env: cleanEnv(process.env), stdio: 'pipe' });
+}
+
 /**
  * Runs the command line in a fresh git repository holding `files`. The host's
- * PRIVATE_NAMES, CI and CHECK_PUBLIC_REQUIRED never reach it; `env` sets them.
+ * PRIVATE_NAMES, CI, CHECK_PUBLIC_REQUIRED and GIT_* variables never reach it
+ * or the git calls that build it; `env` sets what a case needs.
  */
 function runCli(files, env = {}, setup = undefined) {
   const dir = mkdtempSync(path.join(tmpdir(), 'check-public-cli-'));
   try {
-    execFileSync('git', ['init', '-q'], { cwd: dir, stdio: 'pipe' });
+    git(dir, 'init', '-q');
     for (const [name, text] of Object.entries(files)) writeFileSync(path.join(dir, name), text);
     setup?.(dir);
-    const hostEnv = Object.fromEntries(
-      Object.entries(process.env).filter(
-        ([key]) => !['PRIVATE_NAMES', 'CI', 'CHECK_PUBLIC_REQUIRED'].includes(key),
-      ),
-    );
     return spawnSync(process.execPath, [SCRIPT], {
       cwd: dir,
-      env: { ...hostEnv, ...env },
+      env: { ...cleanEnv(process.env), ...env },
       encoding: 'utf8',
     });
   } finally {
@@ -121,7 +144,7 @@ test('cli: passes a clean file and counts the files it scanned', () => {
 
 test('cli: skips a tracked file deleted from the working tree and does not count it', () => {
   const result = runCli({ 'gone.md': 'fine\n', 'kept.md': 'fine\n' }, { PRIVATE_NAMES: '/acme/i' }, (dir) => {
-    execFileSync('git', ['add', 'gone.md'], { cwd: dir, stdio: 'pipe' });
+    git(dir, 'add', 'gone.md');
     rmSync(path.join(dir, 'gone.md'));
   });
   assert.equal(result.status, 0, result.stderr);
@@ -147,4 +170,29 @@ test('cli: no list at all only warns when the run does not require one', () => {
   const ci = runCli({ 'clean.md': 'fine\n' }, { CI: 'true' });
   assert.equal(ci.status, 0, ci.stderr);
   assert.ok(ci.stderr.includes('::warning::check:public skipped'), ci.stderr);
+});
+
+test('cli: checks the name of a binary file but never reads its contents', () => {
+  const named = runCli({ 'acme-shot.png': 'bytes' }, { PRIVATE_NAMES: '/acme/i' });
+  assert.equal(named.status, 1);
+  assert.ok(named.stderr.includes('acme-shot.png (file name) matches private name 1'), named.stderr);
+  const plain = runCli({ 'shot.png': 'Built for acme.' }, { PRIVATE_NAMES: '/acme/i' });
+  assert.equal(plain.status, 0, plain.stderr);
+});
+
+test('cli: importing the module does not run it, even when argv[1] is not a file', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'check-public-import-'));
+  try {
+    const code = `import(${JSON.stringify(pathToFileURL(SCRIPT).href)}).then(() => console.log('imported'))`;
+    const result = spawnSync(process.execPath, ['-e', code, 'not-a-file'], {
+      cwd: dir,
+      env: cleanEnv(process.env),
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), 'imported');
+    assert.equal(result.stderr, '');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
