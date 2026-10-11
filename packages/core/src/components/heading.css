@@ -1,0 +1,65 @@
+/*
+ * Heading, the four heading steps of the type scale: heading-1 to heading-4
+ * read --text-h1 to --text-h4 with their line height, tracking and weight. The
+ * element is the caller's choice (h1 to h4), the look is the class, so a card
+ * title can be an h2 drawn in the card-title step.
+ *
+ * Headings scale down on small screens (docs/design-system.md, "Typography"):
+ * the 64px step is 48px under 1024px and 40px under 768px, and the 36px step is
+ * 28px under 768px. The widths are the tablet and desktop breakpoint tokens,
+ * written out because a media query cannot read a custom property;
+ * test/css.test.js keeps them equal. Line height is a ratio, so it scales with
+ * the size and the 1:1 display step stays 1:1.
+ */
+@layer components {
+  .heading {
+    margin: 0;
+    font-family: var(--font-sans);
+  }
+
+  .heading-1 {
+    font-size: var(--text-h1);
+    line-height: var(--text-h1--line-height);
+    letter-spacing: var(--text-h1--letter-spacing);
+    font-weight: var(--text-h1--font-weight);
+  }
+
+  .heading-2 {
+    font-size: var(--text-h2);
+    line-height: var(--text-h2--line-height);
+    letter-spacing: var(--text-h2--letter-spacing);
+    font-weight: var(--text-h2--font-weight);
+  }
+
+  .heading-3 {
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: var(--text-h3--font-weight);
+  }
+
+  /* The subhead has no tracking token, so it says so: a heading inside tracked
+     text must not inherit the tracking. */
+  .heading-4 {
+    font-size: var(--text-h4);
+    line-height: var(--text-h4--line-height);
+    letter-spacing: normal;
+    font-weight: var(--text-h4--font-weight);
+  }
+
+  @media (width < 1024px) {
+    .heading-1 {
+      font-size: 3rem;
+    }
+  }
+
+  @media (width < 768px) {
+    .heading-1 {
+      font-size: 2.5rem;
+    }
+
+    .heading-2 {
+      font-size: 1.75rem;
+    }
+  }
+}

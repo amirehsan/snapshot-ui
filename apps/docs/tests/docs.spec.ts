@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { axeViolations, hitSize, hitsAt, settled, sideways, withoutClipboard } from './support';
 
 const PAGE = '/docs/components/button';
@@ -19,6 +19,15 @@ const expectDrawerClosed = async (page: Page): Promise<void> => {
 const visit = async (page: Page, url = PAGE): Promise<void> => {
   await page.goto(url);
   await settled(page);
+};
+
+/**
+ * Brings a link in the open drawer into view and waits until the drawer holding it has stopped sliding.
+ * The rail lists every page, so any one link can sit below the fold of a drawer that scrolls.
+ */
+const railLinkInView = async (link: Locator): Promise<void> => {
+  await link.scrollIntoViewIfNeeded();
+  await expect(link).toBeInViewport({ ratio: 1 });
 };
 
 for (const width of [375, 768, 1024, 1440]) {
@@ -44,7 +53,7 @@ test('the open drawer has no axe violations', async ({ page }) => {
   await page.getByRole('button', { name: 'Open the menu' }).click();
   await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
   // Let the slide finish: axe reads colors, and a half-open drawer is a moving target.
-  await expect(page.getByRole('link', { name: 'Spinner' })).toBeInViewport({ ratio: 1 });
+  await railLinkInView(page.getByRole('link', { name: 'Spinner' }));
   expect(await axeViolations(page)).toEqual([]);
 });
 
@@ -90,7 +99,7 @@ test('under 1024px the rail is a drawer that holds focus and Escape closes', asy
   await expect(drawer).toHaveAttribute('aria-modal', 'true');
   await expect(menu).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-drawer', 'open');
-  await expect(page.getByRole('navigation').getByRole('link', { name: 'Spinner' })).toBeInViewport();
+  await railLinkInView(page.getByRole('navigation').getByRole('link', { name: 'Spinner' }));
   await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
   // The page behind the drawer does not scroll.
   await expect(page.locator('html')).toHaveCSS('overflow', 'hidden');
@@ -416,7 +425,7 @@ for (const width of [375, 1440]) {
     // The rail is a drawer on a phone: open it, and the brand is on screen to be hit.
     if (width < 1024) {
       await page.getByRole('button', { name: 'Open the menu' }).click();
-      await expect(page.getByRole('link', { name: 'Spinner' })).toBeInViewport({ ratio: 1 });
+      await railLinkInView(page.getByRole('link', { name: 'Spinner' }));
     }
     const brand = page.locator('.brand');
     const size = await hitSize(brand);

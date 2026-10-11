@@ -1078,3 +1078,84 @@ the accessibility tree, a spinner named by `pendingLabel` sits over it, and
 presses are ignored while focus stays. In dark the primary hover fill is
 translucent, so the fill is clipped to the padding box: painted under the
 border as well, the border band would read brighter than the pill.
+
+## Typography
+
+Heading, Text and Eyebrow are the document's hierarchy table with a class on
+each row, so no size, weight or tracking here is new. These are the places the
+library had to decide.
+
+**The element and the look are two props.** `level` picks the element, `h1` to
+`h4`, and `size` picks the type step, 1 to 4. `size` follows `level` unless it is
+given. A page outline and a visual hierarchy are different things: a card title
+is a small heading under the page's `h1`, and a hero line is a large heading
+that is not the page title. If one prop did both, a heading would be picked for
+its size and the outline would skip a level. `level` defaults to 2, because an
+`h1` is once per page and the page decides where it goes.
+
+**They are plain elements.** React Aria has a Heading, and it is the obvious
+basis. It is a client module that exists to read a dialog's context, which
+nothing here has, and type should work in a server component. So Heading is a
+plain `h1` to `h4`, and Text and Eyebrow are a plain `p`, `span` or `div`. None
+carries a client directive or imports React Aria.
+
+**Headings scale down on small screens.** The document's responsive table says
+the hero headline is about 48px on a tablet and about 40px on a phone. The
+library makes that exact and carries it to the section step, which drops from
+36px to 28px under 768px:
+
+| Step | Token | 1024px and up | Under 1024px | Under 768px |
+| --- | --- | --- | --- | --- |
+| `heading-1` | `--text-h1` | 64px | 48px | 40px |
+| `heading-2` | `--text-h2` | 36px | 36px | 28px |
+| `heading-3` | `--text-h3` | 24px | 24px | 24px |
+| `heading-4` | `--text-h4` | 14px | 14px | 14px |
+
+The smaller sizes are in rem, so they follow the reader's browser font size as
+the tokens do. Line height is a ratio, so it scales with the size and the 1:1
+display step stays 1:1 at every width. A media query cannot read a custom
+property, so the two widths are written out in `heading.css`. A test compares
+them with `--breakpoint-md` and `--breakpoint-sm`, so they cannot drift. Under
+768px the card title and the subhead are already small enough to stay.
+
+**The class is `copy`, not `text`.** A class may not start with a Tailwind
+namespace, and `text-` is one: `text-small` would collide in any app that also
+uses Tailwind. Text renders `copy`, with `copy-small` and `copy-muted` added for
+the small step and the muted tone. `copy` is the `--text-body` step, 16px at
+weight 450, and `copy-small` is `--text-small`, 14px.
+
+**Muted is slate, never taupe.** A muted sentence is still read, and the test in
+"Where each text color may go" is whether the reader needs to read it. Slate on
+canvas measures 4.83:1 in light and 7.25:1 in dark, and it is the lowest of the
+grounds the contrast gate already lists for hints and notes, so no pairing was
+added. Taupe fails AA on every surface.
+
+**Spacing is the layout's.** Each class sets `margin: 0`, so the default margin
+of a paragraph or a heading never adds to a gap the layout already chose.
+
+**The eyebrow is a label.** It is 14px, 700, +4% tracking, in capitals and in
+slate, which is the document's eyebrow row set in the color its text-color test
+gives an eyebrow. It renders a `p`, `span` or `div` and never a heading, because
+it labels the heading beside it and is not an entry in the outline. It is
+`inline-flex`, so a span sits inside a line of text.
+
+**The eyebrow's dot is Light Signal Orange.** The document is split on the dot's
+color. Its palette lists eyebrow dots among the uses of Signal Orange, and its
+prompt guide asks for a Light Signal Orange dot. The library takes the second
+reading, because Signal Orange is reserved for consent and an eyebrow is not
+consent, and because the app's own page header already draws its dot in Light
+Signal Orange. The dot is 6px, and it takes `--radius-dot`, so it stays round in
+every shape. It is always lit. The app's rail group label greys its dot until the
+group holds the current page, which is navigation state, and an eyebrow has none.
+
+The dot measures 2.52:1 on canvas in light, under the 3:1 that WCAG 1.4.11 asks
+of a graphic that carries meaning. It carries none: the label says everything
+without it, and the dot is the system's mark. It is decoration, so it is not in
+the contrast gate. In dark it measures 6.73:1.
+
+**The dot hangs into the gutter.** It sits left of the label by its own width
+plus the gap, 6px and `--spacing-part`, so the label text lands on the same
+left edge as the content below it. An indented label reads as a different level
+of hierarchy, which is what the rail's group label learned. Where a label has
+no gutter beside it, a caller sets `margin-inline-start: 0` on
+`.eyebrow::before` to keep the dot inline.

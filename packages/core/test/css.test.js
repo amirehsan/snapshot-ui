@@ -16,6 +16,21 @@ const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
  */
 const INK_RING = /(?<![\w-])outline(?:-color)?\s*:[^;{}]*var\(\s*--color-ink\s*[,)]/i;
 
+/** The text between the braces that follow `header`, nested blocks included. */
+function blockAfter(css, header) {
+  const start = css.indexOf(header);
+  if (start === -1) return '';
+  const open = css.indexOf('{', start) + 1;
+  let depth = 1;
+  let close = open;
+  while (depth > 0 && close < css.length) {
+    const char = css[close++];
+    if (char === '{') depth += 1;
+    else if (char === '}') depth -= 1;
+  }
+  return css.slice(open, close - 1);
+}
+
 describe('src/styles.css', () => {
   const entry = read('src/styles.css');
 
@@ -79,6 +94,54 @@ describe('the ink ring guard', () => {
     ]) {
       expect(css, css).not.toMatch(INK_RING);
     }
+  });
+});
+
+describe('type components', () => {
+  it.each(['copy.css', 'eyebrow.css'])(
+    '%s sets text the reader has to read in slate, never taupe',
+    (file) => {
+      // Taupe is for placeholders and disabled text. Everything else is read.
+      const source = read(`src/components/${file}`);
+      expect(source).toContain('var(--color-slate)');
+      expect(source).not.toContain('--color-taupe');
+    },
+  );
+});
+
+describe('dist/components/heading.css', () => {
+  it.each([1, 2, 3, 4])('draws heading-%i from its own type token', (step) => {
+    const rule = blockAfter(read('dist/components/heading.css'), `.heading-${step} `);
+    expect(rule).toContain(`font-size: var(--text-h${step});`);
+    expect(rule).toContain(`line-height: var(--text-h${step}--line-height);`);
+    expect(rule).toContain(`font-weight: var(--text-h${step}--font-weight);`);
+  });
+
+  // A media query cannot read a custom property, so the breakpoints are written
+  // out in the CSS. They must stay the token values.
+  const queries = async () => {
+    const { tokens } = await import('../dist/tokens.js');
+    return {
+      tablet: `@media (width < ${tokens.breakpoint.md.value})`,
+      phone: `@media (width < ${tokens.breakpoint.sm.value})`,
+    };
+  };
+
+  it('scales the display step to 48px under 1024px and 40px under 768px, and the section step to 28px under 768px', async () => {
+    const built = read('dist/components/heading.css');
+    const { tablet, phone } = await queries();
+    expect(blockAfter(built, tablet)).toMatch(/\.heading-1\s*\{\s*font-size:\s*3rem;\s*\}/);
+    expect(blockAfter(built, phone)).toMatch(/\.heading-1\s*\{\s*font-size:\s*2\.5rem;\s*\}/);
+    expect(blockAfter(built, phone)).toMatch(/\.heading-2\s*\{\s*font-size:\s*1\.75rem;\s*\}/);
+  });
+
+  it('leaves the card title and subhead steps alone at every width, and the section step above 768px', async () => {
+    const built = read('dist/components/heading.css');
+    const { tablet, phone } = await queries();
+    for (const query of [tablet, phone]) {
+      expect(blockAfter(built, query)).not.toMatch(/\.heading-[34]/);
+    }
+    expect(blockAfter(built, tablet)).not.toContain('.heading-2');
   });
 });
 

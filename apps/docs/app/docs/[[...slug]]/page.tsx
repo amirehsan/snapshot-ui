@@ -1,3 +1,4 @@
+import { Eyebrow } from '@snapshot-ui/react';
 import pkg from '@snapshot-ui/react/package.json';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -28,16 +29,12 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>): Promi
           <aside className="panel-side" aria-label="On this page">
             {page.data.toc.length > 0 ? (
               <section className="card toc-card">
-                <p className="eyebrow" style={{ marginBottom: 18 }}>
-                  On this page
-                </p>
+                <Eyebrow style={{ marginBottom: 18 }}>On this page</Eyebrow>
                 <Toc items={page.data.toc} />
               </section>
             ) : null}
             <section className="card">
-              <p className="eyebrow" style={{ marginBottom: 18 }}>
-                Package
-              </p>
+              <Eyebrow style={{ marginBottom: 18 }}>Package</Eyebrow>
               <div className="meta">
                 <div className="meta-row">
                   <span>Version</span>

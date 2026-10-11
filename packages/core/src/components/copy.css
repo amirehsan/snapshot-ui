@@ -1,0 +1,30 @@
+/*
+ * Copy, the body text of a page: the body step by default, the small step for
+ * hints and helper lines, and a muted tone for text that is secondary. The
+ * class is `copy` and not `text` because a class may not start with a Tailwind
+ * namespace such as text-, which would collide in any app that also uses
+ * Tailwind.
+ *
+ * Muted is slate. Taupe is for placeholders and disabled text only: it fails
+ * AA on every surface, and everything here is read.
+ */
+@layer components {
+  .copy {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    letter-spacing: normal;
+    font-weight: var(--text-body--font-weight);
+  }
+
+  .copy-small {
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+  }
+
+  .copy-muted {
+    color: var(--color-slate);
+  }
+}
