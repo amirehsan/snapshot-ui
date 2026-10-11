@@ -35,7 +35,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",
-    "check:package": "publint && attw --pack . --profile esm-only"
+    "check:package": "publint && attw --pack . --profile esm-only",
+    "size": "size-limit"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
+    "@size-limit/preset-small-lib": "14.2.0",
     "@storybook/react-vite": "catalog:",
     "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",
@@ -60,6 +62,7 @@
     "publint": "0.3.25",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "size-limit": "14.2.0",
     "storybook": "catalog:",
     "tsdown": "0.23.1",
     "typescript": "catalog:",
