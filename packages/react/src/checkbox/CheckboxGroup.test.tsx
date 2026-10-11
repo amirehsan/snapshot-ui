@@ -226,6 +226,28 @@ describe('CheckboxGroup', () => {
     expect(new FormData(formOf(container)).getAll('channels')).toEqual(['email']);
   });
 
+  // The same React Aria limit, in its other form, recorded in Appendix B and not worked around. Every
+  // `removeValue` in react-stately's useCheckboxGroupState filters the list as it was before the reset
+  // and sets the result outright, so when a reset unchecks two boxes the last removal wins and the
+  // other box stays checked: here the reset ends at ['email'] and not at []. `it.fails` holds the
+  // correct expectation, and flags itself when react-stately fixes removeValue.
+  it.fails('is back to its default after a reset that unchecks more than one box', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <CheckboxGroup label="Notify me by" name="channels">
+          {channels}
+        </CheckboxGroup>
+        <button type="reset">Reset</button>
+      </form>,
+    );
+    await user.click(screen.getByRole('checkbox', { name: 'Email' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Text message' }));
+    expect(new FormData(formOf(container)).getAll('channels')).toEqual(['email', 'sms']);
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(new FormData(formOf(container)).getAll('channels')).toEqual([]);
+  });
+
   it('asks for one checked box, not all of them, when it is required', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn((event: { preventDefault: () => void }) => {
