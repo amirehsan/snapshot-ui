@@ -32,7 +32,9 @@ Pass `budget` to count the value's length against about how long it should be. T
 
 <Preview name="text-area-counter" />
 
-A line break counts as one character, as it does in the value `onChange` receives. A browser sends each line break in a form request as two characters, so a server that measures the request sees one more per line.
+The count is the value's length as JavaScript and `maxLength` measure it, in UTF-16 code units. A line break counts as one, as it does in the value `onChange` receives, and an emoji, or an accented letter built from two code points, can count as two. A browser sends each line break in a form request as two characters, so a server that measures the request sees one more per line.
+
+The budget is a soft target and the count can pass it. `maxLength` is a hard stop that the counter does not read, so set `budget` at or below `maxLength`.
 
 </Section>
 
@@ -79,11 +81,11 @@ Every React Aria TextField prop is accepted, except `type` and `pattern`, which 
 
 ## Accessibility
 
-A native textarea, labelled by the label and described by the hint and the error line, with React Aria handling the wiring. A screen reader reads the Changed chip with the field, after the hint, while the field is changed and valid. An invalid field reads its error line alone.
+A native textarea, labelled by the label and described by the hint and the error line, with React Aria handling the wiring. A screen reader reads the Changed chip with the field, after the hint, while the field is changed and valid. An invalid field reads its hint and then its error line, and the chip steps aside.
 
 <Keys rows={[['Tab', 'Moves focus into the field. The edge firms to 1.5px ink and the 2px ring sits outside it.'], ['Shift Tab', 'Moves focus back out.'], ['Enter', 'Adds a new line. It never submits the form.']]} />
 
-The corner handle resizes with a pointer or a finger, and the keyboard has no way to resize, so set `rows` to the height the content needs. The placeholder is taupe, which is quiet by design, so it never carries anything the label does not. The count is a polite status region.
+The corner handle resizes with a pointer, in the browsers that draw one, and the keyboard has no way to resize, so set `rows` to the height the content needs. The placeholder is taupe, which is quiet by design, so it never carries anything the label does not. The count is a polite status region.
 
 </Section>
 

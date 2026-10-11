@@ -280,7 +280,7 @@ describe('src/components/textarea.css', () => {
     expect(textarea().map(({ selector }) => selector)).toEqual(['.input.textarea']);
   });
 
-  it('overrides only the six things a multi-line box changes', () => {
+  it('overrides only the seven things a multi-line box changes', () => {
     expect(textarea()[0]?.properties.sort()).toEqual([
       'border-radius',
       'height',

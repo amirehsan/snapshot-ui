@@ -1549,11 +1549,28 @@ order.
   from the box model and not measured: the headless browser the tests use draws
   every edge at 1px. It is accepted: holding the height still would need a fixed
   height, which is what a textarea is not.
+- **A long value scrolls inside the box.** The box does not grow with its
+  text, so a value taller than its rows scrolls, and its scrollbar sits inside
+  the curve of the corner, which clips it. `textarea.css` sets no scrollbar
+  property. The tokens' `color-scheme` themes the scrollbar for light and dark,
+  and `base.css` adds a thin `scrollbar-width` and a `scrollbar-color` from the
+  palette when an app loads it. Components never depend on `base.css`, so a
+  textarea without it keeps the browser's own scrollbar, drawn in the theme's
+  `color-scheme`. The `Overflow` story shows the box scrolled to its top with
+  its text cut at the edge. The headless browser that makes the baselines hides
+  scrollbars, so the images do not draw the bar: it was checked once in the
+  same browser with scrollbars drawn (inside the curve, thin and themed in
+  light, dark and at 375px) and no test holds it.
 - **The count** counts the value's length, a line break as one character: that
-  is the value React Aria reports and `FormData` holds. A browser sends each
+  is the value React Aria reports and `FormData` holds. The unit is the value's
+  `length`, in UTF-16 code units, the unit JavaScript, `maxLength` and the value
+  `onChange` receives all use, so an emoji, or an accented letter built from two
+  code points, can count as two. A browser sends each
   line break in a form request as two characters (CR and LF; measured as
   `%0D%0A` in a posted body), so a server that measures the request sees one more
-  per line. Everything else about the count is TextField's: it advises, never
+  per line. The budget is a soft target and the count can pass it. `maxLength` is
+  a hard stop that the count does not read, so set `budget` at or below it.
+  Everything else about the count is TextField's: it advises, never
   blocks, and appears from 70% of the budget.
 
 No pairing was added to the contrast gate. The fills, edges and text are the

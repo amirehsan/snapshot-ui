@@ -24,6 +24,16 @@ function tokenRadius(name: string): string {
 
 const TWO_LINES =
   'A shared space for the Northwind design team.\nBriefs, reviews and the weekly notes live here.';
+const MANY_LINES = [
+  'A shared space for the Northwind design team.',
+  'Briefs, reviews and the weekly notes live here.',
+  'Everyone on the team can post.',
+  'Guests can read and comment.',
+  'Files older than a year move to the archive.',
+  'Ask in the channel before you delete anything.',
+  'The owner reviews access every quarter.',
+  'Questions go to the team lead.',
+].join('\n');
 const NEAR_BUDGET = 'A shared space for the Northwind design team.\nBriefs and reviews.';
 const OVER_BUDGET = 'A shared space for the Northwind design team.\nBriefs, reviews, notes and the guests.';
 
@@ -174,6 +184,17 @@ export const Tall: Story = {
     const textarea = canvas.getByRole('textbox', { name: 'Short description' });
     await expect(textarea).toHaveAttribute('rows', '6');
     await expect(textarea.getBoundingClientRect().height).toBeGreaterThan(150);
+  },
+};
+
+/** A value taller than the box scrolls inside it and does not grow it. The baseline shows the box at its top, with the next line cut at the edge. */
+export const Overflow: Story = {
+  args: { defaultValue: MANY_LINES },
+  play: async ({ canvas }) => {
+    const textarea = canvas.getByRole('textbox', { name: 'Short description' });
+    // The box keeps its three rows and scrolls. It does not grow with its text.
+    await expect(textarea.scrollHeight).toBeGreaterThan(textarea.clientHeight);
+    await expect(textarea.getBoundingClientRect().height).toBeLessThan(120);
   },
 };
 

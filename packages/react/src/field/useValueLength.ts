@@ -21,8 +21,12 @@ export interface ValueLength {
  * it, for `FieldCounter`. An uncontrolled field keeps its value inside React
  * Aria, so the count is kept from the changes it reports, starting from the
  * default value. A form reset reports the default value through the same
- * change, so the count follows it. A line break counts as one character, as it
- * does in the value React Aria reports.
+ * change, so the count follows it.
+ *
+ * The unit is the value's `length`, in UTF-16 code units. That is how
+ * JavaScript, `maxLength` and the value React Aria reports all measure, so a
+ * line break counts as one, and an emoji or an accented letter built from two
+ * code points can count as two.
  *
  * Internal: every text field with a `budget` calls it, so they all count alike.
  * Not exported from the package.
