@@ -1,3 +1,4 @@
+import { Kbd } from '@snapshot-ui/react';
 import type { ReactElement } from 'react';
 
 /** A keyboard table: each row is the keys, then what they do. */
@@ -8,9 +9,9 @@ export function Keys({ rows }: { rows: [keys: string, action: string][] }): Reac
         <div className="key-row" key={keys}>
           <span>
             {keys.split(' ').map((key) => (
-              <span className="kbd" key={key} style={{ marginRight: 6 }}>
+              <Kbd key={key} style={{ marginRight: 6 }}>
                 {key}
-              </span>
+              </Kbd>
             ))}
           </span>
           <span>{action}</span>

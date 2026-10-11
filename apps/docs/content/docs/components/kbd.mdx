@@ -1,0 +1,61 @@
+---
+title: Kbd
+description: A key hint, such as the search shortcut. One small key on a bone chip, static and safe in a server component.
+icon: Keyboard
+---
+
+<Section>
+
+## Examples
+
+One Kbd per key, so a shortcut is as many keys as it has. Figures are tabular, so a row of keys keeps its width.
+
+<Preview name="kbd-keys" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+A static `kbd` element with no React Aria, so it works in a server component without `'use client'`.
+
+<Code code={`import { Kbd } from '@snapshot-ui/react';
+
+export function SearchHint() {
+  return (
+    <p>
+      Press <Kbd>&#8984;</Kbd> <Kbd>K</Kbd> to search.
+    </p>
+  );
+}`} />
+
+</Section>
+
+<Section>
+
+## Props
+
+A Kbd accepts every attribute of an HTML element.
+
+<PropsTable path="../../packages/react/src/kbd/Kbd.tsx" type="Pick<KbdProps, 'children' | 'className' | 'aria-hidden'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A Kbd is read aloud like any text. When something nearby already names the shortcut, such as a button whose label says it, pass `aria-hidden` so it is not announced twice.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps key hints in the system.
+
+<Rules dos={['Show a key hint only for a shortcut that works.', 'Use the key symbol people see on their keyboard, such as the command key or Esc.']} donts={['Never use a Kbd as a button. It is a label, not a control.']} />
+
+</Section>

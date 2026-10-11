@@ -1,4 +1,4 @@
-import { Eyebrow } from '@snapshot-ui/react';
+import { Badge, Eyebrow, Link } from '@snapshot-ui/react';
 import pkg from '@snapshot-ui/react/package.json';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -38,15 +38,15 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>): Promi
               <div className="meta">
                 <div className="meta-row">
                   <span>Version</span>
-                  <span className="badge">{pkg.version}</span>
+                  <Badge>{pkg.version}</Badge>
                 </div>
                 <div className="meta-row">
                   <span>Source</span>
-                  <a href={`${GITHUB}/edit/main/apps/docs/content/docs/${page.path}`}>Edit this page</a>
+                  <Link href={`${GITHUB}/edit/main/apps/docs/content/docs/${page.path}`}>Edit this page</Link>
                 </div>
                 <div className="meta-row">
                   <span>Built on</span>
-                  <a href="https://react-aria.adobe.com">React Aria</a>
+                  <Link href="https://react-aria.adobe.com">React Aria</Link>
                 </div>
               </div>
             </section>

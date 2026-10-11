@@ -1,3 +1,4 @@
+import { Link } from '@snapshot-ui/react';
 import type { MDXComponents } from 'mdx/types';
 import { Code } from './code';
 import { Keys } from './keys';
@@ -9,6 +10,7 @@ import { Section } from './section';
 /** Every element and component MDX pages may use, drawn in Snapshot UI. */
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
+    a: ({ children, ...props }) => <Link {...props}>{children}</Link>,
     h2: ({ children, ...props }) => (
       <h2 className="type-h3" {...props}>
         {children}

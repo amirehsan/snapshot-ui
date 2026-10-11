@@ -164,6 +164,18 @@ describe('dist/components/heading.css', () => {
   });
 });
 
+describe('src/components/badge.css', () => {
+  const source = () => read('src/components/badge.css').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('draws no fill, so its text stays on the surface behind it and every pair is a measured one', () => {
+    expect(source()).not.toMatch(/background/);
+  });
+
+  it('is never clay or signal, which mean unsaved work and consent', () => {
+    expect(source()).not.toMatch(/--color-(?:clay|signal)/);
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 
