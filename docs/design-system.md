@@ -1126,9 +1126,10 @@ weight 450, and `copy-small` is `--text-small`, 14px.
 
 **Muted is slate, never taupe.** A muted sentence is still read, and the test in
 "Where each text color may go" is whether the reader needs to read it. Slate on
-canvas measures 4.83:1 in light and 7.25:1 in dark, and it is the lowest of the
-grounds the contrast gate already lists for hints and notes, so no pairing was
-added. Taupe fails AA on every surface.
+canvas measures 4.84:1 in light and 7.26:1 in dark. Of the five grounds the
+contrast gate already lists for hints and notes, canvas is the lowest in light,
+and bone is the lowest in dark at 6.44:1. Slate clears 4.5:1 on all of them, so
+no pairing was added. Taupe fails AA on every surface.
 
 **Spacing is the layout's.** Each class sets `margin: 0`, so the default margin
 of a paragraph or a heading never adds to a gap the layout already chose.
@@ -1137,7 +1138,9 @@ of a paragraph or a heading never adds to a gap the layout already chose.
 slate, which is the document's eyebrow row set in the color its text-color test
 gives an eyebrow. It renders a `p`, `span` or `div` and never a heading, because
 it labels the heading beside it and is not an entry in the outline. It is
-`inline-flex`, so a span sits inside a line of text.
+`inline-flex`, so a span sits inside a line of text. A label with no gutter
+beside it takes the `eyebrow-inset` variant, or the `inset` prop of Eyebrow,
+which keeps the dot inside the label's box.
 
 **The eyebrow's dot is Light Signal Orange.** The document is split on the dot's
 color. Its palette lists eyebrow dots among the uses of Signal Orange, and its
@@ -1148,7 +1151,7 @@ Signal Orange. The dot is 6px, and it takes `--radius-dot`, so it stays round in
 every shape. It is always lit. The app's rail group label greys its dot until the
 group holds the current page, which is navigation state, and an eyebrow has none.
 
-The dot measures 2.52:1 on canvas in light, under the 3:1 that WCAG 1.4.11 asks
+The dot measures 2.53:1 on canvas in light, under the 3:1 that WCAG 1.4.11 asks
 of a graphic that carries meaning. It carries none: the label says everything
 without it, and the dot is the system's mark. It is decoration, so it is not in
 the contrast gate. In dark it measures 6.73:1.

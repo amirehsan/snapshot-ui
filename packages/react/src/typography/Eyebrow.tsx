@@ -10,6 +10,12 @@ export interface EyebrowProps extends HTMLAttributes<HTMLElement> {
    * @default 'p'
    */
   as?: EyebrowElement;
+  /**
+   * Keeps the dot inside the label's box. By default the dot hangs into the
+   * gutter beside the label, so use this where there is no gutter.
+   * @default false
+   */
+  inset?: boolean;
   ref?: Ref<HTMLElement>;
 }
 
@@ -18,7 +24,12 @@ export interface EyebrowProps extends HTMLAttributes<HTMLElement> {
  * the gutter. A static component: it renders a plain `p`, `span` or `div`, so it
  * works in a server component.
  */
-export function Eyebrow({ as: Element = 'p', className, ...props }: EyebrowProps): ReactElement {
+export function Eyebrow({
+  as: Element = 'p',
+  inset = false,
+  className,
+  ...props
+}: EyebrowProps): ReactElement {
   // createElement and not JSX: see Text.
-  return createElement(Element, { ...props, className: cx('eyebrow', className) });
+  return createElement(Element, { ...props, className: cx('eyebrow', inset && 'eyebrow-inset', className) });
 }

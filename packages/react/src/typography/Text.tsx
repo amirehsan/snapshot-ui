@@ -37,6 +37,9 @@ export function Text({
 }: TextProps): ReactElement {
   // createElement and not JSX: JSX checks the props against all three tags at
   // once, and a ref typed for the HTMLElement they share fails that check.
+  // The public ref type is therefore the wide HTMLElement. React's ref types
+  // are covariant, so a ref typed for another tag, a div ref on the default p,
+  // still compiles: keep the ref's type in step with `as`.
   return createElement(Element, {
     ...props,
     className: cx('copy', size === 'small' && 'copy-small', tone === 'muted' && 'copy-muted', className),

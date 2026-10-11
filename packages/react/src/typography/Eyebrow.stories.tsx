@@ -25,3 +25,13 @@ export const AboveHeading: Story = {
     </div>
   ),
 };
+
+/** With no gutter beside the label, `inset` keeps the dot inside the label's box, so nothing hangs outside it. */
+export const Inset: Story = {
+  args: { inset: true },
+  render: (args) => (
+    <div style={{ overflow: 'hidden', border: '1px solid var(--color-frame)', padding: '12px 0' }}>
+      <Eyebrow {...args} />
+    </div>
+  ),
+};
