@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noImplicitAny": false,
+    "types": ["node"]
+  },
+  "include": ["scripts", "stylelint", "test", "*.config.js", "dist/tokens.d.ts"]
+}
