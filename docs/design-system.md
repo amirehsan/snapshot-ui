@@ -440,7 +440,7 @@ When refining existing screens generated with this design system:
 
 ---
 
-# Appendix: Form Surfaces Derived for Snapshot
+# Appendix A: Form Surfaces Derived for Snapshot
 
 Everything above describes a marketing page. Snapshot is a settings panel, and
 section 10 of this document says so directly:
@@ -769,7 +769,7 @@ two full width cards the choice was a near empty band and the builder's rows so
 wide that their buttons sat a screen away from their names. A third is about
 330px at the 1440px entry, which is room for a choice and not for fields, so a
 third never holds a form. A two thirds card can also span two rows beside two
-thirds stacked on top of each other, when both decide what it holds: the menu editor
+one third cards stacked on top of each other, when both decide what it holds: the menu editor
 stacks the source over the list of menus on the left, and the builder spans
 both rows on the right.
 
@@ -943,9 +943,13 @@ own.
 | `frame` | ink at 12% | white at 12% | The outline of a list, or of a float surface opening over another. |
 | `divider` | ink at 10% | white at 10% | A rule inside a surface. |
 
-**Boundary is the document's own value.** Section 4 gives the input border as
-"Ink Black at ~50% opacity". The app dropped it to 40%, which measures 2.58:1
-on white, under the 3:1 WCAG 1.4.11 asks of a control's edge. At 50%:
+**Boundary is the document's own value in light, and firmer in dark.** Section
+4 gives the input border as "Ink Black at ~50% opacity". The app dropped it to
+40%, which measures 2.58:1 on white, under the 3:1 WCAG 1.4.11 asks of a
+control's edge. Section 7 gives dark inputs white at 35%, which clears 3:1 for
+an edge, as Appendix A notes. The library uses 50% in dark too, because the
+same token is a switch's off track: at 35% the dark thumb measures 2.84 against
+it, and at 50% it measures 4.59. At 50%:
 
 | Boundary against | Light | Dark |
 | --- | --- | --- |
