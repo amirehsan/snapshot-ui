@@ -1,0 +1,42 @@
+/*
+ * Opt-in page base for an app built on Snapshot UI. Components never depend on
+ * it: each sets what it needs. Import it once, at the root, after styles.css.
+ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Thin and in the palette: ink at low strength on no track at all. */
+    scrollbar-color: var(--color-scrollbar) transparent;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    /* A missing weight never renders as faux bold, kerning is the font's own,
+       and greyscale smoothing keeps the 450 weight even in both themes. */
+    font-synthesis: none;
+    font-kerning: normal;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  @supports (scrollbar-width: thin) {
+    * {
+      scrollbar-width: thin;
+    }
+  }
+}
