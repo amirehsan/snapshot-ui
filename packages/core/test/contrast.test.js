@@ -117,7 +117,7 @@ describe('the text colors Link and Badge draw', () => {
     const measured = new Set(
       CONTRAST_PAIRS.filter((pair) => pair.minimum === TEXT).map((pair) => `${pair.text} on ${pair.ground}`),
     );
-    // Kbd is slate on its own bone chip. Link, success and error are not measured on bone.
+    // Kbd is slate on its own bone chip. Link and success are not measured on bone.
     expect(measured, 'slate on bone').toContain('slate on bone');
     for (const text of ['link', 'success', 'error', 'slate']) {
       for (const ground of ['canvas', 'lifted', 'float', 'raised']) {
