@@ -1,4 +1,4 @@
 {
   "title": "Components",
-  "pages": ["badge", "button", "kbd", "link", "spinner", "typography"]
+  "pages": ["badge", "button", "icon-button", "kbd", "link", "spinner", "typography"]
 }

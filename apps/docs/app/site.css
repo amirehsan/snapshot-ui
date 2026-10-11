@@ -3,9 +3,9 @@
  * mockups (docs/mockups/mockup.css) for parts the library does not ship yet.
  * Phase 1b deletes each stand-in in the same task that adds the real
  * component to @snapshot-ui/core: heading and text (the type-* and muted
- * rules), icon-button, field, input, segmented, switch and card.
- * Button, Spinner, Eyebrow, Link, Kbd and Badge come from @snapshot-ui/core
- * and are not redrawn here.
+ * rules), field, input, segmented, switch and card.
+ * Button, Spinner, Eyebrow, Link, Kbd, Badge and IconButton come from
+ * @snapshot-ui/core and are not redrawn here.
  */
 /* The site's own base. The library's base.css sets the page and body type
    but, as a library, leaves links and headings alone; a site resets them. */
@@ -161,7 +161,6 @@
     color: var(--color-taupe);
   }
 
-  .icon-button:focus-visible,
   .chip:focus-visible,
   .rail-link:focus-visible,
   .segmented-option:has(:focus-visible),
@@ -173,41 +172,6 @@
   .button-large {
     min-height: 48px;
     padding-inline: 1.75rem;
-  }
-
-  .icon-button {
-    display: inline-grid;
-    place-items: center;
-    flex: none;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border: 1px solid var(--color-ink);
-    border-radius: var(--radius-pill);
-    background: transparent;
-    color: var(--color-ink);
-    cursor: pointer;
-    transition:
-      border-radius 200ms ease,
-      background-color 120ms ease;
-  }
-
-  .icon-button:hover {
-    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
-  }
-
-  .icon-button-ghost {
-    border-color: transparent;
-    color: var(--color-slate);
-  }
-
-  .icon-button-ghost:hover {
-    color: var(--color-ink);
-  }
-
-  .icon-button svg {
-    width: 18px;
-    height: 18px;
   }
 
   /* ---- Chips, key hints, badges --------------------------------------- */

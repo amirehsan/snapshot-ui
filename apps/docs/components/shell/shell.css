@@ -440,13 +440,16 @@
     display: none;
   }
 
+  /* The header's menu button floats: an outline IconButton at 48px with a float fill, a hairline edge and a lift shadow. */
   .header-menu {
+    --icon-button-bg: var(--color-float);
+    --icon-button-bg-active: color-mix(in srgb, var(--color-ink) 5%, var(--color-float));
+    --icon-button-border: var(--color-hairline);
+
     display: none;
     width: 48px;
     height: 48px;
     margin-left: -8px;
-    border-color: var(--color-hairline);
-    background-color: var(--color-float);
     box-shadow: var(--shadow-lift);
   }
 

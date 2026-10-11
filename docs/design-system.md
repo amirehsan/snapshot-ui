@@ -1262,3 +1262,57 @@ All sixteen pairs are in the contrast gate already, so Badge adds none. Slate
 is also measured on Bone, 4.99 and 6.44, so a neutral badge may sit there. The
 three colored tones are not measured on Bone, so they stay on the four
 surfaces above.
+
+## IconButton
+
+Section 4 gives the icon-only circle button as transparent or white, an icon
+of 10 to 20px, a 1px ink border on cream or none over media, a 50% radius and
+a 40px diameter at the least. The library keeps all of it and splits the two
+looks into variants. The radius is `--radius-pill`, so the circle follows the
+shape axis: a circle in Rounded, 12px in Soft, square in Square.
+
+- **Ghost** is the base. It has no fill and no edge, and its icon is slate,
+  turning ink on hover. It is the document's "none over media" look, for bars,
+  headers and the corner of a code block.
+- **Outline** is the document's circle on cream: a transparent fill, a 1px ink
+  border and an ink icon. Ink is white in dark, so the edge follows the theme.
+  The edge is the ink pairing the contrast gate already holds against canvas,
+  lifted, bone, float and raised. Ink measures 16.25 on canvas, 17.84 on
+  lifted and 18.43 on float in light, and 19.31, 17.42 and 17.42 in dark, far
+  over the 3 that WCAG 1.4.11 asks of an edge.
+
+Hover and press are a 5% ink wash, over whatever the button sits on, in both
+variants. The app stepped Float to Lifted, which are the same color in dark,
+so its hover changed nothing there. Like every hover wash it is a cue and not a
+boundary, so it has no pair in the contrast gate. The icon is ink on the wash,
+and measures 14.70 on canvas and 16.65 on float in light, 17.41 and 15.25 in
+dark. The lowest of the five grounds is 13.24, Bone in dark. A press shows the
+wash too, since touch has no hover to show it. The ghost icon at rest is
+slate, which measures 4.84 on canvas in light and 7.26 in dark, over the 4.5
+the text gate asks of it and the 3 an icon needs.
+
+Disabled turns the icon taupe, stops the hover and shows `not-allowed`. An
+outline button's edge fades to 15% ink, as the Button's does. Taupe measures
+1.40 on canvas in light and 3.81 in dark. A disabled control is exempt from
+contrast, as the Button's disabled label is.
+
+The rest follow the rules above:
+
+- The icon is 20px, the top of the document's range. Icon libraries draw at
+  24px, so the stylesheet sets the size of any `svg` inside.
+- The ring is the shared focus ring, outside the circle, so ink still reads
+  against the page behind it.
+- The cursor is `pointer`. The app's header toggle and toast dismiss had none.
+- The button is 40px. The app's rail collapse button was 28px and its toast
+  dismiss 32px, and neither is carried over: a control drawn smaller extends
+  its hit area instead.
+- The only motion is a 120ms fade of the wash, and reduced motion removes it.
+
+The icon holds no text, so it is hidden from assistive technology and the
+types require a name: `aria-label`, or `aria-labelledby`. Given an `href` the
+component renders an anchor with the same classes, because an icon that goes
+somewhere, such as a GitHub link, is a link and not a button. The app's icon
+controls were all buttons. React Aria renders a disabled link as a `span` with
+`role="link"` and `aria-disabled`, which the stylesheet matches through
+`data-disabled`. There is no pending state, since an icon has nowhere to show
+one.
