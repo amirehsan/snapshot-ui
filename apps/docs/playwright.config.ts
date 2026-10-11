@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 3100;
+// Override with DOCS_E2E_PORT to run e2e in two checkouts at once.
+const PORT = Number(process.env.DOCS_E2E_PORT ?? 3100);
 const isCI = Boolean(process.env.CI);
 
 export default defineConfig({

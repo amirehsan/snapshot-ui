@@ -33,7 +33,7 @@ describe('tokens.css', () => {
     ]);
   });
 
-  it('declares every variable the components rely on, on :root', () => {
+  it('declares exactly the variables the components rely on, on :root', () => {
     const textStyles = ['h1', 'h2', 'h3', 'h4', 'eyebrow', 'body', 'action', 'small', 'overline'];
     const withLetterSpacing = ['h1', 'h2', 'h3', 'eyebrow', 'action', 'overline'];
     const contract = [
@@ -79,9 +79,11 @@ describe('tokens.css', () => {
       ...['sm', 'md', 'lg'].map((name) => `--breakpoint-${name}`),
       '--focus-ring-width',
       '--focus-ring-offset',
+      '--focus-ring-color',
     ];
-    const declared = new Set([...block(':root').matchAll(/^\s*(--[\w-]+):/gm)].map((match) => match[1]));
-    expect(contract.filter((name) => !declared.has(name))).toEqual([]);
+    const declared = [...block(':root').matchAll(/^\s*(--[\w-]+):/gm)].map((match) => match[1]);
+    // Equality, not inclusion: a variable that leaks into :root fails too.
+    expect(declared.sort()).toEqual([...contract].sort());
   });
 
   it('declares the light values on :root', () => {
@@ -98,6 +100,24 @@ describe('tokens.css', () => {
     expect(root).toContain('--shadow-float: 0px 24px 48px 0px rgb(0 0 0 / 0.08);');
     expect(root).toContain('--spacing-peer: 24px;');
     expect(root).toContain('--focus-ring-width: 2px;');
+  });
+
+  it('keeps the focus ring a reference to ink, declared again in every theme scope', () => {
+    const ring = '--focus-ring-color: var(--color-ink);';
+    expect(block(':root')).toContain(ring);
+    // A custom property that holds var() resolves where it is declared, so a
+    // nested theme scope would otherwise inherit the page's ink, not its own.
+    for (const selector of [
+      '[data-theme="dark"]',
+      '[data-theme="light"]',
+      ':root:not([data-theme="light"])',
+    ]) {
+      expect(block(selector), selector).toContain(ring);
+    }
+    // Shape never changes ink, so the shape blocks leave it alone.
+    for (const selector of ['[data-shape="soft" i]', '[data-shape="square" i]', '[data-shape="rounded" i]']) {
+      expect(block(selector), selector).not.toContain('--focus-ring-color');
+    }
   });
 
   it('keeps the alpha of translucent dark colors', () => {
@@ -154,5 +174,6 @@ describe('tokens.js', () => {
     expect(tokens.color.slate.modes.theme.dark).toBe('rgb(255 255 255 / 0.6)');
     expect(tokens.radius.pill.modes.shape.soft).toBe('12px');
     expect(tokens.text.body['line-height'].cssVar).toBe('--text-body--line-height');
+    expect(tokens['focus-ring'].color.var).toBe('var(--focus-ring-color)');
   });
 });
