@@ -27,6 +27,8 @@ export const Disabled: Story = { args: { isDisabled: true } };
 export const Pending: Story = { args: { isPending: true, pendingLabel: 'Saving' } };
 
 export const Pressed: Story = {
+  // A press is transient, so no screenshot can hold it. The story test still asserts it.
+  tags: ['no-visual'],
   play: async ({ args, canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }));
     await expect(args.onPress).toHaveBeenCalledOnce();

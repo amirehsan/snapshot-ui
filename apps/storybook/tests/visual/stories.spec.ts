@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
+import { ready } from './ready';
 
 interface IndexEntry {
   id: string;
@@ -30,15 +31,11 @@ for (const story of stories) {
     test(`${story.id} [${theme}/${shape}${suffix}]`, async ({ page }) => {
       await page.setViewportSize({ width, height: 720 });
       await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=theme:${theme};shape:${shape}`);
-      await page.waitForFunction(() => {
-        const phase = (window as { __STORYBOOK_PREVIEW__?: { currentRender?: { phase?: string } } })
-          .__STORYBOOK_PREVIEW__?.currentRender?.phase;
-        return phase === 'completed' || phase === 'finished';
-      });
+      await ready(page);
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
       await expect(page.locator('html')).toHaveAttribute('data-shape', shape);
-      await expect(page).toHaveScreenshot(`${story.id}--${theme}-${shape}${suffix}.png`);
+      await expect(page).toHaveScreenshot(`${story.id}--${theme}-${shape}${suffix}.png`, { fullPage: true });
     });
   }
 }
