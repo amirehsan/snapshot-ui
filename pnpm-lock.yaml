@@ -6,9 +6,15 @@ settings:
 
 catalogs:
   default:
+    '@storybook/react-vite':
+      specifier: 10.6.1
+      version: 10.6.1
     '@typescript/native':
       specifier: npm:typescript@^7.0.2
       version: 7.0.2
+    storybook:
+      specifier: 10.6.1
+      version: 10.6.1
     typescript:
       specifier: npm:@typescript/typescript6@^6.0.2
       version: 6.0.2
@@ -82,7 +88,7 @@ importers:
         specifier: 10.6.1
         version: 10.6.1(@vitest/browser-playwright@5.0.3)(@vitest/browser@5.0.3(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.0.3))(react@19.3.0)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.0))(vitest@5.0.3)
       '@storybook/react-vite':
-        specifier: 10.6.1
+        specifier: 'catalog:'
         version: 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@typescript/typescript6@6.0.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.0))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       '@types/node':
         specifier: 24.19.2
@@ -115,7 +121,7 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
       storybook:
-        specifier: 10.6.1
+        specifier: 'catalog:'
         version: 10.6.1(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.0)
       typescript:
         specifier: 'catalog:'
@@ -182,7 +188,7 @@ importers:
         specifier: 0.18.5
         version: 0.18.5
       '@storybook/react-vite':
-        specifier: 10.6.1
+        specifier: 'catalog:'
         version: 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(@typescript/typescript6@6.0.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.0))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       '@testing-library/dom':
         specifier: 10.4.2
@@ -221,7 +227,7 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
       storybook:
-        specifier: 10.6.1
+        specifier: 'catalog:'
         version: 10.6.1(@types/react@19.3.0)(prettier@3.9.10)(react@19.3.0)
       tsdown:
         specifier: 0.23.1
