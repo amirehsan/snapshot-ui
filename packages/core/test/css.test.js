@@ -210,6 +210,24 @@ describe('src/components/icon-button.css', () => {
   });
 });
 
+describe('src/components/field.css', () => {
+  const source = () => stripComments(read('src/components/field.css')).replace(/\s+/g, ' ');
+  // The label, the hint and the error line (which share one rule) and the count.
+  const wrapping = ['.field-label {', '.field-description, .field-error {', '.field-counter {'];
+
+  it('breaks a long unbroken word in the label, hint, error line and count, so a narrow screen is never pushed sideways', () => {
+    for (const header of wrapping) {
+      expect(blockAfter(source(), header), header).toContain('overflow-wrap: anywhere;');
+    }
+  });
+
+  it('sets every text part in the library font, so a page without base.css keeps the controls and their labels alike', () => {
+    for (const header of [...wrapping, '.field-changed {']) {
+      expect(blockAfter(source(), header), header).toContain('font-family: var(--font-sans);');
+    }
+  });
+});
+
 describe('src/components/badge.css', () => {
   const source = () => read('src/components/badge.css').replace(/\/\*[\s\S]*?\*\//g, '');
 

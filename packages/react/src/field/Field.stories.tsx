@@ -167,6 +167,31 @@ export const LongLabel: Story = {
   },
 };
 
+// One unbroken word in each part, with no hyphen, slash or dot for a browser to break at.
+const LONG_LABEL = 'Thenamethatyourteamseesintheheaderandineveryinviteandinallthebillingemailswesendout';
+const LONG_HINT = 'Shownintheheaderandineveryinviteandinallthebillingemailsthatwesendouttoyourteam';
+const LONG_ERROR = 'Enteranamefortheworkspacethatismadeofwordsnotoneunbrokenstringofletterswithnobreaks';
+
+/** One unbroken word in the label, the hint and the error line wraps inside its part and never scrolls the field sideways. */
+export const LongWord: Story = {
+  args: {
+    label: LONG_LABEL,
+    description: LONG_HINT,
+    errorMessage: LONG_ERROR,
+    isInvalid: true,
+    defaultValue: 'Northwind Studio',
+  },
+  play: async ({ canvas }) => {
+    const field = canvas.getByRole('textbox', { name: LONG_LABEL }).closest('.field');
+    if (!(field instanceof HTMLElement)) throw new Error('The field root is missing.');
+    // Text that cannot break pokes out of its box and widens what holds it.
+    await expect(field.scrollWidth).toBeLessThanOrEqual(field.clientWidth);
+    for (const text of [LONG_LABEL, LONG_HINT, LONG_ERROR]) {
+      await expect(canvas.getByText(text)).toBeVisible();
+    }
+  },
+};
+
 /** Typing past the budget is never blocked. */
 export const TypingPastBudget: Story = {
   tags: ['no-visual'],

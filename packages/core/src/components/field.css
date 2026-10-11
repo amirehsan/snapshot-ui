@@ -10,7 +10,8 @@
 @layer components {
   .field {
     display: grid;
-    /* A column that may shrink, so one long word never pushes the page sideways. */
+    /* A column that may shrink, so a wide child cannot widen the field. A long
+       word in a label, hint, error or count wraps inside its own part, below. */
     grid-template-columns: minmax(0, 1fr);
     align-content: start;
     /* Parts of one thing: label to control to hint. */
@@ -32,17 +33,21 @@
 
   .field-label {
     color: var(--color-ink);
+    font-family: var(--font-sans);
     font-size: var(--text-h4);
     line-height: var(--text-h4--line-height);
     font-weight: var(--text-h4--font-weight);
+    overflow-wrap: anywhere;
   }
 
   .field-description,
   .field-error {
     display: block;
+    font-family: var(--font-sans);
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
     font-weight: var(--text-small--font-weight);
+    overflow-wrap: anywhere;
   }
 
   .field-description {
@@ -62,10 +67,12 @@
   .field-counter {
     justify-self: end;
     color: var(--color-slate);
+    font-family: var(--font-sans);
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
     font-weight: var(--text-small--font-weight);
     font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
   }
 
   .field-counter:empty {
@@ -95,6 +102,7 @@
     display: inline-block;
     padding-inline-start: calc(0.375rem + var(--spacing-part));
     color: var(--color-clay);
+    font-family: var(--font-sans);
     font-size: var(--text-eyebrow);
     line-height: var(--text-eyebrow--line-height);
     letter-spacing: var(--text-eyebrow--letter-spacing);

@@ -1336,9 +1336,11 @@ everything else here is derived.
 - **The wrapper** is a grid with 8px between its parts, the "parts of one
   thing" step. It stops at `--container-field`, so a count set at the end of
   the field lands under the end of the control and a hint wraps at a readable
-  measure. Its column may shrink, so a long word never pushes the page sideways.
-  The label row holds the label and the chip, and the chip wraps under a long
-  label instead of overflowing.
+  measure. Its column may shrink, and the label, hint, error line and count
+  break a long unbroken word where they must (`overflow-wrap: anywhere`, as
+  Link, Kbd and Badge do), so one such word wraps inside its part and the page
+  does not scroll sideways. The label row holds the label and the chip, and the
+  chip wraps under a long label instead of overflowing.
 - **Label** is 14/700 in ink, the h4 step. **Description** is 14/450 in slate,
   the small step. Both are the document's own, unchanged.
 - **Error** is 14/450 in the error color. The app had no inline error line, but
