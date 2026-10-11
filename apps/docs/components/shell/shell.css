@@ -447,6 +447,10 @@
     text-overflow: ellipsis;
   }
 
+  .rail-close {
+    display: none;
+  }
+
   .header-menu {
     display: none;
     width: 48px;
@@ -517,64 +521,73 @@
       border-radius 200ms ease;
   }
 
-  /* ---- Collapsed rail: icons only, names as tooltips ---------------- */
-  [data-rail='collapsed'] {
-    --rail-width: 104px;
-  }
+  /* ---- Collapsed rail: icons only, names as tooltips ----------------
+     Only from 1024px up. Under it the rail is a drawer, and a drawer always
+     shows its labels, whatever was chosen on a wide screen. */
+  @media (width >= 1024px) {
+    [data-rail='collapsed'] {
+      --rail-width: 104px;
+    }
 
-  [data-rail='collapsed'] .rail-collapse svg {
-    rotate: 180deg;
-  }
+    [data-rail='collapsed'] .rail-collapse svg {
+      rotate: 180deg;
+    }
 
-  [data-rail='collapsed'] .rail-head {
-    justify-content: center;
-    padding: 24px 0 12px;
-  }
+    [data-rail='collapsed'] .rail-head {
+      justify-content: center;
+      padding: 24px 0 12px;
+    }
 
-  [data-rail='collapsed'] .rail-version,
-  [data-rail='collapsed'] .rail-key,
-  [data-rail='collapsed'] .rail-link .badge {
-    display: none;
-  }
+    [data-rail='collapsed'] .rail-version,
+    [data-rail='collapsed'] .rail-key,
+    [data-rail='collapsed'] .rail-link .badge {
+      display: none;
+    }
 
-  /* Hidden from view, not from assistive technology. */
-  [data-rail='collapsed'] .rail-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
+    /* Hidden from view, not from assistive technology. */
+    [data-rail='collapsed'] .rail-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
 
-  [data-rail='collapsed'] .rail-search {
-    justify-content: center;
-    width: 44px;
-    margin: 8px auto 4px;
-    padding: 0;
-  }
+    [data-rail='collapsed'] .rail-search {
+      justify-content: center;
+      width: 44px;
+      margin: 8px auto 4px;
+      padding: 0;
+    }
 
-  [data-rail='collapsed'] .rail-nav {
-    padding-inline: 16px;
-    scrollbar-width: none;
-  }
+    [data-rail='collapsed'] .rail-nav {
+      padding-inline: 16px;
+      scrollbar-width: none;
+    }
 
-  [data-rail='collapsed'] .rail-group {
-    justify-content: center;
-    margin-top: 16px;
-    padding: 8px 0;
-    font-size: 0;
-  }
+    [data-rail='collapsed'] .rail-group {
+      justify-content: center;
+      margin-top: 16px;
+      padding: 8px 0;
+      font-size: 0;
+    }
 
-  [data-rail='collapsed'] .rail-group::before {
-    margin-left: 0;
-  }
+    [data-rail='collapsed'] .rail-group::before {
+      margin-left: 0;
+    }
 
-  [data-rail='collapsed'] .rail-link {
-    position: relative;
-    justify-content: center;
-    width: 40px;
-    margin-inline: auto;
-    padding: 0;
+    [data-rail='collapsed'] .rail-link {
+      position: relative;
+      justify-content: center;
+      width: 40px;
+      margin-inline: auto;
+      padding: 0;
+    }
+
+    [data-rail='collapsed'] .rail-foot {
+      justify-content: center;
+      padding: 16px 0 20px;
+    }
   }
 
   /* The collapsed rail's names, floated beside the icon so the list
@@ -597,11 +610,6 @@
 
   .rail-tip[hidden] {
     display: none;
-  }
-
-  [data-rail='collapsed'] .rail-foot {
-    justify-content: center;
-    padding: 16px 0 20px;
   }
 
   .scrim {
@@ -634,8 +642,7 @@
 
   /* ---- Under 1024: the rail becomes a drawer ------------------------ */
   @media (width < 1024px) {
-    :root,
-    [data-rail='collapsed'] {
+    :root {
       --rail-width: 0px;
     }
 
@@ -667,8 +674,21 @@
       display: none;
     }
 
-    .header-menu {
+    .header-menu,
+    .rail-close {
       display: inline-grid;
+    }
+
+    /* Room for the close button, set a little in from the rail's corner. The 40px
+       button is taller than the 26px brand, so the padding gives back the 14px:
+       the head keeps its height and the brand its place. */
+    .rail-head {
+      gap: 8px;
+      padding: 17px 12px 5px 28px;
+    }
+
+    .rail-version {
+      margin-left: auto;
     }
 
     .header-inner {
@@ -724,10 +744,6 @@
     .card-header {
       margin: 0 -20px 24px;
       padding: 0 20px 20px;
-    }
-
-    .card-header-row {
-      flex-wrap: wrap;
     }
 
     .stage {

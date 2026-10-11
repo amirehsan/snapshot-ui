@@ -107,6 +107,10 @@ export function DocsShell({
     [pathname, drawerOpen],
   );
 
+  const closeDrawer = (): void => {
+    setDrawerPath(null);
+  };
+
   const toggleCollapsed = (): void => {
     writeRailCollapsed(!collapsed);
   };
@@ -122,16 +126,11 @@ export function DocsShell({
         version={version}
         collapsed={collapsed}
         drawerOpen={drawerOpen}
+        onCloseDrawer={closeDrawer}
         onToggleCollapsed={toggleCollapsed}
         onSearch={actions.openSearch}
       />
-      <div
-        className="scrim"
-        aria-hidden
-        onClick={() => {
-          setDrawerPath(null);
-        }}
-      />
+      <div className="scrim" aria-hidden onClick={closeDrawer} />
       <div className="workspace" inert={drawerOpen}>
         {children}
       </div>

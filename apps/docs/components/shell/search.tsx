@@ -17,7 +17,7 @@ export function SearchDialog({
 }): ReactElement {
   const dialog = useRef<HTMLDialogElement>(null);
   const router = useRouter();
-  const { search, onSearchChange, data, isLoading } = useFetchSearch();
+  const { search, onSearchChange, data, isLoading, error } = useFetchSearch();
 
   useEffect(() => {
     const element = dialog.current;
@@ -26,7 +26,10 @@ export function SearchDialog({
     if (!open && element.open) element.close();
   }, [open]);
 
-  const results = (data?.items ?? []).filter((item) => item.type !== 'table').slice(0, 12);
+  // `data` is the last search that finished, and stays while the next one loads.
+  // Only results for what is in the field now may be listed, counted or opened.
+  const current = data?.query === search ? data : undefined;
+  const results = (current?.items ?? []).filter((item) => item.type !== 'table').slice(0, 12);
 
   // Arrow keys move between the input and the results.
   const onKeyDown = (event: KeyboardEvent<HTMLDialogElement>): void => {
@@ -55,15 +58,20 @@ export function SearchDialog({
   };
 
   // One status region, mounted before its text changes so that a screen reader
-  // announces the outcome of each search. It shows only when nothing matches.
+  // announces the outcome of each search. Only the two dead ends are also shown:
+  // a "Searching" line would flash on every keystroke.
+  const noMatch = current !== undefined && results.length === 0;
+  const failed = !isLoading && current === undefined && error !== undefined;
   const status =
     search.length === 0
       ? ''
       : results.length > 0
         ? `${String(results.length)} ${results.length === 1 ? 'result' : 'results'}`
-        : isLoading
-          ? 'Searching'
-          : `Nothing matches "${search}"`;
+        : noMatch
+          ? `Nothing matches "${search}"`
+          : failed
+            ? 'Search failed. Try again.'
+            : 'Searching';
 
   return (
     // The dialog closes on Escape natively; a click on the backdrop lands on the dialog itself.
@@ -103,10 +111,7 @@ export function SearchDialog({
         />
         <span className="kbd">esc</span>
       </div>
-      <p
-        className={search.length > 0 && results.length === 0 ? 'search-empty' : 'visually-hidden'}
-        role="status"
-      >
+      <p className={noMatch || failed ? 'search-empty' : 'visually-hidden'} role="status">
         {status}
       </p>
       {results.length > 0 ? (
