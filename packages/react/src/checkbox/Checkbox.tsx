@@ -24,6 +24,7 @@ export interface CheckboxProps extends Omit<RACCheckboxFieldProps, 'children' | 
   /**
    * The error line, shown only while the checkbox is invalid. A function receives
    * the validation result. Without it the checkbox shows its own validation messages.
+   * Inside a `CheckboxGroup` it is not shown: a group has one error line, its own.
    */
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /** A class name, or a function of the checkbox's state, merged after the library's own class. */

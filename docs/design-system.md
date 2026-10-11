@@ -1597,6 +1597,11 @@ open, each recorded here.
   second flex item with a 12px gap before it. The hint is outside the label,
   as React Aria structures it: it describes the checkbox without becoming part
   of its name, and it is not a target. It is indented to the text, not the box.
+  A checkbox with no text, named by `aria-label` as a table's row select is,
+  has a row only as wide as the box, so the box takes a transparent hit area of
+  its own, 40px square and centred on it, as a `::before` that leaves the drawn
+  box where it is. It stops inside the 40px between vertical rows and the 24px
+  between horizontal ones.
 - **The edge** is `--color-boundary`, ink at 50%. The app drew the box at 45%,
   which measures 2.99 against Raised in light (about 3.0, and 2.63 on the page).
   Boundary is the document's own 50% and the token every control edge uses, so
@@ -1671,6 +1676,20 @@ leaves, every box takes the error edge and the line shows.
 - **Spacing.** The rows carry their own 8px of padding, so the group's 8px
   between parts would double it: the group closes the gap, and the label sits
   8px above the first box's text, like a text field's.
+- **A form reset that re-checks one box and unchecks another loses the
+  re-checked box.** This is React Aria's, and it is not worked around. In
+  `useCheckboxGroupState`, `addValue` takes an updater, so each call builds on
+  the one before, but `removeValue` filters the `selectedValues` it closed over
+  and sets that list outright. A native `reset` runs every box's reset in
+  turn, in one event, so a box re-checked before another is unchecked is
+  dropped by the later `removeValue`. With the default `['email']` and the user
+  at `['sms']`, a reset ends at `[]` and not `['email']`. In a controlled group,
+  `onChange` fires once per box and the last array is the wrong one. A reset
+  that only adds boxes, or only removes them, is not affected. A test holds the
+  correct expectation as an expected failure, so a fix upstream flags itself.
+- **A group shows one error line, its own.** React Aria clears the error
+  context of the checkboxes inside a group, so an `errorMessage` on one of them
+  is not shown there. It shows when the checkbox stands alone.
 
 | Box edge (boundary on its Raised fill) against | Light | Dark |
 | --- | --- | --- |

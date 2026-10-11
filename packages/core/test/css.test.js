@@ -357,6 +357,13 @@ describe('src/components/checkbox.css', () => {
     const row = blockAfter(rules(), '.checkbox {\n    --checkbox-fill');
     expect(row).toContain('min-height: 40px;');
     expect(row).toContain('cursor: pointer;');
+    // A row with no text is only as wide as the box, so the box grows a 40px square hit area around itself.
+    const bare = blockAfter(rules(), '.checkbox:not(:has(.checkbox-text)) .checkbox-box::before {');
+    expect(bare).toContain("content: '';");
+    expect(bare).toContain('position: absolute;');
+    expect(bare).toContain('width: 40px;');
+    expect(bare).toContain('height: 40px;');
+    expect(bare).toContain('translate: -50% -50%;');
   });
 
   it('leaves the boxes alone when the group is changed: the chip is the cue', () => {
