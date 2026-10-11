@@ -25,11 +25,15 @@ export const InSentence: Story = {
 
 export const Disabled: Story = { args: { isDisabled: true } };
 
-/** A long link wraps with its sentence, and its underline follows every line. */
+/**
+ * A long link wraps with its sentence, and its underline follows every line.
+ * It ends in an address with nothing to break at, which wraps anywhere
+ * instead of pushing a narrow screen sideways.
+ */
 export const LongText: Story = {
   args: {
     children:
-      'A link whose text is long enough to wrap onto several lines in a narrow column, as the link of a real sentence often does',
+      'A link whose text is long enough to wrap onto several lines in a narrow column, ending in averyveryverylongaddresswithnohyphensorslashesinitsoitcannotbreakanywhereelse',
   },
   render: (args) => (
     <p style={{ margin: 0 }}>

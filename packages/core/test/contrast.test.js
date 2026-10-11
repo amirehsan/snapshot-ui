@@ -99,11 +99,13 @@ describe('contrastFailures', () => {
 });
 
 describe('the text colors Link and Badge draw', () => {
-  it('measures link, success, error and slate text on canvas, lifted, float and raised', () => {
+  it('measures link, success, error and slate text on canvas, lifted, float and raised, and slate on bone', () => {
     // Badge has no fill and Link draws none, so these pairs are every pair they need.
     const measured = new Set(
       CONTRAST_PAIRS.filter((pair) => pair.minimum === TEXT).map((pair) => `${pair.text} on ${pair.ground}`),
     );
+    // Kbd is slate on its own bone chip. Link, success and error are not measured on bone.
+    expect(measured, 'slate on bone').toContain('slate on bone');
     for (const text of ['link', 'success', 'error', 'slate']) {
       for (const ground of ['canvas', 'lifted', 'float', 'raised']) {
         expect(measured, `${text} on ${ground}`).toContain(`${text} on ${ground}`);

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef } from 'react';
+import { RouterProvider } from 'react-aria-components';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { Link } from './Link';
@@ -15,7 +16,7 @@ describe('Link', () => {
     await expectNoA11yViolations(container);
   });
 
-  it('keeps target and rel, so a link can open a new tab safely', () => {
+  it('passes target and rel through to the anchor', () => {
     render(
       <Link href="https://react-aria.adobe.com" target="_blank" rel="noopener noreferrer">
         React Aria
@@ -53,6 +54,35 @@ describe('Link', () => {
     await user.tab();
     expect(link).toHaveFocus();
     expect(link).toHaveAttribute('data-focus-visible', 'true');
+  });
+
+  it('marks hover and press for the underline', async () => {
+    const user = userEvent.setup();
+    render(<Link href="#guide">Read the guide</Link>);
+    const link = screen.getByRole('link');
+    expect(link).not.toHaveAttribute('data-hovered');
+    expect(link).not.toHaveAttribute('data-pressed');
+    await user.hover(link);
+    expect(link).toHaveAttribute('data-hovered', 'true');
+    await user.pointer({ keys: '[MouseLeft>]', target: link });
+    expect(link).toHaveAttribute('data-pressed', 'true');
+    await user.pointer({ keys: '[/MouseLeft]' });
+    expect(link).not.toHaveAttribute('data-pressed');
+    await user.unhover(link);
+    expect(link).not.toHaveAttribute('data-hovered');
+  });
+
+  it('navigates through a RouterProvider with the href it was given', async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    render(
+      <RouterProvider navigate={navigate}>
+        <Link href="/guide">Read the guide</Link>
+      </RouterProvider>,
+    );
+    await user.click(screen.getByRole('link', { name: 'Read the guide' }));
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate.mock.calls[0]?.[0]).toBe('/guide');
   });
 
   it('is inert when disabled', async () => {
