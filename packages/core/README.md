@@ -10,7 +10,7 @@ pnpm add @snapshot-ui/react @snapshot-ui/core
 
 ## Use
 
-Import the stylesheet once, at the root of your app. `styles.css` holds the tokens and every component. `base.css` is optional: it sets the page background, the body type and the font rendering details.
+Import the stylesheet once, at the root of your app. `styles.css` holds the tokens and every component. `base.css` is optional: it sets the page background, the body type, the font rendering details and an ink focus ring for your own links and fields.
 
 ```ts
 import '@snapshot-ui/core/styles.css';
