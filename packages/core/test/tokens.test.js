@@ -16,6 +16,74 @@ describe('tokens.css', () => {
     expect(css).toMatch(/@layer theme \{/);
   });
 
+  it('writes the blocks in cascade order', () => {
+    // Order is behavior: the later [data-theme="light"] must beat the system
+    // media query, and the shape blocks come after both theme scopes.
+    const selectors = [...css.matchAll(/^\s*(.+?) \{$/gm)].map((match) => match[1]);
+    expect(selectors).toEqual([
+      '@layer theme',
+      ':root',
+      '[data-theme="dark"]',
+      '@media (prefers-color-scheme: dark)',
+      ':root:not([data-theme="light"])',
+      '[data-theme="light"]',
+      '[data-shape="soft" i]',
+      '[data-shape="square" i]',
+      '[data-shape="rounded" i]',
+    ]);
+  });
+
+  it('declares every variable the components rely on, on :root', () => {
+    const textStyles = ['h1', 'h2', 'h3', 'h4', 'eyebrow', 'body', 'action', 'small', 'overline'];
+    const withLetterSpacing = ['h1', 'h2', 'h3', 'eyebrow', 'action', 'overline'];
+    const contract = [
+      ...[
+        'canvas',
+        'lifted',
+        'bone',
+        'float',
+        'raised',
+        'disabled',
+        'ink',
+        'charcoal',
+        'granite',
+        'slate',
+        'taupe',
+        'link',
+        'signal',
+        'signal-light',
+        'clay',
+        'error',
+        'success',
+        'boundary',
+        'frame',
+        'divider',
+        'hairline',
+        'scrim',
+        'scrollbar',
+        'scrollbar-hover',
+      ].map((name) => `--color-${name}`),
+      '--opacity-scrim',
+      '--font-sans',
+      '--font-mono',
+      ...textStyles.flatMap((name) => [
+        `--text-${name}`,
+        `--text-${name}--line-height`,
+        `--text-${name}--font-weight`,
+      ]),
+      ...withLetterSpacing.map((name) => `--text-${name}--letter-spacing`),
+      ...['micro', 'control', 'surface', 'stadium', 'pill', 'dot'].map((name) => `--radius-${name}`),
+      ...['lift', 'float', 'dramatic'].map((name) => `--shadow-${name}`),
+      ...['part', 'peer', 'separate', 'page'].map((name) => `--spacing-${name}`),
+      '--container-field',
+      ...['sm', 'md', 'lg'].map((name) => `--breakpoint-${name}`),
+      '--focus-ring-width',
+      '--focus-ring-offset',
+    ];
+    const declared = new Set([...block(':root').matchAll(/^\s*(--[\w-]+):/gm)].map((match) => match[1]));
+    expect(contract.filter((name) => !declared.has(name))).toEqual([]);
+  });
+
   it('declares the light values on :root', () => {
     const root = block(':root');
     expect(root).toContain('color-scheme: light;');
