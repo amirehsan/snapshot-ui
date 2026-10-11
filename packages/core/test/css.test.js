@@ -67,4 +67,19 @@ describe('dist/base.css', () => {
   it('keeps the WebKit text size adjust prefix that iOS Safari needs', () => {
     expect(built).toContain('-webkit-text-size-adjust');
   });
+
+  it('draws the focus ring for anything focusable, inside the base layer', () => {
+    // The text between the braces of the first `@layer base`, nested blocks included.
+    const open = built.indexOf('@layer base {') + '@layer base {'.length;
+    let depth = 1;
+    let close = open;
+    while (depth > 0 && close < built.length) {
+      const char = built[close++];
+      if (char === '{') depth += 1;
+      else if (char === '}') depth -= 1;
+    }
+    expect(built.slice(open, close)).toMatch(
+      /:focus-visible\s*\{\s*outline:\s*var\(--focus-ring-width\) solid var\(--color-ink\);\s*outline-offset:\s*var\(--focus-ring-offset\);\s*\}/,
+    );
+  });
 });

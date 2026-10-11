@@ -11,7 +11,7 @@ export default {
     // light-dark() is excluded from lowering in build-css.js, so it would ship
     // unlowered below the browser floor. Components switch on data-theme tokens.
     'function-disallowed-list': [
-      ['light-dark'],
+      [/^light-dark$/i],
       {
         message:
           'Use the data-theme tokens instead of light-dark(), which the browser floor does not support (function-disallowed-list)',
