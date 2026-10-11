@@ -42,6 +42,7 @@
   "scripts": {
     "build": "node scripts/build-tokens.js",
     "test": "vitest run",
+    "check:contrast": "node scripts/check-contrast.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },
