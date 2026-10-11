@@ -1,14 +1,7 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+import { axeViolations, hitSize, hitsAt, settled, sideways } from './support';
 
 const PAGE = '/docs/components/button';
-
-const sideways = (page: Page): Promise<number> =>
-  page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-
-/** The color and corner switches settle after hydration: one radio is checked in each. */
-const settled = (page: Page): Promise<void> =>
-  expect(page.locator('.header input[type="radio"]:checked')).toHaveCount(2);
 
 /** Whether the focused element is inside the open drawer. */
 const focusInRail = (page: Page): Promise<boolean> =>
@@ -19,33 +12,6 @@ const visit = async (page: Page, url = PAGE): Promise<void> => {
   await page.goto(url);
   await settled(page);
 };
-
-const axeViolations = async (page: Page): Promise<string[]> => {
-  const { violations } = await new AxeBuilder({ page }).analyze();
-  return violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
-};
-
-/** The size a pointer can hit: the element's box, or its ::after hit area when that is larger. */
-const hitSize = (locator: Locator): Promise<{ width: number; height: number }> =>
-  locator.evaluate((element) => {
-    const box = element.getBoundingClientRect();
-    const hit = getComputedStyle(element, '::after');
-    return {
-      width: Math.max(box.width, parseFloat(hit.width) || 0),
-      height: Math.max(box.height, parseFloat(hit.height) || 0),
-    };
-  });
-
-/** Whether a point `dy` pixels from the element's center, past its drawn edge, still hits it. */
-const hitsAt = (locator: Locator, selector: string, dy: number): Promise<boolean> =>
-  locator.evaluate(
-    (element, [target, offset]) => {
-      const box = element.getBoundingClientRect();
-      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2 + offset);
-      return hit?.closest(target) === element;
-    },
-    [selector, dy] as const,
-  );
 
 for (const width of [375, 768, 1024, 1440]) {
   test(`a docs page fits ${String(width)}px with no sideways scroll`, async ({ page }) => {

@@ -1,0 +1,862 @@
+/* The homepage keeps the approved mockup's fixed brand surfaces in both themes (an
+   ink footer, a white satellite), so literal colors and radii are allowed here only. */
+/* stylelint-disable snapshot-ui/token-only */
+/* The homepage, from docs/mockups/home.html. */
+@layer components {
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 48px;
+  }
+
+  /* ---- Floating nav pill ----------------------------------------- */
+  .nav-wrap {
+    position: sticky;
+    top: 24px;
+    z-index: 20;
+    padding: 0 48px;
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    max-width: 1184px;
+    margin: 0 auto;
+    padding: 10px 12px 10px 28px;
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-pill);
+    background-color: color-mix(in srgb, var(--color-float) 88%, transparent);
+    box-shadow: var(--shadow-lift);
+    backdrop-filter: blur(16px) saturate(140%);
+    transition: border-radius 200ms ease;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 36px;
+    margin-right: auto;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .nav-links a {
+    position: relative;
+    color: var(--color-slate);
+  }
+
+  /* Drawn at 22px, hit at 40px, with no layout shift. */
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    inset: -9px -8px;
+  }
+
+  .nav-links a:hover,
+  .nav-links a[aria-current='page'] {
+    color: var(--color-ink);
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ---- Hero ------------------------------------------------------ */
+  .hero {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 64px;
+    align-items: end;
+    padding: 120px 0 56px;
+  }
+
+  .hero h1 {
+    max-width: 11ch;
+    margin-top: 24px;
+  }
+
+  .hero-side {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    padding-bottom: 10px;
+  }
+
+  .lede {
+    color: var(--color-charcoal);
+    font-size: 1.1875rem;
+    line-height: 1.5;
+    max-width: 44ch;
+  }
+
+  .install {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 6px 6px 22px;
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-float);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: var(--color-charcoal);
+    transition: border-radius 200ms ease;
+  }
+
+  .install b {
+    color: var(--color-slate);
+    font-weight: 400;
+  }
+
+  .shape-switch {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* ---- Stadium hero frame -------------------------------------- */
+  .frame {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 28px;
+    align-items: start;
+    padding: 56px;
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-stadium);
+    background-color: var(--color-canvas);
+    box-shadow: var(--shadow-float);
+    overflow: hidden;
+    transition: border-radius 200ms ease;
+  }
+
+  .frame-light {
+    background-color: #2b2b2a;
+  }
+
+  .frame .card {
+    box-shadow: var(--shadow-float);
+  }
+
+  .frame-arc {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .toast {
+    position: absolute;
+    right: 56px;
+    bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px 14px 16px;
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+    font-weight: 500;
+    transition: border-radius 200ms ease;
+  }
+
+  .toast-dot {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-dot);
+    background-color: var(--color-success);
+    color: var(--color-canvas);
+  }
+
+  .toast-dot svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ---- Section heads -------------------------------------------- */
+  .section {
+    padding: 128px 0 0;
+  }
+
+  .section-head {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 64px;
+    align-items: end;
+    margin-bottom: 56px;
+  }
+
+  .section-head h2 {
+    margin-top: 20px;
+    max-width: 16ch;
+  }
+
+  /* ---- Orbit: circular portraits ---------------------------------- */
+  .orbit {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 48px;
+  }
+
+  .orbit-arc {
+    position: absolute;
+    left: -48px;
+    right: -48px;
+    top: -40px;
+    height: 420px;
+    width: calc(100% + 96px);
+    pointer-events: none;
+  }
+
+  .portrait {
+    position: relative;
+    display: grid;
+    justify-items: start;
+    gap: 18px;
+  }
+
+  .portrait:nth-child(3) {
+    margin-top: 120px;
+  }
+
+  .portrait:nth-child(4) {
+    margin-top: 40px;
+  }
+
+  .portrait-circle {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 280px;
+    height: 280px;
+    border-radius: var(--radius-dot);
+    background-color: var(--color-lifted);
+    box-shadow: var(--shadow-float);
+  }
+
+  .portrait-glyph {
+    font-size: 6rem;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .satellite {
+    position: absolute;
+    right: 6px;
+    bottom: 22px;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-dot);
+    background-color: #ffffff;
+    color: #141413;
+    box-shadow: var(--shadow-lift);
+  }
+
+  .satellite svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .portrait p {
+    max-width: 34ch;
+  }
+
+  .shape-stack {
+    position: relative;
+    width: 140px;
+    height: 120px;
+  }
+
+  .shape-stack span {
+    position: absolute;
+    width: 96px;
+    height: 72px;
+    border: 1.5px solid var(--color-ink);
+    background-color: var(--color-float);
+  }
+
+  .shape-stack span:nth-child(1) {
+    left: 0;
+    top: 0;
+    border-radius: 36px;
+  }
+
+  .shape-stack span:nth-child(2) {
+    left: 22px;
+    top: 24px;
+    border-radius: 12px;
+  }
+
+  .shape-stack span:nth-child(3) {
+    left: 44px;
+    top: 48px;
+    border-radius: 0;
+    background-color: var(--color-ink);
+  }
+
+  .contrast-glyph {
+    display: flex;
+    gap: 10px;
+  }
+
+  .contrast-glyph span {
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    border-radius: var(--radius-dot);
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .contrast-glyph span:first-child {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .contrast-glyph span:last-child {
+    border: 1.5px solid var(--color-ink);
+  }
+
+  /* ---- Theme axes grid ----------------------------------------- */
+  .axes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .axis-tile {
+    display: grid;
+    gap: 20px;
+    padding: 28px;
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-stadium);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+  }
+
+  .axis-tile .card {
+    padding: 22px;
+    border-radius: var(--radius-surface);
+  }
+
+  .axis-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-small);
+    color: var(--color-slate);
+    font-weight: 500;
+  }
+
+  /* ---- Catalog ---------------------------------------------------- */
+  .catalog {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .catalog-group {
+    display: grid;
+    gap: 18px;
+    align-content: start;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ---- Watermark CTA -------------------------------------------- */
+  .cta {
+    position: relative;
+    margin-top: 128px;
+    padding: 112px 64px;
+    border-radius: var(--radius-stadium);
+    background-color: var(--color-lifted);
+    overflow: hidden;
+    transition: border-radius 200ms ease;
+  }
+
+  /* Drawn by CSS, not written in the page: decorative text is not content,
+     and a deliberately faint word would fail a contrast check as text. */
+  .watermark::before {
+    content: 'snapshot';
+  }
+
+  .watermark {
+    position: absolute;
+    right: -20px;
+    bottom: -48px;
+    font-size: 14rem;
+    line-height: 1;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .cta-inner {
+    position: relative;
+    display: grid;
+    gap: 28px;
+    max-width: 620px;
+  }
+
+  /* ---- Footer: ink in light, Deep Well in dark --------------------- */
+  .footer {
+    margin-top: 128px;
+    padding: 96px 0 120px;
+    background-color: #141413;
+    color: #ffffff;
+  }
+
+  [data-theme='dark'] .footer {
+    background-color: #050505;
+  }
+
+  .footer h2 {
+    max-width: 18ch;
+    margin-bottom: 72px;
+  }
+
+  .footer-cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    padding-bottom: 64px;
+  }
+
+  .footer-col {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    font-size: 0.875rem;
+  }
+
+  .footer-col summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    color: rgb(255 255 255 / 0.6);
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    list-style: none;
+    pointer-events: none;
+  }
+
+  .footer-col summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .footer-links {
+    display: grid;
+    gap: 14px;
+  }
+
+  .footer-col a {
+    position: relative;
+    color: rgb(255 255 255 / 0.85);
+  }
+
+  /* Drawn at 20px, hit at 40px, with no layout shift. The links are 34px apart, so
+     neighbors share a few pixels, as the contents list does in the docs shell. */
+  .footer-col a::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: calc(50% - 20px);
+    height: 40px;
+  }
+
+  .footer-col a:hover {
+    color: #ffffff;
+  }
+
+  .footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 28px;
+    border-top: 1px solid rgb(255 255 255 / 0.18);
+    color: rgb(255 255 255 / 0.6);
+    font-size: 0.875rem;
+  }
+
+  .footer-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid rgb(255 255 255 / 0.4);
+    border-radius: var(--radius-pill);
+    color: #ffffff;
+  }
+  .frame-card {
+    position: relative;
+  }
+
+  .frame-card-offset {
+    margin-top: 64px;
+  }
+
+  .push-end {
+    justify-content: flex-end;
+  }
+
+  .nav-menu {
+    display: none;
+  }
+
+  .nav-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    padding: 20px 16px 32px;
+    background-color: var(--color-canvas);
+  }
+
+  .nav-overlay[hidden] {
+    display: none;
+  }
+
+  .nav-overlay-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 4px 4px 12px;
+  }
+
+  .nav-overlay-links {
+    display: grid;
+    gap: 20px;
+    padding: 0 12px;
+  }
+
+  /* 34px tall on a phone, hit at 40px, with no layout shift. */
+  .nav-overlay-links a {
+    position: relative;
+  }
+
+  .nav-overlay-links a::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: calc(50% - 20px);
+    height: 40px;
+  }
+
+  .nav-overlay .button {
+    margin: auto 12px 0;
+  }
+
+  /* ---- Tablet: 768 to 1023 ------------------------------------------ */
+  @media (width < 1024px) {
+    .page,
+    .nav-wrap {
+      padding-inline: 32px;
+    }
+
+    .nav {
+      gap: 16px;
+      padding-left: 20px;
+    }
+
+    .nav-links {
+      display: none;
+    }
+
+    .nav-actions {
+      margin-left: auto;
+    }
+
+    .nav-menu {
+      display: inline-grid;
+    }
+
+    .hero,
+    .section-head {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 28px;
+    }
+
+    .hero > *,
+    .section-head > * {
+      min-width: 0;
+    }
+
+    /* The arcs only work with the asymmetric desktop placement. */
+    .orbit-arc {
+      display: none;
+    }
+
+    .hero {
+      padding-top: 96px;
+    }
+
+    .hero h1 {
+      max-width: 14ch;
+    }
+
+    .frame {
+      grid-template-columns: 1fr;
+      padding: 32px;
+    }
+
+    .frame-card-offset {
+      margin-top: 0;
+    }
+
+    .toast {
+      position: relative;
+      right: auto;
+      bottom: auto;
+      justify-self: end;
+    }
+
+    .section {
+      padding-top: 96px;
+    }
+
+    .orbit {
+      grid-template-columns: repeat(2, 1fr);
+      row-gap: 64px;
+    }
+
+    .portrait:nth-child(n) {
+      margin-top: 0;
+    }
+
+    .portrait-circle {
+      width: 240px;
+      height: 240px;
+    }
+
+    .axes {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .catalog {
+      grid-template-columns: 1fr;
+    }
+
+    .cta {
+      margin-top: 96px;
+      padding: 80px 40px;
+    }
+
+    .watermark {
+      font-size: 10rem;
+    }
+
+    .footer {
+      margin-top: 96px;
+      padding: 72px 0 96px;
+    }
+
+    .footer-cols {
+      grid-template-columns: repeat(2, 1fr);
+      row-gap: 48px;
+    }
+  }
+
+  /* ---- Phone: under 768 -------------------------------------------- */
+  @media (width < 768px) {
+    .page,
+    .nav-wrap {
+      padding-inline: 16px;
+    }
+
+    .nav-wrap {
+      top: 12px;
+    }
+
+    .nav {
+      padding: 6px 6px 6px 18px;
+    }
+
+    .nav-cta,
+    .nav-actions [aria-label='GitHub'],
+    .nav-actions [data-toggle-theme] {
+      display: none;
+    }
+
+    .hero {
+      padding: 64px 0 40px;
+    }
+
+    .lede {
+      font-size: 1.0625rem;
+    }
+
+    .hero .row .button {
+      flex: 1;
+    }
+
+    .install {
+      font-size: 0.8125rem;
+    }
+
+    .install > span {
+      min-width: 0;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+    }
+
+    .shape-switch {
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .frame {
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .frame .card {
+      padding: 24px 20px;
+    }
+
+    .frame .card-header {
+      margin: 0 -20px 20px;
+      padding: 0 20px 20px;
+    }
+
+    .frame-arc,
+    .orbit-arc {
+      display: none;
+    }
+
+    .toast {
+      justify-self: stretch;
+    }
+
+    .section {
+      padding-top: 64px;
+    }
+
+    .section-head {
+      margin-bottom: 32px;
+    }
+
+    .orbit {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .portrait {
+      justify-items: center;
+    }
+
+    .portrait-circle {
+      width: 220px;
+      height: 220px;
+    }
+
+    .portrait-glyph {
+      font-size: 4.5rem;
+    }
+
+    .axes {
+      grid-template-columns: 1fr;
+    }
+
+    .axis-tile {
+      padding: 20px;
+    }
+
+    .catalog .card {
+      padding: 24px;
+    }
+
+    .cta {
+      margin-top: 64px;
+      padding: 56px 24px;
+    }
+
+    .cta .row .button {
+      flex: 1;
+    }
+
+    .watermark {
+      font-size: 6rem;
+      bottom: -20px;
+    }
+
+    .footer {
+      margin-top: 64px;
+      padding: 56px 0 72px;
+    }
+
+    .footer h2 {
+      margin-bottom: 40px;
+    }
+
+    .footer-cols {
+      grid-template-columns: 1fr;
+      gap: 0;
+      padding-bottom: 40px;
+    }
+
+    .footer-col {
+      padding: 16px 0;
+      border-top: 1px solid rgb(255 255 255 / 0.18);
+    }
+
+    .footer-col summary {
+      position: relative;
+      margin: 0;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    /* 28px tall, hit at 40px, with no layout shift. */
+    .footer-col summary::before {
+      content: '';
+      position: absolute;
+      inset-inline: 0;
+      top: calc(50% - 20px);
+      height: 40px;
+    }
+
+    .footer-col summary::after {
+      content: '+';
+      font-size: 1.25rem;
+      font-weight: 450;
+    }
+
+    .footer-col[open] summary::after {
+      content: '\2212';
+    }
+
+    .footer-col[open] summary {
+      margin-bottom: 14px;
+    }
+
+    .footer-bottom {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+  }
+}

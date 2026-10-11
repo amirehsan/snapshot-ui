@@ -250,6 +250,17 @@
     border-color: var(--color-ink);
   }
 
+  /* A link chip is drawn at 36px (34px inside its border) and hit at 40px, with no layout shift. */
+  .chip[href] {
+    position: relative;
+  }
+
+  .chip[href]::before {
+    content: '';
+    position: absolute;
+    inset: -3px 0;
+  }
+
   .chip-new::after {
     content: 'New';
     margin-left: 2px;
@@ -399,6 +410,13 @@
     font-size: 0.875rem;
   }
 
+  /* Drawn at 32px, hit at 40px, which fills the control's own padding. No layout shift. */
+  .segmented-small .segmented-option::before {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+  }
+
   .segmented-option input {
     position: absolute;
     width: 1px;
@@ -435,6 +453,13 @@
     transition:
       background-color 160ms ease,
       border-radius 200ms ease;
+  }
+
+  /* Drawn at 30px, hit at 40px, with no layout shift. */
+  .switch::before {
+    content: '';
+    position: absolute;
+    inset: -5px -4px;
   }
 
   .switch::after {

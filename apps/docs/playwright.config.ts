@@ -16,8 +16,8 @@ export default defineConfig({
   webServer: {
     // The production build, served by plain node so it runs anywhere.
     command: `node node_modules/next/dist/bin/next start -p ${String(PORT)} -H 127.0.0.1`,
-    // Ready once a docs page answers: the site has no page at `/` until the homepage lands.
-    url: `http://127.0.0.1:${String(PORT)}/docs`,
+    // Ready once the homepage answers.
+    url: `http://127.0.0.1:${String(PORT)}/`,
     reuseExistingServer: !isCI,
   },
 });
