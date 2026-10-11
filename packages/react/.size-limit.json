@@ -49,6 +49,20 @@
     "limit": "1 kB"
   },
   {
+    "name": "import { FieldCounter } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ FieldCounter }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
+    "name": "import { Label } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Label }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

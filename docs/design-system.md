@@ -1265,8 +1265,9 @@ the same margin. The lowest text pair is 4.81, info on raised in dark.
 
 All sixteen pairs are in the contrast gate already, so Badge adds none. Slate
 is also measured on Bone, 4.99 and 6.44, so a neutral badge may sit there. The
-three colored tones are not measured on Bone, so they stay on the four
-surfaces above.
+info and success tones are not measured on Bone, so they stay on the four
+surfaces above. Error is gated on Bone too, because a field part draws it
+there.
 
 ## IconButton
 
@@ -1324,3 +1325,72 @@ controls were all buttons. React Aria renders a disabled link as a `span` with
 `role="link"` and `aria-disabled`, which the stylesheet matches through
 `data-disabled`. There is no pending state, since an icon has nowhere to show
 one.
+
+## Field parts
+
+A field is a label, a control, a hint and, when they apply, an error line, a
+length count and a "Changed" chip. The parts are separate so any control can
+carry them. The document already gives the label and the hint their steps;
+everything else here is derived.
+
+- **The wrapper** is a grid with 8px between its parts, the "parts of one
+  thing" step. It stops at `--container-field`, so a count set at the end of
+  the field lands under the end of the control and a hint wraps at a readable
+  measure. Its column may shrink, so a long word never pushes the page sideways.
+  The label row holds the label and the chip, and the chip wraps under a long
+  label instead of overflowing.
+- **Label** is 14/700 in ink, the h4 step. **Description** is 14/450 in slate,
+  the small step. Both are the document's own, unchanged.
+- **Error** is 14/450 in the error color. The app had no inline error line, but
+  its per-control problem lines (a list, a menu, a stale icon) are exactly this
+  step and this color, so a field's error is the same line. It is not heavier
+  than the hint: the sentence says what is wrong, so color is not the only cue,
+  and the control's border and `aria-invalid` carry the rest. React Aria links
+  it to the control as its description, so a screen reader reads it with the
+  field.
+
+**The length counter advises and never blocks.** It sets no `maxlength` and no
+validity, so a value past the budget still saves, as in the app. It reads
+"62 of about 60", the app's wording, and stays empty until the value reaches
+70% of the budget: "0 of about 320" beside an empty field reads as a demand
+for 320 characters. `showFrom` moves that share and `label` replaces the text.
+The text sits in a polite `status` region that is in the page from the start
+and empty until the count appears, because a live region that arrives
+together with its text is often not announced. An empty region leaves the
+layout without leaving the accessibility tree, so it costs no gap. Figures are
+tabular so the count does not shimmer as it changes.
+
+**Past the budget the count turns to ink at 700.** The app set it in clay. The
+library keeps clay for the "Changed" chip alone: a value over its budget is
+usually a value that was just edited, and two clay words on one field read as
+one status. Error is wrong for the reason the app gave, since a value over its
+budget saves. Ink at 700 is the strongest text the system has and no hue is
+involved, so it holds for readers who cannot tell the colors apart. The
+number already says it is over, and `label` lets an app say it in words.
+
+**The chip is the full eyebrow step**: 14px, 700, 4% tracking, uppercase, with
+a 6px dot, all in clay. The app's comments call it "a smaller scale" and
+"eleven pixels", but its rule applies the whole eyebrow step and nothing
+shrinks it, so the library draws what the app shipped. The dot is drawn and
+the word is real text, so a screen reader reads "Changed" rather than a bullet
+and the word can be replaced. The chip is an element beside the label, not
+text inside it, so the control's accessible name stays the label's own.
+
+**Invalid outranks changed, and the chip steps aside.** The app gave its label
+one marker slot, and when a field was both changed and invalid the "check"
+marker took it. The library has no check marker, because the error line is the
+text cue, so the chip hides and the field shows the error border, the error
+line and no chip. `data-changed` on the field's root shows the chip and
+`data-invalid` hides it. Each control draws its own border for the two states,
+and the error border wins there too.
+
+| Color | Part | Lowest on the five surfaces, light | Dark |
+| --- | --- | --- | --- |
+| Ink | Label, count past its budget | 16.25 | 15.36 |
+| Slate | Description, count | 4.84 | 6.44 |
+| Error | Error line | 6.58 | 5.06 |
+| Clay | Changed chip | 6.20 | 6.02 |
+
+The five surfaces are canvas, lifted, bone, float and raised. Clay on float and
+error on bone were not in the contrast gate, so they are now: every text color
+a field part uses is gated on every surface.

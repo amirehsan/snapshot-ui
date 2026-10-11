@@ -385,6 +385,43 @@ test('a server-rendered MDX page renders library components and props', async ({
   await expect(page.getByText("Default: 'primary'")).toBeVisible();
 });
 
+test('the field parts page shows the Changed chip on a changed field and hides it on an invalid one', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/field');
+  const edited = page.locator('.field', { has: page.locator('#field-parts-name') });
+  await expect(edited.locator('.field-changed')).toBeHidden();
+  await edited.getByRole('textbox').fill('Northwind Studio East');
+  await expect(edited.locator('.field-changed')).toBeVisible();
+  await edited.getByRole('textbox').fill('Northwind Studio');
+  await expect(edited.locator('.field-changed')).toBeHidden();
+
+  const changed = page.locator('.field', { has: page.locator('#field-states-changed') });
+  await expect(changed.locator('.field-changed')).toBeVisible();
+  const invalid = page.locator('.field', { has: page.locator('#field-states-invalid') });
+  await expect(invalid.locator('.field-changed')).toBeHidden();
+  await expect(invalid.locator('.field-error')).toBeVisible();
+});
+
+test('the length count on the field parts page appears near the budget and never blocks typing', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/field');
+  const field = page.locator('.field', { has: page.locator('#field-counter-text') });
+  const counter = field.locator('.field-counter');
+  await expect(counter).toHaveText('34 of about 40');
+  await expect(counter).not.toHaveAttribute('data-over');
+  await expect(counter).toHaveCSS('font-weight', '450');
+  const longer = 'A shared space for the design team and its guests';
+  await field.getByRole('textbox').fill(longer);
+  await expect(field.getByRole('textbox')).toHaveValue(longer);
+  await expect(counter).toHaveText(`${String(longer.length)} of about 40`);
+  await expect(counter).toHaveAttribute('data-over');
+  await expect(counter).toHaveCSS('font-weight', '700');
+  await field.getByRole('textbox').fill('Short');
+  await expect(counter).toHaveText('');
+});
+
 test('the copy button reports that the code was copied', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await visit(page);

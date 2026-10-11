@@ -17,3 +17,16 @@ export { Link, type LinkProps } from './link';
 export { Kbd, type KbdProps } from './kbd';
 export { Badge, type BadgeProps, type BadgeTone } from './badge';
 export { IconButton, type IconButtonProps, type IconButtonVariant } from './icon-button';
+export {
+  Description,
+  FieldChanged,
+  FieldCounter,
+  FieldError,
+  Label,
+  type DescriptionProps,
+  type FieldChangedProps,
+  type FieldCounterProps,
+  type FieldCounterState,
+  type FieldErrorProps,
+  type LabelProps,
+} from './field';

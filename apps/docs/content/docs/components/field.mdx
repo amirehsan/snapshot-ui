@@ -1,0 +1,108 @@
+---
+title: Field parts
+description: The label, hint, error line, length count and Changed chip that every field is made of, and the two attributes that carry a field's state.
+icon: TextCursorInput
+---
+
+<Section>
+
+## Parts
+
+A field is a grid of parts with 8px between them. Label names the control, Description is the hint under it, and the clay chip marks an unsaved value. Type in the box to change it.
+
+<Preview name="field-parts" />
+
+</Section>
+
+<Section>
+
+## States
+
+A field's root carries two attributes. `data-changed` shows the Changed chip. `data-invalid` hides it, because invalid outranks changed: the error line and the control's error border show instead. The first field is changed. The second is changed and invalid.
+
+<Preview name="field-states" />
+
+</Section>
+
+<Section>
+
+## Length count
+
+A count advises and never blocks. It stays empty until the value reaches 70% of the budget, reads "34 of about 40", and past the budget turns to ink at 700. Nothing stops the value from growing, and it still saves.
+
+<Preview name="field-counter" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Inside a React Aria field the parts wire themselves: Label names the control, Description and FieldError become its description, and FieldError appears only while the field is invalid. Put the `field` class and `data-changed` on the field's root, and keep the chip in the label row, where the stylesheet shows or hides it.
+
+<Code code={`import { Input, TextField } from 'react-aria-components';
+import { Description, FieldChanged, FieldCounter, FieldError, Label } from '@snapshot-ui/react';
+
+export function ShortDescription({
+  value,
+  onChange,
+  isChanged,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  isChanged: boolean;
+}) {
+  return (
+    <TextField
+      className="field"
+      data-changed={isChanged ? '' : undefined}
+      value={value}
+      onChange={onChange}
+    >
+      <div className="field-head">
+        <Label>Short description</Label>
+        <FieldChanged />
+      </div>
+      <Input className="input" />
+      <Description>One sentence, for search results.</Description>
+      <FieldError />
+      <FieldCounter count={value.length} budget={60} />
+    </TextField>
+  );
+}`} />
+
+The classes are `field`, `field-head`, `field-label`, `field-description`, `field-error`, `field-counter` and `field-changed`, so the same parts work in plain HTML.
+
+</Section>
+
+<Section>
+
+## Props
+
+The count takes the numbers and the text. The chip takes its text as children. Label, Description and FieldError accept React Aria's Label, Text and FieldError props.
+
+<PropsTable path="../../packages/react/src/field/FieldCounter.tsx" type="Pick<FieldCounterProps, 'count' | 'budget' | 'showFrom' | 'label'>" />
+
+<PropsTable path="../../packages/react/src/field/FieldChanged.tsx" type="Pick<FieldChangedProps, 'children'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+Label is a real label, so a click on it focuses the control. Description and FieldError join the control's accessible description. The chip sits beside the label, not inside it, so the control keeps its name. To have a screen reader read it with the field, give the chip an `id` and pass that id to the field as `aria-describedby` while the chip shows. A hidden element named in `aria-describedby` is still read.
+
+The count is a polite status region that is in the page from the start and empty until it has something to say, so a screen reader announces it as it changes. To announce less often, pass it a count that settles after a pause.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps fields in the system.
+
+<Rules dos={['Say what the field is in the label, in sentence case, and keep the hint for what the label cannot say.', 'Show a count only where length helps the reader. It advises; a budget is not a limit.', 'Let the control draw the changed border whenever the chip shows. They always appear together.']} donts={['Never use clay for anything but the Changed chip. It means unsaved.', 'Never block typing at the budget. Past it the count turns to ink and the value still saves.', 'Never leave the chip beside an error. Invalid outranks changed.']} />
+
+</Section>

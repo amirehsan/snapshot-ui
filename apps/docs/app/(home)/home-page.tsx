@@ -1,8 +1,7 @@
 'use client';
 
-import { IconButton } from '@snapshot-ui/react';
+import { Description, Eyebrow, FieldChanged, IconButton, Label } from '@snapshot-ui/react';
 import Link from 'next/link';
-import { Eyebrow } from '@snapshot-ui/react';
 import { useTheme } from 'next-themes';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { SearchDialog } from '@/components/shell/search';
@@ -348,21 +347,21 @@ export function HomePage(): ReactElement {
               <div className="setting">
                 <div>
                   <div className="type-h4">Product updates</div>
-                  <div className="field-hint">A short note when something ships.</div>
+                  <Description>A short note when something ships.</Description>
                 </div>
                 <DemoSwitch label="Product updates" defaultOn={true} />
               </div>
               <div className="setting">
                 <div>
                   <div className="type-h4">Weekly digest</div>
-                  <div className="field-hint">Every Tuesday morning.</div>
+                  <Description>Every Tuesday morning.</Description>
                 </div>
                 <DemoSwitch label="Weekly digest" defaultOn={false} />
               </div>
               <div className="setting">
                 <div>
                   <div className="type-h4">Security alerts</div>
-                  <div className="field-hint">Always on for owners.</div>
+                  <Description>Always on for owners.</Description>
                 </div>
                 <DemoSwitch label="Security alerts" defaultOn={true} />
               </div>
@@ -374,12 +373,13 @@ export function HomePage(): ReactElement {
               <p className="muted">Shown in the header and in every invite.</p>
             </div>
             <div className="stack">
-              <label className="field">
-                <span className="field-label">
-                  Workspace name <span className="field-marker">Changed</span>
-                </span>
-                <input className="input input-changed" defaultValue="Northwind Studio" />
-              </label>
+              <div className="field" data-changed="">
+                <div className="field-head">
+                  <Label htmlFor="workspace-name">Workspace name</Label>
+                  <FieldChanged />
+                </div>
+                <input id="workspace-name" className="input input-changed" defaultValue="Northwind Studio" />
+              </div>
               <div className="field">
                 <span className="field-label">Theme</span>
                 <div className="segmented" role="radiogroup" aria-label="Theme">

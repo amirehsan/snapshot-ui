@@ -45,13 +45,13 @@ export const CONTRAST_PAIRS = [
     minimum: TEXT,
     shows: `an inline link on ${ground}`,
   })),
-  ...['canvas', 'lifted', 'bone', 'raised'].map((ground) => ({
+  ...['canvas', 'lifted', 'bone', 'float', 'raised'].map((ground) => ({
     text: 'clay',
     ground,
     minimum: TEXT,
     shows: `the changed marker on ${ground}`,
   })),
-  ...['canvas', 'lifted', 'float', 'raised'].map((ground) => ({
+  ...['canvas', 'lifted', 'bone', 'float', 'raised'].map((ground) => ({
     text: 'error',
     ground,
     minimum: TEXT,

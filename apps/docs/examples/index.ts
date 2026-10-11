@@ -4,6 +4,9 @@ import BadgeTones from './badge-tones';
 import ButtonStates from './button-states';
 import ButtonVariants from './button-variants';
 import EyebrowHeading from './eyebrow-heading';
+import LengthCounter from './field-counter';
+import FieldParts from './field-parts';
+import FieldStates from './field-states';
 import HeadingSizes from './heading-sizes';
 import IconButtonLink from './icon-button-link';
 import IconButtonStates from './icon-button-states';
@@ -22,6 +25,9 @@ export const examples = {
   'button-states': ButtonStates,
   'button-variants': ButtonVariants,
   'eyebrow-heading': EyebrowHeading,
+  'field-counter': LengthCounter,
+  'field-parts': FieldParts,
+  'field-states': FieldStates,
   'heading-sizes': HeadingSizes,
   'icon-button-link': IconButtonLink,
   'icon-button-states': IconButtonStates,

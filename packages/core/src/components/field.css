@@ -1,0 +1,124 @@
+/*
+ * The parts of a field, derived in docs/design-system.md ("Field parts").
+ *
+ * A field's root carries the class `field` and, as they apply, the attributes
+ * `data-changed` and `data-invalid`. Those two attributes are the whole state:
+ * the chip below shows on the first and gives way to the second, and each
+ * control draws its own border for them in its own file. Invalid outranks
+ * changed everywhere.
+ */
+@layer components {
+  .field {
+    display: grid;
+    /* A column that may shrink, so one long word never pushes the page sideways. */
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    /* Parts of one thing: label to control to hint. */
+    gap: var(--spacing-part);
+    /* The widest a control grows, so a count set at the end of the field lands
+       under the end of the control and a hint wraps at a readable measure. */
+    max-width: var(--container-field);
+  }
+
+  /* The label row. The chip sits beside the label and wraps under it when the
+     label is long, so a narrow screen never scrolls sideways. */
+  .field-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  .field-label {
+    color: var(--color-ink);
+    font-size: var(--text-h4);
+    line-height: var(--text-h4--line-height);
+    font-weight: var(--text-h4--font-weight);
+  }
+
+  .field-description,
+  .field-error {
+    display: block;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+  }
+
+  .field-description {
+    color: var(--color-slate);
+  }
+
+  .field-error {
+    color: var(--color-error);
+  }
+
+  /*
+   * The length count. It advises and never blocks. While it has nothing to say
+   * it is empty, and an empty region leaves the layout (absolute, so it takes
+   * no grid row and no gap) without leaving the accessibility tree, since a
+   * live region that arrives together with its text is often not announced.
+   */
+  .field-counter {
+    justify-self: end;
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .field-counter:empty {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Past the budget: ink at 700, the strongest text the system has. Never clay,
+     which means unsaved, and never error, since the value still saves. */
+  .field-counter[data-over] {
+    color: var(--color-ink);
+    font-weight: 700;
+  }
+
+  /*
+   * The "Changed" chip: the full eyebrow step in clay with a 6px dot. The dot
+   * is drawn and out of flow, so the chip's baseline is its text's and it lines
+   * up with the label whatever the label does.
+   */
+  .field-changed {
+    position: relative;
+    display: inline-block;
+    padding-inline-start: calc(0.375rem + var(--spacing-part));
+    color: var(--color-clay);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
+    letter-spacing: var(--text-eyebrow--letter-spacing);
+    font-weight: var(--text-eyebrow--font-weight);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .field-changed::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 0;
+    width: 0.375rem;
+    height: 0.375rem;
+    translate: 0 -50%;
+    border-radius: var(--radius-dot);
+    background-color: currentcolor;
+  }
+
+  /* The chip belongs to a changed field and yields to an invalid one: the error
+     line is the text cue, and the control's border shows the error. */
+  .field:not([data-changed]) .field-changed,
+  .field[data-invalid] .field-changed {
+    display: none;
+  }
+}
