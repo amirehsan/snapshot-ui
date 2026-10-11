@@ -13,3 +13,8 @@ playwright-report/
 !.env.example
 .local/
 .claude/
+.source/
+next-env.d.ts
+.pw-browsers/
+packages/core/test/.tailwind/
+.superpowers/

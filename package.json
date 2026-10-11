@@ -1,0 +1,39 @@
+{
+  "name": "snapshot-ui-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.10.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:root": "node --test scripts/*.test.js",
+    "lint": "turbo run lint && eslint scripts",
+    "typecheck": "turbo run typecheck",
+    "test:visual": "turbo run test:visual",
+    "size": "turbo run size",
+    "check:package": "turbo run check:package",
+    "check:public": "node scripts/check-public.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "pnpm check:public && pnpm test:root && pnpm format:check && turbo run lint typecheck build test check:package size",
+    "changeset": "changeset"
+  },
+  "devDependencies": {
+    "@changesets/cli": "3.0.3",
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "@typescript/native": "catalog:",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "turbo": "2.11.7",
+    "typescript": "catalog:",
+    "typescript-eslint": "8.71.1"
+  }
+}
