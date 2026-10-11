@@ -1,0 +1,137 @@
+/*
+ * Button, from the design system's pill specifications: the Ink Pill
+ * (primary) and the Outlined Pill (secondary), plus a borderless tertiary for
+ * the recessive action beside a primary and an error-filled danger for
+ * destructive confirmation. Signal Orange is not a variant: it is reserved
+ * for consent and legal actions.
+ *
+ * Each variant only sets the --button-* properties; the states below read
+ * them, so a state never needs one rule per variant.
+ */
+@layer components {
+  .button {
+    --button-bg: var(--color-ink);
+    --button-fg: var(--color-canvas);
+    --button-border: var(--color-ink);
+    --button-bg-active: var(--color-charcoal);
+    --button-fg-active: var(--color-canvas);
+    --button-border-active: var(--color-charcoal);
+
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-part);
+    /* The document's 6px by 24px padding makes a 31px pill; its own touch
+       target rule says no button drops below 40px. The padding sets the
+       shape and this sets the target. */
+    min-height: 40px;
+    margin: 0;
+    padding-block: 0.375rem;
+    padding-inline: 1.5rem;
+    border: 1.5px solid var(--button-border);
+    border-radius: var(--radius-control);
+    background-color: var(--button-bg);
+    color: var(--button-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-action);
+    line-height: var(--text-action--line-height);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: var(--text-action--font-weight);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .button-secondary {
+    /* Float rather than white, so on a dark surface it is the document's dark
+       secondary: the surface's own fill with a white outline. */
+    --button-bg: var(--color-float);
+    --button-fg: var(--color-ink);
+    --button-border: var(--color-ink);
+    /* A wash of ink over float. The source's lifted step was invisible in dark,
+       where lifted and float are the same color. */
+    --button-bg-active: color-mix(in srgb, var(--color-ink) 5%, var(--color-float));
+    --button-fg-active: var(--color-ink);
+    --button-border-active: var(--color-ink);
+
+    font-weight: 450;
+  }
+
+  .button-tertiary {
+    --button-bg: transparent;
+    --button-fg: var(--color-slate);
+    --button-border: transparent;
+    --button-bg-active: transparent;
+    --button-fg-active: var(--color-ink);
+    --button-border-active: transparent;
+  }
+
+  .button-danger {
+    --button-bg: var(--color-error);
+    --button-fg: var(--color-canvas);
+    --button-border: var(--color-error);
+    --button-bg-active: color-mix(in srgb, var(--color-error) 85%, var(--color-ink));
+    --button-fg-active: var(--color-canvas);
+    --button-border-active: color-mix(in srgb, var(--color-error) 85%, var(--color-ink));
+  }
+
+  .button-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-part);
+  }
+
+  @media (hover: hover) {
+    .button:is(:hover, [data-hovered]):not(:disabled, [data-disabled], [aria-disabled='true']) {
+      border-color: var(--button-border-active);
+      background-color: var(--button-bg-active);
+      color: var(--button-fg-active);
+    }
+  }
+
+  /* The document's press is a subtle compression; Snapshot uses the same color
+     step as hover instead, since touch has no hover to show it. */
+  .button:is(:active, [data-pressed]):not(:disabled, [data-disabled], [aria-disabled='true']) {
+    border-color: var(--button-border-active);
+    background-color: var(--button-bg-active);
+    color: var(--button-fg-active);
+  }
+
+  /* Outside the pill, so ink still reads against the page behind an ink fill. */
+  .button:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--color-ink);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .button:is(:disabled, [data-disabled]) {
+    border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    background-color: var(--color-disabled);
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  .button-tertiary:is(:disabled, [data-disabled]) {
+    border-color: transparent;
+    background-color: transparent;
+  }
+
+  /* Pending keeps its fill and its width: the label turns invisible but stays
+     in the accessibility tree, and the spinner sits over where it was. */
+  .button[data-pending] {
+    cursor: progress;
+  }
+
+  .button[data-pending] .button-label {
+    opacity: 0;
+  }
+
+  .button-spinner {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+  }
+}

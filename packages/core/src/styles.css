@@ -9,3 +9,4 @@
 
 @import '../dist/tokens.css';
 @import './components/spinner.css';
+@import './components/button.css';
