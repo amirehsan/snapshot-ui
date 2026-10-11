@@ -1,0 +1,73 @@
+---
+title: Button
+description: A pressable action. Primary for the one thing a view is for, secondary beside it, tertiary for the quiet way out and danger for a destructive confirmation.
+icon: RectangleHorizontal
+---
+
+<Section>
+
+## Variants
+
+Signal orange is deliberately not a variant: it is reserved for consent and legal actions.
+
+<Preview name="button-variants" />
+
+</Section>
+
+<Section>
+
+## States
+
+Pending keeps the width and the focus, and announces itself. Disabled is the only grey.
+
+<Preview name="button-states" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Pass `isPending` while work runs. The button stays focusable, ignores presses and does not submit its form.
+
+<Code code={`import { Button } from '@snapshot-ui/react';
+
+export function SaveBar({ isSaving }: { isSaving: boolean }) {
+  return (
+    <Button type="submit" isPending={isSaving} pendingLabel="Saving">
+      Save changes
+    </Button>
+  );
+}`} />
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria Button prop is accepted. These are the ones Snapshot UI adds or shapes.
+
+<PropsTable path="../../packages/react/src/button/Button.tsx" type="Pick<ButtonProps, 'variant' | 'isPending' | 'pendingLabel' | 'isDisabled' | 'onPress'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A native button element, with React Aria handling press across mouse, touch and keyboard.
+
+<Keys rows={[['Space Enter', 'Activates the button.'], ['Tab', 'Moves focus to it. The 2px ink ring sits outside the pill.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps buttons in the system.
+
+<Rules dos={['One primary per view. Pair it with a secondary or a tertiary.', 'Labels are verbs in sentence case, such as Save changes.']} donts={['Never orange. Signal orange belongs to consent and legal actions.']} />
+
+</Section>

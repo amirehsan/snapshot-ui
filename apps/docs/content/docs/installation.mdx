@@ -1,0 +1,70 @@
+---
+title: Installation
+description: Add the two packages, import one stylesheet and load the font.
+icon: Download
+---
+
+<Section>
+
+## Install
+
+Both packages, with React 19 or later.
+
+<Code lang="bash" code="pnpm add @snapshot-ui/react @snapshot-ui/core" />
+
+</Section>
+
+<Section>
+
+## Import the stylesheet
+
+Once, at the root of your app. `styles.css` holds the tokens and every component. `base.css` is optional: it sets the page background, the body type and the font rendering details.
+
+<Code code={`import '@snapshot-ui/core/styles.css';
+import '@snapshot-ui/core/base.css';`} />
+
+The CSS sits in cascade layers, so your own unlayered CSS always wins, and Tailwind's utilities win over the components.
+
+</Section>
+
+<Section>
+
+## Load the font
+
+Snapshot UI sets body text at weight 450, which only a variable font has. In Next.js, `next/font` self-hosts it and sets the family the tokens read:
+
+<Code code={`import { Sofia_Sans } from 'next/font/google';
+
+const sofia = Sofia_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-sans' });
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" className={sofia.variable}>
+      <body>{children}</body>
+    </html>
+  );
+}`} />
+
+Anywhere else, install `@fontsource-variable/sofia-sans` and import it once. The font stack already includes its family name.
+
+</Section>
+
+<Section>
+
+## Next.js server components
+
+Every component file carries `'use client'`, so a server component or an MDX page can render them directly. React Aria itself must never be imported into a server component.
+
+</Section>
+
+<Section>
+
+## Tailwind CSS, if you use it
+
+`tailwind.css` exposes the tokens as utilities, such as `bg-canvas`, `text-slate`, `rounded-control` and `p-part`. It also removes Tailwind's default radii, text sizes and shadows, so an off-system value like `rounded-lg` compiles to nothing.
+
+<Code lang="css" code={`@import 'tailwindcss';
+@import '@snapshot-ui/core/tailwind.css';
+@import '@snapshot-ui/core/styles.css';`} />
+
+</Section>
