@@ -1,0 +1,25 @@
+/*
+ * The multi-line box, derived in docs/design-system.md ("TextArea"). The control
+ * carries both classes, `input textarea`, so it takes everything from input.css:
+ * the fill, the edge, hover, the focus edge and ring, disabled, and the changed
+ * and invalid borders keyed on the field's root. This rule only undoes the single
+ * line. It sets none of what those states set, so none of them can lose to it, and
+ * it names both classes, so it outranks the input's own rule in any import order.
+ */
+@layer components {
+  .input.textarea {
+    /* The input is a 48px pill. A textarea is as tall as its rows, never under 6rem. */
+    height: auto;
+    min-height: 6rem;
+    /* The document's 20px control radius (10px in Soft, square in Square), not the input's pill. */
+    border-radius: var(--radius-control);
+    /* The input's own padding and line height, restated: three rows of 1.4 at 16px
+       are 67px, plus 24px of padding and 2px of edge, 93px, so the floor sets the
+       height until a fourth row. */
+    padding-block: 0.75rem;
+    padding-inline: 1.5rem;
+    line-height: var(--text-body--line-height);
+    /* Up and down only. Sideways would break the field's column. */
+    resize: vertical;
+  }
+}

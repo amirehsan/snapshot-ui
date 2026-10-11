@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactElement, type ReactNode, type Ref } from 'react';
+import type { ReactElement, ReactNode, Ref } from 'react';
 import {
   TextField as RACTextField,
   type TextFieldProps as RACTextFieldProps,
@@ -13,6 +13,7 @@ import { FieldCounter } from '../field/FieldCounter';
 import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
+import { useValueLength } from '../field/useValueLength';
 import { cx } from '../utils/cx';
 import { Input } from './Input';
 
@@ -72,7 +73,7 @@ export function TextField({
   ...props
 }: TextFieldProps): ReactElement {
   // The count follows the value whether the caller controls it or not.
-  const [typed, setTyped] = useState(defaultValue ?? '');
+  const { length, onChange: trackChange } = useValueLength({ value: props.value, defaultValue, onChange });
   const { chipId, describedBy } = useChangedDescription({
     // Only a label row has a chip, so only a labelled field has one to read.
     isChanged: isChanged && label != null,
@@ -86,16 +87,13 @@ export function TextField({
       aria-describedby={describedBy}
       data-changed={isChanged ? '' : undefined}
       className={composeRenderProps(className, (userClassName) => cx('field', userClassName))}
-      onChange={(value) => {
-        setTyped(value);
-        onChange?.(value);
-      }}
+      onChange={trackChange}
     >
       {label != null ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
       <Input ref={inputRef} placeholder={placeholder} />
       {description != null ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
-      {budget === undefined ? null : <FieldCounter count={(props.value ?? typed).length} budget={budget} />}
+      {budget === undefined ? null : <FieldCounter count={length} budget={budget} />}
     </RACTextField>
   );
 }

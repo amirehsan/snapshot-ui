@@ -1,0 +1,98 @@
+---
+title: Text area
+description: A multi-line text field. The same field as Text field with a taller box, so the label, the hint, the error line, the changed state and the length count work the same way.
+icon: AlignLeft
+---
+
+<Section>
+
+## Basic
+
+Pass a label, and a hint if the label cannot say it all. The box is three lines tall and never shorter than 6rem. Enter adds a line, and the reader can drag the corner to make it taller. The placeholder shows an example and never replaces the label.
+
+<Preview name="text-area-basic" />
+
+</Section>
+
+<Section>
+
+## States
+
+The states are the ones Text field draws, on the taller box. A changed field gets a light signal orange edge and a clay chip beside its label. An invalid field gets the error edge and an error line, and invalid outranks changed, so the chip steps aside. A disabled field is recessed. A read-only field looks like an enabled one and still submits.
+
+<Preview name="text-area-states" />
+
+</Section>
+
+<Section>
+
+## Length and height
+
+Pass `budget` to count the value's length against about how long it should be. The count appears from 70% of the budget and never blocks typing. Pass `rows` for a taller box: the height is the rows times the line height, plus the padding and the edge, and never less than 6rem.
+
+<Preview name="text-area-counter" />
+
+A line break counts as one character, as it does in the value `onChange` receives. A browser sends each line break in a form request as two characters, so a server that measures the request sees one more per line.
+
+</Section>
+
+<Section>
+
+## Usage
+
+Every value works controlled and uncontrolled, and a field with a `name` submits in a plain form. `onChange` receives the string, with each line break as `\n`.
+
+<Code code={`import { useState } from 'react';
+import { TextArea } from '@snapshot-ui/react';
+
+export function ShortDescription({ saved }: { saved: string }) {
+  const [value, setValue] = useState(saved);
+  return (
+    <TextArea
+      label="Short description"
+      description="One or two sentences, for search results."
+      name="description"
+      value={value}
+      onChange={setValue}
+      isChanged={value !== saved}
+      budget={120}
+      rows={4}
+    />
+  );
+}`} />
+
+For a custom layout, use the parts inside React Aria's own TextField: Label, Description and FieldError from Snapshot UI, and React Aria's TextArea with the classes `input textarea`. There is no bare textarea part, because the pair of classes is all it adds. [Field parts](/docs/components/field) has the layout.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria TextField prop is accepted, except `type` and `pattern`, which belong to a single line. These are the ones Snapshot UI adds or shapes.
+
+<PropsTable path="../../packages/react/src/text-area/TextArea.tsx" type="Pick<TextAreaProps, 'label' | 'description' | 'errorMessage' | 'placeholder' | 'rows' | 'isChanged' | 'changedLabel' | 'budget' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate' | 'textAreaRef'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A native textarea, labelled by the label and described by the hint and the error line, with React Aria handling the wiring. A screen reader reads the Changed chip with the field, after the hint, while the field is changed and valid. An invalid field reads its error line alone.
+
+<Keys rows={[['Tab', 'Moves focus into the field. The edge firms to 1.5px ink and the 2px ring sits outside it.'], ['Shift Tab', 'Moves focus back out.'], ['Enter', 'Adds a new line. It never submits the form.']]} />
+
+The corner handle resizes with a pointer or a finger, and the keyboard has no way to resize, so set `rows` to the height the content needs. The placeholder is taupe, which is quiet by design, so it never carries anything the label does not. The count is a polite status region.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps fields in the system.
+
+<Rules dos={['Name the field in the label, in sentence case. Use the hint for what the label cannot say.', 'Use a text area for text that runs to a sentence or more. A name, an email or a title is a text field.', 'Set rows to the length you expect, so the box starts at the right height.']} donts={['Never use the placeholder as the label.', 'Never block typing at the budget. The count advises.', 'Never leave the chip beside an error. Invalid outranks changed.']} />
+
+</Section>
