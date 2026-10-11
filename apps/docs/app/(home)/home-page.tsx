@@ -1,0 +1,820 @@
+'use client';
+
+import Link from 'next/link';
+import { useTheme } from 'next-themes';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { SearchDialog } from '@/components/shell/search';
+import { useShape } from '@/lib/document-state';
+import { writeShape, type Shape } from '@/lib/prepaint';
+
+const INSTALL = 'pnpm add @snapshot-ui/react @snapshot-ui/core';
+
+/** A stand-in switch for the homepage's sample settings. Phase 1b replaces it with Switch. */
+function DemoSwitch({ label, defaultOn }: { label: string; defaultOn: boolean }): ReactElement {
+  const [on, setOn] = useState(defaultOn);
+  return (
+    <button
+      className="switch"
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={() => {
+        setOn(!on);
+      }}
+    />
+  );
+}
+
+export function HomePage(): ReactElement {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const shape = useShape();
+  const [copied, setCopied] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+
+  useEffect(() => {
+    // The footer's columns fold on phones and stay open everywhere else.
+    if (matchMedia('(width < 768px)').matches) {
+      document.querySelectorAll('.footer-col').forEach((column) => {
+        column.removeAttribute('open');
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    if (menuOpen) closeButton.current?.focus();
+    else if (wasOpen.current) menuButton.current?.focus();
+    wasOpen.current = menuOpen;
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      // Also on leaving the page with the menu open, so the next page can scroll.
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
+  const toggleTheme = (): void => {
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+  };
+
+  const changeShape = (next: Shape): void => {
+    writeShape(next);
+  };
+
+  const copyInstall = (): void => {
+    void navigator.clipboard.writeText(INSTALL).then(() => {
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    });
+  };
+
+  return (
+    <>
+      <div className="nav-wrap">
+        <nav className="nav" aria-label="Main">
+          <Link className="brand" href="/">
+            <svg viewBox="0 0 26 26" fill="none" aria-hidden>
+              <circle cx="13" cy="13" r="10" stroke="currentColor" strokeWidth="2" />
+              <circle cx="21.5" cy="7" r="3.5" fill="var(--color-signal-light)" />
+            </svg>
+            snapshot ui
+          </Link>
+          <div className="nav-links">
+            <Link href="/docs">Docs</Link>
+            <Link href="/docs/components/button">Components</Link>
+            <Link href="/docs/theming">Theming</Link>
+            <a href="https://github.com/amirehsan/snapshot-ui/releases">Changelog</a>
+          </div>
+          <div className="nav-actions">
+            <button
+              className="icon-button icon-button-ghost"
+              type="button"
+              aria-label="Search the docs"
+              onClick={() => {
+                setSearchOpen(true);
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="m16 16 5 5" />
+              </svg>
+            </button>
+            <button
+              className="icon-button icon-button-ghost"
+              type="button"
+              aria-label="Toggle dark mode"
+              onClick={toggleTheme}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 14.5A8.2 8.2 0 0 1 9.5 4 8.2 8.2 0 1 0 20 14.5z" />
+              </svg>
+            </button>
+            <a
+              className="icon-button icon-button-ghost"
+              href="https://github.com/amirehsan/snapshot-ui"
+              aria-label="GitHub"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z" />
+              </svg>
+            </a>
+            <Link className="button nav-cta" href="/docs/installation">
+              Get started
+            </Link>
+            <button
+              ref={menuButton}
+              className="icon-button icon-button-ghost nav-menu"
+              type="button"
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+              aria-controls="nav-overlay"
+              onClick={() => {
+                setMenuOpen(true);
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </button>
+          </div>
+        </nav>
+      </div>
+      <div className="nav-overlay" id="nav-overlay" hidden={!menuOpen}>
+        <div className="nav-overlay-head">
+          <span className="brand">
+            <svg viewBox="0 0 26 26" fill="none" aria-hidden>
+              <circle cx="13" cy="13" r="10" stroke="currentColor" strokeWidth="2" />
+              <circle cx="21.5" cy="7" r="3.5" fill="var(--color-signal-light)" />
+            </svg>
+            snapshot ui
+          </span>
+          <button
+            ref={closeButton}
+            className="icon-button nav-close"
+            type="button"
+            aria-label="Close menu"
+            onClick={() => {
+              setMenuOpen(false);
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <nav className="nav-overlay-links" aria-label="Menu">
+          <Link className="type-h2" href="/docs">
+            Docs
+          </Link>
+          <Link className="type-h2" href="/docs/components/button">
+            Components
+          </Link>
+          <Link className="type-h2" href="/docs/theming">
+            Theming
+          </Link>
+          <a className="type-h2" href="https://github.com/amirehsan/snapshot-ui/releases">
+            Changelog
+          </a>
+        </nav>
+        <Link className="button button-large" href="/docs/installation">
+          Get started
+        </Link>
+      </div>
+
+      <main className="page">
+        <section className="hero">
+          <div>
+            <p className="eyebrow">Component library</p>
+            <h1 className="type-h1">Calm interfaces for settings, dashboards and apps.</h1>
+          </div>
+          <div className="hero-side">
+            <p className="lede">
+              Snapshot UI is an accessible React library in a warm, editorial voice: cream surfaces, one
+              typeface and corners that round with intent. Plain HTML is next.
+            </p>
+            <div className="row">
+              <Link className="button button-large" href="/docs/installation">
+                Get started
+              </Link>
+              <Link className="button button-secondary button-large" href="/docs/components/button">
+                Browse components
+              </Link>
+            </div>
+            <div className="install">
+              <span>
+                <b>$</b> pnpm add @snapshot-ui/react @snapshot-ui/core
+              </span>
+              <button
+                className="icon-button icon-button-ghost"
+                type="button"
+                aria-label={copied ? 'Copied' : 'Copy install command'}
+                onClick={copyInstall}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="9" y="9" width="11" height="11" rx="2" />
+                  <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                </svg>
+              </button>
+            </div>
+            <div className="shape-switch">
+              <span className="type-small muted">Corners</span>
+              <div className="segmented segmented-small" role="radiogroup" aria-label="Corners">
+                <label className="segmented-option">
+                  <input
+                    type="radio"
+                    name="shape"
+                    value="rounded"
+                    checked={shape === 'rounded'}
+                    onChange={() => {
+                      changeShape('rounded');
+                    }}
+                  />
+                  Rounded
+                </label>
+                <label className="segmented-option">
+                  <input
+                    type="radio"
+                    name="shape"
+                    value="soft"
+                    checked={shape === 'soft'}
+                    onChange={() => {
+                      changeShape('soft');
+                    }}
+                  />
+                  Soft
+                </label>
+                <label className="segmented-option">
+                  <input
+                    type="radio"
+                    name="shape"
+                    value="square"
+                    checked={shape === 'square'}
+                    onChange={() => {
+                      changeShape('square');
+                    }}
+                  />
+                  Square
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="frame" data-theme="dark" aria-label="Components at work">
+          <svg
+            className="frame-arc"
+            viewBox="0 0 1180 560"
+            preserveAspectRatio="none"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M-20 470 C 260 300, 620 620, 1200 120"
+              stroke="var(--color-signal-light)"
+              strokeWidth="1.5"
+            />
+          </svg>
+          <div className="card frame-card" data-theme="light">
+            <div className="card-header">
+              <p className="type-h3">Notifications</p>
+              <p className="muted">Where we reach you, and how often.</p>
+            </div>
+            <div className="settings-list">
+              <div className="setting">
+                <div>
+                  <div className="type-h4">Product updates</div>
+                  <div className="field-hint">A short note when something ships.</div>
+                </div>
+                <DemoSwitch label="Product updates" defaultOn={true} />
+              </div>
+              <div className="setting">
+                <div>
+                  <div className="type-h4">Weekly digest</div>
+                  <div className="field-hint">Every Tuesday morning.</div>
+                </div>
+                <DemoSwitch label="Weekly digest" defaultOn={false} />
+              </div>
+              <div className="setting">
+                <div>
+                  <div className="type-h4">Security alerts</div>
+                  <div className="field-hint">Always on for owners.</div>
+                </div>
+                <DemoSwitch label="Security alerts" defaultOn={true} />
+              </div>
+            </div>
+          </div>
+          <div className="card frame-card frame-card-offset" data-theme="light">
+            <div className="card-header">
+              <p className="type-h3">Workspace</p>
+              <p className="muted">Shown in the header and in every invite.</p>
+            </div>
+            <div className="stack">
+              <label className="field">
+                <span className="field-label">
+                  Workspace name <span className="field-marker">Changed</span>
+                </span>
+                <input className="input input-changed" defaultValue="Northwind Studio" />
+              </label>
+              <div className="field">
+                <span className="field-label">Theme</span>
+                <div className="segmented" role="radiogroup" aria-label="Theme">
+                  <label className="segmented-option">
+                    <input type="radio" name="demo-theme" />
+                    Light
+                  </label>
+                  <label className="segmented-option">
+                    <input type="radio" name="demo-theme" />
+                    Dark
+                  </label>
+                  <label className="segmented-option">
+                    <input type="radio" name="demo-theme" defaultChecked />
+                    System
+                  </label>
+                </div>
+              </div>
+              <div className="row push-end">
+                <button className="button button-tertiary" type="button">
+                  Discard
+                </button>
+                <button className="button" type="button">
+                  Save changes
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="toast" data-theme="light" role="status">
+            <span className="toast-dot">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m5 12.5 5 5 9-10" />
+              </svg>
+            </span>
+            Saved. Your changes are live.
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Foundations</p>
+              <h2 className="type-h2">One voice, measured rather than chosen by eye.</h2>
+            </div>
+            <p className="lede">
+              Every color pairing is checked for contrast in both themes, every corner comes from one scale,
+              and every component is keyboard first.
+            </p>
+          </div>
+          <div className="orbit">
+            <svg
+              className="orbit-arc"
+              viewBox="0 0 1280 420"
+              preserveAspectRatio="none"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M40 300 C 300 40, 520 420, 760 250 S 1180 60, 1290 200"
+                stroke="var(--color-signal-light)"
+                strokeWidth="1.5"
+              />
+            </svg>
+            <article className="portrait">
+              <div className="portrait-circle">
+                <span className="portrait-glyph">Aa</span>
+                <Link className="satellite" href="/docs/design-principles" aria-label="Typography">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </Link>
+              </div>
+              <p className="eyebrow">Type</p>
+              <h3 className="type-h3">One family, at a body weight of 450.</h3>
+            </article>
+            <article className="portrait">
+              <div className="portrait-circle">
+                <div className="shape-stack">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <Link className="satellite" href="/docs/theming" aria-label="Shape">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </Link>
+              </div>
+              <p className="eyebrow">Shape</p>
+              <h3 className="type-h3">Rounded, Soft or Square, from one attribute.</h3>
+            </article>
+            <article className="portrait">
+              <div className="portrait-circle">
+                <div className="contrast-glyph">
+                  <span>Aa</span>
+                  <span>Aa</span>
+                </div>
+                <Link className="satellite" href="/docs/design-principles" aria-label="Accessibility">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </Link>
+              </div>
+              <p className="eyebrow">Access</p>
+              <h3 className="type-h3">WCAG 2.2 AA, built on React Aria.</h3>
+            </article>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Theme axes</p>
+              <h2 className="type-h2">Two switches. Every component follows.</h2>
+            </div>
+            <p className="lede">
+              Set data-theme and data-shape on any element. A light card inside a dark page just works.
+            </p>
+          </div>
+          <div className="axes">
+            <div className="axis-tile" data-theme="light" data-shape="rounded">
+              <div className="axis-label">
+                <span>Light</span>
+                <span>Rounded</span>
+              </div>
+              <div className="card stack">
+                <input className="input" placeholder="Search settings" />
+                <div className="row spread">
+                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <div className="row">
+                    <button className="icon-button" type="button" aria-label="Call">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
+                      </svg>
+                    </button>
+                    <button className="button" type="button">
+                      Book a visit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="axis-tile" data-theme="light" data-shape="soft">
+              <div className="axis-label">
+                <span>Light</span>
+                <span>Soft</span>
+              </div>
+              <div className="card stack">
+                <input className="input" placeholder="Search settings" />
+                <div className="row spread">
+                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <div className="row">
+                    <button className="icon-button" type="button" aria-label="Call">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
+                      </svg>
+                    </button>
+                    <button className="button" type="button">
+                      Book a visit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="axis-tile" data-theme="light" data-shape="square">
+              <div className="axis-label">
+                <span>Light</span>
+                <span>Square</span>
+              </div>
+              <div className="card stack">
+                <input className="input" placeholder="Search settings" />
+                <div className="row spread">
+                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <div className="row">
+                    <button className="icon-button" type="button" aria-label="Call">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
+                      </svg>
+                    </button>
+                    <button className="button" type="button">
+                      Book a visit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="axis-tile" data-theme="dark" data-shape="rounded">
+              <div className="axis-label">
+                <span>Dark</span>
+                <span>Rounded</span>
+              </div>
+              <div className="card stack">
+                <input className="input" placeholder="Search settings" />
+                <div className="row spread">
+                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <div className="row">
+                    <button className="icon-button" type="button" aria-label="Call">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
+                      </svg>
+                    </button>
+                    <button className="button" type="button">
+                      Book a visit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="axis-tile" data-theme="dark" data-shape="soft">
+              <div className="axis-label">
+                <span>Dark</span>
+                <span>Soft</span>
+              </div>
+              <div className="card stack">
+                <input className="input" placeholder="Search settings" />
+                <div className="row spread">
+                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <div className="row">
+                    <button className="icon-button" type="button" aria-label="Call">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
+                      </svg>
+                    </button>
+                    <button className="button" type="button">
+                      Book a visit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="axis-tile" data-theme="dark" data-shape="square">
+              <div className="axis-label">
+                <span>Dark</span>
+                <span>Square</span>
+              </div>
+              <div className="card stack">
+                <input className="input" placeholder="Search settings" />
+                <div className="row spread">
+                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <div className="row">
+                    <button className="icon-button" type="button" aria-label="Call">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
+                      </svg>
+                    </button>
+                    <button className="button" type="button">
+                      Book a visit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Components</p>
+              <h2 className="type-h2">Everything a dashboard asks for.</h2>
+            </div>
+            <p className="lede">
+              From a single switch to the whole app shell. Published as you build, at 0.x, from the first
+              phase.
+            </p>
+          </div>
+          <div className="catalog">
+            <div className="card catalog-group">
+              <p className="eyebrow">Forms</p>
+              <div className="chips">
+                <Link className="chip" href="/docs/components/button">
+                  Button
+                </Link>
+                <span className="chip">Icon button</span>
+                <span className="chip">Text field</span>
+                <span className="chip">Text area</span>
+                <span className="chip">Checkbox</span>
+                <span className="chip">Radio group</span>
+                <span className="chip">Switch</span>
+                <span className="chip">Segmented control</span>
+                <span className="chip">Select</span>
+                <span className="chip">Combo box</span>
+                <span className="chip">Tag input</span>
+              </div>
+            </div>
+            <div className="card catalog-group">
+              <p className="eyebrow">Dates and media</p>
+              <div className="chips">
+                <span className="chip">Date picker</span>
+                <span className="chip chip-new">Date range</span>
+                <span className="chip">Time field</span>
+                <span className="chip">Color field</span>
+                <span className="chip">Icon picker</span>
+                <span className="chip">Media input</span>
+                <span className="chip chip-new">Slider</span>
+                <span className="chip">Rich text</span>
+              </div>
+            </div>
+            <div className="card catalog-group">
+              <p className="eyebrow">Lists and data</p>
+              <div className="chips">
+                <span className="chip chip-new">Data table</span>
+                <span className="chip">Sortable list</span>
+                <span className="chip">Tree builder</span>
+                <span className="chip">Master detail</span>
+                <span className="chip">Transfer list</span>
+                <span className="chip">Stat tile</span>
+                <span className="chip">Empty state</span>
+                <span className="chip chip-new">Charts</span>
+              </div>
+            </div>
+            <div className="card catalog-group">
+              <p className="eyebrow">Overlays and shell</p>
+              <div className="chips">
+                <span className="chip">Dialog</span>
+                <span className="chip">Toast</span>
+                <span className="chip">Tooltip</span>
+                <span className="chip">Menu</span>
+                <span className="chip">Drawer</span>
+                <span className="chip">Command palette</span>
+                <span className="chip">Sidebar</span>
+                <span className="chip">Save bar</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="cta">
+          <span className="watermark" aria-hidden />
+          <div className="cta-inner">
+            <p className="eyebrow">Open source, MIT</p>
+            <h2 className="type-h2">Start with a button. Ship the whole settings page.</h2>
+            <div className="row">
+              <Link className="button button-large" href="/docs/components/button">
+                Read the docs
+              </Link>
+              <a
+                className="button button-secondary button-large"
+                href="https://github.com/amirehsan/snapshot-ui"
+              >
+                Star on GitHub
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="footer" data-theme="dark">
+        <div className="page">
+          <h2 className="type-h2">Everything you need to build a calm product, whenever you need it.</h2>
+          <div className="footer-cols">
+            <details className="footer-col" open>
+              <summary>Docs</summary>
+              <div className="footer-links">
+                <Link href="/docs">Introduction</Link>
+                <Link href="/docs/installation">Installation</Link>
+                <Link href="/docs/theming">Theming</Link>
+                <Link href="/docs/design-principles">Design principles</Link>
+              </div>
+            </details>
+            <details className="footer-col" open>
+              <summary>Components</summary>
+              <div className="footer-links">
+                <Link href="/docs/components/button">Button</Link>
+                <Link href="/docs/components/spinner">Spinner</Link>
+              </div>
+            </details>
+            <details className="footer-col" open>
+              <summary>Community</summary>
+              <div className="footer-links">
+                <a href="https://github.com/amirehsan/snapshot-ui">GitHub &#8599;</a>
+                <a href="https://github.com/amirehsan/snapshot-ui/discussions">Discussions &#8599;</a>
+                <a href="https://github.com/amirehsan/snapshot-ui/blob/main/CONTRIBUTING.md">Contributing</a>
+                <a href="https://github.com/amirehsan/snapshot-ui/blob/main/CODE_OF_CONDUCT.md">
+                  Code of conduct
+                </a>
+              </div>
+            </details>
+            <details className="footer-col" open>
+              <summary>Project</summary>
+              <div className="footer-links">
+                <a href="https://github.com/amirehsan/snapshot-ui/releases">Changelog</a>
+                <a href="https://github.com/amirehsan/snapshot-ui/blob/main/SECURITY.md">Security</a>
+                <a href="https://github.com/amirehsan/snapshot-ui/blob/main/LICENSE">MIT License</a>
+              </div>
+            </details>
+          </div>
+          <div className="footer-bottom">
+            <span>&#169; 2026 Snapshot UI. Released under the MIT License.</span>
+            <span>Built on React Aria</span>
+          </div>
+        </div>
+      </footer>
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+    </>
+  );
+}
