@@ -65,7 +65,12 @@ describe('Button', () => {
 
   it('keeps the label in the accessible name while pending', () => {
     render(<Button isPending>Save</Button>);
-    expect(screen.getByRole('button').textContent).toContain('Save');
+    expect(screen.getByRole('button', { name: /Save/ })).toBeInTheDocument();
+  });
+
+  it('names the spinner Loading when no pendingLabel is given', () => {
+    render(<Button isPending>Save</Button>);
+    expect(screen.getByRole('progressbar', { name: 'Loading' })).toBeInTheDocument();
   });
 
   it('submits a native form', async () => {
@@ -117,6 +122,11 @@ describe('Button', () => {
 
   it('merges a custom className', () => {
     render(<Button className="extra">Save</Button>);
+    expect(screen.getByRole('button')).toHaveClass('button', 'button-primary', 'extra');
+  });
+
+  it('merges a function-form className with the base classes', () => {
+    render(<Button className={({ isPressed }) => (isPressed ? 'is-pressed' : 'extra')}>Save</Button>);
     expect(screen.getByRole('button')).toHaveClass('button', 'button-primary', 'extra');
   });
 });
