@@ -7,6 +7,10 @@
 // A preprocessor copies every mode value into a hidden tree
 // (__mode.<axis>.<variant>.<path>) so transforms apply to mode values exactly as
 // they do to base values. The formats then split base and mode tokens again.
+//
+// A base $value may be a reference such as "{color.ink}". The CSS keeps it as
+// var(--color-ink) instead of resolving it, so it follows the mode it is read
+// in, and every scope of an axis that changes the target declares it again.
 import StyleDictionary from 'style-dictionary';
 import { fileHeader } from 'style-dictionary/utils';
 
@@ -97,6 +101,54 @@ StyleDictionary.registerTransformGroup({
   ],
 });
 
+const REFERENCE = /\{([^{}]+)\}/g;
+
+/** The paths a base token's $value refers to, as written: "{color.ink}" is color.ink. */
+const referencesOf = (token) =>
+  typeof token.original.$value === 'string'
+    ? [...token.original.$value.matchAll(REFERENCE)].map((m) => m[1])
+    : [];
+
+/** The base token a reference path names. */
+function target(path, byPath) {
+  const found = byPath.get(path);
+  if (!found) throw new Error(`Unknown token reference {${path}}`);
+  return found;
+}
+
+/**
+ * The value a base token declares. A reference stays a var() to the variable it
+ * names; every other value is the resolved and transformed one.
+ */
+function cssValue(token, byPath) {
+  if (referencesOf(token).length === 0) return token.$value;
+  return token.original.$value.replace(REFERENCE, (_, path) => `var(--${target(path, byPath).name})`);
+}
+
+/**
+ * Base tokens that refer, directly or through each other, to a token the axis
+ * changes. A custom property that holds var() resolves where it is declared, so
+ * --focus-ring-color: var(--color-ink) on :root would hand a nested
+ * [data-theme="dark"] scope the page's ink instead of its own. Each scope
+ * declares these again, as it does `color`.
+ */
+function followers(base, changed, byPath) {
+  const names = new Set(changed);
+  const found = [];
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const t of base) {
+      if (names.has(t.name)) continue;
+      if (referencesOf(t).some((path) => names.has(target(path, byPath).name))) {
+        names.add(t.name);
+        found.push(t);
+        grew = true;
+      }
+    }
+  }
+  return found;
+}
+
 /** Splits all tokens into base tokens and axis -> variant -> declarations. */
 function splitTokens(allTokens) {
   const base = allTokens.filter((t) => t.path[0] !== MODE_ROOT);
@@ -109,7 +161,7 @@ function splitTokens(allTokens) {
     if (!baseToken) throw new Error(`Mode value for unknown token ${rest.join('.')}`);
     ((modes[axis] ??= {})[variant] ??= []).push({ name: baseToken.name, value: t.$value });
   }
-  return { base, modes };
+  return { base, modes, byPath };
 }
 
 const decl = (name, value) => `--${name}: ${value};`;
@@ -122,17 +174,21 @@ const attrSelector = (def, variant) => `[${def.attr}="${variant}"${def.caseInsen
 StyleDictionary.registerFormat({
   name: 'snapshot-ui/css-layered',
   format: async ({ dictionary, file }) => {
-    const { base, modes } = splitTokens(dictionary.allTokens);
+    const { base, modes, byPath } = splitTokens(dictionary.allTokens);
     const out = [];
-    const rootLines = base.map((t) => decl(t.name, t.$value));
+    const rootLines = base.map((t) => decl(t.name, cssValue(t, byPath)));
     rootLines.unshift(`color-scheme: ${AXES.theme.base};`);
     out.push(block(':root', rootLines, 1));
     for (const [axis, variants] of Object.entries(modes)) {
       const def = AXES[axis];
       const changed = new Set(Object.values(variants).flatMap((v) => v.map((d) => d.name)));
-      const baseLines = base.filter((t) => changed.has(t.name)).map((t) => decl(t.name, t.$value));
+      const followLines = followers(base, changed, byPath).map((t) => decl(t.name, cssValue(t, byPath)));
+      const baseLines = [
+        ...base.filter((t) => changed.has(t.name)).map((t) => decl(t.name, cssValue(t, byPath))),
+        ...followLines,
+      ];
       for (const [variant, decls] of Object.entries(variants)) {
-        const lines = decls.map((d) => decl(d.name, d.value));
+        const lines = [...decls.map((d) => decl(d.name, d.value)), ...followLines];
         // A theme scope re-resolves its own text color: inherited color is
         // computed in the parent's theme, so a light card inside a dark page
         // would otherwise keep the page's white text.

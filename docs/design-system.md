@@ -931,6 +931,19 @@ document. Four were renamed because they described a marketing page:
 | `--text-footer-link` | `--text-small` | It is the hint and helper text step. |
 | `--text-footer-header` | `--text-overline` | Uppercase column headers in tables and stat tiles. |
 
+Three values have no name in the document, so the library gives them one:
+
+- `--font-mono` is `ui-monospace`, `SFMono-Regular`, `Menlo`, then the generic
+  `monospace`. It is for code only, and Sofia Sans stays the one family for
+  every label and sentence.
+- `--container-field` is 44rem (704px), the widest a single control grows. Past
+  about 700px the eye has to travel too far from a label to the end of its own
+  input.
+- `--focus-ring-color` is ink, kept as one reference to `--color-ink` so every
+  ring follows the theme and a theme can recolor them all from this one token.
+  Each theme scope declares it again, since a variable that holds `var()`
+  resolves where it is declared.
+
 ## Four colors added
 
 All four are tokens with a light and a dark value, so no component mixes its
@@ -966,6 +979,12 @@ enabled. The dark value steps down to Lifted Surface instead.
 
 The `hairline` color is the app's variable of the same name, unchanged. The
 scrim's opacity is a token, `opacity-scrim`, 0.4 in light and 0.65 in dark.
+
+The `scrollbar` and `scrollbar-hover` colors are the app's thumb colors: ink at
+22%, and at 40% under the pointer, with white at the same strengths in dark.
+The app mixed them from ink where it used them. The library writes the values
+out, so no component mixes its own. Standard `scrollbar-color` has no hover
+state, so `base.css` sets only the first.
 
 ## The shape axis
 

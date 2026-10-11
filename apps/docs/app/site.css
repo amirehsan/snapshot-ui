@@ -186,7 +186,7 @@
   .rail-link:focus-visible,
   .segmented-option:has(:focus-visible),
   .tab:focus-visible {
-    outline: var(--focus-ring-width) solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
 
@@ -585,7 +585,7 @@
   }
 
   .code pre:focus-visible {
-    outline: var(--focus-ring-width) solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
 }

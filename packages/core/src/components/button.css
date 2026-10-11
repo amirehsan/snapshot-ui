@@ -104,7 +104,7 @@
 
   /* Outside the pill, so ink still reads against the page behind an ink fill. */
   .button:is(:focus-visible, [data-focus-visible]) {
-    outline: var(--focus-ring-width) solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
 

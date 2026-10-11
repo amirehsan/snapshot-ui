@@ -494,7 +494,7 @@
   }
 
   .rail-collapse:focus-visible {
-    outline: var(--focus-ring-width) solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
 
@@ -822,7 +822,7 @@
   }
 
   .docs-section a:not([class]):focus-visible {
-    outline: var(--focus-ring-width) solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
     border-radius: var(--radius-micro);
   }

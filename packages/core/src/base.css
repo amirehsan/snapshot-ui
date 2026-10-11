@@ -37,7 +37,7 @@
   /* One ring for anything focusable. Components that draw their own (the
      button does) sit in a later layer and win. */
   :focus-visible {
-    outline: var(--focus-ring-width) solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
 

@@ -39,6 +39,11 @@ describe.each(components)('src/components/%s', (file) => {
   it('is built to dist', () => {
     expect(existsSync(new URL(`../dist/components/${file}`, import.meta.url))).toBe(true);
   });
+
+  it('draws its focus ring in the focus ring token, never in ink', () => {
+    // An inset ring on an ink fill inverts to the canvas color, which is allowed.
+    expect(source).not.toMatch(/outline(?:-color)?:[^;]*var\(--color-ink\)/);
+  });
 });
 
 describe('dist/styles.css', () => {
@@ -70,7 +75,9 @@ describe('dist/base.css', () => {
 
   it('draws the focus ring for anything focusable, inside the base layer', () => {
     // The text between the braces of the first `@layer base`, nested blocks included.
-    const open = built.indexOf('@layer base {') + '@layer base {'.length;
+    const start = built.indexOf('@layer base {');
+    expect(start).toBeGreaterThan(-1);
+    const open = start + '@layer base {'.length;
     let depth = 1;
     let close = open;
     while (depth > 0 && close < built.length) {
@@ -79,7 +86,7 @@ describe('dist/base.css', () => {
       else if (char === '}') depth -= 1;
     }
     expect(built.slice(open, close)).toMatch(
-      /:focus-visible\s*\{\s*outline:\s*var\(--focus-ring-width\) solid var\(--color-ink\);\s*outline-offset:\s*var\(--focus-ring-offset\);\s*\}/,
+      /:focus-visible\s*\{\s*outline:\s*var\(--focus-ring-width\) solid var\(--focus-ring-color\);\s*outline-offset:\s*var\(--focus-ring-offset\);\s*\}/,
     );
   });
 });

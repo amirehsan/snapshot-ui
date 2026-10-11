@@ -39,8 +39,14 @@
     "size": "size-limit"
   },
   "peerDependencies": {
+    "@snapshot-ui/core": "workspace:^",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@snapshot-ui/core": {
+      "optional": true
+    }
   },
   "dependencies": {
     "lucide-react": "^1.55.0",
