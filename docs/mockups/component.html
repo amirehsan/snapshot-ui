@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-shape="rounded">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Button | Snapshot UI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:wght@400..700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./mockup.css" />
+    <script>
+      try {
+        if (localStorage.getItem('snapshot-ui-docs-rail') === 'collapsed') {
+          document.documentElement.dataset.rail = 'collapsed';
+        }
+      } catch {}
+    </script>
+    <style>
+      @layer components {
+        :root {
+          --rail-width: 320px;
+        }
+
+        /* ---- Floating rail ------------------------------------------- */
+        .rail {
+          position: fixed;
+          top: 16px;
+          bottom: 16px;
+          left: 16px;
+          z-index: 30;
+          display: flex;
+          flex-direction: column;
+          width: calc(var(--rail-width) - 32px);
+          border: 1px solid var(--color-hairline);
+          border-radius: var(--radius-stadium);
+          background-color: var(--color-float);
+          box-shadow: var(--shadow-lift);
+          overflow: hidden;
+          transition: border-radius 200ms ease, background-color 200ms ease;
+        }
+
+        .rail-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 24px 24px 12px 28px;
+        }
+
+        .brand {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 1.125rem;
+          font-weight: 500;
+          letter-spacing: -0.03em;
+        }
+
+        .brand svg {
+          width: 26px;
+          height: 26px;
+        }
+
+        .rail-search {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 8px 12px 4px;
+          min-height: 42px;
+          padding: 0 12px;
+          border: 1px solid var(--color-hairline);
+          border-radius: var(--radius-pill);
+          background-color: var(--color-canvas);
+          color: var(--color-slate);
+          font-size: 0.9375rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: border-radius 200ms ease;
+        }
+
+        .rail-search svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        .rail-search span:first-of-type {
+          flex: 1;
+          text-align: left;
+        }
+
+        .rail-nav {
+          flex: 1;
+          overflow-y: auto;
+          padding: 8px 12px 24px;
+        }
+
+        .rail-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 24px;
+          padding: 0 12px 8px;
+          color: var(--color-slate);
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          line-height: 1.2;
+          text-transform: uppercase;
+        }
+
+        /* The dot hangs into the gutter so the label text and the links below
+           share one vertical axis. Grey, orange on the group holding the page. */
+        .rail-group::before {
+          content: '';
+          flex: none;
+          width: 6px;
+          height: 6px;
+          margin-left: -14px;
+          border-radius: var(--radius-dot);
+          background-color: color-mix(in srgb, var(--color-ink) 25%, transparent);
+        }
+
+        .rail-group-current {
+          color: var(--color-ink);
+        }
+
+        .rail-group-current::before {
+          background-color: var(--color-signal-light);
+        }
+
+        .rail-list {
+          display: grid;
+          gap: 2px;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .rail-link {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          min-height: 40px;
+          padding: 0 12px;
+          border-radius: var(--radius-pill);
+          color: var(--color-charcoal);
+          font-size: 0.9375rem;
+          font-weight: 500;
+          line-height: 1.45;
+          letter-spacing: -0.01em;
+          transition: border-radius 200ms ease;
+        }
+
+        .rail-link:hover {
+          background-color: var(--color-canvas);
+          color: var(--color-ink);
+        }
+
+        .rail-link[aria-current='page'] {
+          background-color: var(--color-ink);
+          color: var(--color-canvas);
+        }
+
+        .rail-link .badge {
+          padding: 1px 6px;
+        }
+
+        .rail-foot {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 24px 20px 28px;
+          border-top: 1px solid var(--color-divider);
+          color: var(--color-slate);
+          font-size: 0.875rem;
+        }
+
+        /* ---- Workspace ----------------------------------------------- */
+        .workspace {
+          margin-left: var(--rail-width);
+          min-height: 100vh;
+        }
+
+        .header {
+          position: sticky;
+          top: 0;
+          z-index: 20;
+          background-color: color-mix(in srgb, var(--color-canvas) 80%, transparent);
+          backdrop-filter: blur(20px) saturate(140%);
+        }
+
+        .header-inner {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 24px;
+          max-width: 1320px;
+          padding: 32px 32px 20px;
+        }
+
+        .header-titles {
+          display: grid;
+          gap: 6px;
+        }
+
+        .header-controls {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .content {
+          max-width: 1320px;
+          padding: 8px 32px 64px;
+        }
+
+        .lede {
+          max-width: 70ch;
+          margin-bottom: 32px;
+          color: var(--color-charcoal);
+          font-size: 1.125rem;
+          line-height: 1.5;
+        }
+
+        .panel {
+          display: grid;
+          grid-template-columns: repeat(12, minmax(0, 1fr));
+          gap: 32px;
+          align-items: start;
+        }
+
+        .panel-main {
+          grid-column: span 8;
+          display: grid;
+          gap: 32px;
+        }
+
+        .panel-side {
+          grid-column: span 4;
+          display: grid;
+          gap: 32px;
+          position: sticky;
+          top: 150px;
+        }
+
+        /* ---- Tabs: pills in a canvas track with no control boundary ---- */
+        .tabs {
+          display: inline-flex;
+          gap: 4px;
+          padding: 4px;
+          border-radius: var(--radius-surface);
+          background-color: var(--color-canvas);
+          transition: border-radius 200ms ease;
+        }
+
+        .tab {
+          min-height: 36px;
+          padding: 0 16px;
+          border: 0;
+          border-radius: var(--radius-pill);
+          background: transparent;
+          color: var(--color-slate);
+          font-weight: 500;
+          cursor: pointer;
+          transition: border-radius 200ms ease;
+        }
+
+        .tab[aria-selected='true'] {
+          background-color: var(--color-ink);
+          color: var(--color-canvas);
+        }
+
+        /* ---- Preview stage ------------------------------------------- */
+        .stage {
+          display: grid;
+          place-items: center;
+          min-height: 220px;
+          padding: 40px 24px;
+          border: 1px solid var(--color-frame);
+          border-radius: var(--radius-surface);
+          background-color: var(--color-canvas);
+          transition: border-radius 200ms ease;
+        }
+
+        .stage .row {
+          justify-content: center;
+          gap: 12px;
+        }
+
+        .stage-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 16px;
+          color: var(--color-slate);
+          font-size: var(--text-small);
+        }
+
+        [hidden] {
+          display: none !important;
+        }
+
+        /* ---- Props --------------------------------------------------- */
+        .props {
+          display: grid;
+          border: 1px solid var(--color-frame);
+          border-radius: var(--radius-surface);
+          overflow: hidden;
+          transition: border-radius 200ms ease;
+        }
+
+        .prop {
+          display: grid;
+          grid-template-columns: 170px 1fr;
+          gap: 24px;
+          padding: 18px 20px;
+        }
+
+        .prop + .prop {
+          border-top: 1px solid var(--color-divider);
+        }
+
+        .prop-name {
+          font-family: var(--font-mono);
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .prop-type {
+          display: inline-block;
+          margin-top: 6px;
+          padding: 2px 8px;
+          border-radius: var(--radius-micro);
+          background-color: var(--color-bone);
+          color: var(--color-granite);
+          font-family: var(--font-mono);
+          font-size: 0.8125rem;
+        }
+
+        .prop-default {
+          color: var(--color-slate);
+          font-size: var(--text-small);
+        }
+
+        /* ---- Keyboard ------------------------------------------------ */
+        .keys {
+          display: grid;
+          gap: 14px;
+        }
+
+        .key-row {
+          display: grid;
+          grid-template-columns: 130px 1fr;
+          gap: 16px;
+          align-items: baseline;
+        }
+
+        /* ---- Aside cards --------------------------------------------- */
+        .toc {
+          display: grid;
+          gap: 4px;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .toc a {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 34px;
+          color: var(--color-slate);
+          font-weight: 500;
+        }
+
+        .toc a::before {
+          content: '';
+          width: 6px;
+          height: 6px;
+          border-radius: var(--radius-dot);
+          background-color: color-mix(in srgb, var(--color-ink) 20%, transparent);
+        }
+
+        .toc a[aria-current='true'] {
+          color: var(--color-ink);
+        }
+
+        .toc a[aria-current='true']::before {
+          background-color: var(--color-signal-light);
+        }
+
+        .rules {
+          display: grid;
+          gap: 16px;
+        }
+
+        .rule {
+          display: grid;
+          grid-template-columns: 24px 1fr;
+          gap: 12px;
+          align-items: start;
+        }
+
+        .rule-mark {
+          display: grid;
+          place-items: center;
+          width: 24px;
+          height: 24px;
+          border-radius: var(--radius-dot);
+          background-color: var(--color-ink);
+          color: var(--color-canvas);
+        }
+
+        .rule-mark-no {
+          background-color: transparent;
+          border: 1.5px solid var(--color-ink);
+          color: var(--color-ink);
+        }
+
+        .rule-mark svg {
+          width: 13px;
+          height: 13px;
+        }
+
+        .meta {
+          display: grid;
+          gap: 12px;
+        }
+
+        .meta-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          color: var(--color-slate);
+          font-size: var(--text-small);
+        }
+
+        .meta-row a {
+          color: var(--color-ink);
+          font-weight: 500;
+          text-decoration: underline;
+          text-underline-offset: 4px;
+        }
+
+        .footer-note {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 48px;
+          color: var(--color-slate);
+          font-size: var(--text-small);
+        }
+
+        .footer-note a {
+          color: var(--color-ink);
+          font-weight: 500;
+        }
+        .rail-icon {
+          flex: none;
+          width: 20px;
+          height: 20px;
+        }
+
+        .rail-link {
+          justify-content: flex-start;
+          gap: 12px;
+        }
+
+        .rail-label {
+          flex: 1;
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .header-menu {
+          display: none;
+          width: 48px;
+          height: 48px;
+          margin-left: -8px;
+          border-color: var(--color-hairline);
+          background-color: var(--color-float);
+          box-shadow: var(--shadow-lift);
+        }
+
+        /* ---- Collapse button: 32px drawn, 40px to hit --------------------- */
+        .rail-collapse {
+          position: fixed;
+          top: 40px;
+          left: calc(var(--rail-width) - 16px + 6px);
+          z-index: 31;
+          display: grid;
+          place-items: center;
+          width: 32px;
+          height: 32px;
+          padding: 0;
+          border: 1px solid var(--color-frame);
+          border-radius: var(--radius-pill);
+          background-color: var(--color-float);
+          color: var(--color-slate);
+          box-shadow: var(--shadow-lift);
+          cursor: pointer;
+          transition: left 200ms ease, border-radius 200ms ease;
+        }
+
+        .rail-collapse::before {
+          content: '';
+          position: absolute;
+          inset: -4px;
+        }
+
+        .rail-collapse:hover {
+          color: var(--color-ink);
+        }
+
+        .rail-collapse:focus-visible {
+          outline: var(--focus-ring-width) solid var(--color-ink);
+          outline-offset: var(--focus-ring-offset);
+        }
+
+        .rail-collapse svg {
+          width: 16px;
+          height: 16px;
+          transition: rotate 200ms ease;
+        }
+
+        .rail-collapse-label {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip-path: inset(50%);
+        }
+
+        .rail,
+        .workspace {
+          transition: width 200ms ease, margin-left 200ms ease, translate 200ms ease, border-radius 200ms ease;
+        }
+
+        /* ---- Collapsed rail: icons only, names as tooltips ---------------- */
+        [data-rail='collapsed'] {
+          --rail-width: 104px;
+        }
+
+        [data-rail='collapsed'] .rail-collapse svg {
+          rotate: 180deg;
+        }
+
+        [data-rail='collapsed'] .rail-head {
+          justify-content: center;
+          padding: 24px 0 12px;
+        }
+
+        [data-rail='collapsed'] .rail-version,
+        [data-rail='collapsed'] .rail-key,
+        [data-rail='collapsed'] .rail-link .badge {
+          display: none;
+        }
+
+        /* Hidden from view, not from assistive technology. */
+        [data-rail='collapsed'] .rail-label {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip-path: inset(50%);
+        }
+
+        [data-rail='collapsed'] .rail-search {
+          justify-content: center;
+          width: 44px;
+          margin: 8px auto 4px;
+          padding: 0;
+        }
+
+        [data-rail='collapsed'] .rail-nav {
+          padding-inline: 16px;
+          scrollbar-width: none;
+        }
+
+        [data-rail='collapsed'] .rail-group {
+          justify-content: center;
+          margin-top: 16px;
+          padding: 8px 0;
+          font-size: 0;
+        }
+
+        [data-rail='collapsed'] .rail-group::before {
+          margin-left: 0;
+        }
+
+        [data-rail='collapsed'] .rail-link {
+          position: relative;
+          justify-content: center;
+          width: 40px;
+          margin-inline: auto;
+          padding: 0;
+        }
+
+        /* The collapsed rail's names, floated beside the icon so the list
+           itself can still scroll. The library's Tooltip does the same in a
+           portal: 400ms on hover, at once on focus. */
+        .rail-tip {
+          position: fixed;
+          z-index: 40;
+          padding: 6px 10px;
+          border-radius: var(--radius-micro);
+          background-color: var(--color-ink);
+          color: var(--color-canvas);
+          font-size: 0.8125rem;
+          font-weight: 500;
+          line-height: 1.3;
+          white-space: nowrap;
+          translate: 0 -50%;
+          pointer-events: none;
+        }
+
+        .rail-tip[hidden] {
+          display: none;
+        }
+
+        [data-rail='collapsed'] .rail-foot {
+          justify-content: center;
+          padding: 16px 0 20px;
+        }
+
+        .scrim {
+          position: fixed;
+          inset: 0;
+          z-index: 29;
+          background-color: var(--color-scrim);
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 180ms ease;
+        }
+
+        /* ---- Under 1440: the side column folds under the content -------- */
+        @media (width < 1440px) {
+          .panel-main,
+          .panel-side {
+            grid-column: 1 / -1;
+          }
+
+          .panel-side {
+            position: static;
+            grid-template-columns: repeat(2, 1fr);
+            align-items: start;
+          }
+
+          .panel-side .toc-card {
+            display: none;
+          }
+        }
+
+        /* ---- Under 1024: the rail becomes a drawer ------------------------ */
+        @media (width < 1024px) {
+          :root,
+          [data-rail='collapsed'] {
+            --rail-width: 0px;
+          }
+
+          .rail {
+            width: min(320px, calc(100vw - 32px));
+            translate: calc(-100% - 24px) 0;
+          }
+
+          [data-drawer='open'] .rail {
+            translate: 0 0;
+          }
+
+          [data-drawer='open'] .scrim {
+            opacity: var(--opacity-scrim);
+            pointer-events: auto;
+          }
+
+          .rail-collapse {
+            display: none;
+          }
+
+          .header-menu {
+            display: inline-grid;
+          }
+
+          .header-inner {
+            flex-wrap: wrap;
+            align-items: center;
+            padding-top: 20px;
+          }
+
+          .header-titles {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .header-controls {
+            width: 100%;
+          }
+        }
+
+        /* ---- Phone ----------------------------------------------------- */
+        @media (width < 768px) {
+          .header-inner {
+            gap: 16px;
+            padding: 16px 16px 16px;
+          }
+
+          .header-controls {
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          .content {
+            padding: 8px 16px 48px;
+          }
+
+          .lede {
+            font-size: 1.0625rem;
+          }
+
+          .panel,
+          .panel-main,
+          .panel-side {
+            gap: 20px;
+          }
+
+          .panel-side {
+            grid-template-columns: 1fr;
+          }
+
+          .card {
+            padding: 24px 20px;
+          }
+
+          .card-header {
+            margin: 0 -20px 24px;
+            padding: 0 20px 20px;
+          }
+
+          .card-header-row {
+            flex-wrap: wrap;
+          }
+
+          .stage {
+            min-height: 0;
+            padding: 24px 16px;
+          }
+
+          .stage .row .button {
+            flex: 1 1 auto;
+          }
+
+          .stage-bar {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+
+          .code {
+            padding: 16px;
+            font-size: 0.8125rem;
+          }
+
+          .prop,
+          .key-row {
+            grid-template-columns: 1fr;
+            gap: 8px;
+          }
+
+          .prop {
+            padding: 16px;
+          }
+
+          .footer-note {
+            margin-top: 24px;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <aside class="rail" id="rail" aria-label="Documentation">
+      <div class="rail-head">
+        <a class="brand" href="./home.html">
+          <svg viewBox="0 0 26 26" fill="none" aria-hidden="true">
+            <circle cx="13" cy="13" r="10" stroke="currentColor" stroke-width="2" />
+            <circle cx="21.5" cy="7" r="3.5" fill="var(--color-signal-light)" />
+          </svg>
+          <span class="rail-label">snapshot ui</span>
+        </a>
+        <span class="badge rail-version">v0.1</span>
+      </div>
+      <button class="rail-search" type="button" data-label="Search docs" aria-label="Search docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 5 5" /></svg>
+        <span class="rail-label">Search docs</span>
+        <span class="kbd rail-key">&#8984;K</span>
+      </button>
+      <nav class="rail-nav">
+        <p class="rail-group">Getting started</p>
+        <ul class="rail-list">
+          <li><a class="rail-link" href="#" data-label="Introduction"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg><span class="rail-label">Introduction</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Installation"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span class="rail-label">Installation</span></a></li>
+          <li><a class="rail-link" href="#theming" data-label="Theming"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg><span class="rail-label">Theming</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Design principles"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="m16.2 7.8-1.8 5.4a2 2 0 0 1-1.3 1.3l-5.3 1.7 1.8-5.4a2 2 0 0 1 1.3-1.3z"/></svg><span class="rail-label">Design principles</span></a></li>
+        </ul>
+        <p class="rail-group rail-group-current">Forms</p>
+        <ul class="rail-list">
+          <li><a class="rail-link" href="#" aria-current="page" data-label="Button"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M8.5 12h7"/></svg><span class="rail-label">Button</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Icon button"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m10.5 8.5 3.5 3.5-3.5 3.5"/></svg><span class="rail-label">Icon button</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Text field"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6.5" width="20" height="11" rx="5.5"/><path d="M8 10v4"/></svg><span class="rail-label">Text field</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Text area"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M7 9h10M7 13h7"/></svg><span class="rail-label">Text area</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Checkbox"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="m8 12 3 3 5-6"/></svg><span class="rail-label">Checkbox</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Radio group"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg><span class="rail-label">Radio group</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Switch"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6.5" width="20" height="11" rx="5.5"/><circle cx="16.5" cy="12" r="3"/></svg><span class="rail-label">Switch</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Segmented control"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6.5" width="20" height="11" rx="5.5"/><path d="M9 6.5v11M15 6.5v11"/></svg><span class="rail-label">Segmented control</span> <span class="badge badge-info">New</span></a></li>
+        </ul>
+        <p class="rail-group">Content</p>
+        <ul class="rail-list">
+          <li><a class="rail-link" href="#" data-label="Card"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="5"/><path d="M3 9.5h18"/></svg><span class="rail-label">Card</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Typography"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg><span class="rail-label">Typography</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Badge"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor"/></svg><span class="rail-label">Badge</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Key hint"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></svg><span class="rail-label">Key hint</span></a></li>
+          <li><a class="rail-link" href="#" data-label="Spinner"><svg class="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg><span class="rail-label">Spinner</span></a></li>
+        </ul>
+      </nav>
+      <div class="rail-foot">
+        <span class="rail-label">MIT &#183; React 19</span>
+        <a class="icon-button icon-button-ghost" href="#" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z" /></svg>
+        </a>
+      </div>
+    </aside>
+    <button class="rail-collapse" type="button" aria-controls="rail" aria-expanded="true">
+      <span class="rail-collapse-label">Collapse the menu</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg>
+    </button>
+    <div class="scrim" aria-hidden="true"></div>
+    <div class="rail-tip" role="presentation" hidden></div>
+
+    <div class="workspace">
+      <header class="header">
+        <div class="header-inner">
+          <button class="icon-button header-menu" type="button" aria-label="Open the menu" aria-controls="rail" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          </button>
+          <div class="header-titles">
+            <p class="eyebrow">Docs <span class="eyebrow-sep">&#8250;</span> Forms</p>
+            <h1 class="type-h2">Button</h1>
+          </div>
+          <div class="header-controls">
+            <div class="segmented segmented-small" role="radiogroup" aria-label="Color mode">
+              <label class="segmented-option"><input type="radio" name="theme" value="light" checked />Light</label>
+              <label class="segmented-option"><input type="radio" name="theme" value="dark" />Dark</label>
+            </div>
+            <div class="segmented segmented-small" role="radiogroup" aria-label="Corners">
+              <label class="segmented-option"><input type="radio" name="shape" value="rounded" checked />Rounded</label>
+              <label class="segmented-option"><input type="radio" name="shape" value="soft" />Soft</label>
+              <label class="segmented-option"><input type="radio" name="shape" value="square" />Square</label>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <p class="lede">
+          A pressable action. Primary for the one thing the view is for, secondary beside it, tertiary for the
+          quiet way out, and danger for a destructive confirmation.
+        </p>
+
+        <div class="panel">
+          <div class="panel-main">
+            <section class="card" id="variants">
+              <div class="card-header">
+                <div class="card-header-row">
+                  <h2 class="type-h3">Variants</h2>
+                  <div class="tabs" role="tablist" aria-label="Example">
+                    <button class="tab" role="tab" aria-selected="true" type="button" data-tab="preview">Preview</button>
+                    <button class="tab" role="tab" aria-selected="false" type="button" data-tab="code">Code</button>
+                  </div>
+                </div>
+                <p class="muted">Signal orange is deliberately not a variant: it is reserved for consent and legal actions.</p>
+              </div>
+              <div data-panel="preview">
+                <div class="stage">
+                  <div class="row">
+                    <button class="button" type="button">Save changes</button>
+                    <button class="button button-secondary" type="button">Preview</button>
+                    <button class="button button-tertiary" type="button">Discard</button>
+                    <button class="button button-danger" type="button">Delete site</button>
+                  </div>
+                </div>
+                <div class="stage-bar">
+                  <span>Follows the page theme and corners</span>
+                  <span>4 variants</span>
+                </div>
+              </div>
+              <pre class="code" data-panel="code" hidden><span class="k">import</span> { Button } <span class="k">from</span> <span class="s">'@snapshot-ui/react'</span>;
+
+<span class="c">// One primary per view; the others step down.</span>
+&lt;<span class="t">Button</span>&gt;Save changes&lt;/<span class="t">Button</span>&gt;
+&lt;<span class="t">Button</span> variant=<span class="s">"secondary"</span>&gt;Preview&lt;/<span class="t">Button</span>&gt;
+&lt;<span class="t">Button</span> variant=<span class="s">"tertiary"</span>&gt;Discard&lt;/<span class="t">Button</span>&gt;
+&lt;<span class="t">Button</span> variant=<span class="s">"danger"</span>&gt;Delete site&lt;/<span class="t">Button</span>&gt;</pre>
+            </section>
+
+            <section class="card" id="states">
+              <div class="card-header">
+                <h2 class="type-h3">States</h2>
+                <p class="muted">Pending keeps the width and focus, and announces itself. Disabled is the only grey.</p>
+              </div>
+              <div class="stage">
+                <div class="row">
+                  <button class="button button-pending" type="button" aria-disabled="true">
+                    <span class="button-label">Save changes</span>
+                    <span class="spinner" role="progressbar" aria-label="Saving"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle class="track" cx="12" cy="12" r="9" stroke-width="3" /><circle class="arc" cx="12" cy="12" r="9" stroke-width="3" stroke-dasharray="14 57" /></svg></span>
+                  </button>
+                  <button class="button" type="button" disabled>Save changes</button>
+                  <button class="button button-secondary" type="button" disabled>Preview</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="card" id="usage">
+              <div class="card-header">
+                <h2 class="type-h3">Usage</h2>
+                <p class="muted">Install both packages and import the stylesheet once.</p>
+              </div>
+              <pre class="code"><span class="k">import</span> <span class="s">'@snapshot-ui/core/styles.css'</span>;
+<span class="k">import</span> { Button } <span class="k">from</span> <span class="s">'@snapshot-ui/react'</span>;
+
+<span class="k">export function</span> <span class="t">SaveBar</span>({ isSaving }: { isSaving: <span class="k">boolean</span> }) {
+  <span class="k">return</span> (
+    &lt;<span class="t">Button</span> type=<span class="s">"submit"</span> isPending={isSaving} pendingLabel=<span class="s">"Saving"</span>&gt;
+      Save changes
+    &lt;/<span class="t">Button</span>&gt;
+  );
+}</pre>
+            </section>
+
+            <section class="card" id="props">
+              <div class="card-header">
+                <h2 class="type-h3">Props</h2>
+                <p class="muted">Every React Aria Button prop is accepted. These are the ones Snapshot UI adds or shapes.</p>
+              </div>
+              <div class="props">
+                <div class="prop">
+                  <div><div class="prop-name">variant</div><span class="prop-type">"primary" | "secondary" | "tertiary" | "danger"</span></div>
+                  <div><p>Visual emphasis.</p><p class="prop-default">Default: "primary"</p></div>
+                </div>
+                <div class="prop">
+                  <div><div class="prop-name">isPending</div><span class="prop-type">boolean</span></div>
+                  <div><p>Shows a spinner, ignores presses, stays focusable and announces the change.</p><p class="prop-default">Default: false</p></div>
+                </div>
+                <div class="prop">
+                  <div><div class="prop-name">pendingLabel</div><span class="prop-type">string</span></div>
+                  <div><p>Accessible name of the spinner while pending.</p><p class="prop-default">Default: "Loading"</p></div>
+                </div>
+                <div class="prop">
+                  <div><div class="prop-name">isDisabled</div><span class="prop-type">boolean</span></div>
+                  <div><p>Removes the button from interaction.</p><p class="prop-default">Default: false</p></div>
+                </div>
+                <div class="prop">
+                  <div><div class="prop-name">onPress</div><span class="prop-type">(event: PressEvent) =&gt; void</span></div>
+                  <div><p>Fires on click, Enter, Space and touch, with no ghost clicks.</p></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card" id="accessibility">
+              <div class="card-header">
+                <h2 class="type-h3">Accessibility</h2>
+                <p class="muted">A native button element, with React Aria handling press across input types.</p>
+              </div>
+              <div class="keys">
+                <div class="key-row"><span><span class="kbd">Space</span> <span class="kbd">Enter</span></span><span>Activates the button.</span></div>
+                <div class="key-row"><span><span class="kbd">Tab</span></span><span>Moves focus to it, and the 2px ink ring appears outside the pill.</span></div>
+                <div class="key-row"><span><span class="kbd">Pending</span></span><span>Still focusable. The spinner's name joins the button's, so screen readers hear "Save changes, Saving".</span></div>
+              </div>
+            </section>
+
+            <div class="footer-note">
+              <a href="#">&#8592; Introduction</a>
+              <a href="#">Icon button &#8594;</a>
+            </div>
+          </div>
+
+          <aside class="panel-side">
+            <section class="card toc-card">
+              <p class="eyebrow" style="margin-bottom: 18px">On this page</p>
+              <ul class="toc">
+                <li><a href="#variants" aria-current="true">Variants</a></li>
+                <li><a href="#states">States</a></li>
+                <li><a href="#usage">Usage</a></li>
+                <li><a href="#props">Props</a></li>
+                <li><a href="#accessibility">Accessibility</a></li>
+              </ul>
+            </section>
+            <section class="card">
+              <p class="eyebrow" style="margin-bottom: 18px">Design rules</p>
+              <div class="rules">
+                <div class="rule"><span class="rule-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 5 5 9-10" /></svg></span><p>One primary per view. Pair it with a secondary or a tertiary.</p></div>
+                <div class="rule"><span class="rule-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 5 5 9-10" /></svg></span><p>Labels are verbs, in sentence case: "Save changes".</p></div>
+                <div class="rule"><span class="rule-mark rule-mark-no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></span><p>Never orange. Signal orange belongs to consent and legal actions.</p></div>
+              </div>
+            </section>
+            <section class="card">
+              <p class="eyebrow" style="margin-bottom: 18px">Package</p>
+              <div class="meta">
+                <div class="meta-row"><span>Version</span><span class="badge">0.1.0</span></div>
+                <div class="meta-row"><span>Source</span><a href="#">GitHub</a></div>
+                <div class="meta-row"><span>Workshop</span><a href="#">Storybook</a></div>
+                <div class="meta-row"><span>Built on</span><a href="#">React Aria</a></div>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const root = document.documentElement;
+      // ?theme=dark&shape=soft opens the mockup in that state.
+      const params = new URLSearchParams(location.search);
+      if (params.get('theme')) root.dataset.theme = params.get('theme');
+      if (params.get('shape')) root.dataset.shape = params.get('shape');
+      // Reflect the current attributes in the switches, so a page opened in dark or soft shows it.
+      document.querySelectorAll('input[name="theme"], input[name="shape"]').forEach((radio) => {
+        radio.checked = root.dataset[radio.name] === radio.value;
+      });
+      document.querySelectorAll('input[name="theme"]').forEach((radio) => {
+        radio.addEventListener('change', () => (root.dataset.theme = radio.value));
+      });
+      document.querySelectorAll('input[name="shape"]').forEach((radio) => {
+        radio.addEventListener('change', () => (root.dataset.shape = radio.value));
+      });
+      const collapse = document.querySelector('.rail-collapse');
+      const syncCollapse = () => {
+        const collapsed = root.dataset.rail === 'collapsed';
+        collapse.setAttribute('aria-expanded', String(!collapsed));
+        collapse.querySelector('.rail-collapse-label').textContent = collapsed ? 'Expand the menu' : 'Collapse the menu';
+      };
+      syncCollapse();
+      collapse.addEventListener('click', () => {
+        const collapsed = root.dataset.rail !== 'collapsed';
+        if (collapsed) root.dataset.rail = 'collapsed';
+        else delete root.dataset.rail;
+        try {
+          localStorage.setItem('snapshot-ui-docs-rail', collapsed ? 'collapsed' : 'expanded');
+        } catch {}
+        syncCollapse();
+      });
+      const tip = document.querySelector('.rail-tip');
+      let tipTimer = 0;
+      const showTip = (target, delay) => {
+        if (root.dataset.rail !== 'collapsed' || matchMedia('(width < 1024px)').matches) return;
+        clearTimeout(tipTimer);
+        tipTimer = setTimeout(() => {
+          const box = target.getBoundingClientRect();
+          tip.textContent = target.dataset.label;
+          tip.style.left = `${box.right + 14}px`;
+          tip.style.top = `${box.top + box.height / 2}px`;
+          tip.hidden = false;
+        }, delay);
+      };
+      const hideTip = () => {
+        clearTimeout(tipTimer);
+        tip.hidden = true;
+      };
+      document.querySelectorAll('.rail-link, .rail-search').forEach((item) => {
+        item.addEventListener('mouseenter', () => showTip(item, 400));
+        item.addEventListener('focus', () => item.matches(':focus-visible') && showTip(item, 0));
+        item.addEventListener('mouseleave', hideTip);
+        item.addEventListener('blur', hideTip);
+      });
+      document.querySelector('.rail-nav').addEventListener('scroll', hideTip);
+      const menuButton = document.querySelector('.header-menu');
+      const setDrawer = (open) => {
+        if (open) root.dataset.drawer = 'open';
+        else delete root.dataset.drawer;
+        menuButton.setAttribute('aria-expanded', String(open));
+        if (open) document.querySelector('.rail .rail-link[aria-current="page"]').focus();
+        else menuButton.focus();
+      };
+      menuButton.addEventListener('click', () => setDrawer(true));
+      document.querySelector('.scrim').addEventListener('click', () => setDrawer(false));
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && root.dataset.drawer === 'open') setDrawer(false);
+      });
+      if (params.get('rail') === 'collapsed') root.dataset.rail = 'collapsed', syncCollapse();
+      if (params.get('drawer') === 'open') root.dataset.drawer = 'open';
+      const tabs = document.querySelectorAll('[data-tab]');
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          tabs.forEach((other) => other.setAttribute('aria-selected', String(other === tab)));
+          document.querySelectorAll('[data-panel]').forEach((panel) => {
+            panel.hidden = panel.dataset.panel !== tab.dataset.tab;
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

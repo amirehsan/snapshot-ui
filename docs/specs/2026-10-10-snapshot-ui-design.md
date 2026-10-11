@@ -41,7 +41,9 @@ Success means:
 | CSS class prefix | None. Classes read `button`, `field`, `card`. See risk R1. |
 | Shape | Three corner styles, Rounded by default, Soft and Square as alternatives. Switched per subtree with an attribute, like dark mode. See section 5.3. |
 | Build order | Seven phases, publishing 0.x from the end of phase 1. |
-| Marketing pieces | Parked. Portrait cards, satellite buttons, orbital arcs, the hero frame, the floating nav pill and the footer belong to websites, not apps. |
+| Marketing pieces | Parked as library components. Portrait cards, satellite buttons, orbital arcs, the hero frame, the floating nav pill and the footer belong to websites, not apps. The docs homepage still draws them by hand, since it is a website. |
+| Docs site design | The docs site is drawn in Snapshot UI itself, not in a docs theme. Fumadocs runs headless underneath, for content, navigation, the table of contents and search. The approved mockups in `docs/mockups/` are the reference. Added 2026-10-10. |
+| Responsive | Every component and every docs page works from a 320px wide screen up, with no sideways scrolling. Added 2026-10-10. |
 
 ## 3. Design authority
 
@@ -169,6 +171,9 @@ attribute on any element and apply to its whole subtree.
 - `[data-theme="dark"]` on any element switches that subtree to dark.
   `[data-theme="light"]` forces light.
 - With no attribute on `html`, dark follows `prefers-color-scheme`.
+- Every `[data-theme]` block also sets `color: var(--color-ink)`. Inherited
+  text color is computed in the parent's theme, so without this a light card
+  inside a dark page keeps the page's white text. The mockups found this.
 - This works with `next-themes` configured with `attribute="data-theme"`.
 
 ### 5.3 Theme axes: shape
@@ -252,6 +257,39 @@ The font is not bundled. The docs show how to load Sofia Sans as a variable
 font, with `next/font/google` in Next.js and a Google Fonts link elsewhere. The
 450 weight requires the variable build.
 
+### 5.6 Typography practice
+
+- **Weights are 400, 450, 500 and 700 only.** 450 is body text, 500 headings
+  and actions, 700 labels, eyebrows and badges, 400 fine print. No 600: it is
+  not in the system and a reader sees it as a fifth step.
+- **Minimum sizes.** 14px for anything a reader reads in sentences, 12px for
+  short uppercase labels with tracking, such as badges and group labels.
+- **`base.css` sets the hygiene** a product UI expects: `font-synthesis: none`
+  so a missing weight never renders as faux bold, `font-kerning: normal`,
+  `font-optical-sizing: auto`, greyscale smoothing so the 450 weight renders
+  evenly in both themes, and `-webkit-text-size-adjust: 100%`.
+- **Numbers that line up use tabular figures:** badges, counters, key hints,
+  tables and stat tiles.
+- **Loading:** the variable font with `display: swap` and a `latin` subset,
+  self-hosted through `next/font` in Next.js so there is no layout shift and no
+  request to a third party at runtime.
+- **Headings scale down on small screens** as the design document's
+  responsive table says: the 64px display step is 48px under 1024px and 40px
+  under 768px, and the 36px section step is 28px under 768px.
+
+### 5.7 Responsive practice
+
+- Breakpoints are the token ones: 768, 1024 and 1440. Layouts are written
+  mobile first, from 320px.
+- No component may cause sideways scrolling at 320px. Long content that cannot
+  wrap, such as code or an install command, scrolls inside its own box.
+- Grid children that hold such content set `min-width: 0`, the usual cause of
+  overflow.
+- Touch targets stay at 40px or more at every width. A control drawn smaller
+  extends its hit area with a pseudo-element, as the source's menu row buttons
+  do.
+- Visual tests include a 375px viewport for every story.
+
 ## 6. Package: @snapshot-ui/react
 
 ### 6.1 Platform
@@ -325,12 +363,29 @@ now:
 
 ## 8. Apps
 
-- **apps/docs:** the public docs site, Next.js 16 with Fumadocs. Getting
-  started, theming, dark mode, the design principles, and one page per
-  component with a live example that follows the site-wide color mode and shape switches, the
-  code, usage guidance with the design
-  rules that apply, a props table generated from the types, a keyboard table
-  and accessibility notes. Deployed to Vercel.
+- **apps/docs:** the public docs site, Next.js 16, drawn in Snapshot UI and
+  following the approved mockups in `docs/mockups/`.
+  - **Fumadocs runs headless.** `fumadocs-core` and `fumadocs-mdx` provide the
+    content loading, page tree, table of contents and search. No
+    `fumadocs-ui` layout or theme is used.
+  - **The homepage** uses the design document's website language: the
+    floating pill nav, an asymmetric hero, the dark stadium frame with real
+    components in it, circular portraits on an orbital arc, the theme axes
+    grid, the catalog and the ink footer.
+  - **Every other page** uses the Snapshot app shell. A floating rail with
+    eyebrow groups that collapses to icons with tooltips and remembers the
+    choice, a drawer below 1024px, a sticky header with the crumb and the
+    color mode and corner switches, and stadium cards in a main column beside
+    a side column that folds under it below 1440px.
+  - **Component pages** carry a live example that follows the site-wide
+    switches, the code, usage guidance with the design rules that apply, a
+    props table generated from the types, a keyboard table and accessibility
+    notes.
+  - **Dogfooding.** In phase 1 the shell is hand-written CSS in the docs app
+    on the library's tokens, because the sidebar and app shell components do
+    not exist yet. Phase 5 replaces it with the library's own Sidebar,
+    PageHeader and AppShell, which then must reproduce it.
+  - Deployed to Vercel.
 - **apps/storybook:** Storybook 10 with the accessibility and Vitest addons. A
   story for every variant and state, shown in light and dark. It is the
   workshop during development and the target for interaction and visual tests.
@@ -348,7 +403,7 @@ Every pull request runs, in CI and through `pnpm` scripts locally:
 | Automated accessibility | axe-core run inside every component test, failing on any violation. |
 | Contrast | The source app's contrast check, ported to read `tokens.json` and assert every documented pairing in both themes. |
 | Interaction tests | Storybook stories run through Vitest. |
-| Visual regression | Playwright screenshots of every story, compared to committed baselines: Rounded in light and dark, and Soft and Square in light. |
+| Visual regression | Playwright screenshots of every story, compared to committed baselines: Rounded in light and dark, Soft and Square in light, and Rounded light at a 375px viewport. Baselines are generated in the same Linux Playwright image CI uses. |
 | Package correctness | publint and Are the Types Wrong on every built package. |
 | Size budget | size-limit, with a budget per component entry. |
 
@@ -482,7 +537,7 @@ pages, the release pipeline, the repo files, and the cleaned
 | Component | Source | React Aria basis | Notes |
 | --- | --- | --- | --- |
 | AppShell | `partials/layouts/snapshot.hbs`, `styles/shell/` | none | Composes the parts below. |
-| Sidebar | `partials/shell/sidebar.hbs`, `styles/shell/sidebar.css`, `js/nav-state.js`, `js/nav-groups.js` | Disclosure, Link | Groups, icon-only collapse at 104px that is remembered, drawer below 1024px. |
+| Sidebar | `partials/shell/sidebar.hbs`, `styles/shell/sidebar.css`, `js/nav-state.js`, `js/nav-groups.js` | Disclosure, Link, Tooltip | Groups, icon-only collapse at 104px that is remembered, names as tooltips while collapsed, a collapse button with a 40px hit area, drawer below 1024px. Must reproduce the docs site's phase 1 rail. |
 | PageHeader, Breadcrumbs | `partials/shell/header.hbs`, `styles/shell/header.css` | Breadcrumbs | |
 | SaveBar | `partials/shell/save-bar.hbs`, `styles/shell/save-bar.css` | none | Status in a live region. Discard confirms. |
 | AccountMenu, ThemeSwitch | `partials/shell/account.hbs`, `js/theme.js` | Menu, RadioGroup | Light, dark and system. |
@@ -523,3 +578,4 @@ from phases 1 to 5. Specified in its own document.
 | R5 | TypeScript 7 is new and some tooling may lag. | The version rule in section 6.1. |
 | R6 | Dense data, loading and empty states have no specification in the document. | Each gets a recorded derivation before it is built, per section 3. |
 | R7 | A component looks right in Rounded and wrong in Soft or Square, which nobody sees until a user switches. | Visual baselines in all three shapes, and the docs site's shape switch on every example. |
+| R8 | The docs shell is built twice: by hand in phase 1, then from the library in phase 5. | The phase 1 shell is written on the same tokens and class structure the Sidebar and AppShell will use, and phase 5's definition of done includes replacing it. |
