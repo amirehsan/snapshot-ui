@@ -126,6 +126,15 @@ describe('the shared config', () => {
     expect(await lintWith('a { color: var(--color-ink); }')).not.toContain('function-disallowed-list');
   });
 
+  it('rejects light-dark() in any case', async () => {
+    expect(await lintWith('a { color: LIGHT-DARK(var(--color-ink), var(--color-canvas)); }')).toContain(
+      'function-disallowed-list',
+    );
+    expect(await lintWith('a { color: Light-Dark(var(--color-ink), var(--color-canvas)); }')).toContain(
+      'function-disallowed-list',
+    );
+  });
+
   it('rejects classes that collide with Tailwind utilities or are not kebab-case', async () => {
     expect(await lintWith('.text-big { color: var(--color-ink); }')).toContain('selector-class-pattern');
     expect(await lintWith('.rounded-card { color: var(--color-ink); }')).toContain('selector-class-pattern');
