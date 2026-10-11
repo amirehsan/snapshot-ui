@@ -8,3 +8,4 @@
 @layer theme, base, components, utilities;
 
 @import '../dist/tokens.css';
+@import './components/spinner.css';

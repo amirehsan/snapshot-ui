@@ -1,2 +1,1 @@
-// Components are added here as they are built.
-export {};
+export { Spinner, type SpinnerProps, type SpinnerSize } from './spinner';
