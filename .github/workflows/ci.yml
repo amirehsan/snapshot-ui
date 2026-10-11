@@ -38,7 +38,8 @@ jobs:
         run: node scripts/check-public.js
         env:
           PRIVATE_NAMES: ${{ secrets.PRIVATE_NAMES }}
-          CHECK_PUBLIC_REQUIRED: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+          # Dependabot pull requests cannot read Actions secrets and only move pinned action SHAs.
+          CHECK_PUBLIC_REQUIRED: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
 
   verify:
     name: Verify
