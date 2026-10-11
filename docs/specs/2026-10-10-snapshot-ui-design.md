@@ -385,7 +385,9 @@ now:
     on the library's tokens, because the sidebar and app shell components do
     not exist yet. Phase 5 replaces it with the library's own Sidebar,
     PageHeader and AppShell, which then must reproduce it.
-  - Deployed to Vercel.
+  - Deployed to Vercel at `https://snapshotui.com`, which the owner holds.
+    The root layout sets `metadataBase` to that origin. The packages'
+    `homepage` fields stay on the GitHub README until the site is live there.
 - **apps/storybook:** Storybook 10 with the accessibility and Vitest addons. A
   story for every variant and state, shown in light and dark. It is the
   workshop during development and the target for interaction and visual tests.
@@ -437,8 +439,8 @@ Every pull request runs, in CI and through `pnpm` scripts locally:
 
 1. Create the free npm organization `snapshot-ui`.
 2. Add the GitHub repo as a trusted publisher for each package on npm.
-3. Create a Vercel project for `apps/docs`, at any point before the docs go
-   public.
+3. Create a Vercel project for `apps/docs` and point `snapshotui.com` at it,
+   at any point before the docs go public.
 
 ## 11. Catalog and phases
 
