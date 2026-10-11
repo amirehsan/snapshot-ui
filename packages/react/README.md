@@ -12,7 +12,7 @@ The components carry no CSS of their own. `@snapshot-ui/core` holds the styles.
 
 ## Use
 
-Import the stylesheet once, at the root of your app. `base.css` is optional: it sets the page background, the body type and the font rendering details.
+Import the stylesheet once, at the root of your app. `base.css` is optional: it sets the page background, the body type, the font rendering details and an ink focus ring for your own links and fields.
 
 ```tsx
 import '@snapshot-ui/core/styles.css';
