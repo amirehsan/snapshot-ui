@@ -1,6 +1,7 @@
 'use client';
 
 import type { Item, Node, Root } from 'fumadocs-core/page-tree';
+import { X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 
@@ -40,6 +41,7 @@ export function Rail({
   version,
   collapsed,
   drawerOpen,
+  onCloseDrawer,
   onToggleCollapsed,
   onSearch,
 }: {
@@ -48,6 +50,7 @@ export function Rail({
   version: string;
   collapsed: boolean;
   drawerOpen: boolean;
+  onCloseDrawer: () => void;
   onToggleCollapsed: () => void;
   onSearch: () => void;
 }): ReactElement {
@@ -128,6 +131,15 @@ export function Rail({
             <span className="rail-label">snapshot ui</span>
           </Link>
           <span className="badge rail-version">v{version}</span>
+          {/* Only drawn while the rail is a drawer, where touch and screen reader users need a way out. */}
+          <button
+            className="icon-button icon-button-ghost rail-close"
+            type="button"
+            aria-label="Close menu"
+            onClick={onCloseDrawer}
+          >
+            <X aria-hidden />
+          </button>
         </div>
         <button
           className="rail-search"
@@ -164,6 +176,10 @@ export function Rail({
                         href={item.url}
                         data-label={label(item)}
                         aria-current={item.url === pathname ? 'page' : undefined}
+                        onClick={() => {
+                          // Going to the page already open changes nothing, so it would leave the drawer up.
+                          if (item.url === pathname) onCloseDrawer();
+                        }}
                       >
                         {item.icon ? <span className="rail-icon">{item.icon}</span> : null}
                         <span className="rail-label">{item.name}</span>

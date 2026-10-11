@@ -1,0 +1,10 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    // `next build`, `next typegen` (typecheck and lint) and `next dev` all write .next/types, so none
+    // of them may run beside another: a half-written type file fails whichever one reads it.
+    "typecheck": { "dependsOn": ["^build", "build"] },
+    "lint": { "dependsOn": ["^build", "typecheck"] }
+  }
+}

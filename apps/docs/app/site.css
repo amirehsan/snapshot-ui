@@ -3,7 +3,7 @@
  * mockups (docs/mockups/mockup.css) for parts the library does not ship yet.
  * Phase 1b deletes each stand-in in the same task that adds the real
  * component to @snapshot-ui/core: icon-button, kbd, badge, field, input,
- * segmented, switch, check and card.
+ * segmented, switch and card.
  * Button and Spinner come from @snapshot-ui/core and are not redrawn here.
  */
 /* The site's own base. The library's base.css sets the page and body type
@@ -295,11 +295,6 @@
     color: var(--color-granite);
   }
 
-  .badge-info {
-    background-color: color-mix(in srgb, var(--color-link) 12%, transparent);
-    color: var(--color-link);
-  }
-
   /* ---- Form controls ---------------------------------------------------- */
   .field {
     display: grid;
@@ -463,22 +458,6 @@
     transform: translateX(22px);
   }
 
-  .check {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 20px;
-    height: 20px;
-    border: 1.5px solid var(--color-boundary);
-    border-radius: var(--radius-micro);
-    background-color: var(--color-raised);
-  }
-
-  .check svg {
-    width: 14px;
-    height: 14px;
-  }
-
   /* ---- Surfaces ----------------------------------------------------------- */
   .card {
     min-width: 0;
@@ -497,13 +476,6 @@
     margin: 0 -2rem 2rem;
     padding: 0 2rem 1.5rem;
     border-bottom: 1px solid var(--color-divider);
-  }
-
-  .card-header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
   }
 
   .stack {
@@ -554,25 +526,6 @@
     font-size: 0.875rem;
     line-height: 1.7;
     transition: border-radius 200ms ease;
-  }
-
-  /* Highlighting stays in the neutral tiers and link blue: clay, error and
-     success carry meaning inside a panel, and that extends to sample code. */
-  .code .k {
-    color: var(--color-link);
-  }
-
-  .code .s {
-    color: var(--color-granite);
-  }
-
-  .code .t {
-    color: var(--color-ink);
-    font-weight: 500;
-  }
-
-  .code .c {
-    color: var(--color-slate);
   }
 
   .code-copy {

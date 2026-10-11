@@ -172,6 +172,73 @@ test('the drawer closes when the window grows past 1024px', async ({ page }) => 
   await expect(page.getByRole('complementary', { name: 'Documentation' })).toBeVisible();
 });
 
+test('the drawer has a close button that returns focus to the menu button', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await visit(page);
+  const menu = page.getByRole('button', { name: 'Open the menu' });
+  await menu.click();
+  const close = page.getByRole('button', { name: 'Close menu' });
+  await expect(close).toBeVisible();
+  const box = await close.boundingBox();
+  expect(box?.width).toBeGreaterThanOrEqual(40);
+  expect(box?.height).toBeGreaterThanOrEqual(40);
+  // It is near the top of the drawer, with the brand.
+  expect(box?.y).toBeLessThan(80);
+
+  await close.click();
+  await expect(page.locator('html')).not.toHaveAttribute('data-drawer', 'open');
+  await expect(menu).toBeFocused();
+  await expect(menu).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('the close button is drawn only while the rail is a drawer', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page);
+  const close = page.getByRole('button', { name: 'Close menu' });
+  await expect(close).toHaveCount(0);
+  await expect(page.locator('.rail-close')).toHaveCSS('display', 'none');
+  await page.getByRole('button', { name: 'Collapse the menu' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-rail', 'collapsed');
+  await expect(close).toHaveCount(0);
+  await expect(page.locator('.rail-close')).toHaveCSS('display', 'none');
+
+  // A closed drawer is out of the accessibility tree, close button included.
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expect(close).toHaveCount(0);
+});
+
+test('choosing the page that is already open closes the drawer', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await visit(page);
+  const menu = page.getByRole('button', { name: 'Open the menu' });
+  await menu.click();
+  await expect(page.getByRole('link', { name: 'Button' })).toBeFocused();
+  await page.getByRole('link', { name: 'Button' }).click();
+  await expect(page.locator('html')).not.toHaveAttribute('data-drawer', 'open');
+  await expect(page).toHaveURL(/\/docs\/components\/button$/);
+  await expect(menu).toBeFocused();
+});
+
+test('a collapsed rail chosen on a wide screen leaves the drawer with its labels', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page);
+  await page.getByRole('button', { name: 'Collapse the menu' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-rail', 'collapsed');
+
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.getByRole('button', { name: 'Open the menu' }).click();
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
+  // The preference is still stored, and the drawer ignores it: names, version and search key all show.
+  await expect(page.locator('html')).toHaveAttribute('data-rail', 'collapsed');
+  const label = page.locator('#rail .rail-link', { hasText: 'Spinner' }).locator('.rail-label');
+  const labelBox = await label.boundingBox();
+  expect(labelBox?.width).toBeGreaterThan(30);
+  expect(labelBox?.height).toBeGreaterThan(10);
+  await expect(page.locator('#rail .rail-version')).toBeVisible();
+  await expect(page.locator('#rail .rail-key')).toBeVisible();
+  expect((await page.locator('#rail .rail-search').boundingBox())?.width).toBeGreaterThan(200);
+});
+
 test('the first Tab lands on a skip link that jumps to the content', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await visit(page);
@@ -247,6 +314,48 @@ test('search announces its outcome through a status region that is already mount
   await expect(status).toHaveText('Nothing matches "zzzzqx"');
   // The same node throughout: its text changed, it was never remounted.
   expect(await element.evaluate((node) => node.isConnected)).toBe(true);
+});
+
+test('Enter never opens a result that belongs to an earlier query', async ({ page }) => {
+  await visit(page, '/docs');
+  await page.keyboard.press('ControlOrMeta+k');
+  const dialog = page.getByRole('dialog', { name: 'Search the docs' });
+  const field = dialog.getByRole('searchbox', { name: 'Search' });
+  await field.fill('Spinner');
+  await expect(dialog.getByRole('link', { name: /Spinner/ }).first()).toBeVisible();
+
+  // The second query is still loading when Enter lands, and Spinner's results are
+  // still in memory. Enter may do nothing, or open the right page once it has
+  // loaded. It must never open Spinner's.
+  await field.fill('Button');
+  await field.press('Enter');
+  await expect(
+    dialog
+      .getByRole('link', { name: /Button/ })
+      .first()
+      .or(page.getByRole('heading', { level: 1, name: 'Button' })),
+  ).toBeVisible();
+  await expect(page).not.toHaveURL(/spinner/);
+
+  // With results for what was typed, Enter opens the first of them.
+  if (!page.url().includes('/components/button')) await field.press('Enter');
+  await expect(page).toHaveURL(/\/docs\/components\/button$/);
+});
+
+test('the results and their count only ever belong to the current query', async ({ page }) => {
+  await visit(page, '/docs');
+  await page.keyboard.press('ControlOrMeta+k');
+  const dialog = page.getByRole('dialog', { name: 'Search the docs' });
+  const field = dialog.getByRole('searchbox', { name: 'Search' });
+  await field.fill('Spinner');
+  await expect(dialog.getByRole('link', { name: /Spinner/ }).first()).toBeVisible();
+
+  // Read straight after typing, without retrying: the new search has not come back yet,
+  // and nothing of Spinner's may still be listed or counted.
+  await field.fill('zzzzqx');
+  expect(await dialog.locator('.search-result').count()).toBe(0);
+  expect(await dialog.getByRole('status').textContent()).not.toMatch(/\d+ results?/);
+  await expect(dialog.getByRole('status')).toHaveText('Nothing matches "zzzzqx"');
 });
 
 test('a server-rendered MDX page renders library components and props', async ({ page }) => {
