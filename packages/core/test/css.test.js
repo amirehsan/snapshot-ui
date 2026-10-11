@@ -6,6 +6,16 @@ const components = readdirSync(new URL('../src/components', import.meta.url)).fi
   f.endsWith('.css'),
 );
 
+const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+/**
+ * An `outline` or `outline-color` declaration that reads ink, in CSS without
+ * comments. The lookbehind keeps `.badge-outline` and `--outline` out, the
+ * `[^;{}]` stops at the end of the declaration or the rule, and the closing
+ * `[,)]` also catches `var(--color-ink, fallback)` but not `var(--color-inkwell)`.
+ */
+const INK_RING = /(?<![\w-])outline(?:-color)?\s*:[^;{}]*var\(\s*--color-ink\s*[,)]/i;
+
 describe('src/styles.css', () => {
   const entry = read('src/styles.css');
 
@@ -25,7 +35,7 @@ describe.each(components)('src/components/%s', (file) => {
   const source = read(`src/components/${file}`);
 
   it('keeps every rule inside @layer components', () => {
-    const withoutComments = source.replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    const withoutComments = stripComments(source).trim();
     expect(withoutComments.startsWith('@layer components {')).toBe(true);
     expect(withoutComments.endsWith('}')).toBe(true);
   });
@@ -42,7 +52,33 @@ describe.each(components)('src/components/%s', (file) => {
 
   it('draws its focus ring in the focus ring token, never in ink', () => {
     // An inset ring on an ink fill inverts to the canvas color, which is allowed.
-    expect(source).not.toMatch(/outline(?:-color)?:[^;]*var\(--color-ink\)/);
+    expect(stripComments(source)).not.toMatch(INK_RING);
+  });
+});
+
+describe('the ink ring guard', () => {
+  it('matches an outline that reads ink, however it is written', () => {
+    for (const css of [
+      'outline: 2px solid var(--color-ink);',
+      'outline-color: var(--color-ink, red)',
+      'OUTLINE: 1px solid VAR( --color-ink )',
+      'outline:\n    var(--focus-ring-width)\n    solid\n    var(--color-ink);',
+      '.a { outline: var(--focus-ring-offset) solid var(--color-ink) }',
+    ]) {
+      expect(css, css).toMatch(INK_RING);
+    }
+  });
+
+  it('leaves everything else alone', () => {
+    for (const css of [
+      '.badge-outline:hover { background: var(--color-ink); }',
+      'outline: var(--focus-ring-width) solid var(--focus-ring-color); color: var(--color-ink)',
+      'outline-color: var(--color-canvas);',
+      'outline: 2px solid var(--color-inkwell);',
+      stripComments('/* outline: var(--color-ink) */ .a { color: var(--color-ink); }'),
+    ]) {
+      expect(css, css).not.toMatch(INK_RING);
+    }
   });
 });
 
