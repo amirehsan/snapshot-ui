@@ -790,8 +790,11 @@
     scroll-margin-top: 150px;
   }
 
-  .docs-section p,
-  .docs-section li {
+  /* Prose only. What a Preview stage shows is a component drawn by its own
+     class, so the page's reading measure and line height must not reach it.
+     :where() keeps the specificity of the plain p and li it replaces. */
+  .docs-section p:where(:not(.stage *)),
+  .docs-section li:where(:not(.stage *)) {
     margin: 0;
     max-width: 70ch;
     line-height: 1.6;

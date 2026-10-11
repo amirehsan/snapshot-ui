@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Eyebrow } from '@snapshot-ui/react';
 import { useTheme } from 'next-themes';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { SearchDialog } from '@/components/shell/search';
@@ -244,7 +245,7 @@ export function HomePage(): ReactElement {
       <main className="page" inert={menuOpen}>
         <section className="hero">
           <div>
-            <p className="eyebrow">Component library</p>
+            <Eyebrow>Component library</Eyebrow>
             <h1 className="type-h1">Calm interfaces for settings, dashboards and apps.</h1>
           </div>
           <div className="hero-side">
@@ -440,7 +441,7 @@ export function HomePage(): ReactElement {
         <section className="section">
           <div className="section-head">
             <div>
-              <p className="eyebrow">Foundations</p>
+              <Eyebrow>Foundations</Eyebrow>
               <h2 className="type-h2">One voice, measured rather than chosen by eye.</h2>
             </div>
             <p className="lede">
@@ -478,7 +479,7 @@ export function HomePage(): ReactElement {
                   </svg>
                 </Link>
               </div>
-              <p className="eyebrow">Type</p>
+              <Eyebrow>Type</Eyebrow>
               <h3 className="type-h3">One family, at a body weight of 450.</h3>
             </article>
             <article className="portrait">
@@ -501,7 +502,7 @@ export function HomePage(): ReactElement {
                   </svg>
                 </Link>
               </div>
-              <p className="eyebrow">Shape</p>
+              <Eyebrow>Shape</Eyebrow>
               <h3 className="type-h3">Rounded, Soft or Square, from one attribute.</h3>
             </article>
             <article className="portrait">
@@ -523,7 +524,7 @@ export function HomePage(): ReactElement {
                   </svg>
                 </Link>
               </div>
-              <p className="eyebrow">Access</p>
+              <Eyebrow>Access</Eyebrow>
               <h3 className="type-h3">WCAG 2.2 AA, built on React Aria.</h3>
             </article>
           </div>
@@ -532,7 +533,7 @@ export function HomePage(): ReactElement {
         <section className="section">
           <div className="section-head">
             <div>
-              <p className="eyebrow">Theme axes</p>
+              <Eyebrow>Theme axes</Eyebrow>
               <h2 className="type-h2">Two switches. Every component follows.</h2>
             </div>
             <p className="lede">
@@ -720,7 +721,7 @@ export function HomePage(): ReactElement {
         <section className="section">
           <div className="section-head">
             <div>
-              <p className="eyebrow">Components</p>
+              <Eyebrow>Components</Eyebrow>
               <h2 className="type-h2">Everything a dashboard asks for.</h2>
             </div>
             <p className="lede">
@@ -730,7 +731,7 @@ export function HomePage(): ReactElement {
           </div>
           <div className="catalog">
             <div className="card catalog-group">
-              <p className="eyebrow">Forms</p>
+              <Eyebrow>Forms</Eyebrow>
               <div className="chips">
                 <Link className="chip" href="/docs/components/button">
                   Button
@@ -748,7 +749,7 @@ export function HomePage(): ReactElement {
               </div>
             </div>
             <div className="card catalog-group">
-              <p className="eyebrow">Dates and media</p>
+              <Eyebrow>Dates and media</Eyebrow>
               <div className="chips">
                 <span className="chip">Date picker</span>
                 <span className="chip chip-new">Date range</span>
@@ -761,7 +762,7 @@ export function HomePage(): ReactElement {
               </div>
             </div>
             <div className="card catalog-group">
-              <p className="eyebrow">Lists and data</p>
+              <Eyebrow>Lists and data</Eyebrow>
               <div className="chips">
                 <span className="chip chip-new">Data table</span>
                 <span className="chip">Sortable list</span>
@@ -774,7 +775,7 @@ export function HomePage(): ReactElement {
               </div>
             </div>
             <div className="card catalog-group">
-              <p className="eyebrow">Overlays and shell</p>
+              <Eyebrow>Overlays and shell</Eyebrow>
               <div className="chips">
                 <span className="chip">Dialog</span>
                 <span className="chip">Toast</span>
@@ -792,7 +793,7 @@ export function HomePage(): ReactElement {
         <section className="cta">
           <span className="watermark" aria-hidden />
           <div className="cta-inner">
-            <p className="eyebrow">Open source, MIT</p>
+            <Eyebrow>Open source, MIT</Eyebrow>
             <h2 className="type-h2">Start with a button. Ship the whole settings page.</h2>
             <div className="row">
               <Link className="button button-large" href="/docs/components/button">

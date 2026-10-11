@@ -1,0 +1,95 @@
+---
+title: Typography
+description: Heading, Text and Eyebrow set the type scale. They are plain elements, so they work in a server component.
+icon: Type
+---
+
+<Section>
+
+## Heading
+
+The level picks the element and the size picks the look. The size follows the level unless you give one, so a card title can be an h2 drawn in the card-title step.
+
+<Preview name="heading-sizes" />
+
+Headings scale down on small screens. The display step is 48px under 1024px and 40px under 768px, and the section step is 28px under 768px.
+
+</Section>
+
+<Section>
+
+## Text
+
+Body text in the body or the small step. The muted tone is slate, for secondary text.
+
+<Preview name="text-tones" />
+
+</Section>
+
+<Section>
+
+## Eyebrow
+
+The small capitalised label above a heading, with the accent dot. The dot hangs into the gutter, so the label lines up with the heading below it.
+
+<Preview name="eyebrow-heading" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+None of the three needs a client boundary: they render plain elements and import no React Aria.
+
+<Code code={`import { Eyebrow, Heading, Text } from '@snapshot-ui/react';
+
+export function SectionIntro() {
+  return (
+    <header>
+      <Eyebrow>Foundations</Eyebrow>
+      <Heading level={2}>Everything a dashboard asks for.</Heading>
+      <Text tone="muted">Type and color come from tokens.</Text>
+    </header>
+  );
+}`} />
+
+</Section>
+
+<Section>
+
+## Props
+
+Each one accepts every attribute of the element it renders, and a `className` that is added after its own.
+
+### Heading props
+
+<PropsTable path="../../packages/react/src/typography/Heading.tsx" type="Pick<HeadingProps, 'level' | 'size'>" />
+
+### Text props
+
+<PropsTable path="../../packages/react/src/typography/Text.tsx" type="Pick<TextProps, 'as' | 'size' | 'tone'>" />
+
+### Eyebrow props
+
+<PropsTable path="../../packages/react/src/typography/Eyebrow.tsx" type="Pick<EyebrowProps, 'as'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A Heading is a real h1 to h4 element, so the page outline is what assistive technology reads, whatever size it is drawn in. An Eyebrow is a label and never a heading, so it stays out of the outline. Muted text is slate, which clears 4.5:1 on every surface.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps the type in the system.
+
+<Rules dos={['Pick the level from the page outline, then the size from the hierarchy.', 'Use one h1 per page and never skip a level on the way down.', 'Leave room beside an eyebrow: its dot hangs 14px into the gutter.']} donts={['Never pick a level for its size. Set the size instead.', 'No capitals except the eyebrow.', 'Never taupe for text a reader has to read. Muted is slate.']} />
+
+</Section>

@@ -10,3 +10,6 @@
 @import '../dist/tokens.css';
 @import './components/spinner.css';
 @import './components/button.css';
+@import './components/heading.css';
+@import './components/copy.css';
+@import './components/eyebrow.css';

@@ -156,27 +156,6 @@
     color: var(--color-slate);
   }
 
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-part);
-    font-size: var(--text-eyebrow);
-    line-height: var(--text-eyebrow--line-height);
-    letter-spacing: var(--text-eyebrow--letter-spacing);
-    font-weight: var(--text-eyebrow--font-weight);
-    text-transform: uppercase;
-    color: var(--color-slate);
-  }
-
-  .eyebrow::before {
-    content: '';
-    flex: none;
-    width: 6px;
-    height: 6px;
-    border-radius: var(--radius-dot);
-    background-color: var(--color-signal-light);
-  }
-
   .eyebrow-sep {
     color: var(--color-taupe);
   }

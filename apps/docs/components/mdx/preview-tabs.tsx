@@ -1,5 +1,6 @@
 'use client';
 
+import { Eyebrow } from '@snapshot-ui/react';
 import { useId, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
 
 const TABS = ['Preview', 'Code'] as const;
@@ -20,7 +21,7 @@ export function PreviewTabs({ preview, code }: { preview: ReactNode; code: React
   return (
     <div className="preview">
       <div className="preview-head">
-        <p className="eyebrow">Example</p>
+        <Eyebrow>Example</Eyebrow>
         <div className="tabs" role="tablist" aria-label="Example">
           {TABS.map((tab) => (
             <button

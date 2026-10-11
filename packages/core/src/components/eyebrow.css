@@ -1,0 +1,35 @@
+/*
+ * Eyebrow, the label above a heading: the 14px, 700, +4% tracking step, in
+ * capitals, in slate, with the accent dot the design system calls the identity
+ * (docs/design-system.md, "Typography"). The dot is light signal orange and
+ * takes --radius-dot so it stays round in every shape.
+ *
+ * The dot hangs into the gutter by its own width plus the gap, so the label
+ * text sits on the same left edge as the content below it. Where there is no
+ * gutter beside the label, set margin-inline-start to 0 on .eyebrow::before.
+ */
+@layer components {
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    margin: 0;
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
+    letter-spacing: var(--text-eyebrow--letter-spacing);
+    font-weight: var(--text-eyebrow--font-weight);
+    text-transform: uppercase;
+  }
+
+  .eyebrow::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-inline-start: calc(-1 * (6px + var(--spacing-part)));
+    border-radius: var(--radius-dot);
+    background-color: var(--color-signal-light);
+  }
+}
