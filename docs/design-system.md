@@ -1013,3 +1013,20 @@ No component writes a corner of its own, or the shape could not reach it.
 - **Minimum sizes:** 14px for sentences, 12px for short uppercase labels.
 - **Touch targets stay at 40px.** A control drawn smaller extends its hit area
   with a pseudo-element, as the app's menu row buttons do.
+
+## Spinner
+
+The document specifies no loading state. This one is derived from the orbit,
+the system's one moving shape.
+
+- A 3px ring at 25% of the current color, with a quarter arc at full strength
+  turning every 900ms.
+- Round line caps. The ends of a stroke are dots, and dots stay round in every
+  shape.
+- It takes the color and size of the text around it, 1em, so inside a button it
+  is the label's own color and needs no variant. Two fixed sizes serve standalone
+  use: 24px, and 40px, the touch-target floor of whatever it stands in for.
+- Under reduced motion it slows to a 2.4 second turn rather than stopping. A
+  still spinner reads as finished.
+- It is announced as an indeterminate progress bar named "Loading" unless it is
+  given a name.
