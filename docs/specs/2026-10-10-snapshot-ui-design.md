@@ -1,6 +1,6 @@
 # Snapshot UI: library design
 
-Status: awaiting review
+Status: approved 2026-10-10
 Date: 2026-10-10
 
 ## 1. Goal
@@ -39,6 +39,7 @@ Success means:
 | Distribution | Compiled npm packages. A copy-paste registry may be added later on top. |
 | Repo layout | One pnpm and Turborepo workspace with `packages/` and `apps/`, as in section 4. |
 | CSS class prefix | None. Classes read `button`, `field`, `card`. See risk R1. |
+| Shape | Three corner styles, Rounded by default, Soft and Square as alternatives. Switched per subtree with an attribute, like dark mode. See section 5.3. |
 | Build order | Seven phases, publishing 0.x from the end of phase 1. |
 | Marketing pieces | Parked. Portrait cards, satellite buttons, orbital arcs, the hero frame, the floating nav pill and the footer belong to websites, not apps. |
 
@@ -56,6 +57,9 @@ The rules that most shape the library, all from that document:
 - **Type.** Sofia Sans only. Body at weight 450, headings at 500 with -2%
   tracking, uppercase only for the 14px eyebrow with its accent dot.
 - **Radius scale.** 6, 20, 24, 40, pill and circle. Nothing between 8 and 16.
+  This is the Rounded shape. Soft and Square are opt-in alternate scales,
+  derived from the source site's corner option, and Soft deliberately uses
+  the 10 to 16px range the document rejects for Rounded. See section 5.3.
 - **Nested radii.** Rounded inside rounded takes the next step down: 40 holds
   24, 24 holds 20, 20 holds 6. Pills, circles, floating surfaces and
   text-sized chips take no step.
@@ -114,7 +118,7 @@ on `core`. `core` depends on nothing at runtime. `editor` and `charts` depend on
 
 One source file, `packages/core/tokens/tokens.json`, in the W3C Design Tokens
 Community Group format, with a light and a dark value for every color and
-shadow. Style Dictionary 5 generates from it:
+shadow, and a Rounded, Soft and Square value for every radius. Style Dictionary 5 generates from it:
 
 - `dist/tokens.css`: CSS custom properties for light, dark and system modes.
 - `dist/tailwind.css`: a Tailwind v4 `@theme` block exposing the tokens as
@@ -124,11 +128,12 @@ shadow. Style Dictionary 5 generates from it:
   JavaScript consumers.
 
 Token names follow the source app's Tailwind namespaces so the two stay
-recognizable. Three renames make the names describe an app library rather than
+recognizable. Four renames make the names describe an app library rather than
 a marketing page:
 
 | Source name | Library name | Why |
 | --- | --- | --- |
+| `--radius-button` 20px | `--radius-control` | It rounds buttons, tiles and rows that light up, not only buttons. The source site's corner scale already calls it control. |
 | `--radius-consent` 24px | `--radius-surface` | In an app, 24px is the card, popup and field-frame radius. Consent buttons are a rare use. |
 | `--text-footer-link` 14/450 | `--text-small` | It is the hint and helper text step. Apps have no footer. |
 | `--text-footer-header` 14/700/+4% | `--text-overline` | Uppercase column headers, used by tables and stat tiles. |
@@ -145,8 +150,8 @@ Full token set:
 - **Type:** `h1`, `h2`, `h3`, `h4`, `eyebrow`, `body`, `action`, `small`,
   `overline`, each with size, line height, tracking and weight.
   `--font-sans` is `"Sofia Sans", Inter, Arial, sans-serif`.
-- **Radius:** `micro` 6, `button` 20, `surface` 24, `stadium` 40, `pill` 999.
-  Circles use `50%` directly in component CSS.
+- **Radius:** `micro`, `control`, `surface`, `stadium`, `pill` and `dot`, with
+  a value per shape as tabled in section 5.3.
 - **Shadow:** `lift`, `float`, `dramatic`, light and dark values.
 - **Spacing:** Tailwind's numeric scale as in the source, plus four semantic
   steps: `--spacing-part` 8px, `--spacing-peer` 24px, `--spacing-separate`
@@ -155,7 +160,10 @@ Full token set:
 - **Focus:** `--focus-ring-width` 2px, `--focus-ring-offset` 2px,
   `--focus-ring-color` ink.
 
-### 5.2 Theme modes
+### 5.2 Theme axes: color mode
+
+A theme has two independent axes, color mode and shape. Both are set by an
+attribute on any element and apply to its whole subtree.
 
 - Light is the default on `:root`.
 - `[data-theme="dark"]` on any element switches that subtree to dark.
@@ -163,14 +171,56 @@ Full token set:
 - With no attribute on `html`, dark follows `prefers-color-scheme`.
 - This works with `next-themes` configured with `attribute="data-theme"`.
 
-### 5.3 Component CSS
+### 5.3 Theme axes: shape
+
+The source site lets a client cut every corner one of three ways, Rounded,
+Soft or Square, from one setting. The library keeps that concept.
+
+- `data-shape="rounded"`, `"soft"` or `"square"` on any element sets the
+  shape for its subtree. Matching ignores case. A missing or unknown value is
+  Rounded, with no script needed.
+- The shape only remaps the radius tokens. Components never know which shape
+  is active.
+
+| Token | Rounded | Soft | Square | Rounds |
+| --- | --- | --- | --- | --- |
+| `--radius-micro` | 6px | 6px | 0 | checkboxes, badges, key hints, tooltips |
+| `--radius-control` | 20px | 10px | 0 | buttons, tiles, rows that light up, textarea parts |
+| `--radius-surface` | 24px | 12px | 0 | popups, menus, nested cards, field frames, lists, previews |
+| `--radius-stadium` | 40px | 16px | 0 | panel cards, dialogs, the sidebar rail |
+| `--radius-pill` | 999px | 12px | 0 | inputs, icon buttons, segmented tracks, chips, nav items, switches, avatars |
+| `--radius-dot` | 50% | 50% | 50% | what must stay round to keep its meaning |
+
+Every value comes from the source site's corner scale except `micro`, which
+the site does not have. It is derived here: Soft keeps it at 6px, one step
+under Soft's 10px control as the nested-radius rule asks, and Square sets it
+to 0 like every other step.
+
+**Dots never change.** A radio's indicator, a status dot, the eyebrow's accent
+dot, a slider's thumb, a spinner and the ends of a progress stroke take
+`--radius-dot` in every shape. A square radio would read as a checkbox, so
+roundness there is meaning, not style.
+
+**The nested-radius rule holds in every shape.** Each scale descends, or is 0
+throughout, so rounded inside rounded still steps down.
+
+**No component writes a corner of its own.** A literal radius is a corner the
+shape cannot reach, such as one 20px button on a Square page. The Stylelint
+rule in section 5.4 refuses any radius that is not a token, `0`, or a
+`calc()` built on a token, which ports the source's corner check.
+
+The docs site shows the concept the way the source's Design panel does: a
+segmented control choosing the shape above a live preview of a button, an
+icon button and a card.
+
+### 5.4 Component CSS
 
 - Written as plain modern CSS with nesting, one file per component in
   `packages/core/src/components/`. No `@apply` and no Tailwind dependency, so
   the same files serve React, plain HTML and non-Tailwind apps.
 - Only token variables. A Stylelint rule fails the build on a literal color,
   radius or shadow anywhere outside the token source, which ports the source
-  app's style check.
+  app's style and corner checks.
 - All component rules live in `@layer components`, tokens in `@layer theme`,
   and the opt-in base styles in `@layer base`. In a Tailwind app, utilities
   override components. In any app, the app's own unlayered CSS wins.
@@ -187,7 +237,7 @@ Full token set:
 - Built by Lightning CSS for the same browser floor as Tailwind v4: Safari
   16.4, Chrome 111, Firefox 128.
 
-### 5.4 Entry points
+### 5.5 Entry points
 
 | Import | Contents |
 | --- | --- |
@@ -277,12 +327,14 @@ now:
 
 - **apps/docs:** the public docs site, Next.js 16 with Fumadocs. Getting
   started, theming, dark mode, the design principles, and one page per
-  component with a live example, the code, usage guidance with the design
+  component with a live example that follows the site-wide color mode and shape switches, the
+  code, usage guidance with the design
   rules that apply, a props table generated from the types, a keyboard table
   and accessibility notes. Deployed to Vercel.
 - **apps/storybook:** Storybook 10 with the accessibility and Vitest addons. A
   story for every variant and state, shown in light and dark. It is the
   workshop during development and the target for interaction and visual tests.
+  Its toolbar switches color mode and shape.
 
 ## 9. Quality gates
 
@@ -296,7 +348,7 @@ Every pull request runs, in CI and through `pnpm` scripts locally:
 | Automated accessibility | axe-core run inside every component test, failing on any violation. |
 | Contrast | The source app's contrast check, ported to read `tokens.json` and assert every documented pairing in both themes. |
 | Interaction tests | Storybook stories run through Vitest. |
-| Visual regression | Playwright screenshots of every story in light and dark, compared to committed baselines. |
+| Visual regression | Playwright screenshots of every story, compared to committed baselines: Rounded in light and dark, and Soft and Square in light. |
 | Package correctness | publint and Are the Types Wrong on every built package. |
 | Size budget | size-limit, with a budget per component entry. |
 
@@ -306,7 +358,8 @@ Every pull request runs, in CI and through `pnpm` scripts locally:
 2. Its React component has typed, documented props and exports its parts.
 3. Tests cover rendering, every variant, keyboard use, controlled and
    uncontrolled use, form submission for fields, and an axe pass.
-4. Stories cover every variant and state, with visual baselines in both themes.
+4. Stories cover every variant and state, with visual baselines in both color
+   modes and all three shapes.
 5. Its docs page is complete as described in section 8.
 6. If it is new, its derivation is recorded in `docs/design-system.md` first.
 7. A changeset describes it.
@@ -341,28 +394,28 @@ recorded derivation first.
 ### Phase 1: Foundation and form basics
 
 Also in this phase: the workspace, the token pipeline, every CSS entry point,
-the quality gates, Storybook, the docs site skeleton with its getting-started
+both theme axes, the quality gates, Storybook, the docs site skeleton with its getting-started
 pages, the release pipeline, the repo files, and the cleaned
 `docs/design-system.md`.
 
 | Component | Source | React Aria basis | Notes |
 | --- | --- | --- | --- |
-| Button | `styles/primitives/button.css`, danger in `dialog.css` | Button | Primary, secondary, tertiary, danger. Pending state shows a spinner. One size, as in the source: 40px minimum height, 6px by 24px padding, 20px radius. |
-| IconButton | rail and dialog close buttons in `styles/shell/sidebar.css` | Button | 40px circle. Requires an accessible label. |
+| Button | `styles/primitives/button.css`, danger in `dialog.css` | Button | Primary, secondary, tertiary, danger. Pending state shows a spinner. One size, as in the source: 40px minimum height, 6px by 24px padding, `--radius-control`. |
+| IconButton | rail and dialog close buttons in `styles/shell/sidebar.css` | Button | 40px, `--radius-pill`: a circle in Rounded, following the shape elsewhere. Requires an accessible label. |
 | Link | `--color-link` | Link | Inline link. |
 | Label, Description, FieldError | `styles/primitives/field.css` | Label, Text, FieldError | Label 14/700, hint 14/450 slate. |
 | FieldCounter | `js/length.js` | none | Shows count against a budget, never blocks. |
 | Changed state | `data-dirty` in `field.css` | none | `isChanged` gives a light signal orange border and a clay "Changed" chip. |
 | TextField | `.ry-input` in `field.css` | TextField, Input | 48px pill. |
 | TextArea | `.ry-panels-components-area` in `styles/panels/components.css` | TextField, TextArea | `--radius-surface` 24px, 6rem minimum height, vertical resize only. |
-| Checkbox, CheckboxGroup | `.ry-choice` in `styles/primitives/control.css` | Checkbox, CheckboxGroup | 6px box. |
-| RadioGroup | `control.css`, `partials/shell/account.hbs` | RadioGroup | Full-pill rows. Selected is the ink pill plus a check glyph. |
+| Checkbox, CheckboxGroup | `.ry-choice` in `styles/primitives/control.css` | Checkbox, CheckboxGroup | `--radius-micro` box. |
+| RadioGroup | `control.css`, `partials/shell/account.hbs` | RadioGroup | `--radius-pill` rows. Selected is the ink fill plus a check glyph. Indicator dots take `--radius-dot`. |
 | Switch | `js/switch-input.js`, `control.css` | Switch | |
 | SegmentedControl | `js/segmented.js` | RadioGroup | Stacks when the row does not fit. |
-| Card | `.ry-panel-section` in `styles/primitives/panel.css` | none, static | Header, title, note, body. Lifted, 40px, 32px padding. |
+| Card | `.ry-panel-section` in `styles/primitives/panel.css` | none, static | Header, title, note, body. Lifted, `--radius-stadium`, 32px padding. |
 | Heading, Text, Eyebrow | `styles/tokens.css` type tokens | Heading | Eyebrow dot hangs into the gutter. |
-| Kbd | search key in `styles/shell/search.css` | none, static | 6px. |
-| Badge | new | none, static | 6px per the nested-radius rule. Tones neutral, info, success, error. Never clay or signal. |
+| Kbd | search key in `styles/shell/search.css` | none, static | `--radius-micro`. |
+| Badge | new | none, static | `--radius-micro` per the nested-radius rule. Tones neutral, info, success, error. Never clay or signal. |
 | Spinner | new | ProgressBar, indeterminate | Loading state is unspecified in the document; derive it. Honors reduced motion. |
 
 ### Phase 2: Choice controls and overlays
@@ -419,7 +472,7 @@ pages, the release pipeline, the repo files, and the cleaned
 | DataTable | new | Table | Sorting, selection, column resizing. Needs the dense-data companion spec the document says is missing. |
 | EmptyState | `.ry-placeholder` in `panel.css` | none, static | |
 | StatTile | `styles/panels/overview.css` | none, static | |
-| Avatar, AvatarGroup | slot avatars in `slots.css` | none, static | Circle. |
+| Avatar, AvatarGroup | slot avatars in `slots.css` | none, static | `--radius-pill`: a circle in Rounded. |
 | Skeleton | new | none, static | Loading state is unspecified; derive it. |
 | ProgressBar, Meter | new | ProgressBar, Meter | |
 | DescriptionList | new | none, static | |
@@ -469,3 +522,4 @@ from phases 1 to 5. Specified in its own document.
 | R4 | The public repo could leak the source company's or its clients' names. | The design document is cleaned before its first commit. The source path lives only in the gitignored `.local/SOURCE.md`. |
 | R5 | TypeScript 7 is new and some tooling may lag. | The version rule in section 6.1. |
 | R6 | Dense data, loading and empty states have no specification in the document. | Each gets a recorded derivation before it is built, per section 3. |
+| R7 | A component looks right in Rounded and wrong in Soft or Square, which nobody sees until a user switches. | Visual baselines in all three shapes, and the docs site's shape switch on every example. |
