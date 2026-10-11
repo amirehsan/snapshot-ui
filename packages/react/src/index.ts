@@ -32,3 +32,10 @@ export {
 } from './field';
 export { Input, TextField, type InputProps, type TextFieldProps } from './text-field';
 export { TextArea, type TextAreaProps } from './text-area';
+export {
+  Checkbox,
+  CheckboxGroup,
+  type CheckboxGroupOrientation,
+  type CheckboxGroupProps,
+  type CheckboxProps,
+} from './checkbox';

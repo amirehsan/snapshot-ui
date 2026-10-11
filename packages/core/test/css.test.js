@@ -319,6 +319,59 @@ describe('src/components/textarea.css', () => {
   });
 });
 
+describe('src/components/checkbox.css', () => {
+  // The rules without their comments, which quote selectors of their own.
+  const rules = () => read('src/components/checkbox.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const SELECTED =
+    '.checkbox:is([data-selected], :has(:checked), [data-indeterminate], :has(:indeterminate)) {';
+
+  it('draws the mark with a mask over the canvas color, not an image with a color of its own', () => {
+    const source = rules();
+    expect(source).toContain('--checkbox-mark: var(--color-canvas);');
+    expect(source).toContain('background-color: var(--checkbox-mark);');
+    expect(source).toMatch(/mask-image: url\("data:image\/svg\+xml,/);
+    // A background image would carry its own literal color, which is the source's invisible dark check.
+    expect(source).not.toMatch(/background-image/);
+  });
+
+  it('orders the states hover, selected, invalid and disabled, so each outranks the one before', () => {
+    const source = rules();
+    const hover = source.indexOf('.checkbox:where(:hover');
+    const selected = source.indexOf(SELECTED);
+    const invalid = source.indexOf('.checkbox[data-invalid] {');
+    const disabled = source.indexOf('.checkbox:is(:has(:disabled), [data-disabled]) {');
+    expect(hover).toBeGreaterThan(-1);
+    expect(selected).toBeGreaterThan(hover);
+    expect(invalid).toBeGreaterThan(selected);
+    expect(disabled).toBeGreaterThan(invalid);
+  });
+
+  it('draws hover only where hover exists', () => {
+    const source = rules();
+    const media = source.indexOf('@media (hover: hover)');
+    expect(media).toBeGreaterThan(-1);
+    expect(source.indexOf(':hover')).toBeGreaterThan(media);
+  });
+
+  it('keeps the row at least 40px tall, so the whole row is the target', () => {
+    const row = blockAfter(rules(), '.checkbox {\n    --checkbox-fill');
+    expect(row).toContain('min-height: 40px;');
+    expect(row).toContain('cursor: pointer;');
+  });
+
+  it('leaves the boxes alone when the group is changed: the chip is the cue', () => {
+    expect(rules()).not.toContain('data-changed');
+    expect(rules()).not.toContain('--color-signal');
+  });
+
+  it('keeps the mark and the fill visible in forced colors, with system colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(forced).toContain('--checkbox-fill: Highlight;');
+    expect(forced).toContain('--checkbox-mark: HighlightText;');
+    expect(forced).toContain('--checkbox-mark: GrayText;');
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

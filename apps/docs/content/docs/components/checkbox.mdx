@@ -1,0 +1,119 @@
+---
+title: Checkbox
+description: A single checkbox, or a labelled group of them. The whole row is the label, at least 40px tall, with a hint and an error line, and a group shows when its selection is unsaved or invalid.
+icon: SquareCheck
+---
+
+<Section>
+
+## Basic
+
+The label sits beside the box and the whole row is the target, so a press on the text, the gap or the box toggles it. A hint goes under the label's text.
+
+<Preview name="checkbox-basic" />
+
+</Section>
+
+<Section>
+
+## States
+
+Checked is an ink fill with a canvas mark, drawn with a mask so it reads in both themes. Indeterminate is a canvas bar. Invalid turns only the edge to the error color, so a checked box that is invalid still reads as checked. A disabled box is recessed with a taupe label, and a read-only box looks like an enabled one and cannot be pressed.
+
+<Preview name="checkbox-states" />
+
+</Section>
+
+<Section>
+
+## Group
+
+A group names several checkboxes and holds their values as one array. Vertical is the default. Horizontal lays the rows out side by side and wraps them when the row is full. The first group is controlled, and its selection differs from the saved one, so `isChanged` shows the clay chip beside the label. The boxes keep their edges: the chip marks the field, not each box.
+
+<Preview name="checkbox-group" />
+
+</Section>
+
+<Section>
+
+## Select all
+
+A parent checkbox is indeterminate while only some of its children are checked. Pass `isIndeterminate` and `isSelected` from the children's state, and it follows. Pressing an indeterminate checkbox reports `true`, which here checks every child.
+
+<Preview name="checkbox-select-all" />
+
+</Section>
+
+<Section>
+
+## Validation
+
+Set `isRequired` on a checkbox, or on a group where one checked box is enough, and the browser's own checks run when the form is submitted. The error line then shows the message, and every box in an invalid group turns its edge to the error color. A `validate` function works too.
+
+<Preview name="checkbox-validation" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Every value works controlled and uncontrolled. A checked checkbox with a `name` submits its `value`, or "on", and an unchecked one is left out of the form. A group submits one entry per checked box, all under the group's `name`.
+
+<Code code={`import { useState } from 'react';
+import { Checkbox, CheckboxGroup } from '@snapshot-ui/react';
+
+export function Preferences() {
+  const [channels, setChannels] = useState(['email']);
+  return (
+    <form>
+      <CheckboxGroup label="Notify me by" name="channels" value={channels} onChange={setChannels}>
+        <Checkbox value="email">Email</Checkbox>
+        <Checkbox value="sms">Text message</Checkbox>
+      </CheckboxGroup>
+      <Checkbox name="remember" defaultSelected>
+        Remember me
+      </Checkbox>
+    </form>
+  );
+}`} />
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria checkbox prop is accepted. These are the ones Snapshot UI adds or shapes.
+
+### Checkbox
+
+<PropsTable path="../../packages/react/src/checkbox/Checkbox.tsx" type="Pick<CheckboxProps, 'children' | 'description' | 'errorMessage' | 'value' | 'name' | 'isSelected' | 'defaultSelected' | 'onChange' | 'isIndeterminate' | 'isDisabled' | 'isReadOnly' | 'isRequired' | 'isInvalid' | 'validate'>" />
+
+### CheckboxGroup
+
+<PropsTable path="../../packages/react/src/checkbox/CheckboxGroup.tsx" type="Pick<CheckboxGroupProps, 'label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'orientation' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isDisabled' | 'isReadOnly' | 'isRequired' | 'isInvalid' | 'validate'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A native checkbox input inside its label, with React Aria handling the wiring. The mixed state is exposed as mixed. A group is a `group` named by its label, and its hint and error line describe every checkbox in it. A screen reader reads the Changed chip with the group, after the hint, while the group is changed and valid. An invalid group reads its error line alone.
+
+<Keys rows={[['Tab', 'Moves to the next checkbox. Each one is its own stop, in a group too.'], ['Space', 'Toggles the focused checkbox.'], ['Arrow keys', 'Do nothing. Only a radio group moves between its choices with them.']]} />
+
+The row is 40px tall at the least, and the box is drawn at 20px inside it. In Windows high contrast the box takes the system colors, so the mark never disappears.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps checkboxes in the system.
+
+<Rules dos={['Name each checkbox in its own label, in sentence case, and use the hint for what the label cannot say.', 'Use a group when several choices answer one question, and say what is wrong in the error line.', 'Keep the whole row as the target, with the label beside the box.']} donts={['Never use a checkbox for a setting that takes effect the moment it is pressed. That is a switch.', 'Never use a group when only one choice is allowed. That is a radio group.', 'Never leave the chip beside an error. Invalid outranks changed.']} />
+
+</Section>

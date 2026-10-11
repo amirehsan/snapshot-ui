@@ -3,6 +3,11 @@ import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
 import ButtonStates from './button-states';
 import ButtonVariants from './button-variants';
+import CheckboxBasic from './checkbox-basic';
+import CheckboxGroupExample from './checkbox-group';
+import CheckboxSelectAll from './checkbox-select-all';
+import CheckboxStates from './checkbox-states';
+import CheckboxValidation from './checkbox-validation';
 import EyebrowHeading from './eyebrow-heading';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
@@ -30,6 +35,11 @@ export const examples = {
   'badge-tones': BadgeTones,
   'button-states': ButtonStates,
   'button-variants': ButtonVariants,
+  'checkbox-basic': CheckboxBasic,
+  'checkbox-group': CheckboxGroupExample,
+  'checkbox-select-all': CheckboxSelectAll,
+  'checkbox-states': CheckboxStates,
+  'checkbox-validation': CheckboxValidation,
   'eyebrow-heading': EyebrowHeading,
   'field-counter': LengthCounter,
   'field-parts': FieldParts,

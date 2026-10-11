@@ -524,6 +524,109 @@ test('a text area draws a control corner, a 6rem floor and vertical resize, and 
   await expect(changed).toHaveCSS('outline-style', 'solid');
 });
 
+/** The form on the checkbox page that asks for a group and a single checkbox. */
+const preferencesForm = (page: Page): Locator =>
+  page.locator('form').filter({ has: page.getByRole('button', { name: 'Save preferences' }) });
+
+test('the checkbox page blocks an empty submit, names the problem and saves once it is fixed', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/checkbox');
+  const form = preferencesForm(page);
+  const group = form.getByRole('group', { name: /Notify me by/ });
+  const save = form.getByRole('button', { name: 'Save preferences' });
+
+  await save.click();
+  await expect(group.locator('.field-error')).toHaveText('Pick at least one way to be notified.');
+  await expect(group).toHaveAttribute('data-invalid');
+  await expect(group.getByRole('checkbox', { name: 'Email' })).toBeFocused();
+  // Every box of an invalid group draws the error edge.
+  await expect(group.locator('.checkbox-box')).toHaveCount(3);
+  for (const box of await group.locator('.checkbox-box').all()) {
+    await expect(box).toHaveCSS('border-top-color', 'rgb(163, 35, 27)');
+  }
+
+  // The label is the target: press the text, as a reader does.
+  await form.getByText('Push notification', { exact: true }).click();
+  await form.getByText('I accept the terms', { exact: true }).click();
+  await save.click();
+  await expect(form.getByRole('status')).toHaveText('Saved: push.');
+  await expect(form.locator('.field-error')).toHaveCount(0);
+});
+
+test('the arrow keys do not move between the checkboxes of a group, and Tab does', async ({ page }) => {
+  await visit(page, '/docs/components/checkbox');
+  const group = page.getByRole('group', { name: /Notify me by/ }).first();
+  const email = group.getByRole('checkbox', { name: 'Email' });
+  const sms = group.getByRole('checkbox', { name: 'Text message' });
+  await email.focus();
+  await expect(email).toBeFocused();
+  for (const key of ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft']) await page.keyboard.press(key);
+  await expect(email).toBeFocused();
+  await expect(email).toBeChecked();
+  await page.keyboard.press('Tab');
+  await expect(sms).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(sms).toBeChecked();
+  await expect(email).toBeChecked();
+});
+
+test('the whole checkbox row is the target, and it is at least 40px tall', async ({ page }) => {
+  await visit(page, '/docs/components/checkbox');
+  const label = page.locator('label.checkbox').filter({ hasText: 'Show service descriptions' });
+  const input = label.getByRole('checkbox');
+  await label.evaluate((element) => {
+    element.scrollIntoView({ block: 'center' });
+  });
+  const row = await label.boundingBox();
+  const box = await label.locator('.checkbox-box').boundingBox();
+  const text = await label.locator('.checkbox-text').boundingBox();
+  if (!row || !box || !text) throw new Error('The row is not on screen');
+  expect(row.height).toBeGreaterThanOrEqual(40);
+  expect(box.width).toBe(20);
+  // A press in the gap between the box and the text, which is neither of them, still toggles.
+  await expect(input).not.toBeChecked();
+  await page.mouse.click((box.x + box.width + text.x) / 2, row.y + row.height / 2);
+  await expect(input).toBeChecked();
+  // So does one in the padding above the box.
+  await page.mouse.click(box.x + box.width / 2, row.y + 2);
+  await expect(input).not.toBeChecked();
+});
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`a checked box draws its mark in canvas on ink in ${theme}`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: theme });
+    await visit(page, '/docs/components/checkbox');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+    const label = page.locator('label.checkbox').filter({ hasText: 'Remember me on this device' });
+    await expect(label.getByRole('checkbox')).toBeChecked();
+    const colors = await label.locator('.checkbox-box').evaluate((box) => ({
+      fill: getComputedStyle(box).backgroundColor,
+      mark: getComputedStyle(box, '::after').backgroundColor,
+    }));
+    // Ink is dark in light and white in dark, and canvas is the other way round, so the mark always shows.
+    expect(colors).toEqual(
+      theme === 'light'
+        ? { fill: 'rgb(20, 20, 19)', mark: 'rgb(243, 240, 238)' }
+        : { fill: 'rgb(255, 255, 255)', mark: 'rgb(14, 14, 13)' },
+    );
+  });
+}
+
+test('a select-all checkbox is mixed while some of its children are checked', async ({ page }) => {
+  await visit(page, '/docs/components/checkbox');
+  const all = page.getByRole('checkbox', { name: 'Select all channels' });
+  const channels = page.getByRole('group', { name: 'Channels' });
+  await expect(all).toBeChecked({ indeterminate: true });
+  await page.locator('label.checkbox', { hasText: 'Select all channels' }).click();
+  await expect(all).toBeChecked();
+  await expect(channels.getByRole('checkbox', { checked: true })).toHaveCount(3);
+  await channels.locator('label.checkbox', { hasText: 'Email' }).click();
+  await expect(all).toBeChecked({ indeterminate: true });
+  await expect(channels.getByRole('checkbox', { checked: true })).toHaveCount(2);
+});
+
 test('the copy button reports that the code was copied', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await visit(page);

@@ -1,0 +1,201 @@
+/*
+ * Checkbox and CheckboxGroup, derived in docs/design-system.md ("Checkbox"):
+ * a 20px box with a --radius-micro corner and a --color-boundary edge, drawn
+ * beside its label. The whole row is the label and is at least 40px tall.
+ *
+ * The box reads three properties that the states below set on the label, so a
+ * state never needs a rule per part. Source order carries the precedence:
+ * rest, hover, selected, invalid, then disabled. Hover has the lowest
+ * specificity (:where) so every state outranks it.
+ *
+ * The mark is drawn with a mask: the SVG below is only a shape, and the color
+ * is --checkbox-mark, canvas on the ink fill, so it follows the theme.
+ */
+@layer components {
+  .checkbox-field,
+  .checkbox {
+    --checkbox-size: 20px;
+    --checkbox-gap: 0.75rem;
+  }
+
+  /* One checkbox with its hint and error line. The label sits at its own
+     width, so only the row is a target. */
+  .checkbox-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    max-width: var(--container-field);
+  }
+
+  .checkbox {
+    --checkbox-fill: var(--color-raised);
+    --checkbox-edge: var(--color-boundary);
+    --checkbox-mark: var(--color-canvas);
+
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--checkbox-gap);
+    max-width: 100%;
+    /* The box is 20px; the row is the target, and it is 40px. */
+    min-height: 40px;
+    margin: 0;
+    padding-block: 0.5rem;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The label's text, in a box of its own so a link or an emphasis inside it is
+     not a second flex item with a gap before it. */
+  .checkbox-text {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+
+  .checkbox-box {
+    position: relative;
+    box-sizing: border-box;
+    flex: none;
+    width: var(--checkbox-size);
+    height: var(--checkbox-size);
+    /* Centres the box on the label's first line. */
+    margin-block-start: calc((1lh - var(--checkbox-size)) / 2);
+    border: 1.5px solid var(--checkbox-edge);
+    border-radius: var(--radius-micro);
+    background-color: var(--checkbox-fill);
+  }
+
+  /* The mark, hidden until the box is selected or indeterminate. The mask shape
+     is the only thing the data URI draws; its stroke color is never used. */
+  .checkbox-box::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    display: none;
+    background-color: var(--checkbox-mark);
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: 14px;
+  }
+
+  .checkbox:is([data-selected], :has(:checked), [data-indeterminate], :has(:indeterminate))
+    .checkbox-box::after {
+    display: block;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 10.5 8 14.5 16 5.5'/%3E%3C/svg%3E");
+  }
+
+  /* After the check, so an indeterminate box that is also selected shows the bar. */
+  .checkbox:is([data-indeterminate], :has(:indeterminate)) .checkbox-box::after {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M4 10h12'/%3E%3C/svg%3E");
+  }
+
+  /* Hover and press darken the edge of an empty box and nothing else. A read-only
+     box has nothing to press, so it keeps its rest look. */
+  @media (hover: hover) {
+    .checkbox:where(:hover, [data-hovered]):where(:not([data-readonly])) {
+      --checkbox-edge: color-mix(in srgb, var(--color-ink) 70%, transparent);
+    }
+  }
+
+  .checkbox:where(:active, [data-pressed]):where(:not([data-readonly])) {
+    --checkbox-edge: color-mix(in srgb, var(--color-ink) 70%, transparent);
+  }
+
+  .checkbox:is([data-selected], :has(:checked), [data-indeterminate], :has(:indeterminate)) {
+    --checkbox-fill: var(--color-ink);
+    --checkbox-edge: var(--color-ink);
+  }
+
+  /* The ring is outside the box, so ink still reads against the page behind an ink fill. */
+  .checkbox:is(:has(:focus-visible), [data-focus-visible]) .checkbox-box {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* A read-only box cannot be pressed, so it is not offered as a button. */
+  .checkbox[data-readonly] {
+    cursor: default;
+  }
+
+  /* Only the edge turns: the fill and the mark stay, so a checked box that is
+     invalid still reads as checked. */
+  .checkbox[data-invalid] {
+    --checkbox-edge: var(--color-error);
+  }
+
+  /* Last, so a disabled box that is hovered, selected or invalid stays disabled. */
+  .checkbox:is(:has(:disabled), [data-disabled]) {
+    --checkbox-fill: var(--color-disabled);
+    --checkbox-edge: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    --checkbox-mark: var(--color-taupe);
+
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  /* The hint and the error line sit under the label's text, not under the box.
+     The hint stays slate when the checkbox is disabled: it is text the reader
+     can still need, it is not the control's label, and taupe would fail contrast. */
+  .checkbox-field > :is(.field-description, .field-error) {
+    padding-inline-start: calc(var(--checkbox-size) + var(--checkbox-gap));
+  }
+
+  .checkbox-field > .field-error {
+    padding-block-start: 0.125rem;
+  }
+
+  /* The label's padding spaces one row from the next, so a row with a hint or an
+     error line closes with the same room. */
+  .checkbox-field > :not(.checkbox):last-child {
+    padding-block-end: 0.5rem;
+  }
+
+  /* The group. Its rows carry their own padding, so the field's 8px between
+     parts would double it. */
+  .field.checkbox-group {
+    row-gap: 0;
+  }
+
+  .checkbox-group > .field-error {
+    padding-block-start: 0.25rem;
+  }
+
+  .checkbox-items {
+    display: grid;
+    justify-items: start;
+  }
+
+  .checkbox-group[data-orientation='horizontal'] .checkbox-items {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 1.5rem;
+  }
+
+  /*
+   * Forced colors (Windows high contrast). The browser replaces every author
+   * color except a system color, so the canvas mark on an ink fill would be
+   * canvas on canvas and vanish. These are the only colors in the library that
+   * are not tokens: the reader's own palette is the point there.
+   */
+  @media (forced-colors: active) {
+    .checkbox:is([data-selected], :has(:checked), [data-indeterminate], :has(:indeterminate)) {
+      --checkbox-fill: Highlight;
+      --checkbox-edge: Highlight;
+      --checkbox-mark: HighlightText;
+    }
+
+    .checkbox:is(:has(:disabled), [data-disabled]) {
+      --checkbox-fill: canvas;
+      --checkbox-edge: GrayText;
+      --checkbox-mark: GrayText;
+
+      color: GrayText;
+    }
+  }
+}

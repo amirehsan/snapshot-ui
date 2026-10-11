@@ -1575,3 +1575,122 @@ order.
 
 No pairing was added to the contrast gate. The fills, edges and text are the
 input's, and the textarea draws no color of its own.
+
+## Checkbox
+
+The document specifies no checkbox. The app's choice control is the precedent:
+a 20px box with a 1.5px edge and a micro corner, 12px from its text, in a row
+at least 40px tall. The library keeps that shape and settles what the app left
+open, each recorded here.
+
+- **The box** is 20px, the Raised fill, a 1.5px edge and `--radius-micro`. The
+  corner follows the shape axis: 6px in Rounded and Soft, square in Square. A
+  radio keeps its dot round in every shape because roundness is its meaning; a
+  checkbox is the small square the shape axis cuts.
+- **The row is the label, and it is 40px tall.** The app's row is a `label`
+  with `min-height: 40px` and 8px above and below, so a 20px box is never the
+  target by itself. React Aria's checkbox button is that label: it wraps the
+  input, the box and the text, so a press on the box, the gap, the padding or
+  the text toggles it. The label takes its own width, so the target is the
+  visible row and not the empty line after it. The text sits in an element of
+  its own, because a link or an emphasis inside the label would otherwise be a
+  second flex item with a 12px gap before it. The hint is outside the label,
+  as React Aria structures it: it describes the checkbox without becoming part
+  of its name, and it is not a target. It is indented to the text, not the box.
+- **The edge** is `--color-boundary`, ink at 50%. The app drew the box at 45%,
+  which measures 2.99 against Raised in light (about 3.0, and 2.63 on the page).
+  Boundary is the document's own 50% and the token every control edge uses, so
+  a checkbox and a text field on one card match.
+- **Hover** darkens the edge of an empty box to ink at 70%, the app's value,
+  only where hover exists, and pressing shows the same edge so touch has a cue.
+  A checked box keeps its ink edge. A read-only box has nothing to press, so it
+  shows neither.
+- **Checked is an ink fill with a canvas mark.** The app drew the check as an
+  image with a literal `#F3F0EE` stroke, so on the white fill of dark mode it
+  measures 1.13:1 and is invisible, though its comment says it follows the
+  theme. The library draws the mark with `mask-image`: the SVG says only where
+  the mark is, and the mark's color is `--checkbox-mark`, the canvas token,
+  painted as the background of the mask's element. The mark is then canvas on
+  ink in both themes and no color lives in an image. Indeterminate is a bar
+  drawn the same way, and it wins when the box is both selected and mixed.
+- **Focus is the token ring on the box,** 2px at 2px offset, outside the box
+  and not on the row. The ring sits outside the ink fill, so ink still reads
+  against the page behind it and it does not invert; only an inset ring on an
+  ink fill does.
+- **Invalid turns the edge to the error color** at the same 1.5px and leaves the
+  fill and the mark alone, so a checked box that is invalid still reads as
+  checked. The error line is under the label's text. In a group, React Aria
+  marks every box invalid while the group is, so every edge turns and the one
+  error line under the group says why.
+- **Disabled** has no look in the app: the row keeps its pointer and its full
+  color. The library gives the box the `disabled` fill and an ink edge at 15%,
+  the label and the mark taupe, and `not-allowed`. The hint stays slate: it is
+  not the control's label, a reader may still need it, and taupe on it measures
+  about 1.4:1 in light, which axe fails. A disabled checkbox falls outside the
+  3:1 asked of a control, as Button's disabled edge does, so the pairs are
+  recorded and not gated. A disabled box that is checked keeps its mark in
+  taupe, which is faint in light and clear in dark:
+
+  | Disabled | Light | Dark |
+  | --- | --- | --- |
+  | Edge against its fill | 1.37 | 1.59 |
+  | Taupe mark on the fill | 1.44 | 3.81 |
+
+- **Read-only looks like an enabled box,** as a read-only input does, with the
+  default cursor, no hover edge and its place in the tab order and the form.
+  `data-readonly` is the hook for an app that wants another look.
+- **No transition.** The mark appears and the state changes at once, so there is
+  nothing for reduced motion to stop.
+- **Forced colors.** The browser replaces every author color but a system color,
+  and a mask that paints canvas on an ink fill would then paint canvas on
+  canvas. In forced colors the selected box takes `Highlight` with a
+  `HighlightText` mark and a disabled one `GrayText`. These are the only colors
+  in the library that are not tokens, and they exist because the reader's own
+  palette is the point there (checked in Chromium with forced colors emulated).
+
+**The group follows the field contract and marks a change with the chip alone.**
+`CheckboxGroup` is a `field` with a label row, a hint and an error line, and it
+has `data-changed` and `data-invalid` on its root, a chip that is read with the
+group and a chip that leaves while the group is invalid, exactly as TextField
+does. The source's composite controls draw the changed edge on the one surface
+a field has: the track, the trigger or the frame. A group of boxes has none, and
+the app's choice rows have no changed look at all, only the label chip. Drawing
+it on the boxes would mark boxes that did not change, would drop an empty box's
+edge from 3.48 to the light signal orange's 2.87 against Raised (2.53 on the
+page, under the 3:1 a boundary asks), and would sit beside the ink edge of every
+checked box. So the boxes keep their edges, the chip carries the cue and the
+stylesheet has no `data-changed` rule. Invalid still outranks changed: the chip
+leaves, every box takes the error edge and the line shows.
+
+- **Orientation** is vertical by default and horizontal on request. React Aria's
+  group has none, so the component writes `data-orientation` on the root for the
+  layout, and nothing else depends on it: arrow keys do not move between
+  checkboxes in either layout. Each checkbox is its own tab stop, so the keys are
+  Tab and Space. Horizontal rows wrap, 24px apart, so long labels fall to the
+  next row and never scroll the page sideways.
+- **Spacing.** The rows carry their own 8px of padding, so the group's 8px
+  between parts would double it: the group closes the gap, and the label sits
+  8px above the first box's text, like a text field's.
+
+| Box edge (boundary on its Raised fill) against | Light | Dark |
+| --- | --- | --- |
+| Raised | 3.48 | 4.93 |
+| Float | 3.48 | 5.59 |
+| Lifted | 3.36 | 5.59 |
+| Bone | 3.16 | 4.93 |
+| canvas | 3.06 | 6.20 |
+
+| Other edges and marks | Light | Dark |
+| --- | --- | --- |
+| canvas mark on the ink fill | 16.25 | 19.31 |
+| The app's mark on the ink fill | 16.25 | 1.13 |
+| Hover edge (ink at 70%), lowest on the five surfaces | 6.04 | 8.22 |
+| Error edge, lowest on the five surfaces | 6.58 | 5.06 |
+| Ink fill, lowest on the five surfaces | 16.25 | 15.36 |
+
+The figures are the gate's own arithmetic, rounded to two decimals. "Four
+colors added" lists the boundary on Raised as 3.47, which is the same 3.4767
+cut and not rounded. Bone is the one surface the boundary was not yet gated
+on, and a checkbox can sit in a note, so it is now: `CONTRAST_PAIRS` holds the
+boundary on all five surfaces. canvas on ink, the checked mark, was gated as the
+primary label already, at the stricter text minimum, and a test now says so.
