@@ -32,7 +32,7 @@ A group names several checkboxes and holds their values as one array. Vertical i
 
 <Preview name="checkbox-group" />
 
-A form reset returns a group to its `defaultValue`, with one limit that comes from React Aria: if a single reset has to check one box and uncheck another, the checked one is lost, while a reset that only checks boxes or only unchecks them works.
+A form reset returns a group to its `defaultValue`, with two limits that come from React Aria: a reset that unchecks more than one box leaves all but the last of them checked, and a reset that checks a box and also unchecks one further down the group loses the checked box. A reset that only checks boxes, or unchecks a single box, works.
 
 </Section>
 

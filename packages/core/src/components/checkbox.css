@@ -73,10 +73,14 @@
 
   /* A row with no text, named by aria-label, is only as wide as the box. The box
      takes a transparent hit area of its own, 40px square and centred on it, so
-     the target is 40px wide too and the drawn box does not move. It stays inside
-     the 40px between vertical rows and the 24px between horizontal ones. The size
-     is set outright and the centre is the box's, because an inset would measure
-     from inside the border, which the browser rounds. */
+     the target is 40px wide too and the drawn box does not move. At the default
+     line height the box sits about 1px above the middle of its row, so the area
+     reaches about 1px past the row's top edge and stops about 1px short of its
+     bottom edge. Rows in a stack are 40px apart, so neighbouring areas meet and
+     do not overlap, and the 24px between horizontal rows leaves 4px clear. The
+     area overhangs the box by 10px on each side, so leave 10px beside a scroll
+     edge. The size is set outright and the centre is the box's, because an
+     inset would measure from inside the border, which the browser rounds. */
   .checkbox:not(:has(.checkbox-text)) .checkbox-box::before {
     content: '';
     position: absolute;

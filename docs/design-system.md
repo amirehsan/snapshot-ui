@@ -1600,8 +1600,13 @@ open, each recorded here.
   A checkbox with no text, named by `aria-label` as a table's row select is,
   has a row only as wide as the box, so the box takes a transparent hit area of
   its own, 40px square and centred on it, as a `::before` that leaves the drawn
-  box where it is. It stops inside the 40px between vertical rows and the 24px
-  between horizontal ones.
+  box where it is. At the default line height the box sits about 1px above the
+  middle of its 40px row, so the area reaches about 1px past the row's top edge
+  and stops about 1px short of its bottom edge. Rows in a stack are 40px apart,
+  so the areas of neighbours meet and do not overlap, and each overhangs its box
+  by 10px, which leaves 4px clear in the 24px between horizontal rows. The same
+  10px overhang means a label-less checkbox needs 10px of room beside a scroll
+  edge, a window's or a scrolling container's.
 - **The edge** is `--color-boundary`, ink at 50%. The app drew the box at 45%,
   which measures 2.99 against Raised in light (about 3.0, and 2.63 on the page).
   Boundary is the document's own 50% and the token every control edge uses, so
@@ -1676,17 +1681,21 @@ leaves, every box takes the error edge and the line shows.
 - **Spacing.** The rows carry their own 8px of padding, so the group's 8px
   between parts would double it: the group closes the gap, and the label sits
   8px above the first box's text, like a text field's.
-- **A form reset that re-checks one box and unchecks another loses the
-  re-checked box.** This is React Aria's, and it is not worked around. In
-  `useCheckboxGroupState`, `addValue` takes an updater, so each call builds on
-  the one before, but `removeValue` filters the `selectedValues` it closed over
-  and sets that list outright. A native `reset` runs every box's reset in
-  turn, in one event, so a box re-checked before another is unchecked is
-  dropped by the later `removeValue`. With the default `['email']` and the user
-  at `['sms']`, a reset ends at `[]` and not `['email']`. In a controlled group,
-  `onChange` fires once per box and the last array is the wrong one. A reset
-  that only adds boxes, or only removes them, is not affected. A test holds the
-  correct expectation as an expected failure, so a fix upstream flags itself.
+- **A form reset can lose boxes in a group.** This is React Aria's, and it is
+  not worked around. In `useCheckboxGroupState`, `addValue` takes an updater,
+  so each call builds on the one before, but `removeValue` filters the
+  `selectedValues` it closed over, which is the list as it was before the
+  reset, and sets the result outright. A native `reset` runs every box's reset
+  in turn, in one event, so the last removal wins. Two things follow. A reset
+  that unchecks more than one box leaves all but the last of them checked: with
+  the default `[]` and `a` and `b` checked, it ends at `['a']`. A reset that
+  re-checks a box before it unchecks another one, in DOM order, loses the
+  re-checked box: with the default `['email']` and the user at `['sms']`, it
+  ends at `[]` and not `['email']`. A reset that only re-checks boxes, that
+  unchecks a single box, or that re-checks a box after the last box it
+  unchecks, works. In a controlled group, `onChange` fires once per box that
+  changes and the last array is the wrong one. Two tests hold the correct
+  expectations as expected failures, so a fix upstream flags itself.
 - **A group shows one error line, its own.** React Aria clears the error
   context of the checkboxes inside a group, so an `errorMessage` on one of them
   is not shown there. It shows when the checkbox stands alone.
