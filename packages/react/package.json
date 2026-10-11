@@ -1,0 +1,68 @@
+{
+  "name": "@snapshot-ui/react",
+  "version": "0.0.0",
+  "description": "Accessible React components for Snapshot UI, built on React Aria.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amirehsan/snapshot-ui.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/amirehsan/snapshot-ui#readme",
+  "bugs": "https://github.com/amirehsan/snapshot-ui/issues",
+  "keywords": [
+    "snapshot-ui",
+    "react",
+    "react-aria",
+    "components",
+    "design-system",
+    "accessibility"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown && node scripts/check-use-client.js",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",
+    "check:package": "publint && attw --pack . --profile esm-only"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "lucide-react": "^1.55.0",
+    "react-aria-components": "^1.22.1"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@storybook/react-vite": "10.6.1",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@typescript/native": "catalog:",
+    "axe-core": "4.14.0",
+    "jsdom": "30.1.2",
+    "publint": "0.3.25",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "storybook": "10.6.1",
+    "tsdown": "0.23.1",
+    "typescript": "catalog:",
+    "vitest": "5.0.3"
+  }
+}
