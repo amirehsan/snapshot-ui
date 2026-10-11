@@ -164,6 +164,22 @@ describe('dist/components/heading.css', () => {
   });
 });
 
+describe('src/components/link.css', () => {
+  const source = () => stripComments(read('src/components/link.css')).replace(/\s+/g, ' ');
+
+  it('breaks a long address anywhere, so a narrow screen is never pushed sideways', () => {
+    expect(blockAfter(source(), '.link {')).toContain('overflow-wrap: anywhere;');
+  });
+
+  it('treats aria-disabled like data-disabled, so a plain anchor can be switched off', () => {
+    const css = source();
+    expect(css).toContain(".link:is([data-disabled], [aria-disabled='true']) {");
+    // A disabled link keeps its 1px underline: neither hover nor press may thicken it.
+    expect(css).toContain(".link:is(:hover, [data-hovered]):not([data-disabled], [aria-disabled='true']) {");
+    expect(css).toContain(".link:is(:active, [data-pressed]):not([data-disabled], [aria-disabled='true']) {");
+  });
+});
+
 describe('src/components/badge.css', () => {
   const source = () => read('src/components/badge.css').replace(/\/\*[\s\S]*?\*\//g, '');
 

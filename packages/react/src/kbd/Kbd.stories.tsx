@@ -35,9 +35,12 @@ export const Arrows: Story = {
   ),
 };
 
-/** A key with a long name wraps instead of pushing a narrow screen sideways. */
+/** A key with a long name wraps, even an unbroken one, instead of pushing a narrow screen sideways. */
 export const LongText: Story = {
-  args: { children: 'Control Option Shift Command Return Escape Backspace Delete Tab Home End' },
+  args: {
+    children:
+      'Control Option Shift ControlOptionShiftCommandReturnEscapeBackspaceDeleteTabHomeEndPageUpPageDown',
+  },
   render: (args) => (
     <p style={{ margin: 0 }}>
       Press <Kbd {...args} /> to carry on.

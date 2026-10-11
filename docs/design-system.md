@@ -1188,7 +1188,10 @@ library draws one link and gives it the states the app left out.
   every shape.
 - **A disabled link is Dust Taupe** with the `not-allowed` cursor. It keeps its
   underline, so the word still reads as a link that is switched off, and hover
-  does nothing.
+  does nothing. React Aria marks it with `data-disabled`; a plain anchor says it
+  with `aria-disabled="true"`, as a button does, and gets the same look.
+- **A long address wraps.** It breaks anywhere, so a link whose text is one long
+  path cannot push a narrow screen sideways.
 - **An inline link is exempt from the 40px target.** WCAG 2.5.8 excepts a link
   inside a sentence, and a 40px hit area would overlap the lines above and
   below it. A link used alone as a control, such as a menu entry, takes its
@@ -1202,10 +1205,15 @@ so the library has one key, at 12px, that looks the same wherever it sits.
 
 - Slate on Bone, the app's pairing. Slate on Bone is already in the contrast
   gate and measures 4.99 in light and 6.44 in dark.
+- **The chip is a tint, not an edge.** Bone against the surface behind it
+  measures 1.03:1 on canvas in light, and in dark it is the same color as
+  raised, 1.00:1, so on those surfaces the chip has no shape of its own. The
+  Slate text carries the key: 4.99:1 in light and 6.44:1 in dark.
 - `--radius-micro`, the step the shape table gives key hints, so a key follows
   the shape axis.
-- Weight 700 with the overline tracking, and tabular figures, so a row of keys
-  such as the arrows and Enter keeps one width per key.
+- Weight 700 with the overline tracking, and tabular figures. Tabular figures
+  keep a changing number steady, and nothing more: a key is as wide as its
+  label.
 - Sofia Sans. A browser gives `kbd` a monospace face; the library sets the sans
   family back, since a key is a label and `--font-mono` is for code only.
 - The app hid its rail key from assistive technology, so the shortcut was not

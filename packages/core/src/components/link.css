@@ -13,18 +13,21 @@
     text-decoration-line: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 0.25em;
+    /* A long path or address has no break to wrap at, so it breaks anywhere
+       instead of pushing a narrow screen sideways. */
+    overflow-wrap: anywhere;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
 
   @media (hover: hover) {
-    .link:is(:hover, [data-hovered]):not([data-disabled]) {
+    .link:is(:hover, [data-hovered]):not([data-disabled], [aria-disabled='true']) {
       text-decoration-thickness: 2px;
     }
   }
 
   /* The same step as hover, since touch has no hover to show it. */
-  .link:is(:active, [data-pressed]):not([data-disabled]) {
+  .link:is(:active, [data-pressed]):not([data-disabled], [aria-disabled='true']) {
     text-decoration-thickness: 2px;
   }
 
@@ -33,8 +36,9 @@
     outline-offset: var(--focus-ring-offset);
   }
 
-  /* Switched off, but still a link: the underline stays. */
-  .link[data-disabled] {
+  /* Switched off, but still a link: the underline stays. React Aria sets
+     data-disabled; plain HTML says it with aria-disabled, as Button does. */
+  .link:is([data-disabled], [aria-disabled='true']) {
     color: var(--color-taupe);
     cursor: not-allowed;
   }

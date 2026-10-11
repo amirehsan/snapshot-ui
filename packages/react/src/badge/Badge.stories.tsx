@@ -19,7 +19,7 @@ export const Info: Story = { args: { tone: 'info', children: 'New' } };
 
 export const Success: Story = { args: { tone: 'success', children: 'Published' } };
 
-export const Error: Story = { args: { tone: 'error', children: 'Failed' } };
+export const ErrorTone: Story = { args: { tone: 'error', children: 'Failed' } };
 
 /** Tabular figures keep a column of counts lined up, whatever the digits. */
 export const Counts: Story = {
@@ -41,11 +41,11 @@ export const Counts: Story = {
   ),
 };
 
-/** A long label wraps inside its outline instead of pushing a narrow screen sideways. */
+/** A long label wraps inside its outline, even an unbroken run, instead of pushing a narrow screen sideways. */
 export const LongText: Story = {
   args: {
     tone: 'info',
     children:
-      'A label long enough to wrap onto several lines on a phone, with an unbroken run of lettersaftertheend',
+      'A label long enough to wrap onto several lines on a phone, with an unbroken run of lettersaftertheendwithnothingtobreakatsothelabelmustwrapinsidetheoutline',
   },
 };
