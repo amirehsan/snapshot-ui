@@ -109,7 +109,7 @@ jobs:
       - name: Make sure npm supports trusted publishing
         run: |
           npm --version
-          npx --yes semver@7 --range ">=11.5.1" "$(npm --version)" || npm install --global npm@^11.5.1
+          node -e "const [a, b, c] = process.argv[1].split('.').map(Number); process.exit(a > 11 || (a === 11 && (b > 5 || (b === 5 && c >= 1))) ? 0 : 1)" "$(npm --version)" || npm install --global npm@11.21.0
       - name: Publish to npm with provenance
         uses: changesets/action/publish@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
