@@ -63,6 +63,19 @@ describe('paletteFor', () => {
   });
 });
 
+describe('CONTRAST_PAIRS', () => {
+  const surfaces = ['canvas', 'lifted', 'bone', 'float', 'raised'];
+
+  // The field parts sit on any surface a form can: a page, a card, a note, a
+  // floating panel. Each text color they use is gated on all five.
+  it.each(['ink', 'slate', 'clay', 'error'])('gates %s text on every surface', (text) => {
+    const gated = CONTRAST_PAIRS.filter((pair) => pair.text === text && pair.minimum === TEXT).map(
+      (pair) => pair.ground,
+    );
+    expect(surfaces.filter((surface) => !gated.includes(surface))).toEqual([]);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 
