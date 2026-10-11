@@ -108,14 +108,17 @@
     outline-offset: var(--focus-ring-offset);
   }
 
-  .button:is(:disabled, [data-disabled]) {
+  /* A plain anchor or span says it is disabled with aria-disabled, and so does a
+     pending Button, which keeps its fill and is not drawn disabled. :where leaves
+     the rule at the weight of one class and one attribute. */
+  .button:is(:disabled, [data-disabled], :where([aria-disabled='true']:not([data-pending]))) {
     border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
     background-color: var(--color-disabled);
     color: var(--color-taupe);
     cursor: not-allowed;
   }
 
-  .button-tertiary:is(:disabled, [data-disabled]) {
+  .button-tertiary:is(:disabled, [data-disabled], :where([aria-disabled='true']:not([data-pending]))) {
     border-color: transparent;
     background-color: transparent;
   }

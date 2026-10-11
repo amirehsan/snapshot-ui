@@ -66,14 +66,18 @@ describe('IconButton', () => {
   });
 
   it('hides the icon from assistive technology', () => {
+    // An icon that is exposed to assistive technology on its own: a bare svg with a role and a name,
+    // and no `aria-hidden`. Only the wrapper can hide it, so the test fails if the wrapper stops.
     const { container } = render(
       <IconButton aria-label="Search">
-        <Search />
+        <svg role="img" aria-label="Magnifier" viewBox="0 0 24 24" />
       </IconButton>,
     );
     const icon = container.querySelector('svg');
     expect(icon).toBeInTheDocument();
-    expect(icon?.closest('[aria-hidden="true"]')).toBeInTheDocument();
+    expect(icon).not.toHaveAttribute('aria-hidden');
+    expect(container.querySelector('.icon-button-icon')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.getByRole('button')).toHaveAccessibleName('Search');
   });
 
