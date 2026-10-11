@@ -105,6 +105,22 @@ describe('type components', () => {
       const source = read(`src/components/${file}`);
       expect(source).toContain('var(--color-slate)');
       expect(source).not.toContain('--color-taupe');
+
+      if (file === 'eyebrow.css') {
+        const css = stripComments(source);
+        // The label is tracked at its own token.
+        expect(blockAfter(css, '.eyebrow {')).toContain(
+          'letter-spacing: var(--text-eyebrow--letter-spacing);',
+        );
+        // The dot is light signal orange, the attention cue. Signal orange is consent only.
+        expect(blockAfter(css, '.eyebrow::before {')).toContain(
+          'background-color: var(--color-signal-light);',
+        );
+        expect(css).not.toContain('var(--color-signal)');
+        // The inset variant keeps the dot inside the box, and it comes after the rule it overrides.
+        expect(blockAfter(css, '.eyebrow-inset::before {')).toContain('margin-inline-start: 0;');
+        expect(css.indexOf('.eyebrow-inset::before')).toBeGreaterThan(css.indexOf('.eyebrow::before'));
+      }
     },
   );
 });
@@ -114,6 +130,9 @@ describe('dist/components/heading.css', () => {
     const rule = blockAfter(read('dist/components/heading.css'), `.heading-${step} `);
     expect(rule).toContain(`font-size: var(--text-h${step});`);
     expect(rule).toContain(`line-height: var(--text-h${step}--line-height);`);
+    // The subhead has no tracking token, so it resets to normal and does not inherit.
+    const tracking = step === 4 ? 'normal' : `var(--text-h${step}--letter-spacing)`;
+    expect(rule).toContain(`letter-spacing: ${tracking};`);
     expect(rule).toContain(`font-weight: var(--text-h${step}--font-weight);`);
   });
 

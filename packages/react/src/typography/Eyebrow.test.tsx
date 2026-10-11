@@ -27,6 +27,27 @@ describe('Eyebrow', () => {
     expect(screen.getByText('Components')).toHaveAttribute('class', 'eyebrow extra');
   });
 
+  it('keeps the dot inside its box with inset, and leaves the attribute off the element', () => {
+    render(<Eyebrow inset>Components</Eyebrow>);
+    const eyebrow = screen.getByText('Components');
+    expect(eyebrow).toHaveAttribute('class', 'eyebrow eyebrow-inset');
+    expect(eyebrow).not.toHaveAttribute('inset');
+  });
+
+  it.each([undefined, false])('has no inset class when inset is %s', (inset) => {
+    render(<Eyebrow inset={inset}>Components</Eyebrow>);
+    expect(screen.getByText('Components')).toHaveAttribute('class', 'eyebrow');
+  });
+
+  it('merges a custom className after the inset class', () => {
+    render(
+      <Eyebrow inset className="extra">
+        Components
+      </Eyebrow>,
+    );
+    expect(screen.getByText('Components')).toHaveAttribute('class', 'eyebrow eyebrow-inset extra');
+  });
+
   it('forwards a ref to the element it renders', () => {
     const ref = createRef<HTMLElement>();
     render(

@@ -30,7 +30,7 @@ Body text in the body or the small step. The muted tone is slate, for secondary 
 
 ## Eyebrow
 
-The small capitalised label above a heading, with the accent dot. The dot hangs into the gutter, so the label lines up with the heading below it.
+The small capitalised label above a heading, with the accent dot. The dot hangs into the gutter, so the label lines up with the heading below it. With no gutter beside the label, `inset` keeps the dot inside the label's box. An Eyebrow is an inline-level flex box, so it sits on a line like text, and two of them can share a line. Space it from the heading with the layout, a grid or flex gap as the examples do, and not with margins.
 
 <Preview name="eyebrow-heading" />
 
@@ -72,7 +72,7 @@ Each one accepts every attribute of the element it renders, and a `className` th
 
 ### Eyebrow props
 
-<PropsTable path="../../packages/react/src/typography/Eyebrow.tsx" type="Pick<EyebrowProps, 'as'>" />
+<PropsTable path="../../packages/react/src/typography/Eyebrow.tsx" type="Pick<EyebrowProps, 'as' | 'inset'>" />
 
 </Section>
 
@@ -90,6 +90,6 @@ A Heading is a real h1 to h4 element, so the page outline is what assistive tech
 
 What keeps the type in the system.
 
-<Rules dos={['Pick the level from the page outline, then the size from the hierarchy.', 'Use one h1 per page and never skip a level on the way down.', 'Leave room beside an eyebrow: its dot hangs 14px into the gutter.']} donts={['Never pick a level for its size. Set the size instead.', 'No capitals except the eyebrow.', 'Never taupe for text a reader has to read. Muted is slate.']} />
+<Rules dos={['Pick the level from the page outline, then the size from the hierarchy.', 'Use one h1 per page and never skip a level on the way down.', 'Leave room beside an eyebrow: its dot hangs 14px into the gutter. With no gutter, set inset.']} donts={['Never pick a level for its size. Set the size instead.', 'No capitals except the eyebrow.', 'Never taupe for text a reader has to read. Muted is slate.']} />
 
 </Section>

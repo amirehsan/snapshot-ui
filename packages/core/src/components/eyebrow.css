@@ -6,7 +6,8 @@
  *
  * The dot hangs into the gutter by its own width plus the gap, so the label
  * text sits on the same left edge as the content below it. Where there is no
- * gutter beside the label, set margin-inline-start to 0 on .eyebrow::before.
+ * gutter beside the label, use eyebrow-inset, which keeps the dot inside the
+ * label's box.
  */
 @layer components {
   .eyebrow {
@@ -31,5 +32,9 @@
     margin-inline-start: calc(-1 * (6px + var(--spacing-part)));
     border-radius: var(--radius-dot);
     background-color: var(--color-signal-light);
+  }
+
+  .eyebrow-inset::before {
+    margin-inline-start: 0;
   }
 }
