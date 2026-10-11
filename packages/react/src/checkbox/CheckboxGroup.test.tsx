@@ -203,6 +203,29 @@ describe('CheckboxGroup', () => {
     expect(screen.getByRole('checkbox', { name: 'Push' })).not.toBeChecked();
   });
 
+  // A known React Aria limit, recorded in Appendix B and not worked around. In react-stately's
+  // useCheckboxGroupState, `addValue` takes an updater but `removeValue` filters the stale
+  // `selectedValues` closure and sets the result. One native reset event runs every box's reset in
+  // turn, so a box re-checked before another is unchecked is lost: here the reset ends at [] and not
+  // at ['email']. `it.fails` holds the correct expectation. When react-stately fixes removeValue this
+  // test passes, so vitest fails it ("Expect test to fail") and it asks to be made a plain `it`.
+  it.fails('is back to its default after a reset that re-checks one box and unchecks another', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <CheckboxGroup label="Notify me by" name="channels" defaultValue={['email']}>
+          {channels}
+        </CheckboxGroup>
+        <button type="reset">Reset</button>
+      </form>,
+    );
+    await user.click(screen.getByRole('checkbox', { name: 'Email' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Text message' }));
+    expect(new FormData(formOf(container)).getAll('channels')).toEqual(['sms']);
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(new FormData(formOf(container)).getAll('channels')).toEqual(['email']);
+  });
+
   it('asks for one checked box, not all of them, when it is required', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn((event: { preventDefault: () => void }) => {
@@ -292,6 +315,20 @@ describe('CheckboxGroup', () => {
     expect(screen.getByText('Pick as many as you like.')).toHaveClass('field-description');
     for (const box of screen.getAllByRole('checkbox')) expect(box).toBeInvalid();
     await expectNoA11yViolations(container);
+  });
+
+  it('shows one error line, the group, and drops an errorMessage set on a checkbox inside it', () => {
+    const { container } = render(
+      <CheckboxGroup label="Notify me by" isInvalid errorMessage="Pick at least one.">
+        <Checkbox value="email" errorMessage="Not shown inside a group.">
+          Email
+        </Checkbox>
+        <Checkbox value="sms">Text message</Checkbox>
+      </CheckboxGroup>,
+    );
+    expect(container.querySelectorAll('.field-error')).toHaveLength(1);
+    expect(screen.getByText('Pick at least one.')).toHaveClass('field-error');
+    expect(screen.queryByText('Not shown inside a group.')).not.toBeInTheDocument();
   });
 
   it('lets a checkbox in the group keep a hint of its own', () => {

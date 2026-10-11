@@ -71,6 +71,22 @@
     background-color: var(--checkbox-fill);
   }
 
+  /* A row with no text, named by aria-label, is only as wide as the box. The box
+     takes a transparent hit area of its own, 40px square and centred on it, so
+     the target is 40px wide too and the drawn box does not move. It stays inside
+     the 40px between vertical rows and the 24px between horizontal ones. The size
+     is set outright and the centre is the box's, because an inset would measure
+     from inside the border, which the browser rounds. */
+  .checkbox:not(:has(.checkbox-text)) .checkbox-box::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    translate: -50% -50%;
+  }
+
   /* The mark, hidden until the box is selected or indeterminate. The mask shape
      is the only thing the data URI draws; its stroke color is never used. */
   .checkbox-box::after {

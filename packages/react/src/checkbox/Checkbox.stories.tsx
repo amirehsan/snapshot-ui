@@ -168,6 +168,50 @@ export const LongLabel: Story = {
   },
 };
 
+/**
+ * No text, named by aria-label, as a table's row select is. The row is only as wide
+ * as the box, so the box carries a 40px square hit area of its own, centred on it:
+ * a point 9px to either side, above or below the box still presses the checkbox.
+ */
+export const Labelless: Story = {
+  args: { children: undefined, 'aria-label': 'Select row 3' },
+  // Room around the box, so the points the play function tests are inside the window.
+  decorators: [
+    (Story) => (
+      <div style={{ padding: '1rem' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const input = canvas.getByRole('checkbox', { name: 'Select row 3' });
+    const row = input.closest('label');
+    const box = row?.querySelector('.checkbox-box');
+    if (!row || !box) throw new Error('No row');
+    await expect(row.querySelector('.checkbox-text')).toBeNull();
+    // The drawn box stays 20px, and the hit area around it is 40px square.
+    const area = getComputedStyle(box, '::before');
+    await expect(box.getBoundingClientRect().width).toBe(20);
+    await expect(area.width).toBe('40px');
+    await expect(area.height).toBe('40px');
+    const edges = box.getBoundingClientRect();
+    const middle = { x: edges.left + edges.width / 2, y: edges.top + edges.height / 2 };
+    const near = [
+      { x: edges.left - 9, y: middle.y },
+      { x: edges.right + 9, y: middle.y },
+      { x: middle.x, y: edges.top - 9 },
+      { x: middle.x, y: edges.bottom + 9 },
+    ];
+    for (const point of near) {
+      const hit = document.elementFromPoint(point.x, point.y);
+      await expect(hit?.closest('label')).toBe(row);
+    }
+    // The area stops at 40px, so it leaves the room between neighbouring rows alone.
+    const beyond = document.elementFromPoint(edges.left - 11, middle.y);
+    await expect(beyond?.closest('label')).not.toBe(row);
+  },
+};
+
 /** Keyboard focus draws the ring around the box, outside it. */
 export const Focused: Story = {
   play: async ({ canvas, userEvent }) => {
