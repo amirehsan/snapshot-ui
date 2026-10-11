@@ -1,0 +1,17 @@
+packages:
+  - 'packages/*'
+  - 'apps/*'
+
+# TypeScript 7 is native and has no JavaScript API yet. typescript-eslint and
+# other tools import `typescript` and need the 6.0 API, so the two run side by
+# side, as the TypeScript 7.0 release notes recommend: `tsc` comes from
+# @typescript/native, the API from the `typescript` name.
+catalog:
+  '@typescript/native': 'npm:typescript@^7.0.2'
+  typescript: 'npm:@typescript/typescript6@^6.0.2'
+
+# pnpm 10 blocks dependency install scripts unless they are listed.
+onlyBuiltDependencies:
+  - esbuild
+  - '@parcel/watcher'
+  - sharp

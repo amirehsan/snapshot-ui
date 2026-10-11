@@ -1,0 +1,13 @@
+**/dist
+**/storybook-static
+**/.next
+**/.source
+**/coverage
+**/playwright-report
+**/test-results
+**/__screenshots__
+**/*.md
+**/*.mdx
+docs/mockups
+pnpm-lock.yaml
+.superpowers
