@@ -7,6 +7,14 @@ const PAGE = '/docs/components/button';
 const focusInRail = (page: Page): Promise<boolean> =>
   page.evaluate(() => document.activeElement?.closest('#rail') != null);
 
+/** Whether the drawer is shut: the page is not held still and the menu button says so. */
+const expectDrawerClosed = async (page: Page): Promise<void> => {
+  await expect(page.locator('html')).not.toHaveAttribute('data-drawer', 'open');
+  await expect(page.locator('.workspace')).not.toHaveAttribute('inert');
+  await expect(page.getByRole('button', { name: 'Open the menu' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toHaveCount(0);
+};
+
 /** Opens a page and waits for hydration, so the keys and clicks a test sends are not lost to a page still booting. */
 const visit = async (page: Page, url = PAGE): Promise<void> => {
   await page.goto(url);
@@ -183,6 +191,44 @@ test('choosing the page that is already open closes the drawer', async ({ page }
   await expect(page.locator('html')).not.toHaveAttribute('data-drawer', 'open');
   await expect(page).toHaveURL(/\/docs\/components\/button$/);
   await expect(menu).toBeFocused();
+});
+
+test('Back to the page the drawer was opened on finds the drawer closed', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await visit(page);
+  await page.getByRole('button', { name: 'Open the menu' }).click();
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
+  await page.getByRole('link', { name: 'Spinner' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Spinner' })).toBeVisible();
+  await expectDrawerClosed(page);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/docs\/components\/button$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Button' })).toBeVisible();
+  await expectDrawerClosed(page);
+});
+
+test('Back and Forward with the drawer open leave it closed', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await visit(page, '/docs');
+  // Two pages in the history, reached by a link and not a reload, so the shell keeps its state.
+  await page.getByRole('button', { name: 'Open the menu' }).click();
+  await page.getByRole('link', { name: 'Button' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Button' })).toBeVisible();
+  await expectDrawerClosed(page);
+
+  await page.getByRole('button', { name: 'Open the menu' }).click();
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
+  // The browser's own Back, with nothing clicked in the page.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/docs$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Introduction' })).toBeVisible();
+  await expectDrawerClosed(page);
+
+  await page.goForward();
+  await expect(page).toHaveURL(/\/docs\/components\/button$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Button' })).toBeVisible();
+  await expectDrawerClosed(page);
 });
 
 test('a collapsed rail chosen on a wide screen leaves the drawer with its labels', async ({ page }) => {

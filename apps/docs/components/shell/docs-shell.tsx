@@ -28,9 +28,16 @@ export function DocsShell({
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
   const collapsed = useRailCollapsed();
-  // The drawer belongs to the page it was opened on, so navigating closes it.
-  const [drawerPath, setDrawerPath] = useState<string | null>(null);
-  const drawerOpen = drawerPath === pathname;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  // The drawer belongs to the page it was opened on, so any navigation closes it: a link, or the
+  // browser's Back and Forward. Comparing paths while rendering would reopen it on a return to
+  // that page, so the state is reset when the path changes (React's "adjusting state while
+  // rendering"; an effect would paint the stale drawer first).
+  const [shownPath, setShownPath] = useState(pathname);
+  if (shownPath !== pathname) {
+    setShownPath(pathname);
+    setDrawerOpen(false);
+  }
 
   // The open drawer is a modal dialog: it takes focus, holds the page still and
   // closes on Escape, and everything behind it is inert (see the render below).
@@ -47,7 +54,7 @@ export function DocsShell({
       // Search is a dialog above the drawer: it handles its own keys, Escape included.
       if (event.defaultPrevented || document.querySelector('dialog[open]')) return;
       if (event.key === 'Escape') {
-        setDrawerPath(null);
+        setDrawerOpen(false);
       } else if (event.key === 'Tab') {
         wrapTab(event, '#rail');
       }
@@ -55,7 +62,7 @@ export function DocsShell({
     // Past 1024px the rail is no longer a drawer, so a window widened with it open closes it.
     const wide = matchMedia('(width >= 1024px)');
     const onWiden = (): void => {
-      if (wide.matches) setDrawerPath(null);
+      if (wide.matches) setDrawerOpen(false);
     };
     document.addEventListener('keydown', onKey);
     wide.addEventListener('change', onWiden);
@@ -86,17 +93,17 @@ export function DocsShell({
     () => ({
       drawerOpen,
       openDrawer: () => {
-        setDrawerPath(pathname);
+        setDrawerOpen(true);
       },
       openSearch: () => {
         setSearchOpen(true);
       },
     }),
-    [pathname, drawerOpen],
+    [drawerOpen],
   );
 
   const closeDrawer = (): void => {
-    setDrawerPath(null);
+    setDrawerOpen(false);
   };
 
   const toggleCollapsed = (): void => {
