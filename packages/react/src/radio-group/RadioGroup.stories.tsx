@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
+import { Link } from '../link/Link';
 import { Radio } from './Radio';
 import { RadioGroup } from './RadioGroup';
 
@@ -314,6 +315,32 @@ export const FocusedUnselected: Story = {
     await expect(getComputedStyle(row).outlineStyle).toBe('solid');
     await expect(getComputedStyle(row).outlineColor).toBe(tokenColor('--focus-ring-color'));
     await expect(getComputedStyle(row).outlineOffset).toBe('2px');
+  },
+};
+
+/**
+ * A link in a row's label is a tab stop of its own. Focused by keyboard it draws
+ * its own ring, and the row draws none: the row rings only for its own radio.
+ */
+export const LinkInLabel: Story = {
+  tags: ['no-visual'],
+  render: (args) => (
+    <RadioGroup {...args}>
+      <Radio value="weekly">
+        Weekly, like the <Link href="#sample">sample issue</Link>
+      </Radio>
+      <Radio value="monthly">Monthly</Radio>
+    </RadioGroup>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.tab();
+    const radio = canvas.getByRole('radio', { name: 'Weekly, like the sample issue' });
+    await expect(radio).toHaveFocus();
+    await userEvent.tab();
+    const link = canvas.getByRole('link', { name: 'sample issue' });
+    await expect(link).toHaveFocus();
+    await expect(getComputedStyle(rowOf(radio)).outlineStyle).toBe('none');
+    await expect(getComputedStyle(link).outlineStyle).toBe('solid');
   },
 };
 

@@ -8,6 +8,9 @@ const components = readdirSync(new URL('../src/components', import.meta.url)).fi
 
 const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 
+/** CSS with its whitespace closed up, so a selector that Prettier breaks over lines reads as one line. */
+const closeUp = (css) => css.replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
+
 /**
  * An `outline` or `outline-color` declaration that reads ink, in CSS without
  * comments. The lookbehind keeps `.badge-outline` and `--outline` out, the
@@ -467,7 +470,7 @@ describe('src/components/checkbox.css', () => {
   // The rules without their comments, which quote selectors of their own.
   const rules = () => read('src/components/checkbox.css').replace(/\/\*[\s\S]*?\*\//g, '');
   const SELECTED =
-    '.checkbox:is([data-selected], :has(:checked), [data-indeterminate], :has(:indeterminate)) {';
+    '.checkbox:is([data-selected], :where(:has(input:checked)), [data-indeterminate], :where(:has(input:indeterminate))) {';
 
   it('draws the mark with a mask over the canvas color, not an image with a color of its own', () => {
     const source = rules();
@@ -479,11 +482,11 @@ describe('src/components/checkbox.css', () => {
   });
 
   it('orders the states hover, selected, invalid and disabled, so each outranks the one before', () => {
-    const source = rules();
+    const source = closeUp(rules());
     const hover = source.indexOf('.checkbox:where(:hover');
     const selected = source.indexOf(SELECTED);
     const invalid = source.indexOf('.checkbox[data-invalid] {');
-    const disabled = source.indexOf('.checkbox:is(:has(:disabled), [data-disabled]) {');
+    const disabled = source.indexOf('.checkbox:is(:where(:has(input:disabled)), [data-disabled]) {');
     expect(hover).toBeGreaterThan(-1);
     expect(selected).toBeGreaterThan(hover);
     expect(invalid).toBeGreaterThan(selected);
@@ -525,11 +528,12 @@ describe('src/components/checkbox.css', () => {
 
 describe('src/components/radio.css', () => {
   // The rules without their comments, which quote selectors of their own.
-  const rules = () => read('src/components/radio.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  // Closed up, so a selector Prettier breaks over lines is found as one.
+  const rules = () => closeUp(read('src/components/radio.css').replace(/\/\*[\s\S]*?\*\//g, ''));
   // Every state also matches the native twin, so plain HTML draws the same row.
-  const SELECTED = ':is([data-selected], :has(:checked))';
-  const FOCUSED = ':is([data-focus-visible], :has(:focus-visible))';
-  const DISABLED = ':is([data-disabled], :has(:disabled))';
+  const SELECTED = ':is([data-selected], :where(:has(input:checked)))';
+  const FOCUSED = ':is([data-focus-visible], :where(:has(input:focus-visible)))';
+  const DISABLED = ':is([data-disabled], :where(:has(input:disabled)))';
 
   it('puts the error edge on every row of an invalid group', () => {
     const invalid = blockAfter(rules(), '.field[data-invalid] .radio {');
@@ -590,14 +594,12 @@ describe('src/components/radio.css', () => {
       expect(source, selector).toContain(selector);
     }
     // The :not() lists of hover and pressed leave out the same three kinds of row, twins included.
-    // Prettier breaks the long list over lines, so the whitespace is closed up first.
-    const flat = source.replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
     const excluded =
-      ':not([data-selected], :has(:checked), [data-disabled], :has(:disabled), [data-readonly]) {';
-    expect(flat.split(excluded)).toHaveLength(3);
+      ':not([data-selected], :where(:has(input:checked)), [data-disabled], :where(:has(input:disabled)), [data-readonly]) {';
+    expect(source.split(excluded)).toHaveLength(3);
     // No selector keys on the data attribute alone: a row from plain HTML carries none.
     expect(source).not.toMatch(/\.radio\[data-(?:selected|focus-visible|disabled)\]/);
-    expect(flat).not.toContain(':not([data-selected], [data-disabled]');
+    expect(source).not.toContain(':not([data-selected], [data-disabled]');
   });
 
   it('keeps the states in the order that carries their precedence: selected, focus, disabled, invalid', () => {
@@ -750,9 +752,10 @@ describe('src/components/card.css', () => {
 
 describe('src/components/segmented.css', () => {
   // The rules without their comments, which quote selectors of their own.
-  const rules = () => read('src/components/segmented.css').replace(/\/\*[\s\S]*?\*\//g, '');
-  const SELECTED = ':is([data-selected], :has(:checked))';
-  const FOCUSED = ':is([data-focus-visible], :has(:focus-visible))';
+  // Closed up, so a selector Prettier breaks over lines is found as one.
+  const rules = () => closeUp(read('src/components/segmented.css').replace(/\/\*[\s\S]*?\*\//g, ''));
+  const SELECTED = ':is([data-selected], :where(:has(input:checked)))';
+  const FOCUSED = ':is([data-focus-visible], :where(:has(input:focus-visible)))';
 
   it('declares the invalid edge after the changed one, and both after the disabled one', () => {
     const source = rules();
@@ -820,7 +823,9 @@ describe('src/components/segmented.css', () => {
     expect(blockAfter(source, '.segmented-option[data-readonly] {')).toContain('cursor: default;');
     // After the chosen fill, before the disabled rule: a disabled option is still not-allowed.
     expect(readOnly).toBeGreaterThan(source.indexOf(`.segmented-option${SELECTED} {`));
-    expect(readOnly).toBeLessThan(source.indexOf('.segmented-option:is([data-disabled], :has(:disabled)) {'));
+    expect(readOnly).toBeLessThan(
+      source.indexOf('.segmented-option:is([data-disabled], :where(:has(input:disabled))) {'),
+    );
   });
 
   it('keeps every option at least 40px wide, so a one-glyph label is still a target', () => {
@@ -849,6 +854,30 @@ describe('src/components/segmented.css', () => {
     expect(forced).toContain('background-color: GrayText;');
   });
 });
+
+describe.each(['checkbox.css', 'radio.css', 'segmented.css'])(
+  'src/components/%s, read from plain HTML',
+  (file) => {
+    const source = () => closeUp(stripComments(read(`src/components/${file}`)));
+
+    it('reads each native state from its own input, so a focused link in the label never rings the control', () => {
+      const css = source();
+      for (const state of ['checked', 'disabled', 'focus-visible', 'indeterminate']) {
+        expect(css, state).not.toContain(`:has(:${state})`);
+      }
+      expect(css).toContain(':has(input:focus-visible)');
+    });
+
+    it('weighs each native test as nothing, so naming the input moves no state past another', () => {
+      // The data attribute beside it carries the weight, as it did before the input was named.
+      const css = source();
+      const named = css.match(/:has\(input:[\w-]+\)/g) ?? [];
+      const weightless = css.match(/:where\(:has\(input:[\w-]+\)\)/g) ?? [];
+      expect(named.length).toBeGreaterThan(0);
+      expect(weightless).toHaveLength(named.length);
+    });
+  },
+);
 
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');

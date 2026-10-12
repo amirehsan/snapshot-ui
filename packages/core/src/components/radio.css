@@ -5,6 +5,10 @@
  * item, and its ring holds a check, so color is never the only signal.
  *
  * Each state only sets the --radio-* properties; the row and its dot read them.
+ * Markup without React Aria is read from the input the row holds, and the input
+ * is named, as in :has(input:focus-visible), so a link or a button in the label
+ * never lights the row's ring or state. That test sits in :where(), so it
+ * weighs no more than the data attribute beside it.
  * A group is a field: its root carries `field` and, as they apply,
  * `data-changed` and `data-invalid`. Invalid puts the error edge on every row.
  * Changed draws nothing here: a choice has no control edge to recolor, so the
@@ -112,9 +116,9 @@
   @media (hover: hover) {
     .radio:is(:hover, [data-hovered]):not(
         [data-selected],
-        :has(:checked),
+        :where(:has(input:checked)),
         [data-disabled],
-        :has(:disabled),
+        :where(:has(input:disabled)),
         [data-readonly]
       ) {
       --radio-bg: color-mix(in srgb, var(--color-ink) 5%, transparent);
@@ -125,16 +129,16 @@
   /* Pressed shows the same wash as hover, since touch has no hover to show it. */
   .radio:is(:active, [data-pressed]):not(
       [data-selected],
-      :has(:checked),
+      :where(:has(input:checked)),
       [data-disabled],
-      :has(:disabled),
+      :where(:has(input:disabled)),
       [data-readonly]
     ) {
     --radio-bg: color-mix(in srgb, var(--color-ink) 5%, transparent);
     --radio-ring: color-mix(in srgb, var(--color-ink) 70%, transparent);
   }
 
-  .radio:is([data-selected], :has(:checked)) {
+  .radio:is([data-selected], :where(:has(input:checked))) {
     --radio-bg: var(--color-ink);
     --radio-fg: var(--color-canvas);
     --radio-ring: var(--color-canvas);
@@ -143,7 +147,7 @@
   }
 
   /* The ring sits outside the row, where ink still reads against the page. */
-  .radio:is([data-focus-visible], :has(:focus-visible)) {
+  .radio:is([data-focus-visible], :where(:has(input:focus-visible))) {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
@@ -151,7 +155,10 @@
   /* On the ink fill the ring inverts to the canvas color and sits inside the
      row, 4px in from the edge, so ink shows on both sides of it. Focus and
      selection move together on a radio, so this is the usual keyboard state. */
-  .radio:is([data-selected], :has(:checked)):is([data-focus-visible], :has(:focus-visible)) {
+  .radio:is([data-selected], :where(:has(input:checked))):is(
+      [data-focus-visible],
+      :where(:has(input:focus-visible))
+    ) {
     outline-color: var(--color-canvas);
     outline-offset: calc(var(--focus-ring-offset) * -2);
   }
@@ -164,13 +171,13 @@
   /* Taupe text and a faint ring, as a disabled Button and Input are. The
      choice of a disabled group is still information, so a selected row keeps
      its check at the boundary strength, on the disabled fill. */
-  .radio:is([data-disabled], :has(:disabled)) {
+  .radio:is([data-disabled], :where(:has(input:disabled))) {
     --radio-fg: var(--color-taupe);
     --radio-ring: color-mix(in srgb, var(--color-ink) 15%, transparent);
     cursor: not-allowed;
   }
 
-  .radio:is([data-disabled], :has(:disabled)):is([data-selected], :has(:checked)) {
+  .radio:is([data-disabled], :where(:has(input:disabled))):is([data-selected], :where(:has(input:checked))) {
     --radio-bg: var(--color-disabled);
     --radio-ring: var(--color-boundary);
     --radio-glyph: var(--color-boundary);
@@ -190,11 +197,11 @@
      disabled checkbox is: its ring, its check and its label, chosen or not,
      so it does not read as an enabled one. */
   @media (forced-colors: active) {
-    .radio:is([data-selected], :has(:checked)) {
+    .radio:is([data-selected], :where(:has(input:checked))) {
       --radio-glyph: CanvasText;
     }
 
-    .radio:is([data-disabled], :has(:disabled)) {
+    .radio:is([data-disabled], :where(:has(input:disabled))) {
       --radio-fg: GrayText;
       --radio-ring: GrayText;
     }
@@ -202,7 +209,10 @@
     /* The disabled, chosen rule outside this block weighs three selectors and
        sets the ring and the check, so this one matches its weight and follows
        it. */
-    .radio:is([data-disabled], :has(:disabled)):is([data-selected], :has(:checked)) {
+    .radio:is([data-disabled], :where(:has(input:disabled))):is(
+        [data-selected],
+        :where(:has(input:checked))
+      ) {
       --radio-ring: GrayText;
       --radio-glyph: GrayText;
     }
