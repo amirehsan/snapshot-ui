@@ -559,6 +559,74 @@ describe('src/components/switch.css', () => {
   });
 });
 
+describe('src/components/segmented.css', () => {
+  // The rules without their comments, which quote selectors of their own.
+  const rules = () => read('src/components/segmented.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const SELECTED = ':is([data-selected], :has(:checked))';
+  const FOCUSED = ':is([data-focus-visible], :has(:focus-visible))';
+
+  it('declares the invalid edge after the changed one, and both after the disabled one', () => {
+    const source = rules();
+    const disabled = source.indexOf('.segmented[data-disabled] .segmented-track');
+    const changed = source.indexOf('.segmented[data-changed] .segmented-track');
+    const invalid = source.indexOf('.segmented[data-invalid] .segmented-track');
+    expect(disabled).toBeGreaterThan(-1);
+    expect(changed).toBeGreaterThan(disabled);
+    expect(invalid).toBeGreaterThan(changed);
+  });
+
+  it('sets the track height to 40px of option and 4px each side, so a firmer edge moves nothing', () => {
+    const source = rules();
+    const track = blockAfter(source, '.segmented-track {');
+    expect(track).toContain('--segmented-option-height: 2.5rem;');
+    expect(track).toContain('height: calc(var(--segmented-option-height) + 0.5rem);');
+    expect(track).toContain('border: 1px solid var(--color-boundary);');
+    // The firmer edge is a width only: the track's height never reads it.
+    for (const state of ['changed', 'invalid']) {
+      const edge = blockAfter(source, `.segmented[data-${state}] .segmented-track`);
+      expect(edge).toContain('border-width: 1.5px;');
+      expect(edge).not.toContain('height');
+    }
+    // Stacked, the track is as tall as its rows.
+    expect(blockAfter(source, '.segmented[data-stacked] .segmented-track')).toContain('height: auto;');
+  });
+
+  it('turns every option to 40px when it stacks, in both sizes', () => {
+    const source = rules();
+    const stacked = blockAfter(source, '.segmented[data-stacked] .segmented-track');
+    expect(stacked).toContain('--segmented-option-height: 2.5rem;');
+    // A pill's corner is half the height, which on a column is a blob, so a stacked track takes the surface step.
+    expect(stacked).toContain('--segmented-radius: var(--radius-surface);');
+    expect(blockAfter(source, '.segmented-sm .segmented-track')).toContain(
+      '--segmented-option-height: 2rem;',
+    );
+    // The compact option reaches its 40px hit area only while it sits in a row.
+    expect(source).toContain('.segmented-sm:not([data-stacked]) .segmented-option::before');
+  });
+
+  it('fills the selected option with ink and inverts its focus ring to the canvas color', () => {
+    const source = rules();
+    expect(blockAfter(source, `.segmented-option${SELECTED} {`)).toContain(
+      'background-color: var(--color-ink);',
+    );
+    const ring = blockAfter(source, `.segmented-option${SELECTED}${FOCUSED} {`);
+    expect(ring).toContain('outline-color: var(--color-canvas);');
+    expect(ring).toMatch(/outline-offset: calc\(-1 \* /);
+    // The standard ring, for every other option, is the token ring outside the pill.
+    const standard = blockAfter(source, `.segmented-option${FOCUSED} {`);
+    expect(standard).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(standard).toContain('outline-offset: var(--focus-ring-offset);');
+  });
+
+  it('draws hover only where hover exists, and before the selected fill so selection wins', () => {
+    const source = rules();
+    const media = source.indexOf('@media (hover: hover)');
+    expect(media).toBeGreaterThan(-1);
+    expect(source.indexOf(':hover')).toBeGreaterThan(media);
+    expect(source.indexOf(`.segmented-option${SELECTED} {`)).toBeGreaterThan(media);
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

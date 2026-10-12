@@ -1,6 +1,14 @@
 'use client';
 
-import { Eyebrow, IconButton, Input, Switch, TextField } from '@snapshot-ui/react';
+import {
+  Eyebrow,
+  IconButton,
+  Input,
+  SegmentedControl,
+  SegmentedControlItem,
+  Switch,
+  TextField,
+} from '@snapshot-ui/react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
@@ -265,44 +273,19 @@ export function HomePage(): ReactElement {
             </div>
             <div className="shape-switch">
               <span className="type-small muted">Corners</span>
-              <div className="segmented segmented-small" role="radiogroup" aria-label="Corners">
-                <label className="segmented-option">
-                  <input
-                    type="radio"
-                    name="shape"
-                    value="rounded"
-                    checked={mounted && shape === 'rounded'}
-                    onChange={() => {
-                      changeShape('rounded');
-                    }}
-                  />
-                  Rounded
-                </label>
-                <label className="segmented-option">
-                  <input
-                    type="radio"
-                    name="shape"
-                    value="soft"
-                    checked={mounted && shape === 'soft'}
-                    onChange={() => {
-                      changeShape('soft');
-                    }}
-                  />
-                  Soft
-                </label>
-                <label className="segmented-option">
-                  <input
-                    type="radio"
-                    name="shape"
-                    value="square"
-                    checked={mounted && shape === 'square'}
-                    onChange={() => {
-                      changeShape('square');
-                    }}
-                  />
-                  Square
-                </label>
-              </div>
+              <SegmentedControl
+                aria-label="Corners"
+                name="shape"
+                size="sm"
+                value={mounted ? shape : null}
+                onChange={(next) => {
+                  changeShape(next as Shape);
+                }}
+              >
+                <SegmentedControlItem value="rounded">Rounded</SegmentedControlItem>
+                <SegmentedControlItem value="soft">Soft</SegmentedControlItem>
+                <SegmentedControlItem value="square">Square</SegmentedControlItem>
+              </SegmentedControl>
             </div>
           </div>
         </section>
@@ -354,23 +337,11 @@ export function HomePage(): ReactElement {
                 defaultValue="Northwind Studio"
                 isChanged
               />
-              <div className="field">
-                <span className="field-label">Theme</span>
-                <div className="segmented" role="radiogroup" aria-label="Theme">
-                  <label className="segmented-option">
-                    <input type="radio" name="demo-theme" />
-                    Light
-                  </label>
-                  <label className="segmented-option">
-                    <input type="radio" name="demo-theme" />
-                    Dark
-                  </label>
-                  <label className="segmented-option">
-                    <input type="radio" name="demo-theme" defaultChecked />
-                    System
-                  </label>
-                </div>
-              </div>
+              <SegmentedControl label="Theme" name="demo-theme" defaultValue="system">
+                <SegmentedControlItem value="light">Light</SegmentedControlItem>
+                <SegmentedControlItem value="dark">Dark</SegmentedControlItem>
+                <SegmentedControlItem value="system">System</SegmentedControlItem>
+              </SegmentedControl>
               <div className="row push-end">
                 <button className="button button-tertiary" type="button">
                   Discard

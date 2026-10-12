@@ -1953,3 +1953,147 @@ browser's `on` without one) under its `name` only while it is on, and is left
 out of the form while disabled. The app's two-option text value, its `Yes|No`
 pair and its list of fields that read as on when blank are the app's own logic
 and not the library's.
+
+## SegmentedControl
+
+The document specifies no segmented control. Tabs (see "Still missing" in
+Appendix A) are the same row of pills with no value, and the source has one
+for choosing a value. The library keeps the source's control and changes a few
+things, each recorded here.
+
+- **Shape.** The track is a pill with the Raised fill and the boundary edge:
+  `--radius-pill`, which the shape table already lists for segmented tracks, so
+  it follows the shape axis. The options sit inside it at 4px, and their corner
+  is the track's less that 4px, so the two stay concentric in every shape: pills
+  in a pill, 8px inside Soft's 12px, square inside square. The source drew the
+  track with a fixed 24px corner, which is the pill's corner at this height, so
+  Rounded looks the same.
+- **The options are 40px tall.** The source's comment says 40px (48 less 4px of
+  padding each side) and its rule gives 38, because the 1px edge was left out of
+  the sum. The library sets the option to 40px and the track to 48px, the height
+  of the input beside it. The track's height is set and not left to add up. The
+  firmer 1.5px edge of a changed or invalid control is a width the browser may
+  snap to a whole device pixel, so it draws 1px on most screens and 1.5px on a
+  2x screen, and a height that depended on it would jump with the state. The
+  options stay centered, and the edge is all that changes.
+- **The edge** is `--color-boundary`, 1px. The source dropped it to 40%, which
+  measures 2.58:1 on white ("Four colors added"). Hover does not touch it.
+- **Labels** are the action step (16px, weight 500) in slate. The options are
+  sized by their labels, and the room left over is shared out equally. A label
+  too long for its option is cut with an ellipsis, a last resort: the control
+  stacks before that happens. Labels have a line a little taller than the step,
+  so an ellipsis never clips a descender.
+- **The chosen option is an ink fill with canvas text**, the shape the rail's
+  current link uses. canvas on ink measures 16.25:1 in light and 19.31 in dark,
+  and is in the contrast gate already (the primary button's label).
+- **Hover is a 5% ink wash** and the label turns ink, only where hover exists
+  and never on the chosen option, a disabled one or a touch screen. The wash
+  measures 1.11 against the fill in light and 1.16 in dark: a cue, not a
+  boundary, and not gated. The label turns ink because the source's did; slate
+  would have held 4.96 and 5.84 on the wash.
+
+**Focus on the chosen option is an inset ring in the canvas color.** Focus and
+selection move together on a radio group, so the focused option is nearly always
+the chosen one, and the source drew an ink ring inside an ink fill, which
+measures 1:1. The ring inverts here, as the rail's current link does: canvas on
+ink is gated at 3:1 ("the inverted focus ring on an ink fill") and measures
+16.25 and 19.31. It sits 4px inside the pill, as far in as the standard ring
+sits out. Every other option takes the standard ring, 2px outside the pill,
+which lands on the track's own edge and reads as a ring there.
+
+**A control stacks when its row does not fit.** The options are all in one row or
+all in a column, never some of each. The component compares the row's natural
+width with the room the control has, and a row wider than its room, by more than
+half a pixel (the width a row can overrun by and still paint inside), stacks.
+Stacked, every option is 40px tall in both sizes, the labels start at the left
+and the track takes the surface corner, 24px in Rounded, with the options 4px
+inside it at 20px. A pill's corner is half the track's height, which on a column
+is a blob. The component sets `data-stacked` on the root and the stylesheet does
+the rest.
+
+How the row is measured is the part worth recording, because a naive version
+flickers. Two elements are read and nothing is copied. The track is
+`width: max-content` and at least as wide as its root, so a row that does not fit
+makes the track wider than the root, and no copy of the options is needed to
+learn the natural width. The room is a zero-height marker as wide as the root.
+It is the marker that a `ResizeObserver` watches, not the root, because stacking
+changes the root's height, and a size change that an observer's own callback
+causes in the element it watches raises the browser's "loop completed with
+undelivered notifications" error. A stacked track is a column, so its width says
+nothing about the row; to find out whether the row fits again, the component
+takes `data-stacked` off, reads both widths, and puts the answer back, which is
+one layout inside the observer's callback and never paints the in-between state.
+It looks again only when something that can change the answer happened: the room
+changed, a label changed (a `MutationObserver` on the track), a web font arrived
+(the row measured in a fallback face is the wrong width), or `size` changed.
+Choosing an option, hovering and moving focus change none of them. Where a width
+cannot be read, as in a hidden panel, the arrangement stays as it is. The source
+measured with off-screen copies of the labels; reading the real track needs no
+copy and cannot disagree with it.
+
+**The room is the root's own width.** The root is a field, so like every field
+it fills the column it is in, up to `--container-field`. A control placed in a
+parent that sizes its children to their content, a flex row or a centered grid,
+takes its natural width and has no room to compare with, so it never stacks and
+its row overruns the parent instead. A control that must stack there needs a
+width (`flex: 1` in a row, or a `width` in a grid). The source measured the room
+beside the control's neighbors, which is more than a field's column asks for.
+The compact controls in the docs header never need it: they sit in a row that
+wraps.
+
+**The compact size, `sm`,** is for a toolbar or a header, where the 48px track
+is too tall. It draws the track at 40px and the options at 32px, 14px type, with
+2px between them, and each option is still hit at 40px: a pseudo-element
+reaches over the 4px of padding and edge, which is all there is between the
+control and what is next to it, so nothing shifts. It is a size prop and not a
+docs-only rule because the docs header and the homepage's Corners switch both use
+it. A stacked compact control uses 40px rows, so the hit areas of neighboring
+rows never overlap.
+
+**Disabled had no look in the source.** A disabled control is recessed, as every
+field is: the disabled fill, an ink edge at 15%, and taupe labels, with the
+not-allowed cursor. The chosen option keeps its place as a taupe pill with the
+disabled fill for its label, so a reader can still tell which value is set; in
+the source's switch a disabled control was the same whether on or off.
+Disabled is outside the 3:1 asked of a boundary and the 4.5:1 asked of text:
+
+| Disabled | Light | Dark |
+| --- | --- | --- |
+| Taupe label on the disabled fill | 1.44 | 3.81 |
+| Chosen pill on the disabled fill, and its label on the pill | 1.44 | 3.81 |
+| Edge, ink at 15%, on the disabled fill | 1.37 | 1.59 |
+
+**Changed and invalid are edges on the track, keyed on the field's root.** The
+source's rule looked for the tracked input inside the segmented group, and the
+input was the group's sibling, so the track never drew its orange edge and only
+the chip showed. The root carries `data-changed` and, from React Aria,
+`data-invalid`, and the track draws the edge for them, as an input does: light
+signal orange for changed, the error color for invalid, both 1.5px, and the
+invalid rule comes after the changed one so a control that is both shows the
+error edge. The chip leaves while the control is invalid by any cause and is read
+with the control while it is changed, through the same label-row helper as
+TextField.
+
+| Edge | Lowest on the five surfaces, light | Dark |
+| --- | --- | --- |
+| Boundary, over the Raised fill | 3.06 | 4.93 |
+| Error (invalid) | 6.58 | 5.06 |
+| Light Signal Orange (changed) | 2.53 | 5.35 |
+
+The boundary and the label colors are gated already (slate on Raised measures
+5.49 and 6.44). Light Signal Orange is under the 3:1 a boundary asks on every
+light surface, the document's own choice of attention cue, recorded and not
+gated, and never alone: the clay chip carries the word.
+
+**The options are always laid out in a row.** React Aria's `orientation` is not
+a prop here. The arrow keys serve both axes of a radio group, so a stacked
+control answers Up and Down as well as Left and Right, and the group stays
+`aria-orientation="horizontal"` for the one arrangement it was drawn in. A
+control needs a visible label or an `aria-label`, and the types ask for one.
+Nothing animates, so there is no reduced-motion block; the docs site keeps its
+own corner transition.
+
+No pairing was added to the contrast gate: every color the control draws is
+gated already (slate and ink on Raised, canvas on ink, the boundary, the
+inverted ring, error) or recorded above (the hover wash, Light Signal Orange in
+light, the disabled look).

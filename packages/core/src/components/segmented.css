@@ -1,0 +1,234 @@
+/*
+ * The segmented control, derived in docs/design-system.md
+ * ("SegmentedControl"): a field whose control is a pill track holding a few
+ * short options, one of them filled with ink.
+ *
+ * The root is a field (field.css), so it carries data-changed and
+ * data-invalid, and the track draws the edge for them. React Aria draws the
+ * options as radios: .segmented-item is the wrapper React Aria adds, and
+ * .segmented-option is the label a person sees and presses.
+ *
+ * Stacking: the row of options is all or nothing. A control whose row does
+ * not fit its room stacks one option per row, and the React component sets
+ * data-stacked on the root to say so. Nothing here wraps an option onto a
+ * second row of its own.
+ */
+@layer components {
+  /* Positioned, so the room marker below can sit in it without taking a grid row. */
+  .segmented {
+    position: relative;
+  }
+
+  /*
+   * A zero-height marker as wide as the root. The React component watches it
+   * to learn how much room the control has. It is watched instead of the root
+   * because stacking changes the root's height, and a size change that an
+   * observer's own callback causes in the element it watches is what raises
+   * the browser's "loop completed with undelivered notifications" error.
+   */
+  .segmented-room {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /*
+   * A row of 40px options is 48px tall, the height of the field's input: 40px
+   * of option and 4px each side, which is 3px of padding and the 1px edge.
+   * The height is set, not left to add up, because the firmer 1.5px edge a
+   * changed or invalid control draws is a width the browser may snap to a whole
+   * device pixel, and a height that depended on it would jump with the state.
+   * The options stay centered, so the edge changes and nothing else moves.
+   *
+   * Its width is its natural one-row width, and at least the room it has. A
+   * row that does not fit therefore makes the track wider than its root, and
+   * that is how the component sees it: it compares the track with the room.
+   */
+  .segmented-track {
+    --segmented-option-height: 2.5rem;
+    --segmented-radius: var(--radius-pill);
+
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    width: max-content;
+    min-width: 100%;
+    height: calc(var(--segmented-option-height) + 0.5rem);
+    padding: 0.1875rem;
+    border: 1px solid var(--color-boundary);
+    border-radius: var(--segmented-radius);
+    background-color: var(--color-raised);
+  }
+
+  /* The wrapper React Aria puts around each radio. It grows with the room left over. */
+  .segmented-item {
+    display: flex;
+    flex: 1 0 auto;
+    min-width: 0;
+  }
+
+  .segmented-option {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: var(--segmented-option-height);
+    margin: 0;
+    padding-inline: 1rem;
+    border-radius: calc(var(--segmented-radius) - 0.25rem);
+    background-color: transparent;
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+    font-size: var(--text-action);
+    line-height: var(--text-action--line-height);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: var(--text-action--font-weight);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* A little taller than the line, so a descender is never clipped by the ellipsis. */
+  .segmented-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.25;
+  }
+
+  /* The radio stays in the accessibility tree and the tab order. React Aria hides it the same way. */
+  .segmented-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @media (hover: hover) {
+    .segmented-option:is(:hover, [data-hovered]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+      color: var(--color-ink);
+    }
+  }
+
+  /* After hover, so a selected option keeps its fill and its canvas text under the pointer. */
+  .segmented-option:is([data-selected], :has(:checked)) {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  /* An option, or the whole control, that cannot be chosen. Hover shows nothing here. */
+  .segmented-option:is([data-disabled], :has(:disabled)) {
+    background-color: transparent;
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  /* A disabled option that is selected keeps its place in the row: a taupe pill with the track's own fill for text. */
+  .segmented-option:is([data-selected], :has(:checked)):is([data-disabled], :has(:disabled)) {
+    background-color: var(--color-taupe);
+    color: var(--color-disabled);
+  }
+
+  .segmented-option:is([data-focus-visible], :has(:focus-visible)) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /*
+   * The ring inverts on an ink fill, and only there: an ink ring drawn inside
+   * an ink pill measures 1:1, and focus and selection move together on a radio
+   * group, so the focused option is nearly always the selected one. The ring
+   * stays inside the pill, as far in as the standard ring sits out.
+   */
+  .segmented-option:is([data-selected], :has(:checked)):is([data-focus-visible], :has(:focus-visible)) {
+    outline-color: var(--color-canvas);
+    outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
+  }
+
+  /*
+   * The compact size is drawn at 32px and hit at 40px: the pseudo-element
+   * reaches over the track's 4px of padding and edge, which is all there is
+   * between one control and the next, so nothing shifts.
+   */
+  .segmented-sm .segmented-track {
+    --segmented-option-height: 2rem;
+
+    gap: 0.125rem;
+  }
+
+  .segmented-sm .segmented-option {
+    padding-inline: 0.875rem;
+    font-size: var(--text-small);
+  }
+
+  .segmented-sm:not([data-stacked]) .segmented-option::before {
+    content: '';
+    position: absolute;
+    inset-block: -0.25rem;
+    inset-inline: 0;
+  }
+
+  /*
+   * Stacked: the same track and the same pills, turned to a column. Every
+   * option is 40px, whatever the size, so the rows are real targets that do
+   * not overlap. Labels start at the left, as a list's options do, because a
+   * column is read down its left edge. The track takes the surface corner
+   * instead of the pill's: a pill's corner is half the height, which on a
+   * column is a blob, and the surface step is the 24px the row had, with the
+   * options 4px inside it at 20px.
+   */
+  .segmented[data-stacked] .segmented-track {
+    --segmented-option-height: 2.5rem;
+    --segmented-radius: var(--radius-surface);
+
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    width: auto;
+    height: auto;
+  }
+
+  .segmented[data-stacked] .segmented-item {
+    flex: none;
+  }
+
+  .segmented[data-stacked] .segmented-option {
+    justify-content: flex-start;
+  }
+
+  /*
+   * The track's edge, keyed on the field's root as the field contract in
+   * field.css says. A disabled control is recessed. A changed one firms to
+   * light signal orange and an invalid one to the error color; both come
+   * after the disabled rule, so the chip and the edge always show together,
+   * and invalid comes last, so it outranks changed.
+   */
+  .segmented[data-disabled] .segmented-track {
+    border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    background-color: var(--color-disabled);
+  }
+
+  .segmented[data-changed] .segmented-track {
+    border-width: 1.5px;
+    border-color: var(--color-signal-light);
+  }
+
+  .segmented[data-invalid] .segmented-track {
+    border-width: 1.5px;
+    border-color: var(--color-error);
+  }
+}

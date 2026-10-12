@@ -320,3 +320,22 @@ for (const width of [375, 1440]) {
     }
   });
 }
+
+test('the homepage frame has a labelled Theme control of its own, and the hero a compact Corners control', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page);
+  const theme = page.getByRole('radiogroup', { name: 'Theme' });
+  await expect(theme.locator('.field-label')).toHaveText('Theme');
+  await expect(theme.getByRole('radio')).toHaveCount(3);
+  await expect(theme.getByRole('radio', { name: 'System' })).toBeChecked();
+  await theme.locator('.segmented-option', { hasText: 'Dark' }).click();
+  await expect(theme.getByRole('radio', { name: 'Dark' })).toBeChecked();
+  // The picker is a sample of the control. Choosing in it does not theme the page.
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  const corners = page.getByRole('radiogroup', { name: 'Corners', exact: true });
+  await expect(corners).toHaveClass(/segmented-sm/);
+  await expect(corners.getByRole('radio', { name: 'Rounded' })).toBeChecked();
+});

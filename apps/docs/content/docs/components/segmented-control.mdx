@@ -1,0 +1,101 @@
+---
+title: Segmented control
+description: A few short options seen at once, of which one is chosen. When its row does not fit, it stacks one option per row.
+icon: Columns3
+---
+
+<Section>
+
+## Basic
+
+Pass a label, and the options as children, each with its own `value`. The chosen option is the ink pill. A segmented control is for a few short options that are all worth seeing at once. For more, or for options that need explaining, use a list.
+
+<Preview name="segmented-control-basic" />
+
+</Section>
+
+<Section>
+
+## States
+
+The track's edge carries the state, as in every field. A changed control gets a light signal orange edge and a clay chip beside its label. An invalid control gets the error edge and an error line, and invalid outranks changed, so the chip steps aside. A disabled control is recessed, and its chosen option stays in view as a quiet taupe pill. The compact size, `sm`, draws 32px options in a 40px track and still hits each one at 40px.
+
+<Preview name="segmented-control-states" />
+
+</Section>
+
+<Section>
+
+## Stacking
+
+The options are all in one row or all in a column, never some of each. When the row does not fit the room the control has, it stacks one option per row, each 40px tall. When the room comes back, the row does too. The control compares its own row with its own width, so give it a column to fill, as you would a text field. A control sized to its content, in a flex row or a centered grid, has no room to compare with and never stacks.
+
+<Preview name="segmented-control-stacking" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Every value works controlled and uncontrolled, and a control with a `name` submits the chosen `value` in a plain form. `onChange` receives the value. A `value` of `null` is a controlled control with nothing chosen.
+
+<Code code={`import { useState } from 'react';
+import { SegmentedControl, SegmentedControlItem } from '@snapshot-ui/react';
+
+export function Appearance({ saved }: { saved: string }) {
+  const [mode, setMode] = useState(saved);
+  return (
+    <SegmentedControl
+      label="Appearance"
+      name="appearance"
+      value={mode}
+      onChange={setMode}
+      isChanged={mode !== saved}
+    >
+      <SegmentedControlItem value="light">Light</SegmentedControlItem>
+      <SegmentedControlItem value="dark">Dark</SegmentedControlItem>
+      <SegmentedControlItem value="system">System</SegmentedControlItem>
+    </SegmentedControl>
+  );
+}`} />
+
+Without a visible label, name the control with `aria-label`, as a toolbar's switch is named by what it sits beside. One of the two is required.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria RadioGroup prop is accepted, except `orientation`: the options are always laid out in a row, and stack on their own. These are the ones Snapshot UI adds or shapes.
+
+<PropsTable path="../../packages/react/src/segmented-control/SegmentedControl.tsx" type="Pick<SegmentedControlBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'size' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isInvalid' | 'validate'>" />
+
+Each option is a SegmentedControlItem.
+
+<PropsTable path="../../packages/react/src/segmented-control/SegmentedControlItem.tsx" type="Pick<SegmentedControlItemProps, 'value' | 'children' | 'isDisabled' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A native radio group: each option is a radio, the control is named by its label, and React Aria handles the wiring. A screen reader reads the Changed chip with the control, after the hint, while the control is changed and valid. An invalid control reads its error line alone. The group is one tab stop, and focus lands on the chosen option.
+
+<Keys rows={[['Tab', 'Moves focus into the control, onto the chosen option, or the first when nothing is chosen.'], ['Right Down', 'Chooses the next option, and wraps from the last to the first.'], ['Left Up', 'Chooses the previous option, and wraps from the first to the last.'], ['Space', 'Chooses the focused option.']]} />
+
+The 2px ring sits outside an option that is not chosen. On the chosen option, which is an ink fill, the ring is drawn inside it in the canvas color, so it still reads. A disabled option is skipped by the arrow keys.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps segmented controls in the system.
+
+<Rules dos={['Use two to five options of a word or two each, all worth seeing at once.', 'Name the control in the label, in sentence case.', 'Show the chip and the changed edge together, and only while the value is unsaved.']} donts={['Never use it to switch what a page shows. That is tabs, and they hold no value.', 'Never let the options wrap onto a second row of their own. The control stacks them or it does not.', 'Never leave the chip beside an error. Invalid outranks changed.']} />
+
+</Section>
