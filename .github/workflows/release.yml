@@ -17,6 +17,9 @@ env:
 
 jobs:
   select-mode:
+    # A fork has no release to make and no npm environment to publish from. The other jobs need this one,
+    # so on a fork they are skipped with it.
+    if: github.repository == 'amirehsan/snapshot-ui'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
