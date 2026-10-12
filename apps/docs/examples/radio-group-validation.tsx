@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Radio, RadioGroup } from '@snapshot-ui/react';
+import { Button, Radio, RadioGroup, Text } from '@snapshot-ui/react';
 import { useState, type ReactElement } from 'react';
 
 export default function RadioGroupValidation(): ReactElement {
@@ -23,9 +23,9 @@ export default function RadioGroupValidation(): ReactElement {
       <div className="row">
         <Button type="submit">Continue</Button>
       </div>
-      <p className="muted" role="status">
+      <Text tone="muted" role="status">
         {chosen ? `You chose the ${chosen} plan.` : ''}
-      </p>
+      </Text>
     </form>
   );
 }

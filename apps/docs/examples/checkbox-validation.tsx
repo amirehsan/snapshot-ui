@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Checkbox, CheckboxGroup } from '@snapshot-ui/react';
+import { Button, Checkbox, CheckboxGroup, Text } from '@snapshot-ui/react';
 import { useState, type ReactElement } from 'react';
 
 export default function CheckboxValidation(): ReactElement {
@@ -33,9 +33,9 @@ export default function CheckboxValidation(): ReactElement {
       <div className="row">
         <Button type="submit">Save preferences</Button>
       </div>
-      <p className="muted" role="status">
+      <Text tone="muted" role="status">
         {saved}
-      </p>
+      </Text>
     </form>
   );
 }

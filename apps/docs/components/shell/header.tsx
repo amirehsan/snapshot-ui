@@ -1,6 +1,6 @@
 'use client';
 
-import { IconButton, SegmentedControl, SegmentedControlItem } from '@snapshot-ui/react';
+import { Heading, IconButton, SegmentedControl, SegmentedControlItem } from '@snapshot-ui/react';
 import { useTheme } from 'next-themes';
 import type { ReactElement } from 'react';
 import { useMounted, useShape } from '@/lib/document-state';
@@ -81,7 +81,9 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
           <p className="eyebrow">
             Docs <span className="eyebrow-sep">&#8250;</span> {group}
           </p>
-          <h1 className="type-h2">{title}</h1>
+          <Heading level={1} size={2}>
+            {title}
+          </Heading>
         </div>
         <div className="header-controls">
           <Choice

@@ -40,7 +40,8 @@ A count advises and never blocks. It stays empty until the value reaches 70% of 
 
 [Text field](/docs/components/text-field) renders all of this in one element. For a custom layout, put the parts inside a React Aria field: Label names the control, Description and FieldError become its description, and FieldError appears only while the field is invalid. Put the `field` class and `data-changed` on the field's root, and keep the chip in the label row, where the stylesheet shows or hides it.
 
-<Code code={`import { TextField } from 'react-aria-components';
+```tsx
+import { TextField } from 'react-aria-components';
 import { Description, FieldChanged, FieldCounter, FieldError, Input, Label } from '@snapshot-ui/react';
 
 export function ShortDescription({
@@ -69,7 +70,8 @@ export function ShortDescription({
       <FieldCounter count={value.length} budget={60} />
     </TextField>
   );
-}`} />
+}
+```
 
 The classes are `field`, `field-head`, `field-label`, `field-description`, `field-error`, `field-counter` and `field-changed`, so the same parts work in plain HTML.
 

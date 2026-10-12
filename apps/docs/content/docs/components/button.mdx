@@ -30,7 +30,8 @@ Pending keeps the width and the focus, and announces itself. Disabled is the onl
 
 Pass `isPending` while work runs. The button stays focusable, ignores presses and does not submit its form.
 
-<Code code={`import { Button } from '@snapshot-ui/react';
+```tsx
+import { Button } from '@snapshot-ui/react';
 
 export function SaveBar({ isSaving }: { isSaving: boolean }) {
   return (
@@ -38,7 +39,8 @@ export function SaveBar({ isSaving }: { isSaving: boolean }) {
       Save changes
     </Button>
   );
-}`} />
+}
+```
 
 </Section>
 

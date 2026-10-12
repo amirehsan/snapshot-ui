@@ -1,4 +1,4 @@
-import { Link } from '@snapshot-ui/react';
+import { Heading, Link } from '@snapshot-ui/react';
 import type { MDXComponents } from 'mdx/types';
 import { Code } from './code';
 import { Keys } from './keys';
@@ -12,14 +12,14 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     a: ({ children, ...props }) => <Link {...props}>{children}</Link>,
     h2: ({ children, ...props }) => (
-      <h2 className="type-h3" {...props}>
+      <Heading level={2} size={3} {...props}>
         {children}
-      </h2>
+      </Heading>
     ),
     h3: ({ children, ...props }) => (
-      <h3 className="type-h4" {...props}>
+      <Heading level={3} size={4} {...props}>
         {children}
-      </h3>
+      </Heading>
     ),
     Section,
     Preview,

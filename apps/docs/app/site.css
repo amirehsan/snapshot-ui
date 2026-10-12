@@ -1,12 +1,23 @@
 /*
- * The docs site's own components: stand-ins drawn by hand from the approved
- * mockups (docs/mockups/mockup.css) for parts the library does not ship yet.
- * Phase 1b deletes each stand-in in the same task that adds the real
- * component to @snapshot-ui/core: heading and text (the type-* and muted
- * rules).
- * Button, Spinner, Eyebrow, Link, Kbd, Badge, IconButton, the field parts,
- * TextField, Switch, SegmentedControl and Card come from @snapshot-ui/core and
- * are not redrawn here.
+ * What the docs site draws for itself. Every component the library ships comes
+ * from @snapshot-ui/core and is not redrawn here, headings and text included.
+ * What is left belongs to a site and not to a design system:
+ *
+ * - the site's own base: the library leaves links, headings and paragraphs
+ *   alone, and a site resets them;
+ * - the brand mark, the skip link and visually hidden text;
+ * - chips and the large button, which only the homepage uses;
+ * - layout helpers (stack, row, spread) and the settings list, which arrange
+ *   the library's parts on the docs pages;
+ * - code blocks, with the Shiki palette mapped onto the tokens;
+ * - the motion the docs add to the library. Its components never animate their
+ *   corners or their color, since the shape and the color mode belong to the
+ *   app, but the docs show them changing, so the controls and the card here
+ *   ease between shapes. The rule at the end of the file stops all of it under
+ *   reduced motion.
+ *
+ * Phase 5 rebuilds the shell from the library's Sidebar and AppShell, and the
+ * parts that arrange pages move with it.
  */
 /* The site's own base. The library's base.css sets the page and body type
    but, as a library, leaves links and headings alone; a site resets them. */
@@ -102,62 +113,6 @@
     outline-offset: -4px;
   }
 
-  /* ---- Type ----------------------------------------------------------- */
-  .type-h1 {
-    font-size: var(--text-h1);
-    line-height: var(--text-h1--line-height);
-    letter-spacing: var(--text-h1--letter-spacing);
-    font-weight: var(--text-h1--font-weight);
-  }
-
-  .type-h2 {
-    font-size: var(--text-h2);
-    line-height: var(--text-h2--line-height);
-    letter-spacing: var(--text-h2--letter-spacing);
-    font-weight: var(--text-h2--font-weight);
-  }
-
-  .type-h3 {
-    font-size: var(--text-h3);
-    line-height: var(--text-h3--line-height);
-    letter-spacing: var(--text-h3--letter-spacing);
-    font-weight: var(--text-h3--font-weight);
-  }
-
-  @media (width < 1024px) {
-    .type-h1 {
-      font-size: 3rem;
-    }
-  }
-
-  @media (width < 768px) {
-    .type-h1 {
-      font-size: 2.5rem;
-      line-height: 1.05;
-    }
-
-    .type-h2 {
-      font-size: 1.75rem;
-      line-height: 1.2;
-    }
-  }
-
-  .type-h4 {
-    font-size: var(--text-h4);
-    line-height: var(--text-h4--line-height);
-    font-weight: var(--text-h4--font-weight);
-  }
-
-  .type-small {
-    font-size: var(--text-small);
-    line-height: var(--text-small--line-height);
-    font-weight: var(--text-small--font-weight);
-  }
-
-  .muted {
-    color: var(--color-slate);
-  }
-
   .eyebrow-sep {
     color: var(--color-taupe);
   }
@@ -174,7 +129,7 @@
     padding-inline: 1.75rem;
   }
 
-  /* ---- Chips, key hints, badges --------------------------------------- */
+  /* ---- Chips ------------------------------------------------------------- */
   .chip {
     display: inline-flex;
     align-items: center;

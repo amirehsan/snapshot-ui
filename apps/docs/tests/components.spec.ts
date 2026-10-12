@@ -1,7 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { settled, sideways } from './support';
+import { axeViolations, COMPONENT_PAGES, settled, sideways } from './support';
 
 /**
  * Checks that run across every component page: Windows high contrast, and a
@@ -17,16 +15,12 @@ const visit = async (page: Page, url: string): Promise<void> => {
 };
 
 /** The slug of every page in the Components section, in the rail's order. */
-const COMPONENT_PAGES: string[] = (
-  JSON.parse(
-    readFileSync(fileURLToPath(new URL('../content/docs/components/meta.json', import.meta.url)), 'utf8'),
-  ) as { pages: string[] }
-).pages;
+const SLUGS = COMPONENT_PAGES.map(({ slug }) => slug);
 
 test('the Components section lists the pages the loops below visit', () => {
-  expect(COMPONENT_PAGES.length).toBeGreaterThanOrEqual(15);
-  expect(COMPONENT_PAGES).toContain('switch');
-  expect(COMPONENT_PAGES).toContain('segmented-control');
+  expect(SLUGS.length).toBeGreaterThanOrEqual(15);
+  expect(SLUGS).toContain('switch');
+  expect(SLUGS).toContain('segmented-control');
 });
 
 // ---- Windows high contrast ----------------------------------------------------------------------
@@ -217,12 +211,24 @@ const LONG_TARGETS: Record<string, string[]> = {
   'text-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
 };
 
-for (const slug of COMPONENT_PAGES) {
+for (const slug of SLUGS) {
   test(`the ${slug} page fits 320px and 375px, with a long web address in its text`, async ({ page }) => {
     for (const width of [320, 375]) {
       await page.setViewportSize({ width, height: 800 });
       await visit(page, `/docs/components/${slug}`);
       expect(await sideways(page), `${slug} at ${String(width)}px`).toBe(0);
+
+      // Nothing in a props table is cut off by its frame, which clips what does not fit: a description
+      // that is hidden is as lost as one that scrolls the page.
+      const cut = await page.locator('.props').evaluateAll((frames) =>
+        frames.flatMap((frame) => {
+          const edge = frame.getBoundingClientRect().right;
+          return [...frame.querySelectorAll('*')]
+            .filter((element) => element.getBoundingClientRect().right > edge + 0.5)
+            .map((element) => element.textContent.slice(0, 30));
+        }),
+      );
+      expect(cut, `props cut off on the ${slug} page at ${String(width)}px`).toEqual([]);
 
       for (const selector of LONG_TARGETS[slug] ?? []) {
         const targets = page.locator(selector);
@@ -245,6 +251,19 @@ for (const slug of COMPONENT_PAGES) {
       }
     }
   });
+}
+
+// ---- Accessibility ------------------------------------------------------------------------------
+
+for (const slug of SLUGS) {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`the ${slug} page has no axe violations in ${theme}`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await visit(page, `/docs/components/${slug}`);
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      expect(await axeViolations(page)).toEqual([]);
+    });
+  }
 }
 
 // ---- Server rendering ---------------------------------------------------------------------------
@@ -276,13 +295,13 @@ const SERVER_RENDERED: Record<string, string[]> = {
 
 test('every component page is listed as server rendered', () => {
   // A page added to the rail must say what its examples draw, so it cannot skip this check.
-  expect(Object.keys(SERVER_RENDERED).sort()).toEqual([...COMPONENT_PAGES].sort());
+  expect(Object.keys(SERVER_RENDERED).sort()).toEqual([...SLUGS].sort());
 });
 
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 
-  for (const slug of COMPONENT_PAGES) {
+  for (const slug of SLUGS) {
     test(`the ${slug} page arrives from the server with its examples drawn`, async ({ page }) => {
       await page.goto(`/docs/components/${slug}`);
       for (const selector of SERVER_RENDERED[slug] ?? []) {

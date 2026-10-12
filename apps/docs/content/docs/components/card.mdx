@@ -30,7 +30,8 @@ A card placed in another card, directly or in its body, steps its corner down to
 
 Card is static. It renders on the server and ships no JavaScript. Choose the element with `as` and the heading level with `level`, so the card fits the page's outline.
 
-<Code code={`import { Card, CardBody, CardHeader, CardNote, CardTitle } from '@snapshot-ui/react';
+```tsx
+import { Card, CardBody, CardHeader, CardNote, CardTitle } from '@snapshot-ui/react';
 
 export function Notifications() {
   return (
@@ -44,7 +45,8 @@ export function Notifications() {
       <CardBody>...</CardBody>
     </Card>
   );
-}`} />
+}
+```
 
 </Section>
 

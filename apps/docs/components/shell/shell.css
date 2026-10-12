@@ -276,18 +276,45 @@
 
   /* ---- Props --------------------------------------------------- */
   .props {
-    display: grid;
     border: 1px solid var(--color-frame);
     border-radius: var(--radius-surface);
     overflow: hidden;
     transition: border-radius 200ms ease;
   }
 
-  .prop {
-    display: grid;
-    grid-template-columns: 170px 1fr;
-    gap: 24px;
-    padding: 18px 20px;
+  /* A real table, drawn as a list: a 170px name column, a 24px gap and the description, inside the 20px
+     the rows are padded by. The rows are separated by a rule and the cells carry no border of their own. */
+  .props table,
+  .keys {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+
+  .props th,
+  .props td,
+  .keys th,
+  .keys td {
+    padding: 0;
+    font-weight: inherit;
+    text-align: start;
+  }
+
+  .prop th,
+  .prop td {
+    padding-block: 18px;
+    padding-inline: 0 20px;
+    vertical-align: top;
+  }
+
+  .prop th {
+    width: 214px;
+    padding-inline: 20px 24px;
+  }
+
+  /* A long word in a description breaks inside its cell instead of widening the table. */
+  .prop td {
+    overflow-wrap: anywhere;
   }
 
   .prop + .prop {
@@ -317,16 +344,20 @@
   }
 
   /* ---- Keyboard ------------------------------------------------ */
-  .keys {
-    display: grid;
-    gap: 14px;
+  /* The keys are a real table too: a 130px column of keys, a 16px gap and the action, 14px between rows. */
+  .key-row th,
+  .key-row td {
+    vertical-align: baseline;
   }
 
-  .key-row {
-    display: grid;
-    grid-template-columns: 130px 1fr;
-    gap: 16px;
-    align-items: baseline;
+  .key-row th {
+    width: 146px;
+    padding-inline-end: 16px;
+  }
+
+  .key-row + .key-row th,
+  .key-row + .key-row td {
+    padding-top: 14px;
   }
 
   /* ---- Aside cards --------------------------------------------- */
@@ -404,9 +435,11 @@
     height: 13px;
   }
 
+  /* 20px between rows: the two links are 20px tall with a 10px hit area above and below each, so
+     the areas meet in the middle of the gap and do not overlap. */
   .meta {
     display: grid;
-    gap: 12px;
+    gap: 20px;
   }
 
   .meta-row {
@@ -415,6 +448,19 @@
     justify-content: space-between;
     color: var(--color-slate);
     font-size: var(--text-small);
+  }
+
+  /* The package card's links are 14px text in a row, 20px tall. The pseudo-element reaches 40px,
+     10px above and below, and moves nothing. */
+  .meta-row .link {
+    position: relative;
+    min-height: 20px;
+  }
+
+  .meta-row .link::after {
+    content: '';
+    position: absolute;
+    inset: -10px -6px;
   }
 
   .rail-icon {
@@ -757,14 +803,37 @@
       font-size: 0.8125rem;
     }
 
+    /* On a phone each row stacks: the name above its description, or the keys above the action. */
     .prop,
     .key-row {
+      display: grid;
       grid-template-columns: 1fr;
       gap: 8px;
     }
 
+    .prop th,
+    .prop td,
+    .key-row th,
+    .key-row td,
+    .key-row + .key-row th,
+    .key-row + .key-row td {
+      display: block;
+      width: auto;
+      padding: 0;
+    }
+
     .prop {
       padding: 16px;
+    }
+
+    /* A long type name has no place to break, and the frame clips what does not fit. */
+    .prop-type {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .key-row + .key-row {
+      margin-top: 14px;
     }
   }
 }
@@ -923,12 +992,20 @@
     color: var(--color-taupe);
   }
 
+  /* What lies between the field and the footer. Its floor holds whether there is nothing typed, no match
+     or a list, so the dialog keeps one height while the text changes; a longer list grows it to the
+     dialog's own maximum and scrolls in here. */
+  .search-body {
+    flex: 1 1 auto;
+    min-height: min(20rem, 50dvh);
+    overflow-y: auto;
+  }
+
   .search-results {
     display: grid;
     gap: 2px;
     margin: 0;
     padding: 8px;
-    overflow-y: auto;
     list-style: none;
   }
 

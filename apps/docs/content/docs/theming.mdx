@@ -10,11 +10,15 @@ icon: Contrast
 
 Set `data-theme="light"` or `data-theme="dark"` on any element. With no attribute on the page, dark follows the system setting.
 
-<Code code={`<html data-theme="dark">`} />
+```tsx
+<html data-theme="dark">
+```
 
 With `next-themes`, use the attribute mode:
 
-<Code code={`<ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>`} />
+```tsx
+<ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
+```
 
 </Section>
 
@@ -34,9 +38,11 @@ Set `data-shape` to `rounded`, `soft` or `square`. Every corner in the library c
 
 Both attributes work on any element, and the nearest one wins. A light card inside a dark page takes its own colors and its own text color.
 
-<Code code={`<main data-theme="dark">
+```tsx
+<main data-theme="dark">
   <section data-theme="light" data-shape="square">...</section>
-</main>`} />
+</main>
+```
 
 </Section>
 
@@ -46,9 +52,11 @@ Both attributes work on any element, and the nearest one wins. A light card insi
 
 Every value is a CSS variable you can read, such as `var(--color-ink)`, `var(--radius-control)` or `var(--spacing-peer)`. The same tokens are available in JavaScript, with each mode's value:
 
-<Code code={`import { tokens } from '@snapshot-ui/core/tokens';
+```tsx
+import { tokens } from '@snapshot-ui/core/tokens';
 
 tokens.color.slate.var; // 'var(--color-slate)'
-tokens.radius.pill.modes.shape.soft; // '12px'`} />
+tokens.radius.pill.modes.shape.soft; // '12px'
+```
 
 </Section>

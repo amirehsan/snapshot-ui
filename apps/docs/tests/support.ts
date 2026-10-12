@@ -1,5 +1,23 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page } from '@playwright/test';
+
+/** A file under the docs content, read as text. */
+const content = (path: string): string =>
+  readFileSync(fileURLToPath(new URL(`../content/docs/${path}`, import.meta.url)), 'utf8');
+
+/**
+ * The pages of the Components section in the rail's order: each one's slug, as the rail's list gives it,
+ * and the title its page gives itself. Read from the content, so a page added to the rail is covered by
+ * every test that loops over this list without anyone remembering to add it.
+ */
+export const COMPONENT_PAGES: { slug: string; title: string }[] = (
+  JSON.parse(content('components/meta.json')) as { pages: string[] }
+).pages.map((slug) => ({
+  slug,
+  title: /^title: (.+)$/m.exec(content(`components/${slug}.mdx`))?.[1] ?? slug,
+}));
 
 /** How far the page overflows the window sideways. Zero means it fits. */
 export const sideways = (page: Page): Promise<number> =>

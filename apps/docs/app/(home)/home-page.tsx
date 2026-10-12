@@ -7,11 +7,13 @@ import {
   CardNote,
   CardTitle,
   Eyebrow,
+  Heading,
   IconButton,
   Input,
   SegmentedControl,
   SegmentedControlItem,
   Switch,
+  Text,
   TextField,
 } from '@snapshot-ui/react';
 import Link from 'next/link';
@@ -207,16 +209,16 @@ export function HomePage(): ReactElement {
           </IconButton>
         </div>
         <nav className="nav-overlay-links" aria-label="Menu">
-          <Link className="type-h2" href="/docs">
+          <Link className="heading heading-2" href="/docs">
             Docs
           </Link>
-          <Link className="type-h2" href="/docs/components/button">
+          <Link className="heading heading-2" href="/docs/components/button">
             Components
           </Link>
-          <Link className="type-h2" href="/docs/theming">
+          <Link className="heading heading-2" href="/docs/theming">
             Theming
           </Link>
-          <a className="type-h2" href="https://github.com/amirehsan/snapshot-ui/releases">
+          <a className="heading heading-2" href="https://github.com/amirehsan/snapshot-ui/releases">
             Changelog
           </a>
         </nav>
@@ -229,7 +231,7 @@ export function HomePage(): ReactElement {
         <section className="hero">
           <div>
             <Eyebrow>Component library</Eyebrow>
-            <h1 className="type-h1">Calm interfaces for settings, dashboards and apps.</h1>
+            <Heading level={1}>Calm interfaces for settings, dashboards and apps.</Heading>
           </div>
           <div className="hero-side">
             <p className="lede">
@@ -277,7 +279,9 @@ export function HomePage(): ReactElement {
               </span>
             </div>
             <div className="shape-switch">
-              <span className="type-small muted">Corners</span>
+              <Text as="span" size="small" tone="muted">
+                Corners
+              </Text>
               <SegmentedControl
                 aria-label="Corners"
                 name="shape"
@@ -378,7 +382,7 @@ export function HomePage(): ReactElement {
           <div className="section-head">
             <div>
               <Eyebrow>Foundations</Eyebrow>
-              <h2 className="type-h2">One voice, measured rather than chosen by eye.</h2>
+              <Heading level={2}>One voice, measured rather than chosen by eye.</Heading>
             </div>
             <p className="lede">
               Every color pairing is checked for contrast in both themes, every corner comes from one scale,
@@ -416,7 +420,7 @@ export function HomePage(): ReactElement {
                 </Link>
               </div>
               <Eyebrow>Type</Eyebrow>
-              <h3 className="type-h3">One family, at a body weight of 450.</h3>
+              <Heading level={3}>One family, at a body weight of 450.</Heading>
             </article>
             <article className="portrait">
               <div className="portrait-circle">
@@ -439,7 +443,7 @@ export function HomePage(): ReactElement {
                 </Link>
               </div>
               <Eyebrow>Shape</Eyebrow>
-              <h3 className="type-h3">Rounded, Soft or Square, from one attribute.</h3>
+              <Heading level={3}>Rounded, Soft or Square, from one attribute.</Heading>
             </article>
             <article className="portrait">
               <div className="portrait-circle">
@@ -461,7 +465,7 @@ export function HomePage(): ReactElement {
                 </Link>
               </div>
               <Eyebrow>Access</Eyebrow>
-              <h3 className="type-h3">WCAG 2.2 AA, built on React Aria.</h3>
+              <Heading level={3}>WCAG 2.2 AA, built on React Aria.</Heading>
             </article>
           </div>
         </section>
@@ -470,7 +474,7 @@ export function HomePage(): ReactElement {
           <div className="section-head">
             <div>
               <Eyebrow>Theme axes</Eyebrow>
-              <h2 className="type-h2">Two switches. Every component follows.</h2>
+              <Heading level={2}>Two switches. Every component follows.</Heading>
             </div>
             <p className="lede">
               Set data-theme and data-shape on any element. A light card inside a dark page just works.
@@ -658,7 +662,7 @@ export function HomePage(): ReactElement {
           <div className="section-head">
             <div>
               <Eyebrow>Components</Eyebrow>
-              <h2 className="type-h2">Everything a dashboard asks for.</h2>
+              <Heading level={2}>Everything a dashboard asks for.</Heading>
             </div>
             <p className="lede">
               From a single switch to the whole app shell. Published as you build, at 0.x, from the first
@@ -675,12 +679,24 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/icon-button">
                   Icon button
                 </Link>
-                <span className="chip">Text field</span>
-                <span className="chip">Text area</span>
-                <span className="chip">Checkbox</span>
-                <span className="chip">Radio group</span>
-                <span className="chip">Switch</span>
-                <span className="chip">Segmented control</span>
+                <Link className="chip" href="/docs/components/text-field">
+                  Text field
+                </Link>
+                <Link className="chip" href="/docs/components/text-area">
+                  Text area
+                </Link>
+                <Link className="chip" href="/docs/components/checkbox">
+                  Checkbox
+                </Link>
+                <Link className="chip" href="/docs/components/radio-group">
+                  Radio group
+                </Link>
+                <Link className="chip" href="/docs/components/switch">
+                  Switch
+                </Link>
+                <Link className="chip" href="/docs/components/segmented-control">
+                  Segmented control
+                </Link>
                 <span className="chip">Select</span>
                 <span className="chip">Combo box</span>
                 <span className="chip">Tag input</span>
@@ -732,7 +748,7 @@ export function HomePage(): ReactElement {
           <span className="watermark" aria-hidden />
           <div className="cta-inner">
             <Eyebrow>Open source, MIT</Eyebrow>
-            <h2 className="type-h2">Start with a button. Ship the whole settings page.</h2>
+            <Heading level={2}>Start with a button. Ship the whole settings page.</Heading>
             <div className="row">
               <Link className="button button-large" href="/docs/components/button">
                 Read the docs
@@ -750,7 +766,7 @@ export function HomePage(): ReactElement {
 
       <footer className="footer" data-theme="dark" inert={menuOpen}>
         <div className="page">
-          <h2 className="type-h2">Everything you need to build a calm product, whenever you need it.</h2>
+          <Heading level={2}>Everything you need to build a calm product, whenever you need it.</Heading>
           <div className="footer-cols">
             <details className="footer-col" open>
               <summary>Docs</summary>
@@ -764,9 +780,21 @@ export function HomePage(): ReactElement {
             <details className="footer-col" open>
               <summary>Components</summary>
               <div className="footer-links">
+                <Link href="/docs/components/badge">Badge</Link>
                 <Link href="/docs/components/button">Button</Link>
+                <Link href="/docs/components/card">Card</Link>
+                <Link href="/docs/components/checkbox">Checkbox</Link>
+                <Link href="/docs/components/field">Field parts</Link>
                 <Link href="/docs/components/icon-button">Icon button</Link>
+                <Link href="/docs/components/kbd">Kbd</Link>
+                <Link href="/docs/components/link">Link</Link>
+                <Link href="/docs/components/radio-group">Radio group</Link>
+                <Link href="/docs/components/segmented-control">Segmented control</Link>
                 <Link href="/docs/components/spinner">Spinner</Link>
+                <Link href="/docs/components/switch">Switch</Link>
+                <Link href="/docs/components/text-area">Text area</Link>
+                <Link href="/docs/components/text-field">Text field</Link>
+                <Link href="/docs/components/typography">Typography</Link>
               </div>
             </details>
             <details className="footer-col" open>

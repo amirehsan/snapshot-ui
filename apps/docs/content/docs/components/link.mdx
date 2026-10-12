@@ -30,7 +30,8 @@ A disabled link is Dust Taupe and keeps its underline, so the word still reads a
 
 Give it an `href`. For a link that opens a new tab, pass `target` and `rel` as you would to an anchor.
 
-<Code code={`import { Link } from '@snapshot-ui/react';
+```tsx
+import { Link } from '@snapshot-ui/react';
 
 export function Footnote() {
   return (
@@ -42,7 +43,8 @@ export function Footnote() {
       .
     </p>
   );
-}`} />
+}
+```
 
 For client-side routing in a framework, wrap your app in React Aria's `RouterProvider`. Link then navigates through your router.
 
