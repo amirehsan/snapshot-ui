@@ -618,14 +618,6 @@ describe('src/components/segmented.css', () => {
     expect(standard).toContain('outline-offset: var(--focus-ring-offset);');
   });
 
-  it('draws hover only where hover exists, and before the selected fill so selection wins', () => {
-    const source = rules();
-    const media = source.indexOf('@media (hover: hover)');
-    expect(media).toBeGreaterThan(-1);
-    expect(source.indexOf(':hover')).toBeGreaterThan(media);
-    expect(source.indexOf(`.segmented-option${SELECTED} {`)).toBeGreaterThan(media);
-  });
-
   it('gives a read-only control no hover wash and no pointer, and the disabled cursor still wins', () => {
     const source = rules();
     // The exclusion is in :where(), so hover keeps the weight of the selected rule written after it.
@@ -645,6 +637,14 @@ describe('src/components/segmented.css', () => {
   it('keeps every option at least 40px wide, so a one-glyph label is still a target', () => {
     const source = rules();
     expect(blockAfter(source, '.segmented-option {')).toContain('min-width: 2.5rem;');
+  });
+
+  it('draws hover only where hover exists, and before the selected fill so selection wins', () => {
+    const source = rules();
+    const media = source.indexOf('@media (hover: hover)');
+    expect(media).toBeGreaterThan(-1);
+    expect(source.indexOf(':hover')).toBeGreaterThan(media);
+    expect(source.indexOf(`.segmented-option${SELECTED} {`)).toBeGreaterThan(media);
   });
 });
 
