@@ -10,9 +10,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request makes the older run stale. A push to main never does: every commit on
+# main keeps its own result.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   TURBO_TELEMETRY_DISABLED: 1
