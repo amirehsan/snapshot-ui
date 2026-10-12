@@ -80,7 +80,7 @@ export function Switch({
           <span className="switch-track" aria-hidden="true">
             <span className="switch-thumb" />
           </span>
-          {children}
+          {hasLabel ? <span className="switch-text">{children}</span> : null}
         </RACSwitchButton>
         {hasLabel ? <FieldChanged id={chipId}>{changedLabel}</FieldChanged> : null}
       </div>

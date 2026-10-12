@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
+import { Link } from '../link';
 import { Switch } from './Switch';
 
 /** The color a token paints in the theme around `scope`, read by painting it. */
@@ -178,6 +179,59 @@ export const LongLabel: Story = {
     description: 'You can turn this off at any time from the link at the bottom of each email.',
     isChanged: true,
     defaultSelected: true,
+  },
+};
+
+/**
+ * The px between the end of what comes before `element` in its line of text and `element`, and between
+ * `element` and what comes after it. A space belongs to the text beside it, so a label that is one run of
+ * text has no gap here, and one cut into flex items would have the row's 12px.
+ */
+function gapsAround(element: Element): { before: number; after: number } {
+  const edge = (node: ChildNode | null, side: 'before' | 'after'): number | undefined => {
+    if (!node) return undefined;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const rects = [...range.getClientRects()];
+    const rect = side === 'before' ? rects.at(-1) : rects.at(0);
+    return side === 'before' ? rect?.right : rect?.left;
+  };
+  const own = element.getBoundingClientRect();
+  const before = edge(element.previousSibling, 'before');
+  const after = edge(element.nextSibling, 'after');
+  return {
+    before: before === undefined ? 0 : own.left - before,
+    after: after === undefined ? 0 : after - own.right,
+  };
+}
+
+/** Inline markup in the label stays one run of text: the spaces around an emphasis and a link are kept. */
+export const RichLabel: Story = {
+  render: (args) => (
+    <Switch {...args}>
+      Send the <strong>weekly</strong> digest to <Link href="#">my inbox</Link>.
+    </Switch>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const control = canvas.getByRole('switch', { name: 'Send the weekly digest to my inbox.' });
+    const text = canvasElement.querySelector('.switch-text');
+    const strong = text?.querySelector('strong');
+    const link = text?.querySelector('a');
+    if (!text || !strong || !link) throw new Error('No rich label drawn');
+    await expect(control).not.toBeChecked();
+    // The label is one box in the row, so the emphasis and the link are inline in it and not flex items.
+    await expect(strong.parentElement).toBe(text);
+    await expect(link.parentElement).toBe(text);
+    for (const element of [strong, link]) {
+      const { before, after } = gapsAround(element);
+      await expect(Math.abs(before)).toBeLessThan(6);
+      await expect(Math.abs(after)).toBeLessThan(6);
+    }
+    // The row's hit area covers the row, so the text paints above it and a press on the link reaches the link.
+    const { left, top, width, height } = link.getBoundingClientRect();
+    await expect(document.elementFromPoint(left + width / 2, top + height / 2)).toBe(link);
+    // One line of text, so the row is no taller than the track and its hit area.
+    await expect(text.getBoundingClientRect().height).toBeLessThan(30);
   },
 };
 
