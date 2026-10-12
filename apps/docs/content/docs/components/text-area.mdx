@@ -36,6 +36,18 @@ The count is the value's length as JavaScript and `maxLength` measure it, in UTF
 
 The budget is a soft target and the count can pass it. `maxLength` is a hard stop that the counter does not read, so set `budget` at or below `maxLength`.
 
+To word the count another way, such as in another language, pass `counter` with a `label` function. It receives the count, the budget and whether the count is past it, and returns the text. `counter.showFrom` moves the share of the budget the count first appears at.
+
+```tsx
+<TextArea
+  label="Kurzbeschreibung"
+  budget={60}
+  counter={{ label: ({ count, budget }) => `${count} von etwa ${budget}` }}
+/>
+```
+
+The count is announced each time it changes. If that is too often for your readers, build the field from its parts and pass FieldCounter a count that settles after a pause, as [Field parts](/docs/components/field) describes.
+
 </Section>
 
 <Section>
@@ -75,7 +87,7 @@ For a custom layout, use the parts inside React Aria's own TextField: Label, Des
 
 Every React Aria TextField prop is accepted, except `type` and `pattern`, which belong to a single line. These are the ones Snapshot UI adds or shapes.
 
-<PropsTable path="../../packages/react/src/text-area/TextArea.tsx" type="Pick<TextAreaProps, 'label' | 'description' | 'errorMessage' | 'placeholder' | 'rows' | 'isChanged' | 'changedLabel' | 'budget' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate' | 'textAreaRef'>" />
+<PropsTable path="../../packages/react/src/text-area/TextArea.tsx" type="Pick<TextAreaProps, 'label' | 'description' | 'errorMessage' | 'placeholder' | 'rows' | 'isChanged' | 'changedLabel' | 'budget' | 'counter' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate' | 'textAreaRef'>" />
 
 </Section>
 

@@ -10,7 +10,7 @@ import {
   composeRenderProps,
 } from 'react-aria-components';
 import { Description } from '../field/Description';
-import { FieldCounter } from '../field/FieldCounter';
+import { FieldCounter, type FieldCounterProps } from '../field/FieldCounter';
 import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
@@ -61,6 +61,13 @@ export interface TextAreaProps extends Omit<
    * or below it.
    */
   budget?: number;
+  /**
+   * Options for the count that `budget` shows. `label` replaces its text, for
+   * another language or other words: it receives the count, the budget and
+   * whether the count is past it. `showFrom` is the share of the budget the
+   * count first appears at, from 0 to 1, and is 0.7 unless given.
+   */
+  counter?: Pick<FieldCounterProps, 'label' | 'showFrom'>;
   /** A class name, or a function of the field's state, merged after the library's own class. */
   className?: string | ((values: TextFieldRenderProps & { defaultClassName: string | undefined }) => string);
   /** A ref to the field's root element. */
@@ -83,6 +90,7 @@ export function TextArea({
   isChanged = false,
   changedLabel,
   budget,
+  counter,
   className,
   textAreaRef,
   defaultValue,
@@ -110,7 +118,7 @@ export function TextArea({
       <RACTextArea ref={textAreaRef} rows={rows} placeholder={placeholder} className="input textarea" />
       {description != null ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
-      {budget === undefined ? null : <FieldCounter count={length} budget={budget} />}
+      {budget === undefined ? null : <FieldCounter {...counter} count={length} budget={budget} />}
     </RACTextField>
   );
 }
