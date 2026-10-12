@@ -333,6 +333,36 @@ describe('src/components/button.css', () => {
   });
 });
 
+describe('the disabled link forms in forced colors', () => {
+  // The browser grays out a disabled button element by itself, but not a span or an anchor that says it with
+  // aria-disabled, which is how React Aria draws a disabled link. Each file grays those out in GrayText.
+  const forced = (file) => blockAfter(closeUp(stripComments(read(`src/components/${file}`))), FORCED_COLORS);
+
+  it('draws a disabled button in GrayText, edge and label, and keeps the tertiary edgeless and a pending one as it is', () => {
+    const disabled = ":is(:disabled, [data-disabled], :where([aria-disabled='true']:not([data-pending])))";
+    const rule = blockAfter(forced('button.css'), `.button${disabled} {`);
+    expect(rule).toContain('border-color: GrayText;');
+    expect(rule).toContain('color: GrayText;');
+    expect(blockAfter(forced('button.css'), `.button-tertiary${disabled} {`)).toContain(
+      'border-color: transparent;',
+    );
+  });
+
+  it('draws a disabled icon button in GrayText, and the outline variant its edge too', () => {
+    const css = forced('icon-button.css');
+    expect(
+      blockAfter(css, ".icon-button:is(:disabled, [data-disabled], [aria-disabled='true']) {"),
+    ).toContain('color: GrayText;');
+    expect(blockAfter(css, '.icon-button-outline {')).toContain('--icon-button-border-disabled: GrayText;');
+  });
+
+  it('draws a disabled link in GrayText', () => {
+    expect(blockAfter(forced('link.css'), ".link:is([data-disabled], [aria-disabled='true']) {")).toContain(
+      'color: GrayText;',
+    );
+  });
+});
+
 describe('src/components/icon-button.css', () => {
   const source = () => stripComments(read('src/components/icon-button.css')).replace(/\s+/g, ' ');
 
@@ -366,6 +396,13 @@ describe('src/components/field.css', () => {
     }
   });
 
+  it('centres the chip dot on the first line, so a wrapped chip keeps it beside its first word', () => {
+    const dot = blockAfter(source(), '.field-changed::before {');
+    expect(dot).toContain('inset-block-start: calc((1lh - 0.375rem) / 2);');
+    expect(dot).not.toContain('translate');
+    expect(dot).not.toContain('50%');
+  });
+
   it('lets a long Changed label wrap inside the label row, even inside a word', () => {
     const chip = blockAfter(source(), '.field-changed {');
     expect(chip).toContain('max-width: 100%;');
@@ -390,13 +427,19 @@ describe('src/components/badge.css', () => {
 describe('src/components/input.css', () => {
   // The rules without their comments, which quote selectors of their own.
   const rules = () => read('src/components/input.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const INVALID = ":is(.field[data-invalid] .input, .input[aria-invalid='true']) {";
 
   it('declares the invalid border after the changed one, so invalid outranks changed', () => {
     const source = rules();
-    const changed = source.indexOf('.field[data-changed] .input');
-    const invalid = source.indexOf('.field[data-invalid] .input');
+    const changed = source.indexOf('.field[data-changed] .input {');
+    const invalid = source.indexOf(INVALID);
     expect(changed).toBeGreaterThan(-1);
     expect(invalid).toBeGreaterThan(changed);
+  });
+
+  it('draws the invalid border for a plain input with aria-invalid, at the weight of the changed rule', () => {
+    // :is() weighs both forms as its heaviest, the field's rule, so the twin also wins over changed by order.
+    expect(blockAfter(rules(), INVALID)).toContain('border: 1.5px solid var(--color-error);');
   });
 
   it('draws hover only where hover exists', () => {
@@ -453,7 +496,7 @@ describe('src/components/textarea.css', () => {
   it('keeps the changed and invalid borders on the input, where the textarea inherits them', () => {
     const selectors = blocks('src/components/input.css').map(({ selector }) => selector);
     expect(selectors).toContain('.field[data-changed] .input');
-    expect(selectors).toContain('.field[data-invalid] .input');
+    expect(selectors).toContain(":is(.field[data-invalid] .input, .input[aria-invalid='true'])");
     expect(textarea().map(({ selector }) => selector)).not.toContain('.field[data-changed] .textarea');
   });
 
@@ -471,6 +514,8 @@ describe('src/components/checkbox.css', () => {
   const rules = () => read('src/components/checkbox.css').replace(/\/\*[\s\S]*?\*\//g, '');
   const SELECTED =
     '.checkbox:is([data-selected], :where(:has(input:checked)), [data-indeterminate], :where(:has(input:indeterminate))) {';
+  // Plain HTML says invalid on the input, and the test weighs nothing, so disabled still wins by order.
+  const INVALID = ".checkbox:is([data-invalid], :where(:has(input[aria-invalid='true']))) {";
 
   it('draws the mark with a mask over the canvas color, not an image with a color of its own', () => {
     const source = rules();
@@ -485,7 +530,7 @@ describe('src/components/checkbox.css', () => {
     const source = closeUp(rules());
     const hover = source.indexOf('.checkbox:where(:hover');
     const selected = source.indexOf(SELECTED);
-    const invalid = source.indexOf('.checkbox[data-invalid] {');
+    const invalid = source.indexOf(INVALID);
     const disabled = source.indexOf('.checkbox:is(:where(:has(input:disabled)), [data-disabled]) {');
     expect(hover).toBeGreaterThan(-1);
     expect(selected).toBeGreaterThan(hover);
@@ -511,6 +556,17 @@ describe('src/components/checkbox.css', () => {
     expect(bare).toContain('width: 40px;');
     expect(bare).toContain('height: 40px;');
     expect(bare).toContain('translate: -50% -50%;');
+  });
+
+  it('turns only the edge for an invalid box, from React Aria or from a plain input with aria-invalid', () => {
+    const rule = blockAfter(closeUp(rules()), INVALID);
+    expect(rule.trim()).toBe('--checkbox-edge: var(--color-error);');
+  });
+
+  it('boxes the label text, so one long word breaks anywhere in the row and inline markup stays one run', () => {
+    const text = blockAfter(rules(), '.checkbox-text {');
+    expect(text).toContain('min-width: 0;');
+    expect(text).toContain('overflow-wrap: anywhere;');
   });
 
   it('leaves the boxes alone when the group is changed: the chip is the cue', () => {
@@ -871,8 +927,8 @@ describe.each(['checkbox.css', 'radio.css', 'segmented.css'])(
     it('weighs each native test as nothing, so naming the input moves no state past another', () => {
       // The data attribute beside it carries the weight, as it did before the input was named.
       const css = source();
-      const named = css.match(/:has\(input:[\w-]+\)/g) ?? [];
-      const weightless = css.match(/:where\(:has\(input:[\w-]+\)\)/g) ?? [];
+      const named = css.match(/:has\(input(?::[\w-]+|\[[^\]]*\])\)/g) ?? [];
+      const weightless = css.match(/:where\(:has\(input(?::[\w-]+|\[[^\]]*\])\)\)/g) ?? [];
       expect(named.length).toBeGreaterThan(0);
       expect(weightless).toHaveLength(named.length);
     });

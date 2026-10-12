@@ -41,6 +41,7 @@ interface SampleFieldProps {
   errorMessage?: string;
   isInvalid?: boolean;
   isChanged?: boolean;
+  changedLabel?: string;
   budget?: number;
   defaultValue?: string;
 }
@@ -52,6 +53,7 @@ function SampleField({
   errorMessage,
   isInvalid,
   isChanged,
+  changedLabel,
   budget,
   defaultValue = '',
 }: SampleFieldProps): ReactElement {
@@ -68,7 +70,7 @@ function SampleField({
       >
         <div className="field-head">
           <Label>{label}</Label>
-          <FieldChanged />
+          <FieldChanged>{changedLabel}</FieldChanged>
         </div>
         <Input className="story-field-input" />
         {description ? <Description>{description}</Description> : null}
@@ -164,6 +166,21 @@ export const LongLabel: Story = {
     label: 'The name your team sees in the header, in every invite and in the billing emails',
     isChanged: true,
     defaultValue: 'Northwind Studio',
+  },
+};
+
+const LONG_CHANGED = 'Changed since your last save and not yet published to the team';
+
+/** A long chip wraps under the label, and its dot stays beside the chip's first line. */
+export const LongChangedLabel: Story = {
+  args: { isChanged: true, changedLabel: LONG_CHANGED, defaultValue: 'Northwind Studio' },
+  play: async ({ canvas }) => {
+    const chip = canvas.getByText(LONG_CHANGED);
+    const line = parseFloat(getComputedStyle(chip).lineHeight);
+    await expect(chip.getBoundingClientRect().height).toBeGreaterThan(line * 1.5);
+    // The dot is centred on the first line, and not on the whole chip.
+    const dot = getComputedStyle(chip, '::before');
+    await expect(Math.abs(parseFloat(dot.top) + parseFloat(dot.height) / 2 - line / 2)).toBeLessThan(0.5);
   },
 };
 

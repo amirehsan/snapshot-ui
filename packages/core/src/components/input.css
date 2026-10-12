@@ -55,12 +55,14 @@
 
   /* The field's root carries data-changed and data-invalid. These rules are
      more specific than the states above, so a changed or invalid edge holds
-     through hover, focus and disabled. Invalid comes second and wins. */
+     through hover, focus and disabled. Invalid comes second and wins. Plain
+     HTML says invalid on the input, with aria-invalid; :is() weighs that twin
+     as the field's rule, the same as the changed rule, so it wins by order too. */
   .field[data-changed] .input {
     border: 1.5px solid var(--color-signal-light);
   }
 
-  .field[data-invalid] .input {
+  :is(.field[data-invalid] .input, .input[aria-invalid='true']) {
     border: 1.5px solid var(--color-error);
   }
 }

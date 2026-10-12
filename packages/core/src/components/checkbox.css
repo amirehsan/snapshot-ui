@@ -57,10 +57,12 @@
   }
 
   /* The label's text, in a box of its own so a link or an emphasis inside it is
-     not a second flex item with a gap before it. */
+     not a second flex item with a gap before it. A long word breaks anywhere, as
+     every other part does: only anywhere also lowers the row's min-content width,
+     which a flex or grid parent sizes it by. */
   .checkbox-text {
     min-width: 0;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
   }
 
   .checkbox-box {
@@ -160,7 +162,7 @@
 
   /* Only the edge turns: the fill and the mark stay, so a checked box that is
      invalid still reads as checked. */
-  .checkbox[data-invalid] {
+  .checkbox:is([data-invalid], :where(:has(input[aria-invalid='true']))) {
     --checkbox-edge: var(--color-error);
   }
 

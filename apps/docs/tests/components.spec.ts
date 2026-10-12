@@ -177,6 +177,39 @@ test.describe('forced colors', () => {
     await input.focus();
     await expectVisibleRing(input);
   });
+
+  test('a disabled link form is drawn in GrayText, as a disabled control is', async ({ page }) => {
+    // The browser grays out a disabled button element by itself, but not a link that says it is disabled
+    // with aria-disabled: React Aria's disabled Link, and a plain anchor wearing a button's classes.
+    await visit(page, '/docs/components/link');
+    const gray = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'GrayText';
+      document.body.append(probe);
+      const { color } = getComputedStyle(probe);
+      probe.remove();
+      return color;
+    });
+    const disabled = page.locator(".stage .link[aria-disabled='true']");
+    await expect(disabled).toHaveCount(1);
+    expect((await paint(disabled)).text).toBe(gray);
+    expect((await paint(page.locator('.stage a.link[href]').first())).text).not.toBe(gray);
+
+    // The text is put in the browser, so the test needs no fixture page and ships no extra route.
+    const stage = page.locator('.stage').first();
+    await stage.evaluate((element) => {
+      element.insertAdjacentHTML(
+        'beforeend',
+        '<a class="button" aria-disabled="true" data-probe="button">Save changes</a>' +
+          '<a class="icon-button icon-button-outline" aria-disabled="true" aria-label="Copy" data-probe="icon-button"></a>',
+      );
+    });
+    for (const probe of ['button', 'icon-button']) {
+      const look = await paint(stage.locator(`[data-probe="${probe}"]`));
+      expect(look.text, probe).toBe(gray);
+      expect(look.edge, probe).toBe(gray);
+    }
+  });
 });
 
 // ---- Narrow screens -----------------------------------------------------------------------------

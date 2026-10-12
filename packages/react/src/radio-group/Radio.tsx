@@ -10,6 +10,7 @@ import {
 } from 'react-aria-components';
 import { Description } from '../field/Description';
 import { cx } from '../utils/cx';
+import { present } from '../utils/present';
 
 export interface RadioProps extends Omit<RadioFieldProps, 'children' | 'className' | 'style'> {
   /**
@@ -42,9 +43,9 @@ export function Radio({ children, description, className, ref, ...props }: Radio
         className={composeRenderProps(className, (userClassName) => cx('radio', userClassName))}
       >
         <span className="radio-indicator" aria-hidden="true" />
-        {children == null ? null : <span className="radio-text">{children}</span>}
+        {present(children) ? <span className="radio-text">{children}</span> : null}
       </RadioButton>
-      {description != null ? <Description>{description}</Description> : null}
+      {present(description) ? <Description>{description}</Description> : null}
     </RadioField>
   );
 }

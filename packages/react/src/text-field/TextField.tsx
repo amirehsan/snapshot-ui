@@ -15,6 +15,7 @@ import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { useValueLength } from '../field/useValueLength';
 import { cx } from '../utils/cx';
+import { present } from '../utils/present';
 import { Input } from './Input';
 
 export interface TextFieldProps extends Omit<RACTextFieldProps, 'children' | 'className'> {
@@ -88,7 +89,7 @@ export function TextField({
   const { length, onChange: trackChange } = useValueLength({ value: props.value, defaultValue, onChange });
   const { chipId, describedBy } = useChangedDescription({
     // Only a label row has a chip, so only a labelled field has one to read.
-    isChanged: isChanged && label != null,
+    isChanged: isChanged && present(label),
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
   });
@@ -101,9 +102,9 @@ export function TextField({
       className={composeRenderProps(className, (userClassName) => cx('field', userClassName))}
       onChange={trackChange}
     >
-      {label != null ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
+      {present(label) ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
       <Input ref={inputRef} placeholder={placeholder} />
-      {description != null ? <Description>{description}</Description> : null}
+      {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
       {budget === undefined ? null : <FieldCounter {...counter} count={length} budget={budget} />}
     </RACTextField>

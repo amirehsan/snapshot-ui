@@ -95,7 +95,8 @@
   /*
    * The "Changed" chip: the full eyebrow step in clay with a 6px dot. The dot
    * is drawn and out of flow, so the chip's baseline is its text's and it lines
-   * up with the label whatever the label does.
+   * up with the label whatever the label does. It is centred on the chip's first
+   * line, so a changedLabel that wraps keeps it beside its first word.
    */
   .field-changed {
     position: relative;
@@ -118,11 +119,10 @@
   .field-changed::before {
     content: '';
     position: absolute;
-    inset-block-start: 50%;
+    inset-block-start: calc((1lh - 0.375rem) / 2);
     inset-inline-start: 0;
     width: 0.375rem;
     height: 0.375rem;
-    translate: 0 -50%;
     border-radius: var(--radius-dot);
     background-color: currentcolor;
   }

@@ -12,6 +12,7 @@ import { Description } from '../field/Description';
 import { FieldChanged } from '../field/FieldChanged';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { cx } from '../utils/cx';
+import { present } from '../utils/present';
 
 export interface SwitchProps extends Omit<
   RACSwitchFieldProps,
@@ -62,7 +63,7 @@ export function Switch({
   className,
   ...props
 }: SwitchProps): ReactElement {
-  const hasLabel = children != null;
+  const hasLabel = present(children);
   const { chipId, describedBy } = useChangedDescription({
     // Only a switch with a visible label has a chip to read.
     isChanged: isChanged && hasLabel,
@@ -84,7 +85,7 @@ export function Switch({
         </RACSwitchButton>
         {hasLabel ? <FieldChanged id={chipId}>{changedLabel}</FieldChanged> : null}
       </div>
-      {description != null ? <Description>{description}</Description> : null}
+      {present(description) ? <Description>{description}</Description> : null}
     </RACSwitchField>
   );
 }

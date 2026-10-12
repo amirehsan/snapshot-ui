@@ -12,6 +12,7 @@ import {
 import { Description } from '../field/Description';
 import { FieldError } from '../field/FieldError';
 import { cx } from '../utils/cx';
+import { present } from '../utils/present';
 
 export interface CheckboxProps extends Omit<RACCheckboxFieldProps, 'children' | 'className'> {
   /**
@@ -56,9 +57,9 @@ export function Checkbox({
     >
       <CheckboxButton className="checkbox">
         <span className="checkbox-box" aria-hidden="true" />
-        {children == null ? null : <span className="checkbox-text">{children}</span>}
+        {present(children) ? <span className="checkbox-text">{children}</span> : null}
       </CheckboxButton>
-      {description != null ? <Description>{description}</Description> : null}
+      {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
     </CheckboxField>
   );

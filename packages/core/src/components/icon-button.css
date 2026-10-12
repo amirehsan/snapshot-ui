@@ -80,6 +80,25 @@
     cursor: not-allowed;
   }
 
+  /*
+   * Forced colors (Windows high contrast) repaint every author color. The
+   * browser grays out a disabled button element by itself, but not the link
+   * form, which React Aria draws as a span with aria-disabled, so that would
+   * look enabled. A system color is kept, so every disabled form is drawn in
+   * GrayText, as a disabled checkbox, radio, switch or segmented option is: the
+   * icon, and the edge where the variant has one. These are the only colors in
+   * this file that are not tokens: the reader's own palette is the point there.
+   */
+  @media (forced-colors: active) {
+    .icon-button-outline {
+      --icon-button-border-disabled: GrayText;
+    }
+
+    .icon-button:is(:disabled, [data-disabled], [aria-disabled='true']) {
+      color: GrayText;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .icon-button {
       transition: none;

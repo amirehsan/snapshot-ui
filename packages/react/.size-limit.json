@@ -21,6 +21,20 @@
     "limit": "1 kB"
   },
   {
+    "name": "import { Text } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Text }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
+    "name": "import { Eyebrow } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Eyebrow }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
     "name": "import { Link } from \"@snapshot-ui/react\"",
     "path": "dist/index.js",
     "import": "{ Link }",
@@ -59,6 +73,13 @@
     "name": "import { Label } from \"@snapshot-ui/react\"",
     "path": "dist/index.js",
     "import": "{ Label }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
+    "name": "import { Input } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Input }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
     "limit": "1 kB"
   },
