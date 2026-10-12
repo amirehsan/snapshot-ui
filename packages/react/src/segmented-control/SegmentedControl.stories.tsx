@@ -14,6 +14,16 @@ function tokenColor(name: string): string {
   return color;
 }
 
+/** The color of the 5% ink wash an option takes under the pointer, read by painting it. */
+function washColor(): string {
+  const probe = document.createElement('span');
+  probe.style.backgroundColor = 'color-mix(in srgb, var(--color-ink) 5%, transparent)';
+  document.body.append(probe);
+  const { backgroundColor } = getComputedStyle(probe);
+  probe.remove();
+  return backgroundColor;
+}
+
 /** One option for each entry: the key is the value and the text is what the option shows. */
 function options(entries: Record<string, string>): ReactNode {
   return Object.entries(entries).map(([value, text]) => (
@@ -233,6 +243,68 @@ export const FocusedUnselected: Story = {
     if (!option) throw new Error('No option');
     await expect(getComputedStyle(option).outlineColor).toBe(tokenColor('--focus-ring-color'));
     await expect(getComputedStyle(option).outlineOffset).toBe('2px');
+  },
+};
+
+/**
+ * An option that can be chosen takes a 5% wash of ink and ink text under the pointer. The chosen option
+ * is already ink and keeps it, a disabled option takes nothing, and a read-only control takes no wash and
+ * shows no pointer. Not a baseline: the browser re-checks the real pointer a moment after the play
+ * function hovers and clears the synthetic hover, so the screenshot would show every option at rest.
+ */
+export const Hovered: Story = {
+  tags: ['no-visual'],
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <SegmentedControl {...args} label="Color mode" defaultValue="dark">
+        <SegmentedControlItem value="light">Light</SegmentedControlItem>
+        <SegmentedControlItem value="dark">Dark</SegmentedControlItem>
+        <SegmentedControlItem value="system" isDisabled>
+          System
+        </SegmentedControlItem>
+      </SegmentedControl>
+      <SegmentedControl {...args} label="Report cadence" isReadOnly defaultValue="weekly">
+        {options({ daily: 'Daily', weekly: 'Weekly' })}
+      </SegmentedControl>
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const optionOf = (name: string): HTMLElement => {
+      const option = canvas.getByRole('radio', { name }).closest('label');
+      if (!option) throw new Error(`No option named ${name}`);
+      return option;
+    };
+    const clear = 'rgba(0, 0, 0, 0)';
+
+    const light = optionOf('Light');
+    await expect(getComputedStyle(light).cursor).toBe('pointer');
+    await userEvent.hover(light);
+    await expect(light).toHaveAttribute('data-hovered');
+    await expect(getComputedStyle(light).backgroundColor).toBe(washColor());
+    await expect(getComputedStyle(light).color).toBe(tokenColor('--color-ink'));
+
+    // The chosen option is already ink and keeps its fill and its canvas text.
+    const dark = optionOf('Dark');
+    await userEvent.hover(dark);
+    await expect(dark).toHaveAttribute('data-hovered');
+    await expect(getComputedStyle(dark).backgroundColor).toBe(tokenColor('--color-ink'));
+    await expect(getComputedStyle(dark).color).toBe(tokenColor('--color-canvas'));
+
+    // A disabled option takes no wash and shows the not-allowed cursor.
+    const system = optionOf('System');
+    await userEvent.hover(system);
+    await expect(system).not.toHaveAttribute('data-hovered');
+    await expect(getComputedStyle(system).backgroundColor).toBe(clear);
+    await expect(getComputedStyle(system).cursor).toBe('not-allowed');
+
+    // A read-only control cannot change, so it takes no wash and is not offered as a button.
+    const daily = optionOf('Daily');
+    await expect(getComputedStyle(daily).cursor).toBe('default');
+    await userEvent.hover(daily);
+    await expect(daily).not.toHaveAttribute('data-hovered');
+    await expect(getComputedStyle(daily).backgroundColor).toBe(clear);
+    await expect(getComputedStyle(daily).color).toBe(tokenColor('--color-slate'));
+    await expect(getComputedStyle(optionOf('Weekly')).backgroundColor).toBe(tokenColor('--color-ink'));
   },
 };
 

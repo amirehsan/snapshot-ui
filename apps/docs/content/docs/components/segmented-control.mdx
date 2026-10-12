@@ -28,7 +28,7 @@ The track's edge carries the state, as in every field. A changed control gets a 
 
 ## Stacking
 
-The options are all in one row or all in a column, never some of each. When the row does not fit the room the control has, it stacks one option per row, each 40px tall. When the room comes back, the row does too. The control compares its own row with its own width, so give it a column to fill, as you would a text field. A control sized to its content, in a flex row or a centered grid, has no room to compare with and never stacks.
+The options are all in one row or all in a column, never some of each. When the row does not fit the room the control has, it stacks one option per row, each 40px tall. When the room comes back, the row does too. The control compares its own row with its own width, so give it a column to fill, as you would a text field. A control sized to its content, in a flex row or a centered grid, has no room to compare with and never stacks. Stacking is decided in the browser, so before the page hydrates, or with scripts off, a row that does not fit overflows its root. Give the control's spacing outside it, as a margin or a wrapper: horizontal padding added to the root through `className` makes the room the control measures wider than the room its track has.
 
 <Preview name="segmented-control-stacking" />
 
@@ -82,11 +82,11 @@ Each option is a SegmentedControlItem.
 
 ## Accessibility
 
-A native radio group: each option is a radio, the control is named by its label, and React Aria handles the wiring. A screen reader reads the Changed chip with the control, after the hint, while the control is changed and valid. An invalid control reads its error line alone. The group is one tab stop, and focus lands on the chosen option.
+A native radio group: each option is a radio, the control is named by its label, and React Aria handles the wiring. A screen reader reads the Changed chip with the control, after the hint, while the control is changed and valid. An invalid control reads its error line alone. The group is one tab stop, and focus lands on the chosen option, unless that option is disabled (see below).
 
 <Keys rows={[['Tab', 'Moves focus into the control, onto the chosen option, or the first when nothing is chosen.'], ['Right Down', 'Chooses the next option, and wraps from the last to the first.'], ['Left Up', 'Chooses the previous option, and wraps from the first to the last.'], ['Space', 'Chooses the focused option.']]} />
 
-The 2px ring sits outside an option that is not chosen. On the chosen option, which is an ink fill, the ring is drawn inside it in the canvas color, so it still reads. A disabled option is skipped by the arrow keys.
+The 2px ring sits outside an option that is not chosen. On the chosen option, which is an ink fill, the ring is drawn inside it in the canvas color, so it still reads. A disabled option is skipped by the arrow keys. A read-only control keeps its choice and takes no hover wash. Do not disable the chosen option of a control the reader can still change: React Aria gives the tab stop to the chosen option alone and takes it from a disabled one, so Tab skips the control.
 
 </Section>
 
