@@ -245,6 +245,8 @@
   }
 
   /* ---- Preview stage ------------------------------------------- */
+  /* The stage resets the wrapping the docs section's Card sets, so each example wraps a long word by
+     its own component's rules, the ones an app gets, and not by the card it is shown in. */
   .stage {
     display: grid;
     place-items: center;
@@ -253,6 +255,7 @@
     border: 1px solid var(--color-frame);
     border-radius: var(--radius-surface);
     background-color: var(--color-canvas);
+    overflow-wrap: normal;
     transition: border-radius 200ms ease;
   }
 

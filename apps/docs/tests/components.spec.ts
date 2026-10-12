@@ -189,10 +189,9 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
  * selector must match, so a class that is renamed cannot turn this into a test of nothing. Scoped to the
  * preview stage, so the page's own chrome (its package card, its headings) is not the thing under test.
  *
- * A caveat: every docs section is a Card, and a Card sets `overflow-wrap: anywhere`, which the stage inherits.
- * Text that wraps because of its own rule is therefore not told from text that wraps because of the card's.
- * With the inheritance cut off at `.stage`, every page here still passes except typography, whose Heading,
- * Text and Eyebrow set no wrapping of their own (as a browser's default text does not).
+ * Every docs section is a Card, and a Card sets `overflow-wrap: anywhere`, which its children inherit. The
+ * stage sets it back to normal, so each target here wraps by its own component's rule, as it would in an
+ * app, and never by the card the page is drawn in.
  */
 const LONG_TARGETS: Record<string, string[]> = {
   badge: ['.stage .badge'],
@@ -249,6 +248,10 @@ for (const slug of SLUGS) {
         }),
       );
       expect(cut, `props cut off on the ${slug} page at ${String(width)}px`).toEqual([]);
+
+      // The stage cuts the card's wrapping off, so what wraps below wraps by its own component's rule.
+      if (slug in LONG_TARGETS)
+        await expect(page.locator('.stage').first()).toHaveCSS('overflow-wrap', 'normal');
 
       for (const selector of LONG_TARGETS[slug] ?? []) {
         const targets = page.locator(selector);
