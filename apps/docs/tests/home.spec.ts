@@ -287,14 +287,16 @@ test('choosing a link in the open menu leaves the next page able to scroll', asy
 
 /**
  * What a pointer or finger must be able to hit on the homepage. No link here sits inside a sentence.
- * A switch is its row, a label that holds a visually hidden input, so the row is what is counted.
+ * A switch is its row, a label that holds a visually hidden input, so the row is what is counted. The
+ * three in the settings card are the exception: each lends its parts to the row's grid and has no box
+ * of its own, so it is skipped here, and the switch test above measures the hit area it draws instead.
  */
 const CONTROLS = 'a[href], button, summary, .segmented-option, .switch';
 
 /**
  * The fewest controls the page and the open menu have on a phone and on a desktop. On a production
- * build the page has 79 on a phone, with the footer open, and 80 on a desktop; the floor is 6 under the
- * smaller, the margin it had before the catalog and the footer linked every component.
+ * build the page has 76 on a phone, with the footer open, and 77 on a desktop, the settings card's
+ * switches aside; the floor is 3 under the smaller.
  */
 const CHECKED_ON_PAGE = 73;
 const CHECKED_IN_MENU = 6;
