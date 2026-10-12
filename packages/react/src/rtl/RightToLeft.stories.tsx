@@ -1,0 +1,341 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { ReactElement, ReactNode } from 'react';
+import { I18nProvider } from 'react-aria-components';
+import { expect, userEvent, waitFor } from 'storybook/test';
+import { Checkbox, CheckboxGroup } from '../checkbox';
+import { Radio, RadioGroup } from '../radio-group';
+import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
+import { Switch } from '../switch';
+import { TextArea } from '../text-area';
+import { TextField } from '../text-field';
+
+/**
+ * Right-to-left text, checked for every field in a real browser: layout needs a
+ * browser, and a jsdom test cannot place a box. Each story renders a field under
+ * React Aria's I18nProvider with an Arabic locale, inside a wrapper whose `dir`
+ * is `rtl`, and its play function measures where the parts landed. The words are
+ * Arabic so the line really reads right to left; the assertions are about edges,
+ * which do not depend on which font draws the letters.
+ *
+ * The stories are `no-visual`: they assert positions, and a baseline of Arabic
+ * text would depend on the font a machine falls back to.
+ */
+
+/** The width of a form column, in a wrapper that reads right to left. */
+function Rtl({ children }: { children: ReactNode }): ReactElement {
+  return (
+    <I18nProvider locale="ar-EG">
+      <div dir="rtl" lang="ar" style={{ width: 'min(28rem, calc(100vw - 2rem))' }}>
+        {children}
+      </div>
+    </I18nProvider>
+  );
+}
+
+const rect = (element: Element): DOMRect => element.getBoundingClientRect();
+
+function find(scope: ParentNode, selector: string): HTMLElement {
+  const element = scope.querySelector<HTMLElement>(selector);
+  if (!element) throw new Error(`Nothing matches ${selector}`);
+  return element;
+}
+
+/** The box of the last run of text in an element, which is how a row holds its words beside its control. */
+function lastText(element: Element): DOMRect {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  let last: Node | null = null;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.textContent?.trim()) last = node;
+  }
+  if (!last) throw new Error('No text in the element');
+  const range = document.createRange();
+  range.selectNodeContents(last);
+  return range.getBoundingClientRect();
+}
+
+/** Two edges are the same edge: less than a pixel apart. */
+async function expectSameEdge(a: number, b: number): Promise<void> {
+  await expect(Math.abs(a - b)).toBeLessThan(1);
+}
+
+/** The box lies inside the other, with half a pixel of rounding. */
+async function expectInside(inner: DOMRect, outer: DOMRect): Promise<void> {
+  await expect(inner.left).toBeGreaterThanOrEqual(outer.left - 0.5);
+  await expect(inner.right).toBeLessThanOrEqual(outer.right + 0.5);
+}
+
+const meta = {
+  title: 'Checks/Right to left',
+  tags: ['no-visual'],
+} satisfies Meta;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/**
+ * The label starts at the right edge of the field, the Changed chip follows it
+ * to its left, and the count sits under the left end of the control, where a
+ * line of Arabic ends. The chip's dot is at the chip's start, which is its right.
+ */
+export const TextFieldMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <TextField
+        label="اسم مساحة العمل"
+        description="يظهر هذا الاسم للفريق كله."
+        isChanged
+        budget={20}
+        defaultValue="مساحة عمل الفريق"
+      />
+    </Rtl>
+  ),
+  play: async ({ canvasElement }) => {
+    const root = rect(find(canvasElement, '.field'));
+    const label = rect(find(canvasElement, '.field-label'));
+    const chipElement = find(canvasElement, '.field-changed');
+    const chip = rect(chipElement);
+    const input = rect(find(canvasElement, '.input'));
+    const counter = rect(find(canvasElement, '.field-counter'));
+    await expectSameEdge(label.right, root.right);
+    await expect(chip.right).toBeLessThan(label.left);
+    await expectSameEdge(counter.left, input.left);
+    for (const box of [label, chip, input, counter]) await expectInside(box, root);
+    const dot = getComputedStyle(chipElement, '::before');
+    await expect(dot.right).toBe('0px');
+    await expect(parseFloat(getComputedStyle(chipElement).paddingRight)).toBeGreaterThan(0);
+    await expect(getComputedStyle(chipElement).paddingLeft).toBe('0px');
+  },
+};
+
+/** The same arrangement on a text area: label and chip from the right, the count under the left end. */
+export const TextAreaMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <TextArea
+        label="وصف قصير"
+        description="جملة واحدة تظهر في نتائج البحث."
+        isChanged
+        budget={30}
+        defaultValue="مساحة مشتركة لفريق التصميم وضيوفه."
+      />
+    </Rtl>
+  ),
+  play: async ({ canvasElement }) => {
+    const root = rect(find(canvasElement, '.field'));
+    const label = rect(find(canvasElement, '.field-label'));
+    const chip = rect(find(canvasElement, '.field-changed'));
+    const area = rect(find(canvasElement, '.textarea'));
+    const counter = rect(find(canvasElement, '.field-counter'));
+    await expectSameEdge(label.right, root.right);
+    await expect(chip.right).toBeLessThan(label.left);
+    await expectSameEdge(counter.left, area.left);
+    for (const box of [label, chip, area, counter]) await expectInside(box, root);
+  },
+};
+
+/**
+ * The box is at the right end of its row with the words to its left, and the
+ * hint is indented past the box on the right, which is the start side.
+ */
+export const CheckboxMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <Checkbox defaultSelected description="رسالة قصيرة كل أسبوع.">
+        أرسل لي ملخصًا أسبوعيًا
+      </Checkbox>
+    </Rtl>
+  ),
+  play: async ({ canvasElement }) => {
+    const root = rect(find(canvasElement, '.checkbox-field'));
+    const row = rect(find(canvasElement, '.checkbox'));
+    const box = rect(find(canvasElement, '.checkbox-box'));
+    const text = rect(find(canvasElement, '.checkbox-text'));
+    const hint = find(canvasElement, '.field-description');
+    await expectSameEdge(row.right, root.right);
+    await expectSameEdge(box.right, row.right);
+    await expect(text.right).toBeLessThanOrEqual(box.left + 0.5);
+    await expectInside(text, root);
+    await expect(getComputedStyle(hint).paddingRight).toBe('32px');
+    await expect(getComputedStyle(hint).paddingLeft).toBe('0px');
+  },
+};
+
+/** Every box of a group is at the right end of its row, down a column and along a row alike. */
+export const CheckboxGroupMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <div style={{ display: 'grid', gap: '2rem' }}>
+        <CheckboxGroup label="أبلغني عبر" defaultValue={['email']}>
+          <Checkbox value="email">البريد</Checkbox>
+          <Checkbox value="sms">رسالة نصية</Checkbox>
+          <Checkbox value="push">إشعار</Checkbox>
+        </CheckboxGroup>
+        <CheckboxGroup label="أيام الأسبوع" orientation="horizontal" defaultValue={['sat']}>
+          <Checkbox value="sat">السبت</Checkbox>
+          <Checkbox value="sun">الأحد</Checkbox>
+          <Checkbox value="mon">الإثنين</Checkbox>
+        </CheckboxGroup>
+      </div>
+    </Rtl>
+  ),
+  play: async ({ canvasElement }) => {
+    const [column, row] = [...canvasElement.querySelectorAll<HTMLElement>('.checkbox-group')];
+    if (!column || !row) throw new Error('Two groups expected');
+    const columnBoxes = [...column.querySelectorAll('.checkbox-box')].map(rect);
+    const columnItems = rect(find(column, '.checkbox-items'));
+    await expect(columnBoxes).toHaveLength(3);
+    for (const box of columnBoxes) await expectSameEdge(box.right, columnItems.right);
+    await expectSameEdge(rect(find(column, '.field-label')).right, rect(column).right);
+
+    // A row of boxes starts at the right: the first option is the rightmost.
+    const rowBoxes = [...row.querySelectorAll('.checkbox-box')].map(rect);
+    await expect(rowBoxes).toHaveLength(3);
+    await expect(rowBoxes[0]?.left ?? 0).toBeGreaterThan(rowBoxes[1]?.left ?? Infinity);
+    await expect(rowBoxes[1]?.left ?? 0).toBeGreaterThan(rowBoxes[2]?.left ?? Infinity);
+    for (const box of rowBoxes) await expectInside(box, rect(row));
+  },
+};
+
+/** The dot is at the right of its row, ahead of the words, and the hint is indented past it. */
+export const RadioGroupMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <RadioGroup label="تكرار النشرة" defaultValue="weekly">
+        <Radio value="weekly" description="كل ثلاثاء صباحًا.">
+          أسبوعيًا
+        </Radio>
+        <Radio value="monthly">شهريًا</Radio>
+        <Radio value="never">أبدًا</Radio>
+      </RadioGroup>
+    </Rtl>
+  ),
+  play: async ({ canvasElement }) => {
+    const items = rect(find(canvasElement, '.radio-items'));
+    const rows = [...canvasElement.querySelectorAll<HTMLElement>('label.radio')];
+    await expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      const box = rect(row);
+      const dot = rect(find(row, '.radio-indicator'));
+      // Row padding (1rem) and edge (1.5px) lie between the row's right edge and the dot.
+      await expectSameEdge(box.right - dot.right, 16 + 1.5);
+      await expect(lastText(row).right).toBeLessThanOrEqual(dot.left + 0.5);
+      await expectSameEdge(box.right, items.right);
+      await expectInside(box, items);
+    }
+    const hint = find(canvasElement, '.field-description');
+    await expect(getComputedStyle(hint).paddingLeft).toBe('0px');
+    await expect(parseFloat(getComputedStyle(hint).paddingRight)).toBeGreaterThan(40);
+  },
+};
+
+/**
+ * The thumb starts at the right of its track and moves to the left when the
+ * switch is on, with the same 3px gap at each end. The words are to the left of
+ * the track, the Changed chip is to the left of the row, and the hint is
+ * indented past the track on the right.
+ */
+export const SwitchMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <div style={{ display: 'grid', gap: '1.5rem' }}>
+        <Switch>الإشعارات متوقفة</Switch>
+        <Switch defaultSelected>الإشعارات تعمل</Switch>
+        <Switch isChanged description="رسالة كل ثلاثاء.">
+          الملخص الأسبوعي
+        </Switch>
+      </div>
+    </Rtl>
+  ),
+  play: async ({ canvasElement }) => {
+    const rows = [...canvasElement.querySelectorAll<HTMLElement>('.switch')];
+    const [off, on, changed] = rows;
+    if (!off || !on || !changed) throw new Error('Three switches expected');
+    const gaps = (row: HTMLElement): { start: number; end: number } => {
+      const track = rect(find(row, '.switch-track'));
+      const thumb = rect(find(row, '.switch-thumb'));
+      return { start: track.right - thumb.right, end: thumb.left - track.left };
+    };
+    // Off: one gap from the right (the start). On: one gap from the left (the end).
+    await waitFor(async () => {
+      await expectSameEdge(gaps(off).start, 3);
+      await expectSameEdge(gaps(on).end, 3);
+    });
+    const thumbOff = rect(find(off, '.switch-thumb'));
+    const thumbOn = rect(find(on, '.switch-thumb'));
+    await expect(thumbOn.left).toBeLessThan(thumbOff.left);
+    // The track is at the right end of its row, and the words follow it to the left.
+    for (const row of rows) {
+      const track = rect(find(row, '.switch-track'));
+      await expectSameEdge(track.right, rect(row).right);
+      await expect(lastText(row).right).toBeLessThanOrEqual(track.left + 0.5);
+    }
+    const chip = rect(find(canvasElement, '.field-changed'));
+    await expect(chip.right).toBeLessThanOrEqual(rect(changed).left + 0.5);
+    await expectInside(chip, rect(find(canvasElement, '.field[data-changed]')));
+    const hint = find(canvasElement, '.field-description');
+    await expect(getComputedStyle(hint).paddingLeft).toBe('0px');
+    await expect(parseFloat(getComputedStyle(hint).paddingRight)).toBeGreaterThan(40);
+  },
+};
+
+/**
+ * The first option is the rightmost, so the track reads right to left, and the
+ * arrow keys follow what is seen: Left goes to the option on the left, which is
+ * the next one. A stacked control starts its labels at the right.
+ */
+export const SegmentedControlMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <div style={{ display: 'grid', gap: '2rem' }}>
+        <SegmentedControl label="المظهر" defaultValue="light" isChanged>
+          <SegmentedControlItem value="light">فاتح</SegmentedControlItem>
+          <SegmentedControlItem value="dark">داكن</SegmentedControlItem>
+          <SegmentedControlItem value="system">النظام</SegmentedControlItem>
+        </SegmentedControl>
+        <div style={{ width: '9rem' }}>
+          <SegmentedControl label="الخطة" defaultValue="free">
+            <SegmentedControlItem value="free">مجانية</SegmentedControlItem>
+            <SegmentedControlItem value="team">الفريق</SegmentedControlItem>
+            <SegmentedControlItem value="business">الأعمال</SegmentedControlItem>
+          </SegmentedControl>
+        </div>
+      </div>
+    </Rtl>
+  ),
+  play: async ({ canvasElement, canvas }) => {
+    const [row, stacked] = [...canvasElement.querySelectorAll<HTMLElement>('.segmented')];
+    if (!row || !stacked) throw new Error('Two controls expected');
+
+    const options = [...row.querySelectorAll('.segmented-option')].map(rect);
+    const track = rect(find(row, '.segmented-track'));
+    await expect(options).toHaveLength(3);
+    await expect(options[0]?.left ?? 0).toBeGreaterThan(options[1]?.left ?? Infinity);
+    await expect(options[1]?.left ?? 0).toBeGreaterThan(options[2]?.left ?? Infinity);
+    for (const option of options) await expectInside(option, track);
+    await expectSameEdge(rect(find(row, '.field-label')).right, rect(row).right);
+    await expect(rect(find(row, '.field-changed')).right).toBeLessThan(rect(find(row, '.field-label')).left);
+    // The chosen option is the first, at the right end of the track.
+    await expectSameEdge(rect(find(row, '.segmented-option[data-selected]')).right, options[0]?.right ?? 0);
+
+    // Left is forward in right-to-left text: from the first option it chooses the second.
+    canvas.getByRole('radio', { name: 'فاتح' }).focus();
+    await userEvent.keyboard('{ArrowLeft}');
+    await expect(canvas.getByRole('radio', { name: 'داكن' })).toBeChecked();
+    await userEvent.keyboard('{ArrowRight}');
+    await expect(canvas.getByRole('radio', { name: 'فاتح' })).toBeChecked();
+
+    // Stacked: one option per row, the words from the right.
+    await waitFor(async () => {
+      await expect(stacked).toHaveAttribute('data-stacked');
+    });
+    for (const option of stacked.querySelectorAll('.segmented-option')) {
+      const box = rect(option);
+      const words = rect(find(option, '.segmented-label'));
+      // The option's inline padding (1rem) lies between its right edge and its words.
+      await expectSameEdge(box.right - words.right, 16);
+      await expect(words.left).toBeGreaterThan(box.left);
+    }
+    const stackedOptions = [...stacked.querySelectorAll('.segmented-option')].map(rect);
+    await expect(stackedOptions[1]?.top ?? 0).toBeGreaterThan(stackedOptions[0]?.top ?? Infinity);
+  },
+};

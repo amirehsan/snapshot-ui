@@ -31,6 +31,23 @@ function blockAfter(css, header) {
   return css.slice(open, close - 1);
 }
 
+const FORCED_COLORS = '@media (forced-colors: active)';
+
+/** The CSS without its comments and without its forced-colors blocks. */
+function outsideForcedColors(css) {
+  let rest = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  for (;;) {
+    const start = rest.indexOf(FORCED_COLORS);
+    if (start === -1) return rest;
+    const end = rest.indexOf('{', start) + 1 + blockAfter(rest, FORCED_COLORS).length + 1;
+    rest = rest.slice(0, start) + rest.slice(end);
+  }
+}
+
+// The keywords a reader's own palette is written in. Matching ignores case, as CSS does. A token sits after a dash, which the lookbehind excludes.
+const SYSTEM_COLOR =
+  /(?<![\w-])(?:canvas|CanvasText|Highlight|HighlightText|GrayText|ButtonFace|ButtonText|ButtonBorder|LinkText|VisitedText|ActiveText|FieldText|MarkText|SelectedItem|SelectedItemText|AccentColor|AccentColorText)(?![\w-])/i;
+
 describe('src/styles.css', () => {
   const entry = read('src/styles.css');
 
@@ -68,6 +85,14 @@ describe.each(components)('src/components/%s', (file) => {
   it('draws its focus ring in the focus ring token, never in ink', () => {
     // An inset ring on an ink fill inverts to the canvas color, which is allowed.
     expect(stripComments(source)).not.toMatch(INK_RING);
+  });
+
+  it('uses a system color only inside a forced-colors block', () => {
+    // In forced colors the reader's palette is the point, so a system color is the one literal allowed
+    // there. Anywhere else it would be a color that is neither a token nor the reader's choice.
+    const values = [...outsideForcedColors(source).matchAll(/:\s*([^;{}]+);/g)].map((match) => match[1]);
+    expect(values.length).toBeGreaterThan(0);
+    for (const value of values) expect(value).not.toMatch(SYSTEM_COLOR);
   });
 });
 
@@ -225,6 +250,14 @@ describe('src/components/field.css', () => {
     for (const header of [...wrapping, '.field-changed {']) {
       expect(blockAfter(source(), header), header).toContain('font-family: var(--font-sans);');
     }
+  });
+
+  it('lets a long Changed label wrap inside the label row, even inside a word', () => {
+    const chip = blockAfter(source(), '.field-changed {');
+    expect(chip).toContain('max-width: 100%;');
+    expect(chip).toContain('overflow-wrap: anywhere;');
+    // A chip that cannot wrap is as wide as its text, which one long word can push past the screen.
+    expect(chip).not.toContain('nowrap');
   });
 });
 
@@ -550,6 +583,26 @@ describe('src/components/switch.css', () => {
     expect(rules()).toContain('.field[data-changed] .switch-track::before');
   });
 
+  it('breaks a long word in the label inside the row instead of widening it', () => {
+    const row = blockAfter(rules(), '.switch {');
+    expect(row).toContain('min-width: 0;');
+    expect(row).toContain('max-width: 100%;');
+    expect(row).toContain('overflow-wrap: anywhere;');
+  });
+
+  it('gives the track and the thumb system colors in forced colors, so on and off stay apart', () => {
+    // The browser paints every background canvas: without these a canvas thumb sits on a canvas track.
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(forced, '.switch {')).toMatch(
+      /--switch-track-fill: canvas;\s*--switch-thumb-fill: CanvasText;\s*--switch-edge: CanvasText;/,
+    );
+    expect(blockAfter(forced, '.switch:is([data-selected], :has(input:checked)) {')).toMatch(
+      /--switch-track-fill: Highlight;\s*--switch-thumb-fill: HighlightText;/,
+    );
+    expect(forced).toContain('--switch-thumb-fill: GrayText;');
+    expect(forced).toContain('--switch-track-fill: GrayText;');
+  });
+
   it('draws the changed ring outside the track and never recolors the off track, whose boundary is a measured edge', () => {
     const changed = [...rules().matchAll(/([^{}]*\[data-changed\][^{}]*)\{([^}]*)\}/g)];
     expect(changed.length).toBeGreaterThan(0);
@@ -670,6 +723,19 @@ describe('src/components/segmented.css', () => {
     expect(media).toBeGreaterThan(-1);
     expect(source.indexOf(':hover')).toBeGreaterThan(media);
     expect(source.indexOf(`.segmented-option${SELECTED} {`)).toBeGreaterThan(media);
+  });
+
+  it('fills the selected option with Highlight in forced colors, and keeps its ring visible on it', () => {
+    // The browser paints every background canvas: without this the chosen option is the color of the track.
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    const chosen = blockAfter(forced, `.segmented-option${SELECTED} {`);
+    expect(chosen).toContain('background-color: Highlight;');
+    expect(chosen).toContain('color: HighlightText;');
+    expect(blockAfter(forced, `.segmented-option${SELECTED}${FOCUSED} {`)).toContain(
+      'outline-color: HighlightText;',
+    );
+    // A disabled option still shows which one was chosen.
+    expect(forced).toContain('background-color: GrayText;');
   });
 });
 
