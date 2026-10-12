@@ -382,6 +382,10 @@ describe('src/components/checkbox.css', () => {
 describe('src/components/radio.css', () => {
   // The rules without their comments, which quote selectors of their own.
   const rules = () => read('src/components/radio.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  // Every state also matches the native twin, so plain HTML draws the same row.
+  const SELECTED = ':is([data-selected], :has(:checked))';
+  const FOCUSED = ':is([data-focus-visible], :has(:focus-visible))';
+  const DISABLED = ':is([data-disabled], :has(:disabled))';
 
   it('puts the error edge on every row of an invalid group', () => {
     const invalid = blockAfter(rules(), '.field[data-invalid] .radio {');
@@ -408,10 +412,10 @@ describe('src/components/radio.css', () => {
 
   it('inverts the focus ring to the canvas color inside a selected ink row, and keeps the token ring outside', () => {
     const source = rules();
-    const selected = blockAfter(source, '.radio[data-selected][data-focus-visible] {');
+    const selected = blockAfter(source, `.radio${SELECTED}${FOCUSED} {`);
     expect(selected).toContain('outline-color: var(--color-canvas);');
     expect(selected).toMatch(/outline-offset:\s*calc\(var\(--focus-ring-offset\) \* -2\);/);
-    const plain = blockAfter(source, '.radio[data-focus-visible] {');
+    const plain = blockAfter(source, `.radio${FOCUSED} {`);
     expect(plain).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
     expect(plain).toContain('outline-offset: var(--focus-ring-offset);');
   });
@@ -425,9 +429,79 @@ describe('src/components/radio.css', () => {
   });
 
   it('gives a disabled row a look of its own, with the not-allowed cursor', () => {
-    const disabled = blockAfter(rules(), '.radio[data-disabled] {');
+    const disabled = blockAfter(rules(), `.radio${DISABLED} {`);
     expect(disabled).toContain('cursor: not-allowed;');
     expect(disabled).toContain('var(--color-taupe)');
+  });
+
+  it('gives every state a native twin, so a plain label with a checked input is drawn the same', () => {
+    const source = rules();
+    for (const selector of [
+      `.radio${SELECTED} {`,
+      `.radio${FOCUSED} {`,
+      `.radio${SELECTED}${FOCUSED} {`,
+      `.radio${DISABLED} {`,
+      `.radio${DISABLED}${SELECTED} {`,
+    ]) {
+      expect(source, selector).toContain(selector);
+    }
+    // The :not() lists of hover and pressed leave out the same three kinds of row, twins included.
+    // Prettier breaks the long list over lines, so the whitespace is closed up first.
+    const flat = source.replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
+    const excluded =
+      ':not([data-selected], :has(:checked), [data-disabled], :has(:disabled), [data-readonly]) {';
+    expect(flat.split(excluded)).toHaveLength(3);
+    // No selector keys on the data attribute alone: a row from plain HTML carries none.
+    expect(source).not.toMatch(/\.radio\[data-(?:selected|focus-visible|disabled)\]/);
+    expect(flat).not.toContain(':not([data-selected], [data-disabled]');
+  });
+
+  it('keeps the states in the order that carries their precedence: selected, focus, disabled, invalid', () => {
+    const source = rules();
+    const selected = source.indexOf(`.radio${SELECTED} {`);
+    const focused = source.indexOf(`.radio${FOCUSED} {`);
+    const selectedFocused = source.indexOf(`.radio${SELECTED}${FOCUSED} {`);
+    const disabled = source.indexOf(`.radio${DISABLED} {`);
+    const disabledSelected = source.indexOf(`.radio${DISABLED}${SELECTED} {`);
+    const invalid = source.indexOf('.field[data-invalid] .radio {');
+    expect(selected).toBeGreaterThan(-1);
+    expect(focused).toBeGreaterThan(selected);
+    expect(selectedFocused).toBeGreaterThan(focused);
+    expect(disabled).toBeGreaterThan(selectedFocused);
+    expect(disabledSelected).toBeGreaterThan(disabled);
+    expect(invalid).toBeGreaterThan(disabledSelected);
+  });
+
+  it('boxes the label text, so one long word wraps in the row and inline markup stays one run', () => {
+    const source = rules();
+    const text = blockAfter(source, '.radio-text {');
+    expect(text).toContain('min-width: 0;');
+    expect(text).toContain('overflow-wrap: anywhere;');
+    // A row with no text has no box, and is held to the target by the row's own height and padding.
+    expect(blockAfter(source, '.radio {')).toContain('min-height: 40px;');
+    expect(blockAfter(source, '.radio {')).toContain('padding-inline: 1rem;');
+  });
+
+  it('takes the hint out of the width of an option in a horizontal group, so the pill hugs its label', () => {
+    const hint = blockAfter(
+      rules(),
+      ".radio-group[data-orientation='horizontal'] .radio-items .field-description {",
+    );
+    expect(hint).toContain('contain: inline-size;');
+  });
+
+  it('draws a disabled row in GrayText in forced colors, chosen or not, and the check in CanvasText', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(blockAfter(forced, `.radio${SELECTED} {`)).toContain('--radio-glyph: CanvasText;');
+    const disabled = blockAfter(forced, `.radio${DISABLED} {`);
+    expect(disabled).toContain('--radio-fg: GrayText;');
+    expect(disabled).toContain('--radio-ring: GrayText;');
+    // The base rule for a disabled, chosen row is more specific, so the forced one sets its own ring and check.
+    const chosen = blockAfter(forced, `.radio${DISABLED}${SELECTED} {`);
+    expect(chosen).toContain('--radio-ring: GrayText;');
+    expect(chosen).toContain('--radio-glyph: GrayText;');
+    // A disabled row that is not chosen never gets a check.
+    expect(disabled).not.toContain('--radio-glyph');
   });
 });
 

@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, useState, type ReactElement } from 'react';
+import { I18nProvider } from 'react-aria-components';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { Radio } from './Radio';
@@ -128,6 +129,22 @@ describe('RadioGroup', () => {
     expect(monthly).toHaveAttribute('tabindex', '-1');
   });
 
+  it('moves the other way in a right-to-left locale: ArrowLeft chooses the next option', async () => {
+    const user = userEvent.setup();
+    render(
+      <I18nProvider locale="ar-EG">
+        <Frequency orientation="horizontal" defaultValue="weekly" />
+      </I18nProvider>,
+    );
+    await user.tab();
+    expect(screen.getByRole('radio', { name: 'Weekly' })).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('radio', { name: 'Monthly' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Monthly' })).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: 'Weekly' })).toBeChecked();
+  });
+
   it('lays out horizontally with orientation, and the arrow keys still move the selection', async () => {
     const user = userEvent.setup();
     render(<Frequency orientation="horizontal" defaultValue="weekly" />);
@@ -209,6 +226,41 @@ describe('RadioGroup', () => {
     expect(new FormData(form).get('frequency')).toBe('weekly');
     await user.click(screen.getByText('Never'));
     expect(new FormData(form).get('frequency')).toBe('never');
+  });
+
+  it('is back to its default after a native form reset, tells onChange once, and the chip follows', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    function Saved(): ReactElement {
+      const [value, setValue] = useState('weekly');
+      return (
+        <form>
+          <Frequency
+            name="frequency"
+            defaultValue="weekly"
+            isChanged={value !== 'weekly'}
+            onChange={(next) => {
+              setValue(next);
+              onChange(next);
+            }}
+          />
+          <button type="reset">Reset</button>
+        </form>
+      );
+    }
+    const { container } = render(<Saved />);
+    const group = screen.getByRole('radiogroup');
+    await user.click(screen.getByText('Never'));
+    expect(group).toHaveAttribute('data-changed', '');
+    expect(group).toHaveAccessibleDescription('Changed');
+    onChange.mockClear();
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(screen.getByRole('radio', { name: 'Weekly' })).toBeChecked();
+    expect(new FormData(formOf(container)).get('frequency')).toBe('weekly');
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange).toHaveBeenCalledWith('weekly');
+    expect(group).not.toHaveAttribute('data-changed');
+    expect(group).not.toHaveAccessibleDescription();
   });
 
   it('submits nothing while nothing is chosen', () => {
@@ -446,6 +498,31 @@ describe('RadioGroup', () => {
     expect(team).not.toBeChecked();
     expect(new FormData(formOf(container)).get('plan')).toBe('business');
     await expectNoA11yViolations(container);
+  });
+
+  // A known React Aria limit, recorded in Appendix B and not worked around. `useRadio` in
+  // @react-aria/radio gives the chosen radio the only tab stop and every other one tabIndex -1, then
+  // takes the tab stop away from a disabled radio, so a chosen radio that is disabled leaves the group
+  // with none: Tab skips it and the keys cannot be reached. `it.fails` holds the right behavior, a tab
+  // stop in the group, so an upstream fix makes this test report and it can be turned into a plain `it`.
+  it.fails('keeps a tab stop in the group when the chosen radio is disabled', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Before</button>
+        <RadioGroup label="Plan" defaultValue="team">
+          <Radio value="free">Free</Radio>
+          <Radio value="team" isDisabled>
+            Team
+          </Radio>
+          <Radio value="business">Business</Radio>
+        </RadioGroup>
+        <button type="button">After</button>
+      </>,
+    );
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole('radiogroup')).toContainElement(document.activeElement as HTMLElement);
   });
 
   it('forwards ref to the group', () => {

@@ -102,6 +102,35 @@ export const Horizontal: Story = {
   },
 };
 
+/** In a horizontal group the pills hug their labels, and a hint wraps to the width of its own pill. */
+export const HorizontalHints: Story = {
+  args: { orientation: 'horizontal', defaultValue: 'weekly' },
+  render: (args) => (
+    <RadioGroup {...args}>
+      <Radio value="weekly" description="Every Tuesday morning.">
+        Weekly
+      </Radio>
+      <Radio value="monthly" description="The first Tuesday of the month.">
+        Monthly
+      </Radio>
+      <Radio value="never" description="No email at all.">
+        Never
+      </Radio>
+    </RadioGroup>
+  ),
+  play: async ({ canvas }) => {
+    for (const name of ['Weekly', 'Monthly', 'Never']) {
+      const radio = canvas.getByRole('radio', { name });
+      const row = rowOf(radio);
+      const hint = row.nextElementSibling;
+      if (!(hint instanceof HTMLElement)) throw new Error('The hint is missing');
+      // The hint takes the width of the pill, and does not stretch it to the width of the sentence.
+      await expect(hint.getBoundingClientRect().width).toBeCloseTo(row.getBoundingClientRect().width, 0);
+      await expect(row.getBoundingClientRect().width).toBeLessThan(180);
+    }
+  },
+};
+
 /** `isChanged` shows the clay chip, and nothing else: the rows keep their plain edge. */
 export const Changed: Story = {
   args: { isChanged: true, defaultValue: 'monthly', description: 'You can change this at any time.' },
@@ -219,6 +248,49 @@ export const LongLabel: Story = {
   ),
 };
 
+/** One word with no break in it wraps inside its row and never scrolls the group sideways. */
+export const LongWord: Story = {
+  args: { defaultValue: 'long' },
+  render: (args) => (
+    <RadioGroup {...args}>
+      <Radio value="long">
+        Antidisestablishmentarianismantidisestablishmentarianismantidisestablishmentarianism
+      </Radio>
+      <Radio value="short">Short</Radio>
+    </RadioGroup>
+  ),
+  play: async ({ canvas }) => {
+    const group = canvas.getByRole('radiogroup');
+    const row = rowOf(canvas.getByRole('radio', { name: /^Antidisestablishment/ }));
+    // Text that cannot break pokes out of its box and widens what holds it.
+    await expect(row.scrollWidth).toBeLessThanOrEqual(row.clientWidth);
+    await expect(group.scrollWidth).toBeLessThanOrEqual(group.clientWidth);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  },
+};
+
+/** A radio named by `aria-label` has no text, and its row is still a target of 40px or more. */
+export const Labelless: Story = {
+  args: { orientation: 'horizontal', defaultValue: 'weekly' },
+  render: (args) => (
+    <RadioGroup {...args}>
+      <Radio value="weekly" aria-label="Weekly" />
+      <Radio value="monthly" aria-label="Monthly" />
+      <Radio value="never" aria-label="Never" />
+    </RadioGroup>
+  ),
+  play: async ({ canvas }) => {
+    for (const name of ['Weekly', 'Monthly', 'Never']) {
+      const row = rowOf(canvas.getByRole('radio', { name }));
+      await expect(row.querySelector('.radio-text')).toBeNull();
+      // A horizontal row hugs its content, so the padding and the dot are all that hold the width.
+      const { width, height } = row.getBoundingClientRect();
+      await expect(width).toBeGreaterThanOrEqual(40);
+      await expect(height).toBeGreaterThanOrEqual(40);
+    }
+  },
+};
+
 /** Keyboard focus on the chosen row draws the ring inside the ink pill, in the canvas color. */
 export const FocusedSelected: Story = {
   args: { defaultValue: 'weekly' },
@@ -245,8 +317,13 @@ export const FocusedUnselected: Story = {
   },
 };
 
-/** A row that can be chosen takes a 5% wash of ink under the pointer, and a firmer ring. */
+/**
+ * A row that can be chosen takes a 5% wash of ink under the pointer, and a firmer ring. Not a
+ * baseline: the browser re-checks the real pointer a moment after the play function hovers and
+ * clears the synthetic hover, so the screenshot would show the row at rest.
+ */
 export const Hovered: Story = {
+  tags: ['no-visual'],
   args: { defaultValue: 'monthly' },
   play: async ({ canvas, userEvent }) => {
     const row = rowOf(canvas.getByRole('radio', { name: 'Weekly' }));

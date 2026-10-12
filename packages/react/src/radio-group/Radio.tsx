@@ -12,7 +12,11 @@ import { Description } from '../field/Description';
 import { cx } from '../utils/cx';
 
 export interface RadioProps extends Omit<RadioFieldProps, 'children' | 'className' | 'style'> {
-  /** The option's label. Keep it to inline text, which wraps inside the row when it is long. */
+  /**
+   * The option's label. It wraps inside the row when it is long, even a word
+   * with no break in it, and inline markup stays in one run of text. Without
+   * one, give the radio an `aria-label`.
+   */
   children?: ReactNode;
   /** A hint under the option's row. It becomes the radio's accessible description. */
   description?: ReactNode;
@@ -38,7 +42,7 @@ export function Radio({ children, description, className, ref, ...props }: Radio
         className={composeRenderProps(className, (userClassName) => cx('radio', userClassName))}
       >
         <span className="radio-indicator" aria-hidden="true" />
-        {children}
+        {children == null ? null : <span className="radio-text">{children}</span>}
       </RadioButton>
       {description != null ? <Description>{description}</Description> : null}
     </RadioField>

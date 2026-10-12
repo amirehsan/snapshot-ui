@@ -28,7 +28,8 @@ export interface RadioGroupProps extends Omit<RACRadioGroupProps, 'children' | '
    * Whether the choice differs from the saved one. Shows the clay Changed chip
    * in the label row, which is the whole cue (the options draw no edge of their
    * own), and has a screen reader read the chip with the group. An invalid
-   * group shows its error instead.
+   * group shows its error instead. A group with no visible `label` has no label
+   * row to hold the chip, so it shows nothing: it still sets `data-changed`.
    */
   isChanged?: boolean;
   /**
