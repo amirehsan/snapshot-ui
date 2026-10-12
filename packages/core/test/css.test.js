@@ -625,6 +625,27 @@ describe('src/components/segmented.css', () => {
     expect(source.indexOf(':hover')).toBeGreaterThan(media);
     expect(source.indexOf(`.segmented-option${SELECTED} {`)).toBeGreaterThan(media);
   });
+
+  it('gives a read-only control no hover wash and no pointer, and the disabled cursor still wins', () => {
+    const source = rules();
+    // The exclusion is in :where(), so hover keeps the weight of the selected rule written after it.
+    const hover = blockAfter(
+      source,
+      '.segmented-option:is(:hover, [data-hovered]):where(:not([data-readonly])) {',
+    );
+    expect(hover).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
+    expect(source).not.toContain('.segmented-option:is(:hover, [data-hovered]) {');
+    const readOnly = source.indexOf('.segmented-option[data-readonly] {');
+    expect(blockAfter(source, '.segmented-option[data-readonly] {')).toContain('cursor: default;');
+    // After the chosen fill, before the disabled rule: a disabled option is still not-allowed.
+    expect(readOnly).toBeGreaterThan(source.indexOf(`.segmented-option${SELECTED} {`));
+    expect(readOnly).toBeLessThan(source.indexOf('.segmented-option:is([data-disabled], :has(:disabled)) {'));
+  });
+
+  it('keeps every option at least 40px wide, so a one-glyph label is still a target', () => {
+    const source = rules();
+    expect(blockAfter(source, '.segmented-option {')).toContain('min-width: 2.5rem;');
+  });
 });
 
 describe('dist/styles.css', () => {

@@ -149,6 +149,32 @@ describe('SegmentedControl', () => {
     expect(checked()).toEqual(['Dark']);
   });
 
+  // A known React Aria limit, recorded in Appendix B and not worked around. `useRadio` in
+  // @react-aria/radio gives the chosen radio the only tab stop and every other one tabIndex -1, then
+  // takes the tab stop away from a disabled radio, so a chosen option that is disabled leaves the
+  // control with none: Tab skips it and the keys cannot be reached. `it.fails` holds the right
+  // behavior, a tab stop in the control, so an upstream fix makes this test report and it can be
+  // turned into a plain `it`.
+  it.fails('keeps a tab stop in the control when the chosen option is disabled', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Before</button>
+        <SegmentedControl label="Color mode" defaultValue="dark">
+          <SegmentedControlItem value="light">Light</SegmentedControlItem>
+          <SegmentedControlItem value="dark" isDisabled>
+            Dark
+          </SegmentedControlItem>
+          <SegmentedControlItem value="system">System</SegmentedControlItem>
+        </SegmentedControl>
+        <button type="button">After</button>
+      </>,
+    );
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole('radiogroup')).toContainElement(document.activeElement as HTMLElement);
+  });
+
   it('follows the value of a controlled control, and tells the caller what was chosen', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn<(value: string) => void>();
@@ -187,23 +213,47 @@ describe('SegmentedControl', () => {
     expect(new FormData(form).get('theme')).toBe('system');
   });
 
-  it('submits its default value, and follows a form reset back to it', async () => {
+  it('is back to its default after a native form reset, tells onChange once, and the chip follows', async () => {
     const user = userEvent.setup();
-    const { container } = render(
-      <form>
-        <Theme label="Color mode" name="theme" defaultValue="dark" />
-      </form>,
-    );
+    const onChange = vi.fn<(value: string) => void>();
+    function Saved(): ReactElement {
+      const [value, setValue] = useState('dark');
+      return (
+        <form>
+          <Theme
+            label="Color mode"
+            name="theme"
+            defaultValue="dark"
+            isChanged={value !== 'dark'}
+            onChange={(next) => {
+              setValue(next);
+              onChange(next);
+            }}
+          />
+          <button type="reset">Reset</button>
+        </form>
+      );
+    }
+    const { container } = render(<Saved />);
     const form = container.querySelector('form');
     if (!form) throw new Error('No form');
+    const group = screen.getByRole('radiogroup');
     expect(new FormData(form).get('theme')).toBe('dark');
     await user.click(screen.getByText('System'));
     expect(new FormData(form).get('theme')).toBe('system');
-    act(() => {
-      form.reset();
-    });
+    expect(group).toHaveAttribute('data-changed', '');
+    expect(group).toHaveAccessibleDescription('Changed');
+    onChange.mockClear();
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
     expect(checked()).toEqual(['Dark']);
+    expect(screen.getByRole('radio', { name: 'Dark' }).closest('label')).toHaveAttribute('data-selected');
+    expect(screen.getByRole('radio', { name: 'System' }).closest('label')).not.toHaveAttribute(
+      'data-selected',
+    );
     expect(new FormData(form).get('theme')).toBe('dark');
+    expect(onChange).toHaveBeenCalledExactlyOnceWith('dark');
+    expect(group).not.toHaveAttribute('data-changed');
+    expect(group).not.toHaveAccessibleDescription();
   });
 
   it('disables every option, leaves them out of the form and shows the control as disabled', async () => {

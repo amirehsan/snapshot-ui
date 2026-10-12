@@ -1982,7 +1982,9 @@ things, each recorded here.
   sized by their labels, and the room left over is shared out equally. A label
   too long for its option is cut with an ellipsis, a last resort: the control
   stacks before that happens. Labels have a line a little taller than the step,
-  so an ellipsis never clips a descender.
+  so an ellipsis never clips a descender. An option is never narrower than 40px,
+  so a one-glyph label, a letter or a numeral, is still a 40px target: with no
+  floor it would be about 36px wide, the glyph between 16px of padding each side.
 - **The chosen option is an ink fill with canvas text**, the shape the rail's
   current link uses. canvas on ink measures 16.25:1 in light and 19.31 in dark,
   and is in the contrast gate already (the primary button's label).
@@ -1990,7 +1992,12 @@ things, each recorded here.
   and never on the chosen option, a disabled one or a touch screen. The wash
   measures 1.11 against the fill in light and 1.16 in dark: a cue, not a
   boundary, and not gated. The label turns ink because the source's did; slate
-  would have held 4.96 and 5.84 on the wash.
+  would have held 4.96 and 5.84 on the wash. A read-only control takes no wash
+  and no pointer cursor, as a radio, a checkbox and a switch do: it cannot
+  change, so it is not offered as a button. React Aria already removes
+  `data-hovered` under read-only, but the native `:hover` half of the rule
+  would still paint, so the rule excludes `[data-readonly]` itself, inside
+  `:where()` so that hover keeps the weight of the chosen fill written after it.
 
 **Focus on the chosen option is an inset ring in the canvas color.** Focus and
 selection move together on a radio group, so the focused option is nearly always
@@ -2029,7 +2036,9 @@ changed, a label changed (a `MutationObserver` on the track), a web font arrived
 Choosing an option, hovering and moving focus change none of them. Where a width
 cannot be read, as in a hidden panel, the arrangement stays as it is. The source
 measured with off-screen copies of the labels; reading the real track needs no
-copy and cannot disagree with it.
+copy and cannot disagree with it. Measuring needs script: before the page
+hydrates, or with scripts off, nothing has said to stack, so a row that does not
+fit overflows its root there.
 
 **The room is the root's own width.** The root is a field, so like every field
 it fills the column it is in, up to `--container-field`. A control placed in a
@@ -2039,7 +2048,10 @@ its row overruns the parent instead. A control that must stack there needs a
 width (`flex: 1` in a row, or a `width` in a grid). The source measured the room
 beside the control's neighbors, which is more than a field's column asks for.
 The compact controls in the docs header never need it: they sit in a row that
-wraps.
+wraps. The marker is as wide as the root's padding box, so horizontal padding a
+caller adds to the root through `className` makes the measured room wider than
+the room the track has, and a row can overrun it by that much without stacking.
+Give the control's spacing outside it, as a margin or a wrapper.
 
 **The compact size, `sm`,** is for a toolbar or a header, where the 48px track
 is too tall. It draws the track at 40px and the options at 32px, 14px type, with
@@ -2062,6 +2074,16 @@ Disabled is outside the 3:1 asked of a boundary and the 4.5:1 asked of text:
 | Taupe label on the disabled fill | 1.44 | 3.81 |
 | Chosen pill on the disabled fill, and its label on the pill | 1.44 | 3.81 |
 | Edge, ink at 15%, on the disabled fill | 1.37 | 1.59 |
+
+**A disabled, chosen option leaves the control with no tab stop.** React Aria's
+`useRadio` (in `@react-aria/radio`) gives the tab stop only to the chosen radio,
+and then takes it away from a disabled one, so with `defaultValue="dark"` and
+Dark disabled, Tab skips the control and a keyboard user cannot reach the other
+options. A segmented control is built on the same hook, as a radio group is. It
+is a limit of React Aria, recorded and not worked around: an `it.fails` test
+holds the correct behavior, a tab stop in the control, so an upstream fix
+reports itself. Until then, do not disable the chosen option of a control the
+reader can still change.
 
 **Changed and invalid are edges on the track, keyed on the field's root.** The
 source's rule looked for the tracked input inside the segmented group, and the

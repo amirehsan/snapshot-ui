@@ -71,6 +71,9 @@
     min-width: 0;
   }
 
+  /* At least 40px wide, so an option with one short word or a single glyph is
+     still a 40px target. It may shrink to that and no further, and the label is
+     cut with an ellipsis before the option goes under it. */
   .segmented-option {
     position: relative;
     box-sizing: border-box;
@@ -78,7 +81,7 @@
     flex: 1 1 auto;
     align-items: center;
     justify-content: center;
-    min-width: 0;
+    min-width: 2.5rem;
     height: var(--segmented-option-height);
     margin: 0;
     padding-inline: 1rem;
@@ -117,8 +120,13 @@
     white-space: nowrap;
   }
 
+  /*
+   * A read-only control cannot change, so it takes no wash. The exclusion sits
+   * in :where() and adds no specificity, so the selected fill below, which is
+   * written after this rule at the same weight, still wins under the pointer.
+   */
   @media (hover: hover) {
-    .segmented-option:is(:hover, [data-hovered]) {
+    .segmented-option:is(:hover, [data-hovered]):where(:not([data-readonly])) {
       background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
       color: var(--color-ink);
     }
@@ -128,6 +136,11 @@
   .segmented-option:is([data-selected], :has(:checked)) {
     background-color: var(--color-ink);
     color: var(--color-canvas);
+  }
+
+  /* A read-only choice cannot be pressed, so it is not offered as a button. */
+  .segmented-option[data-readonly] {
+    cursor: default;
   }
 
   /* An option, or the whole control, that cannot be chosen. Hover shows nothing here. */
