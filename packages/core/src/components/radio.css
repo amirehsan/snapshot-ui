@@ -1,0 +1,167 @@
+/*
+ * RadioGroup, derived in docs/design-system.md ("RadioGroup"): a stack of
+ * full-pill rows. An unselected row is a ring and a label with no fill. The
+ * selected row is the ink pill the navigation already uses for its current
+ * item, and its ring holds a check, so color is never the only signal.
+ *
+ * Each state only sets the --radio-* properties; the row and its dot read them.
+ * A group is a field: its root carries `field` and, as they apply,
+ * `data-changed` and `data-invalid`. Invalid puts the error edge on every row.
+ * Changed draws nothing here: a choice has no control edge to recolor, so the
+ * group's Changed chip is the whole cue.
+ */
+@layer components {
+  .radio-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-part);
+  }
+
+  .radio-group[data-orientation='horizontal'] .radio-items {
+    flex-flow: row wrap;
+  }
+
+  /* An option and its hint. The column may shrink, so a long label wraps. */
+  .radio-items > * {
+    min-width: 0;
+  }
+
+  /* The hint lines up with the label text: row padding, edge, dot and gap. */
+  .radio-items .field-description {
+    padding-inline-start: calc(1rem + 1.5px + 20px + 0.75rem);
+  }
+
+  .radio {
+    --radio-bg: transparent;
+    --radio-fg: var(--color-ink);
+    --radio-ring: var(--color-boundary);
+    --radio-dot: var(--color-raised);
+    --radio-glyph: transparent;
+    --radio-edge: transparent;
+
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    /* The padding sets the shape and this sets the touch target. */
+    min-height: 40px;
+    margin: 0;
+    padding-block: 0.5rem;
+    padding-inline: 1rem;
+    /* The edge is always there, transparent, so an invalid group does not shift
+       the layout. The fill stops at the padding box, so the edge reads against
+       the page and not against an ink fill. */
+    border: 1.5px solid var(--radio-edge);
+    border-radius: var(--radius-pill);
+    background-color: var(--radio-bg);
+    background-clip: padding-box;
+    color: var(--radio-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The dot. Its ring is the control boundary over the raised fill, and it
+     keeps its shape in every corner shape: a square radio reads as a checkbox. */
+  .radio-indicator {
+    position: relative;
+    box-sizing: border-box;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid var(--radio-ring);
+    border-radius: var(--radius-dot);
+    background-color: var(--radio-dot);
+  }
+
+  /* The check, drawn as a mask over a token color: a fixed stroke in an image
+     could not follow the theme, and the source's was invisible in dark. It is
+     transparent until the row is selected. */
+  .radio-indicator::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--radio-glyph);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='5 12.5 10 17.5 19 7'/%3E%3C/svg%3E")
+      center / 12px 12px no-repeat;
+  }
+
+  /* A wash of ink on a row that can be chosen, and a firmer ring. The wash
+     lowers the ring against the page, so the ring steps up with it. A selected
+     row is already ink and takes neither. */
+  @media (hover: hover) {
+    .radio:is(:hover, [data-hovered]):not([data-selected], [data-disabled], [data-readonly]) {
+      --radio-bg: color-mix(in srgb, var(--color-ink) 5%, transparent);
+      --radio-ring: color-mix(in srgb, var(--color-ink) 70%, transparent);
+    }
+  }
+
+  /* Pressed shows the same wash as hover, since touch has no hover to show it. */
+  .radio:is(:active, [data-pressed]):not([data-selected], [data-disabled], [data-readonly]) {
+    --radio-bg: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    --radio-ring: color-mix(in srgb, var(--color-ink) 70%, transparent);
+  }
+
+  .radio[data-selected] {
+    --radio-bg: var(--color-ink);
+    --radio-fg: var(--color-canvas);
+    --radio-ring: var(--color-canvas);
+    --radio-dot: transparent;
+    --radio-glyph: var(--color-canvas);
+  }
+
+  /* The ring sits outside the row, where ink still reads against the page. */
+  .radio[data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* On the ink fill the ring inverts to the canvas color and sits inside the
+     row, 2px in from the edge, so ink shows on both sides of it. Focus and
+     selection move together on a radio, so this is the usual keyboard state. */
+  .radio[data-selected][data-focus-visible] {
+    outline-color: var(--color-canvas);
+    outline-offset: calc(var(--focus-ring-offset) * -2);
+  }
+
+  /* A read-only choice cannot change, so it takes no wash and no pointer. */
+  .radio[data-readonly] {
+    cursor: default;
+  }
+
+  /* Taupe text and a faint ring, as a disabled Button and Input are. The
+     choice of a disabled group is still information, so a selected row keeps
+     its check at the boundary strength, on the disabled fill. */
+  .radio[data-disabled] {
+    --radio-fg: var(--color-taupe);
+    --radio-ring: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    cursor: not-allowed;
+  }
+
+  .radio[data-disabled][data-selected] {
+    --radio-bg: var(--color-disabled);
+    --radio-ring: var(--color-boundary);
+    --radio-glyph: var(--color-boundary);
+    --radio-edge: color-mix(in srgb, var(--color-ink) 15%, transparent);
+  }
+
+  /* The group's root carries data-invalid. This rule comes after every state
+     above and is at least as specific, so the error edge holds through hover,
+     focus, disabled and chosen. */
+  .field[data-invalid] .radio {
+    --radio-edge: var(--color-error);
+  }
+
+  /* Forced colors repaint every background, which would leave the check the
+     color of its own ground. A system color is kept, so the check is drawn in
+     the text color of the row. */
+  @media (forced-colors: active) {
+    .radio[data-selected] .radio-indicator::after {
+      background-color: CanvasText;
+    }
+  }
+}

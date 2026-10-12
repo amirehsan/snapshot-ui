@@ -1722,3 +1722,95 @@ cut and not rounded. Bone is the one surface the boundary was not yet gated
 on, and a checkbox can sit in a note, so it is now: `CONTRAST_PAIRS` holds the
 boundary on all five surfaces. canvas on ink, the checked mark, was gated as the
 primary label already, at the stricter text minimum, and a test now says so.
+
+## RadioGroup
+
+The document specifies no radio. Its section on what is still missing says radio
+is "specified by use": the appearance choice in the account menu is full-pill
+rows, the chosen one an ink pill with a check glyph. The app also draws a plain
+choice, a 20px native radio beside its label. The library joins them: the rows
+and the ink pill are the account menu's, and the dot is the plain choice's.
+
+- **A group is a field.** Its root carries `field` and `radio-group`, its label
+  row holds the label and the Changed chip, and its hint and error line follow
+  the options, as on every field. Each option can carry a hint of its own,
+  which sits under its row and lines up with the label text.
+- **Rows** are `--radius-pill`, 40px or taller (1.5px edge, 8px padding and a
+  22.4px line draw 41.4px), with 16px at each side and 12px between the dot and
+  the label. They fill the group's width when stacked, so the whole row is the
+  target, and hug their label in a horizontal group, where they wrap. The label
+  is the 16px body step at 450, not the account menu's 500: it is the content of
+  a choice, not an action. An unchosen row has no fill and no visible edge.
+- **The dot** is 20px, `--radius-dot` and the Raised fill, with a 1.5px edge in
+  the boundary color. It is the plain choice's box with the document's 50%
+  boundary where the app used 45%. It stays round in every corner shape, because
+  a square radio would read as a checkbox.
+- **The chosen row is the ink pill, and its ring holds the check.** Ink fill,
+  canvas label, and the dot's ring and check drawn in canvas. The account menu
+  put its check at the end of the row; the library puts it in the dot, so one
+  element carries both states and the labels stay aligned. The plain choice
+  painted an ink dot through an inset ring, which on an ink row would be ink on
+  ink, so the dot is not filled. The check is a mask over a token color, never
+  an image with a fixed stroke: the app's checkbox check used a literal
+  `#f3f0ee` stroke and measured 1.13:1 on dark's white fill. canvas follows the
+  theme, and measures 16.25 in light and 19.31 in dark against ink.
+- **Hover is the document's 5% ink wash on a row that is not chosen**, and the
+  ring steps up to ink at 70%, the plain choice's hover value. The wash lowers
+  the 50% ring against the page from 3.06 to 2.77 on canvas and from 3.16 to
+  2.86 on bone, under the 3:1 an edge asks, so the ring firms with it. A chosen
+  row is already ink and takes neither, as the app's checked row kept its fill
+  on hover. A read-only group takes neither either, and shows the default
+  cursor: a pointer and a wash promise a change it cannot make. Pressed shows
+  the hover look, since touch has no hover.
+- **Focus on a row that is not chosen** is the token ring outside the row, 2px
+  at 2px, as on a Button. **Focus on the chosen row** is the same ring in the
+  canvas color, inside the row. The app drew its account rows' ring in ink,
+  inset, on the ink pill: 1:1, invisible, and the arrow keys move focus and the
+  choice together, so the focused row is nearly always the chosen one. The ring
+  sits 4px in from the edge and not flush: flush, a canvas ring on a canvas page
+  reads as a pill that shrank, and 4px leaves ink on both sides of it. The
+  design document's rule holds: the ring inverts on an ink fill, and only there.
+- **Invalid is an edge on the rows; changed is the chip alone.** The row is the
+  control, so an invalid group puts a 1.5px error edge on every row, keyed on
+  the group's `data-invalid`. The edge is transparent the rest of the time, so
+  nothing shifts. The fill stops at the padding box, so the edge on a chosen
+  row is measured against the page and not against ink: the error color on ink
+  is 2.47 in light, and against the page it is 6.58 to 7.46. A group that is
+  both changed and invalid shows the error edge and no chip. A changed group
+  draws no edge at all. The field contract in "Field parts" says the chip and
+  a changed border always show together, and this is the one place the library
+  departs from it, for choice groups (RadioGroup, and CheckboxGroup likewise).
+  The source draws the changed edge on text controls and on the outer track of
+  composite controls, never on a choice row. And the edge of a choice is the
+  boundary of its dot, a required 3:1 ring: recoloring it Light Signal Orange
+  would trade 3.06 to 3.48 for 2.53 to 2.87 on the light surfaces. The clay
+  chip carries the cue, it is gated on every surface, and a screen reader reads
+  it with the group.
+- **Disabled** (the app had no look: pointer cursor, full color) is taupe text,
+  a faint ring at ink 15% and the `not-allowed` cursor, as a disabled Button and
+  Input are. A disabled group's choice is still information, so a disabled,
+  chosen row keeps its check at the boundary strength on the disabled fill, with
+  the 15% edge a disabled Button has, and the check is gated at 3:1. The
+  disabled ring measures 1.21 against canvas in light and 2.03 in dark, and the
+  taupe label 1.40 and 3.81: inactive controls are outside the contrast asked of
+  active ones, and the shape of the check, not its color, says what is chosen.
+- **Nothing animates.** A radio's state changes at once, as the app's did, and
+  core components never animate shape, so there is no reduced-motion block.
+- **Forced colors** repaint every background, which would leave the mask's
+  color the color of its ground. A system color is kept, so the check is drawn
+  in the row's text color there.
+
+| Pairing | Light (lowest of the five surfaces) | Dark |
+| --- | --- | --- |
+| Ring (boundary over Raised) against the surface | 3.06 | 4.93 |
+| Ring against the washed surface, at rest | 2.77 | 4.25 |
+| Ring against the washed surface, on hover (ink 70%) | 5.46 | 7.09 |
+| The wash against the surface (a cue, not an edge) | 1.11 | 1.11 |
+| canvas on ink: label, ring, check, inset focus ring | 16.25 | 19.31 |
+| Error edge against the surface | 6.58 | 5.06 |
+| Check of a disabled, chosen row on the disabled fill | 3.40 | 5.21 |
+
+The five surfaces are canvas, lifted, bone, float and raised. One pair was
+added to the gate: the disabled check. The boundary ring against bone (3.16 in
+light, 4.93 in dark) was added with Checkbox, so the ring is gated on all five
+surfaces. The wash is recorded and not gated, since it would fail it.

@@ -19,6 +19,10 @@ import IconButtonVariants from './icon-button-variants';
 import KbdKeys from './kbd-keys';
 import LinkInline from './link-inline';
 import LinkStates from './link-states';
+import RadioGroupBasic from './radio-group-basic';
+import RadioGroupHorizontal from './radio-group-horizontal';
+import RadioGroupStates from './radio-group-states';
+import RadioGroupValidation from './radio-group-validation';
 import SpinnerSizes from './spinner-sizes';
 import TextAreaBasic from './text-area-basic';
 import TextAreaCounter from './text-area-counter';
@@ -51,6 +55,10 @@ export const examples = {
   'kbd-keys': KbdKeys,
   'link-inline': LinkInline,
   'link-states': LinkStates,
+  'radio-group-basic': RadioGroupBasic,
+  'radio-group-horizontal': RadioGroupHorizontal,
+  'radio-group-states': RadioGroupStates,
+  'radio-group-validation': RadioGroupValidation,
   'spinner-sizes': SpinnerSizes,
   'text-area-basic': TextAreaBasic,
   'text-area-counter': TextAreaCounter,

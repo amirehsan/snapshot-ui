@@ -93,6 +93,27 @@ describe('CONTRAST_PAIRS', () => {
   });
 });
 
+describe('the edges Radio draws', () => {
+  const surfaces = ['canvas', 'lifted', 'bone', 'float', 'raised'];
+
+  // A radio's dot sits on whatever surface a form can: a page, a card, a note,
+  // a floating panel. Its ring is the boundary, painted over the Raised fill.
+  it('gates the boundary ring on all five surfaces', () => {
+    const gated = CONTRAST_PAIRS.filter(
+      (pair) => pair.text === 'boundary' && pair.fill === 'raised' && pair.minimum === NON_TEXT,
+    ).map((pair) => pair.ground);
+    expect(surfaces.filter((surface) => !gated.includes(surface))).toEqual([]);
+  });
+
+  // The chosen value of a disabled group is still information, so its check is
+  // held to the same 3:1 as an edge, over the disabled fill it is drawn on.
+  it('gates the check of a disabled, selected row on the disabled fill', () => {
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'boundary', ground: 'disabled', fill: 'disabled', minimum: NON_TEXT }),
+    );
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

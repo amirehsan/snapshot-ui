@@ -379,6 +379,58 @@ describe('src/components/checkbox.css', () => {
   });
 });
 
+describe('src/components/radio.css', () => {
+  // The rules without their comments, which quote selectors of their own.
+  const rules = () => read('src/components/radio.css').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('puts the error edge on every row of an invalid group', () => {
+    const invalid = blockAfter(rules(), '.field[data-invalid] .radio {');
+    expect(invalid).toContain('--radio-edge: var(--color-error);');
+  });
+
+  it('leaves the rows alone when the group is changed: the chip is the cue', () => {
+    expect(rules()).not.toContain('data-changed');
+    expect(rules()).not.toContain('--color-signal');
+  });
+
+  it('draws hover only where hover exists', () => {
+    const source = rules();
+    const media = source.indexOf('@media (hover: hover)');
+    expect(media).toBeGreaterThan(-1);
+    expect(source.indexOf(':hover')).toBeGreaterThan(media);
+  });
+
+  it('cuts rows as pills and indicators as dots, which keep their shape in every corner shape', () => {
+    const source = rules();
+    expect(blockAfter(source, '.radio {')).toContain('border-radius: var(--radius-pill);');
+    expect(blockAfter(source, '.radio-indicator {')).toContain('border-radius: var(--radius-dot);');
+  });
+
+  it('inverts the focus ring to the canvas color inside a selected ink row, and keeps the token ring outside', () => {
+    const source = rules();
+    const selected = blockAfter(source, '.radio[data-selected][data-focus-visible] {');
+    expect(selected).toContain('outline-color: var(--color-canvas);');
+    expect(selected).toMatch(/outline-offset:\s*calc\(var\(--focus-ring-offset\) \* -2\);/);
+    const plain = blockAfter(source, '.radio[data-focus-visible] {');
+    expect(plain).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(plain).toContain('outline-offset: var(--focus-ring-offset);');
+  });
+
+  it('draws the check as a mask over a token color, never as an image with a fixed color', () => {
+    const source = rules();
+    expect(source).toMatch(/mask:\s*url\(/);
+    // A fixed stroke color in the image is what left the source's check invisible in dark.
+    expect(source).not.toMatch(/background-image/);
+    expect(source).not.toMatch(/%23[\da-f]{3,6}/i);
+  });
+
+  it('gives a disabled row a look of its own, with the not-allowed cursor', () => {
+    const disabled = blockAfter(rules(), '.radio[data-disabled] {');
+    expect(disabled).toContain('cursor: not-allowed;');
+    expect(disabled).toContain('var(--color-taupe)');
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

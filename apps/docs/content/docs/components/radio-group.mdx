@@ -1,0 +1,113 @@
+---
+title: Radio group
+description: A choice of one from a short list. Each option is a full-pill row, and the chosen row is the ink pill with a check in its ring.
+icon: CircleDot
+---
+
+<Section>
+
+## Basic
+
+Pass a label, and a hint if the label cannot say it all. Each `Radio` can carry a hint of its own, which sits under its row. Choose another option to see the Changed chip.
+
+<Preview name="radio-group-basic" />
+
+</Section>
+
+<Section>
+
+## Horizontal
+
+Set `orientation="horizontal"` for a short row of options. The rows keep their width and wrap onto the next line when the row runs out of room.
+
+<Preview name="radio-group-horizontal" />
+
+</Section>
+
+<Section>
+
+## States
+
+A changed group shows a clay chip beside its label and nothing else: unlike a text field, a choice has no control edge to recolor, so the chip is the whole cue. An invalid group draws the error edge on every row and an error line, and invalid outranks changed, so the chip steps aside. A disabled group is recessed and keeps the check of its choice, and one option can be disabled on its own.
+
+<Preview name="radio-group-states" />
+
+</Section>
+
+<Section>
+
+## Validation
+
+Set `isRequired` or a `validate` function, and the browser's own checks run when the form is submitted. The error line shows the message, and choosing an option clears it. The first failed submit moves focus to the group.
+
+<Preview name="radio-group-validation" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Every value works controlled and uncontrolled, and a group with a `name` submits the chosen option's `value` in a plain form. `onChange` receives the value as a string.
+
+<Code code={`import { useState } from 'react';
+import { Radio, RadioGroup } from '@snapshot-ui/react';
+
+export function Frequency({ saved }: { saved: string }) {
+  const [value, setValue] = useState<string | null>(saved);
+  return (
+    <RadioGroup
+      label="Newsletter frequency"
+      name="frequency"
+      value={value}
+      onChange={setValue}
+      isChanged={value !== saved}
+    >
+      <Radio value="weekly" description="Every Tuesday morning.">
+        Weekly
+      </Radio>
+      <Radio value="monthly">Monthly</Radio>
+      <Radio value="never">Never</Radio>
+    </RadioGroup>
+  );
+}`} />
+
+For a choice of two with the same weight, such as a setting that is simply on or off, use a switch instead. For a choice that changes the view in place, such as a mode, use a segmented control.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria RadioGroup prop is accepted. These are the ones Snapshot UI adds or shapes.
+
+<PropsTable path="../../packages/react/src/radio-group/RadioGroup.tsx" type="Pick<RadioGroupProps, 'label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'orientation' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate'>" />
+
+Each option is a `Radio`.
+
+<PropsTable path="../../packages/react/src/radio-group/Radio.tsx" type="Pick<RadioProps, 'value' | 'children' | 'description' | 'isDisabled' | 'inputRef'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A group of native radio inputs, named by the label and described by the hint, the error line and, while it shows, the Changed chip. React Aria keeps the group to one tab stop and moves the choice with the arrow keys. The dot and the check are decoration, so an option's name is its label text alone.
+
+<Keys rows={[['Tab', 'Moves focus into the group, to the chosen option or the first one. The 2px ring sits outside an unchosen row and inside the ink of the chosen one.'], ['Down Right', 'Moves to the next option and chooses it.'], ['Up Left', 'Moves to the previous option and chooses it.'], ['Space', 'Chooses the focused option.']]} />
+
+Disabled options are skipped by the arrow keys. A read-only group keeps its choice and takes no hover wash.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps radio groups in the system.
+
+<Rules dos={['Name the group in the label, in sentence case, and keep options short enough to scan.', 'Choose a default when one is safe. A required group with nothing chosen shows the error only after a failed submit.', 'Show the chip while the choice is unsaved, and only then.']} donts={['Never use a radio group for more than about six options. Use a select.', 'Never leave the chip beside an error. Invalid outranks changed.', 'Never hide the check. Color is not the only sign of the chosen option.']} />
+
+</Section>
