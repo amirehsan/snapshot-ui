@@ -379,7 +379,7 @@ test('the results and their count only ever belong to the current query', async 
   await expect(dialog.getByRole('status')).toHaveText('Nothing matches "zzzzqx"');
 });
 
-test('the search dialog keeps its height while the query changes', async ({ page }) => {
+test('the search dialog never shrinks below its resting height while the query changes', async ({ page }) => {
   await visit(page, '/docs');
   await page.keyboard.press('ControlOrMeta+k');
   const dialog = page.getByRole('dialog', { name: 'Search the docs' });

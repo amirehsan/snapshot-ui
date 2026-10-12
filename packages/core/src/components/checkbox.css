@@ -200,7 +200,7 @@
   /*
    * Forced colors (Windows high contrast). The browser replaces every author
    * color except a system color, so the canvas mark on an ink fill would be
-   * canvas on canvas and vanish. These are the only colors in the library that
+   * canvas on canvas and vanish. These are the only colors in this file that
    * are not tokens: the reader's own palette is the point there.
    */
   @media (forced-colors: active) {

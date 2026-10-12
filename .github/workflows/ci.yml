@@ -10,8 +10,9 @@ on:
 permissions:
   contents: read
 
-# A newer push to a pull request makes the older run stale. A push to main never does: every commit on
-# main keeps its own result.
+# A newer push to a pull request makes the older run stale, so it is cancelled. On main the run in
+# progress is never cancelled, but GitHub still cancels a run that is waiting behind it when a newer one
+# queues, so a burst of pushes to main may skip the runs in between.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

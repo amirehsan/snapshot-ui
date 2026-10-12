@@ -44,9 +44,64 @@ function outsideForcedColors(css) {
   }
 }
 
-// The keywords a reader's own palette is written in. Matching ignores case, as CSS does. A token sits after a dash, which the lookbehind excludes.
-const SYSTEM_COLOR =
-  /(?<![\w-])(?:canvas|CanvasText|Highlight|HighlightText|GrayText|ButtonFace|ButtonText|ButtonBorder|LinkText|VisitedText|ActiveText|FieldText|MarkText|SelectedItem|SelectedItemText|AccentColor|AccentColorText)(?![\w-])/i;
+// The keywords a reader's own palette is written in: every system color of CSS Color 4, current and
+// deprecated. Matching ignores case, as CSS does, and takes whole words only. A token such as
+// `--color-canvas` has the keyword after a dash, and `canvas-text` before one, so both are left alone.
+const SYSTEM_COLORS = [
+  'AccentColor',
+  'AccentColorText',
+  'ActiveText',
+  'ButtonBorder',
+  'ButtonFace',
+  'ButtonText',
+  // As the stylesheets write it.
+  'canvas',
+  'CanvasText',
+  'Field',
+  'FieldText',
+  'GrayText',
+  'Highlight',
+  'HighlightText',
+  'LinkText',
+  'Mark',
+  'MarkText',
+  'SelectedItem',
+  'SelectedItemText',
+  'VisitedText',
+  // Deprecated, and still honored by browsers.
+  'ActiveBorder',
+  'ActiveCaption',
+  'AppWorkspace',
+  'Background',
+  'ButtonHighlight',
+  'ButtonShadow',
+  'CaptionText',
+  'InactiveBorder',
+  'InactiveCaption',
+  'InactiveCaptionText',
+  'InfoBackground',
+  'InfoText',
+  'Menu',
+  'MenuText',
+  'Scrollbar',
+  'ThreeDDarkShadow',
+  'ThreeDFace',
+  'ThreeDHighlight',
+  'ThreeDLightShadow',
+  'ThreeDShadow',
+  'Window',
+  'WindowFrame',
+  'WindowText',
+];
+const SYSTEM_COLOR = new RegExp(`(?<![\\w-])(?:${SYSTEM_COLORS.join('|')})(?![\\w-])`, 'i');
+
+/**
+ * Every declaration value outside the forced-colors blocks and the comments. A value ends at `;`, or at
+ * the `}` that closes the rule when the last declaration has no `;`. A selector's colon never matches,
+ * because a `{` follows it before any `;` or `}`.
+ */
+const valuesOutsideForcedColors = (css) =>
+  [...outsideForcedColors(css).matchAll(/:\s*([^;{}]+)(?:;|(?=\}))/g)].map((match) => match[1].trim());
 
 describe('src/styles.css', () => {
   const entry = read('src/styles.css');
@@ -90,7 +145,7 @@ describe.each(components)('src/components/%s', (file) => {
   it('uses a system color only inside a forced-colors block', () => {
     // In forced colors the reader's palette is the point, so a system color is the one literal allowed
     // there. Anywhere else it would be a color that is neither a token nor the reader's choice.
-    const values = [...outsideForcedColors(source).matchAll(/:\s*([^;{}]+);/g)].map((match) => match[1]);
+    const values = valuesOutsideForcedColors(source);
     expect(values.length).toBeGreaterThan(0);
     for (const value of values) expect(value).not.toMatch(SYSTEM_COLOR);
   });
@@ -118,6 +173,52 @@ describe('the ink ring guard', () => {
       stripComments('/* outline: var(--color-ink) */ .a { color: var(--color-ink); }'),
     ]) {
       expect(css, css).not.toMatch(INK_RING);
+    }
+  });
+});
+
+describe('the system color guard', () => {
+  const stray = (css) => valuesOutsideForcedColors(css).filter((value) => SYSTEM_COLOR.test(value));
+
+  it('matches every system color, current and deprecated, in any case', () => {
+    expect(SYSTEM_COLORS).toHaveLength(42);
+    for (const color of SYSTEM_COLORS) {
+      for (const written of [color, color.toLowerCase(), color.toUpperCase()]) {
+        expect(stray(`.x { background-color: ${written}; }`), written).toEqual([written]);
+      }
+    }
+    for (const css of [
+      '.x { background: Field; }',
+      '.x { background: Mark; }',
+      '.x { background: Window; }',
+      '.x { background: CANVAS; }',
+      '.x { border: 1px solid var(--edge, GrayText); }',
+      '@media (prefers-contrast: more) { .x { color: Highlight; } }',
+      '@layer components { .x { color: ink; } .y:hover { color: LinkText; } }',
+    ]) {
+      expect(stray(css), css).toHaveLength(1);
+    }
+  });
+
+  it('catches the last declaration of a rule that has no semicolon', () => {
+    expect(stray('.x { color: var(--color-ink); background: Field }')).toEqual(['Field']);
+    expect(stray('.x{background:Mark}')).toEqual(['Mark']);
+    expect(stray('.x { color: var(--color-ink) } .y { background: Window }')).toEqual(['Window']);
+  });
+
+  it('leaves tokens, comments, selectors and forced-colors blocks alone', () => {
+    for (const css of [
+      '.x { background-color: var(--color-canvas); }',
+      '.x { color: var(--color-highlight-text) }',
+      '.x { color: var(--canvas); background: var(--field-fill); border-color: var(--window-edge) }',
+      '.x { background-color: canvas-fill; }',
+      '.x { transition: background-color 150ms ease, box-shadow 150ms ease; }',
+      "/* Highlight is the reader's own */ .x { color: var(--color-ink); }",
+      '.field:hover .mark { color: var(--color-ink); }',
+      '.x { content: ""; }\n@media (forced-colors: active) { .x { color: Highlight; background: Field } }',
+      '@media (forced-colors: active) { .x { background: Window } } .y { color: var(--color-ink) }',
+    ]) {
+      expect(stray(css), css).toEqual([]);
     }
   });
 });

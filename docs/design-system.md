@@ -1672,7 +1672,7 @@ open, each recorded here.
   and a mask that paints canvas on an ink fill would then paint canvas on
   canvas. In forced colors the selected box takes `Highlight` with a
   `HighlightText` mark and a disabled one `GrayText`. These are the only colors
-  in the library that are not tokens, and they exist because the reader's own
+  in this file that are not tokens, and they exist because the reader's own
   palette is the point there (checked in Chromium with forced colors emulated).
 
 **The group follows the field contract and marks a change with the chip alone.**
