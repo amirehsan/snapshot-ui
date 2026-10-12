@@ -3,8 +3,9 @@ import { cx } from '../utils/cx';
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {
   /**
-   * The element to render. A `section` or an `article` is a landmark of its
-   * own once it has an accessible name; a `div` is not.
+   * The element to render. A `section` with an accessible name is a region
+   * landmark. An `article` is not a landmark, named or not, and a `div` is
+   * neither.
    * @default 'div'
    */
   as?: 'div' | 'section' | 'article';
@@ -59,7 +60,11 @@ export interface CardBodyProps extends HTMLAttributes<HTMLDivElement> {
   ref?: Ref<HTMLDivElement>;
 }
 
-/** The card's content, stacked with 24px between peers. */
+/**
+ * The card's content, stacked with 24px between peers. The body is a grid, so
+ * wrap text in a paragraph: bare text next to an element, or two inline
+ * elements side by side, would each take a row of their own.
+ */
 export function CardBody({ className, ...props }: CardBodyProps): ReactElement {
   return <div {...props} className={cx('card-body', className)} />;
 }

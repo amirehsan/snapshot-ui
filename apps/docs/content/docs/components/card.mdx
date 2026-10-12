@@ -68,9 +68,11 @@ Every part takes `className`, which is merged after its own class, `ref`, and th
 
 ## Accessibility
 
-A card is a div unless `as` says otherwise. A section or an article with a name, from `aria-labelledby` or `aria-label`, is a landmark region, and without a name it is not announced.
+A card is a div unless `as` says otherwise. A `section` with a name, from `aria-labelledby` or `aria-label`, is a region landmark, and without a name it is not announced. An `article` is not a landmark, named or not.
 
 The header is a div rather than a header element. A header outside sectioning content is the page's banner, so two cards at page level would add two. The title renders the heading level you choose and looks the same at every level.
+
+A card is not interactive: to make one lead somewhere, put a link in its title, and never nest buttons or links in a card that is clickable.
 
 </Section>
 
@@ -80,6 +82,6 @@ The header is a div rather than a header element. A header outside sectioning co
 
 What keeps cards in the system.
 
-<Rules dos={['One title per card, and make it the heading that names the card.', 'Nest a card only for something that stands apart, such as a danger zone.', 'Let the body space its children at 24px and leave their margins alone.']} donts={['Never trim the 32px padding to fit more in. It is what separates a card from its content.', 'Never use a card for a single control or a short label. A card holds a section.']} />
+<Rules dos={['One title per card, and make it the heading that names the card.', 'Nest a card only for something that stands apart, such as a danger zone.', 'Let the body space its children at 24px and leave their margins alone.', 'Wrap text in a paragraph. The body is a grid, so bare text beside an element takes a row of its own.']} donts={['Never trim the 32px padding to fit more in. It is what separates a card from its content.', 'Never use a card for a single control or a short label. A card holds a section.']} />
 
 </Section>

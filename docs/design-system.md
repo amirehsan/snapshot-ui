@@ -2124,7 +2124,7 @@ light, the disabled look).
 
 The document's panel section becomes `Card`, with a header, a title, a note
 and a body. Lifted Cream, the stadium corner and 32px of padding come straight
-from the document. Six things were derived.
+from the document. Seven things were derived.
 
 - **The padding is a spacing step.** It reads `--spacing-separate`, the step
   for "section header to its body", so the space around a card's content and
@@ -2162,6 +2162,16 @@ from the document. Six things were derived.
   down the page and 32px between them across it, which only shows once the body
   is given columns. Its children carry no vertical margin of their own, so a
   paragraph's default one never adds to the 24px.
+- **A long word breaks anywhere.** `overflow-wrap: anywhere` is set once, on
+  the card, and inherited by every part and by whatever the card holds. It
+  first sat on the title and the note alone, which left every paragraph and
+  bare text in the body uncovered, and a part that sets its own value beats the
+  inherited one, so none does. It is `anywhere` and not `break-word`, because
+  only `anywhere` also lowers the card's min-content width, which a flex or
+  grid parent sizes the card by. Measured at 320px with a word of 130 letters,
+  the first version let a paragraph in the body scroll the page to 981px, and a
+  title in a centered flex column made the card 1426px wide. With `anywhere`
+  on the card, every placement fits the 280px column it sits in.
 
 The title is ink and the note is slate, both on Lifted, and both pairings are
 in the contrast gate. Ink measures 17.84 in light and 17.42 in dark, and slate
