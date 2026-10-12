@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
+import { tokenPixels } from '../stories/paint';
 import { Card, CardBody, CardHeader, CardNote, CardTitle } from './Card';
 
 const meta = {
@@ -19,10 +20,6 @@ type Story = StoryObj<typeof meta>;
 
 /** The top-left corner in pixels, so a story reads the shape the toolbar has chosen. */
 const radius = (element: HTMLElement): number => parseFloat(getComputedStyle(element).borderTopLeftRadius);
-
-/** A token's value in pixels, read where the toolbar's data-shape applies. */
-const token = (name: string): number =>
-  parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
 
 /** A word of 75 letters with no hyphen and no space, so the only way to fit it is to break it. */
 const UNBROKEN_WORD = 'workspacenotificationpreferencesforeverymemberandeveryprojectyoucreatelater';
@@ -82,9 +79,9 @@ export const Nested: Story = {
     </Card>
   ),
   play: async ({ canvas }) => {
-    await expect(radius(canvas.getByTestId('outer-card'))).toBe(token('--radius-stadium'));
+    await expect(radius(canvas.getByTestId('outer-card'))).toBe(tokenPixels('--radius-stadium'));
     const inner = canvas.getByTestId('inner-card');
-    await expect(radius(inner)).toBe(token('--radius-surface'));
+    await expect(radius(inner)).toBe(tokenPixels('--radius-surface'));
     await expect(getComputedStyle(inner).borderTopColor).not.toBe('rgba(0, 0, 0, 0)');
   },
 };
@@ -99,8 +96,8 @@ export const NestedWithoutBody: Story = {
     </Card>
   ),
   play: async ({ canvas }) => {
-    await expect(radius(canvas.getByTestId('outer-card'))).toBe(token('--radius-stadium'));
-    await expect(radius(canvas.getByTestId('inner-card'))).toBe(token('--radius-surface'));
+    await expect(radius(canvas.getByTestId('outer-card'))).toBe(tokenPixels('--radius-stadium'));
+    await expect(radius(canvas.getByTestId('inner-card'))).toBe(tokenPixels('--radius-surface'));
   },
 };
 
@@ -129,7 +126,7 @@ export const OnAWell: Story = {
   play: async ({ canvas }) => {
     const outer = canvas.getByTestId('outer-card');
     const onWell = canvas.getByTestId('well-card');
-    await expect(radius(onWell)).toBe(token('--radius-stadium'));
+    await expect(radius(onWell)).toBe(tokenPixels('--radius-stadium'));
     // The edge is the card's own hairline, the same as the outer card's, and not the nested outline.
     await expect(getComputedStyle(onWell).borderTopColor).toBe(getComputedStyle(outer).borderTopColor);
   },

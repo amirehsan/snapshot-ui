@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
+import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
@@ -21,12 +22,6 @@ import { TextField } from '../src/text-field';
  */
 
 const CHANGED = 'Changed';
-
-const formOf = (container: HTMLElement): HTMLFormElement => {
-  const form = container.querySelector('form');
-  if (!form) throw new Error('No form');
-  return form;
-};
 
 /** The submitted value of a name, as the browser would send it. */
 const sent = (container: HTMLElement, name: string): FormDataEntryValue[] =>

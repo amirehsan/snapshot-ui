@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRef, useState, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { formOf, root } from '../../test/dom';
 import { Checkbox } from './Checkbox';
 import { CheckboxGroup, type CheckboxGroupProps } from './CheckboxGroup';
 
@@ -23,18 +24,6 @@ const channels = [
     Push
   </Checkbox>,
 ];
-
-const root = (container: HTMLElement): Element => {
-  const element = container.firstElementChild;
-  if (!element) throw new Error('Nothing rendered');
-  return element;
-};
-
-const formOf = (container: HTMLElement): HTMLFormElement => {
-  const form = container.querySelector('form');
-  if (!form) throw new Error('No form');
-  return form;
-};
 
 describe('CheckboxGroup', () => {
   it('renders a named group of checkboxes inside a field', async () => {

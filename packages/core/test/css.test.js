@@ -174,6 +174,7 @@ describe('the ink ring guard', () => {
       'outline-color: var(--color-canvas);',
       'outline: 2px solid var(--color-inkwell);',
       stripComments('/* outline: var(--color-ink) */ .a { color: var(--color-ink); }'),
+      '.a { outline: none } .b { color: var(--color-ink) }',
     ]) {
       expect(css, css).not.toMatch(INK_RING);
     }
@@ -184,7 +185,51 @@ describe('the system color guard', () => {
   const stray = (css) => valuesOutsideForcedColors(css).filter((value) => SYSTEM_COLOR.test(value));
 
   it('matches every system color, current and deprecated, in any case', () => {
-    expect(SYSTEM_COLORS).toHaveLength(42);
+    // Written out again, so a misspelled entry in the list is caught here and not tested against itself.
+    expect(SYSTEM_COLORS).toEqual([
+      'AccentColor',
+      'AccentColorText',
+      'ActiveText',
+      'ButtonBorder',
+      'ButtonFace',
+      'ButtonText',
+      'canvas',
+      'CanvasText',
+      'Field',
+      'FieldText',
+      'GrayText',
+      'Highlight',
+      'HighlightText',
+      'LinkText',
+      'Mark',
+      'MarkText',
+      'SelectedItem',
+      'SelectedItemText',
+      'VisitedText',
+      'ActiveBorder',
+      'ActiveCaption',
+      'AppWorkspace',
+      'Background',
+      'ButtonHighlight',
+      'ButtonShadow',
+      'CaptionText',
+      'InactiveBorder',
+      'InactiveCaption',
+      'InactiveCaptionText',
+      'InfoBackground',
+      'InfoText',
+      'Menu',
+      'MenuText',
+      'Scrollbar',
+      'ThreeDDarkShadow',
+      'ThreeDFace',
+      'ThreeDHighlight',
+      'ThreeDLightShadow',
+      'ThreeDShadow',
+      'Window',
+      'WindowFrame',
+      'WindowText',
+    ]);
     for (const color of SYSTEM_COLORS) {
       for (const written of [color, color.toLowerCase(), color.toUpperCase()]) {
         expect(stray(`.x { background-color: ${written}; }`), written).toEqual([written]);
@@ -216,7 +261,7 @@ describe('the system color guard', () => {
       '.x { color: var(--canvas); background: var(--field-fill); border-color: var(--window-edge) }',
       '.x { background-color: canvas-fill; }',
       '.x { transition: background-color 150ms ease, box-shadow 150ms ease; }',
-      "/* Highlight is the reader's own */ .x { color: var(--color-ink); }",
+      '/* color: Highlight; */ .x { color: var(--color-ink); }',
       '.field:hover .mark { color: var(--color-ink); }',
       '.x { content: ""; }\n@media (forced-colors: active) { .x { color: Highlight; background: Field } }',
       '@media (forced-colors: active) { .x { background: Window } } .y { color: var(--color-ink) }',
@@ -234,24 +279,20 @@ describe('type components', () => {
       const source = read(`src/components/${file}`);
       expect(source).toContain('var(--color-slate)');
       expect(source).not.toContain('--color-taupe');
-
-      if (file === 'eyebrow.css') {
-        const css = stripComments(source);
-        // The label is tracked at its own token.
-        expect(blockAfter(css, '.eyebrow {')).toContain(
-          'letter-spacing: var(--text-eyebrow--letter-spacing);',
-        );
-        // The dot is light signal orange, the attention cue. Signal orange is consent only.
-        expect(blockAfter(css, '.eyebrow::before {')).toContain(
-          'background-color: var(--color-signal-light);',
-        );
-        expect(css).not.toContain('var(--color-signal)');
-        // The inset variant keeps the dot inside the box, and it comes after the rule it overrides.
-        expect(blockAfter(css, '.eyebrow-inset::before {')).toContain('margin-inline-start: 0;');
-        expect(css.indexOf('.eyebrow-inset::before')).toBeGreaterThan(css.indexOf('.eyebrow::before'));
-      }
     },
   );
+
+  it('tracks the eyebrow at its own token, dots it in light signal orange and keeps the inset dot inside', () => {
+    const css = stripComments(read('src/components/eyebrow.css'));
+    // The label is tracked at its own token.
+    expect(blockAfter(css, '.eyebrow {')).toContain('letter-spacing: var(--text-eyebrow--letter-spacing);');
+    // The dot is light signal orange, the attention cue. Signal orange is consent only.
+    expect(blockAfter(css, '.eyebrow::before {')).toContain('background-color: var(--color-signal-light);');
+    expect(css).not.toContain('var(--color-signal)');
+    // The inset variant keeps the dot inside the box, and it comes after the rule it overrides.
+    expect(blockAfter(css, '.eyebrow-inset::before {')).toContain('margin-inline-start: 0;');
+    expect(css.indexOf('.eyebrow-inset::before')).toBeGreaterThan(css.indexOf('.eyebrow::before'));
+  });
 
   it.each([
     ['heading.css', '.heading {'],

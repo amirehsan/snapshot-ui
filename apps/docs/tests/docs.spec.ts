@@ -467,10 +467,12 @@ test('the field parts page shows the Changed chip on a changed field and hides i
   await page.emulateMedia({ colorScheme: 'light' });
   await visit(page, '/docs/components/field');
   const edited = fieldNamed(page, 'Workspace name');
+  await expect(edited.locator('.field-changed')).toHaveCount(1);
   await expect(edited.locator('.field-changed')).toBeHidden();
   await edited.getByRole('textbox').fill('Northwind Studio East');
   await expect(edited.locator('.field-changed')).toBeVisible();
   await edited.getByRole('textbox').fill('Northwind Studio');
+  await expect(edited.locator('.field-changed')).toHaveCount(1);
   await expect(edited.locator('.field-changed')).toBeHidden();
 
   // A changed field draws the light signal orange edge and its chip.
@@ -479,7 +481,7 @@ test('the field parts page shows the Changed chip on a changed field and hides i
   await expect(changed.getByRole('textbox')).toHaveCSS('border-top-color', 'rgb(243, 115, 56)');
   // An invalid field draws the error edge and the error line, and no chip.
   const invalid = fieldNamed(page, 'Short description');
-  await expect(invalid.locator('.field-changed')).toBeHidden();
+  await expect(invalid.locator('.field-changed')).toHaveCount(0);
   await expect(invalid.locator('.field-error')).toBeVisible();
   await expect(invalid.getByRole('textbox')).toHaveCSS('border-top-color', 'rgb(163, 35, 27)');
 });
@@ -735,6 +737,7 @@ test('the arrow keys move the choice of a radio group, and the chosen row draws 
     group.locator('label.radio', { has: page.getByRole('radio', { name }) });
 
   // A change from the saved choice shows the chip, and going back hides it.
+  await expect(group.locator('.field-changed')).toHaveCount(1);
   await expect(group.locator('.field-changed')).toBeHidden();
   await weekly.focus();
   await page.keyboard.press('ArrowDown');
@@ -749,6 +752,7 @@ test('the arrow keys move the choice of a radio group, and the chosen row draws 
   await expect(chosen).toHaveCSS('outline-offset', '-4px');
   await page.keyboard.press('ArrowUp');
   await expect(weekly).toBeChecked();
+  await expect(group.locator('.field-changed')).toHaveCount(1);
   await expect(group.locator('.field-changed')).toBeHidden();
   // The row that lost the choice is plain again.
   await expect(rowOf('Monthly')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
@@ -838,6 +842,7 @@ test('the unsaved changes example shows the chip and the ring until the setting 
     });
   const save = page.getByRole('button', { name: 'Save changes' });
   const discard = page.getByRole('button', { name: 'Discard' });
+  await expect(field.locator('.field-changed')).toHaveCount(1);
   await expect(field.locator('.field-changed')).toBeHidden();
   await expect(save).toBeDisabled();
   expect(await ring()).toMatch(/^0px /);
@@ -851,11 +856,13 @@ test('the unsaved changes example shows the chip and the ring until the setting 
 
   await discard.click();
   await expect(digest).not.toBeChecked();
+  await expect(field.locator('.field-changed')).toHaveCount(1);
   await expect(field.locator('.field-changed')).toBeHidden();
 
   await switchNamed(page, 'Weekly digest').click();
   await save.click();
   await expect(digest).toBeChecked();
+  await expect(field.locator('.field-changed')).toHaveCount(1);
   await expect(field.locator('.field-changed')).toBeHidden();
   await expect(save).toBeDisabled();
 });

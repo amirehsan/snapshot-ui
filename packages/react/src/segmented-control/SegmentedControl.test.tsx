@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRef, useState, type ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { root } from '../../test/dom';
 import { SegmentedControl, type SegmentedControlProps } from './SegmentedControl';
 import { SegmentedControlItem } from './SegmentedControlItem';
 
@@ -22,12 +23,6 @@ function Controlled(props: SegmentedControlProps): ReactElement {
   const [value, setValue] = useState('light');
   return <Theme {...props} value={value} onChange={setValue} />;
 }
-
-const root = (container: HTMLElement): Element => {
-  const element = container.firstElementChild;
-  if (!element) throw new Error('Nothing rendered');
-  return element;
-};
 
 const checked = (): string[] =>
   screen

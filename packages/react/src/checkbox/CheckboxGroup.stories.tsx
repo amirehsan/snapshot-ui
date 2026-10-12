@@ -1,19 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
+import { tokenColor } from '../stories/paint';
 import { Checkbox } from './Checkbox';
 import { CheckboxGroup } from './CheckboxGroup';
-
-/** The color a CSS value paints in the current theme, read by painting it. */
-function paint(value: string): string {
-  const probe = document.createElement('span');
-  probe.style.color = value;
-  document.body.append(probe);
-  const { color } = getComputedStyle(probe);
-  probe.remove();
-  return color;
-}
-
-const token = (name: string): string => paint(`var(${name})`);
 
 const meta = {
   title: 'Components/CheckboxGroup',
@@ -114,7 +103,7 @@ export const Changed: Story = {
       .closest('label')
       ?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
-    await expect(getComputedStyle(box).borderTopColor).toBe(token('--color-boundary'));
+    await expect(getComputedStyle(box).borderTopColor).toBe(tokenColor('--color-boundary'));
   },
 };
 
@@ -127,7 +116,7 @@ export const Invalid: Story = {
       await expect(input).toBeInvalid();
       const box = input.closest('label')?.querySelector('.checkbox-box');
       if (!box) throw new Error('No box');
-      await expect(getComputedStyle(box).borderTopColor).toBe(token('--color-error'));
+      await expect(getComputedStyle(box).borderTopColor).toBe(tokenColor('--color-error'));
     }
   },
 };
@@ -153,7 +142,7 @@ export const Disabled: Story = {
       .closest('label')
       ?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
-    await expect(getComputedStyle(box).backgroundColor).toBe(token('--color-disabled'));
+    await expect(getComputedStyle(box).backgroundColor).toBe(tokenColor('--color-disabled'));
   },
 };
 

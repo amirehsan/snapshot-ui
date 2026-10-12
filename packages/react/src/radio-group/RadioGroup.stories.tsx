@@ -1,18 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { Link } from '../link/Link';
+import { tokenColor } from '../stories/paint';
 import { Radio } from './Radio';
 import { RadioGroup } from './RadioGroup';
-
-/** The color a token paints in the current theme, read by painting it. */
-function tokenColor(name: string): string {
-  const probe = document.createElement('span');
-  probe.style.color = `var(${name})`;
-  document.body.append(probe);
-  const { color } = getComputedStyle(probe);
-  probe.remove();
-  return color;
-}
 
 /** The row, which is the label around a radio. */
 function rowOf(radio: HTMLElement): HTMLElement {

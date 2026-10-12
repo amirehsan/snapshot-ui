@@ -16,7 +16,8 @@ const DIRECTIVE_ANYWHERE = /^[ \t]*(['"])use client\1/m;
 // Matches the specifier in every import form: `from`, bare `import '...'`,
 // `import('...')`, `export ... from` and subpaths such as `react-aria-components/foo`.
 const ARIA_REFERENCE = /(['"])react-aria-components(?:\/[^'"]*)?\1/;
-const NOT_PRODUCTION_SOURCE = /\.(test|stories)\.tsx?$/;
+// Tests, stories and the helpers the stories share in src/stories never ship.
+const NOT_PRODUCTION_SOURCE = /\.(test|stories)\.tsx?$|^src\/stories\//;
 
 const root = resolve(process.argv[2] ?? process.cwd());
 let failed = false;

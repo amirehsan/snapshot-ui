@@ -1,19 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { Link } from '../link/Link';
+import { paint, tokenColor } from '../stories/paint';
 import { Checkbox } from './Checkbox';
-
-/** The color a CSS value paints in the current theme, read by painting it. */
-function paint(value: string): string {
-  const probe = document.createElement('span');
-  probe.style.color = value;
-  document.body.append(probe);
-  const { color } = getComputedStyle(probe);
-  probe.remove();
-  return color;
-}
-
-const token = (name: string): string => paint(`var(${name})`);
 
 const meta = {
   title: 'Components/Checkbox',
@@ -38,8 +27,8 @@ export const Default: Story = {
     await expect(input).not.toBeChecked();
     const box = input.closest('label')?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
-    await expect(getComputedStyle(box).borderTopColor).toBe(token('--color-boundary'));
-    await expect(getComputedStyle(box).backgroundColor).toBe(token('--color-raised'));
+    await expect(getComputedStyle(box).borderTopColor).toBe(tokenColor('--color-boundary'));
+    await expect(getComputedStyle(box).backgroundColor).toBe(tokenColor('--color-raised'));
     // Nothing is drawn inside an empty box.
     await expect(getComputedStyle(box, '::after').display).toBe('none');
   },
@@ -53,11 +42,11 @@ export const Checked: Story = {
     await expect(input).toBeChecked();
     const box = input.closest('label')?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
-    await expect(getComputedStyle(box).backgroundColor).toBe(token('--color-ink'));
-    await expect(getComputedStyle(box).borderTopColor).toBe(token('--color-ink'));
+    await expect(getComputedStyle(box).backgroundColor).toBe(tokenColor('--color-ink'));
+    await expect(getComputedStyle(box).borderTopColor).toBe(tokenColor('--color-ink'));
     // The mark is a mask over the canvas color: not an image with a color of its own.
     const mark = getComputedStyle(box, '::after');
-    await expect(mark.backgroundColor).toBe(token('--color-canvas'));
+    await expect(mark.backgroundColor).toBe(tokenColor('--color-canvas'));
     await expect(mark.display).toBe('block');
     await expect(mark.maskImage).toContain('polyline');
   },
@@ -71,7 +60,7 @@ export const Indeterminate: Story = {
     await expect(input).toBePartiallyChecked();
     const box = input.closest('label')?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
-    await expect(getComputedStyle(box).backgroundColor).toBe(token('--color-ink'));
+    await expect(getComputedStyle(box).backgroundColor).toBe(tokenColor('--color-ink'));
     await expect(getComputedStyle(box, '::after').maskImage).toContain('M4 10h12');
   },
 };
@@ -98,7 +87,7 @@ export const Invalid: Story = {
     await expect(canvas.getByText('Accept the terms to continue.')).toBeVisible();
     const box = input.closest('label')?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
-    await expect(getComputedStyle(box).borderTopColor).toBe(token('--color-error'));
+    await expect(getComputedStyle(box).borderTopColor).toBe(tokenColor('--color-error'));
   },
 };
 
@@ -113,8 +102,8 @@ export const InvalidAndChecked: Story = {
   play: async ({ canvas }) => {
     const box = canvas.getByRole('checkbox').closest('label')?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
-    await expect(getComputedStyle(box).borderTopColor).toBe(token('--color-error'));
-    await expect(getComputedStyle(box).backgroundColor).toBe(token('--color-ink'));
+    await expect(getComputedStyle(box).borderTopColor).toBe(tokenColor('--color-error'));
+    await expect(getComputedStyle(box).backgroundColor).toBe(tokenColor('--color-ink'));
   },
 };
 
@@ -128,8 +117,8 @@ export const Disabled: Story = {
     const box = row?.querySelector('.checkbox-box');
     if (!row || !box) throw new Error('No row');
     await expect(getComputedStyle(row).cursor).toBe('not-allowed');
-    await expect(getComputedStyle(row).color).toBe(token('--color-taupe'));
-    await expect(getComputedStyle(box).backgroundColor).toBe(token('--color-disabled'));
+    await expect(getComputedStyle(row).color).toBe(tokenColor('--color-taupe'));
+    await expect(getComputedStyle(box).backgroundColor).toBe(tokenColor('--color-disabled'));
   },
 };
 
@@ -139,8 +128,8 @@ export const DisabledChecked: Story = {
   play: async ({ canvas }) => {
     const box = canvas.getByRole('checkbox').closest('label')?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
-    await expect(getComputedStyle(box).backgroundColor).toBe(token('--color-disabled'));
-    await expect(getComputedStyle(box, '::after').backgroundColor).toBe(token('--color-taupe'));
+    await expect(getComputedStyle(box).backgroundColor).toBe(tokenColor('--color-disabled'));
+    await expect(getComputedStyle(box, '::after').backgroundColor).toBe(tokenColor('--color-taupe'));
     await expect(getComputedStyle(box, '::after').display).toBe('block');
   },
 };
@@ -223,7 +212,7 @@ export const Focused: Story = {
     if (!box) throw new Error('No box');
     await expect(getComputedStyle(box).outlineStyle).toBe('solid');
     await expect(getComputedStyle(box).outlineWidth).toBe('2px');
-    await expect(getComputedStyle(box).outlineColor).toBe(token('--focus-ring-color'));
+    await expect(getComputedStyle(box).outlineColor).toBe(tokenColor('--focus-ring-color'));
   },
 };
 
@@ -237,7 +226,7 @@ export const FocusedChecked: Story = {
     const box = input.closest('label')?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
     await expect(getComputedStyle(box).outlineWidth).toBe('2px');
-    await expect(getComputedStyle(box).backgroundColor).toBe(token('--color-ink'));
+    await expect(getComputedStyle(box).backgroundColor).toBe(tokenColor('--color-ink'));
   },
 };
 
@@ -355,6 +344,6 @@ export const PlainHtml: Story = {
   play: async ({ canvas }) => {
     const box = canvas.getByRole('checkbox').closest('label')?.querySelector('.checkbox-box');
     if (!box) throw new Error('No box');
-    await expect(getComputedStyle(box).borderTopColor).toBe(token('--color-error'));
+    await expect(getComputedStyle(box).borderTopColor).toBe(tokenColor('--color-error'));
   },
 };

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRef, useState, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { root } from '../../test/dom';
 import { TextField, type TextFieldProps } from './TextField';
 
 /** A field the caller controls, the way a form library would. */
@@ -10,12 +11,6 @@ function Controlled(props: TextFieldProps): ReactElement {
   const [value, setValue] = useState('Northwind');
   return <TextField {...props} value={value} onChange={setValue} />;
 }
-
-const root = (container: HTMLElement): Element => {
-  const element = container.firstElementChild;
-  if (!element) throw new Error('Nothing rendered');
-  return element;
-};
 
 describe('TextField', () => {
   it('renders a labelled input with a hint, inside a field', async () => {
@@ -248,6 +243,84 @@ describe('TextField', () => {
     expect(screen.queryByText('Changed')).not.toBeInTheDocument();
     expect(input.getAttribute('aria-describedby')?.split(' ')).not.toContain(chipId);
     expect(input).toHaveAccessibleDescription('Enter a name.');
+    await expectNoA11yViolations(container);
+  });
+
+  it('reads the hint and the error of an invalid field, and drops only the chip', async () => {
+    const { container } = render(
+      <TextField
+        label="Name"
+        description="Shown in the header."
+        isChanged
+        isInvalid
+        errorMessage="Enter a name."
+        defaultValue="!"
+      />,
+    );
+    const input = screen.getByRole('textbox', { name: 'Name' });
+    expect(input).toHaveAccessibleDescription('Shown in the header. Enter a name.');
+    expect(input.getAttribute('aria-describedby')?.split(' ')).toHaveLength(2);
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    await expectNoA11yViolations(container);
+  });
+
+  it('keeps the chip on a disabled field that is changed, and reads it', () => {
+    const { container } = render(<TextField label="Name" isDisabled isChanged defaultValue="Northwind" />);
+    const input = screen.getByRole('textbox', { name: 'Name' });
+    expect(input).toBeDisabled();
+    expect(root(container)).toHaveAttribute('data-changed', '');
+    expect(root(container)).toHaveAttribute('data-disabled');
+    expect(input).toHaveAccessibleDescription('Changed');
+  });
+
+  it('lets invalid outrank changed on a disabled field too', () => {
+    const { container } = render(
+      <TextField label="Name" isDisabled isChanged isInvalid errorMessage="Enter a name." defaultValue="!" />,
+    );
+    const input = screen.getByRole('textbox', { name: 'Name' });
+    expect(root(container)).toHaveAttribute('data-disabled');
+    expect(root(container)).toHaveAttribute('data-invalid');
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    expect(input).toHaveAccessibleDescription('Enter a name.');
+  });
+
+  it('reads the chip while validate passes, and the error alone while it fails', async () => {
+    const user = userEvent.setup();
+    render(
+      <TextField
+        label="Email"
+        isChanged
+        defaultValue="team@northwind.test"
+        validationBehavior="aria"
+        validate={(value) => (value.includes('@') ? null : 'Enter an email address.')}
+      />,
+    );
+    const input = screen.getByRole('textbox', { name: 'Email' });
+    expect(input).toHaveAccessibleDescription('Changed');
+    await user.clear(input);
+    await user.type(input, 'team');
+    expect(input).toHaveAccessibleDescription('Enter an email address.');
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    await user.type(input, '@northwind.test');
+    expect(input).toHaveAccessibleDescription('Changed');
+  });
+
+  it('leaves the chip id in aria-describedby when React Aria finds the field invalid, and axe accepts it', async () => {
+    // The field's props cannot see validation React Aria runs, so the chip leaves the page and its id stays.
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <TextField label="Name" name="name" isRequired isChanged errorMessage="Enter a name." />
+        <button type="submit">Save</button>
+      </form>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const input = screen.getByRole('textbox', { name: /Name/ });
+    const ids = input.getAttribute('aria-describedby')?.split(' ') ?? [];
+    // The error line resolves, and the chip's id names nothing, so the description is the error alone.
+    expect(ids.map((id) => document.getElementById(id) !== null)).toEqual([true, false]);
+    expect(input).toHaveAccessibleDescription('Enter a name.');
+    // axe's aria-valid-attr-value asks only that one id of the list resolves, so it reports nothing.
     await expectNoA11yViolations(container);
   });
 

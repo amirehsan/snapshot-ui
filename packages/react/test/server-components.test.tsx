@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -86,7 +86,7 @@ describe('the static components in a server component', () => {
     expect(renderToStaticMarkup(element)).toBe(markup);
   });
 
-  it('pass a class and attributes through, so a server page can shape them', () => {
+  it('passes a class and attributes through, so a server page can shape them', () => {
     const html = renderToStaticMarkup(
       <Heading level={2} className="page-title" id="top" data-testid="title">
         Title
@@ -119,5 +119,32 @@ describe.each(STATIC_MODULES)('the source of %s', (file) => {
 
   it('imports no React Aria, which would pull a client module into a server tree', () => {
     expect(source).not.toContain('react-aria-components');
+  });
+});
+
+describe('every component source', () => {
+  // A static component that is not listed above is never checked to stay one, so every source is either a
+  // client module, which says so on its first line, or listed. Tests and stories never ship.
+  const src = new URL('../src/', import.meta.url);
+  const sources = readdirSync(src, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((folder) =>
+      readdirSync(new URL(`${folder.name}/`, src))
+        .filter((file) => file.endsWith('.tsx') && !/\.(?:test|stories)\.tsx$/.test(file))
+        .map((file) => `${folder.name}/${file}`),
+    );
+
+  it('finds the sources, so a moved folder cannot pass as one with nothing in it', () => {
+    expect(sources.length).toBeGreaterThan(STATIC_MODULES.length);
+    for (const file of STATIC_MODULES) expect(sources).toContain(file);
+  });
+
+  it('is a client module or a listed static one', () => {
+    const unlisted = sources.filter(
+      (file) =>
+        !readFileSync(new URL(file, src), 'utf8').startsWith("'use client';") &&
+        !STATIC_MODULES.includes(file),
+    );
+    expect(unlisted).toEqual([]);
   });
 });

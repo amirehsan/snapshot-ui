@@ -56,6 +56,17 @@ describe('check-use-client', () => {
     expect(status).toBe(0);
   });
 
+  it('leaves the helpers the stories share out of the sources, as it leaves the stories', () => {
+    const root = makeRoot({
+      ...GOOD_TREE,
+      'src/stories/paint.ts': `export const paint = (value: string): string => value;\n`,
+      'src/button/Button.stories.tsx': `export default {};\n`,
+    });
+    const { status, stdout } = guard(root);
+    expect(stdout).toContain('(2 sources, 1 client modules)');
+    expect(status).toBe(0);
+  });
+
   it('defaults the package root to the current directory', () => {
     const root = makeRoot(GOOD_TREE);
     const { status, stdout } = guard(undefined, root);

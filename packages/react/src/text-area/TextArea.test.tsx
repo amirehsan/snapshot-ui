@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRef, useState, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { root } from '../../test/dom';
 import { TextArea, type TextAreaProps } from './TextArea';
 
 /** A field the caller controls, the way a form library would. */
@@ -10,12 +11,6 @@ function Controlled(props: TextAreaProps): ReactElement {
   const [value, setValue] = useState('Northwind\nStudio');
   return <TextArea {...props} value={value} onChange={setValue} />;
 }
-
-const root = (container: HTMLElement): Element => {
-  const element = container.firstElementChild;
-  if (!element) throw new Error('Nothing rendered');
-  return element;
-};
 
 describe('TextArea', () => {
   it('renders a labelled textarea with a hint, inside a field', async () => {
