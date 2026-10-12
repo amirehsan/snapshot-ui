@@ -10,6 +10,7 @@ export default function TextFieldStates(): ReactElement {
       <TextField
         label="Short name"
         defaultValue="!"
+        isChanged
         isInvalid
         errorMessage="Enter a name with at least two letters."
       />

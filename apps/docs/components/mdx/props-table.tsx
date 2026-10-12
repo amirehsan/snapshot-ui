@@ -9,9 +9,18 @@ function inline(text: string): ReactNode[] {
 /**
  * Props from the library's own types and JSDoc, as a table whose rows are named
  * by the prop. `type` is usually a Pick of the component's props: React Aria's
- * inherited props include dozens of DOM events nobody needs listed.
+ * inherited props include dozens of DOM events nobody needs listed. `label` is
+ * the table's accessible name, so a page with several tables names each one.
  */
-export async function PropsTable({ path, type }: { path: string; type: string }): Promise<ReactElement> {
+export async function PropsTable({
+  path,
+  type,
+  label = 'Props',
+}: {
+  path: string;
+  type: string;
+  label?: string;
+}): Promise<ReactElement> {
   const [doc] = await generator.generateTypeTable(
     { path, type },
     { typeSimplifier: { shouldSimplify: () => false } },
@@ -19,7 +28,7 @@ export async function PropsTable({ path, type }: { path: string; type: string })
   const entries = [...(doc?.entries ?? [])].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <div className="props">
-      <table aria-label="Props">
+      <table aria-label={label}>
         <tbody>
           {entries.map((entry) => {
             const fallback = entry.tags.find((tag) => tag.name === 'default')?.text;

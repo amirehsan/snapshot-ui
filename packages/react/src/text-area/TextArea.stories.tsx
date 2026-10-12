@@ -118,7 +118,7 @@ export const InvalidAndChanged: Story = {
   },
 };
 
-/** From 70% of the budget the count appears, quiet and slate. A line break counts as one character. */
+/** From 70% of the budget the count appears, quiet and slate. A line break counts as one UTF-16 code unit. */
 export const WithCounter: Story = {
   args: {
     description: 'One or two sentences, for search results.',

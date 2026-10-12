@@ -17,11 +17,22 @@ export default function SegmentedControlStates(): ReactElement {
       <SegmentedControl label="Billing plan" defaultValue="team" isChanged>
         {PLANS}
       </SegmentedControl>
-      <SegmentedControl label="Billing plan" isInvalid errorMessage="Choose a plan to continue.">
+      <SegmentedControl
+        label="Plan for the new workspace"
+        isInvalid
+        errorMessage="Choose a plan to continue."
+      >
         {PLANS}
       </SegmentedControl>
-      <SegmentedControl label="Billing plan" defaultValue="business" isDisabled>
+      <SegmentedControl label="Plan while billing is paused" defaultValue="business" isDisabled>
         {PLANS}
+      </SegmentedControl>
+      <SegmentedControl label="Plan for a trial" defaultValue="free">
+        <SegmentedControlItem value="free">Free</SegmentedControlItem>
+        <SegmentedControlItem value="team">Team</SegmentedControlItem>
+        <SegmentedControlItem value="business" isDisabled>
+          Business
+        </SegmentedControlItem>
       </SegmentedControl>
       <SegmentedControl aria-label="Corners" size="sm" defaultValue="soft">
         <SegmentedControlItem value="rounded">Rounded</SegmentedControlItem>
