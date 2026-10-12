@@ -225,19 +225,45 @@
     border-top: 1px solid var(--color-divider);
   }
 
-  /* A settings list ends each row with its switch, so the label and the hint sit at the start. */
+  /*
+   * A settings row, drawn as the mockup draws it: the label at the h4 step over its hint at the
+   * start, and the track at the end, centred on the two. The label row and the switch's own label
+   * lend their parts to the field's grid (display: contents), so the label stays one element and a
+   * press on its text or its track still flips the switch. Its hit area, the switch's ::before, is
+   * placed against the field, which is positioned for it, so the whole row is the target, at least
+   * 40px tall.
+   */
   .setting .field {
+    position: relative;
     flex: 1;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 1.5rem;
+    row-gap: 0;
   }
 
-  .setting .field-head > .switch {
-    flex: 1;
-    flex-direction: row-reverse;
-    justify-content: space-between;
+  .setting .field-head,
+  .setting .switch {
+    display: contents;
+  }
+
+  .setting .switch-text {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: var(--text-h4);
+    line-height: var(--text-h4--line-height);
+    font-weight: var(--text-h4--font-weight);
   }
 
   .setting .field-description {
+    grid-column: 1;
+    grid-row: 2;
     padding-inline-start: 0;
+  }
+
+  .setting .switch-track {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
   }
 
   .code {
