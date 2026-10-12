@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, TextField } from '@snapshot-ui/react';
+import { Button, Text, TextField } from '@snapshot-ui/react';
 import { useState, type ReactElement } from 'react';
 
 export default function TextFieldValidation(): ReactElement {
@@ -33,9 +33,9 @@ export default function TextFieldValidation(): ReactElement {
       <div className="row">
         <Button type="submit">Send invite</Button>
       </div>
-      <p className="muted" role="status">
+      <Text tone="muted" role="status">
         {sentTo ? `Invite sent to ${sentTo}.` : ''}
-      </p>
+      </Text>
     </form>
   );
 }

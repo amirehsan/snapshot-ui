@@ -62,7 +62,8 @@ Set `isRequired` on a checkbox, or on a group where one checked box is enough, a
 
 Every value works controlled and uncontrolled. A checked checkbox with a `name` submits its `value`, or "on", and an unchecked one is left out of the form. A group submits one entry per checked box, all under the group's `name`.
 
-<Code code={`import { useState } from 'react';
+```tsx
+import { useState } from 'react';
 import { Checkbox, CheckboxGroup } from '@snapshot-ui/react';
 
 export function Preferences() {
@@ -78,7 +79,8 @@ export function Preferences() {
       </Checkbox>
     </form>
   );
-}`} />
+}
+```
 
 </Section>
 

@@ -40,7 +40,8 @@ Give it an `href` and it renders an anchor with the same classes and the same ne
 
 The child is the icon. It is hidden from assistive technology, so the name comes from `aria-label` or `aria-labelledby`, and the types require one of them.
 
-<Code code={`import { IconButton } from '@snapshot-ui/react';
+```tsx
+import { IconButton } from '@snapshot-ui/react';
 import { Settings } from 'lucide-react';
 
 export function SettingsButton({ onOpen }: { onOpen: () => void }) {
@@ -49,7 +50,8 @@ export function SettingsButton({ onOpen }: { onOpen: () => void }) {
       <Settings />
     </IconButton>
   );
-}`} />
+}
+```
 
 </Section>
 

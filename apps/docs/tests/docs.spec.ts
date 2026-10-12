@@ -379,6 +379,78 @@ test('the results and their count only ever belong to the current query', async 
   await expect(dialog.getByRole('status')).toHaveText('Nothing matches "zzzzqx"');
 });
 
+test('the search dialog keeps its height while the query changes', async ({ page }) => {
+  await visit(page, '/docs');
+  await page.keyboard.press('ControlOrMeta+k');
+  const dialog = page.getByRole('dialog', { name: 'Search the docs' });
+  const field = dialog.getByRole('searchbox', { name: 'Search' });
+  const height = async (): Promise<number> => (await dialog.boundingBox())?.height ?? 0;
+
+  // Nothing typed yet: the floor under the results, 20rem, plus the field and the footer.
+  const resting = await height();
+  await expect(dialog.locator('.search-body')).toHaveCSS('min-height', '320px');
+  expect(resting).toBeGreaterThan(320);
+  await field.fill('zzzzqx');
+  await expect(dialog.getByRole('status')).toHaveText('Nothing matches "zzzzqx"');
+  expect(await height()).toBeCloseTo(resting, 0);
+
+  // Typing never takes it under that floor: not while a search is still out and its results are not
+  // listed, and not once they have come back.
+  for (const text of ['S', 'Sp', 'Spi', 'Spin', 'Spinn', 'Spinne', 'Spinner']) {
+    await field.fill(text);
+    expect(await height()).toBeGreaterThanOrEqual(resting - 0.5);
+  }
+  await expect(dialog.getByRole('link', { name: /Spinner/ }).first()).toBeVisible();
+  expect(await height()).toBeGreaterThanOrEqual(resting - 0.5);
+});
+
+test('choosing a search result for a heading on the open page closes the drawer', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await visit(page);
+  await page.getByRole('button', { name: 'Open the menu' }).click();
+  await page.getByRole('button', { name: 'Search docs' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Search the docs' });
+  await dialog.getByRole('searchbox', { name: 'Search' }).fill('Pass isPending');
+  // Only the hash changes: the path is the one already open, so nothing the shell watches for moves.
+  await dialog.locator('a.search-result[href="/docs/components/button#usage"]').click();
+  await expect(page).toHaveURL(/\/docs\/components\/button#usage$/);
+  await expect(dialog).toBeHidden();
+  await expectDrawerClosed(page);
+  await expect(page.getByRole('button', { name: 'Open the menu' })).toBeFocused();
+});
+
+test('Enter on a search result for the open page closes the drawer, with or without a hash', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await visit(page);
+  const menu = page.getByRole('button', { name: 'Open the menu' });
+  await menu.click();
+  await page.getByRole('button', { name: 'Search docs' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Search the docs' });
+  const field = dialog.getByRole('searchbox', { name: 'Search' });
+  await field.fill('Pass isPending');
+  // The first result is the page itself: not even the hash changes.
+  await expect(dialog.locator('a.search-result').first()).toHaveAttribute('href', '/docs/components/button');
+  await field.press('Enter');
+  await expect(dialog).toBeHidden();
+  await expectDrawerClosed(page);
+  await expect(page).toHaveURL(/\/docs\/components\/button$/);
+
+  // A result reached with the arrow keys is the link's own Enter, and takes the hash.
+  await menu.click();
+  await page.getByRole('button', { name: 'Search docs' }).click();
+  await field.fill('Pass isPending');
+  await expect(dialog.locator('a.search-result[href="/docs/components/button#usage"]')).toBeVisible();
+  await field.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await expect(dialog.locator('a.search-result[href="/docs/components/button#usage"]')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/docs\/components\/button#usage$/);
+  await expect(dialog).toBeHidden();
+  await expectDrawerClosed(page);
+});
+
 test('a server-rendered MDX page renders library components and props', async ({ page }) => {
   await visit(page);
   await expect(page.getByRole('button', { name: 'Delete site' })).toBeVisible();
@@ -788,6 +860,39 @@ test('the unsaved changes example shows the chip and the ring until the setting 
   await expect(save).toBeDisabled();
 });
 
+for (const width of [375, 1440]) {
+  test(`the props and the keys are real tables with a header cell for each row, at ${String(width)}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    const props = page.getByRole('table', { name: 'Props' });
+    const rows = await props.getByRole('row').count();
+    expect(rows).toBeGreaterThan(0);
+    await expect(props.getByRole('rowheader')).toHaveCount(rows);
+    await expect(props.getByRole('cell')).toHaveCount(rows);
+    await expect(props.getByRole('rowheader').first()).toContainText('isDisabled');
+    const keys = page.getByRole('table', { name: 'Keyboard' });
+    await expect(keys.getByRole('row')).toHaveCount(2);
+    await expect(keys.getByRole('rowheader').first()).toContainText('Space');
+    await expect(keys.getByRole('cell').first()).toHaveText('Activates the button.');
+
+    // Side by side from 768px: the name and its description share a line. On a phone each row stacks.
+    const [name, description] = await Promise.all([
+      props.getByRole('rowheader').first().boundingBox(),
+      props.getByRole('cell').first().boundingBox(),
+    ]);
+    if (!name || !description) throw new Error('The first prop is not on screen');
+    if (width < 768) {
+      expect(description.y).toBeGreaterThanOrEqual(name.y + name.height - 1);
+      expect(description.x).toBeCloseTo(name.x, 0);
+    } else {
+      expect(description.x).toBeGreaterThan(name.x + name.width - 1);
+      expect(description.y).toBeCloseTo(name.y, 0);
+    }
+  });
+}
+
 test('the copy button reports that the code was copied', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await visit(page);
@@ -797,6 +902,29 @@ test('the copy button reports that the code was copied', async ({ page, context 
   await expect(block.getByRole('status')).toHaveText('Copied');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('SaveBar');
   await expect(block.getByRole('status')).toHaveText('', { timeout: 5000 });
+});
+
+test('a code block keeps the indentation it is written with, on the page and in what the copy button copies', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await visit(page);
+  const block = page.locator('.code').filter({ hasText: 'export function SaveBar' });
+  // MDX strips two columns from every continuation line of a JS expression, so code written inside
+  // <Code code={`...`} /> lost them and "return (" came out flush left. A fenced block is not an expression.
+  const indented =
+    'export function SaveBar({ isSaving }: { isSaving: boolean }) {\n' +
+    '  return (\n' +
+    '    <Button type="submit" isPending={isSaving} pendingLabel="Saving">\n' +
+    '      Save changes\n' +
+    '    </Button>\n' +
+    '  );\n' +
+    '}';
+  expect(await block.locator('pre').textContent()).toContain(indented);
+  await block.getByRole('button', { name: 'Copy code' }).click();
+  await expect(block.getByRole('status')).toHaveText('Copied');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(indented);
 });
 
 test('the copy button reports a failure when there is no clipboard', async ({ page }) => {
@@ -819,7 +947,7 @@ test('reduced motion stops the shell transitions', async ({ page }) => {
 });
 
 for (const width of [375, 1440]) {
-  test(`brand link, preview tabs and contents links are hit at 40px at ${String(width)}px`, async ({
+  test(`brand link, preview tabs, contents links and package links are hit at 40px at ${String(width)}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -854,6 +982,20 @@ for (const width of [375, 1440]) {
       expect(tabSize.width).toBeGreaterThanOrEqual(40);
       expect(await hitsAt(tab, '.tab', -19)).toBe(true);
       expect(await hitsAt(tab, '.tab', 19)).toBe(true);
+    }
+
+    // The package card's links, "Edit this page" and "React Aria", are 14px text in a row.
+    const packageLinks = page.locator('.meta-row .link');
+    await expect(packageLinks).toHaveCount(2);
+    for (const link of await packageLinks.all()) {
+      await link.evaluate((element) => {
+        element.scrollIntoView({ block: 'center' });
+      });
+      const linkSize = await hitSize(link);
+      expect(linkSize.height).toBeGreaterThanOrEqual(40);
+      expect(linkSize.width).toBeGreaterThanOrEqual(40);
+      expect(await hitsAt(link, '.meta-row .link', -19)).toBe(true);
+      expect(await hitsAt(link, '.meta-row .link', 19)).toBe(true);
     }
 
     // The contents list is a desktop aside: under 1440px it folds away.

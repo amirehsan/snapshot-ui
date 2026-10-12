@@ -40,7 +40,8 @@ The options are all in one row or all in a column, never some of each. When the 
 
 Every value works controlled and uncontrolled, and a control with a `name` submits the chosen `value` in a plain form. `onChange` receives the value. A `value` of `null` is a controlled control with nothing chosen.
 
-<Code code={`import { useState } from 'react';
+```tsx
+import { useState } from 'react';
 import { SegmentedControl, SegmentedControlItem } from '@snapshot-ui/react';
 
 export function Appearance({ saved }: { saved: string }) {
@@ -58,7 +59,8 @@ export function Appearance({ saved }: { saved: string }) {
       <SegmentedControlItem value="system">System</SegmentedControlItem>
     </SegmentedControl>
   );
-}`} />
+}
+```
 
 Without a visible label, name the control with `aria-label`, as a toolbar's switch is named by what it sits beside. One of the two is required.
 

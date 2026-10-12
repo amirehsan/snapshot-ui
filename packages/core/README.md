@@ -29,6 +29,26 @@ With Tailwind CSS, `tailwind.css` exposes the tokens as utilities, such as `bg-c
 
 Body text is set at weight 450, which only a variable font has. Load Sofia Sans as one; the installation guide shows how.
 
+## Components
+
+`styles.css` draws every component below, and `@snapshot-ui/react` supplies the markup that goes with each. Every name links to its page in the documentation, with examples, props, keyboard use and design rules.
+
+- [Badge](https://snapshotui.com/docs/components/badge)
+- [Button](https://snapshotui.com/docs/components/button)
+- [Card](https://snapshotui.com/docs/components/card)
+- [Checkbox](https://snapshotui.com/docs/components/checkbox)
+- [Field parts](https://snapshotui.com/docs/components/field)
+- [Icon button](https://snapshotui.com/docs/components/icon-button)
+- [Kbd](https://snapshotui.com/docs/components/kbd)
+- [Link](https://snapshotui.com/docs/components/link)
+- [Radio group](https://snapshotui.com/docs/components/radio-group)
+- [Segmented control](https://snapshotui.com/docs/components/segmented-control)
+- [Spinner](https://snapshotui.com/docs/components/spinner)
+- [Switch](https://snapshotui.com/docs/components/switch)
+- [Text area](https://snapshotui.com/docs/components/text-area)
+- [Text field](https://snapshotui.com/docs/components/text-field)
+- [Typography](https://snapshotui.com/docs/components/typography)
+
 ## Links
 
 - [Documentation](https://snapshotui.com/docs)

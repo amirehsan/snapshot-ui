@@ -50,7 +50,8 @@ Set `isRequired` or a `validate` function, and the browser's own checks run when
 
 Every value works controlled and uncontrolled, and a group with a `name` submits the chosen option's `value` in a plain form. `onChange` receives the value as a string.
 
-<Code code={`import { useState } from 'react';
+```tsx
+import { useState } from 'react';
 import { Radio, RadioGroup } from '@snapshot-ui/react';
 
 export function Frequency({ saved }: { saved: string }) {
@@ -70,7 +71,8 @@ export function Frequency({ saved }: { saved: string }) {
       <Radio value="never">Never</Radio>
     </RadioGroup>
   );
-}`} />
+}
+```
 
 For a choice of two with the same weight, such as a setting that is simply on or off, use a switch instead. For a choice that changes the view in place, such as a mode, use a segmented control.
 

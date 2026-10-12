@@ -1,5 +1,12 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { axeViolations, cornersSettled, hitSize, sideways, withoutClipboard } from './support';
+import {
+  axeViolations,
+  COMPONENT_PAGES,
+  cornersSettled,
+  hitSize,
+  sideways,
+  withoutClipboard,
+} from './support';
 
 /** Opens the homepage and waits for its Corners switch to settle, which happens once the page has hydrated. */
 const visit = async (page: Page): Promise<void> => {
@@ -100,6 +107,37 @@ test('the homepage switches are real switches: named, described, on or off as dr
   const samples = page.getByRole('switch', { name: 'Sample', exact: true });
   await expect(samples).toHaveCount(6);
   for (const sample of await samples.all()) await expect(sample).toBeChecked();
+});
+
+test('the footer lists every component page in the rail order, and a catalog chip with a page links to it', async ({
+  page,
+}) => {
+  await visit(page);
+  const column = page
+    .locator('.footer-col')
+    .filter({ has: page.locator('summary', { hasText: 'Components' }) });
+  const listed = await column
+    .locator('.footer-links a')
+    .evaluateAll((links) =>
+      links.map((link) => ({ href: link.getAttribute('href'), name: link.textContent })),
+    );
+  expect(listed).toEqual(
+    COMPONENT_PAGES.map(({ slug, title }) => ({ href: `/docs/components/${slug}`, name: title })),
+  );
+
+  // A chip is a link when the catalog's component has a page, and plain text while it does not.
+  const slugs = new Map(COMPONENT_PAGES.map(({ slug, title }) => [title.toLowerCase(), slug]));
+  const chips = await page
+    .locator('.catalog .chip')
+    .evaluateAll((elements) =>
+      elements.map((element) => ({ name: element.textContent.trim(), href: element.getAttribute('href') })),
+    );
+  for (const chip of chips) {
+    const slug = slugs.get(chip.name.toLowerCase());
+    expect(chip.href, chip.name).toBe(slug ? `/docs/components/${slug}` : null);
+  }
+  // Button, Icon button and the six form controls have pages.
+  expect(chips.filter((chip) => chip.href)).toHaveLength(8);
 });
 
 test('the homepage switches corners and remembers them', async ({ page }) => {
@@ -253,8 +291,12 @@ test('choosing a link in the open menu leaves the next page able to scroll', asy
  */
 const CONTROLS = 'a[href], button, summary, .segmented-option, .switch';
 
-/** The fewest controls the page and the open menu have on a phone and on a desktop. */
-const CHECKED_ON_PAGE = 55;
+/**
+ * The fewest controls the page and the open menu have on a phone and on a desktop. On a production
+ * build the page has 79 on a phone, with the footer open, and 80 on a desktop; the floor is 6 under the
+ * smaller, the margin it had before the catalog and the footer linked every component.
+ */
+const CHECKED_ON_PAGE = 73;
 const CHECKED_IN_MENU = 6;
 
 /**

@@ -48,7 +48,8 @@ Pass `budget` to count the value's length against about how long it should be. T
 
 Every value works controlled and uncontrolled, and a field with a `name` submits in a plain form. `onChange` receives the string.
 
-<Code code={`import { useState } from 'react';
+```tsx
+import { useState } from 'react';
 import { TextField } from '@snapshot-ui/react';
 
 export function ShortDescription({ saved }: { saved: string }) {
@@ -64,7 +65,8 @@ export function ShortDescription({ saved }: { saved: string }) {
       budget={60}
     />
   );
-}`} />
+}
+```
 
 For a custom layout, use the parts inside React Aria's own field: Label, Input, Description and FieldError. Field parts has the example. For text that runs to several lines, use [Text area](/docs/components/text-area), which takes the same props.
 

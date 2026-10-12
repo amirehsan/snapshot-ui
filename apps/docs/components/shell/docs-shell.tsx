@@ -129,7 +129,7 @@ export function DocsShell({
       <div className="workspace" inert={drawerOpen}>
         {children}
       </div>
-      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} onNavigate={closeDrawer} />
     </ShellContext>
   );
 }

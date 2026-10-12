@@ -6,7 +6,11 @@ import { CopyButton } from './copy-button';
 // code follows the color mode and never borrows a reserved color.
 const theme = createCssVariablesTheme({ name: 'snapshot', variablePrefix: '--shiki-' });
 
-/** Highlighted on the server, with a copy button. */
+/**
+ * Highlighted on the server, with a copy button. A page does not write it out: a
+ * fenced block in an MDX page becomes one (see lib/remark-code.ts), and an
+ * example's source is shown by Preview.
+ */
 export async function Code({ code, lang = 'tsx' }: { code: string; lang?: string }): Promise<ReactElement> {
   const source = code.trim();
   const html = await codeToHtml(source, { lang, theme });

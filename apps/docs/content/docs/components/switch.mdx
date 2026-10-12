@@ -40,7 +40,8 @@ Pass `isChanged` while the setting differs from the saved one. A clay chip shows
 
 Every value works controlled and uncontrolled, and a switch with a `name` submits in a plain form. It sends its `value`, or `on` when it has none, only while it is on, as a checkbox does. `onChange` receives a boolean. A switch with no visible label needs an `aria-label`.
 
-<Code code={`import { useState } from 'react';
+```tsx
+import { useState } from 'react';
 import { Switch } from '@snapshot-ui/react';
 
 export function DigestSetting({ saved }: { saved: boolean }) {
@@ -57,7 +58,8 @@ export function DigestSetting({ saved }: { saved: boolean }) {
       Weekly digest
     </Switch>
   );
-}`} />
+}
+```
 
 A switch is for a setting that takes effect as soon as it is flipped. It has no required or invalid state, so for a choice that a form confirms later, such as agreeing to terms, use a checkbox.
 

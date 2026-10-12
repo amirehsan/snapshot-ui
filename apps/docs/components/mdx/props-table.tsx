@@ -7,9 +7,9 @@ function inline(text: string): ReactNode[] {
 }
 
 /**
- * Props from the library's own types and JSDoc. `type` is usually a Pick of
- * the component's props: React Aria's inherited props include dozens of DOM
- * events nobody needs listed.
+ * Props from the library's own types and JSDoc, as a table whose rows are named
+ * by the prop. `type` is usually a Pick of the component's props: React Aria's
+ * inherited props include dozens of DOM events nobody needs listed.
  */
 export async function PropsTable({ path, type }: { path: string; type: string }): Promise<ReactElement> {
   const [doc] = await generator.generateTypeTable(
@@ -19,21 +19,25 @@ export async function PropsTable({ path, type }: { path: string; type: string })
   const entries = [...(doc?.entries ?? [])].sort((a, b) => a.name.localeCompare(b.name));
   return (
     <div className="props">
-      {entries.map((entry) => {
-        const fallback = entry.tags.find((tag) => tag.name === 'default')?.text;
-        return (
-          <div className="prop" key={entry.name}>
-            <div>
-              <div className="prop-name">{entry.name}</div>
-              <span className="prop-type">{entry.type.replace(/ \| undefined$/, '')}</span>
-            </div>
-            <div>
-              <p>{inline(entry.description)}</p>
-              {fallback ? <p className="prop-default">Default: {fallback}</p> : null}
-            </div>
-          </div>
-        );
-      })}
+      <table aria-label="Props">
+        <tbody>
+          {entries.map((entry) => {
+            const fallback = entry.tags.find((tag) => tag.name === 'default')?.text;
+            return (
+              <tr className="prop" key={entry.name}>
+                <th scope="row">
+                  <div className="prop-name">{entry.name}</div>
+                  <span className="prop-type">{entry.type.replace(/ \| undefined$/, '')}</span>
+                </th>
+                <td>
+                  <p>{inline(entry.description)}</p>
+                  {fallback ? <p className="prop-default">Default: {fallback}</p> : null}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

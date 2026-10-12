@@ -12,9 +12,17 @@ const KIND = { page: 'Page', heading: 'Section', text: 'Text' } as const;
 export function SearchDialog({
   open,
   onOpenChange,
+  onNavigate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Called when a result is chosen, before the dialog closes. Whatever was open
+   * behind the search belongs to the page it was opened on, and a result may
+   * leave that page, or stay on it and move to a heading, which no change of
+   * path announces.
+   */
+  onNavigate?: () => void;
 }): ReactElement {
   const dialog = useRef<HTMLDialogElement>(null);
   const router = useRouter();
@@ -48,6 +56,14 @@ export function SearchDialog({
     onOpenChange(false);
   };
 
+  const choose = (): void => {
+    // The dialog closes first, so the focus it gives back to what opened it lands before whatever
+    // onNavigate closes takes the focus on, and the last word is the caller's.
+    dialog.current?.close();
+    onNavigate?.();
+    close();
+  };
+
   // Enter in the field opens the first result, as the footer promises. On a
   // result, Enter is the link's own.
   const first = results[0];
@@ -55,7 +71,7 @@ export function SearchDialog({
     if (event.key !== 'Enter' || event.nativeEvent.isComposing || !first) return;
     event.preventDefault();
     router.push(first.url);
-    close();
+    choose();
   };
 
   // One status region, mounted before its text changes so that a screen reader
@@ -112,21 +128,24 @@ export function SearchDialog({
         />
         <Kbd>esc</Kbd>
       </div>
-      <p className={noMatch || failed ? 'search-empty' : 'visually-hidden'} role="status">
-        {status}
-      </p>
-      {results.length > 0 ? (
-        <ul className="search-results">
-          {results.map((item) => (
-            <li key={item.id}>
-              <Link className="search-result" href={item.url} onClick={close}>
-                <span>{item.content}</span>
-                <span className="search-result-kind">{KIND[item.type]}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {/* A fixed floor under the results, so the dialog does not shrink and grow with every keystroke. */}
+      <div className="search-body">
+        <p className={noMatch || failed ? 'search-empty' : 'visually-hidden'} role="status">
+          {status}
+        </p>
+        {results.length > 0 ? (
+          <ul className="search-results">
+            {results.map((item) => (
+              <li key={item.id}>
+                <Link className="search-result" href={item.url} onClick={choose}>
+                  <span>{item.content}</span>
+                  <span className="search-result-kind">{KIND[item.type]}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
       <div className="search-foot">
         <span>
           <Kbd>&#8593;</Kbd> <Kbd>&#8595;</Kbd> to move
