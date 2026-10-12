@@ -41,6 +41,134 @@ for (const width of [375, 768, 1024, 1440]) {
   });
 }
 
+/** How the orbit line meets one circle: how near it passes the center, and its angles at the circle's edge. */
+interface Crossing {
+  miss: number;
+  enter: number;
+  leave: number;
+}
+
+/**
+ * The orbit line in client coordinates, read from the path itself at points a quarter pixel apart along
+ * it: where its visible part, the part inside its clip, starts and ends; how near it passes each circle's
+ * center; and its angle in degrees, downward positive, where it enters each circle's edge and where it
+ * leaves. Also the window's width without its scrollbar, and how far the page overflows it sideways.
+ */
+const orbitLine = (
+  page: Page,
+): Promise<{ start: number; end: number; width: number; circles: Crossing[]; overflow: number }> =>
+  page.evaluate(() => {
+    const path = document.querySelector<SVGPathElement>('.orbit-arc path');
+    const toClient = path?.getScreenCTM();
+    const id = /^url\(#(.+)\)$/.exec(path?.getAttribute('clip-path') ?? '')?.[1];
+    const clip = id ? document.getElementById(id)?.querySelector('rect') : null;
+    if (!path || !toClient || !clip) throw new Error('No clipped orbit line drawn');
+
+    // The clip is in the path's own coordinates, so a point is tested before it is mapped to the window.
+    const [left, top] = [clip.x.baseVal.value, clip.y.baseVal.value];
+    const [right, bottom] = [left + clip.width.baseVal.value, top + clip.height.baseVal.value];
+    const length = path.getTotalLength();
+    const steps = Math.ceil(length * 4);
+    const points = Array.from({ length: steps + 1 }, (_, step) =>
+      path.getPointAtLength((length * step) / steps),
+    )
+      .filter(({ x, y }) => x >= left && x <= right && y >= top && y <= bottom)
+      .map((point) => point.matrixTransform(toClient));
+
+    /** The line's angle at points[index], over a pixel either side of it. */
+    const angle = (index: number): number => {
+      const before = points[Math.max(index - 4, 0)];
+      const after = points[Math.min(index + 4, points.length - 1)];
+      if (!before || !after) return NaN;
+      return (Math.atan2(after.y - before.y, after.x - before.x) * 180) / Math.PI;
+    };
+    const circles = [...document.querySelectorAll('.portrait-circle')].map((circle) => {
+      const box = circle.getBoundingClientRect();
+      const [x, y, radius] = [box.left + box.width / 2, box.top + box.height / 2, box.width / 2];
+      const distances = points.map((point) => Math.hypot(point.x - x, point.y - y));
+      const inside = distances.map((distance) => distance <= radius);
+      const enter = inside.indexOf(true);
+      const leave = inside.lastIndexOf(true);
+      return { miss: Math.min(...distances), enter: angle(enter), leave: angle(leave) };
+    });
+    const root = document.documentElement;
+    return {
+      start: points[0]?.x ?? NaN,
+      end: points.at(-1)?.x ?? NaN,
+      width: root.clientWidth,
+      circles,
+      overflow: root.scrollWidth - root.clientWidth,
+    };
+  });
+
+/**
+ * Waits for the orbit line to be measured for this window, then checks it. Its visible part starts at
+ * the window's left edge and ends at its right edge. It passes within 1px of every circle's center,
+ * and meets each circle's edge at the same angle on both sides, mirrored: it rises into a crest as
+ * steeply as it falls out of it. And it scrolls nothing sideways. The server draws the line for a
+ * 1440px window, so it has been measured once its end meets this window's right edge.
+ */
+const expectThreaded = async (page: Page): Promise<void> => {
+  await expect
+    .poll(async () => {
+      const { end, width } = await orbitLine(page);
+      return Math.abs(end - width);
+    })
+    .toBeLessThanOrEqual(1);
+  const { start, end, width, circles, overflow } = await orbitLine(page);
+  expect(Math.abs(start)).toBeLessThanOrEqual(1);
+  expect(Math.abs(end - width)).toBeLessThanOrEqual(1);
+  expect(circles).toHaveLength(3);
+  for (const [index, { miss, enter, leave }] of circles.entries()) {
+    const circle = `circle ${String(index + 1)}`;
+    expect(miss, circle).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(enter + leave),
+      `${circle} enters at ${String(enter)}, leaves at ${String(leave)}`,
+    ).toBeLessThanOrEqual(2);
+  }
+  expect(overflow).toBeLessThanOrEqual(0);
+};
+
+for (const width of [1024, 1280, 1440, 1920]) {
+  test(`the orbit line runs edge to edge at ${String(width)}px, through every circle's center`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    await expectThreaded(page);
+  });
+}
+
+test('the orbit line is measured again when the window narrows', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page);
+  await expectThreaded(page);
+  const line = page.locator('.orbit-arc path');
+  const wide = await line.getAttribute('d');
+  await page.setViewportSize({ width: 1100, height: 900 });
+  await expectThreaded(page);
+  await expect(line).not.toHaveAttribute('d', wide ?? '');
+});
+
+test.describe('before the page scripts load', () => {
+  test.use({ javaScriptEnabled: false });
+
+  for (const width of [1024, 1920]) {
+    test(`the homepage fits ${String(width)}px with no sideways scroll`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      // Still the server's line, drawn for a 1440px window: no script has measured it.
+      await expect(page.locator('.orbit-arc')).toHaveAttribute('viewBox', '128 0 928 400');
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(0);
+    });
+  }
+});
+
 for (const theme of ['light', 'dark'] as const) {
   test(`the homepage has no axe violations in ${theme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: theme });

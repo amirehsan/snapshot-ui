@@ -208,13 +208,14 @@
     gap: 48px;
   }
 
+  /* The orbit's own box, drawn 1:1 in pixels (orbit.tsx sizes it). The line runs on past the box to
+     the window's edges, where its clip cuts it off: what an svg draws outside its box never scrolls
+     the page. The portraits come later in the page, so the opaque circles cover the line. */
   .orbit-arc {
     position: absolute;
-    left: -48px;
-    right: -48px;
-    top: -40px;
-    height: 420px;
-    width: calc(100% + 96px);
+    top: 0;
+    left: 0;
+    overflow: visible;
     pointer-events: none;
   }
 
@@ -225,12 +226,9 @@
     gap: 18px;
   }
 
+  /* The middle portrait sits lower and the outer two level, so the line runs crest, trough, crest. */
   .portrait:nth-child(3) {
     margin-top: 120px;
-  }
-
-  .portrait:nth-child(4) {
-    margin-top: 40px;
   }
 
   .portrait-circle {
