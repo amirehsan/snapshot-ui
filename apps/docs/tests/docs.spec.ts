@@ -627,6 +627,74 @@ test('a select-all checkbox is mixed while some of its children are checked', as
   await expect(channels.getByRole('checkbox', { checked: true })).toHaveCount(2);
 });
 
+test('the radio group page shows a failed submit as an error line on every row, and sends once a plan is chosen', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/radio-group');
+  const group = page.getByRole('radiogroup', { name: 'Plan', exact: true });
+  const rows = group.locator('label.radio');
+  const submit = page.getByRole('button', { name: 'Continue' });
+
+  await submit.click();
+  await expect(group.locator('.field-error')).toHaveText('Choose a plan to continue.');
+  await expect(group).toHaveAttribute('data-invalid');
+  await expect(group.getByRole('radio').first()).toBeFocused();
+  for (const row of await rows.all()) await expect(row).toHaveCSS('border-top-color', 'rgb(163, 35, 27)');
+
+  // Choosing an option clears the error, and the form then sends the value.
+  await group.getByText('Team').click();
+  await expect(group.locator('.field-error')).toHaveCount(0);
+  await expect(rows.first()).toHaveCSS('border-top-color', 'rgba(0, 0, 0, 0)');
+  await submit.click();
+  await expect(page.getByText('You chose the team plan.')).toBeVisible();
+});
+
+test('the arrow keys move the choice of a radio group, and the chosen row draws its focus ring in canvas inside the ink', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/radio-group');
+  const group = page.getByRole('radiogroup', { name: 'Newsletter frequency' });
+  const weekly = group.getByRole('radio', { name: 'Weekly' });
+  const monthly = group.getByRole('radio', { name: 'Monthly' });
+  // `has` is resolved inside each row, so the radio is looked up from the page and not from the group.
+  const rowOf = (name: string): Locator =>
+    group.locator('label.radio', { has: page.getByRole('radio', { name }) });
+
+  // A change from the saved choice shows the chip, and going back hides it.
+  await expect(group.locator('.field-changed')).toBeHidden();
+  await weekly.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(monthly).toBeFocused();
+  await expect(monthly).toBeChecked();
+  await expect(group.locator('.field-changed')).toBeVisible();
+  const chosen = rowOf('Monthly');
+  await expect(chosen).toHaveCSS('background-color', 'rgb(20, 20, 19)');
+  await expect(chosen).toHaveCSS('color', 'rgb(243, 240, 238)');
+  await expect(chosen).toHaveCSS('outline-style', 'solid');
+  await expect(chosen).toHaveCSS('outline-color', 'rgb(243, 240, 238)');
+  await expect(chosen).toHaveCSS('outline-offset', '-4px');
+  await page.keyboard.press('ArrowUp');
+  await expect(weekly).toBeChecked();
+  await expect(group.locator('.field-changed')).toBeHidden();
+  // The row that lost the choice is plain again.
+  await expect(rowOf('Monthly')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+});
+
+test('every option of a radio group is a target of 40px or more, across the whole row', async ({ page }) => {
+  await visit(page, '/docs/components/radio-group');
+  const group = page.getByRole('radiogroup', { name: 'Newsletter frequency' });
+  const { height } = await hitSize(group.locator('label.radio').first());
+  expect(height).toBeGreaterThanOrEqual(40);
+  // A stacked row fills the group, so the empty end of the row is part of the target.
+  const [row, field] = await Promise.all([
+    group.locator('label.radio').first().boundingBox(),
+    group.locator('.radio-items').boundingBox(),
+  ]);
+  expect(row?.width).toBeCloseTo(field?.width ?? 0, 0);
+});
+
 test('the copy button reports that the code was copied', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await visit(page);

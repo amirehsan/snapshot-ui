@@ -39,3 +39,4 @@ export {
   type CheckboxGroupProps,
   type CheckboxProps,
 } from './checkbox';
+export { Radio, RadioGroup, type RadioGroupProps, type RadioProps } from './radio-group';

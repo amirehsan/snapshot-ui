@@ -100,6 +100,13 @@ export const CONTRAST_PAIRS = [
     minimum: NON_TEXT,
     shows: 'a control boundary against bone',
   },
+  {
+    text: 'boundary',
+    ground: 'disabled',
+    fill: 'disabled',
+    minimum: NON_TEXT,
+    shows: 'the check of a disabled, selected radio',
+  },
 ];
 
 /** Parses #rgb, #rrggbb, rgb(r g b), rgb(r g b / a), rgba(r, g, b, a) and transparent. */
