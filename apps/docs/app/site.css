@@ -3,9 +3,9 @@
  * mockups (docs/mockups/mockup.css) for parts the library does not ship yet.
  * Phase 1b deletes each stand-in in the same task that adds the real
  * component to @snapshot-ui/core: heading and text (the type-* and muted
- * rules), segmented, switch and card.
- * Button, Spinner, Eyebrow, Link, Kbd, Badge, IconButton, the field parts and
- * TextField come from @snapshot-ui/core and are not redrawn here.
+ * rules), segmented and card.
+ * Button, Spinner, Eyebrow, Link, Kbd, Badge, IconButton, the field parts,
+ * TextField and Switch come from @snapshot-ui/core and are not redrawn here.
  */
 /* The site's own base. The library's base.css sets the page and body type
    but, as a library, leaves links and headings alone; a site resets them. */
@@ -297,49 +297,6 @@
     outline-offset: -4px;
   }
 
-  .switch {
-    position: relative;
-    flex: none;
-    width: 52px;
-    height: 30px;
-    padding: 3px;
-    border: 0;
-    border-radius: var(--radius-pill);
-    background-color: var(--color-boundary);
-    cursor: pointer;
-    transition:
-      background-color 160ms ease,
-      border-radius 200ms ease;
-  }
-
-  /* Drawn at 30px, hit at 40px, with no layout shift. */
-  .switch::before {
-    content: '';
-    position: absolute;
-    inset: -5px -4px;
-  }
-
-  .switch::after {
-    content: '';
-    display: block;
-    width: 24px;
-    height: 24px;
-    border-radius: var(--radius-pill);
-    background-color: var(--color-float);
-    box-shadow: var(--shadow-lift);
-    transition:
-      transform 160ms ease,
-      border-radius 200ms ease;
-  }
-
-  .switch[aria-checked='true'] {
-    background-color: var(--color-ink);
-  }
-
-  .switch[aria-checked='true']::after {
-    transform: translateX(22px);
-  }
-
   /* ---- Surfaces ----------------------------------------------------------- */
   .card {
     min-width: 0;
@@ -394,6 +351,21 @@
 
   .settings-list .setting + .setting {
     border-top: 1px solid var(--color-divider);
+  }
+
+  /* A settings list ends each row with its switch, so the label and the hint sit at the start. */
+  .setting .field {
+    flex: 1;
+  }
+
+  .setting .field-head > .switch {
+    flex: 1;
+    flex-direction: row-reverse;
+    justify-content: space-between;
+  }
+
+  .setting .field-description {
+    padding-inline-start: 0;
   }
 
   .code {

@@ -24,6 +24,9 @@ import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
 import RadioGroupValidation from './radio-group-validation';
 import SpinnerSizes from './spinner-sizes';
+import SwitchBasic from './switch-basic';
+import SwitchSettings from './switch-settings';
+import SwitchStates from './switch-states';
 import TextAreaBasic from './text-area-basic';
 import TextAreaCounter from './text-area-counter';
 import TextAreaStates from './text-area-states';
@@ -60,6 +63,9 @@ export const examples = {
   'radio-group-states': RadioGroupStates,
   'radio-group-validation': RadioGroupValidation,
   'spinner-sizes': SpinnerSizes,
+  'switch-basic': SwitchBasic,
+  'switch-settings': SwitchSettings,
+  'switch-states': SwitchStates,
   'text-area-basic': TextAreaBasic,
   'text-area-counter': TextAreaCounter,
   'text-area-states': TextAreaStates,

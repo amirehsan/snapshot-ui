@@ -1,0 +1,96 @@
+---
+title: Switch
+description: A setting that is on or off and takes effect as soon as it is flipped. One element draws the track, the label, the hint and the Changed chip, and submits its value in a form only while it is on.
+icon: ToggleLeft
+---
+
+<Section>
+
+## Basic
+
+Pass a label, and a hint if the label cannot say it all. The whole row is the target, so a press on the label flips the switch as well as a press on the track.
+
+<Preview name="switch-basic" />
+
+</Section>
+
+<Section>
+
+## States
+
+On is an ink track with a canvas thumb. Off is the control boundary color with a raised thumb. A disabled switch is recessed, and one that is on is filled where one that is off is hollow, so the two never look alike. A read-only switch looks like an enabled one and cannot be changed.
+
+<Preview name="switch-states" />
+
+</Section>
+
+<Section>
+
+## Unsaved changes
+
+Pass `isChanged` while the setting differs from the saved one. A clay chip shows beside the label and a light signal orange ring goes around the track, and a screen reader reads the chip with the switch. Flip a switch below to see them.
+
+<Preview name="switch-settings" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Every value works controlled and uncontrolled, and a switch with a `name` submits in a plain form. It sends its `value`, or `on` when it has none, only while it is on, as a checkbox does. `onChange` receives a boolean. A switch with no visible label needs an `aria-label`.
+
+<Code code={`import { useState } from 'react';
+import { Switch } from '@snapshot-ui/react';
+
+export function DigestSetting({ saved }: { saved: boolean }) {
+  const [isOn, setOn] = useState(saved);
+  return (
+    <Switch
+      name="digest"
+      value="weekly"
+      description="Every Tuesday morning."
+      isSelected={isOn}
+      onChange={setOn}
+      isChanged={isOn !== saved}
+    >
+      Weekly digest
+    </Switch>
+  );
+}`} />
+
+A switch is for a setting that takes effect as soon as it is flipped. It has no required or invalid state, so for a choice that a form confirms later, such as agreeing to terms, use a checkbox.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria SwitchField prop is accepted except `isRequired`, `isInvalid` and `validate`. These are the ones Snapshot UI adds or shapes.
+
+<PropsTable path="../../packages/react/src/switch/Switch.tsx" type="Pick<SwitchProps, 'children' | 'description' | 'isSelected' | 'defaultSelected' | 'onChange' | 'name' | 'value' | 'isDisabled' | 'isReadOnly' | 'isChanged' | 'changedLabel'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A native checkbox with the `switch` role, so a screen reader says the label and then on or off. The track and the thumb are decoration. The label names the switch, the hint and the Changed chip describe it, and a press anywhere on the row flips it. The row is 40px tall to hit, though the track is drawn 30px.
+
+<Keys rows={[['Space', 'Turns the switch on or off.'], ['Tab', 'Moves focus to the switch. The 2px ring sits outside the track.']]} />
+
+Motion is a 160ms slide of the thumb and a fade of the track, and both stop under reduced motion.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps switches in the system.
+
+<Rules dos={['Label what the switch controls, in sentence case, such as Weekly digest.', 'Show the chip and the ring together, and only while the setting is unsaved.', 'Let the switch act at once, or mark it changed until the page saves.']} donts={['Never write the label as an action, such as Turn on weekly digest. The thumb already says on or off.', 'Never use a switch for a choice a form confirms later.', 'Never use color alone to say a setting is on. The thumb moves too.']} />
+
+</Section>

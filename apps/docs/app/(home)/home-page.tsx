@@ -1,6 +1,6 @@
 'use client';
 
-import { Description, Eyebrow, IconButton, Input, TextField } from '@snapshot-ui/react';
+import { Eyebrow, IconButton, Input, Switch, TextField } from '@snapshot-ui/react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { useEffect, useRef, useState, type ReactElement } from 'react';
@@ -11,23 +11,6 @@ import { writeShape, type Shape } from '@/lib/prepaint';
 import { useCopy } from '@/lib/use-copy';
 
 const INSTALL = 'pnpm add @snapshot-ui/react @snapshot-ui/core';
-
-/** A stand-in switch for the homepage's sample settings. Phase 1b replaces it with Switch. */
-function DemoSwitch({ label, defaultOn }: { label: string; defaultOn: boolean }): ReactElement {
-  const [on, setOn] = useState(defaultOn);
-  return (
-    <button
-      className="switch"
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      onClick={() => {
-        setOn(!on);
-      }}
-    />
-  );
-}
 
 export function HomePage(): ReactElement {
   const { resolvedTheme, setTheme } = useTheme();
@@ -345,25 +328,17 @@ export function HomePage(): ReactElement {
             </div>
             <div className="settings-list">
               <div className="setting">
-                <div>
-                  <div className="type-h4">Product updates</div>
-                  <Description>A short note when something ships.</Description>
-                </div>
-                <DemoSwitch label="Product updates" defaultOn={true} />
+                <Switch description="A short note when something ships." defaultSelected>
+                  Product updates
+                </Switch>
               </div>
               <div className="setting">
-                <div>
-                  <div className="type-h4">Weekly digest</div>
-                  <Description>Every Tuesday morning.</Description>
-                </div>
-                <DemoSwitch label="Weekly digest" defaultOn={false} />
+                <Switch description="Every Tuesday morning.">Weekly digest</Switch>
               </div>
               <div className="setting">
-                <div>
-                  <div className="type-h4">Security alerts</div>
-                  <Description>Always on for owners.</Description>
-                </div>
-                <DemoSwitch label="Security alerts" defaultOn={true} />
+                <Switch description="Always on for owners." defaultSelected>
+                  Security alerts
+                </Switch>
               </div>
             </div>
           </div>
@@ -534,7 +509,7 @@ export function HomePage(): ReactElement {
               <div className="card stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
-                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <Switch aria-label="Sample" defaultSelected />
                   <div className="row">
                     <IconButton variant="outline" aria-label="Call">
                       <svg
@@ -563,7 +538,7 @@ export function HomePage(): ReactElement {
               <div className="card stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
-                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <Switch aria-label="Sample" defaultSelected />
                   <div className="row">
                     <IconButton variant="outline" aria-label="Call">
                       <svg
@@ -592,7 +567,7 @@ export function HomePage(): ReactElement {
               <div className="card stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
-                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <Switch aria-label="Sample" defaultSelected />
                   <div className="row">
                     <IconButton variant="outline" aria-label="Call">
                       <svg
@@ -621,7 +596,7 @@ export function HomePage(): ReactElement {
               <div className="card stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
-                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <Switch aria-label="Sample" defaultSelected />
                   <div className="row">
                     <IconButton variant="outline" aria-label="Call">
                       <svg
@@ -650,7 +625,7 @@ export function HomePage(): ReactElement {
               <div className="card stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
-                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <Switch aria-label="Sample" defaultSelected />
                   <div className="row">
                     <IconButton variant="outline" aria-label="Call">
                       <svg
@@ -679,7 +654,7 @@ export function HomePage(): ReactElement {
               <div className="card stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
-                  <DemoSwitch label="Sample" defaultOn={true} />
+                  <Switch aria-label="Sample" defaultSelected />
                   <div className="row">
                     <IconButton variant="outline" aria-label="Call">
                       <svg

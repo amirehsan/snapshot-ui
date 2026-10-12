@@ -40,3 +40,4 @@ export {
   type CheckboxProps,
 } from './checkbox';
 export { Radio, RadioGroup, type RadioGroupProps, type RadioProps } from './radio-group';
+export { Switch, type SwitchProps } from './switch';

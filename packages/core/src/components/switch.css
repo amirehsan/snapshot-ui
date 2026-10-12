@@ -1,0 +1,158 @@
+/*
+ * The switch, derived in docs/design-system.md ("Switch"): a 52 by 30 stadium
+ * track with a 24px round thumb, the pill vocabulary again. The row is the
+ * label, so the whole line is the target, and the track and the thumb are drawn
+ * inside it.
+ *
+ * Each state only sets the --switch-* properties; the track and the thumb read
+ * them, so a state never needs one rule per part. State is read from the row
+ * (`data-selected`, `data-disabled`, `data-focus-visible`) or, for markup
+ * without React Aria, from the input the row holds. The changed ring is keyed on
+ * the field's root, as the field contract in field.css says.
+ */
+@layer components {
+  .switch {
+    --switch-width: 52px;
+    --switch-thumb-size: 24px;
+    /* The gap between the thumb and the track on all four sides. */
+    --switch-inset: 3px;
+    --switch-track-fill: var(--color-boundary);
+    --switch-thumb-fill: var(--color-raised);
+    --switch-edge: transparent;
+    --switch-travel: 0px;
+    /* The width of the changed ring, which the focus ring steps out past. */
+    --switch-changed-ring: 2px;
+
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Drawn 30px tall and hit 40px tall, so the row meets the touch target with no
+     layout shift. The extra area belongs to the row, so a press on it toggles. */
+  .switch::before {
+    content: '';
+    position: absolute;
+    inset: -5px 0;
+  }
+
+  .switch-track {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex: none;
+    align-items: center;
+    width: var(--switch-width);
+    height: calc(var(--switch-thumb-size) + 2 * var(--switch-inset));
+    /* The 1px edge is clear but for a disabled switch that is off, and it sits
+       inside the inset, so the thumb is one gap from the track either way. */
+    padding: calc(var(--switch-inset) - 1px);
+    border: 1px solid var(--switch-edge);
+    border-radius: var(--radius-pill);
+    background-color: var(--switch-track-fill);
+    transition: background-color 160ms ease;
+  }
+
+  /* The thumb follows the pill, so it is a circle in Rounded and Soft and a
+     square in Square, with the track. It casts no shadow: the lift shadow is
+     invisible on a light track and smears a gray halo across a white one. */
+  .switch-thumb {
+    flex: none;
+    width: var(--switch-thumb-size);
+    height: var(--switch-thumb-size);
+    margin-inline-start: var(--switch-travel);
+    border-radius: var(--radius-pill);
+    background-color: var(--switch-thumb-fill);
+    transition:
+      margin-inline-start 160ms ease,
+      background-color 160ms ease;
+  }
+
+  /* On: an ink track and a canvas thumb. The thumb moves the track width less
+     the thumb and two gaps, which leaves one gap at the end, the same as the
+     gap it had at the start. */
+  .switch:is([data-selected], :has(input:checked)) {
+    --switch-track-fill: var(--color-ink);
+    --switch-thumb-fill: var(--color-canvas);
+    --switch-travel: calc(var(--switch-width) - var(--switch-thumb-size) - 2 * var(--switch-inset));
+  }
+
+  /* The ring is outside the track, so ink still reads against the surface behind
+     it when the track is ink. */
+  .switch:is([data-focus-visible], :has(input:focus-visible)) .switch-track {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* Disabled, off: the recessed fill with a faint edge and a taupe thumb, the
+     disabled idiom of a button or an input. */
+  .switch:is([data-disabled], :has(input:disabled)) {
+    --switch-track-fill: var(--color-disabled);
+    --switch-thumb-fill: var(--color-taupe);
+    --switch-edge: color-mix(in srgb, var(--color-ink) 15%, transparent);
+
+    cursor: not-allowed;
+  }
+
+  /* Disabled, on: the track is filled, with taupe, and the thumb is the recessed
+     fill. Filled against recessed is what tells on from off, with the thumb
+     position, so the two never share a look (the source drew one for both). */
+  .switch:is([data-disabled], :has(input:disabled)):is([data-selected], :has(input:checked)) {
+    --switch-track-fill: var(--color-taupe);
+    --switch-thumb-fill: var(--color-disabled);
+    --switch-edge: transparent;
+  }
+
+  /* A read-only switch looks like an enabled one and keeps its place in the
+     form; only the cursor stops promising a press. */
+  .switch[data-readonly] {
+    cursor: default;
+  }
+
+  /*
+   * The field's root carries data-changed. A 1.5px border on a 30px track reads
+   * as a smudge, so the changed cue is a ring outside the track instead, in
+   * light signal orange. The focus ring steps out past it.
+   */
+  .field[data-changed] .switch-track::before {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * var(--switch-changed-ring) - 1px);
+    border: var(--switch-changed-ring) solid var(--color-signal-light);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .field[data-changed] .switch:is([data-focus-visible], :has(input:focus-visible)) .switch-track {
+    outline-offset: calc(var(--focus-ring-offset) + var(--switch-changed-ring));
+  }
+
+  /* The row beside the chip is centered on the track, where a label row sits on
+     its baseline. */
+  .field-head:has(> .switch) {
+    align-items: center;
+  }
+
+  /* The hint lines up with the label text, past the track (52px) and the gap. The
+     lead selector adds no specificity, so a layout can move the hint. */
+  :where(.field-head:has(> .switch)) ~ .field-description {
+    padding-inline-start: calc(52px + 0.75rem);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .switch-track,
+    .switch-thumb {
+      transition: none;
+    }
+  }
+}

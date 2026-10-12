@@ -105,6 +105,13 @@
     "limit": "1 kB"
   },
   {
+    "name": "import { Switch } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Switch }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "1 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

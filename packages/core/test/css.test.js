@@ -505,6 +505,51 @@ describe('src/components/radio.css', () => {
   });
 });
 
+describe('src/components/switch.css', () => {
+  // The rules without their comments, which quote selectors of their own.
+  const rules = () => read('src/components/switch.css').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('stops the track and the thumb moving under reduced motion', () => {
+    const reduced = blockAfter(rules(), '@media (prefers-reduced-motion: reduce)');
+    expect(reduced).toContain('.switch-track');
+    expect(reduced).toContain('.switch-thumb');
+    expect(reduced).toMatch(/transition:\s*none;/);
+  });
+
+  it('never animates the corners, which belong to the shape axis', () => {
+    expect(rules()).not.toMatch(/transition[^;]*radius/);
+  });
+
+  it('derives the thumb travel from the track, the thumb and the gap, so the gaps match', () => {
+    // Off, the thumb sits one gap from the start. On, it has moved the track
+    // width less the thumb and two gaps, which leaves one gap at the end.
+    expect(rules()).toMatch(
+      /--switch-travel:\s*calc\(var\(--switch-width\) - var\(--switch-thumb-size\) - 2 \* var\(--switch-inset\)\);/,
+    );
+  });
+
+  it('draws a disabled switch that is on differently from one that is off', () => {
+    const on =
+      /\.switch:is\(\[data-disabled\][^{]*\):is\(\[data-selected\][^{]*\)\s*\{[^}]*--switch-track-fill:\s*var\(--color-taupe\);/;
+    const off =
+      /\.switch:is\(\[data-disabled\][^{]*\)\s*\{[^}]*--switch-track-fill:\s*var\(--color-disabled\);/;
+    expect(rules()).toMatch(on);
+    expect(rules()).toMatch(off);
+  });
+
+  it('keys the changed ring on the field root, as the field contract asks', () => {
+    expect(rules()).toContain('.field[data-changed] .switch-track::before');
+  });
+
+  it('draws the changed ring outside the track and never recolors the off track, whose boundary is a measured edge', () => {
+    const changed = [...rules().matchAll(/([^{}]*\[data-changed\][^{}]*)\{([^}]*)\}/g)];
+    expect(changed.length).toBeGreaterThan(0);
+    for (const [, selector = '', body = ''] of changed) {
+      expect(body, selector.trim()).not.toMatch(/background|--switch-track-fill|--switch-edge/);
+    }
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

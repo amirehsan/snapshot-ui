@@ -107,6 +107,23 @@ export const CONTRAST_PAIRS = [
     minimum: NON_TEXT,
     shows: 'the check of a disabled, selected radio',
   },
+  // The off track is the boundary color painted on the surface itself, so it is
+  // measured against each surface a switch can sit on. The thumb on it is
+  // measured on each too (lifted is the entry above). The on state is covered by
+  // canvas on ink, the primary button label, at the text minimum.
+  ...['canvas', 'lifted', 'bone', 'float', 'raised'].map((ground) => ({
+    text: 'boundary',
+    ground,
+    minimum: NON_TEXT,
+    shows: `the switch off track on ${ground}`,
+  })),
+  ...['canvas', 'bone', 'float', 'raised'].map((surface) => ({
+    text: 'raised',
+    ground: 'boundary',
+    over: surface,
+    minimum: NON_TEXT,
+    shows: `the switch thumb on its off track on ${surface}`,
+  })),
 ];
 
 /** Parses #rgb, #rrggbb, rgb(r g b), rgb(r g b / a), rgba(r, g, b, a) and transparent. */

@@ -695,6 +695,99 @@ test('every option of a radio group is a target of 40px or more, across the whol
   expect(row?.width).toBeCloseTo(field?.width ?? 0, 0);
 });
 
+/** The gaps, in px, between the thumb and the two ends of the track of the switch row `row`. */
+const thumbGaps = (row: Locator): Promise<{ start: number; end: number }> =>
+  row.evaluate((element) => {
+    const track = element.querySelector('.switch-track')?.getBoundingClientRect();
+    const thumb = element.querySelector('.switch-thumb')?.getBoundingClientRect();
+    if (!track || !thumb) throw new Error('No switch drawn');
+    return { start: thumb.left - track.left, end: track.right - thumb.right };
+  });
+
+/** The switch row whose control has this name, on the page that is open. */
+const switchNamed = (page: Page, name: string): Locator =>
+  page.locator('.switch').filter({ has: page.getByRole('switch', { name, exact: true }) });
+
+test('a switch flips by a press on its label and by Space, and its thumb keeps the same gap at both ends', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/switch');
+  const control = page.getByRole('switch', { name: 'Notify me about replies', exact: true });
+  const row = switchNamed(page, 'Notify me about replies');
+  await expect(control).toBeChecked();
+  await expect.poll(async () => (await thumbGaps(row)).end).toBeCloseTo(3, 1);
+
+  await row.click();
+  await expect(control).not.toBeChecked();
+  await expect.poll(async () => (await thumbGaps(row)).start).toBeCloseTo(3, 1);
+
+  await control.focus();
+  await page.keyboard.press('Space');
+  await expect(control).toBeChecked();
+  await expect.poll(async () => (await thumbGaps(row)).end).toBeCloseTo(3, 1);
+  // The 30px track is drawn inside a row that is hit at 40px.
+  expect((await hitSize(row)).height).toBeGreaterThanOrEqual(40);
+});
+
+test('a disabled switch looks different when it is on and when it is off, and neither looks enabled', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/switch');
+  const fill = (name: string): Promise<string> =>
+    switchNamed(page, name)
+      .locator('.switch-track')
+      .evaluate((track) => getComputedStyle(track).backgroundColor);
+  const [on, off, disabledOn, disabledOff] = [
+    await fill('On'),
+    await fill('Off'),
+    await fill('Disabled and on'),
+    await fill('Disabled and off'),
+  ];
+  expect(new Set([on, off, disabledOn, disabledOff]).size).toBe(4);
+  await expect(page.getByRole('switch', { name: 'Disabled and on', exact: true })).toBeDisabled();
+  await expect(switchNamed(page, 'Disabled and off')).toHaveCSS('cursor', 'not-allowed');
+  await expect(switchNamed(page, 'Read-only')).toHaveCSS('cursor', 'default');
+});
+
+test('the unsaved changes example shows the chip and the ring until the setting is saved or discarded', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/switch');
+  const digest = page.getByRole('switch', { name: 'Weekly digest', exact: true });
+  const field = page.locator('.field').filter({ has: digest });
+  /** The changed ring around the track, as its width and color. It has no width until the switch is changed. */
+  const ring = (): Promise<string> =>
+    field.locator('.switch-track').evaluate((track) => {
+      const { borderTopWidth, borderTopColor } = getComputedStyle(track, '::before');
+      return `${borderTopWidth} ${borderTopColor}`;
+    });
+  const save = page.getByRole('button', { name: 'Save changes' });
+  const discard = page.getByRole('button', { name: 'Discard' });
+  await expect(field.locator('.field-changed')).toBeHidden();
+  await expect(save).toBeDisabled();
+  expect(await ring()).toMatch(/^0px /);
+
+  await switchNamed(page, 'Weekly digest').click();
+  await expect(digest).toBeChecked();
+  await expect(field.locator('.field-changed')).toBeVisible();
+  await expect(digest).toHaveAccessibleDescription('Every Tuesday morning. Changed');
+  expect(await ring()).toBe('2px rgb(243, 115, 56)');
+  await expect(save).toBeEnabled();
+
+  await discard.click();
+  await expect(digest).not.toBeChecked();
+  await expect(field.locator('.field-changed')).toBeHidden();
+
+  await switchNamed(page, 'Weekly digest').click();
+  await save.click();
+  await expect(digest).toBeChecked();
+  await expect(field.locator('.field-changed')).toBeHidden();
+  await expect(save).toBeDisabled();
+});
+
 test('the copy button reports that the code was copied', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await visit(page);

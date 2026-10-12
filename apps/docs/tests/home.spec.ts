@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { axeViolations, cornersSettled, sideways, withoutClipboard } from './support';
+import { axeViolations, cornersSettled, hitSize, sideways, withoutClipboard } from './support';
 
 /** Opens the homepage and waits for its Corners switch to settle, which happens once the page has hydrated. */
 const visit = async (page: Page): Promise<void> => {
@@ -75,6 +75,31 @@ test('the workspace field is labelled, shows its Changed chip and reads it with 
   await expect(input).toHaveCSS('border-top-color', 'rgb(243, 115, 56)');
   // Each axis tile has a named input of its own.
   await expect(page.getByRole('textbox', { name: 'Search settings' })).toHaveCount(6);
+});
+
+test('the homepage switches are real switches: named, described, on or off as drawn, and hit at 40px', async ({
+  page,
+}) => {
+  await visit(page);
+  const frame = page.locator('.frame-card').first();
+  const product = frame.getByRole('switch', { name: 'Product updates', exact: true });
+  const digest = frame.getByRole('switch', { name: 'Weekly digest', exact: true });
+  const alerts = frame.getByRole('switch', { name: 'Security alerts', exact: true });
+  await expect(product).toBeChecked();
+  await expect(digest).not.toBeChecked();
+  await expect(alerts).toBeChecked();
+  await expect(product).toHaveAccessibleDescription('A short note when something ships.');
+  // A press on the label flips the switch, and the row keeps its 40px target.
+  await frame.getByText('Weekly digest', { exact: true }).click();
+  await expect(digest).toBeChecked();
+  const row = frame
+    .locator('.switch')
+    .filter({ has: page.getByRole('switch', { name: 'Weekly digest', exact: true }) });
+  expect((await hitSize(row)).height).toBeGreaterThanOrEqual(40);
+  // Each axis tile has one, named Sample and on.
+  const samples = page.getByRole('switch', { name: 'Sample', exact: true });
+  await expect(samples).toHaveCount(6);
+  for (const sample of await samples.all()) await expect(sample).toBeChecked();
 });
 
 test('the homepage switches corners and remembers them', async ({ page }) => {
@@ -222,8 +247,11 @@ test('choosing a link in the open menu leaves the next page able to scroll', asy
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });
 
-/** What a pointer or finger must be able to hit on the homepage. No link here sits inside a sentence. */
-const CONTROLS = 'a[href], button, summary, .segmented-option';
+/**
+ * What a pointer or finger must be able to hit on the homepage. No link here sits inside a sentence.
+ * A switch is its row, a label that holds a visually hidden input, so the row is what is counted.
+ */
+const CONTROLS = 'a[href], button, summary, .segmented-option, .switch';
 
 /** The fewest controls the page and the open menu have on a phone and on a desktop. */
 const CHECKED_ON_PAGE = 55;
