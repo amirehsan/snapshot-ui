@@ -1736,11 +1736,21 @@ and the ink pill are the account menu's, and the dot is the plain choice's.
   the options, as on every field. Each option can carry a hint of its own,
   which sits under its row and lines up with the label text.
 - **Rows** are `--radius-pill`, 40px or taller (1.5px edge, 8px padding and a
-  22.4px line draw 41.4px), with 16px at each side and 12px between the dot and
+  22.4px line draw 41.4px, and a 1x display draws the edge as 1px, so the row
+  measures 40.4px there), with 16px at each side and 12px between the dot and
   the label. They fill the group's width when stacked, so the whole row is the
   target, and hug their label in a horizontal group, where they wrap. The label
   is the 16px body step at 450, not the account menu's 500: it is the content of
   a choice, not an action. An unchosen row has no fill and no visible edge.
+- **The label's text sits in a box of its own** (`radio-text`), so a link or an
+  emphasis inside it stays in one run of text and is not a second flex item with
+  a 12px gap before it, and so one long word wraps inside the row
+  (`overflow-wrap: anywhere`) and never widens it: before the box a long word
+  pushed the row past a 320px page. A radio with no text has no box, and its row
+  is the padding and the dot, 54px by 40px. The hint of an option in a
+  horizontal group is taken out of the option's width (`contain: inline-size`),
+  so the pill hugs its label and the hint wraps to the pill: without it the
+  option was as wide as the hint's sentence.
 - **The dot** is 20px, `--radius-dot` and the Raised fill, with a 1.5px edge in
   the boundary color. It is the plain choice's box with the document's 50%
   boundary where the app used 45%. It stays round in every corner shape, because
@@ -1798,7 +1808,29 @@ and the ink pill are the account menu's, and the dot is the plain choice's.
   core components never animate shape, so there is no reduced-motion block.
 - **Forced colors** repaint every background, which would leave the mask's
   color the color of its ground. A system color is kept, so the check is drawn
-  in the row's text color there.
+  in the row's text color there. A disabled row is drawn in `GrayText` for its
+  label, its ring and, when chosen, its check, as a disabled checkbox is, so it
+  does not read as an enabled one.
+- **Every state has a native twin.** A row is also drawn from its input: chosen
+  is `:has(:checked)`, focus is `:has(:focus-visible)` and disabled is
+  `:has(:disabled)`, beside React Aria's `data-selected`,
+  `data-focus-visible` and `data-disabled`, so a plain label around a native
+  radio and the library's dot gets the same pill, ring and disabled look.
+  Read-only has no native form, and keeps its data attribute alone. `:is()`
+  takes the specificity of its highest argument and both are one attribute or
+  pseudo-class, so no rule changed its weight or its place in the order.
+- **A disabled, chosen radio leaves the group with no tab stop.** React Aria's
+  `useRadio` (in `@react-aria/radio`) gives the tab stop only to the chosen
+  radio, and then takes it away from a disabled one, so with `defaultValue="team"`
+  and Team disabled, Tab skips the group and a keyboard user cannot reach the
+  other options. It is a limit of React Aria, recorded and not worked around:
+  an `it.fails` test holds the correct behavior, a tab stop in the group, so an
+  upstream fix reports itself. Until then, do not disable the chosen option of
+  a group the reader can still change.
+- **A group with no visible label shows no Changed chip**, since the chip lives
+  in the label row. `isChanged` still sets `data-changed` on the root, and
+  nothing else, because a choice group draws no changed edge: a group whose
+  change should show needs a `label`.
 
 | Pairing | Light (lowest of the five surfaces) | Dark |
 | --- | --- | --- |

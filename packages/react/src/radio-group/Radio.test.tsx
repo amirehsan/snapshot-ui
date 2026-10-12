@@ -24,6 +24,10 @@ const row = (name: string): HTMLElement => {
   return label;
 };
 
+/** The classes of what a row draws. React Aria's visually hidden input has none. */
+const visibleParts = (label: HTMLElement): string[] =>
+  [...label.children].map((child) => child.className).filter((name) => name !== '');
+
 describe('Radio', () => {
   it('is a labelled row holding the native radio, a dot and the label text', async () => {
     const { container } = render(<Alone />);
@@ -145,6 +149,37 @@ describe('Radio', () => {
     await user.tab();
     expect(row('Free')).toHaveAttribute('data-focus-visible');
     expect(row('Team')).not.toHaveAttribute('data-focus-visible');
+    // Held down, the row is pressed, and it is released once the button is.
+    await user.pointer({ keys: '[MouseLeft>]', target: team });
+    expect(team).toHaveAttribute('data-pressed');
+    await user.pointer({ keys: '[/MouseLeft]' });
+    expect(team).not.toHaveAttribute('data-pressed');
+  });
+
+  it('puts the label in a text box of its own, so inline markup stays one run of text', () => {
+    render(
+      <RadioGroup label="Plan">
+        <Radio value="pro">
+          Pro <strong>plan</strong>
+        </Radio>
+      </RadioGroup>,
+    );
+    const pro = row('Pro plan');
+    expect(visibleParts(pro)).toEqual(['radio-indicator', 'radio-text']);
+    const text = pro.querySelector('.radio-text');
+    expect(text).toHaveTextContent('Pro plan');
+    expect(text?.querySelector('strong')).toHaveTextContent('plan');
+  });
+
+  it('has no text box for a radio without a label, and keeps its name from aria-label', () => {
+    render(
+      <RadioGroup label="Plan">
+        <Radio value="free" aria-label="Free plan" />
+      </RadioGroup>,
+    );
+    const free = row('Free plan');
+    expect(visibleParts(free)).toEqual(['radio-indicator']);
+    expect(free.querySelector('.radio-text')).toBeNull();
   });
 
   it('passes the value to the form', async () => {
