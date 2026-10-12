@@ -8,6 +8,11 @@
  * rest, hover, selected, invalid, then disabled. Hover has the lowest
  * specificity (:where) so every state outranks it.
  *
+ * Markup without React Aria is read from the input the label holds, and the
+ * input is named, as in :has(input:focus-visible), so a link or a button in
+ * the label never lights the box's ring or state. That test sits in :where(),
+ * so it weighs no more than the data attribute beside it.
+ *
  * The mark is drawn with a mask: the SVG below is only a shape, and the color
  * is --checkbox-mark, canvas on the ink fill, so it follows the theme.
  */
@@ -104,14 +109,19 @@
     mask-size: 14px;
   }
 
-  .checkbox:is([data-selected], :has(:checked), [data-indeterminate], :has(:indeterminate))
+  .checkbox:is(
+      [data-selected],
+      :where(:has(input:checked)),
+      [data-indeterminate],
+      :where(:has(input:indeterminate))
+    )
     .checkbox-box::after {
     display: block;
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 10.5 8 14.5 16 5.5'/%3E%3C/svg%3E");
   }
 
   /* After the check, so an indeterminate box that is also selected shows the bar. */
-  .checkbox:is([data-indeterminate], :has(:indeterminate)) .checkbox-box::after {
+  .checkbox:is([data-indeterminate], :where(:has(input:indeterminate))) .checkbox-box::after {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M4 10h12'/%3E%3C/svg%3E");
   }
 
@@ -127,13 +137,18 @@
     --checkbox-edge: color-mix(in srgb, var(--color-ink) 70%, transparent);
   }
 
-  .checkbox:is([data-selected], :has(:checked), [data-indeterminate], :has(:indeterminate)) {
+  .checkbox:is(
+    [data-selected],
+    :where(:has(input:checked)),
+    [data-indeterminate],
+    :where(:has(input:indeterminate))
+  ) {
     --checkbox-fill: var(--color-ink);
     --checkbox-edge: var(--color-ink);
   }
 
   /* The ring is outside the box, so ink still reads against the page behind an ink fill. */
-  .checkbox:is(:has(:focus-visible), [data-focus-visible]) .checkbox-box {
+  .checkbox:is(:where(:has(input:focus-visible)), [data-focus-visible]) .checkbox-box {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
@@ -150,7 +165,7 @@
   }
 
   /* Last, so a disabled box that is hovered, selected or invalid stays disabled. */
-  .checkbox:is(:has(:disabled), [data-disabled]) {
+  .checkbox:is(:where(:has(input:disabled)), [data-disabled]) {
     --checkbox-fill: var(--color-disabled);
     --checkbox-edge: color-mix(in srgb, var(--color-ink) 15%, transparent);
     --checkbox-mark: var(--color-taupe);
@@ -204,13 +219,18 @@
    * are not tokens: the reader's own palette is the point there.
    */
   @media (forced-colors: active) {
-    .checkbox:is([data-selected], :has(:checked), [data-indeterminate], :has(:indeterminate)) {
+    .checkbox:is(
+      [data-selected],
+      :where(:has(input:checked)),
+      [data-indeterminate],
+      :where(:has(input:indeterminate))
+    ) {
       --checkbox-fill: Highlight;
       --checkbox-edge: Highlight;
       --checkbox-mark: HighlightText;
     }
 
-    .checkbox:is(:has(:disabled), [data-disabled]) {
+    .checkbox:is(:where(:has(input:disabled)), [data-disabled]) {
       --checkbox-fill: canvas;
       --checkbox-edge: GrayText;
       --checkbox-mark: GrayText;

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
+import { Link } from '../link/Link';
 import { Checkbox } from './Checkbox';
 
 /** The color a CSS value paints in the current theme, read by painting it. */
@@ -237,6 +238,30 @@ export const FocusedChecked: Story = {
     if (!box) throw new Error('No box');
     await expect(getComputedStyle(box).outlineWidth).toBe('2px');
     await expect(getComputedStyle(box).backgroundColor).toBe(token('--color-ink'));
+  },
+};
+
+/**
+ * A link in the label is a tab stop of its own. Focused by keyboard it draws its
+ * own ring, and the box draws none: the box rings only for its own input.
+ */
+export const LinkInLabel: Story = {
+  tags: ['no-visual'],
+  render: (args) => (
+    <Checkbox {...args}>
+      I agree to the <Link href="#terms">terms of service</Link>
+    </Checkbox>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.tab();
+    await expect(canvas.getByRole('checkbox', { name: 'I agree to the terms of service' })).toHaveFocus();
+    await userEvent.tab();
+    const link = canvas.getByRole('link', { name: 'terms of service' });
+    await expect(link).toHaveFocus();
+    const box = canvas.getByRole('checkbox').closest('label')?.querySelector('.checkbox-box');
+    if (!box) throw new Error('No box');
+    await expect(getComputedStyle(box).outlineStyle).toBe('none');
+    await expect(getComputedStyle(link).outlineStyle).toBe('solid');
   },
 };
 

@@ -1829,13 +1829,16 @@ and the ink pill are the account menu's, and the dot is the plain choice's.
   label, its ring and, when chosen, its check, as a disabled checkbox is, so it
   does not read as an enabled one.
 - **Every state has a native twin.** A row is also drawn from its input: chosen
-  is `:has(:checked)`, focus is `:has(:focus-visible)` and disabled is
-  `:has(:disabled)`, beside React Aria's `data-selected`,
+  is `:has(input:checked)`, focus is `:has(input:focus-visible)` and disabled is
+  `:has(input:disabled)`, beside React Aria's `data-selected`,
   `data-focus-visible` and `data-disabled`, so a plain label around a native
-  radio and the library's dot gets the same pill, ring and disabled look.
-  Read-only has no native form, and keeps its data attribute alone. `:is()`
-  takes the specificity of its highest argument and both are one attribute or
-  pseudo-class, so no rule changed its weight or its place in the order.
+  radio and the library's dot gets the same pill, ring and disabled look. The
+  input is named, so a link focused inside the label rings itself and never the
+  row. Read-only has no native form, and keeps its data attribute alone. `:is()`
+  takes the specificity of its highest argument, so each native test sits in
+  `:where()`, which weighs nothing, and the one attribute beside it carries the
+  weight: no rule changed its weight or its place in the order. Checkbox and
+  SegmentedControl read their inputs the same way.
 - **A disabled, chosen radio leaves the group with no tab stop.** React Aria's
   `useRadio` (in `@react-aria/radio`) gives the tab stop only to the chosen
   radio, and then takes it away from a disabled one, so with `defaultValue="team"`

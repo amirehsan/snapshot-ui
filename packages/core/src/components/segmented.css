@@ -6,7 +6,11 @@
  * The root is a field (field.css), so it carries data-changed and
  * data-invalid, and the track draws the edge for them. React Aria draws the
  * options as radios: .segmented-item is the wrapper React Aria adds, and
- * .segmented-option is the label a person sees and presses.
+ * .segmented-option is the label a person sees and presses. Markup without
+ * React Aria is read from the input the option holds, and the input is named,
+ * as in :has(input:focus-visible), so nothing else in the label can light the
+ * option's ring or state. That test sits in :where(), so it weighs no more
+ * than the data attribute beside it.
  *
  * Stacking: the row of options is all or nothing. A control whose row does
  * not fit its room stacks one option per row, and the React component sets
@@ -133,7 +137,7 @@
   }
 
   /* After hover, so a selected option keeps its fill and its canvas text under the pointer. */
-  .segmented-option:is([data-selected], :has(:checked)) {
+  .segmented-option:is([data-selected], :where(:has(input:checked))) {
     background-color: var(--color-ink);
     color: var(--color-canvas);
   }
@@ -144,19 +148,22 @@
   }
 
   /* An option, or the whole control, that cannot be chosen. Hover shows nothing here. */
-  .segmented-option:is([data-disabled], :has(:disabled)) {
+  .segmented-option:is([data-disabled], :where(:has(input:disabled))) {
     background-color: transparent;
     color: var(--color-taupe);
     cursor: not-allowed;
   }
 
   /* A disabled option that is selected keeps its place in the row: a taupe pill with the track's own fill for text. */
-  .segmented-option:is([data-selected], :has(:checked)):is([data-disabled], :has(:disabled)) {
+  .segmented-option:is([data-selected], :where(:has(input:checked))):is(
+      [data-disabled],
+      :where(:has(input:disabled))
+    ) {
     background-color: var(--color-taupe);
     color: var(--color-disabled);
   }
 
-  .segmented-option:is([data-focus-visible], :has(:focus-visible)) {
+  .segmented-option:is([data-focus-visible], :where(:has(input:focus-visible))) {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
@@ -167,7 +174,10 @@
    * group, so the focused option is nearly always the selected one. The ring
    * stays inside the pill, as far in as the standard ring sits out.
    */
-  .segmented-option:is([data-selected], :has(:checked)):is([data-focus-visible], :has(:focus-visible)) {
+  .segmented-option:is([data-selected], :where(:has(input:checked))):is(
+      [data-focus-visible],
+      :where(:has(input:focus-visible))
+    ) {
     outline-color: var(--color-canvas);
     outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
   }
@@ -256,21 +266,27 @@
    * the point there.
    */
   @media (forced-colors: active) {
-    .segmented-option:is([data-selected], :has(:checked)) {
+    .segmented-option:is([data-selected], :where(:has(input:checked))) {
       background-color: Highlight;
       color: HighlightText;
     }
 
-    .segmented-option:is([data-disabled], :has(:disabled)) {
+    .segmented-option:is([data-disabled], :where(:has(input:disabled))) {
       color: GrayText;
     }
 
-    .segmented-option:is([data-selected], :has(:checked)):is([data-disabled], :has(:disabled)) {
+    .segmented-option:is([data-selected], :where(:has(input:checked))):is(
+        [data-disabled],
+        :where(:has(input:disabled))
+      ) {
       background-color: GrayText;
       color: canvas;
     }
 
-    .segmented-option:is([data-selected], :has(:checked)):is([data-focus-visible], :has(:focus-visible)) {
+    .segmented-option:is([data-selected], :where(:has(input:checked))):is(
+        [data-focus-visible],
+        :where(:has(input:focus-visible))
+      ) {
       outline-color: HighlightText;
     }
   }
