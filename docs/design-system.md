@@ -2119,3 +2119,51 @@ No pairing was added to the contrast gate: every color the control draws is
 gated already (slate and ink on Raised, canvas on ink, the boundary, the
 inverted ring, error) or recorded above (the hover wash, Light Signal Orange in
 light, the disabled look).
+
+## Card
+
+The document's panel section becomes `Card`, with a header, a title, a note
+and a body. Lifted Cream, the stadium corner and 32px of padding come straight
+from the document. Six things were derived.
+
+- **The padding is a spacing step.** It reads `--spacing-separate`, the step
+  for "section header to its body", so the space around a card's content and
+  the space between its header and body are one number. The header's rule
+  reaches the card's edges through negative margins of the same size, so the
+  two cannot drift apart. The rule is `--color-divider`, the app's ink at 10%
+  under its own token, and the border is `--color-hairline`, which is why the
+  box does not move when the color mode changes.
+- **The card does not narrow on a phone.** The document asks for about 24px of
+  padding on mobile. A card cannot know how wide the column around it is, only
+  the page can, and a card in a narrow dialog on a wide screen would never
+  step down. So the card is 32px everywhere, and a site that wants less on a
+  phone sets it where it knows the width.
+- **The header is a div.** A `<header>` outside sectioning content is the
+  page's banner. A card is a div unless it is told otherwise, so every card
+  header at page level would add a banner, and axe fails two of them as
+  duplicate landmarks. The title is what names a card, so the structure is
+  carried by the heading and not by the wrapper.
+- **The title's level is not its look.** The app's section title was always an
+  `h2`. In a library the card cannot know where it sits in the page's outline,
+  so `level` picks the element, `h1` to `h4`, and the type stays the h3 step at
+  every level, so the same card looks the same wherever it is placed.
+- **A card in a card steps down.** The app never put a card in a card. The
+  library does, and the nested radii table already says what to do: a 40px
+  holder holds 24px cards. A card placed in another card, directly or in its
+  body, takes `--radius-surface`, which is 12px in Soft and 0 in Square. The
+  rule is those two placements and not any descendant: a card that sits on a
+  well of its own, such as the docs preview stage, is not on the card's
+  surface and keeps its corner. In light a nested card is Lifted on Lifted and
+  the hairline is transparent, so nothing would show its edge. It takes the
+  frame outline a list takes. The outline is a cue and not a boundary, since
+  nothing depends on seeing the edge: it measures 1.28 against Lifted in light
+  and 1.43 in dark.
+- **The body owns the rhythm.** It is the app's body grid: 24px between peers
+  down the page and 32px between them across it, which only shows once the body
+  is given columns. Its children carry no vertical margin of their own, so a
+  paragraph's default one never adds to the 24px.
+
+The title is ink and the note is slate, both on Lifted, and both pairings are
+in the contrast gate. Ink measures 17.84 in light and 17.42 in dark, and slate
+5.31 and 6.94. The app's collapse toggle is not part of Card. It arrives with
+the collapsible card.

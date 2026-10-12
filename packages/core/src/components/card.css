@@ -1,0 +1,82 @@
+/*
+ * Card, the design system's panel section: Lifted Cream laid on the canvas,
+ * a stadium corner and 32px of padding. The header is a band ruled off from
+ * the body; its negative margins take the rule to the card's edges, which is
+ * what makes it a band rather than an underline on the text. Derived in
+ * docs/design-system.md ("Card").
+ */
+@layer components {
+  .card {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: var(--spacing-separate);
+    /* Transparent in light and white 12% in dark, so the box never reflows
+       when the color mode changes. */
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-stadium);
+    background-color: var(--color-lifted);
+  }
+
+  /* Rounded inside rounded takes the next step down the scale. In light, a
+     card on a card has no tone step to separate it, and the hairline is
+     transparent there, so it takes the outline a list takes. Nested means
+     placed in a card or in its body. A card that only sits somewhere deeper,
+     on a well of its own, is not on this surface and keeps its corner. */
+  .card > .card,
+  .card-body .card {
+    border-color: var(--color-frame);
+    border-radius: var(--radius-surface);
+  }
+
+  .card-header {
+    display: grid;
+    gap: var(--spacing-part);
+    margin: 0 calc(var(--spacing-separate) * -1) var(--spacing-separate);
+    padding: 0 var(--spacing-separate) var(--spacing-peer);
+    border-bottom: 1px solid var(--color-divider);
+  }
+
+  /* The element is the reader's outline and the look is the system's, so the
+     title draws at the h3 step whatever heading level it renders. */
+  .card-title {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: var(--text-h3--font-weight);
+    color: var(--color-ink);
+    overflow-wrap: break-word;
+  }
+
+  .card-note {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    color: var(--color-slate);
+    overflow-wrap: break-word;
+  }
+
+  /* Peers sit 24px apart down the page and 32px apart across it. The column
+     gap only shows when the body is given columns. The body owns the vertical
+     rhythm, so a child carries no margin of its own: a paragraph's default one
+     would add to the gap. */
+  .card-body {
+    display: grid;
+    column-gap: var(--spacing-separate);
+    row-gap: var(--spacing-peer);
+    align-content: start;
+  }
+
+  .card-body > * {
+    margin-block: 0;
+  }
+
+  /* A long unbroken word wraps inside the card instead of widening its track. */
+  .card-header > *,
+  .card-body > * {
+    min-width: 0;
+  }
+}

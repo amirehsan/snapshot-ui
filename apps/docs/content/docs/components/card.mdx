@@ -1,0 +1,85 @@
+---
+title: Card
+description: A lifted surface for one section of an app. A header names it, a body holds its content, and a card inside a card steps its corner down.
+icon: PanelTop
+---
+
+<Section>
+
+## Header and body
+
+The header holds a title and a note and is ruled off from the body. The title is the card's heading.
+
+<Preview name="card-parts" />
+
+</Section>
+
+<Section>
+
+## Nesting
+
+A card placed in another card, directly or in its body, steps its corner down to the surface radius and takes an outline, because a card on a card has no tone step to set it apart.
+
+<Preview name="card-nested" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Card is static. It renders on the server and ships no JavaScript. Choose the element with `as` and the heading level with `level`, so the card fits the page's outline.
+
+<Code code={`import { Card, CardBody, CardHeader, CardNote, CardTitle } from '@snapshot-ui/react';
+
+export function Notifications() {
+  return (
+    <Card as="section" aria-labelledby="notifications-title">
+      <CardHeader>
+        <CardTitle id="notifications-title" level={2}>
+          Notifications
+        </CardTitle>
+        <CardNote>Where we reach you, and how often.</CardNote>
+      </CardHeader>
+      <CardBody>...</CardBody>
+    </Card>
+  );
+}`} />
+
+</Section>
+
+<Section>
+
+## Props
+
+Every part takes `className`, which is merged after its own class, `ref`, and the rest of its HTML attributes. These are the props that choose an element.
+
+### Card
+
+<PropsTable path="../../packages/react/src/card/Card.tsx" type="Pick<CardProps, 'as' | 'className'>" />
+
+### CardTitle
+
+<PropsTable path="../../packages/react/src/card/Card.tsx" type="Pick<CardTitleProps, 'level' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A card is a div unless `as` says otherwise. A section or an article with a name, from `aria-labelledby` or `aria-label`, is a landmark region, and without a name it is not announced.
+
+The header is a div rather than a header element. A header outside sectioning content is the page's banner, so two cards at page level would add two. The title renders the heading level you choose and looks the same at every level.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps cards in the system.
+
+<Rules dos={['One title per card, and make it the heading that names the card.', 'Nest a card only for something that stands apart, such as a danger zone.', 'Let the body space its children at 24px and leave their margins alone.']} donts={['Never trim the 32px padding to fit more in. It is what separates a card from its content.', 'Never use a card for a single control or a short label. A card holds a section.']} />
+
+</Section>

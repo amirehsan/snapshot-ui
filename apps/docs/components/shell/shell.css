@@ -795,8 +795,8 @@
      header band's rule running edge to edge beneath it. */
   .docs-section > h2 + p {
     max-width: none;
-    margin: calc(var(--spacing-part) - var(--spacing-peer)) -2rem 0;
-    padding: 0 2rem 1.5rem;
+    margin: calc(var(--spacing-part) - var(--spacing-peer)) calc(var(--spacing-separate) * -1) 0;
+    padding: 0 var(--spacing-separate) var(--spacing-peer);
     border-bottom: 1px solid var(--color-divider);
     color: var(--color-slate);
   }

@@ -1,4 +1,4 @@
-import { Badge, Eyebrow, Link } from '@snapshot-ui/react';
+import { Badge, Card, Eyebrow, Link } from '@snapshot-ui/react';
 import pkg from '@snapshot-ui/react/package.json';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -28,12 +28,12 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>): Promi
           </div>
           <aside className="panel-side" aria-label="On this page">
             {page.data.toc.length > 0 ? (
-              <section className="card toc-card">
+              <Card as="section" className="toc-card">
                 <Eyebrow style={{ marginBottom: 18 }}>On this page</Eyebrow>
                 <Toc items={page.data.toc} />
-              </section>
+              </Card>
             ) : null}
-            <section className="card">
+            <Card as="section">
               <Eyebrow style={{ marginBottom: 18 }}>Package</Eyebrow>
               <div className="meta">
                 <div className="meta-row">
@@ -49,7 +49,7 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>): Promi
                   <Link href="https://react-aria.adobe.com">React Aria</Link>
                 </div>
               </div>
-            </section>
+            </Card>
           </aside>
         </div>
       </main>

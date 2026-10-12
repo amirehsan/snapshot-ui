@@ -3,6 +3,7 @@
   "pages": [
     "badge",
     "button",
+    "card",
     "checkbox",
     "field",
     "icon-button",
