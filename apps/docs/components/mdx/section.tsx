@@ -1,3 +1,4 @@
+import { Card } from '@snapshot-ui/react';
 import type { ReactElement, ReactNode } from 'react';
 
 /**
@@ -5,5 +6,9 @@ import type { ReactElement, ReactNode } from 'react';
  * right after it is the note above the rule, as in the mockup.
  */
 export function Section({ children }: { children: ReactNode }): ReactElement {
-  return <section className="card docs-section">{children}</section>;
+  return (
+    <Card as="section" className="docs-section">
+      {children}
+    </Card>
+  );
 }

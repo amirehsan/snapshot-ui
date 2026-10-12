@@ -3,6 +3,8 @@ import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
 import ButtonStates from './button-states';
 import ButtonVariants from './button-variants';
+import CardNested from './card-nested';
+import CardParts from './card-parts';
 import CheckboxBasic from './checkbox-basic';
 import CheckboxGroupExample from './checkbox-group';
 import CheckboxSelectAll from './checkbox-select-all';
@@ -45,6 +47,8 @@ export const examples = {
   'badge-tones': BadgeTones,
   'button-states': ButtonStates,
   'button-variants': ButtonVariants,
+  'card-nested': CardNested,
+  'card-parts': CardParts,
   'checkbox-basic': CheckboxBasic,
   'checkbox-group': CheckboxGroupExample,
   'checkbox-select-all': CheckboxSelectAll,

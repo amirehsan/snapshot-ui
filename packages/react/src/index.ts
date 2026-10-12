@@ -48,3 +48,15 @@ export {
   type SegmentedControlProps,
   type SegmentedControlSize,
 } from './segmented-control';
+export {
+  Card,
+  CardBody,
+  CardHeader,
+  CardNote,
+  CardTitle,
+  type CardBodyProps,
+  type CardHeaderProps,
+  type CardNoteProps,
+  type CardProps,
+  type CardTitleProps,
+} from './card';

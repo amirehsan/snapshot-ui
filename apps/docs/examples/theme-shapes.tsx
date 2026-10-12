@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Eyebrow } from '@snapshot-ui/react';
+import { Button, Card, Eyebrow } from '@snapshot-ui/react';
 import type { ReactElement } from 'react';
 
 const SHAPES = ['rounded', 'soft', 'square'] as const;
@@ -14,9 +14,7 @@ export default function ThemeShapes(): ReactElement {
           <div className="row">
             <Button>Book a visit</Button>
           </div>
-          <div className="card" style={{ padding: 20 }}>
-            A card, cut {shape}.
-          </div>
+          <Card style={{ padding: 20 }}>A card, cut {shape}.</Card>
         </div>
       ))}
     </div>

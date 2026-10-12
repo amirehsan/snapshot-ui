@@ -1,0 +1,65 @@
+import { createElement, type HTMLAttributes, type ReactElement, type Ref } from 'react';
+import { cx } from '../utils/cx';
+
+export interface CardProps extends HTMLAttributes<HTMLElement> {
+  /**
+   * The element to render. A `section` or an `article` is a landmark of its
+   * own once it has an accessible name; a `div` is not.
+   * @default 'div'
+   */
+  as?: 'div' | 'section' | 'article';
+  ref?: Ref<HTMLElement>;
+}
+
+/** A lifted surface laid on the page. Static: it adds no JavaScript. */
+export function Card({ as: tag = 'div', className, ...props }: CardProps): ReactElement {
+  // createElement rather than JSX: the three tags take one HTMLElement ref type between them.
+  return createElement(tag, { ...props, className: cx('card', className) });
+}
+
+export interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
+  ref?: Ref<HTMLDivElement>;
+}
+
+/**
+ * The band above the body that holds the title and the note, ruled off from
+ * the body. A div, not a header: a header outside sectioning content is the
+ * page's banner, and a card is a div by default.
+ */
+export function CardHeader({ className, ...props }: CardHeaderProps): ReactElement {
+  return <div {...props} className={cx('card-header', className)} />;
+}
+
+export interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
+  /**
+   * The heading element, `h1` to `h4`, so the card fits the page's outline.
+   * The look is the same at every level.
+   * @default 2
+   */
+  level?: 1 | 2 | 3 | 4;
+  ref?: Ref<HTMLHeadingElement>;
+}
+
+/** The card's heading. */
+export function CardTitle({ level = 2, className, ...props }: CardTitleProps): ReactElement {
+  const Heading = `h${level}` as const;
+  return <Heading {...props} className={cx('card-title', className)} />;
+}
+
+export interface CardNoteProps extends HTMLAttributes<HTMLParagraphElement> {
+  ref?: Ref<HTMLParagraphElement>;
+}
+
+/** A line of slate text under the title. */
+export function CardNote({ className, ...props }: CardNoteProps): ReactElement {
+  return <p {...props} className={cx('card-note', className)} />;
+}
+
+export interface CardBodyProps extends HTMLAttributes<HTMLDivElement> {
+  ref?: Ref<HTMLDivElement>;
+}
+
+/** The card's content, stacked with 24px between peers. */
+export function CardBody({ className, ...props }: CardBodyProps): ReactElement {
+  return <div {...props} className={cx('card-body', className)} />;
+}

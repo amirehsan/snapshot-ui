@@ -1,6 +1,11 @@
 'use client';
 
 import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardNote,
+  CardTitle,
   Eyebrow,
   IconButton,
   Input,
@@ -304,11 +309,11 @@ export function HomePage(): ReactElement {
               strokeWidth="1.5"
             />
           </svg>
-          <div className="card frame-card" data-theme="light">
-            <div className="card-header">
-              <p className="type-h3">Notifications</p>
-              <p className="muted">Where we reach you, and how often.</p>
-            </div>
+          <Card className="frame-card" data-theme="light">
+            <CardHeader>
+              <CardTitle>Notifications</CardTitle>
+              <CardNote>Where we reach you, and how often.</CardNote>
+            </CardHeader>
             <div className="settings-list">
               <div className="setting">
                 <Switch description="A short note when something ships." defaultSelected>
@@ -324,13 +329,13 @@ export function HomePage(): ReactElement {
                 </Switch>
               </div>
             </div>
-          </div>
-          <div className="card frame-card frame-card-offset" data-theme="light">
-            <div className="card-header">
-              <p className="type-h3">Workspace</p>
-              <p className="muted">Shown in the header and in every invite.</p>
-            </div>
-            <div className="stack">
+          </Card>
+          <Card className="frame-card frame-card-offset" data-theme="light">
+            <CardHeader>
+              <CardTitle>Workspace</CardTitle>
+              <CardNote>Shown in the header and in every invite.</CardNote>
+            </CardHeader>
+            <CardBody>
               <TextField
                 label="Workspace name"
                 description="Pick a name your team will recognize."
@@ -350,8 +355,8 @@ export function HomePage(): ReactElement {
                   Save changes
                 </button>
               </div>
-            </div>
-          </div>
+            </CardBody>
+          </Card>
           <div className="frame-toast" data-theme="light" role="status">
             <span className="frame-toast-dot">
               <svg
@@ -477,7 +482,7 @@ export function HomePage(): ReactElement {
                 <span>Light</span>
                 <span>Rounded</span>
               </div>
-              <div className="card stack">
+              <Card className="stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <Switch aria-label="Sample" defaultSelected />
@@ -499,14 +504,14 @@ export function HomePage(): ReactElement {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
             <div className="axis-tile" data-theme="light" data-shape="soft">
               <div className="axis-label">
                 <span>Light</span>
                 <span>Soft</span>
               </div>
-              <div className="card stack">
+              <Card className="stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <Switch aria-label="Sample" defaultSelected />
@@ -528,14 +533,14 @@ export function HomePage(): ReactElement {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
             <div className="axis-tile" data-theme="light" data-shape="square">
               <div className="axis-label">
                 <span>Light</span>
                 <span>Square</span>
               </div>
-              <div className="card stack">
+              <Card className="stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <Switch aria-label="Sample" defaultSelected />
@@ -557,14 +562,14 @@ export function HomePage(): ReactElement {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
             <div className="axis-tile" data-theme="dark" data-shape="rounded">
               <div className="axis-label">
                 <span>Dark</span>
                 <span>Rounded</span>
               </div>
-              <div className="card stack">
+              <Card className="stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <Switch aria-label="Sample" defaultSelected />
@@ -586,14 +591,14 @@ export function HomePage(): ReactElement {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
             <div className="axis-tile" data-theme="dark" data-shape="soft">
               <div className="axis-label">
                 <span>Dark</span>
                 <span>Soft</span>
               </div>
-              <div className="card stack">
+              <Card className="stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <Switch aria-label="Sample" defaultSelected />
@@ -615,14 +620,14 @@ export function HomePage(): ReactElement {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
             <div className="axis-tile" data-theme="dark" data-shape="square">
               <div className="axis-label">
                 <span>Dark</span>
                 <span>Square</span>
               </div>
-              <div className="card stack">
+              <Card className="stack">
                 <Input aria-label="Search settings" placeholder="Search settings" />
                 <div className="row spread">
                   <Switch aria-label="Sample" defaultSelected />
@@ -644,7 +649,7 @@ export function HomePage(): ReactElement {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
         </section>
@@ -661,7 +666,7 @@ export function HomePage(): ReactElement {
             </p>
           </div>
           <div className="catalog">
-            <div className="card catalog-group">
+            <Card className="catalog-group">
               <Eyebrow>Forms</Eyebrow>
               <div className="chips">
                 <Link className="chip" href="/docs/components/button">
@@ -680,8 +685,8 @@ export function HomePage(): ReactElement {
                 <span className="chip">Combo box</span>
                 <span className="chip">Tag input</span>
               </div>
-            </div>
-            <div className="card catalog-group">
+            </Card>
+            <Card className="catalog-group">
               <Eyebrow>Dates and media</Eyebrow>
               <div className="chips">
                 <span className="chip">Date picker</span>
@@ -693,8 +698,8 @@ export function HomePage(): ReactElement {
                 <span className="chip chip-new">Slider</span>
                 <span className="chip">Rich text</span>
               </div>
-            </div>
-            <div className="card catalog-group">
+            </Card>
+            <Card className="catalog-group">
               <Eyebrow>Lists and data</Eyebrow>
               <div className="chips">
                 <span className="chip chip-new">Data table</span>
@@ -706,8 +711,8 @@ export function HomePage(): ReactElement {
                 <span className="chip">Empty state</span>
                 <span className="chip chip-new">Charts</span>
               </div>
-            </div>
-            <div className="card catalog-group">
+            </Card>
+            <Card className="catalog-group">
               <Eyebrow>Overlays and shell</Eyebrow>
               <div className="chips">
                 <span className="chip">Dialog</span>
@@ -719,7 +724,7 @@ export function HomePage(): ReactElement {
                 <span className="chip">Sidebar</span>
                 <span className="chip">Save bar</span>
               </div>
-            </div>
+            </Card>
           </div>
         </section>
 
