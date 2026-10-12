@@ -219,16 +219,21 @@
     pointer-events: none;
   }
 
+  /* Every portrait gives its circle the same 400px band, as deep as the lowest circle reaches, and
+     keeps its rows at their own heights, so the three captions start on one line under the band. */
   .portrait {
     position: relative;
     display: grid;
+    grid-template-rows: 400px;
+    align-content: start;
     justify-items: start;
     gap: 18px;
   }
 
-  /* The middle portrait sits lower and the outer two level, so the line runs crest, trough, crest. */
-  .portrait:nth-child(3) {
-    margin-top: 120px;
+  /* The middle circle sits at the foot of its band, 120px below the outer two at the top, so the
+     line runs crest, trough, crest. */
+  .portrait:nth-child(3) .portrait-circle {
+    align-self: end;
   }
 
   .portrait-circle {
@@ -632,8 +637,14 @@
       row-gap: 64px;
     }
 
-    .portrait:nth-child(n) {
-      margin-top: 0;
+    /* The portraits stack, so each is as deep as its own circle and captions. */
+    .portrait {
+      grid-template-rows: none;
+      align-content: normal;
+    }
+
+    .portrait:nth-child(3) .portrait-circle {
+      align-self: auto;
     }
 
     .portrait-circle {

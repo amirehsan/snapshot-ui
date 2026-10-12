@@ -151,6 +151,29 @@ test('the orbit line is measured again when the window narrows', async ({ page }
   await expect(line).not.toHaveAttribute('d', wide ?? '');
 });
 
+/** The tops of the three portraits' eyebrows and of their titles, in client pixels. */
+const captionTops = (page: Page): Promise<{ eyebrows: number[]; titles: number[] }> =>
+  page.locator('.orbit').evaluate((orbit) => {
+    const tops = (selector: string): number[] =>
+      [...orbit.querySelectorAll(selector)].map((element) => element.getBoundingClientRect().top);
+    return { eyebrows: tops('.portrait > .eyebrow'), titles: tops('.portrait > h3') };
+  });
+
+for (const width of [1024, 1440, 1920]) {
+  test(`the portrait captions line up at ${String(width)}px, under circles still threaded on the orbit line`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    // The middle circle sits lower, but every caption starts on the same line.
+    for (const [name, tops] of Object.entries(await captionTops(page))) {
+      expect(tops, name).toHaveLength(3);
+      expect(Math.max(...tops) - Math.min(...tops), name).toBeLessThanOrEqual(1);
+    }
+    await expectThreaded(page);
+  });
+}
+
 test.describe('before the page scripts load', () => {
   test.use({ javaScriptEnabled: false });
 
