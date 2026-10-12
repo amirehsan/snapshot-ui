@@ -78,6 +78,18 @@
       background-color 160ms ease;
   }
 
+  /* The label's text, in a box of its own so a link or an emphasis inside it is
+     not a second flex item with a gap before it, and so one long word wraps
+     inside the row and does not widen it. A row with no text has no box. It is
+     positioned so it paints above the hit area, which covers the row: a link in
+     the label gets its own press, and a press elsewhere on the text still
+     reaches the row. */
+  .switch-text {
+    position: relative;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   /* On: an ink track and a canvas thumb. The thumb moves the track width less
      the thumb and two gaps, which leaves one gap at the end, the same as the
      gap it had at the start. */

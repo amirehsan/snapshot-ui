@@ -537,6 +537,15 @@ describe('src/components/switch.css', () => {
     expect(rules()).toMatch(off);
   });
 
+  it('boxes the label text, so one long word wraps in the row and inline markup stays one run', () => {
+    const text = blockAfter(rules(), '.switch-text {');
+    expect(text).toContain('min-width: 0;');
+    expect(text).toContain('overflow-wrap: anywhere;');
+    // The row's hit area is a positioned pseudo-element over the whole row, so the text sits above it
+    // and a link in the label can be pressed.
+    expect(text).toContain('position: relative;');
+  });
+
   it('keys the changed ring on the field root, as the field contract asks', () => {
     expect(rules()).toContain('.field[data-changed] .switch-track::before');
   });

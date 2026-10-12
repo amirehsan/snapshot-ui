@@ -17,6 +17,10 @@ const root = (container: HTMLElement): Element => {
   return element;
 };
 
+/** The classes of the parts of a row that carry one, in order: the track and the label text. */
+const visibleParts = (row: Element): string[] =>
+  [...row.children].map((child) => child.className).filter((name) => name !== '');
+
 const formOf = (container: HTMLElement): HTMLFormElement => {
   const form = container.querySelector('form');
   if (!form) throw new Error('No form');
@@ -42,6 +46,28 @@ describe('Switch', () => {
     expect(track).toHaveAttribute('aria-hidden', 'true');
     expect(track?.firstElementChild).toHaveClass('switch-thumb');
     expect(track?.firstElementChild?.children).toHaveLength(0);
+  });
+
+  it('puts the label in a text box of its own, so inline markup stays one run of text', () => {
+    render(
+      <Switch>
+        Weekly <strong>digest</strong> summary
+      </Switch>,
+    );
+    const row = screen.getByRole('switch', { name: 'Weekly digest summary' }).closest('label');
+    if (!row) throw new Error('No row');
+    expect(visibleParts(row)).toEqual(['switch-track', 'switch-text']);
+    const text = row.querySelector('.switch-text');
+    expect(text).toHaveTextContent('Weekly digest summary');
+    expect(text?.querySelector('strong')).toHaveTextContent('digest');
+  });
+
+  it('has no text box for a switch without a label, and keeps its name from aria-label', () => {
+    render(<Switch aria-label="Sample" />);
+    const row = screen.getByRole('switch', { name: 'Sample' }).closest('label');
+    if (!row) throw new Error('No row');
+    expect(visibleParts(row)).toEqual(['switch-track']);
+    expect(row.querySelector('.switch-text')).toBeNull();
   });
 
   it('puts the row first and the hint after it', async () => {
