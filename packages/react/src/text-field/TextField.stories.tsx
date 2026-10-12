@@ -180,12 +180,13 @@ export const Typing: Story = {
 /**
  * The stylesheet also serves markup without React Aria: a plain input says it is
  * invalid with aria-invalid, and that edge outranks a changed field's, as
- * data-invalid does.
+ * data-invalid does. The fixture takes no pointer events, so a pointer left
+ * over from an earlier story cannot hover an input and change the edge read.
  */
 export const PlainHtml: Story = {
   tags: ['no-visual'],
   render: () => (
-    <div style={{ display: 'grid', gap: 16 }}>
+    <div style={{ display: 'grid', gap: 16, pointerEvents: 'none' }}>
       <div className="field">
         <label className="field-label" htmlFor="plain-name">
           Workspace name
