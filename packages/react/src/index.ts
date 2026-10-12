@@ -44,6 +44,7 @@ export { Switch, type SwitchProps } from './switch';
 export {
   SegmentedControl,
   SegmentedControlItem,
+  type SegmentedControlBaseProps,
   type SegmentedControlItemProps,
   type SegmentedControlProps,
   type SegmentedControlSize,

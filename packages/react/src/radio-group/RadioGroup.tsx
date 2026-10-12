@@ -13,6 +13,7 @@ import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { cx } from '../utils/cx';
+import { present } from '../utils/present';
 
 export interface RadioGroupProps extends Omit<RACRadioGroupProps, 'children' | 'className'> {
   /** The group's name, shown above the options. Without one, give the group an `aria-label`. */
@@ -63,7 +64,7 @@ export function RadioGroup({
 }: RadioGroupProps): ReactElement {
   const { chipId, describedBy } = useChangedDescription({
     // Only a label row has a chip, so only a labelled group has one to read.
-    isChanged: isChanged && label != null,
+    isChanged: isChanged && present(label),
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
   });
@@ -74,9 +75,9 @@ export function RadioGroup({
       data-changed={isChanged ? '' : undefined}
       className={composeRenderProps(className, (userClassName) => cx('field', 'radio-group', userClassName))}
     >
-      {label != null ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
+      {present(label) ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
       <div className="radio-items">{children}</div>
-      {description != null ? <Description>{description}</Description> : null}
+      {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
     </RACRadioGroup>
   );

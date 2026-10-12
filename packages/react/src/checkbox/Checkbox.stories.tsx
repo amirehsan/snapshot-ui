@@ -325,3 +325,36 @@ export const RowIsTheTarget: Story = {
     await expect(input).toBeChecked();
   },
 };
+
+/** Hidden the way React Aria hides the input, so the row is what a person sees and presses. */
+const VISUALLY_HIDDEN = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  margin: -1,
+  padding: 0,
+  overflow: 'hidden',
+  border: 0,
+  clipPath: 'inset(50%)',
+  whiteSpace: 'nowrap',
+} as const;
+
+/**
+ * The stylesheet also serves markup without React Aria: a label that holds a
+ * checkbox which says it is invalid with aria-invalid takes the error edge.
+ */
+export const PlainHtml: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <label className="checkbox">
+      <input type="checkbox" aria-invalid="true" style={VISUALLY_HIDDEN} />
+      <span className="checkbox-box" aria-hidden="true" />
+      <span className="checkbox-text">I agree to the terms of service</span>
+    </label>
+  ),
+  play: async ({ canvas }) => {
+    const box = canvas.getByRole('checkbox').closest('label')?.querySelector('.checkbox-box');
+    if (!box) throw new Error('No box');
+    await expect(getComputedStyle(box).borderTopColor).toBe(token('--color-error'));
+  },
+};

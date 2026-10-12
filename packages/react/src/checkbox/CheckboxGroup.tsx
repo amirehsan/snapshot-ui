@@ -13,6 +13,7 @@ import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { cx } from '../utils/cx';
+import { present } from '../utils/present';
 
 export type CheckboxGroupOrientation = 'vertical' | 'horizontal';
 
@@ -70,7 +71,7 @@ export function CheckboxGroup({
 }: CheckboxGroupProps): ReactElement {
   const { chipId, describedBy } = useChangedDescription({
     // Only a label row has a chip, so only a labelled group has one to read.
-    isChanged: isChanged && label != null,
+    isChanged: isChanged && present(label),
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
   });
@@ -85,9 +86,9 @@ export function CheckboxGroup({
         cx('field', 'checkbox-group', userClassName),
       )}
     >
-      {label != null ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
+      {present(label) ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
       <div className="checkbox-items">{children}</div>
-      {description != null ? <Description>{description}</Description> : null}
+      {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
     </RACCheckboxGroup>
   );

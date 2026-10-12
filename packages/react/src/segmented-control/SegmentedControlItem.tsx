@@ -10,7 +10,10 @@ import {
 } from 'react-aria-components';
 import { cx } from '../utils/cx';
 
-export interface SegmentedControlItemProps extends Omit<RACRadioFieldProps, 'children' | 'className'> {
+export interface SegmentedControlItemProps extends Omit<
+  RACRadioFieldProps,
+  'children' | 'className' | 'style'
+> {
   /** The value the control takes while this option is selected. It is also what a form submits. */
   value: string;
   /** What the option shows: a word or two. */

@@ -123,6 +123,27 @@
     background-color: transparent;
   }
 
+  /*
+   * Forced colors (Windows high contrast) repaint every author color. The
+   * browser grays out a disabled button element by itself, but not a plain
+   * anchor or span that says it with aria-disabled, which would look enabled.
+   * A system color is kept, so every disabled form is drawn in GrayText, as a
+   * disabled checkbox, radio, switch or segmented option is: the label, and the
+   * edge where the variant has one. A pending button is not disabled and keeps
+   * its look. These are the only colors in this file that are not tokens: the
+   * reader's own palette is the point there.
+   */
+  @media (forced-colors: active) {
+    .button:is(:disabled, [data-disabled], :where([aria-disabled='true']:not([data-pending]))) {
+      border-color: GrayText;
+      color: GrayText;
+    }
+
+    .button-tertiary:is(:disabled, [data-disabled], :where([aria-disabled='true']:not([data-pending]))) {
+      border-color: transparent;
+    }
+  }
+
   /* Pending keeps its fill and its width: the label turns invisible but stays
      in the accessibility tree, and the spinner sits over where it was. */
   .button[data-pending] {

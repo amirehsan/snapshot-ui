@@ -185,3 +185,34 @@ export const Typing: Story = {
     await expect(canvas.getByRole('status')).toHaveTextContent('14 of about 10');
   },
 };
+
+/**
+ * The stylesheet also serves markup without React Aria: a plain input says it is
+ * invalid with aria-invalid, and that edge outranks a changed field's, as
+ * data-invalid does.
+ */
+export const PlainHtml: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <div style={{ display: 'grid', gap: 16 }}>
+      <div className="field">
+        <label className="field-label" htmlFor="plain-name">
+          Workspace name
+        </label>
+        <input id="plain-name" className="input" defaultValue="Northwind Studio" />
+      </div>
+      <div className="field" data-changed="">
+        <label className="field-label" htmlFor="plain-handle">
+          Handle
+        </label>
+        <input id="plain-handle" className="input" aria-invalid="true" defaultValue="!" />
+      </div>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const plain = canvas.getByRole('textbox', { name: 'Workspace name' });
+    const invalid = canvas.getByRole('textbox', { name: 'Handle' });
+    await expect(getComputedStyle(plain).borderTopColor).toBe(tokenColor('--color-boundary'));
+    await expect(getComputedStyle(invalid).borderTopColor).toBe(tokenColor('--color-error'));
+  },
+};

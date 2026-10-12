@@ -13,6 +13,7 @@ import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { cx } from '../utils/cx';
+import { present } from '../utils/present';
 import { useStacking } from './useStacking';
 
 export type SegmentedControlSize = 'md' | 'sm';
@@ -98,7 +99,7 @@ export function SegmentedControl({
   useStacking(roomRef, trackRef, size);
   const { chipId, describedBy } = useChangedDescription({
     // Only a label row has a chip, so only a labelled control has one to read.
-    isChanged: isChanged && label != null,
+    isChanged: isChanged && present(label),
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
   });
@@ -112,11 +113,11 @@ export function SegmentedControl({
         cx('field', 'segmented', size !== 'md' && `segmented-${size}`, userClassName),
       )}
     >
-      {label != null ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
+      {present(label) ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
       <div ref={trackRef} className="segmented-track">
         {children}
       </div>
-      {description != null ? <Description>{description}</Description> : null}
+      {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
       <span ref={roomRef} className="segmented-room" aria-hidden="true" />
     </RACRadioGroup>

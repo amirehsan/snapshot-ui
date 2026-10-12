@@ -42,4 +42,16 @@
     color: var(--color-taupe);
     cursor: not-allowed;
   }
+
+  /* Forced colors (Windows high contrast) repaint every author color, so taupe
+     becomes LinkText and a disabled link looks enabled. A system color is kept,
+     so a disabled link is drawn in GrayText, as a disabled checkbox, radio,
+     switch or segmented option is; the underline follows the text. These are
+     the only colors in this file that are not tokens: the reader's own palette
+     is the point there. */
+  @media (forced-colors: active) {
+    .link:is([data-disabled], [aria-disabled='true']) {
+      color: GrayText;
+    }
+  }
 }
