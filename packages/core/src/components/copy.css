@@ -16,6 +16,11 @@
     line-height: var(--text-body--line-height);
     letter-spacing: normal;
     font-weight: var(--text-body--font-weight);
+    /* A long word, such as an address, has no break to wrap at, so it breaks
+       anywhere instead of pushing a narrow screen sideways. Anywhere, and not
+       break-word, also lowers the text's min-content width, which a flex or
+       grid parent sizes it by. */
+    overflow-wrap: anywhere;
   }
 
   .copy-small {

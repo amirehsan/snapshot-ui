@@ -22,6 +22,11 @@
     letter-spacing: var(--text-eyebrow--letter-spacing);
     font-weight: var(--text-eyebrow--font-weight);
     text-transform: uppercase;
+    /* A long word has no break to wrap at, so it breaks anywhere instead of
+       pushing a narrow screen sideways. Anywhere, and not break-word, also
+       lowers the label's min-content width, which a flex or grid parent sizes
+       it by. */
+    overflow-wrap: anywhere;
   }
 
   .eyebrow::before {

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect } from 'storybook/test';
 import { Heading } from './Heading';
 
 const meta = {
@@ -13,6 +14,9 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** A word of 75 letters with no hyphen and no space, so the only way to fit it is to break it. */
+const UNBROKEN_WORD = 'workspacenotificationpreferencesforeverymemberandeveryprojectyoucreatelater';
 
 /** Level 2, drawn in the 36px section step. */
 export const Section: Story = {};
@@ -32,4 +36,24 @@ export const LevelAndSizeApart: Story = { args: { level: 3, size: 1 } };
 /** A long title wraps and keeps its tight line height. */
 export const LongTitle: Story = {
   args: { level: 1, children: 'Calm interfaces for settings, dashboards and apps.' },
+};
+
+/**
+ * A word with no break in it breaks anywhere, so it stays inside the width it
+ * is given. The visual suite shoots every story at 375px.
+ */
+export const LongWord: Story = {
+  args: { children: UNBROKEN_WORD },
+  render: (args) => (
+    <div data-testid="frame" style={{ width: 'min(480px, calc(100vw - 48px))' }}>
+      <Heading {...args} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const frame = canvas.getByTestId('frame');
+    const heading = canvas.getByRole('heading', { name: UNBROKEN_WORD });
+    // A word that cannot break pokes out of its box, or widens the box past the frame that holds it.
+    await expect(heading.scrollWidth).toBeLessThanOrEqual(heading.clientWidth);
+    await expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth);
+  },
 };

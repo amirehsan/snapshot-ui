@@ -249,6 +249,16 @@ describe('type components', () => {
       }
     },
   );
+
+  it.each([
+    ['heading.css', '.heading {'],
+    ['copy.css', '.copy {'],
+    ['eyebrow.css', '.eyebrow {'],
+  ])('%s breaks a long word anywhere, so a narrow screen is never pushed sideways', (file, header) => {
+    // Anywhere, not break-word: only anywhere also lowers the min-content width a grid parent sizes by.
+    const css = stripComments(read(`src/components/${file}`));
+    expect(blockAfter(css, header)).toContain('overflow-wrap: anywhere;');
+  });
 });
 
 describe('dist/components/heading.css', () => {
