@@ -41,3 +41,10 @@ export {
 } from './checkbox';
 export { Radio, RadioGroup, type RadioGroupProps, type RadioProps } from './radio-group';
 export { Switch, type SwitchProps } from './switch';
+export {
+  SegmentedControl,
+  SegmentedControlItem,
+  type SegmentedControlItemProps,
+  type SegmentedControlProps,
+  type SegmentedControlSize,
+} from './segmented-control';

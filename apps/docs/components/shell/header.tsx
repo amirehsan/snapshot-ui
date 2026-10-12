@@ -1,6 +1,6 @@
 'use client';
 
-import { IconButton } from '@snapshot-ui/react';
+import { IconButton, SegmentedControl, SegmentedControlItem } from '@snapshot-ui/react';
 import { useTheme } from 'next-themes';
 import type { ReactElement } from 'react';
 import { useMounted, useShape } from '@/lib/document-state';
@@ -8,8 +8,9 @@ import { writeShape } from '@/lib/prepaint';
 import { useShell } from './context';
 
 /**
- * A stand-in for the segmented control phase 1b builds: real radios, so arrow
- * keys and the single choice come from the platform.
+ * One of the header's switches: a compact segmented control. Its value is not
+ * known until the browser has said which option is set, and until then it
+ * shows none.
  */
 function Choice<T extends string>({
   label,
@@ -25,22 +26,21 @@ function Choice<T extends string>({
   onChange: (value: T) => void;
 }): ReactElement {
   return (
-    <div className="segmented segmented-small" role="radiogroup" aria-label={label}>
+    <SegmentedControl
+      aria-label={label}
+      name={name}
+      size="sm"
+      value={value ?? null}
+      onChange={(next) => {
+        onChange(next as T);
+      }}
+    >
       {options.map(([option, text]) => (
-        <label key={option} className="segmented-option">
-          <input
-            type="radio"
-            name={name}
-            value={option}
-            checked={value === option}
-            onChange={() => {
-              onChange(option);
-            }}
-          />
+        <SegmentedControlItem key={option} value={option}>
           {text}
-        </label>
+        </SegmentedControlItem>
       ))}
-    </div>
+    </SegmentedControl>
   );
 }
 

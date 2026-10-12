@@ -870,3 +870,85 @@ for (const width of [375, 1440]) {
     }
   });
 }
+
+for (const width of [375, 1440]) {
+  test(`the header switches are segmented controls, named for what they set and hit at 40px at ${String(width)}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    for (const [name, options] of [
+      ['Color mode', ['Light', 'Dark']],
+      ['Corners', ['Rounded', 'Soft', 'Square']],
+    ] as const) {
+      const group = page.getByRole('radiogroup', { name, exact: true });
+      await expect(group).toHaveClass(/segmented-sm/);
+      await expect(group.getByRole('radio')).toHaveCount(options.length);
+      for (const text of options) {
+        const option = group.locator('.segmented-option', { hasText: text });
+        // The option is drawn at 32px and hit at 40px, with the extra area on the option itself.
+        const size = await hitSize(option);
+        expect(size.height).toBeGreaterThanOrEqual(40);
+        expect(size.width).toBeGreaterThanOrEqual(40);
+        expect(await hitsAt(option, '.segmented-option', -18)).toBe(true);
+        expect(await hitsAt(option, '.segmented-option', 18)).toBe(true);
+      }
+    }
+  });
+}
+
+test('the segmented control page keeps a wide room in one row and stacks a narrow one, and follows the window', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page, '/docs/components/segmented-control');
+  const wide = page.getByRole('radiogroup', { name: 'Report cadence in a wide room' });
+  const narrow = page.getByRole('radiogroup', { name: 'Report cadence in a narrow room' });
+  await expect(wide).not.toHaveAttribute('data-stacked');
+  await expect(narrow).toHaveAttribute('data-stacked');
+  const options = await narrow.locator('.segmented-option').all();
+  expect(options).toHaveLength(5);
+  for (const option of options) expect((await option.boundingBox())?.height).toBeCloseTo(40, 1);
+  // The window narrows and the wide room no longer fits its row. Widened, the row comes back.
+  await page.setViewportSize({ width: 375, height: 900 });
+  await expect(wide).toHaveAttribute('data-stacked');
+  // The shell eases into the narrow layout, so the page settles a moment after the control does.
+  await expect.poll(() => sideways(page)).toBe(0);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(wide).not.toHaveAttribute('data-stacked');
+});
+
+test('the segmented control page chooses with the arrow keys and draws each state on the track edge', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page, '/docs/components/segmented-control');
+  const mode = page.getByRole('radiogroup', { name: 'Appearance' });
+  await expect(mode.getByRole('radio', { name: 'System' })).toBeChecked();
+  await mode.getByRole('radio', { name: 'System' }).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(mode.getByRole('radio', { name: 'Dark' })).toBeChecked();
+  await expect(mode.getByRole('radio', { name: 'Dark' })).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(mode.getByRole('radio', { name: 'Light' })).toBeChecked();
+
+  // A changed control draws the light signal orange edge and its chip.
+  const changed = page.locator('.segmented[data-changed]');
+  await expect(changed.locator('.field-changed')).toBeVisible();
+  await expect(changed.locator('.segmented-track')).toHaveCSS('border-top-color', 'rgb(243, 115, 56)');
+  // An invalid one draws the error edge and the error line, and no chip.
+  const invalid = page.locator('.segmented[data-invalid]');
+  await expect(invalid.locator('.field-error')).toHaveText('Choose a plan to continue.');
+  await expect(invalid.locator('.field-changed')).toHaveCount(0);
+  await expect(invalid.locator('.segmented-track')).toHaveCSS('border-top-color', 'rgb(163, 35, 27)');
+  // A disabled one is recessed, and its chosen option is a taupe pill.
+  const disabled = page.locator('.segmented[data-disabled]');
+  await expect(disabled.getByRole('radio', { name: 'Business' })).toBeDisabled();
+  await expect(disabled.locator('.segmented-track')).toHaveCSS('background-color', 'rgb(244, 244, 244)');
+  await expect(disabled.locator('.segmented-option[data-selected]')).toHaveCSS(
+    'background-color',
+    'rgb(209, 205, 199)',
+  );
+  await expect(disabled.locator('.segmented-option').first()).toHaveCSS('cursor', 'not-allowed');
+});
