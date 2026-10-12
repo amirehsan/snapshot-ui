@@ -24,6 +24,7 @@ import { useMounted, useShape } from '@/lib/document-state';
 import { wrapTab } from '@/lib/focus-trap';
 import { writeShape, type Shape } from '@/lib/prepaint';
 import { useCopy } from '@/lib/use-copy';
+import { Orbit } from './orbit';
 
 const INSTALL = 'pnpm add @snapshot-ui/react @snapshot-ui/core';
 
@@ -389,20 +390,7 @@ export function HomePage(): ReactElement {
               and every component is keyboard first.
             </p>
           </div>
-          <div className="orbit">
-            <svg
-              className="orbit-arc"
-              viewBox="0 0 1280 420"
-              preserveAspectRatio="none"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M40 300 C 300 40, 520 420, 760 250 S 1180 60, 1290 200"
-                stroke="var(--color-signal-light)"
-                strokeWidth="1.5"
-              />
-            </svg>
+          <Orbit>
             <article className="portrait">
               <div className="portrait-circle">
                 <span className="portrait-glyph">Aa</span>
@@ -467,7 +455,7 @@ export function HomePage(): ReactElement {
               <Eyebrow>Access</Eyebrow>
               <Heading level={3}>WCAG 2.2 AA, built on React Aria.</Heading>
             </article>
-          </div>
+          </Orbit>
         </section>
 
         <section className="section">
