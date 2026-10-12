@@ -80,8 +80,9 @@
   }
 
   /* A child may shrink to the card's width, so one with its own overflow, such
-     as a code block or a table, scrolls inside the card instead of widening the
-     track. */
+     as a code block, scrolls inside the card instead of widening the track. A
+     table has no overflow of its own, so it scrolls only inside a wrapper that
+     sets one. */
   .card-header > *,
   .card-body > * {
     min-width: 0;

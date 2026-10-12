@@ -8,7 +8,7 @@ icon: PanelTop
 
 ## Header and body
 
-The header holds a title and a note and is ruled off from the body. The title is the card's heading.
+The header holds a title and a note and is ruled off from the body. The title is the card's heading. A long word breaks anywhere in a card, and an element that must not break, such as a code sample, can set `overflow-wrap: normal`.
 
 <Preview name="card-parts" />
 
@@ -58,11 +58,11 @@ Every part takes `className`, which is merged after its own class, `ref`, and th
 
 ### Card
 
-<PropsTable path="../../packages/react/src/card/Card.tsx" type="Pick<CardProps, 'as' | 'className'>" />
+<PropsTable label="Card props" path="../../packages/react/src/card/Card.tsx" type="Pick<CardProps, 'as' | 'className'>" />
 
 ### CardTitle
 
-<PropsTable path="../../packages/react/src/card/Card.tsx" type="Pick<CardTitleProps, 'level' | 'className'>" />
+<PropsTable label="CardTitle props" path="../../packages/react/src/card/Card.tsx" type="Pick<CardTitleProps, 'level' | 'className'>" />
 
 </Section>
 

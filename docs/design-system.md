@@ -1176,8 +1176,8 @@ the contrast gate. In dark it measures 6.73:1.
 plus the gap, 6px and `--spacing-part`, so the label text lands on the same
 left edge as the content below it. An indented label reads as a different level
 of hierarchy, which is what the rail's group label learned. Where a label has
-no gutter beside it, a caller sets `margin-inline-start: 0` on
-`.eyebrow::before` to keep the dot inline.
+no gutter beside it, the `eyebrow-inset` variant, or the `inset` prop of
+Eyebrow, keeps the dot inline, inside the label's box.
 
 ## Link
 
@@ -1334,8 +1334,9 @@ component renders an anchor with the same classes, because an icon that goes
 somewhere, such as a GitHub link, is a link and not a button. The app's icon
 controls were all buttons. React Aria renders a disabled link as a `span` with
 `role="link"` and `aria-disabled`, which the stylesheet matches through
-`data-disabled`. There is no pending state, since an icon has nowhere to show
-one.
+`data-disabled` and also through `aria-disabled`. In forced colors it is drawn
+in `GrayText`, as the browser draws a disabled button element. There is no
+pending state, since an icon has nowhere to show one.
 
 ## Field parts
 
@@ -1482,15 +1483,21 @@ the error edge (the app showed the orange one).
 Light Signal Orange is under the 3:1 that a boundary asks on every light
 surface (2.53 to 2.87), and while a field is changed it is the field's edge.
 That is the document's own choice of attention cue, kept and recorded rather
-than gated, since it would fail the gate. The cue is never alone: the clay chip
-carries the word and is gated, the chip is read with the field, and the label,
-the value and the ring still identify the control.
+than gated, since it would fail the gate. In a labelled field the cue is never
+alone: the clay chip carries the word and is gated, the chip is read with the
+field, and the label, the value and the ring still identify the control. A
+field named by `aria-label` has no label row and so no chip, and there the
+edge is the whole cue: an app that changes such a field says so in words of
+its own.
 
 **The length count counts what will be saved.** `budget` counts the value's
-length as typed. The app trimmed the value and collapsed runs of spaces first;
-the library's count is the value the form submits, so the figure never
-disagrees with what a server receives. Everything else about the count is the
-field parts' own: it advises, never blocks, and appears from 70% of the budget.
+length as typed, in UTF-16 code units, the unit JavaScript, `maxLength` and the
+value `onChange` receives all use, so an emoji, or an accented letter built
+from two code points, can count as two. The app trimmed the value and collapsed
+runs of spaces first; the library's count is the value the form submits, so the
+figure never disagrees with what a server receives. Everything else about the
+count is the field parts' own: it advises, never blocks, and appears from 70% of
+the budget.
 
 **The Changed chip is announced.** The border and the chip are visual, so
 TextField passes the chip's id to React Aria as `aria-describedby` while the
@@ -1582,13 +1589,13 @@ order.
   is the value React Aria reports and `FormData` holds. The unit is the value's
   `length`, in UTF-16 code units, the unit JavaScript, `maxLength` and the value
   `onChange` receives all use, so an emoji, or an accented letter built from two
-  code points, can count as two. A browser sends each
-  line break in a form request as two characters (CR and LF; measured as
-  `%0D%0A` in a posted body), so a server that measures the request sees one more
-  per line. The budget is a soft target and the count can pass it. `maxLength` is
-  a hard stop that the count does not read, so set `budget` at or below it.
-  Everything else about the count is TextField's: it advises, never
-  blocks, and appears from 70% of the budget.
+  code points, can count as two. A browser sends each line break in a form
+  request as two characters (CR and LF; measured as `%0D%0A` in a posted body),
+  so a server that measures the request sees one more per line. The budget is a
+  soft target and the count can pass it. `maxLength` is a hard stop that the
+  count does not read, so set `budget` at or below it. Everything else about the
+  count is TextField's: it advises, never blocks, and appears from 70% of the
+  budget.
 
 No pairing was added to the contrast gate. The fills, edges and text are the
 input's, and the textarea draws no color of its own.
@@ -1672,7 +1679,7 @@ open, each recorded here.
   and a mask that paints canvas on an ink fill would then paint canvas on
   canvas. In forced colors the selected box takes `Highlight` with a
   `HighlightText` mark and a disabled one `GrayText`. These are the only colors
-  in this file that are not tokens, and they exist because the reader's own
+  in `checkbox.css` that are not tokens, and they exist because the reader's own
   palette is the point there (checked in Chromium with forced colors emulated).
 
 **The group follows the field contract and marks a change with the chip alone.**
@@ -1708,11 +1715,11 @@ leaves, every box takes the error edge and the line shows.
   the default `[]` and `a` and `b` checked, it ends at `['a']`. A reset that
   re-checks a box before it unchecks another one, in DOM order, loses the
   re-checked box: with the default `['email']` and the user at `['sms']`, it
-  ends at `[]` and not `['email']`. A reset that only re-checks boxes, that
-  unchecks a single box, or that re-checks a box after the last box it
-  unchecks, works. In a controlled group, `onChange` fires once per box that
-  changes and the last array is the wrong one. Two tests hold the correct
-  expectations as expected failures, so a fix upstream flags itself.
+  ends at `[]` and not `['email']`. A reset that only re-checks boxes, or that
+  unchecks a single box and re-checks the others only after it, works. In a
+  controlled group, `onChange` fires once per box that changes and the last
+  array is the wrong one. Two tests hold the correct expectations as expected
+  failures, so a fix upstream flags itself.
 - **A group shows one error line, its own.** React Aria clears the error
   context of the checkboxes inside a group, so an `errorMessage` on one of them
   is not shown there. It shows when the checkbox stands alone.
@@ -1992,7 +1999,10 @@ only places in the library that write a color that is not a token.
 `switch-text` span, which wraps in its own right (`min-width: 0` and
 `overflow-wrap: anywhere`), so an address in a label breaks inside it. The row
 is an inline flex box, and its own `min-width: 0`, `max-width: 100%` and
-`overflow-wrap: anywhere` keep the row itself inside a 320px screen.
+`overflow-wrap: anywhere` keep the row itself inside a 320px screen. The
+`switch-text` box is positioned, so it stacks above the row's hit area, the
+`::before` that reaches 5px past the row: a link in the label takes its own
+press, and a press anywhere else on the text still reaches the row.
 
 ## SegmentedControl
 
@@ -2024,7 +2034,8 @@ things, each recorded here.
   stacks before that happens. Labels have a line a little taller than the step,
   so an ellipsis never clips a descender. An option is never narrower than 40px,
   so a one-glyph label, a letter or a numeral, is still a 40px target: with no
-  floor it would be about 36px wide, the glyph between 16px of padding each side.
+  floor a compact option would be about 36px wide, the glyph between its 14px
+  of padding each side.
 - **The chosen option is an ink fill with canvas text**, the shape the rail's
   current link uses. canvas on ink measures 16.25:1 in light and 19.31 in dark,
   and is in the contrast gate already (the primary button's label).
@@ -2221,8 +2232,9 @@ from the document. Seven things were derived.
   inherited one, so none does. It is `anywhere` and not `break-word`, because
   only `anywhere` also lowers the card's min-content width, which a flex or
   grid parent sizes the card by. Measured at 320px with a word of 130 letters,
-  the first version let a paragraph in the body scroll the page to 981px, and a
-  title in a centered flex column made the card 1426px wide. With `anywhere`
+  in the fallback font of the browser the baselines are drawn in, the first
+  version let a paragraph in the body scroll the page to 981px, and a title in
+  a centered flex column made the card 1426px wide. With `anywhere`
   on the card, every placement fits the 280px column it sits in.
 
 The title is ink and the note is slate, both on Lifted, and both pairings are

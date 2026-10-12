@@ -92,11 +92,11 @@ Every React Aria checkbox prop is accepted. These are the ones Snapshot UI adds 
 
 ### Checkbox
 
-<PropsTable path="../../packages/react/src/checkbox/Checkbox.tsx" type="Pick<CheckboxProps, 'children' | 'description' | 'errorMessage' | 'value' | 'name' | 'isSelected' | 'defaultSelected' | 'onChange' | 'isIndeterminate' | 'isDisabled' | 'isReadOnly' | 'isRequired' | 'isInvalid' | 'validate'>" />
+<PropsTable label="Checkbox props" path="../../packages/react/src/checkbox/Checkbox.tsx" type="Pick<CheckboxProps, 'children' | 'description' | 'errorMessage' | 'value' | 'name' | 'isSelected' | 'defaultSelected' | 'onChange' | 'isIndeterminate' | 'isDisabled' | 'isReadOnly' | 'isRequired' | 'isInvalid' | 'validate'>" />
 
 ### CheckboxGroup
 
-<PropsTable path="../../packages/react/src/checkbox/CheckboxGroup.tsx" type="Pick<CheckboxGroupProps, 'label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'orientation' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isDisabled' | 'isReadOnly' | 'isRequired' | 'isInvalid' | 'validate'>" />
+<PropsTable label="CheckboxGroup props" path="../../packages/react/src/checkbox/CheckboxGroup.tsx" type="Pick<CheckboxGroupProps, 'label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'orientation' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isDisabled' | 'isReadOnly' | 'isRequired' | 'isInvalid' | 'validate'>" />
 
 </Section>
 
@@ -108,7 +108,7 @@ A native checkbox input inside its label, with React Aria handling the wiring. T
 
 <Keys rows={[['Tab', 'Moves to the next checkbox. Each one is its own stop, in a group too.'], ['Space', 'Toggles the focused checkbox.'], ['Arrow keys', 'Do nothing. Only a radio group moves between its choices with them.']]} />
 
-The row is 40px tall at the least, and the box is drawn at 20px inside it. A checkbox with no text, named by `aria-label`, keeps a 40px square target around its box. In Windows high contrast the box takes the system colors, so the mark never disappears.
+The row is 40px tall at the least, and the box is drawn at 20px inside it. A checkbox with no text, named by `aria-label`, keeps a 40px square target around its box. The target overhangs the box by 10px on each side, so leave 10px beside a scroll edge. In Windows high contrast the box takes the system colors, so the mark never disappears.
 
 </Section>
 

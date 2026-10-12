@@ -212,6 +212,20 @@ test.describe('forced colors', () => {
   });
 });
 
+// ---- Props tables -------------------------------------------------------------------------------
+
+test('every props table on a component page has a name of its own', async ({ page }) => {
+  // A page with several tables names each one, so a screen reader's list of tables tells them apart.
+  for (const slug of SLUGS) {
+    await page.goto(`/docs/components/${slug}`);
+    const names = await page
+      .locator('.props table')
+      .evaluateAll((tables) => tables.map((table) => table.getAttribute('aria-label')));
+    expect(names.length, slug).toBeGreaterThan(0);
+    expect(new Set(names).size, `${slug}: ${names.join(', ')}`).toBe(names.length);
+  }
+});
+
 // ---- Narrow screens -----------------------------------------------------------------------------
 
 /** A web address with no break in it: nothing for the browser to wrap at. */

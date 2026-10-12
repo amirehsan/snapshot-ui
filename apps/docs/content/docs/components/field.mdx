@@ -38,9 +38,10 @@ A count advises and never blocks. It stays empty until the value reaches 70% of 
 
 ## Usage
 
-[Text field](/docs/components/text-field) renders all of this in one element. For a custom layout, put the parts inside a React Aria field: Label names the control, Description and FieldError become its description, and FieldError appears only while the field is invalid. Put the `field` class and `data-changed` on the field's root, and keep the chip in the label row, where the stylesheet shows or hides it.
+[Text field](/docs/components/text-field) renders all of this in one element. For a custom layout, put the parts inside a React Aria field: Label names the control, Description and FieldError become its description, and FieldError appears only while the field is invalid. Put the `field` class and `data-changed` on the field's root, and keep the chip in the label row, where the stylesheet shows or hides it. Give the chip an `id` and pass it in `aria-describedby` while the field is changed, so a screen reader reads it with the field.
 
 ```tsx
+import { useId } from 'react';
 import { TextField } from 'react-aria-components';
 import { Description, FieldChanged, FieldCounter, FieldError, Input, Label } from '@snapshot-ui/react';
 
@@ -53,16 +54,18 @@ export function ShortDescription({
   onChange: (value: string) => void;
   isChanged: boolean;
 }) {
+  const chipId = useId();
   return (
     <TextField
       className="field"
       data-changed={isChanged ? '' : undefined}
+      aria-describedby={isChanged ? chipId : undefined}
       value={value}
       onChange={onChange}
     >
       <div className="field-head">
         <Label>Short description</Label>
-        <FieldChanged />
+        <FieldChanged id={chipId} />
       </div>
       <Input />
       <Description>One sentence, for search results.</Description>
@@ -83,9 +86,9 @@ The classes are `field`, `field-head`, `field-label`, `field-description`, `fiel
 
 The count takes the numbers and the text. The chip takes its text as children. Label, Description and FieldError accept React Aria's Label, Text and FieldError props.
 
-<PropsTable path="../../packages/react/src/field/FieldCounter.tsx" type="Pick<FieldCounterProps, 'count' | 'budget' | 'showFrom' | 'label'>" />
+<PropsTable label="FieldCounter props" path="../../packages/react/src/field/FieldCounter.tsx" type="Pick<FieldCounterProps, 'count' | 'budget' | 'showFrom' | 'label'>" />
 
-<PropsTable path="../../packages/react/src/field/FieldChanged.tsx" type="Pick<FieldChangedProps, 'children'>" />
+<PropsTable label="FieldChanged props" path="../../packages/react/src/field/FieldChanged.tsx" type="Pick<FieldChangedProps, 'children'>" />
 
 </Section>
 

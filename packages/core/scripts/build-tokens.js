@@ -11,10 +11,11 @@
 // A base $value may be a reference such as "{color.ink}". The CSS keeps it as
 // var(--color-ink) instead of resolving it, so it follows the mode it is read
 // in, and every scope of an axis that changes the target declares it again.
-// The build follows a reference only when it is the whole $value, a string. It
-// throws on a reference inside a composite $value, and on a mode value that is
-// or contains a reference, because it would otherwise resolve those silently
-// against the base value.
+// A string $value may also embed references, as in "calc({radius.control} -
+// 4px)", and each one is followed the same way. The build throws on a reference
+// inside a composite $value, and on a mode value that is or contains a
+// reference, because it would otherwise resolve those silently against the base
+// value.
 import StyleDictionary from 'style-dictionary';
 import { fileHeader } from 'style-dictionary/utils';
 
@@ -128,8 +129,9 @@ StyleDictionary.registerTransformGroup({
 
 /**
  * The paths a base token's $value refers to, as written: "{color.ink}" is color.ink.
- * A reference is followed only when it is the whole $value, a string. Inside a
- * composite value it would be resolved once and never repeated in a theme scope,
+ * A string $value's references are followed, whether one is the whole value or
+ * is embedded in it, as in "calc({radius.control} - 4px)". Inside a composite
+ * value a reference would be resolved once and never repeated in a theme scope,
  * so the build refuses it.
  */
 function referencesOf(token) {

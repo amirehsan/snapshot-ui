@@ -18,7 +18,7 @@ Pass a label, and the options as children, each with its own `value`. The chosen
 
 ## States
 
-The track's edge carries the state, as in every field. A changed control gets a light signal orange edge and a clay chip beside its label. An invalid control gets the error edge and an error line, and invalid outranks changed, so the chip steps aside. A disabled control is recessed, and its chosen option stays in view as a quiet taupe pill. The compact size, `sm`, draws 32px options in a 40px track and still hits each one at 40px.
+The track's edge carries the state, as in every field. A changed control gets a light signal orange edge and a clay chip beside its label. An invalid control gets the error edge and an error line, and invalid outranks changed, so the chip steps aside. A disabled control is recessed, and its chosen option stays in view as a quiet taupe pill. A single option can be disabled on its own, with `isDisabled` on its item, and the rest stay open. The compact size, `sm`, draws 32px options in a 40px track and still hits each one at 40px.
 
 <Preview name="segmented-control-states" />
 
@@ -72,11 +72,11 @@ Without a visible label, name the control with `aria-label`, as a toolbar's swit
 
 Every React Aria RadioGroup prop is accepted, except `orientation`: the options are always laid out in a row, and stack on their own. These are the ones Snapshot UI adds or shapes.
 
-<PropsTable path="../../packages/react/src/segmented-control/SegmentedControl.tsx" type="Pick<SegmentedControlBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'size' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isInvalid' | 'validate'>" />
+<PropsTable label="SegmentedControl props" path="../../packages/react/src/segmented-control/SegmentedControl.tsx" type="Pick<SegmentedControlBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'size' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate'>" />
 
 Each option is a SegmentedControlItem.
 
-<PropsTable path="../../packages/react/src/segmented-control/SegmentedControlItem.tsx" type="Pick<SegmentedControlItemProps, 'value' | 'children' | 'isDisabled' | 'className'>" />
+<PropsTable label="SegmentedControlItem props" path="../../packages/react/src/segmented-control/SegmentedControlItem.tsx" type="Pick<SegmentedControlItemProps, 'value' | 'children' | 'isDisabled' | 'className'>" />
 
 </Section>
 
