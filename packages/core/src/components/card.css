@@ -15,6 +15,13 @@
     border: 1px solid var(--color-hairline);
     border-radius: var(--radius-stadium);
     background-color: var(--color-lifted);
+    /* A long unbroken word, address or identifier breaks anywhere instead of
+       widening the card or pushing the page sideways. It is set once, here, and
+       inherited by every part and by whatever the card holds: a part that set
+       its own value would beat the inherited one. It is anywhere and not
+       break-word, because only anywhere also lowers the card's min-content
+       width, which a flex or grid parent sizes the card by. */
+    overflow-wrap: anywhere;
   }
 
   /* Rounded inside rounded takes the next step down the scale. In light, a
@@ -46,7 +53,6 @@
     letter-spacing: var(--text-h3--letter-spacing);
     font-weight: var(--text-h3--font-weight);
     color: var(--color-ink);
-    overflow-wrap: break-word;
   }
 
   .card-note {
@@ -56,7 +62,6 @@
     line-height: var(--text-body--line-height);
     font-weight: var(--text-body--font-weight);
     color: var(--color-slate);
-    overflow-wrap: break-word;
   }
 
   /* Peers sit 24px apart down the page and 32px apart across it. The column
@@ -74,7 +79,9 @@
     margin-block: 0;
   }
 
-  /* A long unbroken word wraps inside the card instead of widening its track. */
+  /* A child may shrink to the card's width, so one with its own overflow, such
+     as a code block or a table, scrolls inside the card instead of widening the
+     track. */
   .card-header > *,
   .card-body > * {
     min-width: 0;

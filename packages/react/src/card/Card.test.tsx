@@ -87,6 +87,23 @@ describe('Card', () => {
     expect(screen.getByRole('region', { name: 'Notifications' })).toHaveClass('card');
   });
 
+  it('is not a region when it is an article, or a section without a name', () => {
+    render(
+      <>
+        <Card as="article" aria-label="Notifications" data-testid="article">
+          Text
+        </Card>
+        <Card as="section" data-testid="section">
+          Text
+        </Card>
+      </>,
+    );
+    // An article is not a landmark, named or not, and an unnamed section is not announced.
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Notifications' })).toHaveClass('card');
+    expect(screen.getByTestId('section')).toHaveClass('card');
+  });
+
   it('nests: a card inside a card is another card with its own parts', () => {
     render(
       <Card data-testid="outer">
@@ -107,7 +124,7 @@ describe('Card', () => {
     const inner = screen.getByTestId('inner');
     expect(outer).toContainElement(inner);
     expect(inner).toHaveAttribute('class', 'card');
-    // The corner step is the stylesheet's `.card .card`, so the markup is the same at every depth.
+    // The corner step is the stylesheet's `.card > .card, .card-body .card`, so the markup is the same at every depth.
     expect(outer.querySelectorAll('.card')).toHaveLength(1);
     expect(inner.querySelectorAll('.card-header, .card-title, .card-body')).toHaveLength(3);
     expect(screen.getByRole('heading', { level: 2, name: 'Workspace' })).toBeInTheDocument();

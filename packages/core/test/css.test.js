@@ -559,6 +559,31 @@ describe('src/components/switch.css', () => {
   });
 });
 
+describe('src/components/card.css', () => {
+  // The rules without their comments, which quote selectors and values of their own.
+  const rules = () => stripComments(read('src/components/card.css'));
+
+  it('breaks a long unbroken word anywhere, on the card, so every part and its content inherit it', () => {
+    const source = rules();
+    expect(blockAfter(source, '.card {')).toContain('overflow-wrap: anywhere;');
+    // A part that set its own value would beat the inherited one, and break-word does not lower
+    // the min-content width that a flex or grid parent sizes the card by.
+    expect(source).not.toContain('break-word');
+    expect(blockAfter(source, '.card-title {')).not.toContain('overflow-wrap');
+    expect(blockAfter(source, '.card-note {')).not.toContain('overflow-wrap');
+  });
+
+  it('steps a card down only when it sits in a card or in its body, never for any descendant', () => {
+    const source = rules();
+    const nested = blockAfter(source, '.card > .card,');
+    expect(source).toMatch(/\.card > \.card,\s*\.card-body \.card \{/);
+    expect(nested).toContain('border-radius: var(--radius-surface);');
+    expect(nested).toContain('border-color: var(--color-frame);');
+    // A card on a well of its own, such as the docs preview stage, keeps its stadium corner.
+    expect(source).not.toMatch(/\.card \.card/);
+  });
+});
+
 describe('src/components/segmented.css', () => {
   // The rules without their comments, which quote selectors of their own.
   const rules = () => read('src/components/segmented.css').replace(/\/\*[\s\S]*?\*\//g, '');

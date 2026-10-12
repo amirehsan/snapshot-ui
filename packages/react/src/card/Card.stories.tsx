@@ -24,6 +24,9 @@ const radius = (element: HTMLElement): number => parseFloat(getComputedStyle(ele
 const token = (name: string): number =>
   parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
 
+/** A word of 75 letters with no hyphen and no space, so the only way to fit it is to break it. */
+const UNBROKEN_WORD = 'workspacenotificationpreferencesforeverymemberandeveryprojectyoucreatelater';
+
 /** A lifted surface with 32px of padding and a stadium corner. */
 export const Basic: Story = {
   render: (args) => (
@@ -102,6 +105,37 @@ export const NestedWithoutBody: Story = {
 };
 
 /**
+ * Nested means placed in a card or in its body, not anywhere inside one. A card
+ * on a well of its own, as the docs preview stage is, keeps its stadium corner
+ * and its own edge even when the well sits in a card. A selector for any
+ * descendant would step it down and fail this story.
+ */
+export const OnAWell: Story = {
+  // The corner is the whole point and the visual suite already shoots Nested, so no screenshot.
+  tags: ['no-visual'],
+  render: (args) => (
+    <Card {...args} data-testid="outer-card">
+      <div
+        style={{
+          padding: 24,
+          borderRadius: 'var(--radius-surface)',
+          background: 'var(--color-canvas)',
+        }}
+      >
+        <Card data-testid="well-card">A card on a well, inside a card.</Card>
+      </div>
+    </Card>
+  ),
+  play: async ({ canvas }) => {
+    const outer = canvas.getByTestId('outer-card');
+    const onWell = canvas.getByTestId('well-card');
+    await expect(radius(onWell)).toBe(token('--radius-stadium'));
+    // The edge is the card's own hairline, the same as the outer card's, and not the nested outline.
+    await expect(getComputedStyle(onWell).borderTopColor).toBe(getComputedStyle(outer).borderTopColor);
+  },
+};
+
+/**
  * The tokens decide, so a card takes the theme of the block it sits in. A card
  * with its own data-theme takes that one instead, and its text follows.
  */
@@ -151,10 +185,14 @@ export const InsideDarkBlock: Story = {
   },
 };
 
-/** Titles, notes and bodies wrap inside the card. The visual suite shoots every story at 375px. */
+/**
+ * Titles, notes and bodies wrap inside the card, and so does a word with no
+ * break in it: the card breaks it anywhere. The visual suite shoots every story
+ * at 375px.
+ */
 export const LongContent: Story = {
   render: (args) => (
-    <Card {...args} as="section" aria-labelledby="long-title">
+    <Card {...args} as="section" aria-labelledby="long-title" data-testid="long-card">
       <CardHeader>
         <CardTitle id="long-title">Notification preferences for every workspace you belong to</CardTitle>
         <CardNote>
@@ -172,7 +210,18 @@ export const LongContent: Story = {
           Security alerts are always on for owners, because a sign-in from a new device or a changed billing
           contact is something an owner needs to know about the same day.
         </p>
+        <p>
+          The key for every workspace you create later is {UNBROKEN_WORD}, and it never has a space in it.
+        </p>
       </CardBody>
     </Card>
   ),
+  play: async ({ canvas }) => {
+    const card = canvas.getByTestId('long-card');
+    // Nothing the card holds reaches past it: not the card, and not any text inside it.
+    await expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+    for (const text of card.querySelectorAll<HTMLElement>('.card-title, .card-note, .card-body > p')) {
+      await expect(text.scrollWidth).toBeLessThanOrEqual(text.clientWidth);
+    }
+  },
 };
