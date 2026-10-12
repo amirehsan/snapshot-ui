@@ -27,7 +27,11 @@
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
+    /* A long word in the label breaks inside the row instead of widening it. */
+    min-width: 0;
+    max-width: 100%;
     margin: 0;
+    overflow-wrap: anywhere;
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: var(--text-body);
@@ -159,6 +163,42 @@
      lead selector adds no specificity, so a layout can move the hint. */
   :where(.field-head:has(> .switch)) ~ .field-description {
     padding-inline-start: calc(52px + 0.75rem);
+  }
+
+  /*
+   * Forced colors (Windows high contrast). The browser paints every background
+   * canvas, so the thumb would be canvas on a canvas track and the two states
+   * would look alike. System colors are kept, so the track and the thumb are
+   * given theirs here: off is an empty track with a solid thumb, on is a
+   * Highlight track with a HighlightText thumb, and the thumb's place in the
+   * track says it again. The edge is always drawn, since the browser forces a
+   * clear border to a color anyway. These are the only colors in this file that
+   * are not tokens; the reader's own palette is the point there.
+   */
+  @media (forced-colors: active) {
+    .switch {
+      --switch-track-fill: canvas;
+      --switch-thumb-fill: CanvasText;
+      --switch-edge: CanvasText;
+    }
+
+    .switch:is([data-selected], :has(input:checked)) {
+      --switch-track-fill: Highlight;
+      --switch-thumb-fill: HighlightText;
+      --switch-edge: Highlight;
+    }
+
+    .switch:is([data-disabled], :has(input:disabled)) {
+      --switch-track-fill: canvas;
+      --switch-thumb-fill: GrayText;
+      --switch-edge: GrayText;
+    }
+
+    .switch:is([data-disabled], :has(input:disabled)):is([data-selected], :has(input:checked)) {
+      --switch-track-fill: GrayText;
+      --switch-thumb-fill: canvas;
+      --switch-edge: GrayText;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

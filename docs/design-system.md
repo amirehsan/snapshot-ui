@@ -1034,6 +1034,17 @@ No component writes a corner of its own, or the shape could not reach it.
 - **Minimum sizes:** 14px for sentences, 12px for short uppercase labels.
 - **Touch targets stay at 40px.** A control drawn smaller extends its hit area
   with a pseudo-element, as the app's menu row buttons do.
+- **A state that only a fill carries is also drawn in forced colors.** Windows
+  high contrast repaints every background with the reader's canvas, and it
+  draws a border and an outline in the reader's text color. A state that a
+  border or an outline carries survives that. A check mark drawn with a mask
+  survives only in a system color, which the checkbox and the radio group give
+  it. A switch's track and thumb and the chosen segmented option are fills, and
+  without help they are the same canvas as everything around them, so those
+  components give their fills system colors too. Each does it in a
+  `@media (forced-colors: active)` block, which is the one place a system color
+  may be written: a test fails any component file that writes one anywhere
+  else.
 
 ## Spinner
 
@@ -1377,6 +1388,12 @@ shrinks it, so the library draws what the app shipped. The dot is drawn and
 the word is real text, so a screen reader reads "Changed" rather than a bullet
 and the word can be replaced. The chip is an element beside the label, not
 text inside it, so the control's accessible name stays the label's own.
+
+**The chip wraps when its text is long.** It is one line at its natural width,
+as the word "Changed" is, and a `changedLabel` that is longer moves to a row of
+its own and then wraps, inside a word if it must, so a translation or an
+address in it can never be wider than the field. The first version could not
+wrap, and one long word pushed the page sideways at 320px.
 
 **Invalid outranks changed, and the chip steps aside.** The app gave its label
 one marker slot, and when a field was both changed and invalid the "check"
@@ -1954,6 +1971,26 @@ out of the form while disabled. The app's two-option text value, its `Yes|No`
 pair and its list of fields that read as on when blank are the app's own logic
 and not the library's.
 
+**In forced colors the track and the thumb take system colors.** The browser
+paints every background canvas, so a canvas thumb sat on a canvas track and an
+on switch and an off one drew the same border and nothing else: only the
+thumb's place was left to tell them apart. A `@media (forced-colors: active)`
+block sets the three properties every state reads. Off is an empty track in
+the text color with a solid CanvasText thumb. On is a Highlight track with a
+HighlightText thumb, so the pair the system guarantees to read together is the
+pair drawn. Disabled off is a GrayText edge and thumb on an empty track, and
+disabled on is a GrayText track with a canvas thumb, so the disabled pair still
+differ from each other and from the enabled pair. The changed ring and the
+focus ring are borders and outlines, which the browser keeps. This block, and
+the ones in the checkbox, the radio group and the segmented control, are the
+only places in the library that write a color that is not a token.
+
+**A long word in the label breaks inside the row.** The label is the
+`switch-text` span, which wraps in its own right (`min-width: 0` and
+`overflow-wrap: anywhere`), so an address in a label breaks inside it. The row
+is an inline flex box, and its own `min-width: 0`, `max-width: 100%` and
+`overflow-wrap: anywhere` keep the row itself inside a 320px screen.
+
 ## SegmentedControl
 
 The document specifies no segmented control. Tabs (see "Still missing" in
@@ -2119,6 +2156,18 @@ No pairing was added to the contrast gate: every color the control draws is
 gated already (slate and ink on Raised, canvas on ink, the boundary, the
 inverted ring, error) or recorded above (the hover wash, Light Signal Orange in
 light, the disabled look).
+
+**In forced colors the chosen option is Highlight.** The browser paints every
+background canvas, so the ink pill became canvas on a canvas track, with the
+same text color as every other option: the chosen one could not be told from
+the rest. A `@media (forced-colors: active)` block gives the chosen option
+Highlight with HighlightText, and a disabled chosen option GrayText with canvas
+text, so it is still the one that was chosen. The focus ring on the chosen
+option is HighlightText, because the browser's own ring color would sit on the
+Highlight fill. The track's edge and the other options' text are the browser's
+own, and they hold. Like the checkbox's, the radio group's and the switch's,
+the block is one of the only places in the library that writes a color that is
+not a token.
 
 ## Card
 

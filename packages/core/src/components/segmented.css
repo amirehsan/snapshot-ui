@@ -244,4 +244,34 @@
     border-width: 1.5px;
     border-color: var(--color-error);
   }
+
+  /*
+   * Forced colors (Windows high contrast). The browser paints every background
+   * canvas, which would leave the chosen option the same canvas as the track
+   * and the other options. System colors are kept, so the chosen option is
+   * given Highlight with HighlightText, and a disabled one GrayText with canvas
+   * text. The focus ring on a chosen option inverts to HighlightText, because
+   * the browser's own ring color would sit on the Highlight fill. These are the
+   * only colors in this file that are not tokens; the reader's own palette is
+   * the point there.
+   */
+  @media (forced-colors: active) {
+    .segmented-option:is([data-selected], :has(:checked)) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .segmented-option:is([data-disabled], :has(:disabled)) {
+      color: GrayText;
+    }
+
+    .segmented-option:is([data-selected], :has(:checked)):is([data-disabled], :has(:disabled)) {
+      background-color: GrayText;
+      color: canvas;
+    }
+
+    .segmented-option:is([data-selected], :has(:checked)):is([data-focus-visible], :has(:focus-visible)) {
+      outline-color: HighlightText;
+    }
+  }
 }

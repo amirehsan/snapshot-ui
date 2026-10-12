@@ -108,7 +108,11 @@
     letter-spacing: var(--text-eyebrow--letter-spacing);
     font-weight: var(--text-eyebrow--font-weight);
     text-transform: uppercase;
-    white-space: nowrap;
+    /* One line at its natural width, as a short word is. A longer changedLabel moves to
+       a row of its own first, and wraps there, even inside a word, so it can never push
+       the page sideways. */
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .field-changed::before {
