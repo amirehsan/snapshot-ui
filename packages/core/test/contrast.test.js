@@ -114,6 +114,30 @@ describe('the edges Radio draws', () => {
   });
 });
 
+describe('the switch', () => {
+  const surfaces = ['canvas', 'lifted', 'bone', 'float', 'raised'];
+
+  // A switch sits on any surface a settings panel can: a page, a card, a note, a floating panel.
+  it('gates the off track against every surface it can sit on', () => {
+    const gated = CONTRAST_PAIRS.filter((pair) => pair.text === 'boundary' && pair.fill === undefined).map(
+      (pair) => pair.ground,
+    );
+    expect(surfaces.filter((surface) => !gated.includes(surface))).toEqual([]);
+  });
+
+  it('gates the raised thumb on the off track, which takes its color from the surface behind it', () => {
+    const gated = CONTRAST_PAIRS.filter((pair) => pair.text === 'raised' && pair.ground === 'boundary').map(
+      (pair) => pair.over,
+    );
+    expect(surfaces.filter((surface) => !gated.includes(surface))).toEqual([]);
+  });
+
+  it('gates the canvas thumb on the ink track at the text minimum, which covers the on state', () => {
+    const pair = CONTRAST_PAIRS.find((entry) => entry.text === 'canvas' && entry.ground === 'ink');
+    expect(pair?.minimum).toBe(TEXT);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

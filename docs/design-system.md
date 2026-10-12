@@ -1846,3 +1846,110 @@ The five surfaces are canvas, lifted, bone, float and raised. One pair was
 added to the gate: the disabled check. The boundary ring against bone (3.16 in
 light, 4.93 in dark) was added with Checkbox, so the ring is gated on all five
 surfaces. The wash is recorded and not gated, since it would fail it.
+
+## Switch
+
+The document gives the switch one sentence: a stadium track with a round
+thumb, the pill vocabulary again, for a setting that is simply on or off. The
+numbers are the app's, from `js/switch-input.js` and `control.css`, and the
+library changes the ones below, each recorded here.
+
+**Size is the app's.** A 52px by 30px track and a 24px round thumb. The row is
+the label, so the whole line is one target, and the label text is the body step
+in ink, as in the app.
+
+**The thumb keeps the same gap everywhere.** The app padded the track by 2px
+and moved the thumb 22px, which left 2px at the start when off and 4px at the
+end when on. A 24px thumb in a 30px track has 3px above and below, so the
+library gives it 3px at both ends too. The travel is then the track (52px) less
+the thumb (24px) less two gaps (6px), which is 22px again: the app's distance,
+with the padding changed to match it. Width, thumb size and gap are three
+properties and the travel is computed from them, so a size that changes stays
+symmetric. The thumb follows `--radius-pill` like the track, a circle in
+Rounded and Soft and a square in Square. It moves by its inline margin and not
+by a transform, so it reverses in right-to-left text without a direction
+selector, which the browser floor does not have.
+
+**The off track is the boundary color and the on track is ink.** The app mixed
+ink at 22% for the off track, which measured 1.62:1, and "Four colors added"
+already names a switch's off track as a use of `boundary`. The thumb is the
+Raised fill when off and canvas when on, which on an ink track (white in dark)
+is the inverse, as the primary Button's label is. The off track is painted on
+the surface itself, so each pair is measured on all five surfaces a switch can
+sit on:
+
+| Pair | Lowest on the five surfaces, light | Dark |
+| --- | --- | --- |
+| Off track against the surface | 3.38 | 4.93 |
+| Raised thumb on the off track | 3.48 | 4.24 |
+| Ink track against the surface (the ink text pairs) | 16.25 | 15.36 |
+| canvas thumb on the ink track (the primary Button label) | 16.25 | 19.31 |
+
+The first two rows are new in the contrast gate: the off track on each surface,
+and the thumb on it on each (Lifted was there already). The last two were gated
+already, at 4.5:1, and still are.
+
+**The thumb casts no shadow.** The app gave it the lift shadow. At 4% in light
+it cannot be seen, and at 40% in dark it smears a gray halo across the white on
+track, so the library draws a flat thumb in both themes.
+
+**Focus is the token ring around the track,** 2px at a 2px offset. It sits
+outside the track so ink still reads against the surface when the track is ink.
+The app drew the same ring, in ink; the library draws it in the focus ring
+token. Nothing else on the row changes.
+
+**Disabled is different when the switch is on and when it is off.** The app drew
+ink at 10% for both, so a disabled switch told on from off by the thumb alone.
+The library follows the disabled idiom of the Button
+and the input and splits it. Off is hollow: the recessed `disabled` fill, a 1px
+edge of ink at 15% and a taupe thumb. On is filled: a taupe track and a thumb
+in the recessed fill. The fill, the thumb and its position all say which, so no
+one cue carries it. A disabled control is outside the 3:1 asked of an active
+one: the taupe thumb on the recessed track measures 1.44 in light and 3.81 in
+dark, and the filled track against its surface 1.40 to 1.58 in light and 3.68
+to 3.81 in dark. The label stays ink, as a disabled field's label does, so the
+setting can still be read.
+
+**Changed is a ring around the track and the chip beside the label.** The app's
+switch draws a changed cue of its own, a 2px ring in light signal orange
+("a 1.5px border on a 24px pill reads as a smudge rather than a cue"), so the
+library keeps the ring and does not draw the 1.5px border that text fields use.
+The ring is outside the track, so it does not replace the off track's boundary
+fill: the track under it keeps the 3.38:1 measured above, on every surface. The
+track draws the ring, keyed on the field's root (`data-changed`) as the field
+contract asks, so it shows on an ink track and on a boundary one. The focus ring steps out
+past it by its width, so a changed switch with focus shows both. The chip is
+the field's `FieldChanged`, beside the label and not inside it, so the switch
+is named by its label alone, and a screen reader reads it with the switch
+through `aria-describedby`, exactly as TextField's chip is read. Light signal
+orange measures 2.53 to 2.87:1 against the light surfaces and 5.35 to 6.73 in
+dark. That is under the 3:1 a boundary asks in light, and it is kept and
+recorded rather than gated, for the reason TextField gives: the cue is never
+alone, because the clay chip carries the word and is gated. A switch with no
+visible label draws the ring and no chip, as a field without a label row does.
+
+**There is no invalid or required state.** The app drew an error ring on a
+switch row. A switch takes effect as soon as it is flipped, so no value of it
+can be wrong, and a choice that a form confirms later is a Checkbox. The
+library leaves `isRequired`, `isInvalid` and `validate` out of the props.
+
+**Drawn 30px, hit 40px.** The row extends its hit area with a pseudo-element, 5px
+above and below, so the touch rule holds with no layout shift. The app's switch
+was 30px with nothing extended.
+
+**Hover draws nothing, as in the app.** The thumb moving is the feedback, and the
+pointer cursor marks the row as pressable. A read-only switch looks like an
+enabled one, like a read-only field, and only its cursor stops being a pointer,
+since a press does nothing.
+
+**Motion is the app's 160ms,** a fade of the track and a slide of the thumb, and
+both stop under reduced motion, which the app's did not. The corners never
+animate: they belong to the shape axis.
+
+**The control is a native checkbox with the `switch` role,** from React Aria's
+SwitchField and SwitchButton, so a screen reader says "switch, on" where a
+checkbox would say "checked", as the app wanted. It submits its `value` (the
+browser's `on` without one) under its `name` only while it is on, and is left
+out of the form while disabled. The app's two-option text value, its `Yes|No`
+pair and its list of fields that read as on when blank are the app's own logic
+and not the library's.
