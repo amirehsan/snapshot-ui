@@ -335,6 +335,38 @@ describe('TextField', () => {
     expect(screen.getByRole('status')).toHaveAttribute('data-over');
   });
 
+  it('words the count with counter.label, in the status region a screen reader announces', async () => {
+    const user = userEvent.setup();
+    render(
+      <TextField
+        label="Kurzbeschreibung"
+        defaultValue="abcdefgh"
+        budget={10}
+        counter={{
+          label: ({ count, budget, over }) =>
+            `${String(count)} von etwa ${String(budget)}${over ? ', zu lang' : ''}`,
+        }}
+      />,
+    );
+    const counter = screen.getByRole('status');
+    expect(counter).toHaveTextContent('8 von etwa 10');
+    await user.type(screen.getByRole('textbox', { name: 'Kurzbeschreibung' }), 'ijk');
+    expect(counter).toHaveTextContent('11 von etwa 10, zu lang');
+    expect(counter).toHaveAttribute('data-over');
+  });
+
+  it('shows the count from the share of the budget counter.showFrom gives', async () => {
+    const user = userEvent.setup();
+    render(
+      <TextField label="Kurzbeschreibung" defaultValue="abcd" budget={10} counter={{ showFrom: 0.5 }} />,
+    );
+    const counter = screen.getByRole('status');
+    // 4 of 10 is under half the budget, and 5 is the first count shown, where 70% would wait for 7.
+    expect(counter).toBeEmptyDOMElement();
+    await user.type(screen.getByRole('textbox', { name: 'Kurzbeschreibung' }), 'e');
+    expect(counter).toHaveTextContent('5 of about 10');
+  });
+
   it('has no counter without a budget', () => {
     render(<TextField label="Name" defaultValue="abcdefgh" />);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
