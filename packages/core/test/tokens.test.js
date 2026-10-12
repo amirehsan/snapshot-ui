@@ -353,4 +353,36 @@ describe('build-tokens.js', () => {
     expect(fixtureTokens.color.middle.modes).toEqual({ theme: { dark: '#eeeeee' } });
     expect(fixtureTokens.ring.radius.modes).toEqual({ shape: { soft: '10px', square: '0px' } });
   });
+
+  it('repeats a follower whose string value embeds a reference in every scope of its axis', () => {
+    const run = buildFixture({
+      // A theme token, so the theme scopes exist and the follower can be seen to stay out of them.
+      color: { $type: 'color', ink },
+      radius: {
+        $type: 'dimension',
+        control: {
+          $value: px(20),
+          $extensions: { 'snapshot-ui': { shape: { soft: px(10), square: px(0) } } },
+        },
+      },
+      ring: {
+        // The reference is part of a longer string, not the whole value.
+        $type: 'dimension',
+        inner: { $value: 'calc({radius.control} - 4px)' },
+      },
+    });
+    expect(run.stderr).toBe('');
+    expect(run.status).toBe(0);
+
+    const line = '--ring-inner: calc(var(--radius-control) - 4px);';
+    for (const selector of [':root', SOFT, SQUARE, ROUNDED]) {
+      expect(blockOf(run.css, selector), selector).toContain(line);
+    }
+    for (const selector of THEME) expect(blockOf(run.css, selector), selector).not.toContain('--ring-inner');
+
+    const fixtureTokens = JSON.parse(run.js.slice(run.js.indexOf('{'), run.js.lastIndexOf('}') + 1));
+    expect(fixtureTokens.ring.inner.modes).toEqual({
+      shape: { soft: 'calc(10px - 4px)', square: 'calc(0px - 4px)' },
+    });
+  });
 });

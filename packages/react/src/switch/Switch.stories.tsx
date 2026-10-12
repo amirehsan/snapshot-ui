@@ -1,17 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
 import { Link } from '../link';
+import { tokenColor } from '../stories/paint';
 import { Switch } from './Switch';
-
-/** The color a token paints in the theme around `scope`, read by painting it. */
-function tokenColor(name: string, scope: Element = document.body): string {
-  const probe = document.createElement('span');
-  probe.style.color = `var(${name})`;
-  scope.append(probe);
-  const { color } = getComputedStyle(probe);
-  probe.remove();
-  return color;
-}
 
 /** The row, the track and the thumb of the first switch drawn inside `scope`. */
 function parts(scope: Element): { row: Element; track: Element; thumb: Element } {

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRef, useState, type ReactElement } from 'react';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { formOf, root, visibleParts } from '../../test/dom';
 import { Switch, type SwitchProps } from './Switch';
 
 /** A switch the caller controls, the way a form library would. */
@@ -10,22 +11,6 @@ function Controlled(props: SwitchProps): ReactElement {
   const [isSelected, setSelected] = useState(false);
   return <Switch {...props} isSelected={isSelected} onChange={setSelected} />;
 }
-
-const root = (container: HTMLElement): Element => {
-  const element = container.firstElementChild;
-  if (!element) throw new Error('Nothing rendered');
-  return element;
-};
-
-/** The classes of the parts of a row that carry one, in order: the track and the label text. */
-const visibleParts = (row: Element): string[] =>
-  [...row.children].map((child) => child.className).filter((name) => name !== '');
-
-const formOf = (container: HTMLElement): HTMLFormElement => {
-  const form = container.querySelector('form');
-  if (!form) throw new Error('No form');
-  return form;
-};
 
 describe('Switch', () => {
   it('renders a switch with its label, inside a field', async () => {

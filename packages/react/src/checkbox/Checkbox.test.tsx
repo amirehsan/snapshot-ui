@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRef, useState, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { formOf, root } from '../../test/dom';
 import { Checkbox, type CheckboxProps } from './Checkbox';
 
 /** A checkbox the caller controls, the way a form library would. */
@@ -11,22 +12,10 @@ function Controlled(props: CheckboxProps): ReactElement {
   return <Checkbox {...props} isSelected={selected} onChange={setSelected} />;
 }
 
-const root = (container: HTMLElement): Element => {
-  const element = container.firstElementChild;
-  if (!element) throw new Error('Nothing rendered');
-  return element;
-};
-
 const part = (container: HTMLElement, selector: string): HTMLElement => {
   const element = container.querySelector<HTMLElement>(selector);
   if (!element) throw new Error(`No ${selector}`);
   return element;
-};
-
-const formOf = (container: HTMLElement): HTMLFormElement => {
-  const form = container.querySelector('form');
-  if (!form) throw new Error('No form');
-  return form;
 };
 
 describe('Checkbox', () => {

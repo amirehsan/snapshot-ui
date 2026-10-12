@@ -1,16 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
+import { tokenColor } from '../stories/paint';
 import { TextArea } from './TextArea';
-
-/** The color a token paints in the current theme, read by painting it. */
-function tokenColor(name: string): string {
-  const probe = document.createElement('span');
-  probe.style.color = `var(${name})`;
-  document.body.append(probe);
-  const { color } = getComputedStyle(probe);
-  probe.remove();
-  return color;
-}
 
 /** The corner radius a token paints in the current shape, read by painting it. */
 function tokenRadius(name: string): string {

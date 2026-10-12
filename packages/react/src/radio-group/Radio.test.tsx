@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRef, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { visibleParts } from '../../test/dom';
 import { Radio, type RadioProps } from './Radio';
 import { RadioGroup } from './RadioGroup';
 
@@ -23,10 +24,6 @@ const row = (name: string): HTMLElement => {
   if (!label) throw new Error(`No row for ${name}`);
   return label;
 };
-
-/** The classes of what a row draws. React Aria's visually hidden input has none. */
-const visibleParts = (label: HTMLElement): string[] =>
-  [...label.children].map((child) => child.className).filter((name) => name !== '');
 
 describe('Radio', () => {
   it('is a labelled row holding the native radio, a dot and the label text', async () => {

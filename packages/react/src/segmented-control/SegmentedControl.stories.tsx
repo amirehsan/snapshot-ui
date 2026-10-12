@@ -1,28 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import { expect, waitFor } from 'storybook/test';
+import { tokenColor, washColor } from '../stories/paint';
 import { SegmentedControl, type SegmentedControlBaseProps } from './SegmentedControl';
 import { SegmentedControlItem } from './SegmentedControlItem';
-
-/** The color a token paints in the current theme, read by painting it. */
-function tokenColor(name: string): string {
-  const probe = document.createElement('span');
-  probe.style.color = `var(${name})`;
-  document.body.append(probe);
-  const { color } = getComputedStyle(probe);
-  probe.remove();
-  return color;
-}
-
-/** The color of the 5% ink wash an option takes under the pointer, read by painting it. */
-function washColor(): string {
-  const probe = document.createElement('span');
-  probe.style.backgroundColor = 'color-mix(in srgb, var(--color-ink) 5%, transparent)';
-  document.body.append(probe);
-  const { backgroundColor } = getComputedStyle(probe);
-  probe.remove();
-  return backgroundColor;
-}
 
 /** One option for each entry: the key is the value and the text is what the option shows. */
 function options(entries: Record<string, string>): ReactNode {

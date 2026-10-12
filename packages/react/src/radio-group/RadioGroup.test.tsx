@@ -4,6 +4,7 @@ import { createRef, useState, type ReactElement } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { formOf, root } from '../../test/dom';
 import { Radio } from './Radio';
 import { RadioGroup, type RadioGroupProps } from './RadioGroup';
 
@@ -29,18 +30,6 @@ function Frequency(props: Partial<RadioGroupProps>): ReactElement {
     </RadioGroup>
   );
 }
-
-const root = (container: HTMLElement): Element => {
-  const element = container.firstElementChild;
-  if (!element) throw new Error('Nothing rendered');
-  return element;
-};
-
-const formOf = (container: HTMLElement): HTMLFormElement => {
-  const form = container.querySelector('form');
-  if (!form) throw new Error('No form');
-  return form;
-};
 
 describe('RadioGroup', () => {
   it('renders a labelled group of radio rows inside a field', async () => {
