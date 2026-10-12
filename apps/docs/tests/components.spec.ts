@@ -188,6 +188,11 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
  * What a long unbroken word is put into, per page: the places a person writes their own text. Each
  * selector must match, so a class that is renamed cannot turn this into a test of nothing. Scoped to the
  * preview stage, so the page's own chrome (its package card, its headings) is not the thing under test.
+ *
+ * A caveat: every docs section is a Card, and a Card sets `overflow-wrap: anywhere`, which the stage inherits.
+ * Text that wraps because of its own rule is therefore not told from text that wraps because of the card's.
+ * With the inheritance cut off at `.stage`, every page here still passes except typography, whose Heading,
+ * Text and Eyebrow set no wrapping of their own (as a browser's default text does not).
  */
 const LONG_TARGETS: Record<string, string[]> = {
   badge: ['.stage .badge'],
@@ -199,6 +204,8 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .checkbox-text',
   ],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
+  kbd: ['.stage .kbd'],
+  link: ['.stage .link'],
   'radio-group': [
     '.stage .field-label',
     '.stage .field-description',
@@ -209,7 +216,20 @@ const LONG_TARGETS: Record<string, string[]> = {
   switch: ['.stage .switch-text', '.stage .field-description'],
   'text-area': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'text-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
+  typography: ['.stage .heading', '.stage .copy', '.stage .eyebrow'],
 };
+
+/** The pages with no text a person writes, each with its reason. A page is in one list or the other. */
+const NO_LONG_TEXT: Record<string, string> = {
+  button: 'a label is a short command on one line by design (white-space: nowrap), not text that wraps',
+  'icon-button': 'a glyph and no text: its name is an aria-label that nothing draws',
+  spinner: 'a progress mark with no text a person writes',
+};
+
+test('every component page is given long text, or is listed as having none', () => {
+  // A page added to the rail must be in one list, so it cannot skip the narrow-screen check by omission.
+  expect([...Object.keys(LONG_TARGETS), ...Object.keys(NO_LONG_TEXT)].sort()).toEqual([...SLUGS].sort());
+});
 
 for (const slug of SLUGS) {
   test(`the ${slug} page fits 320px and 375px, with a long web address in its text`, async ({ page }) => {

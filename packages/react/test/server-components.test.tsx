@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -92,5 +93,31 @@ describe('the static components in a server component', () => {
       </Heading>,
     );
     expect(html).toBe('<h2 id="top" data-testid="title" class="heading heading-2 page-title">Title</h2>');
+  });
+});
+
+/** The source file of every static component, relative to `src`. */
+const STATIC_MODULES = [
+  'typography/Heading.tsx',
+  'typography/Text.tsx',
+  'typography/Eyebrow.tsx',
+  'kbd/Kbd.tsx',
+  'badge/Badge.tsx',
+  'card/Card.tsx',
+  'field/FieldCounter.tsx',
+  'field/FieldChanged.tsx',
+];
+
+describe.each(STATIC_MODULES)('the source of %s', (file) => {
+  // Rendering above proves the component runs without client APIs today; this proves it stays a server
+  // module, since a `'use client'` line would turn it, and everything it imports, into a client one.
+  const source = readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8');
+
+  it('carries no client directive', () => {
+    expect(source).not.toMatch(/^\s*['"]use client['"]/m);
+  });
+
+  it('imports no React Aria, which would pull a client module into a server tree', () => {
+    expect(source).not.toContain('react-aria-components');
   });
 });
