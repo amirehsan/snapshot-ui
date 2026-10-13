@@ -90,7 +90,7 @@ export function FrameEffects({
   // in the content: a native `autoFocus` there takes focus later in this same layout phase, and the panel's
   // ref attaches, and copies the scope, after both. Read here, focus is still on what opened the modal.
   const isOpen = useContext(OverlayTriggerStateContext)?.isOpen ?? false;
-  useGiveFocusBack(originRef, isOpen);
+  useGiveFocusBack(originRef);
   useOverlayStack(id, isOpen, scrimRef);
   // The latest callback, so the one called at unmount is the one the caller passed last. It runs after focus
   // has been given back.

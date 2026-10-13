@@ -40,11 +40,11 @@ export interface PopoverProps extends Omit<RACPopoverProps, 'className' | 'child
 
 /**
  * Rendered first in the popover's content, so it reads what held focus before the content takes it, and gives
- * focus back to that as the popover leaves the page after closing, before a dialog under it can take it.
+ * focus back to that as the popover leaves the page with focus inside it, before a dialog under it can take it.
  */
-function GiveFocusBack({ isOpen }: { isOpen: boolean }): null {
+function GiveFocusBack(): null {
   const originRef = useRef<Element | null>(null);
-  useGiveFocusBack(originRef, isOpen);
+  useGiveFocusBack(originRef);
   return null;
 }
 
@@ -98,9 +98,9 @@ export function Popover({
         ),
       )}
     >
-      {composeRenderProps(children, (content, { isExiting }) => (
+      {composeRenderProps(children, (content) => (
         <>
-          <GiveFocusBack isOpen={!isExiting} />
+          <GiveFocusBack />
           {content}
         </>
       ))}

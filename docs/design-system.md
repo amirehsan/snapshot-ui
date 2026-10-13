@@ -3076,7 +3076,17 @@ its own corner. Soft and Square descend by construction.
 **What React Aria gives.** Its `Dialog` focuses the dialog element on open,
 unless a control inside already holds focus, and its `FocusScope` holds Tab
 inside and gives focus back to the trigger, or to whatever held it when a
-controlled dialog opened, in the frame after the dialog leaves. Its
+controlled dialog opened, in the frame after the dialog leaves. The frame
+does not wait for that frame: when the panel leaves the page with focus
+inside it, closed or taken off by the app, it gives focus back at once to
+what held it as the panel opened, if focus is on the body and that element is
+still on the page. On a loaded machine the frame comes late, and React Aria's
+dialog focuses itself 500ms after it opens while focus is on the body, so a
+dialog under a closing overlay would otherwise take focus for good. It gives
+focus back through React Aria's own `react-aria-focus-scope-restore` event, so
+a trigger that handles its own restore, such as a link preview that must not
+reopen, still does, and it moves nothing when focus was elsewhere before the
+close. The Popover does the same. Its
 `ModalOverlay` runs `usePreventScroll` while open, which sets
 `overflow: hidden` on the root element, hides everything outside with `inert`,
 or `aria-hidden` where `inert` is missing, while it keeps any element marked
@@ -4260,9 +4270,11 @@ the listener from there.
 
 **Close, then act.** Choosing records the item in the recents, closes the
 palette, which tells `onOpenChange(false)`, and waits. The panel leaves after
-React Aria's exit animation; the frame's unmount call fires then; React Aria's
-focus scope gives focus back in the next animation frame; and `onAction(item)`
-runs one frame after that, with the item as the app passed it. React Aria's
+React Aria's exit animation; the frame gives focus back to what opened the
+palette as the panel leaves, before its unmount call fires, or React Aria's
+focus scope does in the next animation frame when the frame could not; and
+`onAction(item)` runs one frame after that, two after the unmount call, with
+the item as the app passed it. React Aria's
 `onExit` fires when the exit starts, not when it ends, so the palette waits on
 the unmount instead. The app's palette closed first for the same reason: focus
 given back after the app has moved it would undo the move, and the last word
