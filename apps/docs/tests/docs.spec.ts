@@ -1749,3 +1749,36 @@ test('the tooltip page shows a tip on hover after a pause and at once on focus',
   expect(await helpTip.count()).toBe(1);
   await expect(help).toHaveAttribute('aria-describedby', (await helpTip.getAttribute('id')) ?? '');
 });
+
+// The docs shell's own header and rail use "Open the menu", "Menu", "Close menu", "Collapse the menu" and "Expand
+// the menu" too, and Playwright matches names as substrings, so every locator below is scoped to the example.
+
+test('the app shell page collapses its example rail to icons and expands it again', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/app-shell');
+  const example = page.locator('.stage').first();
+  const shell = example.locator('.app-shell');
+  const rail = example.locator('.sidebar:not(.sidebar-drawer)');
+  await example.getByRole('button', { name: 'Collapse the menu', exact: true }).click();
+  await expect(shell).toHaveAttribute('data-sidebar', 'collapsed');
+  await expect.poll(async () => (await rail.boundingBox())?.width).toBeCloseTo(72, 0);
+  await example.getByRole('button', { name: 'Expand the menu', exact: true }).click();
+  await expect(shell).not.toHaveAttribute('data-sidebar');
+  await expect.poll(async () => (await rail.boundingBox())?.width).toBeCloseTo(288, 0);
+});
+
+test('the sidebar page opens the real drawer from its example and Escape closes it', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/sidebar');
+  const example = page
+    .locator('.stage')
+    .filter({ has: page.getByRole('navigation', { name: 'Main, drawer' }) });
+  const button = example.getByRole('button', { name: 'Open the menu', exact: true });
+  await button.click();
+  const drawer = page.getByRole('dialog', { name: 'Menu', exact: true });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByRole('link', { name: 'Home', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(button).toBeFocused();
+});

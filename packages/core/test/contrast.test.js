@@ -400,6 +400,39 @@ describe('the tooltip', () => {
   });
 });
 
+describe('the sidebar', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The rail is float. Its items and the brand are ink on it; the counts, the group labels and the search label
+  // are slate on it; the current item is canvas on an ink pill. The gate already holds all three as text.
+  it('cites ink on float, slate on float and canvas on ink, which the gate holds at the text minimum', () => {
+    for (const [text, ground] of [
+      ['ink', 'float'],
+      ['slate', 'float'],
+      ['canvas', 'ink'],
+    ]) {
+      expect(CONTRAST_PAIRS).toContainEqual(expect.objectContaining({ text, ground, minimum: TEXT }));
+    }
+  });
+
+  // Slate on float is 6.94 in dark, as the dialog's description records; 6.44 is slate on bone.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { text, ground, light, dark } of [
+      { text: 'ink', ground: 'float', light: 18.43, dark: 17.42 },
+      { text: 'slate', ground: 'float', light: 5.49, dark: 6.94 },
+      { text: 'canvas', ground: 'ink', light: 16.25, dark: 19.31 },
+    ]) {
+      expect(measured('light', text, ground), `${text} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground), `${text} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

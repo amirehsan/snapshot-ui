@@ -17,6 +17,14 @@ import { Popover } from '../src/popover';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Sheet, SheetTrigger } from '../src/sheet';
+import {
+  Sidebar,
+  SidebarBrand,
+  SidebarGroup,
+  SidebarItem,
+  SidebarSearch,
+  SidebarTrigger,
+} from '../src/sidebar';
 import { Spinner } from '../src/spinner';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
@@ -280,6 +288,44 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </AppShell>,
     ['class="app-shell"', 'data-has-sidebar', 'data-has-bottom-bar', '<main'],
     ['data-sidebar'],
+  ],
+  [
+    // The rail renders at every width, and the drawer copy renders nothing until the drawer opens. The key chip
+    // knows no platform on the server, so it says Mod.
+    'Sidebar',
+    <AppShell
+      header={<SidebarTrigger />}
+      sidebar={
+        <Sidebar
+          aria-label="Main"
+          brand={
+            <SidebarBrand href="/" mark={<svg />}>
+              Snapshot
+            </SidebarBrand>
+          }
+          search={<SidebarSearch shortcut="Mod K">Search or jump to</SidebarSearch>}
+          footer={<span>Ada Lovelace</span>}
+        >
+          <SidebarGroup label="Overview" isCurrent>
+            <SidebarItem href="/transactions" icon={<svg />} isCurrent count={12} countLabel="to review">
+              Transactions
+            </SidebarItem>
+          </SidebarGroup>
+        </Sidebar>
+      }
+    >
+      page
+    </AppShell>,
+    [
+      'class="sidebar"',
+      'aria-current="page"',
+      'class="sidebar-item-count"',
+      'aria-expanded="true"',
+      'aria-haspopup="dialog"',
+      'class="kbd sidebar-search-shortcut"',
+      'Mod K',
+    ],
+    ['role="dialog"', 'sidebar-drawer'],
   ],
 ];
 

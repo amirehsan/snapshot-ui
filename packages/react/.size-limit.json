@@ -224,6 +224,13 @@
     "limit": "1.5 kB"
   },
   {
+    "name": "import { Sidebar, SidebarGroup, SidebarItem, SidebarBrand, SidebarSearch, SidebarTrigger } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Sidebar, SidebarGroup, SidebarItem, SidebarBrand, SidebarSearch, SidebarTrigger }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "4.5 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

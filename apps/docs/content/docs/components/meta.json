@@ -1,6 +1,7 @@
 {
   "title": "Components",
   "pages": [
+    "app-shell",
     "badge",
     "button",
     "card",
@@ -19,6 +20,7 @@
     "radio-group",
     "segmented-control",
     "sheet",
+    "sidebar",
     "spinner",
     "switch",
     "text-area",

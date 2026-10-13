@@ -1,0 +1,135 @@
+---
+title: App shell
+description: "The frame an app runs in: a floating rail that collapses to icons and opens as a drawer on a phone, a sticky header, the page, and room for a bottom tab bar."
+icon: PanelsTopLeft
+---
+
+<Section>
+
+## Layout
+
+`AppShell` takes three slots and the page. `sidebar` is the rail, a [Sidebar](/docs/components/sidebar), fixed and floating 16px inside the top, the start and the bottom of the screen; from 1024px up the workspace is offset by its full width. `header` is the page header, sticky to the top of the workspace; its look is the header's own, and the shell only keeps it above the page as the page scrolls. `bottomBar` is a bottom tab bar for a phone. The page goes in `children`, which the shell renders inside its one `<main>`.
+
+The examples on this page sit in a frame, so the rail floats inside it rather than over the docs. In an app it floats over the window.
+
+<Preview name="app-shell-basic" />
+
+</Section>
+
+<Section>
+
+## Collapsed
+
+`defaultSidebarCollapsed` starts the rail as a 72px column of icons, the page 104px in. The collapse button on the rail's edge folds and unfolds it, and the shell remembers the choice for as long as the page is open. Control it with `isSidebarCollapsed` and `onSidebarCollapsedChange`. While collapsed the root carries `data-sidebar="collapsed"`, and CSS does the rest: the attribute on any ancestor of the rail narrows it.
+
+<Preview name="app-shell-collapsed" />
+
+</Section>
+
+<Section>
+
+## The collapsed state and the cookie
+
+The first paint must be the right width, and nothing may be measured to find it. A Next.js App Router layout reads the choice from a cookie on the server and passes it as the default; a thin client wrapper writes the cookie when the reader changes it:
+
+```tsx
+// app/(app)/layout.tsx, a server component
+import { cookies } from 'next/headers';
+import type { ReactNode } from 'react';
+import { Shell } from './shell';
+
+export default async function Layout({ children }: { children: ReactNode }) {
+  const collapsed = (await cookies()).get('sidebar')?.value === 'collapsed';
+  return (
+    <Shell defaultSidebarCollapsed={collapsed} sidebar={<AppNav />} header={<AppHeader />}>
+      {children}
+    </Shell>
+  );
+}
+```
+
+```tsx
+// app/(app)/shell.tsx
+'use client';
+
+import { AppShell, type AppShellProps } from '@snapshot-ui/react';
+
+export function Shell(props: Omit<AppShellProps, 'onSidebarCollapsedChange'>) {
+  return (
+    <AppShell
+      {...props}
+      onSidebarCollapsedChange={(collapsed) => {
+        document.cookie = `sidebar=${collapsed ? 'collapsed' : 'expanded'}; path=/; max-age=31536000`;
+      }}
+    />
+  );
+}
+```
+
+The shell is uncontrolled with the cookie as its default: a full page load reads the cookie again, and in between the shell's own state is right. A static site has no cookie to read: a script that runs before the first paint sets `data-sidebar="collapsed"` on `<html>` from local storage, and the app feeds `isSidebarCollapsed` from `useSyncExternalStore` over that attribute. One CSS rule serves both, because the attribute works on any ancestor. The shell writes `data-sidebar="collapsed"` while collapsed and nothing otherwise, never `expanded`, so it never resets an attribute set higher up.
+
+</Section>
+
+<Section>
+
+## The skip link and main
+
+The first Tab on the page lands on a skip link, out of sight until it is focused, then an ink pill over the rail's corner. Enter moves focus to `<main>`, past the rail and the header. `skipLinkLabel` replaces its text, "Skip to content". `<main>` takes an id from `useId`, or the one `mainId` gives, and `useAppShell().mainId` hands it to anything else that links to it.
+
+</Section>
+
+<Section>
+
+## The drawer
+
+Below 1024px the rail is hidden, and a [SidebarTrigger](/docs/components/sidebar#the-drawer) in the header opens it as a drawer from the start edge. Escape, a press on the scrim, the close button and a press on any item in it close the drawer, as does the window widening to 1024px and Back or Forward. The shell cannot see the router, so anything else that navigates from inside the drawer, such as a command palette opened from it, calls `closeDrawer()` from `useAppShell()`. An app may instead close it from an effect on `usePathname()`. Control the drawer with `isDrawerOpen` and `onDrawerOpenChange`.
+
+</Section>
+
+<Section>
+
+## The bottom reserve
+
+Below 1024px, with a `bottomBar`, the workspace pads its bottom by the tab bar's height and the safe area under it, so the end of the page is never under the bar. The padding is one property, `--app-shell-inset-block-end`; anything else docked to the bottom edge, such as a save bar, adds to it rather than declaring its own.
+
+</Section>
+
+<Section>
+
+## Usage
+
+AppShell is a client component, and a server layout can render it. Every prop is serializable except the callbacks, so a server layout passes the slots as elements and reads the cookie, and a client wrapper supplies the callbacks, as above. `useAppShell()` gives the state to the parts and to an app's own header or palette; it throws outside a shell. Links in the rail navigate through React Aria's `RouterProvider`, which [Routing](/docs/routing) sets up once for the app.
+
+</Section>
+
+<Section>
+
+## Props
+
+`className` and `ref` go on the root, and `className` is merged after the library's class.
+
+<PropsTable label="AppShell props" path="../../packages/react/src/app-shell/AppShell.tsx" type="Pick<AppShellProps, 'sidebar' | 'header' | 'bottomBar' | 'children' | 'isSidebarCollapsed' | 'defaultSidebarCollapsed' | 'onSidebarCollapsedChange' | 'isDrawerOpen' | 'defaultDrawerOpen' | 'onDrawerOpenChange' | 'skipLinkLabel' | 'mainId' | 'className'>" />
+
+<PropsTable label="useAppShell state" path="../../packages/react/src/app-shell/AppShell.tsx" type="AppShellState" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The shell renders one `<main>`, and the skip link to it is the first tab stop. The rail's nav and a tab bar's nav are each named, and the two are never in the tree at once: below 1024px the rail is hidden, and from 1024px up the tab bar is. The rail root and the header wrapper carry no landmark role. While the drawer is open the page behind it is hidden from assistive technology and does not scroll.
+
+<Keys rows={[['Tab', 'The skip link first, then the header, the rail and the page.'], ['Enter', 'On the skip link, moves focus to the main content.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps the shell in the system.
+
+<Rules dos={["Pass the cookie's value as the default, so the first paint is the right width.", "Keep the header's look to the header: the shell only makes it sticky.", 'Call closeDrawer() from anything that navigates from inside the drawer.']} donts={['Never measure the viewport for the first paint.', 'Never write data-sidebar="expanded". The shell writes collapsed or nothing.', 'Never put a second <main> in the page. The shell draws the one.']} />
+
+</Section>

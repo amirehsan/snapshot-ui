@@ -10,6 +10,7 @@ import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Sheet } from '../src/sheet';
+import { Sidebar, SidebarGroup, SidebarItem } from '../src/sidebar';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
@@ -189,5 +190,29 @@ describe('an empty shell slot', () => {
     expect(container.querySelector('.app-shell-header')).toBeNull();
     expect(shell).not.toHaveAttribute('data-has-sidebar');
     expect(shell).not.toHaveAttribute('data-has-bottom-bar');
+  });
+
+  it('draws no head, no footer and nothing for the search in a Sidebar given false, an empty string or null', () => {
+    // A Sidebar throws outside an AppShell, so the row wraps it in one.
+    const { container } = render(
+      <AppShell
+        sidebar={
+          <Sidebar aria-label="Main" brand={false} search="" footer={null}>
+            <SidebarGroup label="Overview">
+              <SidebarItem href="#home" icon={<svg />}>
+                Home
+              </SidebarItem>
+            </SidebarGroup>
+          </Sidebar>
+        }
+      >
+        page
+      </AppShell>,
+    );
+    const rail = container.querySelector('.sidebar');
+    expect(rail).not.toBeNull();
+    expect(container.querySelector('.sidebar-head')).toBeNull();
+    expect(container.querySelector('.sidebar-footer')).toBeNull();
+    expect(container.querySelector('.sidebar-collapse')?.nextElementSibling).toHaveClass('sidebar-nav');
   });
 });

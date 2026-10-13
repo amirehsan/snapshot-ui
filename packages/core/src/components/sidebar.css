@@ -1,0 +1,541 @@
+/*
+ * Sidebar: the floating rail, derived in docs/design-system.md ("Sidebar"). Fixed and 16px clear of
+ * the viewport on three sides, the float surface with the hairline edge, the stadium corner and the
+ * level 1 lift; 288px wide (the --container-sidebar token less its two insets) and 72px when
+ * data-sidebar="collapsed" is on any ancestor, from 1024px up. Below 1024px the rail is display: none,
+ * out of the tab order and the accessibility tree, and the same markup opens as a drawer copy that
+ * never collapses: every collapsed rule is scoped :not(.sidebar-drawer). The rail-local constants are
+ * custom properties on .sidebar: a 12px gutter for every inset inside the rail, the 20px icon, the
+ * 10px pill inset that puts a group label's first letter, an expanded item's icon and a collapsed
+ * item's icon on one axis, and the row height, the 40px floor that grows to 44px in compact on touch.
+ * 1024px is the --breakpoint-md token, written out because a media query cannot read a custom
+ * property; test/css.test.js keeps them equal.
+ */
+@layer components {
+  .sidebar {
+    --sidebar-icon: 1.25rem;
+    --sidebar-gutter: 0.75rem;
+    --sidebar-pill-inset: calc((var(--size-target) - var(--sidebar-icon)) / 2);
+    --sidebar-row: max(var(--size-target), var(--size-control));
+
+    position: fixed;
+    inset-block: var(--spacing-inset);
+    inset-inline-start: var(--spacing-inset);
+    z-index: var(--z-chrome);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: calc(var(--container-sidebar) - 2 * var(--spacing-inset));
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-stadium);
+    background-color: var(--color-float);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    box-shadow: var(--shadow-lift);
+    transition: width 200ms ease;
+  }
+
+  /* ---- Head: the brand, and in the drawer the close button --------------------------------- */
+  .sidebar-head {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--spacing-part);
+    padding: var(--spacing-peer) calc(var(--sidebar-gutter) * 2) var(--sidebar-gutter);
+  }
+
+  .sidebar-brand {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--sidebar-gutter);
+    min-width: 0;
+    color: var(--color-ink);
+    font-size: var(--text-action);
+    line-height: var(--text-action--line-height);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: var(--text-action--font-weight);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  /* A 24px row hit at 40px, with no layout shift. */
+  .sidebar-brand::after {
+    content: '';
+    position: absolute;
+    inset: -0.5rem;
+  }
+
+  .sidebar-brand-mark {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .sidebar-brand-mark svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .sidebar-brand-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sidebar-brand:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .sidebar-close {
+    flex: none;
+    margin-inline-start: auto;
+  }
+
+  /* ---- The collapse button, straddling the rail's end edge ---------------------------------- */
+  .sidebar-collapse {
+    position: absolute;
+    inset-block-start: var(--spacing-peer);
+    inset-inline-end: -1rem;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-float);
+    color: var(--color-slate);
+    box-shadow: var(--shadow-lift);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Drawn at 32px, hit at 40. */
+  .sidebar-collapse::before {
+    content: '';
+    position: absolute;
+    inset: calc(-1 * (var(--size-target) - 2rem) / 2);
+  }
+
+  .sidebar-collapse svg {
+    width: 1rem;
+    height: 1rem;
+    transition: rotate 200ms ease;
+  }
+
+  @media (hover: hover) {
+    .sidebar-collapse:is(:hover, [data-hovered]) {
+      color: var(--color-ink);
+    }
+  }
+
+  .sidebar-collapse:is(:active, [data-pressed]) {
+    color: var(--color-ink);
+  }
+
+  .sidebar-collapse:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* ---- Search: a canvas pill under the brand ------------------------------------------------- */
+  .sidebar-search {
+    box-sizing: border-box;
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--sidebar-gutter);
+    margin: var(--spacing-part) var(--sidebar-gutter) 0;
+    min-height: var(--sidebar-row);
+    padding-block: 0;
+    padding-inline: var(--sidebar-pill-inset);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-canvas);
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+    font-size: var(--text-action);
+    line-height: var(--text-action--line-height);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: 500;
+    text-align: start;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sidebar-search-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: var(--sidebar-icon);
+    height: var(--sidebar-icon);
+  }
+
+  .sidebar-search-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .sidebar-search-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sidebar-search-shortcut {
+    flex: none;
+    margin-inline-start: auto;
+  }
+
+  @media (hover: hover) {
+    .sidebar-search:is(:hover, [data-hovered]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-canvas));
+      color: var(--color-ink);
+    }
+  }
+
+  .sidebar-search:is(:active, [data-pressed]) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-canvas));
+    color: var(--color-ink);
+  }
+
+  .sidebar-search:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* ---- The list ------------------------------------------------------------------------------- */
+  /* Positioned, so an item's offsetTop is measured from the nav and the reveal on mount can use it. */
+  .sidebar-nav {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: var(--spacing-peer) var(--sidebar-gutter);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .sidebar-group + .sidebar-group {
+    margin-block-start: var(--spacing-peer);
+  }
+
+  /* 14px is the document's minimum for sentences and above its 12px floor for short uppercase
+     labels; --text-overline is the token for uppercase column headers, which a group label is. */
+  .sidebar-group-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    margin: 0;
+    padding: 0 var(--sidebar-pill-inset) var(--spacing-part);
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+    font-size: var(--text-overline);
+    line-height: var(--text-overline--line-height);
+    letter-spacing: var(--text-overline--letter-spacing);
+    font-weight: var(--text-overline--font-weight);
+    text-transform: uppercase;
+  }
+
+  /* The dot hangs into the gutter so the label text and the items share one axis. */
+  .sidebar-group-label::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    margin-inline-start: calc(-1 * (6px + var(--spacing-part)));
+    border-radius: var(--radius-dot);
+    background-color: color-mix(in srgb, var(--color-ink) 25%, transparent);
+  }
+
+  .sidebar-group-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sidebar-group[data-current] .sidebar-group-label {
+    color: var(--color-ink);
+  }
+
+  .sidebar-group[data-current] .sidebar-group-label::before {
+    background-color: var(--color-signal-light);
+  }
+
+  /* 8px: the document's "one nav item to the next". */
+  .sidebar-list {
+    display: grid;
+    gap: var(--spacing-part);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* A 20px line at 16px type aligns with the 20px icon, so the icon sits beside the first line and a
+     wrapped label grows the item. */
+  .sidebar-item {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sidebar-gutter);
+    min-height: var(--sidebar-row);
+    padding-block: calc((var(--sidebar-row) - var(--sidebar-icon)) / 2);
+    padding-inline: var(--sidebar-pill-inset);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-action);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: var(--text-action--font-weight);
+    line-height: 1.25;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sidebar-item-icon {
+    position: relative;
+    flex: none;
+    width: var(--sidebar-icon);
+    height: var(--sidebar-icon);
+  }
+
+  .sidebar-item-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .sidebar-item-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Plain text at the row's end: an outline inside a pill would be a pill in a pill. */
+  .sidebar-item-count {
+    flex: none;
+    margin-inline-start: auto;
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--sidebar-icon);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (hover: hover) {
+    .sidebar-item:is(:hover, [data-hovered]):not([aria-current='page'], [data-current]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+  }
+
+  .sidebar-item:is(:active, [data-pressed]):not([aria-current='page'], [data-current]) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  /* After hover, so it holds under the pointer. */
+  .sidebar-item:is([aria-current='page'], [data-current]) {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .sidebar-item:is([aria-current='page'], [data-current]) .sidebar-item-count {
+    color: inherit;
+  }
+
+  /* Outside the pill on every item, the current one included: an ink ring outside an ink pill reads
+     against the float surface, and nothing in a static group clips it. */
+  .sidebar-item:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* The comma that ends a counted item's label and the search label, there for the name alone: inline, so a
+     browser adds no space before it as it does at a hidden box's edge, and drawn at no size. */
+  .sidebar-comma {
+    font-size: 0;
+  }
+
+  /* The second line of a collapsed item's tooltip. */
+  .sidebar-tooltip-count {
+    display: block;
+  }
+
+  /* ---- Footer --------------------------------------------------------------------------------- */
+  .sidebar-footer {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-part);
+    padding: var(--sidebar-gutter) calc(var(--sidebar-gutter) * 2);
+    border-block-start: 1px solid var(--color-divider);
+  }
+
+  /* ---- In the drawer: the Drawer draws the panel, the rail fills its body --------------------- */
+  .sidebar-drawer {
+    position: static;
+    inset: auto;
+    flex: 1 1 auto;
+    width: auto;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: none;
+    transition: none;
+  }
+
+  /* The Drawer draws no header with a hidden title and no close button, and its body is the part a class
+     on its panel may restyle: here a padding-free column the rail copy fills. */
+  .sidebar-drawer-panel .drawer-body {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* ---- Collapsed: icons only, names as tooltips, from 1024px up ------------------------------- */
+  @media (width >= 1024px) {
+    .sidebar-trigger {
+      display: none;
+    }
+
+    /* Hidden from view and not removed, so no name changes. */
+    [data-sidebar='collapsed' i]
+      .sidebar:not(.sidebar-drawer)
+      :is(
+        .sidebar-brand-name,
+        .sidebar-search-label,
+        .sidebar-group-text,
+        .sidebar-item-label,
+        .sidebar-item-count-number
+      ) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-head {
+      justify-content: center;
+      padding-inline: 0;
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {
+      rotate: 180deg;
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-search {
+      justify-content: center;
+      width: var(--size-target);
+      margin-inline: auto;
+      padding: 0;
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-search-shortcut {
+      display: none;
+    }
+
+    /* The icon moves 4px inward as the rail collapses, hidden by the width transition. */
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-nav {
+      padding-inline: 1rem;
+      scrollbar-width: none;
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-group-label {
+      justify-content: center;
+      padding-inline: 0;
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-group-label::before {
+      margin-inline-start: 0;
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-item {
+      align-items: center;
+      justify-content: center;
+      width: var(--size-target);
+      margin-inline: auto;
+      padding: 0;
+    }
+
+    /* An 8px dot at the icon's top-end corner, its number clipped inside it: ink, and canvas on the
+       current item. Set outright, because the count's resting color is slate. */
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-item-count {
+      position: absolute;
+      inset-block-start: calc((var(--sidebar-row) - var(--sidebar-icon)) / 2 - 0.25rem);
+      inset-inline-end: calc(50% - var(--sidebar-icon) / 2 - 0.25rem);
+      width: 0.5rem;
+      height: 0.5rem;
+      margin: 0;
+      overflow: hidden;
+      border-radius: var(--radius-dot);
+      background-color: var(--color-ink);
+    }
+
+    [data-sidebar='collapsed' i]
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-item:is([aria-current='page'], [data-current])
+      .sidebar-item-count {
+      background-color: var(--color-canvas);
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-footer {
+      justify-content: center;
+      padding-inline: 0;
+    }
+  }
+
+  /* ---- Below 1024px the rail is a drawer, and the fixed copy leaves the tree ------------------ */
+  @media (width < 1024px) {
+    .sidebar:not(.sidebar-drawer) {
+      display: none;
+    }
+  }
+
+  /* The chevron points at the rail in both states, whichever side the rail is on. */
+  [dir='rtl'] .sidebar-collapse svg {
+    scale: -1 1;
+  }
+
+  @media (forced-colors: active) {
+    .sidebar-item:is([aria-current='page'], [data-current]) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .sidebar-group-label::before {
+      background-color: CanvasText;
+    }
+
+    .sidebar-group[data-current] .sidebar-group-label::before {
+      background-color: Highlight;
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-item-count {
+      background-color: CanvasText;
+    }
+
+    [data-sidebar='collapsed' i]
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-item:is([aria-current='page'], [data-current])
+      .sidebar-item-count {
+      background-color: HighlightText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .sidebar-collapse svg {
+      transition: none;
+    }
+  }
+}

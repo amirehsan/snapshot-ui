@@ -36,6 +36,7 @@ Body text is set at weight 450, which only a variable font has. Load Sofia Sans 
 
 Every name links to its page in the documentation, with examples, props, keyboard use and design rules.
 
+- [App shell](https://snapshotui.com/docs/components/app-shell)
 - [Badge](https://snapshotui.com/docs/components/badge)
 - [Button](https://snapshotui.com/docs/components/button)
 - [Card](https://snapshotui.com/docs/components/card)
@@ -54,6 +55,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Radio group](https://snapshotui.com/docs/components/radio-group)
 - [Segmented control](https://snapshotui.com/docs/components/segmented-control)
 - [Sheet](https://snapshotui.com/docs/components/sheet)
+- [Sidebar](https://snapshotui.com/docs/components/sidebar)
 - [Spinner](https://snapshotui.com/docs/components/spinner)
 - [Switch](https://snapshotui.com/docs/components/switch)
 - [Text area](https://snapshotui.com/docs/components/text-area)

@@ -2827,6 +2827,200 @@ describe('src/components/app-shell.css', () => {
   });
 });
 
+describe('src/components/sidebar.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/sidebar.css')));
+  const WIDE = '@media (width >= 1024px)';
+  const NARROW = '@media (width < 1024px)';
+  const COLLAPSED = "[data-sidebar='collapsed' i]";
+
+  it('fixes the rail 16px clear of the viewport, at the chrome layer, the rail token less its two insets wide', () => {
+    const rail = blockAfter(rules(), '.sidebar {');
+    for (const declaration of [
+      'position: fixed;',
+      'inset-block: var(--spacing-inset);',
+      'inset-inline-start: var(--spacing-inset);',
+      'z-index: var(--z-chrome);',
+      'width: calc(var(--container-sidebar) - 2 * var(--spacing-inset));',
+      'border: 1px solid var(--color-hairline);',
+      'border-radius: var(--radius-stadium);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-lift);',
+      'transition: width 200ms ease;',
+    ]) {
+      expect(rail, declaration).toContain(declaration);
+    }
+  });
+
+  it('declares the four rail constants as written', () => {
+    const rail = blockAfter(rules(), '.sidebar {');
+    for (const declaration of [
+      '--sidebar-icon: 1.25rem;',
+      '--sidebar-gutter: 0.75rem;',
+      '--sidebar-pill-inset: calc((var(--size-target) - var(--sidebar-icon)) / 2);',
+      '--sidebar-row: max(var(--size-target), var(--size-control));',
+    ]) {
+      expect(rail, declaration).toContain(declaration);
+    }
+  });
+
+  it('scopes every collapsed rule to the rail copy, so the drawer copy never collapses', () => {
+    const css = rules();
+    const occurrences = [...css.matchAll(/\[data-sidebar='collapsed' i\]/g)];
+    expect(occurrences.length).toBeGreaterThan(5);
+    for (const match of occurrences) {
+      const after = css.slice(match.index + COLLAPSED.length, match.index + COLLAPSED.length + 30);
+      expect(after).toMatch(/^ \.sidebar:not\(\.sidebar-drawer\)/);
+    }
+  });
+
+  it('hides the rail copy under 1024px and the trigger from 1024px up, the medium breakpoint written out', async () => {
+    const css = rules();
+    expect(blockAfter(blockAfter(css, NARROW), '.sidebar:not(.sidebar-drawer) {')).toContain(
+      'display: none;',
+    );
+    expect(blockAfter(blockAfter(css, WIDE), '.sidebar-trigger {')).toContain('display: none;');
+    // A media query cannot read a custom property, so the width is written out and must stay the token.
+    const { tokens } = await import('../dist/tokens.js');
+    const written = [...css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)].map((match) => match[1]);
+    expect(written).toHaveLength(2);
+    for (const width of written) expect(width).toBe(tokens.breakpoint.md.value);
+  });
+
+  it('washes an item and the search pill on hover only with a hover pointer, never on the current item', () => {
+    const css = rules();
+    // Every hover block in the file: the collapse button, the search pill and the items have one each.
+    const hover = css
+      .split('@media (hover: hover)')
+      .slice(1)
+      .map((rest) => blockAfter(`@media (hover: hover)${rest}`, '@media (hover: hover)'))
+      .join(' ');
+    expect(hover).toContain('.sidebar-search:is(:hover, [data-hovered]) {');
+    const itemHover = ".sidebar-item:is(:hover, [data-hovered]):not([aria-current='page'], [data-current]) {";
+    expect(blockAfter(hover, itemHover)).toContain(
+      'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);',
+    );
+    // Outside the media block, no rule hovers an item.
+    const outside = css.replace(/@media \(hover: hover\) \{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
+    expect(outside).not.toMatch(/\.sidebar-item:is\(:hover/);
+    expect(outside).not.toMatch(/\.sidebar-search:is\(:hover/);
+    // The current rule comes after the hover rule, so it holds under the pointer.
+    const current = ".sidebar-item:is([aria-current='page'], [data-current]) {";
+    const currentBlock = blockAfter(css, current);
+    expect(currentBlock).toContain('background-color: var(--color-ink);');
+    expect(currentBlock).toContain('color: var(--color-canvas);');
+    expect(css.indexOf(current)).toBeGreaterThan(css.indexOf(itemHover));
+  });
+
+  it('rings a focused item outside it in the focus ring token, never in ink and never inset', () => {
+    const ringed = blockAfter(rules(), '.sidebar-item:is(:focus-visible, [data-focus-visible]) {');
+    expect(ringed).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ringed).toContain('outline-offset: var(--focus-ring-offset);');
+    expect(ringed).not.toMatch(INK_RING);
+    expect(ringed).not.toContain('calc(-1');
+  });
+
+  it('draws an item one row tall, and a group label in the overline step with its 25% ink dot', () => {
+    const css = rules();
+    expect(blockAfter(css, '.sidebar-item {')).toContain('min-height: var(--sidebar-row);');
+    expect(blockAfter(css, '.sidebar-group-label {')).toContain('font-size: var(--text-overline);');
+    expect(blockAfter(css, '.sidebar-group-label::before {')).toContain(
+      'background-color: color-mix(in srgb, var(--color-ink) 25%, transparent);',
+    );
+    expect(blockAfter(css, '.sidebar-group[data-current] .sidebar-group-label::before {')).toContain(
+      'background-color: var(--color-signal-light);',
+    );
+  });
+
+  it('turns a collapsed count into an 8px ink dot, canvas on the current item', () => {
+    const wide = blockAfter(rules(), WIDE);
+    const dot = blockAfter(wide, `${COLLAPSED} .sidebar:not(.sidebar-drawer) .sidebar-item-count {`);
+    for (const declaration of [
+      'position: absolute;',
+      'inset-block-start: calc((var(--sidebar-row) - var(--sidebar-icon)) / 2 - 0.25rem);',
+      'inset-inline-end: calc(50% - var(--sidebar-icon) / 2 - 0.25rem);',
+      'width: 0.5rem;',
+      'height: 0.5rem;',
+      'margin: 0;',
+      'overflow: hidden;',
+      'border-radius: var(--radius-dot);',
+      'background-color: var(--color-ink);',
+    ]) {
+      expect(dot, declaration).toContain(declaration);
+    }
+    expect(
+      blockAfter(
+        wide,
+        `${COLLAPSED} .sidebar:not(.sidebar-drawer) .sidebar-item:is([aria-current='page'], [data-current]) .sidebar-item-count {`,
+      ),
+    ).toContain('background-color: var(--color-canvas);');
+  });
+
+  it("restyles the drawer copy and the Drawer's body only, and never the Drawer's header", () => {
+    const css = rules();
+    const copy = blockAfter(css, '.sidebar-drawer {');
+    for (const declaration of [
+      'position: static;',
+      'inset: auto;',
+      'width: auto;',
+      'border: 0;',
+      'border-radius: 0;',
+      'background-color: transparent;',
+      'box-shadow: none;',
+    ]) {
+      expect(copy, declaration).toContain(declaration);
+    }
+    expect(css.match(/\.sidebar-drawer-panel \.drawer-body \{/g)).toHaveLength(1);
+    expect(blockAfter(css, '.sidebar-drawer-panel .drawer-body {')).toContain('padding: 0;');
+    // The shipped Drawer draws no header with a hidden title and no close button, and the drawer page leaves
+    // the header out of what a class on the panel may restyle.
+    expect(css).not.toContain('.drawer-header');
+  });
+
+  it('draws the comma a name needs at no size, inline', () => {
+    const comma = blockAfter(rules(), '.sidebar-comma {');
+    expect(comma).toContain('font-size: 0;');
+    // A hidden box would get a space at its edge in a browser's name: the comma stays inline.
+    expect(comma).not.toContain('position');
+    expect(comma).not.toContain('display');
+  });
+
+  it('mirrors the chevron in right to left', () => {
+    expect(blockAfter(rules(), "[dir='rtl'] .sidebar-collapse svg {")).toContain('scale: -1 1;');
+  });
+
+  it('draws the current item in Highlight and the dots in CanvasText and Highlight in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    const current = blockAfter(forced, ".sidebar-item:is([aria-current='page'], [data-current]) {");
+    expect(current).toContain('background-color: Highlight;');
+    expect(current).toContain('color: HighlightText;');
+    expect(blockAfter(forced, '.sidebar-group-label::before {')).toContain('background-color: CanvasText;');
+    expect(blockAfter(forced, '.sidebar-group[data-current] .sidebar-group-label::before {')).toContain(
+      'background-color: Highlight;',
+    );
+    expect(blockAfter(forced, `${COLLAPSED} .sidebar:not(.sidebar-drawer) .sidebar-item-count {`)).toContain(
+      'background-color: CanvasText;',
+    );
+  });
+
+  it('stops the rail and the chevron moving under reduced motion, after both transitions', () => {
+    const css = rules();
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    const block = blockAfter(css, reduced);
+    expect(block).toContain('.sidebar, .sidebar-collapse svg {');
+    expect(block).toContain('transition: none;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: width 200ms ease;'));
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: rotate 200ms ease;'));
+  });
+
+  it('is imported after app-shell.css', () => {
+    const entry = read('src/styles.css');
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('sidebar.css')).toBeGreaterThan(at('app-shell.css'));
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 
