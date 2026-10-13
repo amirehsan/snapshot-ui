@@ -61,6 +61,17 @@ const heights = async (page: Page): Promise<Heights> => {
 
 const COMFORTABLE: Heights = { button: 40, iconButton: 40, field: 48, md: 48, sm: 40, card: '32px' };
 
+/**
+ * Takes any density attribute off the page root, so a read measures what comfortable draws with nothing set,
+ * not whatever the preview's toolbar wrote there.
+ */
+const withoutDensity = async (page: Page): Promise<void> => {
+  await page.evaluate(() => {
+    document.documentElement.removeAttribute('data-density');
+  });
+  await expect(page.locator('[data-density]')).toHaveCount(0);
+};
+
 test('compact density draws 36px controls and 20px card padding with a mouse', async ({ page }) => {
   await page.goto(story(DENSITY, 'theme:light;shape:rounded;density:compact'));
   await ready(page);
@@ -78,6 +89,7 @@ test('compact density draws 36px controls and 20px card padding with a mouse', a
 test('comfortable stays at 40, 48 and 32 with no density set', async ({ page }) => {
   await page.goto(story(DENSITY, 'theme:light;shape:rounded'));
   await ready(page);
+  await withoutDensity(page);
   expect(await heights(page)).toEqual(COMFORTABLE);
 });
 
@@ -104,6 +116,7 @@ test.describe('on a touch screen', () => {
     });
     await page.goto(story(DENSITY, 'theme:light;shape:rounded'));
     await ready(page);
+    await withoutDensity(page);
     expect(await heights(page)).toEqual(COMFORTABLE);
   });
 });

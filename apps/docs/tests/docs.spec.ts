@@ -328,6 +328,52 @@ test('the theming page draws compact controls at 36px beside comfortable ones at
   expect(await drawnHeight(comfortable.locator('.input'))).toBe(48);
 });
 
+test('the theming page hits a bordered compact control at 40px, though it draws at 36', async ({ page }) => {
+  await visit(page, '/docs/theming');
+  const compact = page.locator('.density-sample[data-density="compact"]');
+  // A positioned hit area measures from inside the border, so a formula on the token alone fell short of 40.
+  for (const [locator, selector] of [
+    [compact.locator('.button'), '.button'],
+    [compact.locator('.icon-button'), '.icon-button'],
+  ] as const) {
+    // A point outside the viewport hits nothing, and the compact sample sits below the fold.
+    await locator.scrollIntoViewIfNeeded();
+    expect(await drawnHeight(locator), selector).toBe(36);
+    expect(await hitsAt(locator, selector, -19.5), `${selector} above`).toBe(true);
+    expect(await hitsAt(locator, selector, 19.5), `${selector} below`).toBe(true);
+  }
+});
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`the theming page has no axe violations in ${theme}`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: theme });
+    await visit(page, '/docs/theming');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+    expect(await axeViolations(page)).toEqual([]);
+  });
+}
+
+test('the theming page fits 320px, 375px and 1280px with no sideways scroll', async ({ page }) => {
+  for (const width of [320, 375, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await visit(page, '/docs/theming');
+    expect(await sideways(page), `${String(width)}px`).toBe(0);
+  }
+});
+
+test.describe('the theming page without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('arrives from the server with both density samples drawn', async ({ page }) => {
+    await page.goto('/docs/theming');
+    for (const sample of ['.density-sample:not([data-density])', '.density-sample[data-density="compact"]']) {
+      for (const part of ['.button', '.icon-button', '.segmented-option', '.input', '.card']) {
+        expect(await page.locator(`${sample} ${part}`).count(), `${part} in ${sample}`).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
 test('a docs card pads 20px on a phone through --spacing-card', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await visit(page, '/docs/theming');

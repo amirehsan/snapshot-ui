@@ -154,7 +154,7 @@
 
   /* The title is the toggle: a button as wide as the heading block, with the
      chevron at its end, so the title's row is the target. Padding takes it to
-     40px tall and an equal negative margin gives the room back, so the header
+     the 40px target, `--size-target`, and an equal negative margin gives the room back, so the header
      is as tall as a plain card's. The minimum height covers the rounding of a
      layout that works in fractions of a pixel, which drew the padded row
      39.98px tall. */
@@ -164,9 +164,9 @@
     align-items: flex-start;
     gap: var(--spacing-part);
     width: 100%;
-    min-height: 40px;
-    margin: min(0px, calc((1lh - 40px) / 2)) 0;
-    padding: max(0px, calc((40px - 1lh) / 2)) 0;
+    min-height: var(--size-target);
+    margin: min(0px, calc((1lh - var(--size-target)) / 2)) 0;
+    padding: max(0px, calc((var(--size-target) - 1lh) / 2)) 0;
     border: 0;
     border-radius: var(--radius-micro);
     background: none;

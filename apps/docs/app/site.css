@@ -289,7 +289,8 @@
     transition: border-radius 200ms ease;
   }
 
-  .code-copy {
+  /* Two classes, so it outranks the library icon button's position: relative. */
+  .icon-button.code-copy {
     position: absolute;
     top: 10px;
     right: 10px;

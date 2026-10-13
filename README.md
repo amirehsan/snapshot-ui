@@ -30,10 +30,12 @@ installation guide in the docs.
 
 ## Theming
 
-Two attributes theme any element and everything inside it:
+Three attributes theme any element and everything inside it:
 
 - `data-theme="light"` or `"dark"`. With no attribute, the system setting wins.
 - `data-shape="rounded"`, `"soft"` or `"square"` cuts every corner one way.
+- `data-density="compact"` draws controls and fields at 36px, 44px on a touch
+  screen, and pads cards 20px. `"comfortable"` restores the defaults inside it.
 
 ## Develop
 

@@ -1606,8 +1606,10 @@ The document specifies one input, the nav search field, and Appendix A derived
 the settings input from it. The library keeps that input and changes a few
 things, each recorded here.
 
-- **Shape and fill** are the app's: 48px tall, `--radius-pill`, the Raised
-  fill, 24px by 12px padding, and the 16px body step at weight 450 in ink. 16px
+- **Shape and fill** are the app's: `--size-field` tall (48px, 36px in
+  compact), `--radius-pill`, the Raised fill, 24px of inline padding and none
+  on the block axis, so the height alone decides, and the 16px body step at
+  weight 450 in ink. 16px
   also keeps iOS Safari from zooming the page when the field takes focus. The
   radius is a token, so the pill follows the shape axis. The field fills its
   column and `field` caps the column at `--container-field`, so the control has
@@ -4525,13 +4527,16 @@ site already writes by hand for its cards under 768px.
 **The hit area.** A control drawn under the target extends its hit area with a
 pseudo-element, as "Rules every component follows" asks, and one formula
 serves every control:
-`inset-block: calc(-1 * max(0px, (var(--size-target) - <height>) / 2))`,
-where `<height>` is what the control draws: `--size-control` for a button or
-an icon button, and the option's height for a segmented option. It reaches 2px
-a side for a 36px compact control; 4px for the 32px option of a comfortable
-`sm` track, as before; 6px for a 28px compact option, 2px past its track as a
-button's is; and nothing for a control 40px or taller, a compact one on touch
-included. `--size-target` has no density modes because it is the floor itself.
+`inset-block: min(0px, (100% - var(--size-target)) / 2)`. A positioned
+pseudo-element measures from inside its control's border, so 100% is the
+padding box, and the formula reads it rather than the token: a token-based
+formula left a bordered 36px compact button or icon button hit at 38px, its
+padding box plus 2px a side. With the padding box, a bordered 36px compact
+control is hit at 40px, 2px a side past its border box; a bordered 40px control
+at exactly its border box; and one 44px on touch at its own size. A segmented
+option has no border, so 100% is its height: 4px a side for the 32px option of
+a comfortable `sm` track, as before; 6px for a 28px compact option, 2px past
+its track as a button's is; and nothing for an option 40px or taller. `--size-target` has no density modes because it is the floor itself.
 If compact lowered it, the formula would lower every hit area with it, and a
 compact control would be a smaller target, which is the one thing density must
 not change.

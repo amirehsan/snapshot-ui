@@ -1066,9 +1066,9 @@ describe('src/components/card.css, the collapsible card', () => {
   it('brings the toggle to a 40px target as wide as the title, and gives the room back so the header keeps its height', () => {
     const toggle = blockAfter(rules(), '.card-toggle {');
     expect(toggle).toContain('width: 100%;');
-    expect(toggle).toContain('min-height: 40px;');
-    expect(toggle).toContain('padding: max(0px, calc((40px - 1lh) / 2)) 0;');
-    expect(toggle).toContain('margin: min(0px, calc((1lh - 40px) / 2)) 0;');
+    expect(toggle).toContain('min-height: var(--size-target);');
+    expect(toggle).toContain('padding: max(0px, calc((var(--size-target) - 1lh) / 2)) 0;');
+    expect(toggle).toContain('margin: min(0px, calc((1lh - var(--size-target)) / 2)) 0;');
     expect(toggle).toContain('cursor: pointer;');
   });
 
@@ -1415,12 +1415,14 @@ describe.each(['checkbox.css', 'radio.css', 'segmented.css'])(
 describe('the density tokens in the controls and the card', () => {
   // The rules without their comments, which quote selectors and values of their own.
   const rules = (file) => stripComments(read(`src/components/${file}`));
-  // One formula from the target, reaching 2px a side for a 36px compact control and nothing at 40px or more.
-  const hitArea = (height) => [
+  // One formula from the target. It reads the padding box, 100%, because a positioned child measures from
+  // inside the border: a bordered 36px compact control is hit at 40, not 38, and one at 40px or more at its own
+  // border box.
+  const HIT_AREA = [
     "content: '';",
     'position: absolute;',
     'inset-inline: 0;',
-    `inset-block: calc(-1 * max(0px, (var(--size-target) - ${height}) / 2));`,
+    'inset-block: min(0px, (100% - var(--size-target)) / 2);',
   ];
 
   it('sizes the button, the icon button and the input from the tokens, with one hit-area formula', () => {
@@ -1428,7 +1430,7 @@ describe('the density tokens in the controls and the card', () => {
     const pill = blockAfter(button, '.button {');
     expect(pill).toContain('min-height: var(--size-control);');
     expect(pill).not.toContain('min-height: 40px');
-    for (const declaration of hitArea('var(--size-control)')) {
+    for (const declaration of HIT_AREA) {
       expect(blockAfter(button, '.button::before {'), declaration).toContain(declaration);
     }
     const iconButton = rules('icon-button.css');
@@ -1441,7 +1443,7 @@ describe('the density tokens in the controls and the card', () => {
       expect(circle, declaration).toContain(declaration);
     }
     expect(circle).not.toContain('40px');
-    for (const declaration of hitArea('var(--size-control)')) {
+    for (const declaration of HIT_AREA) {
       expect(blockAfter(iconButton, '.icon-button::before {'), declaration).toContain(declaration);
     }
     // The browser centers an input's text in its content box, so the padding goes and the height decides.
@@ -1466,7 +1468,7 @@ describe('the density tokens in the controls and the card', () => {
     );
     expect(css).toContain('.segmented:not([data-stacked]) .segmented-option::before {');
     const hit = blockAfter(css, '.segmented:not([data-stacked]) .segmented-option::before {');
-    for (const declaration of hitArea('var(--segmented-option-height)')) {
+    for (const declaration of HIT_AREA) {
       expect(hit, declaration).toContain(declaration);
     }
     // The one rule serves both sizes, and no option height is a literal any more.
@@ -1591,6 +1593,18 @@ describe('src/components/dialog.css', () => {
   // The rules without their comments, with their whitespace closed up. A header that is the start of a longer
   // one (`.dialog {` and `.dialog-head {`) is looked up with the "} " of the rule before it.
   const rules = () => closeUp(stripComments(read('src/components/dialog.css')));
+
+  it('places the close button with two classes, so the icon button position never wins by load order', () => {
+    // The icon button is position: relative for its hit area, in a rule of one class.
+    expect(blockAfter(rules(), '.icon-button.dialog-close {')).toContain('position: absolute;');
+    expect(rules()).not.toMatch(/(^|[\s}])\.dialog-close \{/);
+  });
+
+  it('reserves the close button height beside the head, so a compact one reserves 36px', () => {
+    expect(blockAfter(rules(), '.dialog-head-with-close {')).toContain(
+      'padding-inline-end: var(--size-control);',
+    );
+  });
 
   it('centres the panel on the scrim, the overlay inset clear on every side', () => {
     const overlay = blockAfter(rules(), '.dialog-overlay {');
@@ -1777,7 +1791,7 @@ describe('src/components/drawer.css', () => {
 
   it('centres the first line of the title on the close button, and only beside one', () => {
     expect(blockAfter(rules(), '.drawer-header:has(> .drawer-close) .drawer-title {')).toContain(
-      'margin-block-start: calc((2.5rem - 1lh) / 2);',
+      'margin-block-start: calc((var(--size-control) - 1lh) / 2);',
     );
   });
 
@@ -1876,7 +1890,7 @@ describe('src/components/sheet.css', () => {
     // The icon of the close button lines up with the padding edge, and the title's first line with the button.
     expect(blockAfter(css, '.sheet-close {')).toContain('margin-inline-end: -0.5rem;');
     expect(blockAfter(css, '.sheet-header:has(> .sheet-close) .sheet-title {')).toContain(
-      'margin-block-start: calc((2.5rem - 1lh) / 2);',
+      'margin-block-start: calc((var(--size-control) - 1lh) / 2);',
     );
   });
 
