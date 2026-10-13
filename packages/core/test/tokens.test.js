@@ -230,6 +230,12 @@ describe('tokens.css', () => {
     expect(system).toContain('--color-gain: #6cc195;');
   });
 
+  it('declares warning and gain again in the light scope, for a light card inside a dark page', () => {
+    const light = block('[data-theme="light"]');
+    expect(light).toContain('--color-warning: #8a5300;');
+    expect(light).toContain('--color-gain: #2a5f46;');
+  });
+
   it('resets text color in every theme scope, so nested themes read', () => {
     for (const selector of [
       '[data-theme="dark"]',
@@ -279,6 +285,10 @@ describe('tokens.js', () => {
     expect(tokens.radius.pill.modes.shape.soft).toBe('12px');
     expect(tokens.text.body['line-height'].cssVar).toBe('--text-body--line-height');
     expect(tokens['focus-ring'].color.var).toBe('var(--focus-ring-color)');
+    expect(tokens.color.warning.modes.theme.dark).toBe('#e8b04f');
+    expect(tokens.z.modal.var).toBe('var(--z-modal)');
+    expect(tokens.z.modal.value).toBe(1000);
+    expect(tokens.z.toast.value).toBe(1100);
   });
 
   it('gives a token that refers to ink the modes of ink', () => {

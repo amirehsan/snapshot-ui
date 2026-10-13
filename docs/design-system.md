@@ -1047,7 +1047,7 @@ and Light Signal Orange, 28 apart in light and 29 in dark, far enough):
 | `warning` to `error` | 35.6 | 44.6 |
 | `gain` to `success` | 0.0 | 7.6 |
 
-Warning to clay is the closest pair in the system. By CIEDE2000 it is 13.4 in
+Warning to clay is the closest pair of colors with different meanings. By CIEDE2000 it is 13.4 in
 light and 13.8 in dark, well above the roughly 5 at which two colors are told
 apart at a glance. `gain` and `success` are the same value in light. The two are
 kept apart by rule as well as by value: clay is only the Changed chip on a
@@ -1301,15 +1301,19 @@ line and never a paragraph.
 Sans has tabular figures, so a column of amounts lines up only when the class
 asks for them. The classes `copy-numeral` and `copy-numeral-sm` set tabular
 digits beside the four properties of their token. Tabular figures are wider:
-"$12,345.67" at 56px is 253px proportional and 293px tabular. Tailwind users have
-`text-numeral` and `tabular-nums`.
+"$12,345.67" at 56px is 253px proportional and 293px tabular. The Tailwind
+`text-numeral` utility sets only the size, line height, tracking and weight: it has
+no phone step and no `nowrap`, so a Tailwind user adds `whitespace-nowrap
+tabular-nums` and their own phone step, or uses the `.copy-numeral` class.
 
 **The phone step.** On a 320px screen a card with 20px of padding leaves 248px of
 content, and 293px does not fit. At 44px the same figure is 230px, so the large
 step drops to 2.75rem under 768px. The width is the `--breakpoint-sm` token,
 written out in `copy.css` because a media query cannot read a custom property,
 and a test compares them so they cannot drift. The small step needs none:
-"$1,234,567.89", the widest figure tested, is 216px at 32px.
+"$1,234,567.89", the widest figure tested, is 216px at 32px. A single figure
+fits, but two `numeral-sm` figures cannot share a row at 320px, since neither
+wraps, so a row of them wraps as a row (`flex-wrap`), as the docs example does.
 
 **Why `nowrap`.** The text classes break a long word anywhere
 (`overflow-wrap: anywhere`), which is right for a sentence and wrong for a
@@ -1317,6 +1321,21 @@ number: a figure that breaks across two lines reads as two numbers, which is a
 wrong number. Both numeral classes set `white-space: nowrap`, which wins over the
 inherited wrapping. Keep a numeral to one figure, and give it its sign and unit
 in the string, since nothing is formatted here.
+
+**Direction.** A numeral reads left to right in every direction, and keeps its
+sign where it was written. A leading plus or minus is neutral to the bidi
+algorithm, so in a right-to-left block "+$1,980.00" alone in its box would draw
+as "$1,980.00+", with the sign stranded on the far side of the digits. Both
+classes therefore set `direction: ltr` and
+`unicode-bidi: isolate`, which pins the figure to its written order. That alone
+would left-align a block-level figure inside a right-to-left layout, because
+`start` follows the element's own direction, so `text-align: match-parent`
+resolves `start` against the parent: the figure still begins at the start of a
+right-to-left line. Measured in Chromium, Firefox and WebKit, Chromium knows only
+`-webkit-match-parent` and Firefox only `match-parent`, so `copy.css` writes both,
+the standard name last. Without the fix the sign lands right of the currency symbol
+in all three. A story, "Checks/Right to left, Numerals", measures it in Chromium:
+the sign sits left of the currency symbol and the figure's right edge is the block's.
 
 ## Link
 
