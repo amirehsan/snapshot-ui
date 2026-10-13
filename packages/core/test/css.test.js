@@ -942,7 +942,7 @@ describe('src/components/card.css, the collapsible card', () => {
       body: body.trim(),
     }));
   /** A part only the collapsible card draws, or the dir attribute its chevron reads. */
-  const COLLAPSIBLE = /card-(?:collapsible|disclosure|toggle|chevron|actions|fold)|\[dir=/;
+  const COLLAPSIBLE = /card-(?:collapsible|disclosure|toggle|chevron|actions|fold|marker)|\[dir=/;
   /** The rules a plain card is drawn with, by selector. */
   const CARD = [
     '.card',
@@ -962,11 +962,11 @@ describe('src/components/card.css, the collapsible card', () => {
     }
   });
 
-  it('draws in tokens only: a slate chevron that turns ink', () => {
+  it('draws in tokens only: a slate chevron that turns ink, and a light signal orange marker', () => {
     const colors = all()
       .filter(({ selector }) => COLLAPSIBLE.test(selector))
       .flatMap(({ body }) => [...body.matchAll(/var\((--color-[a-z-]+)\)/g)].map(([, name]) => name));
-    expect([...new Set(colors)].sort()).toEqual(['--color-ink', '--color-slate']);
+    expect([...new Set(colors)].sort()).toEqual(['--color-ink', '--color-signal-light', '--color-slate']);
     expect(blockAfter(rules(), '.card-chevron {')).toContain('color: var(--color-slate);');
   });
 
@@ -1127,6 +1127,44 @@ describe('src/components/card.css, the collapsible card', () => {
     const css = rules();
     expect(blockAfter(css, '.card-toggle {')).toContain('align-items: flex-start;');
     expect(blockAfter(css, '.card-chevron {')).toContain('margin-block: calc((1lh - 24px) / 2);');
+  });
+
+  it('draws the folded marker as an 8px light signal orange dot after the title, level with its first line', () => {
+    const css = rules();
+    const dot = blockAfter(css, '.card-marker {');
+    expect(dot).toContain('width: 8px;');
+    expect(dot).toContain('height: 8px;');
+    expect(dot).toContain('border-radius: var(--radius-dot);');
+    expect(dot).toContain('background-color: var(--color-signal-light);');
+    // Out of the flow, from the end of the title's words, which it sits in, and centred on their first line.
+    expect(dot).toContain('position: absolute;');
+    expect(dot).toContain('inset-inline-start: calc(100% + var(--spacing-part));');
+    expect(dot).toContain('inset-block-start: calc((1lh - 8px) / 2);');
+    const text = blockAfter(css, '.card-toggle-text {');
+    expect(text).toContain('position: relative;');
+    // The words take only their own width, so the dot follows the last word of a title on one line, and the
+    // chevron keeps the end of the row.
+    expect(text).toContain('flex: 0 1 auto;');
+    expect(blockAfter(css, '.card-chevron {')).toContain('margin-inline-start: auto;');
+    // The marker's words are hidden by the hidden attribute, so no rule draws them, and none can undo it.
+    expect(css).not.toContain('card-marker-label');
+  });
+
+  it('keeps room for the dot beside a folded title, so the title never moves when the dot comes or goes', () => {
+    const css = rules();
+    const room = blockAfter(
+      css,
+      '.card-collapsible:not([data-expanded]) > .card-disclosure > .card-header .card-toggle-text {',
+    );
+    // The dot and the gap before it, whether the dot is drawn or not. An open card keeps no room.
+    expect(room.trim()).toBe('margin-inline-end: calc(8px + var(--spacing-part));');
+    expect(blockAfter(css, '.card-toggle-text {')).not.toContain('margin');
+  });
+
+  it("draws the dot in the reader's text color in forced colors, where a background would be lost", () => {
+    expect(blockAfter(blockAfter(rules(), FORCED_COLORS), '.card-marker {')).toContain(
+      'background-color: CanvasText;',
+    );
   });
 
   it('stops every transition it draws under reduced motion, from a block that comes after them', () => {

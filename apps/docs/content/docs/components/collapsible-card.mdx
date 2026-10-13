@@ -40,6 +40,28 @@ A server-rendered page shows a remembered fold only after it has loaded. The ser
 
 <Section>
 
+## The changed marker
+
+While a card is folded, a light signal orange dot after its title says that its body holds a change, so a change never goes out of sight. The card finds the change itself: any element in its body that carries `data-changed`, as every Snapshot UI field's root does while its `isChanged` is true, marks the card, and so does a changed field in a card nested in the body. For a change that no field reports, pass `isChanged` to the card. Its root then carries `data-changed` too, so a collapsible card around it counts the change. Open, the card shows no marker, and each field shows its own Changed chip.
+
+<Preview name="collapsible-card-changed" />
+
+A screen reader reads the toggle's title, then collapsed, then `changedLabel`, which is "Changed" unless you give other words. The dot is for the eye, and a screen reader skips it. A folded title keeps room for the dot, so the title stays where it is when the dot comes or goes. The card watches its body only while it is folded, and looks once as it folds, so a field changed while the card was open marks it at once. The server cannot look in the body, so on a server-rendered page the dot for a changed field appears once the page has hydrated. A card the server draws folded with `isChanged` shows its dot from the first frame.
+
+</Section>
+
+<Section>
+
+## Opening for an invalid field
+
+A folded card opens itself when a field in its body fails the browser's validation on submit, so the field can be seen and fixed. A field among the header's actions is in view already, so it leaves the card folded. The card hears the browser's `invalid` event before the field takes focus, and opens the way its toggle does: a remembered fold is forgotten, and `onExpandedChange` is called with `true`, so a card that `isExpanded` controls opens once the app sets it open.
+
+This covers fields that leave validation to the browser, which React Aria does by default, with `validationBehavior="native"`. With `validationBehavior="aria"` the browser sees nothing wrong, fires no `invalid` event and lets the form submit, so the card stays folded. Open it from your own state, with `isExpanded`, when your validation fails.
+
+</Section>
+
+<Section>
+
 ## Usage
 
 A card is open on its first render. Pass `defaultExpanded={false}` to start it folded, or control it with `isExpanded` and `onExpandedChange`. The children are the body, laid out as a card's body is. CollapsibleCard is a client component, and a server component can render it, as the first example on this page does.
@@ -68,7 +90,7 @@ export function Notifications() {
 
 The rest of the HTML attributes, `className` and `ref` go on the card's root, and `className` is merged after the library's classes.
 
-<PropsTable path="../../packages/react/src/collapsible-card/CollapsibleCard.tsx" type="Pick<CollapsibleCardProps, 'title' | 'level' | 'note' | 'actions' | 'defaultExpanded' | 'isExpanded' | 'onExpandedChange' | 'storageKey' | 'as' | 'className'>" />
+<PropsTable path="../../packages/react/src/collapsible-card/CollapsibleCard.tsx" type="Pick<CollapsibleCardProps, 'title' | 'level' | 'note' | 'actions' | 'defaultExpanded' | 'isExpanded' | 'onExpandedChange' | 'storageKey' | 'isChanged' | 'changedLabel' | 'as' | 'className'>" />
 
 </Section>
 

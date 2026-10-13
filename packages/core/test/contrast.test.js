@@ -148,6 +148,20 @@ describe('the collapsible card', () => {
       );
     }
   });
+
+  // The folded marker's dot is light signal orange on the lifted card. It is under the 3:1 a graphic that
+  // carries meaning asks, in light, so it is recorded in the design record rather than gated: the toggle's
+  // description carries the meaning, and the dot is a cue beside it. The numbers here are the record's.
+  it('measures the folded marker on the lifted card under 3:1 in light, so it is recorded and not gated', () => {
+    const measured = (mode) => {
+      const palette = paletteFor(tokens, mode);
+      return contrastRatio(parseColor(palette['signal-light']), parseColor(palette.lifted));
+    };
+    expect(measured('light')).toBeCloseTo(2.78, 2);
+    expect(measured('light')).toBeLessThan(NON_TEXT);
+    expect(measured('dark')).toBeCloseTo(6.07, 2);
+    expect(CONTRAST_PAIRS.filter((pair) => pair.text === 'signal-light')).toEqual([]);
+  });
 });
 
 describe('contrastFailures', () => {

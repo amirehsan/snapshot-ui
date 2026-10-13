@@ -99,7 +99,9 @@
    * hydration. The component sets all three. The header and the fold sit in
    * React Aria's disclosure element, .card-disclosure, which draws nothing.
    * Every state rule reaches them through it from the root, so a card nested
-   * in the body keeps its own state.
+   * in the body keeps its own state. The folded marker is drawn only while it
+   * shows, so it needs no state rule of its own, and its words are in an
+   * element the hidden attribute hides, which a description may still name.
    */
 
   /* The header is a grid. The title, which holds the toggle, takes the first
@@ -176,8 +178,12 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* The words take their own width and no more, so the folded marker can
+     follow the last word of a title on one line. The chevron's auto margin
+     keeps it at the end of the row. */
   .card-toggle-text {
-    flex: auto;
+    position: relative;
+    flex: 0 1 auto;
     min-width: 0;
   }
 
@@ -190,6 +196,7 @@
     width: 24px;
     height: 24px;
     margin-block: calc((1lh - 24px) / 2);
+    margin-inline-start: auto;
     color: var(--color-slate);
     transition: rotate 200ms ease;
   }
@@ -225,6 +232,29 @@
 
   .card-collapsible:not([data-expanded]) > .card-disclosure > .card-header .card-chevron {
     rotate: var(--card-chevron-turn, 90deg);
+  }
+
+  /* The folded marker: a light signal orange dot after the title's words,
+     the attention cue the system keeps for a change. It hangs off the end of
+     the words, out of the flow, a part step on, and is centred on their first
+     line, as the chevron is, so a title that wraps keeps it beside the words a
+     reader starts with. The toggle's description carries what it means, and
+     the dot is a cue beside it for the eye. */
+  .card-marker {
+    position: absolute;
+    inset-block-start: calc((1lh - 8px) / 2);
+    inset-inline-start: calc(100% + var(--spacing-part));
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-dot);
+    background-color: var(--color-signal-light);
+  }
+
+  /* A folded title keeps room for the dot and the gap before it, drawn or
+     not, so the title never moves when the dot comes or goes. An open card
+     draws no marker and keeps no room. */
+  .card-collapsible:not([data-expanded]) > .card-disclosure > .card-header .card-toggle-text {
+    margin-inline-end: calc(8px + var(--spacing-part));
   }
 
   /* The space and the rule between the header and the body fold with the
@@ -280,11 +310,17 @@
   /* Forced colors repaint text in the reader's palette, but an svg keeps the
      color its author set, so the slate or ink chevron would stay as it was. It
      takes the toggle's color there, the reader's text color, at rest, under the
-     pointer and pressed alike. */
+     pointer and pressed alike. The marker's dot is a background, which forced
+     colors paint over with the page's own, so it takes the reader's text color
+     too. */
   @media (forced-colors: active) {
     .card-chevron,
     .card-toggle:is(:hover, [data-hovered], :active, [data-pressed]) .card-chevron {
       color: inherit;
+    }
+
+    .card-marker {
+      background-color: CanvasText;
     }
   }
 

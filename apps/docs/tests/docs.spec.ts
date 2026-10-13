@@ -1240,3 +1240,46 @@ test('a folded collapsible card on its page is hidden until found, so find-in-pa
   await expect(fold).not.toHaveCSS('display', 'none');
   await expect(fold.locator('.card-body')).toBeHidden();
 });
+
+test('a folded collapsible card on its page marks the change it holds, and drops the mark when it is reset', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  page.on('pageerror', (error) => {
+    errors.push(error.message);
+  });
+  await visit(page, '/docs/components/collapsible-card');
+  const toggle = page.getByRole('button', { name: 'Workspace', exact: true });
+  const card = page.locator('.card-collapsible').filter({ has: toggle });
+  const dot = toggle.locator('.card-marker');
+  /** Where the title's words sit in the card, wherever the page has scrolled to. */
+  const place = (): Promise<number[]> =>
+    toggle.locator('.card-toggle-text').evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const edge = element.closest('.card-collapsible')?.getBoundingClientRect() ?? box;
+      return [box.left - edge.left, box.top - edge.top, box.width, box.height];
+    });
+  // The server drew the card folded, and once the page has hydrated the card finds the changed field in it,
+  // with no hydration warning.
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(dot).toBeVisible();
+  await expect(dot).toHaveCSS('background-color', 'rgb(243, 115, 56)');
+  await expect(toggle).toHaveAccessibleDescription('Changed');
+  await expect(page.getByRole('heading', { name: 'Workspace', exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+  const marked = await place();
+  // Open, the field shows its own chip and the card shows no mark. Folded again, the mark is back.
+  await toggle.click();
+  await expect(dot).toHaveCount(0);
+  await expect(card.locator('.field-changed')).toBeVisible();
+  await toggle.click();
+  await expect(dot).toBeVisible();
+  // Reset sits in the header, so it works while the card is folded. The mark goes, and the title stays put.
+  await card.getByRole('button', { name: 'Reset' }).click();
+  await expect(dot).toHaveCount(0);
+  await expect(toggle).not.toHaveAttribute('aria-describedby');
+  expect(await place()).toEqual(marked);
+});

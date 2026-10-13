@@ -12,6 +12,7 @@ import CheckboxStates from './checkbox-states';
 import CheckboxValidation from './checkbox-validation';
 import CollapsibleCardActions from './collapsible-card-actions';
 import CollapsibleCardBasic from './collapsible-card-basic';
+import CollapsibleCardChanged from './collapsible-card-changed';
 import CollapsibleCardRemembered from './collapsible-card-remembered';
 import EyebrowHeading from './eyebrow-heading';
 import LengthCounter from './field-counter';
@@ -59,6 +60,7 @@ export const examples = {
   'checkbox-validation': CheckboxValidation,
   'collapsible-card-actions': CollapsibleCardActions,
   'collapsible-card-basic': CollapsibleCardBasic,
+  'collapsible-card-changed': CollapsibleCardChanged,
   'collapsible-card-remembered': CollapsibleCardRemembered,
   'eyebrow-heading': EyebrowHeading,
   'field-counter': LengthCounter,

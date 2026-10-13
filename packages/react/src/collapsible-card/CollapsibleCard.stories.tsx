@@ -3,7 +3,8 @@ import { useState, type ReactElement } from 'react';
 import { expect, waitFor } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
-import { firstLineOffset, lineCount, tokenPixels } from '../stories/paint';
+import { firstLineOffset, lineCount, tokenColor, tokenPixels } from '../stories/paint';
+import { TextField } from '../text-field';
 import { CollapsibleCard, type CollapsibleCardProps } from './CollapsibleCard';
 
 /** The parts of the collapsible card that is `card`. */
@@ -445,5 +446,139 @@ export const Remembered: Story = {
     // Folded from its first render: no fold is marked and no transition runs.
     await expect(second).not.toHaveAttribute('data-folding');
     await expect(second.getAnimations({ subtree: true })).toHaveLength(0);
+  },
+};
+
+/** The folded marker's dot in `card`, which must show one. */
+function dotOf(card: Element): HTMLElement {
+  const dot = partsOf(card).text.querySelector<HTMLElement>(':scope > .card-marker');
+  if (!dot) throw new Error('No marker drawn');
+  return dot;
+}
+
+/** Where a box sits inside `card`, so two cards can be compared wherever they are on the page. */
+function placeIn(card: Element, box: DOMRect): { left: number; top: number; width: number; height: number } {
+  const edge = card.getBoundingClientRect();
+  return { left: box.left - edge.left, top: box.top - edge.top, width: box.width, height: box.height };
+}
+
+/** The box of the last line of words in the title, read from the title's text. */
+function lastWords(text: Element): DOMRect {
+  const range = document.createRange();
+  range.selectNodeContents(text.firstChild ?? text);
+  const lines = range.getClientRects();
+  const last = lines[lines.length - 1];
+  if (!last) throw new Error('No words drawn');
+  return last;
+}
+
+/**
+ * Folded over a changed field, a card shows a light signal orange dot after its title, level with its first
+ * line, and its toggle is described as changed. A folded title keeps room for the dot whether it shows or
+ * not, so a title with the dot sits exactly where the same title without it does, wrapped or not.
+ */
+export const FoldedChanged: Story = {
+  args: { title: 'Profile', note: 'How the rest of the team sees you.', defaultExpanded: false },
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <CollapsibleCard {...args} data-testid="changed">
+        <TextField label="Display name" defaultValue="Ada King" isChanged />
+      </CollapsibleCard>
+      <div style={{ display: 'grid', gap: 24, width: 288 }}>
+        <CollapsibleCard {...args} title="Notification preferences for every workspace" data-testid="long">
+          <TextField label="Digest day" defaultValue="Tuesday" isChanged />
+        </CollapsibleCard>
+        <CollapsibleCard {...args} title="Notification preferences for every workspace" data-testid="saved">
+          <TextField label="Digest day" defaultValue="Tuesday" />
+        </CollapsibleCard>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const changed = byTestId(canvasElement, 'changed');
+    const { title, toggle, text, chevron } = partsOf(changed);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    // The words are in a hidden element beside the heading: the toggle's name and the heading's text stay
+    // the title.
+    await expect(toggle).toHaveAccessibleName('Profile');
+    await expect(toggle).toHaveAccessibleDescription('Changed');
+    await expect(title.textContent).toBe('Profile');
+    // An 8px light signal orange dot, round in every shape.
+    const dot = dotOf(changed);
+    const style = getComputedStyle(dot);
+    await expect(style.width).toBe('8px');
+    await expect(style.height).toBe('8px');
+    await expect(style.backgroundColor).toBe(tokenColor('--color-signal-light'));
+    await expect(parseFloat(style.borderTopLeftRadius)).toBeGreaterThanOrEqual(4);
+    // After the last word of a title on one line, a part step on, level with the line, and short of the chevron.
+    const box = dot.getBoundingClientRect();
+    await expect(Math.abs(box.left - lastWords(text).right - tokenPixels('--spacing-part'))).toBeLessThan(
+      0.5,
+    );
+    await expect(Math.abs(firstLineOffset(dot, text))).toBeLessThanOrEqual(0.5);
+    await expect(box.right).toBeLessThan(chevron.getBoundingClientRect().left);
+    // A title that wraps keeps the dot level with its first line, inside the toggle and clear of the chevron.
+    const long = byTestId(canvasElement, 'long');
+    const longParts = partsOf(long);
+    const longDot = dotOf(long).getBoundingClientRect();
+    await expect(lineCount(longParts.text)).toBeGreaterThan(1);
+    await expect(Math.abs(firstLineOffset(dotOf(long), longParts.text))).toBeLessThanOrEqual(0.5);
+    await expect(longDot.left).toBeGreaterThanOrEqual(longParts.text.getBoundingClientRect().right);
+    await expect(longDot.right).toBeLessThan(longParts.chevron.getBoundingClientRect().left);
+    await expect(longDot.right).toBeLessThanOrEqual(longParts.toggle.getBoundingClientRect().right);
+    // The same title with nothing changed shows no dot, and its words and header are where the marked one's are.
+    const saved = byTestId(canvasElement, 'saved');
+    const savedParts = partsOf(saved);
+    await expect(savedParts.text.querySelector('.card-marker')).toBeNull();
+    await expect(savedParts.toggle).not.toHaveAttribute('aria-describedby');
+    await expect(placeIn(saved, savedParts.text.getBoundingClientRect())).toEqual(
+      placeIn(long, longParts.text.getBoundingClientRect()),
+    );
+    await expect(savedParts.header.getBoundingClientRect().height).toBe(
+      longParts.header.getBoundingClientRect().height,
+    );
+  },
+};
+
+/**
+ * A field that fails the browser's validation on submit opens the folded card that holds it, before React Aria
+ * moves focus to the field, so the field is shown, focused and in view.
+ */
+export const OpensForInvalid: Story = {
+  // A check of the open: the open and the folded card are shot in Open and Folded.
+  tags: ['no-visual'],
+  args: { title: 'Billing', note: 'Paid by card, every month.', defaultExpanded: false },
+  render: (args) => (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+      }}
+      style={{ display: 'grid', gap: 24 }}
+    >
+      <CollapsibleCard {...args} data-testid="card">
+        <TextField label="Card holder" isRequired />
+      </CollapsibleCard>
+      <div>
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const card = byTestId(canvasElement, 'card');
+    const { toggle } = partsOf(card);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(canvas.getByRole('button', { name: 'Save' }));
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const field = canvas.getByRole('textbox', { name: 'Card holder' });
+    await expect(field).toHaveFocus();
+    await waitFor(async () => {
+      await expect(card).not.toHaveAttribute('data-folding');
+    });
+    // Shown whole: nothing clips it and nothing covers it, and it is inside the window.
+    await expect(field).toBeVisible();
+    const box = field.getBoundingClientRect();
+    await expect(box.top).toBeGreaterThanOrEqual(0);
+    await expect(box.bottom).toBeLessThanOrEqual(window.innerHeight);
+    await expect(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)).toBe(field);
   },
 };
