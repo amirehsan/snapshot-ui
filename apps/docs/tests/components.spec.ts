@@ -267,7 +267,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   switch: ['.stage .switch-text', '.stage .field-description'],
   'text-area': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'text-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
-  typography: ['.stage .heading', '.stage .copy', '.stage .eyebrow'],
+  // A numeral is a figure and never wraps (white-space: nowrap), so a web address is not put into one.
+  typography: ['.stage .heading', '.stage .copy:not(.copy-numeral, .copy-numeral-sm)', '.stage .eyebrow'],
 };
 
 /** The pages with no text a person writes, each with its reason. A page is in one list or the other. */
@@ -366,7 +367,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   switch: ['.stage .switch-thumb'],
   'text-area': ['.stage .textarea'],
   'text-field': ['.stage .input'],
-  typography: ['.stage .heading', '.stage .copy', '.stage .eyebrow'],
+  typography: ['.stage .heading', '.stage .copy', '.stage .copy-numeral', '.stage .eyebrow'],
 };
 
 test('every component page is listed as server rendered', () => {

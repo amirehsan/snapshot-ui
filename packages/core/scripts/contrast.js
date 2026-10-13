@@ -65,6 +65,20 @@ export const CONTRAST_PAIRS = [
     minimum: TEXT,
     shows: `a success message on ${ground}`,
   })),
+  // Warning and gain are text on every surface, bone included, which a badge or a tile can sit on. Neither is
+  // ever the label on an ink fill, where they measure under the minimum in both themes, so no such pair is held.
+  ...['canvas', 'lifted', 'bone', 'float', 'raised'].map((ground) => ({
+    text: 'warning',
+    ground,
+    minimum: TEXT,
+    shows: `a warning badge or stripe on ${ground}`,
+  })),
+  ...['canvas', 'lifted', 'bone', 'float', 'raised'].map((ground) => ({
+    text: 'gain',
+    ground,
+    minimum: TEXT,
+    shows: `an amount that arrived on ${ground}`,
+  })),
   { text: 'canvas', ground: 'ink', minimum: TEXT, shows: 'the primary button label' },
   {
     text: 'canvas',
