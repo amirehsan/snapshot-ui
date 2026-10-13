@@ -351,6 +351,55 @@ describe('the command palette', () => {
   });
 });
 
+describe('the tooltip', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The tip is ink with canvas text, the same pair as the primary button's label, gated at the text minimum.
+  it('cites canvas on ink, which the gate holds at the text minimum, for the text of the tip', () => {
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+    expect(measured('light', 'canvas', 'ink')).toBeCloseTo(16.25, 2);
+    expect(measured('dark', 'canvas', 'ink')).toBeCloseTo(19.31, 2);
+  });
+
+  // The key chip is canvas at 20% over ink with canvas text: the composite the menu's selected row records. It
+  // is a mix and not a token, so it cannot join the gate; it is measured again here, in both modes.
+  it('measures the key chip, canvas on canvas at 20% over ink, recorded and not gated', () => {
+    const chip = (mode) => {
+      const palette = paletteFor(tokens, mode);
+      const ink = parseColor(palette.ink);
+      const canvas = parseColor(palette.canvas);
+      return contrastRatio(canvas, composite({ ...canvas, a: 0.2 }, ink));
+    };
+    expect(chip('light')).toBeCloseTo(9.13, 2);
+    expect(chip('dark')).toBeCloseTo(12.37, 2);
+    for (const mode of ['light', 'dark']) expect(chip(mode), mode).toBeGreaterThanOrEqual(TEXT);
+  });
+
+  // The tip opens over any surface, so its own edge is ink against that surface: ink on canvas, lifted, float
+  // and raised, which the gate already holds as text at the stricter minimum. No border is needed.
+  it('cites ink on canvas, lifted, float and raised, which the gate holds, for the tip against what it opens over', () => {
+    const grounds = ['canvas', 'lifted', 'float', 'raised'];
+    for (const ground of grounds) {
+      expect(CONTRAST_PAIRS).toContainEqual(expect.objectContaining({ text: 'ink', ground, minimum: TEXT }));
+    }
+    for (const { mode, low, high } of [
+      { mode: 'light', low: 16.25, high: 18.43 },
+      { mode: 'dark', low: 15.36, high: 19.31 },
+    ]) {
+      const ratios = grounds.map((ground) => measured(mode, 'ink', ground));
+      expect(Math.min(...ratios), mode).toBeCloseTo(low, 2);
+      expect(Math.max(...ratios), mode).toBeCloseTo(high, 2);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

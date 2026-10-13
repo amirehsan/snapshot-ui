@@ -684,8 +684,8 @@ near-black page needs more of it to register.
 
 ## Still missing
 
-No specification for: tooltip, empty state, or loading state. Each needs the
-same derive-and-record treatment as it arrives.
+No specification for: empty state or loading state. The tooltip is derived in
+Appendix B. Each needs the same derive-and-record treatment as it arrives.
 
 Tabs arrived with the Design panel's Colors card and are derived in
 the tabs component CSS: the segmented control's row of 40px pills in a padded
@@ -4229,3 +4229,117 @@ dark, and opened by the shortcut from the page it is the page's. `dir` comes
 from the locale. The glass is first in the row and the Esc key last, so in
 right to left they swap ends; the label, the end value and the key keep their
 reading order, and every value is logical.
+
+## Tooltip
+
+The app names the icons of its collapsed rail with a tip: ink with canvas
+text, 6px corners, an arrow, a 140ms fade with a 4px slide, and a key chip for
+the search shortcut. It opens after 400ms on hover and at once on keyboard
+focus, with no wait while another tip is warm, stays while the pointer is on
+it, closes on Escape, on a press and on scroll, and never shows for touch.
+`Tooltip` keeps all of it on React Aria's `TooltipTrigger` and `Tooltip`,
+which own the timing, the hover, the focus rule and the placement, so the
+stylesheet draws the tip and its motion and the wrapper sets the delays, the
+scope, the direction and the chip. "Overlays" derives the shared parts.
+
+**The delays, as React Aria gives them.** `delay` is 400ms and `closeDelay`
+120ms, the library's, against React Aria's own 1500ms and 500ms. React Aria
+opens a tip on hover only with a mouse, since its hover ignores a touch
+pointer, and on focus only when the focus is visible, so a click's focus shows
+none. Once a tip has opened, React Aria keeps every tip warm: a module-level
+flag, cleared by a cooldown of 500ms (`TOOLTIP_COOLDOWN` in react-stately's
+`useTooltipTriggerState`) that starts when a close starts, which is when the
+pointer leaves. With the 120ms close delay, the next tip opens at once for
+about 380ms after the last one visibly closed, and for half a second after the
+pointer left it. The app's window was 300ms. Matching it would mean writing
+the state hook again, so React Aria's is kept, and the parent spec's sentence
+now says "about half a second". Neither the window nor its length is a prop.
+
+**The surface.** `--color-ink` with `--color-canvas` text, the app's tip, and
+the primary button's pair: 16.25 in light and 19.31 in dark, both gated. The
+tip opens over any surface, so its own edge is ink against what is behind it:
+16.25 to 18.43 in light and 15.36 to 19.31 in dark on the canvas, Lifted, Float
+and Raised, pairs the gate already holds as text. No border is needed to see
+it. It has one all the same, `1px solid transparent`, so forced colors have an
+edge to redraw (below). `--radius-micro`, the step this document gives key
+hints, badges and tooltips, which keeps 6px in Soft and goes square in Square.
+`--shadow-float`, elevation level 2, as every float.
+
+**The text.** `--text-small`, 14px at 450, padded 6px by 10px. 14px is the
+sentence floor; the app's 13px is under it. Light text on a dark fill renders
+heavier than it measures, so 450 holds on the ink without a bolder weight. A
+tip wraps at `min(20rem, calc(100vw - 2rem))`, 320px or the screen less the
+overlay inset on both sides, so a description tip never runs off a 320px
+screen, and `overflow-wrap: anywhere` breaks a long word inside that width.
+
+**The arrow and the gap.** React Aria's `OverlayArrow`, holding an 8px svg
+drawn pointing down for a tip above its trigger, `M0 0 4 4 8 0`, filled with
+the tip's ink. React Aria places the arrow element on the side the tip
+landed, centred on the trigger, and the stylesheet turns the svg for the
+other three sides by the arrow's own `data-placement`. `offset` is 12px, the
+gap from the tip's box to the trigger, with the arrow's 4px inside it, so the
+point stops 8px short of the trigger. The tip opens above its trigger by
+default and flips to the other side where the screen has no room, inside
+React Aria's 12px `containerPadding`; `data-placement` says where it landed.
+In right to left `start` and `end` resolve through React Aria, and `end` is
+the left. It sits at the inline z-index of 100000 React Aria writes, above
+every modal, as "Token names" sets out.
+
+**The key chip.** The one key look, inverted for the ink: 12px, weight 700,
+overline tracking, tabular figures, `--radius-micro`, canvas text on canvas at
+20% over the ink, `margin-inline-start: 0.5rem`. It is the chip a chosen menu
+row draws, measured the same way: 9.13 in light and 12.37 in dark, a mix and
+not a token, so it is recorded here and in the contrast tests and not gated.
+`Mod` is the platform's modifier after mount, through the shared `Shortcut`,
+and React Aria's `Keyboard` writes `dir="ltr"` on the chip, so its keys read
+left to right in either direction. The app's pill was a rail-local choice.
+
+**Motion.** Opacity and a 4px slide toward the trigger, 140ms ease-out, on
+React Aria's `[data-entering]` and `[data-exiting]`: a tip above its trigger
+rises from 4px lower, one below drops from 4px higher, and one to the side
+slides in from 4px nearer. These are the app's values and the popover's. A
+warm swap is not animated: React Aria 1.22.1 marks a tip that opens inside
+the warm window, and the tip it replaces, `shouldSkipAnimation`, and writes
+neither attribute on them, so the next tip appears at once and the last one
+leaves at once, as the overlay spec's motion table asks. The state is React
+Aria's own, and the wrapper adds nothing to it. A cold open and a plain close
+fade. Reduced motion turns the transition off, in a block after the rules it
+overrides.
+
+**Closing.** The pointer leaving closes the tip after 120ms, unless it moved
+onto the tip, which is hoverable (WCAG 1.4.13). Escape closes it, through a
+`keydown` listener React Aria puts on the document while the tip is open,
+which stops the key there, so a tip inside a dialog closes and the dialog
+stays. A press of the trigger, a pointer down or a key down, closes it, and so
+does blur. A scroll of a box around the trigger closes it, through React
+Aria's `useCloseOnScroll`. A resize of the window does not close a tip in
+React Aria 1.22.1, which only moves it; the wrapper closes it, through the
+trigger's state, since a tip whose trigger is reflowing is no longer about
+what is under the pointer. A tip given its own `isOpen` or `defaultOpen` keeps
+a state of its own, which the wrapper leaves alone.
+
+**Forced colors.** The repaint turns the svg's fill into a shape that may not
+match the tip, so the arrow goes (`display: none`). The transparent border is
+drawn in `CanvasText`, so the tip keeps its edge on the reader's background.
+
+**Announcement.** The tip is `role="tooltip"`, and React Aria gives the
+trigger `aria-describedby` while it is open, so the tip is the trigger's
+description. The app hid its tip from assistive technology, because the item
+already carried the same name. The library accepts React Aria's description:
+a tip is supplementary, and on an icon button it mirrors the `aria-label`,
+which a screen reader may read twice. Whether that reads badly is the owner's
+check, in VoiceOver and NVDA, before the shell ships; it is pending. The named
+fallback is to hide the tip, as the app did. Two facts read in 1.22.1 shape
+it: React Aria's tip passes no `aria-hidden` through, since its DOM filter
+keeps only the id, the labelling props, the `data-` attributes and the global
+attributes; and a trigger's `aria-describedby` still reads a hidden tip's
+text, since a description follows its reference into hidden content. So the
+fallback is a change in the wrapper and not a prop a caller sets: the tip
+hidden, and a trigger whose tip only repeats its name left undescribed.
+
+**Scope and direction.** The tip copies its theme, shape and density from the
+trigger React Aria hands it through `TooltipContext`, or from the `triggerRef`
+it is given, and not from what holds focus: a tip opened by hover was opened
+by no focus, so focus can be anywhere. A tip opened from a dark card is the
+dark ink, white with black text, while the page stays light. React Aria
+writes no direction on a tip, so `dir` comes from the locale.

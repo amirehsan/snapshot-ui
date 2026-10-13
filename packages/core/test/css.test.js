@@ -2473,6 +2473,121 @@ describe('src/components/command-palette.css', () => {
   });
 });
 
+describe('src/components/tooltip.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.tooltip {` is the start of no longer
+  // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
+  const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
+
+  it('is imported last, after command-palette.css', () => {
+    const entry = read('src/styles.css');
+    const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
+    expect(imported.at(-2)).toBe('command-palette.css');
+    expect(imported.at(-1)).toBe('tooltip.css');
+  });
+
+  it('draws the ink tip with canvas text, a transparent 1px border, the micro corner and the float shadow', () => {
+    const tip = blockAfter(rules(), '.tooltip {');
+    for (const declaration of [
+      'background-color: var(--color-ink);',
+      'color: var(--color-canvas);',
+      'border: 1px solid transparent;',
+      'border-radius: var(--radius-micro);',
+      'box-shadow: var(--shadow-float);',
+    ]) {
+      expect(tip, declaration).toContain(declaration);
+    }
+  });
+
+  it('caps its width at 20rem or the viewport less 2rem, and breaks a long word anywhere', () => {
+    const tip = blockAfter(rules(), '.tooltip {');
+    expect(tip).toContain('max-width: min(20rem, calc(100vw - 2rem));');
+    expect(tip).toContain('overflow-wrap: anywhere;');
+  });
+
+  it('sets its text in the small step, padded 6px by 10px', () => {
+    const tip = blockAfter(rules(), '.tooltip {');
+    for (const declaration of [
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: var(--text-small--font-weight);',
+      'padding: 0.375rem 0.625rem;',
+    ]) {
+      expect(tip, declaration).toContain(declaration);
+    }
+  });
+
+  it('fades in and out over 140ms, sliding 4px toward the trigger from the side it opened on', () => {
+    const css = rules();
+    expect(blockAfter(css, '.tooltip {')).toContain(
+      'transition: opacity 140ms ease-out, translate 140ms ease-out;',
+    );
+    expect(blockAfter(css, '.tooltip:is([data-entering], [data-exiting]) {')).toContain('opacity: 0;');
+    for (const [placement, translate] of [
+      ['top', '0 4px'],
+      ['bottom', '0 -4px'],
+      ['left', '4px 0'],
+      ['right', '-4px 0'],
+    ]) {
+      expect(
+        blockAfter(css, `.tooltip[data-placement='${placement}']:is([data-entering], [data-exiting]) {`),
+        placement,
+      ).toContain(`translate: ${translate};`);
+    }
+  });
+
+  it('draws an 8px arrow filled in ink, pointing down, and turns it for the other three sides', () => {
+    const css = rules();
+    const arrow = blockAfter(css, '.tooltip-arrow svg {');
+    for (const declaration of ['display: block;', 'width: 8px;', 'height: 8px;', 'fill: var(--color-ink);']) {
+      expect(arrow, declaration).toContain(declaration);
+    }
+    for (const [placement, turn] of [
+      ['bottom', '180deg'],
+      ['left', '-90deg'],
+      ['right', '90deg'],
+    ]) {
+      expect(blockAfter(css, `.tooltip-arrow[data-placement='${placement}'] svg {`), placement).toContain(
+        `rotate: ${turn};`,
+      );
+    }
+    // Pointing down is the svg's own shape, so the top placement needs no rule.
+    expect(css).not.toContain(".tooltip-arrow[data-placement='top']");
+  });
+
+  it('draws the key chip in canvas at 20% over ink, in the 12px overline look, after a logical gap', () => {
+    const chip = blockAfter(rules(), '.tooltip-shortcut {');
+    for (const declaration of [
+      'background-color: color-mix(in srgb, var(--color-canvas) 20%, transparent);',
+      'color: var(--color-canvas);',
+      'border-radius: var(--radius-micro);',
+      'margin-inline-start: 0.5rem;',
+      'font-size: 0.75rem;',
+      'letter-spacing: var(--text-overline--letter-spacing);',
+      'font-weight: var(--text-overline--font-weight);',
+      'font-variant-numeric: tabular-nums;',
+      'white-space: nowrap;',
+    ]) {
+      expect(chip, declaration).toContain(declaration);
+    }
+  });
+
+  it('hides the arrow and draws the border in CanvasText in forced colors, so the tip keeps a shape', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(forced, '.tooltip {')).toContain('border-color: CanvasText;');
+    expect(blockAfter(forced, '.tooltip-arrow {')).toContain('display: none;');
+  });
+
+  it('stops the motion under reduced motion, after it', () => {
+    const css = rules();
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    expect(blockAfter(blockAfter(css, reduced), '.tooltip {')).toContain('transition: none;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: opacity 140ms ease-out'));
+    expect(css.indexOf(reduced)).toBeGreaterThan(
+      css.indexOf(".tooltip[data-placement='right']:is([data-entering], [data-exiting]) {"),
+    );
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 
