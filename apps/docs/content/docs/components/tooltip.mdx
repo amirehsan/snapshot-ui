@@ -28,7 +28,7 @@ A tooltip is a short ink label with canvas text that names an icon button, or ad
 
 ## Usage
 
-Wrap the trigger and the tip in `TooltipTrigger`. The trigger must be focusable and take React Aria's hover and focus, as `Button`, `IconButton` and `Link` do; a static element, such as an icon in a sentence, needs React Aria's `Focusable` around it, and a disabled control cannot take focus, so it gets no tip. TooltipTrigger and Tooltip are client components, and a server component can render them, as the examples on this page do.
+Wrap the trigger and the tip in `TooltipTrigger`. The trigger must be focusable and take React Aria's hover and focus, as `Button`, `IconButton` and `Link` do; a static element, such as an icon in a sentence, needs React Aria's `Focusable` around it, and a disabled control cannot take focus, so it gets no tip. TooltipTrigger and Tooltip are client components, and a server component can render them, as the examples on this page do. A tip forced open with `isOpen` or `defaultOpen` is drawn only in the browser: the server's HTML gives the trigger a description that points at a tip it does not hold until the page hydrates.
 
 The tip opens after 400ms of hover (`delay`) and closes 120ms after the pointer leaves (`closeDelay`), so the pointer can cross onto the tip and rest there. Once one tip has opened, the next opens at once for about half a second after it starts to close, so moving along a row of buttons shows each name without a wait. Escape, a press of the trigger, a scroll of a box around it and a resize of the window close it. Set `isDisabled` while the label is visible anyway, as a navigation rail does when it is expanded. `isOpen`, `defaultOpen` and `onOpenChange` control it.
 
