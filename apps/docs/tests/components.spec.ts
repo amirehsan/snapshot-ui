@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { axeViolations, COMPONENT_PAGES, settled, sideways, systemColor } from './support';
+import { axeViolations, CHART_PAGES, COMPONENT_PAGES, settled, sideways, systemColor } from './support';
 
 /**
  * Checks that run across every component page: Windows high contrast, and a
@@ -14,13 +14,19 @@ const visit = async (page: Page, url: string): Promise<void> => {
   await settled(page);
 };
 
-/** The slug of every page in the Components section, in the rail's order. */
-const SLUGS = COMPONENT_PAGES.map(({ slug }) => slug);
+/** Every page of the Components section and then of the Charts section, in the rail's order. */
+const PAGES = [...COMPONENT_PAGES, ...CHART_PAGES];
 
-test('the Components section lists the pages the loops below visit', () => {
-  expect(SLUGS.length).toBeGreaterThanOrEqual(15);
+/** The slug of every page the loops below visit. */
+const SLUGS = PAGES.map(({ slug }) => slug);
+
+test('the Components and Charts sections list the pages the loops below visit', () => {
+  expect(COMPONENT_PAGES.length).toBeGreaterThanOrEqual(15);
   expect(SLUGS).toContain('switch');
   expect(SLUGS).toContain('segmented-control');
+  expect(CHART_PAGES.map(({ slug }) => slug)).toContain('sparkline');
+  // A slug names one page, so the maps below, which are keyed by slug, cannot mix two up.
+  expect(new Set(SLUGS).size).toBe(SLUGS.length);
 });
 
 // ---- Windows high contrast ----------------------------------------------------------------------
@@ -448,10 +454,10 @@ test.describe('forced colors', () => {
 
 // ---- Props tables -------------------------------------------------------------------------------
 
-test('every props table on a component page has a name of its own', async ({ page }) => {
+test('every props table on a component or chart page has a name of its own', async ({ page }) => {
   // A page with several tables names each one, so a screen reader's list of tables tells them apart.
-  for (const slug of SLUGS) {
-    await page.goto(`/docs/components/${slug}`);
+  for (const { slug, url } of PAGES) {
+    await page.goto(url);
     const names = await page
       .locator('.props table')
       .evaluateAll((tables) => tables.map((table) => table.getAttribute('aria-label')));
@@ -525,22 +531,23 @@ const NO_LONG_TEXT: Record<string, string> = {
   menu: "its text is in a portal that opens on a press; the EndValues story's 375px baseline pins its wrapping",
   popover: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   sheet: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
+  sparkline: 'a drawing with no text; its name, when it has one, is an aria-label nothing draws',
   spinner: 'a progress mark with no text a person writes',
   toast: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   tooltip:
     "its text is in a portal that opens on hover or focus; the Wrapped story's 375px baseline pins its wrapping",
 };
 
-test('every component page is given long text, or is listed as having none', () => {
+test('every component and chart page is given long text, or is listed as having none', () => {
   // A page added to the rail must be in one list, so it cannot skip the narrow-screen check by omission.
   expect([...Object.keys(LONG_TARGETS), ...Object.keys(NO_LONG_TEXT)].sort()).toEqual([...SLUGS].sort());
 });
 
-for (const slug of SLUGS) {
+for (const { slug, url } of PAGES) {
   test(`the ${slug} page fits 320px and 375px, with a long web address in its text`, async ({ page }) => {
     for (const width of [320, 375]) {
       await page.setViewportSize({ width, height: 800 });
-      await visit(page, `/docs/components/${slug}`);
+      await visit(page, url);
       expect(await sideways(page), `${slug} at ${String(width)}px`).toBe(0);
 
       // Nothing in a props table is cut off by its frame, which clips what does not fit: a description
@@ -596,11 +603,11 @@ const NESTED_SHELL: Record<string, string> = {
 };
 const NESTED_RULES = ['landmark-no-duplicate-main', 'landmark-main-is-top-level', 'landmark-unique'];
 
-for (const slug of SLUGS) {
+for (const { slug, url } of PAGES) {
   for (const theme of ['light', 'dark'] as const) {
     test(`the ${slug} page has no axe violations in ${theme}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: theme });
-      await visit(page, `/docs/components/${slug}`);
+      await visit(page, url);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
       expect(await axeViolations(page, { disableRules: slug in NESTED_SHELL ? NESTED_RULES : [] })).toEqual(
         [],
@@ -642,6 +649,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'segmented-control': ['.stage .segmented-option'],
   sheet: ['.stage .button'],
   sidebar: ['.stage .sidebar'],
+  sparkline: ['.stage .sparkline svg .sparkline-line'],
   spinner: ['.stage .spinner'],
   'stat-tile': ['.stage .stat-tile', '.stage .stat-tile-value', '.stage .stat-tile-change'],
   switch: ['.stage .switch-thumb'],
@@ -655,7 +663,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   typography: ['.stage .heading', '.stage .copy', '.stage .copy-numeral', '.stage .eyebrow'],
 };
 
-test('every component page is listed as server rendered', () => {
+test('every component and chart page is listed as server rendered', () => {
   // A page added to the rail must say what its examples draw, so it cannot skip this check.
   expect(Object.keys(SERVER_RENDERED).sort()).toEqual([...SLUGS].sort());
 });
@@ -663,9 +671,9 @@ test('every component page is listed as server rendered', () => {
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 
-  for (const slug of SLUGS) {
+  for (const { slug, url } of PAGES) {
     test(`the ${slug} page arrives from the server with its examples drawn`, async ({ page }) => {
-      await page.goto(`/docs/components/${slug}`);
+      await page.goto(url);
       for (const selector of SERVER_RENDERED[slug] ?? []) {
         expect(await page.locator(selector).count(), `${selector} on the ${slug} page`).toBeGreaterThan(0);
       }

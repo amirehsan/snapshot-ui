@@ -9,6 +9,7 @@ meaning. A plain HTML version that shares the same CSS is planned.
 | --- | --- |
 | `@snapshot-ui/core` | Design tokens, the Tailwind v4 theme and every component's CSS. No JavaScript. |
 | `@snapshot-ui/react` | React components built on React Aria. |
+| `@snapshot-ui/charts` | Charts drawn on the server in SVG: a sparkline and a line chart with a table view. |
 
 ## Install
 

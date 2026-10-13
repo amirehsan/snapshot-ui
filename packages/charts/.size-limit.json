@@ -1,0 +1,9 @@
+[
+  {
+    "name": "import { Sparkline } from \"@snapshot-ui/charts\"",
+    "path": "dist/index.js",
+    "import": "{ Sparkline }",
+    "ignore": ["react", "react-dom"],
+    "limit": "1.5 kB"
+  }
+]

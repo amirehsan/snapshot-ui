@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { axeViolations, hitSize, hitsAt, settled, sideways, withoutClipboard } from './support';
 
@@ -1934,4 +1935,49 @@ test('an over-limit meter says over in words and draws its fill in the warning c
     return backgroundColor;
   });
   expect(await fill.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(warning);
+});
+
+test('a chart page is in the Charts group and shows its own package version', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page, '/docs/charts/sparkline');
+  // The rail draws a group named Charts that holds the page's link, marked as the page open.
+  const group = page
+    .locator('#rail .rail-nav > div')
+    .filter({ has: page.locator('.rail-group', { hasText: /^Charts$/ }) });
+  await expect(group).toHaveCount(1);
+  await expect(group.locator('a[href="/docs/charts/sparkline"]')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.header-titles .eyebrow')).toHaveText('Docs \u203a Charts');
+
+  // The package card reads @snapshot-ui/charts, which is not built on React Aria.
+  const { version } = JSON.parse(
+    readFileSync(new URL('../../../packages/charts/package.json', import.meta.url), 'utf8'),
+  ) as { version: string };
+  const card = page.locator('.panel-side');
+  await expect(card.locator('.badge')).toHaveText(version);
+  await expect(card.locator('.meta-row', { hasText: 'Built on' })).toHaveCount(0);
+
+  // A component page keeps its group, its own package's version and the React Aria row.
+  await visit(page, '/docs/components/meter');
+  await expect(page.locator('.header-titles .eyebrow')).toHaveText('Docs \u203a Components');
+  const { version: react } = JSON.parse(
+    readFileSync(new URL('../../../packages/react/package.json', import.meta.url), 'utf8'),
+  ) as { version: string };
+  await expect(card.locator('.badge')).toHaveText(react);
+  await expect(card.locator('.meta-row', { hasText: 'Built on' })).toHaveCount(1);
+});
+
+test('the stat tile page draws its trend as a sparkline hidden from assistive technology', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/stat-tile');
+  // The trend example's tile, by its label, whatever the examples' order.
+  const tile = page
+    .locator('.stat-tile')
+    .filter({ has: page.locator('.stat-tile-label', { hasText: 'Net worth' }) });
+  await expect(tile).toHaveCount(1);
+  const sparkline = tile.locator('.sparkline');
+  await expect(sparkline).toHaveCount(1);
+  await expect(sparkline).toHaveAttribute('aria-hidden', 'true');
+  await expect(sparkline.locator('svg .sparkline-line')).toHaveCount(1);
+  await expect(sparkline.locator('.sparkline-end')).toBeVisible();
 });

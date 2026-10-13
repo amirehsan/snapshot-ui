@@ -7,17 +7,31 @@ import { expect, type Locator, type Page } from '@playwright/test';
 const content = (path: string): string =>
   readFileSync(fileURLToPath(new URL(`../content/docs/${path}`, import.meta.url)), 'utf8');
 
+/** A docs page of a section: its slug, the title it gives itself, and where it lives. */
+export interface SectionPage {
+  slug: string;
+  title: string;
+  url: string;
+}
+
 /**
- * The pages of the Components section in the rail's order: each one's slug, as the rail's list gives it,
- * and the title its page gives itself. Read from the content, so a page added to the rail is covered by
- * every test that loops over this list without anyone remembering to add it.
+ * The pages of one section of the rail, `components` or `charts`, in the rail's order: each one's slug, as
+ * the section's list gives it, the title its page gives itself, and its address. Read from the content, so a
+ * page added to the rail is covered by every test that loops over these lists without anyone remembering to
+ * add it.
  */
-export const COMPONENT_PAGES: { slug: string; title: string }[] = (
-  JSON.parse(content('components/meta.json')) as { pages: string[] }
-).pages.map((slug) => ({
-  slug,
-  title: /^title: (.+)$/m.exec(content(`components/${slug}.mdx`))?.[1] ?? slug,
-}));
+const pagesOf = (folder: 'components' | 'charts'): SectionPage[] =>
+  (JSON.parse(content(`${folder}/meta.json`)) as { pages: string[] }).pages.map((slug) => ({
+    slug,
+    title: /^title: (.+)$/m.exec(content(`${folder}/${slug}.mdx`))?.[1] ?? slug,
+    url: `/docs/${folder}/${slug}`,
+  }));
+
+/** The pages of the Components section, in the rail's order. */
+export const COMPONENT_PAGES: SectionPage[] = pagesOf('components');
+
+/** The pages of the Charts section, in the rail's order: the charts of `@snapshot-ui/charts`. */
+export const CHART_PAGES: SectionPage[] = pagesOf('charts');
 
 /** How far the page overflows the window sideways. Zero means it fits. */
 export const sideways = (page: Page): Promise<number> =>

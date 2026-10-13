@@ -65,6 +65,10 @@ Body text is set at weight 450, which only a variable font has. Load Sofia Sans 
 - [Tooltip](https://snapshotui.com/docs/components/tooltip)
 - [Typography](https://snapshotui.com/docs/components/typography)
 
+`styles.css` also draws the charts of `@snapshot-ui/charts`:
+
+- [Sparkline](https://snapshotui.com/docs/charts/sparkline)
+
 ## Links
 
 - [Documentation](https://snapshotui.com/docs)

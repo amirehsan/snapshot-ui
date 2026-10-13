@@ -3645,6 +3645,141 @@ describe('src/components/meter.css', () => {
   });
 });
 
+describe('src/components/charts.css, the shared rules and the sparkline', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/charts.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const SURFACE = 'var(--chart-surface, var(--color-lifted))';
+
+  /** Every rule block of `css` that holds no nested block, as [selector, body]. */
+  const blocks = (css) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => [m[1].trim(), m[2]]);
+
+  it('is imported right after meter.css', () => {
+    const imported = [...read('src/styles.css').matchAll(/@import '\.\/components\/([^']+)';/g)].map(
+      (m) => m[1],
+    );
+    expect(imported.indexOf('charts.css')).toBeGreaterThan(-1);
+    expect(imported.indexOf('charts.css')).toBe(imported.indexOf('meter.css') + 1);
+  });
+
+  it("sets the flip from the nearest dir attribute, as the card's chevron turn is", () => {
+    const css = rules();
+    expect(blockAfter(css, ":where([dir='ltr' i]) {")).toContain('--chart-flip: 1;');
+    expect(blockAfter(css, ":where([dir='rtl' i]) {")).toContain('--chart-flip: -1;');
+    // :dir() is past the browser floor.
+    expect(css).not.toContain(':dir(');
+  });
+
+  it('mirrors every chart svg by the flip and lets its strokes overflow the box', () => {
+    const svg = blockAfter(rules(), '.sparkline-plot svg {');
+    for (const declaration of [
+      'display: block;',
+      'width: 100%;',
+      'height: 100%;',
+      'overflow: visible;',
+      'scale: var(--chart-flip, 1) 1;',
+    ]) {
+      expect(svg, declaration).toContain(declaration);
+    }
+  });
+
+  it('keeps every stroke its width whatever the stretch', () => {
+    const stroked = blocks(rules()).filter(([, body]) => /(?<![\w-])stroke-width\s*:/.test(body));
+    expect(stroked.length).toBeGreaterThan(0);
+    for (const [selector, body] of stroked)
+      expect(body, selector).toContain('vector-effect: non-scaling-stroke;');
+  });
+
+  it('draws the sparkline 96 by 32 with its plot inset 6px', () => {
+    const css = rules();
+    const box = blockAfter(css, '.sparkline {');
+    for (const declaration of [
+      'position: relative;',
+      'display: inline-block;',
+      'box-sizing: border-box;',
+      'width: 6rem;',
+      'height: 2rem;',
+      'vertical-align: middle;',
+    ]) {
+      expect(box, declaration).toContain(declaration);
+    }
+    const plot = blockAfter(css, '.sparkline-plot {');
+    expect(plot).toContain('position: absolute;');
+    expect(plot).toContain('inset: 0.375rem;');
+  });
+
+  it('draws the line 2px ink with round caps and joins, and the area a 10% ink wash', () => {
+    const css = rules();
+    const line = blockAfter(css, '.sparkline-line {');
+    for (const declaration of [
+      'fill: none;',
+      'stroke: var(--color-ink);',
+      'stroke-width: 2px;',
+      'stroke-linecap: round;',
+      'stroke-linejoin: round;',
+      'vector-effect: non-scaling-stroke;',
+    ]) {
+      expect(line, declaration).toContain(declaration);
+    }
+    const area = blockAfter(css, '.sparkline-area {');
+    expect(area).toContain('fill: color-mix(in srgb, var(--color-ink) 10%, transparent);');
+    expect(area).toContain('stroke: none;');
+    for (const reserved of [
+      '--color-error',
+      '--color-success',
+      '--color-clay',
+      '--color-signal',
+      '--color-taupe',
+    ]) {
+      expect(css, reserved).not.toContain(reserved);
+    }
+  });
+
+  it('rings the end point with a 2px border of the surface, read with a fallback, never a shadow', () => {
+    const css = rules();
+    const dot = blockAfter(css, '.sparkline-end {');
+    for (const declaration of [
+      'position: absolute;',
+      // The ring is outside the 8px of ink, whatever box-sizing base.css gives every box.
+      'box-sizing: content-box;',
+      'width: 0.5rem;',
+      'height: 0.5rem;',
+      'margin-block-start: -0.375rem;',
+      'margin-inline-start: -0.375rem;',
+      `border: 2px solid ${SURFACE};`,
+      'border-radius: var(--radius-dot);',
+      'background-color: var(--color-ink);',
+    ]) {
+      expect(dot, declaration).toContain(declaration);
+    }
+    expect(css).not.toContain('box-shadow');
+    expect(css).not.toMatch(/--chart-surface\s*:/);
+    expect(css).not.toMatch(/(?<![\w-])z-index\s*:/);
+  });
+
+  it('writes no physical offset', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])(?:left|right)\s*:/);
+    expect(css).not.toMatch(/(?:margin|padding|border)-(?:left|right)\b/);
+  });
+
+  it('draws the line and the dot CanvasText and drops the wash in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.sparkline-line {')).toContain('stroke: CanvasText;');
+    expect(blockAfter(forced, '.sparkline-area {')).toContain('fill: none;');
+    const dot = blockAfter(forced, '.sparkline-end {');
+    expect(dot).toContain('border-color: canvas;');
+    expect(dot).toContain('background-color: CanvasText;');
+  });
+
+  it('moves nothing, so it needs no reduced-motion block', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])transition\s*:/);
+    expect(css).not.toMatch(/(?<![\w-])animation\s*:/);
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

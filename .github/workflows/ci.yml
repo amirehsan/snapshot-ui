@@ -70,6 +70,21 @@ jobs:
         run: pnpm verify
         env:
           PRIVATE_NAMES: ${{ secrets.PRIVATE_NAMES }}
+      # The release packs each package with pnpm, which writes every workspace: range as the version it
+      # names. A tarball that still holds one would install nowhere, so every publishable package is packed
+      # here as the release does, offline, and checked. The packages were built by pnpm verify above.
+      - name: Pack every publishable package as the release does
+        run: |
+          pnpm --filter "./packages/*" exec pnpm pack --pack-destination "$RUNNER_TEMP/packs"
+          count=0
+          for tarball in "$RUNNER_TEMP"/packs/*.tgz; do
+            count=$((count + 1))
+            if tar -xOzf "$tarball" package/package.json | grep -q '"workspace:'; then
+              echo "$tarball still holds a workspace: range" >&2
+              exit 1
+            fi
+          done
+          test "$count" -eq 3
       - name: Docs end-to-end
         run: pnpm --filter @snapshot-ui/docs test:e2e
       - name: Keep the built Storybook for the visual job

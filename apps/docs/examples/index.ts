@@ -66,6 +66,8 @@ import SidebarCollapsed from './sidebar-collapsed';
 import SidebarDrawer from './sidebar-drawer';
 import SidebarGroups from './sidebar-groups';
 import SidebarLongLabels from './sidebar-long-labels';
+import SparklineTile from './sparkline-tile';
+import SparklineVariants from './sparkline-variants';
 import SpinnerSizes from './spinner-sizes';
 import StatTileBasic from './stat-tile-basic';
 import StatTileLink from './stat-tile-link';
@@ -157,6 +159,8 @@ export const examples = {
   'sidebar-drawer': SidebarDrawer,
   'sidebar-groups': SidebarGroups,
   'sidebar-long-labels': SidebarLongLabels,
+  'sparkline-tile': SparklineTile,
+  'sparkline-variants': SparklineVariants,
   'spinner-sizes': SpinnerSizes,
   'stat-tile-basic': StatTileBasic,
   'stat-tile-link': StatTileLink,
