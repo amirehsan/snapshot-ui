@@ -724,7 +724,9 @@ export function HomePage(): ReactElement {
                 </Link>
                 <span className="chip">Toast</span>
                 <span className="chip">Tooltip</span>
-                <span className="chip">Menu</span>
+                <Link className="chip" href="/docs/components/menu">
+                  Menu
+                </Link>
                 <Link className="chip" href="/docs/components/drawer">
                   Drawer
                 </Link>
@@ -784,6 +786,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/icon-button">Icon button</Link>
                 <Link href="/docs/components/kbd">Kbd</Link>
                 <Link href="/docs/components/link">Link</Link>
+                <Link href="/docs/components/menu">Menu</Link>
                 <Link href="/docs/components/popover">Popover</Link>
                 <Link href="/docs/components/radio-group">Radio group</Link>
                 <Link href="/docs/components/segmented-control">Segmented control</Link>

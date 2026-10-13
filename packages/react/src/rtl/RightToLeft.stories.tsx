@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Settings, User } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
@@ -8,6 +9,7 @@ import { CollapsibleCard } from '../collapsible-card';
 import { DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { Link } from '../link';
+import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { Radio, RadioGroup } from '../radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
 import { firstLineOffset, lineCount } from '../stories/paint';
@@ -547,6 +549,63 @@ export const DrawerMirrored: Story = {
     await expectMirroredHeader(end);
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(body.queryByRole('dialog')).not.toBeInTheDocument());
+  },
+};
+
+/**
+ * A menu in right to left mirrors by DOM order and logical properties: the icon leads at the right of the
+ * row, the label follows to its left, and the key chip and the check trail at the left end.
+ */
+export const MenuMirrored: Story = {
+  // A row is named by its label and described by its key, so axe's label-in-name check is skipped on menu
+  // rows, as in the menu's own stories, which say why.
+  parameters: {
+    a11y: { config: { rules: [{ id: 'label-content-name-mismatch', selector: '*:not(.menu-item)' }] } },
+  },
+  render: () => (
+    <Rtl>
+      <MenuTrigger defaultOpen>
+        <Button variant="secondary">الحساب</Button>
+        <Menu>
+          <MenuSection title="المظهر" selectionMode="single" defaultSelectedKeys={['light']}>
+            <MenuItem id="light" icon={<User />}>
+              فاتح
+            </MenuItem>
+            <MenuItem id="dark" icon={<User />}>
+              داكن
+            </MenuItem>
+          </MenuSection>
+          <MenuItem id="settings" icon={<Settings />} shortcut="Q">
+            الإعدادات
+          </MenuItem>
+        </Menu>
+      </MenuTrigger>
+    </Rtl>
+  ),
+  play: async () => {
+    const popover = await waitFor(async () => {
+      const found = find(document, '.menu-popover');
+      await expect(found).not.toHaveAttribute('data-entering');
+      return found;
+    });
+    await expect(popover).toHaveAttribute('dir', 'rtl');
+    const body = within(document.body);
+    for (const name of ['فاتح', 'داكن']) {
+      const row = body.getByRole('menuitemradio', { name });
+      const icon = rect(find(row, '.menu-item-icon'));
+      const label = rect(find(row, '.menu-item-label'));
+      const check = rect(find(row, '.menu-item-check'));
+      await expect(icon.left).toBeGreaterThanOrEqual(label.right - 0.5);
+      await expect(check.right).toBeLessThanOrEqual(label.left + 0.5);
+    }
+    const settings = body.getByRole('menuitem', { name: 'الإعدادات' });
+    const icon = rect(find(settings, '.menu-item-icon'));
+    const label = rect(find(settings, '.menu-item-label'));
+    const key = rect(find(settings, '.menu-item-shortcut'));
+    await expect(icon.left).toBeGreaterThanOrEqual(label.right - 0.5);
+    await expect(key.right).toBeLessThanOrEqual(label.left + 0.5);
+    // The icon sits at the row's right edge, inside its 12px of padding.
+    await expectSameEdge(rect(settings).right - icon.right, 12);
   },
 };
 

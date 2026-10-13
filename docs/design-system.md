@@ -3735,3 +3735,135 @@ slate on Float, pairs the contrast gate already holds. The frame is a cue that
 the gate does not hold, by the reasoning above: its numbers are recorded there
 as information, since the gate holds only minimums and every one of them would
 fail a 3:1 the frame is not asked to meet.
+
+## Menu
+
+The app's popups, the account menu and the three field popups, share their
+rows: the float fill, 24px corners, 8px of padding, 4px between rows, 40px
+rows, a selected row as an ink pill with a check, a group label in the eyebrow
+style, and a rule between groups. `Menu` keeps all of it, in the `Popover`
+chrome ("Popover"), and draws the rows the listbox of the choice controls will
+inherit: `menu.css` is where a list popup's row is derived, once. It is React
+Aria's `Menu`, a true `role="menu"`. The app's account menu rejected the role
+because it had no arrow keys behind it and said so; React Aria supplies them,
+so the library takes the role, and focus now goes into the menu.
+
+**The popup.** It is the popover's surface with one rule of its own:
+`min-width: max(var(--trigger-width), 12rem)`. The app's two popups measure
+14.5rem and 15rem; 12rem is the floor under both, and a trigger wider than it
+wins, so a menu never sits narrower than its button. The list pads itself 8px
+(`--spacing-part`) and puts 4px between rows, the app's list gap, kept because
+two washed rows side by side need a seam. React Aria writes the popover's
+height cap inline, the room left under or over the trigger. The popover is a
+flex column and the list fills it, `flex: 1 1 auto; min-height: 0` with
+`box-sizing: border-box`, so under the cap the list shrinks to the room inside
+the popover's 1px frame and scrolls, and the popover does not: one scroller.
+The list's first rule, `max-height: inherit`, gave it the whole cap, 2px more
+than that room with `base.css` and 18px more without it, so a long menu
+scrolled inside the list and the popover scrolled the rest, with a second
+scrollbar where scrollbars are drawn.
+
+**The rows.**
+
+| Part | Value | Why |
+| --- | --- | --- |
+| Row | `display: flex; align-items: center; gap: 0.75rem; min-height: 40px; padding: 0.5rem 0.75rem; border-radius: var(--radius-control); cursor: pointer` | the touch floor; the app's 12px gap and inline padding; the nested-radii table gives a 24px popup's options the next step, 20px, which is the control step, so a row descends in Soft and Square with the popup (a pill would not) |
+| Coarse pointer | `min-height: 44px` under `@media (pointer: coarse)` | the consumer's 44px on touch |
+| Label | `--text-action` (16px, 500, -3%), ink, `overflow-wrap: anywhere` | a menu item is an action |
+| Description | `--text-small`, slate, under the label | hints are slate: 5.49 light and 6.94 dark on float, both gated |
+| Icon | 16px, `flex: none`, slate at rest and ink on the focused row | an icon is a hint until its row is the one in hand |
+| Shortcut | drawn as a key: 12px, weight 700, overline tracking, tabular figures, `--radius-micro`, `--color-bone` fill, slate; `margin-inline-start: auto` | the one key look, Kbd's; at the row's end in either direction |
+| Check | Lucide's `Check`, 16px, `flex: none`, at the inline end; every row of a selectable menu or section keeps its room (`visibility: hidden`) and a selected row shows it | the width never changes as the choice moves, and color is never the only sign of a choice |
+| Hover and focus (`[data-hovered]`, `[data-focused]`) | the 5% ink wash, `color-mix(in srgb, var(--color-ink) 5%, transparent)` | the wash rule; hover only inside `@media (hover: hover)` |
+| Keyboard focus (`[data-focus-visible]`) | the ring, inset: `outline-offset: calc(-1 * var(--focus-ring-width))` | a scrolling list clips an outset ring |
+| Selected, single | the ink fill; label, icon and check in canvas; the description canvas at 70%; the key chip canvas at 20% with canvas text; the inset ring inverts to canvas | the inversion rule of "Rules every component follows" |
+| Selected, multiple | the check alone, no fill | five rows filled with ink would shout and hide the wash under the pointer |
+| Disabled | taupe label, icon, description and key; no wash; `cursor: not-allowed` | the disabled idiom; the arrows pass it by |
+| Danger | label and icon in `--color-error`, no fill, focused or not | Button already gives error to destructive actions |
+| Section heading | `--text-overline` (14px, 700, +4%, uppercase), slate, `padding: 0.5rem 0.75rem 0.25rem` | the app's group label in the eyebrow style, without its dot |
+| Separator | `height: 1px; background-color: var(--color-divider); margin-block: 0.25rem` | a rule inside a surface |
+| Forced colors | a selected row in `Highlight` with `HighlightText`, a disabled one in `GrayText`; the ring stays | a fill alone does not survive the repaint |
+
+The danger icon needs a rule of its own: the focused row turns its icon ink at
+a higher specificity than the danger class, so a second selector names the
+focused danger row's icon again, and the row stays red as the pointer or the
+keyboard lands on it. The forced-colors row is the same kind of rule: it names
+the selection mode, so it is as specific as the single row's ink fill and
+comes after it. With the plainer selector the ink fill won, and the repaint
+turned it into the page's own background, so the chosen row looked like the
+rest; a docs test reads it in `Highlight`.
+
+**One state for the pointer and the keyboard.** In a React Aria menu, hover
+moves focus to the item under the pointer, so `[data-focused]` is set under the
+pointer as well as under the keyboard and carries the wash for both, touch
+included. The ring keys on `[data-focus-visible]` alone, which only the
+keyboard sets, so a row under the pointer is washed and never ringed.
+
+**Measured on the wash and on the pill.** The wash is a mix and not a token,
+so its pairs cannot join the gate. They are measured with the gate's own
+composite in both themes and pinned in `contrast.test.js`:
+
+| Pair | Light | Dark |
+| --- | --- | --- |
+| Ink over the wash on float | 16.65 | 15.25 |
+| Slate over the wash on float | 4.96 | 6.41 |
+| Error over the wash on float | 6.74 | 5.02 |
+| The description, canvas at 70% over ink, against ink | 8.34 | 7.31 |
+| The key, canvas on canvas at 20% over ink | 9.13 | 12.37 |
+| The wash against float | 1.11 | 1.14 |
+
+Slate in dark is white at 60%, so it is painted over the wash before it is
+measured, as a reader sees it; painted over float alone it would read 6.07.
+The wash against float is a cue and not a boundary: the ring carries keyboard
+focus and the row's own text carries the item. The pairs the rows rest on are
+gated already: ink, slate and error on float, and canvas on ink.
+
+**Choosing.** `selectionMode="single"` makes the items `menuitemradio`, and
+`multiple` makes them `menuitemcheckbox`, on the menu or on one section, which
+then chooses apart from the rest. A choice in single mode closes the menu, the
+app's rule: a menu that stays open after a choice makes the reader wonder
+whether it registered. A choice in multiple mode leaves it open for the next.
+React Aria's own default closes on a press unless the selection is multiple,
+on Enter always, and on Space only when nothing is chosen, so the library sets
+`shouldCloseOnSelect` itself: true unless the mode is multiple, on the menu
+from its mode and on a section from the section's mode, which reaches every
+item through React Aria's item context. A section with no mode of its own
+takes the menu's. The caller's value on the menu or the section, and an item's
+own, still win.
+
+**The keys.** All React Aria's, with one default changed: React Aria's menu
+wraps from the last item to the first, and the library's stops at both ends,
+so the first and the last item are felt as ends: `shouldFocusWrap` is false
+unless the caller asks, as the command palette does. A
+menu opened from the keyboard focuses its first item, or its last with Arrow
+Up; one opened with a pointer focuses the list itself, so no row looks chosen
+until one is hovered, or the chosen row when the menu itself selects. React
+Aria makes the menu's popover a dialog that holds focus, so Tab stays on the
+row; Escape, a choice and a press outside close the menu, and focus goes back
+to the trigger.
+
+**Names.** A row is named by its label and described by its second line and
+its key, through the ids React Aria gives the three: a screen reader hears
+"Settings", then "Account and billing, Command comma", and a voice user says
+the label. Axe's label-in-name check, on in this library's tests, asks for
+every word a row shows in its name, the description and the key included. WCAG
+2.5.3 asks it of the label, and the name here is the label, so the menu's
+stories skip that one check on menu rows alone, and every other rule, and that
+one everywhere else, still runs. A row named by everything it shows would make
+a screen reader read the second line as part of the name, with no pause.
+
+**Links.** An item with `href` is an anchor with `role="menuitem"`, so a
+modified or middle click opens it as the browser would, and a plain press
+navigates through React Aria's `RouterProvider`, which Link already uses. There
+is no `linkComponent` prop: the item's inherited `render` prop draws a
+router's own link where an app wants one, such as Next's for its prefetch on
+view. The docs show the Next App Router wiring once, on the Link and Menu
+pages.
+
+**Scope and direction.** The popover's ("Popover"): the theme, shape and
+density of the trigger React Aria hands it, and `dir` from the locale. Right to
+left needs nothing of its own: the icon leads and the check trails by DOM
+order, and `margin-inline-start: auto` puts the key at the inline end.
+
+**Nothing animates inside a menu.** The popover fades and slides in; the rows
+do not move, so `menu.css` has no reduced-motion block.

@@ -1,9 +1,11 @@
 import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
+import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
+import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Sheet } from '../src/sheet';
@@ -85,6 +87,9 @@ const OVERLAY_PARTS = [
   '.drawer-footer',
   '.sheet-description',
   '.sheet-footer',
+  '.menu-item-icon',
+  '.menu-item-description',
+  '.menu-item-shortcut',
 ].join(', ');
 
 /**
@@ -111,6 +116,18 @@ const EMPTY_OVERLAYS: [name: string, element: ReactElement][] = [
     <Sheet isOpen title="More" description="" footer={false}>
       {''}
     </Sheet>,
+  ],
+  [
+    // The label is always drawn, since it names the item; the icon, the description and the key only when given.
+    'MenuItem',
+    <MenuTrigger isOpen>
+      <Button>More</Button>
+      <Menu>
+        <MenuItem id="a" icon={false} description="" shortcut="">
+          Settings
+        </MenuItem>
+      </Menu>
+    </MenuTrigger>,
   ],
 ];
 

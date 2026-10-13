@@ -242,6 +242,29 @@ test.describe('forced colors', () => {
     expect((await paint(page.locator('.dialog-title'))).text).toBe(text);
   });
 
+  test('a selected menu row is drawn in Highlight', async ({ page }) => {
+    // The ink pill is a fill, which the repaint would drop with nothing left to say which row is chosen
+    // but the check. The selected row is drawn in the reader's Highlight, with HighlightText on it.
+    await visit(page, '/docs/components/menu');
+    const system = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = 'Highlight';
+      probe.style.color = 'HighlightText';
+      document.body.append(probe);
+      const { backgroundColor, color } = getComputedStyle(probe);
+      probe.remove();
+      return { fill: backgroundColor, text: color };
+    });
+    await page.getByRole('button', { name: 'View options' }).click();
+    const selected = page.getByRole('menuitemradio', { name: 'System' });
+    await expect(selected).toHaveAttribute('aria-checked', 'true');
+    const look = await paint(selected);
+    expect(look.fill).toBe(system.fill);
+    expect(look.text).toBe(system.text);
+    const other = await paint(page.getByRole('menuitemradio', { name: 'Light' }));
+    expect(other.fill).not.toBe(system.fill);
+  });
+
   test('a sheet keeps its edge and its grabber', async ({ page }) => {
     // The hairline is transparent in light and the grabber is a fill, which the repaint would drop: both are
     // drawn in the reader's text color, so the sheet keeps its shape and its handle on the scrim.
@@ -335,6 +358,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   drawer: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   'icon-button': 'a glyph and no text: its name is an aria-label that nothing draws',
+  menu: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   popover: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   sheet: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   spinner: 'a progress mark with no text a person writes',
@@ -426,6 +450,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'icon-button': ['.stage .icon-button'],
   kbd: ['.stage .kbd'],
   link: ['.stage .link'],
+  menu: ['.stage .button, .stage .icon-button'],
   popover: ['.stage .button'],
   'radio-group': ['.stage .radio-indicator'],
   'segmented-control': ['.stage .segmented-option'],

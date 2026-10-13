@@ -214,6 +214,77 @@ describe('the sheet', () => {
   });
 });
 
+describe('the menu', () => {
+  // The rows sit on the float popup: a label in ink, a description and a resting icon in slate, a danger label
+  // and icon in error. A selected row in single mode is the ink pill with canvas on it. All five are gated.
+  it('cites ink, slate and error on float, and canvas on ink, which the gate already holds at the text minimum', () => {
+    for (const [text, ground] of [
+      ['ink', 'float'],
+      ['slate', 'float'],
+      ['error', 'float'],
+      ['canvas', 'ink'],
+    ]) {
+      expect(CONTRAST_PAIRS).toContainEqual(expect.objectContaining({ text, ground, minimum: TEXT }));
+    }
+  });
+
+  /** A color painted over the 5% ink wash on float, measured against the wash. */
+  const onWash = (mode, name) => {
+    const palette = paletteFor(tokens, mode);
+    const float = parseColor(palette.float);
+    const wash = composite({ ...parseColor(palette.ink), a: 0.05 }, float);
+    return contrastRatio(composite(parseColor(palette[name]), wash), wash);
+  };
+
+  // The focused row is the wash, a mix and not a token, so its pairs cannot join the gate. They are measured
+  // here and recorded in the design record. Each stays above the text minimum.
+  it('measures ink, slate and error over the 5% ink wash on float, recorded and not gated', () => {
+    for (const { name, light, dark } of [
+      { name: 'ink', light: 16.65, dark: 15.25 },
+      { name: 'slate', light: 4.96, dark: 6.41 },
+      { name: 'error', light: 6.74, dark: 5.02 },
+    ]) {
+      expect(onWash('light', name), `${name} light`).toBeCloseTo(light, 2);
+      expect(onWash('dark', name), `${name} dark`).toBeCloseTo(dark, 2);
+      for (const mode of ['light', 'dark'])
+        expect(onWash(mode, name), `${name} ${mode}`).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+
+  // On the ink pill the description is canvas at 70%, and the key chip is canvas at 20% with canvas text.
+  it('measures the description and the key chip on the selected ink row, recorded and not gated', () => {
+    const measured = (mode) => {
+      const palette = paletteFor(tokens, mode);
+      const ink = parseColor(palette.ink);
+      const canvas = parseColor(palette.canvas);
+      const description = contrastRatio(composite({ ...canvas, a: 0.7 }, ink), ink);
+      const chip = contrastRatio(canvas, composite({ ...canvas, a: 0.2 }, ink));
+      return { description, chip };
+    };
+    expect(measured('light').description).toBeCloseTo(8.34, 2);
+    expect(measured('dark').description).toBeCloseTo(7.31, 2);
+    expect(measured('light').chip).toBeCloseTo(9.13, 2);
+    expect(measured('dark').chip).toBeCloseTo(12.37, 2);
+    for (const mode of ['light', 'dark']) {
+      expect(measured(mode).description, mode).toBeGreaterThanOrEqual(TEXT);
+      expect(measured(mode).chip, mode).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+
+  // The wash against the float it sits on is a cue that a row is under the pointer or the keyboard, not a
+  // boundary: the ring carries keyboard focus, and the row's text carries the item.
+  it('measures the wash against float below the 3:1 of a boundary, a cue and not a boundary', () => {
+    const measured = (mode) => {
+      const palette = paletteFor(tokens, mode);
+      const float = parseColor(palette.float);
+      return contrastRatio(composite({ ...parseColor(palette.ink), a: 0.05 }, float), float);
+    };
+    expect(measured('light')).toBeCloseTo(1.11, 2);
+    expect(measured('dark')).toBeCloseTo(1.14, 2);
+    for (const mode of ['light', 'dark']) expect(measured(mode), mode).toBeLessThan(NON_TEXT);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 
