@@ -96,16 +96,19 @@ export const Default: Story = {
 
 /**
  * Pending from outside: the spinner in the confirm button with its label kept, Cancel disabled, and Escape
- * leaving it open.
+ * leaving it open. The safe answer cannot take focus, so the alert dialog itself does: its title and
+ * description are read, and Tab reaches the pending button.
  */
 export const Pending: Story = {
-  args: { isPending: true },
+  args: { isPending: true, pendingLabel: 'Deleting' },
   render: (args) => <Opened {...args} />,
   play: async ({ userEvent }) => {
     const body = within(document.body);
     const confirm = body.getByRole('button', { name: /Delete 3 transactions/ });
     await expect(confirm).toHaveAttribute('data-pending', 'true');
+    await expect(confirm).toHaveAccessibleName('Delete 3 transactions Deleting');
     await expect(body.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    await waitFor(() => expect(body.getByRole('alertdialog')).toHaveFocus());
     await userEvent.keyboard('{Escape}');
     await expect(body.getByRole('alertdialog')).toBeInTheDocument();
   },
@@ -257,6 +260,75 @@ function Transactions(): ReactElement {
     </>
   );
 }
+
+/** The second question of a run, which loses nothing. */
+const FOLLOW_UP = {
+  title: 'Tell the bookkeeper?',
+  description: 'They get an email saying the transactions were removed.',
+  confirmLabel: 'Send the email',
+  tone: 'default',
+} as const;
+
+/** A button in a dark scope that asks, and when the answer is yes, chains a second question. */
+function ChainedQuestions(props: ConfirmDialogProps): ReactElement {
+  const { confirm, dialog } = useConfirm();
+  const ask = async (): Promise<void> => {
+    if (await confirm(props)) await confirm(FOLLOW_UP);
+  };
+  return (
+    <div data-theme="dark" style={{ padding: 24, background: 'var(--color-canvas)' }}>
+      <Button
+        variant="danger"
+        onPress={() => {
+          void ask();
+        }}
+      >
+        Delete
+      </Button>
+      {dialog}
+    </div>
+  );
+}
+
+/**
+ * A run of two questions from code, the second chained after the first is confirmed: it opens in the dark
+ * scope of the trigger and starts on its own answer. When it is answered, the panel and the scrim play their
+ * exit before they leave, and focus goes back to the trigger.
+ */
+export const HookChain: Story = {
+  tags: ['no-visual'],
+  render: (args) => <ChainedQuestions {...args} />,
+  play: async ({ canvas, userEvent }) => {
+    const body = within(document.body);
+    const trigger = canvas.getByRole('button', { name: 'Delete' });
+    await userEvent.click(trigger);
+    const first = await body.findByRole('alertdialog', { name: 'Delete these transactions?' });
+    // Answer once the panel has come in, as a person does, so the first one's exit is still playing when the
+    // second is asked: the overlay stays, and only the question in it changes.
+    await atRest();
+    await userEvent.click(within(first).getByRole('button', { name: 'Delete 3 transactions' }));
+    const second = await body.findByRole('alertdialog', { name: 'Tell the bookkeeper?' });
+    await waitFor(() => expect(within(second).getByRole('button', { name: 'Send the email' })).toHaveFocus());
+    const panel = await atRest();
+    await expect(panel).toHaveAttribute('data-theme', 'dark');
+
+    // Watch the overlay leave: each part must be drawn exiting before it goes.
+    const exiting = new Set<string>();
+    const watch = new MutationObserver(() => {
+      if (document.querySelector('.dialog[data-exiting]')) exiting.add('panel');
+      if (document.querySelector('.dialog-overlay[data-exiting]')) exiting.add('scrim');
+    });
+    watch.observe(document.body, { subtree: true, childList: true, attributes: true });
+    try {
+      await userEvent.click(within(second).getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => expect(document.querySelector('.dialog-overlay')).toBeNull());
+    } finally {
+      watch.disconnect();
+    }
+    await expect([...exiting].sort()).toEqual(['panel', 'scrim']);
+    await waitFor(() => expect(trigger).toHaveFocus());
+  },
+};
 
 /**
  * Asking from code: Cancel keeps the row and focus goes back to its button; the confirm removes it and the

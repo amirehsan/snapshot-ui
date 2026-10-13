@@ -1,7 +1,16 @@
 'use client';
 
 import { TriangleAlert } from 'lucide-react';
-import { useContext, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type Key,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { OverlayTriggerStateContext } from 'react-aria-components';
 import { Button } from '../button/Button';
 import { present } from '../utils/present';
@@ -9,7 +18,7 @@ import { BaseDialog, type DialogInternalProps, type DialogProps } from './Dialog
 
 export interface ConfirmDialogProps extends Omit<
   DialogProps,
-  'actions' | 'children' | 'hasCloseButton' | 'closeLabel' | 'description'
+  'actions' | 'children' | 'hasCloseButton' | 'closeLabel' | 'description' | 'onOpenChange'
 > {
   /** What the question does, under the title. Required: an alert dialog is described by it. */
   description: ReactNode;
@@ -39,6 +48,31 @@ export interface ConfirmDialogProps extends Omit<
    * Escape and the scrim are ignored, so a half-finished action cannot be abandoned.
    */
   isPending?: boolean;
+  /**
+   * The accessible name of the spinner in the pending confirm button, read with its label. Name the work in
+   * progress with the outcome's verb, such as "Deleting".
+   * @default 'Loading'
+   */
+  pendingLabel?: string;
+  /**
+   * Called when the dialog opens or closes, for one controlled by `isOpen` or started by `defaultOpen`.
+   * Inside a `DialogTrigger` the trigger owns the open state and this is not called: put `onOpenChange` on
+   * the trigger.
+   */
+  onOpenChange?: (isOpen: boolean) => void;
+}
+
+/**
+ * ConfirmDialog's props with the two `useConfirm` sets: a key for each question's content, and a call when
+ * the panel leaves the page.
+ *
+ * Internal: not exported from the package.
+ */
+export interface ConfirmDialogInternalProps extends ConfirmDialogProps {
+  /** A new key mounts the question's content again, inside the panel that stays. */
+  contentKey?: Key;
+  /** Called when the panel has left the page, after its exit. */
+  onUnmount?: () => void;
 }
 
 /** Whether a value is a promise, or anything else with a `then`, such as a promise from another frame. */
@@ -62,6 +96,10 @@ function report(error: unknown): void {
 /** What a settled confirm calls once the dialog has left the page: nothing. */
 const ignore = (): void => undefined;
 
+/** Each misuse is reported once per page, so a list of confirm dialogs does not flood the console. */
+let warnedTone = false;
+let warnedOpenChange = false;
+
 /**
  * An alert dialog that asks one question. Cancel comes first, then the confirm button, which names the
  * outcome. Only the confirm button is a yes: Escape, a press on the scrim and Cancel each call `onCancel`. A
@@ -69,23 +107,33 @@ const ignore = (): void => undefined;
  * `DialogTrigger`, or from `isOpen` or `defaultOpen`.
  */
 export function ConfirmDialog(props: ConfirmDialogProps): ReactElement {
-  const {
-    description,
-    confirmLabel,
-    cancelLabel = 'Cancel',
-    tone,
-    icon,
-    onConfirm,
-    onCancel,
-    isPending: isPendingOutside = false,
-    isDismissable = true,
-    isKeyboardDismissDisabled = false,
-    isOpen,
-    defaultOpen,
-    onOpenChange,
-    ...dialogProps
-  } = props;
+  return <BaseConfirmDialog {...props} />;
+}
 
+/**
+ * ConfirmDialog, with the props `useConfirm` sets as well. ConfirmDialog is this without them.
+ *
+ * Internal: not exported from the package.
+ */
+export function BaseConfirmDialog({
+  description,
+  confirmLabel,
+  cancelLabel = 'Cancel',
+  tone,
+  icon,
+  onConfirm,
+  onCancel,
+  isPending: isPendingOutside = false,
+  pendingLabel,
+  isDismissable = true,
+  isKeyboardDismissDisabled = false,
+  isOpen,
+  defaultOpen,
+  onOpenChange,
+  contentKey,
+  onUnmount,
+  ...dialogProps
+}: ConfirmDialogInternalProps): ReactElement {
   // The open state is resolved here and handed to Dialog controlled, so every way out, React Aria's and the
   // two buttons', reaches `setShown`. React Aria's rule decides whose it is: a modal given neither `isOpen`
   // nor `defaultOpen` follows the DialogTrigger around it.
@@ -94,9 +142,17 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactElement {
   const [isOpenHere, setOpenHere] = useState(defaultOpen ?? false);
   const isShown = owner ? owner.isOpen : (isOpen ?? isOpenHere);
 
-  // True while a promise from `onConfirm` is running.
-  const [isWaiting, setWaiting] = useState(false);
-  const isPending = isPendingOutside || isWaiting;
+  // The press whose promise from `onConfirm` is running, or null. Each press makes a new one, so the end of
+  // a run can tell whether it is still the dialog's.
+  const [run, setRun] = useState<object | null>(null);
+  // A dialog that closes drops the run still going: reopened, it is not pending, and that run's end can
+  // neither close it nor tell anyone.
+  const [wasShown, setWasShown] = useState(isShown);
+  if (wasShown !== isShown) {
+    setWasShown(isShown);
+    if (!isShown) setRun(null);
+  }
+  const isPending = isPendingOutside || run !== null;
 
   // Set just before the confirm closes the dialog, and read and reset by the close, so a confirm is never
   // taken for a cancel.
@@ -116,15 +172,34 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactElement {
     onOpenChange?.(next);
   };
 
-  // The latest `setShown`, for a confirm that settles after a render, and nothing once the dialog has left
-  // the page, so a late promise tells no one.
+  // The latest `setShown` and run, for a confirm that settles after a render. Once the dialog has left the
+  // page, `setShown` is nothing, so a late promise tells no one.
   const latest = useRef(setShown);
+  const currentRun = useRef(run);
   useLayoutEffect(() => {
     latest.current = setShown;
+    currentRun.current = run;
     return () => {
       latest.current = ignore;
     };
   });
+
+  useEffect(() => {
+    // The type requires the tone; this catches a caller the type cannot see, such as plain JavaScript.
+    const given: unknown = tone;
+    if (given !== 'default' && given !== 'danger' && !warnedTone) {
+      warnedTone = true;
+      console.warn(
+        `ConfirmDialog: tone must be 'default' or 'danger', and it was ${String(given)}. A question that loses something is drawn as a harmless one until it is set.`,
+      );
+    }
+    if (owner && onOpenChange && !warnedOpenChange) {
+      warnedOpenChange = true;
+      console.warn(
+        'ConfirmDialog: inside a DialogTrigger the trigger owns the open state, so onOpenChange on the dialog is not called. Put it on the DialogTrigger.',
+      );
+    }
+  }, [tone, owner, onOpenChange]);
 
   const closeConfirmed = (): void => {
     confirmed.current = true;
@@ -137,14 +212,16 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactElement {
       closeConfirmed();
       return;
     }
-    setWaiting(true);
+    const token = {};
+    setRun(token);
     result.then(
       () => {
-        setWaiting(false);
+        if (currentRun.current !== token) return;
+        setRun(null);
         closeConfirmed();
       },
       (error: unknown) => {
-        setWaiting(false);
+        if (currentRun.current === token) setRun(null);
         report(error);
       },
     );
@@ -161,6 +238,8 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactElement {
     onOpenChange: setShown,
     isDismissable: isDismissable && !isPending,
     isKeyboardDismissDisabled: isKeyboardDismissDisabled || isPending,
+    contentKey,
+    onUnmount,
     actions: (
       <>
         <Button
@@ -178,7 +257,11 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactElement {
           variant={isDanger ? 'danger' : 'primary'}
           // eslint-disable-next-line jsx-a11y/no-autofocus -- initial focus inside a modal is the dialog pattern: a question that loses nothing starts on its answer
           autoFocus={!isDanger}
+          // The label, as a name React Aria can extend: it joins the spinner's name to a pending button's
+          // only when the button is named by an attribute, so pending reads "Delete 3 transactions Deleting".
+          aria-label={confirmLabel}
           isPending={isPending}
+          pendingLabel={pendingLabel}
           onPress={confirm}
         >
           {confirmLabel}
