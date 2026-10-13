@@ -1639,7 +1639,8 @@ test('the tooltip page shows a tip on hover after a pause and at once on focus',
   // Moving away closes it.
   await page.mouse.move(0, 0);
   await expect(tip).toHaveCount(0);
-  // Focus on Edit by a script is not a key, so Tab onwards: the next button's tip is there as the key lands.
+  // React Aria counts a script's focus as visible too, so Edit's tip may open here. The key is what is under
+  // test, so Tab onwards: the next button's tip is there as the key lands.
   await edit.focus();
   await page.keyboard.press('Tab');
   const duplicate = page.getByRole('button', { name: 'Duplicate', exact: true });
@@ -1648,4 +1649,12 @@ test('the tooltip page shows a tip on hover after a pause and at once on focus',
   await page.keyboard.press('Escape');
   await expect(tip).toHaveCount(0);
   await expect(duplicate).toBeFocused();
+  // A link is a trigger too, as a navigation rail's items are: past Share, Help is a link, and Tab shows its tip.
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  const help = page.getByRole('link', { name: 'Help', exact: true });
+  await expect(help).toBeFocused();
+  const helpTip = page.getByRole('tooltip', { name: 'Help' });
+  expect(await helpTip.count()).toBe(1);
+  await expect(help).toHaveAttribute('aria-describedby', (await helpTip.getAttribute('id')) ?? '');
 });
