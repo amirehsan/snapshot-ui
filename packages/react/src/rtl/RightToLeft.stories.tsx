@@ -136,13 +136,23 @@ export const TextAreaMirrored: Story = {
 
 /**
  * The box is at the right end of its row with the words to its left, and the
- * hint is indented past the box on the right, which is the start side.
+ * hint is indented past the box on the right, which is the start side. A changed
+ * checkbox has its chip to the left of the row, level with the first line of the
+ * label, whether the label wraps or not.
  */
 export const CheckboxMirrored: Story = {
   render: () => (
     <Rtl>
       <Checkbox defaultSelected description="رسالة قصيرة كل أسبوع.">
         أرسل لي ملخصًا أسبوعيًا
+      </Checkbox>
+      <Checkbox isChanged>
+        أرسل لي ملخصًا قصيرًا بكل تعليق كتبه فريقي على مشاركاتي، مرة كل أسبوع، صباح يوم الثلاثاء
+      </Checkbox>
+      <Checkbox isChanged>
+        الملخص
+        <br />
+        الأسبوعي
       </Checkbox>
     </Rtl>
   ),
@@ -158,6 +168,25 @@ export const CheckboxMirrored: Story = {
     await expectInside(text, root);
     await expect(getComputedStyle(hint).paddingRight).toBe('32px');
     await expect(getComputedStyle(hint).paddingLeft).toBe('0px');
+    // The changed checkbox with a label that wraps, and the one with a line break.
+    const [, wrapped, beside] = [...canvasElement.querySelectorAll<HTMLElement>('.checkbox-field')];
+    if (!wrapped || !beside) throw new Error('Three checkboxes expected');
+    await expect(lineCount(find(wrapped, '.checkbox-text'))).toBeGreaterThan(1);
+    for (const field of [wrapped, beside]) {
+      await expect(
+        Math.abs(firstLineOffset(find(field, '.checkbox-box'), find(field, '.checkbox-text'))),
+      ).toBeLessThanOrEqual(1);
+    }
+    // The chip is to the left of the row, inside the field, level with the line of the label it follows.
+    const chipElement = find(beside, '.field-changed');
+    const chip = rect(chipElement);
+    await expect(Math.abs(firstLineOffset(chipElement, find(beside, '.checkbox-text')))).toBeLessThanOrEqual(
+      1,
+    );
+    await expect(chip.right).toBeLessThanOrEqual(rect(find(beside, '.checkbox')).left + 0.5);
+    await expectInside(chip, rect(beside));
+    // The dot is at the chip's start, which is its right.
+    await expect(getComputedStyle(chipElement, '::before').right).toBe('0px');
   },
 };
 

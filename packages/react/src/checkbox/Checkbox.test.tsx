@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { formOf, root } from '../../test/dom';
 import { Checkbox, type CheckboxProps } from './Checkbox';
+import { CheckboxGroup } from './CheckboxGroup';
 
 /** A checkbox the caller controls, the way a form library would. */
 function Controlled(props: CheckboxProps): ReactElement {
@@ -222,7 +223,7 @@ describe('Checkbox', () => {
     // The hint is not part of the label, so the name stays the label's own text.
     expect(hint.closest('label')).toBeNull();
     expect([...root(container).children].map((child) => child.classList[0])).toEqual([
-      'checkbox',
+      'field-head',
       'field-description',
     ]);
     await expectNoA11yViolations(container);
@@ -356,6 +357,193 @@ describe('Checkbox', () => {
     expect(text?.querySelector('a')).toHaveAttribute('href', '/terms');
   });
 
+  it('shows the changed chip beside the label, and a screen reader reads it with the checkbox', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <Checkbox isChanged description="Off hides the copy under each card.">
+        Show descriptions
+      </Checkbox>,
+    );
+    expect(root(container)).toHaveAttribute('data-changed', '');
+    const chip = screen.getByText('Changed');
+    expect(chip).toHaveClass('field-changed');
+    const input = screen.getByRole('checkbox', { name: 'Show descriptions' });
+    // The chip is beside the row in the label row, not inside the label: it is no part of the name
+    // and a press on it does not toggle the box.
+    expect(chip.parentElement).toHaveClass('field-head');
+    expect(chip.parentElement).toContainElement(input.closest('label'));
+    expect(chip.closest('label')).toBeNull();
+    expect(input.getAttribute('aria-describedby')?.split(' ')).toContain(chip.id);
+    expect(input).toHaveAccessibleDescription('Off hides the copy under each card. Changed');
+    await user.click(chip);
+    expect(input).not.toBeChecked();
+    await expectNoA11yViolations(container);
+  });
+
+  it('takes the chip text from changedLabel', () => {
+    render(
+      <Checkbox isChanged changedLabel="Unsaved">
+        Show descriptions
+      </Checkbox>,
+    );
+    expect(screen.getByText('Unsaved')).toHaveClass('field-changed');
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox')).toHaveAccessibleDescription('Unsaved');
+  });
+
+  it('shows no chip and reads none while the checkbox is not changed', () => {
+    const { container } = render(
+      <Checkbox description="Off hides the copy under each card.">Show descriptions</Checkbox>,
+    );
+    expect(root(container)).not.toHaveAttribute('data-changed');
+    const input = screen.getByRole('checkbox');
+    // The chip stays in the page for the stylesheet to show, and nothing names it.
+    expect(input.getAttribute('aria-describedby')?.split(' ')).not.toContain(screen.getByText('Changed').id);
+    expect(input).toHaveAccessibleDescription('Off hides the copy under each card.');
+  });
+
+  it('adds the chip to the aria-describedby the caller passes', () => {
+    render(
+      <>
+        <p id="note">Visible to admins.</p>
+        <Checkbox description="Off hides the copy under each card." aria-describedby="note" isChanged>
+          Show descriptions
+        </Checkbox>
+      </>,
+    );
+    expect(screen.getByRole('checkbox')).toHaveAccessibleDescription(
+      'Off hides the copy under each card. Visible to admins. Changed',
+    );
+  });
+
+  it('shows the chip whichever way the box is set', async () => {
+    const user = userEvent.setup();
+    render(<Checkbox isChanged>Show descriptions</Checkbox>);
+    await user.click(screen.getByRole('checkbox'));
+    expect(screen.getByText('Changed')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox')).toHaveAccessibleDescription('Changed');
+  });
+
+  it('keeps its input, and its focus, when isChanged flips', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Checkbox>Show descriptions</Checkbox>);
+    await user.tab();
+    const input = screen.getByRole('checkbox');
+    expect(input).toHaveFocus();
+    rerender(<Checkbox isChanged>Show descriptions</Checkbox>);
+    // The label row is there whether or not the checkbox is changed, so the input is not rebuilt.
+    expect(screen.getByRole('checkbox')).toBe(input);
+    expect(input).toHaveFocus();
+    expect(input).toHaveAccessibleDescription('Changed');
+  });
+
+  it('lets invalid outrank changed: the chip is gone and no longer announced', async () => {
+    const { container, rerender } = render(<Checkbox isChanged>I accept the terms</Checkbox>);
+    const input = screen.getByRole('checkbox', { name: 'I accept the terms' });
+    const chipId = screen.getByText('Changed').id;
+    expect(input.getAttribute('aria-describedby')?.split(' ')).toContain(chipId);
+    rerender(
+      <Checkbox isChanged isInvalid errorMessage="Accept the terms to continue.">
+        I accept the terms
+      </Checkbox>,
+    );
+    expect(root(container)).toHaveAttribute('data-changed', '');
+    expect(root(container)).toHaveAttribute('data-invalid');
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    expect(input.getAttribute('aria-describedby')?.split(' ')).not.toContain(chipId);
+    expect(input).toHaveAccessibleDescription('Accept the terms to continue.');
+    await expectNoA11yViolations(container);
+  });
+
+  it('lets invalid outrank changed when React Aria finds the checkbox invalid', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <Checkbox name="terms" isRequired isChanged errorMessage="Accept the terms to continue.">
+          I accept the terms
+        </Checkbox>
+        <button type="submit">Continue</button>
+      </form>,
+    );
+    const input = screen.getByRole('checkbox', { name: 'I accept the terms' });
+    expect(screen.getByText('Changed')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(container.querySelector('.checkbox-field')).toHaveAttribute('data-invalid');
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    // The checkbox's own props cannot see this validity, so the chip's id stays in aria-describedby and names
+    // nothing, which leaves the error line alone as the description. axe accepts it.
+    const ids = input.getAttribute('aria-describedby')?.split(' ') ?? [];
+    expect(ids.map((id) => document.getElementById(id) !== null)).toEqual([true, false]);
+    expect(input).toHaveAccessibleDescription('Accept the terms to continue.');
+    await expectNoA11yViolations(container);
+    // Checking the box makes it valid again, and the chip returns.
+    await user.click(input);
+    expect(screen.getByText('Changed')).toBeInTheDocument();
+    expect(input).toHaveAccessibleDescription('Changed');
+  });
+
+  it('reads the chip while validate passes, and the error alone while it fails', async () => {
+    const user = userEvent.setup();
+    render(
+      <Checkbox
+        isChanged
+        validationBehavior="aria"
+        validate={(selected) => (selected ? null : 'You must agree.')}
+      >
+        I agree
+      </Checkbox>,
+    );
+    const input = screen.getByRole('checkbox', { name: 'I agree' });
+    expect(input).toHaveAccessibleDescription('You must agree.');
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    await user.click(input);
+    expect(input).toHaveAccessibleDescription('Changed');
+    expect(screen.getByText('Changed')).toBeInTheDocument();
+  });
+
+  it('draws no chip for a checkbox without a visible label, though the root is still changed', async () => {
+    const { container } = render(<Checkbox aria-label="Select row 3" isChanged />);
+    expect(root(container)).toHaveAttribute('data-changed', '');
+    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
+    expect(container.querySelector('.field-head')).toBeNull();
+    expect(screen.getByRole('checkbox')).not.toHaveAttribute('aria-describedby');
+    await expectNoA11yViolations(container);
+  });
+
+  it('ignores isChanged inside a group: its item has no chip, and the group is the one that is changed', () => {
+    const { container, rerender } = render(
+      <CheckboxGroup label="Notify me by">
+        <Checkbox value="email" isChanged changedLabel="Item">
+          Email
+        </Checkbox>
+        <Checkbox value="sms">Text message</Checkbox>
+      </CheckboxGroup>,
+    );
+    // The group has a hidden chip of its own, and the items have none.
+    expect(container.querySelectorAll('.checkbox-field .field-changed')).toHaveLength(0);
+    expect(screen.queryByText('Item')).not.toBeInTheDocument();
+    for (const item of container.querySelectorAll('.checkbox-field')) {
+      expect(item).not.toHaveAttribute('data-changed');
+      expect(item.firstElementChild).toHaveClass('checkbox');
+    }
+    expect(screen.getByRole('checkbox', { name: 'Email' })).not.toHaveAttribute('aria-describedby');
+    expect(screen.getByRole('group')).not.toHaveAttribute('data-changed');
+    expect(screen.getByRole('group')).not.toHaveAccessibleDescription('Changed');
+    // A changed group draws one chip, its own, and its item adds none.
+    rerender(
+      <CheckboxGroup label="Notify me by" isChanged>
+        <Checkbox value="email" isChanged>
+          Email
+        </Checkbox>
+        <Checkbox value="sms">Text message</Checkbox>
+      </CheckboxGroup>,
+    );
+    expect(container.querySelectorAll('.field-changed')).toHaveLength(1);
+    expect(container.querySelectorAll('.checkbox-field .field-changed')).toHaveLength(0);
+    expect(screen.getByRole('group')).toHaveAccessibleDescription('Changed');
+    expect(screen.getByRole('checkbox', { name: 'Email' })).not.toHaveAttribute('aria-describedby');
+  });
+
   it('forwards ref to the field and inputRef to the input', () => {
     const ref = createRef<HTMLDivElement>();
     const inputRef = createRef<HTMLInputElement>();
@@ -388,6 +576,21 @@ describe('Checkbox', () => {
 
   it('has no axe violations when checked', async () => {
     const { container } = render(<Checkbox defaultSelected>Remember me</Checkbox>);
+    await expectNoA11yViolations(container);
+  });
+
+  it.each([
+    ['changed', { isChanged: true }],
+    ['changed and checked', { isChanged: true, defaultSelected: true }],
+    ['changed with a hint', { isChanged: true, description: 'Off hides the copy under each card.' }],
+    ['changed and disabled', { isChanged: true, isDisabled: true }],
+    ['changed with its own chip text', { isChanged: true, changedLabel: 'Not saved yet' }],
+    [
+      'changed and invalid',
+      { isChanged: true, isInvalid: true, errorMessage: 'Accept the terms to continue.' },
+    ],
+  ] satisfies [string, Partial<CheckboxProps>][])('has no axe violations when %s', async (_state, props) => {
+    const { container } = render(<Checkbox {...props}>Remember me</Checkbox>);
     await expectNoA11yViolations(container);
   });
 });

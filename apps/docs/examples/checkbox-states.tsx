@@ -18,6 +18,7 @@ export default function CheckboxStates(): ReactElement {
       <Checkbox isReadOnly defaultSelected>
         Managed by your workspace admin
       </Checkbox>
+      <Checkbox isChanged>Email me a weekly summary</Checkbox>
     </div>
   );
 }

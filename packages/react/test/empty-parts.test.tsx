@@ -26,7 +26,7 @@ const PARTS = [
 const EMPTY: [name: string, element: ReactElement][] = [
   [
     'Checkbox',
-    <Checkbox aria-label="Remember me" description={false}>
+    <Checkbox aria-label="Remember me" description={false} isChanged>
       {''}
     </Checkbox>,
   ],

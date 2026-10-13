@@ -623,9 +623,38 @@ describe('src/components/checkbox.css', () => {
     expect(text).toContain('overflow-wrap: anywhere;');
   });
 
-  it('leaves the boxes alone when the group is changed: the chip is the cue', () => {
-    expect(rules()).not.toContain('data-changed');
+  it('leaves the boxes alone when a checkbox or a group is changed: the chip is the cue', () => {
+    // The one rule keyed on data-changed shows or hides the chip, and nothing is drawn on a box.
+    const keyed = [...rules().matchAll(/[^{};]*data-changed[^{};]*(?=\{)/g)].map((match) =>
+      closeUp(match[0]).trim(),
+    );
+    expect(keyed).toEqual([
+      '.checkbox-field:not([data-changed]) .field-changed, .checkbox-field[data-invalid] .field-changed',
+    ]);
     expect(rules()).not.toContain('--color-signal');
+  });
+
+  it('sets the Changed chip level with the first line of a label that wraps, from a label row that starts its items at the top', () => {
+    // The chip is the row's sibling, so it reads the body line from the field, which declares it for the row too.
+    expect(blockAfter(rules(), '.checkbox-field,\n  .checkbox {')).toContain(
+      '--checkbox-line: calc(var(--text-body) * var(--text-body--line-height));',
+    );
+    expect(rules()).toMatch(/\.field-head:has\(> \.checkbox\)\s*\{\s*align-items: flex-start;\s*\}/);
+    // The row's 8px of padding, and half of what its line has over the chip's own 14px line.
+    const chip = blockAfter(rules(), '.field-head:has(> .checkbox) > .field-changed {');
+    expect(chip).toContain('margin-block-start: calc(0.5rem + (var(--checkbox-line) - 1lh) / 2);');
+  });
+
+  it('shows the Changed chip only while the checkbox is changed and not invalid, and keeps the label row out of the closing padding', () => {
+    const source = closeUp(rules());
+    const hidden = blockAfter(
+      source,
+      '.checkbox-field:not([data-changed]) .field-changed, .checkbox-field[data-invalid] .field-changed {',
+    );
+    expect(hidden).toContain('display: none;');
+    // Only a hint or an error line closes the field with the row's padding: the label row is the row.
+    const closing = blockAfter(source, '.checkbox-field > :not(.checkbox, .field-head):last-child {');
+    expect(closing).toContain('padding-block-end: 0.5rem;');
   });
 
   it('keeps the mark and the fill visible in forced colors, with system colors', () => {

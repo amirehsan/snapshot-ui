@@ -1692,8 +1692,8 @@ the app's choice rows have no changed look at all, only the label chip. Drawing
 it on the boxes would mark boxes that did not change, would drop an empty box's
 edge from 3.48 to the light signal orange's 2.87 against Raised (2.53 on the
 page, under the 3:1 a boundary asks), and would sit beside the ink edge of every
-checked box. So the boxes keep their edges, the chip carries the cue and the
-stylesheet has no `data-changed` rule. Invalid still outranks changed: the chip
+checked box. So the boxes keep their edges, the chip carries the cue and no rule
+keyed on `data-changed` draws a box. Invalid still outranks changed: the chip
 leaves, every box takes the error edge and the line shows.
 
 - **Orientation** is vertical by default and horizontal on request. React Aria's
@@ -1723,6 +1723,25 @@ leaves, every box takes the error edge and the line shows.
 - **A group shows one error line, its own.** React Aria clears the error
   context of the checkboxes inside a group, so an `errorMessage` on one of them
   is not shown there. It shows when the checkbox stands alone.
+- **A checkbox on its own takes the chip too, beside its label.** `isChanged`
+  and `changedLabel` follow the field contract, as Switch's do: `data-changed`
+  on the root, a clay chip that a screen reader reads with the checkbox, and a
+  chip that leaves the page while the checkbox is invalid, by any cause, React
+  Aria's own validation included. Invalid outranks changed. The boxes keep their
+  edges, for the reason given for the group above, and the only rule keyed on
+  `data-changed` shows or hides the chip. The row is a `label`, so the chip
+  cannot be inside it: it would join the checkbox's name, and a press on it
+  would toggle the box. It sits beside the row in the `field-head` row instead.
+  The head starts its items at the top, and the chip takes the row's 8px of
+  padding and half of what the 22.4px line has over its own 14px line, 12.2px,
+  so its middle is on the middle of the first line and of the box, and a row of
+  one line stays 40px tall with nothing moved. A chip that does not fit beside
+  the row drops under it and keeps the margin, 12.2px under the row. A long
+  `changedLabel` wraps inside the field, so the page never scrolls sideways at
+  320px. A checkbox with no visible label has no label row and no chip, as
+  Switch has none. Inside a `CheckboxGroup` the checkbox ignores `isChanged` and
+  keeps the markup it had, with no label row, because the group's chip covers
+  the group.
 
 | Box edge (boundary on its Raised fill) against | Light | Dark |
 | --- | --- | --- |

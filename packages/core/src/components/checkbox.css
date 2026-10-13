@@ -21,6 +21,8 @@
   .checkbox {
     --checkbox-size: 20px;
     --checkbox-gap: 0.75rem;
+    /* The row's line of text, which the Changed chip beside the row reads to sit level with it. */
+    --checkbox-line: calc(var(--text-body) * var(--text-body--line-height));
   }
 
   /* One checkbox with its hint and error line. The label sits at its own
@@ -188,9 +190,33 @@
   }
 
   /* The label's padding spaces one row from the next, so a row with a hint or an
-     error line closes with the same room. */
-  .checkbox-field > :not(.checkbox):last-child {
+     error line closes with the same room. The label row has that padding in its
+     own row already. */
+  .checkbox-field > :not(.checkbox, .field-head):last-child {
     padding-block-end: 0.5rem;
+  }
+
+  /* A checkbox on its own holds its row and its Changed chip in a label row, so the
+     chip is beside the row and not inside the label: it is no part of the name, and
+     a press on it does not toggle the box. The chip shows while the field's root is
+     changed and gives way to an invalid one, as a field's does in field.css. */
+  .checkbox-field:not([data-changed]) .field-changed,
+  .checkbox-field[data-invalid] .field-changed {
+    display: none;
+  }
+
+  /* The chip sits level with the first line of the label, as the box does, and not
+     with the middle of a row that wraps. The head starts its items at the top, and
+     the chip takes the row's 8px of padding and half of what the row's line has over
+     the chip's own 14px line. For a row of one line that is 12.2px, which puts the
+     chip's middle on the line's, so the row does not move. A chip that does not fit
+     beside the row drops under it, and carries the same margin there. */
+  .field-head:has(> .checkbox) {
+    align-items: flex-start;
+  }
+
+  .field-head:has(> .checkbox) > .field-changed {
+    margin-block-start: calc(0.5rem + (var(--checkbox-line) - 1lh) / 2);
   }
 
   /* The group. Its rows carry their own padding, so the field's 8px between
