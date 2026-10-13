@@ -36,7 +36,8 @@ export interface PopoverProps extends Omit<RACPopoverProps, 'className' | 'child
  * corner and the float shadow, 8px from its trigger at its start edge, flipped to the other side and shifted
  * along it when the screen has no room, with no arrow. Outside presses, Escape and blur close it, and focus
  * goes back to the trigger. Built on React Aria's Popover. Open free content from a `DialogTrigger`, which
- * makes the popover a dialog named by the trigger and focuses it; Menu brings its own trigger.
+ * makes the popover a dialog named by the trigger and focuses it, holds Tab inside it, and makes the page
+ * behind inert and still, as a modal does, though nothing dims it; Menu brings its own trigger.
  */
 export function Popover({
   isPadded = false,
