@@ -65,6 +65,8 @@ import TextTones from './text-tones';
 import ThemeShapes from './theme-shapes';
 import ToastAction from './toast-action';
 import ToastBasic from './toast-basic';
+import TooltipBasic from './tooltip-basic';
+import TooltipShortcut from './tooltip-shortcut';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
@@ -134,6 +136,8 @@ export const examples = {
   'theme-shapes': ThemeShapes,
   'toast-action': ToastAction,
   'toast-basic': ToastBasic,
+  'tooltip-basic': TooltipBasic,
+  'tooltip-shortcut': TooltipShortcut,
 } satisfies Record<string, ComponentType>;
 
 export type ExampleName = keyof typeof examples;

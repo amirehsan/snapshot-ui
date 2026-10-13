@@ -118,3 +118,4 @@ export {
   type CommandPaletteLabels,
   type CommandPaletteProps,
 } from './command-palette';
+export { Tooltip, TooltipTrigger, type TooltipProps, type TooltipTriggerProps } from './tooltip';

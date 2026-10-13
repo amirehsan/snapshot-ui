@@ -1,0 +1,69 @@
+---
+title: Tooltip
+description: A short ink label that names an icon or adds a hint, on hover after a pause and at once on keyboard focus, never on touch.
+icon: MessageCircle
+---
+
+<Section>
+
+## Basic
+
+A tooltip is a short ink label with canvas text that names an icon button, or adds a hint to a control, beside it. It shows after the pointer rests on its trigger for 400ms, and at once when the trigger takes focus from the keyboard. It sits 12px from the trigger, above it by default, with a small arrow pointing at it, and flips to the other side where the screen has no room. Long text wraps at 20rem.
+
+<Preview name="tooltip-basic" />
+
+</Section>
+
+<Section>
+
+## With a shortcut
+
+`shortcut` draws a key after the text, such as `Mod K`, in the one key look, inverted for the ink: `Mod` is Cmd on Apple platforms and Ctrl elsewhere. `placement="end"` puts the tip after the trigger, as a collapsed navigation rail shows its names.
+
+<Preview name="tooltip-shortcut" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Wrap the trigger and the tip in `TooltipTrigger`. The trigger must be focusable and take React Aria's hover and focus, as `Button`, `IconButton` and `Link` do; a static element, such as an icon in a sentence, needs React Aria's `Focusable` around it, and a disabled control cannot take focus, so it gets no tip. TooltipTrigger and Tooltip are client components, and a server component can render them, as the examples on this page do.
+
+The tip opens after 400ms of hover (`delay`) and closes 120ms after the pointer leaves (`closeDelay`), so the pointer can cross onto the tip and rest there. Once one tip has opened, the next opens at once for about half a second after it starts to close, so moving along a row of buttons shows each name without a wait. Escape, a press of the trigger, a scroll of a box around it and a resize of the window close it. Set `isDisabled` while the label is visible anyway, as a navigation rail does when it is expanded. `isOpen`, `defaultOpen` and `onOpenChange` control it.
+
+A tooltip never shows for touch, which has no hover, so nothing a touch user needs may live only in a tip. A tip opened from a dark card is dark while the page stays light: it takes the theme, the shape and the density of its trigger, as [Theming](/docs/theming#overlays) explains.
+
+</Section>
+
+<Section>
+
+## Props
+
+`ref` and `className` go on the tip, and `className` is merged after the library's classes. The rest of React Aria's tooltip props pass through.
+
+<PropsTable label="TooltipTrigger props" path="../../packages/react/src/tooltip/Tooltip.tsx" type="Pick<TooltipTriggerProps, 'delay' | 'closeDelay' | 'isDisabled' | 'trigger' | 'isOpen' | 'defaultOpen' | 'onOpenChange'>" />
+
+<PropsTable label="Tooltip props" path="../../packages/react/src/tooltip/Tooltip.tsx" type="Pick<TooltipProps, 'children' | 'shortcut' | 'placement' | 'offset' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A tooltip is supplementary. While it is open it is the trigger's description, so a screen reader reads it after the trigger's name; on an icon button it mirrors the `aria-label`, which a screen reader may read twice. It is never the only name of anything: an icon button keeps its `aria-label`. The tip never takes focus. Whether the repeated name reads well is still to be checked with VoiceOver and NVDA; if it does not, the fallback is to hide such a tip from assistive technology, since a tip that only repeats a name adds nothing to it.
+
+<Keys rows={[['Tab', 'Opens the tip on focus.'], ['Escape', 'Closes it.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps tooltips in the system.
+
+<Rules dos={['Keep a tip to one short line.', 'Name the action on an icon button.', 'Put a key hint in shortcut, not in the text.']} donts={['Never put essential information in a tip. Touch never shows it.', 'Never put a tip on a disabled control. It cannot take focus.', 'Never put interactive content inside a tip.']} />
+
+</Section>

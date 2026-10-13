@@ -21,6 +21,7 @@ import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
 import { ToastRegion } from '../src/toast';
+import { Tooltip, TooltipTrigger } from '../src/tooltip';
 
 /**
  * The client components, rendered on the server. A Next.js server page imports them as client references and
@@ -234,6 +235,18 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     <CommandPalette label="Search" items={[]} onAction={() => undefined} />,
     [],
     ['command-palette'],
+  ],
+  [
+    // A tip opens on hover or focus, which a server render never sees, so closed it draws its trigger alone.
+    'Tooltip, closed',
+    <TooltipTrigger>
+      <IconButton aria-label="Search">
+        <svg />
+      </IconButton>
+      <Tooltip>Search</Tooltip>
+    </TooltipTrigger>,
+    ['<button', 'aria-label="Search"'],
+    ['role="tooltip"'],
   ],
 ];
 
