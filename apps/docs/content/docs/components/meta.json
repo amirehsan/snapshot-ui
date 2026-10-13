@@ -6,6 +6,7 @@
     "card",
     "checkbox",
     "collapsible-card",
+    "command-palette",
     "confirm-dialog",
     "dialog",
     "drawer",

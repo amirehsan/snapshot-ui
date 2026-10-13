@@ -14,6 +14,8 @@ import CollapsibleCardActions from './collapsible-card-actions';
 import CollapsibleCardBasic from './collapsible-card-basic';
 import CollapsibleCardChanged from './collapsible-card-changed';
 import CollapsibleCardRemembered from './collapsible-card-remembered';
+import CommandPaletteAsync from './command-palette-async';
+import CommandPaletteBasic from './command-palette-basic';
 import ConfirmDialogBasic from './confirm-dialog-basic';
 import ConfirmDialogDanger from './confirm-dialog-danger';
 import ConfirmDialogHook from './confirm-dialog-hook';
@@ -81,6 +83,8 @@ export const examples = {
   'collapsible-card-basic': CollapsibleCardBasic,
   'collapsible-card-changed': CollapsibleCardChanged,
   'collapsible-card-remembered': CollapsibleCardRemembered,
+  'command-palette-async': CommandPaletteAsync,
+  'command-palette-basic': CommandPaletteBasic,
   'confirm-dialog-basic': ConfirmDialogBasic,
   'confirm-dialog-danger': ConfirmDialogDanger,
   'confirm-dialog-hook': ConfirmDialogHook,

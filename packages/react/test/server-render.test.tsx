@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { CollapsibleCard } from '../src/collapsible-card';
+import { CommandPalette } from '../src/command-palette';
 import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { IconButton } from '../src/icon-button';
@@ -225,6 +226,14 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     <ToastRegion />,
     ['class="toast-status-host"', 'role="status"', 'aria-live="polite"', 'data-react-aria-top-layer'],
     ['toast-region'],
+  ],
+  [
+    // The palette has no trigger of its own, so closed it renders nothing, and its shortcut listener is an
+    // effect, which a server render never runs.
+    'CommandPalette, closed',
+    <CommandPalette label="Search" items={[]} onAction={() => undefined} />,
+    [],
+    ['command-palette'],
   ],
 ];
 

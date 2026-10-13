@@ -319,6 +319,31 @@ test.describe('forced colors', () => {
     expect((await paint(share.locator('.menu-item-description'))).text).toBe(system.canvasText);
   });
 
+  test('the palette active row is drawn in Highlight', async ({ page }) => {
+    // DOM focus never leaves the field, so the keyboard-active row's ink fill is the only sign of where Enter
+    // goes. The repaint would drop the fill, so the row is drawn in the reader's Highlight, every part of it
+    // in HighlightText and its key chip as the system canvas island, and the field's own outline returns.
+    await visit(page, '/docs/components/command-palette');
+    const system = await systemColors(page);
+    await page.getByRole('button', { name: 'Search the app' }).click();
+    const palette = page.getByRole('dialog', { name: 'Search the app' });
+    const field = palette.getByRole('textbox', { name: 'Search the app' });
+    await field.pressSequentially('checking');
+    // Typing forward makes the first row active from the keyboard.
+    const row = palette.getByRole('menuitem', { name: 'Checking' });
+    await expect(row).toHaveAttribute('data-focus-visible', 'true');
+    const look = await paint(row);
+    expect(look.fill).toBe(system.highlight);
+    expect(look.text).toBe(system.highlightText);
+    for (const part of ['.menu-item-icon', '.menu-item-description', '.menu-item-end']) {
+      expect((await paint(row.locator(part))).text, part).toBe(system.highlightText);
+    }
+    const key = await paint(row.locator('.menu-item-shortcut'));
+    expect(key.fill).toBe(system.canvas);
+    expect(key.text).toBe(system.canvasText);
+    expect(await field.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('auto');
+  });
+
   test('a sheet keeps its edge and its grabber', async ({ page }) => {
     // The hairline is transparent in light and the grabber is a fill, which the repaint would drop: both are
     // drawn in the reader's text color, so the sheet keeps its shape and its handle on the scrim.
@@ -407,6 +432,8 @@ const LONG_TARGETS: Record<string, string[]> = {
 /** The pages with no text a person writes, each with its reason. A page is in one list or the other. */
 const NO_LONG_TEXT: Record<string, string> = {
   button: 'a label is a short command on one line by design (white-space: nowrap), not text that wraps',
+  'command-palette':
+    "its text is in a portal that opens on a press or a key; the Narrow story's 375px baseline pins its wrapping",
   'confirm-dialog':
     "its text is in a portal that opens on a press; its stories' 375px baselines pin its wrapping",
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
@@ -498,6 +525,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   card: ['.stage .card', '.stage .card-title', '.stage .card-note'],
   checkbox: ['.stage .checkbox-box'],
   'collapsible-card': ['.stage .card-collapsible', '.stage .card-toggle', '.stage .card-chevron'],
+  'command-palette': ['.stage .button'],
   'confirm-dialog': ['.stage .button'],
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],

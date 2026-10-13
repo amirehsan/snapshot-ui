@@ -2336,6 +2336,143 @@ describe('src/components/toast.css', () => {
   });
 });
 
+describe('src/components/command-palette.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.command-palette {` is the start of no
+  // longer header, so the first match is the surface's own rule, and the later ones sit in the media blocks.
+  const rules = () => closeUp(stripComments(read('src/components/command-palette.css')));
+  const ACTIVE = '.command-palette-list .menu-item[data-focus-visible]';
+
+  it('is imported after toast.css', () => {
+    const entry = read('src/styles.css');
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('toast.css')).toBeGreaterThanOrEqual(0);
+    expect(at('command-palette.css')).toBeGreaterThan(at('toast.css'));
+  });
+
+  it('anchors the surface 12vh from the top of the scrim, centred, the overlay inset clear at the sides and the bottom', () => {
+    const overlay = blockAfter(rules(), '.command-palette-overlay {');
+    expect(overlay).toContain('align-content: start;');
+    expect(overlay).toContain('justify-items: center;');
+    expect(overlay).toContain('padding: 12vh var(--overlay-inset) var(--overlay-inset);');
+  });
+
+  it('caps the surface at 40rem wide and at 35rem or the room under the anchor tall, a column that clips', () => {
+    const surface = blockAfter(rules(), '.command-palette {');
+    for (const declaration of [
+      'width: min(40rem, 100%);',
+      'max-height: min(35rem, calc(88dvh - 1rem));',
+      'display: flex;',
+      'flex-direction: column;',
+      'overflow: hidden;',
+    ]) {
+      expect(surface, declaration).toContain(declaration);
+    }
+  });
+
+  it('draws the surface in the float tokens: the frame edge, the surface corner, the float fill and shadow', () => {
+    const surface = blockAfter(rules(), '.command-palette {');
+    for (const declaration of [
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+    ]) {
+      expect(surface, declaration).toContain(declaration);
+    }
+  });
+
+  it('rules the field row off with the divider, and draws its focus line as a pseudo-element in the ring color', () => {
+    const css = rules();
+    const field = blockAfter(css, '.command-palette-field {');
+    expect(field).toContain('border-block-end: 1px solid var(--color-divider);');
+    expect(field).toContain('position: relative;');
+    const line = blockAfter(css, '.command-palette-field::after {');
+    expect(line).toContain('height: var(--focus-ring-width);');
+    expect(line).toContain('inset-block-end: -1px;');
+    expect(
+      blockAfter(css, '.command-palette-field:has(.command-palette-input:focus-visible)::after {'),
+    ).toContain('background-color: var(--focus-ring-color);');
+    // The token-only rule forbids a literal shadow, so the only box-shadow is the surface's token.
+    expect([...css.matchAll(/box-shadow:/g)]).toHaveLength(1);
+  });
+
+  it('draws the placeholder in slate at full opacity, an exception to the taupe placeholder rule', () => {
+    const placeholder = blockAfter(rules(), '.command-palette-input::placeholder {');
+    expect(placeholder).toContain('color: var(--color-slate);');
+    expect(placeholder).toContain('opacity: 1;');
+    expect(rules()).not.toContain('--color-taupe');
+  });
+
+  it('gives the body a floor, so the height holds while the text changes, and makes it the one scroller', () => {
+    const css = rules();
+    const body = blockAfter(css, '.command-palette-body {');
+    for (const declaration of [
+      'min-height: min(20rem, 50dvh);',
+      'overflow-y: auto;',
+      'overscroll-behavior: contain;',
+    ]) {
+      expect(body, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.command-palette-list {')).toContain('overflow: visible;');
+  });
+
+  it('fills the keyboard-active row in ink with no ring, and inverts its icon, end value, description and key to canvas', () => {
+    const css = rules();
+    const row = blockAfter(css, `${ACTIVE} {`);
+    expect(row).toContain('background-color: var(--color-ink);');
+    expect(row).toContain('color: var(--color-canvas);');
+    expect(row).toContain('outline: none;');
+    expect(blockAfter(css, `${ACTIVE} :is(.menu-item-icon, .menu-item-end) {`)).toContain(
+      'color: var(--color-canvas);',
+    );
+    expect(blockAfter(css, `${ACTIVE} .menu-item-description {`)).toContain(
+      'color: color-mix(in srgb, var(--color-canvas) 70%, transparent);',
+    );
+    const chip = blockAfter(css, `${ACTIVE} .menu-item-shortcut {`);
+    expect(chip).toContain('background-color: color-mix(in srgb, var(--color-canvas) 20%, transparent);');
+    expect(chip).toContain('color: var(--color-canvas);');
+    // The end value is the Menu's own part, so the palette draws none of its own.
+    expect(css).not.toContain('.command-palette-end');
+  });
+
+  it('hides the key hints under a coarse pointer', () => {
+    const coarse = blockAfter(rules(), '@media (pointer: coarse)');
+    expect(blockAfter(coarse, '.command-palette-footer {')).toContain('display: none;');
+  });
+
+  it('restores the field outline and paints the active row and its parts in the system colors, in forced colors', () => {
+    const css = rules();
+    const forced = blockAfter(css, FORCED_COLORS);
+    expect(blockAfter(forced, '.command-palette {')).toContain('border-color: CanvasText;');
+    expect(blockAfter(forced, '.command-palette-input:focus-visible {')).toContain('outline: auto;');
+    const row = blockAfter(forced, `${ACTIVE} {`);
+    expect(row).toContain('background-color: Highlight;');
+    expect(row).toContain('color: HighlightText;');
+    expect(
+      blockAfter(
+        forced,
+        `${ACTIVE} :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end) {`,
+      ),
+    ).toContain('color: HighlightText;');
+    const chip = blockAfter(forced, `${ACTIVE} .menu-item-shortcut {`);
+    expect(chip).toContain('background-color: canvas;');
+    expect(chip).toContain('color: CanvasText;');
+    // As specific as the ink rules and after them, so they win.
+    expect(css.indexOf(FORCED_COLORS)).toBeGreaterThan(css.indexOf(`${ACTIVE} .menu-item-shortcut {`));
+  });
+
+  it('fades and rises 8px while entering and exiting, and stops moving under reduced motion, after it', () => {
+    const css = rules();
+    const moving = '.command-palette:is([data-entering], [data-exiting]) {';
+    const motion = blockAfter(css, moving);
+    expect(motion).toContain('opacity: 0;');
+    expect(motion).toContain('translate: 0 8px;');
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    expect(blockAfter(blockAfter(css, reduced), '.command-palette {')).toContain('transition: none;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf(moving));
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 
