@@ -78,7 +78,7 @@ export function InsightsGroup() {
 
 ## Slots
 
-`brand` takes a `SidebarBrand`, the mark and the name as a link home; `search` takes a `SidebarSearch`, a pill that opens the app's search in `onPress`; `footer` takes anything, such as the signed-in account. Each slot is drawn only when given. Collapsed, the brand keeps its mark and the search its icon, each with its name as a tooltip, and the footer is centered: read `useSidebar().isCollapsed` to draw the account row as an avatar alone. While the drawer is open the slots render twice, once in the rail and once in the drawer, so give any id inside a slot from `useId`, never a fixed string. `useSidebar().inDrawer` says which copy a slot is in.
+`brand` takes a `SidebarBrand`, the mark and the name as a link home; `search` takes a `SidebarSearch`, a pill that opens the app's search in `onPress`; `footer` takes anything, such as the signed-in account. Each slot is drawn only when given. Collapsed, the brand keeps its mark and the search its icon, each with its name as a tooltip, and the footer is centered: read `useSidebar().isCollapsed` to draw the account row as an avatar alone. While the drawer is open the slots render twice, once in the rail and once in the drawer, so give any id inside a slot from `useId`, never a fixed string. `useSidebar().inDrawer` says which copy a slot is in. The same holds for a `SidebarGroup`: an `id` you pass it is repeated in the drawer copy, so leave the id to the library.
 
 </Section>
 
@@ -86,7 +86,7 @@ export function InsightsGroup() {
 
 ## Usage
 
-Sidebar and its parts are client components, and a server component can render them. Put the `Sidebar` in the shell's `sidebar` slot and a `SidebarTrigger` in its header. The search's `shortcut` is keys separated by spaces, such as `"Mod K"`, drawn as a key chip: `Mod` becomes Cmd on Apple platforms and Ctrl elsewhere after the page loads, and the server's HTML says Mod. The chip is part of the button's name, "Search or jump to, Mod K". An item's `count` comes with its `countLabel`, so the item reads "Transactions, 12 to review". Items and the brand are React Aria links: `href` works before any script runs, a `RouterProvider` routes every press as [Routing](/docs/routing) shows, and `render` draws a router's own link for one item.
+Sidebar and its parts are client components, and a server component can render them. Put the `Sidebar` in the shell's `sidebar` slot and a `SidebarTrigger` in its header. The search's `shortcut` is keys separated by spaces, such as `"Mod K"`, drawn as a key chip: `Mod` becomes Cmd on Apple platforms and Ctrl elsewhere after the page loads, and the server's HTML says Mod. The chip is part of the button's name, in both states: "Search or jump to, Ctrl K", or the Command symbol and K on Apple platforms ("Mod K" in the server's HTML, before the page loads). An item's `count` comes with its `countLabel`, so the item reads "Transactions, 12 to review". Items and the brand are React Aria links: `href` works before any script runs, a `RouterProvider` routes every press as [Routing](/docs/routing) shows, and `render` draws a router's own link for one item.
 
 </Section>
 

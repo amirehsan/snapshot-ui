@@ -2853,6 +2853,13 @@ describe('src/components/sidebar.css', () => {
     }
   });
 
+  it('clips the search shortcut when collapsed rather than removing it, so the search keeps its name', () => {
+    const css = rules();
+    const clip = css.slice(css.indexOf(`${COLLAPSED} .sidebar:not(.sidebar-drawer) :is(`));
+    expect(clip.slice(0, clip.indexOf('{'))).toContain('.sidebar-search-shortcut');
+    expect(css).not.toContain(`${COLLAPSED} .sidebar:not(.sidebar-drawer) .sidebar-search-shortcut {`);
+  });
+
   it('declares the four rail constants as written', () => {
     const rail = blockAfter(rules(), '.sidebar {');
     for (const declaration of [

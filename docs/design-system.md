@@ -4787,14 +4787,22 @@ comma before the count, as the spec first drew it, read "Transactions , 12 to
 review" in Chromium and "Transactions,12to review" in jsdom. So the comma ends
 the label, inline and drawn at `font-size: 0` by `.sidebar-comma`, and plain
 spaces sit between the label, the number and the hidden words: the name is the
-same in Chromium, in Playwright and in jsdom. The search pill names itself the
+same in Chromium, in Playwright and in jsdom. Those are the engines it is
+verified in; Firefox and WebKit name computation is not yet checked. The search pill names itself the
 same way, "Search or jump to, Mod K", with its key chip as part of its text,
 so the visible words are in the name as the docs' label check asks.
 
 **The shortcut.** The search's chip is the shared `Shortcut`, with the
 classes `kbd sidebar-search-shortcut`: `Mod` is "Mod" in the server's HTML and
 becomes the platform's modifier after the page hydrates, and the collapsed
-tooltip passes the same string.
+tooltip passes the same string. Collapsed, the chip is clipped with the labels,
+not removed with `display: none`, so the search keeps its whole name, "Search
+or jump to, Ctrl K" or the Command symbol and K, in both states; a docs test
+checks it in the browser, since jsdom applies no stylesheet.
+
+**The size.** The Sidebar's size limit is 4.5 kB, above the spec's 3 kB
+budget, because the entry bundles the Drawer and the Tooltip with the rail's
+own parts; it measured 3.57 kB.
 
 **The tooltips** are the shipped `Tooltip` and `TooltipTrigger`, as built:
 the brand, the search, every item and the collapse button sit in a trigger
