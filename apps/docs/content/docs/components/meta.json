@@ -22,6 +22,7 @@
     "switch",
     "text-area",
     "text-field",
+    "toast",
     "typography"
   ]
 }

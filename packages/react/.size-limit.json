@@ -196,6 +196,13 @@
     "limit": "2 kB"
   },
   {
+    "name": "import { toast, ToastRegion } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ toast, ToastRegion }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "2 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

@@ -2116,6 +2116,179 @@ describe('src/components/menu.css', () => {
   });
 });
 
+describe('src/components/toast.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.toast {` is the start of no longer
+  // header, so the first match is the base rule, and the later ones sit inside @starting-style and the two
+  // media blocks.
+  const rules = () => closeUp(stripComments(read('src/components/toast.css')));
+
+  it('is imported after menu.css', () => {
+    const entry = read('src/styles.css');
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('menu.css')).toBeGreaterThanOrEqual(0);
+    expect(at('toast.css')).toBeGreaterThan(at('menu.css'));
+  });
+
+  it('keeps the polite status host in the page and out of sight', () => {
+    const host = blockAfter(rules(), '.toast-status-host {');
+    for (const declaration of [
+      'position: absolute;',
+      'width: 1px;',
+      'height: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+      'white-space: nowrap;',
+    ]) {
+      expect(host, declaration).toContain(declaration);
+    }
+    // Hidden by clipping, never removed: a live region that is not rendered announces nothing.
+    expect(host).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
+  });
+
+  it('fixes the region in the bottom end corner, the overlay inset in, above every modal', () => {
+    const region = blockAfter(rules(), '.toast-region {');
+    for (const declaration of [
+      'position: fixed;',
+      'inset-block-end: calc(var(--overlay-inset) + var(--toast-offset-block, 0px));',
+      'inset-inline-end: var(--overlay-inset);',
+      'z-index: var(--z-toast);',
+    ]) {
+      expect(region, declaration).toContain(declaration);
+    }
+  });
+
+  it('caps the region at 28rem and the viewport less 2rem, rings nothing on it and lets presses through around the toasts', () => {
+    const region = blockAfter(rules(), '.toast-region {');
+    for (const declaration of [
+      'width: min(28rem, calc(100vw - 2rem));',
+      'outline: none;',
+      'pointer-events: none;',
+    ]) {
+      expect(region, declaration).toContain(declaration);
+    }
+  });
+
+  it('stacks the list in reverse, so the newest sits nearest the corner, 8px apart, with no list marks', () => {
+    const list = blockAfter(rules(), '.toast-list {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-direction: column-reverse;',
+      'align-items: flex-end;',
+      'gap: var(--spacing-part);',
+      'margin: 0;',
+      'padding: 0;',
+      'list-style: none;',
+    ]) {
+      expect(list, declaration).toContain(declaration);
+    }
+  });
+
+  it('takes presses on each toast and draws the float with the frame, the surface corner and the float shadow', () => {
+    const toast = blockAfter(rules(), '.toast {');
+    for (const declaration of [
+      'pointer-events: auto;',
+      'width: 100%;',
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+      'padding: 1rem var(--spacing-peer);',
+    ]) {
+      expect(toast, declaration).toContain(declaration);
+    }
+  });
+
+  it('draws a 4px stripe at the inline start in --toast-stripe, which is slate unless the tone sets it', () => {
+    const toast = blockAfter(rules(), '.toast {');
+    expect(toast).toContain('--toast-stripe: var(--color-slate);');
+    expect(toast).toContain('border-inline-start: 4px solid var(--toast-stripe);');
+    // The stripe follows the writing direction: nothing here names a physical side.
+    expect(rules()).not.toMatch(/(?<![\w-])(?:left|right)\s*:|border-(?:left|right)/);
+  });
+
+  it('sets the stripe for success, warning and error, and leaves info on the slate base', () => {
+    const css = rules();
+    for (const [tone, token] of [
+      ['success', '--color-success'],
+      ['warning', '--color-warning'],
+      ['error', '--color-error'],
+    ]) {
+      expect(blockAfter(css, `.toast[data-tone='${tone}'] {`), tone).toContain(
+        `--toast-stripe: var(${token});`,
+      );
+    }
+    expect(css).not.toContain("[data-tone='info']");
+  });
+
+  it('sets the title in the body step in ink and the description in the small step in slate, each breaking a long word anywhere', () => {
+    const css = rules();
+    const title = blockAfter(css, '.toast-title {');
+    for (const declaration of [
+      'font-size: var(--text-body);',
+      'line-height: var(--text-body--line-height);',
+      'font-weight: var(--text-body--font-weight);',
+      'color: var(--color-ink);',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(title, declaration).toContain(declaration);
+    }
+    const description = blockAfter(css, '.toast-description {');
+    for (const declaration of [
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: var(--text-small--font-weight);',
+      'color: var(--color-slate);',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(description, declaration).toContain(declaration);
+    }
+    // The text column may shrink below its longest word, so the word breaks instead of widening the stack.
+    expect(blockAfter(css, '.toast-content {')).toContain('min-width: 0;');
+  });
+
+  it('rises 8px into place through @starting-style over 180ms, and leaves at once', () => {
+    const css = rules();
+    expect(blockAfter(css, '.toast {')).toContain('transition: opacity 180ms ease, translate 180ms ease;');
+    const start = blockAfter(blockAfter(css, '@starting-style'), '.toast {');
+    expect(start).toContain('opacity: 0;');
+    expect(start).toContain('translate: 0 8px;');
+    // React Aria's toast has no exit state: a closed toast is removed at once.
+    expect(css).not.toContain('[data-exiting]');
+    expect(css).not.toContain('[data-entering]');
+  });
+
+  it('rings a toast that keyboard focus reaches, in the focus ring token', () => {
+    const ring = blockAfter(rules(), '.toast:is(:focus-visible, [data-focus-visible]) {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+  });
+
+  it('pulls the controls in by 8px at the block ends and the inline end, so the 40px dismiss does not grow a one-line toast', () => {
+    const controls = blockAfter(rules(), '.toast-controls {');
+    for (const declaration of [
+      'flex: none;',
+      'gap: var(--spacing-part);',
+      'margin-block: -0.5rem;',
+      'margin-inline-end: -0.5rem;',
+    ]) {
+      expect(controls, declaration).toContain(declaration);
+    }
+  });
+
+  it('redraws the frame in CanvasText in forced colors, so the words carry the tone', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(forced, '.toast {')).toContain('border-color: CanvasText;');
+  });
+
+  it('stops the rise under reduced motion, after it', () => {
+    const css = rules();
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    expect(blockAfter(blockAfter(css, reduced), '.toast {')).toContain('transition: none;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: opacity 180ms ease'));
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('@starting-style'));
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

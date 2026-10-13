@@ -1,0 +1,99 @@
+---
+title: Toast
+description: 'A brief notice of an event in the corner, above everything: four tones, an optional action, and a polite announcement.'
+icon: BellRing
+---
+
+<Section>
+
+## Tones
+
+A toast reports an event that just happened, such as a save, in the bottom end corner of the screen, 16px in, above every dialog. It is a float card with a 4px stripe at its start in its tone: slate for `info`, and `success`, `warning` and `error`. The title says what happened and an optional second line says more, in slate. A toast leaves on its own after 6 seconds, or 12 for an error, and its X dismisses it sooner. The newest sits nearest the corner, the older ones rise above it, and three show at once; a fourth waits until one leaves.
+
+<Preview name="toast-basic" />
+
+</Section>
+
+<Section>
+
+## With an action
+
+A toast can offer one action, such as Undo, as a secondary button before its X. A toast with an action stays until the action is used or the toast is dismissed, since a reader who needs the action must have time to reach it. The action runs, and then the toast closes.
+
+<Preview name="toast-action" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Mount `<ToastRegion />` once, at the app root, beside your client providers. Then call `toast()` from any client code: a press handler, an effect, or the line after a server action returns. `tone` is required, so every toast says what kind of event it reports.
+
+```tsx
+'use client';
+
+import { Button, toast } from '@snapshot-ui/react';
+import { saveBudget } from './actions';
+
+export function SaveBudget({ budget }: { budget: Budget }) {
+  return (
+    <Button
+      onPress={async () => {
+        // A new save starts, so the last result is stale.
+        toast.clear();
+        const result = await saveBudget(budget);
+        toast(
+          result.ok
+            ? { title: 'Saved', tone: 'success' }
+            : { title: 'The budget was not saved', description: result.message, tone: 'error' },
+        );
+      }}
+    >
+      Save
+    </Button>
+  );
+}
+```
+
+Toasts follow the page's theme and corners, never the scope around the button that raised them, since a toast reports on the app and not on the card it came from, as [Theming](/docs/theming#overlays) explains.
+
+`toast()` returns the toast's id, and `toast.dismiss(id)` closes that toast. `toast.clear()` drops every toast, errors included: call it when a new save starts, since the last result no longer holds. A toast called with no region mounted shows nothing, and the library warns once in the console.
+
+Success, info and warning stay 6 seconds and an error 12, and a toast with an action has no timeout. `timeout` sets milliseconds of its own, or `null` to stay until dismissed. While the pointer is over the toasts, or focus is inside them, every timer pauses, and they start again when both leave, so a reader who needs longer can hold a toast by pointing at it.
+
+Say the outcome in the title, in words. The stripe only repeats it: in Windows high contrast the stripe is repainted in the reader's text color, and a title such as "Saved" or "The import failed" still says what happened. Keep one toast with an action at a time. Three show at once, and a toast with an action stays, so a fourth toast, an error included, would wait unseen behind three of them; when a newer action replaces an older one, dismiss the older one, as the example above does.
+
+</Section>
+
+<Section>
+
+## Props
+
+`toast()` takes these options. `ToastRegion` places and announces the toasts, and `className` goes on its region, after the library's classes.
+
+<PropsTable label="toast options" path="../../packages/react/src/toast/toast.ts" type="ToastOptions" />
+
+<PropsTable label="ToastRegion props" path="../../packages/react/src/toast/ToastRegion.tsx" type="ToastRegionProps" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The toasts sit in a landmark region, named by React Aria's localized count of notifications unless `aria-label` names it, which F6 reaches from anywhere on the page. Each toast is a non-modal alert dialog named by its title and described by its second line, and Tab moves through it, its action and its X. An error is announced assertively, as an alert. Every other tone is announced politely through a status region that `ToastRegion` puts in the page before any toast, since a screen reader only reliably announces a live region that was already there; each toast is announced once, even the same words twice. The toasts stay pressable and announced while a dialog is open, and a press on a toast never closes the dialog. When a focused toast leaves, focus moves to the next toast, or back to where it was. With reduced motion a toast appears without its rise.
+
+<Keys rows={[['F6', 'Reaches the toast region.'], ['Tab', 'Moves through a toast, its action and its dismiss.'], ['Enter Space', 'Press the action or the dismiss.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps toasts in the system.
+
+<Rules dos={['Say the outcome in words, such as Saved or The import failed.', 'Keep one toast with an action at a time.', 'Clear the toasts when a new save starts.']} donts={['Never use a toast for a state a form should show, such as three fields that are invalid.', 'Never let color alone carry the tone.', 'Never use a toast for something that needs a decision. That is a confirm dialog.']} />
+
+</Section>

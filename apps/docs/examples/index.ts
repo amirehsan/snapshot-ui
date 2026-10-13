@@ -61,6 +61,8 @@ import TextFieldValidation from './text-field-validation';
 import TextNumerals from './text-numerals';
 import TextTones from './text-tones';
 import ThemeShapes from './theme-shapes';
+import ToastAction from './toast-action';
+import ToastBasic from './toast-basic';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
@@ -126,6 +128,8 @@ export const examples = {
   'text-numerals': TextNumerals,
   'text-tones': TextTones,
   'theme-shapes': ThemeShapes,
+  'toast-action': ToastAction,
+  'toast-basic': ToastBasic,
 } satisfies Record<string, ComponentType>;
 
 export type ExampleName = keyof typeof examples;

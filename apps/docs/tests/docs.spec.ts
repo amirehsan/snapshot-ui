@@ -1526,3 +1526,31 @@ test.describe('the menu page, on a touch screen', () => {
     expect(await sideways(page)).toBe(0);
   });
 });
+
+test('the toast page shows a toast that is announced politely and dismissed', async ({ page }) => {
+  await visit(page, '/docs/components/toast');
+  // The polite host is in the page before any toast, so a screen reader is already listening to it.
+  const host = page.locator('.stage .toast-status-host');
+  await expect(host).toHaveAttribute('role', 'status');
+  await expect(host).toBeEmpty();
+  await page.getByRole('button', { name: 'Saved', exact: true }).click();
+  const shown = page.getByRole('alertdialog', { name: 'Saved' });
+  await expect(shown).toBeVisible();
+  await expect(host).toContainText('Saved');
+  // The toast's own content is not a second live region.
+  await expect(shown.locator('.toast-content')).toHaveAttribute('role', 'group');
+  await shown.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(shown).toHaveCount(0);
+});
+
+test('an error toast is an alert', async ({ page }) => {
+  await visit(page, '/docs/components/toast');
+  await page.getByRole('button', { name: 'Import failed', exact: true }).click();
+  const shown = page.getByRole('alertdialog', { name: 'Import failed' });
+  await expect(shown).toBeVisible();
+  await expect(shown.getByRole('alert')).toContainText('Import failed');
+  // An error speaks for itself, assertively, and the polite host leaves it alone.
+  await expect(page.locator('.stage .toast-status-host')).not.toContainText('Import failed');
+  await shown.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(shown).toHaveCount(0);
+});

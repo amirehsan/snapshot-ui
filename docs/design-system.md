@@ -2935,9 +2935,9 @@ and the toast mirror.
 **Strings.** English defaults, every one replaceable through a prop:
 ConfirmDialog's `cancelLabel` ("Cancel") and its required `confirmLabel`; the
 `closeLabel` of Dialog, Drawer and Sheet ("Close"); Toast's `dismissLabel`
-("Dismiss"); the toast region's `aria-label`, React Aria's localized
-"Notifications" unless given; and CommandPalette's `labels` object. React
-Aria's own hidden "Dismiss" buttons follow `I18nProvider`.
+("Dismiss"); the toast region's `aria-label`, React Aria's localized count,
+such as "2 notifications.", unless given; and CommandPalette's `labels`
+object. React Aria's own hidden "Dismiss" buttons follow `I18nProvider`.
 
 **Server safety.** No overlay formats with `Intl` during render, reads
 `window` or `document` at render or at import, or measures before its first
@@ -3867,3 +3867,150 @@ order, and `margin-inline-start: auto` puts the key at the inline end.
 
 **Nothing animates inside a menu.** The popover fades and slides in; the rows
 do not move, so `menu.css` has no reduced-motion block.
+
+## Toast
+
+The app's toast becomes `toast()` and `ToastRegion`. The app kept events apart
+from states: "Saved" is a toast, and "three fields are invalid" belongs in the
+save bar. Success and info stayed 6 seconds and errors 12; an error was
+`role="alert"`; the polite host was in the page before anything was put in it;
+a 4px tone stripe sat at the inline start, with 24px corners, in the bottom
+end corner of the viewport, 16px in; and a new save dropped the last result.
+The library keeps all of it, on React Aria's `UNSTABLE_` toast parts, wrapped
+entirely: the public contract is `toast(options)`, which returns an id,
+`toast.dismiss(id)`, `toast.clear()` and `<ToastRegion />`. "Overlays" derives
+the shared parts: the `overlay` class, the inset, the surfaces table and the
+layers.
+
+**One queue.** `toast.ts` holds one `UNSTABLE_ToastQueue` at module scope,
+three toasts visible at once, so any client code calls `toast()`, the line
+after `await` on a server action included, and the module imports on the
+server, since the queue creates no DOM. `toast()` adds to the queue and
+returns the key; `toast.dismiss(id)` closes one; `toast.clear()` closes every
+open toast one by one, through a registry of open keys, so each `onClose`
+fires, which React Aria's own `clear()` does not, and then clears the queue,
+the toasts waiting unseen included. A toast called with no region mounted is
+queued and shows nothing, and a module flag warns once in the console.
+`process` is not typed in the package, so the warning cannot ask whether it is
+in development, and it is one line.
+
+**Two elements, and why.** React Aria's `UNSTABLE_ToastRegion` portals itself
+to the body and renders nothing until the first toast, so it cannot sit inside
+an always-mounted wrapper, and a polite live region has to exist before its
+text for a screen reader to announce it reliably. So `ToastRegion` renders two
+things. In place, where it is mounted, a status host, `div.toast-status-host`
+with `role="status"`, `aria-live="polite"` and `aria-atomic="true"`: always
+present, the server's HTML included, and hidden from sight by clipping
+(`position: absolute`, 1px square, `clip-path: inset(50%)`), never by
+`display`, which would take it out of the accessibility tree. And React Aria's
+region, `div.overlay.toast-region`, a `region` landmark F6 reaches, portaled
+with the first toast, holding `ol.toast-list` and the toasts.
+
+**What the host says.** Only the latest polite toast: its title and its second
+line, in one `span` keyed by the toast's id. With `aria-atomic` a new toast
+never re-reads the older ones, and a repeated "Saved" is a new node, so it is
+announced again. Each toast is seen once, as it arrives at the head of the
+queue, so one that comes back into view when a newer one closes is not read
+twice, and the host empties when its toast leaves the screen, so it never
+holds words nothing shows. An error is left to React Aria's content role,
+`alert`, which is assertive and carries React Aria's `aria-hidden`-then-shown
+step for NVDA. Every other tone's content takes `role="group"`, which React
+Aria merges after its own `alert`, so its visible words are not a second live
+region and nothing is read twice. A test holds both: a polite toast's page has
+one live element, the host, and an error's region has one, its content.
+
+**Under a modal.** Both elements carry `data-react-aria-top-layer`, the region
+through React Aria and the host from the library. React Aria's hide pass keeps
+such an element visible while a modal is open, its outside-press check ignores
+a press inside one, and its focus scope lets focus move into one. So a polite
+toast raised while a dialog is open is announced, a press on a toast's action
+or dismiss closes no dialog, and focus can move into a toast and back. Every
+library modal also passes React Aria a predicate that names `.toast-region`
+("Dialog and ConfirmDialog"), which does not depend on the attribute. The
+attribute is React Aria's internal contract, so the hide and the press are
+pinned by tests, and the version is pinned below.
+
+**Timing.** Success, info and warning stay 6 seconds and an error 12, the
+app's: a warning is read, not acted on, so it takes the ordinary time. A toast
+with an action has no timeout, since a reader who needs the action needs the
+time to reach it. `timeout` overrides, and `null` means never. React Aria
+starts a toast's timer when the toast is drawn, so a toast waiting behind
+three starts its time when it shows. Hover over the region and focus inside it
+pause every timer, and the timers resume only when both have ended: WCAG 2.2.1
+with nothing to set.
+
+**The card.**
+
+| Part | Value | Why |
+| --- | --- | --- |
+| Region | `position: fixed`; `inset-block-end` and `inset-inline-end` at the overlay inset; `width: min(28rem, calc(100vw - 2rem))`; `z-index: var(--z-toast)`; `pointer-events: none` | the app's corner, 16px in; the width caps against the viewport; a press between or around the toasts reaches the page |
+| Toast | the float fill, `1px solid var(--color-frame)`, `--radius-surface`, `--shadow-float`, `pointer-events: auto` | a float that dims nothing and may sit over another float, as "Overlays" sets out |
+| Stripe | `border-inline-start: 4px solid var(--toast-stripe)`: slate for info, then success, warning and error, keyed on `data-tone` | the app's stripe, logical so it mirrors |
+| Padding | `1rem var(--spacing-peer)`, 16px by 24px | the app's 20px by 16px, regularized onto the spacing steps: 24px is the peer gap a drawer and a padded popover use, and 16px the overlay inset |
+| Title | `--text-body`, ink, `overflow-wrap: anywhere` | the event, in words; a long word breaks instead of widening the stack |
+| Description | `--text-small`, slate, 4px under the title, `overflow-wrap: anywhere` | hints are slate |
+| Controls | the action, a secondary Button, then the dismiss, the 40px ghost IconButton with Lucide's X; `margin-block: -0.5rem; margin-inline-end: -0.5rem` | both targets stay 40px without growing the card |
+| List | `flex-direction: column-reverse`, 8px apart (`--spacing-part`) | React Aria lists the newest first, so the newest sits nearest the corner and the oldest rises, as the app stacked them |
+
+**The stripe, measured.** A 4px bar is a graphic and asks 3:1. All four colors
+are gated on Float already, as text at 4.5:1, so `contrast.test.js` cites them
+and adds nothing:
+
+| Stripe on Float | Light | Dark |
+| --- | --- | --- |
+| Slate, info | 5.49 | 6.94 |
+| Success | 7.44 | 6.34 |
+| Warning | 6.33 | 8.92 |
+| Error | 7.46 | 5.73 |
+
+Slate in dark is white at 60%, so it is painted over the float before it is
+measured. The toast stripe is one of the places the warning color was added
+for ("Six colors added").
+
+**The height of one line.** The spec put a one-line toast at 56px: 16px of
+padding, a 24px band and 16px. The 1px frame adds 2px, so it measures 58px.
+The band is the dismiss's: 40px tall, pulled in by 8px at each end, it takes
+24px, more than the title's 22.4px line. Without the pull-in the card would be
+74px. The `Short` story pins 58px, and the stylesheet's comment says so.
+
+**Motion.** A fade and an 8px rise, 180ms ease, on enter only, through
+`@starting-style`: React Aria's toast has neither `data-entering` nor
+`data-exiting`, so the exit is instant. `@starting-style` is above the browser
+floor (Safari 17.5, Firefox 129), so on Safari 16.4 and Firefox 128 a toast
+simply appears. Reduced motion turns the transition off, in a block after it.
+
+**Focus.** Each toast is React Aria's non-modal `alertdialog` with
+`tabIndex="0"`, named by its title and described by its second line, and draws
+the ring when keyboard focus reaches it. The region is `tabIndex="-1"`, React
+Aria's, and takes `outline: none`. When a focused toast leaves by the
+keyboard, React Aria moves focus to the next toast, or the previous one, or
+back to where it was before the region took it; after a pointer press it goes
+back, so no timer looks stuck. Each toast's dismiss is named by
+`dismissLabel`, "Dismiss", and the region by React Aria's localized count,
+such as "2 notifications.", unless `aria-label` names it.
+
+**Scope and direction.** The region follows the page root and copies no scope:
+a toast reports on the app, not on the card whose button raised it, and it may
+outlive that card. React Aria writes `dir` on the region, and the stripe and
+the corner are logical, so in right to left the stack sits in the bottom left
+corner with the stripe on the right.
+
+**Forced colors.** The frame is redrawn in `CanvasText`, and the stripe with
+it, so the tone is carried by the words alone, as it was in the app: the docs
+ask the title to say the outcome.
+
+**Room for a save bar.** `--toast-offset-block` is read with a fallback of 0
+and declared nowhere, so a later save bar can lift the stack by its own
+height.
+
+**`maxVisibleToasts`.** The prop writes the queue's `maxVisibleToasts`, which
+the queue reads each time a toast is added or closed, so a change applies from
+the next toast. It is a plain instance field in 1.22.1, private only in React
+Aria's types, so the library reaches it through a cast, and a region that
+unmounts puts back the value it found.
+
+**The pin.** React Aria's toast parts are `UNSTABLE_` in react-aria-components
+1.22 and may change in a minor. They are wrapped entirely, and
+`@snapshot-ui/react` pins `react-aria-components` to exactly 1.22.1, so a bump
+is a deliberate change with the toast tests run behind it. The docs app keeps
+its caret range, which resolves to the same version in the lockfile.
