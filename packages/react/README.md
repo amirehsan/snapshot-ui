@@ -10,6 +10,8 @@ pnpm add @snapshot-ui/react @snapshot-ui/core
 
 The components carry no CSS of their own. `@snapshot-ui/core` holds the styles.
 
+The package pins `react-aria-components` to an exact version, since the toast parts it wraps are unstable in React Aria. If your app installs `react-aria-components` too, install that same version, so there is one copy of React Aria and its providers, such as `I18nProvider`, reach the library's parts. `RouterProvider` comes from this package.
+
 ## Use
 
 Import the stylesheet once, at the root of your app. `base.css` is optional: it sets the page background, the body type, the font rendering details and an ink focus ring for your own links and fields.

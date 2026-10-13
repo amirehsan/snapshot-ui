@@ -753,6 +753,12 @@ React Aria's toast parts are `UNSTABLE_` in 1.22.1 and may change in a minor. Th
 - **Forced colors.** The frame survives as `CanvasText`; the stripe is repainted too, so tone is carried only by the words, which is how the source already worked. The docs rule: the title says the outcome.
 - **Right to left.** The stripe is `border-inline-start`, the region `inset-inline-end`, and React Aria sets `dir` on its region.
 
+**Correction, ruled in the Task 11 review:** two of this section's numbers changed in the build.
+- A one-line toast is 58px tall, not 56px. The 56 counted 16px of padding, a 24px band and 16px, and left out the 1px frame at the top and the bottom: 1 + 16 + 24 + 16 + 1 = 58. The band is the dismiss's, 40px pulled in by 8px at each end, which is taller than the title's 22.4px line. The CSS above is unchanged, and the `Short` story pins 58px.
+- The region's default name is React Aria's localized count, such as "2 notifications.", and not "Notifications": the string React Aria formats is `notifications` with the count of visible toasts. That applies wherever this document says "Notifications": 4.5's strings, 10.1's `@default` and 14's names.
+
+The build also holds a toast that arrives while the pointer or focus is in the region, which React Aria alone does not, since a new toast starts its timer as it mounts; it warns once when a second region is mounted, since two would show and announce every toast twice; and the status host keeps the title and the second line as two blocks, so a screen reader pauses between them.
+
 ## 11. CommandPalette
 
 ### 11.1 API
@@ -1047,6 +1053,7 @@ Keys tables:
 - **R6: a third-party overlay at a huge z-index** covers a library dialog. Mitigation: the two z variables are overridable and the docs say so.
 - **R7: two near colors.** `warning` and `clay` are the closest pair in the system, and `gain` equals `success` in light. Mitigation: the meaning rules in 4.1 keep them out of one component and out of each other's roles; the values are the consumer's and stay.
 - **R8: an error hidden behind three persistent toasts.** With `maxVisibleToasts` 3 and action toasts that never leave, a fourth toast, an error, waits unseen. Mitigation: the docs advise one action toast at a time and `toast.clear()` at the start of a new save; revisit with a priority rule if it happens.
+  **Correction, ruled in the Task 11 review:** the risk is the other way round. React Aria 1.22.1 always shows the newest toast: `add` puts it first, and the visible toasts are the first three, so a fourth toast, an error included, shows at once and pushes the oldest out of sight until one leaves. With three action toasts on screen, what is lost is the oldest Undo. The mitigation stands, for that reason: one action toast at a time, and `toast.clear()` at a new save.
 - **R9: the browser floor.** `@starting-style` is above it, so a toast appears without its rise on Safari 16.4 and Firefox 128; the sheet's view timeline is above it too and React Aria falls back to a 300ms timer. Mitigation: both are documented and neither affects function.
 - **R10: `onAction` timing.** The palette's close-then-act order only fails in a real browser. Mitigation: the play test that focuses a field.
 - **R11: bundle weight.** Autocomplete, Menu and Modal ship inside the palette's entry, and Sheet is the largest single module in this batch. Mitigation: `size-limit` entries per component with budgets set from the first build.

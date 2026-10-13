@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Settings, User } from 'lucide-react';
-import type { ReactElement, ReactNode } from 'react';
+import { useEffect, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
@@ -18,6 +18,7 @@ import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
 import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
+import { toast, ToastRegion } from '../toast';
 import { Eyebrow, Text } from '../typography';
 
 /**
@@ -614,6 +615,52 @@ export const MenuMirrored: Story = {
     await expect(modifier.left).toBeLessThan(comma.left);
     // The icon sits at the row's right edge, inside its 12px of padding.
     await expectSameEdge(rect(settings).right - icon.right, 12);
+  },
+};
+
+/** A button that raises one toast, and the region that shows it; the toast goes when the story does. */
+function SaveWithToast(): ReactElement {
+  useEffect(
+    () => () => {
+      toast.clear();
+    },
+    [],
+  );
+  return (
+    <>
+      <Button
+        variant="secondary"
+        onPress={() => {
+          toast({ title: 'تم الحفظ', description: 'تغييراتك منشورة الآن.', tone: 'success', timeout: null });
+        }}
+      >
+        احفظ
+      </Button>
+      <ToastRegion dismissLabel="إغلاق" />
+    </>
+  );
+}
+
+/**
+ * The toast region mirrors. React Aria writes `dir` on it from the locale, so the stack sits 16px from the
+ * left edge of the viewport, and the stripe, an inline-start border, is on the right of each toast.
+ */
+export const ToastMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <SaveWithToast />
+    </Rtl>
+  ),
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'احفظ' }));
+    const shown = await within(document.body).findByRole('alertdialog', { name: 'تم الحفظ' });
+    await Promise.all(shown.getAnimations().map((animation) => animation.finished.catch(() => null)));
+    const region = find(document, '.toast-region');
+    await expect(region).toHaveAttribute('dir', 'rtl');
+    await expectSameEdge(rect(region).left, 16);
+    const style = getComputedStyle(shown);
+    await expect(style.borderRightWidth).toBe('4px');
+    await expect(style.borderLeftWidth).toBe('1px');
   },
 };
 

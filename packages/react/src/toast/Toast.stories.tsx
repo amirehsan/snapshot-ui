@@ -115,9 +115,14 @@ const DISMISS: readonly ToastOptions[] = [
   { title: 'Saved', description: 'Your changes are live.', tone: 'success', timeout: null },
 ];
 
-/** An info toast on the default 6 seconds. */
+/** An info toast on a short timer of its own; the unit tests pin the default 6 seconds. */
 const TIMED: readonly ToastOptions[] = [
-  { title: 'Sync started', description: 'New transactions show up in a minute or two.', tone: 'info' },
+  {
+    title: 'Sync started',
+    description: 'New transactions show up in a minute or two.',
+    tone: 'info',
+    timeout: 3000,
+  },
 ];
 
 /** No toast on mount: the story raises its own. */
@@ -247,13 +252,17 @@ export const DismissFocused: Story = {
 };
 
 /**
- * A toast raised while a dialog is open sits above the scrim and takes the press, and the press dismisses
- * the toast and leaves the dialog open, with focus still inside it.
+ * A toast raised while a dialog is open is announced: the dialog hides the page from assistive technology
+ * and leaves the status host out. It sits above the scrim and takes the press, and the press dismisses the
+ * toast and leaves the dialog open, with focus still inside it.
  */
 export const AboveADialog: Story = {
   tags: ['no-visual'],
   render: (args) => (
     <>
+      <main>
+        <p>The page behind the dialog.</p>
+      </main>
       <Dialog
         defaultOpen
         title="Rename the workspace"
@@ -269,6 +278,12 @@ export const AboveADialog: Story = {
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
     const [shown] = await atRest(1);
     if (!shown) throw new Error('No toast');
+    // The page is hidden while the dialog is open, and the status host beside it is not, so it is heard.
+    const hidden = '[aria-hidden="true"], [inert]';
+    await expect(document.querySelector('main')?.closest(hidden)).not.toBeNull();
+    const status = body.getByRole('status');
+    await expect(status.closest(hidden)).toBeNull();
+    await expect(status).toHaveTextContent('Saved');
     const box = shown.getBoundingClientRect();
     const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
     await expect(shown.contains(hit)).toBe(true);
@@ -280,8 +295,10 @@ export const AboveADialog: Story = {
 };
 
 /**
- * The pointer over a toast holds it past its 6 seconds, and it leaves once the pointer does. WCAG 2.2.1 for
- * free: a reader who needs longer keeps it by pointing at it, or by moving focus into it.
+ * The pointer over a toast holds it past its timeout, and it leaves once the pointer does. WCAG 2.2.1 for
+ * free: a reader who needs longer keeps it by pointing at it, or by moving focus into it. The toast's own
+ * 3 seconds keep the story short; the wait under the pointer is longer than the whole timeout, so only the
+ * pause explains the toast still being there.
  */
 export const PauseOnHover: Story = {
   tags: ['no-visual'],
@@ -290,10 +307,10 @@ export const PauseOnHover: Story = {
     const [shown] = await atRest(1);
     if (!shown) throw new Error('No toast');
     await userEvent.hover(shown);
-    await new Promise((resolve) => setTimeout(resolve, 7000));
+    await new Promise((resolve) => setTimeout(resolve, 4000));
     await expect(shown).toBeInTheDocument();
     await userEvent.unhover(shown);
-    await waitFor(() => expect(shown).not.toBeInTheDocument(), { timeout: 7000 });
+    await waitFor(() => expect(shown).not.toBeInTheDocument(), { timeout: 5000 });
   },
 };
 

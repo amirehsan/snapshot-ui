@@ -514,8 +514,9 @@ const SERVER_RENDERED: Record<string, string[]> = {
   switch: ['.stage .switch-thumb'],
   'text-area': ['.stage .textarea'],
   'text-field': ['.stage .input'],
-  // The buttons that raise the toasts, and the polite status host, which is in the page before any toast.
-  toast: ['.stage .button', '.stage .toast-status-host'],
+  // The buttons that raise the toasts, and the polite status host the docs layout mounts, which is in the page
+  // before any toast.
+  toast: ['.stage .button', '.toast-status-host'],
   typography: ['.stage .heading', '.stage .copy', '.stage .copy-numeral', '.stage .eyebrow'],
 };
 
