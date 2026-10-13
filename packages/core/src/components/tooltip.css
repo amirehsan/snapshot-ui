@@ -78,6 +78,13 @@
     white-space: nowrap;
   }
 
+  /* React Aria's Keyboard writes dir="ltr" on the chip, so its keys read left to right, and a logical margin
+     resolves against the chip's own direction: its inline start is always its left. In a right-to-left tip the
+     text is on the chip's right, so the gap moves there. The wrapper always writes dir on the tip. */
+  .tooltip[dir='rtl'] .tooltip-shortcut {
+    margin-inline: 0 0.5rem;
+  }
+
   /* An svg fill is repainted, so the arrow goes and the border carries the shape. */
   @media (forced-colors: active) {
     .tooltip {
