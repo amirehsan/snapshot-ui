@@ -12,6 +12,12 @@ import { cx } from '../utils/cx';
 
 export { MenuTrigger, type MenuTriggerProps } from 'react-aria-components';
 
+/**
+ * React Aria's key, a string or a number, as a menu item's `id`, a selection and a palette item's `id` take
+ * it, so an app can type one without importing React Aria.
+ */
+export type { Key } from 'react-aria-components';
+
 export interface MenuProps<T extends object> extends Omit<RACMenuProps<T>, 'className' | 'style'> {
   /** Where the popover opens. @default 'bottom start' */
   placement?: Placement;

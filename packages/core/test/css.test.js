@@ -1823,6 +1823,8 @@ describe('src/components/sheet.css', () => {
     // Outside the reduced-motion block no rule names the backdrop: a rule here at the shared rule's specificity
     // would hold only while overlay.css loads first, which a per-component import does not promise.
     expect(css.slice(0, start) + css.slice(end)).not.toMatch(/\.sheet-scrim\b/);
+    // Nor does any rule name the shared scrim itself, by a descendant selector or alone.
+    expect(css).not.toMatch(/\.overlay-scrim\b/);
     // Inside it, one important declaration, of a property the shared scrim never sets.
     expect(blockAfter(blockAfter(css, reduced), '.sheet-scrim {').trim()).toBe('animation: none !important;');
     expect(stripComments(read('src/components/overlay.css'))).not.toMatch(/(?<![\w-])animation/);

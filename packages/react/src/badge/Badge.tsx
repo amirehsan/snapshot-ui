@@ -2,9 +2,10 @@ import type { HTMLAttributes, ReactElement, ReactNode, Ref } from 'react';
 import { cx } from '../utils/cx';
 
 /**
- * What a badge means. Error means invalid or failed, success means success, and warning means a
- * state that needs a look soon and is not a failure (Watch, Behind, Needs review, Out of date), so
- * none is ever decoration, in sample content included.
+ * What a badge means. Error means invalid or failed, success means
+ * success, and warning means a state that needs a look soon and is not a
+ * failure (Watch, Behind, Needs review, Out of date), so none is ever
+ * decoration, in sample content included.
  */
 export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 

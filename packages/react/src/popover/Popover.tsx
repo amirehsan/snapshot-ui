@@ -14,6 +14,12 @@ import { useOverlayScope } from '../overlay/useOverlayScope';
 import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
 
+/**
+ * React Aria's placement, a side and an optional alignment such as `'bottom start'`, as Popover, Menu and
+ * Tooltip take it, so an app can type one without importing React Aria.
+ */
+export type { Placement } from 'react-aria-components';
+
 export interface PopoverProps extends Omit<RACPopoverProps, 'className' | 'children' | 'style'> {
   /** The content: free content, padded with `isPadded`, or a list that pads itself. */
   children:
@@ -52,7 +58,16 @@ export function Popover({
   // what holds focus, since a popover opened by its default or by the app's own state was opened by no press,
   // and focus can be anywhere.
   const context = useSlottedContext(PopoverContext, props.slot);
-  const scopeRef = useOverlayScope(props.triggerRef ?? context?.triggerRef);
+  const triggerRef = props.triggerRef ?? context?.triggerRef;
+  // React Aria reads the trigger as soon as the popover opens, and with none it fails on an undefined `current`
+  // that names nothing. This says what is missing instead, on the server and in the browser alike.
+  if ((props.isOpen === true || props.defaultOpen === true) && triggerRef == null) {
+    throw new Error(
+      'Popover: a popover opened with `isOpen` or `defaultOpen` outside a DialogTrigger or MenuTrigger needs ' +
+        '`triggerRef`, a ref to the element it opens against.',
+    );
+  }
+  const scopeRef = useOverlayScope(triggerRef);
   // Memoized, so React does not detach and attach the popover's refs on every render.
   const popoverRef = useMemo(() => mergeRefs<HTMLElement>(ref, scopeRef), [ref, scopeRef]);
   return (

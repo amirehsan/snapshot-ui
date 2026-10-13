@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactElement, Ref } from 'react';
+import { useId, type ReactElement, type Ref } from 'react';
 import {
   Button as RACButton,
   type ButtonProps as RACButtonProps,
@@ -19,7 +19,8 @@ export interface ButtonProps extends RACButtonProps {
    */
   variant?: ButtonVariant;
   /**
-   * Accessible name of the spinner shown while `isPending`.
+   * Accessible name of the spinner shown while `isPending`. It joins the
+   * button's name while pending, so "Save" reads "Save Saving".
    * @default 'Loading'
    */
   pendingLabel?: string;
@@ -34,16 +35,25 @@ export function Button({
   children,
   ...props
 }: ButtonProps): ReactElement {
+  const labelId = useId();
+  // React Aria joins the spinner's name to a pending button's only when an attribute names the button. A
+  // button named by its text gets its label as that attribute while pending, so the spinner's name joins it
+  // in every engine; at rest it is named by its text again.
+  const namedByLabel =
+    props.isPending === true && props['aria-label'] == null && props['aria-labelledby'] == null;
   return (
     <RACButton
       {...props}
+      aria-labelledby={namedByLabel ? labelId : props['aria-labelledby']}
       className={composeRenderProps(className, (userClassName) =>
         cx('button', `button-${variant}`, userClassName),
       )}
     >
       {composeRenderProps(children, (resolved, { isPending }) => (
         <>
-          <span className="button-label">{resolved}</span>
+          <span id={namedByLabel ? labelId : undefined} className="button-label">
+            {resolved}
+          </span>
           {isPending ? <Spinner className="button-spinner" aria-label={pendingLabel} /> : null}
         </>
       ))}

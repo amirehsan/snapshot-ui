@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, useRef, type ReactElement } from 'react';
 import { I18nProvider, PopoverContext } from 'react-aria-components';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import * as library from '../index';
 import { Button } from '../button';
@@ -213,8 +213,29 @@ describe('Popover', () => {
     expect(popover()).toHaveAttribute('dir', 'rtl');
   });
 
+  it('names triggerRef when it is opened outside a trigger without one, and renders nothing when closed', () => {
+    // React's own report of the error the render throws.
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    for (const open of [{ isOpen: true }, { defaultOpen: true }]) {
+      expect(() => render(<Popover {...open}>Panel</Popover>)).toThrow(
+        /Popover: .*outside a DialogTrigger or MenuTrigger needs `triggerRef`/,
+      );
+    }
+    error.mockRestore();
+    render(<Popover isOpen={false}>Panel</Popover>);
+    expect(document.querySelector('.popover')).toBeNull();
+  });
+
   it('is exported from the package', () => {
     expect(library).toHaveProperty('Popover');
+  });
+
+  it('exports React Aria’s Placement type, so an app types a placement with no React Aria import', () => {
+    // Each line fails `pnpm typecheck` if the package stops exporting the type, or exports a looser one.
+    const placement: library.Placement = 'top end';
+    // @ts-expect-error a placement is a side and an optional alignment
+    const nowhere: library.Placement = 'middle';
+    expect([placement, nowhere]).toHaveLength(2);
   });
 
   it('has no axe violations open', async () => {

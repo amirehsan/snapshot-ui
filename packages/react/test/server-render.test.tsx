@@ -261,4 +261,8 @@ describe('the client components on the server', () => {
     for (const part of contains) expect(html).toContain(part);
     for (const part of excludes) expect(html).not.toContain(part);
   });
+
+  it('names triggerRef for a Popover opened outside a trigger without one, with no browser', () => {
+    expect(() => renderToString(<Popover isOpen>Panel</Popover>)).toThrow(/needs `triggerRef`/);
+  });
 });

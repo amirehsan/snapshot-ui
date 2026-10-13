@@ -1,6 +1,6 @@
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useLayoutEffect, type ReactElement } from 'react';
+import { StrictMode, useLayoutEffect, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Button } from '../button';
 import { useConfirm, type ConfirmHandle, type ConfirmOptions } from './useConfirm';
@@ -286,6 +286,44 @@ describe('useConfirm', () => {
     await waitFor(() => {
       expect(trigger).toHaveFocus();
     });
+  });
+
+  it('keeps a chained run in the first trigger’s scope, and gives focus back to it, under Strict Mode', async () => {
+    // Strict Mode rehearses an unmount as each panel mounts, which must not end the run.
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(answer: boolean) => void>();
+    render(
+      <StrictMode>
+        <Chained onAnswer={onAnswer} />
+      </StrictMode>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Delete' });
+    await user.click(trigger);
+    expect(panel()).toHaveAttribute('data-theme', 'dark');
+    await user.click(screen.getByRole('button', { name: 'Delete Groceries' }));
+    await screen.findByRole('alertdialog', { name: 'Tell the bookkeeper?' });
+    expect(panel()).toHaveAttribute('data-theme', 'dark');
+    expect(panel()).toHaveAttribute('data-shape', 'square');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(onAnswer).toHaveBeenCalledExactlyOnceWith(false);
+    });
+    await waitFor(() => {
+      expect(trigger).toHaveFocus();
+    });
+  });
+
+  it('gives focus back to the first trigger without scrolling the page to it', async () => {
+    const user = userEvent.setup();
+    render(<Chained onAnswer={vi.fn()} />);
+    const trigger = screen.getByRole('button', { name: 'Delete' });
+    const focus = vi.spyOn(trigger, 'focus');
+    await user.click(trigger);
+    await user.click(screen.getByRole('button', { name: 'Delete Groceries' }));
+    await screen.findByRole('alertdialog', { name: 'Tell the bookkeeper?' });
+    // The hook's own hand-back as the first panel leaves, as React Aria's restore does it. In jsdom React Aria
+    // focuses with no options, so this call is the hook's.
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
   });
 
   it('answers false at once when asked after the component has unmounted', async () => {
