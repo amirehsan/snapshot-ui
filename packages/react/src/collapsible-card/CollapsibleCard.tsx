@@ -56,11 +56,12 @@ export interface CollapsibleCardProps extends Omit<HTMLAttributes<HTMLElement>, 
   onExpandedChange?: (isExpanded: boolean) => void;
   /**
    * Remembers the fold in this browser under this key, so the card is folded again the next time the page
-   * opens. Cards with the same key fold together, on the page and in other tabs. A card whose key the
-   * browser has not stored is open, whatever `defaultExpanded` says. Ignored when `isExpanded` is given.
-   * The server cannot see the browser's storage, so a server-rendered card is drawn open and folds, with no
-   * transition, once the page has hydrated. Where the browser blocks storage or refuses a write, a fold lasts
-   * only while a card with a `storageKey` is on the page.
+   * opens. Cards with the same key fold together, on the page and in other tabs. The stored entry is a plain
+   * list of the folded keys, and a key the browser has not stored means open, so `defaultExpanded={false}`
+   * does not apply under a `storageKey`. Ignored when `isExpanded` is given. The server cannot see the
+   * browser's storage, so a server-rendered card is drawn open and folds, with no transition, once the page
+   * has hydrated. Where the browser blocks storage or refuses a write, a fold lasts only while a card with a
+   * `storageKey` is on the page.
    */
   storageKey?: string;
   /**
@@ -158,13 +159,13 @@ function CardToggle({
 }
 
 /**
- * A card whose body folds under its header. The title is the toggle, a row as wide as the title with a
+ * A card whose body folds under its header. The title is the toggle, a row at least 40px tall with a
  * chevron at its end, and the note and the actions stay in the header while the body is folded. It draws
  * with Card's own classes, so the two look alike, and it is built on React Aria's Disclosure, so the toggle
  * is a button that says whether the body is shown, and find-in-page can open a folded card in a browser that
  * supports `hidden="until-found"`. Given a `storageKey`, it remembers its fold in the browser. Folded, it
  * marks a change any field in its body holds, and it opens itself when a field in its body fails the
- * browser's validation on submit.
+ * browser's validation on submit, or when a script checks the form's validity.
  */
 export function CollapsibleCard({
   title,

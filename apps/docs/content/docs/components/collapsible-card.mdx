@@ -8,7 +8,7 @@ icon: ChevronsDownUp
 
 ## Folding
 
-The title is the toggle: press it, or focus it and press Enter or Space, to fold the body under the header and to open it again. The whole row is the target, and the chevron at its end turns toward the title while the card is folded. The header stays as it is, and the space and the rule between the header and the body fold away with the body, in 200ms, or at once under reduced motion.
+The title is the toggle: press it, or focus it and press Enter or Space, to fold the body under the header and to open it again. The title row is the target, and the chevron at its end turns toward the title while the card is folded. The header stays as it is, and the space and the rule between the header and the body fold away with the body, in 200ms, or at once under reduced motion.
 
 <Preview name="collapsible-card-basic" />
 
@@ -30,7 +30,7 @@ Controls passed as `actions` sit at the end of the header row, outside the toggl
 
 Give a card a `storageKey` and it remembers its fold in this browser: fold it, reload the page, and it is still folded. Cards with the same key fold together, on the page and in other tabs, and a card that find-in-page opens is remembered as open. Every remembered card on the site keeps its fold in one `localStorage` entry, `snapshot-ui:collapsed`, so give each card a key of its own, such as its page and its title. Where the browser blocks storage or refuses a write, the card still folds and opens, but a fold lasts only while a card with a `storageKey` is on the page.
 
-A card whose key was never stored is open, so `defaultExpanded` does not apply, and a card that `isExpanded` controls reads and stores nothing. `onExpandedChange` is called when someone uses this card, by its toggle or by find-in-page. A card that follows another card or tab with the same key is syncing state, not being used, and does not call it.
+The entry is a plain list of the folded keys, and a key that was never stored means open, so `defaultExpanded={false}` does not apply under a `storageKey`. A card that `isExpanded` controls reads and stores nothing. `onExpandedChange` is called when someone uses this card, by its toggle or by find-in-page. A card that follows another card or tab with the same key is syncing state, not being used, and does not call it.
 
 <Preview name="collapsible-card-remembered" />
 
@@ -54,7 +54,7 @@ A screen reader reads the toggle's title, then collapsed, then `changedLabel`, w
 
 ## Opening for an invalid field
 
-A folded card opens itself when a field in its body fails the browser's validation on submit, so the field can be seen and fixed. A field among the header's actions is in view already, so it leaves the card folded. The card hears the browser's `invalid` event before the field takes focus, and opens the way its toggle does: a remembered fold is forgotten, and `onExpandedChange` is called with `true`, once however many fields fail, so a card that `isExpanded` controls opens once the app sets it open. The open has no transition, and neither has a card with the same `storageKey` that opens with it, so the body is its full height when the field takes focus, and the browser scrolls the field into view however deep in the body it sits, with motion or without. That holds for a React Aria field and for a plain input with `required` alike.
+A folded card opens itself when a field in its body fails the browser's validation on submit, or when a script calls the form's `checkValidity()` or `reportValidity()`, so the field can be seen and fixed. A field among the header's actions is in view already, so it leaves the card folded. The card hears the browser's `invalid` event before the field takes focus, and opens the way its toggle does: a remembered fold is forgotten, and `onExpandedChange` is called with `true`, once however many fields fail, so a card that `isExpanded` controls opens once the app sets it open. The open has no transition, and neither has a card with the same `storageKey` that opens with it, so the body is its full height when the field takes focus, and the browser scrolls the field into view however deep in the body it sits, with motion or without. That holds for a React Aria field and for a plain input with `required` alike.
 
 This covers fields that leave validation to the browser, which React Aria does by default, with `validationBehavior="native"`. With `validationBehavior="aria"` the browser sees nothing wrong, fires no `invalid` event and lets the form submit, so the card stays folded. Open it from your own state, with `isExpanded`, when your validation fails.
 
@@ -64,7 +64,7 @@ This covers fields that leave validation to the browser, which React Aria does b
 
 ## Usage
 
-A card is open on its first render. Pass `defaultExpanded={false}` to start it folded, or control it with `isExpanded` and `onExpandedChange`. The children are the body, laid out as a card's body is. CollapsibleCard is a client component, and a server component can render it, as the first example on this page does.
+A card is open on its first render. Pass `defaultExpanded={false}` to start it folded, or control it with `isExpanded` and `onExpandedChange`. The children are the body, laid out as a card's body is. CollapsibleCard is a client component, and a server component can render it, as the first example on this page does. A card that never folds should stay a [Card](/docs/components/card), which is static and ships no JavaScript. In a parent that sizes the card to its content, such as a shrink-to-fit box, the card's width can change between folded and open, since a folded card holds only its header, so give the card a width from its container.
 
 ```tsx
 import { Button, CollapsibleCard } from '@snapshot-ui/react';
@@ -98,7 +98,7 @@ The rest of the HTML attributes, `className` and `ref` go on the card's root, an
 
 ## Accessibility
 
-The title is a heading that holds a button, so the card is in a screen reader's list of headings, and the button says the title and then whether the body is expanded or collapsed. The chevron is decoration. A folded body leaves the tab order and the accessibility tree. In a browser that supports `hidden="until-found"`, find-in-page and text fragment links can still find its text: the card opens at once, so the browser scrolls to where the match stays, and reports it through `onExpandedChange`. A browser without it hides a folded body completely, and find-in-page does not search it. When a card folds while focus is in its body, as after a Done button there, focus moves to its toggle. The toggle is as wide as the title and 40px tall, and the actions are never inside it.
+The title is a heading that holds a button, so the card is in a screen reader's list of headings, and the button says the title and then whether the body is expanded or collapsed. The chevron is decoration. A folded body leaves the tab order and the accessibility tree. In a browser that supports `hidden="until-found"`, find-in-page can still find its text: the card opens at once, so the browser scrolls to where the match stays, and reports it through `onExpandedChange`. A text fragment link into a card that is folded when the page loads is less sure. The server's HTML hides a folded body completely, and the card makes it findable only once the page has hydrated, so the link works only if the browser is still looking for its text by then. In our measurements Firefox did not look again at all, and Chromium and WebKit stopped within about 1.5 and 5 seconds of the load, so leave open a card that a link must reach. A browser without `until-found` hides a folded body completely, and find-in-page does not search it. When a card folds while focus is in its body, as after a Done button there, focus moves to its toggle. The toggle spans the block the title and the note share, at least 40px tall, and the actions are never inside it.
 
 <Keys rows={[['Enter Space', 'Folds or opens the card.'], ['Tab', 'Moves to the toggle, then to the actions. A folded body takes no focus.']]} />
 
@@ -112,6 +112,6 @@ A card is a div unless `as` says otherwise. A `section` with a name, from `aria-
 
 What keeps collapsible cards in the system.
 
-<Rules dos={['Title the card with what it holds, such as Notifications. The title is the toggle and its name.', 'Put a control that acts on the whole card, such as Reset, in actions, so it stays in reach while the card is folded.', 'Leave open what a reader needs on arrival, and fold what they come back to now and then.']} donts={['Never put a link or a button in the title. The title is already a button.', 'Never fold the only card on a page. A fold that hides everything hides the page.', 'Never use a collapsible card for a single control or a short label. A card holds a section.']} />
+<Rules dos={['Title the card with what it holds, such as Notifications. The title is the toggle and its name.', 'Put a control that acts on the whole card, such as Reset, in actions, so it stays in reach while the card is folded.', 'Leave open what a reader needs on arrival, and fold what they come back to now and then.']} donts={['Never put a link or a button in the title. The title is already a button.', 'Never fold the only card on a page. A fold that hides everything hides the page.', 'Never use a collapsible card for a single control or a short label. A card holds a section.', 'Never use a collapsible card for a card that never folds. Use a Card, which is static.']} />
 
 </Section>

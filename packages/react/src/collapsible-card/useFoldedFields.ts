@@ -40,8 +40,9 @@ export function useHoldsChange(foldRef: RefObject<HTMLElement | null>, isFolded:
 
 /**
  * Opens the card through `open`, the path a press of the toggle takes, when a field in its folded body fails
- * the browser's validation on submit. The browser fires `invalid` at each control that fails before it moves
- * focus to the first one, and a React Aria field moves the focus itself, from its own `invalid` listener on
+ * the browser's validation, on submit or when a script calls the form's `checkValidity()` or
+ * `reportValidity()`. The browser fires `invalid` at each control that fails before it moves focus to the
+ * first one, and a React Aria field moves the focus itself, from its own `invalid` listener on
  * the control. This listener is on the card's root, in the capture phase, so it runs before both, and it
  * renders the open at once, so the body is shown before anything focuses a field in it. Only a folded card
  * listens, and only a control inside the fold opens it: one among the header's actions is in view already.
@@ -54,6 +55,10 @@ export function useHoldsChange(foldRef: RefObject<HTMLElement | null>, isFolded:
  *
  * The root is the fold's grandparent: the root holds React Aria's disclosure, which holds the fold.
  *
+ * `open` is a new function on every render, so the listener reads the latest one from a ref and stays on the
+ * root for as long as the card is folded: a folded card in a parent that renders often adds and removes
+ * nothing per render.
+ *
  * Internal: not exported from the package.
  */
 export function useOpenOnInvalid(
@@ -62,6 +67,10 @@ export function useOpenOnInvalid(
   open: () => void,
 ): void {
   const opening = useRef(false);
+  const latestOpen = useRef(open);
+  useLayoutEffect(() => {
+    latestOpen.current = open;
+  });
   useLayoutEffect(() => {
     const fold = foldRef.current;
     const root = fold?.parentElement?.parentElement;
@@ -73,11 +82,11 @@ export function useOpenOnInvalid(
         opening.current = false;
       });
       markReveal(event);
-      flushSync(open);
+      flushSync(latestOpen.current);
     };
     root.addEventListener('invalid', onInvalid, true);
     return () => {
       root.removeEventListener('invalid', onInvalid, true);
     };
-  }, [foldRef, isFolded, open]);
+  }, [foldRef, isFolded]);
 }

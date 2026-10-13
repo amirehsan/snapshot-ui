@@ -106,7 +106,7 @@ Every React Aria checkbox prop is accepted. These are the ones Snapshot UI adds 
 
 ## Accessibility
 
-A native checkbox input inside its label, with React Aria handling the wiring. The mixed state is exposed as mixed. A group is a `group` named by its label, and its hint and error line describe every checkbox in it. A screen reader reads the Changed chip with the group, after the hint, while the group is changed and valid. An invalid group reads its error line alone.
+A native checkbox input inside its label, with React Aria handling the wiring. The mixed state is exposed as mixed. A group is a `group` named by its label, and its hint and error line describe every checkbox in it. A screen reader reads the Changed chip of a group with the group, and the chip of a standalone checkbox as part of its description, after the hint, while it is changed and valid. A standalone checkbox's chip sits beside the row, so it is no part of the checkbox's name and a press on it does not toggle the box. An invalid group or checkbox reads its error line alone, and a checkbox with no visible label has no chip.
 
 <Keys rows={[['Tab', 'Moves to the next checkbox. Each one is its own stop, in a group too.'], ['Space', 'Toggles the focused checkbox.'], ['Arrow keys', 'Do nothing. Only a radio group moves between its choices with them.']]} />
 

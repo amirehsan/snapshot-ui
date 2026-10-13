@@ -14,7 +14,7 @@ Out of scope: the Accordion (the parent spec's "Accordion, new, from Collapsible
 These are the behaviors the library keeps. Section 6.3 of the parent spec already names the first two.
 
 - **Remembering.** A card remembers its fold per browser, keyed by page and title. Copies of one card share a key and fold together.
-- **The folded marker.** While folded, a card holding a field with an unsaved change shows a light signal orange dot after its title, so a change is never out of sight. Open, each field shows its own Changed chip instead.
+- **The folded marker.** While folded, a card holding a field with an unsaved change shows a dot after its title, so a change is never out of sight. The source app drew it in light signal orange. The library draws it in clay, the color of the Changed chip, because the orange measured 2.78:1 on the card, under the 3:1 a graphic that carries meaning asks (see "The folded marker" in section 5, and the design record's Appendix B). Open, each field shows its own Changed chip instead.
 - **The title is the toggle.** The title row is one button, with a chevron at its end. The whole row is the target, brought to 40px with padding that a negative margin gives back, so the header keeps its height.
 - **The header stays when folded.** Only the body folds. Whatever the header holds, a status or a Reset button, stays visible and usable.
 - **The fold.** The body folds over 200ms. Reduced motion removes the transition.
@@ -100,8 +100,8 @@ export interface CollapsibleCardProps extends Omit<HTMLAttributes<HTMLElement>, 
 
 ### Opening on an invalid field
 
-- **The mechanism.** A capture-phase `invalid` listener on the card root opens a folded card. The browser fires `invalid` on each control that fails native validation when a form is submitted, so a folded card holding one opens before the browser focuses that control.
-- **Controlled cards.** A controlled card receives the request through `onExpandedChange(true)`, once for every control that fails in one check.
+- **The mechanism.** A capture-phase `invalid` listener on the card root opens a folded card. The browser fires `invalid` on each control that fails native validation when a form is submitted, or when a script calls its `checkValidity()` or `reportValidity()`, so a folded card holding one opens before the browser focuses that control.
+- **Controlled cards.** A controlled card receives the request through `onExpandedChange(true)`, once per check, however many controls fail in it.
 - **Drawn at once.** The open has no transition, as find-in-page's does, and neither has any card that opens with it, such as one with the same `storageKey`. So the body is its full height when the field takes focus, and the browser scrolls the field into view however deep it sits.
 
 ## 6. Look and CSS
