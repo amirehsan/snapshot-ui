@@ -3954,9 +3954,17 @@ things. In place, where it is mounted, a status host, `div.toast-status-host`
 with `role="status"`, `aria-live="polite"` and `aria-atomic="true"`: always
 present, the server's HTML included, and hidden from sight by clipping
 (`position: absolute`, 1px square, `clip-path: inset(50%)`), never by
-`display`, which would take it out of the accessibility tree. And React Aria's
-region, `div.overlay.toast-region`, a `region` landmark F6 reaches, portaled
-with the first toast, holding `ol.toast-list` and the toasts.
+`display`, which would take it out of the accessibility tree. It is pinned to
+the start corner of its containing block (`inset-block-start: 0;
+inset-inline-start: 0`): left at its static position, after the last block of
+a page mounted at the root, its 1px box lengthened a page that fills the
+viewport, and the page scrolled by 1px. A docs test holds a short page at
+`scrollHeight` equal to `clientHeight`. And React Aria's region,
+`div.overlay.toast-region`, a `region` landmark F6 reaches, portaled with the
+first toast, holding `ol.toast-list` and the toasts. The region reads an empty
+queue as the same empty list it renders on the server, so hydration adds no
+commit of its own; React Aria's region takes one more as it learns it is on
+the client, and a test counts the two.
 
 **What the host says.** Only the latest polite toast: its title and its second
 line, two blocks inside one element keyed by the toast's id, so a screen
@@ -4002,8 +4010,11 @@ every timer, and the timers resume only when both have ended: WCAG 2.2.1 with
 nothing to set. React Aria pauses when the pointer or focus enters, and a
 toast that arrives after that would start its own timer as it mounts, so the
 region pauses the queue again whenever the visible toasts change while it is
-hovered or holds focus: its effect runs after the new toast's, since the
-toasts are inside it.
+hovered or holds focus. It pauses from a microtask its effect queues, after
+the commit: development Strict Mode runs a new toast's effects a second time
+once every effect of the commit has run, which restarted a timer the effect
+had already paused, and a microtask still runs before any timer falls due. A
+test holds the arrival under `StrictMode`.
 
 **The card.**
 

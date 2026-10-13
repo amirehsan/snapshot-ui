@@ -1551,6 +1551,19 @@ test('the toast page shows a toast that is announced politely and dismissed', as
   await expect(host).toContainText('Savings removed');
 });
 
+test('a page shorter than the viewport does not scroll with the toast region mounted', async ({ page }) => {
+  // The workspace is at least the viewport's height, and the layout mounts the region after it, so a status
+  // host left at its static position would sit 1px below the viewport and the page would scroll by 1px.
+  await page.setViewportSize({ width: 1440, height: 2400 });
+  await visit(page, '/docs');
+  await expect(page.locator('.toast-status-host')).toHaveCount(1);
+  const { scrollHeight, clientHeight } = await page.evaluate(() => ({
+    scrollHeight: document.documentElement.scrollHeight,
+    clientHeight: document.documentElement.clientHeight,
+  }));
+  expect(scrollHeight).toBe(clientHeight);
+});
+
 test('an error toast is an alert', async ({ page }) => {
   await visit(page, '/docs/components/toast');
   await page.getByRole('button', { name: 'Import failed', exact: true }).click();

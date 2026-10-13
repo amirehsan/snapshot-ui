@@ -5,9 +5,13 @@
  * not run there; an instant exit. Derived in docs/design-system.md ("Toast").
  */
 @layer components {
-  /* The polite live region, present before its text, hidden from sight and kept out of aria-hidden. */
+  /* The polite live region, present before its text, hidden from sight and kept out of aria-hidden. Pinned
+     to the start corner: left at its static position after the last block, it would lengthen by 1px a page
+     that fills the viewport, and that page would scroll. */
   .toast-status-host {
     position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
     width: 1px;
     height: 1px;
     overflow: hidden;
