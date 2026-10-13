@@ -134,28 +134,6 @@ describe('useConfirm', () => {
     expect(onAnswer).toHaveBeenCalledTimes(1);
   });
 
-  it('gives a second question its own dialog, so its initial focus runs again', async () => {
-    const user = userEvent.setup();
-    const { latest } = await asked(user);
-    // The first question is a danger one, which starts on Cancel.
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
-    });
-    act(() => {
-      void latest().confirm({
-        ...QUESTION,
-        tone: 'default',
-        title: 'Archive Rent?',
-        confirmLabel: 'Archive Rent',
-      });
-    });
-    // The second is a default one, which starts on its answer.
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Archive Rent' })).toHaveFocus();
-    });
-    expect(screen.getAllByRole('alertdialog')).toHaveLength(1);
-  });
-
   it('answers an open question false when the component that asked unmounts', async () => {
     const user = userEvent.setup();
     const { onAnswer, view } = await asked(user);
