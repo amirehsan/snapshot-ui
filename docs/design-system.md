@@ -2761,20 +2761,26 @@ the layout effects of everything inside the root have run: an effect in a
 component inside a modal's panel found no panel at all, and the copy never
 happened. It starts from the origin: the trigger, where React Aria hands the
 overlay one (Popover and Menu through `PopoverContext`, Tooltip through
-`TooltipContext`), and otherwise `document.activeElement` at that moment,
-since the root attaches in the layout phase of the commit that opens the
-overlay, while the pressed trigger still holds focus, and React Aria's
-`Dialog` moves focus later, in an effect. For each attribute, in the order
-theme, shape, density, the nearest ancestor of the origin that carries it
-gives the value, and an attribute no ancestor carries is removed from the
-root. So an origin outside every nested scope, or the body when nothing is
-focused, gets the root theme. For a modal the copy lands on the panel and not
-on the scrim, so a light card's dialog is light while the scrim keeps the
-page's opacity. The toast region copies nothing and follows the page root. The
-one escape hatch is React Aria's `UNSAFE_PortalProvider` with a container
-inside the scope: the docs show it, imported from `react-aria`, and the
-library neither uses it nor adds a dependency for it. Every overlay has an
-`InDarkScope` story that proves the copy.
+`TooltipContext`), and otherwise what held focus when the overlay opened. The
+pressed trigger still holds focus as the root attaches, and React Aria's
+`Dialog` moves focus later, in an effect, but content that focuses itself as
+it mounts does not wait: React focuses a native `autoFocus`, or React Aria's
+`Input` with `autoFocus`, in the same layout phase, before the root's ref
+attaches, and a dialog opened from a dark card then opened in the root theme.
+So the modal frame records `document.activeElement` in a layout effect of the
+panel's first child, which runs before anything in the content, and hands that
+to the copy as its origin. Content that focuses itself, such as a palette's
+input, needs no origin of its own. For each attribute, in the order theme,
+shape, density, the nearest ancestor of the origin that carries it gives the
+value, and an attribute no ancestor carries is removed from the root. So an
+origin outside every nested scope, or the body when nothing is focused, gets
+the root theme. For a modal the copy lands on the panel and not on the scrim,
+so a light card's dialog is light while the scrim keeps the page's opacity.
+The toast region copies nothing and follows the page root. The one escape
+hatch is React Aria's `UNSAFE_PortalProvider` with a container inside the
+scope: the docs show it, imported from `react-aria`, and the library neither
+uses it nor adds a dependency for it. Every overlay has an `InDarkScope` story
+that proves the copy.
 
 **Direction.** Every overlay root sets `dir` from `useLocale().direction`.
 React Aria does it for `Popover` and the toast region, and the wrappers do it
@@ -2802,9 +2808,13 @@ panel, with everything in it, follows the reader's palette again. It is fixed
 over the viewport at `--z-modal`, as a grid each modal places its panel in,
 and its height is `--visual-viewport-height`, the inline value React Aria
 writes on the overlay so that the on-screen keyboard shortens it, or `100dvh`
-without one. While the overlay enters or exits the scrim is transparent, and
-its color moves in 180ms, ease. A press on the scrim dismisses when the modal
-is `isDismissable`; a press on the toast region does not.
+without one. It is `box-sizing: border-box`, so the padding a modal gives it
+to keep its panel off the viewport's edges sits inside that height on a page
+without `base.css`, where a content box would push the panel past the bottom
+by twice the padding. While the overlay enters or exits the scrim is
+transparent, and its color moves in 180ms, ease. A press on the scrim
+dismisses when the modal is `isDismissable`; a press on the toast region does
+not.
 
 **One scrim when modals stack.** A modal opened from a modal, such as a
 confirm from a dialog, would paint a second scrim over the first and darken
@@ -3001,22 +3011,26 @@ Well. The well's fills vanish there and the icon
 stays, which is enough.
 
 **Widths and height.** The scrim is a grid that centres the panel with the
-16px overlay inset clear on every side, and it is `box-sizing: border-box`, so
-that padding sits inside the viewport's height on a page without `base.css`.
-The panel is `min(28rem, 100%)` wide, or `min(40rem, 100%)` at `size="lg"`, of
-the room inside that padding, which is the viewport less 2rem. Its height
-stops at 100% of the same room, and it takes `min-height: 0` for that cap to
-hold: a grid item's automatic minimum is its content, which grew the scrim's
-row to a long dialog's full height, measured at 1395px for twenty paragraphs
-in a 720px viewport, and left 100% nothing to cap. With no minimum the row is
-the scrim's, and a short dialog still sits in its middle. Inside, the body
-takes the room left (`min-height: 0; overflow-y: auto; overscroll-behavior:
+16px overlay inset clear on every side, inside the viewport's height, since
+the scrim is sized by its border box ("Overlays"). The panel is `min(28rem,
+100%)` wide, or `min(40rem, 100%)` at `size="lg"`, of the room inside that
+padding, which is the viewport less 2rem. Its height stops at 100% of the same
+room, and it takes `min-height: 0` for that cap to hold: a grid item's
+automatic minimum is its content, which grew the scrim's row to a long
+dialog's full height, measured at 1395px for twenty paragraphs in a 720px
+viewport, and left 100% nothing to cap. With no minimum the row is the
+scrim's, and a short dialog still sits in its middle. Inside, the body takes
+the room left (`min-height: 0; overflow-y: auto; overscroll-behavior:
 contain`) and scrolls, while the head and the action row keep their height. A
-body that scrolls is a tab stop while it scrolls, as the homepage's install
-command is on a phone: Chrome and Firefox let the keyboard reach a scroller
-that holds nothing to focus, Safari does not, and axe fails one nothing can
-reach. The action row wraps, ends at the inline end, which `flex-end` follows
-in right to left, and spaces its buttons 8px apart.
+body that scrolls and holds nothing to focus, such as a page of terms, is a
+tab stop while it scrolls, as the homepage's install command is on a phone:
+Chrome and Firefox let the keyboard reach a scroller that holds nothing to
+focus, Safari does not, and axe fails one nothing can reach. A body that holds
+a control is reached through the control, so a long form gains no extra stop
+before its first field. As a tab stop the body draws the focus ring tokens
+itself, so it rings on a page without `base.css` too. The action row wraps,
+ends at the inline end, which `flex-end` follows in right to left, and spaces
+its buttons 8px apart.
 
 **Padding and corners.** The panel pads 32px, `--spacing-separate`, the
 app's number and the step for a section's header to its body. It takes
@@ -3038,6 +3052,15 @@ from the keyboard does not ring the whole panel.
 **The toast region.** Every library modal passes React Aria a predicate that
 keeps a press inside `.toast-region` from counting as a press outside, so
 pressing a toast's action while a dialog is open never closes the dialog.
+
+**Forms, and the parts that are not exported.** The spec exported the body and
+the action row as parts for a custom layout, but a dialog's `children` always
+land inside its own body, so the parts placed there nested, and a nested action
+row scrolled away with the body. They stay internal, and `actions` is the one
+row that stays in view. A form dialog puts its `<form id>` in `children` and its
+submit button in `actions`, joined to the form by the button's `form`
+attribute. Enter in a field still submits, since a submit button joined that
+way is the form's default button.
 
 **ConfirmDialog.** The app's confirm becomes `ConfirmDialog`, an alert
 dialog on top of `Dialog`, and `useConfirm()`, the app's promise. The app's

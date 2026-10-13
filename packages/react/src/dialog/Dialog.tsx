@@ -37,7 +37,11 @@ export interface DialogProps extends Omit<RACDialogProps, 'className' | 'childre
   size?: 'md' | 'lg';
   /** The body, under the description. It scrolls when it is taller than the viewport allows. */
   children?: ReactNode | ((opts: { close: () => void }) => ReactNode);
-  /** The action row, pinned under the body, aligned to the inline end. */
+  /**
+   * The action row, pinned under the body, aligned to the inline end: the one place for buttons that stay
+   * in view. For a form, put the `<form id={formId}>` in `children` and its submit button here, joined to it
+   * by its `form` attribute: `<Button type="submit" form={formId}>`. Enter in a field still submits it.
+   */
   actions?: ReactNode | ((opts: { close: () => void }) => ReactNode);
   /** A press on the scrim closes the dialog. @default true */
   isDismissable?: boolean;
@@ -82,26 +86,35 @@ const resolve = (slot: DialogSlot, close: () => void): ReactNode =>
  * it with `isOpen`.
  */
 export function Dialog(props: DialogProps): ReactElement {
-  const {
-    title,
-    description,
-    icon,
-    tone = 'default',
-    size = 'md',
-    children,
-    actions,
-    isDismissable = true,
-    isKeyboardDismissDisabled = false,
-    hasCloseButton = false,
-    closeLabel = 'Close',
-    isOpen,
-    defaultOpen,
-    onOpenChange,
-    className,
-    overlayClassName,
-    role = 'dialog',
-    ...dialogProps
-  }: DialogInternalProps = props;
+  return <BaseDialog {...props} />;
+}
+
+/**
+ * Dialog, with the role as a typed prop, so ConfirmDialog can make it an alert dialog. Dialog is this with
+ * the role left at `dialog`.
+ *
+ * Internal: not exported from the package.
+ */
+export function BaseDialog({
+  title,
+  description,
+  icon,
+  tone = 'default',
+  size = 'md',
+  children,
+  actions,
+  isDismissable = true,
+  isKeyboardDismissDisabled = false,
+  hasCloseButton = false,
+  closeLabel = 'Close',
+  isOpen,
+  defaultOpen,
+  onOpenChange,
+  className,
+  overlayClassName,
+  role = 'dialog',
+  ...dialogProps
+}: DialogInternalProps): ReactElement {
   const descriptionId = useId();
   const isDescribed = present(description);
   return (
@@ -159,19 +172,39 @@ export function Dialog(props: DialogProps): ReactElement {
   );
 }
 
+/** Internal: not exported from the package. */
 export interface DialogBodyProps extends HTMLAttributes<HTMLDivElement> {
   ref?: Ref<HTMLDivElement>;
 }
 
-/** Makes the body a tab stop while it scrolls, and only then. */
+/** Everything Tab can reach on its own. */
+const TABBABLE = [
+  'a[href]',
+  'area[href]',
+  'button:not(:disabled)',
+  'input:not(:disabled):not([type="hidden"])',
+  'select:not(:disabled)',
+  'textarea:not(:disabled)',
+  'iframe',
+  'audio[controls]',
+  'video[controls]',
+  'summary',
+  '[contenteditable]:not([contenteditable="false"])',
+  '[tabindex]:not([tabindex^="-"])',
+].join(', ');
+
+/**
+ * Makes the body a tab stop while it scrolls and holds nothing Tab reaches, and only then. A body with a
+ * control in it is reached through the control, so a long form gains no extra stop before its first field.
+ */
 function markScrolling(body: HTMLElement): void {
-  if (body.scrollHeight > body.clientHeight) body.tabIndex = 0;
+  if (body.scrollHeight > body.clientHeight && body.querySelector(TABBABLE) === null) body.tabIndex = 0;
   else body.removeAttribute('tabindex');
 }
 
 /**
- * A ref for the body that keeps it a tab stop while it scrolls, so a keyboard can reach it and scroll text
- * that holds nothing to focus. Chrome and Firefox do this for such a scroller and Safari does not. The body,
+ * A ref for the body that keeps it a tab stop while it scrolls and holds nothing to focus, so a keyboard can
+ * reach it and scroll its text. Chrome and Firefox do this for such a scroller and Safari does not. The body,
  * what it holds and changes to it are watched, so a body that comes to scroll, or stops, follows.
  */
 function keyboardScroll(body: HTMLDivElement | null): (() => void) | undefined {
@@ -197,19 +230,27 @@ function keyboardScroll(body: HTMLDivElement | null): (() => void) | undefined {
 }
 
 /**
- * The scrolling body, for a custom layout inside a bare dialog's children. While it scrolls it is a tab
- * stop, so a keyboard can scroll it.
+ * The dialog's scrolling body. While it scrolls and holds nothing to focus it is a tab stop, so a keyboard
+ * can scroll it.
+ *
+ * Internal: not exported from the package. Content given to a Dialog lands inside its body, so these parts
+ * placed there would nest, and the actions would scroll away with it. The `actions` prop is the pinned row.
  */
 export function DialogBody({ className, ref, ...props }: DialogBodyProps): ReactElement {
   const bodyRef = useMemo(() => mergeRefs<HTMLDivElement>(ref, keyboardScroll), [ref]);
   return <div {...props} ref={bodyRef} className={cx('dialog-body', className)} />;
 }
 
+/** Internal: not exported from the package. */
 export interface DialogActionsProps extends HTMLAttributes<HTMLDivElement> {
   ref?: Ref<HTMLDivElement>;
 }
 
-/** The action row, pinned under the body, for a custom layout. */
+/**
+ * The dialog's action row, pinned under the body.
+ *
+ * Internal: not exported from the package.
+ */
 export function DialogActions({ className, ...props }: DialogActionsProps): ReactElement {
   return <div {...props} className={cx('dialog-actions', className)} />;
 }

@@ -28,7 +28,7 @@ A dialog is a float panel centred on the scrim, with 16px clear on every side. F
 
 ## Long content
 
-A body taller than the screen allows scrolls inside the panel, and the head and the action row stay where they are. While it scrolls, the body is a tab stop of its own, so the keyboard can reach it when it holds only text. Escape and a press on the scrim already close a dialog, so the close button in the top end corner is opt-in, with `hasCloseButton`, for a long dialog whose way out has scrolled away. `size="lg"` widens the panel from 28rem to 40rem, and both widths stop at the screen less 2rem.
+A body taller than the screen allows scrolls inside the panel, and the head and the action row stay where they are. While it scrolls and holds nothing to focus, such as a page of terms, the body is a tab stop of its own, so the keyboard can reach it and scroll it. A body that holds a field is reached through the field. Escape and a press on the scrim already close a dialog, so the close button in the top end corner is opt-in, with `hasCloseButton`, for a long dialog whose way out has scrolled away. `size="lg"` widens the panel from 28rem to 40rem, and both widths stop at the screen less 2rem.
 
 <Preview name="dialog-long" />
 
@@ -38,37 +38,50 @@ A body taller than the screen allows scrolls inside the panel, and the head and 
 
 ## Usage
 
-Open a dialog from a `DialogTrigger`, which holds the button that opens it and the dialog, or control it with `isOpen` and `onOpenChange`, or start it open with `defaultOpen`. Dialog is a client component, and a server component can render it, as the examples on this page do. A button with `slot="close"` closes the dialog it is in, and `children` and `actions` may also be functions that receive `close`:
+Open a dialog from a `DialogTrigger`, which holds the button that opens it and the dialog, or control it with `isOpen` and `onOpenChange`, or start it open with `defaultOpen`. Dialog is a client component, and a server component can render it, as the examples on this page do. A button with `slot="close"` closes the dialog it is in, and `children` and `actions` may also be functions that receive `close`.
+
+A dialog that asks for input holds a form. The form goes in `children`, which is the body, with an `id`, and its submit button goes in `actions`, the row that stays in view, joined to the form by its `form` attribute. Pressing the button submits the form, and so does Enter in a field. The form's `onSubmit` reads what was typed, does the work and closes the dialog:
 
 ```tsx
 'use client';
 
 import { Button, Dialog, DialogTrigger, TextField } from '@snapshot-ui/react';
+import { useId } from 'react';
 
-export function RenameWorkspace({ onRename }: { onRename: (name: string) => void }) {
+export function RenameWorkspace({ name, onRename }: { name: string; onRename: (name: string) => void }) {
+  const formId = useId();
   return (
     <DialogTrigger>
       <Button variant="secondary">Rename the workspace</Button>
       <Dialog
         title="Rename the workspace"
         description="The new name shows in the header and in every invite."
-        actions={({ close }) => (
-          <Button
-            onPress={() => {
-              onRename('Northwind Studio');
+        actions={
+          <Button type="submit" form={formId}>
+            Rename
+          </Button>
+        }
+      >
+        {({ close }) => (
+          <form
+            id={formId}
+            onSubmit={(event) => {
+              event.preventDefault();
+              const next = new FormData(event.currentTarget).get('name');
+              if (typeof next === 'string') onRename(next);
               close();
             }}
           >
-            Rename
-          </Button>
+            <TextField label="Workspace name" name="name" defaultValue={name} isRequired />
+          </form>
         )}
-      >
-        <TextField label="Workspace name" defaultValue="Northwind Studio" />
       </Dialog>
     </DialogTrigger>
   );
 }
 ```
+
+The body and the action row are the dialog's own parts and are not exported: anything given as `children` lands inside the body, so a second action row there would scroll away with it. `actions` is the one row that stays.
 
 A dialog opened from a dialog stacks over it, such as a confirm over the form it guards. One scrim paints, Escape closes the top one, and focus goes back into the first when the second closes. A dialog opened from a dark card is dark while the page stays light: it takes the theme, the shape and the density of what it opened from, as [Theming](/docs/theming#overlays) explains.
 

@@ -5,7 +5,7 @@ import { useContext, useLayoutEffect, useRef, useState, type ReactElement, type 
 import { OverlayTriggerStateContext } from 'react-aria-components';
 import { Button } from '../button/Button';
 import { present } from '../utils/present';
-import { Dialog, type DialogInternalProps, type DialogProps } from './Dialog';
+import { BaseDialog, type DialogInternalProps, type DialogProps } from './Dialog';
 
 export interface ConfirmDialogProps extends Omit<
   DialogProps,
@@ -186,5 +186,5 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactElement {
       </>
     ),
   };
-  return <Dialog {...dialog} />;
+  return <BaseDialog {...dialog} />;
 }
