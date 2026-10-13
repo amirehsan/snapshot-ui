@@ -4479,8 +4479,9 @@ writes no direction on a tip, so `dir` comes from the locale.
 
 A site may draw its controls tighter from one attribute, `data-density`, as it
 cuts its corners from `data-shape`. `data-density="compact"` on any element
-remaps four size tokens for its subtree, and no component knows which density
-is active: Button, IconButton, SegmentedControl, the text input and Card read
+remaps three of the four tokens below for its subtree, and the fourth,
+`--size-target`, is the fixed floor. No component knows which density is
+active: Button, IconButton, SegmentedControl, the text input and Card read
 the tokens where they had literals. The first app built on the library asked
 for it, for toolbar controls of 34 to 36px.
 
@@ -4559,13 +4560,17 @@ A token with a refinement value and no value for the variant it refines fails
 the build, naming the token, because the media block would then change a value
 that nothing set: a refinement is its variant again under a condition, and
 cannot stand alone. `tokens.js` lists it beside the variant, as
-`tokens.size.control.modes.density['compact-coarse']`.
+`tokens.size.control.modes.density['compact-coarse']`, and a reader resolves
+it as the CSS does, falling back to the variant and then the base:
+`modes.density['compact-coarse'] ?? modes.density.compact ?? value`. So the
+card's padding on touch reads its compact 20px.
 
 **Scope.**
 
 - **Regions.** `data-density="compact"` on any element compacts its subtree,
   and `data-density="comfortable"` inside it restores the defaults. Matching
-  ignores case. A missing or unknown value is comfortable, with no script.
+  ignores case. A missing or unknown value changes nothing: the subtree keeps
+  the density around it, which is comfortable at the root, with no script.
 - **Phone-wide compact is the site's rule, not an axis value.** The tokens are
   public, so a site sets them under its own media query, where it knows the
   width: `@media (width < 768px) { :root { --spacing-card: 20px; } }` is what

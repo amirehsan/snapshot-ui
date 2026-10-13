@@ -236,23 +236,32 @@ describe('tokens.css', () => {
     // The general rule behind the focus ring: a custom property that holds var()
     // resolves where it is declared, so a root declaration that refers to a
     // variable an axis redeclares must be redeclared in every scope of that axis.
-    const selectors = [...css.matchAll(/^\s*(.+?) \{$/gm)].map(([, selector = '']) => selector);
+    // Each block is read where it stands, not looked up by its selector: the
+    // coarse-pointer refinement repeats the compact selector, and a lookup
+    // would read the compact block twice and never the refinement.
     const axes = new Map();
-    for (const selector of selectors) {
+    for (const match of css.matchAll(/^\s*(.+?) \{$/gm)) {
+      const [, selector = ''] = match;
       const axis = /\[(data-[\w-]+)=/.exec(selector)?.[1];
-      if (axis) axes.set(axis, [...(axes.get(axis) ?? []), selector]);
+      if (!axis) continue;
+      const scope = { selector, declared: declaredIn(css.slice(match.index, css.indexOf('}', match.index))) };
+      axes.set(axis, [...(axes.get(axis) ?? []), scope]);
     }
     expect([...axes.keys()].sort()).toEqual(['data-density', 'data-shape', 'data-sidebar', 'data-theme']);
+    // The refinement is a scope of its own.
+    expect(axes.get('data-density')?.map(({ declared }) => declared)).toContainEqual([
+      '--size-control',
+      '--size-field',
+    ]);
     const checked = [];
     for (const [axis, scopes] of axes) {
-      const declaredByScope = new Map(scopes.map((scope) => [scope, declaredIn(block(scope))]));
-      const changing = new Set([...declaredByScope.values()].flat());
+      const changing = new Set(scopes.flatMap(({ declared }) => declared));
       for (const [, name, value] of block(':root').matchAll(/^\s*(--[\w-]+):\s*(.+);$/gm)) {
         const refers = [...value.matchAll(/var\((--[\w-]+)\)/g)].some((match) => changing.has(match[1]));
         if (!refers) continue;
         checked.push(name);
-        for (const [scope, declared] of declaredByScope) {
-          expect(declared, `${name} in ${scope} (${axis})`).toContain(name);
+        for (const { selector, declared } of scopes) {
+          expect(declared, `${name} in ${selector} (${axis})`).toContain(name);
         }
       }
     }
@@ -555,6 +564,65 @@ describe('build-tokens.js', () => {
     });
     expect(fixtureTokens.size.field.modes).toEqual({ density: { compact: '36px' } });
     expect(fixtureTokens.ring.hit.modes).toEqual({ density: { compact: '36px', 'compact-coarse': '44px' } });
+  });
+
+  /**
+   * Builds `ring.x: calc({size.control} + {spacing.card})`, a follower of a
+   * refined token and of a token with a compact value only, and returns the
+   * coarse CSS block and ring.x's modes in tokens.js. The CSS redeclares only
+   * the refinement's values and the followers on a coarse pointer, so there
+   * the card keeps its compact value, and tokens.js must say the same.
+   */
+  function refinedFollower({ controlModes, spacing }) {
+    const run = buildFixture({
+      size: {
+        $type: 'dimension',
+        control: { $value: px(40), $extensions: { 'snapshot-ui': { density: controlModes } } },
+      },
+      spacing: { $type: 'dimension', ...spacing },
+      ring: { $type: 'dimension', x: { $value: 'calc({size.control} + {spacing.card})' } },
+    });
+    expect(run.stderr).toBe('');
+    expect(run.status).toBe(0);
+    const coarse = blockOf(run.css, '@media (pointer: coarse)');
+    expect(coarse).toContain('--ring-x: calc(var(--size-control) + var(--spacing-card));');
+    expect(coarse).not.toContain('--spacing-card:');
+    const fixtureTokens = JSON.parse(run.js.slice(run.js.indexOf('{'), run.js.lastIndexOf('}') + 1));
+    return fixtureTokens.ring.x.modes;
+  }
+
+  it('gives a follower the variant value of a token the refinement leaves alone, in tokens.js', () => {
+    const modes = refinedFollower({
+      controlModes: { compact: px(36), 'compact-coarse': px(44) },
+      spacing: { card: { $value: px(32), $extensions: { 'snapshot-ui': { density: { compact: px(20) } } } } },
+    });
+    expect(modes).toEqual({
+      density: { compact: 'calc(36px + 20px)', 'compact-coarse': 'calc(44px + 20px)' },
+    });
+  });
+
+  it('gives a follower the declared variant value of a token whose base value is a reference', () => {
+    const modes = refinedFollower({
+      controlModes: { compact: px(36), 'compact-coarse': px(44) },
+      spacing: {
+        page: { $value: px(48) },
+        // The base value follows the page margin; compact declares a literal of its own.
+        card: { $value: '{spacing.page}', $extensions: { 'snapshot-ui': { density: { compact: px(20) } } } },
+      },
+    });
+    expect(modes).toEqual({
+      density: { compact: 'calc(36px + 20px)', 'compact-coarse': 'calc(44px + 20px)' },
+    });
+  });
+
+  it('gives the same values whichever of a refinement and its variant a token lists first', () => {
+    // tokens.js then meets the refinement before the variant it refines.
+    const modes = refinedFollower({
+      controlModes: { 'compact-coarse': px(44), compact: px(36) },
+      spacing: { card: { $value: px(32), $extensions: { 'snapshot-ui': { density: { compact: px(20) } } } } },
+    });
+    expect(modes.density['compact-coarse']).toBe('calc(44px + 20px)');
+    expect(modes.density.compact).toBe('calc(36px + 20px)');
   });
 
   it('rejects a refinement value on a token with no value for the variant it refines, naming the token', () => {
