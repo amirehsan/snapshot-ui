@@ -1146,3 +1146,97 @@ test('a collapsible card folds and opens on its page, by pointer and by keyboard
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(body).toBeHidden();
 });
+
+test('a collapsible card remembers its fold over a reload, and folds at hydration with its transitions held off', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  page.on('pageerror', (error) => {
+    errors.push(error.message);
+  });
+  // From before the page's first script: each change to the Shortcuts card's root, in order, and each
+  // transition that one of its parts starts. The docs' theme switch also holds every transition off while
+  // the page hydrates, so on this page the mark is what is checked.
+  await page.addInitScript(() => {
+    const changes: string[] = [];
+    const runs: string[] = [];
+    Object.assign(window, { changes, runs });
+    /** The Shortcuts card, if `element` is in it. */
+    const shortcuts = (element: unknown): Element | null => {
+      const card = element instanceof Element ? element.closest('.card-collapsible') : null;
+      return card?.querySelector('.card-toggle-text')?.textContent === 'Shortcuts' ? card : null;
+    };
+    new MutationObserver((records) => {
+      for (const { target, attributeName, oldValue } of records) {
+        if (shortcuts(target) === target) {
+          changes.push(`${attributeName ?? ''} ${oldValue === null ? 'set' : 'removed'}`);
+        }
+      }
+    }).observe(document, {
+      subtree: true,
+      attributes: true,
+      attributeOldValue: true,
+      attributeFilter: ['data-expanded', 'data-instant'],
+    });
+    window.addEventListener(
+      'transitionrun',
+      (event) => {
+        if (shortcuts(event.target)) runs.push(event.propertyName);
+      },
+      true,
+    );
+  });
+  const read = (name: 'changes' | 'runs'): Promise<string[]> =>
+    page.evaluate((key) => (window as unknown as Record<string, string[]>)[key] ?? [], name);
+  const stored = (): Promise<string | null> =>
+    page.evaluate(() => localStorage.getItem('snapshot-ui:collapsed'));
+  await visit(page, '/docs/components/collapsible-card');
+  const toggle = page.getByRole('button', { name: 'Shortcuts', exact: true });
+  const card = page.locator('.card-collapsible').filter({ has: toggle });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(await stored()).toBe('["docs-collapsible-card-shortcuts"]');
+  const response = await page.reload();
+  // The server cannot see the stored fold, so it sent the card open, with the mark that holds every
+  // transition off: the root, then the card's own toggle, with no other card's root between them.
+  const html = (await response?.text()) ?? '';
+  expect(html).toMatch(
+    /class="card card-collapsible" data-expanded="" data-instant="">(?:(?!card-collapsible).)*?aria-expanded="true"[^>]*><span class="card-toggle-text">Shortcuts</s,
+  );
+  await settled(page);
+  // Hydrated, the card folded while the mark held its transitions off, and the mark came off after it.
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(card.locator('.card-fold')).toHaveAttribute('hidden', 'until-found');
+  await expect(card).not.toHaveAttribute('data-instant');
+  await expect(card).not.toHaveAttribute('data-folding');
+  expect(await read('changes')).toEqual(['data-expanded removed', 'data-instant removed']);
+  expect(errors).toEqual([]);
+  // A press after that moves as usual, and the card is remembered open.
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect.poll(() => read('runs')).toContain('rotate');
+  expect(await read('changes')).toEqual([
+    'data-expanded removed',
+    'data-instant removed',
+    'data-expanded set',
+  ]);
+  expect(await stored()).toBe('[]');
+});
+
+test('a folded collapsible card on its page is hidden until found, so find-in-page can reach it', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/collapsible-card');
+  const toggle = page.getByRole('button', { name: 'Billing', exact: true });
+  const fold = page.locator('.card-collapsible').filter({ has: toggle }).locator('.card-fold');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(fold).toHaveAttribute('hidden', 'until-found');
+  // The site's rule for [hidden] leaves this one to the browser, which keeps the panel in the layout and
+  // hides what it holds, instead of taking it out with display: none, where find-in-page cannot look.
+  await expect(fold).not.toHaveCSS('display', 'none');
+  await expect(fold.locator('.card-body')).toBeHidden();
+});

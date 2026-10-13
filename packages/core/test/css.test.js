@@ -1071,6 +1071,26 @@ describe('src/components/card.css, the collapsible card', () => {
     expect(clipping[0]?.body).toContain('overflow: hidden;');
   });
 
+  it('turns off every transition it draws while the root carries data-instant, for this card alone', () => {
+    const instant = all().filter(({ selector }) => selector.includes('[data-instant]'));
+    expect(instant).toHaveLength(1);
+    expect(instant[0]?.body).toBe('transition: none;');
+    const selectors = instant[0]?.selector.split(', ') ?? [];
+    // Reached from the card's own root, part by part, so a card nested in the body keeps its own motion.
+    for (const selector of selectors) {
+      expect(selector).toMatch(/^\.card-collapsible\[data-instant\] > \.card-disclosure > /);
+    }
+    const moving = all().filter(
+      ({ body }) => /(?:^|;\s*)transition\s*:/.test(body) && !body.includes('transition: none'),
+    );
+    expect(moving.length).toBeGreaterThan(0);
+    for (const { selector } of moving) {
+      // The part that moves, the last class in its selector, ends one of the selectors that stop it.
+      const part = /\.[a-z-]+$/.exec(selector)?.[0] ?? selector;
+      expect(selectors.some((stop) => stop.endsWith(` ${part}`))).toBe(true);
+    }
+  });
+
   it('lays the header out as a grid: the title and the actions on one row, the note under the title', () => {
     const css = rules();
     const header = blockAfter(css, '.card-disclosure > .card-header {');

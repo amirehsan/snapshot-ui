@@ -1,7 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, useState, type ReactElement } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { root } from '../../test/dom';
 import { Button } from '../button';
@@ -47,6 +49,41 @@ function transition(): { animation: Animation; finish: () => void; cancel: () =>
 const settle = (): Promise<void> =>
   new Promise((resolve) => {
     setTimeout(resolve, 0);
+  });
+
+/** The entry the store keeps its folds in. */
+const ENTRY = 'snapshot-ui:collapsed';
+
+/** The folds the browser has stored, as written, or null when nothing has been written. */
+const stored = (): unknown => JSON.parse(localStorage.getItem(ENTRY) ?? 'null');
+
+/**
+ * Stores folds the way another tab does, or clears the storage when given null, and tells this tab as the
+ * browser does.
+ */
+function storeInAnotherTab(keys: string[] | null): void {
+  if (keys === null) localStorage.clear();
+  else localStorage.setItem(ENTRY, JSON.stringify(keys));
+  act(() => {
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: keys === null ? null : ENTRY,
+        newValue: keys === null ? null : JSON.stringify(keys),
+        storageArea: localStorage,
+      }),
+    );
+  });
+}
+
+/** The toggle of the card with this title. */
+const toggleOf = (title: string): HTMLElement => screen.getByRole('button', { name: title });
+
+/** Waits for the next frame, after anything a frame was asked to do. */
+const nextFrame = (): Promise<void> =>
+  new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      resolve();
+    });
   });
 
 describe('CollapsibleCard', () => {
@@ -404,5 +441,332 @@ describe('CollapsibleCard', () => {
     await user.click(screen.getByRole('button', { name: 'Notifications' }));
     await user.click(screen.getByRole('button', { name: 'Billing' }));
     await expectNoA11yViolations(container);
+  });
+});
+
+describe('CollapsibleCard with a storageKey', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('stores its fold, and is folded again when it renders anew', async () => {
+    const user = userEvent.setup();
+    const onExpandedChange = vi.fn();
+    const { unmount } = render(
+      <CollapsibleCard title="Notifications" storageKey="notifications" onExpandedChange={onExpandedChange}>
+        Body
+      </CollapsibleCard>,
+    );
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    // Nothing is stored until the card folds or opens.
+    expect(stored()).toBeNull();
+    await user.click(toggleOf('Notifications'));
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'false');
+    expect(stored()).toEqual(['notifications']);
+    expect(onExpandedChange).toHaveBeenLastCalledWith(false);
+    unmount();
+    const { container } = render(
+      <CollapsibleCard title="Notifications" storageKey="notifications">
+        Body
+      </CollapsibleCard>,
+    );
+    // Folded from its first render: nothing moved, so nothing marks a fold, and a card first rendered in the
+    // browser has nothing to catch up with.
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'false');
+    expect(root(container)).not.toHaveAttribute('data-expanded');
+    expect(root(container)).not.toHaveAttribute('data-folding');
+    expect(root(container)).not.toHaveAttribute('data-instant');
+    expect(foldOf(container)).toHaveAttribute('hidden', 'until-found');
+    // Opened, its key comes out.
+    await user.click(toggleOf('Notifications'));
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    expect(stored()).toEqual([]);
+  });
+
+  it('is open when its key was never stored, whatever defaultExpanded says', () => {
+    render(
+      <CollapsibleCard title="Notifications" storageKey="notifications" defaultExpanded={false}>
+        Body
+      </CollapsibleCard>,
+    );
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('folds and opens every card with the same key together, and no other', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <CollapsibleCard title="Notifications" storageKey="notifications">
+          Body
+        </CollapsibleCard>
+        <CollapsibleCard title="Notifications again" storageKey="notifications">
+          Body
+        </CollapsibleCard>
+        <CollapsibleCard title="Billing" storageKey="billing">
+          Body
+        </CollapsibleCard>
+        <CollapsibleCard title="Profile">Body</CollapsibleCard>
+      </>,
+    );
+    const expanded = (): (string | null)[] =>
+      ['Notifications', 'Notifications again', 'Billing', 'Profile'].map((title) =>
+        toggleOf(title).getAttribute('aria-expanded'),
+      );
+    await user.click(toggleOf('Notifications'));
+    expect(expanded()).toEqual(['false', 'false', 'true', 'true']);
+    await user.click(toggleOf('Billing'));
+    expect(expanded()).toEqual(['false', 'false', 'false', 'true']);
+    await user.click(toggleOf('Notifications again'));
+    expect(expanded()).toEqual(['true', 'true', 'false', 'true']);
+    expect(stored()).toEqual(['billing']);
+  });
+
+  it('folds and opens when another tab stores its fold, or clears the storage', () => {
+    const { container } = render(
+      <CollapsibleCard title="Notifications" storageKey="notifications">
+        Body
+      </CollapsibleCard>,
+    );
+    storeInAnotherTab(['billing', 'notifications']);
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'false');
+    expect(root(container)).not.toHaveAttribute('data-expanded');
+    storeInAnotherTab(['billing']);
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    storeInAnotherTab(['notifications']);
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'false');
+    storeInAnotherTab(null);
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('keeps the stored keys of cards that are not on the page', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(ENTRY, '["billing","profile"]');
+    render(
+      <CollapsibleCard title="Notifications" storageKey="notifications">
+        Body
+      </CollapsibleCard>,
+    );
+    await user.click(toggleOf('Notifications'));
+    expect(stored()).toEqual(['billing', 'profile', 'notifications']);
+    await user.click(toggleOf('Notifications'));
+    expect(stored()).toEqual(['billing', 'profile']);
+  });
+
+  it.each([
+    ['unreadable JSON', '["notifications"'],
+    ['not a list', '{"notifications":true}'],
+  ])('is open when the stored folds are %s, then folds and stores a good list', async (_name, value) => {
+    const user = userEvent.setup();
+    const error = vi.spyOn(console, 'error');
+    localStorage.setItem(ENTRY, value);
+    render(
+      <CollapsibleCard title="Notifications" storageKey="notifications">
+        Body
+      </CollapsibleCard>,
+    );
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    await user.click(toggleOf('Notifications'));
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'false');
+    expect(stored()).toEqual(['notifications']);
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('is open where the browser blocks storage, and still folds and opens, in step, with no error', async () => {
+    const user = userEvent.setup();
+    const error = vi.spyOn(console, 'error');
+    vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    });
+    render(
+      <>
+        <CollapsibleCard title="Notifications" storageKey="notifications">
+          Body
+        </CollapsibleCard>
+        <CollapsibleCard title="Notifications again" storageKey="notifications">
+          Body
+        </CollapsibleCard>
+      </>,
+    );
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    await user.click(toggleOf('Notifications'));
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'false');
+    expect(toggleOf('Notifications again')).toHaveAttribute('aria-expanded', 'false');
+    await user.click(toggleOf('Notifications'));
+    expect(toggleOf('Notifications again')).toHaveAttribute('aria-expanded', 'true');
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('still folds when the browser refuses the write, as a full storage does, with no error', async () => {
+    const user = userEvent.setup();
+    const error = vi.spyOn(console, 'error');
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    });
+    render(
+      <CollapsibleCard title="Notifications" storageKey="notifications">
+        Body
+      </CollapsibleCard>,
+    );
+    await user.click(toggleOf('Notifications'));
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'false');
+    expect(stored()).toBeNull();
+    await user.click(toggleOf('Notifications'));
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('reads and stores nothing when isExpanded controls it', async () => {
+    const user = userEvent.setup();
+    const onExpandedChange = vi.fn();
+    localStorage.setItem(ENTRY, '["notifications"]');
+    render(
+      <>
+        <CollapsibleCard
+          title="Notifications"
+          storageKey="notifications"
+          isExpanded
+          onExpandedChange={onExpandedChange}
+        >
+          Body
+        </CollapsibleCard>
+        <Controlled title="Billing" storageKey="billing">
+          Body
+        </Controlled>
+      </>,
+    );
+    // The caller's state wins over the stored fold.
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    await user.click(toggleOf('Notifications'));
+    expect(onExpandedChange).toHaveBeenCalledWith(false);
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    await user.click(toggleOf('Billing'));
+    expect(toggleOf('Billing')).toHaveAttribute('aria-expanded', 'false');
+    expect(stored()).toEqual(['notifications']);
+  });
+
+  it('opens through the store when find-in-page reaches its folded body, and so does every card with its key', () => {
+    const onExpandedChange = vi.fn();
+    localStorage.setItem(ENTRY, '["billing","notifications"]');
+    const { container } = render(
+      <>
+        <CollapsibleCard title="Notifications" storageKey="notifications" onExpandedChange={onExpandedChange}>
+          Product updates
+        </CollapsibleCard>
+        <CollapsibleCard title="Notifications again" storageKey="notifications">
+          Weekly digest
+        </CollapsibleCard>
+      </>,
+    );
+    const [fold, again] = container.querySelectorAll('.card-fold');
+    expect(fold).toHaveAttribute('hidden', 'until-found');
+    expect(again).toHaveAttribute('hidden', 'until-found');
+    // The browser fires beforematch on a hidden="until-found" element before it shows text found in it.
+    act(() => {
+      fold?.dispatchEvent(new Event('beforematch'));
+    });
+    expect(onExpandedChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    expect(toggleOf('Notifications again')).toHaveAttribute('aria-expanded', 'true');
+    expect(fold).not.toHaveAttribute('hidden');
+    expect(again).not.toHaveAttribute('hidden');
+    expect(stored()).toEqual(['billing']);
+  });
+});
+
+describe('CollapsibleCard on a server-rendered page', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('renders open, folds a remembered fold at hydration with transitions held off and no warning, then moves as usual', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(ENTRY, '["notifications"]');
+    // Two cards with one key, which fold in the same commit.
+    const page = (
+      <>
+        <CollapsibleCard title="Notifications" storageKey="notifications">
+          Body
+        </CollapsibleCard>
+        <CollapsibleCard title="Notifications again" storageKey="notifications">
+          Body
+        </CollapsibleCard>
+      </>
+    );
+    // The server cannot see the browser's storage, so it draws both cards open, each holding its transitions
+    // off with the mark.
+    const html = renderToString(page);
+    expect(html.match(/class="card card-collapsible" data-expanded="" data-instant=""/g)).toHaveLength(2);
+    expect(html.match(/aria-expanded="true"/g)).toHaveLength(2);
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    document.body.append(container);
+    const cards = [...container.querySelectorAll('.card-collapsible')];
+    // Every state each root gains or loses, in order, however quickly it changes back.
+    const changes: string[] = [];
+    const record = (records: MutationRecord[]): void => {
+      for (const { target, attributeName, oldValue } of records) {
+        const title = (target as Element).querySelector('.card-toggle-text')?.textContent ?? '';
+        changes.push(`${title}: ${attributeName ?? ''} ${oldValue === null ? 'set' : 'removed'}`);
+      }
+    };
+    const observer = new MutationObserver(record);
+    for (const card of cards) {
+      observer.observe(card, {
+        attributes: true,
+        attributeOldValue: true,
+        attributeFilter: ['data-expanded', 'data-instant'],
+      });
+    }
+    const error = vi.spyOn(console, 'error');
+    const onRecoverableError = vi.fn();
+    let hydrated: ReturnType<typeof hydrateRoot> | undefined;
+    await act(async () => {
+      hydrated = hydrateRoot(container, page, { onRecoverableError });
+      await Promise.resolve();
+    });
+    // Hydrated, both cards caught up with the stored fold while the mark held every transition off.
+    for (const title of ['Notifications', 'Notifications again']) {
+      expect(toggleOf(title)).toHaveAttribute('aria-expanded', 'false');
+    }
+    for (const card of cards) {
+      expect(card).not.toHaveAttribute('data-expanded');
+      expect(card).toHaveAttribute('data-instant', '');
+      expect(card.querySelector('.card-fold')).toHaveAttribute('hidden', 'until-found');
+    }
+    await act(async () => {
+      await nextFrame();
+      await nextFrame();
+    });
+    record(observer.takeRecords());
+    // The mark was there before either card folded, and came off two frames later.
+    expect(changes).toEqual([
+      'Notifications: data-expanded removed',
+      'Notifications again: data-expanded removed',
+      'Notifications: data-instant removed',
+      'Notifications again: data-instant removed',
+    ]);
+    expect(error).not.toHaveBeenCalled();
+    expect(onRecoverableError).not.toHaveBeenCalled();
+    // A toggle after that moves as usual: nothing holds the transitions off.
+    changes.length = 0;
+    await user.click(toggleOf('Notifications'));
+    await act(async () => {
+      await nextFrame();
+      await nextFrame();
+    });
+    record(observer.takeRecords());
+    expect(changes).toEqual(['Notifications: data-expanded set', 'Notifications again: data-expanded set']);
+    expect(stored()).toEqual([]);
+    observer.disconnect();
+    act(() => {
+      hydrated?.unmount();
+    });
+    container.remove();
   });
 });

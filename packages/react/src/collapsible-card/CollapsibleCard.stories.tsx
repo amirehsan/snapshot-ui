@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState, type ReactElement } from 'react';
 import { expect, waitFor } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
 import { firstLineOffset, lineCount, tokenPixels } from '../stories/paint';
-import { CollapsibleCard } from './CollapsibleCard';
+import { CollapsibleCard, type CollapsibleCardProps } from './CollapsibleCard';
 
 /** The parts of the collapsible card that is `card`. */
 function partsOf(card: Element): {
@@ -377,5 +378,72 @@ export const OverflowingChild: Story = {
     });
     await expect(card).toHaveAttribute('data-expanded');
     await expect(drawnWhole()).toBe(true);
+  },
+};
+
+/** The key the Remembered story's card stores its fold under. */
+const REMEMBERED = 'storybook-collapsible-card-remembered';
+
+/** Takes the Remembered story's key out of the stored folds, and keeps every other card's. */
+function forget(): void {
+  const stored: unknown = JSON.parse(localStorage.getItem('snapshot-ui:collapsed') ?? '[]');
+  const keys = Array.isArray(stored) ? stored.filter((key) => key !== REMEMBERED) : [];
+  localStorage.setItem('snapshot-ui:collapsed', JSON.stringify(keys));
+}
+
+/** A card, and a button that takes it off the page and renders a new one in its place, as a reload would. */
+function RenderAgain(props: CollapsibleCardProps): ReactElement {
+  const [renders, setRenders] = useState(0);
+  return (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <CollapsibleCard key={renders} {...props} />
+      <div>
+        <Button
+          variant="secondary"
+          onPress={() => {
+            setRenders(renders + 1);
+          }}
+        >
+          Render again
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * With a storageKey the card remembers its fold. Folded, then taken off the page and rendered anew, it is
+ * folded from its first render, so nothing moves. The story clears its key before it runs and after.
+ */
+export const Remembered: Story = {
+  // A check of the store: the open and the folded card are shot in Open and Folded.
+  tags: ['no-visual'],
+  args: { storageKey: REMEMBERED },
+  beforeEach: () => {
+    forget();
+    return forget;
+  },
+  render: (args) => (
+    <RenderAgain {...args} data-testid="card">
+      <p>Product updates, when something ships.</p>
+    </RenderAgain>
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const first = byTestId(canvasElement, 'card');
+    await expect(partsOf(first).toggle).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(partsOf(first).toggle);
+    await expect(partsOf(first).toggle).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(async () => {
+      await expect(first).not.toHaveAttribute('data-folding');
+    });
+    await userEvent.click(canvas.getByRole('button', { name: 'Render again' }));
+    const second = byTestId(canvasElement, 'card');
+    await expect(first.isConnected).toBe(false);
+    await expect(second).not.toHaveAttribute('data-expanded');
+    await expect(partsOf(second).toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(canvas.getByText('Product updates, when something ships.')).not.toBeVisible();
+    // Folded from its first render: no fold is marked and no transition runs.
+    await expect(second).not.toHaveAttribute('data-folding');
+    await expect(second.getAnimations({ subtree: true })).toHaveLength(0);
   },
 };
