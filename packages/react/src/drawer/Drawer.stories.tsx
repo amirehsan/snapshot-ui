@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import axe from 'axe-core';
 import type { ReactElement, ReactNode } from 'react';
 import { expect, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
@@ -6,7 +7,7 @@ import { Card, CardBody } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { DialogTrigger } from '../dialog';
 import { Link } from '../link';
-import { tokenColor } from '../stories/paint';
+import { firstLineOffset, tokenColor } from '../stories/paint';
 import { Switch } from '../switch';
 import { Text } from '../typography';
 import { Drawer, type DrawerProps } from './Drawer';
@@ -130,6 +131,9 @@ export const Start: Story = {
     await expect(box.bottom).toBeCloseTo(window.innerHeight - 16, 1);
     await expect(box.width).toBeCloseTo(Math.min(320, viewportWidth() - 32), 1);
     await expect(within(document.body).getByRole('dialog', { name: 'Menu' })).toBeInTheDocument();
+    // The title's first line and the X are on one line.
+    const close = within(document.body).getByRole('button', { name: 'Close' });
+    await expect(Math.abs(firstLineOffset(close, only('.drawer-title')))).toBeLessThanOrEqual(1);
   },
 };
 
@@ -239,6 +243,87 @@ export const InDarkScope: Story = {
     await expect(only('.drawer-overlay')).not.toHaveAttribute('data-theme');
     const scope = canvas.getByTestId('dark-scope');
     await expect(getComputedStyle(panel).backgroundColor).toBe(tokenColor('--color-float', scope));
+  },
+};
+
+/** Twelve paragraphs and no control, more than any viewport the suite runs holds. */
+const LONG_TEXT: ReactNode = Array.from({ length: 12 }, (_, index) => (
+  <p key={index} style={{ margin: '0 0 1em' }}>
+    {`Note ${String(index + 1)}. The workspace keeps every project, its members and their history, and the owner decides who joins and what each member may change.`}
+  </p>
+));
+
+/**
+ * A body of text with no control in it, taller than the viewport, is a tab stop of its own while it
+ * scrolls, so the keyboard can reach it and scroll it, in Safari too. Axe's scrollable-region rule passes.
+ */
+export const KeyboardScroll: Story = {
+  tags: ['no-visual'],
+  args: { title: 'Release notes', children: LONG_TEXT, footer: undefined },
+  render: (args) => <Opened {...args} trigger="Read the release notes" />,
+  play: async ({ userEvent }) => {
+    await atRest();
+    const body = only('.drawer-body');
+    await expect(body.scrollHeight).toBeGreaterThan(body.clientHeight);
+    await waitFor(() => expect(body).toHaveAttribute('tabindex', '0'));
+    const dialog = within(document.body).getByRole('dialog', { name: 'Release notes' });
+    await waitFor(() => expect(dialog).toHaveFocus());
+    await userEvent.tab();
+    await expect(within(document.body).getByRole('button', { name: 'Close' })).toHaveFocus();
+    await userEvent.tab();
+    await expect(body).toHaveFocus();
+    // The ring is drawn inside the body, which runs flush to the panel's sides.
+    const ring = getComputedStyle(body);
+    await expect(ring.outlineStyle).toBe('solid');
+    await expect(parseFloat(ring.outlineOffset)).toBeLessThan(0);
+    const { violations } = await axe.run(only('.drawer'), {
+      runOnly: { type: 'rule', values: ['scrollable-region-focusable'] },
+    });
+    await expect(violations).toEqual([]);
+  },
+};
+
+/**
+ * A navigation drawer whose list names itself and whose shell closes it: a hidden title and no close
+ * button. Nothing in the header shows, so there is no header, and the body's own 24px is the top of the
+ * panel, as the rail's is. The hidden title still names the drawer.
+ */
+export const NoHeader: Story = {
+  tags: ['no-visual'],
+  args: { isTitleHidden: true, hasCloseButton: false },
+  render: (args) => <Opened {...args} />,
+  play: async () => {
+    const panel = await atRest();
+    await expect(within(document.body).getByRole('dialog', { name: 'Menu' })).toBeInTheDocument();
+    await expect(document.querySelector('.drawer-header')).toBeNull();
+    const inner = panel.getBoundingClientRect().top + parseFloat(getComputedStyle(panel).borderTopWidth);
+    const first = within(document.body).getByRole('link', { name: 'Overview' }).getBoundingClientRect();
+    await expect(only('.drawer-body').getBoundingClientRect().top).toBeCloseTo(inner, 1);
+    // The list starts 24px down, the body's padding, and no header band sits above it.
+    await expect(only('.drawer-body ul').getBoundingClientRect().top - inner).toBeCloseTo(24, 1);
+    await expect(first.top).toBeGreaterThanOrEqual(inner + 24);
+  },
+};
+
+/**
+ * A footer that holds a long address with no break in it wraps it inside the panel. The panel is 320px wide
+ * on any screen wider than 352px, so this holds at 375 as at 1280.
+ */
+export const LongFooterText: Story = {
+  tags: ['no-visual'],
+  args: {
+    footer: 'ada.lovelace.analytical.engine.correspondence@northwind-computing-society.example',
+  },
+  render: (args) => <Opened {...args} />,
+  play: async () => {
+    const panel = await atRest();
+    const footer = only('.drawer-footer');
+    await expect(footer.scrollWidth).toBeLessThanOrEqual(footer.clientWidth);
+    const range = document.createRange();
+    range.selectNodeContents(footer);
+    const text = range.getBoundingClientRect();
+    await expect(text.right).toBeLessThanOrEqual(panel.getBoundingClientRect().right - 24 + 0.5);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   },
 };
 

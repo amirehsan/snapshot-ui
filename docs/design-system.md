@@ -3206,10 +3206,31 @@ rail the drawer mirrors pads 24. So the header, the body and the footer pad
 `--spacing-peer`. The header is a row: the title at the start and the close
 button at the end, with `margin-inline-end: -0.5rem`: the icon sits 10px
 inside the 40px button, so it lands 2px inside the padding edge instead of
-10px and lines up with the text beneath it. The header pads only
-its top and sides, so the body's own 24px is the gap under it. The footer pads
-its sides and its bottom, plus `env(safe-area-inset-bottom)`, so an account row
-or an action stays clear of a phone's home indicator.
+10px and lines up with the text beneath it. The button, 40px, sets the row's
+height, so the title's first line is centred on it: the title steps down by
+half of what the button is taller than its line, `calc((2.5rem - 1lh) / 2)`,
+5.6px for the 28.8px `h3` line, which puts both centres 44px below the panel's
+inner edge, where a dialog's X sits too. The step applies only beside the
+button, and a title that wraps keeps its first line there and runs on below.
+The header pads only its top and sides, so the body's own 24px is the gap
+under it. The footer pads its sides and its bottom, plus
+`env(safe-area-inset-bottom)`, so an account row or an action stays clear of
+a phone's home indicator, and it wraps a long word, as the title and the body
+do, so an account row's address never pushes past a 288px panel.
+
+**The body scrolls from the keyboard.** While the body scrolls and holds
+nothing Tab reaches, such as a page of notes, it is a tab stop of its own, by
+the same rule and the same shared helper as a dialog's body: Chrome and
+Firefox let the keyboard reach such a scroller and Safari does not, and axe
+fails one nothing can reach. A body that holds a link or a control is reached
+through it, so a navigation list gains no extra stop. As a tab stop the body
+draws the focus ring tokens itself, inset by the ring's width, because it runs
+flush to the panel's sides, where an outset ring would cross the hairline. The
+panel clips to its own shape (`overflow: clip`): with no footer the body's
+square bottom corners meet the 40px curve, and the clip keeps that ring, and
+the text scrolling through the body's padding, inside it. Nothing in the panel
+paints past its edge on purpose; the close button's ring keeps 12px clear of
+it.
 
 **The slide is by `data-side`, and the side is physical.** The panel moves in
 from its edge by its own width plus the inset, so it starts wholly off the
@@ -3228,7 +3249,11 @@ sat on the left in right to left and slid in from the right, across the page.
 every drawer has a name. A navigation list names itself, and a title over it
 would say the same thing twice, so `isTitleHidden` wraps the heading in React
 Aria's `VisuallyHidden`: it still names the dialog, and the header shows only
-the close button, at the end.
+the close button, at the end. With no close button either, nothing in a
+header would show, so there is none: the hidden title sits straight in the
+dialog, out of the flow, and the body's own 24px is the top of the panel, as
+the rail's is. An empty header would have kept its 24px of top padding over
+the body's, and started a shell's list 48px down.
 
 **The close button is on by default.** Escape and the scrim close a drawer,
 but a drawer is tall and is often opened by touch, where neither is visible as

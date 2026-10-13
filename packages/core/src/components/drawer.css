@@ -18,6 +18,9 @@
     /* A grid item's automatic minimum is its content, which would grow the scrim's row past the viewport with a
        long list and leave 100% the list's height. With no minimum the row is the scrim's, and the body scrolls. */
     min-height: 0;
+    /* With no footer the body's square corners meet the 40px curve: the body's ring and the text scrolling
+       through its padding stay inside the panel's shape. Nothing inside paints past the edge on purpose. */
+    overflow: clip;
     border: 1px solid var(--color-hairline);
     border-radius: var(--radius-stadium);
     background-color: var(--color-float);
@@ -72,6 +75,12 @@
     overflow-wrap: anywhere;
   }
 
+  /* The 40px close button sets the row's height, so the title's first line is centred on it, as a dialog's
+     title is beside its X. A title that wraps keeps its first line there and runs on below. */
+  .drawer-header:has(> .drawer-close) .drawer-title {
+    margin-block-start: calc((2.5rem - 1lh) / 2);
+  }
+
   /* The icon lines up with the padding edge. */
   .drawer-close {
     flex: none;
@@ -88,9 +97,17 @@
     overflow-wrap: anywhere;
   }
 
+  /* While it scrolls and holds nothing to focus, the body is a tab stop. It runs flush to the panel's sides,
+     so its ring is drawn inside it, where it clears the hairline, with or without base.css. */
+  .drawer-body:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
   .drawer-footer {
     flex: none;
     padding: 0 var(--spacing-peer) calc(var(--spacing-peer) + env(safe-area-inset-bottom, 0px));
+    overflow-wrap: anywhere;
   }
 
   @media (forced-colors: active) {
