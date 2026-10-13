@@ -2751,25 +2751,30 @@ panel's parent and reads the inset for its own padding, and a custom property
 declared on the panel never reaches its parent, so the scrim would have none.
 
 **Theme, shape and density scope.** A portal leaves every nested
-`[data-theme]`, `[data-shape]` and `[data-density]` subtree, so without help
-a dialog opened from a dark card would draw in the page's light theme.
-`useOverlayScope` copies the three onto the overlay's root in a layout effect
-when the root mounts, which is when the overlay opens, since React Aria
-unmounts a closed overlay. It starts from the origin: the trigger, where
-React Aria hands the overlay one (Popover and Menu through `PopoverContext`,
-Tooltip through `TooltipContext`), and otherwise `document.activeElement` at
-that moment, since the pressed trigger still holds focus during the layout
-effect and React Aria's `Dialog` moves focus later, in an effect. For each
-attribute, in the order theme, shape, density, the nearest ancestor of the
-origin that carries it gives the value, and an attribute no ancestor carries
-is removed from the root. So an origin outside every nested scope, or the body
-when nothing is focused, gets the root theme. For a modal the copy lands on
-the panel and not on the scrim, so a light card's dialog is light while the
-scrim keeps the page's opacity. The toast region copies nothing and follows
-the page root. The one escape hatch is React Aria's `UNSAFE_PortalProvider`
-with a container inside the scope: the docs show it, imported from
-`react-aria`, and the library neither uses it nor adds a dependency for it.
-Every overlay has an `InDarkScope` story that proves the copy.
+`[data-theme]`, `[data-shape]` and `[data-density]` subtree, so without help a
+dialog opened from a dark card would draw in the page's light theme.
+`useOverlayScope` returns a callback ref for the overlay's root, which copies
+the three onto the root when it attaches. The root mounts when the overlay
+opens, since React Aria unmounts a closed overlay, so attach is open. It is a
+callback ref and not an effect, because React attaches a root's ref only after
+the layout effects of everything inside the root have run: an effect in a
+component inside a modal's panel found no panel at all, and the copy never
+happened. It starts from the origin: the trigger, where React Aria hands the
+overlay one (Popover and Menu through `PopoverContext`, Tooltip through
+`TooltipContext`), and otherwise `document.activeElement` at that moment,
+since the root attaches in the layout phase of the commit that opens the
+overlay, while the pressed trigger still holds focus, and React Aria's
+`Dialog` moves focus later, in an effect. For each attribute, in the order
+theme, shape, density, the nearest ancestor of the origin that carries it
+gives the value, and an attribute no ancestor carries is removed from the
+root. So an origin outside every nested scope, or the body when nothing is
+focused, gets the root theme. For a modal the copy lands on the panel and not
+on the scrim, so a light card's dialog is light while the scrim keeps the
+page's opacity. The toast region copies nothing and follows the page root. The
+one escape hatch is React Aria's `UNSAFE_PortalProvider` with a container
+inside the scope: the docs show it, imported from `react-aria`, and the
+library neither uses it nor adds a dependency for it. Every overlay has an
+`InDarkScope` story that proves the copy.
 
 **Direction.** Every overlay root sets `dir` from `useLocale().direction`.
 React Aria does it for `Popover` and the toast region, and the wrappers do it
@@ -2785,16 +2790,21 @@ the page; React Aria's invisible underlay only catches a press outside. The
 scrim is Deep Well (`#050505`) at the theme's `--opacity-scrim`, 0.4 in light
 and 0.65 in dark, as "Two surfaces the theme switch needed" in Appendix A
 derives. It is never ink, which is white in dark and would lighten the page it
-covers. It is a background color, mixed with `color-mix()`, and not
-`opacity`, so it never fades the panel inside it. `forced-color-adjust: none`
-keeps it translucent where Windows high contrast would repaint it opaque and
-hide the page. It is fixed over the viewport at `--z-modal`, as a grid each
-modal places its panel in, and its height is `--visual-viewport-height`, the
-inline value React Aria writes on the overlay so that the on-screen keyboard
-shortens it, or `100dvh` without one. While the overlay enters or exits the
-scrim is transparent, and its color moves in 180ms, ease. A press on the scrim
-dismisses when the modal is `isDismissable`; a press on the toast region does
-not.
+covers. It is a background color, mixed with `color-mix()`, and not `opacity`,
+so it never fades the panel inside it. It keeps `forced-color-adjust: none`.
+Without it, Chromium in forced colors leaves the scrim translucent, keeping
+its alpha of 0.4, but swaps its color for the reader's background color:
+measured, `rgba(0, 0, 0, 0.4)` in a dark palette and `rgba(255, 255, 255,
+0.4)` in a light one, which washes the page out instead of dimming it. With
+it, the scrim stays Deep Well. The property is inherited, and a modal's panel
+is the scrim's child, so `overlay` sets `forced-color-adjust: auto` and every
+panel, with everything in it, follows the reader's palette again. It is fixed
+over the viewport at `--z-modal`, as a grid each modal places its panel in,
+and its height is `--visual-viewport-height`, the inline value React Aria
+writes on the overlay so that the on-screen keyboard shortens it, or `100dvh`
+without one. While the overlay enters or exits the scrim is transparent, and
+its color moves in 180ms, ease. A press on the scrim dismisses when the modal
+is `isDismissable`; a press on the toast region does not.
 
 **One scrim when modals stack.** A modal opened from a modal, such as a
 confirm from a dialog, would paint a second scrim over the first and darken
@@ -2896,15 +2906,16 @@ button, which is the 40px IconButton, and a dialog's buttons, which are
 Buttons. Tooltips never show on touch.
 
 **Forced colors and right to left.** The scrim keeps `forced-color-adjust:
-none`. The selected menu row and the palette's active row become `Highlight`
-with `HighlightText`, a disabled row `GrayText`, and the sheet's grabber
-`CanvasText`. The tooltip keeps a transparent border, which the browser
-redraws so the tip keeps its shape, and shows no arrow. Every other border
-survives, since the browser redraws borders in the reader's text color. Every
-system color sits inside `@media (forced-colors: active)`, the one place the
-core test allows one. In right to left every root carries `dir`, the rules
-are logical, placements are `start` and `end`, and the drawer and the toast
-mirror.
+none`, and every overlay root restores `auto`, so a modal's panel does not
+inherit the scrim's opt-out. The selected menu row and the palette's active
+row become `Highlight` with `HighlightText`, a disabled row `GrayText`, and
+the sheet's grabber `CanvasText`. The tooltip keeps a transparent border,
+which the browser redraws so the tip keeps its shape, and shows no arrow.
+Every other border survives, since the browser redraws borders in the reader's
+text color. Every system color sits inside `@media (forced-colors: active)`,
+the one place the core test allows one. In right to left every root carries
+`dir`, the rules are logical, placements are `start` and `end`, and the drawer
+and the toast mirror.
 
 **Strings.** English defaults, every one replaceable through a prop:
 ConfirmDialog's `cancelLabel` ("Cancel") and its required `confirmLabel`; the
@@ -2920,8 +2931,10 @@ such as the palette's `end` slot or a toast's title. The toast queue and the
 overlay stack are module singletons that create no DOM, so they are safe to
 import on the server. `localStorage` is read only through
 `useSyncExternalStore`, with an empty snapshot on the server. Every client
-file starts with `'use client'`, the two hooks included, since they touch
-`document`.
+file starts with `'use client'`, the two hooks included: `useOverlayScope`,
+which reads `document.activeElement`, and `useOverlayStack`, which touches no
+DOM API but sits with it in the overlay folder, where every module is a client
+module.
 
 **Layers.** Modal surfaces and their scrims sit at `--z-modal`, the toast
 region above them at `--z-toast`, and React Aria's positioned overlays at the
