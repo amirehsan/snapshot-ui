@@ -3038,3 +3038,67 @@ from the keyboard does not ring the whole panel.
 **The toast region.** Every library modal passes React Aria a predicate that
 keeps a press inside `.toast-region` from counting as a press outside, so
 pressing a toast's action while a dialog is open never closes the dialog.
+
+**ConfirmDialog.** The app's confirm becomes `ConfirmDialog`, an alert
+dialog on top of `Dialog`, and `useConfirm()`, the app's promise. The app's
+rule is kept whole: a question resolves yes only when the confirm button is
+pressed. Escape, the backdrop, Cancel and a second question asked over the
+first all resolve no, because silence is never yes.
+
+- **Cancel, then the confirm button.** The safe answer comes first in the
+  DOM, so it is the first thing Tab and a screen reader reach, and the confirm
+  button ends the row at the inline end, as a primary action does in every
+  dialog. Cancel is a tertiary Button, and the confirm button is primary, or
+  danger in the danger tone. Its label names the outcome, "Delete 3
+  transactions", never "OK", so the button says what it does without the
+  title.
+- **Initial focus by tone.** The app's focus landed on Cancel by DOM order;
+  here it is explicit. In the danger tone `autoFocus` puts it on Cancel, so a
+  stray Enter loses nothing. In the default tone it goes on the confirm
+  button, the answer the question expects. React Aria's Dialog then leaves
+  focus where it is. These are the library's two uses of `autoFocus` on a
+  button, and each carries its own lint exception with the reason: initial
+  focus inside a modal is the dialog pattern.
+- **`tone` has no default.** The app defaulted to danger on purpose. A
+  default either way hides a choice the caller must make: a destructive
+  question drawn as a harmless one is the costly mistake, and a harmless one
+  drawn as destructive teaches people to ignore the warning. So the prop is
+  required, and the danger tone draws the warning triangle in the error well
+  unless `icon` replaces it.
+- **The description is required.** An alert dialog is read out on open by its
+  name and its description, so every confirm has both. React Aria points the
+  `alertdialog` at the description itself; `Dialog` wires it the same way for
+  every role.
+- **Pending.** When `onConfirm` returns a promise, the dialog waits for it:
+  the confirm button takes Button's pending state, whose label stays in the
+  tree under the spinner, Cancel is disabled, and Escape and the scrim are off,
+  so a half-finished action cannot be abandoned. It closes when the promise
+  resolves. When it rejects, the dialog stays open and is no longer pending,
+  so the question can be answered again, and the error goes to
+  `reportError()`, which reports it as if nothing had caught it: the console
+  shows it and the page's `error` listeners hear it, once. Where
+  `reportError` is missing it is thrown again from a microtask. `isPending`
+  draws the same state for a caller that tracks the work itself.
+- **Every other way out is a cancel.** Escape, a press on the scrim and Cancel
+  each call `onCancel` once. A confirm never does: the component marks the
+  close a confirm asks for before it closes, and its close handler reads and
+  clears the mark. To see every close, whether the dialog follows a
+  `DialogTrigger`, `isOpen` or `defaultOpen`, it resolves that state itself by
+  React Aria's rule and hands `Dialog` a controlled `isOpen`.
+
+**`useConfirm()`.** It returns `{ confirm, dialog }` and needs no provider.
+`confirm(options)` shows the question and returns a promise. A second
+`confirm` while one is open answers the open one no and shows the new one, and
+unmounting the component that asked answers an open question no, so no
+promise is left waiting. `dialog` is `null` until the first question, so a
+page that never asks draws nothing. The hook offers no pending state: the work
+after a yes belongs to the caller's own interface, and a caller that wants the
+dialog itself to wait renders `ConfirmDialog` with `onConfirm`. When the work
+removes the button that asked, such as a row's Delete, React Aria has nowhere
+to give focus back, so the caller places it, as the docs example does on the
+row that takes its place.
+
+**Nothing new is measured.** The danger well is Dialog's, measured above, and
+the buttons are Button's tertiary, primary and danger variants, whose labels
+the contrast gate already holds: slate on Float, canvas on ink and canvas on
+error.

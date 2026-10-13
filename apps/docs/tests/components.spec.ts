@@ -305,6 +305,8 @@ const LONG_TARGETS: Record<string, string[]> = {
 /** The pages with no text a person writes, each with its reason. A page is in one list or the other. */
 const NO_LONG_TEXT: Record<string, string> = {
   button: 'a label is a short command on one line by design (white-space: nowrap), not text that wraps',
+  'confirm-dialog':
+    "its text is in a portal that opens on a press; its stories' 375px baselines pin its wrapping",
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   'icon-button': 'a glyph and no text: its name is an aria-label that nothing draws',
   spinner: 'a progress mark with no text a person writes',
@@ -389,6 +391,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   card: ['.stage .card', '.stage .card-title', '.stage .card-note'],
   checkbox: ['.stage .checkbox-box'],
   'collapsible-card': ['.stage .card-collapsible', '.stage .card-toggle', '.stage .card-chevron'],
+  'confirm-dialog': ['.stage .button'],
   dialog: ['.stage .button'],
   field: ['.stage .field-counter', '.stage .field-changed'],
   'icon-button': ['.stage .icon-button'],

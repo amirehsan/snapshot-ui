@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { CollapsibleCard } from '../src/collapsible-card';
-import { Dialog, DialogTrigger } from '../src/dialog';
+import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Radio, RadioGroup } from '../src/radio-group';
@@ -145,6 +145,20 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </DialogTrigger>,
     ['<button', '>Rename<'],
     ['dialog-content'],
+  ],
+  [
+    'ConfirmDialog, closed',
+    <DialogTrigger>
+      <Button>Delete</Button>
+      <ConfirmDialog
+        title="Delete these?"
+        description="They go for good."
+        confirmLabel="Delete 3 transactions"
+        tone="danger"
+      />
+    </DialogTrigger>,
+    ['<button', '>Delete<'],
+    ['alertdialog'],
   ],
 ];
 
