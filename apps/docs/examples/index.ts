@@ -33,6 +33,9 @@ import IconButtonVariants from './icon-button-variants';
 import KbdKeys from './kbd-keys';
 import LinkInline from './link-inline';
 import LinkStates from './link-states';
+import MenuBasic from './menu-basic';
+import MenuLinks from './menu-links';
+import MenuSelection from './menu-selection';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
 import RadioGroupBasic from './radio-group-basic';
@@ -95,6 +98,9 @@ export const examples = {
   'kbd-keys': KbdKeys,
   'link-inline': LinkInline,
   'link-states': LinkStates,
+  'menu-basic': MenuBasic,
+  'menu-links': MenuLinks,
+  'menu-selection': MenuSelection,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
   'radio-group-basic': RadioGroupBasic,

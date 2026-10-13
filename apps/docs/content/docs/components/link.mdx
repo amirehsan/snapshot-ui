@@ -46,7 +46,36 @@ export function Footnote() {
 }
 ```
 
-For client-side routing in a framework, wrap your app in React Aria's `RouterProvider`. Link then navigates through your router.
+For client-side routing, wrap your app in React Aria's `RouterProvider` once. Link then navigates through your router, and so does a [Menu](/docs/components/menu) item with `href`. With the Next.js App Router, that is a small client component around the app, with the `RouterConfig` augmentation so `routerOptions` is typed:
+
+```tsx
+'use client';
+
+import { useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { RouterProvider } from 'react-aria-components';
+
+declare module 'react-aria-components' {
+  interface RouterConfig {
+    routerOptions: NonNullable<Parameters<ReturnType<typeof useRouter>['push']>[1]>;
+  }
+}
+
+export function ClientProviders({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  return (
+    <RouterProvider
+      navigate={(href, options) => {
+        router.push(href, options);
+      }}
+    >
+      {children}
+    </RouterProvider>
+  );
+}
+```
+
+Render `<ClientProviders>` around `{children}` in `app/layout.tsx`. Install `react-aria-components` at the version `@snapshot-ui/react` depends on, so the app and the library share one router. React Aria renders a plain anchor, so Next does not prefetch the page as the link comes into view; prefetch it with `router.prefetch(href)` from `onHoverStart` and `onFocus`, or draw Next's own `Link` with the `render` prop, from a client component.
 
 </Section>
 

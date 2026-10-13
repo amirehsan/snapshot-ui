@@ -648,6 +648,8 @@ export interface MenuSeparatorProps { className?: string }
 - **Danger.** `variant="danger"` is a look, not a behavior; it pairs with ConfirmDialog in the docs.
 - **Scope and direction.** The popover's.
 
+**Correction, ruled in the Popover review and found in Task 10:** three of the Keys bullet's claims about React Aria 1.22.1 are not what it does. Tab does not close the menu: MenuTrigger's popover is a dialog that holds focus (`Popover.mjs`, `shouldContainFocus: isDialog`), and the menu's Tab handler hands focus back to the focused row, so Tab stays on it; Escape, a choice and an outside press close the menu. The arrows wrap by default (`useMenu.mjs`, `shouldFocusWrap = true`), so the library's list sets `shouldFocusWrap` false unless the caller asks, which gives the "no wrap" this bullet wants. Opening by a pointer focuses the list itself, not its first row (`useMenuTrigger.mjs` opens with no focus strategy), or the chosen row when the menu itself selects; Enter, Space and Arrow Down focus the first row and Arrow Up the last. The trigger's `aria-haspopup` is `"true"`, which assistive technology reads as a menu.
+
 ### 9.3 Look
 
 `menu.css`. The popup is the Popover's chrome plus `.menu-popover { min-width: max(var(--trigger-width), 12rem); }` (the source's two data points are 14.5rem and 15rem; 12rem is the floor and a trigger wider than it wins). The list `.menu { display: flex; flex-direction: column; gap: 0.25rem; padding: var(--spacing-part); max-height: inherit; overflow: auto; outline: none; }`: 8px of padding, 4px between rows.
@@ -1017,6 +1019,8 @@ Keys tables:
 - Tooltip: Tab (opens on focus), Escape (closes).
 
 **Correction, ruled in the Popover review:** the Popover row's Tab is wrong for React Aria 1.22.1. A popover opened from a `DialogTrigger` is a dialog that holds focus inside it (`Popover.mjs` passes `shouldContainFocus: isDialog` to `Overlay`'s `FocusScope contain`), so Tab cycles through the controls inside and never leaves or closes it. The popover page's Keys table says "Cycles through the controls inside."
+
+**Correction, ruled in the Popover review:** the Menu row's Tab is wrong for the same reason. MenuTrigger's popover is a dialog that holds focus, so Tab stays on the focused row and does not close the menu. The menu page's Keys table says "Stays in the open menu."
 
 **Design record**, `docs/design-system.md`, written before each part is built: "Four colors added" becomes six with the tables and rules of 4.1; a `## Numerals` section (4.2); the Badge section's fifth tone; an `## Overlays` section (4.5) with the layer, scope, scrim, surfaces, motion and focus rules; and one section per part (Dialog and ConfirmDialog together, Drawer, Sheet with the spike's result, Popover, Menu, Toast, CommandPalette with the placeholder exception, Tooltip), each with its measured table. The "Still missing: tooltip" note is retired. Parent spec 6.3's tooltip sentence is amended (13.2, item 16).
 
