@@ -4,6 +4,7 @@ import { createRef, type ReactElement } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { holdFrames } from '../../test/dom';
 import * as library from '../index';
 import { Button } from '../button';
 import { ConfirmDialog, DialogTrigger } from '../dialog';
@@ -369,6 +370,10 @@ describe('Drawer', () => {
 
   it('stacks a confirm dialog over the drawer: one scrim paints, and Escape closes the top one only', async () => {
     const user = userEvent.setup();
+    // Every frame held back, as on a loaded machine whose next frame comes late. React Aria gives focus back in
+    // a frame, so only the library's own restore, as the top panel leaves, can put it back on the trigger
+    // before the dialog under it finds focus on the body and takes it.
+    holdFrames();
     render(
       <Drawer
         defaultOpen
@@ -395,9 +400,7 @@ describe('Drawer', () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Menu' })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(signOut).toHaveFocus();
-    });
+    expect(signOut).toHaveFocus();
     expect(openModals()).toHaveLength(1);
   });
 

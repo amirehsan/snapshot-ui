@@ -498,8 +498,10 @@ export const FromADialog: Story = {
     const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
     await expect(popover).toContainElement(hit as HTMLElement);
     await userEvent.keyboard('{Escape}');
-    await waitFor(() => expect(body.queryByRole('menu')).not.toBeInTheDocument());
+    // Focus is on Actions as soon as the menu has left the page, not a frame later: the dialog takes focus
+    // from the body 500ms after it opens, and on a slow machine the menu leaves near that moment.
+    await waitFor(() => expect(document.querySelector('.menu-popover')).toBeNull());
+    await expect(body.getByRole('button', { name: 'Actions' })).toHaveFocus();
     await expect(dialog).toBeInTheDocument();
-    await waitFor(() => expect(body.getByRole('button', { name: 'Actions' })).toHaveFocus());
   },
 };

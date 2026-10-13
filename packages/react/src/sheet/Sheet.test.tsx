@@ -4,6 +4,7 @@ import { createRef, type ReactElement } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { holdFrames } from '../../test/dom';
 import * as library from '../index';
 import { Button } from '../button';
 import { Link } from '../link';
@@ -399,6 +400,10 @@ describe('Sheet', () => {
 
   it('stacks a second sheet over the first: one scrim paints, and Escape closes the top one only', async () => {
     const user = userEvent.setup();
+    // Every frame held back, as on a loaded machine whose next frame comes late. React Aria gives focus back in
+    // a frame, so only the library's own restore, as the top panel leaves, can put it back on the trigger
+    // before the dialog under it finds focus on the body and takes it.
+    holdFrames();
     render(
       <Sheet defaultOpen title="More">
         <SheetTrigger>
@@ -419,9 +424,7 @@ describe('Sheet', () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Filter transactions' })).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'More' })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(inner).toHaveFocus();
-    });
+    expect(inner).toHaveFocus();
     expect(openModals()).toHaveLength(1);
   });
 

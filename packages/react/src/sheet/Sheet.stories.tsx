@@ -467,9 +467,12 @@ export const Stacked: Story = {
     await expect(getComputedStyle(over).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     await expect(under).not.toHaveAttribute('data-stacked');
     await userEvent.keyboard('{Escape}');
-    await waitFor(() => expect(body.getAllByRole('dialog')).toHaveLength(1));
+    // Focus is on the trigger as soon as the top sheet has left the page, not a frame later: the first sheet
+    // takes focus from the body 500ms after it has risen, and on a slow machine the top one leaves near that
+    // moment.
+    await waitFor(() => expect(document.querySelectorAll('.sheet')).toHaveLength(1));
+    await expect(inner).toHaveFocus();
     await expect(body.getByRole('dialog', { name: 'More' })).toBeInTheDocument();
-    await waitFor(() => expect(inner).toHaveFocus());
   },
 };
 

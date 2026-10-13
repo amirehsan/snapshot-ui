@@ -346,9 +346,12 @@ export const Stacked: Story = {
     await expect(innerScrim).toHaveAttribute('data-stacked');
     await expect(getComputedStyle(innerScrim).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     await userEvent.keyboard('{Escape}');
-    await waitFor(() => expect(body.getAllByRole('dialog')).toHaveLength(1));
+    // Focus is on the trigger as soon as the top dialog has left the page, not a frame later: the first
+    // dialog takes focus from the body 500ms after it opens, and on a slow machine the top one leaves near
+    // that moment.
+    await waitFor(() => expect(document.querySelectorAll('.dialog')).toHaveLength(1));
+    await expect(inner).toHaveFocus();
     await expect(body.getByRole('dialog', { name: 'Rename the workspace' })).toBeInTheDocument();
-    await waitFor(() => expect(inner).toHaveFocus());
     // The first dialog's scrim paints Deep Well at the theme's opacity: 0.4 in light and 0.65 in dark.
     const expected = document.documentElement.dataset.theme === 'dark' ? 0.65 : 0.4;
     await waitFor(() =>

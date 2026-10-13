@@ -445,8 +445,9 @@ export function CommandPalette({
     setOpen(false);
   };
 
-  // Given to ModalFrame as onUnmount. The panel has left the page; React Aria restores focus in the
-  // next frame; the app moves it after that, so the last word is the caller's.
+  // Given to ModalFrame as onUnmount. The panel has left the page and focus is going back to what opened
+  // it: ModalFrame gives it back at once when it can, and React Aria otherwise does in the next frame. The
+  // app moves it after that, so the last word is the caller's.
   const afterClose = (): void => {
     const item = chosen.current;
     if (!item) return;
