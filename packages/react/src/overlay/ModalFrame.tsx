@@ -44,7 +44,11 @@ export interface ModalFrameProps {
   isOpen?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (isOpen: boolean) => void;
-  /** Called when the panel has left the page, after React Aria's exit animation. CommandPalette acts on it. */
+  /**
+   * Called when the panel has left the page, after React Aria's exit animation. CommandPalette acts on it. In
+   * development, React's Strict Mode also calls it once as the panel mounts, when it runs every effect twice;
+   * that is harmless as long as it acts only on work that is pending.
+   */
   onUnmount?: () => void;
   children: ReactNode;
 }
@@ -56,18 +60,27 @@ export function isOutsideToastRegion(element: Element): boolean {
 
 /**
  * What a modal does while it is on the page, from inside the panel, where React Aria's overlay state is: it
- * joins the overlay stack while the state is open, so only the bottom-most modal paints its scrim, and it
- * calls `onUnmount` when the panel leaves the page. It renders nothing.
+ * records what held focus when the modal opened, as the origin of the scope copy; it joins the overlay stack
+ * while the state is open, so only the bottom-most modal paints its scrim; and it calls `onUnmount` when the
+ * panel leaves the page. It renders nothing.
  */
 function FrameEffects({
   id,
   scrimRef,
+  originRef,
   onUnmount,
 }: {
   id: string;
   scrimRef: RefObject<HTMLDivElement | null>;
+  originRef: RefObject<Element | null>;
   onUnmount: (() => void) | undefined;
 }): null {
+  // The order is the point. This is the panel's first child, so its mount layout effect runs before anything
+  // in the content: a native `autoFocus` there takes focus later in this same layout phase, and the panel's
+  // ref attaches, and copies the scope, after both. Read here, focus is still on what opened the modal.
+  useLayoutEffect(() => {
+    originRef.current = document.activeElement;
+  }, [originRef]);
   const isOpen = useContext(OverlayTriggerStateContext)?.isOpen ?? false;
   useOverlayStack(id, isOpen, scrimRef);
   // The latest callback, so the one called at unmount is the one the caller passed last.
@@ -87,7 +100,8 @@ function FrameEffects({
 /**
  * The modal composition Dialog, Drawer and CommandPalette share: React Aria's `ModalOverlay` as the scrim
  * and its `Modal` as the panel, with the shared overlay classes, the direction of the locale on the scrim,
- * the scope copied onto the panel as it attaches, and the overlay stack. A press in the toast region never
+ * the scope of what held focus when it opened copied onto the panel as it attaches, and the overlay stack.
+ * Content that focuses a field as it mounts, as a palette's input does, needs no origin of its own. A press in the toast region never
  * closes it, and a press on the scrim does unless `isDismissable` is false.
  *
  * Internal: not exported from the package.
@@ -110,7 +124,9 @@ export function ModalFrame({
   const id = useId();
   const { direction } = useLocale();
   const scrimRef = useRef<HTMLDivElement>(null);
-  const scopeRef = useOverlayScope();
+  // What held focus when the modal opened, recorded by FrameEffects before the content can move focus.
+  const originRef = useRef<Element | null>(null);
+  const scopeRef = useOverlayScope(originRef);
   // Memoized, so React does not detach and attach the panel's refs on every render.
   const ref = useMemo(() => mergeRefs<HTMLDivElement>(panelRef, scopeRef), [panelRef, scopeRef]);
   return (
@@ -130,7 +146,7 @@ export function ModalFrame({
         ref={ref}
         className={composeRenderProps(className, (userClassName) => cx('overlay', panelClass, userClassName))}
       >
-        <FrameEffects id={id} scrimRef={scrimRef} onUnmount={onUnmount} />
+        <FrameEffects id={id} scrimRef={scrimRef} originRef={originRef} onUnmount={onUnmount} />
         {children}
       </Modal>
     </ModalOverlay>

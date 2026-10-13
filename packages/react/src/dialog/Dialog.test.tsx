@@ -1,10 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Pencil, TriangleAlert } from 'lucide-react';
-import { createRef, type ReactElement } from 'react';
+import { createRef, useId, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import * as library from '../index';
 import { Button } from '../button';
+import { TextField } from '../text-field';
 import { openModals } from '../overlay/useOverlayStack';
 import { Dialog, DialogActions, DialogBody, DialogTrigger, type DialogProps } from './Dialog';
 
@@ -305,6 +307,55 @@ describe('Dialog', () => {
     expect(scrim()).not.toHaveAttribute('data-theme');
   });
 
+  it('submits the form in its body from a submit button in its actions, by press and by Enter', async () => {
+    const user = userEvent.setup();
+    const names: string[] = [];
+    function RenameForm(): ReactElement {
+      const formId = useId();
+      return (
+        <Dialog
+          isOpen
+          title="Rename the workspace"
+          actions={
+            <Button type="submit" form={formId}>
+              Rename
+            </Button>
+          }
+        >
+          <form
+            id={formId}
+            onSubmit={(event) => {
+              event.preventDefault();
+              const name = new FormData(event.currentTarget).get('name');
+              if (typeof name === 'string') names.push(name);
+            }}
+          >
+            <TextField label="Workspace name" name="name" defaultValue="Northwind" />
+          </form>
+        </Dialog>
+      );
+    }
+    render(<RenameForm />);
+    // The button sits in the action row, outside the form in the body, and joins it by the form attribute.
+    const submit = screen.getByRole('button', { name: 'Rename' });
+    expect(submit.closest('form')).toBeNull();
+    expect(submit.closest('.dialog-actions')).not.toBeNull();
+    const field = screen.getByRole('textbox', { name: 'Workspace name' });
+    await user.clear(field);
+    await user.type(field, 'Northwind Studio');
+    await user.click(submit);
+    expect(names).toEqual(['Northwind Studio']);
+    await user.type(field, ' Two{Enter}');
+    expect(names).toEqual(['Northwind Studio', 'Northwind Studio Two']);
+  });
+
+  it('keeps the body and the action row private: the package exports Dialog and its trigger only', () => {
+    expect(library).toHaveProperty('Dialog');
+    expect(library).toHaveProperty('DialogTrigger');
+    expect(library).not.toHaveProperty('DialogBody');
+    expect(library).not.toHaveProperty('DialogActions');
+  });
+
   it.each(['default', 'danger'] as const)('has no axe violations open in the %s tone', async (tone) => {
     open({
       tone,
@@ -343,7 +394,7 @@ describe('the dialog parts', () => {
     expect(actions.current?.className).toBe('dialog-actions theirs');
   });
 
-  it('makes the body a tab stop while it scrolls, so a keyboard can scroll it, and only then', () => {
+  it('makes the body a tab stop while it scrolls and holds nothing to focus, and only then', () => {
     // jsdom lays nothing out, so the body's heights are given: taller inside than it shows, then not.
     const inside = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(900);
     const shown = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
@@ -352,8 +403,19 @@ describe('the dialog parts', () => {
       expect(screen.getByTestId('scrolls')).toHaveAttribute('tabindex', '0');
       unmount();
       inside.mockReturnValue(300);
-      render(<DialogBody data-testid="fits">Short words</DialogBody>);
+      const { unmount: unmountShort } = render(<DialogBody data-testid="fits">Short words</DialogBody>);
       expect(screen.getByTestId('fits')).not.toHaveAttribute('tabindex');
+      unmountShort();
+      // A body that scrolls and holds a control is reached through the control, as Chrome does natively, so
+      // a long form gains no extra stop before its first field.
+      inside.mockReturnValue(900);
+      render(
+        <DialogBody data-testid="holds">
+          <p>Long words</p>
+          <Button>Save</Button>
+        </DialogBody>,
+      );
+      expect(screen.getByTestId('holds')).not.toHaveAttribute('tabindex');
     } finally {
       inside.mockRestore();
       shown.mockRestore();

@@ -289,6 +289,8 @@ export { DialogTrigger } from 'react-aria-components';
 
 Exports: `Dialog`, `DialogTrigger` (React Aria's, re-exported unchanged so one trigger serves Dialog, ConfirmDialog, Drawer and a free Popover), `DialogBody`, `DialogActions` (the parts, for a custom layout inside `children` of a bare dialog). `role` is not a prop: a Dialog is `dialog`, and ConfirmDialog is the one that says `alertdialog`.
 
+**Departure, ruled in Task 4's fix round 1:** `DialogBody` and `DialogActions` are not exported. There is no bare dialog: `children` always lands inside the dialog's own `div.dialog-body`, so the parts placed there would nest, and a nested action row would scroll away with the body. They stay internal to `Dialog.tsx`, where Dialog and ConfirmDialog use them. A form dialog puts its `<form id>` in `children` and `<Button type="submit" form={id}>` in `actions`, which is the one pinned row; Enter in a field still submits the form, because a submit button joined by the `form` attribute is the form's default button.
+
 ### 5.2 Dialog behavior
 
 - **Markup.** `ModalOverlay.overlay-scrim.dialog-overlay` > `Modal.overlay.dialog[data-size][data-tone]` > `RACDialog.dialog-content` > the close IconButton (when asked), the icon well, `Heading slot="title"` as `h2.dialog-title`, `Text slot="description"` as `.dialog-description`, `div.dialog-body` holding `children`, `div.dialog-actions` holding `actions`. The title is React Aria's `Heading`, not the library's static one, because the slot is what wires `aria-labelledby`; it is drawn in the `--text-h3` step whatever the level, as a card title is. Parts that are not given render nothing: no empty well, body or action row (the `empty-parts` test).

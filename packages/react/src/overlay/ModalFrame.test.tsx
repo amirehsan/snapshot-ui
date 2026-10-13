@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { createRef, type ReactElement } from 'react';
+import { createRef, useLayoutEffect, useRef, type ReactElement } from 'react';
 import { Dialog as RACDialog, Heading, I18nProvider } from 'react-aria-components';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
@@ -119,6 +119,37 @@ describe('ModalFrame', () => {
     expect(panelAt()).toHaveAttribute('data-shape', 'soft');
     expect(scrimAt()).not.toHaveAttribute('data-theme');
     expect(scrimAt()).not.toHaveAttribute('data-shape');
+  });
+
+  it('copies the theme of the trigger even when the content takes focus as it mounts', () => {
+    // A field that focuses itself in a layout effect, which is when React focuses a native autoFocus: before
+    // the panel around it attaches, so by then the trigger no longer holds focus.
+    function TakesFocus(): ReactElement {
+      const ref = useRef<HTMLInputElement>(null);
+      useLayoutEffect(() => {
+        ref.current?.focus();
+      }, []);
+      return <input ref={ref} aria-label="Workspace name" />;
+    }
+    const page = (isOpen: boolean): ReactElement => (
+      <>
+        <div data-theme="dark" data-density="compact">
+          <button type="button">Open</button>
+        </div>
+        <ModalFrame overlayClass="dialog-overlay" panelClass="dialog" isOpen={isOpen}>
+          <RACDialog>
+            <Heading slot="title">Rename the workspace</Heading>
+            <TakesFocus />
+          </RACDialog>
+        </ModalFrame>
+      </>
+    );
+    const { rerender } = render(page(false));
+    screen.getByRole('button', { name: 'Open' }).focus();
+    rerender(page(true));
+    expect(screen.getByRole('textbox', { name: 'Workspace name' })).toHaveFocus();
+    expect(panelAt()).toHaveAttribute('data-theme', 'dark');
+    expect(panelAt()).toHaveAttribute('data-density', 'compact');
   });
 
   it('has no axe violations with a dialog inside', async () => {
