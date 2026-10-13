@@ -145,6 +145,8 @@ Every field's props type requires an accessible name. Code that names nothing no
 | Checkbox, Switch, Radio, SegmentedControlItem | `children`, `aria-label`, `aria-labelledby` |
 | IconButton | `aria-label`, `aria-labelledby` (already so) |
 
+`SegmentedControlItem` keeps `children` required, because an option's visible content is its name: an option with an `aria-label` and nothing drawn is not supported, and an option that shows only an icon passes the icon as `children` and adds an `aria-label`. This is a deliberate departure from the table above, decided when the plan was written.
+
 - **Type tests.** Each union gets a test with `@ts-expect-error` for the nameless case, as IconButton's has.
 - **Docs.** Each page says so in one line.
 - **Release.** This is a breaking type change, and ships in 0.2.0. Under 0.x a minor version may break, and the changeset says so.

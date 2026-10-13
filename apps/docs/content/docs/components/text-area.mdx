@@ -77,7 +77,7 @@ export function ShortDescription({ saved }: { saved: string }) {
 }
 ```
 
-A field needs a name, and the types require one: a `label`, or an `aria-label` or `aria-labelledby` when the name is shown elsewhere.
+A field needs a name, and the types require one: a `label`, an `aria-label` when no label is shown, or an `aria-labelledby` that points at a label shown elsewhere.
 
 For a custom layout, use the parts inside React Aria's own TextField: Label, Description and FieldError from Snapshot UI, and React Aria's TextArea with the classes `input textarea`. There is no bare textarea part, because the pair of classes is all it adds. [Field parts](/docs/components/field) has the layout.
 
@@ -102,6 +102,8 @@ A native textarea, labelled by the label and described by the hint and the error
 <Keys rows={[['Tab', 'Moves focus into the field. The edge firms to 1.5px ink and the 2px ring sits outside it.'], ['Shift Tab', 'Moves focus back out.'], ['Enter', 'Adds a new line. It never submits the form.']]} />
 
 The corner handle resizes with a pointer, in the browsers that draw one, and the keyboard has no way to resize, so set `rows` to the height the content needs. The placeholder is taupe, which is quiet by design, so it never carries anything the label does not. The count is a polite status region.
+
+A field with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means the field has no accessible name.
 
 </Section>
 

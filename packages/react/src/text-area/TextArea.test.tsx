@@ -43,7 +43,19 @@ describe('TextArea', () => {
     const labelled = <TextArea label="Title" />;
     const byAriaLabel = <TextArea aria-label="Title" />;
     const byLabelledby = <TextArea aria-labelledby="heading" />;
-    expect([nameless, unnamed, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+    const jsxLabel = <TextArea label={<strong>Title</strong>} />;
+    const labelAndAriaLabel = <TextArea label="Title" aria-label="Page title" />;
+    const bothAriaProps = <TextArea aria-label="Page title" aria-labelledby="heading" />;
+    expect([
+      nameless,
+      unnamed,
+      labelled,
+      byAriaLabel,
+      byLabelledby,
+      jsxLabel,
+      labelAndAriaLabel,
+      bothAriaProps,
+    ]).toHaveLength(8);
   });
 
   it('is a textarea and not an input: it carries no type once it has mounted', () => {

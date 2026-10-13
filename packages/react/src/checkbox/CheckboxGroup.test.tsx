@@ -48,7 +48,19 @@ describe('CheckboxGroup', () => {
     const labelled = <CheckboxGroup label="Notify me by" />;
     const byAriaLabel = <CheckboxGroup aria-label="Notify me by" />;
     const byLabelledby = <CheckboxGroup aria-labelledby="heading" />;
-    expect([nameless, hinted, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+    const jsxLabel = <CheckboxGroup label={<strong>Notify me by</strong>} />;
+    const labelAndAriaLabel = <CheckboxGroup label="Notify me by" aria-label="Notification channels" />;
+    const bothAriaProps = <CheckboxGroup aria-label="Notification channels" aria-labelledby="heading" />;
+    expect([
+      nameless,
+      hinted,
+      labelled,
+      byAriaLabel,
+      byLabelledby,
+      jsxLabel,
+      labelAndAriaLabel,
+      bothAriaProps,
+    ]).toHaveLength(8);
   });
 
   it('puts its parts in the order the field contract asks for', () => {

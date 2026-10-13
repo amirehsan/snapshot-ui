@@ -90,6 +90,8 @@ A native radio group: each option is a radio, the control is named by its label,
 
 The 2px ring sits outside an option that is not chosen. On the chosen option, which is an ink fill, the ring is drawn inside it in the canvas color, so it still reads. A disabled option is skipped by the arrow keys. A read-only control keeps its choice and takes no hover wash. Do not disable the chosen option of a control the reader can still change: React Aria gives the tab stop to the chosen option alone and takes it from a disabled one, so Tab skips the control.
 
+A control with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means the control has no accessible name.
+
 </Section>
 
 <Section>

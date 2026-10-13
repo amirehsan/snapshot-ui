@@ -68,7 +68,21 @@ describe('RadioGroup', () => {
     const labelled = <RadioGroup label="Newsletter frequency" />;
     const byAriaLabel = <RadioGroup aria-label="Newsletter frequency" />;
     const byLabelledby = <RadioGroup aria-labelledby="heading" />;
-    expect([nameless, hinted, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+    const jsxLabel = <RadioGroup label={<strong>Newsletter frequency</strong>} />;
+    const labelAndAriaLabel = (
+      <RadioGroup label="Newsletter frequency" aria-label="How often you hear from us" />
+    );
+    const bothAriaProps = <RadioGroup aria-label="How often you hear from us" aria-labelledby="heading" />;
+    expect([
+      nameless,
+      hinted,
+      labelled,
+      byAriaLabel,
+      byLabelledby,
+      jsxLabel,
+      labelAndAriaLabel,
+      bothAriaProps,
+    ]).toHaveLength(8);
   });
 
   it('puts its parts in the order the field contract asks for', () => {

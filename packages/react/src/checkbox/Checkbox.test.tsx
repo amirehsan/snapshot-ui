@@ -44,7 +44,23 @@ describe('Checkbox', () => {
     const labelled = <Checkbox>Remember me</Checkbox>;
     const byAriaLabel = <Checkbox aria-label="Select row 3" />;
     const byLabelledby = <Checkbox aria-labelledby="row-3" />;
-    expect([nameless, hinted, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+    const jsxChildren = (
+      <Checkbox>
+        <strong>Remember me</strong>
+      </Checkbox>
+    );
+    const childrenAndAriaLabel = <Checkbox aria-label="Keep me signed in">Remember me</Checkbox>;
+    const bothAriaProps = <Checkbox aria-label="Keep me signed in" aria-labelledby="row-3" />;
+    expect([
+      nameless,
+      hinted,
+      labelled,
+      byAriaLabel,
+      byLabelledby,
+      jsxChildren,
+      childrenAndAriaLabel,
+      bothAriaProps,
+    ]).toHaveLength(8);
   });
 
   it('has the box and the text in one label, so the whole row is the target', () => {

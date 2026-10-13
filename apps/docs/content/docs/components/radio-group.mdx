@@ -104,6 +104,8 @@ A group of native radio inputs, named by the label and described by the hint, th
 
 Disabled options are skipped by the arrow keys. A read-only group keeps its choice and takes no hover wash. Do not disable the chosen option of a group the reader can still change: React Aria gives the tab stop to the chosen radio alone and takes it from a disabled one, so Tab skips the group.
 
+A group or an option with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means it has no accessible name.
+
 </Section>
 
 <Section>

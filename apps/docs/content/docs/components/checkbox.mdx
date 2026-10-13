@@ -112,6 +112,8 @@ A native checkbox input inside its label, with React Aria handling the wiring. T
 
 The row is 40px tall at the least, and the box is drawn at 20px inside it. A checkbox with no text, named by `aria-label`, keeps a 40px square target around its box. The target overhangs the box by 10px on each side, so leave 10px beside a scroll edge. In Windows high contrast the box takes the system colors, so the mark never disappears.
 
+A checkbox or a group with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means it has no accessible name.
+
 </Section>
 
 <Section>
