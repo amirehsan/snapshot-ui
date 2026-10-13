@@ -4,7 +4,8 @@
  * the viewport's edge; there is no token for it, and this is the one place it is written. The scrim
  * is Deep Well at the theme's opacity, as a background color and not `opacity`, so it never fades the
  * panel with it. One scrim paints when modals stack: every modal overlay that is not the bottom-most
- * carries data-stacked and goes transparent while it still catches presses. Derived in
+ * carries data-stacked and goes transparent while it still catches presses. A sheet's scrim is a
+ * variant, kept here so it wins by specificity in any order the files load. Derived in
  * docs/design-system.md ("Overlays").
  */
 @layer components {
@@ -44,8 +45,23 @@
     forced-color-adjust: none;
   }
 
-  .overlay-scrim:is([data-entering], [data-exiting], [data-stacked]) {
+  /* A stacked scrim is transparent, and a modal's scrim fades its color in and out. The sheet's does not: its
+     swipe keyframes fade it, so it keeps its color while it enters and exits. */
+  .overlay-scrim[data-stacked],
+  .overlay-scrim:not(.sheet-scrim):is([data-entering], [data-exiting]) {
     background-color: transparent;
+  }
+
+  /* The sheet's scrim is React Aria's SheetBackdrop, which React Aria places inside the page-sized overlay
+     beside the sheet's scroller, at position absolute and inset 0, and makes inert. Three of the rules above
+     do not fit it: the modal layer would paint it over the sheet, the viewport's height would leave a scrolled
+     page's view uncovered, and the color's fade would hide it while the sheet scrolls in. Two classes outrank
+     one, so this holds in whatever order sheet.css and this file load. Derived in docs/design-system.md
+     ("Sheet"). */
+  .overlay-scrim.sheet-scrim {
+    z-index: auto;
+    height: auto;
+    transition: none;
   }
 
   @media (prefers-reduced-motion: reduce) {

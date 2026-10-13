@@ -13,20 +13,10 @@
     z-index: var(--z-modal);
   }
 
-  /* The backdrop carries the shared scrim, for its color, its transparency when stacked and its forced-colors
-     opt-out. Three of the shared rules do not fit a backdrop React Aria places inside the page-sized overlay:
-     the modal layer would put it over the sheet's scroller, the viewport's height would leave a scrolled
-     page's view uncovered, and a color that fades while it enters would hide it until the sheet is in. The
-     swipe fades it instead, through the keyframes below. */
-  .sheet-scrim {
-    z-index: auto;
-    height: auto;
-    transition: none;
-  }
-
-  .sheet-scrim:is([data-entering], [data-exiting]):not([data-stacked]) {
-    background-color: color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent);
-  }
+  /* The backdrop carries the shared scrim, overlay-scrim, for its color, its transparency when stacked and its
+     forced-colors opt-out. The three shared rules that do not fit a backdrop React Aria places inside the
+     page-sized overlay give way in overlay.css, as the .overlay-scrim.sheet-scrim variant, so they hold in any
+     order the two files load. The swipe fades the backdrop, through the keyframes below. */
 
   .sheet {
     display: flex;
@@ -42,8 +32,8 @@
   }
 
   /* The tabIndex="-1" element React Aria focuses. With the on-screen keyboard up the visual viewport is shorter
-     than dvh, and React Aria writes its height on the overlay: the content caps at 92% of it, so the sheet
-     shrinks to what is still in view. */
+     than dvh, and React Aria writes its height on the overlay: the content caps at 92% of it, so the sheet is
+     no taller than what is still in view. It stays on the layout viewport's bottom edge all the same. */
   .sheet-content {
     display: flex;
     flex-direction: column;
@@ -122,11 +112,14 @@
   }
 
   /* No overscroll-behavior, unlike a dialog's body: a swipe the body cannot take, down from its top or on a body
-     that does not scroll, must reach React Aria's scroller, which moves the sheet and keeps the page still. */
+     that does not scroll, must reach React Aria's scroller, which moves the sheet and keeps the page still.
+     Until the sheet is fully open the body clips what it holds, which makes no scroll container: a long list
+     neither paints over the footer at a partial stop nor stretches React Aria's scroll range. */
   .sheet-body {
     flex: 1 1 auto;
     min-height: 0;
     padding: var(--spacing-peer);
+    overflow-y: clip;
     overflow-wrap: anywhere;
   }
 

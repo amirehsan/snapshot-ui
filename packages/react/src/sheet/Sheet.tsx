@@ -44,8 +44,10 @@ export interface SheetProps {
   hasCloseButton?: boolean;
   /** The close button's accessible name. @default 'Close' */
   closeLabel?: string;
+  /** Open state, for a sheet without a `SheetTrigger`. Controlled and uncontrolled. */
   isOpen?: boolean;
   defaultOpen?: boolean;
+  /** Called when the sheet asks to open or close. In a `SheetTrigger` the trigger owns the state, so put it there. */
   onOpenChange?: (isOpen: boolean) => void;
   /** Goes on the sheet panel, merged after the library's classes. */
   className?: string | ((values: SheetRenderProps & { defaultClassName: string | undefined }) => string);
