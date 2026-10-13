@@ -62,7 +62,7 @@ Time follows the page's direction, so under `dir="rtl"` the newest day is at the
 pnpm add @snapshot-ui/charts @snapshot-ui/core
 ```
 
-It needs `@snapshot-ui/core` 0.3.0 or later, whose `styles.css` draws it. Every label and value is your formatted string: `valueLabel` says a point and `value` only places it, so a currency, a compact figure or Persian digits are yours, and the server's HTML is final. Pass `yTicks` for gridlines with labels; without them the chart draws only its baseline and relies on the readout and the table. Pass the same `yDomain` to charts read side by side, so their scales match. In another language, pass `labels` with all three of the strings the chart writes itself.
+It needs `@snapshot-ui/core` 0.3.0 or later, whose `styles.css` draws it. Every label and value is your formatted string: `valueLabel` says a point and `value` only places it, so a currency, a compact figure or Persian digits are yours, and the server's HTML is final. Pass `yTicks` for gridlines with labels; without them the chart draws only its baseline and relies on the readout and the table. Pass the same `yDomain` to charts read side by side, so their scales match. In another language, pass `labels` with all four of the strings the chart writes itself: the toggle's two, the note shown with scripts off, and the plot's role description, which a screen reader says in place of "chart".
 
 The svg, the axis labels, the legend and the table render on the server; the client adds the keys, the pointer and the readout. A server component can render it and pass it plain data.
 
@@ -84,6 +84,7 @@ import { LineChart } from '@snapshot-ui/charts';
     showTable: 'نمایش جدول',
     showChart: 'نمایش نمودار',
     noScript: 'اسکریپت‌ها خاموش‌اند، پس داده‌های نمودار در جدول زیر است.',
+    roleDescription: 'نمودار',
   }}
 />;
 ```
@@ -110,9 +111,9 @@ A LineChart accepts every attribute of an HTML element, on its root, a `figure`.
 
 ## Accessibility
 
-The chart is a `figure` named by its `aria-label` or `aria-labelledby`, which the types require. The plot is one tab stop for the whole chart, a group with the role description "chart" named as the figure is, so thirty-one days are never thirty-one tab stops. The arrow keys move a readout and a crosshair through the days with data. A screen reader hears the day and each series with its value once the keys rest for 150ms, so a held key is heard only where it stops; each part is announced on its own, with no punctuation of the library's between your words. The pointer snaps to the nearest day across the whole column, never only on the line. The table is the full alternative. In forced colors the first line is drawn in the reader's text color, the second and the gridlines in GrayText, and the crosshair and dots in Highlight.
+The chart is a `figure` named by its `aria-label` or `aria-labelledby`, which the types require. The plot is one tab stop for the whole chart, a group with the role description "chart" (`labels.roleDescription`) named as the figure is, so thirty-one days are never thirty-one tab stops. It becomes a tab stop once scripts run, since its keys need them. The arrow keys move a readout and a crosshair through the days with data; the readout sits above the day's dots, or below them when they are near the top, so it never covers the point it describes. A key with Alt, Control or Meta is left to the browser. A screen reader hears the day and each series with its value once the keys rest for 150ms, so a held key is heard only where it stops; each part is announced on its own, with no punctuation of the library's between your words. The pointer snaps to the nearest day across the whole column, never only on the line. The table is the full alternative. In forced colors the first line is drawn in the reader's text color, the second and the gridlines in GrayText, and the crosshair and dots in Highlight.
 
-<Keys rows={[['Tab', 'Moves to the plot, one stop for the whole chart, then to the table toggle.'], ['Left Right', 'The previous or next day with data, in the drawn direction.'], ['Home End', 'The first or last day with data.'], ['PageUp PageDown', 'Seven days back or forward.'], ['Escape', 'Hides the readout until the next move.'], ['Enter Space', 'On the toggle, swaps the plot and the table.']]} />
+<Keys rows={[['Tab', 'Moves to the plot, one stop for the whole chart, then to the table toggle.'], ['Left Right', 'The previous or next day with data, in the drawn direction.'], ['Home End', 'The first or last day with data.'], ['PageUp PageDown', 'Seven days back or forward.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter Space', 'On the toggle, swaps the plot and the table.']]} />
 
 </Section>
 

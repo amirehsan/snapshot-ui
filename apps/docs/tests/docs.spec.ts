@@ -2034,6 +2034,29 @@ test('the line chart moves its readout with the arrow keys and reads it out', as
   await expect(live).not.toHaveText(/[:,]/);
 });
 
+test("the line chart's readout leaves the point it describes in view", async ({ page }) => {
+  await visit(page, '/docs/charts/line-chart');
+  const chart = lineChart(page, 'Spending in October');
+  const plot = chart.locator('.line-chart-plot');
+  await plot.focus();
+  await page.keyboard.press('Home');
+  for (let day = 1; day < 18; day++) await page.keyboard.press('ArrowRight');
+  // Oct 18, $77.90 on $0 to $100: the dot is near the top, so the panel goes under it.
+  await expect(chart.locator('.line-chart-readout .line-chart-readout-x')).toHaveText('Oct 18');
+  const panel = await chart.locator('.line-chart-readout').boundingBox();
+  const dot = await chart.locator('.line-chart-dot').boundingBox();
+  const box = await plot.boundingBox();
+  if (!panel || !dot || !box) throw new Error('No readout, dot or plot');
+  const apart =
+    panel.x + panel.width <= dot.x ||
+    dot.x + dot.width <= panel.x ||
+    panel.y + panel.height <= dot.y ||
+    dot.y + dot.height <= panel.y;
+  expect(apart).toBe(true);
+  expect(panel.y).toBeGreaterThanOrEqual(box.y);
+  expect(panel.y + panel.height).toBeLessThanOrEqual(box.y + box.height);
+});
+
 test('the right-to-left line chart draws its newest day at the left, and Left moves to newer days', async ({
   page,
 }) => {
@@ -2067,6 +2090,8 @@ test.describe('a line chart without JavaScript', () => {
     // The plot is drawn, and the noscript copy of the table is the one shown, under its note.
     await expect(chart.locator('.line-chart-plot svg .line-chart-line')).toHaveCount(1);
     await expect(chart.locator('.line-chart-plot')).toBeVisible();
+    // Its keys need scripts, so with them off the plot is no tab stop.
+    await expect(chart.locator('.line-chart-plot')).not.toHaveAttribute('tabindex');
     await expect(chart.locator('.line-chart-noscript')).toBeVisible();
     const shown = chart.locator('table:visible');
     await expect(shown).toHaveCount(1);

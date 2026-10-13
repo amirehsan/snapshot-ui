@@ -40,12 +40,14 @@ export interface LineSeries {
   points: readonly (LinePoint | null)[];
 }
 
-/** The strings the chart writes itself. Give all three, so no default in English is left on the page. */
+/** The strings the chart writes itself. Give all four, so no default in English is left on the page. */
 export interface LineChartLabels {
   showTable: string;
   showChart: string;
   /** Shown with scripts off, above the table: "Scripts are off, so the chart's data is in the table below." */
   noScript: string;
+  /** What a screen reader calls the plot, its `aria-roledescription`: "chart". */
+  roleDescription: string;
 }
 
 export type LineChartProps = Omit<
@@ -65,7 +67,7 @@ export type LineChartProps = Omit<
     yDomain?: readonly [number, number];
     /** Fills under the first series. @default false */
     hasArea?: boolean;
-    /** @default { showTable: 'Show as table', showChart: 'Show as chart', noScript: "Scripts are off, so the chart's data is in the table below." } */
+    /** @default { showTable: 'Show as table', showChart: 'Show as chart', noScript: "Scripts are off, so the chart's data is in the table below.", roleDescription: 'chart' } */
     labels?: LineChartLabels;
     /** Height of the plot in px. @default 240 */
     height?: number;
@@ -76,6 +78,7 @@ const DEFAULT_LABELS: LineChartLabels = {
   showTable: 'Show as table',
   showChart: 'Show as chart',
   noScript: "Scripts are off, so the chart's data is in the table below.",
+  roleDescription: 'chart',
 };
 
 /** What set the active position: a key or focus, which is announced, or a pointer, which is not. */
@@ -96,6 +99,15 @@ const REST = 150;
 
 /** A coordinate far past the plot, for a value far outside the domain: drawn off the plot, never at an infinity. */
 const FAR = 1e6;
+
+/**
+ * The readout's place, in px at the default text size: a line of `--text-small` (14px at 1.43), the panel's
+ * padding and border, and the gap between it and the dots (`margin-block-*` in charts.css, the 6px radius of a
+ * dot and 4px of air). Known before anything is drawn, so the place needs no measurement.
+ */
+const READOUT_LINE = 20;
+const READOUT_EDGES = 14;
+const READOUT_GAP = 10;
 
 /** A string that names something: given and not only spaces. */
 const named = (text: string | undefined): text is string => text !== undefined && text.trim() !== '';
@@ -142,6 +154,8 @@ export function LineChart({
   const [source, setSource] = useState<Source | null>(null);
   const [isReadoutHidden, setReadoutHidden] = useState(false);
   const [announced, setAnnounced] = useState<number | null>(null);
+  // The tab stop is the script's: with scripts off its keys would do nothing, so the server writes none.
+  const [isInteractive, setInteractive] = useState(false);
 
   const count = xLabels.length;
   // The series as drawn: points past the x labels are dropped, and a value that is not a finite number is a
@@ -183,15 +197,23 @@ export function LineChart({
   const current = active !== null && withData.includes(active) ? active : null;
 
   const activate = (index: number, from: Source): void => {
+    // A move shows the readout again; a key that goes nowhere leaves an Escape standing.
+    if (index !== current) setReadoutHidden(false);
+    // A pointer's position is not announced, so the region lets go of the last one: a key that lands back on
+    // it is then a change the screen reader hears.
+    if (from !== 'key') setAnnounced(null);
     setActive(index);
     setSource(from);
-    setReadoutHidden(false);
   };
 
   const clear = (): void => {
     setActive(null);
     setSource(null);
   };
+
+  useEffect(() => {
+    setInteractive(true);
+  }, []);
 
   // The rest before a key or a focus is announced; a new move restarts it, and blur or unmount cancels it.
   useEffect(() => {
@@ -221,18 +243,29 @@ export function LineChart({
   }, [source]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    // A key with Alt, Control or Meta is the browser's or the page's shortcut, never a move.
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.key === 'Escape') {
+      // Stopped as well as prevented, since a React Aria overlay around the chart closes on any Escape that
+      // reaches it. The next Escape, with nothing to hide, goes on to it.
       if (current !== null && !isReadoutHidden) {
         event.preventDefault();
+        event.stopPropagation();
         setReadoutHidden(true);
       }
       return;
     }
     const key = KEYS[event.key];
-    if (key === undefined || active === null) return;
+    const last = withData.at(-1);
+    if (key === undefined || last === undefined) return;
     event.preventDefault();
+    // A plot focused before it had data holds no position: a key starts at the newest, as focus would have.
+    if (current === null) {
+      activate(last, 'key');
+      return;
+    }
     const move = typeof key === 'function' ? key(isRightToLeft(event.currentTarget)) : key;
-    activate(moveFrom(withData, active, move), 'key');
+    activate(moveFrom(withData, current, move), 'key');
   };
 
   const onFocus = (): void => {
@@ -302,6 +335,27 @@ export function LineChart({
 
   const x = current === null ? 0 : xPosition(current, count);
   const readings = current === null ? [] : readingsAt(drawn, current);
+
+  // The readout sits above the highest active dot, its bottom a gap over it, when the lines it holds fit
+  // there; else under the lowest, so it covers none of them; else on the side with more room. Each dot's place,
+  // the plot's height and the number of lines are known, so nothing is measured. A dot drawn past the plot
+  // anchors at its edge.
+  const dotYs =
+    current === null
+      ? []
+      : plotted.flatMap((points) => {
+          const mark = points[current];
+          return mark ? [Math.min(Math.max(mark.y, 0), 100)] : [];
+        });
+  const highest = dotYs.length > 0 ? Math.min(...dotYs) : 0;
+  const lowest = dotYs.length > 0 ? Math.max(...dotYs) : 0;
+  const needed = (readings.length + 1) * READOUT_LINE + READOUT_EDGES + READOUT_GAP;
+  const above = (highest / 100) * height;
+  const below = ((100 - lowest) / 100) * height;
+  const isAbove = above >= needed || (below < needed && above >= below);
+  const readoutStyle = isAbove
+    ? { insetInlineStart: percent(x), insetBlockEnd: percent(100 - highest) }
+    : { insetInlineStart: percent(x), insetBlockStart: percent(lowest) };
   const spoken = announced === null ? [] : readingsAt(drawn, announced);
 
   return (
@@ -328,10 +382,10 @@ export function LineChart({
           ref={plotRef}
           className="line-chart-plot"
           role="group"
-          aria-roledescription="chart"
+          aria-roledescription={labels.roleDescription}
           {...plotName}
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the same one tab stop: the rule reports the attribute's line
-          tabIndex={0}
+          tabIndex={isInteractive ? 0 : undefined}
           data-has-y-labels={ticks.length > 0 ? '' : undefined}
           data-active={current === null ? undefined : ''}
           style={{ blockSize: height }}
@@ -393,7 +447,8 @@ export function LineChart({
                   <div
                     className="line-chart-readout"
                     data-align={x < 25 ? 'start' : x > 75 ? 'end' : 'center'}
-                    style={{ insetInlineStart: percent(x) }}
+                    data-place={isAbove ? 'above' : 'below'}
+                    style={readoutStyle}
                   >
                     <p className="line-chart-readout-x">{xLabels[current]}</p>
                     <ul className="line-chart-readout-list">
@@ -410,7 +465,8 @@ export function LineChart({
             )}
           </div>
           {/* Each part is an element of its own, read as a line of its own, so no punctuation of the library's
-              comes between the app's words: a Persian page hears only Persian. */}
+              comes between the app's words. With `labels.roleDescription` given too, a Persian page hears no
+              English from the chart. */}
           <span className="line-chart-live" aria-live="polite" aria-atomic="true">
             {announced === null ? null : (
               <>

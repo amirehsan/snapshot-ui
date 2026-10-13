@@ -242,12 +242,17 @@
     background-color: var(--color-slate);
   }
 
-  /* A float panel over the active x at the plot's top: centred, or from the x inward in the outer quarters. */
+  /*
+   * A float panel at the active x, above its highest dot or below its lowest; the component writes which, and
+   * the block inset, from known values. Centred on the x in the middle half, where half the plot lies on either
+   * side, or from the x inward in the outer quarters, where three quarters do: each width keeps it inside the
+   * plot, and its text wraps within that width rather than running past its border.
+   */
   .line-chart-readout {
     position: absolute;
-    inset-block-start: 0;
     box-sizing: border-box;
-    max-width: min(16rem, 100%);
+    width: max-content;
+    max-width: min(16rem, 50%);
     padding: 0.375rem 0.625rem;
     border: 1px solid var(--color-frame);
     border-radius: var(--radius-surface);
@@ -256,18 +261,29 @@
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
     color: var(--color-ink);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     translate: calc(var(--chart-flip, 1) * -50%) 0;
   }
 
   .line-chart-readout[data-align='start'] {
+    max-width: min(16rem, 75% - var(--spacing-part));
     translate: none;
     margin-inline-start: var(--spacing-part);
   }
 
   .line-chart-readout[data-align='end'] {
+    max-width: min(16rem, 75% - var(--spacing-part));
     translate: calc(var(--chart-flip, 1) * -100%) 0;
     margin-inline-start: calc(-1 * var(--spacing-part));
+  }
+
+  /* The dot's 6px radius and 4px of air between the panel and the dots, on the side the panel is on. */
+  .line-chart-readout[data-place='above'] {
+    margin-block-end: 0.625rem;
+  }
+
+  .line-chart-readout[data-place='below'] {
+    margin-block-start: 0.625rem;
   }
 
   .line-chart-readout-x {

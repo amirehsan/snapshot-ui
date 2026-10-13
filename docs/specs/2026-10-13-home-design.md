@@ -224,7 +224,7 @@ export type MeterProps = Omit<HTMLAttributes<HTMLDivElement>, 'children'> &
 
 ### 8.1 Package
 
-Batch 2's two chart parts go in a new package, `@snapshot-ui/charts`, the package the parent spec names for phase 6, rather than in `@snapshot-ui/react` (section 10.1, ruling 1). Like `@snapshot-ui/react`, it takes React and React DOM as peers and depends on `react-aria-components` only if a later chart needs it; the few helpers it shares with the react package (`cx`, the `AriaName` type) are copied, not imported, so neither package depends on the other; its CSS ships in `@snapshot-ui/core` as `charts.css`, imported by `styles.css` like every other component file, so an app still loads one stylesheet.
+Batch 2's two chart parts go in a new package, `@snapshot-ui/charts`, the package the parent spec names for phase 6, rather than in `@snapshot-ui/react` (section 10.1, ruling 1). It takes React as its one required peer and depends on `react-aria-components` only if a later chart needs it (React DOM was dropped as a peer when the package was built, because nothing in it imports `react-dom`); the few helpers it shares with the react package (`cx`, the `AriaName` type) are copied, not imported, so neither package depends on the other; its CSS ships in `@snapshot-ui/core` as `charts.css`, imported by `styles.css` like every other component file, so an app still loads one stylesheet.
 
 ### 8.2 Foundations
 

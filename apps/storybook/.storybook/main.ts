@@ -5,6 +5,8 @@ const config: StorybookConfig = {
   stories: [
     '../../../packages/react/src/**/*.stories.@(ts|tsx)',
     '../../../packages/charts/src/**/*.stories.@(ts|tsx)',
+    // Stories that need both packages, which neither package's own stories may import together.
+    '../stories/**/*.stories.@(ts|tsx)',
   ],
   addons: ['@storybook/addon-docs', '@storybook/addon-a11y', '@storybook/addon-vitest'],
   framework: {

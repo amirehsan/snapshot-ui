@@ -3915,7 +3915,11 @@ describe('src/components/charts.css, the line chart', () => {
     );
     expectAll(
       blockAfter(css, ".line-chart-readout[data-align='start'] {"),
-      ['translate: none;', 'margin-inline-start: var(--spacing-part);'],
+      [
+        'translate: none;',
+        'margin-inline-start: var(--spacing-part);',
+        'max-width: min(16rem, 75% - var(--spacing-part));',
+      ],
       'start',
     );
     expectAll(
@@ -3923,8 +3927,30 @@ describe('src/components/charts.css, the line chart', () => {
       [
         'translate: calc(var(--chart-flip, 1) * -100%) 0;',
         'margin-inline-start: calc(-1 * var(--spacing-part));',
+        'max-width: min(16rem, 75% - var(--spacing-part));',
       ],
       'end',
+    );
+  });
+
+  it('keeps the readout off its dots and inside the plot: anchored above or below, and wrapping within its width', () => {
+    const css = look();
+    const panel = blockAfter(css, '.line-chart-readout {');
+    // Centred in the middle half, so half the plot on either side of the x is all it may take.
+    expectAll(
+      panel,
+      ['width: max-content;', 'max-width: min(16rem, 50%);', 'overflow-wrap: anywhere;'],
+      'readout',
+    );
+    // The component writes its block inset, so the CSS sets none and never stops the text from wrapping.
+    expect(panel).not.toContain('inset-block-start');
+    expect(panel).not.toContain('nowrap');
+    // The gap is the dot's 6px radius and 4px of air, on the side the panel is on.
+    expect(blockAfter(css, ".line-chart-readout[data-place='above'] {")).toContain(
+      'margin-block-end: 0.625rem;',
+    );
+    expect(blockAfter(css, ".line-chart-readout[data-place='below'] {")).toContain(
+      'margin-block-start: 0.625rem;',
     );
   });
 
@@ -3934,14 +3960,12 @@ describe('src/components/charts.css, the line chart', () => {
       blockAfter(css, '.line-chart-readout {'),
       [
         'position: absolute;',
-        'inset-block-start: 0;',
         'border: 1px solid var(--color-frame);',
         'border-radius: var(--radius-surface);',
         'background-color: var(--color-float);',
         'box-shadow: var(--shadow-float);',
         'font-size: var(--text-small);',
         'color: var(--color-ink);',
-        'white-space: nowrap;',
       ],
       'readout',
     );
