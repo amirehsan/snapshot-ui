@@ -2939,3 +2939,102 @@ module.
 **Layers.** Modal surfaces and their scrims sit at `--z-modal`, the toast
 region above them at `--z-toast`, and React Aria's positioned overlays at the
 inline 100000 it writes, as "Token names" sets out with the reasons.
+
+## Dialog and ConfirmDialog
+
+The app's dialog becomes `Dialog`: a panel up to 28rem wide with 40px
+corners, 32px of padding, an `h3` title and slate text, and a danger form with
+an error-tinted icon well, whose body scrolls while its action row stays, and
+which Escape and a press on the backdrop close. It had no close button and no
+motion, and a second dialog replaced the first. Five things changed.
+
+- **Float, not lifted.** The app filled its dialog with the lifted surface.
+  This document reserves white for floating surfaces, and the two differ by
+  one step in light and not at all in dark, so the panel is Float, as every
+  overlay is ("Overlays").
+- **The title is an `h2`.** It is React Aria's `Heading` in the dialog's
+  `title` slot, which is what points the dialog's `aria-labelledby` at it, and
+  React Aria gives it level 2. It is drawn in the card title step, the `h3`
+  step, whatever its level, as a card title is. It is required, so every
+  dialog has a name.
+- **The description is wired by the library.** React Aria points
+  `aria-describedby` at its `description` slot only for an alert dialog, so
+  `Dialog` gives the description an id and points the dialog at it, unless the
+  caller passes `aria-describedby` of their own.
+- **The close button is opt-in.** Escape and the scrim close a dialog, as in
+  the app, so a short dialog needs no X. A long one, whose action row the
+  reader may not have reached, asks for it with `hasCloseButton`: a ghost
+  IconButton with Lucide's `X`, 24px from the top and the inline end. Inset
+  24px and 40px wide, it reaches 32px past the panel's 32px padding, so the
+  head keeps 2.5rem clear at its end, those 32px and the 8px a part keeps, and
+  a long title never runs under it.
+- **Motion, and stacking.** The panel fades in and rises 8px in 180ms, ease,
+  while the scrim's color moves in the same 180ms, and both stop under reduced
+  motion. A dialog opened from a dialog, such as a confirm over a form, stacks
+  over it: one scrim paints, Escape closes the top one, and the first keeps
+  its focus state for when the second closes.
+
+**The head.** The well, the title and the description are parts of one thing,
+so they sit 8px apart (`--spacing-part`), and the head is 24px from the body
+and the body 24px from the actions (`--spacing-peer`). The well is a 48px
+circle in `--radius-pill`, Bone with an ink icon sized to 20px, as IconButton
+sizes its icon. In the danger tone it is error at 14% over Float with the icon
+in error. The title is ink, and the description is `--text-body` in slate.
+
+| Pair | Light | Dark | Held |
+| --- | --- | --- | --- |
+| Ink icon on the Bone well | 16.76 | 15.36 | gated, as ink text on bone |
+| Error icon on the 14% error well over Float | 5.88 | 4.72 | measured, not gated |
+| Slate description on Float | 5.49 | 6.94 | gated, as slate text on float |
+
+Every icon clears the 3:1 a graphic needs. The danger well is measured in
+`test/contrast.test.js` and recorded here rather than gated, because the wash
+is a mix and not a token the gate can name. The well's tone is a cue beside
+the words: the title and the danger Button say what the dialog loses.
+
+**The panel on the scrim.** Measured against the scrimmed canvas, Float is
+3.10 in light and 1.15 in dark. In light the tone carries the edge and the
+hairline is transparent; in dark the hairline, white at 12%, carries it, as
+this document already accepts for cards. In forced colors the edge is drawn in
+`CanvasText`, so the panel keeps its shape on the scrim, which stays Deep
+Well. The well's fills vanish there and the icon
+stays, which is enough.
+
+**Widths and height.** The scrim is a grid that centres the panel with the
+16px overlay inset clear on every side, and it is `box-sizing: border-box`, so
+that padding sits inside the viewport's height on a page without `base.css`.
+The panel is `min(28rem, 100%)` wide, or `min(40rem, 100%)` at `size="lg"`, of
+the room inside that padding, which is the viewport less 2rem. Its height
+stops at 100% of the same room, and it takes `min-height: 0` for that cap to
+hold: a grid item's automatic minimum is its content, which grew the scrim's
+row to a long dialog's full height, measured at 1395px for twenty paragraphs
+in a 720px viewport, and left 100% nothing to cap. With no minimum the row is
+the scrim's, and a short dialog still sits in its middle. Inside, the body
+takes the room left (`min-height: 0; overflow-y: auto; overscroll-behavior:
+contain`) and scrolls, while the head and the action row keep their height. A
+body that scrolls is a tab stop while it scrolls, as the homepage's install
+command is on a phone: Chrome and Firefox let the keyboard reach a scroller
+that holds nothing to focus, Safari does not, and axe fails one nothing can
+reach. The action row wraps, ends at the inline end, which `flex-end` follows
+in right to left, and spaces its buttons 8px apart.
+
+**Padding and corners.** The panel pads 32px, `--spacing-separate`, the
+app's number and the step for a section's header to its body. It takes
+`--radius-stadium`, and its parts step down the nested-radii ladder: the well
+is a circle, buttons keep `--radius-control`, and a field in the body keeps
+its own corner. Soft and Square descend by construction.
+
+**What React Aria gives.** Its `Dialog` focuses the dialog element on open,
+unless a control inside already holds focus, and its `FocusScope` holds Tab
+inside and gives focus back to the trigger, or to whatever held it when a
+controlled dialog opened, in the frame after the dialog leaves. Its
+`ModalOverlay` runs `usePreventScroll` while open, which sets
+`overflow: hidden` on the root element, hides everything outside with `inert`,
+or `aria-hidden` where `inert` is missing, while it keeps any element marked
+`data-react-aria-top-layer` visible, and writes `--visual-viewport-height` on
+the scrim. The element React Aria focuses takes `outline: none`, so opening
+from the keyboard does not ring the whole panel.
+
+**The toast region.** Every library modal passes React Aria a predicate that
+keeps a press inside `.toast-region` from counting as a press outside, so
+pressing a toast's action while a dialog is open never closes the dialog.

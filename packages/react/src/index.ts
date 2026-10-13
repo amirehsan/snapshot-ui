@@ -78,3 +78,13 @@ export {
   type CardTitleProps,
 } from './card';
 export { CollapsibleCard, type CollapsibleCardProps } from './collapsible-card';
+export {
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogTrigger,
+  type DialogActionsProps,
+  type DialogBodyProps,
+  type DialogProps,
+  type DialogTriggerProps,
+} from './dialog';

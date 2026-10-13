@@ -1,0 +1,137 @@
+/*
+ * Dialog and ConfirmDialog: a float panel centred on the scrim with 16px clear on every side, the
+ * stadium corner, 32px of padding and the dramatic shadow. The head is one block, the body scrolls
+ * and the action row stays. Derived in docs/design-system.md ("Dialog and ConfirmDialog").
+ */
+@layer components {
+  .dialog-overlay {
+    /* The scrim's height is the viewport's, so the padding has to sit inside it, with or without base.css. */
+    box-sizing: border-box;
+    place-items: center;
+    padding: var(--overlay-inset);
+  }
+
+  .dialog {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(28rem, 100%);
+    /* A grid item's automatic minimum is its content, which would grow the scrim's row past the viewport and
+       leave 100% nothing to cap. With no minimum the row is the scrim's, and a long body scrolls. */
+    min-height: 0;
+    max-height: 100%;
+    padding: var(--spacing-separate);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-stadium);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-dramatic);
+    transition:
+      opacity 180ms ease,
+      translate 180ms ease;
+  }
+
+  .dialog[data-size='lg'] {
+    width: min(40rem, 100%);
+  }
+
+  .dialog:is([data-entering], [data-exiting]) {
+    opacity: 0;
+    translate: 0 8px;
+  }
+
+  /* The tabIndex="-1" element React Aria focuses: no ring on the whole panel. */
+  .dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-peer);
+    min-height: 0;
+    outline: none;
+  }
+
+  .dialog-close {
+    position: absolute;
+    inset-block-start: 1.5rem;
+    inset-inline-end: 1.5rem;
+  }
+
+  /* The well, the title and the description are parts of one thing. */
+  .dialog-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-part);
+  }
+
+  .dialog-head-with-close {
+    padding-inline-end: 2.5rem;
+  }
+
+  .dialog-well {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-bone);
+    color: var(--color-ink);
+  }
+
+  .dialog-well svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .dialog[data-tone='danger'] .dialog-well {
+    background-color: color-mix(in srgb, var(--color-error) 14%, transparent);
+    color: var(--color-error);
+  }
+
+  .dialog-title {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: var(--text-h3--font-weight);
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+
+  .dialog-description {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    color: var(--color-slate);
+    overflow-wrap: anywhere;
+  }
+
+  .dialog-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    overflow-wrap: anywhere;
+  }
+
+  .dialog-actions {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--spacing-part);
+  }
+
+  /* The hairline is transparent in light; forced colors redraws it, so the panel keeps its shape. */
+  @media (forced-colors: active) {
+    .dialog {
+      border-color: CanvasText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dialog {
+      transition: none;
+    }
+  }
+}

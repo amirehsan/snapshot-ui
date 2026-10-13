@@ -1453,6 +1453,84 @@ describe('src/components/overlay.css', () => {
   });
 });
 
+describe('src/components/dialog.css', () => {
+  // The rules without their comments, with their whitespace closed up. A header that is the start of a longer
+  // one (`.dialog {` and `.dialog-head {`) is looked up with the "} " of the rule before it.
+  const rules = () => closeUp(stripComments(read('src/components/dialog.css')));
+
+  it('centres the panel on the scrim, the overlay inset clear on every side', () => {
+    const overlay = blockAfter(rules(), '.dialog-overlay {');
+    expect(overlay).toContain('place-items: center;');
+    expect(overlay).toContain('padding: var(--overlay-inset);');
+    // The scrim is the viewport's height, so the padding must fit inside it on a page without base.css.
+    expect(overlay).toContain('box-sizing: border-box;');
+  });
+
+  it('caps the panel at 28rem, or 40rem at lg, and at the room the scrim leaves', () => {
+    const css = rules();
+    const panel = blockAfter(css, '.dialog {');
+    expect(panel).toContain('width: min(28rem, 100%);');
+    expect(panel).toContain('max-height: 100%;');
+    // Without it, the scrim's row grows to the panel's content and 100% caps nothing.
+    expect(panel).toContain('min-height: 0;');
+    expect(blockAfter(css, ".dialog[data-size='lg'] {")).toContain('width: min(40rem, 100%);');
+  });
+
+  it('draws the panel in the four modal surface tokens, with 32px of padding', () => {
+    const panel = blockAfter(rules(), '.dialog {');
+    for (const declaration of [
+      'background-color: var(--color-float);',
+      'border: 1px solid var(--color-hairline);',
+      'border-radius: var(--radius-stadium);',
+      'box-shadow: var(--shadow-dramatic);',
+      'padding: var(--spacing-separate);',
+    ]) {
+      expect(panel, declaration).toContain(declaration);
+    }
+  });
+
+  it('rings no focus on the content React Aria focuses, and lets it shrink so the body can scroll', () => {
+    const content = blockAfter(rules(), '.dialog-content {');
+    expect(content).toContain('outline: none;');
+    expect(content).toContain('min-height: 0;');
+  });
+
+  it('scrolls the body inside the panel, and only the body', () => {
+    const body = blockAfter(rules(), '.dialog-body {');
+    for (const declaration of ['min-height: 0;', 'overflow-y: auto;', 'overscroll-behavior: contain;']) {
+      expect(body, declaration).toContain(declaration);
+    }
+  });
+
+  it('keeps the action row at its own height, aligned to the inline end', () => {
+    const actions = blockAfter(rules(), '.dialog-actions {');
+    expect(actions).toContain('justify-content: flex-end;');
+    expect(actions).toContain('flex: none;');
+  });
+
+  it('tints the danger well with error at 14% and draws its icon in error', () => {
+    const well = blockAfter(rules(), ".dialog[data-tone='danger'] .dialog-well {");
+    expect(well).toContain('background-color: color-mix(in srgb, var(--color-error) 14%, transparent);');
+    expect(well).toContain('color: var(--color-error);');
+  });
+
+  it('fades and rises 8px while entering and exiting, and stops moving under reduced motion, after it', () => {
+    const css = rules();
+    const moving = '.dialog:is([data-entering], [data-exiting]) {';
+    const motion = blockAfter(css, moving);
+    expect(motion).toContain('opacity: 0;');
+    expect(motion).toContain('translate: 0 8px;');
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    expect(blockAfter(blockAfter(css, reduced), '.dialog {')).toContain('transition: none;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf(moving));
+  });
+
+  it('redraws the edge in CanvasText in forced colors, so the panel keeps its shape', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(forced, '.dialog {')).toContain('border-color: CanvasText;');
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

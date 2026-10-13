@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { Dialog } from '../src/dialog';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Switch } from '../src/switch';
@@ -70,5 +71,29 @@ describe('a label, a hint or a row text of false or an empty string', () => {
   it.each(EMPTY)('renders no empty part in %s', (_name, element) => {
     const { container } = render(element);
     expect(container.querySelectorAll(PARTS)).toHaveLength(0);
+  });
+});
+
+/** Every optional part an overlay draws around what it is given. */
+const OVERLAY_PARTS = ['.dialog-well', '.dialog-description', '.dialog-body', '.dialog-actions'].join(', ');
+
+/**
+ * Each overlay rendered open and given `false`, `null` or `''` for every optional part. An overlay portals
+ * to the body, so the parts are looked for there.
+ */
+const EMPTY_OVERLAYS: [name: string, element: ReactElement][] = [
+  [
+    'Dialog',
+    <Dialog isOpen title="Rename" description="" icon={false} actions={null}>
+      {''}
+    </Dialog>,
+  ],
+];
+
+describe('an optional overlay part of false, null or an empty string', () => {
+  it.each(EMPTY_OVERLAYS)('renders no empty part in %s', (_name, element) => {
+    render(element);
+    expect(document.body.querySelector('.overlay')).not.toBeNull();
+    expect(document.body.querySelectorAll(OVERLAY_PARTS)).toHaveLength(0);
   });
 });

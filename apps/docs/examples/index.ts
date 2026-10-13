@@ -14,6 +14,9 @@ import CollapsibleCardActions from './collapsible-card-actions';
 import CollapsibleCardBasic from './collapsible-card-basic';
 import CollapsibleCardChanged from './collapsible-card-changed';
 import CollapsibleCardRemembered from './collapsible-card-remembered';
+import DialogBasic from './dialog-basic';
+import DialogDanger from './dialog-danger';
+import DialogLong from './dialog-long';
 import EyebrowHeading from './eyebrow-heading';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
@@ -63,6 +66,9 @@ export const examples = {
   'collapsible-card-basic': CollapsibleCardBasic,
   'collapsible-card-changed': CollapsibleCardChanged,
   'collapsible-card-remembered': CollapsibleCardRemembered,
+  'dialog-basic': DialogBasic,
+  'dialog-danger': DialogDanger,
+  'dialog-long': DialogLong,
   'eyebrow-heading': EyebrowHeading,
   'field-counter': LengthCounter,
   'field-parts': FieldParts,

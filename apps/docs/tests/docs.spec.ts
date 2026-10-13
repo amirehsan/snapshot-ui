@@ -1286,3 +1286,25 @@ test('a folded collapsible card on its page marks the change it holds, and drops
   await expect(toggle).not.toHaveAttribute('aria-describedby');
   expect(await place()).toEqual(marked);
 });
+
+test('the dialog page opens its dialog, holds focus, locks the page and gives focus back', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/dialog');
+  const trigger = page.getByRole('button', { name: 'Rename the workspace' });
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: 'Rename the workspace' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toBeFocused();
+  // React Aria holds the page still while the dialog is open.
+  await expect(page.locator('html')).toHaveCSS('overflow', 'hidden');
+  // Tab from the last control lands back inside the dialog, never on the page behind it.
+  const last = dialog.getByRole('button').last();
+  await last.focus();
+  await page.keyboard.press('Tab');
+  expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await expect(page.locator('html')).not.toHaveCSS('overflow', 'hidden');
+});
