@@ -15,14 +15,18 @@ import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { useValueLength } from '../field/useValueLength';
+import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
 
-export interface TextAreaProps extends Omit<
+export interface TextAreaBaseProps extends Omit<
   RACTextFieldProps,
   'children' | 'className' | 'type' | 'pattern'
 > {
-  /** The field's name, shown above the control. Without one, give the field an `aria-label`. */
+  /**
+   * The field's name, shown above the control. Required unless the field has an `aria-label` or an
+   * `aria-labelledby`.
+   */
   label?: ReactNode;
   /** A hint under the control. It becomes the control's accessible description. */
   description?: ReactNode;
@@ -76,6 +80,11 @@ export interface TextAreaProps extends Omit<
   /** A ref to the textarea element. */
   textAreaRef?: Ref<HTMLTextAreaElement>;
 }
+
+/**
+ * The props of a text area. A name is required: its `label`, an `aria-label` or an `aria-labelledby`.
+ */
+export type TextAreaProps = TextAreaBaseProps & AccessibleName<'label'>;
 
 /**
  * A multi-line text field: label, control, hint, error and an optional length

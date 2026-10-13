@@ -16,7 +16,10 @@ export interface SegmentedControlItemProps extends Omit<
 > {
   /** The value the control takes while this option is selected. It is also what a form submits. */
   value: string;
-  /** What the option shows: a word or two. */
+  /**
+   * What the option shows: a word or two. An option that shows only an icon passes the icon here and
+   * names itself with an `aria-label`.
+   */
   children: ReactNode;
   /** A class name, or a function of the option's state, merged after the library's own class. */
   className?:

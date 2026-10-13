@@ -29,6 +29,18 @@ describe('TextField', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('requires an accessible name in its types', () => {
+    // Each @ts-expect-error line below fails `pnpm typecheck` if the type stops requiring a name.
+    // @ts-expect-error a field with no label, aria-label or aria-labelledby has no name
+    const nameless = <TextField />;
+    // @ts-expect-error a hint and a placeholder are not a name
+    const unnamed = <TextField description="Shown under the title." placeholder="Title" />;
+    const labelled = <TextField label="Title" />;
+    const byAriaLabel = <TextField aria-label="Title" />;
+    const byLabelledby = <TextField aria-labelledby="heading" />;
+    expect([nameless, unnamed, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+  });
+
   it('puts its parts in the order the field contract asks for', () => {
     const { container } = render(
       <TextField

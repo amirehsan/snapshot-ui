@@ -25,6 +25,18 @@ describe('Switch', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('requires an accessible name in its types', () => {
+    // Each @ts-expect-error line below fails `pnpm typecheck` if the type stops requiring a name.
+    // @ts-expect-error a switch with no text, aria-label or aria-labelledby has no name
+    const nameless = <Switch />;
+    // @ts-expect-error a hint is not a name
+    const hinted = <Switch description="Every Tuesday morning." />;
+    const labelled = <Switch>Weekly digest</Switch>;
+    const byAriaLabel = <Switch aria-label="Weekly digest" />;
+    const byLabelledby = <Switch aria-labelledby="digest-name" />;
+    expect([nameless, hinted, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+  });
+
   it('draws the track and the thumb as decoration inside the row', () => {
     render(<Switch>Weekly digest</Switch>);
     const track = screen.getByText('Weekly digest').closest('label')?.querySelector('.switch-track');

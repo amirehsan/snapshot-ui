@@ -30,17 +30,32 @@ export {
   type FieldErrorProps,
   type LabelProps,
 } from './field';
-export { Input, TextField, type InputProps, type TextFieldProps } from './text-field';
-export { TextArea, type TextAreaProps } from './text-area';
+export {
+  Input,
+  TextField,
+  type InputProps,
+  type TextFieldBaseProps,
+  type TextFieldProps,
+} from './text-field';
+export { TextArea, type TextAreaBaseProps, type TextAreaProps } from './text-area';
 export {
   Checkbox,
   CheckboxGroup,
+  type CheckboxBaseProps,
+  type CheckboxGroupBaseProps,
   type CheckboxGroupOrientation,
   type CheckboxGroupProps,
   type CheckboxProps,
 } from './checkbox';
-export { Radio, RadioGroup, type RadioGroupProps, type RadioProps } from './radio-group';
-export { Switch, type SwitchProps } from './switch';
+export {
+  Radio,
+  RadioGroup,
+  type RadioBaseProps,
+  type RadioGroupBaseProps,
+  type RadioGroupProps,
+  type RadioProps,
+} from './radio-group';
+export { Switch, type SwitchBaseProps, type SwitchProps } from './switch';
 export {
   SegmentedControl,
   SegmentedControlItem,

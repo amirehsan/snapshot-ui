@@ -62,7 +62,7 @@ export function Appearance({ saved }: { saved: string }) {
 }
 ```
 
-Without a visible label, name the control with `aria-label`, as a toolbar's switch is named by what it sits beside. One of the two is required.
+Without a visible label, name the control with `aria-label` or `aria-labelledby`, as a toolbar's switch is named by what it sits beside. The types require one of the three. An option always takes `children`, and an option that shows only an icon passes the icon there and adds an `aria-label`.
 
 </Section>
 

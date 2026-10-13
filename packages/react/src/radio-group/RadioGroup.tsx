@@ -12,11 +12,15 @@ import { Description } from '../field/Description';
 import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
+import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
 
-export interface RadioGroupProps extends Omit<RACRadioGroupProps, 'children' | 'className'> {
-  /** The group's name, shown above the options. Without one, give the group an `aria-label`. */
+export interface RadioGroupBaseProps extends Omit<RACRadioGroupProps, 'children' | 'className'> {
+  /**
+   * The group's name, shown above the options. Required unless the group has an `aria-label` or an
+   * `aria-labelledby`.
+   */
   label?: ReactNode;
   /** A hint under the options. It becomes the group's accessible description. */
   description?: ReactNode;
@@ -45,6 +49,11 @@ export interface RadioGroupProps extends Omit<RACRadioGroupProps, 'children' | '
   /** A ref to the group's root element. */
   ref?: Ref<HTMLDivElement>;
 }
+
+/**
+ * The props of a radio group. A name is required: its `label`, an `aria-label` or an `aria-labelledby`.
+ */
+export type RadioGroupProps = RadioGroupBaseProps & AccessibleName<'label'>;
 
 /**
  * A group of radios: label, options, hint and error in one element. The

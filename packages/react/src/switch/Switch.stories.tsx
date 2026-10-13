@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { ComponentType } from 'react';
 import { expect, waitFor } from 'storybook/test';
 import { Link } from '../link';
 import { firstLineOffset, lineCount, tokenColor } from '../stories/paint';
-import { Switch } from './Switch';
+import { Switch, type SwitchBaseProps } from './Switch';
 
 /** The row, the track and the thumb of the first switch drawn inside `scope`. */
 function parts(scope: Element): { row: Element; track: Element; thumb: Element } {
@@ -38,7 +39,9 @@ const fill = (element: Element): string => getComputedStyle(element).backgroundC
 
 const meta = {
   title: 'Components/Switch',
-  component: Switch,
+  // The component's props are a union, since it needs a name, and Storybook cannot narrow a union.
+  // The stories are written against the props every member shares.
+  component: Switch as ComponentType<SwitchBaseProps>,
   args: { children: 'Weekly digest' },
   decorators: [
     (Story) => (
@@ -47,7 +50,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof Switch>;
+} satisfies Meta<SwitchBaseProps>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -196,7 +199,7 @@ export const LongLabel: Story = {
   },
   render: (args) => (
     <div style={{ display: 'grid', gap: 24 }}>
-      <Switch {...args} />
+      <Switch {...args}>{args.children}</Switch>
       <Switch {...args} description={undefined}>
         Weekly digest
         <br />

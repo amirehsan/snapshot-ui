@@ -11,14 +11,18 @@ import {
 import { Description } from '../field/Description';
 import { FieldChanged } from '../field/FieldChanged';
 import { useChangedDescription } from '../field/useChangedDescription';
+import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
 
-export interface SwitchProps extends Omit<
+export interface SwitchBaseProps extends Omit<
   RACSwitchFieldProps,
   'children' | 'className' | 'isRequired' | 'isInvalid' | 'validate' | 'validationBehavior'
 > {
-  /** The label, beside the track. Without one, give the switch an `aria-label`. */
+  /**
+   * The label, beside the track. Required unless the switch has an `aria-label` or an
+   * `aria-labelledby`.
+   */
   children?: ReactNode;
   /** A hint under the label. It becomes the switch's accessible description. */
   description?: ReactNode;
@@ -46,6 +50,11 @@ export interface SwitchProps extends Omit<
   /** A ref to the input element. */
   inputRef?: Ref<HTMLInputElement>;
 }
+
+/**
+ * The props of a switch. A name is required: its `children`, an `aria-label` or an `aria-labelledby`.
+ */
+export type SwitchProps = SwitchBaseProps & AccessibleName<'children'>;
 
 /**
  * A setting that is on or off and takes effect as soon as it is flipped: a

@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { ComponentType } from 'react';
 import { expect } from 'storybook/test';
 import { Link } from '../link/Link';
 import { firstLineOffset, lineCount, middleOf, tokenColor } from '../stories/paint';
 import { Radio } from './Radio';
-import { RadioGroup } from './RadioGroup';
+import { RadioGroup, type RadioGroupBaseProps } from './RadioGroup';
 
 /** The row, which is the label around a radio. */
 function rowOf(radio: HTMLElement): HTMLElement {
@@ -22,10 +23,12 @@ function partsOf(row: HTMLElement): { dot: Element; text: Element } {
 
 const meta = {
   title: 'Components/RadioGroup',
-  component: RadioGroup,
+  // The component's props are a union, since it needs a name, and Storybook cannot narrow a union.
+  // The stories are written against the props every member shares.
+  component: RadioGroup as ComponentType<RadioGroupBaseProps>,
   args: { label: 'Newsletter frequency' },
   render: (args) => (
-    <RadioGroup {...args}>
+    <RadioGroup {...args} label={args.label}>
       <Radio value="weekly">Weekly</Radio>
       <Radio value="monthly">Monthly</Radio>
       <Radio value="never">Never</Radio>
@@ -38,7 +41,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof RadioGroup>;
+} satisfies Meta<RadioGroupBaseProps>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -72,7 +75,7 @@ export const Selected: Story = {
 export const WithDescriptions: Story = {
   args: { description: 'You can change this at any time.', defaultValue: 'weekly' },
   render: (args) => (
-    <RadioGroup {...args}>
+    <RadioGroup {...args} label={args.label}>
       <Radio value="weekly" description="Every Tuesday morning.">
         Weekly
       </Radio>
@@ -106,7 +109,7 @@ export const Horizontal: Story = {
 export const HorizontalHints: Story = {
   args: { orientation: 'horizontal', defaultValue: 'weekly' },
   render: (args) => (
-    <RadioGroup {...args}>
+    <RadioGroup {...args} label={args.label}>
       <Radio value="weekly" description="Every Tuesday morning.">
         Weekly
       </Radio>
@@ -197,7 +200,7 @@ export const Disabled: Story = {
 export const DisabledItem: Story = {
   args: { label: 'Plan', defaultValue: 'free' },
   render: (args) => (
-    <RadioGroup {...args}>
+    <RadioGroup {...args} label={args.label}>
       <Radio value="free">Free</Radio>
       <Radio value="team" isDisabled>
         Team
@@ -242,7 +245,7 @@ export const LongLabel: Story = {
     defaultValue: 'weekly',
   },
   render: (args) => (
-    <RadioGroup {...args}>
+    <RadioGroup {...args} label={args.label}>
       <Radio value="weekly" description="A summary of everything that happened, every Tuesday morning.">
         A weekly summary of every workspace, project and invite you belong to
       </Radio>
@@ -264,7 +267,7 @@ export const LongLabel: Story = {
 export const LongWord: Story = {
   args: { defaultValue: 'long' },
   render: (args) => (
-    <RadioGroup {...args}>
+    <RadioGroup {...args} label={args.label}>
       <Radio value="long">
         Antidisestablishmentarianismantidisestablishmentarianismantidisestablishmentarianism
       </Radio>
@@ -285,7 +288,7 @@ export const LongWord: Story = {
 export const Labelless: Story = {
   args: { orientation: 'horizontal', defaultValue: 'weekly' },
   render: (args) => (
-    <RadioGroup {...args}>
+    <RadioGroup {...args} label={args.label}>
       <Radio value="weekly" aria-label="Weekly" />
       <Radio value="monthly" aria-label="Monthly" />
       <Radio value="never" aria-label="Never" />
@@ -340,7 +343,7 @@ export const FocusedUnselected: Story = {
 export const LinkInLabel: Story = {
   tags: ['no-visual'],
   render: (args) => (
-    <RadioGroup {...args}>
+    <RadioGroup {...args} label={args.label}>
       <Radio value="weekly">
         Weekly, like the <Link href="#sample">sample issue</Link>
       </Radio>

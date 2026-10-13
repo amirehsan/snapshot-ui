@@ -1,12 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { ComponentType } from 'react';
 import { expect } from 'storybook/test';
 import { tokenColor } from '../stories/paint';
 import { Checkbox } from './Checkbox';
-import { CheckboxGroup } from './CheckboxGroup';
+import { CheckboxGroup, type CheckboxGroupBaseProps } from './CheckboxGroup';
 
 const meta = {
   title: 'Components/CheckboxGroup',
-  component: CheckboxGroup,
+  // The component's props are a union, since it needs a name, and Storybook cannot narrow a union.
+  // The stories are written against the props every member shares.
+  component: CheckboxGroup as ComponentType<CheckboxGroupBaseProps>,
   args: {
     label: 'Notify me by',
     children: [
@@ -31,7 +34,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof CheckboxGroup>;
+} satisfies Meta<CheckboxGroupBaseProps>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

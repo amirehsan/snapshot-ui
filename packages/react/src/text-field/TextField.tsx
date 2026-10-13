@@ -14,12 +14,16 @@ import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { useValueLength } from '../field/useValueLength';
+import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
 import { Input } from './Input';
 
-export interface TextFieldProps extends Omit<RACTextFieldProps, 'children' | 'className'> {
-  /** The field's name, shown above the control. Without one, give the field an `aria-label`. */
+export interface TextFieldBaseProps extends Omit<RACTextFieldProps, 'children' | 'className'> {
+  /**
+   * The field's name, shown above the control. Required unless the field has an `aria-label` or an
+   * `aria-labelledby`.
+   */
   label?: ReactNode;
   /** A hint under the control. It becomes the control's accessible description. */
   description?: ReactNode;
@@ -65,6 +69,11 @@ export interface TextFieldProps extends Omit<RACTextFieldProps, 'children' | 'cl
   /** A ref to the input element. */
   inputRef?: Ref<HTMLInputElement>;
 }
+
+/**
+ * The props of a text field. A name is required: its `label`, an `aria-label` or an `aria-labelledby`.
+ */
+export type TextFieldProps = TextFieldBaseProps & AccessibleName<'label'>;
 
 /**
  * A single-line text field: label, control, hint, error and an optional length

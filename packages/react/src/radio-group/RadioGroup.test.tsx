@@ -59,6 +59,18 @@ describe('RadioGroup', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('requires an accessible name in its types', () => {
+    // Each @ts-expect-error line below fails `pnpm typecheck` if the type stops requiring a name.
+    // @ts-expect-error a group with no label, aria-label or aria-labelledby has no name
+    const nameless = <RadioGroup />;
+    // @ts-expect-error a hint is not a name
+    const hinted = <RadioGroup description="Pick one." />;
+    const labelled = <RadioGroup label="Newsletter frequency" />;
+    const byAriaLabel = <RadioGroup aria-label="Newsletter frequency" />;
+    const byLabelledby = <RadioGroup aria-labelledby="heading" />;
+    expect([nameless, hinted, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+  });
+
   it('puts its parts in the order the field contract asks for', () => {
     const { container } = render(
       <Frequency description="One line." isInvalid errorMessage="Choose a frequency." />,

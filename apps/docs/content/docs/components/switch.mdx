@@ -38,7 +38,7 @@ Pass `isChanged` while the setting differs from the saved one. A clay chip shows
 
 ## Usage
 
-Every value works controlled and uncontrolled, and a switch with a `name` submits in a plain form. It sends its `value`, or `on` when it has none, only while it is on, as a checkbox does. `onChange` receives a boolean. A switch with no visible label needs an `aria-label`.
+Every value works controlled and uncontrolled, and a switch with a `name` submits in a plain form. It sends its `value`, or `on` when it has none, only while it is on, as a checkbox does. `onChange` receives a boolean. The types require a name: the switch's text, an `aria-label` or an `aria-labelledby`.
 
 ```tsx
 import { useState } from 'react';

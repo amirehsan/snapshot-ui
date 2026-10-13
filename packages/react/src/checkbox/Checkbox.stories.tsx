@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { ComponentType } from 'react';
 import { expect } from 'storybook/test';
 import { Link } from '../link/Link';
 import { firstLineOffset, lineCount, paint, tokenColor } from '../stories/paint';
-import { Checkbox } from './Checkbox';
+import { Checkbox, type CheckboxBaseProps } from './Checkbox';
 
 /** The row, the label's text box and the Changed chip of the checkbox whose field root is `field`. */
 function parts(field: Element): { row: Element; box: Element; text: Element; chip: Element } {
@@ -16,7 +17,9 @@ function parts(field: Element): { row: Element; box: Element; text: Element; chi
 
 const meta = {
   title: 'Components/Checkbox',
-  component: Checkbox,
+  // The component's props are a union, since it needs a name, and Storybook cannot narrow a union.
+  // The stories are written against the props every member shares.
+  component: Checkbox as ComponentType<CheckboxBaseProps>,
   args: { children: 'Remember me on this device' },
   decorators: [
     (Story) => (
@@ -25,7 +28,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof Checkbox>;
+} satisfies Meta<CheckboxBaseProps>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -202,7 +205,7 @@ export const LongLabelChanged: Story = {
   },
   render: (args) => (
     <div style={{ display: 'grid', gap: 24 }}>
-      <Checkbox {...args} />
+      <Checkbox {...args}>{args.children}</Checkbox>
       <Checkbox {...args} description={undefined}>
         Weekly summary
         <br />

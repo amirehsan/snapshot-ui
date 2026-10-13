@@ -1,14 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { ComponentType } from 'react';
 import { expect } from 'storybook/test';
 import { tokenColor } from '../stories/paint';
-import { TextField } from './TextField';
+import { TextField, type TextFieldBaseProps } from './TextField';
 
 const NEAR_BUDGET = 'A shared space for the whole Northwind design team';
 const OVER_BUDGET = 'A shared space for the whole Northwind design team and its guests';
 
 const meta = {
   title: 'Components/TextField',
-  component: TextField,
+  // The component's props are a union, since it needs a name, and Storybook cannot narrow a union.
+  // The stories are written against the props every member shares.
+  component: TextField as ComponentType<TextFieldBaseProps>,
   args: { label: 'Workspace name', placeholder: 'Northwind Studio' },
   decorators: [
     (Story) => (
@@ -17,7 +20,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof TextField>;
+} satisfies Meta<TextFieldBaseProps>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
