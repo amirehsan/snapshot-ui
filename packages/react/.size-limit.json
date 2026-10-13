@@ -161,6 +161,13 @@
     "limit": "2.5 kB"
   },
   {
+    "name": "import { ConfirmDialog } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ ConfirmDialog }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "3 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

@@ -775,6 +775,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/card">Card</Link>
                 <Link href="/docs/components/checkbox">Checkbox</Link>
                 <Link href="/docs/components/collapsible-card">Collapsible card</Link>
+                <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
                 <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/field">Field parts</Link>
                 <Link href="/docs/components/icon-button">Icon button</Link>

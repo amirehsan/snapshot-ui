@@ -1308,3 +1308,25 @@ test('the dialog page opens its dialog, holds focus, locks the page and gives fo
   await expect(trigger).toBeFocused();
   await expect(page.locator('html')).not.toHaveCSS('overflow', 'hidden');
 });
+
+test('the confirm dialog page asks, cancels, confirms and places focus', async ({ page }) => {
+  await visit(page, '/docs/components/confirm-dialog');
+  const list = page.getByRole('list', { name: 'Transactions' });
+  const groceries = list.getByRole('button', { name: 'Delete Groceries' });
+  await groceries.click();
+  const question = page.getByRole('alertdialog', { name: 'Delete Groceries?' });
+  await expect(question).toBeVisible();
+  // The danger tone puts focus on the safe answer.
+  await expect(question.getByRole('button', { name: 'Cancel' })).toBeFocused();
+  await question.getByRole('button', { name: 'Cancel' }).click();
+  await expect(question).toHaveCount(0);
+  await expect(list.getByRole('listitem')).toHaveCount(3);
+  await expect(groceries).toBeFocused();
+
+  await groceries.click();
+  await question.getByRole('button', { name: 'Delete Groceries' }).click();
+  await expect(question).toHaveCount(0);
+  await expect(list.getByRole('listitem')).toHaveCount(2);
+  // The row and its button are gone, so the example puts focus on the next row's button.
+  await expect(list.getByRole('button', { name: 'Delete Insurance' })).toBeFocused();
+});
