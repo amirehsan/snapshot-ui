@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { AppShell } from '../src/app-shell';
+import { Avatar } from '../src/avatar';
 import { BottomTabBar, BottomTabBarItem } from '../src/bottom-tab-bar';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
@@ -351,6 +352,23 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '<button',
       'class="tab-bar-item',
     ],
+  ],
+  [
+    // The image is drawn invisible over the initials; whether it loaded is learned in the browser, never here.
+    'Avatar',
+    <Avatar name="Ada Lovelace" src="/ada.png" />,
+    [
+      'class="avatar"',
+      'data-size="md"',
+      'data-shape="circle"',
+      'role="img"',
+      'aria-label="Ada Lovelace"',
+      'class="avatar-initials"',
+      '>AL<',
+      'class="avatar-image"',
+      'alt=""',
+    ],
+    ['data-loaded'],
   ],
 ];
 

@@ -153,6 +153,19 @@ describe('src/styles.css', () => {
       previous = at(file);
     }
   });
+
+  it('imports the home files after the shell files, in order', () => {
+    // avatar.css is required; the stat tile, the meter and the charts are checked once they exist.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('tab-bar.css')).toBeGreaterThanOrEqual(0);
+    expect(at('avatar.css')).toBeGreaterThan(at('tab-bar.css'));
+    let previous = at('avatar.css');
+    for (const file of ['stat-tile.css', 'meter.css', 'charts.css']) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -2616,13 +2629,21 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is the last overlay file imported, right after command-palette.css, with only the shell files after it', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell and home files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     const tooltip = imported.indexOf('tooltip.css');
     expect(imported[tooltip - 1]).toBe('command-palette.css');
     for (const file of imported.slice(tooltip + 1)) {
-      expect(['app-shell.css', 'sidebar.css', 'tab-bar.css']).toContain(file);
+      expect([
+        'app-shell.css',
+        'sidebar.css',
+        'tab-bar.css',
+        'avatar.css',
+        'stat-tile.css',
+        'meter.css',
+        'charts.css',
+      ]).toContain(file);
     }
   });
 
@@ -3220,6 +3241,91 @@ describe('src/components/tab-bar.css', () => {
     const entry = read('src/styles.css');
     const at = (file) => entry.indexOf(`'./components/${file}'`);
     expect(at('tab-bar.css')).toBeGreaterThan(at('sidebar.css'));
+  });
+});
+
+describe('src/components/avatar.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/avatar.css')));
+  const FORCED = '@media (forced-colors: active)';
+
+  it('draws the three sizes at 24, 32 and 40px, with initials at 12px 700, 14px 500 and 16px 500', () => {
+    const css = rules();
+    const avatar = blockAfter(css, '.avatar {');
+    for (const declaration of ['--avatar-size: 2rem;', 'font-size: 0.875rem;', 'font-weight: 500;']) {
+      expect(avatar, declaration).toContain(declaration);
+    }
+    expect(avatar).toContain('width: var(--avatar-size);');
+    expect(avatar).toContain('height: var(--avatar-size);');
+    const small = blockAfter(css, ".avatar[data-size='sm'] {");
+    for (const declaration of ['--avatar-size: 1.5rem;', 'font-size: 0.75rem;', 'font-weight: 700;']) {
+      expect(small, declaration).toContain(declaration);
+    }
+    const large = blockAfter(css, ".avatar[data-size='lg'] {");
+    for (const declaration of ['--avatar-size: 2.5rem;', 'font-size: 1rem;']) {
+      expect(large, declaration).toContain(declaration);
+    }
+    expect(large).not.toContain('font-weight');
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('cuts a circle on the pill radius and a square on the micro radius', () => {
+    const css = rules();
+    expect(blockAfter(css, '.avatar {')).toContain('border-radius: var(--radius-pill);');
+    expect(blockAfter(css, ".avatar[data-shape='square'] {")).toContain(
+      'border-radius: var(--radius-micro);',
+    );
+  });
+
+  it('fills the fallback with bone and ink, and rings the box with a frame border on a pseudo-element, never a shadow', () => {
+    const css = rules();
+    const avatar = blockAfter(css, '.avatar {');
+    expect(avatar).toContain('background-color: var(--color-bone);');
+    expect(avatar).toContain('color: var(--color-ink);');
+    // Clipped, so the image takes the box's corners.
+    expect(avatar).toContain('overflow: hidden;');
+    const ring = blockAfter(css, '.avatar::after {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset: 0;',
+      'border: 1px solid var(--color-frame);',
+      'border-radius: inherit;',
+      'pointer-events: none;',
+    ]) {
+      expect(ring, declaration).toContain(declaration);
+    }
+    expect(css).not.toContain('box-shadow');
+  });
+
+  it('keeps the image invisible until it is marked loaded, covering the box', () => {
+    const css = rules();
+    const image = blockAfter(css, '.avatar-image {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset: 0;',
+      'width: 100%;',
+      'height: 100%;',
+      'object-fit: cover;',
+      'opacity: 0;',
+    ]) {
+      expect(image, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.avatar-image[data-loaded] {')).toContain('opacity: 1;');
+  });
+
+  it('draws the initials CanvasText on canvas and the ring CanvasText in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    const avatar = blockAfter(forced, '.avatar {');
+    expect(avatar).toContain('background-color: canvas;');
+    expect(avatar).toContain('color: CanvasText;');
+    expect(blockAfter(forced, '.avatar::after {')).toContain('border-color: CanvasText;');
+  });
+
+  it('moves nothing, so it needs no reduced-motion block', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])transition\s*:/);
+    expect(css).not.toMatch(/(?<![\w-])animation\s*:/);
   });
 });
 

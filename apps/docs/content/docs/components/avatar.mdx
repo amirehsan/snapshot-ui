@@ -1,0 +1,78 @@
+---
+title: Avatar
+description: A person, a merchant or a bank as an image, with their initials while it loads or when it fails, at 24, 32 and 40px.
+icon: CircleUser
+---
+
+<Section>
+
+## Sizes and shapes
+
+`sm`, `md` and `lg` are 24, 32 and 40px, with initials at 12, 14 and 16px; the small one is bolder, because 12px is the floor for short uppercase text. A circle is a person. A square is a merchant's or a bank's logo, so it reads as a tile and not a face. Both follow the shape axis: the circle takes the pill radius and the square the micro radius. A 1px ring edges the box, so a white logo on a white card keeps its edge.
+
+<Preview name="avatar-sizes" />
+
+</Section>
+
+<Section>
+
+## Initials
+
+With no image, or while it loads, or when it fails, the avatar shows the first character of the first two words of `name`: Grace Hopper is GH and Northwind is N. Pass `initials` for a stricter rule, such as WF for a bank. An image that fails is removed and the initials it covered stay, so the box never moves and a broken image never shows its icon. The fallback is one neutral look for everyone, bone with ink initials, never a color per name: a color that stands for a person carries a meaning the name already carries, and a palette for it would need colors the system does not have.
+
+<Preview name="avatar-fallback" />
+
+</Section>
+
+<Section>
+
+## Beside a name
+
+When the name is in the text beside the avatar, pass `isDecorative`. The avatar is then hidden from assistive technology, so the row is read once.
+
+<Preview name="avatar-beside-name" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+`name` is required, and it is the name: the accessible name unless the avatar is decorative, and the source of the initials. Serve the image from your own origin. Avatar is a client component for one piece of state, whether the image failed; the image stays hidden until it is known to have loaded, so a page shows the initials until it hydrates.
+
+```tsx
+import { Avatar } from '@snapshot-ui/react';
+
+<Avatar name="Ada Lovelace" src="/people/ada.png" size="lg" />
+<Avatar name="Northwind" src="/logos/northwind.svg" shape="square" />
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+An Avatar accepts every attribute of an HTML element.
+
+<PropsTable label="Avatar props" path="../../packages/react/src/avatar/Avatar.tsx" type="Pick<AvatarProps, 'name' | 'src' | 'initials' | 'size' | 'shape' | 'isDecorative' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+An avatar is an image named by `name`. The initials and the image inside it are hidden, so it is read once, by its name, and never as letters. With `isDecorative` the whole avatar is hidden, for a name that is already in the text beside it. It takes no focus and has no keys.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps avatars in the system.
+
+<Rules dos={['Use a square for a merchant or a bank, and a circle for a person.', 'Pass isDecorative when the name is beside the avatar in text.', 'Serve the image from your own origin.']} donts={['Never give each name a color of its own. The fallback is one neutral look for everyone.', 'Never make the initials the only name. The name is the accessible name, or it is in the text beside the avatar.', 'Never draw more than two initials.']} />
+
+</Section>

@@ -466,6 +466,34 @@ describe('the tab bar', () => {
   });
 });
 
+describe('the avatar', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The fallback is ink initials on a bone fill, one look for everyone. The gate holds the pair as text.
+  it('cites ink on bone, which the gate holds at the text minimum', () => {
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'ink', ground: 'bone', minimum: TEXT }),
+    );
+  });
+
+  // The ring is the translucent frame over the card the avatar sits on: a cue that keeps a white logo's edge on
+  // a white card, so it is measured and recorded, not gated.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { text, ground, light, dark } of [
+      { text: 'ink', ground: 'bone', light: 16.76, dark: 15.36 },
+      { text: 'frame', ground: 'lifted', light: 1.28, dark: 1.43 },
+    ]) {
+      expect(measured('light', text, ground), `${text} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground), `${text} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 
