@@ -63,8 +63,12 @@ export function isOutsideToastRegion(element: Element): boolean {
  * records what held focus when the modal opened, as the origin of the scope copy; it joins the overlay stack
  * while the state is open, so only the bottom-most modal paints its scrim; and it calls `onUnmount` when the
  * panel leaves the page. It renders nothing.
+ *
+ * Exported for Sheet, a modal on React Aria's Sheet family and not on this frame, which renders it first in
+ * its content so it joins the same stack and copies its scope the same way. Internal: not exported from the
+ * package.
  */
-function FrameEffects({
+export function FrameEffects({
   id,
   scrimRef,
   originRef,

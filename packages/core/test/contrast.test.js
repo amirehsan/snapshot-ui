@@ -192,6 +192,28 @@ describe('the dialog', () => {
   });
 });
 
+describe('the sheet', () => {
+  // The grabber is a 40px by 4px bar of boundary on the float panel. A graphic asks 3:1, and the gate already
+  // holds boundary painted straight on float, the switch's off track there, so the pair is cited, not added.
+  it('cites boundary on float, which the gate already holds, for the grabber, at 3.48 in light and 5.21 in dark', () => {
+    const cited = CONTRAST_PAIRS.filter(
+      (pair) =>
+        pair.text === 'boundary' &&
+        pair.ground === 'float' &&
+        pair.fill === undefined &&
+        pair.minimum === NON_TEXT,
+    );
+    expect(cited).toHaveLength(1);
+    const measured = (mode) => {
+      const palette = paletteFor(tokens, mode);
+      const ground = parseColor(palette.float);
+      return contrastRatio(composite(parseColor(palette.boundary), ground), ground);
+    };
+    expect(measured('light')).toBeCloseTo(3.48, 2);
+    expect(measured('dark')).toBeCloseTo(5.21, 2);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

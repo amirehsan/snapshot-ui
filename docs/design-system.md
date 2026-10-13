@@ -2735,8 +2735,10 @@ of them is built, and each overlay's own section records only what is its own.
 **Two classes.** Every overlay portals to `document.body`, React Aria's
 default, and every portaled root carries the class `overlay` beside its own.
 For a modal the root is the panel, React Aria's `Modal`, and the
-`ModalOverlay` that holds it carries the second class, `overlay-scrim`, as a
-sheet's `SheetOverlay` with its `SheetBackdrop` does. A portal sits outside
+`ModalOverlay` that holds it carries the second class, `overlay-scrim`. A
+sheet's scrim is its `SheetBackdrop`, inside React Aria's `SheetOverlay`, so
+the backdrop carries `overlay-scrim` and the overlay does not; "Sheet" says
+why. A portal sits outside
 whatever the app styled, and `base.css` is opt-in, so `overlay` restates on
 the root what `base.css` gives a page: `box-sizing: border-box`, ink, Sofia
 Sans, the body size, line height and weight, and `text-align: start`. The app
@@ -2909,7 +2911,9 @@ most the viewport less 2rem, the inset on both sides. A popover and a menu cap
 at the viewport less 2rem inside React Aria's 12px `containerPadding`, and a
 sheet is `min(100%, 36rem)`. Dialog, drawer and sheet bodies scroll inside the
 panel (`min-height: 0; overflow-y: auto; overscroll-behavior: contain`) while
-the head and the action row stay. Heights use `dvh`, with
+the head and the action row stay; a sheet's body scrolls once the sheet is
+fully open and leaves out `overscroll-behavior`, so a swipe it cannot take
+goes on to the sheet, as "Sheet" derives. Heights use `dvh`, with
 `--visual-viewport-height` for the on-screen keyboard. Targets are 40px: a
 menu row, which grows to 44px under `pointer: coarse`, the toast's dismiss
 button, which is the 40px IconButton, and a dialog's buttons, which are
@@ -3281,8 +3285,8 @@ holds a scroll container two viewports tall, the sheet sits one viewport in,
 and an `IntersectionObserver` closes the sheet once it has scrolled out. The
 spec builds `Sheet` on that family only if it holds in Chromium, WebKit and
 Firefox, and on the modal frame with dragging deferred if it does not. A spike
-decided it before any sheet code was written. This is its record; Task 8
-appends the derivation after it.
+decided it before any sheet code was written. This is its record, and the
+derivation of the component follows it.
 
 **Date and versions.** 2026-10-13, on macOS (arm64), headless.
 `react-aria-components` 1.22.1, with `react-aria` 3.53.1, and Playwright
@@ -3311,7 +3315,8 @@ and a `Sheet`: white, 40px top corners, `max-height: 92dvh`,
 `min(100%, 36rem)` wide, a flex column. Its `SheetContent` is the scroller
 (`overflow-y: auto; min-height: 0`) and holds a heading, a TextField, a Close
 button, a trigger for a second sheet and twenty paragraphs. The overlay took
-the inline style the plan gave it, `position: fixed; inset: 0; z-index: 1000`.
+the inline style the spike's brief gave it, `position: fixed; inset: 0;
+z-index: 1000`.
 Two prototype rules stood in for the library: the second backdrop turned
 transparent on `[data-stack-index="1"]`, and `animation: none !important`
 removed the backdrop's animation under reduced motion.
@@ -3332,17 +3337,17 @@ table gives the first run.
 | Criterion | Chromium 156 | WebKit (build 2336) | Firefox 153 |
 | --- | --- | --- | --- |
 | 1. Opens from a `SheetTrigger` and from `isOpen`; focus moves in and returns | Pass. Focus on the `SheetContent` dialog 546ms after the press (trigger) and 495ms (`isOpen`); back on each trigger after its Close button | Pass. 270ms and 249ms | Pass. 775ms and 761ms |
-| 2. Escape closes, a backdrop press closes, `preventDismissal` stops both | Pass. Escape closed in 292ms, a press 20px from the top in 293ms; with `preventDismissal`, still open after Escape, a press and a 900px swipe, and its Close button closed it in 292ms | Pass. 172ms, 172ms and 165ms | Pass. 285ms, 289ms and 283ms |
-| 3. A swipe down dismisses it | Pass. The wheel took the scroll from 760 to 0 and the sheet was gone 50ms later; the touch drag (410 to 730) dismissed it 525ms after the touch began, momentum carrying the scroll on to 55, below the 61 at which the sheet has left the screen | Pass. Gone 199ms after the wheel: as desktop Safari, React Aria waits for `scrollend` and 50ms | Pass. Gone 23ms after the wheel. No view timeline, so the 300ms fallback: it ran on the open, and on Escape (gone in 286ms, 34 frames of the reverse fade, opacity 1 to 0.08); on the swipe it played no frame (below) |
+| 2. Escape closes, a backdrop press closes, `preventDismissal` stops both | Pass. Escape closed in 292ms, a press 20px from the top, which lands on React Aria's stage over the backdrop and never on the backdrop itself (below), in 293ms; with `preventDismissal`, still open after Escape, a press and a 900px swipe, and its Close button closed it in 292ms | Pass. 172ms, 172ms and 165ms | Pass. 285ms, 289ms and 283ms |
+| 3. A swipe down dismisses it | Pass. The wheel took the scroll from 760 to 0 and the sheet was gone 50ms later; the touch drag (410 to 730) dismissed it 525ms after the touch began, the scroll carrying on to 55, below the 60.8 at which the sheet has left a 760px screen | Pass. Gone 199ms after the wheel: as desktop Safari, React Aria waits for `scrollend` and 50ms | Pass. Gone 23ms after the wheel. No view timeline, so the 300ms fallback: it ran on the open, and on Escape (gone in 286ms, 34 frames of the reverse fade, opacity 1 to 0.08); on the swipe it played no frame (below) |
 | 4. A body taller than `92dvh` scrolls inside, the sheet stays put | Pass. A 1483px body in a 662.4px sheet (92dvh at 720); a wheel of 600 moved the body's `scrollTop` from 0 to 600, the sheet's top stayed at 57.6 and the outer scroll at 720 | Pass. The same numbers | Pass. The same numbers |
-| 5. Two sheets stack, one scrim paints | Pass. The second sheet, its overlay and its backdrop carry `data-stack-index="1"`, the first `0` and `data-has-descendants`; the backdrops compute `rgba(5, 5, 5, 0.4)` and `rgba(0, 0, 0, 0)`; Escape closed the top sheet only, and focus went back to its trigger in the first | Pass. The same | Pass. The same |
+| 5. Two sheets stack, one scrim paints | Pass. The second sheet, its overlay and its backdrop carry `data-stack-index="1"`, the first `0` and `data-has-descendants`; the backdrops compute `rgba(5, 5, 5, 0.4)` and, by the prototype's rule, `rgba(0, 0, 0, 0)`; Escape closed the top sheet only, and focus went back to its trigger in the first | Pass. The same | Pass. The same |
 | 6. Above a sticky header at `z-index: 20` | Pass. At (640, 77), inside both the header (0 to 96) and the sheet (57.6 to 720), the hit is the sheet's content; at the header's middle, a part of the overlay | Pass. The same | Pass. The same |
-| 7. Reduced motion: no smooth scroll, settles in a frame, no backdrop animation | Pass. `scroll-behavior: auto`; the scroller's first frame was already at rest (720), and entering ended in that frame; the backdrop's `animation-name` computes `none`; Escape closed in 33ms | Pass. At rest in the first frame, entering ended one frame later; Escape 22ms | Pass. At rest and entered in the first frame; Escape 4ms |
-| 8. A focused field keeps the sheet on screen as the viewport shrinks | Pass. From 375 by 760 to 375 by 400 with the field focused: still open and focused, the sheet 32 to 400, the field 155.6 to 203.6, `--visual-viewport-height` 400px | Pass. The same numbers | Pass. The same numbers |
+| 7. Reduced motion: no smooth scroll, settles in a frame, no backdrop animation | Pass. `scroll-behavior: auto`; the scroller's first frame was already at rest (720), and entering ended in that frame; the backdrop's `animation-name` computes `none`, by the prototype's rule; Escape closed in 33ms | Pass. At rest in the first frame, entering ended one frame later; Escape 22ms | Pass. At rest and entered in the first frame; Escape 4ms |
+| 8. A focused field keeps the sheet on screen as the viewport shrinks | Pass. From 375 by 760 to 375 by 400 with the field focused: still open, the sheet 32 to 400, the field 155.6 to 203.6, `--visual-viewport-height` 400px | Pass. The same numbers | Pass. The same numbers |
 
 **Verdict: React Aria's `Sheet` family.** Every criterion passed in all three
 engines, in both runs, so the modal frame fallback is not taken and dragging
-is not deferred. Task 8 builds `Sheet` on `SheetOverlay`, `SheetBackdrop`,
+is not deferred. The library's `Sheet` is built on `SheetOverlay`, `SheetBackdrop`,
 `Sheet` and `SheetContent`, re-exports React Aria's `SheetTrigger`, and
 passes `snapPoints` through.
 
@@ -3350,14 +3355,14 @@ passes `snapPoints` through.
 left to React Aria's own positioning, its inline style only `z-index: 1000`,
 and passed in all three engines. Then a page made 2000px taller was scrolled
 600px and a sheet opened from the keyboard, since a click scrolls its trigger
-into view and undoes the page's scroll. With the plan's `position: fixed` the
+into view and undoes the page's scroll. With the brief's `position: fixed` the
 sheet drew at 657.6 to 1320 of a 720px viewport in all three engines, 62px of
 it on screen. With React Aria's positioning it drew at 57.6 to 720, over the
 stuck header. React Aria places its scroll container at the page's scroll
 offset inside an overlay it positions at the document's origin, so a fixed
 overlay moves the sheet down by however far the page is scrolled.
 
-**What the spike leaves for Task 8.**
+**What the spike leaves for the component.**
 
 - **Leave the overlay's position to React Aria.** `SheetOverlay` writes
   `position: absolute`, `top: 0`, `left: 0`, the page's width and height and
@@ -3381,6 +3386,9 @@ overlay moves the sheet down by however far the page is scrolled.
   React Aria's stage, a `div` inside `[data-sheet-scroll]` that covers the
   whole viewport over the backdrop; the press closes the sheet through React
   Aria's press-outside handling, and `SheetBackdrop` itself is never pressed.
+  React Aria also makes the backdrop `inert`, as it does everything outside
+  the sheet, so it takes no hit wherever it is drawn. A test that presses the
+  scrim presses the stage above the sheet.
 - **`preventDismissal` holds against the swipe.** While the sheet rests,
   React Aria shrinks the scroll travel to 1px, so a 900px swipe moved it from
   1 to 1 and the `IntersectionObserver` close never fired. Escape and a press
@@ -3405,7 +3413,7 @@ overlay moves the sheet down by however far the page is scrolled.
   `data-stack-index` on the overlay, the backdrop and the sheet from a
   module-level list of its own, separate from the library's overlay stack,
   and marks the sheet beneath with `data-has-descendants`. The spike keyed the
-  transparent second backdrop on `[data-stack-index="1"]`; Task 8 keys it on
+  transparent second backdrop on `[data-stack-index="1"]`; the component keys it on
   `data-stacked` from the overlay stack, as spec 7.3 says. Escape closes only
   the top sheet, and focus returns to its trigger in the sheet beneath.
 - **`SheetContent` fills the sheet.** React Aria forces `width: 100%` and
@@ -3420,12 +3428,24 @@ overlay moves the sheet down by however far the page is scrolled.
   after the resize) and a `--sheet-scroll-padding-y` it never reads itself;
   capping the sheet against `--visual-viewport-height`, as spec 7.3 asks, is
   the library's rule.
-- **Not proven here.** WebKit with `hasTouch` still reported
-  `maxTouchPoints` 0 and a Mac user agent, so React Aria took its desktop
-  Safari paths; its iOS paths, the 58px allowance for Safari's toolbar and the
-  iOS scroll lock, ran in no engine. The spike set no `snapPoints`, and no
-  `autoFocus` child: React focuses one at mount, before React Aria's deferred
-  focus.
+- **Not proven here.**
+  - WebKit with `hasTouch` still reported `maxTouchPoints` 0 and a Mac user
+    agent, so React Aria took its desktop Safari paths; its iOS paths, the
+    58px allowance for Safari's toolbar and the iOS scroll lock, ran in no
+    engine.
+  - A touch swipe ran in Chromium only, through the DevTools protocol;
+    WebKit and Firefox were swiped with the wheel.
+  - The on-screen keyboard: criterion 8 resized the layout viewport, so it
+    proves the `92dvh` cap and not a keyboard that shrinks only the visual
+    viewport.
+  - The spike set no `snapPoints`.
+  - An `autoFocus` child is a hazard, reasoned from the source and not
+    measured: React focuses it as it mounts, before React Aria's deferred
+    focus, and the deferral exists so that focus does not interrupt the iOS
+    enter scroll.
+  - The engines were older than the builds Playwright 1.64.0 pins
+    (`webkit-2370`, `firefox-1555`), and the runs were headless on macOS
+    only.
 
 **jsdom.** The unit tests run in jsdom 30.1.2, which has no
 `IntersectionObserver`, `ResizeObserver`, `Element.prototype.scrollTo`,
@@ -3435,7 +3455,152 @@ as it mounts, and one with `preventDismissal` and `snapPoints` also needs
 `ResizeObserver`. React Aria skips its enter and exit callbacks for an element
 with no `getAnimations`, so in jsdom a bottom sheet mounts and unmounts at
 once, and with the observers stubbed it mounted without calling `scrollTo` or
-`matchMedia`, which only those callbacks' scrolls reach. Task 8 stubs
+`matchMedia`, which only those callbacks' scrolls reach. The unit tests stub
 `IntersectionObserver`, `ResizeObserver` and `Element.prototype.scrollTo` in
-`packages/react/test/setup.ts` and asserts markup, names and dismissal there;
+`packages/react/test/setup.ts` and assert markup, names and dismissal there;
 the swipe lives in the play tests.
+
+### The component, derived
+
+There is no source sheet, so every value below is derived here, and the
+consumer's two numbers, 92% of the height and a grabber, are recorded as the
+consumer's. The modal frame fallback was not built: the spike passed, and
+`Sheet` is React Aria's family behind the public API the spec gives either
+path.
+
+| Part | Value | Rule |
+| --- | --- | --- |
+| Surface | `--color-float`, `1px solid var(--color-hairline)` | White is for floating surfaces, and a modal separates from the scrim by tone, with the hairline as its edge, as "Overlays" records for every modal panel |
+| Corners | `--radius-stadium` on the two top corners, square below | A dialog is 40px; the bottom is flush with the viewport's edge and takes no corner. The two radii are logical, `border-start-start-radius` and `border-start-end-radius`, which is all the sheet needs in right to left |
+| Height | content-high, `max-height: 92dvh` after a `92vh` line | The consumer's number: 8% of a 760px phone leaves about 60px of the page above the sheet as the reader's context |
+| Width | `min(100%, 36rem)`, centred | No token. A phone surface that still reads on a tablet. React Aria's stage centres the sheet in a flex column and `margin-inline: auto` holds it there; the sheet's own position is React Aria's inline `relative`, so no `inset-inline` is needed |
+| Elevation | none | The only free edge is the viewport's bottom, where a downward shadow shows nothing; the scrim and the hairline separate it |
+| Scrim | the shared `overlay-scrim` on `SheetBackdrop`, and nothing on `SheetOverlay` | Below |
+| Grabber | 40px by 4px, `--radius-dot`, `--color-boundary`, `aria-hidden`, centred in a 44px band | Dots stay round in every shape. Boundary painted straight on float is gated at 3:1 already, as the switch's off track there: 3.48 in light and 5.21 in dark, cited and not added. The 44px band is the touch target size, though the grabber is decoration and the whole sheet is what a finger swipes |
+| Header | the title in the `h3` step in ink, the description in body slate, the close IconButton at the end, `padding-inline: var(--spacing-peer)` | The card title step; the close button is the 40px ghost IconButton |
+| Body | `padding: var(--spacing-peer)`, `overflow-y: auto` once fully open, no `overscroll-behavior` | Below |
+| Safe area | the footer's bottom padding, or the body's when there is no footer, plus `env(safe-area-inset-bottom, 0px)` | The last thing in the sheet stays clear of a phone's home indicator |
+| Footer | `padding: var(--spacing-part) var(--spacing-peer)` and the safe area below | 8px over and under a row of buttons or an account, 24px at the sides |
+| Layer | `z-index: var(--z-modal)` on `SheetOverlay`, and nothing else | React Aria's overlay has none and would sit under a sticky header at `z-index: 20` |
+| Motion | React Aria's scroll slides the sheet; `@keyframes sheet-scrim-fade` fades the backdrop from opacity 0 to 1 over the swipe | Below |
+| Forced colors | the edge and the grabber in `CanvasText` | The hairline is transparent in light and the grabber is a fill, and the repaint keeps neither |
+
+**The overlay is React Aria's, with a layer.** `SheetOverlay` keeps React
+Aria's inline `position: absolute` at the document's origin, the page's size,
+and the class gives it only `z-index: var(--z-modal)`. The spike's run on a
+page scrolled 600px drew a fixed overlay's sheet 62px on screen in all three
+engines, so nothing may fix it. The scrim's color is on the backdrop only:
+spec 7.3 put `overlay-scrim` on the overlay and 7.4 on the backdrop, and on
+the overlay it would paint a second scrim under the backdrop's, one that does
+not fade with the swipe. The spec carries the departure.
+
+**The backdrop is the scrim, fitted to where React Aria puts it.** It takes
+`overlay-scrim` for the Deep Well color, the transparency of `data-stacked`
+and the forced-colors opt-out, and three of the shared rules give way.
+
+- The modal layer, `z-index: var(--z-modal)`, would put the backdrop over the
+  sheet's scroller inside the overlay, its sibling, so it is `auto` and the
+  backdrop paints first, under the sheet. React Aria makes the backdrop
+  `inert`, so a hit test passes through it wherever it is drawn: a story
+  checks the computed `auto` and the order instead.
+- The viewport's height, `var(--visual-viewport-height, 100dvh)`, sizes a
+  fixed scrim. The backdrop is React Aria's `position: absolute; inset: 0`
+  inside the page-sized overlay, and with that height it covered only the
+  top of a scrolled page, measured at 330px of a 900px view; `height: auto`
+  lets `inset: 0` fill the overlay. The `ScrolledPage` story pins both.
+- The shared scrim fades its color in and out on `data-entering` and
+  `data-exiting`. A sheet enters for as long as its scroll takes, about half
+  a second in Chromium, so that would hold the scrim back until the sheet
+  was in. The backdrop keeps its color while it enters and exits, unless it
+  is stacked, and drops the transition: the keyframes fade it instead.
+
+**The body scrolls once the sheet is fully open.** React Aria sets
+`data-expanded` on the sheet while all of it is in view, and with no
+`snapPoints` it does so at rest in all three engines, so the body's
+`overflow-y: auto` is keyed on `.sheet[data-expanded] .sheet-body`: at a
+partial stop a swipe on the content moves the sheet, as on iOS. The body
+leaves out the `overscroll-behavior: contain` a dialog's body has. With it, a
+wheel down the middle of the basic example's sheet, over its body, did
+nothing in Chromium, while the same wheel over the header or the footer
+dismissed it: `contain` stopped the swipe at the body, which had nothing to
+scroll. Without it a swipe the body cannot take goes on to React Aria's
+scroller, which has `overscroll-behavior: contain` itself, so the page behind
+never moves. The docs test swipes the body.
+
+**The sheet shrinks over the keyboard.** The content caps at
+`calc(var(--visual-viewport-height, 100dvh) * 0.92)`, 92% of the visual
+viewport React Aria writes on the overlay. With no keyboard it equals the
+`92dvh` of the sheet; with an on-screen keyboard that shrinks only the visual
+viewport, as iOS does, the sheet shrinks to what is still in view. The cap is
+on the content and not the sheet, so the sheet's `92dvh` and its `92vh`
+fallback both stay in force: a `var()` on the sheet's own `max-height` would
+win over them in every browser. A real keyboard is not proven, only the cap.
+
+**The parts.** The grabber band is 44px tall above the header. Without the
+grabber the header is the first part and takes 24px of top padding, so the
+title and the close button keep clear of the 40px corners. The close button
+sets the header row's height, so the title's first line steps down by
+`calc((2.5rem - 1lh) / 2)` beside it and centres on it, as a drawer's does,
+and its icon lines up with the padding edge through
+`margin-inline-end: -0.5rem`. A hidden title with no close button and no
+description leaves nothing in the header to show, so there is no header: the
+hidden title sits straight in the content, out of the flow, as a drawer's
+does. The body is a tab stop while it scrolls and holds nothing Tab reaches,
+through the helper Dialog and Drawer share, and it draws the focus ring inset,
+since it runs flush to the sheet's sides. The footer wraps a long word, as the
+title, the description and the body do.
+
+**Focus and dismissal.** The sheet focuses its `SheetContent`, the dialog,
+once its enter scroll has ended, and `.sheet-content` takes `outline: none`.
+`isDismissable={false}` is React Aria's `preventDismissal`: Escape, a press
+outside and a swipe do nothing, React Aria draws no hidden Dismiss button, and
+the close button, on by default, is the way out. A press in the toast region
+never closes a sheet, as for every library modal.
+
+**Stacking and scope.** A sheet is not built on the modal frame, so it renders
+the frame's `FrameEffects` first in its content: it records what held focus
+as the sheet opened, for the scope copy on the sheet, and joins the overlay
+stack, which marks a second sheet's backdrop `data-stacked`. React Aria's own
+stack numbers the second sheet `data-stack-index="1"`. The scope lands on the
+sheet, not on the overlay or the backdrop. The overlay carries `dir` from the
+locale; React Aria writes the direction on the sheet too, and keeps its
+scroller left to right, since its geometry is physical.
+
+**Motion.** React Aria drives the slide with scroll: smooth on open and close,
+instant under reduced motion, where it passes no `behavior`. The backdrop's
+`swipeAnimation` is `sheet-scrim-fade`, from opacity 0 to 1, which React Aria
+runs on the sheet's view timeline in Chromium and WebKit and for 300ms on open
+and close in Firefox. React Aria writes it inline whatever the setting, so
+under `prefers-reduced-motion: reduce` the stylesheet removes it with
+`animation: none !important`, the one important declaration in the core
+stylesheets, and the scrim is simply there.
+
+**Stop points.** `snapPoints` passes straight to React Aria, which marks each
+stop inside the sheet with a `div[data-sheet-detent]`, the first with
+`data-sheet-initial`, and opens at the first. The unit test counts the
+markers. The docs test opens a sheet with stops at 40% and 100% in Chromium,
+finds it resting with 40% in view and no `data-expanded`, carries it to its
+full height with a wheel, and scrolls its body there. Stops under a finger,
+and in WebKit and Firefox, are not proven.
+
+**The WebKit project.** The story tests run a third Vitest project,
+`storybook-webkit`, which runs only the stories tagged `webkit`, the sheet's,
+in Playwright's WebKit, the engine a phone's Safari runs. It is the first
+non-Chromium run in the repository. It runs on the build Playwright 1.64.0
+pins, `webkit-2370`, which CI installs with Chromium; the spike ran an older
+one. Its stories cover the layout, focus, the stack, the scope, a page
+scrolled before the sheet opens, a dismissal by the scroller, `isDismissable`
+and a focused field. A touch swipe is not among them: a story's play sends no
+touch gesture, so the swipe is driven through the scroller there and by the
+wheel in the docs test.
+
+**jsdom.** `packages/react/test/setup.ts` gives jsdom an inert
+`IntersectionObserver` and `ResizeObserver`, no-op `Element.prototype.scrollTo`
+and `scrollBy`, and a `matchMedia` that matches nothing, each only where the
+environment has a DOM and lacks it. The SegmentedControl test that runs with
+no `ResizeObserver` takes the stub away for its own run.
+
+**Not proven, carried from the spike.** React Aria's iOS paths; the real
+on-screen keyboard; `snapPoints` under a finger and outside Chromium; an
+`autoFocus` child, which takes focus before React Aria's deferred focus; and a
+touch swipe in any engine but Chromium. The docs page says the same.

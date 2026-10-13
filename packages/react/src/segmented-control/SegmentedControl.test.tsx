@@ -644,8 +644,16 @@ describe('SegmentedControl stacking', () => {
   it('stacks once on mount even where ResizeObserver does not exist', () => {
     setup();
     vi.unstubAllGlobals();
-    render(<Theme label="Color mode" />);
-    expect(stacked()).toBe(true);
+    // The test setup gives jsdom an inert ResizeObserver for React Aria's Sheet, so it is taken away here.
+    const inert = Object.getOwnPropertyDescriptor(globalThis, 'ResizeObserver');
+    Reflect.deleteProperty(globalThis, 'ResizeObserver');
+    try {
+      expect('ResizeObserver' in globalThis).toBe(false);
+      render(<Theme label="Color mode" />);
+      expect(stacked()).toBe(true);
+    } finally {
+      if (inert) Object.defineProperty(globalThis, 'ResizeObserver', inert);
+    }
   });
 
   it('keeps one row in an environment that cannot measure anything', () => {

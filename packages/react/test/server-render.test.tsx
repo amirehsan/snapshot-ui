@@ -11,6 +11,7 @@ import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
+import { Sheet, SheetTrigger } from '../src/sheet';
 import { Spinner } from '../src/spinner';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
@@ -171,6 +172,17 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </DialogTrigger>,
     ['<button', '>Menu<'],
     ['drawer-content'],
+  ],
+  [
+    'Sheet, closed',
+    <SheetTrigger>
+      <Button>More</Button>
+      <Sheet title="More" isTitleHidden>
+        <Link href="/reports">Reports</Link>
+      </Sheet>
+    </SheetTrigger>,
+    ['<button', '>More<'],
+    ['sheet-content'],
   ],
 ];
 
