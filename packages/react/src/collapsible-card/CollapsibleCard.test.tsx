@@ -46,6 +46,30 @@ function transition(): { animation: Animation; finish: () => void; cancel: () =>
   return { animation, finish, cancel };
 }
 
+/**
+ * Records, each time anything reads the transitions of `fold`, whether the card's root held them off with
+ * `data-instant` at that moment. React Aria and the card read them in the commit that opens or folds the card,
+ * which is when a browser starts a transition, so a mark set by a later commit would read as false here.
+ */
+function watchInstant(fold: Element): boolean[] {
+  const seen: boolean[] = [];
+  const card = fold.closest('.card-collapsible');
+  Object.defineProperty(fold, 'getAnimations', {
+    value: () => {
+      seen.push(card?.hasAttribute('data-instant') ?? false);
+      return [];
+    },
+  });
+  return seen;
+}
+
+/** The browser fires beforematch on a hidden="until-found" element before it shows text found in it. */
+function findIn(fold: Element | undefined): void {
+  act(() => {
+    fold?.dispatchEvent(new Event('beforematch'));
+  });
+}
+
 /** Lets every promise that is ready settle, so a test can see what a settled transition changed. */
 const settle = (): Promise<void> =>
   new Promise((resolve) => {
@@ -218,11 +242,16 @@ describe('CollapsibleCard', () => {
         Body
       </CollapsibleCard>,
     );
+    // The title and the note are one block, so the note stays under the title wherever the actions go.
     const header = container.querySelector('.card-header');
     expect([...(header?.children ?? [])].map((child) => child.className)).toEqual([
+      'card-heading',
+      'card-actions',
+    ]);
+    const heading = header?.querySelector(':scope > .card-heading');
+    expect([...(heading?.children ?? [])].map((child) => child.className)).toEqual([
       'card-title',
       'card-note',
-      'card-actions',
     ]);
     expect(screen.getByText('Where we reach you, and how often.').tagName).toBe('P');
     const toggle = screen.getByRole('button', { name: 'Notifications' });
@@ -255,6 +284,7 @@ describe('CollapsibleCard', () => {
     );
     expect(container.querySelector('.card-note, .card-actions')).toBeNull();
     expect(container.querySelector('.card-header')?.children).toHaveLength(1);
+    expect(container.querySelector('.card-heading')?.children).toHaveLength(1);
   });
 
   it('tells onExpandedChange each time the card opens or folds', async () => {
@@ -417,6 +447,115 @@ describe('CollapsibleCard', () => {
     await settle();
     expect(root(container)).not.toHaveAttribute('data-folding');
     expect(root(container)).not.toHaveAttribute('data-expanded');
+  });
+
+  it('opens at once when find-in-page reaches its folded body, and moves as usual after', async () => {
+    const user = userEvent.setup();
+    const onExpandedChange = vi.fn();
+    const { container } = render(
+      <CollapsibleCard title="Notifications" defaultExpanded={false} onExpandedChange={onExpandedChange}>
+        Product updates
+      </CollapsibleCard>,
+    );
+    const card = root(container);
+    const seen = watchInstant(foldOf(container));
+    findIn(foldOf(container));
+    expect(onExpandedChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    expect(foldOf(container)).not.toHaveAttribute('hidden');
+    // The mark was on in the commit that opened the card, so the body is its full height at once and the
+    // browser scrolls to where the match ends up.
+    expect(seen).not.toHaveLength(0);
+    expect(seen).not.toContain(false);
+    expect(card).toHaveAttribute('data-instant', '');
+    // It comes off two frames later, and a press after that moves.
+    await act(async () => {
+      await nextFrame();
+      await nextFrame();
+    });
+    expect(card).not.toHaveAttribute('data-instant');
+    seen.length = 0;
+    await user.click(toggleOf('Notifications'));
+    expect(seen).not.toHaveLength(0);
+    expect(seen).not.toContain(true);
+    expect(card).not.toHaveAttribute('data-instant');
+  });
+
+  it('asks a controlled card to open when find-in-page reaches it, and opens it at once when the caller does', () => {
+    const asked = vi.fn();
+    function Billing({ opens }: { opens: boolean }): ReactElement {
+      const [isExpanded, setExpanded] = useState(false);
+      return (
+        <CollapsibleCard
+          title={opens ? 'Billing' : 'Profile'}
+          isExpanded={isExpanded}
+          onExpandedChange={(next) => {
+            asked(next);
+            if (opens) setExpanded(next);
+          }}
+        >
+          Paid by card
+        </CollapsibleCard>
+      );
+    }
+    const { container } = render(
+      <>
+        <Billing opens />
+        <Billing opens={false} />
+      </>,
+    );
+    const [billing, profile] = container.querySelectorAll('.card-fold');
+    if (!billing || !profile) throw new Error('Two folds expected');
+    const seen = watchInstant(billing);
+    findIn(billing);
+    expect(asked).toHaveBeenCalledExactlyOnceWith(true);
+    expect(toggleOf('Billing')).toHaveAttribute('aria-expanded', 'true');
+    expect(seen).not.toHaveLength(0);
+    expect(seen).not.toContain(false);
+    // A caller that keeps its card folded is asked too, and the card neither opens nor takes the mark.
+    asked.mockClear();
+    findIn(profile);
+    expect(asked).toHaveBeenCalledExactlyOnceWith(true);
+    expect(toggleOf('Profile')).toHaveAttribute('aria-expanded', 'false');
+    expect(profile.closest('.card-collapsible')).not.toHaveAttribute('data-instant');
+  });
+
+  it('moves focus to the toggle when it folds with focus in its body, and leaves focus alone otherwise', async () => {
+    const user = userEvent.setup();
+    function Profile(): ReactElement {
+      const [isExpanded, setExpanded] = useState(true);
+      return (
+        <>
+          <CollapsibleCard title="Profile" isExpanded={isExpanded} onExpandedChange={setExpanded}>
+            <Button
+              onPress={() => {
+                setExpanded(false);
+              }}
+            >
+              Done
+            </Button>
+          </CollapsibleCard>
+          <Button
+            onPress={() => {
+              setExpanded(!isExpanded);
+            }}
+          >
+            Fold or open
+          </Button>
+        </>
+      );
+    }
+    render(<Profile />);
+    // A control in the body folds the card: its focus would be lost in a hidden body, so the toggle takes it.
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(toggleOf('Profile')).toHaveAttribute('aria-expanded', 'false');
+    expect(toggleOf('Profile')).toHaveFocus();
+    // Folded from outside the body, the focus stays where it is.
+    await user.click(toggleOf('Profile'));
+    expect(toggleOf('Profile')).toHaveAttribute('aria-expanded', 'true');
+    await user.click(screen.getByRole('button', { name: 'Fold or open' }));
+    expect(toggleOf('Profile')).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Fold or open' })).toHaveFocus();
   });
 
   it('has no axe violations open, folded, with a note and actions, and nested', async () => {
@@ -676,6 +815,39 @@ describe('CollapsibleCard with a storageKey', () => {
     expect(fold).not.toHaveAttribute('hidden');
     expect(again).not.toHaveAttribute('hidden');
     expect(stored()).toEqual(['billing']);
+  });
+
+  it('opens every card with its key at once when find-in-page reaches one, so a card above cannot push the match away', async () => {
+    localStorage.setItem(ENTRY, '["notifications"]');
+    const { container } = render(
+      <>
+        <CollapsibleCard title="Notifications" storageKey="notifications">
+          Product updates
+        </CollapsibleCard>
+        <CollapsibleCard title="Notifications again" storageKey="notifications">
+          Weekly digest
+        </CollapsibleCard>
+      </>,
+    );
+    const [upper, lower] = container.querySelectorAll('.card-fold');
+    if (!upper || !lower) throw new Error('Two folds expected');
+    const cards = [...container.querySelectorAll('.card-collapsible')];
+    const seen = [watchInstant(upper), watchInstant(lower)];
+    findIn(lower);
+    expect(toggleOf('Notifications')).toHaveAttribute('aria-expanded', 'true');
+    expect(toggleOf('Notifications again')).toHaveAttribute('aria-expanded', 'true');
+    // Both opened in the one commit the store renders, each with its transitions held off.
+    for (const each of seen) {
+      expect(each).not.toHaveLength(0);
+      expect(each).not.toContain(false);
+    }
+    for (const card of cards) expect(card).toHaveAttribute('data-instant', '');
+    await act(async () => {
+      await nextFrame();
+      await nextFrame();
+    });
+    for (const card of cards) expect(card).not.toHaveAttribute('data-instant');
+    expect(stored()).toEqual([]);
   });
 });
 

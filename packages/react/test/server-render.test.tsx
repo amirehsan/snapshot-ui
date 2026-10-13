@@ -106,6 +106,19 @@ const CLIENT: [name: string, element: ReactElement, contains: string[]][] = [
     ['class="card card-collapsible"', 'data-expanded=""', 'data-instant=""', 'aria-expanded="true"'],
   ],
   [
+    // Folded from the server's HTML, with no data-expanded on the root and the fold hidden, so nothing shows
+    // the body before the page hydrates.
+    'CollapsibleCard, folded',
+    <CollapsibleCard title="Notifications" defaultExpanded={false}>
+      <p>Product updates</p>
+    </CollapsibleCard>,
+    [
+      'class="card card-collapsible" data-instant="">',
+      'aria-expanded="false"',
+      'aria-hidden="true" hidden=""><div class="card-body"><p>Product updates</p></div>',
+    ],
+  ],
+  [
     // A folded card that says it holds a change draws its marker on the server, which has no fold to watch.
     'CollapsibleCard, folded and changed',
     <CollapsibleCard title="Notifications" defaultExpanded={false} isChanged>

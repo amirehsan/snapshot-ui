@@ -127,18 +127,20 @@ function CardToggle({
   level,
   isMarked,
   changedLabel,
+  toggleRef,
 }: {
   title: ReactNode;
   level: 1 | 2 | 3 | 4;
   isMarked: boolean;
   changedLabel: string;
+  toggleRef: Ref<HTMLButtonElement>;
 }): ReactElement {
   const Heading = `h${level}` as const;
   const { chipId, describedBy } = useChangedDescription({ isChanged: isMarked });
   return (
     <>
       <Heading className="card-title">
-        <RACButton slot="trigger" className="card-toggle" aria-describedby={describedBy}>
+        <RACButton ref={toggleRef} slot="trigger" className="card-toggle" aria-describedby={describedBy}>
           <span className="card-toggle-text">
             {title}
             {isMarked ? <span className="card-marker" aria-hidden="true" /> : null}
@@ -159,9 +161,10 @@ function CardToggle({
  * A card whose body folds under its header. The title is the toggle, a row as wide as the title with a
  * chevron at its end, and the note and the actions stay in the header while the body is folded. It draws
  * with Card's own classes, so the two look alike, and it is built on React Aria's Disclosure, so the toggle
- * is a button that says whether the body is shown, and find-in-page can open a folded card. Given a
- * `storageKey`, it remembers its fold in the browser. Folded, it marks a change any field in its body holds,
- * and it opens itself when a field in its body fails the browser's validation on submit.
+ * is a button that says whether the body is shown, and find-in-page can open a folded card in a browser that
+ * supports `hidden="until-found"`. Given a `storageKey`, it remembers its fold in the browser. Folded, it
+ * marks a change any field in its body holds, and it opens itself when a field in its body fails the
+ * browser's validation on submit.
  */
 export function CollapsibleCard({
   title,
@@ -186,14 +189,16 @@ export function CollapsibleCard({
     storageKey,
   );
   const foldRef = useRef<HTMLDivElement>(null);
-  const isInstant = useFolding(foldRef, isExpanded);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const isInstant = useFolding(foldRef, toggleRef, isExpanded);
   const holdsChange = useHoldsChange(foldRef, !isExpanded);
   useOpenOnInvalid(foldRef, !isExpanded, () => {
     setExpanded(true);
   });
   // createElement rather than JSX: the three tags take one HTMLElement ref type between them. React Aria's
   // disclosure always renders a div and passes on only global attributes, so the root is the card's own
-  // element, which takes any attribute, and the disclosure sits inside it.
+  // element, which takes any attribute, and the disclosure sits inside it. The title and the note are one
+  // block, so the note stays under the title wherever the actions go.
   return createElement(
     tag,
     {
@@ -205,13 +210,16 @@ export function CollapsibleCard({
     },
     <RACDisclosure className="card-disclosure" isExpanded={isExpanded} onExpandedChange={setExpanded}>
       <div className="card-header">
-        <CardToggle
-          title={title}
-          level={level}
-          isMarked={!isExpanded && (isChanged || holdsChange)}
-          changedLabel={changedLabel}
-        />
-        {present(note) ? <p className="card-note">{note}</p> : null}
+        <div className="card-heading">
+          <CardToggle
+            title={title}
+            level={level}
+            isMarked={!isExpanded && (isChanged || holdsChange)}
+            changedLabel={changedLabel}
+            toggleRef={toggleRef}
+          />
+          {present(note) ? <p className="card-note">{note}</p> : null}
+        </div>
         {present(actions) ? <div className="card-actions">{actions}</div> : null}
       </div>
       <RACDisclosurePanel ref={foldRef} className="card-fold">

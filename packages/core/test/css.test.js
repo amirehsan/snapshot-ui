@@ -1091,36 +1091,38 @@ describe('src/components/card.css, the collapsible card', () => {
     }
   });
 
-  it('lays the header out as a grid: the title and the actions on one row, the note under the title', () => {
+  it('lays the header out as a row that wraps: the title and the note as one block, then the actions', () => {
     const css = rules();
     const header = blockAfter(css, '.card-disclosure > .card-header {');
-    expect(header).toContain('grid-template-columns: minmax(0, 1fr) auto;');
-    // No column gap: an empty actions column must leave the toggle the whole row.
-    expect(header).toContain('column-gap: 0;');
-    expect(
-      blockAfter(
-        css,
-        '.card-disclosure > .card-header > .card-title, .card-disclosure > .card-header > .card-note {',
-      ),
-    ).toContain('grid-column: 1;');
+    expect(header).toContain('display: flex;');
+    expect(header).toContain('flex-wrap: wrap;');
+    // 24px between the heading and the actions on one row. A gap is only drawn between two items on a row,
+    // so a header with no actions keeps none, and actions that wrap start at the row's start.
+    expect(header).toContain('column-gap: var(--spacing-peer);');
+    // The heading keeps the note directly under the title, 8px down, as in a card, and takes the room the
+    // actions leave, but never less than 12rem beside them.
+    const heading = blockAfter(css, '.card-disclosure > .card-header > .card-heading {');
+    expect(heading).toContain('display: grid;');
+    expect(heading).toContain('flex: 1 1 12rem;');
+    expect(heading).toContain('min-inline-size: 0;');
+    expect(heading).toContain('gap: var(--spacing-part);');
     const actions = blockAfter(css, '.card-actions {');
-    expect(actions).toContain('grid-row: 1;');
-    expect(actions).toContain('grid-column: 2;');
-    expect(actions).toContain('margin-inline-start: var(--spacing-peer);');
+    expect(actions).toContain('flex: 0 1 auto;');
     expect(actions).toContain('flex-wrap: wrap;');
+    expect(actions).toContain('gap: var(--spacing-part);');
+    // Wrapped under the heading, the actions start at the row's start, and so does a second line of them.
+    expect(actions).not.toContain('justify-content');
+    expect(actions).not.toContain('margin');
     expect(blockAfter(css, '.card-toggle-text {')).toContain('min-width: 0;');
   });
 
-  it('moves the actions under the note, to the row start, when the header is narrower than 18rem', () => {
+  it('sizes the header from what it holds: no size container, so a card that fits its content fits the title', () => {
     const css = rules();
-    expect(blockAfter(css, '.card-disclosure > .card-header {')).toContain(
-      'container: card-header / inline-size;',
-    );
-    const narrow = blockAfter(blockAfter(css, '@container card-header (width < 18rem)'), '.card-actions {');
-    expect(narrow).toContain('grid-row: auto;');
-    expect(narrow).toContain('grid-column: 1;');
-    expect(narrow).toContain('justify-content: flex-start;');
-    expect(narrow).toContain('margin-inline-start: 0;');
+    // A size container takes no width from its content, which let a folded card shrink to its padding, and
+    // it also made the header a containing block and a stacking context.
+    expect(css).not.toMatch(/container(?:-type|-name)?\s*:/);
+    expect(css).not.toContain('@container');
+    expect(css).not.toMatch(/grid-(?:row|column)\s*:/);
   });
 
   it('sets the chevron level with the first line of a title that wraps', () => {

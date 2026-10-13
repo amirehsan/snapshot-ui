@@ -2338,9 +2338,22 @@ not have, so a plain card is unchanged. Eight things were derived.
   WebKit, `window.find()` did in Firefox, and each time the card reported it
   through `onExpandedChange`. The grid is drawn only while the panel is shown,
   so a browser without `until-found` falls back to the `display: none` that
-  `hidden` gives, which a `display` on the panel would override. That last
-  part is reasoned and not measured, since all three browsers have
-  `until-found`.
+  `hidden` gives, which a `display` on the panel would override, and its
+  find-in-page does not search a folded body. That last part is reasoned and
+  not measured, since all three browsers have `until-found`. A reveal opens
+  the card at once. The browser scrolls to the match as soon as its
+  `beforematch` event is done, and with the 200ms open the body was still 0px
+  tall then, and clipped, so a scroll container: the browser scrolled the
+  body instead of the page, and the body dropped that offset when it stopped
+  clipping. In Chromium, a text fragment link to the last of 41 paragraphs in
+  a 480px card, in an 800px window, left the match at 3188px, out of view.
+  Each card listens for `beforematch` on its root, in the capture phase,
+  before React Aria's listener on the fold opens it, and every card that
+  changes in the render React Aria flushes inside that event carries
+  `data-instant` until two frames later, the mark a server-rendered card
+  carries at hydration: the card itself, each card with its `storageKey`, and
+  a controlled card whose parent opens it. Drawn at once, the match landed at
+  399px, centred, as it does under reduced motion.
 - **The body clips only while it is folded or folding.** An open card draws a
   popup inside it whole, past its edge. A body that folds has to clip, so the
   component marks the root `data-folding` on every toggle and takes the mark
@@ -2358,22 +2371,43 @@ not have, so a plain card is unchanged. Eight things were derived.
   plain card's. A minimum height of 40px covers the rounding of a layout in
   fractions of a pixel, which drew the padded row 39.98px tall. A title that
   wraps keeps its own height, since the margin gives back only the padding.
-- **The header is a grid, and the note stays under the title.** The title
-  takes the first row and the room left in it, the actions end that row, 24px
-  after it, the peer step, and the note sits directly under the title, 8px
-  down, as in a card. The 24px is the actions' margin and not a column gap, so
-  with no actions the toggle spans the row. The header is a size container,
-  and below 18rem (288px) the actions move under the note, to the row's
-  start, and wrap if they must, so the order on screen is always title, note,
-  actions, which is the order in the page and the order a screen reader
-  reads. 18rem is measured: "Notifications" with its chevron and a tertiary
-  Reset button need 272px side by side, a short title with two short buttons
-  284px, and a card on a 390px phone with 16px gutters has 292px. Above it, a
-  long title beside wide actions wraps, and a word too long for the room left
-  breaks. A size container does not size its parent from its content, so a
-  card that takes its width from what it holds takes it from the body. The
-  actions are never inside the toggle, so no control sits inside another, and
-  they stay usable while the card is folded.
+  A card that folds while focus is in its body, as after a Done button
+  there, moves the focus to the toggle, since the body is about to be hidden
+  and would take the focus with it. React Aria's disclosure does not.
+- **The header is a row that wraps, and the note stays under the title.**
+  The title and the note are one block, the heading, with the note 8px under
+  the title, as in a card. The actions end the row, 24px after the heading,
+  the peer step, and the two are centred on each other. The 24px is the row's
+  column gap, which is drawn only between two items on a row, so with no
+  actions the toggle spans the row, and actions that wrap start at the row's
+  start. The heading takes the room the actions leave, and never less than
+  12rem (192px) beside them: where the row cannot give it that, the actions
+  wrap under the note, so the order on screen is always title, note, actions,
+  which is the order in the page and the order a screen reader reads. 12rem
+  holds a typical title on one line with its chevron, as "Notifications"
+  needs 161px, and it is a floor the title keeps whatever the actions hold,
+  so the title's room decides, not a width. The first version made the
+  header a size container and moved the actions under the note below 18rem,
+  which failed two ways, measured in Chromium with Sofia Sans. A size
+  container takes no width from what it holds, and a folded body adds none
+  either, so a folded card in a column that starts its items was 66px wide,
+  its padding, with "Why this verdict" 0px wide on 14 lines. It is now 275px
+  wide, and the open card 259px, each with the title on one line, where a
+  plain card is 227px. Titled "Why this verdict was reached for this
+  listing" in a 240px column, both fill the column, with the title on 4
+  lines. And a query on the header's width cannot see what the
+  actions hold, so above 18rem their column took its full width and left the
+  title the rest: two buttons in a 390px phone's 358px card squeezed
+  "Notifications" to 11px on 13 lines, and three buttons in a 420px card to
+  0px. Both now keep the title on one line, with the actions under the note.
+  The size container also made the header a containing block and a stacking
+  context, which a dropdown among the actions that does not render in a
+  portal would have been positioned and painted against. Nothing contains the
+  header now. One cost of the floor: "Notifications" and a tertiary Reset
+  need 303px, so in a 390px phone's card, 292px inside its padding, the Reset
+  moves under the note, where the 18rem query kept it beside the title. The
+  actions are never inside the toggle, so no control sits inside another,
+  and they stay usable while the card is folded.
 - **The chevron turns toward the title.** It is a 24px Lucide `ChevronDown`
   in slate, which turns ink on hover, where hover exists, and on a press,
   since touch has no hover. It sits level with the first line of a title that
@@ -2383,7 +2417,10 @@ not have, so a plain card is unchanged. Eight things were derived.
   floor (Chrome 120), where Lightning CSS rewrites it as a list of
   right-to-left languages and so ignores `dir`. So each `dir` attribute sets
   the turn as a custom property, 90deg for `ltr` and -90deg for `rtl`, and it
-  inherits: the nearest `dir` decides, as it does for the layout.
+  inherits: the nearest `dir` decides, as it does for the layout. `dir="auto"`
+  sets no turn, so the nearest `ltr` or `rtl` above it decides, and a region
+  marked `auto` whose text resolves to right to left should set `dir="rtl"`
+  itself.
 - **The space folds with the body.** The header's bottom margin, its bottom
   padding and its rule move to 0 with the fold, so a folded card ends at its
   own 32px of padding. The fold, the space and the chevron move in 200ms,
