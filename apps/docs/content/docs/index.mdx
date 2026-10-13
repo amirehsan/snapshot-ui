@@ -18,10 +18,11 @@ Every interactive component is built on [React Aria](https://react-aria.adobe.co
 
 ## Packages
 
-Two packages, released together with matching versions.
+Three packages. `@snapshot-ui/core` and `@snapshot-ui/react` are released together with matching versions; `@snapshot-ui/charts` has versions of its own.
 
 - `@snapshot-ui/core` holds the design tokens, the Tailwind v4 theme and every component's CSS. It has no JavaScript.
 - `@snapshot-ui/react` holds the React components. It ships no CSS of its own.
+- `@snapshot-ui/charts` holds the charts, drawn on the server in SVG. Its CSS is in `@snapshot-ui/core`.
 
 </Section>
 
@@ -32,5 +33,7 @@ Two packages, released together with matching versions.
 The library is at 0.x and grows phase by phase.
 
 Phase 1 is the foundation and the form basics. Choice controls and overlays, specialised inputs, lists and data, and the app shell follow, then charts and the HTML version. Breaking changes are possible before 1.0 and are always listed in the changelog.
+
+A first slice of the charts, a line chart and a sparkline, arrived early, for a home page's figures.
 
 </Section>

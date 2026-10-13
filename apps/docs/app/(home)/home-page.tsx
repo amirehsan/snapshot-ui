@@ -715,7 +715,9 @@ export function HomePage(): ReactElement {
                   Stat tile
                 </Link>
                 <span className="chip">Empty state</span>
-                <span className="chip chip-new">Charts</span>
+                <Link className="chip chip-new" href="/docs/charts/line-chart">
+                  Charts
+                </Link>
               </div>
             </Card>
             <Card className="catalog-group">
