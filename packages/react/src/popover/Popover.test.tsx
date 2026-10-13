@@ -1,9 +1,19 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, useRef, type ReactElement } from 'react';
-import { I18nProvider, PopoverContext } from 'react-aria-components';
+import {
+  ComboBox,
+  I18nProvider,
+  Input,
+  Link,
+  ListBox,
+  ListBoxItem,
+  PopoverContext,
+  PreviewTrigger,
+} from 'react-aria-components';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { holdFrames } from '../../test/dom';
 import * as library from '../index';
 import { Button } from '../button';
 import { Checkbox, CheckboxGroup } from '../checkbox';
@@ -162,6 +172,56 @@ describe('Popover', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     await user.click(document.body);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('leaves focus on the body after a blank press closes a combo box list, and never pulls it into the field', async () => {
+    const user = userEvent.setup();
+    holdFrames();
+    render(
+      <ComboBox aria-label="Currency">
+        <Input />
+        <Popover>
+          <ListBox>
+            <ListBoxItem>Dollar</ListBoxItem>
+            <ListBoxItem>Euro</ListBoxItem>
+          </ListBox>
+        </Popover>
+      </ComboBox>,
+    );
+    const field = screen.getByRole('combobox');
+    await user.click(field);
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    await user.click(document.body);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(field).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
+  });
+
+  it('closes a link preview on Escape from inside it, and the preview stays closed as focus goes back to the link', async () => {
+    const user = userEvent.setup();
+    holdFrames();
+    render(
+      <PreviewTrigger delay={0} closeDelay={0}>
+        <Link href="#ledger">Ledger</Link>
+        <Popover aria-label="Ledger preview">
+          <Link href="#ledger-open">Open the ledger</Link>
+        </Popover>
+      </PreviewTrigger>,
+    );
+    await user.tab();
+    const link = screen.getByRole('link', { name: 'Ledger' });
+    expect(link).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Open the ledger' })).toBeInTheDocument();
+    });
+    await user.tab();
+    expect(screen.getByRole('link', { name: 'Open the ledger' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('link', { name: 'Open the ledger' })).not.toBeInTheDocument();
+    expect(link).toHaveFocus();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('link', { name: 'Open the ledger' })).not.toBeInTheDocument();
   });
 
   it('keeps Tab inside: past the last control it comes back to the first', async () => {

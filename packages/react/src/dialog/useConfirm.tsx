@@ -92,8 +92,9 @@ export function useConfirm(): ConfirmHandle {
     isOnPage.current = false;
     const target = origin.current;
     origin.current = null;
-    // Focus fell to the body with the panel. React Aria gives it back in the next frame; giving it back now
-    // means a question chained after this answer opens from the run's origin too.
+    // Focus fell to the body with the panel and nothing gave it back: the frame gives it back at once only when
+    // it left with the panel, and React Aria waits a frame. Giving it back now means a question chained after
+    // this answer opens from the run's origin too.
     if (isFocusLost() && target?.isConnected) target.focus({ preventScroll: true });
   }, []);
 

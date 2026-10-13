@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, StrictMode, useLayoutEffect, useRef, type ReactElement } from 'react';
+import { createRef, StrictMode, useLayoutEffect, useRef, useState, type ReactElement } from 'react';
 import {
   Button as RACButton,
   Dialog as RACDialog,
@@ -159,6 +159,65 @@ describe('ModalFrame', () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Discard the new name?' })).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+
+  it('gives focus back to what opened it when the app takes it off the page without closing it', async () => {
+    const user = userEvent.setup();
+    holdFrames();
+    function Page(): ReactElement {
+      const [isShown, setShown] = useState(false);
+      return (
+        <>
+          <RACButton
+            onPress={() => {
+              setShown(true);
+            }}
+          >
+            Rename
+          </RACButton>
+          {isShown && (
+            <ModalFrame overlayClass="dialog-overlay" panelClass="dialog" isOpen>
+              <RACDialog>
+                <Heading slot="title">Rename the workspace</Heading>
+                <RACButton
+                  onPress={() => {
+                    setShown(false);
+                  }}
+                >
+                  Done
+                </RACButton>
+              </RACDialog>
+            </ModalFrame>
+          )}
+        </>
+      );
+    }
+    render(<Page />);
+    const opener = screen.getByRole('button', { name: 'Rename' });
+    await user.click(opener);
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+  });
+
+  it('leaves focus on the body when what opened it has left the page', () => {
+    holdFrames();
+    const page = (hasOpener: boolean, isOpen: boolean): ReactElement => (
+      <>
+        {hasOpener && <button type="button">Rename</button>}
+        <Frame isOpen={isOpen} />
+      </>
+    );
+    const { rerender } = render(page(true, false));
+    const opener = screen.getByRole('button', { name: 'Rename' });
+    opener.focus();
+    rerender(page(true, true));
+    expect(screen.getByRole('dialog')).toHaveFocus();
+    rerender(page(false, true));
+    expect(opener).not.toBeInTheDocument();
+    rerender(page(false, false));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.body).toHaveFocus();
   });
 
   it('copies the theme of the focused trigger onto the panel, and nothing onto the scrim', () => {
