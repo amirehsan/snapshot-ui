@@ -9,14 +9,15 @@ import {
   composeRenderProps,
 } from 'react-aria-components';
 import { Description } from '../field/Description';
+import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
 
-export interface RadioProps extends Omit<RadioFieldProps, 'children' | 'className' | 'style'> {
+export interface RadioBaseProps extends Omit<RadioFieldProps, 'children' | 'className' | 'style'> {
   /**
    * The option's label. It wraps inside the row when it is long, even a word
-   * with no break in it, and inline markup stays in one run of text. Without
-   * one, give the radio an `aria-label`.
+   * with no break in it, and inline markup stays in one run of text. Required
+   * unless the radio has an `aria-label` or an `aria-labelledby`.
    */
   children?: ReactNode;
   /** A hint under the option's row. It becomes the radio's accessible description. */
@@ -29,6 +30,11 @@ export interface RadioProps extends Omit<RadioFieldProps, 'children' | 'classNam
   /** A ref to the native radio input. */
   inputRef?: Ref<HTMLInputElement>;
 }
+
+/**
+ * The props of a radio. A name is required: its `children`, an `aria-label` or an `aria-labelledby`.
+ */
+export type RadioProps = RadioBaseProps & AccessibleName<'children'>;
 
 /**
  * One option of a `RadioGroup`: a full-pill row holding a dot and the label,

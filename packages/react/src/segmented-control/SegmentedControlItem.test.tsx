@@ -25,6 +25,23 @@ describe('SegmentedControlItem', () => {
     );
   });
 
+  it('requires its children in its types, and takes an aria-label as an extra', () => {
+    // Each @ts-expect-error line below fails `pnpm typecheck` if the type stops requiring a name.
+    // @ts-expect-error an option with no children has nothing to draw and no name
+    const nameless = <SegmentedControlItem value="light" />;
+    // @ts-expect-error an aria-label names an option and does not replace what it shows
+    const byAriaLabelAlone = <SegmentedControlItem value="light" aria-label="Light" />;
+    // @ts-expect-error an aria-labelledby names an option and does not replace what it shows
+    const byLabelledbyAlone = <SegmentedControlItem value="light" aria-labelledby="light-name" />;
+    const labelled = <SegmentedControlItem value="light">Light</SegmentedControlItem>;
+    const iconOnly = (
+      <SegmentedControlItem value="light" aria-label="Light">
+        <svg viewBox="0 0 24 24" />
+      </SegmentedControlItem>
+    );
+    expect([nameless, byAriaLabelAlone, byLabelledbyAlone, labelled, iconOnly]).toHaveLength(5);
+  });
+
   it('keeps an option that cannot be chosen out of the keys and the form', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn<(value: string) => void>();

@@ -8,6 +8,7 @@ import {
   type LinkProps as RACLinkProps,
   composeRenderProps,
 } from 'react-aria-components';
+import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 
 export type IconButtonVariant = 'ghost' | 'outline';
@@ -21,24 +22,6 @@ interface IconButtonOptions {
    */
   variant?: IconButtonVariant;
 }
-
-/**
- * An icon has no text to name the button, so the types require a name: a label, or the id of an
- * element that holds it.
- */
-type AccessibleName =
-  | {
-      /** The accessible name. Required unless `aria-labelledby` gives one. */
-      'aria-label': string;
-      /** The id of an element that holds the accessible name. */
-      'aria-labelledby'?: string;
-    }
-  | {
-      /** The accessible name. Required unless `aria-labelledby` gives one. */
-      'aria-label'?: string;
-      /** The id of an element that holds the accessible name. */
-      'aria-labelledby': string;
-    };
 
 /** The button form, the default. It has no pending state, because an icon has nowhere to show one. */
 type IconButtonAction = Omit<RACButtonProps, 'aria-label' | 'aria-labelledby' | 'isPending'> & {
@@ -55,10 +38,10 @@ type IconButtonAnchor = Omit<RACLinkProps, 'aria-label' | 'aria-labelledby' | 'h
 
 /**
  * A button that holds one icon, or a link drawn the same way when given an `href`. The child is the
- * icon, such as a Lucide icon. It is hidden from assistive technology, so the name comes from
- * `aria-label` or `aria-labelledby`, which the types require.
+ * icon, such as a Lucide icon. It is hidden from assistive technology and has no text, so the name comes
+ * from `aria-label` or `aria-labelledby`, which the types require.
  */
-export type IconButtonProps = IconButtonOptions & AccessibleName & (IconButtonAction | IconButtonAnchor);
+export type IconButtonProps = IconButtonOptions & AriaName & (IconButtonAction | IconButtonAnchor);
 
 const classes =
   (variant: IconButtonVariant) =>

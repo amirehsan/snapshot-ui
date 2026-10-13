@@ -34,6 +34,18 @@ describe('TextArea', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('requires an accessible name in its types', () => {
+    // Each @ts-expect-error line below fails `pnpm typecheck` if the type stops requiring a name.
+    // @ts-expect-error a field with no label, aria-label or aria-labelledby has no name
+    const nameless = <TextArea />;
+    // @ts-expect-error a hint and a placeholder are not a name
+    const unnamed = <TextArea description="Shown under the title." placeholder="Title" />;
+    const labelled = <TextArea label="Title" />;
+    const byAriaLabel = <TextArea aria-label="Title" />;
+    const byLabelledby = <TextArea aria-labelledby="heading" />;
+    expect([nameless, unnamed, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+  });
+
   it('is a textarea and not an input: it carries no type once it has mounted', () => {
     render(<TextArea label="Notes" />);
     expect(screen.getByRole('textbox')).not.toHaveAttribute('type');

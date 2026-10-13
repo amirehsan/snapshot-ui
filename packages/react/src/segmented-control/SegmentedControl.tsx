@@ -12,6 +12,7 @@ import { Description } from '../field/Description';
 import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
+import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
 import { useStacking } from './useStacking';
@@ -23,8 +24,8 @@ export interface SegmentedControlBaseProps extends Omit<
   'children' | 'className' | 'orientation'
 > {
   /**
-   * The control's name, shown above it with the Changed chip. Without one,
-   * give the control an `aria-label` (or an `aria-labelledby`).
+   * The control's name, shown above it with the Changed chip. Required unless the control has an
+   * `aria-label` or an `aria-labelledby`.
    */
   label?: ReactNode;
   /** A hint under the control. It becomes the group's accessible description. */
@@ -61,21 +62,11 @@ export interface SegmentedControlBaseProps extends Omit<
   ref?: Ref<HTMLDivElement>;
 }
 
-/** What names the control: a visible label, or an `aria-label`, or an `aria-labelledby`. */
-interface LabelledByLabel {
-  label: ReactNode;
-}
-interface LabelledByAriaLabel {
-  label?: undefined;
-  'aria-label': string;
-}
-interface LabelledByElement {
-  label?: undefined;
-  'aria-labelledby': string;
-}
-
-export type SegmentedControlProps = SegmentedControlBaseProps &
-  (LabelledByLabel | LabelledByAriaLabel | LabelledByElement);
+/**
+ * The props of SegmentedControl. The types require a name: a visible `label`, an `aria-label` or an
+ * `aria-labelledby`.
+ */
+export type SegmentedControlProps = SegmentedControlBaseProps & AccessibleName<'label'>;
 
 /**
  * A few short options seen at once, of which one is chosen. Built on React

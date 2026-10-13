@@ -1034,6 +1034,16 @@ No component writes a corner of its own, or the shape could not reach it.
 - **Minimum sizes:** 14px for sentences, 12px for short uppercase labels.
 - **Touch targets stay at 40px.** A control drawn smaller extends its hit area
   with a pseudo-element, as the app's menu row buttons do.
+- **A field's props require an accessible name.** A field is named by a
+  visible `label`, or by its text as `children` where it has no `label` prop
+  (Checkbox, Switch and Radio), or by an `aria-label` or an `aria-labelledby`.
+  IconButton has no text of its own and takes the last two. A segmented option
+  is the exception: it draws its `children`, which stay required, and an
+  `aria-label` is an extra for an option that shows only an icon. The types
+  require a name, so code that names nothing does not compile. Every component
+  states the rule through one shared type. A union cannot be extended, so each
+  field also exports its base props type (`TextFieldBaseProps` and so on) for
+  a wrapper to extend or `Omit`.
 - **A state that only a fill carries is also drawn in forced colors.** Windows
   high contrast repaints every background with the reader's canvas, and it
   draws a border and an outline in the reader's text color. A state that a

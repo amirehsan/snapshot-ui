@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { ComponentType } from 'react';
 import { expect } from 'storybook/test';
 import { tokenColor } from '../stories/paint';
-import { TextArea } from './TextArea';
+import { TextArea, type TextAreaBaseProps } from './TextArea';
 
 /** The corner radius a token paints in the current shape, read by painting it. */
 function tokenRadius(name: string): string {
@@ -30,7 +31,9 @@ const OVER_BUDGET = 'A shared space for the Northwind design team.\nBriefs, revi
 
 const meta = {
   title: 'Components/TextArea',
-  component: TextArea,
+  // The component's props are a union, since it needs a name, and Storybook cannot narrow a union.
+  // The stories are written against the props every member shares.
+  component: TextArea as ComponentType<TextAreaBaseProps>,
   args: { label: 'Short description', placeholder: 'A shared space for the Northwind design team' },
   decorators: [
     (Story) => (
@@ -39,7 +42,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof TextArea>;
+} satisfies Meta<TextAreaBaseProps>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

@@ -12,15 +12,19 @@ import { Description } from '../field/Description';
 import { FieldError } from '../field/FieldError';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
+import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
 
 export type CheckboxGroupOrientation = 'vertical' | 'horizontal';
 
-export interface CheckboxGroupProps extends Omit<RACCheckboxGroupProps, 'children' | 'className'> {
+export interface CheckboxGroupBaseProps extends Omit<RACCheckboxGroupProps, 'children' | 'className'> {
   /** The checkboxes. Each needs a `value`. */
   children?: ReactNode;
-  /** The group's name, shown above the checkboxes. Without one, give the group an `aria-label`. */
+  /**
+   * The group's name, shown above the checkboxes. Required unless the group has an `aria-label` or an
+   * `aria-labelledby`.
+   */
   label?: ReactNode;
   /** A hint under the checkboxes. It becomes the group's accessible description. */
   description?: ReactNode;
@@ -52,6 +56,11 @@ export interface CheckboxGroupProps extends Omit<RACCheckboxGroupProps, 'childre
   /** A ref to the group's root element. */
   ref?: Ref<HTMLDivElement>;
 }
+
+/**
+ * The props of a checkbox group. A name is required: its `label`, an `aria-label` or an `aria-labelledby`.
+ */
+export type CheckboxGroupProps = CheckboxGroupBaseProps & AccessibleName<'label'>;
 
 /**
  * A labelled group of checkboxes that share one value, an array of the checked

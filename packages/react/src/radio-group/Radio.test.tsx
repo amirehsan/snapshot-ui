@@ -41,6 +41,18 @@ describe('Radio', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('requires an accessible name in its types', () => {
+    // Each @ts-expect-error line below fails `pnpm typecheck` if the type stops requiring a name.
+    // @ts-expect-error a radio with no text, aria-label or aria-labelledby has no name
+    const nameless = <Radio value="weekly" />;
+    // @ts-expect-error a hint is not a name
+    const hinted = <Radio value="weekly" description="Every Tuesday morning." />;
+    const labelled = <Radio value="weekly">Weekly</Radio>;
+    const byAriaLabel = <Radio value="weekly" aria-label="Weekly" />;
+    const byLabelledby = <Radio value="weekly" aria-labelledby="weekly-name" />;
+    expect([nameless, hinted, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+  });
+
   it('ties a hint to the radio as its accessible description', async () => {
     const { container } = render(
       <RadioGroup label="Newsletter frequency">

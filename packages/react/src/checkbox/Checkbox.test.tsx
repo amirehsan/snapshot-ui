@@ -35,6 +35,18 @@ describe('Checkbox', () => {
     await expectNoA11yViolations(container);
   });
 
+  it('requires an accessible name in its types', () => {
+    // Each @ts-expect-error line below fails `pnpm typecheck` if the type stops requiring a name.
+    // @ts-expect-error a checkbox with no text, aria-label or aria-labelledby has no name
+    const nameless = <Checkbox />;
+    // @ts-expect-error a hint is not a name
+    const hinted = <Checkbox description="Shown under the label." />;
+    const labelled = <Checkbox>Remember me</Checkbox>;
+    const byAriaLabel = <Checkbox aria-label="Select row 3" />;
+    const byLabelledby = <Checkbox aria-labelledby="row-3" />;
+    expect([nameless, hinted, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+  });
+
   it('has the box and the text in one label, so the whole row is the target', () => {
     const { container } = render(<Checkbox>Remember me</Checkbox>);
     const labels = container.querySelectorAll('label');

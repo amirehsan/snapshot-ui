@@ -15,13 +15,15 @@ import { Description } from '../field/Description';
 import { FieldChanged } from '../field/FieldChanged';
 import { FieldError } from '../field/FieldError';
 import { useChangedDescription } from '../field/useChangedDescription';
+import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
 
-export interface CheckboxProps extends Omit<RACCheckboxFieldProps, 'children' | 'className'> {
+export interface CheckboxBaseProps extends Omit<RACCheckboxFieldProps, 'children' | 'className'> {
   /**
    * The label, shown beside the box. The whole row is the label, so a press
-   * anywhere on it toggles the box. Without one, give the checkbox an `aria-label`.
+   * anywhere on it toggles the box. Required unless the checkbox has an `aria-label` or an
+   * `aria-labelledby`.
    */
   children?: ReactNode;
   /** A hint under the label. It becomes the checkbox's accessible description. */
@@ -54,6 +56,11 @@ export interface CheckboxProps extends Omit<RACCheckboxFieldProps, 'children' | 
   /** A ref to the input element. */
   inputRef?: Ref<HTMLInputElement>;
 }
+
+/**
+ * The props of a checkbox. A name is required: its `children`, an `aria-label` or an `aria-labelledby`.
+ */
+export type CheckboxProps = CheckboxBaseProps & AccessibleName<'children'>;
 
 /**
  * A single checkbox: the box, its label, an optional hint, an error line and
