@@ -5381,6 +5381,11 @@ far past the 3:1 a graphic needs.
 **Right to left.** The svg is mirrored by `--chart-flip`, so the oldest
 value is at the right and the newest at the left, and the end point sits at
 `inset-inline-start: 100%`, which is the left edge under `dir="rtl"`.
+`--chart-flip` is set only by a `dir="ltr"` or `dir="rtl"` attribute, while
+the dot follows the computed `direction`; under `dir="auto"` or a CSS
+`direction` with no attribute the two can disagree, so the docs ask for an
+explicit `dir`. A domain wider than a number can hold, such as -1e308 to
+1e308, is scaled by halves, so no point is ever NaN.
 
 **Where the build departs from the plan.** The size limit is 1.5 kB, above
 the spec's 1 kB budget: the entry measured 843 B, and the rule rounds up to

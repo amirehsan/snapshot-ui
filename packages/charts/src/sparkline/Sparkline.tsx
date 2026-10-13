@@ -10,7 +10,7 @@ export type SparklineProps = Omit<
 > &
   Partial<AriaName> & {
     /** The values, oldest first. */
-    data: number[];
+    data: readonly number[];
     /** Marks the last point with a dot. @default true */
     hasEndPoint?: boolean;
     /** Fills under the line with a 10% ink wash. @default false */

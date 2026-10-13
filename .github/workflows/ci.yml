@@ -74,13 +74,15 @@ jobs:
       # names. A tarball that still holds one would install nowhere, so every publishable package is packed
       # here as the release does, offline, and checked. The packages were built by pnpm verify above.
       - name: Pack every publishable package as the release does
+        # bash, so a failing tar in the pipe fails the step (pipefail) instead of feeding grep nothing.
+        shell: bash
         run: |
           pnpm --filter "./packages/*" exec pnpm pack --pack-destination "$RUNNER_TEMP/packs"
           count=0
           for tarball in "$RUNNER_TEMP"/packs/*.tgz; do
             count=$((count + 1))
-            if tar -xOzf "$tarball" package/package.json | grep -q '"workspace:'; then
-              echo "$tarball still holds a workspace: range" >&2
+            if tar -xOzf "$tarball" package/package.json | grep -Eq '"(workspace|catalog):'; then
+              echo "$tarball still holds a workspace: or catalog: range" >&2
               exit 1
             fi
           done
