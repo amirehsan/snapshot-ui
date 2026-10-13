@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { AppShell } from '../src/app-shell';
+import { BottomTabBar, BottomTabBarItem } from '../src/bottom-tab-bar';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { CollapsibleCard } from '../src/collapsible-card';
@@ -326,6 +327,30 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'Mod K',
     ],
     ['role="dialog"', 'sidebar-drawer'],
+  ],
+  [
+    // Pure CSS and links: nothing is measured, and the count warning is an effect, which a server never runs.
+    'BottomTabBar',
+    <BottomTabBar aria-label="Main">
+      <BottomTabBarItem href="/" icon={<svg />} isCurrent>
+        Home
+      </BottomTabBarItem>
+      <BottomTabBarItem href="/transactions" icon={<svg />} count={12} countLabel="to review">
+        Transactions
+      </BottomTabBarItem>
+      <BottomTabBarItem href="/goals" icon={<svg />}>
+        Goals
+      </BottomTabBarItem>
+      <BottomTabBarItem icon={<svg />}>More</BottomTabBarItem>
+    </BottomTabBar>,
+    [
+      '<nav',
+      'class="tab-bar"',
+      'aria-current="page"',
+      'class="tab-bar-count"',
+      '<button',
+      'class="tab-bar-item',
+    ],
   ],
 ];
 

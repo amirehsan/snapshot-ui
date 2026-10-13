@@ -394,6 +394,22 @@ test.describe('forced colors', () => {
     expect(plain.fill).toBe(await systemColor(page, 'CanvasText'));
   });
 
+  test('the current tab is Highlight and a count chip is CanvasText', async ({ page }) => {
+    // The current item is an ink fill and the chip a fill, which the repaint would drop: the item is drawn in the
+    // selection colors and the chip in the reader's text color, so both still show.
+    await visit(page, '/docs/components/bottom-tab-bar');
+    const example = page.locator('.stage').first();
+    const item = await paint(example.locator('.tab-bar-item[aria-current="page"]'));
+    expect(item.fill).toBe(await systemColor(page, 'Highlight'));
+    expect(item.text).toBe(await systemColor(page, 'HighlightText'));
+    const chip = await paint(
+      example
+        .getByRole('link', { name: 'Transactions, 12 to review', exact: true })
+        .locator('.tab-bar-count'),
+    );
+    expect(chip.fill).toBe(await systemColor(page, 'CanvasText'));
+  });
+
   test('a tooltip keeps a border and loses its arrow', async ({ page }) => {
     // The arrow is an svg fill, which the repaint would turn into a shape of the wrong color or none, so it
     // goes. The tip's transparent border is repainted in the reader's text color, so the tip keeps its shape.
@@ -470,6 +486,8 @@ const LONG_TARGETS: Record<string, string[]> = {
 
 /** The pages with no text a person writes, each with its reason. A page is in one list or the other. */
 const NO_LONG_TEXT: Record<string, string> = {
+  'bottom-tab-bar':
+    'a tab label is one word on one line and ellipsizes as a last resort; the name holds the full label',
   button: 'a label is a short command on one line by design (white-space: nowrap), not text that wraps',
   'command-palette':
     "its text is in a portal that opens on a press or a key; the Narrow story's 375px baseline pins its wrapping",
@@ -577,6 +595,7 @@ for (const slug of SLUGS) {
 const SERVER_RENDERED: Record<string, string[]> = {
   'app-shell': ['.stage .app-shell'],
   badge: ['.stage .badge'],
+  'bottom-tab-bar': ['.stage .tab-bar'],
   button: ['.stage .button'],
   card: ['.stage .card', '.stage .card-title', '.stage .card-note'],
   checkbox: ['.stage .checkbox-box'],

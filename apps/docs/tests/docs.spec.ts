@@ -1782,3 +1782,67 @@ test('the sidebar page opens the real drawer from its example and Escape closes 
   await expect(drawer).toHaveCount(0);
   await expect(button).toBeFocused();
 });
+
+test.describe('the tab bar on a phone', () => {
+  test.use({ viewport: { width: 375, height: 760 } });
+
+  test('the tab bar page names a counted tab with its count, in the browser', async ({ page }) => {
+    // A browser joins a link's parts as the page lays them out, so the name is checked here as well as in jsdom.
+    await visit(page, '/docs/components/bottom-tab-bar');
+    const bar = page.getByRole('navigation', { name: 'Main', exact: true });
+    await expect(bar.getByRole('link', { name: 'Transactions, 12 to review', exact: true })).toBeVisible();
+    await expect(bar.getByRole('link', { name: 'Home', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    // The items share one row, whatever the page's prose does to its own lists.
+    const tops = await bar
+      .locator('.tab-bar-item')
+      .evaluateAll((items) => items.map((item) => Math.round(item.getBoundingClientRect().top)));
+    expect(tops).toHaveLength(4);
+    expect(new Set(tops).size).toBe(1);
+  });
+
+  test('the tab bar page opens the More sheet and closes it from the keyboard', async ({ page }) => {
+    await visit(page, '/docs/components/bottom-tab-bar');
+    const bar = page.getByRole('navigation', { name: 'Main, with More', exact: true });
+    const more = bar.getByRole('button', { name: 'More', exact: true });
+    await more.click();
+    const sheet = page.getByRole('dialog', { name: 'More', exact: true });
+    // Focus moves in once the sheet has risen, as on the sheet page.
+    await expect(sheet).toBeFocused();
+    await expect(more).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+    await expect(more).toBeFocused();
+  });
+
+  test('the app shell page reserves room under the page for the tab bar on a phone', async ({ page }) => {
+    await visit(page, '/docs/components/app-shell');
+    const frame = page.locator('.stage-phone');
+    const workspace = frame.locator('.app-shell-workspace');
+    await expect(workspace).toHaveCSS('padding-bottom', '64px');
+    await expect(frame.locator('.tab-bar')).toBeVisible();
+  });
+});
+
+test('the phone frame shows the tab bar on a wide screen, and the bar hides itself there without it', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/app-shell');
+  // The frame is a phone at every width, so the bar and the reserve show in it on a wide screen too.
+  await page.locator('.stage-phone').evaluate((element) => {
+    element.setAttribute('data-phone-example', '');
+  });
+  const frame = page.locator('[data-phone-example]');
+  const workspace = frame.locator('.app-shell-workspace');
+  await expect(workspace).toHaveCSS('padding-bottom', '64px');
+  await expect(frame.locator('.tab-bar')).toBeVisible();
+  // Without the frame's class, the component's own rules apply: no bar and no reserve from 1024px up.
+  await frame.evaluate((element) => {
+    element.classList.remove('stage-phone');
+  });
+  await expect(workspace).toHaveCSS('padding-bottom', '0px');
+  await expect(frame.locator('.tab-bar')).toBeHidden();
+});

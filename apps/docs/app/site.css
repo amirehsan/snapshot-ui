@@ -364,6 +364,20 @@
   .stage:has(.stage-shell) {
     padding: 0;
   }
+
+  /* A phone's screen for an example of the tab bar, 375px at most. Layout containment makes it the containing
+     block of the bar, which is fixed to the viewport in an app, so the bar docks at the frame's bottom edge. */
+  .stage-phone {
+    position: relative;
+    width: 100%;
+    max-width: 375px;
+    height: 30rem;
+    margin-inline: auto;
+    overflow: hidden;
+    contain: layout;
+    border-radius: var(--radius-surface);
+    background-color: var(--color-canvas);
+  }
 }
 
 /*
@@ -377,4 +391,17 @@
   *::after {
     transition: none;
   }
+}
+
+/*
+ * The phone frame is 375px wide on a 1280px screen, where the tab bar hides itself and the shell drops the room
+ * it keeps for it. Unlayered on purpose, as the block above is: a layered rule could not beat the component
+ * layer's display: none at 1024px and up. The bar's own display is block; its list is the flex row.
+ */
+.stage-phone .tab-bar {
+  display: block;
+}
+
+.stage-phone .app-shell[data-has-bottom-bar] {
+  --app-shell-inset-block-end: calc(4rem + env(safe-area-inset-bottom, 0px));
 }

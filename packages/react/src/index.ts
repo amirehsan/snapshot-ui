@@ -138,3 +138,9 @@ export {
   type SidebarState,
   type SidebarTriggerProps,
 } from './sidebar';
+export {
+  BottomTabBar,
+  BottomTabBarItem,
+  type BottomTabBarItemProps,
+  type BottomTabBarProps,
+} from './bottom-tab-bar';

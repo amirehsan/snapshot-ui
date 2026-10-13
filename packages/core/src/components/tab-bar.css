@@ -1,0 +1,199 @@
+/*
+ * BottomTabBar: the phone's destinations, docked flush with the bottom edge with the safe area padded
+ * inside it, derived in docs/design-system.md ("BottomTabBar"). The float fill and a hairline top edge
+ * separate it from the page; no radius and no shadow, because the shadow tokens cast downward and show
+ * nothing at a bottom edge. Items are 56px, over the consumer's 44px target, with a 20px icon, a 4px
+ * gap and a 14px label at the action weight, in a 4rem bar that app-shell.css reserves under the page;
+ * test/css.test.js keeps the two 4rem equal. Labels ellipsize as a last resort and the name holds the
+ * whole label. The two inline paddings are physical because the safe-area insets are. 1024px is the
+ * --breakpoint-md token, written out because a media query cannot read a custom property.
+ */
+@layer components {
+  .tab-bar {
+    --tab-bar-height: 4rem;
+
+    position: fixed;
+    inset-block-end: 0;
+    inset-inline: 0;
+    z-index: var(--z-chrome);
+    box-sizing: border-box;
+    min-height: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));
+    /* The hairline is the first of the 4px above the items, so the bar is the 64px it reserves. */
+    padding-top: calc(0.25rem - 1px);
+    padding-bottom: calc(0.25rem + env(safe-area-inset-bottom, 0px));
+    padding-left: max(0.25rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.25rem, env(safe-area-inset-right, 0px));
+    border-block-start: 1px solid var(--color-hairline);
+    background-color: var(--color-float);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  .tab-bar-list {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tab-bar-list > li {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* 450 at 14px on a white bar reads light, and a destination's name is an action: weight 500. 4px each side
+     inside the pill leaves "Transactions" room in four tabs from 349px; docs/design-system.md has the sums. */
+  .tab-bar-item {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    width: 100%;
+    min-height: 3.5rem;
+    margin: 0;
+    padding-block: 0;
+    padding-inline: 0.25rem;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tab-bar-item-icon {
+    position: relative;
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .tab-bar-item-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .tab-bar-item-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The comma that ends a counted item's label, there for the name alone: inline, so a browser adds no
+     space before it as it does at a hidden box's edge, and drawn at no size. */
+  .tab-bar-comma {
+    font-size: 0;
+  }
+
+  /* A solid disc at the icon's top-end corner, because a number cannot sit beside a stacked label. The
+     2px float border cuts it from the icon. It is a chip and takes the pill radius, so it follows the
+     shape; 12px numerals are the Badge's and Kbd's size. */
+  .tab-bar-count {
+    position: absolute;
+    inset-block-start: -0.5rem;
+    inset-inline-start: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    padding-inline: 0.25rem;
+    border: 2px solid var(--color-float);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+    font-size: 0.75rem;
+    line-height: 1;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (hover: hover) {
+    .tab-bar-item:is(:hover, [data-hovered]):not(
+        [aria-current='page'],
+        [data-current],
+        [data-current-action]
+      ) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+      color: var(--color-ink);
+    }
+  }
+
+  .tab-bar-item:is(:active, [data-pressed]):not(
+      [aria-current='page'],
+      [data-current],
+      [data-current-action]
+    ) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    color: var(--color-ink);
+  }
+
+  /* After hover. A button item with isCurrent carries data-current-action, since React Aria's
+     data-current belongs to links. */
+  .tab-bar-item:is([aria-current='page'], [data-current], [data-current-action]) {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .tab-bar-item:is([aria-current='page'], [data-current], [data-current-action]) .tab-bar-count {
+    border-color: var(--color-ink);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+  }
+
+  .tab-bar-item:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* An ink ring inside an ink pill is 1:1, so the ring inverts and goes inside, the segmented control's rule. */
+  .tab-bar-item:is([aria-current='page'], [data-current], [data-current-action]):is(
+      :focus-visible,
+      [data-focus-visible]
+    ) {
+    outline-color: var(--color-canvas);
+    outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
+  }
+
+  @media (width >= 1024px) {
+    .tab-bar {
+      display: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .tab-bar-item:is([aria-current='page'], [data-current], [data-current-action]) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .tab-bar-item:is([aria-current='page'], [data-current], [data-current-action]):is(
+        :focus-visible,
+        [data-focus-visible]
+      ) {
+      outline-color: HighlightText;
+    }
+
+    .tab-bar-count {
+      border-color: canvas;
+      background-color: CanvasText;
+      color: canvas;
+    }
+
+    .tab-bar-item:is([aria-current='page'], [data-current], [data-current-action]) .tab-bar-count {
+      border-color: Highlight;
+      background-color: HighlightText;
+      color: Highlight;
+    }
+  }
+}

@@ -4811,3 +4811,113 @@ bottom, sets `scrollTop` to the item's `offsetTop` less 40px. `.sidebar-nav` is
 `position: relative`, so `offsetTop` is measured from the nav. `scrollTop` and
 never `scrollIntoView`, which scrolls every ancestor; once per mount, since
 after that the reader chose the item.
+
+## BottomTabBar
+
+The phone's destinations become `BottomTabBar` and `BottomTabBarItem`: three
+to five tabs, each an icon over a one-line label with an optional count, the
+page shown as an ink pill with canvas text and `aria-current="page"`, and the
+rest of the app behind a More button that opens a sheet. A named nav of plain
+links in tab order, with no tab roles.
+
+**Docked, not floating.** The document's own nav is a floating pill, and the
+bar departs from it on purpose. The safe area lives at the device's edge, and
+a bar docked flush with that edge pads it inside itself, where a floating bar
+would sit above it with a gap of page showing beneath. Floating also costs
+about 8px of label room per tab, the inset on each side shared out, and that
+decides whether "Transactions" fits four tabs at 375px: docked it has 83.8px
+for its 77.3, floating it would have missed by 1.5px. So the bar is the float
+fill with a hairline top edge, no radius and no shadow: the shadow tokens cast
+downward and show nothing at a bottom edge, and the float fill on canvas
+separates by tone in light and the hairline in dark.
+
+**The 56px item and the 64px bar.** An item is 56px tall, over the consumer's
+44px target and the 40px floor: the 20px icon, a 4px gap and a 20px label
+line, with 6px above and below. The bar is 64px, `--tab-bar-height`: 4px of
+padding above and below the items, the 1px hairline counted in the 4px above,
+since a border on a bar whose height is a promise would add a pixel the page
+does not reserve. `app-shell.css` reserves the same 4rem plus the safe area
+under the page, and a test keeps the two equal. The two inline paddings are
+`max(0.25rem, env(safe-area-inset-left, 0px))` and its right twin, physical
+because the insets are.
+
+**The label** takes the `--text-small` step's size and line height with the
+action weight, 500. At 450, the body weight, 14px on a white bar reads light,
+and a destination's name is an action. Inside the pill the item pads 4px each
+side. It is one line with an ellipsis as a last resort, the one label in the
+library that is cut rather than wrapped, because a tab has one line of room
+and its accessible name always holds the whole label.
+
+**The chip.** A count is a solid disc at the icon's top-end corner, because a
+number cannot sit beside a stacked label: ink with canvas numerals, 18px tall
+with 12px numerals at 700, the Badge's and Kbd's size, tabular. A 2px float
+border cuts it from the icon, a border rather than a box-shadow, which the
+token rule forbids. It is a chip and takes the pill radius, so it follows the
+shape; a dot is only the collapsed rail's 8px mark. On the current item it
+inverts to canvas with ink numerals and an ink border, so it reads inside the
+ink pill.
+
+**The count and the name.** The chip sits in the icon's box, which is hidden
+from assistive technology, so it is decoration; the name's count comes from
+visually hidden words after the label, and the number is in the DOM twice,
+once drawn and once read. A browser joins a link's parts as the page lays them
+out and puts a space at the edge of every flex item and every hidden box: a
+hidden ", 12 to review" after the label, as the spec drew it, reads
+"Transactions , 12 to review" in Chromium. So, as on the rail, the comma ends
+the label, inline and drawn at `font-size: 0` by `.tab-bar-comma`, and a plain
+space comes before the hidden "12 to review": the name is "Transactions, 12 to
+review" in Chromium, in Playwright and in jsdom.
+
+**Capacity, measured.** Sofia Sans at 14px and weight 500, in headless
+Chromium: "Transactions" 77.3px, "Documents" 70.4, "Accounts" 57.5, "Settings"
+50.9, "Insights" 48.4, "Home" 35.9, "Goals" 33.5, "More" 30.6. A label's room
+is `(width - 8) / n - 8`, the bar's 4px each side and the item's 4px each
+side: 70, 83.8 and 87.5px for four tabs at 320, 375 and 390px, and 54, 65 and
+68px for five. So four tabs hold "Transactions" from 349px and never at 320px,
+where it ellipsizes, and five hold labels up to about 60px at 375px. The
+spec's item rule wrote 8px inside each side, which leaves 75.8px at 375px and
+cuts "Transactions"; its own sums count 4px, which the item takes.
+
+**Measured pairs.** Slate on float 5.49 in light and 6.94 in dark, the resting
+label and icon, over 4.5 for text and 3 for an icon; the spec's 6.44 is slate
+on bone, as the sidebar's record says. Canvas on ink and ink on canvas 16.25
+and 19.31, the current item and the chip on it and off it. All three are gated
+already as text and cited by the contrast test, not added. The hover's 5% ink
+wash on float is a cue, 1.11 and 1.14, and not gated.
+
+**States.** Hover is the wash and ink text inside `@media (hover: hover)`,
+never on the current item; a press shows the same look, because touch has no
+hover. The current rule comes after both. A button item with `isCurrent`
+carries `data-current-action`, since React Aria's `data-current` belongs to
+links, and never `aria-current`: a button is not the page shown. The focus
+ring is the token ring outside the item, and on the current item it inverts to
+canvas and goes inside, the segmented control's rule, because an ink ring on
+an ink pill is 1:1.
+
+**A dialog trigger.** In a `SheetTrigger` or a `DialogTrigger`, a button item
+takes `aria-expanded` from React Aria and opens the overlay. React Aria 1.22
+adds `aria-haspopup` for menus and listboxes alone, since screen readers
+announce any value as a menu, so the item carries none unless the app passes
+it.
+
+**Forced colors.** The current item is `Highlight` with `HighlightText` and
+its inset ring `HighlightText`; the chip is `CanvasText` on a `canvas` border
+with `canvas` numerals, and on the current item `HighlightText` with
+`Highlight` numerals and border. Fills alone would be dropped by the repaint.
+
+**Wide screens.** From 1024px up the bar is `display: none`, with no script,
+so it leaves the accessibility tree too, and a rail's nav and the bar's are
+never both in it. The width is `--breakpoint-md` written out, tied to the
+token by a test. The shell's reserve is one property,
+`--app-shell-inset-block-end`, which a save bar will add to rather than
+declare its own.
+
+**Three to five.** The bar warns once per mount, in an effect, through
+`console.warn`, when it holds fewer than three or more than five items, and
+still renders them. A ref keeps Strict Mode's second effect quiet, and a
+server never runs effects, so it never warns there. There is no
+development-only gate, because `process.env` is not typed in the package.
+
+**Not in this release.** When the Android soft keyboard opens, the layout
+viewport shrinks and a fixed bar rides up above the keyboard. Recorded for a
+later minor.

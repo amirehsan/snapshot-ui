@@ -1,0 +1,96 @@
+---
+title: Bottom tab bar
+description: "Three to five destinations docked at the bottom of a phone, each with an icon, a label and a count, hidden on a wide screen."
+icon: PanelBottom
+---
+
+<Section>
+
+## Items and counts
+
+A bottom tab bar is the phone's way between the pages an app opens most. It is docked flush with the bottom edge on the float fill, with a hairline above it and the safe area padded inside it. Each `BottomTabBarItem` is an icon over a one-line label; the page shown is an ink pill. A count is a small ink chip at the icon's corner, and its words are in the name: the Transactions tab below is read as "Transactions, 12 to review".
+
+The examples on this page sit in a phone's frame, so the bar docks at the frame's bottom edge rather than the window's.
+
+<Preview name="bottom-tab-bar-basic" />
+
+</Section>
+
+<Section>
+
+## The More button
+
+An item without `href` is a button. Wrap it in a `SheetTrigger` with a [Sheet](/docs/components/sheet) of the other pages, and it opens the sheet and says whether it is open. Given `onPress` instead, it does what the app says. `isCurrent` on a button draws the pill and sets no `aria-current`: a button is not the page shown, and the sheet carries its own current link.
+
+<Preview name="bottom-tab-bar-more" />
+
+</Section>
+
+<Section>
+
+## Capacity
+
+Four short labels; five at most, each under about 60px at 375px. The bar gives each label `(width - 8) / n - 8` pixels: 83.8px for four tabs at 375px and 70px at 320px, 65px and 54px for five. "Transactions" is 77.3px at the label's size and weight, so it fits four tabs from 349px and ellipsizes at 320px. The name is never cut: the label is one line with an ellipsis as a last resort, and the accessible name always holds the whole of it.
+
+Measured in Sofia Sans at 14px and weight 500: Transactions 77.3px, Documents 70.4, Accounts 57.5, Settings 50.9, Insights 48.4, Home 35.9, Goals 33.5 and More 30.6. So Home, Transactions, Goals and More fit at 375px.
+
+</Section>
+
+<Section>
+
+## The safe area
+
+The bar pads the safe area inside itself, under the items and beside them, through `env(safe-area-inset-bottom)` and its left and right twins. On iOS those are 0 unless the page covers the whole screen. In Next.js:
+
+```ts
+// app/layout.tsx
+import type { Viewport } from 'next';
+
+export const viewport: Viewport = { viewportFit: 'cover' };
+```
+
+</Section>
+
+<Section>
+
+## Usage
+
+The bar hides itself from 1024px up by CSS alone, with no script, so it can sit in the page at every width and a wide screen never sees it. Inside an [App shell](/docs/components/app-shell), pass it as `bottomBar`, and below 1024px the page keeps the bar's 64px and the safe area clear under its end. Links navigate through React Aria's `RouterProvider`, which [Routing](/docs/routing) sets up once for the app, and `render` hands an item's anchor to the app's own link where it needs one. The bar warns once in the console when it holds fewer than three items or more than five, and still draws them.
+
+</Section>
+
+<Section>
+
+## Props
+
+`className` and `ref` go on the nav and on each item's link or button, and `className` is merged after the library's class. An item takes a link's props when it has `href`, and a button's when it does not.
+
+<PropsTable label="BottomTabBar props" path="../../packages/react/src/bottom-tab-bar/BottomTabBar.tsx" type="Pick<BottomTabBarProps, 'aria-label' | 'aria-labelledby' | 'children' | 'className'>" />
+
+<PropsTable label="BottomTabBarItem props" path="../../packages/react/src/bottom-tab-bar/BottomTabBarItem.tsx" type="Pick<BottomTabBarItemProps, 'icon' | 'children' | 'isCurrent' | 'count' | 'countLabel' | 'className'>" />
+
+<PropsTable label="Link item props" path="../../packages/react/src/bottom-tab-bar/BottomTabBarItem.tsx" type="Pick<BottomTabBarLinkProps, 'href' | 'routerOptions' | 'render' | 'onHoverStart' | 'onFocus'>" />
+
+<PropsTable label="Button item props" path="../../packages/react/src/bottom-tab-bar/BottomTabBarItem.tsx" type="Pick<BottomTabBarButtonProps, 'onPress' | 'isDisabled'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The bar is a `<nav>` named by its `aria-label`, holding a list of plain links and buttons in tab order, with no tab roles: these are pages, and "tab bar" is the part's name in prose only. The page shown carries `aria-current="page"`. The icon is hidden from assistive technology, and a count's number and words are in the name. A button in a `SheetTrigger` says whether its sheet is open. From 1024px up the bar is `display: none`, so it leaves the accessibility tree too, and a rail's nav and the bar's are never both there.
+
+<Keys rows={[['Tab Shift+Tab', 'Walks the items.'], ['Enter', 'Follows a link, or presses the More button.'], ['Space', 'Presses a button only.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps the bar in the system.
+
+<Rules dos={['Keep to four short labels.', 'Show a count only for what needs attention.', 'Put the rest of the pages behind a More button.']} donts={['Never give the bar six tabs.', 'Never write a label that needs two lines.', 'Never show a tab bar beside a rail on a wide screen.']} />
+
+</Section>
