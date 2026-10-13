@@ -362,6 +362,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   popover: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   sheet: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   spinner: 'a progress mark with no text a person writes',
+  toast: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
 };
 
 test('every component page is given long text, or is listed as having none', () => {
@@ -459,6 +460,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   switch: ['.stage .switch-thumb'],
   'text-area': ['.stage .textarea'],
   'text-field': ['.stage .input'],
+  // The buttons that raise the toasts, and the polite status host, which is in the page before any toast.
+  toast: ['.stage .button', '.stage .toast-status-host'],
   typography: ['.stage .heading', '.stage .copy', '.stage .copy-numeral', '.stage .eyebrow'],
 };
 

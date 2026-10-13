@@ -1,0 +1,135 @@
+/*
+ * Toast: an event in the bottom end corner, 16px in, above every modal. A float with the frame, a
+ * 4px tone stripe at the inline start, the surface corner and the float shadow; 16px by 24px of
+ * padding; an 8px rise on enter through @starting-style, which is above the floor and simply does
+ * not run there; an instant exit. Derived in docs/design-system.md ("Toast").
+ */
+@layer components {
+  /* The polite live region, present before its text, hidden from sight and kept out of aria-hidden. */
+  .toast-status-host {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* --toast-offset-block is 0 and exists so a save bar can lift the stack by its height later. */
+  .toast-region {
+    position: fixed;
+    inset-block-end: calc(var(--overlay-inset) + var(--toast-offset-block, 0px));
+    inset-inline-end: var(--overlay-inset);
+    z-index: var(--z-toast);
+    width: min(28rem, calc(100vw - 2rem));
+    outline: none;
+    pointer-events: none;
+  }
+
+  .toast-list {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: var(--spacing-part);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .toast-list > li {
+    display: contents;
+  }
+
+  .toast {
+    --toast-stripe: var(--color-slate);
+
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 1rem var(--spacing-peer);
+    border: 1px solid var(--color-frame);
+    border-inline-start: 4px solid var(--toast-stripe);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+    pointer-events: auto;
+    transition:
+      opacity 180ms ease,
+      translate 180ms ease;
+  }
+
+  .toast[data-tone='success'] {
+    --toast-stripe: var(--color-success);
+  }
+
+  .toast[data-tone='warning'] {
+    --toast-stripe: var(--color-warning);
+  }
+
+  .toast[data-tone='error'] {
+    --toast-stripe: var(--color-error);
+  }
+
+  @starting-style {
+    .toast {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
+
+  .toast:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .toast-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .toast-title {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+
+  .toast-description {
+    margin: 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+    overflow-wrap: anywhere;
+  }
+
+  /* The 40px dismiss pulls in by 8px at each end, so it takes a 24px band and not 40px: a one-line toast
+     stays 58px tall, its 1px frame and 16px of padding on each side of that band, while the target stays 40px. */
+  .toast-controls {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--spacing-part);
+    margin-block: -0.5rem;
+    margin-inline-end: -0.5rem;
+  }
+
+  /* The frame and the stripe are redrawn in the reader's color, so the words carry the tone. */
+  @media (forced-colors: active) {
+    .toast {
+      border-color: CanvasText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .toast {
+      transition: none;
+    }
+  }
+}
