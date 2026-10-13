@@ -6,8 +6,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import * as library from '../index';
 import { Button } from '../button';
-import { DialogTrigger } from '../dialog';
+import { ConfirmDialog, DialogTrigger } from '../dialog';
 import { Link } from '../link';
+import { openModals } from '../overlay/useOverlayStack';
 import { Drawer, type DrawerProps } from './Drawer';
 
 /** The open drawer's scrim, which React Aria portals to the body. */
@@ -319,6 +320,85 @@ describe('Drawer', () => {
   it('is exported from the package with its trigger', () => {
     expect(library).toHaveProperty('Drawer');
     expect(library).toHaveProperty('DialogTrigger');
+  });
+
+  it('draws no header when the title is hidden and there is no close button, and the title still names it', () => {
+    open({ isTitleHidden: true, hasCloseButton: false, children: NAVIGATION });
+    const dialog = screen.getByRole('dialog', { name: 'Menu' });
+    expect(document.querySelector('.drawer-header')).not.toBeInTheDocument();
+    // The heading sits in its visually hidden box straight inside the content, out of the flow, so the
+    // body's own padding is the top of the panel.
+    const heading = screen.getByRole('heading', { level: 2, name: 'Menu' });
+    const wrapper = heading.parentElement;
+    expect(wrapper?.parentElement).toBe(dialog);
+    expect(wrapper?.style.position).toBe('absolute');
+    expect(dialog).toHaveAttribute('aria-labelledby', heading.id);
+    expect([...dialog.children].map((child) => child.className)).toEqual(['', 'drawer-body']);
+  });
+
+  it('keeps the header for the close button when the title is hidden', () => {
+    open({ isTitleHidden: true });
+    expect(document.querySelector('.drawer-header')).toContainElement(
+      screen.getByRole('button', { name: 'Close' }),
+    );
+  });
+
+  it('makes the body a tab stop while it scrolls and holds nothing to focus, and only then', () => {
+    // jsdom lays nothing out, so the body's heights are given: taller inside than it shows, then not.
+    const inside = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(900);
+    const shown = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
+    const body = (): HTMLElement | null => document.querySelector<HTMLElement>('.drawer-body');
+    try {
+      const { unmount } = open({ children: <p>Long words</p> });
+      expect(body()).toHaveAttribute('tabindex', '0');
+      unmount();
+      inside.mockReturnValue(300);
+      const { unmount: unmountShort } = open({ children: <p>Short words</p> });
+      expect(body()).not.toHaveAttribute('tabindex');
+      unmountShort();
+      // A body that scrolls and holds a link is reached through the link, so a long list gains no extra
+      // stop before its first item.
+      inside.mockReturnValue(900);
+      open({ children: NAVIGATION });
+      expect(body()).not.toHaveAttribute('tabindex');
+    } finally {
+      inside.mockRestore();
+      shown.mockRestore();
+    }
+  });
+
+  it('stacks a confirm dialog over the drawer: one scrim paints, and Escape closes the top one only', async () => {
+    const user = userEvent.setup();
+    render(
+      <Drawer
+        defaultOpen
+        title="Menu"
+        footer={
+          <DialogTrigger>
+            <Button variant="secondary">Sign out</Button>
+            <ConfirmDialog
+              tone="default"
+              title="Sign out of Northwind?"
+              description="You will need your password to come back."
+              confirmLabel="Sign out of Northwind"
+            />
+          </DialogTrigger>
+        }
+      />,
+    );
+    const signOut = screen.getByRole('button', { name: 'Sign out' });
+    await user.click(signOut);
+    expect(screen.getByRole('alertdialog', { name: 'Sign out of Northwind?' })).toBeInTheDocument();
+    expect(openModals()).toHaveLength(2);
+    expect(scrim()).not.toHaveAttribute('data-stacked');
+    expect(document.querySelector('.dialog-overlay')).toHaveAttribute('data-stacked', '');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Menu' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(signOut).toHaveFocus();
+    });
+    expect(openModals()).toHaveLength(1);
   });
 
   it('has no axe violations open with a visible title', async () => {
