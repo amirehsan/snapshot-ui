@@ -120,19 +120,26 @@ export const Flipped: Story = {
   },
 };
 
-/** Free content takes the 24px of a peer gap all round. */
+/**
+ * Free content takes the 24px of a peer gap all round, and a long word in it, such as a share link, breaks
+ * anywhere instead of scrolling the surface sideways.
+ */
 export const Padded: Story = {
   args: {
     children: (
       <p style={{ margin: 0, maxWidth: '20rem' }}>
         Projects you archive leave the list and their members lose access. Bring one back from Settings at any
-        time.
+        time, or share it read-only: snapshotui.com/share/QXJjaGl2ZWRQcm9qZWN0c1JlYWRPbmx5TGlua0Zvck1lbWJlcnM
       </p>
     ),
   },
   render: (args) => <Opened {...args} trigger="About archiving" />,
   play: async () => {
     const popover = await atRest();
+    // The link's token has no break opportunity, so only overflow-wrap keeps it inside the 343px of a 375px
+    // screen, and inside the surface at any width.
+    await expect(popover.scrollWidth).toBeLessThanOrEqual(popover.clientWidth);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
     const padding = getComputedStyle(popover);
     const peer = tokenPixels('--spacing-peer');
     await expect(peer).toBeGreaterThan(0);

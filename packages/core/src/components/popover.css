@@ -9,6 +9,8 @@
     max-width: calc(100vw - 2rem);
     max-height: inherit;
     overflow: auto;
+    /* A long word in free content, such as a share link, breaks anywhere instead of scrolling it sideways. */
+    overflow-wrap: anywhere;
     border: 1px solid var(--color-frame);
     border-radius: var(--radius-surface);
     background-color: var(--color-float);

@@ -3664,8 +3664,13 @@ shadow alone does not close the shape. So it takes `--color-frame`, ink at 12%
 in light and white at 12% in dark, as "Two surfaces the theme switch needed"
 already says for the menu popup. The frame is a cue and not a boundary, as a
 nested card's outline is: nothing depends on seeing it, and the shadow and the
-fill carry the surface. In forced colors it is redrawn in `CanvasText`, so the
-surface keeps its shape.
+fill carry the surface. Painted over the popover's own float fill, it measures
+1.29 against Float in light and 1.43 in dark, which covers its own fill and a
+float it opens over. On the other surfaces it is 1.13 and 1.58 on the page's
+canvas, 1.24 and 1.43 on Lifted, 1.17 and 1.26 on Bone, and 1.29 and 1.26 on
+Raised, light then dark; the float fill alone is 1.13 on the canvas in light
+and 1.11 in dark. In forced colors it is redrawn in `CanvasText`, so the surface
+keeps its shape.
 
 **The corner and the shadow.** `--radius-surface`, the 24px step of a card, a
 list and a field frame, 12px in Soft and 0 in Square, and one step under a
@@ -3692,7 +3697,10 @@ rows sit in that padding, so the popover pads nothing by default. Free content
 takes `isPadded`, 24px (`--spacing-peer`), the gap between peers, as a drawer's
 and a sheet's body do. `matchTriggerWidth` sets `min-width` to the
 `--trigger-width` React Aria writes, so a panel under a wide trigger never sits
-narrower than it; content wider than the trigger still widens it.
+narrower than it; content wider than the trigger still widens it. A long word
+in free content, such as a share link, breaks anywhere (`overflow-wrap:
+anywhere` on the surface, as a card and a dialog body set it), so at 320px it
+wraps inside the 288px and never scrolls the popover sideways.
 
 **Motion.** Opacity and a 4px slide toward the trigger, 140ms ease-out, on
 React Aria's `[data-entering]` and `[data-exiting]`: a popover under its
@@ -3722,6 +3730,8 @@ its default or by the app's own state was opened by no press, so focus can be
 anywhere. It sits at the inline z-index of 100000 React Aria writes, above the
 modal layer, as "Token names" sets out.
 
-**Nothing new is measured.** The surface is Float, and what it holds is ink
-and slate on Float, pairs the contrast gate already holds. The frame is a cue
-that the gate does not hold, by the reasoning above.
+**Nothing new is gated.** The surface is Float, and what it holds is ink and
+slate on Float, pairs the contrast gate already holds. The frame is a cue that
+the gate does not hold, by the reasoning above: its numbers are recorded there
+as information, since the gate holds only minimums and every one of them would
+fail a 3:1 the frame is not asked to meet.
