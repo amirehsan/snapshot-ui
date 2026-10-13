@@ -26,6 +26,20 @@ Controls passed as `actions` sit at the end of the header row, outside the toggl
 
 <Section>
 
+## Remembering the fold
+
+Give a card a `storageKey` and it remembers its fold in this browser: fold it, reload the page, and it is still folded. Cards with the same key fold together, on the page and in other tabs, and a card that find-in-page opens is remembered as open. Every remembered card on the site keeps its fold in one `localStorage` entry, `snapshot-ui:collapsed`, so give each card a key of its own, such as its page and its title. Where the browser blocks storage or refuses a write, the card still folds and opens, but a fold lasts only while a card with a `storageKey` is on the page.
+
+A card whose key was never stored is open, so `defaultExpanded` does not apply, and a card that `isExpanded` controls reads and stores nothing. `onExpandedChange` is called when someone uses this card, by its toggle or by find-in-page. A card that follows another card or tab with the same key is syncing state, not being used, and does not call it.
+
+<Preview name="collapsible-card-remembered" />
+
+A server-rendered page shows a remembered fold only after it has loaded. The server cannot see the browser's storage, so it draws the card open, and the card folds as the page hydrates, at once, with no transition. An app that needs the first frame right controls the card itself, with `isExpanded` from a state the server can read, such as a cookie.
+
+</Section>
+
+<Section>
+
 ## Usage
 
 A card is open on its first render. Pass `defaultExpanded={false}` to start it folded, or control it with `isExpanded` and `onExpandedChange`. The children are the body, laid out as a card's body is. CollapsibleCard is a client component, and a server component can render it, as the first example on this page does.
@@ -54,7 +68,7 @@ export function Notifications() {
 
 The rest of the HTML attributes, `className` and `ref` go on the card's root, and `className` is merged after the library's classes.
 
-<PropsTable path="../../packages/react/src/collapsible-card/CollapsibleCard.tsx" type="Pick<CollapsibleCardProps, 'title' | 'level' | 'note' | 'actions' | 'defaultExpanded' | 'isExpanded' | 'onExpandedChange' | 'as' | 'className'>" />
+<PropsTable path="../../packages/react/src/collapsible-card/CollapsibleCard.tsx" type="Pick<CollapsibleCardProps, 'title' | 'level' | 'note' | 'actions' | 'defaultExpanded' | 'isExpanded' | 'onExpandedChange' | 'storageKey' | 'as' | 'className'>" />
 
 </Section>
 

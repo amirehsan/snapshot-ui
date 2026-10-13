@@ -2410,3 +2410,27 @@ not have, so a plain card is unchanged. Eight things were derived.
 Both are in the contrast gate already, as text on Lifted at 4.5:1, over the
 3:1 an icon needs, so no pair was added, and a test says so. The focus ring is
 the ink ring the gate holds on Lifted.
+
+**Remembering the fold.** `storageKey` keeps every remembered card's fold in
+one `localStorage` entry, `snapshot-ui:collapsed`, a JSON list of the folded
+keys, so a key the browser has not stored is open, and a fold or an open keeps
+the keys of cards on other pages. The page reads it through
+`useSyncExternalStore`: cards with one key share one state, and the `storage`
+event brings in other tabs. An entry that cannot be read reads as nothing
+folded, a write the browser refuses is skipped, neither throws, and the page
+keeps a fold for as long as a remembered card is on it. The server cannot see
+the browser's storage, so its snapshot is open, and a server-rendered card
+folds in the render after hydration. That fold is drawn at once: a card the
+server rendered carries `data-instant`, which turns its transitions off, from
+the server's HTML until two frames after hydration. A first version set the
+mark in a layout effect, for one frame, and on a page with two cards of one
+key it started all five of the second card's transitions in Chromium: the
+first card's `getAnimations()` brought the styles up to date before the second
+card's effect had set its mark. Rendered from the server on, the mark is in
+place before anything reads a style. Measured on a server-rendered page
+hydrated two frames after its first paint, with two cards folded from storage:
+no transition started in Chromium, Firefox or WebKit, against five per card
+with the rule taken out, and a later press moved as usual. Find-in-page opened
+a remembered folded card through the store in all three, by a text fragment
+link in Chromium and WebKit and by `window.find()` in Firefox, and the other
+card with its key opened and the open was stored.

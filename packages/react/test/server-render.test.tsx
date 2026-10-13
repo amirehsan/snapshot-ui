@@ -96,6 +96,15 @@ const CLIENT: [name: string, element: ReactElement, contains: string[]][] = [
       '<div class="card-body"><p>Product updates</p></div>',
     ],
   ],
+  [
+    // The server cannot see the browser's storage, so a card that remembers its fold renders open, and holds
+    // every transition off until hydration has caught up with the fold.
+    'CollapsibleCard with a storageKey',
+    <CollapsibleCard title="Notifications" storageKey="notifications">
+      <p>Product updates</p>
+    </CollapsibleCard>,
+    ['class="card card-collapsible"', 'data-expanded=""', 'data-instant=""', 'aria-expanded="true"'],
+  ],
 ];
 
 describe('the client components on the server', () => {

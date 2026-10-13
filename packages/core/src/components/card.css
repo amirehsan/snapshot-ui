@@ -94,11 +94,12 @@
    * classes, and the rules below add the toggle, the actions, the fold and the
    * space that folds with it, each through a part a plain card does not have.
    *
-   * The root carries data-expanded while the card is open and data-folding
-   * while the fold moves, and the component sets both. The header and the fold
-   * sit in React Aria's disclosure element, .card-disclosure, which draws
-   * nothing. Every state rule reaches them through it from the root, so a card
-   * nested in the body keeps its own state.
+   * The root carries data-expanded while the card is open, data-folding while
+   * the fold moves, and data-instant from a server's HTML until just after
+   * hydration. The component sets all three. The header and the fold sit in
+   * React Aria's disclosure element, .card-disclosure, which draws nothing.
+   * Every state rule reaches them through it from the root, so a card nested
+   * in the body keeps its own state.
    */
 
   /* The header is a grid. The title, which holds the toggle, takes the first
@@ -263,6 +264,17 @@
      card is never cut off at the card's edge. */
   .card-collapsible:is(:not([data-expanded]), [data-folding]) > .card-disclosure > .card-fold > .card-body {
     overflow: hidden;
+  }
+
+  /* The render after hydration is the card catching up with what only the
+     browser knows, such as a remembered fold on a card the server drew open.
+     It is drawn at once, so a page never animates on load: a card the server
+     rendered carries data-instant from the server's HTML until two frames
+     after hydration, and nothing it draws moves while it does. */
+  .card-collapsible[data-instant] > .card-disclosure > .card-header,
+  .card-collapsible[data-instant] > .card-disclosure > .card-header .card-chevron,
+  .card-collapsible[data-instant] > .card-disclosure > .card-fold {
+    transition: none;
   }
 
   /* Forced colors repaint text in the reader's palette, but an svg keeps the
