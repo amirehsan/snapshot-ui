@@ -4112,14 +4112,14 @@ floating surface takes the popup's 24px corner wherever it opens ("Overlays").
 | Field row | `display: flex; align-items: center; gap: 0.75rem; padding: 1rem var(--spacing-peer)`, a divider under it; the 20px slate glass, the field, the spinner while loading, then the Esc key | the docs field's 16px by 20px, regularized onto the peer step; the Esc key sits where the hand reaches to close |
 | Field | `--text-body`, no border, no fill, `outline: none` | the field is the row; its focus is the line below |
 | Placeholder | `--color-slate`, `opacity: 1` | the field's only visible name, so it is read: an exception, below |
-| Body | `flex: 1 1 auto; min-height: min(20rem, 50dvh); overflow-y: auto; overscroll-behavior: contain` | the docs body's floor: one height whether nothing is typed, nothing matches or the list is long, and a longer list scrolls here, the one scroller |
-| Rows | the Menu's list and rows, inline, with no popover; the list's own overflow is `visible` | the rows every list popup shares; the body scrolls, not the list |
+| Body | `display: flex; flex-direction: column; flex: 1 1 auto; min-height: min(20rem, 50dvh)` | the docs body's floor: one height whether nothing is typed, nothing matches or the list is long |
+| Rows | the Menu's list and rows, inline, with no popover; the list fills the body (the Menu's `flex: 1 1 auto; min-height: 0`) and is the one scroller, `overflow-y: auto; overscroll-behavior: contain` | the rows every list popup shares; React Aria measures a page of rows in the element it thinks scrolls, its list, so the page keys move by a page and not to the ends |
 | End value | the Menu's `menu-item-end`: `--text-small`, ink, tabular figures, before the key | an amount belongs to its row, at its end, and reads in columns |
 | Active row, keyboard (`[data-focus-visible]`) | the ink fill; label, icon and end value canvas; the description canvas at 70%; the key chip canvas at 20% with canvas text; no ring | DOM focus never leaves the field, so this is the keyboard user's only focus indicator and must be strong; React Aria sets `data-focus-visible` only when the keyboard moved the row |
 | Active row, pointer (`[data-focused]` alone) | the Menu's 5% wash | the pointer is not choosing yet; hover moves the row, a press chooses |
 | Empty line | `padding: var(--spacing-peer)`, slate, centred | a hint, centred in the body's floor |
 | Status line | clipped to 1px, never `display: none` | it must stay in the accessibility tree |
-| Footer | the up and down keys with "to move", the return key with "to open"; `--text-small`, slate, a divider above; hidden under `@media (pointer: coarse)` | the docs dialog's hints; a phone has no keys to hint |
+| Footer | the up and down keys with "to move", the return key with "to open"; `--text-small`, slate, a divider above; `flex-wrap: wrap`; hidden under `@media (pointer: coarse)` | the docs dialog's hints; translated words wrap instead of running off the surface; a phone has no keys to hint |
 | Motion | the dialog's 180ms fade and 8px rise; none under reduced motion | the Dialog's ("Dialog and ConfirmDialog") |
 
 **The placeholder, an exception.** Placeholders are taupe, the whisper
@@ -4160,7 +4160,10 @@ keystroke cancels the pending one, so it never talks over the letters being
 typed. It says nothing while the field is empty, and nothing while the app is
 loading: when the results land it says their count. 600ms is the quiet period
 the Pagination digest chose, so the library has one number. The count is the
-items the default filter keeps, or every item in manual mode.
+items the default filter keeps, or every item in manual mode. The English
+default says "No results for" the query, "1 result", or the count and
+"results"; `labels.status` replaces the whole function, so a translation
+brings its own plurals.
 
 **The filter.** An item stays when every word of the query, split at
 whitespace, appears in its label, its second line or its keywords, through
@@ -4174,14 +4177,25 @@ list still loading has not yet found nothing.
 
 **The shortcut.** Tokens joined by `+`: the modifiers `Mod`, `Shift` and
 `Alt`, in any order and case, then one key compared with `event.key` without
-case. `Mod` is `metaKey` or `ctrlKey`, either, with no platform sniffing, and a
-modifier that is not listed must be up. A typo, such as `Ctrl+K`, throws as the
-palette mounts. One `keydown` listener on the document, in the bubble phase,
-while the palette is mounted: it leaves a key an editor has already handled
-(`defaultPrevented`) and a key typed while composing, and does nothing while
-another modal is in the overlay stack, so a confirm dialog is never skipped
-past. When it acts it takes the key. It toggles: from inside the field, React
-Aria hands the key on to the list, and it reaches the listener from there.
+case. A key that is a Latin letter or a digit also matches by position: when
+`event.key` is not itself a Latin letter or digit, `event.code` (`KeyK`,
+`Digit1`) stands in. On a Persian, Arabic, Hebrew, Greek or Russian layout,
+Ctrl+K reports the layout's own letter, such as noon or el, and Option on a Mac
+types a symbol, so without the position the palette would never open there,
+and the browser would take the key instead. The character still comes first,
+so a Latin layout that moves the letters, such as Dvorak or AZERTY, matches the
+letter printed on the key and not the QWERTY position. `Mod` is `metaKey` or
+`ctrlKey`, either, with no platform sniffing, and a modifier that is not listed
+must be up. A typo, such as `Ctrl+K`, throws as the palette mounts. One
+`keydown` listener on the document, in the bubble phase, while the palette is
+mounted: it leaves a key an editor has already handled (`defaultPrevented`) and
+a key typed while composing, and does nothing while another of the library's
+modals (Dialog, ConfirmDialog, Drawer, Sheet) is in the overlay stack, so a
+confirm dialog is never skipped past. An app's own modal is not in the stack;
+the docs ask it to prevent the shortcut's keydown, or to pass
+`shortcut={false}` while it is open. When it acts it takes the key. It toggles:
+from inside the field, React Aria hands the key on to the list, and it reaches
+the listener from there.
 
 **Close, then act.** Choosing records the item in the recents, closes the
 palette, which tells `onOpenChange(false)`, and waits. The panel leaves after
@@ -4192,7 +4206,11 @@ runs one frame after that, with the item as the app passed it. React Aria's
 the unmount instead. The app's palette closed first for the same reason: focus
 given back after the app has moved it would undo the move, and the last word
 is the app's. The `OnActionKeepsFocus` story pins it in a real browser: a field
-that `onAction` focuses still has focus two frames later.
+that `onAction` focuses still has focus two frames later. A choice waits only
+for the close it made: opening again, and any close the palette did not make
+for a choice (Escape, the scrim, the shortcut), drops it, so a choice whose
+panel never left, because a caller kept the palette open or it reopened during
+its exit, never runs on a later, unrelated close.
 
 **Recents.** With `storageKey`, one `localStorage` entry per key,
 `snapshot-ui:recent:<storageKey>`, a JSON list of ids as strings, newest first,
@@ -4203,7 +4221,8 @@ render agree, and kept in memory while a palette with the key is on the page,
 so a choice is still listed where storage refuses it. Unreadable JSON, a list
 that is not one, blocked storage and a refused write mean no history and no
 error. With `recentIds` the app owns the list: the palette stores nothing and
-hands the new list to `onRecentChange`. Only ids still in `items` are shown,
+hands the new list to `onRecentChange`, in the app's own keys. Without it,
+`onRecentChange` still hears each new list as stored, every id a string. Only ids still in `items` are shown,
 under a Recent section, while the field is empty; their rows carry keys of
 their own, `recent:<id>`, so the list's keys stay unique, and choosing one runs
 `onAction` with the item, not its copy.
@@ -4216,11 +4235,14 @@ reads badly, the list becomes React Aria's `ListBox` with
 `selectionMode="none"` and `onAction`, which takes the same rows, at no change
 to the props. The stories skip two of axe's checks, each on one element: the
 Menu's label-in-name check on its rows ("Menu"), and the scrollable-region
-check on the body. The field owns the list through `aria-controls` and
-`aria-activedescendant`, as a combobox owns its popup, which axe exempts; the
-arrows, Home, End and the page keys move the active row and React Aria scrolls
-it into view. A tab stop on the body would make the field no longer the
-dialog's only one.
+check on the list, which is the one scroller. The field owns the list through
+`aria-controls` and `aria-activedescendant`, as a combobox owns its popup,
+which axe exempts; the arrows, Home, End and the page keys move the active row
+and React Aria scrolls it into view, which the `Recent` story shows (Arrow Up
+wraps to the last row, inside the list, scrolled) and the `Keys` story shows
+for the page keys. The override keeps the select and textarea axe skips by
+default (`*:not(select, textarea, .command-palette-list)`). A tab stop on the
+list would make the field no longer the dialog's only one.
 
 **Scope and direction.** The frame records what held focus when the palette
 opened, before the field's `autoFocus` takes it, and copies its theme, shape

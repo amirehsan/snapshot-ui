@@ -203,12 +203,16 @@ const meta = {
       config: {
         rules: [
           ...MENU_ROW_A11Y.config.rules,
-          // Axe's scrollable-region check, skipped on the palette's body alone. The field keeps focus and owns
-          // the list through aria-controls and aria-activedescendant, as a combobox owns its popup, which axe
-          // exempts: the arrows, Home, End and the page keys move the active row, and React Aria scrolls it
-          // into view. A tab stop on the body would make the field no longer the dialog's only one. Recorded in
-          // docs/design-system.md ("CommandPalette").
-          { id: 'scrollable-region-focusable', selector: '*:not(.command-palette-body)' },
+          // Axe's scrollable-region check, skipped on the palette's list alone, the one scroller, and still
+          // skipping the select and textarea axe skips by default. The field keeps focus and owns the list
+          // through aria-controls and aria-activedescendant, as a combobox owns its popup, which axe exempts:
+          // the arrows, Home, End and the page keys move the active row, and React Aria scrolls it into view
+          // (the Recent and Keys stories show it). A tab stop on the list would make the field no longer the
+          // dialog's only one. Recorded in docs/design-system.md ("CommandPalette").
+          {
+            id: 'scrollable-region-focusable',
+            selector: '*:not(select, textarea, .command-palette-list)',
+          },
         ],
       },
     },
@@ -220,7 +224,9 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * Opened with nothing typed: the remembered items first, under Recent, then everything. The surface floats
- * 12vh from the top of the viewport, so the list grows down from a field that stays put.
+ * 12vh from the top of the viewport, so the list grows down from a field that stays put. The list is longer
+ * than the surface, and the keyboard reaches all of it from the field: Arrow Up wraps to the last row, which
+ * the list scrolls into view. The play then puts the list back at rest for the picture.
  */
 export const Recent: Story = {
   args: { recentIds: ['transactions', 'budgets'] },
@@ -239,6 +245,24 @@ export const Recent: Story = {
       1,
     );
     await waitFor(() => expect(field()).toHaveFocus());
+    const list = only('.command-palette-list');
+    await expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
+    await expect(list.scrollTop).toBe(0);
+    await userEvent.keyboard('{ArrowUp}');
+    await waitFor(() => expect(labelOf(activeRow())).toBe('Café Lumière'));
+    const last = activeRow();
+    if (!last) throw new Error('No active row');
+    await waitFor(() => expect(list.scrollTop).toBeGreaterThan(0));
+    const box = list.getBoundingClientRect();
+    const row = last.getBoundingClientRect();
+    await expect(row.top).toBeGreaterThanOrEqual(box.top - 0.5);
+    await expect(row.bottom).toBeLessThanOrEqual(box.bottom + 0.5);
+    // Back to rest: Arrow Left gives the field its caret back and leaves no row active, and the list returns
+    // to the top, so the picture is the palette as it opened.
+    await userEvent.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(field()).not.toHaveAttribute('aria-activedescendant'));
+    list.scrollTop = 0;
+    await waitFor(() => expect(list.querySelector('.menu-item[data-focus-visible]')).toBeNull());
   },
 };
 
@@ -367,6 +391,19 @@ export const Keys: Story = {
     const trigger = canvas.getByRole('button', { name: 'Search' });
     await userEvent.click(trigger);
     await atRest();
+    // The whole list is longer than the surface, so Page Down moves the active row by a page of rows, past
+    // the first and short of the last, and Page Up comes back up.
+    const list = only('.command-palette-list');
+    await expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
+    await userEvent.keyboard('{ArrowDown}');
+    await expect(labelOf(activeRow())).toBe('New transaction');
+    await userEvent.keyboard('{PageDown}');
+    const paged = labelOf(activeRow());
+    await expect(paged).not.toBe('New transaction');
+    await expect(paged).not.toBe('Café Lumière');
+    await waitFor(() => expect(list.scrollTop).toBeGreaterThan(0));
+    await userEvent.keyboard('{PageUp}');
+    await expect(labelOf(activeRow())).not.toBe(paged);
     await userEvent.type(field(), 're');
     const names = within(document.body)
       .getAllByRole('menuitem')

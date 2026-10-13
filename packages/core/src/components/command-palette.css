@@ -101,17 +101,18 @@
     color: var(--color-slate);
   }
 
+  /* The body keeps the floor; the list fills it and is the one scroller, so React Aria's page keys measure
+     a page of rows in it instead of jumping to the ends. */
   .command-palette-body {
+    display: flex;
     flex: 1 1 auto;
+    flex-direction: column;
     min-height: min(20rem, 50dvh);
-    overflow-y: auto;
-    overscroll-behavior: contain;
   }
 
-  /* The body scrolls, not the list. */
   .command-palette-list {
-    max-height: none;
-    overflow: visible;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* The keyboard-active row is the only focus indicator, so it is the ink fill; the pointer keeps the wash. */
@@ -149,9 +150,11 @@
     white-space: nowrap;
   }
 
+  /* Translated hints wrap instead of running off the surface. */
   .command-palette-footer {
     display: flex;
     flex: none;
+    flex-wrap: wrap;
     gap: 1rem;
     padding: 0.5rem var(--spacing-peer);
     border-block-start: 1px solid var(--color-divider);

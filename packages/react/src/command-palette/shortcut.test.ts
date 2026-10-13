@@ -9,6 +9,7 @@ import { matchesShortcut, parseShortcut } from './shortcut';
 function keydown(init: Partial<KeyboardEvent>): KeyboardEvent {
   return {
     key: 'k',
+    code: 'KeyK',
     metaKey: false,
     ctrlKey: false,
     shiftKey: false,
@@ -63,6 +64,28 @@ describe('matchesShortcut', () => {
   it('leaves a key an editor has taken, or one typed while composing, alone', () => {
     expect(matchesShortcut(keydown({ metaKey: true, defaultPrevented: true }), modK)).toBe(false);
     expect(matchesShortcut(keydown({ metaKey: true, isComposing: true }), modK)).toBe(false);
+  });
+
+  it('matches by position on a Persian layout, where Ctrl+K types the letter noon', () => {
+    expect(matchesShortcut(keydown({ ctrlKey: true, key: '\u0646', code: 'KeyK' }), modK)).toBe(true);
+    expect(matchesShortcut(keydown({ ctrlKey: true, key: '\u0646', code: 'KeyJ' }), modK)).toBe(false);
+  });
+
+  it('matches by position on a Russian layout, where Cmd+K types the letter el', () => {
+    expect(matchesShortcut(keydown({ metaKey: true, key: '\u043B', code: 'KeyK' }), modK)).toBe(true);
+    // A digit matches by position too, and Option on a Mac, which types a symbol, falls back the same way.
+    expect(
+      matchesShortcut(keydown({ ctrlKey: true, key: '\u0661', code: 'Digit1' }), parseShortcut('Mod+1')),
+    ).toBe(true);
+    expect(
+      matchesShortcut(keydown({ altKey: true, key: '\u02DA', code: 'KeyK' }), parseShortcut('Alt+K')),
+    ).toBe(true);
+  });
+
+  it('matches the printed letter on a Latin layout that moves the keys, such as Dvorak, and not the position', () => {
+    // On Dvorak the key where QWERTY has K types t, and K sits where QWERTY has V.
+    expect(matchesShortcut(keydown({ ctrlKey: true, key: 't', code: 'KeyK' }), modK)).toBe(false);
+    expect(matchesShortcut(keydown({ ctrlKey: true, key: 'k', code: 'KeyV' }), modK)).toBe(true);
   });
 
   it('matches every modifier a shortcut lists, and a lone key only with every modifier up', () => {
