@@ -869,8 +869,10 @@
     color: var(--color-slate);
   }
 
-  .docs-section ul,
-  .docs-section ol {
+  /* Prose only, as above: the rail's and the tab bar's lists are drawn by their own classes, which the
+     prose rule's extra type selector would otherwise outrank. */
+  .docs-section ul:where(:not(.stage *)),
+  .docs-section ol:where(:not(.stage *)) {
     display: grid;
     gap: 8px;
     margin: 0;

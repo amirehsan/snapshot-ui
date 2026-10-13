@@ -38,6 +38,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 
 - [App shell](https://snapshotui.com/docs/components/app-shell)
 - [Badge](https://snapshotui.com/docs/components/badge)
+- [Bottom tab bar](https://snapshotui.com/docs/components/bottom-tab-bar)
 - [Button](https://snapshotui.com/docs/components/button)
 - [Card](https://snapshotui.com/docs/components/card)
 - [Checkbox](https://snapshotui.com/docs/components/checkbox)

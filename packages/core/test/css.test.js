@@ -3021,6 +3021,175 @@ describe('src/components/sidebar.css', () => {
   });
 });
 
+describe('src/components/tab-bar.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line. `.tab-bar {` first matches the bar's own rule, before the wide block repeats it.
+  const rules = () => closeUp(stripComments(read('src/components/tab-bar.css')));
+  const WIDE = '@media (width >= 1024px)';
+  const CURRENT = "[aria-current='page'], [data-current], [data-current-action]";
+
+  it('docks the bar flush with the bottom edge at the chrome layer, the safe area padded inside it', () => {
+    const bar = blockAfter(rules(), '.tab-bar {');
+    for (const declaration of [
+      '--tab-bar-height: 4rem;',
+      'position: fixed;',
+      'inset-block-end: 0;',
+      'inset-inline: 0;',
+      'z-index: var(--z-chrome);',
+      'box-sizing: border-box;',
+      'min-height: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));',
+      'padding-top: calc(0.25rem - 1px);',
+      'padding-bottom: calc(0.25rem + env(safe-area-inset-bottom, 0px));',
+      'padding-left: max(0.25rem, env(safe-area-inset-left, 0px));',
+      'padding-right: max(0.25rem, env(safe-area-inset-right, 0px));',
+      'border-block-start: 1px solid var(--color-hairline);',
+      'background-color: var(--color-float);',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+    }
+    // Docked: no corner, and no shadow, which the shadow tokens would cast downward, off the screen.
+    expect(bar).not.toContain('box-shadow');
+    expect(bar).not.toContain('border-radius');
+  });
+
+  it('draws an item 56px tall as a pill, its label at the small step with the action weight', () => {
+    const item = blockAfter(rules(), '.tab-bar-item {');
+    for (const declaration of [
+      'min-height: 3.5rem;',
+      // 4px each side, which the capacity sums in Appendix B count on.
+      'padding-inline: 0.25rem;',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: 500;',
+      'border-radius: var(--radius-pill);',
+      'color: var(--color-slate);',
+      'cursor: pointer;',
+    ]) {
+      expect(item, declaration).toContain(declaration);
+    }
+    expect(blockAfter(rules(), '.tab-bar-list > li {')).toContain('flex: 1 1 0;');
+  });
+
+  it('keeps a label on one line and ellipsizes it as a last resort', () => {
+    const label = blockAfter(rules(), '.tab-bar-item-label {');
+    for (const declaration of ['overflow: hidden;', 'text-overflow: ellipsis;', 'white-space: nowrap;']) {
+      expect(label, declaration).toContain(declaration);
+    }
+  });
+
+  it('draws the count as an ink chip at the icon corner, cut from it by a 2px float border, in 12px numerals', () => {
+    const count = blockAfter(rules(), '.tab-bar-count {');
+    for (const declaration of [
+      'position: absolute;',
+      'border: 2px solid var(--color-float);',
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-ink);',
+      'color: var(--color-canvas);',
+      'font-size: 0.75rem;',
+      'font-weight: 700;',
+    ]) {
+      expect(count, declaration).toContain(declaration);
+    }
+    const current = blockAfter(rules(), `.tab-bar-item:is(${CURRENT}) .tab-bar-count {`);
+    expect(current).toContain('border-color: var(--color-ink);');
+    expect(current).toContain('background-color: var(--color-canvas);');
+    expect(current).toContain('color: var(--color-ink);');
+  });
+
+  it('draws the comma a name needs at no size, inline', () => {
+    const comma = blockAfter(rules(), '.tab-bar-comma {');
+    expect(comma).toContain('font-size: 0;');
+    // A hidden box would get a space at its edge in a browser's name: the comma stays inline.
+    expect(comma).not.toContain('position');
+    expect(comma).not.toContain('display');
+  });
+
+  it('washes an item on hover only with a hover pointer and never the current one, and the current rule comes after', () => {
+    const css = rules();
+    const hover = blockAfter(css, '@media (hover: hover)');
+    const itemHover = `.tab-bar-item:is(:hover, [data-hovered]):not(${CURRENT}) {`;
+    const washed = blockAfter(hover, itemHover);
+    expect(washed).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
+    expect(washed).toContain('color: var(--color-ink);');
+    // Outside the media block, no rule hovers an item; a press shows the same wash, never on the current one.
+    const outside = css.replace(/@media \(hover: hover\) \{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
+    expect(outside).not.toMatch(/\.tab-bar-item:is\(:hover/);
+    expect(blockAfter(css, `.tab-bar-item:is(:active, [data-pressed]):not(${CURRENT}) {`)).toContain(
+      'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);',
+    );
+    const current = `.tab-bar-item:is(${CURRENT}) {`;
+    const fill = blockAfter(css, current);
+    expect(fill).toContain('background-color: var(--color-ink);');
+    expect(fill).toContain('color: var(--color-canvas);');
+    expect(css.indexOf(current)).toBeGreaterThan(css.indexOf(itemHover));
+  });
+
+  it('rings an item in the focus ring token, inverted to canvas and inset on the current item', () => {
+    const css = rules();
+    const ringed = blockAfter(css, '.tab-bar-item:is(:focus-visible, [data-focus-visible]) {');
+    expect(ringed).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ringed).toContain('outline-offset: var(--focus-ring-offset);');
+    const inverted = blockAfter(
+      css,
+      `.tab-bar-item:is(${CURRENT}):is(:focus-visible, [data-focus-visible]) {`,
+    );
+    expect(inverted).toContain('outline-color: var(--color-canvas);');
+    expect(inverted).toContain(
+      'outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));',
+    );
+  });
+
+  it('hides the bar from 1024px up, the medium breakpoint written out', async () => {
+    const css = rules();
+    expect(blockAfter(blockAfter(css, WIDE), '.tab-bar {')).toContain('display: none;');
+    // A media query cannot read a custom property, so the width is written out and must stay the token.
+    const { tokens } = await import('../dist/tokens.js');
+    const written = [...css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)].map((match) => match[1]);
+    expect(written).toHaveLength(1);
+    expect(written[0]).toBe(tokens.breakpoint.md.value);
+  });
+
+  it('is as tall as the room app-shell.css reserves under the page', () => {
+    const height = /--tab-bar-height: ([\d.]+rem);/.exec(rules())?.[1];
+    const reserve =
+      /--app-shell-inset-block-end: calc\(([\d.]+rem) \+ env\(safe-area-inset-bottom, 0px\)\);/.exec(
+        closeUp(stripComments(read('src/components/app-shell.css'))),
+      )?.[1];
+    expect(height).toBe('4rem');
+    expect(reserve).toBe(height);
+  });
+
+  it('draws the current item in Highlight and the count in CanvasText in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    const current = blockAfter(forced, `.tab-bar-item:is(${CURRENT}) {`);
+    expect(current).toContain('background-color: Highlight;');
+    expect(current).toContain('color: HighlightText;');
+    expect(
+      blockAfter(forced, `.tab-bar-item:is(${CURRENT}):is(:focus-visible, [data-focus-visible]) {`),
+    ).toContain('outline-color: HighlightText;');
+    const count = blockAfter(forced, '.tab-bar-count {');
+    expect(count).toContain('border-color: canvas;');
+    expect(count).toContain('background-color: CanvasText;');
+    expect(count).toContain('color: canvas;');
+    const currentCount = blockAfter(forced, `.tab-bar-item:is(${CURRENT}) .tab-bar-count {`);
+    expect(currentCount).toContain('border-color: Highlight;');
+    expect(currentCount).toContain('background-color: HighlightText;');
+    expect(currentCount).toContain('color: Highlight;');
+  });
+
+  it('moves nothing, so it needs no reduced-motion block', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])transition\s*:/);
+    expect(css).not.toMatch(/(?<![\w-])animation\s*:/);
+  });
+
+  it('is imported after sidebar.css', () => {
+    const entry = read('src/styles.css');
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('tab-bar.css')).toBeGreaterThan(at('sidebar.css'));
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

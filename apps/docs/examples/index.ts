@@ -1,8 +1,11 @@
 import type { ComponentType } from 'react';
 import AppShellBasic from './app-shell-basic';
 import AppShellCollapsed from './app-shell-collapsed';
+import AppShellPhone from './app-shell-phone';
 import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
+import BottomTabBarBasic from './bottom-tab-bar-basic';
+import BottomTabBarMore from './bottom-tab-bar-more';
 import ButtonStates from './button-states';
 import ButtonVariants from './button-variants';
 import CardNested from './card-nested';
@@ -79,8 +82,11 @@ import TooltipShortcut from './tooltip-shortcut';
 export const examples = {
   'app-shell-basic': AppShellBasic,
   'app-shell-collapsed': AppShellCollapsed,
+  'app-shell-phone': AppShellPhone,
   'badge-counts': BadgeCounts,
   'badge-tones': BadgeTones,
+  'bottom-tab-bar-basic': BottomTabBarBasic,
+  'bottom-tab-bar-more': BottomTabBarMore,
   'button-states': ButtonStates,
   'button-variants': ButtonVariants,
   'card-nested': CardNested,

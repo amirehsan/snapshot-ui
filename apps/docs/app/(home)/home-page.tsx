@@ -784,6 +784,7 @@ export function HomePage(): ReactElement {
               <div className="footer-links">
                 <Link href="/docs/components/app-shell">App shell</Link>
                 <Link href="/docs/components/badge">Badge</Link>
+                <Link href="/docs/components/bottom-tab-bar">Bottom tab bar</Link>
                 <Link href="/docs/components/button">Button</Link>
                 <Link href="/docs/components/card">Card</Link>
                 <Link href="/docs/components/checkbox">Checkbox</Link>
