@@ -10,6 +10,8 @@ import CheckboxGroupExample from './checkbox-group';
 import CheckboxSelectAll from './checkbox-select-all';
 import CheckboxStates from './checkbox-states';
 import CheckboxValidation from './checkbox-validation';
+import CollapsibleCardActions from './collapsible-card-actions';
+import CollapsibleCardBasic from './collapsible-card-basic';
 import EyebrowHeading from './eyebrow-heading';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
@@ -54,6 +56,8 @@ export const examples = {
   'checkbox-select-all': CheckboxSelectAll,
   'checkbox-states': CheckboxStates,
   'checkbox-validation': CheckboxValidation,
+  'collapsible-card-actions': CollapsibleCardActions,
+  'collapsible-card-basic': CollapsibleCardBasic,
   'eyebrow-heading': EyebrowHeading,
   'field-counter': LengthCounter,
   'field-parts': FieldParts,

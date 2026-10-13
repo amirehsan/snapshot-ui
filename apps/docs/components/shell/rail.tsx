@@ -137,13 +137,11 @@ export function Rail({
             <X />
           </IconButton>
         </div>
-        <button
-          className="rail-search"
-          type="button"
-          data-label="Search docs"
-          aria-label="Search docs"
-          onClick={onSearch}
-        >
+        {/*
+          Named by its own text, so the name holds everything the button shows. An aria-label of the
+          words alone left out the key beside them, which axe fails as label-content-name-mismatch.
+        */}
+        <button className="rail-search" type="button" data-label="Search docs" onClick={onSearch}>
           <svg
             viewBox="0 0 24 24"
             fill="none"

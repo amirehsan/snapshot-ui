@@ -47,6 +47,20 @@ for (const theme of ['light', 'dark'] as const) {
   });
 }
 
+for (const theme of ['light', 'dark'] as const) {
+  test(`a docs page has no axe violations at 1440px in ${theme}, with the rail drawn whole`, async ({
+    page,
+  }) => {
+    // At 1440px the rail draws the search button with its label and its key, and axe checks that a
+    // control's accessible name holds the text it shows.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ colorScheme: theme });
+    await visit(page);
+    await expect(page.getByRole('button', { name: 'Search docs' })).toBeVisible();
+    expect(await axeViolations(page)).toEqual([]);
+  });
+}
+
 test('the open drawer has no axe violations', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
   await visit(page);
@@ -1100,4 +1114,35 @@ test('the segmented control page chooses with the arrow keys and draws each stat
     'rgb(209, 205, 199)',
   );
   await expect(disabled.locator('.segmented-option').first()).toHaveCSS('cursor', 'not-allowed');
+});
+
+test('a collapsible card folds and opens on its page, by pointer and by keyboard', async ({ page }) => {
+  await visit(page, '/docs/components/collapsible-card');
+  const toggle = page.getByRole('button', { name: 'Notifications', exact: true });
+  const card = page.locator('.card-collapsible').filter({ has: toggle });
+  const body = card.locator('.card-body');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(body).toBeVisible();
+  // Open, Tab goes from the toggle into the body.
+  await toggle.focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Send a test email' })).toBeFocused();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(card).not.toHaveAttribute('data-expanded');
+  await expect(body).toBeHidden();
+  // Once the fold has settled, React Aria hides the panel, and the card stops marking the move.
+  await expect(card.locator('.card-fold')).toHaveAttribute('hidden', 'until-found');
+  await expect(card).not.toHaveAttribute('data-folding');
+  // Folded, the body takes no focus: Tab goes from the toggle to the next card's.
+  await toggle.focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Billing', exact: true })).toBeFocused();
+  await toggle.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(body).toBeVisible();
+  await expect(card).not.toHaveAttribute('data-folding');
+  await toggle.press('Space');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(body).toBeHidden();
 });

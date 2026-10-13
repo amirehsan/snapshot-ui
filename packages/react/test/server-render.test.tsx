@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { CollapsibleCard } from '../src/collapsible-card';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Radio, RadioGroup } from '../src/radio-group';
@@ -79,6 +80,21 @@ const CLIENT: [name: string, element: ReactElement, contains: string[]][] = [
       <SegmentedControlItem value="dark">Dark</SegmentedControlItem>
     </SegmentedControl>,
     ['role="radiogroup"', 'class="segmented-track"', 'class="segmented-room"', 'Dark'],
+  ],
+  [
+    'CollapsibleCard',
+    <CollapsibleCard title="Notifications" note="Where we reach you.">
+      <p>Product updates</p>
+    </CollapsibleCard>,
+    [
+      'class="card card-collapsible"',
+      'data-expanded=""',
+      'class="card-toggle"',
+      'aria-expanded="true"',
+      'class="card-note"',
+      'class="card-fold"',
+      '<div class="card-body"><p>Product updates</p></div>',
+    ],
   ],
 ];
 

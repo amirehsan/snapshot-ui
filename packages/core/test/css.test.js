@@ -932,6 +932,200 @@ describe('src/components/card.css', () => {
   });
 });
 
+describe('src/components/card.css, the collapsible card', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/card.css')));
+  /** Every rule that holds declarations, as its selector and its declarations, media blocks included. */
+  const all = () =>
+    [...rules().matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector = '', body = '']) => ({
+      selector: selector.trim(),
+      body: body.trim(),
+    }));
+  /** A part only the collapsible card draws, or the dir attribute its chevron reads. */
+  const COLLAPSIBLE = /card-(?:collapsible|disclosure|toggle|chevron|actions|fold)|\[dir=/;
+  /** The rules a plain card is drawn with, by selector. */
+  const CARD = [
+    '.card',
+    '.card > .card, .card-body .card',
+    '.card-header',
+    '.card-title',
+    '.card-note',
+    '.card-body',
+    '.card-body > *',
+    '.card-header > *, .card-body > *',
+  ];
+
+  it('leaves a plain card alone: every other rule names a part only the collapsible card draws', () => {
+    expect(all().filter(({ selector }) => CARD.includes(selector))).toHaveLength(CARD.length);
+    for (const { selector } of all()) {
+      if (!CARD.includes(selector)) expect(selector).toMatch(COLLAPSIBLE);
+    }
+  });
+
+  it('draws in tokens only: a slate chevron that turns ink', () => {
+    const colors = all()
+      .filter(({ selector }) => COLLAPSIBLE.test(selector))
+      .flatMap(({ body }) => [...body.matchAll(/var\((--color-[a-z-]+)\)/g)].map(([, name]) => name));
+    expect([...new Set(colors)].sort()).toEqual(['--color-ink', '--color-slate']);
+    expect(blockAfter(rules(), '.card-chevron {')).toContain('color: var(--color-slate);');
+  });
+
+  it('brings the toggle to a 40px target as wide as the title, and gives the room back so the header keeps its height', () => {
+    const toggle = blockAfter(rules(), '.card-toggle {');
+    expect(toggle).toContain('width: 100%;');
+    expect(toggle).toContain('min-height: 40px;');
+    expect(toggle).toContain('padding: max(0px, calc((40px - 1lh) / 2)) 0;');
+    expect(toggle).toContain('margin: min(0px, calc((1lh - 40px) / 2)) 0;');
+    expect(toggle).toContain('cursor: pointer;');
+  });
+
+  it("draws the standard focus ring on the toggle, for the native state and React Aria's", () => {
+    const ring = blockAfter(rules(), '.card-toggle:is(:focus-visible, [data-focus-visible]) {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+  });
+
+  it('turns the chevron from slate to ink on hover only where hover exists, and on a press', () => {
+    const css = rules();
+    const hover = blockAfter(css, '@media (hover: hover)');
+    expect(blockAfter(hover, '.card-toggle:is(:hover, [data-hovered]) .card-chevron {')).toContain(
+      'color: var(--color-ink);',
+    );
+    // Hover is never drawn outside the media query, where a touch screen would keep it after a tap. The
+    // forced-colors block names it only to give the chevron the reader's color.
+    const forced = blockAfter(css, FORCED_COLORS);
+    const outside = css
+      .replace(`@media (hover: hover) {${hover}}`, '')
+      .replace(`${FORCED_COLORS} {${forced}}`, '');
+    expect(outside).not.toContain(':hover');
+    expect(blockAfter(outside, '.card-toggle:is(:active, [data-pressed]) .card-chevron {')).toContain(
+      'color: var(--color-ink);',
+    );
+  });
+
+  it("draws the chevron in the toggle's own color in forced colors, at rest, hovered and pressed", () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    // The hover and press rules weigh as much as this one, and come before it, so it wins.
+    expect(
+      blockAfter(
+        forced,
+        '.card-chevron, .card-toggle:is(:hover, [data-hovered], :active, [data-pressed]) .card-chevron {',
+      ),
+    ).toContain('color: inherit;');
+    expect(rules().indexOf(FORCED_COLORS)).toBeGreaterThan(rules().indexOf('@media (hover: hover)'));
+  });
+
+  it('turns the folded chevron a quarter toward the inline start, the other way under an rtl dir', () => {
+    const css = rules();
+    expect(blockAfter(css, ":where([dir='ltr' i]) {")).toContain('--card-chevron-turn: 90deg;');
+    expect(blockAfter(css, ":where([dir='rtl' i]) {")).toContain('--card-chevron-turn: -90deg;');
+    expect(
+      blockAfter(
+        css,
+        '.card-collapsible:not([data-expanded]) > .card-disclosure > .card-header .card-chevron {',
+      ),
+    ).toContain('rotate: var(--card-chevron-turn, 90deg);');
+    // :dir() is past the browser floor, and Lightning CSS would rewrite it as a list of languages.
+    expect(css).not.toContain(':dir(');
+    // The turn inherits from the nearest dir attribute, so no part of the card sets it.
+    for (const { selector, body } of all()) {
+      if (!selector.includes('[dir=')) expect(body).not.toContain('--card-chevron-turn:');
+    }
+  });
+
+  it('folds the body with a grid row from 1fr to 0fr in 200ms, and draws the grid only while the fold is shown', () => {
+    const css = rules();
+    const fold = blockAfter(css, '.card-fold {');
+    expect(fold).toContain('grid-template-rows: 1fr;');
+    expect(fold).toContain('transition: grid-template-rows 200ms ease;');
+    // React Aria hides a folded panel with hidden="until-found". A browser without until-found falls back
+    // to the display: none of hidden, which only works while no rule sets display on the panel.
+    expect(fold).not.toContain('display');
+    expect(blockAfter(css, '.card-fold:not([hidden]) {')).toContain('display: grid;');
+    expect(
+      blockAfter(css, '.card-collapsible:not([data-expanded]) > .card-disclosure > .card-fold {'),
+    ).toContain('grid-template-rows: 0fr;');
+    // Find-in-page cannot reach text that visibility hides, so the fold never hides its body that way.
+    expect(css).not.toContain('visibility');
+  });
+
+  it('folds the space between the header and the body with the body', () => {
+    const css = rules();
+    const folded = blockAfter(
+      css,
+      '.card-collapsible:not([data-expanded]) > .card-disclosure > .card-header {',
+    );
+    for (const declaration of ['margin-bottom: 0;', 'padding-bottom: 0;', 'border-bottom-width: 0;']) {
+      expect(folded).toContain(declaration);
+    }
+    expect(blockAfter(css, '.card-disclosure > .card-header {')).toContain(
+      'transition: margin-bottom 200ms ease, padding-bottom 200ms ease, border-bottom-width 200ms ease;',
+    );
+  });
+
+  it('clips the body only while the card is folded or folding', () => {
+    const clipping = all().filter(({ body }) => /(?:^|;\s*)overflow(?:-[xy])?\s*:/.test(body));
+    expect(clipping.map(({ selector }) => selector)).toEqual([
+      '.card-collapsible:is(:not([data-expanded]), [data-folding]) > .card-disclosure > .card-fold > .card-body',
+    ]);
+    expect(clipping[0]?.body).toContain('overflow: hidden;');
+  });
+
+  it('lays the header out as a grid: the title and the actions on one row, the note under the title', () => {
+    const css = rules();
+    const header = blockAfter(css, '.card-disclosure > .card-header {');
+    expect(header).toContain('grid-template-columns: minmax(0, 1fr) auto;');
+    // No column gap: an empty actions column must leave the toggle the whole row.
+    expect(header).toContain('column-gap: 0;');
+    expect(
+      blockAfter(
+        css,
+        '.card-disclosure > .card-header > .card-title, .card-disclosure > .card-header > .card-note {',
+      ),
+    ).toContain('grid-column: 1;');
+    const actions = blockAfter(css, '.card-actions {');
+    expect(actions).toContain('grid-row: 1;');
+    expect(actions).toContain('grid-column: 2;');
+    expect(actions).toContain('margin-inline-start: var(--spacing-peer);');
+    expect(actions).toContain('flex-wrap: wrap;');
+    expect(blockAfter(css, '.card-toggle-text {')).toContain('min-width: 0;');
+  });
+
+  it('moves the actions under the note, to the row start, when the header is narrower than 18rem', () => {
+    const css = rules();
+    expect(blockAfter(css, '.card-disclosure > .card-header {')).toContain(
+      'container: card-header / inline-size;',
+    );
+    const narrow = blockAfter(blockAfter(css, '@container card-header (width < 18rem)'), '.card-actions {');
+    expect(narrow).toContain('grid-row: auto;');
+    expect(narrow).toContain('grid-column: 1;');
+    expect(narrow).toContain('justify-content: flex-start;');
+    expect(narrow).toContain('margin-inline-start: 0;');
+  });
+
+  it('sets the chevron level with the first line of a title that wraps', () => {
+    const css = rules();
+    expect(blockAfter(css, '.card-toggle {')).toContain('align-items: flex-start;');
+    expect(blockAfter(css, '.card-chevron {')).toContain('margin-block: calc((1lh - 24px) / 2);');
+  });
+
+  it('stops every transition it draws under reduced motion, from a block that comes after them', () => {
+    const css = rules();
+    const start = css.indexOf('@media (prefers-reduced-motion: reduce)');
+    const reduced = blockAfter(css, '@media (prefers-reduced-motion: reduce)');
+    const moving = all().filter(
+      ({ body }) => /(?:^|;\s*)transition\s*:/.test(body) && !body.includes('transition: none'),
+    );
+    expect(moving.length).toBeGreaterThan(0);
+    for (const { selector } of moving) {
+      // The same selector, so the same weight, later in the file: it wins.
+      expect(reduced).toContain(selector);
+      expect(css.indexOf(`${selector} {`)).toBeLessThan(start);
+    }
+    expect(reduced).toContain('transition: none;');
+  });
+});
+
 describe('src/components/segmented.css', () => {
   // The rules without their comments, which quote selectors of their own.
   // Closed up, so a selector Prettier breaks over lines is found as one.

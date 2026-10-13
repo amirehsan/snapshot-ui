@@ -2,7 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { expect, userEvent, waitFor } from 'storybook/test';
+import { Button } from '../button';
 import { Checkbox, CheckboxGroup } from '../checkbox';
+import { CollapsibleCard } from '../collapsible-card';
 import { Radio, RadioGroup } from '../radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
 import { firstLineOffset, lineCount } from '../stories/paint';
@@ -398,5 +400,64 @@ export const SegmentedControlMirrored: Story = {
     }
     const stackedOptions = [...stacked.querySelectorAll('.segmented-option')].map(rect);
     await expect(stackedOptions[1]?.top ?? 0).toBeGreaterThan(stackedOptions[0]?.top ?? Infinity);
+  },
+};
+
+/**
+ * The title starts at the right of its row and the chevron is at the left end of the toggle, which is the
+ * end of the row in right to left, with the actions after it. Folded, the chevron turns toward the title:
+ * to the right, the inline start. In a narrow card the actions move under the note, to the right, where the
+ * row starts.
+ */
+export const CollapsibleCardMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <div style={{ display: 'grid', gap: '1.5rem' }}>
+        <CollapsibleCard
+          title="الإشعارات"
+          note="أين نصل إليك وكم مرة."
+          actions={<Button variant="secondary">إعادة</Button>}
+        >
+          <p>تحديثات المنتج عند إطلاق شيء جديد.</p>
+        </CollapsibleCard>
+        <CollapsibleCard title="الفواتير" defaultExpanded={false}>
+          <p>الدفع بالبطاقة كل شهر.</p>
+        </CollapsibleCard>
+        <div style={{ width: 288 }}>
+          <CollapsibleCard
+            title="الأمان"
+            note="تنبيهات تسجيل الدخول."
+            actions={<Button variant="tertiary">إعادة</Button>}
+          >
+            <p>دائمًا للمالكين.</p>
+          </CollapsibleCard>
+        </div>
+      </div>
+    </Rtl>
+  ),
+  play: async ({ canvasElement }) => {
+    const [open, folded, narrow] = [...canvasElement.querySelectorAll<HTMLElement>('.card-collapsible')];
+    if (!open || !folded || !narrow) throw new Error('Three cards expected');
+    const toggle = rect(find(open, '.card-toggle'));
+    const chevron = rect(find(open, '.card-chevron'));
+    const title = rect(find(open, '.card-title'));
+    const actions = rect(find(open, '.card-actions'));
+    // The words start at the right of the toggle, and the chevron is at its left end.
+    await expectSameEdge(lastText(find(open, '.card-toggle-text')).right, toggle.right);
+    await expectSameEdge(chevron.left, toggle.left);
+    // The actions end the row, which is at the left.
+    await expect(actions.right).toBeLessThanOrEqual(title.left + 0.5);
+    for (const box of [toggle, actions, rect(find(open, '.card-note'))]) await expectInside(box, rect(open));
+    // Open, the chevron points down. Folded, it turns a quarter toward the title, which is to the right.
+    await expect(getComputedStyle(find(open, '.card-chevron')).rotate).toBe('none');
+    await expect(getComputedStyle(find(folded, '.card-chevron')).rotate).toBe('-90deg');
+    // Narrow, the note stays under the title and the actions move under the note, starting at the right.
+    const narrowTitle = rect(find(narrow, '.card-title'));
+    const narrowNote = rect(find(narrow, '.card-note'));
+    const narrowAction = rect(find(narrow, '.card-actions .button'));
+    await expect(narrowNote.top).toBeGreaterThanOrEqual(narrowTitle.bottom);
+    await expect(narrowAction.top).toBeGreaterThanOrEqual(narrowNote.bottom);
+    await expectSameEdge(narrowAction.right, narrowTitle.right);
+    await expectInside(narrowAction, rect(narrow));
   },
 };

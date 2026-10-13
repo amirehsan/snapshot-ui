@@ -138,6 +138,18 @@ describe('the switch', () => {
   });
 });
 
+describe('the collapsible card', () => {
+  // The chevron is slate at rest and ink under the pointer, on the card's lifted ground. An icon asks
+  // 3:1, and both are gated already as text on lifted, at the stricter 4.5:1.
+  it('gates its chevron, slate and ink, on the lifted card', () => {
+    for (const text of ['slate', 'ink']) {
+      expect(CONTRAST_PAIRS).toContainEqual(
+        expect.objectContaining({ text, ground: 'lifted', minimum: TEXT }),
+      );
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 
