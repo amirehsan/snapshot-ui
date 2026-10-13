@@ -6,6 +6,7 @@ import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
+import { Drawer } from '../src/drawer';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Radio, RadioGroup } from '../src/radio-group';
@@ -159,6 +160,17 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </DialogTrigger>,
     ['<button', '>Delete<'],
     ['alertdialog'],
+  ],
+  [
+    'Drawer, closed',
+    <DialogTrigger>
+      <Button>Menu</Button>
+      <Drawer title="Menu" isTitleHidden>
+        <Link href="/overview">Overview</Link>
+      </Drawer>
+    </DialogTrigger>,
+    ['<button', '>Menu<'],
+    ['drawer-content'],
   ],
 ];
 

@@ -308,6 +308,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   'confirm-dialog':
     "its text is in a portal that opens on a press; its stories' 375px baselines pin its wrapping",
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
+  drawer: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   'icon-button': 'a glyph and no text: its name is an aria-label that nothing draws',
   spinner: 'a progress mark with no text a person writes',
 };
@@ -393,6 +394,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'collapsible-card': ['.stage .card-collapsible', '.stage .card-toggle', '.stage .card-chevron'],
   'confirm-dialog': ['.stage .button'],
   dialog: ['.stage .button'],
+  drawer: ['.stage .button'],
   field: ['.stage .field-counter', '.stage .field-changed'],
   'icon-button': ['.stage .icon-button'],
   kbd: ['.stage .kbd'],

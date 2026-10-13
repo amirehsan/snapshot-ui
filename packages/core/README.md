@@ -40,6 +40,7 @@ Body text is set at weight 450, which only a variable font has. Load Sofia Sans 
 - [Collapsible card](https://snapshotui.com/docs/components/collapsible-card)
 - [Confirm dialog](https://snapshotui.com/docs/components/confirm-dialog)
 - [Dialog](https://snapshotui.com/docs/components/dialog)
+- [Drawer](https://snapshotui.com/docs/components/drawer)
 - [Field parts](https://snapshotui.com/docs/components/field)
 - [Icon button](https://snapshotui.com/docs/components/icon-button)
 - [Kbd](https://snapshotui.com/docs/components/kbd)

@@ -89,3 +89,4 @@ export {
   type DialogProps,
   type DialogTriggerProps,
 } from './dialog';
+export { Drawer, type DrawerPlacement, type DrawerProps } from './drawer';

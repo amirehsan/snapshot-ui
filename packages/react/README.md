@@ -39,6 +39,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Collapsible card](https://snapshotui.com/docs/components/collapsible-card)
 - [Confirm dialog](https://snapshotui.com/docs/components/confirm-dialog)
 - [Dialog](https://snapshotui.com/docs/components/dialog)
+- [Drawer](https://snapshotui.com/docs/components/drawer)
 - [Field parts](https://snapshotui.com/docs/components/field)
 - [Icon button](https://snapshotui.com/docs/components/icon-button)
 - [Kbd](https://snapshotui.com/docs/components/kbd)
