@@ -1,7 +1,7 @@
 /*
  * The layer every overlay shares. A portaled root sits outside whatever the app styled, so `overlay`
  * restates on it what base.css gives a page, and declares the 16px every floating panel keeps from
- * the viewport's edge; there is no token for it, and this is the one place it is written. The scrim
+ * the viewport's edge; it reads `--spacing-inset`, and this is the one place it is declared. The scrim
  * is Deep Well at the theme's opacity, as a background color and not `opacity`, so it never fades the
  * panel with it. One scrim paints when modals stack: every modal overlay that is not the bottom-most
  * carries data-stacked and goes transparent while it still catches presses. A sheet's scrim is a
@@ -13,7 +13,7 @@
      padding, so a declaration on the panel alone would never reach it. */
   .overlay,
   .overlay-scrim {
-    --overlay-inset: 1rem;
+    --overlay-inset: var(--spacing-inset);
   }
 
   .overlay {

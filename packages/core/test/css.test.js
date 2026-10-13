@@ -1278,7 +1278,8 @@ describe('src/components/segmented.css', () => {
   it('sets the track height to 40px of option and 4px each side, so a firmer edge moves nothing', () => {
     const source = rules();
     const track = blockAfter(source, '.segmented-track {');
-    expect(track).toContain('--segmented-option-height: 2.5rem;');
+    // 40px of option in a 48px field, and 28px in a 36px compact one.
+    expect(track).toContain('--segmented-option-height: calc(var(--size-field) - 0.5rem);');
     expect(track).toContain('height: calc(var(--segmented-option-height) + 0.5rem);');
     expect(track).toContain('border: 1px solid var(--color-boundary);');
     // The firmer edge is a width only: the track's height never reads it.
@@ -1294,14 +1295,15 @@ describe('src/components/segmented.css', () => {
   it('turns every option to 40px when it stacks, in both sizes', () => {
     const source = rules();
     const stacked = blockAfter(source, '.segmented[data-stacked] .segmented-track');
-    expect(stacked).toContain('--segmented-option-height: 2.5rem;');
+    // Never under the target, so neighboring rows' hit areas never overlap: 40px, and 44px in compact on touch.
+    expect(stacked).toContain('--segmented-option-height: max(var(--size-target), var(--size-control));');
     // A pill's corner is half the height, which on a column is a blob, so a stacked track takes the surface step.
     expect(stacked).toContain('--segmented-radius: var(--radius-surface);');
     expect(blockAfter(source, '.segmented-sm .segmented-track')).toContain(
-      '--segmented-option-height: 2rem;',
+      '--segmented-option-height: calc(var(--size-control) - 0.5rem);',
     );
-    // The compact option reaches its 40px hit area only while it sits in a row.
-    expect(source).toContain('.segmented-sm:not([data-stacked]) .segmented-option::before');
+    // An option reaches its 40px hit area only while it sits in a row.
+    expect(source).toContain('.segmented:not([data-stacked]) .segmented-option::before');
   });
 
   it('fills the selected option with ink and inverts its focus ring to the canvas color', () => {
@@ -1387,6 +1389,87 @@ describe.each(['checkbox.css', 'radio.css', 'segmented.css'])(
   },
 );
 
+describe('the density tokens in the controls and the card', () => {
+  // The rules without their comments, which quote selectors and values of their own.
+  const rules = (file) => stripComments(read(`src/components/${file}`));
+  // One formula from the target, reaching 2px a side for a 36px compact control and nothing at 40px or more.
+  const hitArea = (height) => [
+    "content: '';",
+    'position: absolute;',
+    'inset-inline: 0;',
+    `inset-block: calc(-1 * max(0px, (var(--size-target) - ${height}) / 2));`,
+  ];
+
+  it('sizes the button, the icon button and the input from the tokens, with one hit-area formula', () => {
+    const button = rules('button.css');
+    const pill = blockAfter(button, '.button {');
+    expect(pill).toContain('min-height: var(--size-control);');
+    expect(pill).not.toContain('min-height: 40px');
+    for (const declaration of hitArea('var(--size-control)')) {
+      expect(blockAfter(button, '.button::before {'), declaration).toContain(declaration);
+    }
+    const iconButton = rules('icon-button.css');
+    const circle = blockAfter(iconButton, '.icon-button {');
+    for (const declaration of [
+      'position: relative;',
+      'width: var(--size-control);',
+      'height: var(--size-control);',
+    ]) {
+      expect(circle, declaration).toContain(declaration);
+    }
+    expect(circle).not.toContain('40px');
+    for (const declaration of hitArea('var(--size-control)')) {
+      expect(blockAfter(iconButton, '.icon-button::before {'), declaration).toContain(declaration);
+    }
+    // The browser centers an input's text in its content box, so the padding goes and the height decides.
+    const input = blockAfter(rules('input.css'), '.input {');
+    expect(input).toContain('height: var(--size-field);');
+    expect(input).toContain('padding-block: 0;');
+    expect(input).not.toContain('48px');
+    // The textarea restates its own padding, so its rows keep their room.
+    expect(blockAfter(rules('textarea.css'), '.input.textarea {')).toContain('padding-block: 0.75rem;');
+  });
+
+  it('derives both segmented option heights from the size tokens and hits every option through one rule', () => {
+    const css = closeUp(rules('segmented.css'));
+    expect(blockAfter(css, '.segmented-track {')).toContain(
+      '--segmented-option-height: calc(var(--size-field) - 0.5rem);',
+    );
+    expect(blockAfter(css, '.segmented-sm .segmented-track {')).toContain(
+      '--segmented-option-height: calc(var(--size-control) - 0.5rem);',
+    );
+    expect(blockAfter(css, '.segmented[data-stacked] .segmented-track {')).toContain(
+      '--segmented-option-height: max(var(--size-target), var(--size-control));',
+    );
+    expect(css).toContain('.segmented:not([data-stacked]) .segmented-option::before {');
+    const hit = blockAfter(css, '.segmented:not([data-stacked]) .segmented-option::before {');
+    for (const declaration of hitArea('var(--segmented-option-height)')) {
+      expect(hit, declaration).toContain(declaration);
+    }
+    // The one rule serves both sizes, and no option height is a literal any more.
+    expect(css).not.toContain('.segmented-sm:not([data-stacked])');
+    expect(css).not.toMatch(/--segmented-option-height:\s*[\d.]+rem/);
+  });
+
+  it('pads the card from --spacing-card and keeps 20px under the title in compact', () => {
+    const card = rules('card.css');
+    expect(blockAfter(card, '.card {')).toContain('padding: var(--spacing-card);');
+    const header = blockAfter(card, '.card-header {');
+    expect(header).toContain('margin: 0 calc(var(--spacing-card) * -1) var(--spacing-card);');
+    expect(header).toContain('padding: 0 var(--spacing-card) min(var(--spacing-peer), var(--spacing-card));');
+    // The body's column gap is the one separate step left: the space across a body, not the card's own padding.
+    expect([...card.matchAll(/([\w-]+)\s*:[^;]*--spacing-separate/g)].map((m) => m[1])).toEqual([
+      'column-gap',
+    ]);
+  });
+
+  it('reads the overlay inset from the inset token, never a literal', () => {
+    const values = [...rules('overlay.css').matchAll(/--overlay-inset:\s*([^;]+);/g)].map((m) => m[1]);
+    expect(values.length).toBeGreaterThan(0);
+    for (const value of values) expect(value).toBe('var(--spacing-inset)');
+  });
+});
+
 describe('src/components/overlay.css', () => {
   // The rules without their comments, with their whitespace closed up, so the selector list Prettier breaks
   // over two lines reads as one. The "} " in front of the scrim's header starts the search at the rule
@@ -1396,7 +1479,7 @@ describe('src/components/overlay.css', () => {
   it('declares the overlay inset once, here, and restates the page type on every overlay root', () => {
     const css = rules();
     // On both roots: a modal's scrim is the panel's parent and reads the inset for its own padding.
-    expect(blockAfter(css, '.overlay, .overlay-scrim {')).toContain('--overlay-inset: 1rem;');
+    expect(blockAfter(css, '.overlay, .overlay-scrim {')).toContain('--overlay-inset: var(--spacing-inset);');
     expect(css.match(/--overlay-inset\s*:/g) ?? []).toHaveLength(1);
     const root = blockAfter(css, '.overlay {');
     for (const declaration of [
@@ -1410,7 +1493,7 @@ describe('src/components/overlay.css', () => {
     ]) {
       expect(root, declaration).toContain(declaration);
     }
-    // There is no token for the inset, so no other file may write one of its own.
+    // The inset reads its token here, so no other file may write one of its own.
     for (const file of components.filter((each) => each !== 'overlay.css')) {
       expect(stripComments(read(`src/components/${file}`)), file).not.toMatch(/--overlay-inset\s*:/);
     }

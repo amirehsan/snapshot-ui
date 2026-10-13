@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import { expect, waitFor } from 'storybook/test';
-import { tokenColor, washColor } from '../stories/paint';
+import { tokenColor, tokenPixels, washColor } from '../stories/paint';
 import { SegmentedControl, type SegmentedControlBaseProps } from './SegmentedControl';
 import { SegmentedControlItem } from './SegmentedControlItem';
 
@@ -42,16 +42,20 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Two options. The track is a 48px pill with the boundary edge, and the selected option is an ink fill. */
+/**
+ * Two options. The track is a pill as tall as a field, 48px, with the boundary edge, and the selected option
+ * is an ink fill. The heights are read from the tokens, so the same play holds in the compact mode.
+ */
 export const Default: Story = {
+  tags: ['density'],
   play: async ({ canvas }) => {
     const group = canvas.getByRole('radiogroup', { name: 'Color mode' });
     const track = group.querySelector('.segmented-track');
     const selected = canvas.getByRole('radio', { name: 'Light' }).closest('label');
     if (!track || !selected) throw new Error('No track or option');
     await expect(getComputedStyle(track).borderTopColor).toBe(tokenColor('--color-boundary'));
-    await expect(track.getBoundingClientRect().height).toBe(48);
-    await expect(selected.getBoundingClientRect().height).toBe(40);
+    await expect(track.getBoundingClientRect().height).toBe(tokenPixels('--size-field'));
+    await expect(selected.getBoundingClientRect().height).toBe(tokenPixels('--size-field') - 8);
     await expect(getComputedStyle(selected).backgroundColor).toBe(tokenColor('--color-ink'));
     await expect(getComputedStyle(selected).color).toBe(tokenColor('--color-canvas'));
     await expect(group).not.toHaveAttribute('data-stacked');
@@ -78,8 +82,12 @@ export const FiveOptions: Story = {
   args: { label: 'Report cadence', defaultValue: 'weekly', children: FIVE },
 };
 
-/** The compact size draws 32px options in a 40px track, and still hits each at 40px. */
+/**
+ * The small size draws 32px options in a track as tall as a control, 40px, and still hits each at 40px. The
+ * heights are read from the tokens, so the same play holds in the compact mode.
+ */
 export const Compact: Story = {
+  tags: ['density'],
   args: {
     label: undefined,
     'aria-label': 'Corners',
@@ -92,8 +100,8 @@ export const Compact: Story = {
     const track = group.querySelector('.segmented-track');
     const option = canvas.getByRole('radio', { name: 'Soft' }).closest('label');
     if (!track || !option) throw new Error('No track or option');
-    await expect(track.getBoundingClientRect().height).toBe(40);
-    await expect(option.getBoundingClientRect().height).toBe(32);
+    await expect(track.getBoundingClientRect().height).toBe(tokenPixels('--size-control'));
+    await expect(option.getBoundingClientRect().height).toBe(tokenPixels('--size-control') - 8);
     await expect(getComputedStyle(option, '::before').height).toBe('40px');
   },
 };

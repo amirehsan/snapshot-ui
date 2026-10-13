@@ -19,6 +19,7 @@ import CommandPaletteBasic from './command-palette-basic';
 import ConfirmDialogBasic from './confirm-dialog-basic';
 import ConfirmDialogDanger from './confirm-dialog-danger';
 import ConfirmDialogHook from './confirm-dialog-hook';
+import DensityControls from './density-controls';
 import DialogBasic from './dialog-basic';
 import DialogDanger from './dialog-danger';
 import DialogLong from './dialog-long';
@@ -90,6 +91,7 @@ export const examples = {
   'confirm-dialog-basic': ConfirmDialogBasic,
   'confirm-dialog-danger': ConfirmDialogDanger,
   'confirm-dialog-hook': ConfirmDialogHook,
+  'density-controls': DensityControls,
   'dialog-basic': DialogBasic,
   'dialog-danger': DialogDanger,
   'dialog-long': DialogLong,

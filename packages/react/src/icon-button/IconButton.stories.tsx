@@ -15,9 +15,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Ghost: Story = {};
+export const Ghost: Story = { tags: ['density'] };
 
-export const Outline: Story = { args: { variant: 'outline' } };
+export const Outline: Story = { tags: ['density'], args: { variant: 'outline' } };
 
 export const Disabled: Story = {
   render: (args) => (

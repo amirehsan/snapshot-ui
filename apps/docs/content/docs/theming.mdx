@@ -1,6 +1,6 @@
 ---
 title: Theming
-description: Two attributes theme any element and everything inside it, color mode and corner shape.
+description: Three attributes theme any element and everything inside it, color mode, corner shape and density.
 icon: Contrast
 ---
 
@@ -34,9 +34,35 @@ Set `data-shape` to `rounded`, `soft` or `square`. Every corner in the library c
 
 <Section>
 
+## Density
+
+Set `data-density="compact"` on any element, and the controls and fields inside it draw at 36px, 44px on a touch screen, and its cards pad 20px. Nothing else changes: the type, the colors, the corners and every other space stay as they are. `data-density="comfortable"` inside a compact element restores the defaults for everything inside it, and the nearest one wins, as it does for the other two attributes.
+
+<Preview name="density-controls" />
+
+On a touch screen a compact control is taller than a comfortable one, because 44px is the target a finger needs. Comfortable does not change on touch: its controls are 40px on every screen.
+
+Phone-wide compact is your site's rule, not a value of the attribute, because an attribute cannot know the width of the screen. The tokens are public, so set them where you know it:
+
+```css
+@media (width < 768px) {
+  :root {
+    --spacing-card: 20px;
+  }
+}
+```
+
+This site does exactly that for its cards. A site that wants every control compact on a phone sets `--size-control` and `--size-field` the same way.
+
+A popup keeps the density of what opened it, as it keeps the color mode and the corner shape: see [Overlays](#overlays).
+
+</Section>
+
+<Section>
+
 ## Nesting
 
-Both attributes work on any element, and the nearest one wins. A light card inside a dark page takes its own colors and its own text color.
+All three attributes, `data-theme`, `data-shape` and `data-density`, work on any element, and the nearest one wins. A light card inside a dark page takes its own colors and its own text color.
 
 ```tsx
 <main data-theme="dark">
@@ -64,7 +90,7 @@ const [container, setContainer] = useState<HTMLElement | null>(null);
 </section>;
 ```
 
-Overlays are stacked by two variables: `--z-modal` (1000) for the modal surfaces and their scrims, and `--z-toast` (1100) for the toast region, which sits above them. An app whose own chrome uses larger numbers sets them higher.
+Overlays are stacked by two variables: `--z-modal` (1000) for the modal surfaces and their scrims, and `--z-toast` (1100) for the toast region, which sits above them. The app's chrome sits under both: fixed chrome, such as the rail and the tab bar, at `--z-chrome` (30), and a sticky page header at `--z-header` (20). An app whose own chrome uses larger numbers sets the overlay variables higher.
 
 </Section>
 
@@ -81,6 +107,6 @@ tokens.color.slate.var; // 'var(--color-slate)'
 tokens.radius.pill.modes.shape.soft; // '12px'
 ```
 
-Beyond the original set, the tokens include `--color-warning` and `--color-gain` (a state that needs a look soon, and money that arrived, each with its own rule of use), the `--text-numeral` and `--text-numeral-sm` type steps, and `--z-modal` and `--z-toast`, the stacking order of the modal surfaces and the toast region, which an app whose chrome uses larger numbers may override.
+Beyond the original set, the tokens include `--color-warning` and `--color-gain` (a state that needs a look soon, and money that arrived, each with its own rule of use), the `--text-numeral` and `--text-numeral-sm` type steps, the control sizes `--size-control`, `--size-field` and `--size-target`, the card padding `--spacing-card`, `--spacing-inset` (how far floating chrome sits from the viewport's edge), `--container-sidebar` (the rail's width), and `--z-modal`, `--z-toast`, `--z-chrome` and `--z-header`, the stacking order of the modal surfaces, the toast region and the app's chrome, which an app whose chrome uses larger numbers may override.
 
 </Section>
