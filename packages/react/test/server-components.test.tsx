@@ -17,11 +17,16 @@ vi.mock('react', async () => {
   return { ...server.default, default: server.default };
 });
 
+// A server bundler replaces a client module with a reference, and React Aria cannot be imported under React's
+// server build, so the linked tile's client module is a stand-in here.
+vi.mock('../src/stat-tile/StatTileLink', () => ({ StatTileLink: () => null }));
+
 import * as react from 'react';
 import { Badge } from '../src/badge';
 import { Card, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
+import { StatTile } from '../src/stat-tile';
 import { Eyebrow, Heading, Text } from '../src/typography';
 
 /** The static components: the ones that carry no `'use client'`, so a server component may use them directly. */
@@ -103,6 +108,38 @@ describe('the static components in a server component', () => {
   });
 });
 
+/** The parts the home batch adds that render with no client JavaScript, and what their markup holds and leaves out. */
+const HOME: [name: string, element: ReactElement, contains: string[], excludes: string[]][] = [
+  [
+    'StatTile',
+    <StatTile
+      label="Spending"
+      value="$1,284.50"
+      change={{ direction: 'up', label: 'Up 12% from last month' }}
+      caption="Across all accounts"
+    />,
+    [
+      '<div class="stat-tile">',
+      '<div class="stat-tile-body">',
+      '<p class="stat-tile-label">Spending</p>',
+      'class="copy copy-numeral-sm stat-tile-value"',
+      'data-direction="up"',
+      'data-tone="neutral"',
+      'aria-hidden="true"',
+      'Across all accounts',
+    ],
+    ['data-rac', '<a'],
+  ],
+];
+
+describe('the home parts in a server component', () => {
+  it.each(HOME)('%s renders under the server build', (_name, element, contains, excludes) => {
+    const html = renderToStaticMarkup(element);
+    for (const text of contains) expect(html).toContain(text);
+    for (const text of excludes) expect(html).not.toContain(text);
+  });
+});
+
 /** The source file of every static component, relative to `src`. */
 const STATIC_MODULES = [
   'typography/Heading.tsx',
@@ -113,6 +150,7 @@ const STATIC_MODULES = [
   'card/Card.tsx',
   'field/FieldCounter.tsx',
   'field/FieldChanged.tsx',
+  'stat-tile/StatTile.tsx',
 ];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {

@@ -494,6 +494,51 @@ describe('the avatar', () => {
   });
 });
 
+describe('the stat tile', () => {
+  /** A token color painted over lifted, or over the 5% ink wash on lifted, and measured against it. */
+  const measured = (mode, name, { washed = false } = {}) => {
+    const palette = paletteFor(tokens, mode);
+    const lifted = parseColor(palette.lifted);
+    const ground = washed ? composite({ ...parseColor(palette.ink), a: 0.05 }, lifted) : lifted;
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The value is ink, the label and the caption slate, and the change line slate, gain or warning, all on the
+  // Card's surface. The gate already holds each as text on lifted, so the tile adds no pair.
+  it('cites ink, slate, gain and warning on lifted, which the gate holds at the text minimum', () => {
+    for (const text of ['ink', 'slate', 'gain', 'warning']) {
+      expect(CONTRAST_PAIRS, text).toContainEqual(
+        expect.objectContaining({ text, ground: 'lifted', minimum: TEXT }),
+      );
+    }
+  });
+
+  // A linked tile under the pointer or a press is the 5% ink wash over lifted, a mix and not a token, so its
+  // pairs are measured here and recorded, not gated. Each stays above the text minimum.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, light, dark } of [
+      { name: 'ink', light: 17.84, dark: 17.42 },
+      { name: 'slate', light: 5.31, dark: 6.94 },
+      { name: 'gain', light: 7.2, dark: 8.04 },
+      { name: 'warning', light: 6.12, dark: 8.92 },
+    ]) {
+      expect(measured('light', name), `${name} on lifted, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name), `${name} on lifted, dark`).toBeCloseTo(dark, 2);
+    }
+    for (const { name, light, dark } of [
+      { name: 'slate', light: 4.8, dark: 6.41 },
+      { name: 'ink', light: 16.11, dark: 15.25 },
+      { name: 'gain', light: 6.5, dark: 7.05 },
+      { name: 'warning', light: 5.53, dark: 7.81 },
+    ]) {
+      expect(measured('light', name, { washed: true }), `${name} on the wash, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, { washed: true }), `${name} on the wash, dark`).toBeCloseTo(dark, 2);
+      for (const mode of ['light', 'dark'])
+        expect(measured(mode, name, { washed: true }), `${name} ${mode}`).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

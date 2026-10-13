@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { AppShell } from '../src/app-shell';
 import { Avatar } from '../src/avatar';
+import { StatTile } from '../src/stat-tile';
 import { BottomTabBar, BottomTabBarItem } from '../src/bottom-tab-bar';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
@@ -369,6 +370,18 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'alt=""',
     ],
     ['data-loaded'],
+  ],
+  [
+    // The linked tile is React Aria's Link, rendered in Node with its content; the nested-focusable warning is
+    // an effect, which never runs here.
+    'StatTile, linked',
+    <StatTile
+      href="/spending"
+      label="Spending"
+      value="$1,284.50"
+      change={{ direction: 'down', label: 'Down 4% from last month', tone: 'gain' }}
+    />,
+    ['<a', 'href="/spending"', 'class="stat-tile"', 'data-direction="down"', 'data-tone="gain"'],
   ],
 ];
 

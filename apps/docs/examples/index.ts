@@ -64,6 +64,10 @@ import SidebarDrawer from './sidebar-drawer';
 import SidebarGroups from './sidebar-groups';
 import SidebarLongLabels from './sidebar-long-labels';
 import SpinnerSizes from './spinner-sizes';
+import StatTileBasic from './stat-tile-basic';
+import StatTileLink from './stat-tile-link';
+import StatTileTones from './stat-tile-tones';
+import StatTileTrend from './stat-tile-trend';
 import SwitchBasic from './switch-basic';
 import SwitchSettings from './switch-settings';
 import SwitchStates from './switch-states';
@@ -148,6 +152,10 @@ export const examples = {
   'sidebar-groups': SidebarGroups,
   'sidebar-long-labels': SidebarLongLabels,
   'spinner-sizes': SpinnerSizes,
+  'stat-tile-basic': StatTileBasic,
+  'stat-tile-link': StatTileLink,
+  'stat-tile-tones': StatTileTones,
+  'stat-tile-trend': StatTileTrend,
   'switch-basic': SwitchBasic,
   'switch-settings': SwitchSettings,
   'switch-states': SwitchStates,

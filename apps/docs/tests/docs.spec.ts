@@ -1904,3 +1904,16 @@ test('an avatar whose image fails shows its initials and keeps its size', async 
   expect(box?.width).toBe(40);
   expect(box?.height).toBe(40);
 });
+
+test('a linked stat tile is one link named by everything it shows, and it follows its href', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/stat-tile');
+  // Case-insensitive: Chromium names the label in the capitals text-transform draws.
+  const tile = page.getByRole('link', { name: /^spending \$1,284\.50 up 12% from last month/i });
+  await expect(tile).toHaveCount(1);
+  await expect(tile).toHaveClass('stat-tile');
+  await expect(tile).not.toHaveAttribute('aria-describedby');
+  await tile.click();
+  await expect(page).toHaveURL(/#spending$/);
+});
