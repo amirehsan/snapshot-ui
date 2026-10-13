@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, useRef, type ReactElement } from 'react';
-import { I18nProvider } from 'react-aria-components';
+import { I18nProvider, PopoverContext } from 'react-aria-components';
 import { describe, expect, it } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import * as library from '../index';
@@ -121,9 +121,24 @@ describe('Popover', () => {
     expect(popover()).toHaveAttribute('data-placement', 'top');
   });
 
-  it('draws no arrow', () => {
-    render(<Triggered defaultOpen>Panel</Triggered>);
-    expect(popover().querySelector('svg, [class*="Arrow"], [class*="arrow"]')).toBeNull();
+  it('takes the side the trigger component asks for when the caller names none', () => {
+    function FromContext(): ReactElement {
+      const triggerRef = useRef<HTMLButtonElement>(null);
+      return (
+        <>
+          <button ref={triggerRef} type="button">
+            Pick
+          </button>
+          <PopoverContext.Provider value={{ placement: 'top', triggerRef }}>
+            <Popover isOpen aria-label="Picker">
+              Panel
+            </Popover>
+          </PopoverContext.Provider>
+        </>
+      );
+    }
+    render(<FromContext />);
+    expect(popover()).toHaveAttribute('data-placement', 'top');
   });
 
   it('closes on Escape and gives focus back to the trigger', async () => {

@@ -1,18 +1,19 @@
 /*
  * Menu: the rows every list popup shares (the listbox of the choice controls inherits them). A
  * 24px popup holds 20px rows: the control step, 40px tall (44px on touch), 8px by 12px of padding,
- * 4px apart so two washes keep a seam, an action-step label, a slate description, a 16px icon, a
- * key chip at the end and a check whose room every row of a selectable list keeps. Single selection
- * is the ink pill with a check; multiple is the check alone. Derived in docs/design-system.md ("Menu").
+ * 4px apart so two washes keep a seam, an action-step label, a slate description, a 16px icon, an
+ * end value and a key chip at the end and a check whose room every row of a selectable list keeps.
+ * Single selection is the ink pill with a check; multiple is the check alone. Derived in
+ * docs/design-system.md ("Menu").
  */
 @layer components {
-  /* The source's popups are 14.5 and 15rem; 12rem is the floor and a wider trigger wins. The popover is a
-     column the list fills, so under the height cap React Aria writes on it the list scrolls and the popover
-     does not: one scroller, not two. */
+  /* The source's popups are 14.5 and 15rem; 12rem is the floor and a wider trigger wins, up to the
+     popover's own cap of the viewport less 2rem. The popover is a column the list fills, so under the
+     height cap React Aria writes on it the list scrolls and the popover does not: one scroller, not two. */
   .menu-popover {
     display: flex;
     flex-direction: column;
-    min-width: max(var(--trigger-width), 12rem);
+    min-width: min(max(var(--trigger-width), 12rem), 100vw - 2rem);
   }
 
   /* It shrinks to the popover's room instead of inheriting the cap, which would leave it 2px taller than
@@ -103,7 +104,18 @@
     overflow-wrap: anywhere;
   }
 
-  /* The one key look (Kbd), at the row's end. */
+  /* A preformatted value at the row's end, such as an amount, before the key: small ink tabular figures. */
+  .menu-item-end {
+    flex: none;
+    color: var(--color-ink);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The one key look (Kbd), at the row's end. Keys read left to right in any direction, so a chip of two
+     keys in a right-to-left row does not draw its comma or its modifier on the other side. */
   .menu-item-shortcut {
     flex: none;
     margin-inline-start: auto;
@@ -118,6 +130,8 @@
     font-weight: var(--text-overline--font-weight);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    direction: ltr;
+    unicode-bidi: isolate;
   }
 
   /* Every row of a selectable list keeps the check's room, so the width never changes. */
@@ -162,21 +176,23 @@
     color: var(--color-error);
   }
 
-  /* Single selection: the ink pill, with every part inverted to canvas. */
-  .menu-item[data-selection-mode='single'][data-selected] {
+  /* Single selection: the ink pill, with every part inverted to canvas. A disabled row is never the pill:
+     it keeps the disabled look below and shows its choice by the check alone. */
+  .menu-item[data-selection-mode='single'][data-selected]:not([data-disabled]) {
     background-color: var(--color-ink);
     color: var(--color-canvas);
   }
 
-  .menu-item[data-selection-mode='single'][data-selected] :is(.menu-item-icon, .menu-item-check) {
+  .menu-item[data-selection-mode='single'][data-selected]:not([data-disabled])
+    :is(.menu-item-icon, .menu-item-check, .menu-item-end) {
     color: var(--color-canvas);
   }
 
-  .menu-item[data-selection-mode='single'][data-selected] .menu-item-description {
+  .menu-item[data-selection-mode='single'][data-selected]:not([data-disabled]) .menu-item-description {
     color: color-mix(in srgb, var(--color-canvas) 70%, transparent);
   }
 
-  .menu-item[data-selection-mode='single'][data-selected] .menu-item-shortcut {
+  .menu-item[data-selection-mode='single'][data-selected]:not([data-disabled]) .menu-item-shortcut {
     background-color: color-mix(in srgb, var(--color-canvas) 20%, transparent);
     color: var(--color-canvas);
   }
@@ -191,7 +207,8 @@
     cursor: not-allowed;
   }
 
-  .menu-item[data-disabled] :is(.menu-item-icon, .menu-item-shortcut, .menu-item-description) {
+  .menu-item[data-disabled]
+    :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end, .menu-item-shortcut) {
     color: var(--color-taupe);
   }
 
@@ -201,15 +218,36 @@
     }
   }
 
-  /* The selected row names its mode, so it outranks the single row's ink fill, which forced colors would
-     otherwise paint over with the page's own background. */
+  /* Forced colors. The repaint turns an author color that is not a system color into CanvasText, and does
+     not hand a part its row's HighlightText or GrayText, so every part with a color of its own follows its
+     row here: HighlightText on a chosen row, which is Highlight, GrayText on a disabled one, CanvasText
+     otherwise. The key chip is an island with its own canvas and CanvasText, so it reads on any row. Each
+     rule is as specific as the rule it overrides and comes after it: the chosen row names its mode, so it
+     outranks the single row's ink fill, which the repaint would turn into the page's own background. */
   @media (forced-colors: active) {
-    .menu-item[data-selection-mode][data-selected] {
+    .menu-item :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end) {
+      color: CanvasText;
+    }
+
+    .menu-item[data-selection-mode][data-selected]:not([data-disabled]) {
       background-color: Highlight;
       color: HighlightText;
     }
 
-    .menu-item[data-disabled] {
+    .menu-item[data-selection-mode][data-selected]:not([data-disabled])
+      :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end) {
+      color: HighlightText;
+    }
+
+    .menu-item-shortcut,
+    .menu-item[data-selection-mode][data-selected]:not([data-disabled]) .menu-item-shortcut {
+      background-color: canvas;
+      color: CanvasText;
+    }
+
+    .menu-item[data-disabled],
+    .menu-item[data-disabled]
+      :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end, .menu-item-shortcut) {
       color: GrayText;
     }
   }

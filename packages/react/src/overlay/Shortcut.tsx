@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactElement } from 'react';
+import { useSyncExternalStore, type ReactElement } from 'react';
 import { Keyboard } from 'react-aria-components';
 
 export interface ShortcutProps {
@@ -13,20 +13,25 @@ export interface ShortcutProps {
 /** The platforms whose modifier is Command: a Mac, an iPhone, an iPad and an iPod. */
 const APPLE = /^(?:Mac|iPhone|iPad|iPod)/;
 
+/** The platform never changes while the page is open, so there is nothing to listen to. */
+const subscribe = (): (() => void) => () => undefined;
+
+/** The modifier this browser's platform names. */
+const platformModifier = (): string => (APPLE.test(navigator.platform) ? '\u2318' : 'Ctrl');
+
+/** The server knows no platform, so its HTML says "Mod". */
+const serverModifier = (): string => 'Mod';
+
 /**
- * The platform's modifier for "Mod": "Mod" on the server and the first render, then the Command symbol on
- * Apple platforms and "Ctrl" elsewhere, set in an effect so hydration matches.
+ * The platform's modifier for "Mod": the Command symbol on Apple platforms and "Ctrl" elsewhere. It is
+ * "Mod" on the server and while a server's HTML hydrates, and React then draws the platform's, so
+ * hydration matches; a chip that mounts in the browser, as one in a menu or a tip opened later does, draws
+ * the platform's key on its first paint.
  *
  * Internal: not exported from the package.
  */
 export function useModifierKey(): string {
-  const [modifier, setModifier] = useState('Mod');
-  useEffect(() => {
-    // The platform is known only in the browser, and the server's HTML said "Mod", so it is read after mount.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- the first render must match the server's HTML
-    setModifier(APPLE.test(navigator.platform) ? '\u2318' : 'Ctrl');
-  }, []);
-  return modifier;
+  return useSyncExternalStore(subscribe, platformModifier, serverModifier);
 }
 
 /**

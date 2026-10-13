@@ -89,6 +89,7 @@ const OVERLAY_PARTS = [
   '.sheet-footer',
   '.menu-item-icon',
   '.menu-item-description',
+  '.menu-item-end',
   '.menu-item-shortcut',
 ].join(', ');
 
@@ -118,12 +119,13 @@ const EMPTY_OVERLAYS: [name: string, element: ReactElement][] = [
     </Sheet>,
   ],
   [
-    // The label is always drawn, since it names the item; the icon, the description and the key only when given.
+    // The label is always drawn, since it names the item; the icon, the description, the end value and the key
+    // only when given.
     'MenuItem',
     <MenuTrigger isOpen>
       <Button>More</Button>
       <Menu>
-        <MenuItem id="a" icon={false} description="" shortcut="">
+        <MenuItem id="a" icon={false} description="" end={null} shortcut="">
           Settings
         </MenuItem>
       </Menu>

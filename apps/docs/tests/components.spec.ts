@@ -35,6 +35,34 @@ const paint = (
     return { fill: style.backgroundColor, edge: style.borderTopColor, text: style.color };
   }, pseudo ?? null);
 
+/** The colors the reader's palette gives the system color keywords, read from probes on the open page. */
+const systemColors = (
+  page: Page,
+): Promise<{
+  highlight: string;
+  highlightText: string;
+  canvas: string;
+  canvasText: string;
+  grayText: string;
+}> =>
+  page.evaluate(() => {
+    const read = (property: 'color' | 'backgroundColor', value: string): string => {
+      const probe = document.createElement('span');
+      probe.style[property] = value;
+      document.body.append(probe);
+      const computed = getComputedStyle(probe)[property];
+      probe.remove();
+      return computed;
+    };
+    return {
+      highlight: read('backgroundColor', 'Highlight'),
+      highlightText: read('color', 'HighlightText'),
+      canvas: read('backgroundColor', 'canvas'),
+      canvasText: read('color', 'CanvasText'),
+      grayText: read('color', 'GrayText'),
+    };
+  });
+
 /**
  * The focus ring an element draws: its outline, and the color it is drawn over. An inset ring (a negative
  * offset) is drawn over the element's own fill; an outset one over the first fill found going up the tree.
@@ -242,27 +270,53 @@ test.describe('forced colors', () => {
     expect((await paint(page.locator('.dialog-title'))).text).toBe(text);
   });
 
-  test('a selected menu row is drawn in Highlight', async ({ page }) => {
+  test('a selected menu row is drawn in Highlight, and every part of it in HighlightText', async ({
+    page,
+  }) => {
     // The ink pill is a fill, which the repaint would drop with nothing left to say which row is chosen
-    // but the check. The selected row is drawn in the reader's Highlight, with HighlightText on it.
+    // but the check. The selected row is drawn in the reader's Highlight, and its parts follow it: the
+    // repaint turns a part's own author color into CanvasText, which on Highlight all but vanishes.
     await visit(page, '/docs/components/menu');
-    const system = await page.evaluate(() => {
-      const probe = document.createElement('span');
-      probe.style.backgroundColor = 'Highlight';
-      probe.style.color = 'HighlightText';
-      document.body.append(probe);
-      const { backgroundColor, color } = getComputedStyle(probe);
-      probe.remove();
-      return { fill: backgroundColor, text: color };
-    });
+    const system = await systemColors(page);
     await page.getByRole('button', { name: 'View options' }).click();
     const selected = page.getByRole('menuitemradio', { name: 'System' });
     await expect(selected).toHaveAttribute('aria-checked', 'true');
     const look = await paint(selected);
-    expect(look.fill).toBe(system.fill);
-    expect(look.text).toBe(system.text);
-    const other = await paint(page.getByRole('menuitemradio', { name: 'Light' }));
-    expect(other.fill).not.toBe(system.fill);
+    expect(look.fill).toBe(system.highlight);
+    expect(look.text).toBe(system.highlightText);
+    for (const part of ['.menu-item-icon', '.menu-item-check', '.menu-item-description']) {
+      expect((await paint(selected.locator(part))).text, part).toBe(system.highlightText);
+    }
+    // No item in the example has a value or a key on a chosen row, so the two are put in the browser. The
+    // key is an island with its own system canvas fill and CanvasText, which reads on any row.
+    await selected.evaluate((row) => {
+      row.insertAdjacentHTML(
+        'beforeend',
+        '<span class="menu-item-end" data-probe="end">$12.00</span><kbd class="menu-item-shortcut" data-probe="key">K</kbd>',
+      );
+    });
+    expect((await paint(selected.locator('[data-probe="end"]'))).text).toBe(system.highlightText);
+    const key = await paint(selected.locator('[data-probe="key"]'));
+    expect(key.fill).toBe(system.canvas);
+    expect(key.text).toBe(system.canvasText);
+    const other = page.getByRole('menuitemradio', { name: 'Light' });
+    expect((await paint(other)).fill).not.toBe(system.highlight);
+    expect((await paint(other.locator('.menu-item-icon'))).text).toBe(system.canvasText);
+  });
+
+  test('a disabled menu row and every part of it are drawn in GrayText', async ({ page }) => {
+    await visit(page, '/docs/components/menu');
+    const system = await systemColors(page);
+    await page.getByRole('button', { name: 'Project actions' }).click();
+    const disabled = page.getByRole('menuitem', { name: 'Export' });
+    await expect(disabled).toHaveAttribute('aria-disabled', 'true');
+    expect((await paint(disabled)).text).toBe(system.grayText);
+    for (const part of ['.menu-item-icon', '.menu-item-description', '.menu-item-shortcut']) {
+      expect((await paint(disabled.locator(part))).text, part).toBe(system.grayText);
+    }
+    // An enabled row's parts are the reader's text color.
+    const share = page.getByRole('menuitem', { name: 'Share' });
+    expect((await paint(share.locator('.menu-item-description'))).text).toBe(system.canvasText);
   });
 
   test('a sheet keeps its edge and its grabber', async ({ page }) => {
@@ -358,7 +412,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   drawer: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   'icon-button': 'a glyph and no text: its name is an aria-label that nothing draws',
-  menu: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
+  menu: "its text is in a portal that opens on a press; the EndValues story's 375px baseline pins its wrapping",
   popover: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   sheet: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   spinner: 'a progress mark with no text a person writes',
