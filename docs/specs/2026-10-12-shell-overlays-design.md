@@ -638,6 +638,8 @@ export interface MenuSeparatorProps { className?: string }
 
 `Menu` renders its own Popover (`popover menu-popover`) so a caller composes only `MenuTrigger` and `Menu`, as Select will. Its accessible name comes from the trigger through `MenuTrigger` (`aria-labelledby`), so none is required in the types; `aria-label` is accepted. Selection, `disabledKeys`, `onAction`, `items` with a render function, `renderEmptyState` and `shouldCloseOnSelect` pass through under React Aria's names. The list itself is a private `MenuList` (React Aria's `Menu` wearing the `menu` class), which CommandPalette reuses inline without the popover, with `MenuItem`, `MenuSection` and `MenuSeparator`.
 
+**Addition, ruled in the Task 10 review:** `MenuItem` takes `end?: ReactNode`, a preformatted value drawn at the row's end before the key, small ink tabular figures, outside the name and first in the description; CommandPalette's items use it for their `end` slot (section 11), so the palette draws `span.menu-item-end`. The library also re-exports React Aria's `RouterProvider` and the `RouterConfig` interface, through `Link.tsx`, so an app imports them from `@snapshot-ui/react` and the items always read the router context the app provides: with a second copy of React Aria in the app, every `href` would fall back to a full page load with no error.
+
 ### 9.2 Behavior
 
 - **Markup.** `RACMenuItem.menu-item[.menu-item-danger]` > `span.menu-item-icon[aria-hidden]`, `span.menu-item-text` (`Text slot="label"` as `.menu-item-label`, `Text slot="description"` as `.menu-item-description`), `Keyboard.menu-item-shortcut`, `span.menu-item-check[aria-hidden]` holding Lucide's 16px `Check`. A section is `MenuSection.menu-section` with `Header.menu-heading`; a separator is `Separator.menu-separator`.
@@ -676,6 +678,11 @@ Rows, shared with the listbox rows the choice-controls spec inherits:
 | Forced colors | selected row `background-color: Highlight; color: HighlightText`; disabled `GrayText`; the ring stays | a fill alone does not survive |
 
 Nothing animates inside a menu.
+
+**Correction, ruled in the Popover and Task 10 reviews:** three of 9.3's rules changed in the build.
+- The list does not take `max-height: inherit`. Under React Aria's inline height cap that gave the list the whole cap, 2px more than the room inside the popover's frame (18px without `base.css`), so a long menu scrolled twice. `.menu-popover` is a flex column, and `.menu` is `flex: 1 1 auto; min-height: 0; box-sizing: border-box`, so the list is the one scroller.
+- The popup's floor is `min(max(var(--trigger-width), 12rem), 100vw - 2rem)`, since a minimum width beats the popover's maximum.
+- In forced colors, each part with a color of its own follows its row: `HighlightText` on a chosen row, `GrayText` on a disabled one, `CanvasText` otherwise, with the key chip an island of the system canvas color and `CanvasText`. The repaint turns a part's own author color into `CanvasText`, and does not hand it the row's. A disabled row is never the ink pill, even when chosen. The key chip reads left to right in any direction (`direction: ltr; unicode-bidi: isolate`).
 
 ## 10. Toast
 

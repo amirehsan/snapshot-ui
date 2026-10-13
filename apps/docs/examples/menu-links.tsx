@@ -1,9 +1,8 @@
 'use client';
 
-import { Button, Menu, MenuItem, MenuTrigger } from '@snapshot-ui/react';
+import { Button, Menu, MenuItem, MenuTrigger, RouterProvider } from '@snapshot-ui/react';
 import { useRouter } from 'next/navigation';
 import type { ReactElement } from 'react';
-import { RouterProvider } from 'react-aria-components';
 
 const PAGES = [
   { slug: 'button', title: 'Button' },

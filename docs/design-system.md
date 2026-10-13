@@ -3680,13 +3680,17 @@ floats' level: a popover is above the page and below every modal.
 
 **Placement.** `bottom start`, 8px from the trigger, which is React Aria's
 default `offset` and the app's gap; the popover leaves `offset` to React Aria,
-so a trigger that sets its own, such as a context menu at 0, keeps it. Where
+so a trigger that sets its own, such as a context menu at 0, keeps it, and a
+side the trigger component asks for wins over `bottom start` when the caller
+names none. Where
 the side it asked for has no room, React Aria flips it to the other side, and
 it shifts along the trigger to stay inside its 12px `containerPadding`, its
 default, so it never runs off the screen. `data-placement` says the side it
 landed on, and the motion keys on it. React Aria writes the popover's height
-cap inline, the room left on that side, and the popover scrolls inside it
-(`max-height: inherit; overflow: auto`). Its width caps at the viewport less
+cap inline on the popover itself, the room left on that side, and the popover
+scrolls inside it (`overflow: auto`); its `max-height: inherit` takes nothing
+from the cap it is given, and is there for a child that inherits it. A menu's
+list does not ("Menu"). Its width caps at the viewport less
 2rem, the overlay inset on both sides, so at 320px a popover is at most 288px
 wide whatever it holds. In right to left `start` and `end` resolve through
 React Aria, which also writes `dir` on the popover, so nothing here is
@@ -3697,7 +3701,9 @@ rows sit in that padding, so the popover pads nothing by default. Free content
 takes `isPadded`, 24px (`--spacing-peer`), the gap between peers, as a drawer's
 and a sheet's body do. `matchTriggerWidth` sets `min-width` to the
 `--trigger-width` React Aria writes, so a panel under a wide trigger never sits
-narrower than it; content wider than the trigger still widens it. A long word
+narrower than it, up to the viewport less 2rem (`min(var(--trigger-width),
+100vw - 2rem)`, since a minimum width beats a maximum one); content wider
+than the trigger still widens it. A long word
 in free content, such as a share link, breaks anywhere (`overflow-wrap:
 anywhere` on the surface, as a card and a dialog body set it), so at 320px it
 wraps inside the 288px and never scrolls the popover sideways.
@@ -3749,9 +3755,11 @@ because it had no arrow keys behind it and said so; React Aria supplies them,
 so the library takes the role, and focus now goes into the menu.
 
 **The popup.** It is the popover's surface with one rule of its own:
-`min-width: max(var(--trigger-width), 12rem)`. The app's two popups measure
-14.5rem and 15rem; 12rem is the floor under both, and a trigger wider than it
-wins, so a menu never sits narrower than its button. The list pads itself 8px
+`min-width: min(max(var(--trigger-width), 12rem), 100vw - 2rem)`. The app's
+two popups measure 14.5rem and 15rem; 12rem is the floor under both, and a
+trigger wider than it wins, so a menu never sits narrower than its button, up
+to the popover's own cap of the viewport less 2rem, which a minimum width would
+otherwise beat. The list pads itself 8px
 (`--spacing-part`) and puts 4px between rows, the app's list gap, kept because
 two washed rows side by side need a seam. React Aria writes the popover's
 height cap inline, the room left under or over the trigger. The popover is a
@@ -3772,26 +3780,42 @@ scrollbar where scrollbars are drawn.
 | Label | `--text-action` (16px, 500, -3%), ink, `overflow-wrap: anywhere` | a menu item is an action |
 | Description | `--text-small`, slate, under the label | hints are slate: 5.49 light and 6.94 dark on float, both gated |
 | Icon | 16px, `flex: none`, slate at rest and ink on the focused row | an icon is a hint until its row is the one in hand |
-| Shortcut | drawn as a key: 12px, weight 700, overline tracking, tabular figures, `--radius-micro`, `--color-bone` fill, slate; `margin-inline-start: auto` | the one key look, Kbd's; at the row's end in either direction |
+| End value | `--text-small`, ink, tabular figures, `flex: none`, before the key; given preformatted, never formatted | an amount or a count belongs to the row, at its end, and reads in columns down the list |
+| Shortcut | drawn as a key: 12px, weight 700, overline tracking, tabular figures, `--radius-micro`, `--color-bone` fill, slate; `margin-inline-start: auto`; `direction: ltr; unicode-bidi: isolate` | the one key look, Kbd's; at the row's end in either direction, its keys always read left to right |
 | Check | Lucide's `Check`, 16px, `flex: none`, at the inline end; every row of a selectable menu or section keeps its room (`visibility: hidden`) and a selected row shows it | the width never changes as the choice moves, and color is never the only sign of a choice |
 | Hover and focus (`[data-hovered]`, `[data-focused]`) | the 5% ink wash, `color-mix(in srgb, var(--color-ink) 5%, transparent)` | the wash rule; hover only inside `@media (hover: hover)` |
 | Keyboard focus (`[data-focus-visible]`) | the ring, inset: `outline-offset: calc(-1 * var(--focus-ring-width))` | a scrolling list clips an outset ring |
-| Selected, single | the ink fill; label, icon and check in canvas; the description canvas at 70%; the key chip canvas at 20% with canvas text; the inset ring inverts to canvas | the inversion rule of "Rules every component follows" |
+| Selected, single | the ink fill; label, icon, end value and check in canvas; the description canvas at 70%; the key chip canvas at 20% with canvas text; the inset ring inverts to canvas | the inversion rule of "Rules every component follows" |
 | Selected, multiple | the check alone, no fill | five rows filled with ink would shout and hide the wash under the pointer |
-| Disabled | taupe label, icon, description and key; no wash; `cursor: not-allowed` | the disabled idiom; the arrows pass it by |
+| Disabled | taupe label, icon, description, end value, key and check; no wash, and never the pill, even when chosen; `cursor: not-allowed` | the disabled idiom; the arrows pass it by; a chosen row that is disabled shows its choice by the check alone |
 | Danger | label and icon in `--color-error`, no fill, focused or not | Button already gives error to destructive actions |
 | Section heading | `--text-overline` (14px, 700, +4%, uppercase), slate, `padding: 0.5rem 0.75rem 0.25rem` | the app's group label in the eyebrow style, without its dot |
 | Separator | `height: 1px; background-color: var(--color-divider); margin-block: 0.25rem` | a rule inside a surface |
-| Forced colors | a selected row in `Highlight` with `HighlightText`, a disabled one in `GrayText`; the ring stays | a fill alone does not survive the repaint |
+| Forced colors | a selected row in `Highlight` and every part on it in `HighlightText`; a disabled row and its parts in `GrayText`; the other rows' parts in `CanvasText`; the key chip an island of the system `canvas` with `CanvasText`; the ring stays | a fill alone does not survive the repaint, and a part's own color would not follow its row |
 
 The danger icon needs a rule of its own: the focused row turns its icon ink at
 a higher specificity than the danger class, so a second selector names the
 focused danger row's icon again, and the row stays red as the pointer or the
-keyboard lands on it. The forced-colors row is the same kind of rule: it names
-the selection mode, so it is as specific as the single row's ink fill and
-comes after it. With the plainer selector the ink fill won, and the repaint
-turned it into the page's own background, so the chosen row looked like the
-rest; a docs test reads it in `Highlight`.
+keyboard lands on it. The forced-colors rules are the same kind of rule. The
+chosen row names its selection mode, so it is as specific as the single row's
+ink fill and comes after it; with a plainer selector the ink fill won, and the
+repaint turned it into the page's own background. And every part with a color
+of its own needs its own forced rule: the repaint turns an author color that is
+not a system color into `CanvasText`, and does not hand a part its row's
+`HighlightText` or `GrayText`. Measured before the rule, the chosen row's
+check, icon, second line and key were `CanvasText` on `Highlight`, about 1.1:1
+in the emulated palette and 1.5:1 in Windows' Aquatic theme, and a disabled
+row's parts looked enabled. So the icon, the check, the second line and the end
+value take `HighlightText` on a chosen row, `GrayText` on a disabled one and
+`CanvasText` otherwise, each rule as specific as the one it overrides and after
+it. The key chip is an island: its own system `canvas` with `CanvasText`, `GrayText`
+when disabled, which reads on any row; on a chosen row in multiple mode the
+chip's bone is already forced to an opaque system `canvas`, so `HighlightText` there
+would vanish. Two docs tests read each part on a chosen and on a disabled row.
+A row under the pointer shows nothing in forced colors, since the wash is a
+mix the repaint drops; the keyboard ring still shows. Native menus in Windows
+high contrast draw the hovered row in `Highlight`, which here means the
+choice, so a pointer cue there is left as an open question.
 
 **One state for the pointer and the keyboard.** In a React Aria menu, hover
 moves focus to the item under the pointer, so `[data-focused]` is set under the
@@ -3842,28 +3866,51 @@ Aria makes the menu's popover a dialog that holds focus, so Tab stays on the
 row; Escape, a choice and a press outside close the menu, and focus goes back
 to the trigger.
 
-**Names.** A row is named by its label and described by its second line and
-its key, through the ids React Aria gives the three: a screen reader hears
-"Settings", then "Account and billing, Command comma", and a voice user says
-the label. Axe's label-in-name check, on in this library's tests, asks for
-every word a row shows in its name, the description and the key included. WCAG
-2.5.3 asks it of the label, and the name here is the label, so the menu's
-stories skip that one check on menu rows alone, and every other rule, and that
-one everywhere else, still runs. A row named by everything it shows would make
-a screen reader read the second line as part of the name, with no pause.
+**Names.** A row is named by its label and described by its end value, its
+second line and its key, through their ids: a screen reader hears "Settings",
+then "Account and billing, Command comma", and a voice user says the label.
+React Aria wires the second line and the key; the end value's id goes in
+`aria-describedby` ahead of them. Platform menus model a row the same way:
+macOS gives the key as the item's command character and Windows as its
+accelerator key, both outside the name. Axe's label-in-name check (ACT
+2ee8b8, tagged WCAG 2.5.3 and on by default in axe 4.14) asks for every word a
+row shows in its name, the description, the value and the key included. WCAG
+2.5.3 asks it of the label, and the name here is the label, so the stories skip
+that one check on menu rows alone, through one shared constant,
+`MENU_ROW_A11Y` in `packages/react/src/stories/a11y.ts`. It overrides the
+rule's selector with `*:not(.menu-item)`, so the rule still runs everywhere
+else on the page, and every other rule runs everywhere. A row named by
+everything it shows would make a screen reader read the second line as part of
+the name, with no pause.
+
+**The key's modifier.** `Mod` in a key hint is the platform's modifier, the
+Command symbol on Apple platforms and Ctrl elsewhere. It is read with
+`useSyncExternalStore`, whose server snapshot is "Mod", so a server's HTML
+hydrates without a mismatch, and a chip that mounts in the browser, as every
+menu's and every tip's does, draws the platform's key on its first paint and
+never shows "Mod" for a frame.
 
 **Links.** An item with `href` is an anchor with `role="menuitem"`, so a
 modified or middle click opens it as the browser would, and a plain press
-navigates through React Aria's `RouterProvider`, which Link already uses. There
-is no `linkComponent` prop: the item's inherited `render` prop draws a
+navigates through React Aria's `RouterProvider`, which Link already uses. The
+library re-exports it, and the `RouterConfig` interface to augment, so an app
+imports both from `@snapshot-ui/react` and always holds the library's own copy:
+with a second copy of React Aria in the app, the items would read a router
+context nobody provides, and every `href` would fall back to a full page load
+with no error. There is no `linkComponent` prop: the item's inherited `render` prop draws a
 router's own link where an app wants one, such as Next's for its prefetch on
 view. The docs show the Next App Router wiring once, on the Link and Menu
 pages.
 
 **Scope and direction.** The popover's ("Popover"): the theme, shape and
 density of the trigger React Aria hands it, and `dir` from the locale. Right to
-left needs nothing of its own: the icon leads and the check trails by DOM
-order, and `margin-inline-start: auto` puts the key at the inline end.
+left needs one rule of its own: the icon leads and the check trails by DOM
+order, and `margin-inline-start: auto` puts the key at the inline end, but a
+key chip of two keys in a right-to-left row would draw its comma or its
+modifier on the other side, ", Ctrl" for "Ctrl ,". React Aria's `Keyboard`
+already writes `dir="ltr"` on the chip, and the chip also sets
+`direction: ltr; unicode-bidi: isolate`, as the numerals do, so its keys read
+left to right in any direction whatever draws it.
 
 **Nothing animates inside a menu.** The popover fades and slides in; the rows
 do not move, so `menu.css` has no reduced-motion block.

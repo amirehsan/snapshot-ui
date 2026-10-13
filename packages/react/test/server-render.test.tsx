@@ -10,6 +10,7 @@ import { Drawer } from '../src/drawer';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
+import { Shortcut } from '../src/overlay/Shortcut';
 import { Popover } from '../src/popover';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
@@ -209,6 +210,13 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </MenuTrigger>,
     ['<button', 'aria-label="More"', 'aria-haspopup="true"', 'aria-expanded="false"'],
     ['role="menu"', 'Settings'],
+  ],
+  [
+    // The key chip Menu, CommandPalette and Tooltip share knows no platform on the server, so it says Mod.
+    'Shortcut',
+    <Shortcut keys="Mod ," className="menu-item-shortcut" />,
+    ['<kbd', 'dir="ltr"', 'class="menu-item-shortcut"', '>Mod ,<'],
+    ['\u2318', 'Ctrl'],
   ],
   [
     // The polite status host is in the page's HTML, empty, before any toast; React Aria's region mounts in the

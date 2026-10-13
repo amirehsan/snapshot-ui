@@ -10,8 +10,10 @@ import { DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { Link } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
+import { Popover } from '../popover';
 import { Radio, RadioGroup } from '../radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
+import { MENU_ROW_A11Y } from '../stories/a11y';
 import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
 import { TextArea } from '../text-area';
@@ -554,14 +556,13 @@ export const DrawerMirrored: Story = {
 
 /**
  * A menu in right to left mirrors by DOM order and logical properties: the icon leads at the right of the
- * row, the label follows to its left, and the key chip and the check trail at the left end.
+ * row, the label follows to its left, and the end value, the key chip and the check trail at the left end.
+ * The keys of a chip still read left to right, so "Ctrl ," never draws as ", Ctrl".
  */
 export const MenuMirrored: Story = {
   // A row is named by its label and described by its key, so axe's label-in-name check is skipped on menu
-  // rows, as in the menu's own stories, which say why.
-  parameters: {
-    a11y: { config: { rules: [{ id: 'label-content-name-mismatch', selector: '*:not(.menu-item)' }] } },
-  },
+  // rows alone, as MENU_ROW_A11Y says why.
+  parameters: { a11y: MENU_ROW_A11Y },
   render: () => (
     <Rtl>
       <MenuTrigger defaultOpen>
@@ -575,7 +576,7 @@ export const MenuMirrored: Story = {
               داكن
             </MenuItem>
           </MenuSection>
-          <MenuItem id="settings" icon={<Settings />} shortcut="Q">
+          <MenuItem id="settings" icon={<Settings />} end="3" shortcut="Mod ,">
             الإعدادات
           </MenuItem>
         </Menu>
@@ -601,11 +602,49 @@ export const MenuMirrored: Story = {
     const settings = body.getByRole('menuitem', { name: 'الإعدادات' });
     const icon = rect(find(settings, '.menu-item-icon'));
     const label = rect(find(settings, '.menu-item-label'));
-    const key = rect(find(settings, '.menu-item-shortcut'));
+    const end = rect(find(settings, '.menu-item-end'));
+    const chip = find(settings, '.menu-item-shortcut');
+    const key = rect(chip);
     await expect(icon.left).toBeGreaterThanOrEqual(label.right - 0.5);
-    await expect(key.right).toBeLessThanOrEqual(label.left + 0.5);
+    await expect(end.right).toBeLessThanOrEqual(label.left + 0.5);
+    await expect(key.right).toBeLessThanOrEqual(end.left + 0.5);
+    // The modifier comes first and the comma last, drawn left to right inside the right-to-left row.
+    const modifier = characterBox(chip, 0);
+    const comma = characterBox(chip, chip.textContent.length - 1);
+    await expect(modifier.left).toBeLessThan(comma.left);
     // The icon sits at the row's right edge, inside its 12px of padding.
     await expectSameEdge(rect(settings).right - icon.right, 12);
+  },
+};
+
+/**
+ * A popover opened at `bottom start` in right to left lines up with its trigger's right edge, the start of
+ * a right-to-left line, and React Aria writes `dir` on it.
+ */
+export const PopoverMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <DialogTrigger defaultOpen>
+          <Button variant="secondary">تصفية المشاريع</Button>
+          <Popover isPadded>
+            <p style={{ margin: 0 }}>المشاريع النشطة فقط.</p>
+          </Popover>
+        </DialogTrigger>
+      </div>
+    </Rtl>
+  ),
+  play: async ({ canvas }) => {
+    const popover = await waitFor(async () => {
+      const found = find(document, '.popover');
+      await expect(found).toHaveAttribute('data-placement', 'bottom');
+      await expect(found).not.toHaveAttribute('data-entering');
+      return found;
+    });
+    await Promise.all(popover.getAnimations().map((animation) => animation.finished.catch(() => null)));
+    await expect(popover).toHaveAttribute('dir', 'rtl');
+    const trigger = rect(canvas.getByRole('button', { name: 'تصفية المشاريع' }));
+    await expectSameEdge(rect(popover).right, trigger.right);
   },
 };
 

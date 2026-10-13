@@ -6,6 +6,7 @@ import { Button } from '../button';
 import { Card, CardBody } from '../card';
 import { Dialog, DialogTrigger } from '../dialog';
 import { IconButton } from '../icon-button';
+import { MENU_ROW_A11Y } from '../stories/a11y';
 import { tokenColor, washColor } from '../stories/paint';
 import { Menu, MenuTrigger, type MenuProps } from './Menu';
 import { MenuItem } from './MenuItem';
@@ -99,18 +100,6 @@ const TOGGLES = (
     <MenuItem id="guides">Guides</MenuItem>
   </MenuSection>
 );
-
-/**
- * Axe's label-in-name check, skipped on menu rows alone. A row is named by its label and described by its
- * second line and its key chip, through the ids React Aria gives them, so a screen reader hears "Settings"
- * and then "Account and billing, Command comma", and a voice user says the label. The check asks for every
- * visible word in the name, the description and the key included; WCAG 2.5.3 asks it of the label. Every
- * other rule, and this one everywhere else on the page, still runs. Recorded in docs/design-system.md
- * ("Menu").
- */
-const MENU_ROW_A11Y = {
-  config: { rules: [{ id: 'label-content-name-mismatch', selector: '*:not(.menu-item)' }] },
-};
 
 const meta = {
   title: 'Components/Menu',
@@ -232,6 +221,99 @@ export const InDarkScope: Story = {
     const scope = canvas.getByTestId('dark-scope');
     await expect(getComputedStyle(popover).backgroundColor).toBe(tokenColor('--color-float', scope));
     await expect(getComputedStyle(item('Dark')).backgroundColor).toBe(tokenColor('--color-ink', scope));
+  },
+};
+
+/** The left-to-right order of a chip's characters as drawn, read from their boxes. */
+function drawnOrder(chip: Element): string {
+  const node = chip.firstChild;
+  if (node?.nodeType !== Node.TEXT_NODE) throw new Error('The chip does not hold text');
+  const text = node.textContent ?? '';
+  return Array.from({ length: text.length }, (_, index) => {
+    const range = document.createRange();
+    range.setStart(node, index);
+    range.setEnd(node, index + 1);
+    return { character: text.charAt(index), left: range.getBoundingClientRect().left };
+  })
+    .filter(({ character }) => character.trim() !== '')
+    .sort((a, b) => a.left - b.left)
+    .map(({ character }) => character)
+    .join('');
+}
+
+/**
+ * Values at the row's end, as a payment menu shows its balances: small ink tabular figures before the key,
+ * inverted to canvas on the chosen row. A second line that is one long unbroken address breaks anywhere, so
+ * at 375px the popup stays inside the screen and scrolls sideways nowhere.
+ */
+export const EndValues: Story = {
+  render: (args) => (
+    <Opened {...args}>
+      <MenuSection title="Pay from" selectionMode="single" defaultSelectedKeys={['checking']}>
+        <MenuItem id="checking" end="$2,340.12" shortcut="Mod 1">
+          Checking
+        </MenuItem>
+        <MenuItem id="savings" end="$10,050.00" shortcut="Mod 2">
+          Savings
+        </MenuItem>
+        <MenuItem
+          id="joint"
+          description="Shared with ada.lovelace.and.charles.babbage@analytical-engine.example"
+          end="$412.30"
+        >
+          Joint
+        </MenuItem>
+      </MenuSection>
+    </Opened>
+  ),
+  play: async () => {
+    const popover = await atRest();
+    const menu = within(document.body).getByRole('menu');
+    for (const element of [popover, menu, ...menu.querySelectorAll<HTMLElement>('.menu-item')]) {
+      await expect(element.scrollWidth).toBeLessThanOrEqual(element.clientWidth);
+    }
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+    const savings = item('Savings');
+    const end = savings.querySelector('.menu-item-end');
+    const key = savings.querySelector('.menu-item-shortcut');
+    if (!end || !key) throw new Error('No end value or key on Savings');
+    await expect(end.getBoundingClientRect().right).toBeLessThanOrEqual(key.getBoundingClientRect().left);
+    await expect(getComputedStyle(end).color).toBe(tokenColor('--color-ink'));
+    await expect(getComputedStyle(end).fontVariantNumeric).toBe('tabular-nums');
+    const chosen = item('Checking').querySelector('.menu-item-end');
+    if (!chosen) throw new Error('No end value on Checking');
+    await expect(getComputedStyle(chosen).color).toBe(tokenColor('--color-canvas'));
+    await expect(['\u23182', 'Ctrl2']).toContain(drawnOrder(key));
+  },
+};
+
+/**
+ * A chosen row that is also disabled is not the ink pill: it keeps the disabled look and shows its choice
+ * by the check alone, in taupe.
+ */
+export const DisabledChoice: Story = {
+  tags: ['no-visual'],
+  render: (args) => (
+    <Opened {...args}>
+      <MenuSection title="Theme" selectionMode="single" defaultSelectedKeys={['dark']}>
+        <MenuItem id="light">Light</MenuItem>
+        <MenuItem id="dark" isDisabled>
+          Dark
+        </MenuItem>
+      </MenuSection>
+    </Opened>
+  ),
+  play: async () => {
+    await atRest();
+    const dark = item('Dark');
+    await expect(dark).toHaveAttribute('data-selected', 'true');
+    await expect(dark).toHaveAttribute('data-disabled', 'true');
+    await expect(getComputedStyle(dark).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    await expect(getComputedStyle(dark).color).toBe(tokenColor('--color-taupe'));
+    const check = dark.querySelector('.menu-item-check');
+    if (!check) throw new Error('No check');
+    await expect(getComputedStyle(check).visibility).toBe('visible');
+    await expect(getComputedStyle(check).color).toBe(tokenColor('--color-taupe'));
   },
 };
 
