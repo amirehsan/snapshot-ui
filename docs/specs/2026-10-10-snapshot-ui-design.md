@@ -339,8 +339,8 @@ These are deliberate UX decisions in the source app and are kept:
   marker while folded.
 - A length counter shows the count and never blocks typing.
 - Toasts stay 6 seconds, or 12 for errors, and errors use `role="alert"`.
-- A tooltip opens after 400ms on hover and at once on focus, and for 300ms
-  after one closes the next opens without delay.
+- A tooltip opens after 400ms on hover and at once on focus, and for about
+  half a second after one closes the next opens without delay.
 - Conditional fields are made `inert` when hidden, never cleared or disabled.
 - Drag-and-drop lists also work by keyboard pick-up and arrow keys, with live
   region announcements.

@@ -1,0 +1,97 @@
+/*
+ * Tooltip: the source's ink tip with canvas text, the 6px step the design document gives tooltips,
+ * the float shadow, an 8px arrow, 14px text (the sentence floor; light on dark at 450 renders heavier
+ * than it measures), wrapping at 20rem, a 140ms ease-out fade with a 4px slide toward the trigger,
+ * and a key chip in canvas at 20% over ink. The transparent border is repainted in forced colors so
+ * the tip keeps a shape when the arrow is hidden. Derived in docs/design-system.md ("Tooltip").
+ */
+@layer components {
+  .tooltip {
+    max-width: min(20rem, calc(100vw - 2rem));
+    padding: 0.375rem 0.625rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-micro);
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+    box-shadow: var(--shadow-float);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    overflow-wrap: anywhere;
+    transition:
+      opacity 140ms ease-out,
+      translate 140ms ease-out;
+  }
+
+  .tooltip:is([data-entering], [data-exiting]) {
+    opacity: 0;
+  }
+
+  .tooltip[data-placement='top']:is([data-entering], [data-exiting]) {
+    translate: 0 4px;
+  }
+
+  .tooltip[data-placement='bottom']:is([data-entering], [data-exiting]) {
+    translate: 0 -4px;
+  }
+
+  .tooltip[data-placement='left']:is([data-entering], [data-exiting]) {
+    translate: 4px 0;
+  }
+
+  .tooltip[data-placement='right']:is([data-entering], [data-exiting]) {
+    translate: -4px 0;
+  }
+
+  .tooltip-arrow svg {
+    display: block;
+    width: 8px;
+    height: 8px;
+    fill: var(--color-ink);
+  }
+
+  .tooltip-arrow[data-placement='bottom'] svg {
+    rotate: 180deg;
+  }
+
+  .tooltip-arrow[data-placement='left'] svg {
+    rotate: -90deg;
+  }
+
+  .tooltip-arrow[data-placement='right'] svg {
+    rotate: 90deg;
+  }
+
+  /* The one key look, inverted for the ink tip. */
+  .tooltip-shortcut {
+    margin-inline-start: 0.5rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-micro);
+    background-color: color-mix(in srgb, var(--color-canvas) 20%, transparent);
+    color: var(--color-canvas);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1;
+    letter-spacing: var(--text-overline--letter-spacing);
+    font-weight: var(--text-overline--font-weight);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* An svg fill is repainted, so the arrow goes and the border carries the shape. */
+  @media (forced-colors: active) {
+    .tooltip {
+      border-color: CanvasText;
+    }
+
+    .tooltip-arrow {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tooltip {
+      transition: none;
+    }
+  }
+}

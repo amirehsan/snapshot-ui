@@ -1623,3 +1623,29 @@ test('the palette remembers recents across a reload', async ({ page }) => {
   const recent = palette.getByRole('group', { name: 'Recent' });
   await expect(recent.getByRole('menuitem', { name: 'Rent' })).toBeVisible();
 });
+
+test('the tooltip page shows a tip on hover after a pause and at once on focus', async ({ page }) => {
+  await visit(page, '/docs/components/tooltip');
+  const edit = page.getByRole('button', { name: 'Edit', exact: true });
+  const tip = page.getByRole('tooltip');
+  await expect(tip).toHaveCount(0);
+  // A resting pointer shows the tip after its pause, and it describes the button while it is open. React Aria
+  // answers a hover only once the mouse has moved over the page, as a person's always has by then.
+  await page.mouse.move(1, 1);
+  await edit.hover();
+  await expect(tip).toBeVisible();
+  await expect(tip).toHaveText('Edit');
+  await expect(edit).toHaveAttribute('aria-describedby', (await tip.getAttribute('id')) ?? '');
+  // Moving away closes it.
+  await page.mouse.move(0, 0);
+  await expect(tip).toHaveCount(0);
+  // Focus on Edit by a script is not a key, so Tab onwards: the next button's tip is there as the key lands.
+  await edit.focus();
+  await page.keyboard.press('Tab');
+  const duplicate = page.getByRole('button', { name: 'Duplicate', exact: true });
+  await expect(duplicate).toBeFocused();
+  expect(await page.getByRole('tooltip', { name: 'Duplicate' }).count()).toBe(1);
+  await page.keyboard.press('Escape');
+  await expect(tip).toHaveCount(0);
+  await expect(duplicate).toBeFocused();
+});

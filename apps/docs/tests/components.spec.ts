@@ -368,6 +368,18 @@ test.describe('forced colors', () => {
     expect(Number(alpha), fill).toBeGreaterThan(0);
     expect(Number(alpha), fill).toBeLessThan(1);
   });
+
+  test('a tooltip keeps a border and loses its arrow', async ({ page }) => {
+    // The arrow is an svg fill, which the repaint would turn into a shape of the wrong color or none, so it
+    // goes. The tip's transparent border is repainted in the reader's text color, so the tip keeps its shape.
+    await visit(page, '/docs/components/tooltip');
+    const system = await systemColors(page);
+    await page.getByRole('button', { name: 'Edit', exact: true }).focus();
+    const tip = page.getByRole('tooltip');
+    await expect(tip).toHaveText('Edit');
+    expect((await paint(tip)).edge).toBe(system.canvasText);
+    await expect(tip.locator('.tooltip-arrow')).toBeHidden();
+  });
 });
 
 // ---- Props tables -------------------------------------------------------------------------------
@@ -444,6 +456,8 @@ const NO_LONG_TEXT: Record<string, string> = {
   sheet: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   spinner: 'a progress mark with no text a person writes',
   toast: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
+  tooltip:
+    "its text is in a portal that opens on hover or focus; the Wrapped story's 375px baseline pins its wrapping",
 };
 
 test('every component page is given long text, or is listed as having none', () => {
@@ -545,6 +559,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The buttons that raise the toasts, and the polite status host the docs layout mounts, which is in the page
   // before any toast.
   toast: ['.stage .button', '.toast-status-host'],
+  // The triggers; a tip opens on hover or focus, so none is in the page before a script runs.
+  tooltip: ['.stage .icon-button'],
   typography: ['.stage .heading', '.stage .copy', '.stage .copy-numeral', '.stage .eyebrow'],
 };
 

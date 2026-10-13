@@ -57,6 +57,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Text area](https://snapshotui.com/docs/components/text-area)
 - [Text field](https://snapshotui.com/docs/components/text-field)
 - [Toast](https://snapshotui.com/docs/components/toast)
+- [Tooltip](https://snapshotui.com/docs/components/tooltip)
 - [Typography](https://snapshotui.com/docs/components/typography)
 
 ## Links

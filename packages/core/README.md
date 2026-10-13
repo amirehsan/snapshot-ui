@@ -56,6 +56,7 @@ Body text is set at weight 450, which only a variable font has. Load Sofia Sans 
 - [Text area](https://snapshotui.com/docs/components/text-area)
 - [Text field](https://snapshotui.com/docs/components/text-field)
 - [Toast](https://snapshotui.com/docs/components/toast)
+- [Tooltip](https://snapshotui.com/docs/components/tooltip)
 - [Typography](https://snapshotui.com/docs/components/typography)
 
 ## Links
