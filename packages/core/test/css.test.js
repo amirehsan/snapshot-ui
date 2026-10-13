@@ -2192,6 +2192,13 @@ describe('src/components/toast.css', () => {
     expect(host).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
   });
 
+  it('pins the status host to the start corner of its containing block, so it never adds to the page scroll', () => {
+    // At its static position after the last block, the 1px host lengthens a page that fills the viewport.
+    const host = blockAfter(rules(), '.toast-status-host {');
+    expect(host).toContain('inset-block-start: 0;');
+    expect(host).toContain('inset-inline-start: 0;');
+  });
+
   it('fixes the region in the bottom end corner, the overlay inset in, above every modal', () => {
     const region = blockAfter(rules(), '.toast-region {');
     for (const declaration of [

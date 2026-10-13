@@ -1,5 +1,8 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Profiler, StrictMode } from 'react';
+import { hydrateRoot, type Root } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { Dialog } from '../dialog';
@@ -23,6 +26,13 @@ function show(options: ToastOptions): string {
 function advance(ms: number): void {
   act(() => {
     vi.advanceTimersByTime(ms);
+  });
+}
+
+/** Lets the microtasks a commit queued run, as they do before any timer in a browser. */
+async function settle(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
   });
 }
 
@@ -383,15 +393,75 @@ describe('ToastRegion', () => {
         });
       },
     ],
-  ])('holds a toast that arrives while %s is in the region', (_name, enter) => {
+  ])('holds a toast that arrives while %s is in the region', async (_name, enter) => {
     render(<ToastRegion />);
     show({ title: 'Older', tone: 'info' });
     advance(1000);
     enter();
     // The newer toast starts its own timer as it mounts, after React Aria paused the rest.
     show({ title: 'Newer', tone: 'info' });
+    await settle();
     advance(10000);
     expect(toasts()).toHaveLength(2);
+  });
+
+  it.each([
+    ['the pointer', (): void => void fireEvent.pointerOver(region(), { pointerType: 'mouse' })],
+    [
+      'focus',
+      (): void => {
+        act(() => {
+          within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Dismiss' }).focus();
+        });
+      },
+    ],
+  ])('holds a toast that arrives while %s is in the region under Strict Mode', async (_name, enter) => {
+    // Strict Mode runs a new toast's effects a second time after the commit's, which restarts its timer.
+    render(
+      <StrictMode>
+        <ToastRegion />
+      </StrictMode>,
+    );
+    show({ title: 'Older', tone: 'info' });
+    advance(1000);
+    enter();
+    show({ title: 'Newer', tone: 'info' });
+    await settle();
+    advance(10000);
+    expect(toasts()).toHaveLength(2);
+  });
+
+  it('adds no commit of its own to hydration when no toast is open', () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    let commits = 0;
+    const page = (
+      <Profiler
+        id="region"
+        onRender={() => {
+          commits += 1;
+        }}
+      >
+        <ToastRegion />
+      </Profiler>
+    );
+    // The server's own HTML, which hydration adopts.
+    container.innerHTML = renderToString(page);
+    commits = 0;
+    let root: Root | undefined;
+    try {
+      act(() => {
+        root = hydrateRoot(container, page);
+      });
+      // Hydration, then React Aria's region once more as it learns it is on the client, which a bare React Aria
+      // region does too. A client snapshot that differed from the server's empty one would add a third.
+      expect(commits).toBe(2);
+    } finally {
+      act(() => {
+        root?.unmount();
+      });
+      container.remove();
+    }
   });
 
   it('warns once when a second region is mounted', () => {
