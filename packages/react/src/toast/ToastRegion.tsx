@@ -33,8 +33,11 @@ export interface ToastRegionProps {
 type Queued = QueuedToast<ToastContent>;
 
 const subscribe = (listener: () => void): (() => void) => queue.subscribe(listener);
-const visibleNow = (): readonly Queued[] => queue.visibleToasts;
+/** No toasts: the server's snapshot, and the client's whenever the queue is empty. */
 const NONE: readonly Queued[] = [];
+// An empty queue reads as the same array the server rendered, so hydration finds nothing changed here. React
+// Aria's own empty list is a different array, which would cost one more commit.
+const visibleNow = (): readonly Queued[] => (queue.visibleToasts.length === 0 ? NONE : queue.visibleToasts);
 const visibleOnServer = (): readonly Queued[] => NONE;
 
 /**
@@ -87,13 +90,25 @@ export function ToastRegion({
   const visible = useSyncExternalStore(subscribe, visibleNow, visibleOnServer);
 
   // React Aria pauses the timers when hover or focus enters the region, and a toast that arrives after that
-  // starts its own as it mounts. This effect runs after the new toast's, since the toasts are inside the
-  // region, and holds it with the rest while the pointer or focus is still there.
+  // starts its own as it mounts. This holds it with the rest while the pointer or focus is still there. It
+  // pauses from a microtask, after the commit: development Strict Mode runs a new toast's effects a second
+  // time once every effect of the commit has run, which would restart a timer paused here and now. A
+  // microtask still runs before any timer can fall due.
   useEffect(() => {
-    const region = regionRef.current;
-    if (region && (region.matches('[data-hovered]') || region.contains(document.activeElement))) {
-      queue.pauseAll();
-    }
+    let current = true;
+    queueMicrotask(() => {
+      const region = regionRef.current;
+      if (
+        current &&
+        region &&
+        (region.matches('[data-hovered]') || region.contains(document.activeElement))
+      ) {
+        queue.pauseAll();
+      }
+    });
+    return () => {
+      current = false;
+    };
   }, [visible]);
 
   // Counted from the layout phase, so a toast that a component raises as it mounts finds the region counted.
