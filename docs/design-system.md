@@ -2360,7 +2360,7 @@ not have, so a plain card is unchanged. Eight things were derived.
   folded panel, which no browser searches, and React Aria sets `until-found`
   in a layout effect after hydration. Measured by loading, with a text
   fragment link, a page that sets `hidden="until-found"` on its target after
-  a delay, in Playwright's Chromium 156, Firefox 153 and WebKit 27.2:
+  a delay, in Playwright's Chromium 156, Firefox 153 and WebKit 26.5:
   Chromium opened it at 300ms and not at 1.5s, WebKit at 1.5s and not at 5s,
   and Firefox with the attribute set as the page parsed and not 50ms later.
   So the docs promise find-in-page on the hydrated page, which needs no
