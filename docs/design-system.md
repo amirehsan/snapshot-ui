@@ -4925,6 +4925,12 @@ declare its own.
 still renders them. A ref keeps Strict Mode's second effect quiet, and a
 server never runs effects, so it never warns there. There is no
 development-only gate, because `process.env` is not typed in the package.
+It counts what the bar draws, not `Children.count`: a fragment's items count
+one by one, and a slot that renders nothing, such as `{isAdmin && <Item />}`
+while false, counts as none, so four items passed in one fragment never warn.
+
+**Disabled.** A button item with `isDisabled` is taupe, the color of disabled
+text, with the default cursor and no hover or press wash.
 
 **Not in this release.** When the Android soft keyboard opens, the layout
 viewport shrinks and a fixed bar rides up above the keyboard. Recorded for a

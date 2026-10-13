@@ -155,6 +155,20 @@ describe('BottomTabBar', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it('counts the items inside a fragment and skips a slot that renders nothing', () => {
+    // Four items in one fragment are four, not one; a false or null slot, such as `{isAdmin && <Item />}`, is none.
+    const { unmount } = render(<BottomTabBar aria-label="Main">{FOUR}</BottomTabBar>);
+    unmount();
+    render(
+      <BottomTabBar aria-label="Main">
+        {items(5)}
+        {false}
+        {null}
+      </BottomTabBar>,
+    );
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('warns once per mount, through Strict Mode and a re-render with the same wrong count', () => {
     const { rerender } = render(
       <StrictMode>

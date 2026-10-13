@@ -122,7 +122,9 @@
     .tab-bar-item:is(:hover, [data-hovered]):not(
         [aria-current='page'],
         [data-current],
-        [data-current-action]
+        [data-current-action],
+        :disabled,
+        [data-disabled]
       ) {
       background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
       color: var(--color-ink);
@@ -132,7 +134,9 @@
   .tab-bar-item:is(:active, [data-pressed]):not(
       [aria-current='page'],
       [data-current],
-      [data-current-action]
+      [data-current-action],
+      :disabled,
+      [data-disabled]
     ) {
     background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
     color: var(--color-ink);
@@ -149,6 +153,12 @@
     border-color: var(--color-ink);
     background-color: var(--color-canvas);
     color: var(--color-ink);
+  }
+
+  /* A button item with isDisabled: taupe, the color of disabled text, with no wash and no pointer. */
+  .tab-bar-item:is(:disabled, [data-disabled]) {
+    color: var(--color-taupe);
+    cursor: default;
   }
 
   .tab-bar-item:is(:focus-visible, [data-focus-visible]) {

@@ -3034,6 +3034,7 @@ describe('src/components/tab-bar.css', () => {
   const rules = () => closeUp(stripComments(read('src/components/tab-bar.css')));
   const WIDE = '@media (width >= 1024px)';
   const CURRENT = "[aria-current='page'], [data-current], [data-current-action]";
+  const DISABLED = ':disabled, [data-disabled]';
 
   it('docks the bar flush with the bottom edge at the chrome layer, the safe area padded inside it', () => {
     const bar = blockAfter(rules(), '.tab-bar {');
@@ -3114,21 +3115,27 @@ describe('src/components/tab-bar.css', () => {
   it('washes an item on hover only with a hover pointer and never the current one, and the current rule comes after', () => {
     const css = rules();
     const hover = blockAfter(css, '@media (hover: hover)');
-    const itemHover = `.tab-bar-item:is(:hover, [data-hovered]):not(${CURRENT}) {`;
+    const itemHover = `.tab-bar-item:is(:hover, [data-hovered]):not(${CURRENT}, ${DISABLED}) {`;
     const washed = blockAfter(hover, itemHover);
     expect(washed).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
     expect(washed).toContain('color: var(--color-ink);');
     // Outside the media block, no rule hovers an item; a press shows the same wash, never on the current one.
     const outside = css.replace(/@media \(hover: hover\) \{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
     expect(outside).not.toMatch(/\.tab-bar-item:is\(:hover/);
-    expect(blockAfter(css, `.tab-bar-item:is(:active, [data-pressed]):not(${CURRENT}) {`)).toContain(
-      'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);',
-    );
+    expect(
+      blockAfter(css, `.tab-bar-item:is(:active, [data-pressed]):not(${CURRENT}, ${DISABLED}) {`),
+    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
     const current = `.tab-bar-item:is(${CURRENT}) {`;
     const fill = blockAfter(css, current);
     expect(fill).toContain('background-color: var(--color-ink);');
     expect(fill).toContain('color: var(--color-canvas);');
     expect(css.indexOf(current)).toBeGreaterThan(css.indexOf(itemHover));
+  });
+
+  it('draws a disabled item in taupe with no pointer, and gives it no hover or press wash', () => {
+    const disabled = blockAfter(rules(), `.tab-bar-item:is(${DISABLED}) {`);
+    expect(disabled).toContain('color: var(--color-taupe);');
+    expect(disabled).toContain('cursor: default;');
   });
 
   it('rings an item in the focus ring token, inverted to canvas and inset on the current item', () => {
