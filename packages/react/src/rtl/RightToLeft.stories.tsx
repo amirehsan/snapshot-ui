@@ -11,6 +11,7 @@ import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
 import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
+import { Eyebrow, Text } from '../typography';
 
 /**
  * Right-to-left text, checked for every field in a real browser: layout needs a
@@ -21,7 +22,8 @@ import { TextField } from '../text-field';
  * which do not depend on which font draws the letters.
  *
  * The stories are `no-visual`: they assert positions, and a baseline of Arabic
- * text would depend on the font a machine falls back to.
+ * text would depend on the font a machine falls back to. The one exception is
+ * `Numerals`, which holds Latin digits only, so no fallback font is in its baseline.
  */
 
 /** The width of a form column, in a wrapper that reads right to left. */
@@ -53,6 +55,16 @@ function lastText(element: Element): DOMRect {
   if (!last) throw new Error('No text in the element');
   const range = document.createRange();
   range.selectNodeContents(last);
+  return range.getBoundingClientRect();
+}
+
+/** The box of one character of an element's first run of text. */
+function characterBox(element: Element, index: number): DOMRect {
+  const node = element.firstChild;
+  if (node?.nodeType !== Node.TEXT_NODE) throw new Error('The element does not start with text');
+  const range = document.createRange();
+  range.setStart(node, index);
+  range.setEnd(node, index + 1);
   return range.getBoundingClientRect();
 }
 
@@ -463,5 +475,45 @@ export const CollapsibleCardMirrored: Story = {
     await expect(narrowAction.top).toBeGreaterThanOrEqual(narrowNote.bottom);
     await expectSameEdge(narrowAction.right, narrowTitle.right);
     await expectInside(narrowAction, rect(narrow));
+  },
+};
+
+/**
+ * A signed figure keeps its sign in front. A leading plus or minus is neutral to the bidi algorithm, so in
+ * a right-to-left block "+$1,980.00" would draw as "$1,980.00+". A numeral sets its own direction to left to
+ * right and isolates itself, and `text-align: match-parent` keeps it at the start of the right-to-left line,
+ * which is the right edge. The block, the sign and the figure's edge are measured here, and the story is
+ * baselined, since its text is Latin digits and no fallback font is in it.
+ */
+export const Numerals: Story = {
+  tags: ['!no-visual'],
+  render: () => (
+    <div dir="rtl" style={{ display: 'grid', gap: 24, width: 'min(28rem, calc(100vw - 2rem))' }}>
+      <Text size="numeral">+$2,345.67</Text>
+      <div style={{ display: 'grid', gap: 8 }}>
+        <Eyebrow>Arrived</Eyebrow>
+        <Text as="span" size="numeral-sm">
+          +$1,980.00
+        </Text>
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        <Eyebrow>Spent</Eyebrow>
+        <Text as="span" size="numeral-sm">
+          -$4,210.00
+        </Text>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const block = rect(find(canvasElement, '[dir="rtl"]'));
+    const figures = [...canvasElement.querySelectorAll<HTMLElement>('.copy-numeral, .copy-numeral-sm')];
+    await expect(figures).toHaveLength(3);
+    for (const figure of figures) {
+      await expect(getComputedStyle(figure).direction).toBe('ltr');
+      // The figure ends at the right edge of the block, which is where a right-to-left line starts.
+      await expectSameEdge(lastText(figure).right, block.right);
+      // The sign is the first character and is drawn left of the currency symbol after it.
+      await expect(characterBox(figure, 0).right).toBeLessThanOrEqual(characterBox(figure, 1).left + 0.5);
+    }
   },
 };

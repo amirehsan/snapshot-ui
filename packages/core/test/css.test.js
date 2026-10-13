@@ -317,6 +317,21 @@ describe('src/components/copy.css, the numerals', () => {
     expect(shared).toContain('white-space: nowrap;');
   });
 
+  it('keeps a figure reading left to right in any direction, at the start of its parent line', () => {
+    // A leading + or - is neutral in a right-to-left block, so without this "+$1,980.00" draws as
+    // "$1,980.00+". match-parent resolves start against the parent, so a block figure stays at the start
+    // of a right-to-left line instead of jumping to the left with its own direction.
+    const shared = blockAfter(source(), '.copy-numeral, .copy-numeral-sm {');
+    expect(shared).toContain('direction: ltr;');
+    expect(shared).toContain('unicode-bidi: isolate;');
+    // Chromium knows only the prefixed name and Firefox only the standard one, so both are written.
+    expect(shared).toContain('text-align: -webkit-match-parent;');
+    expect(shared).toContain('text-align: match-parent;');
+    expect(shared.indexOf('text-align: match-parent;')).toBeGreaterThan(
+      shared.indexOf('text-align: -webkit-match-parent;'),
+    );
+  });
+
   it.each(['numeral', 'numeral-sm'])('draws copy-%s from its own type token', (name) => {
     const rule = blockAfter(source(), `} .copy-${name} {`);
     expect(rule).toContain(`font-size: var(--text-${name});`);
