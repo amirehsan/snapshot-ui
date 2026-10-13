@@ -196,6 +196,8 @@ Ties inside a layer break by DOM order: React Aria appends each portal after the
 
 Deep Well at 0.4 light and 0.65 dark, never ink (ink is white in dark and would lighten the page). It is a background color and not `opacity`, so it does not fade the panel with it. `forced-color-adjust: none` keeps it translucent where Windows high contrast would repaint it opaque and hide the page. `--visual-viewport-height` is the inline value React Aria writes on the overlay for the on-screen keyboard. A press on the scrim dismisses when `isDismissable`; a press on the toast region does not (below).
 
+**Correction, ruled in the Popover review:** for a popover opened from a `DialogTrigger`, the underlay does more than catch outside presses. React Aria 1.22.1 makes that popover a dialog (`Popover.mjs` gives it `role="dialog"` unless `isNonModal`), makes the page behind inert (`ariaHideOutside` with `shouldUseInert`) and locks its scroll (`usePreventScroll`), as a modal does, with no scrim. Nothing dims, so "never dim the page" still holds. One consequence: with the page inert, the first press on another control, such as the next filter chip, only closes the open panel. `isNonModal` drops all of this, along with the focus move and outside-press dismissal, and is left to the controls whose focus stays in a field, such as ComboBox; a chip row that wants one-press switching decides its own focus model in the shell spec.
+
 **One scrim when modals stack.** `useOverlayStack(id, isOpen)` keeps a module-level ordered set of the open modal overlays (a plain `Set`, safe to import on the server) and returns whether this one is the bottom-most. Every modal overlay that is not carries `data-stacked`, so only the first paints the scrim; the others still capture presses. When the first closes, the next becomes bottom-most and paints it. The same set answers two other questions: CommandPalette's shortcut is ignored while any other modal is open, and tests can read it.
 
 **Fills, edges, shadows, corners.**
@@ -1013,6 +1015,8 @@ Keys tables:
 - Toast: F6 (reaches the region), Tab (through a toast's action and dismiss), Enter and Space.
 - CommandPalette: Cmd or Ctrl+K (opens and closes), Down and Up (move, wrap), Home and End, Enter (opens the item), Escape (closes), typing filters, Tab stays in the dialog.
 - Tooltip: Tab (opens on focus), Escape (closes).
+
+**Correction, ruled in the Popover review:** the Popover row's Tab is wrong for React Aria 1.22.1. A popover opened from a `DialogTrigger` is a dialog that holds focus inside it (`Popover.mjs` passes `shouldContainFocus: isDialog` to `Overlay`'s `FocusScope contain`), so Tab cycles through the controls inside and never leaves or closes it. The popover page's Keys table says "Cycles through the controls inside."
 
 **Design record**, `docs/design-system.md`, written before each part is built: "Four colors added" becomes six with the tables and rules of 4.1; a `## Numerals` section (4.2); the Badge section's fifth tone; an `## Overlays` section (4.5) with the layer, scope, scrim, surfaces, motion and focus rules; and one section per part (Dialog and ConfirmDialog together, Drawer, Sheet with the spike's result, Popover, Menu, Toast, CommandPalette with the placeholder exception, Tooltip), each with its measured table. The "Still missing: tooltip" note is retired. Parent spec 6.3's tooltip sentence is amended (13.2, item 16).
 

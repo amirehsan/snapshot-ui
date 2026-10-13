@@ -1894,6 +1894,10 @@ describe('src/components/popover.css', () => {
     }
   });
 
+  it('breaks a long word anywhere, so free content never scrolls the surface sideways', () => {
+    expect(blockAfter(rules(), '.popover {')).toContain('overflow-wrap: anywhere;');
+  });
+
   it('pads free content 24px, and only with popover-padded', () => {
     const css = rules();
     expect(blockAfter(css, '.popover-padded {')).toContain('padding: var(--spacing-peer);');
