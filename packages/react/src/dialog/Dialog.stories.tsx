@@ -266,6 +266,52 @@ export const FocusAndRestore: Story = {
 };
 
 /**
+ * A control inside that asks for focus gets it: here a plain input with `autoFocus`, which React focuses as
+ * it mounts, before the panel around it is in place. The dialog opens from a trigger in a dark block and is
+ * still dark, because the frame records what held focus before the content takes it.
+ */
+export const AutoFocusChild: Story = {
+  tags: ['no-visual'],
+  args: {
+    children: (
+      <label style={{ display: 'grid', gap: 8 }}>
+        Workspace name
+        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- the story proves that a control asking for focus as the dialog opens gets it, and does not cost the dialog its scope */}
+        <input className="input" defaultValue="Northwind Studio" autoFocus />
+      </label>
+    ),
+    actions: <Button slot="close">Rename</Button>,
+  },
+  render: (args) => (
+    <div
+      data-theme="dark"
+      data-testid="dark-scope"
+      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+    >
+      <DialogTrigger>
+        <Button variant="secondary">Rename the workspace</Button>
+        <Dialog {...args} />
+      </DialogTrigger>
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.tab();
+    await expect(canvas.getByRole('button', { name: 'Rename the workspace' })).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    const panel = await atRest();
+    const body = within(document.body);
+    // The child that asked for focus has it, and the dialog element does not take it back.
+    await waitFor(() => expect(body.getByRole('textbox', { name: 'Workspace name' })).toHaveFocus());
+    await expect(body.getByRole('dialog')).not.toHaveFocus();
+    // The scope came from the trigger, not from the input inside the panel.
+    await expect(panel).toHaveAttribute('data-theme', 'dark');
+    await expect(getComputedStyle(panel).backgroundColor).toBe(
+      tokenColor('--color-float', canvas.getByTestId('dark-scope')),
+    );
+  },
+};
+
+/**
  * A dialog opened from a dialog: one scrim paints, Escape closes the top one only, and focus goes back to
  * the trigger inside the first.
  */

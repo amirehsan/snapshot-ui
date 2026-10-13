@@ -5,8 +5,6 @@
  */
 @layer components {
   .dialog-overlay {
-    /* The scrim's height is the viewport's, so the padding has to sit inside it, with or without base.css. */
-    box-sizing: border-box;
     place-items: center;
     padding: var(--overlay-inset);
   }
@@ -112,6 +110,13 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     overflow-wrap: anywhere;
+  }
+
+  /* While it scrolls and holds nothing to focus, the body is a tab stop, and it rings as every control does,
+     with or without base.css. */
+  .dialog-body:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
   }
 
   .dialog-actions {

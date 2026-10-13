@@ -20,12 +20,13 @@ export function copyScope(root: Element, origin: Element | null | undefined): vo
 
 /**
  * Returns a callback ref for an overlay's root that copies onto it the theme, shape and density scope of the
- * element the overlay opened from, when the root attaches. The origin is `originRef.current` when React Aria
- * gives the overlay its trigger (Popover and Menu through `PopoverContext`, Tooltip through
- * `TooltipContext`), and otherwise `document.activeElement` at that moment: the root attaches in the layout
- * phase of the commit that opens the overlay, while the pressed trigger still holds focus, before React
- * Aria's Dialog moves it in an effect. An overlay root mounts when it opens, since React Aria unmounts a
- * closed overlay, so attach is open.
+ * element the overlay opened from, when the root attaches. An overlay root mounts when it opens, since React
+ * Aria unmounts a closed overlay, so attach is open. The origin is `originRef.current`: the trigger, when
+ * React Aria gives the overlay one (Popover and Menu through `PopoverContext`, Tooltip through
+ * `TooltipContext`), or what held focus when the overlay opened, as `ModalFrame` records it. Without one it is
+ * `document.activeElement` at attach, which is the pressed trigger unless the content took focus as it
+ * mounted: a native `autoFocus` inside the root does that in the same layout phase, before the root's ref
+ * attaches. So an overlay whose content may focus itself records the origin earlier and passes it here.
  *
  * A callback ref and not an effect: React attaches a root's ref only after the layout effects of everything
  * inside it have run, so an effect in a component rendered inside the root, as a modal's panel holds its

@@ -29,6 +29,10 @@ function attach<T>(ref: Ref<T> | undefined, element: T): () => void {
  *
  * React 19 detaches by running the cleanup the merged ref returns. A caller that detaches by calling it
  * with null instead, as code written before React 19 does, undoes the same last attach.
+ *
+ * Memoize the result, with `useMemo` over the refs, as `ModalFrame` does. A new merged ref on every render
+ * makes React detach and attach every ref it feeds on every render: object refs blink to null, and a callback
+ * ref with side effects runs them again.
  */
 export function mergeRefs<T>(...refs: (Ref<T> | undefined)[]): RefCallback<T> {
   let detach: (() => void) | undefined;

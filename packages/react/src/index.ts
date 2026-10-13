@@ -81,15 +81,11 @@ export { CollapsibleCard, type CollapsibleCardProps } from './collapsible-card';
 export {
   ConfirmDialog,
   Dialog,
-  DialogActions,
-  DialogBody,
   DialogTrigger,
   useConfirm,
   type ConfirmDialogProps,
   type ConfirmHandle,
   type ConfirmOptions,
-  type DialogActionsProps,
-  type DialogBodyProps,
   type DialogProps,
   type DialogTriggerProps,
 } from './dialog';

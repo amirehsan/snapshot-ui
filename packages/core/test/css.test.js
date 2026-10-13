@@ -1432,6 +1432,8 @@ describe('src/components/overlay.css', () => {
     }
     // A color and not an opacity, so the panel inside never fades with it.
     expect(scrim).not.toMatch(/(?<![\w-])opacity\s*:/);
+    // Its height is the viewport's, so any padding a modal gives it must sit inside, without base.css too.
+    expect(scrim).toContain('box-sizing: border-box;');
   });
 
   it('opts every overlay root back into forced colors, which the scrim would otherwise hand its panel', () => {
@@ -1462,8 +1464,8 @@ describe('src/components/dialog.css', () => {
     const overlay = blockAfter(rules(), '.dialog-overlay {');
     expect(overlay).toContain('place-items: center;');
     expect(overlay).toContain('padding: var(--overlay-inset);');
-    // The scrim is the viewport's height, so the padding must fit inside it on a page without base.css.
-    expect(overlay).toContain('box-sizing: border-box;');
+    // The scrim's own rule sizes it by its border box, so the padding stays inside the viewport.
+    expect(overlay).not.toContain('box-sizing');
   });
 
   it('caps the panel at 28rem, or 40rem at lg, and at the room the scrim leaves', () => {
@@ -1500,6 +1502,12 @@ describe('src/components/dialog.css', () => {
     for (const declaration of ['min-height: 0;', 'overflow-y: auto;', 'overscroll-behavior: contain;']) {
       expect(body, declaration).toContain(declaration);
     }
+  });
+
+  it('rings the body in the focus ring tokens while it is the tab stop, with or without base.css', () => {
+    const ring = blockAfter(rules(), '.dialog-body:focus-visible {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
   });
 
   it('keeps the action row at its own height, aligned to the inline end', () => {

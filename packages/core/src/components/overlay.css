@@ -29,6 +29,8 @@
   }
 
   .overlay-scrim {
+    /* Its height is the viewport's, so the padding a modal gives it has to sit inside, without base.css too. */
+    box-sizing: border-box;
     position: fixed;
     inset: 0;
     z-index: var(--z-modal);

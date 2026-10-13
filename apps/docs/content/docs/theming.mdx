@@ -50,7 +50,7 @@ Both attributes work on any element, and the nearest one wins. A light card insi
 
 ## Overlays
 
-A dialog renders at the end of the page, outside the element it opened from, so it cannot inherit that element's attributes. Instead it copies `data-theme`, `data-shape` and `data-density` from the nearest ancestors of the element it opened from that carry them, so a dialog opened from a button in a dark card is dark while the page stays light. Every other overlay the library adds follows the same rule. An overlay opened by a keyboard shortcut copies from whatever holds focus, and one opened with nothing focused takes the page's own theme.
+A dialog renders at the end of the page, outside the element it opened from, so it cannot inherit that element's attributes. Instead it copies `data-theme`, `data-shape` and `data-density` from the nearest ancestors of the element it opened from that carry them, so a dialog opened from a button in a dark card is dark while the page stays light. Every other overlay the library adds follows the same rule, except the toast region, which follows the page root. An overlay opened by a keyboard shortcut copies from whatever holds focus, and one opened with nothing focused takes the page's own theme. A field inside a dialog that takes focus as it opens does not change this: the dialog records what held focus before its content takes it.
 
 For an overlay the copy cannot reach, such as one a third-party component opens, React Aria's `UNSAFE_PortalProvider`, from the `react-aria` package, renders every overlay inside it into a container you choose. Put the container inside the scope:
 

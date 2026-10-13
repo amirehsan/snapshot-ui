@@ -17,6 +17,8 @@ export interface ConfirmHandle {
 }
 
 interface Question {
+  /** Its own key, so a question asked over another gets a dialog of its own. */
+  id: number;
   options: ConfirmOptions;
   resolve: (answer: boolean) => void;
 }
@@ -31,6 +33,9 @@ export function useConfirm(): ConfirmHandle {
   // The open question, readable from callbacks without a render: a second `confirm` must answer the
   // first `false` before it is replaced, and unmounting must answer whatever is still open.
   const pending = useRef<Question | null>(null);
+  // Counts the questions, to key each one's dialog: a question that replaces an open one mounts a dialog of
+  // its own, so its initial focus and its scope copy run again rather than staying where the first left them.
+  const asked = useRef(0);
 
   const settle = useCallback((answer: boolean): void => {
     const open = pending.current;
@@ -44,7 +49,8 @@ export function useConfirm(): ConfirmHandle {
     (options: ConfirmOptions): Promise<boolean> =>
       new Promise<boolean>((resolve) => {
         pending.current?.resolve(false);
-        const next = { options, resolve };
+        asked.current += 1;
+        const next = { id: asked.current, options, resolve };
         pending.current = next;
         setQuestion(next);
       }),
@@ -62,6 +68,7 @@ export function useConfirm(): ConfirmHandle {
   const dialog =
     question === null ? null : (
       <ConfirmDialog
+        key={question.id}
         {...question.options}
         isOpen
         onOpenChange={(isOpen) => {
