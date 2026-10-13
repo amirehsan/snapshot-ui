@@ -4894,8 +4894,8 @@ cuts "Transactions"; its own sums count 4px, which the item takes.
 
 **Measured pairs.** Slate on float 5.49 in light and 6.94 in dark, the resting
 label and icon, over 4.5 for text and 3 for an icon; the spec's 6.44 is slate
-on bone, as the sidebar's record says. Canvas on ink and ink on canvas 16.25
-and 19.31, the current item and the chip on it and off it. All three are gated
+on bone, as the sidebar's record says. The current item and the chip on it
+and off it are canvas on ink and ink on canvas, 16.25 and 19.31. All three are gated
 already as text and cited by the contrast test, not added. The hover's 5% ink
 wash on float is a cue, 1.11 and 1.14, and not gated.
 
