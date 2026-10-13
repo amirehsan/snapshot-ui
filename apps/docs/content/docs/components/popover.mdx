@@ -40,7 +40,7 @@ A popover opened from a dark card is dark while the page stays light: it takes t
 
 ## Props
 
-`ref` and `className` go on the popover element, the one that takes focus, and `className` is merged after the library's classes. `triggerRef` is the element it opens against: a trigger component hands it over, and a popover controlled with `isOpen` outside one needs it. The rest of React Aria's popover props pass through.
+`ref` and `className` go on the popover element, the one that takes focus, and `className` is merged after the library's classes. `triggerRef` is the element it opens against: a trigger component hands it over, and a popover opened with `isOpen` or `defaultOpen` outside one needs it, or it throws an error that names `triggerRef`. The rest of React Aria's popover props pass through.
 
 <PropsTable path="../../packages/react/src/popover/Popover.tsx" type="Pick<PopoverProps, 'children' | 'isPadded' | 'matchTriggerWidth' | 'placement' | 'offset' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'triggerRef' | 'className'>" />
 
