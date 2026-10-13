@@ -210,6 +210,37 @@ test.describe('forced colors', () => {
       expect(look.edge, probe).toBe(gray);
     }
   });
+
+  test('a dialog keeps a translucent scrim and a drawn edge, and its panel follows the palette', async ({
+    page,
+  }) => {
+    // The scrim opts out of the repaint, so it stays Deep Well and the page stays in view behind it. The panel
+    // opts back in, since the opt-out is inherited, so its text and its edge, the hairline that is transparent
+    // in light, are drawn in the reader's text color.
+    await visit(page, '/docs/components/dialog');
+    const text = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'CanvasText';
+      document.body.append(probe);
+      const { color } = getComputedStyle(probe);
+      probe.remove();
+      return color;
+    });
+    await page.getByRole('button', { name: 'Rename the workspace' }).click();
+    await expect(page.getByRole('dialog', { name: 'Rename the workspace' })).toBeVisible();
+    const scrim = page.locator('.dialog-overlay');
+    await expect(scrim).not.toHaveAttribute('data-entering');
+    // The scrim is a color-mix, which computes to color(srgb r g b / a); its alpha is the last number.
+    const fill = (await paint(scrim)).fill;
+    const alpha = /\/\s*([\d.]+)\s*\)$/.exec(fill)?.[1] ?? /rgba\([^)]*,\s*([\d.]+)\)$/.exec(fill)?.[1];
+    expect(alpha, fill).toBeDefined();
+    expect(Number(alpha), fill).toBeGreaterThan(0);
+    expect(Number(alpha), fill).toBeLessThan(1);
+    const panel = await paint(page.locator('.dialog'));
+    expect(panel.edge).toBe(text);
+    expect(panel.text).toBe(text);
+    expect((await paint(page.locator('.dialog-title'))).text).toBe(text);
+  });
 });
 
 // ---- Props tables -------------------------------------------------------------------------------
@@ -274,6 +305,7 @@ const LONG_TARGETS: Record<string, string[]> = {
 /** The pages with no text a person writes, each with its reason. A page is in one list or the other. */
 const NO_LONG_TEXT: Record<string, string> = {
   button: 'a label is a short command on one line by design (white-space: nowrap), not text that wraps',
+  dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   'icon-button': 'a glyph and no text: its name is an aria-label that nothing draws',
   spinner: 'a progress mark with no text a person writes',
 };
@@ -357,6 +389,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   card: ['.stage .card', '.stage .card-title', '.stage .card-note'],
   checkbox: ['.stage .checkbox-box'],
   'collapsible-card': ['.stage .card-collapsible', '.stage .card-toggle', '.stage .card-chevron'],
+  dialog: ['.stage .button'],
   field: ['.stage .field-counter', '.stage .field-changed'],
   'icon-button': ['.stage .icon-button'],
   kbd: ['.stage .kbd'],

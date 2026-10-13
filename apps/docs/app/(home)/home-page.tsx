@@ -719,7 +719,9 @@ export function HomePage(): ReactElement {
             <Card className="catalog-group">
               <Eyebrow>Overlays and shell</Eyebrow>
               <div className="chips">
-                <span className="chip">Dialog</span>
+                <Link className="chip" href="/docs/components/dialog">
+                  Dialog
+                </Link>
                 <span className="chip">Toast</span>
                 <span className="chip">Tooltip</span>
                 <span className="chip">Menu</span>
@@ -773,6 +775,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/card">Card</Link>
                 <Link href="/docs/components/checkbox">Checkbox</Link>
                 <Link href="/docs/components/collapsible-card">Collapsible card</Link>
+                <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/field">Field parts</Link>
                 <Link href="/docs/components/icon-button">Icon button</Link>
                 <Link href="/docs/components/kbd">Kbd</Link>

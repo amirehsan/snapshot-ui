@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { CollapsibleCard } from '../src/collapsible-card';
+import { Dialog, DialogTrigger } from '../src/dialog';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Radio, RadioGroup } from '../src/radio-group';
@@ -19,8 +20,11 @@ import { TextField } from '../src/text-field';
  * the server renders them once to HTML before the browser takes over, so each must render with no window, no
  * document and no layout. This file runs in Node, which has none of the three: a component that reads one
  * while it renders throws here. (Effects and observers do not run during a server render, so they may.)
+ *
+ * An overlay renders nothing until it opens, so its row also names what must stay out of the HTML: closed, a
+ * dialog draws its trigger and none of its own parts.
  */
-const CLIENT: [name: string, element: ReactElement, contains: string[]][] = [
+const CLIENT: [name: string, element: ReactElement, contains: string[], excludes?: string[]][] = [
   ['Button', <Button>Save</Button>, ['<button', 'class="button button-primary', '>Save<']],
   ['Spinner', <Spinner aria-label="Loading" />, ['role="progressbar"', 'class="spinner']],
   ['Link', <Link href="/docs">Docs</Link>, ['<a', 'href="/docs"', 'class="link']],
@@ -133,6 +137,15 @@ const CLIENT: [name: string, element: ReactElement, contains: string[]][] = [
       'class="card-marker-label" hidden="">Changed</span>',
     ],
   ],
+  [
+    'Dialog, closed',
+    <DialogTrigger>
+      <Button>Rename</Button>
+      <Dialog title="Rename the workspace" />
+    </DialogTrigger>,
+    ['<button', '>Rename<'],
+    ['dialog-content'],
+  ],
 ];
 
 describe('the client components on the server', () => {
@@ -141,8 +154,9 @@ describe('the client components on the server', () => {
     expect(typeof document).toBe('undefined');
   });
 
-  it.each(CLIENT)('%s renders to HTML with no browser', (_name, element, contains) => {
+  it.each(CLIENT)('%s renders to HTML with no browser', (_name, element, contains, excludes = []) => {
     const html = renderToString(element);
     for (const part of contains) expect(html).toContain(part);
+    for (const part of excludes) expect(html).not.toContain(part);
   });
 });
