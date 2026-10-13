@@ -4,6 +4,8 @@
 // Per-mode values live in $extensions["snapshot-ui"][axis][variant]:
 //   "$extensions": { "snapshot-ui": { "theme": { "dark": "#0e0e0d" } } }
 //   "$extensions": { "snapshot-ui": { "shape": { "soft": { "value": 10, "unit": "px" } } } }
+// A refinement of a variant, such as density's compact-coarse, is set the same
+// way, beside a value for the variant it refines.
 // A preprocessor copies every mode value into a hidden tree
 // (__mode.<axis>.<variant>.<path>) so transforms apply to mode values exactly as
 // they do to base values. The formats then split base and mode tokens again.
@@ -37,6 +39,7 @@ function referencesIn(value) {
 /**
  * Each axis maps to a data attribute. `base` is the variant that $value holds and
  * `variants` lists the other variants a token may set, so a typo fails the build.
+ * The CSS writes the axes in this order, so a later axis wins a tie.
  */
 export const AXES = {
   theme: {
@@ -48,6 +51,16 @@ export const AXES = {
     variants: ['dark'],
   },
   shape: { attr: 'data-shape', base: 'rounded', caseInsensitive: true, variants: ['soft', 'square'] },
+  density: {
+    attr: 'data-density',
+    base: 'comfortable',
+    caseInsensitive: true,
+    variants: ['compact'],
+    // A refinement writes one variant's values again under a media query: compact on a touch screen.
+    // A token gives it a value only beside a value for the variant it refines.
+    refinements: { 'compact-coarse': { of: 'compact', media: '(pointer: coarse)' } },
+  },
+  sidebar: { attr: 'data-sidebar', base: 'expanded', caseInsensitive: true, variants: ['collapsed'] },
 };
 
 StyleDictionary.registerPreprocessor({
@@ -61,9 +74,17 @@ StyleDictionary.registerPreprocessor({
         const modes = node.$extensions?.[EXT] ?? {};
         for (const [axis, variants] of Object.entries(modes)) {
           if (!Object.hasOwn(AXES, axis)) throw new Error(`Unknown mode axis "${axis}" on ${path.join('.')}`);
+          const def = AXES[axis];
           for (const [variant, value] of Object.entries(variants)) {
-            if (!AXES[axis].variants.includes(variant)) {
+            const refinement = def.refinements?.[variant];
+            if (!def.variants.includes(variant) && !refinement) {
               throw new Error(`Unknown ${axis} variant "${variant}" on ${path.join('.')}`);
+            }
+            if (refinement && !Object.hasOwn(variants, refinement.of)) {
+              throw new Error(
+                `Token ${path.join('.')} has a ${axis} ${variant} value but no ${refinement.of} value. ` +
+                  'A refinement changes a value under a media query, so the variant it refines must set one.',
+              );
             }
             // Style Dictionary would resolve the reference against the base token,
             // which is the base variant's value, not this variant's.
@@ -216,33 +237,55 @@ StyleDictionary.registerFormat({
     const rootLines = base.map((t) => decl(t.name, cssValue(t, byPath)));
     rootLines.unshift(`color-scheme: ${AXES.theme.base};`);
     out.push(block(':root', rootLines, 1));
-    for (const [axis, variants] of Object.entries(modes)) {
-      const def = AXES[axis];
+    // AXES order, not the order the tokens happen to come in: the cascade is
+    // behavior, so it must not move when a token is added.
+    for (const [axis, def] of Object.entries(AXES)) {
+      const variants = modes[axis];
+      if (!variants) continue;
       const changed = new Set(Object.values(variants).flatMap((v) => v.map((d) => d.name)));
       const followLines = followers(base, changed, byPath).map((t) => decl(t.name, cssValue(t, byPath)));
-      const baseLines = [
-        ...base.filter((t) => changed.has(t.name)).map((t) => decl(t.name, cssValue(t, byPath))),
-        ...followLines,
-      ];
-      for (const [variant, decls] of Object.entries(variants)) {
+      const scope = (variant, decls) => {
         const lines = [...decls.map((d) => decl(d.name, d.value)), ...followLines];
         // A theme scope re-resolves its own text color: inherited color is
         // computed in the parent's theme, so a light card inside a dark page
         // would otherwise keep the page's white text.
         if (def.colorScheme) lines.unshift(`color-scheme: ${variant};`, 'color: var(--color-ink);');
-        out.push(block(attrSelector(def, variant), lines, 1));
+        return lines;
+      };
+      for (const variant of def.variants) {
+        const decls = variants[variant];
+        if (!decls) continue;
+        out.push(block(attrSelector(def, variant), scope(variant, decls), 1));
         if (def.media?.[variant]) {
           out.push(
             [
               `  @media ${def.media[variant]} {`,
-              block(`:root:not(${attrSelector(def, def.base)})`, lines, 2),
+              block(`:root:not(${attrSelector(def, def.base)})`, scope(variant, decls), 2),
               '  }',
             ].join('\n'),
           );
         }
       }
+      // A refinement writes its variant's values again under its media query,
+      // after the variant's own block, so on the same element it wins wherever
+      // the query matches. A token with no refinement value keeps the variant's.
+      for (const [name, refinement] of Object.entries(def.refinements ?? {})) {
+        const decls = variants[name];
+        if (!decls) continue;
+        out.push(
+          [
+            `  @media ${refinement.media} {`,
+            block(attrSelector(def, refinement.of), scope(name, decls), 2),
+            '  }',
+          ].join('\n'),
+        );
+      }
       // The base variant again, so a light subtree inside a dark page, or a
       // rounded one inside a soft page, takes its own values.
+      const baseLines = [
+        ...base.filter((t) => changed.has(t.name)).map((t) => decl(t.name, cssValue(t, byPath))),
+        ...followLines,
+      ];
       if (def.colorScheme) baseLines.unshift(`color-scheme: ${def.base};`, 'color: var(--color-ink);');
       out.push(block(attrSelector(def, def.base), baseLines, 1));
     }
