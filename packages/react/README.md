@@ -12,7 +12,7 @@ The components carry no CSS of their own. `@snapshot-ui/core` holds the styles.
 
 The package pins `react-aria-components` to exactly 1.22.1, since the toast parts it wraps are unstable in React Aria. If your app installs `react-aria-components` too, pin it to that same version, with no range, so there is one copy of React Aria. `RouterProvider` and `I18nProvider` come from this package, the library's own copy of React Aria's, so they always reach its parts.
 
-For right to left, wrap the region in `I18nProvider` with its locale, such as `fa-IR`, beside its `dir="rtl"`: a `dir` on a page section does not reach a dialog, a menu or a toast portaled to the body, and the locale does.
+For right to left, wrap the region in `I18nProvider` with its locale, such as `fa-IR`, beside its `dir="rtl"`: a `dir` on a page section does not reach a dialog, a menu, a popover or a tooltip portaled to the body, and the locale does. A toast follows the locale where `ToastRegion` is mounted, so mount it inside the same `I18nProvider` if the section should get right-to-left toasts.
 
 ## Use
 
