@@ -1665,6 +1665,166 @@ describe('src/components/drawer.css', () => {
   });
 });
 
+describe('src/components/sheet.css', () => {
+  // The rules without their comments, with their whitespace closed up. A header that is the start of a longer
+  // one (`.sheet {` and `.sheet-overlay {`) is looked up with the "} " of the rule before it.
+  const rules = () => closeUp(stripComments(read('src/components/sheet.css')));
+
+  it('is imported after drawer.css', () => {
+    const entry = read('src/styles.css');
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('drawer.css')).toBeGreaterThanOrEqual(0);
+    expect(at('sheet.css')).toBeGreaterThan(at('drawer.css'));
+  });
+
+  it('lifts the overlay to the modal layer and leaves its position and its color alone', () => {
+    // React Aria positions the overlay at the document's origin, the page's size, and places the sheet's
+    // scroller at the page's scroll offset inside it: a fixed overlay drew the sheet off screen on a scrolled
+    // page. The scrim is the backdrop's, so a color here would paint a second one under it.
+    const overlay = blockAfter(rules(), '.sheet-overlay {');
+    expect(overlay.trim()).toBe('z-index: var(--z-modal);');
+  });
+
+  it('draws the panel 36rem wide at most, up to 92% of the viewport, in float with the hairline and no shadow', () => {
+    const panel = blockAfter(rules(), '} .sheet {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-direction: column;',
+      'width: min(100%, 36rem);',
+      'margin-inline: auto;',
+      'background-color: var(--color-float);',
+      'border: 1px solid var(--color-hairline);',
+    ]) {
+      expect(panel, declaration).toContain(declaration);
+    }
+    // The consumer's 92%, in dvh, after a vh line for a browser that has no dvh.
+    const vh = panel.indexOf('max-height: 92vh;');
+    expect(vh).toBeGreaterThanOrEqual(0);
+    expect(panel.indexOf('max-height: 92dvh;')).toBeGreaterThan(vh);
+    // Its only free edge is the viewport's bottom, where a shadow shows nothing.
+    expect(rules()).not.toMatch(/box-shadow\s*:/);
+  });
+
+  it('rounds the top two corners in the stadium radius and leaves the bottom square', () => {
+    const panel = blockAfter(rules(), '} .sheet {');
+    expect(panel).toContain('border-start-start-radius: var(--radius-stadium);');
+    expect(panel).toContain('border-start-end-radius: var(--radius-stadium);');
+    expect(panel).not.toMatch(/border-end-(start|end)-radius|border-radius\s*:/);
+  });
+
+  it('caps the content at 92% of the visual viewport React Aria writes, so the sheet shrinks over an on-screen keyboard', () => {
+    const content = blockAfter(rules(), '.sheet-content {');
+    expect(content).toContain('max-height: calc(var(--visual-viewport-height, 100dvh) * 0.92);');
+    expect(content).toContain('min-height: 0;');
+    expect(content).toContain('outline: none;');
+  });
+
+  it('draws the grabber 40px by 4px in boundary, as a dot, centred in a 44px band', () => {
+    const css = rules();
+    const band = blockAfter(css, '.sheet-grabber-band {');
+    expect(band).toContain('height: 44px;');
+    expect(band).toContain('place-items: center;');
+    const grabber = blockAfter(css, '} .sheet-grabber {');
+    for (const declaration of [
+      'width: 40px;',
+      'height: 4px;',
+      'border-radius: var(--radius-dot);',
+      'background-color: var(--color-boundary);',
+    ]) {
+      expect(grabber, declaration).toContain(declaration);
+    }
+  });
+
+  it('pads the header 24px at the sides, and at the top too when no grabber band is above it', () => {
+    const css = rules();
+    expect(blockAfter(css, '.sheet-header {')).toContain('padding-inline: var(--spacing-peer);');
+    expect(blockAfter(css, '.sheet-header:first-child {')).toContain(
+      'padding-block-start: var(--spacing-peer);',
+    );
+    // The icon of the close button lines up with the padding edge, and the title's first line with the button.
+    expect(blockAfter(css, '.sheet-close {')).toContain('margin-inline-end: -0.5rem;');
+    expect(blockAfter(css, '.sheet-header:has(> .sheet-close) .sheet-title {')).toContain(
+      'margin-block-start: calc((2.5rem - 1lh) / 2);',
+    );
+  });
+
+  it('pads the body 24px and scrolls it once the sheet is fully open, and only the body', () => {
+    const css = rules();
+    const body = blockAfter(css, '.sheet-body {');
+    for (const declaration of [
+      'flex: 1 1 auto;',
+      'min-height: 0;',
+      'padding: var(--spacing-peer);',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(body, declaration).toContain(declaration);
+    }
+    // A swipe the body cannot take goes on to React Aria's scroller, which moves the sheet: contain would stop
+    // it at the body, and a swipe down a short body would never dismiss the sheet.
+    expect(css).not.toMatch(/overscroll-behavior/);
+    // At a partial stop a swipe on the content moves the sheet, so the body scrolls only at the full height.
+    expect(body).not.toContain('overflow-y');
+    expect(blockAfter(css, '.sheet[data-expanded] .sheet-body {')).toContain('overflow-y: auto;');
+    expect(blockAfter(css, '.sheet-grabber-band {')).toContain('flex: none;');
+    expect(blockAfter(css, '.sheet-header {')).toContain('flex: none;');
+    expect(blockAfter(css, '.sheet-footer {')).toContain('flex: none;');
+  });
+
+  it('keeps the last part clear of the home indicator, the body when there is no footer', () => {
+    const css = rules();
+    expect(blockAfter(css, '.sheet-body:last-child {')).toContain(
+      'padding-block-end: calc(var(--spacing-peer) + env(safe-area-inset-bottom, 0px));',
+    );
+    expect(blockAfter(css, '.sheet-footer {')).toContain(
+      'padding: var(--spacing-part) var(--spacing-peer) calc(var(--spacing-part) + env(safe-area-inset-bottom, 0px));',
+    );
+  });
+
+  it('rings the body inside its own box while it is the tab stop', () => {
+    // The body runs flush to the panel's sides, so an outset ring would cross the hairline.
+    const ring = blockAfter(rules(), '.sheet-body:focus-visible {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+  });
+
+  it('fits the shared scrim to the backdrop: under the sheet, the overlay tall, and faded by the swipe', () => {
+    const css = rules();
+    const scrim = blockAfter(css, '.sheet-scrim {');
+    // The shared scrim sits at the modal layer, which inside the overlay would put it over the sheet; it is as
+    // tall as the viewport, which would leave a scrolled page's view uncovered; and it fades its color while
+    // it enters, which would hide it until the sheet is in.
+    expect(scrim).toContain('z-index: auto;');
+    expect(scrim).toContain('height: auto;');
+    expect(scrim).toContain('transition: none;');
+    expect(
+      blockAfter(css, '.sheet-scrim:is([data-entering], [data-exiting]):not([data-stacked]) {'),
+    ).toContain(
+      'background-color: color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent);',
+    );
+  });
+
+  it('fades the backdrop in through sheet-scrim-fade, from transparent to the scrim', () => {
+    const fade = blockAfter(rules(), '@keyframes sheet-scrim-fade {');
+    expect(blockAfter(fade, 'from {')).toContain('opacity: 0;');
+    expect(blockAfter(fade, 'to {')).toContain('opacity: 1;');
+  });
+
+  it('redraws the edge and the grabber in CanvasText in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(forced, '.sheet {')).toContain('border-color: CanvasText;');
+    expect(blockAfter(forced, '.sheet-grabber {')).toContain('background-color: CanvasText;');
+  });
+
+  it('removes the backdrop animation under reduced motion, over the inline style React Aria writes, after it', () => {
+    const css = rules();
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    // React Aria writes the swipe animation on the backdrop inline whatever the setting, so only an important
+    // declaration outranks it.
+    expect(blockAfter(blockAfter(css, reduced), '.sheet-scrim {')).toContain('animation: none !important;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('@keyframes sheet-scrim-fade'));
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

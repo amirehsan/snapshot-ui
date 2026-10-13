@@ -1363,3 +1363,76 @@ test('the drawer page opens a navigation drawer that locks the page and closes o
   await expect(trigger).toBeFocused();
   await expect(page.locator('html')).not.toHaveCSS('overflow', 'hidden');
 });
+
+test.describe('the sheet page, on a phone', () => {
+  // A phone's screen, with touch, as the sheet spike ran its swipes.
+  test.use({ viewport: { width: 375, height: 760 }, hasTouch: true });
+
+  test('the sheet page opens a sheet that a wheel swipe, Escape and its button close', async ({ page }) => {
+    await visit(page, '/docs/components/sheet');
+    const trigger = page.getByRole('button', { name: 'Filter transactions' });
+    const sheet = page.getByRole('dialog', { name: 'Filter transactions' });
+    const panel = page.locator('.sheet');
+
+    // React Aria drives the swipe with the browser's own scroll, so a wheel down the sheet is a swipe down.
+    await trigger.click();
+    // Focus moves in once the sheet has scrolled in, and the page behind is held still.
+    await expect(sheet).toBeFocused();
+    await expect(page.locator('html')).toHaveCSS('overflow', 'hidden');
+    // It sits on the bottom edge, the screen's full width.
+    const box = await panel.boundingBox();
+    if (!box) throw new Error('No sheet');
+    expect(box.y + box.height).toBeCloseTo(760, 0);
+    expect(box.width).toBeCloseTo(375, 0);
+    // The middle of the sheet is its body, over a field: a swipe there goes on to the sheet's own scroller.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, -900);
+    await expect(sheet).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(page.locator('html')).not.toHaveCSS('overflow', 'hidden');
+
+    await trigger.click();
+    await expect(sheet).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+
+    await trigger.click();
+    await expect(sheet).toBeFocused();
+    await sheet.getByRole('button', { name: 'Close' }).click();
+    await expect(sheet).toHaveCount(0);
+  });
+
+  test('a sheet caps at 92% of the viewport and scrolls inside', async ({ page }) => {
+    await visit(page, '/docs/components/sheet');
+    await page.getByRole('button', { name: 'Show every transaction' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Transactions' });
+    await expect(sheet).toBeFocused();
+    const panel = page.locator('.sheet');
+    const body = panel.locator('.sheet-body');
+    // It opens at its first stop, 40% of the sheet, where the body does not scroll and a swipe moves the sheet.
+    await expect(panel).not.toHaveAttribute('data-expanded');
+    const resting = await panel.boundingBox();
+    if (!resting) throw new Error('No sheet');
+    expect(760 - resting.y).toBeCloseTo(0.4 * resting.height, -1);
+    // A wheel up the sheet carries it to its full height.
+    await page.mouse.move(187, 700);
+    await page.mouse.wheel(0, 600);
+    await expect(panel).toHaveAttribute('data-expanded');
+    await expect.poll(async () => (await panel.boundingBox())?.y).toBeCloseTo(760 - resting.height, 0);
+    const open = await panel.boundingBox();
+    if (!open) throw new Error('No sheet');
+    expect(open.height).toBeLessThanOrEqual(0.92 * 760 + 1);
+    expect(open.y + open.height).toBeCloseTo(760, 0);
+    expect(await body.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+    // Now a wheel on the body scrolls the body, and the sheet stays where it is.
+    const inside = await body.boundingBox();
+    if (!inside) throw new Error('No body');
+    await page.mouse.move(inside.x + inside.width / 2, inside.y + inside.height / 2);
+    await page.mouse.wheel(0, 300);
+    await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    expect((await panel.boundingBox())?.y).toBeCloseTo(open.y, 0);
+    await expect(sheet).toBeVisible();
+    expect(await sideways(page)).toBe(0);
+  });
+});

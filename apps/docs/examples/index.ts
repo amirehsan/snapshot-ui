@@ -40,6 +40,9 @@ import RadioGroupValidation from './radio-group-validation';
 import SegmentedControlBasic from './segmented-control-basic';
 import SegmentedControlStacking from './segmented-control-stacking';
 import SegmentedControlStates from './segmented-control-states';
+import SheetBasic from './sheet-basic';
+import SheetMore from './sheet-more';
+import SheetSnapPoints from './sheet-snap-points';
 import SpinnerSizes from './spinner-sizes';
 import SwitchBasic from './switch-basic';
 import SwitchSettings from './switch-settings';
@@ -97,6 +100,9 @@ export const examples = {
   'segmented-control-basic': SegmentedControlBasic,
   'segmented-control-stacking': SegmentedControlStacking,
   'segmented-control-states': SegmentedControlStates,
+  'sheet-basic': SheetBasic,
+  'sheet-more': SheetMore,
+  'sheet-snap-points': SheetSnapPoints,
   'spinner-sizes': SpinnerSizes,
   'switch-basic': SwitchBasic,
   'switch-settings': SwitchSettings,

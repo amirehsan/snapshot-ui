@@ -786,6 +786,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/link">Link</Link>
                 <Link href="/docs/components/radio-group">Radio group</Link>
                 <Link href="/docs/components/segmented-control">Segmented control</Link>
+                <Link href="/docs/components/sheet">Sheet</Link>
                 <Link href="/docs/components/spinner">Spinner</Link>
                 <Link href="/docs/components/switch">Switch</Link>
                 <Link href="/docs/components/text-area">Text area</Link>

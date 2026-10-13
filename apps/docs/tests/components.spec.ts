@@ -241,6 +241,31 @@ test.describe('forced colors', () => {
     expect(panel.text).toBe(text);
     expect((await paint(page.locator('.dialog-title'))).text).toBe(text);
   });
+
+  test('a sheet keeps its edge and its grabber', async ({ page }) => {
+    // The hairline is transparent in light and the grabber is a fill, which the repaint would drop: both are
+    // drawn in the reader's text color, so the sheet keeps its shape and its handle on the scrim.
+    await visit(page, '/docs/components/sheet');
+    const text = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'CanvasText';
+      document.body.append(probe);
+      const { color } = getComputedStyle(probe);
+      probe.remove();
+      return color;
+    });
+    await page.getByRole('button', { name: 'Filter transactions' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Filter transactions' });
+    // Focus moves in once the sheet has scrolled in.
+    await expect(sheet).toBeFocused();
+    expect((await paint(page.locator('.sheet'))).edge).toBe(text);
+    expect((await paint(page.locator('.sheet-grabber'))).fill).toBe(text);
+    // The scrim stays translucent, as a dialog's does.
+    const fill = (await paint(page.locator('.sheet-scrim'))).fill;
+    const alpha = /\/\s*([\d.]+)\s*\)$/.exec(fill)?.[1] ?? /rgba\([^)]*,\s*([\d.]+)\)$/.exec(fill)?.[1];
+    expect(Number(alpha), fill).toBeGreaterThan(0);
+    expect(Number(alpha), fill).toBeLessThan(1);
+  });
 });
 
 // ---- Props tables -------------------------------------------------------------------------------
@@ -310,6 +335,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   drawer: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   'icon-button': 'a glyph and no text: its name is an aria-label that nothing draws',
+  sheet: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   spinner: 'a progress mark with no text a person writes',
 };
 
@@ -401,6 +427,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   link: ['.stage .link'],
   'radio-group': ['.stage .radio-indicator'],
   'segmented-control': ['.stage .segmented-option'],
+  sheet: ['.stage .button'],
   spinner: ['.stage .spinner'],
   switch: ['.stage .switch-thumb'],
   'text-area': ['.stage .textarea'],

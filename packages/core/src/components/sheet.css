@@ -1,0 +1,185 @@
+/*
+ * Sheet: the bottom sheet for phones, derived in docs/design-system.md ("Sheet"). A float panel with
+ * the stadium corner on its top edge only, content-high up to 92dvh (the consumer's number), 36rem
+ * wide at most, no shadow because its only free edge is at the viewport's bottom, a 40px by 4px
+ * grabber in a 44px band, the card title step, 24px of padding, and a safe-area bottom. React Aria
+ * drives the slide with scroll; the backdrop fades through sheet-scrim-fade over the swipe.
+ */
+@layer components {
+  /* Only a layer: React Aria positions the overlay itself, at the document's origin and the page's size, and
+     puts the sheet's scroller at the page's scroll offset inside it, so a fixed overlay would draw the sheet
+     off screen on a scrolled page. The scrim is the backdrop's; a color here would paint a second one. */
+  .sheet-overlay {
+    z-index: var(--z-modal);
+  }
+
+  /* The backdrop carries the shared scrim, for its color, its transparency when stacked and its forced-colors
+     opt-out. Three of the shared rules do not fit a backdrop React Aria places inside the page-sized overlay:
+     the modal layer would put it over the sheet's scroller, the viewport's height would leave a scrolled
+     page's view uncovered, and a color that fades while it enters would hide it until the sheet is in. The
+     swipe fades it instead, through the keyframes below. */
+  .sheet-scrim {
+    z-index: auto;
+    height: auto;
+    transition: none;
+  }
+
+  .sheet-scrim:is([data-entering], [data-exiting]):not([data-stacked]) {
+    background-color: color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent);
+  }
+
+  .sheet {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 36rem);
+    max-height: 92vh;
+    max-height: 92dvh;
+    margin-inline: auto;
+    border: 1px solid var(--color-hairline);
+    border-start-start-radius: var(--radius-stadium);
+    border-start-end-radius: var(--radius-stadium);
+    background-color: var(--color-float);
+  }
+
+  /* The tabIndex="-1" element React Aria focuses. With the on-screen keyboard up the visual viewport is shorter
+     than dvh, and React Aria writes its height on the overlay: the content caps at 92% of it, so the sheet
+     shrinks to what is still in view. */
+  .sheet-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: calc(var(--visual-viewport-height, 100dvh) * 0.92);
+    outline: none;
+  }
+
+  /* Dots stay round in every shape, and boundary is gated at 3:1 on float already. */
+  .sheet-grabber-band {
+    display: grid;
+    flex: none;
+    place-items: center;
+    height: 44px;
+  }
+
+  .sheet-grabber {
+    width: 40px;
+    height: 4px;
+    border-radius: var(--radius-dot);
+    background-color: var(--color-boundary);
+  }
+
+  .sheet-header {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    gap: var(--spacing-part);
+    padding-inline: var(--spacing-peer);
+  }
+
+  /* With no grabber band above it, the header keeps 24px from the sheet's top edge and its 40px corners. */
+  .sheet-header:first-child {
+    padding-block-start: var(--spacing-peer);
+  }
+
+  .sheet-header-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  .sheet-title {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: var(--text-h3--font-weight);
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+
+  /* The 40px close button sets the row's height, so the title's first line is centred on it, as a drawer's
+     is. A title that wraps keeps its first line there and runs on below. */
+  .sheet-header:has(> .sheet-close) .sheet-title {
+    margin-block-start: calc((2.5rem - 1lh) / 2);
+  }
+
+  .sheet-description {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    color: var(--color-slate);
+    overflow-wrap: anywhere;
+  }
+
+  /* The icon lines up with the padding edge. */
+  .sheet-close {
+    flex: none;
+    margin-inline-start: auto;
+    margin-inline-end: -0.5rem;
+  }
+
+  /* No overscroll-behavior, unlike a dialog's body: a swipe the body cannot take, down from its top or on a body
+     that does not scroll, must reach React Aria's scroller, which moves the sheet and keeps the page still. */
+  .sheet-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: var(--spacing-peer);
+    overflow-wrap: anywhere;
+  }
+
+  /* At a partial stop a swipe on the content moves the sheet, so the body scrolls only once it is fully open.
+     With no stops React Aria marks it so at rest. */
+  .sheet[data-expanded] .sheet-body {
+    overflow-y: auto;
+  }
+
+  /* While it scrolls and holds nothing to focus, the body is a tab stop. It runs flush to the panel's sides,
+     so its ring is drawn inside it, where it clears the hairline, with or without base.css. */
+  .sheet-body:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
+  /* With no footer the body takes the safe area. */
+  .sheet-body:last-child {
+    padding-block-end: calc(var(--spacing-peer) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sheet-footer {
+    flex: none;
+    padding: var(--spacing-part) var(--spacing-peer)
+      calc(var(--spacing-part) + env(safe-area-inset-bottom, 0px));
+    overflow-wrap: anywhere;
+  }
+
+  @keyframes sheet-scrim-fade {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .sheet {
+      border-color: CanvasText;
+    }
+
+    .sheet-grabber {
+      background-color: CanvasText;
+    }
+  }
+
+  /* React Aria writes the swipe animation on the backdrop inline whatever the setting, and an inline style
+     outranks any rule that is not important. Its own scrolls go instant, so the scrim is simply there. */
+  @media (prefers-reduced-motion: reduce) {
+    .sheet-scrim {
+      animation: none !important;
+    }
+  }
+}

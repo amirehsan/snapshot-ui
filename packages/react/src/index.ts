@@ -90,3 +90,4 @@ export {
   type DialogTriggerProps,
 } from './dialog';
 export { Drawer, type DrawerPlacement, type DrawerProps } from './drawer';
+export { Sheet, SheetTrigger, type SheetProps, type SheetTriggerProps } from './sheet';
