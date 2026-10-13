@@ -18,6 +18,7 @@ import { Spinner } from '../src/spinner';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
+import { ToastRegion } from '../src/toast';
 
 /**
  * The client components, rendered on the server. A Next.js server page imports them as client references and
@@ -208,6 +209,14 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </MenuTrigger>,
     ['<button', 'aria-label="More"', 'aria-haspopup="true"', 'aria-expanded="false"'],
     ['role="menu"', 'Settings'],
+  ],
+  [
+    // The polite status host is in the page's HTML, empty, before any toast; React Aria's region mounts in the
+    // browser with the first toast.
+    'ToastRegion',
+    <ToastRegion />,
+    ['class="toast-status-host"', 'role="status"', 'aria-live="polite"', 'data-react-aria-top-layer'],
+    ['toast-region'],
   ],
 ];
 

@@ -53,6 +53,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Switch](https://snapshotui.com/docs/components/switch)
 - [Text area](https://snapshotui.com/docs/components/text-area)
 - [Text field](https://snapshotui.com/docs/components/text-field)
+- [Toast](https://snapshotui.com/docs/components/toast)
 - [Typography](https://snapshotui.com/docs/components/typography)
 
 ## Links

@@ -251,7 +251,7 @@ importers:
         specifier: ^1.55.0
         version: 1.55.0(@types/react@19.3.0)(react@19.3.0)
       react-aria-components:
-        specifier: ^1.22.1
+        specifier: 1.22.1
         version: 1.22.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
     devDependencies:
       '@arethetypeswrong/cli':

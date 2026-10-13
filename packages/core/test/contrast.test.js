@@ -285,6 +285,34 @@ describe('the menu', () => {
   });
 });
 
+describe('the toast', () => {
+  // The stripe is a 4px graphic at the toast's inline start, on the float: slate for info, and success,
+  // warning and error. A graphic asks 3:1, and the gate already holds all four on float as text, at the
+  // stricter 4.5:1, so the pairs are cited, not added. The numbers here are the record's.
+  it('cites the four stripe colors on float, which the gate holds at the text minimum, over the 3:1 a graphic needs', () => {
+    const measured = (mode, name) => {
+      const palette = paletteFor(tokens, mode);
+      const ground = parseColor(palette.float);
+      // Slate in dark is white at 60%, so it is painted over the float before it is measured.
+      return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+    };
+    for (const { name, light, dark } of [
+      { name: 'slate', light: 5.49, dark: 6.94 },
+      { name: 'success', light: 7.44, dark: 6.34 },
+      { name: 'warning', light: 6.33, dark: 8.92 },
+      { name: 'error', light: 7.46, dark: 5.73 },
+    ]) {
+      expect(CONTRAST_PAIRS).toContainEqual(
+        expect.objectContaining({ text: name, ground: 'float', minimum: TEXT }),
+      );
+      expect(measured('light', name), `${name} light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name), `${name} dark`).toBeCloseTo(dark, 2);
+      for (const mode of ['light', 'dark'])
+        expect(measured(mode, name), `${name} ${mode}`).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 
