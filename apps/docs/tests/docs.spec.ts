@@ -1330,3 +1330,36 @@ test('the confirm dialog page asks, cancels, confirms and places focus', async (
   // The row and its button are gone, so the example puts focus on the next row's button.
   await expect(list.getByRole('button', { name: 'Delete Insurance' })).toBeFocused();
 });
+
+test('the drawer page opens a navigation drawer that locks the page and closes on Escape', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/drawer');
+  const trigger = page.getByRole('button', { name: 'Browse the workspace' });
+  await trigger.click();
+  // The title is hidden, since the list names itself, and still names the drawer.
+  const drawer = page.getByRole('dialog', { name: 'Workspace', exact: true });
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toBeFocused();
+  const title = drawer.getByRole('heading', { name: 'Workspace', exact: true });
+  await expect(title).toBeAttached();
+  // Kept for assistive technology in React Aria's visually hidden box, 1px wide and clipped.
+  expect(await title.evaluate((element) => element.parentElement?.getBoundingClientRect().width)).toBe(1);
+  await expect(drawer.getByRole('navigation', { name: 'Workspace pages' })).toBeVisible();
+  // It comes from the start, the left in English, and floats 16px inside the edges once it has slid in.
+  const panel = page.locator('.drawer');
+  await expect(panel).toHaveAttribute('data-side', 'left');
+  await expect(panel).not.toHaveAttribute('data-entering');
+  await expect.poll(async () => (await panel.boundingBox())?.x).toBeCloseTo(16, 0);
+  await expect.poll(async () => (await panel.boundingBox())?.y).toBeCloseTo(16, 0);
+  // React Aria holds the page still while the drawer is open.
+  await expect(page.locator('html')).toHaveCSS('overflow', 'hidden');
+  // Tab from the last link lands back inside the drawer, never on the page behind it.
+  await drawer.getByRole('link').last().focus();
+  await page.keyboard.press('Tab');
+  expect(await drawer.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await expect(page.locator('html')).not.toHaveCSS('overflow', 'hidden');
+});

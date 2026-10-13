@@ -1,0 +1,107 @@
+/*
+ * Drawer: a float panel inset 16px from every edge of the viewport, with the stadium corner, the
+ * hairline and the dramatic shadow, sliding in from its edge in 180ms over the scrim. The header
+ * holds the title and the close button, the body scrolls, and the footer stays. Derived in
+ * docs/design-system.md ("Drawer").
+ */
+@layer components {
+  .drawer-overlay {
+    align-items: stretch;
+    padding: var(--overlay-inset);
+  }
+
+  .drawer {
+    display: flex;
+    flex-direction: column;
+    width: min(20rem, 100%);
+    height: 100%;
+    /* A grid item's automatic minimum is its content, which would grow the scrim's row past the viewport with a
+       long list and leave 100% the list's height. With no minimum the row is the scrim's, and the body scrolls. */
+    min-height: 0;
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-stadium);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-dramatic);
+    transition: translate 180ms ease;
+  }
+
+  /* The side is physical, and so is the alignment: the scrim carries the locale's dir, and a grid's start and
+     end follow it, so start would put a right-hand drawer on the left in right to left. */
+  .drawer[data-side='left'] {
+    justify-self: left;
+  }
+
+  .drawer[data-side='right'] {
+    justify-self: right;
+  }
+
+  .drawer[data-side='left']:is([data-entering], [data-exiting]) {
+    translate: calc(-100% - var(--overlay-inset)) 0;
+  }
+
+  .drawer[data-side='right']:is([data-entering], [data-exiting]) {
+    translate: calc(100% + var(--overlay-inset)) 0;
+  }
+
+  .drawer-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    outline: none;
+  }
+
+  /* 24px, not the dialog's 32: a 320px panel at 32px leaves 256px for a list, and the rail it mirrors pads 24. */
+  .drawer-header {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-part);
+    padding: var(--spacing-peer) var(--spacing-peer) 0;
+  }
+
+  .drawer-title {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: var(--text-h3--font-weight);
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+
+  /* The icon lines up with the padding edge. */
+  .drawer-close {
+    flex: none;
+    margin-inline-start: auto;
+    margin-inline-end: -0.5rem;
+  }
+
+  .drawer-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: var(--spacing-peer);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    overflow-wrap: anywhere;
+  }
+
+  .drawer-footer {
+    flex: none;
+    padding: 0 var(--spacing-peer) calc(var(--spacing-peer) + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (forced-colors: active) {
+    .drawer {
+      border-color: CanvasText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .drawer {
+      transition: none;
+    }
+  }
+}
