@@ -1446,12 +1446,38 @@ describe('src/components/overlay.css', () => {
 
   it('goes transparent while entering, exiting or stacked, and stops the transition under reduced motion, after it', () => {
     const css = rules();
-    expect(blockAfter(css, '.overlay-scrim:is([data-entering], [data-exiting], [data-stacked]) {')).toContain(
-      'background-color: transparent;',
-    );
+    // A sheet's scrim keeps its color while it enters and exits, since its swipe keyframes fade it; stacked, it
+    // goes transparent as every other scrim does.
+    expect(
+      blockAfter(
+        css,
+        '.overlay-scrim[data-stacked], .overlay-scrim:not(.sheet-scrim):is([data-entering], [data-exiting]) {',
+      ),
+    ).toContain('background-color: transparent;');
     const reduced = '@media (prefers-reduced-motion: reduce)';
     expect(blockAfter(blockAfter(css, reduced), '.overlay-scrim {')).toContain('transition: none;');
     expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: background-color'));
+  });
+
+  it("fits the scrim to a sheet's backdrop here, in a variant that outranks the shared rule, so no file order matters", () => {
+    const css = rules();
+    const variant = '.overlay-scrim.sheet-scrim {';
+    // Two classes against one: the variant wins by specificity, whichever file the browser reads first.
+    const fitted = blockAfter(css, variant);
+    for (const declaration of ['z-index: auto;', 'height: auto;', 'transition: none;']) {
+      expect(fitted, declaration).toContain(declaration);
+    }
+    // And by order inside this one file, after the rule it fits.
+    expect(css.indexOf(variant)).toBeGreaterThan(css.indexOf('} .overlay-scrim {'));
+    // The scrim's color is written once, here, in all the component files.
+    const formula = 'color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent)';
+    const written = components.flatMap((file) =>
+      closeUp(stripComments(read(`src/components/${file}`)))
+        .split(formula)
+        .slice(1)
+        .map(() => file),
+    );
+    expect(written).toEqual(['overlay.css']);
   });
 });
 
@@ -1763,7 +1789,9 @@ describe('src/components/sheet.css', () => {
     // it at the body, and a swipe down a short body would never dismiss the sheet.
     expect(css).not.toMatch(/overscroll-behavior/);
     // At a partial stop a swipe on the content moves the sheet, so the body scrolls only at the full height.
-    expect(body).not.toContain('overflow-y');
+    // Before that it clips, which makes no scroll container, so a long list neither paints over the footer
+    // nor stretches React Aria's scroll range.
+    expect(body).toContain('overflow-y: clip;');
     expect(blockAfter(css, '.sheet[data-expanded] .sheet-body {')).toContain('overflow-y: auto;');
     expect(blockAfter(css, '.sheet-grabber-band {')).toContain('flex: none;');
     expect(blockAfter(css, '.sheet-header {')).toContain('flex: none;');
@@ -1787,20 +1815,24 @@ describe('src/components/sheet.css', () => {
     expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
   });
 
-  it('fits the shared scrim to the backdrop: under the sheet, the overlay tall, and faded by the swipe', () => {
+  it("overrides nothing of the shared scrim, which overlay.css fits to the backdrop, so the files' order never matters", () => {
     const css = rules();
-    const scrim = blockAfter(css, '.sheet-scrim {');
-    // The shared scrim sits at the modal layer, which inside the overlay would put it over the sheet; it is as
-    // tall as the viewport, which would leave a scrolled page's view uncovered; and it fades its color while
-    // it enters, which would hide it until the sheet is in.
-    expect(scrim).toContain('z-index: auto;');
-    expect(scrim).toContain('height: auto;');
-    expect(scrim).toContain('transition: none;');
-    expect(
-      blockAfter(css, '.sheet-scrim:is([data-entering], [data-exiting]):not([data-stacked]) {'),
-    ).toContain(
-      'background-color: color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent);',
-    );
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    const start = css.indexOf(reduced);
+    const end = css.indexOf('{', start) + 1 + blockAfter(css, reduced).length + 1;
+    // Outside the reduced-motion block no rule names the backdrop: a rule here at the shared rule's specificity
+    // would hold only while overlay.css loads first, which a per-component import does not promise.
+    expect(css.slice(0, start) + css.slice(end)).not.toMatch(/\.sheet-scrim\b/);
+    // Inside it, one important declaration, of a property the shared scrim never sets.
+    expect(blockAfter(blockAfter(css, reduced), '.sheet-scrim {').trim()).toBe('animation: none !important;');
+    expect(stripComments(read('src/components/overlay.css'))).not.toMatch(/(?<![\w-])animation/);
+  });
+
+  it('wraps a long word in the title, the description and the footer, as in the body', () => {
+    const css = rules();
+    for (const part of ['.sheet-title {', '.sheet-description {', '.sheet-footer {']) {
+      expect(blockAfter(css, part), part).toContain('overflow-wrap: anywhere;');
+    }
   });
 
   it('fades the backdrop in through sheet-scrim-fade, from transparent to the scrim', () => {

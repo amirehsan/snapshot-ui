@@ -193,7 +193,8 @@ export const Overflowing: Story = {
     const footer = only('.sheet-footer').getBoundingClientRect();
     await expect(footer.top).toBeGreaterThanOrEqual(0);
     await expect(footer.bottom).toBeLessThanOrEqual(window.innerHeight + 0.5);
-    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+    // Nothing in the sheet runs past its sides. React Aria's overlay clips, so the page's own width cannot tell.
+    await expect(sheet.scrollWidth).toBeLessThanOrEqual(sheet.clientWidth);
   },
 };
 
@@ -305,9 +306,58 @@ export const ScrolledPage: Story = {
 };
 
 /**
+ * The backdrop's fit to the shared scrim holds in any order the stylesheets load. An app may import each
+ * component's file on its own, and a bundler may put overlay.css after sheet.css: the play restates the shared
+ * scrim rule after everything else in the components layer, as a late overlay.css would, and the backdrop still
+ * sits under the sheet and covers a scrolled page's view, since its variant outranks that rule.
+ */
+export const ScrimInAnyOrder: Story = {
+  tags: ['no-visual'],
+  render: (args) => (
+    <div style={{ paddingBlock: 1000 }}>
+      <SheetTrigger>
+        <Button variant="secondary">Filter transactions</Button>
+        <Sheet {...args} />
+      </SheetTrigger>
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const late = document.createElement('style');
+    late.textContent = `@layer components {
+      .overlay-scrim {
+        z-index: var(--z-modal);
+        height: var(--visual-viewport-height, 100dvh);
+        transition: background-color 180ms ease;
+      }
+    }`;
+    document.head.append(late);
+    try {
+      const trigger = canvas.getByRole('button', { name: 'Filter transactions' });
+      trigger.scrollIntoView({ block: 'center' });
+      await expect(window.scrollY).toBeGreaterThan(200);
+      trigger.focus({ preventScroll: true });
+      await userEvent.keyboard('{Enter}');
+      await atRest();
+      const scrim = only('.sheet-scrim');
+      const style = getComputedStyle(scrim);
+      await expect(style.zIndex).toBe('auto');
+      await expect(style.transitionDuration).toBe('0s');
+      const box = scrim.getBoundingClientRect();
+      await expect(box.top).toBeLessThanOrEqual(0);
+      await expect(box.bottom).toBeGreaterThanOrEqual(window.innerHeight);
+    } finally {
+      late.remove();
+    }
+  },
+};
+
+/**
  * The swipe is the browser's own scroll: React Aria slides the sheet on a scroller two viewports tall, and
- * closes it once it has scrolled out. A swipe down takes that scroller to its start, which is what this does,
- * smoothly, as a finger's momentum would; the touch gesture itself is the docs test's and the spike's.
+ * closes it once it has scrolled out. A swipe down takes that scroller to its start, which is what this does;
+ * the touch gesture itself is the docs test's and the spike's. The smooth scroll is load-bearing. On desktop
+ * Safari, React Aria's exit waits for the next `scrollend` once the sheet has left the screen, and after an
+ * instant scroll that event can come before the exit starts and never again: in Linux WebKit, the engine CI
+ * runs, the sheet then stayed mounted and invisible. A smooth scroll ends after the sheet has left.
  */
 export const ScrollToDismiss: Story = {
   tags: ['no-visual'],
@@ -316,6 +366,43 @@ export const ScrollToDismiss: Story = {
     await atRest();
     only('[data-sheet-scroll]').scrollTo({ top: 0, behavior: 'smooth' });
     await waitFor(() => expect(within(document.body).queryByRole('dialog')).toBeNull(), { timeout: 1500 });
+  },
+};
+
+/**
+ * A press above a sheet that can be dismissed closes it. It lands on React Aria's stage, which covers the
+ * backdrop, and React Aria's press-outside handling closes the sheet: the backdrop itself is inert.
+ */
+export const PressOutside: Story = {
+  tags: ['no-visual'],
+  render: (args) => <Opened {...args} />,
+  play: async ({ userEvent }) => {
+    const sheet = await atRest();
+    const stage = sheet.parentElement;
+    if (!stage) throw new Error('No stage');
+    await userEvent.click(stage);
+    await waitFor(() => expect(within(document.body).queryByRole('dialog')).toBeNull(), { timeout: 1500 });
+  },
+};
+
+/** An address with no break in it: nothing for the browser to wrap at. */
+const LONG = `https://example.com/${'segment'.repeat(9)}end`;
+
+/**
+ * A title and a footer that hold a long address with no break in it wrap it inside the sheet, which is 36rem
+ * wide at most, so this holds on any screen.
+ */
+export const LongText: Story = {
+  tags: ['no-visual'],
+  args: { title: LONG, footer: LONG },
+  render: (args) => <Opened {...args} />,
+  play: async () => {
+    const sheet = await atRest();
+    for (const part of ['.sheet-header-text', '.sheet-title', '.sheet-footer']) {
+      const element = only(part);
+      await expect(element.scrollWidth, part).toBeLessThanOrEqual(element.clientWidth);
+    }
+    await expect(sheet.scrollWidth).toBeLessThanOrEqual(sheet.clientWidth);
   },
 };
 
@@ -389,13 +476,23 @@ export const NotDismissable: Story = {
 };
 
 /**
- * A field in the sheet takes focus, and the sheet keeps it in view: React Aria writes the visual viewport's
- * height on the overlay, and the sheet caps at 92% of it, so an on-screen keyboard that shrinks the visual
- * viewport shrinks the sheet with it.
+ * A field in the sheet takes focus, and React Aria writes the visual viewport's height on the overlay. The
+ * content caps at 92% of it, so with an on-screen keyboard that shrinks the visual viewport to 400px, as the
+ * play then stands in for, a long sheet is no taller than 368px and its edges. Where it sits, on the layout
+ * viewport's bottom edge, is not what this proves.
  */
 export const KeyboardUp: Story = {
   tags: ['no-visual'],
-  args: { title: 'Add a payee', description: undefined, children: <TextField label="Payee" /> },
+  args: {
+    title: 'Add a payee',
+    description: undefined,
+    children: (
+      <div style={{ display: 'grid', gap: 24 }}>
+        <TextField label="Payee" />
+        {ROWS}
+      </div>
+    ),
+  },
   render: (args) => (
     <div style={{ width: 375, maxWidth: '100%' }}>
       <Opened {...args} trigger="Add a payee" />
@@ -410,9 +507,17 @@ export const KeyboardUp: Story = {
     // React Aria's own reading: the visual viewport's height at its scale.
     const viewport = window.visualViewport;
     const visible = viewport ? viewport.height * viewport.scale : document.documentElement.clientHeight;
-    const written = parseFloat(only('.sheet-overlay').style.getPropertyValue('--visual-viewport-height'));
+    const overlay = only('.sheet-overlay');
+    const written = parseFloat(overlay.style.getPropertyValue('--visual-viewport-height'));
     await expect(written).toBeCloseTo(visible, 0);
-    // The content caps at 92% of it, and the sheet adds its 1px edges.
-    await expect(sheet.getBoundingClientRect().height).toBeLessThanOrEqual(0.92 * written + 2.5);
+    // A keyboard that leaves 400px in view: the content caps at 92% of it, 368px, and the sheet adds its edges.
+    overlay.style.setProperty('--visual-viewport-height', '400px');
+    await waitFor(() =>
+      expect(only('.sheet-content').getBoundingClientRect().height).toBeLessThanOrEqual(368.5),
+    );
+    await expect(sheet.getBoundingClientRect().height).toBeLessThanOrEqual(370.5);
+    // The body scrolls inside what is left.
+    const body = only('.sheet-body');
+    await expect(body.scrollHeight).toBeGreaterThan(body.clientHeight);
   },
 };

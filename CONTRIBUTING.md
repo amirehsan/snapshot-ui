@@ -10,7 +10,12 @@ You need Node 24.5 or later and pnpm 10, which corepack provides.
 ```bash
 corepack enable
 pnpm install
+pnpm --filter @snapshot-ui/storybook exec playwright install chromium webkit
 ```
+
+The last line installs the browsers the story and end-to-end tests run in:
+Chromium for every story, and WebKit for the stories tagged `webkit`, the
+sheet's.
 
 | Command | What it does |
 | --- | --- |
