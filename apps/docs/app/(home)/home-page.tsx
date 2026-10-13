@@ -776,6 +776,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs">Introduction</Link>
                 <Link href="/docs/installation">Installation</Link>
                 <Link href="/docs/theming">Theming</Link>
+                <Link href="/docs/routing">Routing</Link>
                 <Link href="/docs/design-principles">Design principles</Link>
               </div>
             </details>

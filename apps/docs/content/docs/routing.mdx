@@ -1,0 +1,113 @@
+---
+title: Routing
+description: Every link in the library is React Aria's Link, so one RouterProvider at the app's root routes all of them through the app's router.
+icon: Route
+---
+
+<Section>
+
+## One provider
+
+With no provider, a press on a link follows its `href` as the browser would, so the server's HTML is a real link and works with scripts off. With one `RouterProvider` at the app's root, a plain press calls the app's router instead. A modified press, such as one with a modifier key, on a link with `target` or `download`, or to another origin, still falls through to the browser.
+
+Import `RouterProvider` from `@snapshot-ui/react`: it is the library's own copy of React Aria's, so the provider and every link share one router, whatever else the app installs. With the Next.js App Router, that is a small client component around the app, with the `RouterConfig` augmentation so `routerOptions` is typed:
+
+```tsx
+'use client';
+
+import { useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { RouterProvider } from '@snapshot-ui/react';
+
+declare module '@snapshot-ui/react' {
+  interface RouterConfig {
+    routerOptions: NonNullable<Parameters<ReturnType<typeof useRouter>['push']>[1]>;
+  }
+}
+
+export function ClientRouter({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  return (
+    <RouterProvider
+      navigate={(href, options) => {
+        router.push(href, options);
+      }}
+    >
+      {children}
+    </RouterProvider>
+  );
+}
+```
+
+Render `<ClientRouter>` around `{children}` in `app/layout.tsx`. `routerOptions` on a link are the options the router receives with that one press, such as `{ scroll: false }`, typed through `RouterConfig`.
+
+</Section>
+
+<Section>
+
+## What goes through it
+
+Every part that draws a link: [Link](/docs/components/link), [IconButton](/docs/components/icon-button) with `href`, a [Menu](/docs/components/menu) item with `href`, and the shell's links, [SidebarItem and SidebarBrand](/docs/components/sidebar) and [BottomTabBarItem](/docs/components/bottom-tab-bar). Breadcrumbs will too, when they ship.
+
+</Section>
+
+<Section>
+
+## Prefetch
+
+React Aria renders a plain `<a>`, so Next does not prefetch these pages as the links come into view. Most links are fine without it. An always-visible navigation, such as a rail or a tab bar, is where prefetch pays, and there are two ways back.
+
+Prefetch on intent, as the reader moves toward the link:
+
+```tsx
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { SidebarItem } from '@snapshot-ui/react';
+import { Wallet } from 'lucide-react';
+
+export function TransactionsItem({ isCurrent }: { isCurrent: boolean }) {
+  const router = useRouter();
+  const prefetch = () => {
+    router.prefetch('/transactions');
+  };
+  return (
+    <SidebarItem href="/transactions" icon={<Wallet />} isCurrent={isCurrent} onHoverStart={prefetch} onFocus={prefetch}>
+      Transactions
+    </SidebarItem>
+  );
+}
+```
+
+Or draw Next's own `Link` with the `render` prop every link part inherits, for its viewport prefetch. It is a function, so it is passed from a client component, which the app has anyway for `usePathname()`:
+
+```tsx
+'use client';
+
+import NextLink from 'next/link';
+import { SidebarItem } from '@snapshot-ui/react';
+import { Wallet } from 'lucide-react';
+
+export function TransactionsItem({ isCurrent }: { isCurrent: boolean }) {
+  return (
+    <SidebarItem
+      href="/transactions"
+      icon={<Wallet />}
+      isCurrent={isCurrent}
+      render={(props) => <NextLink {...props} href="/transactions" />}
+    >
+      Transactions
+    </SidebarItem>
+  );
+}
+```
+
+</Section>
+
+<Section>
+
+## No linkComponent
+
+The library takes no `linkComponent` prop. It would be a second spelling of `render`, it could not be serialized from a server component either, and it would have to be threaded through every group, item, brand and bar. One provider covers the common case, and `render` covers the one link that needs more.
+
+</Section>

@@ -28,38 +28,9 @@ A menu can also choose. `selectionMode="single"` makes its items radios: the cho
 
 ## Links
 
-An item with `href` is a real link, an anchor with `role="menuitem"`, so a middle click or a modified click opens it as the browser would. A plain press navigates through React Aria's `RouterProvider`, which [Link](/docs/components/link) uses too, so wrap your app in it once. Import it from `@snapshot-ui/react`: it is the library's own copy of React Aria's, so the provider and the items always share one router, whatever else the app installs. With the Next.js App Router, that is a small client component around the app, with the `RouterConfig` augmentation so `routerOptions` is typed:
+An item with `href` is a real link, an anchor with `role="menuitem"`, so a middle click or a modified click opens it as the browser would. A plain press navigates through React Aria's `RouterProvider`, which [Link](/docs/components/link) uses too: one provider at the app's root routes every link through the app's router, as [Routing](/docs/routing) sets up.
 
-```tsx
-'use client';
-
-import { useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
-import { RouterProvider } from '@snapshot-ui/react';
-
-declare module '@snapshot-ui/react' {
-  interface RouterConfig {
-    routerOptions: NonNullable<Parameters<ReturnType<typeof useRouter>['push']>[1]>;
-  }
-}
-
-export function ClientProviders({ children }: { children: ReactNode }) {
-  const router = useRouter();
-  return (
-    <RouterProvider
-      navigate={(href, options) => {
-        router.push(href, options);
-      }}
-    >
-      {children}
-    </RouterProvider>
-  );
-}
-```
-
-Render `<ClientProviders>` around `{children}` in `app/layout.tsx`.
-
-The one trade-off: React Aria renders a plain anchor, so Next does not prefetch the page as the link comes into view. Prefetch it yourself with `router.prefetch(href)` from the item's `onHoverStart` and `onFocus`, or draw Next's own `Link` for an item with the `render` prop it inherits, from a client component:
+An item's inherited `render` can draw a router's own link, from a client component; an item without `href` renders a `div`:
 
 ```tsx
 <MenuItem
