@@ -16,6 +16,10 @@ import { present } from '../utils/present';
 
 export type DrawerPlacement = 'start' | 'end';
 
+/**
+ * The drawer's props, all of them: unlike Dialog and Sheet, it passes none of React Aria's other dialog props
+ * through, such as `aria-describedby`, `id` or `aria-label`. Its title names it.
+ */
 export interface DrawerProps {
   /** Which edge the panel comes from. `start` and `end` follow the writing direction. @default 'start' */
   placement?: DrawerPlacement;

@@ -6,13 +6,15 @@ import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { CollapsibleCard } from '../collapsible-card';
-import { DialogTrigger } from '../dialog';
+import { CommandPalette } from '../command-palette';
+import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { Link } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { Popover } from '../popover';
 import { Radio, RadioGroup } from '../radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
+import { Sheet, SheetTrigger } from '../sheet';
 import { MENU_ROW_A11Y } from '../stories/a11y';
 import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
@@ -696,6 +698,136 @@ export const PopoverMirrored: Story = {
 };
 
 /**
+ * A dialog in right to left: the scrim carries `dir`, the title starts at the right edge of the head, the
+ * close button sits at the left corner, and the action row packs to the left, the end of a right-to-left
+ * line, with Cancel first in reading order and so to the right of the confirm button.
+ */
+export const DialogMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <Dialog
+        defaultOpen
+        title="إعادة تسمية مساحة العمل"
+        description="يظهر الاسم الجديد لفريقك."
+        hasCloseButton
+        closeLabel="إغلاق"
+        actions={
+          <>
+            <Button variant="tertiary" slot="close">
+              إلغاء
+            </Button>
+            <Button>حفظ</Button>
+          </>
+        }
+      />
+    </Rtl>
+  ),
+  play: async () => {
+    const panel = await waitFor(async () => {
+      const found = find(document, '.dialog');
+      await expect(found).not.toHaveAttribute('data-entering');
+      return found;
+    });
+    await Promise.all(panel.getAnimations().map((animation) => animation.finished.catch(() => null)));
+    await expect(find(document, '.dialog-overlay')).toHaveAttribute('dir', 'rtl');
+    const box = rect(panel);
+    const close = rect(find(panel, '.dialog-close'));
+    const headElement = find(panel, '.dialog-head');
+    const head = rect(headElement);
+    const title = find(panel, '.dialog-title');
+    // The close button is in the left half, inside the room the head keeps for it at its left end, the end of
+    // the line, and the title starts at the right.
+    await expect(close.left - box.left).toBeLessThan(box.right - close.right);
+    await expect(parseFloat(getComputedStyle(headElement).paddingLeft)).toBeGreaterThan(0);
+    await expect(close.right).toBeLessThanOrEqual(
+      head.left + parseFloat(getComputedStyle(headElement).paddingLeft) + 0.5,
+    );
+    await expectSameEdge(lastText(title).right, head.right);
+    const body = within(document.body);
+    const cancel = rect(body.getByRole('button', { name: 'إلغاء' }));
+    const save = rect(body.getByRole('button', { name: 'حفظ' }));
+    const row = rect(find(panel, '.dialog-actions'));
+    await expect(save.right).toBeLessThanOrEqual(cancel.left + 0.5);
+    await expectSameEdge(save.left, row.left);
+    await expect(row.right - cancel.right).toBeGreaterThan(0);
+  },
+};
+
+/**
+ * A sheet in right to left: the overlay carries `dir`, the grabber stays centred, the title starts at the
+ * right edge of the header and the close button sits at its left end.
+ */
+export const SheetMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <SheetTrigger defaultOpen>
+        <Button variant="secondary">التصفية</Button>
+        <Sheet title="تصفية المعاملات" description="اختر ما يظهر في القائمة." closeLabel="إغلاق">
+          <p style={{ margin: 0 }}>المعاملات المقاصة فقط.</p>
+        </Sheet>
+      </SheetTrigger>
+    </Rtl>
+  ),
+  play: async () => {
+    // React Aria slides the sheet in with a scroll and calls it expanded once the whole sheet is in view.
+    const sheet = await waitFor(
+      async () => {
+        await expect(find(document, '.sheet-overlay')).not.toHaveAttribute('data-entering');
+        const found = find(document, '.sheet');
+        await expect(found).toHaveAttribute('data-expanded');
+        return found;
+      },
+      { timeout: 5000 },
+    );
+    await expect(find(document, '.sheet-overlay')).toHaveAttribute('dir', 'rtl');
+    const box = rect(sheet);
+    const grabber = rect(find(sheet, '.sheet-grabber'));
+    await expect(Math.abs(grabber.left + grabber.width / 2 - (box.left + box.width / 2))).toBeLessThan(1);
+    const header = rect(find(sheet, '.sheet-header'));
+    const text = rect(find(sheet, '.sheet-header-text'));
+    const close = rect(find(sheet, '.sheet-close'));
+    await expect(close.right).toBeLessThanOrEqual(text.left + 0.5);
+    await expect(close.left - header.left).toBeLessThan(header.right - close.right);
+    await expectSameEdge(lastText(find(sheet, '.sheet-title')).right, text.right);
+  },
+};
+
+/**
+ * The palette in right to left: the scrim carries `dir`, the magnifying glass leads at the right of the
+ * field, the typed text starts beside it, and the Esc key trails at the left, the end of the line.
+ */
+export const CommandPaletteMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <CommandPalette
+        label="ابحث في التطبيق"
+        defaultOpen
+        onAction={() => undefined}
+        items={[
+          { id: 'budgets', label: 'الميزانيات' },
+          { id: 'accounts', label: 'الحسابات' },
+        ]}
+      />
+    </Rtl>
+  ),
+  play: async () => {
+    const panel = await waitFor(async () => {
+      const found = find(document, '.command-palette');
+      await expect(found).not.toHaveAttribute('data-entering');
+      return found;
+    });
+    await Promise.all(panel.getAnimations().map((animation) => animation.finished.catch(() => null)));
+    await expect(find(document, '.command-palette-overlay')).toHaveAttribute('dir', 'rtl');
+    const glass = rect(find(panel, '.command-palette-glass'));
+    const input = rect(find(panel, '.command-palette-input'));
+    const escape = rect(find(panel, '.command-palette-field .kbd'));
+    await expect(glass.left).toBeGreaterThanOrEqual(input.right - 0.5);
+    await expect(escape.right).toBeLessThanOrEqual(input.left + 0.5);
+    await expect(getComputedStyle(find(panel, '.command-palette-input')).direction).toBe('rtl');
+  },
+};
+
+/**
  * A signed figure keeps its sign in front. A leading plus or minus is neutral to the bidi algorithm, so in
  * a right-to-left block "+$1,980.00" would draw as "$1,980.00+". A numeral sets its own direction to left to
  * right and isolates itself, and `text-align: match-parent` keeps it at the start of the right-to-left line,
@@ -732,5 +864,34 @@ export const Numerals: Story = {
       // The sign is the first character and is drawn left of the currency symbol after it.
       await expect(characterBox(figure, 0).right).toBeLessThanOrEqual(characterBox(figure, 1).left + 0.5);
     }
+  },
+};
+
+/**
+ * A figure inside a right-to-left sentence keeps its sign in front. Inline, the figure sits among the
+ * sentence's letters, and its own `direction` reorders nothing unless it is isolated: without `unicode-bidi:
+ * isolate` the plus is resolved with the Arabic around it and drawn after the figure. No baseline, since the
+ * words are Arabic.
+ */
+export const NumeralInASentence: Story = {
+  render: () => (
+    <Rtl>
+      <p style={{ margin: 0 }}>
+        وصل{' '}
+        <Text as="span" size="numeral-sm">
+          +$1,980.00
+        </Text>{' '}
+        إلى الحساب اليوم.
+      </p>
+    </Rtl>
+  ),
+  play: async ({ canvasElement }) => {
+    const figure = find(canvasElement, '.copy-numeral-sm');
+    await expect(getComputedStyle(figure).unicodeBidi).toBe('isolate');
+    // The sign is the first character and is drawn left of the currency symbol after it.
+    await expect(characterBox(figure, 0).right).toBeLessThanOrEqual(characterBox(figure, 1).left + 0.5);
+    // The sentence starts at the right, so the figure sits left of its first word.
+    const sentence = rect(find(canvasElement, 'p'));
+    await expect(rect(figure).right).toBeLessThan(sentence.right);
   },
 };

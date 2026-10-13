@@ -74,8 +74,9 @@ export function useConfirm(): ConfirmHandle {
           origin.current = active instanceof HTMLElement && active !== document.body ? active : null;
         } else if (isFocusLost() && origin.current?.isConnected) {
           // The last panel has just left and focus has not come back yet: give it back first, so this
-          // question opens from the run's origin, in its scope, and React Aria returns focus to it.
-          origin.current.focus();
+          // question opens from the run's origin, in its scope, and React Aria returns focus to it. With no
+          // scroll, as React Aria's own restore does it.
+          origin.current.focus({ preventScroll: true });
         }
         isOnPage.current = true;
         asked.current += 1;
@@ -93,7 +94,7 @@ export function useConfirm(): ConfirmHandle {
     origin.current = null;
     // Focus fell to the body with the panel. React Aria gives it back in the next frame; giving it back now
     // means a question chained after this answer opens from the run's origin too.
-    if (isFocusLost() && target?.isConnected) target.focus();
+    if (isFocusLost() && target?.isConnected) target.focus({ preventScroll: true });
   }, []);
 
   useLayoutEffect(() => {

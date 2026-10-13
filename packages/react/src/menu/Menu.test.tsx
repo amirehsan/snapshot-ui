@@ -696,6 +696,12 @@ describe('Menu', () => {
     expect(library).not.toHaveProperty('Shortcut');
   });
 
+  it('exports React Aria’s Key type, so an app types its item ids with no React Aria import', () => {
+    // Fails `pnpm typecheck` if the package stops exporting the type.
+    const ids: library.Key[] = ['rename', 7];
+    expect(ids).toHaveLength(2);
+  });
+
   it('has no axe violations open, with a section, a separator, a selected row and a disabled row', async () => {
     render(
       <MenuTrigger defaultOpen>

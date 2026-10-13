@@ -222,5 +222,19 @@
     "import": "{ Button }",
     "ignore": ["react", "react-dom"],
     "limit": "40 kB"
+  },
+  {
+    "name": "Sheet with React Aria (watch only)",
+    "path": "dist/index.js",
+    "import": "{ Sheet }",
+    "ignore": ["react", "react-dom"],
+    "limit": "45 kB"
+  },
+  {
+    "name": "CommandPalette with React Aria (watch only)",
+    "path": "dist/index.js",
+    "import": "{ CommandPalette }",
+    "ignore": ["react", "react-dom"],
+    "limit": "70 kB"
   }
 ]

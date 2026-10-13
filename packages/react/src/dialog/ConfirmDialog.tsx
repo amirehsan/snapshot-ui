@@ -257,9 +257,6 @@ export function BaseConfirmDialog({
           variant={isDanger ? 'danger' : 'primary'}
           // eslint-disable-next-line jsx-a11y/no-autofocus -- initial focus inside a modal is the dialog pattern: a question that loses nothing starts on its answer
           autoFocus={!isDanger}
-          // The label, as a name React Aria can extend: it joins the spinner's name to a pending button's
-          // only when the button is named by an attribute, so pending reads "Delete 3 transactions Deleting".
-          aria-label={confirmLabel}
           isPending={isPending}
           pendingLabel={pendingLabel}
           onPress={confirm}

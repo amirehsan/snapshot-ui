@@ -14,6 +14,7 @@ export {
   type TextTone,
 } from './typography';
 export { Link, RouterProvider, type LinkProps, type RouterConfig } from './link';
+export { I18nProvider, type I18nProviderProps } from './i18n';
 export { Kbd, type KbdProps } from './kbd';
 export { Badge, type BadgeProps, type BadgeTone } from './badge';
 export { IconButton, type IconButtonProps, type IconButtonVariant } from './icon-button';
@@ -91,13 +92,14 @@ export {
 } from './dialog';
 export { Drawer, type DrawerPlacement, type DrawerProps } from './drawer';
 export { Sheet, SheetTrigger, type SheetProps, type SheetTriggerProps } from './sheet';
-export { Popover, type PopoverProps } from './popover';
+export { Popover, type Placement, type PopoverProps } from './popover';
 export {
   Menu,
   MenuItem,
   MenuSection,
   MenuSeparator,
   MenuTrigger,
+  type Key,
   type MenuItemProps,
   type MenuProps,
   type MenuSectionProps,

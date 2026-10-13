@@ -323,7 +323,13 @@ export const ScrimInAnyOrder: Story = {
   ),
   play: async ({ canvas, userEvent }) => {
     const late = document.createElement('style');
+    // First, a one-class variant of the kind the backdrop once had, so the probe below can show the late rule
+    // beats it.
     late.textContent = `@layer components {
+      .scrim-probe {
+        z-index: auto;
+        transition: none;
+      }
       .overlay-scrim {
         z-index: var(--z-modal);
         height: var(--visual-viewport-height, 100dvh);
@@ -331,7 +337,14 @@ export const ScrimInAnyOrder: Story = {
       }
     }`;
     document.head.append(late);
+    // A scrim with that one-class variant loses to the late rule, which shows the rule is in force, so the
+    // checks below prove the backdrop's variant outranks it and not that it never applied.
+    const probe = document.createElement('div');
+    probe.className = 'overlay-scrim scrim-probe';
+    document.body.append(probe);
     try {
+      await expect(getComputedStyle(probe).zIndex).toBe('1000');
+      await expect(getComputedStyle(probe).transitionDuration).toBe('0.18s');
       const trigger = canvas.getByRole('button', { name: 'Filter transactions' });
       trigger.scrollIntoView({ block: 'center' });
       await expect(window.scrollY).toBeGreaterThan(200);
@@ -346,6 +359,7 @@ export const ScrimInAnyOrder: Story = {
       await expect(box.top).toBeLessThanOrEqual(0);
       await expect(box.bottom).toBeGreaterThanOrEqual(window.innerHeight);
     } finally {
+      probe.remove();
       late.remove();
     }
   },
