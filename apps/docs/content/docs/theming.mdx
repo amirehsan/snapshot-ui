@@ -48,6 +48,28 @@ Both attributes work on any element, and the nearest one wins. A light card insi
 
 <Section>
 
+## Overlays
+
+A dialog renders at the end of the page, outside the element it opened from, so it cannot inherit that element's attributes. Instead it copies `data-theme`, `data-shape` and `data-density` from the nearest ancestors of the element it opened from that carry them, so a dialog opened from a button in a dark card is dark while the page stays light. Every other overlay the library adds follows the same rule. An overlay opened by a keyboard shortcut copies from whatever holds focus, and one opened with nothing focused takes the page's own theme.
+
+For an overlay the copy cannot reach, such as one a third-party component opens, React Aria's `UNSAFE_PortalProvider`, from the `react-aria` package, renders every overlay inside it into a container you choose. Put the container inside the scope:
+
+```tsx
+import { UNSAFE_PortalProvider } from 'react-aria';
+
+const [container, setContainer] = useState<HTMLElement | null>(null);
+
+<section data-theme="dark" ref={setContainer}>
+  <UNSAFE_PortalProvider getContainer={() => container}>{children}</UNSAFE_PortalProvider>
+</section>;
+```
+
+Overlays are stacked by two variables: `--z-modal` (1000) for the modal surfaces and their scrims, and `--z-toast` (1100) for the toast region, which sits above them. An app whose own chrome uses larger numbers sets them higher.
+
+</Section>
+
+<Section>
+
 ## Tokens
 
 Every value is a CSS variable you can read, such as `var(--color-ink)`, `var(--radius-control)` or `var(--spacing-peer)`. The same tokens are available in JavaScript, with each mode's value:

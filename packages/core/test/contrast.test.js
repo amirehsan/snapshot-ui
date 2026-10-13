@@ -165,6 +165,33 @@ describe('the collapsible card', () => {
   });
 });
 
+describe('the dialog', () => {
+  // The well is a 48px bone circle holding an ink icon, and the description is slate on the float panel. An
+  // icon asks 3:1 and text 4.5:1, and both pairs are gated already as text, at the stricter minimum.
+  it('cites ink on bone and slate on float, which the gate already holds, for the well and the description', () => {
+    for (const [text, ground] of [
+      ['ink', 'bone'],
+      ['slate', 'float'],
+    ]) {
+      expect(CONTRAST_PAIRS).toContainEqual(expect.objectContaining({ text, ground, minimum: TEXT }));
+    }
+  });
+
+  // The danger well is error at 14% over float, and its icon is error. The wash is a mix and not a token, so
+  // the pair cannot join the gate. It is measured here and recorded in the design record instead.
+  it('measures the error icon on the 14% error well over float above the 3:1 a graphic needs in both themes, recorded and not gated', () => {
+    const measured = (mode) => {
+      const palette = paletteFor(tokens, mode);
+      const error = parseColor(palette.error);
+      const well = composite({ ...error, a: 0.14 }, parseColor(palette.float));
+      return contrastRatio(error, well);
+    };
+    expect(measured('light')).toBeCloseTo(5.88, 2);
+    expect(measured('dark')).toBeCloseTo(4.72, 2);
+    for (const mode of ['light', 'dark']) expect(measured(mode), mode).toBeGreaterThanOrEqual(NON_TEXT);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

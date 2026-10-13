@@ -1,9 +1,7 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig({
-  // The private overlay hooks are entries of their own, so they are built, and their directive checked,
-  // before any component imports them. The exports map still names only the index, so nothing exports them.
-  entry: ['src/index.ts', 'src/overlay/useOverlayScope.ts', 'src/overlay/useOverlayStack.ts'],
+  entry: ['src/index.ts'],
   tsconfig: 'tsconfig.build.json',
   format: 'esm',
   platform: 'neutral',
