@@ -522,6 +522,28 @@ describe('CommandPalette keys', () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
+  it('drops a choice the caller kept open when the shortcut closes it', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    const onOpenChange = vi.fn();
+    const props = { label: 'Search', items: ITEMS, onAction, onOpenChange };
+    // A caller that keeps the palette open when a choice asks to close it.
+    const { rerender } = render(<CommandPalette {...props} isOpen />);
+    await user.type(input(), 'budg{Enter}');
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    onOpenChange.mockClear();
+    // The shortcut asks to close for no choice, and the caller closes it.
+    pressShortcut();
+    expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
+    rerender(<CommandPalette {...props} isOpen={false} />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it('drops a pending choice when it opens again during its exit', async () => {
     const user = userEvent.setup();
     const onAction = vi.fn();
@@ -540,9 +562,9 @@ describe('CommandPalette keys', () => {
     await user.type(input(), 'budg{Enter}');
     rerender(<CommandPalette {...props} isOpen={false} />);
     expect(panel()).toHaveAttribute('data-exiting');
-    // Opened again before the exit ends, so the panel never left the page for that choice.
+    // Opened again before the exit ends, so the panel never left the page for that choice. Opening drops it,
+    // and the caller then closes the palette itself, which is no close of the palette's own.
     rerender(<CommandPalette {...props} isOpen />);
-    await user.keyboard('{Escape}');
     rerender(<CommandPalette {...props} isOpen={false} />);
     await act(async () => {
       finish();

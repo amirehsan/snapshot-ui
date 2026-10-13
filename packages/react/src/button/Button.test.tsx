@@ -68,6 +68,36 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: /Save/ })).toBeInTheDocument();
   });
 
+  it('adds the pending label to a text button’s name while pending, and drops it after', () => {
+    const { rerender } = render(
+      <Button isPending pendingLabel="Saving">
+        Save
+      </Button>,
+    );
+    expect(screen.getByRole('button')).toHaveAccessibleName('Save Saving');
+    rerender(<Button pendingLabel="Saving">Save</Button>);
+    const button = screen.getByRole('button');
+    expect(button).toHaveAccessibleName('Save');
+    // Named by its text again, as a button that was never pending is.
+    expect(button).not.toHaveAttribute('aria-labelledby');
+  });
+
+  it('keeps a name given by attribute, and adds the pending label to it', () => {
+    render(
+      <>
+        <span id="outside">Publish the post</span>
+        <Button isPending pendingLabel="Publishing" aria-labelledby="outside">
+          Publish
+        </Button>
+        <Button isPending pendingLabel="Sending" aria-label="Send the invoice">
+          Send
+        </Button>
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Publish the post Publishing' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send the invoice Sending' })).toBeInTheDocument();
+  });
+
   it('names the spinner Loading when no pendingLabel is given', () => {
     render(<Button isPending>Save</Button>);
     expect(screen.getByRole('progressbar', { name: 'Loading' })).toBeInTheDocument();
