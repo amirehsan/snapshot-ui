@@ -84,7 +84,7 @@ import { StatTile } from '@snapshot-ui/react';
 
 ## Props
 
-A StatTile accepts every attribute of an HTML element.
+A plain StatTile accepts every attribute of an HTML element. A linked one (`href`) is React Aria's `Link`, which forwards `id`, `data-*`, `lang`, `dir`, `hidden`, `style`, `aria-label`, `aria-labelledby`, `aria-describedby`, `aria-details`, `aria-current` and the event handlers; others, such as `title` or `role`, apply only to the plain tile.
 
 <PropsTable label="StatTile props" path="../../packages/react/src/stat-tile/StatTile.tsx" type="Pick<StatTileProps, 'label' | 'value' | 'change' | 'caption' | 'trend' | 'href' | 'level' | 'className'>" />
 

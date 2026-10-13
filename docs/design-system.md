@@ -5132,6 +5132,10 @@ value's row) and 343px at 375 (277px, the trend under the caption), and the
 expect. `StatTile` leaves `ref` in the attributes it spreads rather than
 naming it, as `Card` does, since the React hooks lint reads a named ref passed
 to `createElement` as a read during render. `StatTileLink` casts the tile's
-HTML attributes to React Aria's link props, a type-only widening: the focus
-handlers of an HTML element take an `HTMLElement` event, React Aria's an
-`Element` one.
+HTML attributes to React Aria's link props. The cast does more than widen the
+focus handlers' event type: React Aria's `Link` forwards only some DOM
+attributes (`id`, `data-*`, `lang`, `dir`, `hidden`, `style`, the naming
+attributes, `aria-current` and the event handlers), so others, such as
+`title` or `role`, reach a plain tile and are dropped from a linked one. The
+props page says so, and a test pins it, so a later React Aria that forwards
+more is noticed.
