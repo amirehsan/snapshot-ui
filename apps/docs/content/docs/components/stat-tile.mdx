@@ -1,0 +1,113 @@
+---
+title: Stat tile
+description: 'One headline figure on a card: a label, the value, a change line with an arrow and a word, a caption and a small trend.'
+icon: Hash
+---
+
+<Section>
+
+## Anatomy
+
+An overline label in slate capitals, the value as a small numeral, a change line with an arrow and the app's sentence, and a caption for the period. Only the label and the value are required. The tile is the Card's surface, and its padding follows density as a card's does.
+
+<Preview name="stat-tile-basic" />
+
+</Section>
+
+<Section>
+
+## The change line
+
+The line is slate by default. It takes `gain` only for money that arrived and `warning` only for a state that needs a look. It is never red or green for up and down, because "Down 12%" is good for spending and bad for income: the direction does not know which. The sentence carries the meaning, and the arrow repeats it.
+
+<Preview name="stat-tile-tones" />
+
+</Section>
+
+<Section>
+
+## A trend
+
+Any small drawing goes in `trend`, at the end of the value's row, 96 by 32 at most. It is hidden from assistive technology unless it names itself, since the tile's text already says the change. When the tile has less than 18rem of content, the trend moves under the caption.
+
+<Preview name="stat-tile-trend" />
+
+</Section>
+
+<Section>
+
+## As a link
+
+`href` makes the whole tile one link, routed through `RouterProvider` as [Routing](/docs/routing) sets up. Its name is everything it shows, in order. Nothing focusable can sit inside it, since a link cannot hold a link or a button, and the console says so when something does.
+
+<Preview name="stat-tile-link" />
+
+</Section>
+
+<Section>
+
+## In a row
+
+A tile takes its width from its column, never from its content, because it measures itself to move its trend. Lay tiles in a grid such as `repeat(auto-fit, minmax(16rem, 1fr))`, never in a row that sizes them by what they hold. Cap the minimum at the row's width, as below, so a column narrower than 16rem holds one tile and nothing scrolls sideways.
+
+```css
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  gap: var(--spacing-peer);
+}
+```
+
+</Section>
+
+<Section>
+
+## Usage
+
+Every figure is the app's formatted string: the library formats no number and no date, so the server's HTML is final in any locale. A server component renders a tile without `href` with no client JavaScript; a linked tile is a client part.
+
+```tsx
+import { StatTile } from '@snapshot-ui/react';
+
+<StatTile
+  label="Spending"
+  value="$1,284.50"
+  change={{ direction: 'up', label: 'Up 12% from last month' }}
+  caption="Across all accounts"
+  href="/spending"
+/>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+A StatTile accepts every attribute of an HTML element.
+
+<PropsTable label="StatTile props" path="../../packages/react/src/stat-tile/StatTile.tsx" type="Pick<StatTileProps, 'label' | 'value' | 'change' | 'caption' | 'trend' | 'href' | 'level' | 'className'>" />
+
+<PropsTable label="StatTileChange" path="../../packages/react/src/stat-tile/StatTile.tsx" type="StatTileChange" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The tile is its text, read in order: the label, the value, the change and the caption. As a link it is one link, named by that text. The arrow is hidden, since the sentence says the change. `level` makes the label a heading, so the tile joins the page's outline.
+
+<Keys rows={[['Tab', 'Moves to a linked tile, one stop for the whole tile.'], ['Enter', 'Follows the link.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps stat tiles in the system.
+
+<Rules dos={['Show one figure per tile.', 'Say the change in words, in a sentence.', 'Give a caption for the period the figure covers.']} donts={['Never color a change by its direction.', 'Never put a button or a link inside a linked tile.', 'Never pass a figure for the library to format. Every figure is your string.']} />
+
+</Section>

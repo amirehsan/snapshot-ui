@@ -147,3 +147,4 @@ export {
   type BottomTabBarProps,
 } from './bottom-tab-bar';
 export { Avatar, type AvatarProps } from './avatar';
+export { StatTile, type StatTileChange, type StatTileProps } from './stat-tile';

@@ -1,0 +1,167 @@
+/*
+ * StatTile: one headline figure on the Card's surface, derived in docs/design-system.md ("StatTile"): Lifted,
+ * the hairline, the stadium corner and --spacing-card, so a tile follows density with no token of its own. An
+ * overline label, a numeral-sm value (copy.css draws it), a change line in slate unless it means money that
+ * arrived (gain) or a state that needs a look (warning), never red or green for up and down, and a caption.
+ * The trend sits at the inline end of the value's row and moves under the caption when the tile's content is
+ * narrower than 18rem, by a container query on the tile, so a tile in a narrow column moves too. As a link the
+ * tile takes the 5% ink wash on hover and press, and the token ring outside it; no lift, it is a surface.
+ */
+@layer components {
+  .stat-tile {
+    container: stat-tile / inline-size;
+    box-sizing: border-box;
+    display: block;
+    min-width: 0;
+    padding: var(--spacing-card);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-stadium);
+    background-color: var(--color-lifted);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    overflow-wrap: anywhere;
+    text-decoration: none;
+  }
+
+  /* A tile in a card steps down a corner, and takes the frame edge a card in a card takes. */
+  .card > .stat-tile,
+  .card-body .stat-tile {
+    border-color: var(--color-frame);
+    border-radius: var(--radius-surface);
+  }
+
+  .stat-tile-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'label label'
+      'value trend'
+      'change change'
+      'caption caption';
+    column-gap: var(--spacing-peer);
+    align-items: center;
+  }
+
+  .stat-tile-label {
+    grid-area: label;
+    margin: 0;
+    font-size: var(--text-overline);
+    line-height: var(--text-overline--line-height);
+    letter-spacing: var(--text-overline--letter-spacing);
+    font-weight: var(--text-overline--font-weight);
+    text-transform: uppercase;
+    color: var(--color-slate);
+  }
+
+  /* The size, the tabular figures, nowrap and the direction are copy-numeral-sm's. */
+  .stat-tile-value {
+    grid-area: value;
+    min-width: 0;
+    margin-block-start: var(--spacing-part);
+    color: var(--color-ink);
+  }
+
+  .stat-tile-trend {
+    grid-area: trend;
+    display: flex;
+    justify-content: flex-end;
+    max-width: 6rem;
+    max-height: 2rem;
+    margin-block-start: var(--spacing-part);
+  }
+
+  .stat-tile-change {
+    grid-area: change;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.25rem;
+    margin: var(--spacing-part) 0 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+  }
+
+  .stat-tile-change[data-tone='gain'] {
+    color: var(--color-gain);
+  }
+
+  .stat-tile-change[data-tone='warning'] {
+    color: var(--color-warning);
+  }
+
+  /* Level with the first line of a sentence that wraps, as the card's chevron is. */
+  .stat-tile-arrow {
+    display: inline-flex;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-block: calc((1lh - 1rem) / 2);
+  }
+
+  .stat-tile-arrow svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .stat-tile-change-label {
+    min-width: 0;
+  }
+
+  .stat-tile-caption {
+    grid-area: caption;
+    margin: 0.25rem 0 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+  }
+
+  /* 18rem of content: a 354px tile in comfortable, 330px in compact. */
+  @container stat-tile (width < 18rem) {
+    .stat-tile-body {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'label'
+        'value'
+        'change'
+        'caption'
+        'trend';
+    }
+
+    .stat-tile-trend {
+      justify-content: flex-start;
+    }
+  }
+
+  a.stat-tile {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (hover: hover) {
+    a.stat-tile:is(:hover, [data-hovered]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-lifted));
+    }
+  }
+
+  /* A press shows what hover does, since touch has no hover to show it. */
+  a.stat-tile:is(:active, [data-pressed]) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-lifted));
+  }
+
+  a.stat-tile:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  @media (forced-colors: active) {
+    .stat-tile {
+      border-color: CanvasText;
+    }
+
+    a.stat-tile:is(:focus-visible, [data-focus-visible]) {
+      outline-color: Highlight;
+    }
+  }
+}

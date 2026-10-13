@@ -11,6 +11,7 @@ import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Sheet } from '../src/sheet';
 import { Sidebar, SidebarGroup, SidebarItem } from '../src/sidebar';
+import { StatTile } from '../src/stat-tile';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
@@ -214,5 +215,14 @@ describe('an empty shell slot', () => {
     expect(container.querySelector('.sidebar-head')).toBeNull();
     expect(container.querySelector('.sidebar-footer')).toBeNull();
     expect(container.querySelector('.sidebar-collapse')?.nextElementSibling).toHaveClass('sidebar-nav');
+  });
+});
+
+describe('an empty stat tile slot', () => {
+  it('draws no trend and no caption for false or an empty string', () => {
+    const { container } = render(<StatTile label="Spending" value="$1" trend={false} caption="" />);
+    expect(container.querySelector('.stat-tile')).not.toBeNull();
+    expect(container.querySelector('.stat-tile-trend')).toBeNull();
+    expect(container.querySelector('.stat-tile-caption')).toBeNull();
   });
 });

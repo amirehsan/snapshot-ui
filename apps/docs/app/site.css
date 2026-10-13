@@ -215,6 +215,16 @@
     justify-content: space-between;
   }
 
+  /* Stat tiles in columns of 16rem or more. The stage centers its children, and a tile is a size container,
+     which takes no width from its content, so the row gives it the stage's width. The minimum is capped at the
+     row's width, so a stage narrower than 16rem, at 320px, holds one column and nothing scrolls sideways. */
+  .tile-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    gap: var(--spacing-peer);
+    width: 100%;
+  }
+
   .setting {
     display: flex;
     align-items: center;

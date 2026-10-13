@@ -3329,6 +3329,138 @@ describe('src/components/avatar.css', () => {
   });
 });
 
+describe('src/components/stat-tile.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/stat-tile.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const CONTAINER = '@container stat-tile (width < 18rem)';
+  const WASH = 'background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-lifted));';
+
+  /** The CSS with the container query's block taken out, so the wide layout is read on its own. */
+  const outsideContainer = (css) => {
+    const start = css.indexOf(CONTAINER);
+    if (start === -1) return css;
+    const end = css.indexOf('{', start) + 1 + blockAfter(css, CONTAINER).length + 1;
+    return css.slice(0, start) + css.slice(end);
+  };
+
+  it("draws the Card's surface, padded by --spacing-card", () => {
+    const tile = blockAfter(rules(), '.stat-tile {');
+    for (const declaration of [
+      'padding: var(--spacing-card);',
+      'border: 1px solid var(--color-hairline);',
+      'border-radius: var(--radius-stadium);',
+      'background-color: var(--color-lifted);',
+      'color: var(--color-ink);',
+      'box-sizing: border-box;',
+    ]) {
+      expect(tile, declaration).toContain(declaration);
+    }
+    expect(rules()).not.toContain('box-shadow');
+  });
+
+  it('steps a tile in a card down to the surface corner with the frame edge', () => {
+    const nested = blockAfter(rules(), '.card > .stat-tile, .card-body .stat-tile {');
+    expect(nested).toContain('border-color: var(--color-frame);');
+    expect(nested).toContain('border-radius: var(--radius-surface);');
+  });
+
+  it('lays the body out as a grid with the trend at the end of the value row', () => {
+    const body = blockAfter(outsideContainer(rules()), '.stat-tile-body {');
+    expect(body).toContain('display: grid;');
+    expect(body).toContain('grid-template-columns: minmax(0, 1fr) auto;');
+    expect(body).toContain(
+      "grid-template-areas: 'label label' 'value trend' 'change change' 'caption caption';",
+    );
+    const css = outsideContainer(rules());
+    for (const [part, area] of [
+      ['.stat-tile-label {', 'label'],
+      ['.stat-tile-value {', 'value'],
+      ['.stat-tile-trend {', 'trend'],
+      ['.stat-tile-change {', 'change'],
+      ['.stat-tile-caption {', 'caption'],
+    ]) {
+      expect(blockAfter(css, part), part).toContain(`grid-area: ${area};`);
+    }
+    const trend = blockAfter(css, '.stat-tile-trend {');
+    expect(trend).toContain('max-width: 6rem;');
+    expect(trend).toContain('max-height: 2rem;');
+  });
+
+  it('draws the label at the overline step in slate, in capitals', () => {
+    const label = blockAfter(rules(), '.stat-tile-label {');
+    for (const declaration of [
+      'font-size: var(--text-overline);',
+      'line-height: var(--text-overline--line-height);',
+      'letter-spacing: var(--text-overline--letter-spacing);',
+      'font-weight: var(--text-overline--font-weight);',
+      'text-transform: uppercase;',
+      'color: var(--color-slate);',
+      'margin: 0;',
+    ]) {
+      expect(label, declaration).toContain(declaration);
+    }
+    expect(rules()).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('colors the change line slate, gain or warning by its tone, and never error, success, clay or signal', () => {
+    const css = rules();
+    expect(blockAfter(css, '.stat-tile-change {')).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, ".stat-tile-change[data-tone='gain'] {")).toContain('color: var(--color-gain);');
+    expect(blockAfter(css, ".stat-tile-change[data-tone='warning'] {")).toContain(
+      'color: var(--color-warning);',
+    );
+    for (const reserved of ['--color-error', '--color-success', '--color-clay', '--color-signal']) {
+      expect(css, reserved).not.toContain(reserved);
+    }
+    // The arrow takes the line's color, and the direction never picks one.
+    expect(css).not.toContain('data-direction');
+  });
+
+  it('moves the trend under the caption below 18rem of content, by a container query on the tile', () => {
+    const css = rules();
+    expect(blockAfter(css, '.stat-tile {')).toContain('container: stat-tile / inline-size;');
+    const narrow = blockAfter(css, CONTAINER);
+    expect(narrow).not.toBe('');
+    const body = blockAfter(narrow, '.stat-tile-body {');
+    expect(body).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(body).toContain("grid-template-areas: 'label' 'value' 'change' 'caption' 'trend';");
+    expect(blockAfter(narrow, '.stat-tile-trend {')).toContain('justify-content: flex-start;');
+    // A container query, never a viewport query, decides it.
+    expect(css).not.toMatch(/@media \((?:min-|max-)?width/);
+  });
+
+  it('washes a linked tile 5% ink over Lifted on hover, only where hover exists, and on a press', () => {
+    const css = rules();
+    const hover = blockAfter(css, '@media (hover: hover)');
+    expect(blockAfter(hover, 'a.stat-tile:is(:hover, [data-hovered]) {')).toContain(WASH);
+    expect(outsideContainer(css).replace(`@media (hover: hover) {${hover}}`, '')).not.toContain(':hover');
+    expect(blockAfter(css, 'a.stat-tile:is(:active, [data-pressed]) {')).toContain(WASH);
+    expect(blockAfter(css, 'a.stat-tile {')).toContain('cursor: pointer;');
+  });
+
+  it('rings a linked tile with the token ring outside it', () => {
+    const ring = blockAfter(rules(), 'a.stat-tile:is(:focus-visible, [data-focus-visible]) {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+  });
+
+  it('draws the edge CanvasText and the ring Highlight in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.stat-tile {')).toContain('border-color: CanvasText;');
+    expect(blockAfter(forced, 'a.stat-tile:is(:focus-visible, [data-focus-visible]) {')).toContain(
+      'outline-color: Highlight;',
+    );
+  });
+
+  it('moves nothing, so it needs no reduced-motion block', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])transition\s*:/);
+    expect(css).not.toMatch(/(?<![\w-])animation\s*:/);
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

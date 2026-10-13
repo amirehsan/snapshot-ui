@@ -5009,3 +5009,114 @@ shown as it is.
 the home files, and a test keeps the stat tile, the meter and the charts after
 it in that order once they exist. The tooltip's test, which allowed only the
 shell files after the last overlay file, now allows the home files too.
+
+## StatTile
+
+One headline figure: `StatTile`, an overline label, the value, a change line,
+a caption and a small trend, on the Card's surface. The document's token
+table names the overline step for "Uppercase column headers in tables and
+stat tiles", and has no tile of its own, so this one is derived.
+
+**Surface.** The Card's: Lifted, the 1px hairline, `--radius-stadium` and
+`--spacing-card`, so a tile follows density with no token of its own: 32px
+of padding, 20px in compact. A tile directly in a `.card`, or anywhere in a
+`.card-body`, steps down to `--radius-surface` and takes the frame edge, by
+the Card's own rule for a card in a card.
+
+**Label.** `--text-overline` (14px, 700, uppercase, tracked), slate. With
+`level` it is an `h2`, `h3` or `h4` in the page's outline and looks the same;
+without it, a `p`.
+
+**Value.** `copy-numeral-sm`: 32px at 500, tabular, `nowrap`, left to right
+and isolated, so "+$1,980.00" reads left to right in a right-to-left page.
+The document prefers proportional figures for a figure that stands alone;
+the numeral record chose tabular for every numeral, so tiles in a row align,
+and the tile keeps that. Ink.
+
+**Rhythm.** 8px (`--spacing-part`) from the label to the value and from the
+value to the change line, and 4px from the change line to the caption, so
+the caption reads as the change's footnote.
+
+**The change line.** `--text-small`, slate for `neutral`, `--color-gain` for
+`gain` and `--color-warning` for `warning`, the arrow in the same color. The
+tone is the app's choice and never follows the direction (ruling 4): "Down
+12%" is good for spending and bad for income, so a red down or a green up
+would be wrong half the time, and error and success already mean a failed
+and a finished action. `gain` is only for money that arrived and `warning`
+only for a state that needs a look; signal orange and clay appear nowhere.
+The sentence carries the meaning and the arrow repeats it, so the state is
+never color alone.
+
+**The arrows.** Inline SVG with Lucide's geometry, 24 by 24, stroke 2, round
+caps and joins, `currentColor`, drawn at 16px: up `M12 19V5` and `m5 12 7-7
+7 7`, down `M12 5v14` and `m19 12-7 7-7-7`, flat a dash, `M5 12h14`.
+lucide-react's `Icon` is a client module, so a Lucide arrow would make the
+unlinked tile a client tree; the glyphs are drawn in the static module
+instead. The arrow is `aria-hidden`, sits level with the first line of a
+sentence that wraps, and is never mirrored in right to left: up and down
+have no reading direction, and the dash is symmetric.
+
+**The trend.** The slot is at the inline end of the value's row, 96 by 32 at
+most, 24px (`--spacing-peer`) from the value, and comes after the value in
+the DOM, so a trend that names itself is read after the figure. The tile is
+a size container (`container: stat-tile / inline-size`), and under 18rem of
+content the body is one column with the trend after the caption, at the
+inline start. A container query measures the content box, so 18rem is a
+354px tile in comfortable and 330px in compact; 288px holds a `numeral-sm`
+figure such as "$12,345.67" (167px tabular at 32px), the 24px gap and the
+96px trend. A query on the tile, never on the viewport, so a tile in a narrow
+column moves too. The consequence: a size container takes no width from its
+content, so a tile takes its width from its column. Lay tiles in a grid such
+as `repeat(auto-fit, minmax(16rem, 1fr))`, never in a row sized by content.
+The docs' `.tile-row` caps the minimum, `minmax(min(16rem, 100%), 1fr)`: at
+320px the stage is narrower than 16rem, and the plain minimum pushed the page
+27px sideways, so a column narrower than 16rem holds one tile.
+
+**The link.** With `href` the whole tile is React Aria's `Link`
+(`a.stat-tile`), so a press routes through `RouterProvider` and a modified
+press falls through to the browser. Its name is its content: the label, the
+value, the change and the caption, in that order. Every line is a block (a
+`p`, or the heading), never a `span`, because name computation puts a space
+between blocks and none between inline elements. The spec named the link by
+the label, the value and the change and put the caption in
+`aria-describedby`; axe's `label-content-name-mismatch` fails a link whose
+name leaves out text it shows, so the caption is in the name and there is no
+description. A link cannot hold a link or a button, so on mount a linked
+tile looks for a focusable element inside itself and, once per mount, warns
+in the console: "StatTile with href holds a focusable element; a link cannot
+hold a link or a button. Move it out of the tile."
+
+**Static and client.** One module cannot be both. `StatTile.tsx` carries no
+directive and imports no React Aria: a server component renders a tile
+without `href` with no client JavaScript, and its HTML holds no React Aria
+attribute. With `href` it hands its content to `StatTileLink.tsx`, a private
+client module that is the link and owns the warning.
+
+**Hover and press.** A linked tile takes the 5% ink wash over Lifted on
+hover, inside `@media (hover: hover)`, and on a press, since touch has no
+hover to show it. No lift and no shadow: the tile is a surface, not a
+button. Cursor pointer. The focus ring is the token ring outside the tile.
+
+**Contrast.** On Lifted, gated already as text and cited by the contrast
+test, not added: ink 17.84 in light and 17.42 in dark, slate 5.31 and 6.94,
+gain 7.20 and 8.04, warning 6.12 and 8.92. On the hover wash, a mix and not
+a token, so measured and recorded, not gated: slate 4.80 and 6.41, ink 16.11
+and 15.25, gain 6.50 and 7.05, warning 5.53 and 7.81, each above the text
+minimum.
+
+**Forced colors.** The edge is `CanvasText` and a linked tile's ring is
+`Highlight`. The text takes the reader's colors; the arrow is `currentColor`
+and follows them.
+
+**Where the build departs from the plan.** The stories set Storybook's
+`padded` layout: under the default `centered` one the canvas shrinks to its
+content, and a size container has none, so every tile drew as its 66px of
+padding. Padded, a tile is 384px at 1280 (318px of content, the trend in the
+value's row) and 343px at 375 (277px, the trend under the caption), and the
+`RightToLeft` play measures the content width to know which layout to
+expect. `StatTile` leaves `ref` in the attributes it spreads rather than
+naming it, as `Card` does, since the React hooks lint reads a named ref passed
+to `createElement` as a read during render. `StatTileLink` casts the tile's
+HTML attributes to React Aria's link props, a type-only widening: the focus
+handlers of an HTML element take an `HTMLElement` event, React Aria's an
+`Element` one.
