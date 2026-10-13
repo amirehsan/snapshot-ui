@@ -148,3 +148,4 @@ export {
 } from './bottom-tab-bar';
 export { Avatar, type AvatarProps } from './avatar';
 export { StatTile, type StatTileChange, type StatTileProps } from './stat-tile';
+export { Meter, type MeterBaseProps, type MeterProps, type MeterSegment } from './meter';

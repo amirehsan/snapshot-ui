@@ -225,6 +225,15 @@
     width: 100%;
   }
 
+  /* One column of figures up to 28rem: a card that holds a meter or a chart takes its width from here, since
+     the stage centers its children and neither draws a width of its own. */
+  .sample-column {
+    display: grid;
+    gap: var(--spacing-peer);
+    width: 100%;
+    max-width: 28rem;
+  }
+
   .setting {
     display: flex;
     align-items: center;

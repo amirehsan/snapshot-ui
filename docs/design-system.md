@@ -5139,3 +5139,121 @@ attributes, `aria-current` and the event handlers), so others, such as
 `title` or `role`, reach a plain tile and are dropped from a linked one. The
 props page says so, and a test pins it, so a later React Aria that forwards
 more is noticed.
+
+## Meter
+
+Spending against a budget: `Meter`, segments stacked in one bar, a marker
+for today's pace, the label and the value text above the bar, and an
+optional legend. The document has no meter of its own, so this one is
+derived.
+
+**The pattern by hand.** The WAI-ARIA meter pattern, written in the static
+module, not React Aria's `Meter`: that one takes one value, where this one
+stacks several, and it builds its own `aria-valuetext` with `Intl`, where
+every figure here is the app's string. `aria-valuemin` is 0,
+`aria-valuemax` is `max`, `aria-valuenow` is the sum of the segments, each
+floored at 0, capped at `max` (0 when `max` is not over 0), and
+`aria-valuetext` is `valueLabel`, so a screen reader reads "$1,020 of
+$1,200" and never a percentage. The visible value text is `aria-hidden`,
+since the meter reads it. `useId` is the module's one hook, and the server
+build exports it, so a server component renders the meter with no client
+JavaScript.
+
+**The role on the bar.** `meter` has presentational children, so a legend
+inside a `role="meter"` element would be lost to assistive technology. The
+root is a plain `div.meter`; `div.meter-bar` is the meter, and the legend is
+a list beside it. The bar is named by `aria-labelledby` when it is given,
+else by `aria-label`, else by the visible label through its id. A blank
+`aria-labelledby` or `aria-label` (empty or only spaces) falls through to
+the next, and a meter given no name at all, which the types forbid but an
+empty label can still reach, is named by its value text, so the bar never
+goes unnamed. With `pace` the bar is described by the pace label, a hidden
+span after the bar; a blank pace label draws the marker alone, with no
+description and no legend key.
+
+**The track.** 8px tall, `--radius-pill`, in the frame color, ink at 12%,
+the unfilled remainder. It is a flex row that clips its segments, so the
+first segment's start takes the track's radius; the last segment's end
+takes it too, and the joins between segments stay square.
+
+**The looks.** `fill` is solid ink, for spent; `hatched` is ink stripes 2px
+wide every 6px at 45 degrees, a `repeating-linear-gradient` over the track,
+for held, committed but not gone. Both read `--meter-ink`, which is ink on
+the root and `--color-warning` under `[data-over]`, so one property turns
+both looks warning over the limit. Exactly `max` is not over. Over the limit
+the words are the app's, and `valueLabel` must say "over"; the docs and the
+changeset say so, since the color is never the only signal. Error, success,
+signal orange, clay and taupe appear nowhere.
+
+**The geometry.** Each segment's width is its share of `max`, stacked from
+the inline start, written as a percentage with at most three decimals in
+`style={{ inlineSize }}`. What passes `max` is clipped, accounting for what
+came before, so the stack never draws past the track, and a segment left
+with no width is not drawn, so it draws no stray spacer. The legend lists
+every segment. Nothing is measured.
+
+**Spacers and rings are borders.** The token rule allows no inset or spread
+shadow, so the 2px cut between two segments is a `border-inline-start` on
+every segment after the first, inside its width, with the fills clipped to
+the padding box; and the pace marker's 2px ring is its border. Both are in
+`var(--meter-surface, var(--color-lifted))`: read with a fallback and never
+declared by the meter, so an app sets `--meter-surface` once on any ancestor
+(a canvas section) and every meter inside follows, where a value declared on
+the meter would beat it.
+
+**Held, printed.** A printed page drops backgrounds, which loses the fill as
+well as the hatch, so `.meter` sets `print-color-adjust: exact` and its
+`-webkit-` form. The held segment also keeps a 1px edge in `--meter-ink`,
+a border on its `::after`, which an absolute child draws inside the padding
+box, so inside the spacer: the held amount still shows its extent where
+backgrounds are not painted.
+
+**The pace marker.** 2px of ink 16px tall, centred on the track, in a 2px
+ring of the surface, so it reads over the fill and over the track alike. It
+is HTML placed by `inset-inline-start` at `pace.value / max`, clamped to 0
+to 100%, with its 3px half-width taken back by `margin-inline-start`, so its
+centre is the pace. It is never warning: the pace is not over anything.
+
+**The label row.** The label at `--text-small` weight 500 in ink at the
+start, and `valueLabel` at `--text-small` in slate with tabular figures at
+the end, 8px (`--spacing-part`) above the bar. The row wraps, and a long
+word breaks anywhere.
+
+**The legend.** With `hasLegend`, a list under the bar: per segment a 12px
+swatch in its look on the micro radius, its label in slate and its value in
+ink with tabular figures, then the pace marker's key, a 2px ink line, and
+its label. The swatches are `aria-hidden`.
+
+**Contrast.** The label is ink and the value text slate on Lifted, gated
+already as text and cited by the contrast test, not added. The track is a
+mix, so its pairs are measured and recorded, not gated. On Lifted the ink
+fill against the track is 13.88 in light and 12.19 in dark, the warning
+fill 4.77 and 6.24, each past the 3:1 a graphic needs; the track against
+Lifted is 1.28 and 1.43, a cue and not a boundary, since the value text
+carries the meter's extent. On canvas the ink fill is 12.69 and 14.19, the
+warning fill 4.36 and 7.27, and the track 1.28 and 1.36.
+
+**Forced colors.** The fills are backgrounds and the stripes an image, which
+the repaint drops. The fill and the fill and pace swatches become
+`CanvasText`; the stripes opt out of the repaint
+(`forced-color-adjust: none`) and are drawn again as `CanvasText` on
+`canvas`, with their edges named `CanvasText`; the track takes a 1px
+`CanvasText` outline, so its end shows; `--meter-surface` is `canvas`, so
+the spacers and the ring are the reader's background; the marker is
+`Highlight`. The over state keeps its words.
+
+**Right to left.** The track is a flex row and every offset is logical, so
+the bar fills from the inline start, the right, and the marker mirrors with
+it. The hatch keeps its 45 degrees: it is a texture, not an arrow.
+
+**Where the build departs from the plan.** The plan has `useId` run under
+the server-build test because the server build exports it. It does, but
+`server-components.test.tsx` renders with `react-dom/server`, which sets the
+dispatcher of the ordinary React, so the server build's own `useId` found
+none and threw. The test's React mock now keeps the server build's exports
+and takes each hook it exports (`use`, `useCallback`, `useDebugValue`,
+`useId`, `useMemo`) from the ordinary React, so the list of names, which the
+guard checks, is still the server build's. The blank-name fallbacks above
+are an addition, so the bar is never unnamed. The size limit is 1.5 kB,
+above the spec's 1 kB budget: the entry measured 795 B, and the rule rounds
+up to 1 kB and adds 0.5 kB.

@@ -410,6 +410,29 @@ test.describe('forced colors', () => {
     expect(chip.fill).toBe(await systemColor(page, 'CanvasText'));
   });
 
+  test('a meter keeps its fill, its hatch, its track edge and its pace marker', async ({ page }) => {
+    // The fill and the marker are backgrounds and the hatch an image, which the repaint would drop: the fill is
+    // drawn in the reader's text color, the hatch opts out of the repaint, the track is outlined so its end
+    // shows, and the marker is drawn in the selection color.
+    await visit(page, '/docs/components/meter');
+    // The pace example's meter, by its name, whatever the examples' order.
+    const meter = page
+      .locator('.meter')
+      .filter({ has: page.getByRole('meter', { name: 'Transport', exact: true }) });
+    await expect(meter).toHaveCount(1);
+    const text = await systemColor(page, 'CanvasText');
+    expect((await paint(meter.locator(".meter-segment[data-look='fill']"))).fill).toBe(text);
+    expect(
+      await meter
+        .locator(".meter-segment[data-look='hatched']")
+        .evaluate((element) => getComputedStyle(element).backgroundImage),
+    ).not.toBe('none');
+    expect(
+      await meter.locator('.meter-track').evaluate((element) => getComputedStyle(element).outlineColor),
+    ).toBe(text);
+    expect((await paint(meter.locator('.meter-pace'))).fill).toBe(await systemColor(page, 'Highlight'));
+  });
+
   test('a tooltip keeps a border and loses its arrow', async ({ page }) => {
     // The arrow is an svg fill, which the repaint would turn into a shape of the wrong color or none, so it
     // goes. The tip's transparent border is repainted in the reader's text color, so the tip keeps its shape.
@@ -469,6 +492,7 @@ const LONG_TARGETS: Record<string, string[]> = {
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
   kbd: ['.stage .kbd'],
   link: ['.stage .link'],
+  meter: ['.stage .meter-label', '.stage .meter-value', '.stage .meter-legend-label'],
   'radio-group': [
     '.stage .field-label',
     '.stage .field-description',
@@ -612,6 +636,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   kbd: ['.stage .kbd'],
   link: ['.stage .link'],
   menu: ['.stage .button, .stage .icon-button'],
+  meter: ['.stage .meter [role="meter"]', '.stage .meter-segment'],
   popover: ['.stage .button'],
   'radio-group': ['.stage .radio-indicator'],
   'segmented-control': ['.stage .segmented-option'],

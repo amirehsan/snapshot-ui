@@ -10,11 +10,22 @@ import { describe, expect, it, vi } from 'vitest';
 // React as a server component sees it: the react-server build, which has no state, no effects, no refs
 // and no context. A component that calls one of those throws here, as it does in a Next.js server tree.
 // react-dom/server is outside this module graph, so it renders the elements with the ordinary React.
+// The few hooks the server build exports (useId among them) read the dispatcher of the React that renders, so
+// each is taken from the ordinary React, the one react-dom/server sets: the names stay the server build's.
 vi.mock('react', async () => {
   const require = createRequire(import.meta.url);
   const entry = join(dirname(require.resolve('react/package.json')), 'react.react-server.js');
-  const server = (await import(/* @vite-ignore */ pathToFileURL(entry).href)) as { default: object };
-  return { ...server.default, default: server.default };
+  const server = (await import(/* @vite-ignore */ pathToFileURL(entry).href)) as {
+    default: Record<string, unknown>;
+  };
+  const client = require('react') as Record<string, unknown>;
+  const exports = Object.fromEntries(
+    Object.entries(server.default).map(([name, value]) => [
+      name,
+      name.startsWith('use') ? client[name] : value,
+    ]),
+  );
+  return { ...exports, default: exports };
 });
 
 // A server bundler replaces a client module with a reference, and React Aria cannot be imported under React's
@@ -26,6 +37,7 @@ import { Badge } from '../src/badge';
 import { Card, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
+import { Meter } from '../src/meter';
 import { StatTile } from '../src/stat-tile';
 import { Eyebrow, Heading, Text } from '../src/typography';
 
@@ -130,6 +142,32 @@ const HOME: [name: string, element: ReactElement, contains: string[], excludes: 
     ],
     ['data-rac', '<a'],
   ],
+  [
+    'Meter',
+    <Meter
+      label="Groceries"
+      max={1200}
+      valueLabel="$1,020 of $1,200"
+      pace={{ value: 900, label: "Where you'd be today: $900" }}
+      segments={[
+        { value: 820, look: 'fill', label: 'Spent', valueLabel: '$820.00' },
+        { value: 200, look: 'hatched', label: 'Held', valueLabel: '$200.00' },
+      ]}
+    />,
+    [
+      'class="meter"',
+      'role="meter"',
+      'aria-valuemin="0"',
+      'aria-valuemax="1200"',
+      'aria-valuenow="1020"',
+      'aria-valuetext="$1,020 of $1,200"',
+      'data-look="hatched"',
+      'inline-size:68.333%',
+      'inset-inline-start:75%',
+      'hidden=""',
+    ],
+    ['data-over', 'meter-legend'],
+  ],
 ];
 
 describe('the home parts in a server component', () => {
@@ -151,6 +189,7 @@ const STATIC_MODULES = [
   'field/FieldCounter.tsx',
   'field/FieldChanged.tsx',
   'stat-tile/StatTile.tsx',
+  'meter/Meter.tsx',
 ];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {

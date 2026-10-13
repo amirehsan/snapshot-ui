@@ -7,6 +7,7 @@ import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
+import { Meter } from '../src/meter';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Sheet } from '../src/sheet';
@@ -224,5 +225,22 @@ describe('an empty stat tile slot', () => {
     expect(container.querySelector('.stat-tile')).not.toBeNull();
     expect(container.querySelector('.stat-tile-trend')).toBeNull();
     expect(container.querySelector('.stat-tile-caption')).toBeNull();
+  });
+});
+
+describe('an empty meter label', () => {
+  it('draws no label for an empty string, and the bar is named by aria-label', () => {
+    const { container } = render(
+      <Meter
+        label=""
+        aria-label="Groceries"
+        max={1200}
+        segments={[{ value: 820, look: 'fill', label: 'Spent', valueLabel: '$820.00' }]}
+        valueLabel="$820 of $1,200"
+      />,
+    );
+    expect(container.querySelector('.meter')).not.toBeNull();
+    expect(container.querySelector('.meter-label')).toBeNull();
+    expect(screen.getByRole('meter', { name: 'Groceries' })).not.toHaveAttribute('aria-labelledby');
   });
 });

@@ -3461,6 +3461,190 @@ describe('src/components/stat-tile.css', () => {
   });
 });
 
+describe('src/components/meter.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/meter.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const SURFACE = 'var(--meter-surface, var(--color-lifted))';
+  const HATCH = 'repeating-linear-gradient(45deg, var(--meter-ink) 0 2px, transparent 2px 6px)';
+
+  it('is imported right after stat-tile.css', () => {
+    const imported = [...read('src/styles.css').matchAll(/@import '\.\/components\/([^']+)';/g)].map(
+      (m) => m[1],
+    );
+    expect(imported.indexOf('meter.css')).toBe(imported.indexOf('stat-tile.css') + 1);
+  });
+
+  it('lays the label and the tabular slate value out as one row above the bar', () => {
+    const css = rules();
+    const head = blockAfter(css, '.meter-head {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'align-items: baseline;',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(head, declaration).toContain(declaration);
+    }
+    const label = blockAfter(css, '.meter-label {');
+    expect(label).toContain('font-weight: 500;');
+    expect(label).toContain('color: var(--color-ink);');
+    const value = blockAfter(css, '.meter-value {');
+    for (const declaration of [
+      'margin-inline-start: auto;',
+      'font-variant-numeric: tabular-nums;',
+      'color: var(--color-slate);',
+    ]) {
+      expect(value, declaration).toContain(declaration);
+    }
+    // 8px from the row to the bar.
+    expect(blockAfter(css, '.meter {')).toContain('gap: var(--spacing-part);');
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('draws an 8px track on the pill radius in the frame color, clipping the segments', () => {
+    const track = blockAfter(rules(), '.meter-track {');
+    for (const declaration of [
+      'display: flex;',
+      'height: 0.5rem;',
+      'overflow: hidden;',
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-frame);',
+    ]) {
+      expect(track, declaration).toContain(declaration);
+    }
+  });
+
+  it('fills in ink, hatches 2px stripes every 6px at 45 degrees, and turns both warning over the limit, through one property', () => {
+    const css = rules();
+    expect(blockAfter(css, '.meter {')).toContain('--meter-ink: var(--color-ink);');
+    expect(blockAfter(css, '.meter[data-over] {')).toContain('--meter-ink: var(--color-warning);');
+    expect(blockAfter(css, ".meter-segment[data-look='fill'] {")).toContain(
+      'background-color: var(--meter-ink);',
+    );
+    expect(blockAfter(css, ".meter-segment[data-look='hatched'] {")).toContain(`background-image: ${HATCH};`);
+    expect(blockAfter(css, ".meter-swatch[data-look='fill'] {")).toContain(
+      'background-color: var(--meter-ink);',
+    );
+    expect(blockAfter(css, ".meter-swatch[data-look='hatched'] {")).toContain(`background-image: ${HATCH};`);
+    for (const reserved of [
+      '--color-error',
+      '--color-success',
+      '--color-clay',
+      '--color-signal',
+      '--color-taupe',
+    ]) {
+      expect(css, reserved).not.toContain(reserved);
+    }
+  });
+
+  it('cuts touching segments apart with a 2px border of the surface, read with a fallback and never declared outside forced colors', () => {
+    const css = rules();
+    expect(blockAfter(css, '.meter-segment + .meter-segment {')).toContain(
+      `border-inline-start: 2px solid ${SURFACE};`,
+    );
+    // The fills stop at the border, so the spacer shows the surface.
+    expect(blockAfter(css, ".meter-segment[data-look='fill'] {")).toContain('background-clip: padding-box;');
+    expect(blockAfter(css, ".meter-segment[data-look='hatched'] {")).toContain(
+      'background-clip: padding-box;',
+    );
+    expect(blockAfter(css, '.meter-segment {')).toContain('box-sizing: border-box;');
+    expect(closeUp(outsideForcedColors(read('src/components/meter.css')))).not.toMatch(/--meter-surface\s*:/);
+    expect(css).not.toContain('box-shadow');
+  });
+
+  it("rounds the last segment's end and leaves the joins square", () => {
+    const css = rules();
+    const last = blockAfter(css, '.meter-segment:last-child {');
+    expect(last).toContain('border-start-end-radius: var(--radius-pill);');
+    expect(last).toContain('border-end-end-radius: var(--radius-pill);');
+    expect(blockAfter(css, '.meter-segment {')).not.toContain('border-radius');
+  });
+
+  it("draws the held segment's 1px edge on a pseudo-element inside the spacer", () => {
+    const css = rules();
+    expect(blockAfter(css, '.meter-segment {')).toContain('position: relative;');
+    const edge = blockAfter(css, ".meter-segment[data-look='hatched']::after {");
+    for (const declaration of [
+      "content: '';",
+      'position: absolute;',
+      'inset: 0;',
+      'border: 1px solid var(--meter-ink);',
+      'border-radius: inherit;',
+    ]) {
+      expect(edge, declaration).toContain(declaration);
+    }
+  });
+
+  it('places the pace marker by logical offsets, 2px of ink 16px tall in a 2px surface ring, centred on the track', () => {
+    const css = rules();
+    expect(blockAfter(css, '.meter-bar {')).toContain('position: relative;');
+    const pace = blockAfter(css, '.meter-pace {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset-block-start: 50%;',
+      'box-sizing: content-box;',
+      'width: 2px;',
+      'height: 1rem;',
+      'margin-block-start: calc(-0.5rem - 2px);',
+      'margin-inline-start: -3px;',
+      `border: 2px solid ${SURFACE};`,
+      'background-color: var(--color-ink);',
+      'background-clip: padding-box;',
+    ]) {
+      expect(pace, declaration).toContain(declaration);
+    }
+  });
+
+  it('keeps the fills when the page is printed', () => {
+    const meter = blockAfter(rules(), '.meter {');
+    expect(meter).toContain('-webkit-print-color-adjust: exact;');
+    expect(meter).toContain('print-color-adjust: exact;');
+  });
+
+  it('writes no physical offset', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])(?:left|right)\s*:/);
+    expect(css).not.toMatch(/(?:margin|padding|border)-(?:left|right)\b/);
+  });
+
+  it('draws CanvasText fills, CanvasText stripes on canvas, an outlined track and a Highlight marker in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.meter {')).toContain('--meter-surface: canvas;');
+    expect(blockAfter(forced, '.meter-track {')).toContain('outline: 1px solid CanvasText;');
+    expect(
+      blockAfter(
+        forced,
+        ".meter-segment[data-look='fill'], .meter-swatch[data-look='fill'], .meter-swatch[data-look='pace'] {",
+      ),
+    ).toContain('background-color: CanvasText;');
+    const hatched = blockAfter(
+      forced,
+      ".meter-segment[data-look='hatched'], .meter-swatch[data-look='hatched'] {",
+    );
+    for (const declaration of [
+      'forced-color-adjust: none;',
+      'background-color: canvas;',
+      'background-image: repeating-linear-gradient(45deg, CanvasText 0 2px, canvas 2px 6px);',
+    ]) {
+      expect(hatched, declaration).toContain(declaration);
+    }
+    expect(
+      blockAfter(forced, ".meter-segment[data-look='hatched']::after, .meter-swatch[data-look='hatched'] {"),
+    ).toContain('border-color: CanvasText;');
+    expect(blockAfter(forced, '.meter-pace {')).toContain('background-color: Highlight;');
+  });
+
+  it('moves nothing, so it needs no reduced-motion block', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])transition\s*:/);
+    expect(css).not.toMatch(/(?<![\w-])animation\s*:/);
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 
