@@ -105,6 +105,21 @@ const CLIENT: [name: string, element: ReactElement, contains: string[]][] = [
     </CollapsibleCard>,
     ['class="card card-collapsible"', 'data-expanded=""', 'data-instant=""', 'aria-expanded="true"'],
   ],
+  [
+    // A folded card that says it holds a change draws its marker on the server, which has no fold to watch.
+    'CollapsibleCard, folded and changed',
+    <CollapsibleCard title="Notifications" defaultExpanded={false} isChanged>
+      <p>Product updates</p>
+    </CollapsibleCard>,
+    [
+      'class="card card-collapsible" data-instant="" data-changed=""',
+      'aria-expanded="false"',
+      'aria-describedby="',
+      '<span class="card-toggle-text">Notifications<span class="card-marker" aria-hidden="true"></span></span>',
+      '</h2><span id="',
+      'class="card-marker-label" hidden="">Changed</span>',
+    ],
+  ],
 ];
 
 describe('the client components on the server', () => {

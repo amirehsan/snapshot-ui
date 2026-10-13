@@ -2434,3 +2434,64 @@ with the rule taken out, and a later press moved as usual. Find-in-page opened
 a remembered folded card through the store in all three, by a text fragment
 link in Chromium and WebKit and by `window.find()` in Firefox, and the other
 card with its key opened and the open was stored.
+
+**The folded marker.** A folded card that holds a change shows a dot after its
+title: 8px, `--radius-dot`, Light Signal Orange, the attention cue the system
+keeps for a change, as on a changed field's edge. It shows while the card is
+folded and either `isChanged` is given or an element in the body carries
+`data-changed`, which every field's root carries while it is changed, a field
+in a nested card included. While `isChanged` is true the card's own root
+carries `data-changed` too, as a field's root does, so a collapsible card
+around it counts the change, whether the inner card is open or folded. The
+core stylesheets key `[data-changed]` only under a field's own classes, so the
+attribute draws nothing on a card. A MutationObserver on the fold watches that
+one attribute in its subtree, and the elements that come and go there, only
+while the card is folded, and is disconnected when it opens or leaves the
+page, so a large open card costs nothing. The render that folds the card reads
+the fold once, so a field changed while the card was open marks it at once.
+The dot hangs off the end of the title's words, out of the flow, a part step
+on, and is centred on their first line, as the chevron is, so a title that
+wraps keeps it beside the words a reader starts with. The words now take their
+own width and no more, and the chevron's auto margin keeps the row's end, so
+on one line the dot follows the last word. A folded title always keeps the
+dot's room, 16px, drawn or not, so the title never moves when the dot comes or
+goes; an open card keeps none, so no open card changed. While the dot shows,
+the toggle is described by `changedLabel`, "Changed" unless given, in an
+element with the `hidden` attribute after the heading, which a description may
+name, so the toggle's name and the heading's text stay the title, and a screen
+reader reads the title, collapsed, then Changed. In forced colors the dot, a
+background, was painted over with the canvas and vanished (checked in Chromium
+with forced colors emulated), so the forced-colors block draws it in
+`CanvasText`.
+
+| Folded marker on the card's Lifted ground | Light | Dark |
+| --- | --- | --- |
+| Light Signal Orange | 2.78 | 6.07 |
+
+The dot is under the 3:1 that WCAG 1.4.11 asks of a graphic that carries
+meaning, in light, as the eyebrow's dot and a changed field's edge are. It is
+accepted, and recorded rather than gated, because the dot is not where the
+meaning lives: the toggle's description carries it, so a screen reader reads
+Changed, and the dot is a cue beside the title, supplementary to it. Opening
+the card shows each changed field's clay chip, which is gated. A contrast test
+holds these two numbers and checks that no pair gates the dot.
+
+**Opening for an invalid field.** A folded card opens itself when a field in
+its body fails the browser's validation on submit. It listens on its root, in
+the capture phase, for the `invalid` event the browser fires at each control
+that fails, and opens through the same setter as its toggle when the control
+is inside the fold, so a remembered fold is forgotten and a controlled card is
+asked through `onExpandedChange(true)`. A control among the header's actions
+is in view already and leaves the card folded. A React Aria field moves focus
+to the first field that failed, itself, from its own `invalid` listener on the
+control, during the same event, so the card renders the open inside its
+listener with `flushSync`. Without it, a submit started from script left the
+field to take focus while its card was still folded and hidden: in jsdom the
+field was focused with the card's toggle still collapsed and the panel still
+`hidden="until-found"`. In Chromium a story submits the form of a folded card,
+and the field is open, focused, and drawn whole in the window once the fold
+has settled. React Aria's other path, `validationBehavior="aria"`, sets no
+`required` attribute and no custom validity, so the browser finds nothing
+wrong, fires no `invalid` event and submits the form. A folded card then stays
+folded, the docs say so, and an app that validates that way opens the card
+from its own state. No second mechanism was added for it.

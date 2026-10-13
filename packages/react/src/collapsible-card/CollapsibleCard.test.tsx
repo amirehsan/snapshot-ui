@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { root } from '../../test/dom';
 import { Button } from '../button';
+import { TextField } from '../text-field';
 import { CollapsibleCard, type CollapsibleCardProps } from './CollapsibleCard';
 
 /** A card the caller controls, the way a page that keeps the fold in its own state would. */
@@ -768,5 +769,362 @@ describe('CollapsibleCard on a server-rendered page', () => {
       hydrated?.unmount();
     });
     container.remove();
+  });
+});
+
+/** The folded marker's dot in the card with this toggle, or null while the card shows none. */
+const dotOf = (toggle: HTMLElement): Element | null =>
+  toggle.querySelector('.card-toggle-text > .card-marker');
+
+/** The toggle of the card with this title, found in the page even where a folded card hides it. */
+function hiddenToggleOf(title: string): HTMLElement {
+  const toggle = [...document.querySelectorAll<HTMLElement>('.card-toggle')].find(
+    (each) => each.querySelector('.card-toggle-text')?.textContent === title,
+  );
+  if (!toggle) throw new Error(`No toggle for ${title}`);
+  return toggle;
+}
+
+/** A folded card holding a field, which `isChanged` marks as changed. */
+function Profile({ isChanged }: { isChanged: boolean }): ReactElement {
+  return (
+    <CollapsibleCard title="Profile" defaultExpanded={false}>
+      <TextField label="Display name" defaultValue="Ada" isChanged={isChanged} />
+    </CollapsibleCard>
+  );
+}
+
+describe('CollapsibleCard while it holds a change', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('shows a dot after the title, and is described as changed, only while folded, when isChanged says so', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <CollapsibleCard title="Notifications" defaultExpanded={false} isChanged>
+        Body
+      </CollapsibleCard>,
+    );
+    const toggle = toggleOf('Notifications');
+    const heading = screen.getByRole('heading', { level: 2 });
+    // Folded: a dot after the title's words, which is decoration, and words a screen reader reads with the
+    // toggle, after its name and its state. The words are in a hidden element after the heading, so neither
+    // the toggle's name nor the heading's text changes.
+    const dot = dotOf(toggle);
+    expect(dot).not.toBeNull();
+    expect(dot).toHaveAttribute('aria-hidden', 'true');
+    expect(dot?.previousSibling?.textContent).toBe('Notifications');
+    expect(toggle).toHaveAccessibleName('Notifications');
+    expect(toggle).toHaveAccessibleDescription('Changed');
+    expect(heading).toHaveAccessibleName('Notifications');
+    expect(heading).toHaveTextContent(/^Notifications$/);
+    const label = document.getElementById(toggle.getAttribute('aria-describedby') ?? '');
+    expect(label).toHaveClass('card-marker-label');
+    expect(label).toHaveAttribute('hidden');
+    expect(label?.previousElementSibling).toBe(heading);
+    // The root says the card holds a change, as a field's root does, folded or open.
+    expect(root(container)).toHaveAttribute('data-changed', '');
+    // Open: no dot and no description. Each field shows its own Changed chip.
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(dotOf(toggle)).toBeNull();
+    expect(toggle).not.toHaveAttribute('aria-describedby');
+    expect(container.querySelector('.card-marker-label')).toBeNull();
+    expect(root(container)).toHaveAttribute('data-changed', '');
+    // Folded again, the marker is back.
+    await user.click(toggle);
+    expect(dotOf(toggle)).not.toBeNull();
+    expect(toggle).toHaveAccessibleDescription('Changed');
+  });
+
+  it('shows the marker while a field in its folded body is changed, as the field changes', async () => {
+    const error = vi.spyOn(console, 'error');
+    const { rerender } = render(<Profile isChanged={false} />);
+    const toggle = toggleOf('Profile');
+    expect(dotOf(toggle)).toBeNull();
+    // The field's root gains data-changed while the card is folded, and the card sees it.
+    rerender(<Profile isChanged />);
+    await waitFor(() => {
+      expect(dotOf(toggle)).not.toBeNull();
+    });
+    expect(toggle).toHaveAccessibleDescription('Changed');
+    rerender(<Profile isChanged={false} />);
+    await waitFor(() => {
+      expect(dotOf(toggle)).toBeNull();
+    });
+    expect(toggle).not.toHaveAttribute('aria-describedby');
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('shows the marker the moment it folds over a field that changed while it was open', async () => {
+    const user = userEvent.setup();
+    render(
+      <CollapsibleCard title="Profile">
+        <TextField label="Display name" defaultValue="Ada" isChanged />
+      </CollapsibleCard>,
+    );
+    const toggle = toggleOf('Profile');
+    // Open, the field shows its own chip, and the card shows nothing.
+    expect(dotOf(toggle)).toBeNull();
+    expect(toggle).not.toHaveAttribute('aria-describedby');
+    // Nothing changes after the fold, so only a look at the fold as it folds can find the change.
+    await user.click(toggle);
+    expect(dotOf(toggle)).not.toBeNull();
+    expect(toggle).toHaveAccessibleDescription('Changed');
+  });
+
+  it('watches its fold only while folded, and stops when it opens or leaves the page', async () => {
+    const user = userEvent.setup();
+    const observe = vi.spyOn(MutationObserver.prototype, 'observe');
+    const disconnect = vi.spyOn(MutationObserver.prototype, 'disconnect');
+    const { container, unmount } = render(
+      <CollapsibleCard title="Profile">
+        <TextField label="Display name" defaultValue="Ada" />
+      </CollapsibleCard>,
+    );
+    const fold = foldOf(container);
+    /** Each observer that started watching the fold, in order, and how it was asked to watch. */
+    const watchers = (): { observer: unknown; options: unknown }[] =>
+      observe.mock.calls.flatMap(([target, options], index) =>
+        target === fold ? [{ observer: observe.mock.contexts[index], options }] : [],
+      );
+    const stopped = (observer: unknown): boolean => disconnect.mock.contexts.includes(observer);
+    // Open, nothing watches it.
+    expect(watchers()).toEqual([]);
+    await user.click(toggleOf('Profile'));
+    const [first] = watchers();
+    expect(watchers()).toHaveLength(1);
+    // The one attribute a changed field carries, anywhere in the body, and the elements that come and go.
+    expect(first?.options).toEqual({ attributeFilter: ['data-changed'], subtree: true, childList: true });
+    expect(stopped(first?.observer)).toBe(false);
+    await user.click(toggleOf('Profile'));
+    expect(stopped(first?.observer)).toBe(true);
+    expect(watchers()).toHaveLength(1);
+    await user.click(toggleOf('Profile'));
+    expect(watchers()).toHaveLength(2);
+    const second = watchers()[1];
+    expect(stopped(second?.observer)).toBe(false);
+    unmount();
+    expect(stopped(second?.observer)).toBe(true);
+  });
+
+  it('counts a changed field inside a card nested in its body, and the nested card keeps its own fold and marker', async () => {
+    const user = userEvent.setup();
+    render(
+      <CollapsibleCard title="Settings" defaultExpanded={false}>
+        <p>Everything about your account.</p>
+        <CollapsibleCard title="Profile" level={3} defaultExpanded={false}>
+          <TextField label="Display name" defaultValue="Ada" isChanged />
+        </CollapsibleCard>
+      </CollapsibleCard>,
+    );
+    const outer = toggleOf('Settings');
+    const inner = hiddenToggleOf('Profile');
+    // Both folded: the outer card counts the field inside the inner one, and the inner card marks it too.
+    expect(dotOf(outer)).not.toBeNull();
+    expect(outer).toHaveAccessibleDescription('Changed');
+    expect(dotOf(inner)).not.toBeNull();
+    // Open, the outer card shows no marker, and the inner card is still folded, with its own marker.
+    await user.click(outer);
+    expect(dotOf(outer)).toBeNull();
+    expect(toggleOf('Profile')).toBe(inner);
+    expect(inner).toHaveAttribute('aria-expanded', 'false');
+    expect(inner).toHaveAccessibleDescription('Changed');
+    await user.click(inner);
+    expect(dotOf(inner)).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Display name' })).toBeVisible();
+    // Folding the outer card hides the inner one, which stays open, and the outer card marks the field again.
+    await user.click(outer);
+    expect(dotOf(outer)).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Profile' })).toBeNull();
+    expect(inner).toHaveAttribute('aria-expanded', 'true');
+    expect(dotOf(inner)).toBeNull();
+  });
+
+  it('counts a card nested in its body whose isChanged is true, open or folded, by its root', async () => {
+    function Settings({ isChanged }: { isChanged: boolean }): ReactElement {
+      return (
+        <CollapsibleCard title="Settings" defaultExpanded={false}>
+          <CollapsibleCard title="Profile" level={3} isChanged={isChanged}>
+            <p>Nothing in here reports a change.</p>
+          </CollapsibleCard>
+        </CollapsibleCard>
+      );
+    }
+    const { rerender } = render(<Settings isChanged />);
+    const outer = toggleOf('Settings');
+    const inner = hiddenToggleOf('Profile');
+    // The inner card is open, so it shows no marker, but its root says it holds a change, and the folded
+    // outer card counts it.
+    expect(inner.closest('.card-collapsible')).toHaveAttribute('data-changed', '');
+    expect(dotOf(inner)).toBeNull();
+    expect(dotOf(outer)).not.toBeNull();
+    expect(outer).toHaveAccessibleDescription('Changed');
+    rerender(<Settings isChanged={false} />);
+    await waitFor(() => {
+      expect(dotOf(outer)).toBeNull();
+    });
+    expect(inner.closest('.card-collapsible')).not.toHaveAttribute('data-changed');
+    expect(outer).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('reads changedLabel as the marker', () => {
+    render(
+      <CollapsibleCard title="Notifications" defaultExpanded={false} isChanged changedLabel="Unsaved">
+        Body
+      </CollapsibleCard>,
+    );
+    expect(toggleOf('Notifications')).toHaveAccessibleDescription('Unsaved');
+    expect(document.querySelector('.card-marker-label')).toHaveTextContent('Unsaved');
+  });
+
+  it('has no axe violations folded and changed, and nested', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <>
+        <CollapsibleCard title="Notifications" defaultExpanded={false} isChanged>
+          <p>Product updates, when something ships.</p>
+        </CollapsibleCard>
+        <CollapsibleCard title="Settings" defaultExpanded={false}>
+          <CollapsibleCard title="Profile" level={3} defaultExpanded={false}>
+            <TextField label="Display name" defaultValue="Ada" isChanged />
+          </CollapsibleCard>
+        </CollapsibleCard>
+      </>,
+    );
+    await expectNoA11yViolations(container);
+    await user.click(toggleOf('Settings'));
+    await expectNoA11yViolations(container);
+  });
+});
+
+/** Stops a form from leaving the page, which jsdom cannot do. */
+const stay = (event: { preventDefault: () => void }): void => {
+  event.preventDefault();
+};
+
+describe('CollapsibleCard with a field that fails validation', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('opens when a field inside fails the browser validation on submit, before the field takes focus', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn(stay);
+    const onExpandedChange = vi.fn();
+    const { container } = render(
+      <form onSubmit={onSubmit}>
+        <CollapsibleCard title="Profile" defaultExpanded={false}>
+          <TextField label="Display name" defaultValue="Ada" isRequired />
+        </CollapsibleCard>
+        <CollapsibleCard title="Billing" defaultExpanded={false} onExpandedChange={onExpandedChange}>
+          <TextField label="Card holder" isRequired />
+        </CollapsibleCard>
+        <button type="submit">Save</button>
+      </form>,
+    );
+    const [, billing] = container.querySelectorAll<HTMLElement>('.card-fold');
+    const input = billing?.querySelector('input');
+    if (!billing || !input) throw new Error('No Billing field');
+    // Where the card stood at the moment the field took focus, which React Aria moves to the first field
+    // that failed, in its own listener for the field's invalid event.
+    const seen: string[] = [];
+    input.addEventListener('focus', () => {
+      seen.push(
+        `${String(hiddenToggleOf('Billing').getAttribute('aria-expanded'))} ${String(billing.getAttribute('hidden'))}`,
+      );
+    });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(toggleOf('Billing')).toHaveAttribute('aria-expanded', 'true');
+    expect(onExpandedChange).toHaveBeenCalledExactlyOnceWith(true);
+    // Open, with its body shown, before the field took focus.
+    expect(seen).toEqual(['true null']);
+    expect(input).toHaveFocus();
+    // A card whose fields are all valid stays folded.
+    expect(hiddenToggleOf('Profile')).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('asks a controlled card to open, through onExpandedChange', async () => {
+    const user = userEvent.setup();
+    const onExpandedChange = vi.fn();
+    render(
+      <form onSubmit={stay}>
+        <CollapsibleCard title="Billing" isExpanded={false} onExpandedChange={onExpandedChange}>
+          <TextField label="Card holder" isRequired />
+        </CollapsibleCard>
+        <button type="submit">Save</button>
+      </form>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onExpandedChange).toHaveBeenCalledExactlyOnceWith(true);
+    // The caller decides, and has not opened it.
+    expect(toggleOf('Billing')).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('opens a remembered fold through the store, which forgets the fold', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(ENTRY, '["profile","billing"]');
+    render(
+      <form onSubmit={stay}>
+        <CollapsibleCard title="Billing" storageKey="billing">
+          <TextField label="Card holder" isRequired />
+        </CollapsibleCard>
+        <button type="submit">Save</button>
+      </form>,
+    );
+    expect(toggleOf('Billing')).toHaveAttribute('aria-expanded', 'false');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(toggleOf('Billing')).toHaveAttribute('aria-expanded', 'true');
+    expect(stored()).toEqual(['profile']);
+  });
+
+  it('stays folded for a field in its header that fails, which is in view already', async () => {
+    const user = userEvent.setup();
+    const onExpandedChange = vi.fn();
+    render(
+      <form onSubmit={stay}>
+        <CollapsibleCard
+          title="Billing"
+          defaultExpanded={false}
+          onExpandedChange={onExpandedChange}
+          actions={<TextField aria-label="Coupon" isRequired />}
+        >
+          <TextField label="Card holder" defaultValue="Ada" isRequired />
+        </CollapsibleCard>
+        <button type="submit">Save</button>
+      </form>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    // React Aria moves focus to the field that failed, which the folded card shows in its header.
+    expect(screen.getByRole('textbox', { name: 'Coupon' })).toHaveFocus();
+    expect(toggleOf('Billing')).toHaveAttribute('aria-expanded', 'false');
+    expect(onExpandedChange).not.toHaveBeenCalled();
+  });
+
+  it('stays folded for a field React Aria validates with validationBehavior="aria", which fires no invalid event', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn(stay);
+    const invalid = vi.fn();
+    const { container } = render(
+      <form onSubmit={onSubmit}>
+        <CollapsibleCard title="Billing" defaultExpanded={false}>
+          <TextField label="Card holder" isRequired validationBehavior="aria" />
+        </CollapsibleCard>
+        <button type="submit">Save</button>
+      </form>,
+    );
+    container.addEventListener('invalid', invalid, true);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    // The browser sees nothing wrong, so the form submits and no invalid event reaches the card.
+    expect(invalid).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(toggleOf('Billing')).toHaveAttribute('aria-expanded', 'false');
   });
 });

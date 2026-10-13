@@ -15,9 +15,11 @@ import {
   Disclosure as RACDisclosure,
   DisclosurePanel as RACDisclosurePanel,
 } from 'react-aria-components';
+import { useChangedDescription } from '../field/useChangedDescription';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
 import { useStoredFold } from './foldStore';
+import { useHoldsChange, useOpenOnInvalid } from './useFoldedFields';
 import { useFolding } from './useFolding';
 
 export interface CollapsibleCardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
@@ -62,6 +64,20 @@ export interface CollapsibleCardProps extends Omit<HTMLAttributes<HTMLElement>, 
    */
   storageKey?: string;
   /**
+   * Marks a folded card as holding a change even when no field inside says so. A folded card already marks
+   * itself while any element in its body carries `data-changed`, as every library field's root does while
+   * it is changed, so this is for a change the card's fields do not report. While folded, the marker is a
+   * light signal orange dot after the title, and the toggle is described by `changedLabel`. Open, the card
+   * shows no marker, and each field shows its own Changed chip. While it is true, the card's root carries
+   * `data-changed`, as a field's does, so a collapsible card around this one counts the change too.
+   */
+  isChanged?: boolean;
+  /**
+   * The words a screen reader reads with the toggle while the folded marker shows.
+   * @default 'Changed'
+   */
+  changedLabel?: string;
+  /**
    * The element to render. A `section` with an accessible name is a region landmark. An `article` is
    * not a landmark, named or not, and a `div` is neither.
    * @default 'div'
@@ -101,16 +117,41 @@ function useExpanded(
  * The title, drawn as the card title, holding the toggle: the title's text and the chevron, which is
  * decoration. The title names the toggle and `aria-expanded` gives its state. This is the one place the
  * toggle is built, so anything that comes to describe it is added here.
+ *
+ * While `isMarked`, the toggle carries the folded marker: a dot after the title's words, which is decoration
+ * too, and `changedLabel`, which describes the toggle. The words are in a `hidden` element after the heading,
+ * which a description may name, so neither the toggle's name nor the heading's text changes.
  */
-function CardToggle({ title, level }: { title: ReactNode; level: 1 | 2 | 3 | 4 }): ReactElement {
+function CardToggle({
+  title,
+  level,
+  isMarked,
+  changedLabel,
+}: {
+  title: ReactNode;
+  level: 1 | 2 | 3 | 4;
+  isMarked: boolean;
+  changedLabel: string;
+}): ReactElement {
   const Heading = `h${level}` as const;
+  const { chipId, describedBy } = useChangedDescription({ isChanged: isMarked });
   return (
-    <Heading className="card-title">
-      <RACButton slot="trigger" className="card-toggle">
-        <span className="card-toggle-text">{title}</span>
-        <ChevronDown className="card-chevron" aria-hidden="true" />
-      </RACButton>
-    </Heading>
+    <>
+      <Heading className="card-title">
+        <RACButton slot="trigger" className="card-toggle" aria-describedby={describedBy}>
+          <span className="card-toggle-text">
+            {title}
+            {isMarked ? <span className="card-marker" aria-hidden="true" /> : null}
+          </span>
+          <ChevronDown className="card-chevron" aria-hidden="true" />
+        </RACButton>
+      </Heading>
+      {isMarked ? (
+        <span id={chipId} className="card-marker-label" hidden>
+          {changedLabel}
+        </span>
+      ) : null}
+    </>
   );
 }
 
@@ -119,7 +160,8 @@ function CardToggle({ title, level }: { title: ReactNode; level: 1 | 2 | 3 | 4 }
  * chevron at its end, and the note and the actions stay in the header while the body is folded. It draws
  * with Card's own classes, so the two look alike, and it is built on React Aria's Disclosure, so the toggle
  * is a button that says whether the body is shown, and find-in-page can open a folded card. Given a
- * `storageKey`, it remembers its fold in the browser.
+ * `storageKey`, it remembers its fold in the browser. Folded, it marks a change any field in its body holds,
+ * and it opens itself when a field in its body fails the browser's validation on submit.
  */
 export function CollapsibleCard({
   title,
@@ -130,6 +172,8 @@ export function CollapsibleCard({
   isExpanded: isExpandedProp,
   onExpandedChange,
   storageKey,
+  isChanged = false,
+  changedLabel = 'Changed',
   as: tag = 'div',
   className,
   children,
@@ -143,6 +187,10 @@ export function CollapsibleCard({
   );
   const foldRef = useRef<HTMLDivElement>(null);
   const isInstant = useFolding(foldRef, isExpanded);
+  const holdsChange = useHoldsChange(foldRef, !isExpanded);
+  useOpenOnInvalid(foldRef, !isExpanded, () => {
+    setExpanded(true);
+  });
   // createElement rather than JSX: the three tags take one HTMLElement ref type between them. React Aria's
   // disclosure always renders a div and passes on only global attributes, so the root is the card's own
   // element, which takes any attribute, and the disclosure sits inside it.
@@ -153,10 +201,16 @@ export function CollapsibleCard({
       className: cx('card', 'card-collapsible', className),
       'data-expanded': isExpanded ? '' : undefined,
       'data-instant': isInstant ? '' : undefined,
+      'data-changed': isChanged ? '' : undefined,
     },
     <RACDisclosure className="card-disclosure" isExpanded={isExpanded} onExpandedChange={setExpanded}>
       <div className="card-header">
-        <CardToggle title={title} level={level} />
+        <CardToggle
+          title={title}
+          level={level}
+          isMarked={!isExpanded && (isChanged || holdsChange)}
+          changedLabel={changedLabel}
+        />
         {present(note) ? <p className="card-note">{note}</p> : null}
         {present(actions) ? <div className="card-actions">{actions}</div> : null}
       </div>

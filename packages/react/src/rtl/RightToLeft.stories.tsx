@@ -406,8 +406,8 @@ export const SegmentedControlMirrored: Story = {
 /**
  * The title starts at the right of its row and the chevron is at the left end of the toggle, which is the
  * end of the row in right to left, with the actions after it. Folded, the chevron turns toward the title:
- * to the right, the inline start. In a narrow card the actions move under the note, to the right, where the
- * row starts.
+ * to the right, the inline start, and the dot that marks a change follows the title's words, to their left.
+ * In a narrow card the actions move under the note, to the right, where the row starts.
  */
 export const CollapsibleCardMirrored: Story = {
   render: () => (
@@ -420,7 +420,7 @@ export const CollapsibleCardMirrored: Story = {
         >
           <p>تحديثات المنتج عند إطلاق شيء جديد.</p>
         </CollapsibleCard>
-        <CollapsibleCard title="الفواتير" defaultExpanded={false}>
+        <CollapsibleCard title="الفواتير" defaultExpanded={false} isChanged>
           <p>الدفع بالبطاقة كل شهر.</p>
         </CollapsibleCard>
         <div style={{ width: 288 }}>
@@ -451,6 +451,10 @@ export const CollapsibleCardMirrored: Story = {
     // Open, the chevron points down. Folded, it turns a quarter toward the title, which is to the right.
     await expect(getComputedStyle(find(open, '.card-chevron')).rotate).toBe('none');
     await expect(getComputedStyle(find(folded, '.card-chevron')).rotate).toBe('-90deg');
+    // Folded and changed, the dot follows the words a part step to their left, short of the chevron.
+    const dot = rect(find(folded, '.card-marker'));
+    await expectSameEdge(lastText(find(folded, '.card-toggle-text')).left - dot.right, 8);
+    await expect(dot.left).toBeGreaterThan(rect(find(folded, '.card-chevron')).right);
     // Narrow, the note stays under the title and the actions move under the note, starting at the right.
     const narrowTitle = rect(find(narrow, '.card-title'));
     const narrowNote = rect(find(narrow, '.card-note'));
