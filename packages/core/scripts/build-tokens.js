@@ -63,6 +63,17 @@ export const AXES = {
   sidebar: { attr: 'data-sidebar', base: 'expanded', caseInsensitive: true, variants: ['collapsed'] },
 };
 
+// The format writes a refinement as one media block on the variant's selector.
+// It writes no color-scheme and no system-preference copy for one, so an axis
+// that needs either cannot take refinements until the format learns to.
+for (const [axis, def] of Object.entries(AXES)) {
+  if (def.refinements && (def.colorScheme || def.media)) {
+    throw new Error(
+      `The ${axis} axis has refinements and also colorScheme or media, which the format cannot combine.`,
+    );
+  }
+}
+
 StyleDictionary.registerPreprocessor({
   name: 'snapshot-ui/modes',
   preprocessor: (dictionary) => {
@@ -275,7 +286,7 @@ StyleDictionary.registerFormat({
         out.push(
           [
             `  @media ${refinement.media} {`,
-            block(attrSelector(def, refinement.of), scope(name, decls), 2),
+            block(attrSelector(def, refinement.of), scope(refinement.of, decls), 2),
             '  }',
           ].join('\n'),
         );
@@ -346,9 +357,18 @@ function buildTokenObject(dictionary) {
   // hand a reader the light value. In a variant, its value is its original
   // $value with each reference replaced by that token's value there: the
   // variant's own value if it has one, else its base value.
+  // `declaredIn` reads `modes`, which holds declared values only: `modeValues`
+  // also holds followers' computed values, which a follower must not be handed
+  // back as a declaration of its own.
+  const declaredIn = (name, axis, variant) => modes[axis]?.[variant]?.find((d) => d.name === name)?.value;
   const valueIn = (token, axis, variant) => {
     const own = modeValues.get(token.name)?.[axis]?.[variant];
     if (own !== undefined) return own;
+    // A refinement block redeclares only its own values and the followers, so
+    // a token with neither keeps the value its variant declared.
+    const of = AXES[axis].refinements?.[variant]?.of;
+    const declared = of === undefined ? undefined : declaredIn(token.name, axis, of);
+    if (declared !== undefined) return declared;
     if (referencesOf(token).length === 0) return token.$value;
     return token.original.$value.replace(REFERENCE, (_, path) =>
       valueIn(target(path, byPath), axis, variant),
