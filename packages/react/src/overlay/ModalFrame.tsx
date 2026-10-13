@@ -26,6 +26,11 @@ import { useOverlayScope } from './useOverlayScope';
 import { useOverlayStack } from './useOverlayStack';
 
 export interface ModalFrameProps {
+  /**
+   * The modal's id in the overlay stack. CommandPalette passes its own, so its shortcut can ask whether a
+   * modal other than itself is open. @default a `useId()`
+   */
+  id?: string;
   /** The scrim's own class, beside `overlay-scrim`: `dialog-overlay`, `drawer-overlay`, `command-palette-overlay`. */
   overlayClass: string;
   /** The panel's own class, beside `overlay`: `dialog`, `drawer`, `command-palette`. */
@@ -111,6 +116,7 @@ export function FrameEffects({
  * Internal: not exported from the package.
  */
 export function ModalFrame({
+  id: givenId,
   overlayClass,
   panelClass,
   panelAttributes,
@@ -125,7 +131,8 @@ export function ModalFrame({
   onUnmount,
   children,
 }: ModalFrameProps): ReactElement {
-  const id = useId();
+  const ownId = useId();
+  const id = givenId ?? ownId;
   const { direction } = useLocale();
   const scrimRef = useRef<HTMLDivElement>(null);
   // What held focus when the modal opened, recorded by FrameEffects before the content can move focus.
