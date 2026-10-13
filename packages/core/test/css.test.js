@@ -599,6 +599,19 @@ describe('src/components/checkbox.css', () => {
     expect(bare).toContain('translate: -50% -50%;');
   });
 
+  it('draws a disabled label in taupe, and sets the box on the first line of a label that wraps', () => {
+    const disabled = blockAfter(
+      closeUp(rules()),
+      '.checkbox:is(:where(:has(input:disabled)), [data-disabled]) {',
+    );
+    expect(disabled).toContain('color: var(--color-taupe);');
+    // The row starts its items at the top, and the box's margin is half of what the line has over the box.
+    expect(blockAfter(rules(), '.checkbox {\n    --checkbox-fill')).toContain('align-items: flex-start;');
+    expect(blockAfter(rules(), '.checkbox-box {')).toContain(
+      'margin-block-start: calc((1lh - var(--checkbox-size)) / 2);',
+    );
+  });
+
   it('turns only the edge for an invalid box, from React Aria or from a plain input with aria-invalid', () => {
     const rule = blockAfter(closeUp(rules()), INVALID);
     expect(rule.trim()).toBe('--checkbox-edge: var(--color-error);');
@@ -677,6 +690,21 @@ describe('src/components/radio.css', () => {
     const disabled = blockAfter(rules(), `.radio${DISABLED} {`);
     expect(disabled).toContain('cursor: not-allowed;');
     expect(disabled).toContain('var(--color-taupe)');
+  });
+
+  it('draws a disabled label in taupe, through the property the row reads its text color from', () => {
+    expect(blockAfter(rules(), '.radio {')).toContain('color: var(--radio-fg);');
+    expect(blockAfter(rules(), `.radio${DISABLED} {`)).toContain('--radio-fg: var(--color-taupe);');
+  });
+
+  it('sets the dot on the first line of a label that wraps, and keeps a row with no text centred', () => {
+    // The dot is 20px, so its margin is half of what the line has over it.
+    const dot = blockAfter(rules(), '.radio:has(.radio-text) > .radio-indicator {');
+    expect(dot).toContain('align-self: flex-start;');
+    expect(dot).toContain('margin-block-start: calc((1lh - 20px) / 2);');
+    // The row stays centred, so a row with no text keeps the dot in the middle of its 40px.
+    expect(blockAfter(rules(), '.radio {')).toContain('align-items: center;');
+    expect(blockAfter(rules(), '.radio-indicator {')).not.toContain('margin');
   });
 
   it('gives every state a native twin, so a plain label with a checked input is drawn the same', () => {
@@ -778,6 +806,34 @@ describe('src/components/switch.css', () => {
       /\.switch:is\(\[data-disabled\][^{]*\)\s*\{[^}]*--switch-track-fill:\s*var\(--color-disabled\);/;
     expect(rules()).toMatch(on);
     expect(rules()).toMatch(off);
+  });
+
+  it('draws a disabled label in taupe, and in GrayText in forced colors, as a disabled checkbox does', () => {
+    const header = '.switch:is([data-disabled], :has(input:disabled)) {';
+    expect(blockAfter(rules(), header)).toContain('color: var(--color-taupe);');
+    expect(blockAfter(blockAfter(rules(), FORCED_COLORS), header)).toContain('color: GrayText;');
+  });
+
+  it('sets the track on the first line of a label that wraps, and keeps a row of one line 30px tall', () => {
+    // The track is taller than a line, so the row pads the text down by half the difference and the track
+    // takes the same half back as a negative margin: one line fills the 30px, and more lines push past it.
+    const size = blockAfter(rules(), '.switch,\n  .field-head:has(> .switch) {');
+    expect(size).toContain('--switch-height: calc(var(--switch-thumb-size) + 2 * var(--switch-inset));');
+    const row = blockAfter(rules(), '.switch {');
+    expect(row).toContain('align-items: flex-start;');
+    expect(row).toContain('padding-block: max(0px, calc((var(--switch-height) - 1lh) / 2));');
+    const track = blockAfter(rules(), '.switch-track {');
+    expect(track).toContain('height: var(--switch-height);');
+    expect(track).toContain('margin-block: calc((1lh - var(--switch-height)) / 2);');
+  });
+
+  it('sets the Changed chip level with the first line, as the track is, from a head that starts its items at the top', () => {
+    // The chip is the row's sibling, so the head carries the track's size for it to read.
+    expect(rules()).toMatch(/\.field-head:has\(> \.switch\)\s*\{\s*align-items: flex-start;\s*\}/);
+    const chip = blockAfter(rules(), '.field-head:has(> .switch) > .field-changed {');
+    expect(chip).toContain('margin-block-start: calc((var(--switch-height) - 1lh) / 2);');
+    // The old rule centred the head's items on the row, which is the middle of a label that wraps.
+    expect(rules()).not.toMatch(/\.field-head:has\(> \.switch\)\s*\{[^}]*align-items: center/);
   });
 
   it('boxes the label text, so one long word wraps in the row and inline markup stays one run', () => {

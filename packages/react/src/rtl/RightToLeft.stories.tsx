@@ -5,6 +5,7 @@ import { expect, userEvent, waitFor } from 'storybook/test';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { Radio, RadioGroup } from '../radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
+import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
 import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
@@ -196,7 +197,10 @@ export const CheckboxGroupMirrored: Story = {
   },
 };
 
-/** The dot is at the right of its row, ahead of the words, and the hint is indented past it. */
+/**
+ * The dot is at the right of its row, ahead of the words, and the hint is indented past it. A label that
+ * wraps keeps the dot level with its first line.
+ */
 export const RadioGroupMirrored: Story = {
   render: () => (
     <Rtl>
@@ -206,14 +210,24 @@ export const RadioGroupMirrored: Story = {
         </Radio>
         <Radio value="monthly">شهريًا</Radio>
         <Radio value="never">أبدًا</Radio>
+        <Radio value="digest">
+          ملخص أسبوعي لكل مساحة عمل ومشروع ودعوة تنتمي إليها، يصلك كل ثلاثاء صباحًا مع روابط مباشرة إلى كل
+          نقاش
+        </Radio>
       </RadioGroup>
     </Rtl>
   ),
   play: async ({ canvasElement }) => {
     const items = rect(find(canvasElement, '.radio-items'));
     const rows = [...canvasElement.querySelectorAll<HTMLElement>('label.radio')];
-    await expect(rows).toHaveLength(3);
+    await expect(rows).toHaveLength(4);
+    const wrapped = rows[3];
+    if (!wrapped) throw new Error('Four rows expected');
+    await expect(lineCount(find(wrapped, '.radio-text'))).toBeGreaterThan(1);
     for (const row of rows) {
+      await expect(
+        Math.abs(firstLineOffset(find(row, '.radio-indicator'), find(row, '.radio-text'))),
+      ).toBeLessThanOrEqual(1);
       const box = rect(row);
       const dot = rect(find(row, '.radio-indicator'));
       // Row padding (1rem) and edge (1.5px) lie between the row's right edge and the dot.
@@ -232,7 +246,8 @@ export const RadioGroupMirrored: Story = {
  * The thumb starts at the right of its track and moves to the left when the
  * switch is on, with the same 3px gap at each end. The words are to the left of
  * the track, the Changed chip is to the left of the row, and the hint is
- * indented past the track on the right.
+ * indented past the track on the right. A label that wraps keeps the track
+ * level with its first line.
  */
 export const SwitchMirrored: Story = {
   render: () => (
@@ -243,13 +258,16 @@ export const SwitchMirrored: Story = {
         <Switch isChanged description="رسالة كل ثلاثاء.">
           الملخص الأسبوعي
         </Switch>
+        <Switch>
+          أرسل لي ملخصًا قصيرًا بكل تعليق كتبه فريقي على مشاركاتي، مرة كل أسبوع، صباح يوم الثلاثاء
+        </Switch>
       </div>
     </Rtl>
   ),
   play: async ({ canvasElement }) => {
     const rows = [...canvasElement.querySelectorAll<HTMLElement>('.switch')];
-    const [off, on, changed] = rows;
-    if (!off || !on || !changed) throw new Error('Three switches expected');
+    const [off, on, changed, wrapped] = rows;
+    if (!off || !on || !changed || !wrapped) throw new Error('Four switches expected');
     const gaps = (row: HTMLElement): { start: number; end: number } => {
       const track = rect(find(row, '.switch-track'));
       const thumb = rect(find(row, '.switch-thumb'));
@@ -269,9 +287,23 @@ export const SwitchMirrored: Story = {
       await expectSameEdge(track.right, rect(row).right);
       await expect(lastText(row).right).toBeLessThanOrEqual(track.left + 0.5);
     }
-    const chip = rect(find(canvasElement, '.field-changed'));
+    const wrappedText = find(wrapped, '.switch-text');
+    await expect(lineCount(wrappedText)).toBeGreaterThan(1);
+    for (const row of rows) {
+      await expect(
+        Math.abs(firstLineOffset(find(row, '.switch-track'), find(row, '.switch-text'))),
+      ).toBeLessThanOrEqual(1);
+    }
+    // The other fields keep a chip too, which is hidden, so the chip is read from the field that is changed.
+    const changedField = find(canvasElement, '.field[data-changed]');
+    const chipElement = find(changedField, '.field-changed');
+    // The chip is level with the line of the label it follows.
+    await expect(Math.abs(firstLineOffset(chipElement, find(changed, '.switch-text')))).toBeLessThanOrEqual(
+      1,
+    );
+    const chip = rect(chipElement);
     await expect(chip.right).toBeLessThanOrEqual(rect(changed).left + 0.5);
-    await expectInside(chip, rect(find(canvasElement, '.field[data-changed]')));
+    await expectInside(chip, rect(changedField));
     const hint = find(canvasElement, '.field-description');
     await expect(getComputedStyle(hint).paddingLeft).toBe('0px');
     await expect(parseFloat(getComputedStyle(hint).paddingRight)).toBeGreaterThan(40);

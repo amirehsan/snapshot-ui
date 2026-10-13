@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
 import { Link } from '../link';
-import { tokenColor } from '../stories/paint';
+import { firstLineOffset, lineCount, tokenColor } from '../stories/paint';
 import { Switch } from './Switch';
 
 /** The row, the track and the thumb of the first switch drawn inside `scope`. */
@@ -11,6 +11,14 @@ function parts(scope: Element): { row: Element; track: Element; thumb: Element }
   const thumb = scope.querySelector('.switch-thumb');
   if (!row || !track || !thumb) throw new Error('No switch drawn');
   return { row, track, thumb };
+}
+
+/** The label's text box and the Changed chip of the switch whose field root is `field`. */
+function labelAndChip(field: Element): { text: Element; chip: Element } {
+  const text = field.querySelector('.switch-text');
+  const chip = field.querySelector('.field-changed');
+  if (!text || !chip) throw new Error('No label or chip drawn');
+  return { text, chip };
 }
 
 /** The gaps, in px, between the thumb and the start, the end, the top and the bottom of the track. */
@@ -55,6 +63,11 @@ export const Off: Story = {
     await expect(gaps.start).toBeCloseTo(3, 1);
     await expect(gaps.top).toBeCloseTo(3, 1);
     await expect(gaps.bottom).toBeCloseTo(3, 1);
+    // One line of text leaves the row as tall as the track, with the track level with the line.
+    await expect(parts(canvasElement).row.getBoundingClientRect().height).toBeCloseTo(30, 1);
+    const text = canvasElement.querySelector('.switch-text');
+    if (!text) throw new Error('No label drawn');
+    await expect(Math.abs(firstLineOffset(track, text))).toBeLessThanOrEqual(1);
   },
 };
 
@@ -83,13 +96,14 @@ export const WithDescription: Story = {
   },
 };
 
-/** Disabled and off: a recessed track, a faint edge and a taupe thumb. */
+/** Disabled and off: a taupe label, a recessed track, a faint edge and a taupe thumb. */
 export const DisabledOff: Story = {
   args: { isDisabled: true },
   play: async ({ canvas, canvasElement }) => {
     const control = canvas.getByRole('switch', { name: 'Weekly digest' });
     await expect(control).toBeDisabled();
     const { row, track, thumb } = parts(canvasElement);
+    await expect(getComputedStyle(row).color).toBe(tokenColor('--color-taupe'));
     await expect(fill(track)).toBe(tokenColor('--color-disabled'));
     await expect(fill(thumb)).toBe(tokenColor('--color-taupe'));
     await expect(getComputedStyle(track).borderTopColor).not.toBe('rgba(0, 0, 0, 0)');
@@ -97,14 +111,15 @@ export const DisabledOff: Story = {
   },
 };
 
-/** Disabled and on: a filled taupe track and a recessed thumb, so on and off differ without the thumb position. */
+/** Disabled and on: a taupe label, a filled taupe track and a recessed thumb, so on and off differ without the thumb position. */
 export const DisabledOn: Story = {
   args: { isDisabled: true, defaultSelected: true },
   play: async ({ canvas, canvasElement }) => {
     const control = canvas.getByRole('switch', { name: 'Weekly digest' });
     await expect(control).toBeDisabled();
     await expect(control).toBeChecked();
-    const { track, thumb } = parts(canvasElement);
+    const { row, track, thumb } = parts(canvasElement);
+    await expect(getComputedStyle(row).color).toBe(tokenColor('--color-taupe'));
     await expect(fill(track)).toBe(tokenColor('--color-taupe'));
     await expect(fill(thumb)).toBe(tokenColor('--color-disabled'));
     await expect(getComputedStyle(track).borderTopColor).toBe('rgba(0, 0, 0, 0)');
@@ -131,6 +146,9 @@ export const Changed: Story = {
     await expect(ring.borderTopColor).toBe(tokenColor('--color-signal-light'));
     await expect(ring.borderTopWidth).toBe('2px');
     await expect(control).toHaveAccessibleDescription('Every Tuesday morning. Changed');
+    // The chip is beside the row, level with the line of the label.
+    const { text, chip } = labelAndChip(canvasElement);
+    await expect(Math.abs(firstLineOffset(chip, text))).toBeLessThanOrEqual(1);
   },
 };
 
@@ -163,13 +181,47 @@ export const ChangedAndFocused: Story = {
   },
 };
 
-/** A long label wraps beside the track and the chip drops under it, with no sideways scroll at 375px. */
+/**
+ * A long label wraps beside the track and the chip drops under it, with no sideways scroll at 375px. The
+ * track stays level with the first line, the words a reader starts with, and not with the middle of the block.
+ * A label with a line break is short enough to leave the chip beside it, and the chip is level with the first
+ * line too.
+ */
 export const LongLabel: Story = {
   args: {
     children: 'Email me a short summary of every comment on my posts, once a week, on Tuesday mornings',
     description: 'You can turn this off at any time from the link at the bottom of each email.',
     isChanged: true,
     defaultSelected: true,
+  },
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <Switch {...args} />
+      <Switch {...args} description={undefined}>
+        Weekly digest
+        <br />
+        on Tuesday mornings
+      </Switch>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const [long, broken] = [...canvasElement.querySelectorAll('.field')];
+    if (!long || !broken) throw new Error('Two switches expected');
+    for (const field of [long, broken]) {
+      const { text } = labelAndChip(field);
+      await expect(lineCount(text)).toBeGreaterThan(1);
+      await expect(Math.abs(firstLineOffset(parts(field).track, text))).toBeLessThanOrEqual(1);
+    }
+    // The long label fills its row, so the chip drops under it.
+    await expect(labelAndChip(long).chip.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      parts(long).row.getBoundingClientRect().bottom,
+    );
+    // The short one leaves room, so the chip is beside the row, level with the first line.
+    const { text, chip } = labelAndChip(broken);
+    await expect(chip.getBoundingClientRect().top).toBeLessThan(
+      parts(broken).row.getBoundingClientRect().bottom,
+    );
+    await expect(Math.abs(firstLineOffset(chip, text))).toBeLessThanOrEqual(1);
   },
 };
 

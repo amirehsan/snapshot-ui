@@ -11,11 +11,18 @@
  * the field's root, as the field contract in field.css says.
  */
 @layer components {
-  .switch {
-    --switch-width: 52px;
+  /* The size of the track, read by the row and by the Changed chip beside it. The
+     chip is the row's sibling, so it cannot inherit these from the row. */
+  .switch,
+  .field-head:has(> .switch) {
     --switch-thumb-size: 24px;
     /* The gap between the thumb and the track on all four sides. */
     --switch-inset: 3px;
+    --switch-height: calc(var(--switch-thumb-size) + 2 * var(--switch-inset));
+  }
+
+  .switch {
+    --switch-width: 52px;
     --switch-track-fill: var(--color-boundary);
     --switch-thumb-fill: var(--color-raised);
     --switch-edge: transparent;
@@ -25,12 +32,17 @@
 
     position: relative;
     display: inline-flex;
-    align-items: center;
+    /* The track sits level with the first line of a label that wraps, not with the
+       middle of the block. It is taller than a line, so the row pads the text down by
+       half the difference, and the track takes that half back as its margin: one line
+       still fills the 30px of the track, and a longer label runs on below it. */
+    align-items: flex-start;
     gap: 0.75rem;
     /* A long word in the label breaks inside the row instead of widening it. */
     min-width: 0;
     max-width: 100%;
     margin: 0;
+    padding-block: max(0px, calc((var(--switch-height) - 1lh) / 2));
     overflow-wrap: anywhere;
     color: var(--color-ink);
     font-family: var(--font-sans);
@@ -57,7 +69,8 @@
     flex: none;
     align-items: center;
     width: var(--switch-width);
-    height: calc(var(--switch-thumb-size) + 2 * var(--switch-inset));
+    height: var(--switch-height);
+    margin-block: calc((1lh - var(--switch-height)) / 2);
     /* The 1px edge is clear but for a disabled switch that is off, and it sits
        inside the inset, so the thumb is one gap from the track either way. */
     padding: calc(var(--switch-inset) - 1px);
@@ -111,12 +124,14 @@
   }
 
   /* Disabled, off: the recessed fill with a faint edge and a taupe thumb, the
-     disabled idiom of a button or an input. */
+     disabled idiom of a button or an input, and a taupe label, as a disabled
+     checkbox and radio draw theirs. */
   .switch:is([data-disabled], :has(input:disabled)) {
     --switch-track-fill: var(--color-disabled);
     --switch-thumb-fill: var(--color-taupe);
     --switch-edge: color-mix(in srgb, var(--color-ink) 15%, transparent);
 
+    color: var(--color-taupe);
     cursor: not-allowed;
   }
 
@@ -153,10 +168,16 @@
     outline-offset: calc(var(--focus-ring-offset) + var(--switch-changed-ring));
   }
 
-  /* The row beside the chip is centered on the track, where a label row sits on
-     its baseline. */
+  /* The chip sits level with the first line of the label, as the track does, and not
+     with the middle of a row that wraps. The head starts its items at the top, and the
+     chip takes a margin of half of what the track has over its own line. For a row of
+     one line that is where centring on the 30px row put the chip, so nothing moves. */
   .field-head:has(> .switch) {
-    align-items: center;
+    align-items: flex-start;
+  }
+
+  .field-head:has(> .switch) > .field-changed {
+    margin-block-start: calc((var(--switch-height) - 1lh) / 2);
   }
 
   /* The hint lines up with the label text, past the track (52px) and the gap. The
@@ -192,6 +213,8 @@
       --switch-track-fill: canvas;
       --switch-thumb-fill: GrayText;
       --switch-edge: GrayText;
+
+      color: GrayText;
     }
 
     .switch:is([data-disabled], :has(input:disabled)):is([data-selected], :has(input:checked)) {

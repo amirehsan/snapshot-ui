@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { Link } from '../link/Link';
-import { tokenColor } from '../stories/paint';
+import { firstLineOffset, lineCount, middleOf, tokenColor } from '../stories/paint';
 import { Radio } from './Radio';
 import { RadioGroup } from './RadioGroup';
 
@@ -10,6 +10,14 @@ function rowOf(radio: HTMLElement): HTMLElement {
   const row = radio.closest('label');
   if (!row) throw new Error('A radio has no row');
   return row;
+}
+
+/** The dot and the label's text box of a row. */
+function partsOf(row: HTMLElement): { dot: Element; text: Element } {
+  const dot = row.querySelector('.radio-indicator');
+  const text = row.querySelector('.radio-text');
+  if (!dot || !text) throw new Error('A row has no dot or no text');
+  return { dot, text };
 }
 
 const meta = {
@@ -223,7 +231,10 @@ export const ReadOnly: Story = {
   },
 };
 
-/** Long labels wrap inside the row, and the chip drops under a long group label, with no sideways scroll at 375px. */
+/**
+ * Long labels wrap inside the row, and the chip drops under a long group label, with no sideways scroll at
+ * 375px. The dot stays level with the first line of a label, and not with the middle of the row.
+ */
 export const LongLabel: Story = {
   args: {
     label: 'How often should we email you about the activity in your workspaces and projects?',
@@ -238,6 +249,15 @@ export const LongLabel: Story = {
       <Radio value="never">Never</Radio>
     </RadioGroup>
   ),
+  play: async ({ canvas }) => {
+    const long = partsOf(rowOf(canvas.getByRole('radio', { name: /^A weekly summary/ })));
+    const short = partsOf(rowOf(canvas.getByRole('radio', { name: 'Never' })));
+    await expect(lineCount(long.text)).toBeGreaterThan(1);
+    await expect(lineCount(short.text)).toBe(1);
+    for (const { dot, text } of [long, short]) {
+      await expect(Math.abs(firstLineOffset(dot, text))).toBeLessThanOrEqual(1);
+    }
+  },
 };
 
 /** One word with no break in it wraps inside its row and never scrolls the group sideways. */
@@ -275,6 +295,10 @@ export const Labelless: Story = {
     for (const name of ['Weekly', 'Monthly', 'Never']) {
       const row = rowOf(canvas.getByRole('radio', { name }));
       await expect(row.querySelector('.radio-text')).toBeNull();
+      // With no text there is no first line, so the dot stays in the middle of its row.
+      const dot = row.querySelector('.radio-indicator');
+      if (!dot) throw new Error('A row has no dot');
+      await expect(Math.abs(middleOf(dot) - middleOf(row))).toBeLessThan(0.5);
       // A horizontal row hugs its content, so the padding and the dot are all that hold the width.
       const { width, height } = row.getBoundingClientRect();
       await expect(width).toBeGreaterThanOrEqual(40);
