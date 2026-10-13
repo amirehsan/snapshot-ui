@@ -48,6 +48,24 @@ const tipOnPage = (): HTMLElement | null => within(document.body).queryByRole('t
 const boxOf = (name: string): DOMRect =>
   within(document.body).getByRole('button', { name }).getBoundingClientRect();
 
+/** The box of a tip's own words: its text, beside its arrow and its chip. */
+function wordsOf(tip: HTMLElement): DOMRect {
+  const words = [...tip.childNodes].find(
+    (node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim() !== '',
+  );
+  if (!words) throw new Error('No words in the tip');
+  const range = document.createRange();
+  range.selectNodeContents(words);
+  return range.getBoundingClientRect();
+}
+
+/** The key chip of a tip, which must be there. */
+function chipOf(tip: HTMLElement): HTMLElement {
+  const chip = tip.querySelector<HTMLElement>('kbd.tooltip-shortcut');
+  if (!chip) throw new Error('No key chip');
+  return chip;
+}
+
 /** A description long enough to wrap over many lines, as the tip of an info button can be. */
 const NINETY_WORDS =
   'A budget sets how much a category may spend in a month. Spending is counted from the first day of the ' +
@@ -124,8 +142,10 @@ export const End: Story = {
     const button = boxOf('Search');
     const box = tip.getBoundingClientRect();
     await expect(box.left - button.right).toBeGreaterThanOrEqual(12 - 0.5);
-    const chip = tip.querySelector('kbd.tooltip-shortcut');
-    await expect(['⌘ K', 'Ctrl K']).toContain(chip?.textContent);
+    const chip = chipOf(tip);
+    await expect(['⌘ K', 'Ctrl K']).toContain(chip.textContent);
+    // 8px between the words and the chip.
+    await expect(chip.getBoundingClientRect().left - wordsOf(tip).right).toBeCloseTo(8, 0);
     const arrow = tip.querySelector('.tooltip-arrow');
     await expect(arrow).toHaveAttribute('data-placement', 'right');
     const svg = arrow?.querySelector('svg')?.getBoundingClientRect();
@@ -391,7 +411,10 @@ export const FlipNearEdge: Story = {
   },
 };
 
-/** In right to left the tip reads right to left, and the end is the left. */
+/**
+ * In right to left the tip reads right to left, the end is the left, and the key chip sits to the left of the
+ * words, still 8px from them although the chip itself reads left to right.
+ */
 export const DirFromLocale: Story = {
   tags: ['no-visual'],
   render: () => (
@@ -401,7 +424,9 @@ export const DirFromLocale: Story = {
           <IconButton aria-label="Search" variant="outline">
             <Search />
           </IconButton>
-          <Tooltip placement="end">Search</Tooltip>
+          <Tooltip placement="end" shortcut="Mod K">
+            Search
+          </Tooltip>
         </TooltipTrigger>
       </div>
     </I18nProvider>
@@ -411,5 +436,7 @@ export const DirFromLocale: Story = {
     await expect(tip).toHaveAttribute('dir', 'rtl');
     await expect(tip).toHaveAttribute('data-placement', 'left');
     await expect(boxOf('Search').left - tip.getBoundingClientRect().right).toBeGreaterThanOrEqual(12 - 0.5);
+    // The chip's own dir is ltr, so its gap is set on its right, the side that faces the words.
+    await expect(wordsOf(tip).left - chipOf(tip).getBoundingClientRect().right).toBeCloseTo(8, 0);
   },
 };

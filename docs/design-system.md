@@ -4309,12 +4309,20 @@ every modal, as "Token names" sets out.
 
 **The key chip.** The one key look, inverted for the ink: 12px, weight 700,
 overline tracking, tabular figures, `--radius-micro`, canvas text on canvas at
-20% over the ink, `margin-inline-start: 0.5rem`. It is the chip a chosen menu
-row draws, measured the same way: 9.13 in light and 12.37 in dark, a mix and
-not a token, so it is recorded here and in the contrast tests and not gated.
-`Mod` is the platform's modifier after mount, through the shared `Shortcut`,
-and React Aria's `Keyboard` writes `dir="ltr"` on the chip, so its keys read
-left to right in either direction. The app's pill was a rail-local choice.
+20% over the ink, 8px from the text. It is the chip a chosen menu row draws,
+measured the same way: 9.13 in light and 12.37 in dark, a mix and not a
+token, so it is recorded here and in the contrast tests and not gated. `Mod`
+is the platform's modifier after mount, through the shared `Shortcut`, and
+React Aria's `Keyboard` writes `dir="ltr"` on the chip, so its keys read left
+to right in either direction. That same `dir` decides its gap: a logical
+margin maps by the element's own direction, so the chip's inline start is
+always its left. In a left-to-right tip `margin-inline-start: 0.5rem` faces
+the text. In a right-to-left tip the text sits on the chip's right, so
+`.tooltip[dir='rtl'] .tooltip-shortcut` moves the 8px there with
+`margin-inline: 0 0.5rem`; the wrapper always writes `dir` on the tip, and the
+selector outranks the chip's own rule in any order. The `End` and
+`DirFromLocale` stories measure 8px in each direction. The app's pill was a
+rail-local choice.
 
 **Motion.** Opacity and a 4px slide toward the trigger, 140ms ease-out, on
 React Aria's `[data-entering]` and `[data-exiting]`: a tip above its trigger
@@ -4336,9 +4344,15 @@ stays. A press of the trigger, a pointer down or a key down, closes it, and so
 does blur. A scroll of a box around the trigger closes it, through React
 Aria's `useCloseOnScroll`. A resize of the window does not close a tip in
 React Aria 1.22.1, which only moves it; the wrapper closes it, through the
-trigger's state, since a tip whose trigger is reflowing is no longer about
-what is under the pointer. A tip given its own `isOpen` or `defaultOpen` keeps
-a state of its own, which the wrapper leaves alone.
+trigger's state. A resize reflows the page under the tip, whether it opened by
+hover or by focus: the trigger moves, and a label it stood for may now show
+beside it, as a navigation rail's does when it widens with the window. Setting
+`isDisabled` then takes away the trigger's hover and focus handlers but does
+not close a tip that is already open, so without this a focus-opened tip
+would stay beside the visible label. It trims WCAG 1.4.13's "persistent" for a
+deliberate resize, as React Aria's scroll close already does. A tip given its
+own `isOpen` or `defaultOpen` keeps a state of its own, which the wrapper
+leaves alone.
 
 **Forced colors.** The repaint turns the svg's fill into a shape that may not
 match the tip, so the arrow goes (`display: none`). The transparent border is
@@ -4357,7 +4371,11 @@ keeps only the id, the labelling props, the `data-` attributes and the global
 attributes; and a trigger's `aria-describedby` still reads a hidden tip's
 text, since a description follows its reference into hidden content. So the
 fallback is a change in the wrapper and not a prop a caller sets: the tip
-hidden, and a trigger whose tip only repeats its name left undescribed.
+hidden, and a trigger whose tip only repeats its name left undescribed. Hiding
+the tip's own content, inside a tip that stays exposed, does empty the
+trigger's description, which makes it the likely mechanism; it also leaves a
+`role="tooltip"` with no name, so it is checked against axe's
+`aria-tooltip-name` before it is relied on.
 
 **Scope and direction.** The tip copies its theme, shape and density from the
 trigger React Aria hands it through `TooltipContext`, or from the `triggerRef`

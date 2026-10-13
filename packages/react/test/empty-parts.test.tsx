@@ -13,6 +13,7 @@ import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
 import { toast, ToastRegion } from '../src/toast';
+import { Tooltip, TooltipTrigger } from '../src/tooltip';
 
 /** Every part that a label, a hint or a row's text renders into, and the chip beside a label. */
 const PARTS = [
@@ -92,6 +93,7 @@ const OVERLAY_PARTS = [
   '.menu-item-description',
   '.menu-item-end',
   '.menu-item-shortcut',
+  '.tooltip-shortcut',
 ].join(', ');
 
 /**
@@ -131,6 +133,14 @@ const EMPTY_OVERLAYS: [name: string, element: ReactElement][] = [
         </MenuItem>
       </Menu>
     </MenuTrigger>,
+  ],
+  [
+    // The text is always drawn; the key chip only when a shortcut is given.
+    'Tooltip',
+    <TooltipTrigger isOpen>
+      <Button>Search</Button>
+      <Tooltip shortcut="">Search</Tooltip>
+    </TooltipTrigger>,
   ],
 ];
 

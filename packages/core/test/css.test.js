@@ -2580,6 +2580,15 @@ describe('src/components/tooltip.css', () => {
     }
   });
 
+  it("keeps the chip's gap on the side facing the text in a right-to-left tip, where the chip itself is left to right", () => {
+    const css = rules();
+    expect(blockAfter(css, ".tooltip[dir='rtl'] .tooltip-shortcut {")).toContain('margin-inline: 0 0.5rem;');
+    // After the chip's own rule, at a higher specificity, so it wins in any order.
+    expect(css.indexOf(".tooltip[dir='rtl'] .tooltip-shortcut {")).toBeGreaterThan(
+      css.indexOf('.tooltip-shortcut {'),
+    );
+  });
+
   it('hides the arrow and draws the border in CanvasText in forced colors, so the tip keeps a shape', () => {
     const forced = blockAfter(rules(), FORCED_COLORS);
     expect(blockAfter(forced, '.tooltip {')).toContain('border-color: CanvasText;');

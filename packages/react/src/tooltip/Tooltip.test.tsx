@@ -311,15 +311,18 @@ describe('TooltipTrigger and Tooltip', () => {
     expect(openTip()).toHaveAttribute('data-density', 'compact');
   });
 
-  it('close on Escape', () => {
+  it('close on Escape pressed anywhere, not only on the trigger', () => {
+    // Opened by hover with focus on the page, so the trigger's own key down, which closes the tip on any key,
+    // never hears it: only React Aria's listener on the document can close it.
     render(<Tipped />);
-    tabTo(trigger());
+    mouseOnto(trigger());
+    wait(400);
     expect(tip()).not.toBeNull();
+    expect(trigger()).not.toHaveFocus();
     act(() => {
-      fireEvent.keyDown(trigger(), { key: 'Escape' });
+      fireEvent.keyDown(document.body, { key: 'Escape' });
     });
     expect(tip()).toBeNull();
-    expect(trigger()).toHaveFocus();
   });
 
   it('close on a press of the trigger, by the pointer or by a key', () => {
