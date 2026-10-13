@@ -1628,6 +1628,27 @@ describe('src/components/drawer.css', () => {
     expect(blockAfter(css, '.drawer-footer {')).toContain('flex: none;');
   });
 
+  it('rings the body inside its own box while it is the tab stop, and clips the panel to its corners', () => {
+    const css = rules();
+    // The body runs flush to the panel's sides, so an outset ring would cross the hairline.
+    const ring = blockAfter(css, '.drawer-body:focus-visible {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+    // With no footer the body's square corners meet the 40px curve; the panel keeps the ring and the
+    // scrolling text inside it.
+    expect(blockAfter(css, '} .drawer {')).toContain('overflow: clip;');
+  });
+
+  it('wraps a long word in the footer, as in the title and the body', () => {
+    expect(blockAfter(rules(), '.drawer-footer {')).toContain('overflow-wrap: anywhere;');
+  });
+
+  it('centres the first line of the title on the close button, and only beside one', () => {
+    expect(blockAfter(rules(), '.drawer-header:has(> .drawer-close) .drawer-title {')).toContain(
+      'margin-block-start: calc((2.5rem - 1lh) / 2);',
+    );
+  });
+
   it('redraws the edge in CanvasText in forced colors, so the panel keeps its shape', () => {
     const forced = blockAfter(rules(), FORCED_COLORS);
     expect(blockAfter(forced, '.drawer {')).toContain('border-color: CanvasText;');

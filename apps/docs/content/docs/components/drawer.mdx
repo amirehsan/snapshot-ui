@@ -8,7 +8,7 @@ icon: PanelLeft
 
 ## Navigation
 
-A drawer is a float panel that slides in from the start or the end edge and floats 16px inside the viewport on every side, its full height. From the top it holds a header with the title and a close button, a body, and a footer pinned under it. The body scrolls when it is taller than the screen allows, and the header and the footer stay. The title is required, because it names the drawer. A navigation list names itself, so `isTitleHidden` keeps the title for assistive technology only, and the header shows just the close button. The footer is the place for the signed-in account or an action that should stay in view.
+A drawer is a float panel that slides in from the start or the end edge and floats 16px inside the viewport on every side, its full height. From the top it holds a header with the title and a close button, a body, and a footer pinned under it. The body scrolls when it is taller than the screen allows, and the header and the footer stay. While it scrolls and holds nothing to focus, such as a page of notes, the body is a tab stop of its own, so the keyboard can reach it and scroll it. The title is required, because it names the drawer. A navigation list names itself, so `isTitleHidden` keeps the title for assistive technology only, and the header shows just the close button. With `hasCloseButton={false}` as well there is no header at all, and the body starts at the top of the panel. The footer is the place for the signed-in account or an action that should stay in view.
 
 <Preview name="drawer-navigation" />
 
@@ -40,7 +40,7 @@ The panel floats 16px from every edge, the inset the toast and a rail keep, and 
 
 ## Props
 
-`ref` goes on the dialog element, the one that takes focus. `className` goes on the panel and `overlayClassName` on the scrim, each merged after the library's classes.
+`ref` goes on the dialog element, the one that takes focus. `className` goes on the panel and `overlayClassName` on the scrim, each merged after the library's classes. Inside the panel, `.drawer-body` and `.drawer-footer` are the parts a class on the panel may restyle, such as a shell that sets its own padding; the header and the other inner parts may change between releases.
 
 <PropsTable path="../../packages/react/src/drawer/Drawer.tsx" type="Pick<DrawerProps, 'placement' | 'title' | 'isTitleHidden' | 'children' | 'footer' | 'isDismissable' | 'isKeyboardDismissDisabled' | 'hasCloseButton' | 'closeLabel' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'className' | 'overlayClassName'>" />
 

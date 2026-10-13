@@ -10,6 +10,7 @@ import {
   type ModalRenderProps,
 } from 'react-aria-components';
 import { IconButton } from '../icon-button/IconButton';
+import { keyboardScroll } from '../overlay/keyboard-scroll';
 import { ModalFrame } from '../overlay/ModalFrame';
 import { present } from '../utils/present';
 
@@ -78,6 +79,7 @@ export function Drawer({
       {title}
     </Heading>
   );
+  const shownTitle = isTitleHidden ? <VisuallyHidden>{heading}</VisuallyHidden> : heading;
   return (
     <ModalFrame
       overlayClass="drawer-overlay"
@@ -94,15 +96,21 @@ export function Drawer({
       <RACDialog ref={ref} className="drawer-content">
         {({ close }) => (
           <>
-            <div className="drawer-header">
-              {isTitleHidden ? <VisuallyHidden>{heading}</VisuallyHidden> : heading}
-              {hasCloseButton ? (
-                <IconButton slot="close" aria-label={closeLabel} className="drawer-close">
-                  <X />
-                </IconButton>
-              ) : null}
-            </div>
-            <div className="drawer-body">
+            {isTitleHidden && !hasCloseButton ? (
+              // Nothing in a header would show, so there is none: the hidden title, out of the flow, still
+              // names the drawer, and the body's own padding is the top of the panel.
+              shownTitle
+            ) : (
+              <div className="drawer-header">
+                {shownTitle}
+                {hasCloseButton ? (
+                  <IconButton slot="close" aria-label={closeLabel} className="drawer-close">
+                    <X />
+                  </IconButton>
+                ) : null}
+              </div>
+            )}
+            <div className="drawer-body" ref={keyboardScroll}>
               {typeof children === 'function' ? children({ close }) : children}
             </div>
             {present(footer) ? <div className="drawer-footer">{footer}</div> : null}
