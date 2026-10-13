@@ -40,7 +40,7 @@ The panel floats 16px from every edge, the inset the toast and a rail keep, and 
 
 ## Props
 
-`ref` goes on the dialog element, the one that takes focus. `className` goes on the panel and `overlayClassName` on the scrim, each merged after the library's classes. Inside the panel, `.drawer-body` and `.drawer-footer` are the parts a class on the panel may restyle, such as a shell that sets its own padding; the header and the other inner parts may change between releases.
+`ref` goes on the dialog element, the one that takes focus. Unlike Dialog and Sheet, a drawer passes none of React Aria's other dialog props through, such as `aria-describedby`, `id` or `aria-label`: its title names it, and anything it needs to say goes in its body. `className` goes on the panel and `overlayClassName` on the scrim, each merged after the library's classes. Inside the panel, `.drawer-body` and `.drawer-footer` are the parts a class on the panel may restyle, such as a shell that sets its own padding; the header and the other inner parts may change between releases.
 
 <PropsTable path="../../packages/react/src/drawer/Drawer.tsx" type="Pick<DrawerProps, 'placement' | 'title' | 'isTitleHidden' | 'children' | 'footer' | 'isDismissable' | 'isKeyboardDismissDisabled' | 'hasCloseButton' | 'closeLabel' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'className' | 'overlayClassName'>" />
 

@@ -1047,8 +1047,8 @@ and Light Signal Orange, 28 apart in light and 29 in dark, far enough):
 | `warning` to `error` | 35.6 | 44.6 |
 | `gain` to `success` | 0.0 | 7.6 |
 
-Warning to clay is the closest pair of colors with different meanings. By CIEDE2000 it is 13.4 in
-light and 13.8 in dark, well above the roughly 5 at which two colors are told
+Warning to clay is the closest pair of distinct hues. By CIEDE2000 it is 13.4
+in light and 13.8 in dark, well above the roughly 5 at which two colors are told
 apart at a glance. `gain` and `success` are the same value in light. The two are
 kept apart by rule as well as by value: clay is only the Changed chip on a
 field's label, and warning is a badge, a toast stripe, later an alert or a meter
@@ -1183,7 +1183,14 @@ than the document's compression, because touch has no hover to show it.
 
 Pending keeps the fill and the width. The label turns invisible but stays in
 the accessibility tree, a spinner named by `pendingLabel` sits over it, and
-presses are ignored while focus stays. In dark the primary hover fill is
+presses are ignored while focus stays. The spinner's name joins the button's,
+so a pending "Save" reads "Save Saving". React Aria joins them only when an
+attribute names the button, and name computations differ on whether a
+progress bar inside a button gives its name to the button's content, so while
+pending the library names a button that has no name attribute by its label,
+through `aria-labelledby`, and React Aria adds the spinner. At rest it is named
+by its text again. A test holds the name in both states, and React Aria
+announces it as the wait starts. In dark the primary hover fill is
 translucent, so the fill is clipped to the padding box: painted under the
 border as well, the border band would read brighter than the pill.
 
@@ -1303,8 +1310,9 @@ asks for them. The classes `copy-numeral` and `copy-numeral-sm` set tabular
 digits beside the four properties of their token. Tabular figures are wider:
 "$12,345.67" at 56px is 253px proportional and 293px tabular. The Tailwind
 `text-numeral` utility sets only the size, line height, tracking and weight: it has
-no phone step and no `nowrap`, so a Tailwind user adds `whitespace-nowrap
-tabular-nums` and their own phone step, or uses the `.copy-numeral` class.
+no phone step, no `nowrap` and no direction, so a Tailwind user adds
+`whitespace-nowrap tabular-nums`, their own phone step and `dir="ltr"` on a
+signed figure, or uses the `.copy-numeral` class.
 
 **The phone step.** On a 320px screen a card with 20px of padding leaves 248px of
 content, and 293px does not fit. At 44px the same figure is 230px, so the large
@@ -1334,8 +1342,13 @@ resolves `start` against the parent: the figure still begins at the start of a
 right-to-left line. Measured in Chromium, Firefox and WebKit, Chromium knows only
 `-webkit-match-parent` and Firefox only `match-parent`, so `copy.css` writes both,
 the standard name last. Without the fix the sign lands right of the currency symbol
-in all three. A story, "Checks/Right to left, Numerals", measures it in Chromium:
-the sign sits left of the currency symbol and the figure's right edge is the block's.
+in all three. A block-level figure, such as a grid item, would keep its sign
+without `isolate`; an inline one inside a right-to-left sentence would not,
+since its own `direction` reorders nothing unless it is isolated. Two stories in
+"Checks/Right to left" measure it in Chromium. "Numerals" checks block figures:
+the sign sits left of the currency symbol and the figure's right edge is the
+block's. "Numeral in a sentence" checks an inline figure among Arabic words,
+where the sign lands after the digits without `isolate`.
 
 ## Link
 
@@ -1412,7 +1425,7 @@ hover, no focus ring and no touch target.
   look soon and is not a failure: Watch, Behind, Needs review, Out of date. It
   is its own color because Light Signal Orange measures 2.53 to 2.87 on the
   light surfaces, under the 3:1 a graphic needs, and is already the changed
-  border and the eyebrow dot (see "Why warning is not Light Signal Orange").
+  border and the eyebrow dot (see "Six colors added").
   Clay is unsaved work and Signal Orange is consent, and Light Signal Orange is
   an attention cue that a label has no use for, so none of the three is a tone.
 - **A short uppercase label.** 12px, the floor for short uppercase text,
@@ -2791,7 +2804,14 @@ for Tooltip, `ModalOverlay` and `SheetOverlay`. Every rule is written in
 logical properties. `:dir()` is above the browser floor (Chrome 120), so no
 rule uses it: where a physical side is needed, as for the drawer's slide, the
 component resolves its `placement` and the direction into a `data-side`
-attribute, and the stylesheet keys on that.
+attribute, and the stylesheet keys on that. The direction comes from the
+locale and never from the page: a `dir` on a section does not reach an
+overlay portaled to the body, so an app wraps a right-to-left region, such as
+a guide in Persian, in `I18nProvider` with the region's locale.
+`@snapshot-ui/react` re-exports React Aria's own `I18nProvider`, as it does
+`RouterProvider`, so the provider and the parts share one copy of React Aria
+whatever else the app installs. "Checks/Right to left" holds a story for
+Dialog, Drawer, Sheet, Popover, Menu, Toast and CommandPalette.
 
 **The scrim.** Only the modal surfaces have one: Dialog, ConfirmDialog,
 Drawer, Sheet and CommandPalette. Popover, Menu, Tooltip and Toast never dim
@@ -2945,15 +2965,25 @@ paint, and every value an overlay shows may be given as a preformatted string,
 such as the palette's `end` slot or a toast's title. The toast queue and the
 overlay stack are module singletons that create no DOM, so they are safe to
 import on the server. `localStorage` is read only through
-`useSyncExternalStore`, with an empty snapshot on the server. Every client
-file starts with `'use client'`, the two hooks included: `useOverlayScope`,
-which reads `document.activeElement`, and `useOverlayStack`, which touches no
-DOM API but sits with it in the overlay folder, where every module is a client
-module.
+`useSyncExternalStore`, with an empty snapshot on the server. Every file that
+imports React Aria starts with `'use client'`, and so does every module in the
+overlay folder, the two hooks included: `useOverlayScope`, which reads
+`document.activeElement`, and `useOverlayStack`, which touches no DOM API but
+sits with it there, where every module is a client module. A helper that
+imports no React Aria and is only ever imported by a client module carries no
+directive and sits inside that module's boundary, as the palette's recents
+store does, like the collapsible card's fold store before it.
 
 **Layers.** Modal surfaces and their scrims sit at `--z-modal`, the toast
 region above them at `--z-toast`, and React Aria's positioned overlays at the
 inline 100000 it writes, as "Token names" sets out with the reasons.
+
+**Refs.** Each overlay's `ref` takes the type of the React Aria part it lands
+on: `HTMLElement` for Dialog, ConfirmDialog, Drawer, Popover and
+CommandPalette, and `HTMLDivElement` for Sheet, Menu and Tooltip. A ref shared
+by a Dialog and the Sheet that stands in for it on a phone is a callback ref
+that takes an `HTMLElement`, which both accept; a `useRef<HTMLElement>` object
+fits only the first five.
 
 ## Dialog and ConfirmDialog
 
@@ -3112,9 +3142,8 @@ first all resolve no, because silence is never yes.
   `reportError` is missing it is thrown again from a microtask. `isPending`
   draws the same state for a caller that tracks the work itself.
   `pendingLabel` names the spinner, "Loading" by default, and should name the
-  work, such as "Deleting". React Aria joins a spinner's name to a pending
-  button's only when the button is named by an attribute, so the confirm
-  button carries its label as `aria-label` too: pending, it reads "Delete 3
+  work, such as "Deleting". Button joins the spinner's name to a pending
+  button's ("Button"), so pending, the confirm button reads "Delete 3
   transactions Deleting", and React Aria announces that as the wait starts. A
   dialog that closes while its promise runs, which only a controlled caller
   can do, drops that run: reopened, it is not pending, and the run's end
@@ -3154,8 +3183,15 @@ together.
   leaving reopens that panel, which keeps its scope. One asked after it has
   left would open from the body, because focus fell there with the panel, so
   the hook gives focus back to the recorded trigger first, as the panel
-  leaves, and the next question opens from it, in its theme, shape and
-  density.
+  leaves, without scrolling to it, and the next question opens from it, in its
+  theme, shape and density. The scope is found again through that trigger and
+  not stored, so a question asked after the panel has left, once the answer's
+  work has removed the trigger and nothing in the scope holds focus, opens in
+  the root theme. A question chained straight after the answer, the usual
+  `if (await confirm(a)) { remove(); await confirm(b); }`, is asked while the
+  panel is still leaving and keeps the scope. Strict Mode's rehearsed unmount
+  of a new panel does not end the run, and a test runs a chain under
+  `StrictMode`.
 - **Focus goes back to the first trigger.** When the last question is
   answered and its panel has left, focus returns to the recorded trigger, not
   to the body and never to a Cancel that has gone. React Aria does this a
@@ -3265,6 +3301,13 @@ but a drawer is tall and is often opened by touch, where neither is visible as
 a way out, so the X is drawn unless `hasCloseButton` is false. It is the ghost
 IconButton, 40px, with Lucide's `X`, named "Close" unless `closeLabel` says
 otherwise.
+
+**A closed set of props.** Drawer lists its props and passes none of React
+Aria's dialog props through, unlike Dialog and Sheet, which extend them: its
+dialog is named by its title alone and takes no `aria-describedby`, `id` or
+`aria-label`, since the modal frame forwards a fixed set and the type promises
+only what reaches React Aria. A drawer that needs a description says it in its
+body; passing the props through later would break nothing.
 
 **The shadow.** A drawer is a modal surface, so it takes elevation level 3,
 `--shadow-dramatic`, as Dialog does. A shell whose drawer is the rail itself,
@@ -3637,11 +3680,14 @@ no `ResizeObserver` takes the stub away for its own run.
 on-screen keyboard, and where the sheet sits under it; `snapPoints` under a
 finger and outside Chromium; an `autoFocus` child, which takes focus before
 React Aria's deferred focus; and a touch swipe in any engine but Chromium.
-Two more are known: on iOS React Aria's scroll lock puts
+Three more are known: on iOS React Aria's scroll lock puts
 `overscroll-behavior: contain` back on the body, so a long body at its top
-keeps a pull down to itself; and on desktop Safari a fast swipe can leave
-React Aria's exit waiting for a `scrollend` that has passed, seen in Linux
-WebKit and not on macOS. The docs page says the same.
+keeps a pull down to itself; on desktop Safari a fast swipe can leave React
+Aria's exit waiting for a `scrollend` that has passed, seen in Linux WebKit
+and not on macOS, and the unseen sheet's page-sized overlay then keeps the
+page blocked, with focus still in the hidden dialog; and a long body at a
+partial stop is a tab stop before it can scroll, since the body is marked as
+scrolling by its content and not by the stop. The docs page says the same.
 
 ## Popover
 
@@ -3734,7 +3780,11 @@ from the trigger React Aria hands it through `PopoverContext`, or from the
 `triggerRef` it is given, and not from what holds focus: a popover opened by
 its default or by the app's own state was opened by no press, so focus can be
 anywhere. It sits at the inline z-index of 100000 React Aria writes, above the
-modal layer, as "Token names" sets out.
+modal layer, as "Token names" sets out. A popover opened with `isOpen` or
+`defaultOpen` outside a trigger component has nothing to open against unless
+it is given `triggerRef`, and React Aria then fails on an undefined `current`
+that names nothing, so the popover throws an error that names `triggerRef`
+instead, on the server and in the browser, before React Aria reads it.
 
 **Nothing new is gated.** The surface is Float, and what it holds is ink and
 slate on Float, pairs the contrast gate already holds. The frame is a cue that
@@ -4387,6 +4437,15 @@ the tip's own content, inside a tip that stays exposed, does empty the
 trigger's description, which makes it the likely mechanism; it also leaves a
 `role="tooltip"` with no name, so it is checked against axe's
 `aria-tooltip-name` before it is relied on.
+
+**A tip forced open on the server.** A portal draws nothing on the server, so
+a `TooltipTrigger` given `isOpen` or `defaultOpen` renders its trigger with an
+`aria-describedby` that points at a tip the server's HTML does not hold. The
+reference resolves once the page hydrates and the tip mounts. No shipped path
+opens a tip before a hover or a focus, and holding a forced tip closed until
+hydration would need a state of its own for `defaultOpen`, so it is recorded
+and not changed: until the script runs, that trigger's description points at
+nothing.
 
 **Scope and direction.** The tip copies its theme, shape and density from the
 trigger React Aria hands it through `TooltipContext`, or from the `triggerRef`
