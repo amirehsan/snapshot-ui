@@ -5461,18 +5461,28 @@ the plot, so no coordinate is ever NaN or an infinity.
 
 **One tab stop, not a tooltip per point.** Thirty-one tooltips would be
 thirty-one tab stops (spec 4). The plot is `tabIndex={0}`, `role="group"`,
-`aria-roledescription="chart"`, named as the figure is; a name that is
-blank falls to the other, and with neither the series' column headers in
-the table name it, so the group is never unnamed. Focus activates the
-newest position with data, unless a pointer already holds one, and blur
-ends it. Left and Right move to the previous or next position with data,
-Home and End to the first and the last, Page Up and Page Down seven
-positions, landing on the nearest position with data in that direction or
-at the end, and Escape hides the readout, keeping the crosshair, until the
-next move; a second Escape is left to whatever holds the chart. Every key
-the chart uses is `preventDefault`ed. The one lint exception sits on the
-plot, split over two comments because the tab-index rule reports the
-attribute's line.
+and `aria-roledescription` from `labels.roleDescription`, "chart" by
+default, named as the figure is; a name that is blank falls to the other,
+and with neither the series' column headers in the table name it, so the
+group is never unnamed. The tab stop is set after mount, by state an effect
+sets: the server writes no `tabindex`, so with scripts off the plot, whose
+keys need them, is no dead tab stop. Focus activates the newest position
+with data, unless a pointer already holds one, and blur ends it; a plot
+focused before it had data takes the newest position on its first key.
+Left and Right move to the previous or next position with data, Home and
+End to the first and the last, Page Up and Page Down seven positions,
+landing on the nearest position with data in that direction or at the
+end, and Escape hides the readout, keeping the crosshair, until the next
+move. A key that goes nowhere, Right at the newest day or End when there,
+is not a move and leaves the readout hidden. The Escape that hides it is
+stopped as well as prevented, since React Aria's overlays close on an
+Escape that reaches them whether or not it was prevented, so a chart in a
+dialog or a sheet hides its readout first; a second Escape, with nothing
+to hide, is left to whatever holds the chart. A key with Alt, Control or
+Meta is the browser's or the page's and the chart does nothing with it.
+Every key the chart uses is `preventDefault`ed. The one lint exception
+sits on the plot, split over two comments because the tab-index rule
+reports the attribute's line.
 
 **The keys in both directions.** In right to left Left is the next, newer,
 position, as drawn. The direction is read at the key press from the
@@ -5482,13 +5492,29 @@ nearest `dir="ltr"` or `dir="rtl"` attribute,
 pointer reads the same attribute.
 
 **The readout** is a float panel (Float, the 1px frame edge,
-`--radius-surface`, `--shadow-float`, `--text-small`) at the top of the
-plot over the active x: the x label in slate, then one line per series
-with a point there, the value first in 500 and tabular, then the series'
-label in slate. It is centred on the x, and in the oldest quarter it
-starts at the x (`data-align="start"`) and in the newest it ends there
-(`"end"`), a `--spacing-part` off it, so it stays inside the plot with no
-measurement. The crosshair is a 1px slate line, and each series with a
+`--radius-surface`, `--shadow-float`, `--text-small`) at the active x: the
+x label in slate, then one line per series with a point there, the value
+first in 500 and tabular, then the series' label in slate. It never covers
+the point it describes, and it is placed from known values with no
+measurement: each dot's y, the plot's `height` and the number of lines.
+Above the highest active dot (`data-place="above"`), its bottom inset at
+that y and a 0.625rem margin over it (the dot's 6px radius and 4px of
+air), when the lines fit there at 20px each, with 14px of padding and
+border and the gap; else below the lowest active dot (`"below"`), its top
+inset at that y, so it covers neither series' dot; else on the side with
+more room. Anchored by the edge nearest the dots, it grows away from them,
+so a panel taller than the estimate, wrapped or at a larger text size, may
+reach past the plot but never over a dot. Oct 18 in the docs, $77.90 on $0
+to $100, is 53px under the top of a 240px plot, short of the 64px one
+series needs, so its readout sits under the dot. A dot drawn past the plot
+anchors at its edge. Across, it is centred on the x, and in the oldest
+quarter it starts at the x (`data-align="start"`) and in the newest it
+ends there (`"end"`), a `--spacing-part` off it. It is `max-content` wide
+up to `min(16rem, 50%)` when centred, since half the plot lies on either
+side of an x in the middle half, and `min(16rem, 75% - --spacing-part)` at
+the ends, so it stays inside the plot at any width, and its text wraps
+within that width (`overflow-wrap: anywhere`) rather than running past its
+border. The crosshair is a 1px slate line, and each series with a
 point there has a dot: 8px of its color in a 2px border of
 `--chart-surface`, `content-box` as the sparkline's end point is. Nothing
 transitions.
@@ -5497,13 +5523,16 @@ transitions.
 position rests 150ms, the live region (`aria-live="polite"`,
 `aria-atomic`) takes the day and then each series with a point there; a
 move inside the rest restarts it, so a held key is heard only where it
-stops, and blur or unmount cancels it. A pointer is not announced. The
+stops, and blur or unmount cancels it. A pointer is not announced, and a
+pointer that takes the position empties the region, so a key that lands
+back on the day last announced is still a change the reader hears. The
 library writes no punctuation of its own into it (the plan's open
 question 2): the day and each series are separate elements, each
 `display: block`, so they are read as separate lines, and inside a
 series' line its label and value are joined by a space only. A Persian
-page hears its own words and no English colon or comma, and no `labels`
-entry is needed for joiners. The check in VoiceOver and NVDA is not yet
+page that also passes `labels.roleDescription` hears its own words and no
+English: no colon or comma, and no "chart". No `labels` entry is needed
+for joiners. The check in VoiceOver and NVDA is not yet
 verified; it is owed before the release (owner action 3).
 
 **The pointer and touch.** A mouse or a pen over the plot activates the
@@ -5530,9 +5559,10 @@ server, and `charts.css` says `display: none` again for each under
 copy of the table, shown and with no ids. A browser running scripts does
 not parse it and React renders none of it on the client, so there is one
 table in the DOM; with scripts off the plot, the inert toggle, the note and
-the shown table are what a reader gets. The three strings the chart
-writes, `labels`, are all replaceable, and the type requires all three
-together so no English is left on a translated page.
+the shown table are what a reader gets, and the plot is no tab stop. The
+four strings the chart writes, `labels` (the toggle's two, the note, and
+the plot's role description), are all replaceable, and the type requires
+all four together so no English is left on a translated page.
 
 **Contrast.** The ink line is 17.84 and 17.42 on Lifted and 18.43 and
 17.42 on Float, which is also the readout's text. The slate line, the
@@ -5567,3 +5597,17 @@ and the plot and the x axis take `--chart-direction`, which the plan did
 not have. The lint exception is two comments, not one. React DOM was
 dropped as a peer. The size limit is 4 kB, the spec's budget: the entry
 measured 3.03 kB, and the rule rounds up to 3.5 kB and adds 0.5 kB.
+
+**After review.** The readout first sat at the top of the plot, over the
+newest days' dots; it is placed above or below them now, from known
+values, and wraps inside the plot. `aria-roledescription` was a fixed
+English "chart"; it is `labels.roleDescription`, so `LineChartLabels` has
+four strings. The Escape that hides the readout is stopped as well as
+prevented, which a story with the library's Dialog around the chart
+checks (`apps/storybook/stories/`, whose stories may import both
+packages, as neither package's own may). Keys with Alt, Control or Meta
+are left alone, a key that does not move keeps the readout hidden, the
+first key in a plot focused before its data came takes the newest day,
+and a pointer clears the last announcement. The tab stop is set after
+mount, so the server's HTML has none. The entry measures 3.25 kB now,
+inside the same 4 kB.

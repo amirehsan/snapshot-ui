@@ -358,6 +358,82 @@ describe('LineChart', () => {
     expect(readoutX(container)).toBe('Oct 30');
   });
 
+  it('keeps the Escape that hides the readout from whatever holds the chart, and passes on the next', () => {
+    // A React Aria dialog closes on an Escape that reaches it, whether or not it was prevented.
+    const onKeyDown = vi.fn();
+    const { container } = render(
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- a stand-in for a dialog's own key handler
+      <div onKeyDown={onKeyDown}>
+        <Chart />
+      </div>,
+    );
+    const plot = plotOf(container);
+    focus(plot);
+    fireEvent.keyDown(plot, { key: 'Escape' });
+    expect(readout(container)).toBeNull();
+    expect(onKeyDown).not.toHaveBeenCalled();
+
+    // The readout is already hidden, so this Escape is the dialog's.
+    fireEvent.keyDown(plot, { key: 'Escape' });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a key with Alt, Control or Meta to the browser and the page', () => {
+    const { container } = render(<Chart />);
+    const plot = plotOf(container);
+    focus(plot);
+    for (const modifier of ['altKey', 'ctrlKey', 'metaKey'] as const) {
+      for (const key of ['ArrowLeft', 'Home', 'Escape']) {
+        const event = new KeyboardEvent('keydown', {
+          key,
+          [modifier]: true,
+          bubbles: true,
+          cancelable: true,
+        });
+        act(() => {
+          plot.dispatchEvent(event);
+        });
+        expect(event.defaultPrevented, `${modifier} ${key}`).toBe(false);
+        expect(readoutX(container), `${modifier} ${key}`).toBe('Oct 31');
+      }
+    }
+  });
+
+  it('keeps the readout hidden after Escape when a key does not move', () => {
+    const { container } = render(<Chart />);
+    const plot = plotOf(container);
+    focus(plot);
+    fireEvent.keyDown(plot, { key: 'Escape' });
+    expect(readout(container)).toBeNull();
+    // At the newest position Right and End go nowhere, so nothing new is shown.
+    fireEvent.keyDown(plot, { key: 'ArrowRight' });
+    fireEvent.keyDown(plot, { key: 'End' });
+    fireEvent.keyDown(plot, { key: 'PageDown' });
+    expect(readout(container)).toBeNull();
+    fireEvent.keyDown(plot, { key: 'ArrowLeft' });
+    expect(readoutX(container)).toBe('Oct 30');
+  });
+
+  it('activates the newest position on a key when the plot was focused before it had data', () => {
+    const empty: LineSeries = { label: 'This month', points: [] };
+    const { container, rerender } = render(<LineChart aria-label={NAME} series={[empty]} xLabels={[]} />);
+    const plot = plotOf(container);
+    focus(plot);
+    expect(plot).not.toHaveAttribute('data-active');
+
+    rerender(<LineChart aria-label={NAME} series={[THIS_MONTH, LAST_MONTH]} xLabels={DAYS} />);
+    expect(plotOf(container)).toBe(plot);
+    expect(plot).toHaveFocus();
+    const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+    act(() => {
+      plot.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(true);
+    expect(readoutX(container)).toBe('Oct 31');
+    fireEvent.keyDown(plot, { key: 'ArrowLeft' });
+    expect(readoutX(container)).toBe('Oct 30');
+  });
+
   it('announces a position after 150ms of rest, and only where a quick run of keys stops', () => {
     vi.useFakeTimers();
     const { container } = render(<Chart />);
@@ -417,6 +493,30 @@ describe('LineChart', () => {
     // Each part is its own element, joined by nothing but a space inside a series' part.
     const live = container.querySelector('.line-chart-live');
     expect(live?.textContent).not.toMatch(/[:,;.]/);
+  });
+
+  it('announces a key that lands where the last announcement was, once a pointer has moved in between', () => {
+    vi.useFakeTimers();
+    const { container } = render(<Chart />);
+    const plot = plotOf(container);
+    stubBox(plot);
+    focus(plot);
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+    expect(liveParts(container)[0]).toBe('Oct 31');
+
+    // The pointer takes the position, unannounced, and the region lets go of the old day.
+    fireEvent.pointerMove(plot, { clientX: 150, pointerType: 'mouse' });
+    expect(readoutX(container)).toBe('Oct 16');
+    expect(liveParts(container)).toEqual([]);
+
+    // So End, back on Oct 31, is a change the screen reader hears.
+    fireEvent.keyDown(plot, { key: 'End' });
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+    expect(liveParts(container)).toEqual(['Oct 31', 'This month $25.00', 'Last month $60.00']);
   });
 
   it('snaps to the nearest position with data under a mouse, and clears on leave unless focused', () => {
@@ -505,6 +605,46 @@ describe('LineChart', () => {
     expect(readout(container)?.style.insetInlineStart).toBe('100%');
   });
 
+  it('places the readout above the highest dot, or below the lowest when there is no room above, from known values', () => {
+    // Values 95, 50 and 10 on 0 to 100: their dots are at 5%, 50% and 90% of the plot.
+    const one: LineSeries = { label: 'This month', points: [point(95), point(50), point(10)] };
+    const other: LineSeries = { label: 'Last month', points: [point(60), point(20), point(15)] };
+    const { container, rerender } = render(
+      <LineChart aria-label={NAME} series={[one, other]} xLabels={['A', 'B', 'C']} yDomain={[0, 100]} />,
+    );
+    const plot = plotOf(container);
+    const place = (): [string | null, string, string] => {
+      const panel = readout(container);
+      return [
+        panel?.getAttribute('data-place') ?? null,
+        panel?.style.insetBlockEnd ?? '',
+        panel?.style.insetBlockStart ?? '',
+      ];
+    };
+    focus(plot);
+    // C: the dots at 85% and 90%, 204px down a 240px plot, room for three lines above: its bottom on the higher.
+    expect(readoutX(container)).toBe('C');
+    expect(place()).toEqual(['above', '15%', '']);
+
+    // A: the higher dot at 5%, 12px down, no room above: its top under the lower dot, at 40%, so it covers neither.
+    fireEvent.keyDown(plot, { key: 'Home' });
+    expect(readoutX(container)).toBe('A');
+    expect(place()).toEqual(['below', '', '40%']);
+
+    // The room is read from the height: at 20% a 240px plot has 48px above the dot, a 600px one 120px.
+    const high: LineSeries = { label: 'This month', points: [point(80)] };
+    rerender(<LineChart aria-label={NAME} series={[high]} xLabels={['A']} yDomain={[0, 100]} />);
+    fireEvent.keyDown(plot, { key: 'End' });
+    expect(place()).toEqual(['below', '', '20%']);
+    rerender(<LineChart aria-label={NAME} series={[high]} xLabels={['A']} yDomain={[0, 100]} height={600} />);
+    expect(place()).toEqual(['above', '80%', '']);
+
+    // A dot drawn past the plot anchors the readout at the plot's edge, never outside it.
+    const past: LineSeries = { label: 'This month', points: [point(250)] };
+    rerender(<LineChart aria-label={NAME} series={[past]} xLabels={['A']} yDomain={[0, 100]} />);
+    expect(place()).toEqual(['below', '', '0%']);
+  });
+
   it('renders the table hidden, with a caption from aria-label, the x labels as row headers and an empty cell for a gap', () => {
     const { container } = render(<Chart />);
     const table = container.querySelector('table.line-chart-table');
@@ -581,10 +721,16 @@ describe('LineChart', () => {
     expect(toggle).toHaveFocus();
   });
 
-  it('takes its three strings from labels', async () => {
+  it('takes its four strings from labels, the role description among them', async () => {
     const user = userEvent.setup();
-    const labels = { showTable: 'نمایش جدول', showChart: 'نمایش نمودار', noScript: 'اسکریپت خاموش است.' };
+    const labels = {
+      showTable: 'نمایش جدول',
+      showChart: 'نمایش نمودار',
+      noScript: 'اسکریپت خاموش است.',
+      roleDescription: 'نمودار',
+    };
     render(<Chart labels={labels} />);
+    expect(screen.getByRole('group', { name: NAME })).toHaveAttribute('aria-roledescription', 'نمودار');
     const toggle = screen.getByRole('button', { name: 'نمایش جدول' });
     await user.click(toggle);
     expect(toggle).toHaveTextContent('نمایش نمودار');
@@ -694,7 +840,7 @@ describe('LineChart', () => {
     await expectNoA11yViolations(container);
   });
 
-  it('requires a name, one or two series and all three labels in its types', () => {
+  it('requires a name, one or two series and all four labels in its types', () => {
     // @ts-expect-error a chart needs a name: aria-label or aria-labelledby
     const unnamed = <LineChart series={[THIS_MONTH]} xLabels={DAYS} />;
     const three = (
@@ -706,8 +852,17 @@ describe('LineChart', () => {
         aria-label={NAME}
         series={[THIS_MONTH]}
         xLabels={DAYS}
-        // @ts-expect-error all three strings, so no default in English is left on the page
+        // @ts-expect-error all four strings, so no default in English is left on the page
         labels={{ showTable: 'Tabelle', showChart: 'Diagramm' }}
+      />
+    );
+    const noRole = (
+      <LineChart
+        aria-label={NAME}
+        series={[THIS_MONTH]}
+        xLabels={DAYS}
+        // @ts-expect-error the role description is a string the chart writes, so it is required too
+        labels={{ showTable: 'Tabelle', showChart: 'Diagramm', noScript: 'Skripte sind aus.' }}
       />
     );
     // The arrays may be read-only: the chart never changes what it is given.
@@ -721,6 +876,6 @@ describe('LineChart', () => {
         yDomain={Object.freeze([0, 100] as const)}
       />
     );
-    expect([unnamed, three, partial, frozen].every(Boolean)).toBe(true);
+    expect([unnamed, three, partial, noRole, frozen].every(Boolean)).toBe(true);
   });
 });

@@ -57,7 +57,6 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'aria-label="Spending in October"',
       'role="group"',
       'aria-roledescription="chart"',
-      'tabindex="0"',
       'data-series="2"',
       'class="line-chart-area"',
       'class="line-chart-y-label"',
@@ -68,7 +67,8 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'class="line-chart-noscript"',
       'aria-live="polite"',
     ],
-    ['line-chart-readout', 'line-chart-crosshair', 'line-chart-dot', 'data-active'],
+    // The plot takes its tab stop once scripts run: with them off, its keys would do nothing.
+    ['line-chart-readout', 'line-chart-crosshair', 'line-chart-dot', 'data-active', 'tabindex'],
   ],
 ];
 

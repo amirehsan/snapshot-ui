@@ -82,6 +82,27 @@ const liveParts = (canvasElement: HTMLElement): string[] =>
     (element) => element.textContent,
   );
 
+/** Whether two boxes share any area. */
+const overlaps = (a: DOMRect, b: DOMRect): boolean =>
+  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+/**
+ * The readout covers none of the active dots and stays inside the plot across; and, unless its text wraps past
+ * the lines the chart allows for, top to bottom too.
+ */
+const expectReadoutClear = async (canvasElement: HTMLElement, isWrapping = false): Promise<void> => {
+  const plot = part(canvasElement, '.line-chart-plot').getBoundingClientRect();
+  const panel = part(canvasElement, '.line-chart-readout').getBoundingClientRect();
+  const dots = [...canvasElement.querySelectorAll('.line-chart-dot')];
+  await expect(dots.length).toBeGreaterThan(0);
+  for (const dot of dots) await expect(overlaps(panel, dot.getBoundingClientRect())).toBe(false);
+  await expect(panel.left).toBeGreaterThanOrEqual(plot.left - 0.5);
+  await expect(panel.right).toBeLessThanOrEqual(plot.right + 0.5);
+  if (isWrapping) return;
+  await expect(panel.top).toBeGreaterThanOrEqual(plot.top - 0.5);
+  await expect(panel.bottom).toBeLessThanOrEqual(plot.bottom + 0.5);
+};
+
 /** One series: a 2px ink line over the gridlines, "$0", "$50" and "$100" above them, three days under it. */
 export const Default: Story = {};
 
@@ -104,17 +125,19 @@ export const Gaps: Story = {
   },
 };
 
-/** Focused from the keyboard: the newest day, its crosshair, a ringed dot per series and the readout at the end. */
+/**
+ * Focused from the keyboard: the newest day, its crosshair, a ringed dot per series and the readout at the end,
+ * under the dots, since $84.20 leaves no room above them.
+ */
 export const ActivePoint: Story = {
   args: { series: [THIS_MONTH, LAST_MONTH] },
   play: async ({ canvasElement, userEvent }) => {
     await userEvent.tab();
     await expect(readoutX(canvasElement)).toBe('Oct 31');
     await expect(part(canvasElement, '.line-chart-readout')).toHaveAttribute('data-align', 'end');
-    // The panel stays inside the plot, with no measurement.
-    const plot = part(canvasElement, '.line-chart-plot').getBoundingClientRect();
-    const panel = part(canvasElement, '.line-chart-readout').getBoundingClientRect();
-    await expect(panel.right).toBeLessThanOrEqual(plot.right + 0.5);
+    await expect(part(canvasElement, '.line-chart-readout')).toHaveAttribute('data-place', 'below');
+    // The panel stays inside the plot and off its dots, with no measurement.
+    await expectReadoutClear(canvasElement);
     // The dots are round at any width: 8px in a 2px ring.
     const dot = part(canvasElement, '.line-chart-dot').getBoundingClientRect();
     await expect(dot.width).toBe(12);
@@ -122,7 +145,7 @@ export const ActivePoint: Story = {
   },
 };
 
-/** The first day: the readout starts at the inline start and reaches inward. */
+/** The first day: the readout starts at the inline start and reaches inward, above the dots. */
 export const ReadoutNearStart: Story = {
   args: { series: [THIS_MONTH, LAST_MONTH] },
   play: async ({ canvasElement, userEvent }) => {
@@ -130,9 +153,39 @@ export const ReadoutNearStart: Story = {
     await userEvent.keyboard('{Home}');
     await expect(readoutX(canvasElement)).toBe('Oct 1');
     await expect(part(canvasElement, '.line-chart-readout')).toHaveAttribute('data-align', 'start');
-    const plot = part(canvasElement, '.line-chart-plot').getBoundingClientRect();
-    const panel = part(canvasElement, '.line-chart-readout').getBoundingClientRect();
-    await expect(panel.left).toBeGreaterThanOrEqual(plot.left - 0.5);
+    await expect(part(canvasElement, '.line-chart-readout')).toHaveAttribute('data-place', 'above');
+    await expectReadoutClear(canvasElement);
+  },
+};
+
+/**
+ * Every day in turn, in a 15rem plot with long series names: the readout wraps inside its border, stays inside
+ * the plot across, and never covers a dot it describes, however tall the wrapping makes it.
+ */
+export const ReadoutNarrow: Story = {
+  tags: ['no-visual'],
+  args: {
+    series: [
+      { ...THIS_MONTH, label: 'Spending this month, to date' },
+      { ...LAST_MONTH, label: 'Spending last month, same days' },
+    ],
+  },
+  render: (args) => (
+    <div style={{ width: '15rem' }}>
+      <LineChart {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement, userEvent }) => {
+    await userEvent.tab();
+    await userEvent.keyboard('{Home}');
+    for (const [index, day] of DAYS.entries()) {
+      await expect(readoutX(canvasElement)).toBe(day);
+      await expectReadoutClear(canvasElement, true);
+      const panel = part(canvasElement, '.line-chart-readout');
+      // The text wraps inside the border rather than running past it.
+      await expect(panel.scrollWidth).toBeLessThanOrEqual(panel.clientWidth);
+      if (index < DAYS.length - 1) await userEvent.keyboard('{ArrowRight}');
+    }
   },
 };
 
