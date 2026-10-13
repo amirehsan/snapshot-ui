@@ -121,3 +121,4 @@ export {
   type CommandPaletteProps,
 } from './command-palette';
 export { Tooltip, TooltipTrigger, type TooltipProps, type TooltipTriggerProps } from './tooltip';
+export { AppShell, useAppShell, type AppShellProps, type AppShellState } from './app-shell';
