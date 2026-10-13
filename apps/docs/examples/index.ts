@@ -14,6 +14,9 @@ import CollapsibleCardActions from './collapsible-card-actions';
 import CollapsibleCardBasic from './collapsible-card-basic';
 import CollapsibleCardChanged from './collapsible-card-changed';
 import CollapsibleCardRemembered from './collapsible-card-remembered';
+import ConfirmDialogBasic from './confirm-dialog-basic';
+import ConfirmDialogDanger from './confirm-dialog-danger';
+import ConfirmDialogHook from './confirm-dialog-hook';
 import DialogBasic from './dialog-basic';
 import DialogDanger from './dialog-danger';
 import DialogLong from './dialog-long';
@@ -66,6 +69,9 @@ export const examples = {
   'collapsible-card-basic': CollapsibleCardBasic,
   'collapsible-card-changed': CollapsibleCardChanged,
   'collapsible-card-remembered': CollapsibleCardRemembered,
+  'confirm-dialog-basic': ConfirmDialogBasic,
+  'confirm-dialog-danger': ConfirmDialogDanger,
+  'confirm-dialog-hook': ConfirmDialogHook,
   'dialog-basic': DialogBasic,
   'dialog-danger': DialogDanger,
   'dialog-long': DialogLong,

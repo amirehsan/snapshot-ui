@@ -1,0 +1,102 @@
+---
+title: Confirm dialog
+description: An alert dialog that asks one question. It resolves yes only when the confirm button is pressed; Escape, the scrim and Cancel are no.
+icon: CircleHelp
+---
+
+<Section>
+
+## Basic
+
+A confirm dialog is a [Dialog](/docs/components/dialog) that asks one question and offers two answers: Cancel, then the confirm button, which names what it does. The title asks, and the description, which is required, says what will happen. Only the confirm button is a yes: Escape, a press on the scrim and Cancel all mean no. In the default tone the confirm button is primary and takes focus when the dialog opens.
+
+<Preview name="confirm-dialog-basic" />
+
+</Section>
+
+<Section>
+
+## Danger
+
+The tone is required, because a destructive question drawn as a harmless one is the costly mistake, and a harmless one drawn as destructive teaches people to ignore the warning. `tone="danger"` draws the warning triangle in the error well and the danger Button, and focus starts on Cancel, the safe answer. `icon` replaces the triangle. The confirm label names the outcome, such as Delete the workspace, never OK.
+
+<Preview name="confirm-dialog-danger" />
+
+</Section>
+
+<Section>
+
+## Asking from code
+
+`useConfirm()` asks from an event handler. `confirm(options)` opens the dialog and returns a promise that is `true` only when the confirm button is pressed. Render `dialog` once, in the component that asks; it is `null` until the first question. A second question asked while one is open answers the first no, and unmounting the component answers an open question no, so silence is never yes. The hook has no pending state: the work after a yes belongs to your own interface, and a dialog that should itself show it pending is a `ConfirmDialog` rendered directly, with `onConfirm`.
+
+When the action removes the button that asked, such as a row's Delete, focus has nowhere to go back to. Place it yourself after the action, as this example does: it moves focus to the row now in the removed row's place.
+
+<Preview name="confirm-dialog-hook" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Open a confirm dialog from a `DialogTrigger`, or control it with `isOpen` and `onOpenChange`, as a Dialog. `onConfirm` runs when the confirm button is pressed and `onCancel` on every other way out. When `onConfirm` returns a promise, the dialog is pending until it settles: the confirm button shows its spinner with its label kept, Cancel is disabled, and Escape and the scrim do nothing, so a half-finished action cannot be abandoned. It closes when the promise resolves. When it rejects, the dialog stays open and no longer pending, so the question can be answered again, and the error is reported as if nothing had caught it, through `reportError`. `isPending` shows the same state for a caller that tracks the work itself, and nothing closes the dialog until that caller does.
+
+```tsx
+'use client';
+
+import { Button, ConfirmDialog, DialogTrigger } from '@snapshot-ui/react';
+
+export function DeleteWorkspace({ onDelete }: { onDelete: () => Promise<void> }) {
+  return (
+    <DialogTrigger>
+      <Button variant="danger">Delete the workspace</Button>
+      <ConfirmDialog
+        tone="danger"
+        title="Delete the workspace?"
+        description="Its 12 projects and their history go with it. This cannot be undone."
+        confirmLabel="Delete the workspace"
+        onConfirm={onDelete}
+      />
+    </DialogTrigger>
+  );
+}
+```
+
+A press on the scrim cancels. For a question that must be answered, `isDismissable={false}` keeps the scrim out, and Escape still cancels.
+
+</Section>
+
+<Section>
+
+## Props
+
+The rest of React Aria's dialog props and `ref` go on the dialog element, as on Dialog. A confirm dialog has no close button and no body: its answers are its two buttons.
+
+<PropsTable label="ConfirmDialog props" path="../../packages/react/src/dialog/ConfirmDialog.tsx" type="Pick<ConfirmDialogProps, 'title' | 'description' | 'confirmLabel' | 'cancelLabel' | 'tone' | 'icon' | 'onConfirm' | 'onCancel' | 'isPending' | 'isDismissable' | 'isKeyboardDismissDisabled' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'size' | 'className' | 'overlayClassName'>" />
+
+`useConfirm()` takes no arguments and returns:
+
+<PropsTable label="useConfirm" path="../../packages/react/src/dialog/useConfirm.tsx" type="ConfirmHandle" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A confirm dialog is an `alertdialog`, named by its title and described by its description, so both are read when it opens. Focus starts on the safe answer in the danger tone, Cancel, and on the confirm button in the default tone. Tab moves between the two buttons without reaching the page, and when the dialog closes focus goes back to the button that opened it. While the confirm button is pending its label stays in its name, beside the spinner's.
+
+<Keys rows={[['Tab', 'Moves between Cancel and the confirm button.'], ['Escape', 'Cancels.'], ['Enter Space', 'Press the focused button.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps confirm dialogs honest.
+
+<Rules dos={['Name the outcome on the confirm button, such as Delete 3 transactions.', 'Use the danger tone for anything that cannot be undone.', 'Keep the description to what will happen.']} donts={['Never label the confirm button OK or Yes.', 'Never confirm an action that can be undone. Undo it instead.', 'Never pick a tone by default. Choose the one the question deserves.']} />
+
+</Section>
