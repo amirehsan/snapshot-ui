@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef } from 'react';
-import { RouterProvider } from 'react-aria-components';
+import { RouterProvider as RACRouterProvider } from 'react-aria-components';
+import * as library from '../index';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { Link } from './Link';
@@ -72,13 +73,17 @@ describe('Link', () => {
     expect(link).not.toHaveAttribute('data-hovered');
   });
 
+  it("re-exports React Aria's own RouterProvider, so the app and the library share one router", () => {
+    expect(library.RouterProvider).toBe(RACRouterProvider);
+  });
+
   it('navigates through a RouterProvider with the href it was given', async () => {
     const user = userEvent.setup();
     const navigate = vi.fn();
     render(
-      <RouterProvider navigate={navigate}>
+      <library.RouterProvider navigate={navigate}>
         <Link href="/guide">Read the guide</Link>
-      </RouterProvider>,
+      </library.RouterProvider>,
     );
     await user.click(screen.getByRole('link', { name: 'Read the guide' }));
     expect(navigate).toHaveBeenCalledTimes(1);

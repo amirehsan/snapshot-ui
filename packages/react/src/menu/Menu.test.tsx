@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LogOut, Settings, User } from 'lucide-react';
 import { createRef, useState, type ReactElement } from 'react';
-import { RouterProvider, type Key, type Selection } from 'react-aria-components';
+import type { Key, Selection } from 'react-aria-components';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { Button } from '../button';
@@ -175,11 +175,57 @@ describe('Menu', () => {
     ]);
   });
 
+  it('draws an end value before the key, which describes the item and stays out of its name', () => {
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+    const { unmount } = render(
+      <MenuTrigger defaultOpen>
+        <Button>Accounts</Button>
+        <Menu>
+          <MenuItem id="checking" description="Everyday" end="$2,340.12" shortcut="Mod 1">
+            Checking
+          </MenuItem>
+        </Menu>
+      </MenuTrigger>,
+    );
+    const checking = item('Checking');
+    const end = within(checking).getByText('$2,340.12');
+    expect(end.tagName).toBe('SPAN');
+    expect(end).toHaveClass('menu-item-end');
+    expect([...checking.children].map((child) => child.className)).toEqual([
+      'menu-item-text',
+      'menu-item-end',
+      'menu-item-shortcut',
+    ]);
+    // Named by its label alone; the value, the second line and the key describe it, the value first.
+    expect(checking).toHaveAccessibleName('Checking');
+    expect(checking).toHaveAccessibleDescription('$2,340.12 Everyday \u2318 1');
+    expect(checking.getAttribute('aria-describedby')?.split(' ')[0]).toBe(end.id);
+    unmount();
+
+    // A description the caller names stays, after the value.
+    render(
+      <>
+        <p id="note">Joint account</p>
+        <MenuTrigger defaultOpen>
+          <Button>Accounts</Button>
+          <Menu>
+            <MenuItem id="savings" end="$10,050.00" aria-describedby="note">
+              Savings
+            </MenuItem>
+          </Menu>
+        </MenuTrigger>
+      </>,
+    );
+    expect(item('Savings')).toHaveAccessibleDescription('$10,050.00 Joint account');
+  });
+
   it('draws nothing for an icon, a description or a shortcut it is not given', () => {
     render(<Account defaultOpen />);
     const profile = item('Profile');
     expect(profile.querySelector('.menu-item-description')).toBeNull();
     expect(profile.querySelector('.menu-item-shortcut')).toBeNull();
+    expect(profile.querySelector('.menu-item-end')).toBeNull();
+    expect(profile).not.toHaveAttribute('aria-describedby');
     expect(item('Export').querySelector('.menu-item-icon')).toBeNull();
   });
 
@@ -408,11 +454,11 @@ describe('Menu', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument();
   });
 
-  it('renders an item with href as a link that navigates through the RouterProvider', async () => {
+  it("renders an item with href as a link that navigates through the library's RouterProvider", async () => {
     const user = userEvent.setup();
     const navigate = vi.fn<(path: string) => void>();
     render(
-      <RouterProvider navigate={navigate}>
+      <library.RouterProvider navigate={navigate}>
         <MenuTrigger>
           <Button>Help</Button>
           <Menu>
@@ -421,7 +467,7 @@ describe('Menu', () => {
             </MenuItem>
           </Menu>
         </MenuTrigger>
-      </RouterProvider>,
+      </library.RouterProvider>,
     );
     await user.click(screen.getByRole('button', { name: 'Help' }));
     const link = item('Button');

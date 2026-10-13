@@ -13,7 +13,7 @@ export {
   type TextSize,
   type TextTone,
 } from './typography';
-export { Link, type LinkProps } from './link';
+export { Link, RouterProvider, type LinkProps, type RouterConfig } from './link';
 export { Kbd, type KbdProps } from './kbd';
 export { Badge, type BadgeProps, type BadgeTone } from './badge';
 export { IconButton, type IconButtonProps, type IconButtonVariant } from './icon-button';

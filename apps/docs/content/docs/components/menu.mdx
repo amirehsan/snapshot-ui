@@ -8,7 +8,7 @@ icon: EllipsisVertical
 
 ## Basic
 
-A menu is a list of actions that opens from a button, in a [Popover](/docs/components/popover). Each item has a label and can have a 16px icon at its start, a second line under the label in slate, and a key hint at its end, drawn as a key: `Mod` in a hint is Cmd on Apple platforms and Ctrl elsewhere. Sections group items under a heading, and a separator rules between groups. An item that loses something takes `variant="danger"`, which draws its label and icon in the error color. Rows are 40px tall, and 44px on a touch screen.
+A menu is a list of actions that opens from a button, in a [Popover](/docs/components/popover). Each item has a label and can have a 16px icon at its start, a second line under the label in slate, a value at its end such as an amount, given already formatted, and a key hint after it, drawn as a key: `Mod` in a hint is Cmd on Apple platforms and Ctrl elsewhere. Sections group items under a heading, and a separator rules between groups. An item that loses something takes `variant="danger"`, which draws its label and icon in the error color. Rows are 40px tall, and 44px on a touch screen.
 
 <Preview name="menu-basic" />
 
@@ -28,16 +28,16 @@ A menu can also choose. `selectionMode="single"` makes its items radios: the cho
 
 ## Links
 
-An item with `href` is a real link, an anchor with `role="menuitem"`, so a middle click or a modified click opens it as the browser would. A plain press navigates through React Aria's `RouterProvider`, which [Link](/docs/components/link) uses too, so wrap your app in it once. With the Next.js App Router, that is a small client component around the app, with the `RouterConfig` augmentation so `routerOptions` is typed:
+An item with `href` is a real link, an anchor with `role="menuitem"`, so a middle click or a modified click opens it as the browser would. A plain press navigates through React Aria's `RouterProvider`, which [Link](/docs/components/link) uses too, so wrap your app in it once. Import it from `@snapshot-ui/react`: it is the library's own copy of React Aria's, so the provider and the items always share one router, whatever else the app installs. With the Next.js App Router, that is a small client component around the app, with the `RouterConfig` augmentation so `routerOptions` is typed:
 
 ```tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { RouterProvider } from 'react-aria-components';
+import { RouterProvider } from '@snapshot-ui/react';
 
-declare module 'react-aria-components' {
+declare module '@snapshot-ui/react' {
   interface RouterConfig {
     routerOptions: NonNullable<Parameters<ReturnType<typeof useRouter>['push']>[1]>;
   }
@@ -57,7 +57,7 @@ export function ClientProviders({ children }: { children: ReactNode }) {
 }
 ```
 
-Render `<ClientProviders>` around `{children}` in `app/layout.tsx`. Install `react-aria-components` at the version `@snapshot-ui/react` depends on, so the app and the library share one router.
+Render `<ClientProviders>` around `{children}` in `app/layout.tsx`.
 
 The one trade-off: React Aria renders a plain anchor, so Next does not prefetch the page as the link comes into view. Prefetch it yourself with `router.prefetch(href)` from the item's `onHoverStart` and `onFocus`, or draw Next's own `Link` for an item with the `render` prop it inherits, from a client component:
 
@@ -79,11 +79,11 @@ The one trade-off: React Aria renders a plain anchor, so Next does not prefetch 
 
 ## Usage
 
-Compose `MenuTrigger`, the button that opens the menu, and `Menu`, which opens in its own popover. `MenuTrigger` takes `isOpen`, `defaultOpen` and `onOpenChange` to control it. Menu is a client component, and a server component can render it, as the examples on this page do.
+Compose `MenuTrigger`, the button that opens the menu, and `Menu`, which opens in its own popover. `MenuTrigger` takes `isOpen`, `defaultOpen` and `onOpenChange` to control it. Menu is a client component, and a server component can render it, as the selection example on this page does with `defaultSelectedKeys`; a menu that runs a handler or keeps its choice in state lives in a client component, as the other two do.
 
-`onAction` on the menu receives the key, the `id`, of the item that ran; an item's own `onAction` runs for that item alone. A danger item usually asks first: pair it with a [Confirm dialog](/docs/components/confirm-dialog) whose confirm button names the same outcome. The popover opens under the button at its start edge, `placement` changes that, and it flips to the other side where the screen has no room. It is at least 12rem wide, or as wide as the button when that is wider, and a long menu scrolls inside it. A menu opened from a dark card is dark while the page stays light, as [Theming](/docs/theming#overlays) explains.
+`onAction` on the menu receives the key, the `id`, of the item that ran. An item's own `onAction` runs first, with no argument, and then the menu's. A danger item usually asks first: pair it with a [Confirm dialog](/docs/components/confirm-dialog) whose confirm button names the same outcome. The popover opens under the button at its start edge, `placement` changes that, and it flips to the other side where the screen has no room. It is at least 12rem wide, or as wide as the button when that is wider, and a long menu scrolls inside it. A menu opened from a dark card is dark while the page stays light, as [Theming](/docs/theming#overlays) explains.
 
-Focus moves into the menu, and the keys below move it there. The list it replaces had no arrow keys, so it was not a menu; this one is, and focus stays in it until a choice, Escape or a press outside closes it.
+Focus moves into the menu, and the arrow keys move it from item to item, as the table below lists. It stays in the menu until a choice, Escape or a press outside closes it, and then goes back to the button.
 
 </Section>
 
@@ -95,7 +95,7 @@ Focus moves into the menu, and the keys below move it there. The list it replace
 
 <PropsTable label="Menu props" path="../../packages/react/src/menu/Menu.tsx" type="Pick<MenuProps<object>, 'onAction' | 'selectionMode' | 'selectedKeys' | 'defaultSelectedKeys' | 'onSelectionChange' | 'disabledKeys' | 'shouldCloseOnSelect' | 'placement' | 'className' | 'popoverClassName'>" />
 
-<PropsTable label="MenuItem props" path="../../packages/react/src/menu/MenuItem.tsx" type="Pick<MenuItemProps, 'children' | 'id' | 'icon' | 'description' | 'shortcut' | 'variant' | 'href' | 'isDisabled' | 'onAction' | 'shouldCloseOnSelect' | 'textValue' | 'className'>" />
+<PropsTable label="MenuItem props" path="../../packages/react/src/menu/MenuItem.tsx" type="Pick<MenuItemProps, 'children' | 'id' | 'icon' | 'description' | 'end' | 'shortcut' | 'variant' | 'href' | 'isDisabled' | 'onAction' | 'shouldCloseOnSelect' | 'textValue' | 'className'>" />
 
 <PropsTable label="MenuSection props" path="../../packages/react/src/menu/MenuSection.tsx" type="Pick<MenuSectionProps, 'title' | 'selectionMode' | 'selectedKeys' | 'defaultSelectedKeys' | 'onSelectionChange' | 'shouldCloseOnSelect' | 'className'>" />
 

@@ -42,7 +42,7 @@ export interface PopoverProps extends Omit<RACPopoverProps, 'className' | 'child
 export function Popover({
   isPadded = false,
   matchTriggerWidth = false,
-  placement = 'bottom start',
+  placement,
   className,
   ref,
   ...props
@@ -59,7 +59,8 @@ export function Popover({
     <RACPopover
       {...props}
       ref={popoverRef}
-      placement={placement}
+      // The caller's side, else the one the trigger component asks for, else under the trigger at its start.
+      placement={placement ?? context?.placement ?? 'bottom start'}
       className={composeRenderProps(className, (userClassName) =>
         cx(
           'overlay',

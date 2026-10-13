@@ -42,7 +42,13 @@ export default function MenuBasic(): ReactElement {
             <MenuItem id="share" icon={<Share2 />} description="Anyone with the link can view">
               Share
             </MenuItem>
-            <MenuItem id="export" icon={<Download />} isDisabled>
+            <MenuItem
+              id="export"
+              icon={<Download />}
+              description="On the Team plan"
+              shortcut="Mod E"
+              isDisabled
+            >
               Export
             </MenuItem>
           </MenuSection>

@@ -1904,8 +1904,10 @@ describe('src/components/popover.css', () => {
     expect(blockAfter(css, '.popover {')).not.toMatch(/(?<![\w-])padding/);
   });
 
-  it("makes the trigger's width the minimum with popover-match-trigger", () => {
-    expect(blockAfter(rules(), '.popover-match-trigger {')).toContain('min-width: var(--trigger-width);');
+  it("makes the trigger's width the minimum with popover-match-trigger, up to the viewport less 2rem", () => {
+    expect(blockAfter(rules(), '.popover-match-trigger {')).toContain(
+      'min-width: min(var(--trigger-width), 100vw - 2rem);',
+    );
   });
 
   it('fades in and out over 140ms, sliding 4px from the side of the trigger it opened on', () => {
@@ -1956,8 +1958,11 @@ describe('src/components/menu.css', () => {
     expect(at('menu.css')).toBeGreaterThan(at('popover.css'));
   });
 
-  it('floors the popup at 12rem, or the trigger when it is wider', () => {
-    expect(blockAfter(rules(), '.menu-popover {')).toContain('min-width: max(var(--trigger-width), 12rem);');
+  it('floors the popup at 12rem, or the trigger when it is wider, and never past the viewport less 2rem', () => {
+    // A min-width beats a max-width, so the cap is written into the floor itself.
+    expect(blockAfter(rules(), '.menu-popover {')).toContain(
+      'min-width: min(max(var(--trigger-width), 12rem), 100vw - 2rem);',
+    );
   });
 
   it('pads the list 8px with 4px between rows, and rings no focus on the list React Aria focuses', () => {
@@ -2027,13 +2032,15 @@ describe('src/components/menu.css', () => {
     ).toContain('outline-color: var(--color-canvas);');
   });
 
-  it('fills a single selection in ink and inverts its icon, check, description and key chip to canvas', () => {
+  it('fills a single selection in ink and inverts its icon, check, end, description and key chip to canvas', () => {
     const css = rules();
-    const selected = ".menu-item[data-selection-mode='single'][data-selected]";
+    // A disabled row is never the pill: it keeps the disabled look and shows its choice by the check.
+    const selected = ".menu-item[data-selection-mode='single'][data-selected]:not([data-disabled])";
     const fill = blockAfter(css, `${selected} {`);
     expect(fill).toContain('background-color: var(--color-ink);');
     expect(fill).toContain('color: var(--color-canvas);');
-    expect(blockAfter(css, `${selected} :is(.menu-item-icon, .menu-item-check) {`)).toContain(
+    expect(css).not.toContain(".menu-item[data-selection-mode='single'][data-selected] {");
+    expect(blockAfter(css, `${selected} :is(.menu-item-icon, .menu-item-check, .menu-item-end) {`)).toContain(
       'color: var(--color-canvas);',
     );
     expect(blockAfter(css, `${selected} .menu-item-description {`)).toContain(
@@ -2063,9 +2070,34 @@ describe('src/components/menu.css', () => {
     expect(
       blockAfter(
         css,
-        '.menu-item[data-disabled] :is(.menu-item-icon, .menu-item-shortcut, .menu-item-description) {',
+        '.menu-item[data-disabled] :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end, .menu-item-shortcut) {',
       ),
     ).toContain('color: var(--color-taupe);');
+  });
+
+  it('breaks a long word anywhere in the label and the description, which wrap at 320px inside or outside a popover', () => {
+    const css = rules();
+    expect(blockAfter(css, '.menu-item-label {')).toContain('overflow-wrap: anywhere;');
+    expect(blockAfter(css, '.menu-item-description {')).toContain('overflow-wrap: anywhere;');
+    expect(blockAfter(css, '.menu-item-text {')).toContain('min-width: 0;');
+  });
+
+  it('draws the end value as small ink tabular figures that keep their width, before the key', () => {
+    const end = blockAfter(rules(), '.menu-item-end {');
+    for (const declaration of [
+      'flex: none;',
+      'color: var(--color-ink);',
+      'font-size: var(--text-small);',
+      'font-variant-numeric: tabular-nums;',
+    ]) {
+      expect(end, declaration).toContain(declaration);
+    }
+  });
+
+  it('reads the keys of a chip left to right in either direction, isolated from the row', () => {
+    const chip = blockAfter(rules(), '.menu-item-shortcut {');
+    expect(chip).toContain('direction: ltr;');
+    expect(chip).toContain('unicode-bidi: isolate;');
   });
 
   it('draws a danger label and icon in the error color, focused or not', () => {
@@ -2096,19 +2128,34 @@ describe('src/components/menu.css', () => {
     expect(rule).toContain('background-color: var(--color-divider);');
   });
 
-  it('draws a selected row in Highlight and a disabled one in GrayText in forced colors', () => {
+  it('draws a selected row in Highlight with every part in HighlightText, and a disabled one in GrayText, in forced colors', () => {
     const css = rules();
     const forced = blockAfter(css, FORCED_COLORS);
-    // As specific as the single row's ink fill and after it, so it wins: a fill the repaint drops would leave
-    // the row in the page's own background.
-    const header = '.menu-item[data-selection-mode][data-selected] {';
+    const parts = ':is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end)';
+    const chosen = '.menu-item[data-selection-mode][data-selected]:not([data-disabled])';
+    // As specific as the single row's rules and after them, so they win: a color the repaint turns into
+    // CanvasText, or a fill it turns into the page's own background, would hide the choice.
     expect(css.indexOf(FORCED_COLORS)).toBeGreaterThan(
-      css.indexOf(".menu-item[data-selection-mode='single'][data-selected] {"),
+      css.indexOf(
+        ".menu-item[data-selection-mode='single'][data-selected]:not([data-disabled]) .menu-item-shortcut {",
+      ),
     );
-    const selected = blockAfter(forced, header);
-    expect(selected).toContain('background-color: Highlight;');
-    expect(selected).toContain('color: HighlightText;');
-    expect(blockAfter(forced, '.menu-item[data-disabled] {')).toContain('color: GrayText;');
+    const row = blockAfter(forced, `${chosen} {`);
+    expect(row).toContain('background-color: Highlight;');
+    expect(row).toContain('color: HighlightText;');
+    expect(blockAfter(forced, `${chosen} ${parts} {`)).toContain('color: HighlightText;');
+    expect(blockAfter(forced, `.menu-item ${parts} {`)).toContain('color: CanvasText;');
+    // The key chip is an island that keeps its own pair on any row.
+    const island = blockAfter(forced, `.menu-item-shortcut, ${chosen} .menu-item-shortcut {`);
+    expect(island).toContain('background-color: canvas;');
+    expect(island).toContain('color: CanvasText;');
+    const disabled = blockAfter(
+      forced,
+      '.menu-item[data-disabled], .menu-item[data-disabled] :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end, .menu-item-shortcut) {',
+    );
+    expect(disabled).toContain('color: GrayText;');
+    // GrayText comes after the chip's CanvasText, so a disabled chip is gray too.
+    expect(forced.indexOf('color: GrayText;')).toBeGreaterThan(forced.indexOf('color: CanvasText;'));
   });
 
   it('animates nothing inside a menu', () => {
