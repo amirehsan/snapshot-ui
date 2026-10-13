@@ -4,6 +4,7 @@ import { Pencil, TriangleAlert } from 'lucide-react';
 import { createRef, useId, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { holdFrames } from '../../test/dom';
 import * as library from '../index';
 import { Button } from '../button';
 import { TextField } from '../text-field';
@@ -272,6 +273,10 @@ describe('Dialog', () => {
 
   it('stacks a second dialog over the first: one scrim paints, and Escape closes the top one only', async () => {
     const user = userEvent.setup();
+    // Every frame held back, as on a loaded machine whose next frame comes late. React Aria gives focus back in
+    // a frame, so only the library's own restore, as the top panel leaves, can put it back on the trigger
+    // before the dialog under it finds focus on the body and takes it.
+    holdFrames();
     render(
       <Dialog defaultOpen title="Rename the workspace">
         <DialogTrigger>
@@ -289,9 +294,7 @@ describe('Dialog', () => {
     await user.keyboard('{Escape}');
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
     expect(screen.getByRole('dialog', { name: 'Rename the workspace' })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(inner).toHaveFocus();
-    });
+    expect(inner).toHaveFocus();
     expect(openModals()).toHaveLength(1);
   });
 

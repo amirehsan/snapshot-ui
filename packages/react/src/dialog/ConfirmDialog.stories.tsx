@@ -194,9 +194,11 @@ export const FromADialog: Story = {
     await expect(getComputedStyle(confirmScrim).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     await waitFor(() => expect(body.getByRole('button', { name: 'Cancel' })).toHaveFocus());
     await userEvent.keyboard('{Escape}');
-    await waitFor(() => expect(body.queryByRole('alertdialog')).not.toBeInTheDocument());
+    // Focus is on Delete as soon as the confirm has left the page, not a frame later: the dialog takes focus
+    // from the body 500ms after it opens, and on a slow machine the confirm leaves near that moment.
+    await waitFor(() => expect(document.querySelectorAll('.dialog')).toHaveLength(1));
+    await expect(trigger).toHaveFocus();
     await expect(body.getByRole('dialog', { name: 'Edit the rule' })).toBeInTheDocument();
-    await waitFor(() => expect(trigger).toHaveFocus());
   },
 };
 

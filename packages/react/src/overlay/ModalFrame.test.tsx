@@ -1,8 +1,16 @@
 import { render, screen } from '@testing-library/react';
-import { createRef, useLayoutEffect, useRef, type ReactElement } from 'react';
-import { Dialog as RACDialog, Heading, I18nProvider } from 'react-aria-components';
+import userEvent from '@testing-library/user-event';
+import { createRef, StrictMode, useLayoutEffect, useRef, type ReactElement } from 'react';
+import {
+  Button as RACButton,
+  Dialog as RACDialog,
+  DialogTrigger,
+  Heading,
+  I18nProvider,
+} from 'react-aria-components';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { holdFrames } from '../../test/dom';
 import { isOutsideToastRegion, ModalFrame, type ModalFrameProps } from './ModalFrame';
 import { openModals } from './useOverlayStack';
 
@@ -29,6 +37,21 @@ function Frame({
     <ModalFrame overlayClass="dialog-overlay" panelClass="dialog" {...props}>
       <RACDialog>
         <Heading slot="title">{name}</Heading>
+      </RACDialog>
+    </ModalFrame>
+  );
+}
+
+/** A frame open on the page, with a trigger inside its dialog that opens a second frame over it. */
+function Stacked(): ReactElement {
+  return (
+    <ModalFrame overlayClass="dialog-overlay" panelClass="dialog" defaultOpen>
+      <RACDialog>
+        <Heading slot="title">Rename the workspace</Heading>
+        <DialogTrigger>
+          <RACButton>Discard</RACButton>
+          <Frame name="Discard the new name?" />
+        </DialogTrigger>
       </RACDialog>
     </ModalFrame>
   );
@@ -101,6 +124,41 @@ describe('ModalFrame', () => {
     rerender(<Frame isOpen={false} onUnmount={onUnmount} />);
     expect(document.querySelector('.overlay-scrim')).toBeNull();
     expect(onUnmount).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives focus back to its trigger in a dialog under it as it leaves, so that dialog cannot take it', async () => {
+    const user = userEvent.setup();
+    // Every frame held back, as on a loaded machine whose next frame comes late. React Aria gives focus back
+    // in a frame, and until then focus would rest on the body, where the dialog under it takes it 500ms after
+    // it opened.
+    holdFrames();
+    render(<Stacked />);
+    const trigger = screen.getByRole('button', { name: 'Discard' });
+    await user.click(trigger);
+    expect(screen.getByRole('dialog', { name: 'Discard the new name?' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Discard the new name?' })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(trigger).toHaveFocus();
+  });
+
+  it('gives focus back to that trigger under Strict Mode too, which reads what held focus once as it opens', async () => {
+    // Strict Mode runs the panel's effects again as it mounts, once its dialog has taken focus. Read then,
+    // what held focus would be the dialog, which leaves with the panel.
+    const user = userEvent.setup();
+    holdFrames();
+    render(
+      <StrictMode>
+        <Stacked />
+      </StrictMode>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Discard' });
+    await user.click(trigger);
+    expect(screen.getByRole('dialog', { name: 'Discard the new name?' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Discard the new name?' })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 
   it('copies the theme of the focused trigger onto the panel, and nothing onto the scrim', () => {

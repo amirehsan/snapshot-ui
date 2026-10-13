@@ -5,7 +5,9 @@ import { createRef, useState, type ReactElement } from 'react';
 import type { Key, Selection } from 'react-aria-components';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { holdFrames } from '../../test/dom';
 import { Button } from '../button';
+import { Dialog } from '../dialog';
 import * as library from '../index';
 import { Menu, MenuList, MenuTrigger, type MenuProps } from './Menu';
 import { MenuItem } from './MenuItem';
@@ -649,6 +651,29 @@ describe('Menu', () => {
     await waitFor(() => {
       expect(trigger).toHaveFocus();
     });
+  });
+
+  it('gives focus back to its trigger in a dialog as it leaves, so the dialog cannot take it', async () => {
+    const user = userEvent.setup();
+    // Every frame held back, as on a loaded machine whose next frame comes late. React Aria gives focus back
+    // in a frame, and until then focus would rest on the body, where the dialog takes it 500ms after it
+    // opened.
+    holdFrames();
+    render(
+      <Dialog defaultOpen title="Edit the project">
+        <Account />
+      </Dialog>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Account' });
+    await user.click(trigger);
+    await waitFor(() => {
+      expect(screen.getByRole('menu')).toContainElement(document.activeElement as HTMLElement);
+    });
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(trigger).toHaveFocus();
   });
 
   it('keeps Tab inside the open menu, as React Aria holds focus in its popover', async () => {

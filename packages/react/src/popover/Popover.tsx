@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type ReactElement, type ReactNode, type Ref } from 'react';
+import { useMemo, useRef, type ReactElement, type ReactNode, type Ref } from 'react';
 import {
   Popover as RACPopover,
   PopoverContext,
@@ -10,6 +10,7 @@ import {
   type PopoverProps as RACPopoverProps,
   type PopoverRenderProps,
 } from 'react-aria-components';
+import { useGiveFocusBack } from '../overlay/useGiveFocusBack';
 import { useOverlayScope } from '../overlay/useOverlayScope';
 import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
@@ -38,6 +39,16 @@ export interface PopoverProps extends Omit<RACPopoverProps, 'className' | 'child
 }
 
 /**
+ * Rendered first in the popover's content, so it reads what held focus before the content takes it, and gives
+ * focus back to that as the popover leaves the page after closing, before a dialog under it can take it.
+ */
+function GiveFocusBack({ isOpen }: { isOpen: boolean }): null {
+  const originRef = useRef<Element | null>(null);
+  useGiveFocusBack(originRef, isOpen);
+  return null;
+}
+
+/**
  * The float surface a menu, a listbox or a small panel opens in: the float fill, the frame, the surface
  * corner and the float shadow, 8px from its trigger at its start edge, flipped to the other side and shifted
  * along it when the screen has no room, with no arrow. Outside presses, Escape and blur close it, and focus
@@ -50,6 +61,7 @@ export function Popover({
   matchTriggerWidth = false,
   placement,
   className,
+  children,
   ref,
   ...props
 }: PopoverProps): ReactElement {
@@ -85,6 +97,13 @@ export function Popover({
           userClassName,
         ),
       )}
-    />
+    >
+      {composeRenderProps(children, (content, { isExiting }) => (
+        <>
+          <GiveFocusBack isOpen={!isExiting} />
+          {content}
+        </>
+      ))}
+    </RACPopover>
   );
 }

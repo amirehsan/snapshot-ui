@@ -22,6 +22,7 @@ import {
 } from 'react-aria-components';
 import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
+import { useGiveFocusBack } from './useGiveFocusBack';
 import { useOverlayScope } from './useOverlayScope';
 import { useOverlayStack } from './useOverlayStack';
 
@@ -66,8 +67,9 @@ export function isOutsideToastRegion(element: Element): boolean {
 /**
  * What a modal does while it is on the page, from inside the panel, where React Aria's overlay state is: it
  * records what held focus when the modal opened, as the origin of the scope copy; it joins the overlay stack
- * while the state is open, so only the bottom-most modal paints its scrim; and it calls `onUnmount` when the
- * panel leaves the page. It renders nothing.
+ * while the state is open, so only the bottom-most modal paints its scrim; and when the panel leaves the page
+ * after closing, it gives focus back to the origin if focus fell to the body with it, and calls `onUnmount`.
+ * It renders nothing.
  *
  * Exported for Sheet, a modal on React Aria's Sheet family and not on this frame, which renders it first in
  * its content so it joins the same stack and copies its scope the same way. Internal: not exported from the
@@ -87,12 +89,11 @@ export function FrameEffects({
   // The order is the point. This is the panel's first child, so its mount layout effect runs before anything
   // in the content: a native `autoFocus` there takes focus later in this same layout phase, and the panel's
   // ref attaches, and copies the scope, after both. Read here, focus is still on what opened the modal.
-  useLayoutEffect(() => {
-    originRef.current = document.activeElement;
-  }, [originRef]);
   const isOpen = useContext(OverlayTriggerStateContext)?.isOpen ?? false;
+  useGiveFocusBack(originRef, isOpen);
   useOverlayStack(id, isOpen, scrimRef);
-  // The latest callback, so the one called at unmount is the one the caller passed last.
+  // The latest callback, so the one called at unmount is the one the caller passed last. It runs after focus
+  // has been given back.
   const onUnmountRef = useRef(onUnmount);
   useLayoutEffect(() => {
     onUnmountRef.current = onUnmount;
