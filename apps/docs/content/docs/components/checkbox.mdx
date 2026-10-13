@@ -18,7 +18,7 @@ The label sits beside the box and the whole row is the target, so a press on the
 
 ## States
 
-Checked is an ink fill with a canvas mark, drawn with a mask so it reads in both themes. Indeterminate is a canvas bar. Invalid turns only the edge to the error color, so a checked box that is invalid still reads as checked. A disabled box is recessed with a taupe label, and a read-only box looks like an enabled one and cannot be pressed.
+Checked is an ink fill with a canvas mark, drawn with a mask so it reads in both themes. Indeterminate is a canvas bar. Invalid turns only the edge to the error color, so a checked box that is invalid still reads as checked. A disabled box is recessed with a taupe label, and a read-only box looks like an enabled one and cannot be pressed. A changed checkbox shows a clay chip beside its label and nothing else, and a screen reader reads the chip with it. Invalid outranks changed, so the chip steps aside for the error line, and a checkbox with no visible label shows no chip. Inside a group a checkbox ignores `isChanged`, because the group's own chip covers it.
 
 <Preview name="checkbox-states" />
 
@@ -92,7 +92,7 @@ Every React Aria checkbox prop is accepted. These are the ones Snapshot UI adds 
 
 ### Checkbox
 
-<PropsTable label="Checkbox props" path="../../packages/react/src/checkbox/Checkbox.tsx" type="Pick<CheckboxProps, 'children' | 'description' | 'errorMessage' | 'value' | 'name' | 'isSelected' | 'defaultSelected' | 'onChange' | 'isIndeterminate' | 'isDisabled' | 'isReadOnly' | 'isRequired' | 'isInvalid' | 'validate'>" />
+<PropsTable label="Checkbox props" path="../../packages/react/src/checkbox/Checkbox.tsx" type="Pick<CheckboxProps, 'children' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'value' | 'name' | 'isSelected' | 'defaultSelected' | 'onChange' | 'isIndeterminate' | 'isDisabled' | 'isReadOnly' | 'isRequired' | 'isInvalid' | 'validate'>" />
 
 ### CheckboxGroup
 

@@ -1,8 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { Link } from '../link/Link';
-import { paint, tokenColor } from '../stories/paint';
+import { firstLineOffset, lineCount, paint, tokenColor } from '../stories/paint';
 import { Checkbox } from './Checkbox';
+
+/** The row, the label's text box and the Changed chip of the checkbox whose field root is `field`. */
+function parts(field: Element): { row: Element; box: Element; text: Element; chip: Element } {
+  const row = field.querySelector('.checkbox');
+  const box = field.querySelector('.checkbox-box');
+  const text = field.querySelector('.checkbox-text');
+  const chip = field.querySelector('.field-changed');
+  if (!row || !box || !text || !chip) throw new Error('No row, box, label or chip drawn');
+  return { row, box, text, chip };
+}
 
 const meta = {
   title: 'Components/Checkbox',
@@ -107,6 +117,26 @@ export const InvalidAndChecked: Story = {
   },
 };
 
+/**
+ * `isChanged` shows the clay chip beside the label, level with its first line, and has a screen reader read
+ * it with the checkbox. The box keeps its edge, and the row is as tall as it was: the chip is the whole cue.
+ */
+export const Changed: Story = {
+  args: { isChanged: true, description: 'Off hides the copy under each service card.' },
+  play: async ({ canvas, canvasElement }) => {
+    const input = canvas.getByRole('checkbox', { name: 'Remember me on this device' });
+    await expect(canvas.getByText('Changed')).toBeVisible();
+    await expect(input).toHaveAccessibleDescription('Off hides the copy under each service card. Changed');
+    const { row, box, text, chip } = parts(canvasElement);
+    await expect(getComputedStyle(chip).color).toBe(tokenColor('--color-clay'));
+    await expect(getComputedStyle(box).borderTopColor).toBe(tokenColor('--color-boundary'));
+    // One line of text leaves the row at its 40px, with the chip beside it, level with the line.
+    await expect(row.getBoundingClientRect().height).toBeCloseTo(40, 1);
+    await expect(Math.abs(firstLineOffset(chip, text))).toBeLessThanOrEqual(1);
+    await expect(Math.abs(firstLineOffset(box, text))).toBeLessThanOrEqual(1);
+  },
+};
+
 /** The disabled fill, a taupe label and a faint edge, with the not-allowed cursor. */
 export const Disabled: Story = {
   args: { isDisabled: true, description: 'Managed by your workspace admin.' },
@@ -155,6 +185,58 @@ export const LongLabel: Story = {
     children:
       'Send me a weekly summary of every change my team made to the site, including the ones I made myself',
     description: 'You can switch this off at any time from the notification settings.',
+  },
+};
+
+/**
+ * A long label wraps beside the box and a chip that does not fit drops under it, with no sideways scroll at
+ * 375px. The box stays level with the first line. A label with a line break is short enough to leave the chip
+ * beside it, and the chip is level with the first line too. A long `changedLabel` wraps inside the field.
+ */
+export const LongLabelChanged: Story = {
+  args: {
+    children:
+      'Send me a weekly summary of every change my team made to the site, including the ones I made myself',
+    description: 'You can switch this off at any time from the notification settings.',
+    isChanged: true,
+  },
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <Checkbox {...args} />
+      <Checkbox {...args} description={undefined}>
+        Weekly summary
+        <br />
+        on Tuesday mornings
+      </Checkbox>
+      <Checkbox
+        {...args}
+        description={undefined}
+        changedLabel="Not saved yet, so this applies only after you press Save at the bottom of the page"
+      >
+        Weekly summary
+      </Checkbox>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const [long, broken, wordy] = [...canvasElement.querySelectorAll('.checkbox-field')];
+    if (!long || !broken || !wordy) throw new Error('Three checkboxes expected');
+    for (const field of [long, broken]) {
+      const { box, text } = parts(field);
+      await expect(lineCount(text)).toBeGreaterThan(1);
+      await expect(Math.abs(firstLineOffset(box, text))).toBeLessThanOrEqual(1);
+    }
+    // The long label fills its row, so the chip drops under it.
+    await expect(parts(long).chip.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      parts(long).row.getBoundingClientRect().bottom,
+    );
+    // The short one leaves room, so the chip is beside the row, level with the first line.
+    const { row, text, chip } = parts(broken);
+    await expect(chip.getBoundingClientRect().top).toBeLessThan(row.getBoundingClientRect().bottom);
+    await expect(Math.abs(firstLineOffset(chip, text))).toBeLessThanOrEqual(1);
+    // A chip text too long to sit beside its label wraps inside the field.
+    const wide = parts(wordy).chip.getBoundingClientRect();
+    await expect(wide.right).toBeLessThanOrEqual(wordy.getBoundingClientRect().right + 0.5);
+    await expect(wide.height).toBeGreaterThan(parseFloat(getComputedStyle(parts(wordy).chip).lineHeight));
   },
 };
 
