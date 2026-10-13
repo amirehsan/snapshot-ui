@@ -9,6 +9,7 @@ import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
+import { Popover } from '../src/popover';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Sheet, SheetTrigger } from '../src/sheet';
@@ -183,6 +184,15 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </SheetTrigger>,
     ['<button', '>More<'],
     ['sheet-content'],
+  ],
+  [
+    'Popover, closed',
+    <DialogTrigger>
+      <Button>Filter</Button>
+      <Popover isPadded>Panel</Popover>
+    </DialogTrigger>,
+    ['<button', '>Filter<'],
+    ['popover'],
   ],
 ];
 

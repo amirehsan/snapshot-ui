@@ -335,6 +335,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   drawer: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   'icon-button': 'a glyph and no text: its name is an aria-label that nothing draws',
+  popover: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   sheet: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   spinner: 'a progress mark with no text a person writes',
 };
@@ -425,6 +426,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'icon-button': ['.stage .icon-button'],
   kbd: ['.stage .kbd'],
   link: ['.stage .link'],
+  popover: ['.stage .button'],
   'radio-group': ['.stage .radio-indicator'],
   'segmented-control': ['.stage .segmented-option'],
   sheet: ['.stage .button'],

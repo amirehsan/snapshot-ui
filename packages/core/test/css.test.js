@@ -1825,6 +1825,88 @@ describe('src/components/sheet.css', () => {
   });
 });
 
+describe('src/components/popover.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.popover {` is the start of no longer
+  // header, so the first match is the base rule, and the later ones sit inside the two media blocks.
+  const rules = () => closeUp(stripComments(read('src/components/popover.css')));
+
+  it('is imported after sheet.css', () => {
+    const entry = read('src/styles.css');
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('sheet.css')).toBeGreaterThanOrEqual(0);
+    expect(at('popover.css')).toBeGreaterThan(at('sheet.css'));
+  });
+
+  it('caps the width at the viewport less 2rem and scrolls inside the height React Aria leaves it', () => {
+    const popover = blockAfter(rules(), '.popover {');
+    for (const declaration of [
+      'box-sizing: border-box;',
+      'max-width: calc(100vw - 2rem);',
+      'max-height: inherit;',
+      'overflow: auto;',
+    ]) {
+      expect(popover, declaration).toContain(declaration);
+    }
+  });
+
+  it('draws the float surface, the frame in both themes, and rings no focus on the container React Aria focuses', () => {
+    const popover = blockAfter(rules(), '.popover {');
+    for (const declaration of [
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+      'outline: none;',
+    ]) {
+      expect(popover, declaration).toContain(declaration);
+    }
+  });
+
+  it('pads free content 24px, and only with popover-padded', () => {
+    const css = rules();
+    expect(blockAfter(css, '.popover-padded {')).toContain('padding: var(--spacing-peer);');
+    expect(blockAfter(css, '.popover {')).not.toMatch(/(?<![\w-])padding/);
+  });
+
+  it("makes the trigger's width the minimum with popover-match-trigger", () => {
+    expect(blockAfter(rules(), '.popover-match-trigger {')).toContain('min-width: var(--trigger-width);');
+  });
+
+  it('fades in and out over 140ms, sliding 4px from the side of the trigger it opened on', () => {
+    const css = rules();
+    expect(blockAfter(css, '.popover {')).toContain(
+      'transition: opacity 140ms ease-out, translate 140ms ease-out;',
+    );
+    expect(blockAfter(css, '.popover:is([data-entering], [data-exiting]) {')).toContain('opacity: 0;');
+    for (const [placement, translate] of [
+      ['bottom', '0 -4px'],
+      ['top', '0 4px'],
+      ['right', '-4px 0'],
+      ['left', '4px 0'],
+    ]) {
+      expect(
+        blockAfter(css, `.popover[data-placement='${placement}']:is([data-entering], [data-exiting]) {`),
+        placement,
+      ).toContain(`translate: ${translate};`);
+    }
+  });
+
+  it('redraws the frame in CanvasText in forced colors, so the surface keeps its shape', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(forced, '.popover {')).toContain('border-color: CanvasText;');
+  });
+
+  it('stops the motion under reduced motion, after it', () => {
+    const css = rules();
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    expect(blockAfter(blockAfter(css, reduced), '.popover {')).toContain('transition: none;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: opacity 140ms ease-out'));
+    expect(css.indexOf(reduced)).toBeGreaterThan(
+      css.indexOf(".popover[data-placement='left']:is([data-entering], [data-exiting]) {"),
+    );
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

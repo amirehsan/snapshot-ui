@@ -3604,3 +3604,86 @@ no `ResizeObserver` takes the stub away for its own run.
 on-screen keyboard; `snapPoints` under a finger and outside Chromium; an
 `autoFocus` child, which takes focus before React Aria's deferred focus; and a
 touch swipe in any engine but Chromium. The docs page says the same.
+
+## Popover
+
+The app's popups, the account menu and the three field popups, become one
+surface, `Popover`: the float fill, 24px corners, a 1px edge of ink at 12% in
+both themes, the float shadow, 8px from the trigger, and no arrow. The rows,
+the 8px list padding and the 4px gap between rows belong to the list inside,
+so Menu records them; the popover is the chrome they open in, and it also
+holds free content of its own, such as the filter panel of a chip over a list.
+It is React Aria's `Popover`, which places it, flips it, caps its height and
+writes its direction, so the stylesheet draws the surface and its motion and
+nothing else. "Overlays" derives the shared parts: the `overlay` class, the
+scope copy, the surfaces table and the layers.
+
+**The frame in both themes.** A modal sits over a dimmed page and separates by
+tone, so it takes the hairline, which is nothing in light. A popover dims
+nothing and opens over any surface, another float included, such as a menu
+opened from the navigation rail: in light that is white on white, and the
+shadow alone does not close the shape. So it takes `--color-frame`, ink at 12%
+in light and white at 12% in dark, as "Two surfaces the theme switch needed"
+already says for the menu popup. The frame is a cue and not a boundary, as a
+nested card's outline is: nothing depends on seeing it, and the shadow and the
+fill carry the surface. In forced colors it is redrawn in `CanvasText`, so the
+surface keeps its shape.
+
+**The corner and the shadow.** `--radius-surface`, the 24px step of a card, a
+list and a field frame, 12px in Soft and 0 in Square, and one step under a
+dialog's 40px, so a popover opened from a dialog sits inside it on the
+nested-radii ladder. The shadow is `--shadow-float`, elevation level 2, the
+floats' level: a popover is above the page and below every modal.
+
+**Placement.** `bottom start`, 8px from the trigger, which is React Aria's
+default `offset` and the app's gap; the popover leaves `offset` to React Aria,
+so a trigger that sets its own, such as a context menu at 0, keeps it. Where
+the side it asked for has no room, React Aria flips it to the other side, and
+it shifts along the trigger to stay inside its 12px `containerPadding`, its
+default, so it never runs off the screen. `data-placement` says the side it
+landed on, and the motion keys on it. React Aria writes the popover's height
+cap inline, the room left on that side, and the popover scrolls inside it
+(`max-height: inherit; overflow: auto`). Its width caps at the viewport less
+2rem, the overlay inset on both sides, so at 320px a popover is at most 288px
+wide whatever it holds. In right to left `start` and `end` resolve through
+React Aria, which also writes `dir` on the popover, so nothing here is
+physical.
+
+**Padding is opt-in.** A list pads itself 8px (`--spacing-part`), and a menu's
+rows sit in that padding, so the popover pads nothing by default. Free content
+takes `isPadded`, 24px (`--spacing-peer`), the gap between peers, as a drawer's
+and a sheet's body do. `matchTriggerWidth` sets `min-width` to the
+`--trigger-width` React Aria writes, so a panel under a wide trigger never sits
+narrower than it; content wider than the trigger still widens it.
+
+**Motion.** Opacity and a 4px slide toward the trigger, 140ms ease-out, on
+React Aria's `[data-entering]` and `[data-exiting]`: a popover under its
+trigger drops in from 4px higher, one above it rises from 4px lower, and one to
+the right or left slides in from 4px nearer the trigger. These are the values
+the motion table in "Overlays" sets for a popover and a menu, shorter and
+quicker than a dialog's 8px rise in 180ms. Reduced motion turns the transition
+off, in a block after the rules it overrides, and the popover is simply there.
+
+**No arrow.** The app's popups have none: the 8px gap and the shadow tie the
+surface to its trigger, and an arrow would be one more shape to keep on the
+frame, the corner and the flip.
+
+**Focus and dismissal.** Opened from a `DialogTrigger`, React Aria makes the
+popover a dialog named by its trigger, focuses it, and holds Tab inside it, as
+a modal dialog does: the page behind is hidden from assistive technology and
+does not scroll, though nothing dims it. The container takes `outline: none`,
+as "Overlays" says for the containers React Aria focuses. Escape, a press
+outside it and blur close it, and focus goes back to the trigger. A menu, a
+select or a combo box brings its own trigger, which hands the popover its
+state and its trigger, and moves focus into its list instead.
+
+**Scope from the trigger.** The popover copies its theme, shape and density
+from the trigger React Aria hands it through `PopoverContext`, or from the
+`triggerRef` it is given, and not from what holds focus: a popover opened by
+its default or by the app's own state was opened by no press, so focus can be
+anywhere. It sits at the inline z-index of 100000 React Aria writes, above the
+modal layer, as "Token names" sets out.
+
+**Nothing new is measured.** The surface is Float, and what it holds is ink
+and slate on Float, pairs the contrast gate already holds. The frame is a cue
+that the gate does not hold, by the reasoning above.
