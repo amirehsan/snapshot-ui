@@ -2,6 +2,7 @@
 import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { AppShell } from '../src/app-shell';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { CollapsibleCard } from '../src/collapsible-card';
@@ -247,6 +248,38 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </TooltipTrigger>,
     ['<button', 'aria-label="Search"'],
     ['role="tooltip"'],
+  ],
+  [
+    // The collapsed width is painted from the prop, so the attribute is in the server's HTML; the drawer state's
+    // listeners are effects, which a server render never runs.
+    'AppShell, collapsed',
+    <AppShell
+      defaultSidebarCollapsed
+      sidebar={<div>rail</div>}
+      header={<div>head</div>}
+      bottomBar={<div>bar</div>}
+    >
+      page
+    </AppShell>,
+    [
+      'class="app-shell"',
+      'data-sidebar="collapsed"',
+      'data-has-sidebar',
+      'data-has-bottom-bar',
+      'class="app-shell-skip"',
+      '<main',
+      'tabindex="-1"',
+      'class="app-shell-header"',
+    ],
+  ],
+  [
+    // Expanded writes no attribute at all, never "expanded", so one set higher up is not reset.
+    'AppShell, expanded',
+    <AppShell sidebar={<div>rail</div>} header={<div>head</div>} bottomBar={<div>bar</div>}>
+      page
+    </AppShell>,
+    ['class="app-shell"', 'data-has-sidebar', 'data-has-bottom-bar', '<main'],
+    ['data-sidebar'],
   ],
 ];
 

@@ -140,6 +140,19 @@ describe('src/styles.css', () => {
       if (components.includes(file)) expect(at(file), file).toBeGreaterThan(overlay);
     }
   });
+
+  it('imports the shell files after the last overlay file, in order', () => {
+    // app-shell.css is required; the sidebar and the tab bar are checked once they exist.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('tooltip.css')).toBeGreaterThanOrEqual(0);
+    expect(at('app-shell.css')).toBeGreaterThan(at('tooltip.css'));
+    let previous = at('app-shell.css');
+    for (const file of ['sidebar.css', 'tab-bar.css']) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -172,6 +185,16 @@ describe.each(components)('src/components/%s', (file) => {
     const values = valuesOutsideForcedColors(source);
     expect(values.length).toBeGreaterThan(0);
     for (const value of values) expect(value).not.toMatch(SYSTEM_COLOR);
+  });
+
+  it('writes z-index only through a z token', () => {
+    // A var(--z-*), a calc() on one, or auto, which writes no number: the sheet scrim resets its layer with it.
+    const values = [...stripComments(source).matchAll(/(?<![\w-])z-index\s*:\s*([^;{}]+)/g)].map((match) =>
+      match[1].trim(),
+    );
+    for (const value of values) {
+      expect(value).toMatch(/^(?:auto|var\(--z-[\w-]+\)|calc\(.*var\(--z-[\w-]+\).*\))$/);
+    }
   });
 });
 
@@ -2579,11 +2602,14 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is imported last, after command-palette.css', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
-    expect(imported.at(-2)).toBe('command-palette.css');
-    expect(imported.at(-1)).toBe('tooltip.css');
+    const tooltip = imported.indexOf('tooltip.css');
+    expect(imported[tooltip - 1]).toBe('command-palette.css');
+    for (const file of imported.slice(tooltip + 1)) {
+      expect(['app-shell.css', 'sidebar.css', 'tab-bar.css']).toContain(file);
+    }
   });
 
   it('draws the ink tip with canvas text, a transparent 1px border, the micro corner and the float shadow', () => {
@@ -2695,6 +2721,95 @@ describe('src/components/tooltip.css', () => {
     expect(css.indexOf(reduced)).toBeGreaterThan(
       css.indexOf(".tooltip[data-placement='right']:is([data-entering], [data-exiting]) {"),
     );
+  });
+});
+
+describe('src/components/app-shell.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.app-shell {` and
+  // `.app-shell[data-has-sidebar] {` first match the base rules, before the narrow block repeats the second.
+  const rules = () => closeUp(stripComments(read('src/components/app-shell.css')));
+  const NARROW = '@media (width < 1024px)';
+
+  it('declares the offset and the reserve at 0px, and offsets by the rail token while there is a sidebar', () => {
+    const css = rules();
+    const shell = blockAfter(css, '.app-shell {');
+    expect(shell).toContain('--app-shell-sidebar: 0px;');
+    expect(shell).toContain('--app-shell-inset-block-end: 0px;');
+    expect(blockAfter(css, '.app-shell[data-has-sidebar] {')).toContain(
+      '--app-shell-sidebar: var(--container-sidebar);',
+    );
+  });
+
+  it('reads both in the workspace, which moves its margin, and keeps the header sticky at the header layer', () => {
+    const css = rules();
+    const workspace = blockAfter(css, '.app-shell-workspace {');
+    for (const declaration of [
+      'min-height: 100dvh;',
+      'margin-inline-start: var(--app-shell-sidebar);',
+      'padding-block-end: var(--app-shell-inset-block-end);',
+      'transition: margin-inline-start 200ms ease;',
+    ]) {
+      expect(workspace, declaration).toContain(declaration);
+    }
+    const header = blockAfter(css, '.app-shell-header {');
+    for (const declaration of ['position: sticky;', 'inset-block-start: 0;', 'z-index: var(--z-header);']) {
+      expect(header, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.app-shell-main {')).toContain('outline: none;');
+  });
+
+  it('hides the skip link with the clip pattern, and draws it focused as an ink pill above the chrome', () => {
+    const css = rules();
+    const resting = blockAfter(css, '.app-shell-skip {');
+    for (const declaration of [
+      'position: absolute;',
+      'width: 1px;',
+      'height: 1px;',
+      'margin: -1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+      'white-space: nowrap;',
+    ]) {
+      expect(resting, declaration).toContain(declaration);
+    }
+    const focused = blockAfter(css, '.app-shell-skip:focus {');
+    for (const declaration of [
+      'position: fixed;',
+      'inset-block-start: var(--spacing-inset);',
+      'inset-inline-start: var(--spacing-inset);',
+      'z-index: calc(var(--z-chrome) + 1);',
+      'min-height: var(--size-target);',
+      'padding-inline: 1.25rem;',
+      'clip-path: none;',
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-ink);',
+      'color: var(--color-canvas);',
+      'font-size: var(--text-action);',
+      'outline: var(--focus-ring-width) solid var(--color-canvas);',
+      'outline-offset: -4px;',
+    ]) {
+      expect(focused, declaration).toContain(declaration);
+    }
+  });
+
+  it('drops the offset and reserves the tab bar under 1024px, the medium breakpoint written out', async () => {
+    const css = rules();
+    const narrow = blockAfter(css, NARROW);
+    expect(blockAfter(narrow, '.app-shell[data-has-sidebar] {')).toContain('--app-shell-sidebar: 0px;');
+    expect(blockAfter(narrow, '.app-shell[data-has-bottom-bar] {')).toContain(
+      '--app-shell-inset-block-end: calc(4rem + env(safe-area-inset-bottom, 0px));',
+    );
+    // A media query cannot read a custom property, so the width is written out and must stay the token.
+    const { tokens } = await import('../dist/tokens.js');
+    const written = /@media \(width < (\d+px)\)/.exec(css)?.[1];
+    expect(written).toBe(tokens.breakpoint.md.value);
+  });
+
+  it('stops the margin moving under reduced motion, after the transition', () => {
+    const css = rules();
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    expect(blockAfter(blockAfter(css, reduced), '.app-shell-workspace {')).toContain('transition: none;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: margin-inline-start 200ms ease;'));
   });
 });
 

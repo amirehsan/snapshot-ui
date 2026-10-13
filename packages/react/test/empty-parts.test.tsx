@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
+import { AppShell } from '../src/app-shell';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { Dialog } from '../src/dialog';
@@ -174,4 +175,19 @@ describe("a toast's description of false, null or an empty string", () => {
       });
     },
   );
+});
+
+describe('an empty shell slot', () => {
+  it('draws no header wrapper and marks no sidebar or bottom bar for false, an empty string or null', () => {
+    const { container } = render(
+      <AppShell header={false} sidebar="" bottomBar={null}>
+        page
+      </AppShell>,
+    );
+    const shell = container.querySelector('.app-shell');
+    expect(shell).not.toBeNull();
+    expect(container.querySelector('.app-shell-header')).toBeNull();
+    expect(shell).not.toHaveAttribute('data-has-sidebar');
+    expect(shell).not.toHaveAttribute('data-has-bottom-bar');
+  });
 });
