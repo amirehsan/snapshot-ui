@@ -374,6 +374,31 @@ test.describe('the theming page without JavaScript', () => {
   });
 });
 
+test('the routing page is in the rail after Theming, has no axe violations and fits 320px', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page, '/docs/routing');
+  const titles = await page
+    .locator('#rail .rail-link')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('data-label')));
+  const theming = titles.indexOf('Theming');
+  expect(theming).toBeGreaterThan(-1);
+  expect(titles[theming + 1]).toBe('Routing');
+  await expect(page.locator('pre', { hasText: 'RouterProvider' }).first()).toBeVisible();
+  expect(await axeViolations(page)).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await visit(page, '/docs/routing');
+  expect(await sideways(page)).toBe(0);
+  // One home: the pages that had their own copy now link here and hold no provider snippet in their text. An
+  // example's Code tab is the example's own source, and the menu's link example routes through a provider.
+  for (const slug of ['link', 'menu']) {
+    await visit(page, `/docs/components/${slug}`);
+    await expect(page.locator('main a[href="/docs/routing"]').first(), slug).toBeAttached();
+    await expect(page.locator('pre:not(.preview pre)', { hasText: 'RouterProvider' }), slug).toHaveCount(0);
+  }
+});
+
 test('a docs card pads 20px on a phone through --spacing-card', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await visit(page, '/docs/theming');
