@@ -77,7 +77,7 @@ Take `RouterProvider` and `I18nProvider` from `@snapshot-ui/react`, which re-exp
 
 ## Right to left
 
-Every part reads its direction from the locale, through React Aria. A `dir` on a page section lays out what is inside it, but a dialog, a menu or a toast opened from there is portaled to the end of the body and never sees that `dir`. So wrap a right-to-left region, such as a guide in Persian, in `I18nProvider` with the region's locale, beside its `dir` and `lang`:
+Every part reads its direction from the locale, through React Aria. A `dir` on a page section lays out what is inside it, but a dialog, a menu, a popover or a tooltip opened from there is portaled to the end of the body and never sees that `dir`. So wrap a right-to-left region, such as a guide in Persian, in `I18nProvider` with the region's locale, beside its `dir` and `lang`:
 
 ```tsx
 import { I18nProvider } from '@snapshot-ui/react';
@@ -93,7 +93,7 @@ export function PersianGuide({ children }) {
 }
 ```
 
-A whole app in one right-to-left language wraps its root the same way.
+A whole app in one right-to-left language wraps its root the same way. A toast follows the locale where `ToastRegion` is mounted, not the region it was raised from, so an app with a right-to-left section mounts its `ToastRegion` inside the same `I18nProvider` if it wants right-to-left toasts.
 
 </Section>
 

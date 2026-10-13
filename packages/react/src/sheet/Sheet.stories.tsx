@@ -322,14 +322,19 @@ export const ScrimInAnyOrder: Story = {
     </div>
   ),
   play: async ({ canvas, userEvent }) => {
-    const late = document.createElement('style');
-    // First, a one-class variant of the kind the backdrop once had, so the probe below can show the late rule
-    // beats it.
-    late.textContent = `@layer components {
+    // First, in a style of its own, a one-class variant of the kind the backdrop once had. It outranks the shared
+    // rule in overlay.css, and only the late rule below outranks it, so the probe reads these values unless the
+    // late rule is in force.
+    const variant = document.createElement('style');
+    variant.textContent = `@layer components {
       .scrim-probe {
         z-index: auto;
         transition: none;
       }
+    }`;
+    document.head.append(variant);
+    const late = document.createElement('style');
+    late.textContent = `@layer components {
       .overlay-scrim {
         z-index: var(--z-modal);
         height: var(--visual-viewport-height, 100dvh);
@@ -337,8 +342,10 @@ export const ScrimInAnyOrder: Story = {
       }
     }`;
     document.head.append(late);
-    // A scrim with that one-class variant loses to the late rule, which shows the rule is in force, so the
-    // checks below prove the backdrop's variant outranks it and not that it never applied.
+    // The positive control: a scrim with that one-class variant loses to the late rule, so it reads the late
+    // values only if the late rule is in force. It fails if the late style is never applied or lands in an
+    // earlier layer, and the checks below then prove the backdrop's variant outranks the rule, not that it never
+    // applied.
     const probe = document.createElement('div');
     probe.className = 'overlay-scrim scrim-probe';
     document.body.append(probe);
@@ -361,6 +368,7 @@ export const ScrimInAnyOrder: Story = {
     } finally {
       probe.remove();
       late.remove();
+      variant.remove();
     }
   },
 };
