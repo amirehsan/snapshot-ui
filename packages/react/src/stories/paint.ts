@@ -34,3 +34,26 @@ export function washColor(scope: Element = document.body): string {
 export function tokenPixels(name: string): number {
   return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
 }
+
+/** The y of the middle of an element's box. */
+export function middleOf(element: Element): number {
+  const { top, height } = element.getBoundingClientRect();
+  return top + height / 2;
+}
+
+/** How many lines of text `text` draws, from its height and its line height. It must have no padding. */
+export function lineCount(text: Element): number {
+  return Math.round(text.getBoundingClientRect().height / parseFloat(getComputedStyle(text).lineHeight));
+}
+
+/**
+ * The px from the middle of the first line of `text` to the middle of `control`, positive when the control
+ * is lower. The first line box starts at the top of the text's content box and is one line height tall,
+ * which is what the stylesheet aligns to and does not depend on the font that draws the glyphs.
+ */
+export function firstLineOffset(control: Element, text: Element): number {
+  const style = getComputedStyle(text);
+  const top =
+    text.getBoundingClientRect().top + parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop);
+  return middleOf(control) - (top + parseFloat(style.lineHeight) / 2);
+}

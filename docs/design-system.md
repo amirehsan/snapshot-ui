@@ -1779,6 +1779,17 @@ and the ink pill are the account menu's, and the dot is the plain choice's.
   the boundary color. It is the plain choice's box with the document's 50%
   boundary where the app used 45%. It stays round in every corner shape, because
   a square radio would read as a checkbox.
+- **The dot sits level with the first line of a label that wraps.** The row
+  centred its items, so a label of three lines put the dot beside the middle of
+  the second, away from the words a reader starts with. A row with text now
+  starts its items at the top, and the dot takes a margin of half of what the
+  22.4px line has over its 20px, 1.2px, as a checkbox's box does. For a label of
+  one line that is where centring put it, so every one-line row keeps its
+  place. A row with no text has no first line, and keeps the dot centred in its
+  40px. The test for text is the `radio-text` box the component draws around
+  the words, so a hand-written row with bare text beside the library's dot is
+  drawn as before, centred. Left to right and right to left read alike, since
+  the margin is on the block axis.
 - **The chosen row is the ink pill, and its ring holds the check.** Ink fill,
   canvas label, and the dot's ring and check drawn in canvas. The account menu
   put its check at the end of the row; the library puts it in the dot, so one
@@ -1934,8 +1945,8 @@ in the recessed fill. The fill, the thumb and its position all say which, so no
 one cue carries it. A disabled control is outside the 3:1 asked of an active
 one: the taupe thumb on the recessed track measures 1.44 in light and 3.81 in
 dark, and the filled track against its surface 1.40 to 1.58 in light and 3.68
-to 3.81 in dark. The label stays ink, as a disabled field's label does, so the
-setting can still be read.
+to 3.81 in dark. The label is taupe too, as the paragraph on the disabled label
+below records.
 
 **Changed is a ring around the track and the chip beside the label.** The app's
 switch draws a changed cue of its own, a 2px ring in light signal orange
@@ -1963,6 +1974,28 @@ library leaves `isRequired`, `isInvalid` and `validate` out of the props.
 **Drawn 30px, hit 40px.** The row extends its hit area with a pseudo-element, 5px
 above and below, so the touch rule holds with no layout shift. The app's switch
 was 30px with nothing extended.
+
+**A disabled label is taupe, and the track and the chip sit level with the first line.**
+The label stayed ink on a disabled switch, while the checkbox and the radio draw
+theirs taupe, the document's color for disabled text, so the switch now follows
+them (`GrayText` in forced colors, as theirs is). Taupe on the five surfaces
+measures 1.40 to 1.58 in light and 3.68 to 3.81 in dark. That is under the 4.5:1
+asked of text, and WCAG 1.4.3 exempts the text of a disabled control, so the
+pairs are recorded and not gated, as the checkbox's and the radio's are. The
+row also centred its items, which put the track beside the middle of a label that
+wraps. It now starts them at the top, so the track is level with the first line.
+The track (30px) is taller than the 22.4px line, so the row pads the text down
+by half the difference, 3.8px, at the top and the bottom, and the track takes
+that half back as a negative margin on both sides. A row of one line is still
+30px tall with its text where it was, and its hit area still reaches 5px past it,
+to 40px. A longer label runs on below the track with the 3.8px under its last
+line that one line has, and the margins are even so a layout that sets the row
+to `display: contents`, as the docs' settings rows do, still centres the track.
+The Changed chip follows the track: its head starts its items at the top too,
+and the chip takes a margin of half of what the track has over its own 14px
+line, 8px, so it is level with the first line and, for a row of one line,
+exactly where centring put it. A chip that does not fit beside the row drops
+under it, as before, with the same 8px above it.
 
 **Hover draws nothing, as in the app.** The thumb moving is the feedback, and the
 pointer cursor marks the row as pressable. A read-only switch looks like an

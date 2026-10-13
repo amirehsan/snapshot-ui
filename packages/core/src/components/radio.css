@@ -98,6 +98,17 @@
     background-color: var(--radio-dot);
   }
 
+  /* The row centres its items, which puts the dot beside the middle of a label that
+     wraps. With text in the row the dot starts at the top instead, and its margin is
+     half of what the first line has over it (the dot is 20px), so it sits level with
+     the first line, the words a reader starts with. For a label of one line that is
+     where centring put it, so nothing moves. A row with no text has no first line and
+     keeps the dot centred. */
+  .radio:has(.radio-text) > .radio-indicator {
+    align-self: flex-start;
+    margin-block-start: calc((1lh - 20px) / 2);
+  }
+
   /* The check, drawn as a mask over a token color: a fixed stroke in an image
      could not follow the theme, and the source's was invisible in dark. It is
      transparent until the row is selected. */
