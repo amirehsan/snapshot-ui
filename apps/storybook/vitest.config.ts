@@ -13,6 +13,7 @@ export default defineConfig({
         plugins: [storybookTest({ configDir })],
         test: {
           name: 'storybook',
+          setupFiles: ['./.storybook/vitest.setup.ts'],
           browser: {
             enabled: true,
             headless: true,
@@ -27,6 +28,7 @@ export default defineConfig({
         plugins: [storybookTest({ configDir, initialGlobals: { theme: 'dark' } })],
         test: {
           name: 'storybook-dark',
+          setupFiles: ['./.storybook/vitest.setup.ts'],
           browser: {
             enabled: true,
             headless: true,
