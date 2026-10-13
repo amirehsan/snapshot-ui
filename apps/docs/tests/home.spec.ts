@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   axeViolations,
+  CHART_PAGES,
   COMPONENT_PAGES,
   cornersSettled,
   hitSize,
@@ -260,7 +261,7 @@ test('the homepage switches are real switches: named, described, on or off as dr
   for (const sample of await samples.all()) await expect(sample).toBeChecked();
 });
 
-test('the footer lists every component page in the rail order, and a catalog chip with a page links to it', async ({
+test('the footer lists every component and chart page in the rail order, and a catalog chip with a page links to it', async ({
   page,
 }) => {
   await visit(page);
@@ -272,20 +273,18 @@ test('the footer lists every component page in the rail order, and a catalog chi
     .evaluateAll((links) =>
       links.map((link) => ({ href: link.getAttribute('href'), name: link.textContent })),
     );
-  expect(listed).toEqual(
-    COMPONENT_PAGES.map(({ slug, title }) => ({ href: `/docs/components/${slug}`, name: title })),
-  );
+  const pages = [...COMPONENT_PAGES, ...CHART_PAGES];
+  expect(listed).toEqual(pages.map(({ url, title }) => ({ href: url, name: title })));
 
   // A chip is a link when the catalog's component has a page, and plain text while it does not.
-  const slugs = new Map(COMPONENT_PAGES.map(({ slug, title }) => [title.toLowerCase(), slug]));
+  const urls = new Map(pages.map(({ url, title }) => [title.toLowerCase(), url]));
   const chips = await page
     .locator('.catalog .chip')
     .evaluateAll((elements) =>
       elements.map((element) => ({ name: element.textContent.trim(), href: element.getAttribute('href') })),
     );
   for (const chip of chips) {
-    const slug = slugs.get(chip.name.toLowerCase());
-    expect(chip.href, chip.name).toBe(slug ? `/docs/components/${slug}` : null);
+    expect(chip.href, chip.name).toBe(urls.get(chip.name.toLowerCase()) ?? null);
   }
   // Button, Icon button, the six form controls, Stat tile, Dialog, Drawer, Menu, Toast, Command palette, Tooltip
   // and Sidebar have pages.

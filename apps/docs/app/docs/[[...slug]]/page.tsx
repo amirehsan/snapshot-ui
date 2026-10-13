@@ -1,3 +1,4 @@
+import chartsPkg from '@snapshot-ui/charts/package.json';
 import { Badge, Card, Eyebrow, Link } from '@snapshot-ui/react';
 import pkg from '@snapshot-ui/react/package.json';
 import type { Metadata } from 'next';
@@ -15,7 +16,10 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>): Promi
   const page = source.getPage(slug);
   if (!page) notFound();
   const MDX = page.data.body;
-  const group = page.slugs[0] === 'components' ? 'Components' : 'Getting started';
+  const section = page.slugs[0];
+  const group = section === 'components' ? 'Components' : section === 'charts' ? 'Charts' : 'Getting started';
+  // A chart page documents @snapshot-ui/charts, which has a version of its own and is not built on React Aria.
+  const version = section === 'charts' ? chartsPkg.version : pkg.version;
 
   return (
     <>
@@ -38,16 +42,18 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>): Promi
               <div className="meta">
                 <div className="meta-row">
                   <span>Version</span>
-                  <Badge>{pkg.version}</Badge>
+                  <Badge>{version}</Badge>
                 </div>
                 <div className="meta-row">
                   <span>Source</span>
                   <Link href={`${GITHUB}/edit/main/apps/docs/content/docs/${page.path}`}>Edit this page</Link>
                 </div>
-                <div className="meta-row">
-                  <span>Built on</span>
-                  <Link href="https://react-aria.adobe.com">React Aria</Link>
-                </div>
+                {section === 'components' ? (
+                  <div className="meta-row">
+                    <span>Built on</span>
+                    <Link href="https://react-aria.adobe.com">React Aria</Link>
+                  </div>
+                ) : null}
               </div>
             </Card>
           </aside>

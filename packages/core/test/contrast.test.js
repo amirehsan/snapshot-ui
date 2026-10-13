@@ -585,6 +585,60 @@ describe('the meter', () => {
   });
 });
 
+describe('the charts', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+  /** The 10% ink wash under a sparkline, composited over lifted. */
+  const wash = (mode) => {
+    const palette = paletteFor(tokens, mode);
+    return composite({ ...parseColor(palette.ink), a: 0.1 }, parseColor(palette.lifted));
+  };
+
+  // The line and the end point are ink, on the surface a chart sits on: Lifted (a card), Float (a panel) or
+  // canvas (the page). The gate already holds ink on each as text, past the 3:1 a graphic needs, so the
+  // charts add no pair.
+  it('cites ink on lifted, float and canvas, which the gate holds', () => {
+    for (const ground of ['lifted', 'float', 'canvas']) {
+      expect(CONTRAST_PAIRS, ground).toContainEqual(
+        expect.objectContaining({ text: 'ink', ground, minimum: TEXT }),
+      );
+    }
+  });
+
+  // The area is a 10% ink wash, a mix and not a token, so its pairs are measured here and recorded, not
+  // gated. The wash is a cue; the line over it stays far past the graphic minimum.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { ground, light, dark } of [
+      { ground: 'lifted', light: 17.84, dark: 17.42 },
+      { ground: 'float', light: 18.43, dark: 17.42 },
+      { ground: 'canvas', light: 16.25, dark: 19.31 },
+    ]) {
+      expect(measured('light', 'ink', ground), `ink on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', 'ink', ground), `ink on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+    /** The wash against lifted, and the ink line over the wash, in one mode. */
+    const overWash = (mode) => {
+      const palette = paletteFor(tokens, mode);
+      const ground = wash(mode);
+      return {
+        area: contrastRatio(ground, parseColor(palette.lifted)),
+        line: contrastRatio(composite(parseColor(palette.ink), ground), ground),
+      };
+    };
+    const light = overWash('light');
+    const dark = overWash('dark');
+    expect(light.area, 'the wash on lifted, light').toBeCloseTo(1.23, 2);
+    expect(dark.area, 'the wash on lifted, dark').toBeCloseTo(1.34, 2);
+    expect(light.line, 'ink over the wash, light').toBeCloseTo(14.5, 2);
+    expect(dark.line, 'ink over the wash, dark').toBeCloseTo(13.04, 2);
+    for (const { line } of [light, dark]) expect(line).toBeGreaterThanOrEqual(NON_TEXT);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

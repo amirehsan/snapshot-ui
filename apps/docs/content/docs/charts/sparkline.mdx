@@ -1,0 +1,123 @@
+---
+title: Sparkline
+description: "A tile's trend as a line, drawn on the server: decorative by default, named when it says something the tile does not."
+icon: Activity
+---
+
+<Section>
+
+## In a stat tile
+
+A sparkline is a figure's shape over time, small enough to sit beside the figure. Give it to a `StatTile` as its `trend`, and it takes the end of the value's row, 96 by 32.
+
+<Preview name="sparkline-tile" />
+
+</Section>
+
+<Section>
+
+## Area and end point
+
+The line is 2px of ink with round caps and joins. The last value is marked with an 8px dot in a ring of the surface, which `hasEndPoint={false}` leaves out. `hasArea` fills under the line with a 10% ink wash, down to the bottom of the box. A series whose values are all equal is drawn as a flat line at mid-height.
+
+<Preview name="sparkline-variants" />
+
+</Section>
+
+<Section>
+
+## Naming it
+
+A sparkline is hidden from assistive technology by default, since the tile beside it says what it means. When it says something the tile does not, give it an `aria-label`, such as "Spending, last 30 days, rising", or an `aria-labelledby`, and it becomes one image with that name. A blank name is ignored, so it never becomes an image with no name.
+
+```tsx
+<Sparkline data={spending} aria-label="Spending, last 30 days, rising" />
+```
+
+</Section>
+
+<Section>
+
+## Size
+
+The default box is 96 by 32. Give it a width and a height, by `className` or `style`, and the drawing stretches to fill it: the line stays 2px wide and the dot stays round, because the dot is drawn over the line rather than in it. Nothing is measured, so the server's HTML is final.
+
+```tsx
+<Sparkline data={spending} style={{ width: '100%', height: '3rem' }} />
+```
+
+</Section>
+
+<Section>
+
+## Right to left
+
+The oldest value is at the inline start and the newest at the inline end: the left under `dir="rtl"`. The direction comes from the nearest `dir` attribute, so a `dir="ltr"` region inside a right-to-left page draws left to right.
+
+</Section>
+
+<Section>
+
+## On another surface
+
+The ring around the end point is drawn in `--chart-surface`, which is Lifted by default, the card a sparkline sits on most. On the page itself, set `--chart-surface: var(--color-canvas)` on the sparkline or on any ancestor, and every chart inside follows.
+
+```css
+.overview-section {
+  --chart-surface: var(--color-canvas);
+}
+```
+
+</Section>
+
+<Section>
+
+## Usage
+
+```bash
+pnpm add @snapshot-ui/charts @snapshot-ui/core
+```
+
+It needs `@snapshot-ui/core` 0.3.0 or later, whose `styles.css` draws it. The data are numbers, oldest first. The domain is their extent, not from zero, because a sparkline shows a shape, not a magnitude. It is static, so a server component renders it with no client JavaScript.
+
+```tsx
+import { Sparkline } from '@snapshot-ui/charts';
+import { StatTile } from '@snapshot-ui/react';
+
+<StatTile
+  label="Spending"
+  value="$2,148.90"
+  change={{ direction: 'up', label: 'Up 18% from last month' }}
+  trend={<Sparkline data={spending} />}
+/>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+A Sparkline accepts every attribute of an HTML element, on its root, a `span`.
+
+<PropsTable label="Sparkline props" path="../../packages/charts/src/sparkline/Sparkline.tsx" type="Pick<SparklineProps, 'data' | 'hasEndPoint' | 'hasArea' | 'aria-label' | 'aria-labelledby' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+Hidden from assistive technology (`aria-hidden`) unless it is named. Named by `aria-label` or `aria-labelledby`, it is one `role="img"` with that name, and the drawing inside it stays hidden. It takes no focus and has no keys. In forced colors the line and the dot are drawn in the reader's text color, and the wash is dropped.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps sparklines in the system.
+
+<Rules dos={['Put a sparkline beside the figure whose shape it shows.', 'Name it only when it says something the tile does not.']} donts={['Never use a sparkline for a magnitude. It starts at its least value, not at zero.', 'Never draw a second series in a sparkline. That is a line chart.', 'Never make the reader hover a sparkline to learn what it says.']} />
+
+</Section>

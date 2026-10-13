@@ -5257,3 +5257,139 @@ guard checks, is still the server build's. The blank-name fallbacks above
 are an addition, so the bar is never unnamed. The size limit is 1.5 kB,
 above the spec's 1 kB budget: the entry measured 795 B, and the rule rounds
 up to 1 kB and adds 0.5 kB.
+
+## Charts
+
+The charts live in their own package, `@snapshot-ui/charts`, the package the
+parent spec names for phase 6 (the owner's ruling 1 in the home spec).
+Putting them in `@snapshot-ui/react` now would make phase 6 move the
+imports, a breaking change for the consumer. The package depends on nothing
+at run time but React, and React DOM, both peers; `@snapshot-ui/core` is an
+optional peer. It copies `cx` and the `AriaName` type rather than importing
+`@snapshot-ui/react`, so neither package depends on the other. Its CSS is
+`charts.css` in core, imported by `styles.css` after `meter.css`, so an app
+still loads one stylesheet. It is versioned on its own, outside the fixed
+group of core and react, and starts at 0.1.0.
+
+**Drawing without measuring.** Every chart is an `svg` with
+`viewBox="0 0 100 100"` and `preserveAspectRatio="none"`, stretched to its
+box, so the geometry is a pure function of the props and the server's HTML
+is final. Every stroke carries `vector-effect: non-scaling-stroke`, so a
+stretched line keeps its width; the CSS test checks that every rule that
+sets `stroke-width` sets it too. Anything that must keep its shape, a dot, a
+label, the readout, is HTML placed over the svg by percentage with logical
+insets, never an svg mark, which the stretch would turn into an ellipse.
+Nothing reads layout at render. Risk R1 is that a transform on a stretched
+svg breaks the non-scaling stroke; the only transform is the flip below, and
+the visual baselines at 375 and 1280 catch a distorted line.
+
+**Direction from the `dir` attribute.** Time runs from the inline start
+(ruling 3), so in a right-to-left page the newest value is at the left. A
+static chart cannot read React Aria's locale, and `:dir()` is past the
+browser floor, so `charts.css` sets `--chart-flip` to `1` under
+`:where([dir='ltr' i])` and `-1` under `:where([dir='rtl' i])`, the card
+chevron's pattern, and mirrors the svg with `scale: var(--chart-flip, 1) 1`.
+The nearest attribute wins, since a custom property inherits, so a
+`dir="ltr"` region inside a right-to-left page draws left to right; with no
+attribute at all the fallback is 1. The HTML marks follow by their logical
+insets, with no flip of their own. The domain and the path are the same in
+both directions.
+
+**Series colors.** At most two series: the first ink, the second slate in a
+thinner stroke. There is no palette, so the categorical validator of the
+data-visualization method is not run; phase 6 runs it when it adds one. The
+stroke widths are literals in `charts.css`, since two size tokens are not
+worth adding.
+
+**The surface.** A ring or a spacer is a border in the surface the chart
+sits on, `var(--chart-surface, var(--color-lifted))`: read with a fallback
+and never declared by a chart, so an app sets `--chart-surface` once on any
+ancestor and every chart inside follows. No shadow draws a ring, as the
+token rule requires.
+
+**The foundations.** Pure modules, private to the package in 0.1.0.
+`linearScale(domain, range)` maps a value linearly and sends every value to
+the middle of the range when the domain has no width.
+`extent(values, { includeZero })` is the least and the greatest finite
+value, NaN and the infinities ignored, with 0 among them when asked, and
+undefined when there is none. `niceDomain(min, max)` rounds outward to four
+steps: the step is the smallest of 1, 2, 2.5, 5 and 10 times the power of
+ten under a quarter of the span that is at least that quarter, each end is a
+multiple of it, and each number is cleaned with `toPrecision(12)` so float
+noise never reaches the page; equal ends give `[0, 1]` at zero and a domain
+from zero otherwise. `linePath(points)` writes straight segments only,
+because a smoothed line invents values between the points; a null breaks the
+line into subpaths, and a point alone between two breaks is a zero-length
+segment that round caps draw as a dot. `areaPath(points, baseline)` closes
+each run of two or more points down to the baseline. Numbers are written
+with at most three decimals and no trailing zeros, commands with no space
+before them and a space between x and y: `M0 100L50 50L100 0`.
+
+## Sparkline
+
+A figure's shape over time, small enough to sit beside the figure:
+`Sparkline`, the first chart of `@snapshot-ui/charts`. The document has none
+of its own, so this one is derived.
+
+**Static and decorative.** No hook and no client directive, so a server
+component renders it with no client JavaScript. It is hidden from assistive
+technology (`aria-hidden`) by default, since the tile beside it says what it
+means. Given an `aria-labelledby` or an `aria-label` it is one `role="img"`
+with that name, `aria-labelledby` first; a blank name, empty or only spaces,
+falls through to the other, and with neither it stays hidden, so it never
+becomes an image with no name. The svg inside is hidden either way.
+
+**The root is a span** (spec correction 12). The end point is HTML over the
+svg, which an `svg` root cannot hold, so the root is `span.sparkline`, which
+takes `className`, `ref`, the other attributes and the name; inside it,
+`span.sparkline-plot` holds the svg and the end point.
+
+**The box.** 96 by 32 by default, `inline-block` on the middle of the line.
+The plot is inset 6px on every side, half the end point's 12px box, so the
+dot and its ring stay inside the sparkline's own box at either end and at
+the top or bottom. A width and a height from the app stretch it; the line
+stays 2px and the dot round.
+
+**The domain is the extent.** A sparkline shows a shape, not a magnitude, so
+y runs from 100 at the least value to 0 at the greatest, not from zero. x is
+the value's place, `i / (n - 1)` of the width, and the middle for one value.
+A flat series has a domain of no width and draws at mid-height. No data
+draws an empty box; one value draws only its dot, at the middle, since a
+line needs two. A value that is not a finite number is a gap that breaks the
+line, as a null is in the line chart, and the end point is drawn only when
+the last value is one.
+
+**The look.** The line is 2px ink with round caps and joins. `hasArea` fills
+under it with ink at 10%, `color-mix` over transparent, down to the bottom
+of the plot, drawn before the line so the line lies over it. The end point,
+on by default, is 8px of ink in a 2px border of `--chart-surface`,
+`--radius-dot`, centred on the last point by negative logical margins. It is
+`box-sizing: content-box`, as the meter's pace marker is, so the ring sits
+outside the 8px whether or not `base.css` makes every box border-box.
+
+**Contrast.** The line and the dot are ink, which the gate holds as text on
+Lifted, Float and canvas, so the charts add no pair; the contrast test cites
+the three. Measured: ink on Lifted 17.84 in light and 17.42 in dark, on
+Float 18.43 and 17.42, on canvas 16.25 and 19.31. The wash is a mix, so it
+is measured and recorded, not gated: against Lifted it is 1.23 and 1.34, a
+cue and not a boundary, and the line over it on Lifted is 14.50 and 13.04,
+far past the 3:1 a graphic needs.
+
+**Forced colors.** The line is `CanvasText`, the wash is dropped
+(`fill: none`), and the dot is `CanvasText` in a `canvas` ring.
+
+**Right to left.** The svg is mirrored by `--chart-flip`, so the oldest
+value is at the right and the newest at the left, and the end point sits at
+`inset-inline-start: 100%`, which is the left edge under `dir="rtl"`.
+
+**Where the build departs from the plan.** The size limit is 1.5 kB, above
+the spec's 1 kB budget: the entry measured 843 B, and the rule rounds up to
+1 kB and adds 0.5 kB. A value that is not finite is a gap, and the
+blank-name fallback hides the sparkline rather than leave an unnamed image;
+both are additions. The changeset also names the `SparklineProps` export and
+`--chart-surface`, which the plan's text left out and the plan's changeset
+rule asks for. The plan's CSS gave the end point no `box-sizing`, and under
+`base.css`, which makes every box border-box, its 2px border ate into the
+0.5rem: the dot drew 8px across with 4px of ink, 2px off its point, which
+the `Wide` and `RightToLeft` stories caught. It is `content-box` now, and
+the CSS test pins it.

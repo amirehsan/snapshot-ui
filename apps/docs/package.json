@@ -12,6 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@snapshot-ui/charts": "workspace:*",
     "@snapshot-ui/core": "workspace:*",
     "@snapshot-ui/react": "workspace:*",
     "fumadocs-core": "16.17.1",
