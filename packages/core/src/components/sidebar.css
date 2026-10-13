@@ -412,7 +412,8 @@
         .sidebar-search-label,
         .sidebar-group-text,
         .sidebar-item-label,
-        .sidebar-item-count-number
+        .sidebar-item-count-number,
+        .sidebar-search-shortcut
       ) {
       position: absolute;
       width: 1px;
@@ -438,10 +439,6 @@
       width: var(--size-target);
       margin-inline: auto;
       padding: 0;
-    }
-
-    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-search-shortcut {
-      display: none;
     }
 
     /* The icon moves 4px inward as the rail collapses, hidden by the width transition. */

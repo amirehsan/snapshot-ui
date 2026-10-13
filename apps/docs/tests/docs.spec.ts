@@ -1767,6 +1767,25 @@ test('the app shell page collapses its example rail to icons and expands it agai
   await expect.poll(async () => (await rail.boundingBox())?.width).toBeCloseTo(288, 0);
 });
 
+test('the sidebar page names the search the same in the expanded and the collapsed rail', async ({
+  page,
+}) => {
+  // The chip is clipped, not removed, when the rail collapses, so the name keeps its shortcut. jsdom applies no
+  // stylesheet, so this is checked in the browser.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/sidebar');
+  const search = (nav: string): Locator =>
+    page
+      .locator('.stage')
+      .filter({ has: page.getByRole('navigation', { name: nav, exact: true }) })
+      .locator('.sidebar-search');
+  const expanded = search('Main, groups');
+  const collapsed = search('Main, icons');
+  await expect(collapsed.locator('xpath=ancestor::*[@data-sidebar="collapsed"]')).toHaveCount(1);
+  await expect(expanded).toHaveAccessibleName(/^Search or jump to, (Ctrl|\u2318) K$/);
+  await expect(collapsed).toHaveAccessibleName(/^Search or jump to, (Ctrl|\u2318) K$/);
+});
+
 test('the sidebar page opens the real drawer from its example and Escape closes it', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await visit(page, '/docs/components/sidebar');
