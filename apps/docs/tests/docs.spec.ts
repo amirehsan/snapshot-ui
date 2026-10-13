@@ -1128,6 +1128,8 @@ test('a collapsible card folds and opens on its page, by pointer and by keyboard
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Send a test email' })).toBeFocused();
   await toggle.click();
+  // The card marks the fold while it moves, so the body clips.
+  await expect(card).toHaveAttribute('data-folding', '');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(card).not.toHaveAttribute('data-expanded');
   await expect(body).toBeHidden();
@@ -1139,6 +1141,7 @@ test('a collapsible card folds and opens on its page, by pointer and by keyboard
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Billing', exact: true })).toBeFocused();
   await toggle.press('Enter');
+  await expect(card).toHaveAttribute('data-folding', '');
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(body).toBeVisible();
   await expect(card).not.toHaveAttribute('data-folding');

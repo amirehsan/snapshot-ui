@@ -96,61 +96,56 @@
    *
    * The root carries data-expanded while the card is open, data-folding while
    * the fold moves, and data-instant from a server's HTML until just after
-   * hydration. The component sets all three. The header and the fold sit in
-   * React Aria's disclosure element, .card-disclosure, which draws nothing.
-   * Every state rule reaches them through it from the root, so a card nested
-   * in the body keeps its own state. The folded marker is drawn only while it
-   * shows, so it needs no state rule of its own, and its words are in an
-   * element the hidden attribute hides, which a description may still name.
+   * hydration, and for an open by find-in-page. The component sets all three.
+   * The header and the fold sit in React Aria's disclosure element,
+   * .card-disclosure, which draws nothing. Every state rule reaches them
+   * through it from the root, so a card nested in the body keeps its own
+   * state. The folded marker is drawn only while it shows, so it needs no
+   * state rule of its own, and its words are in an element the hidden
+   * attribute hides, which a description may still name.
    */
 
-  /* The header is a grid. The title, which holds the toggle, takes the first
-     row and the room left in it, and the actions end that row. The note sits
-     directly under the title, in its column. With no actions the second
-     column is empty and has no width, so the toggle spans the row, and with no
-     note there is no second row. The header is a size container, so the
-     actions can move when the row is too narrow for both. */
+  /* The header is a row that wraps. The title and the note are one block, the
+     heading, so the note always sits directly under the title, and the actions
+     end the row, the peer step after it. A gap is drawn only between two items
+     on one row, so a header with no actions keeps none, and actions that wrap
+     start at the row's start. Each is centred on the other. Nothing contains
+     the header, so a card that takes its width from what it holds takes it
+     from the header too, as a plain card does. */
   .card-disclosure > .card-header {
-    container: card-header / inline-size;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    column-gap: 0;
+    column-gap: var(--spacing-peer);
     transition:
       margin-bottom 200ms ease,
       padding-bottom 200ms ease,
       border-bottom-width 200ms ease;
   }
 
-  .card-disclosure > .card-header > .card-title,
-  .card-disclosure > .card-header > .card-note {
-    grid-column: 1;
+  /* The heading takes the room the actions leave, and never less than 12rem
+     beside them: where the row cannot give it that, the actions wrap under the
+     note, so the order on screen is title, note, actions, the order a screen
+     reader reads. 12rem (192px) holds a typical title on one line with its
+     chevron, as "Notifications" needs 161px, so a title is never squeezed to
+     a column of letters, whatever the actions hold. Alone on the row, it takes
+     the whole row. */
+  .card-disclosure > .card-header > .card-heading {
+    display: grid;
+    flex: 1 1 12rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-part);
+    min-inline-size: 0;
   }
 
-  /* The 24px between the title and the actions is the actions' margin, not a
-     column gap, so a header with no actions keeps no gap. */
+  /* The actions take their own width, and wrap among themselves on a row too
+     narrow for all of them. */
   .card-actions {
     display: flex;
+    flex: 0 1 auto;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: flex-end;
     gap: var(--spacing-part);
-    grid-row: 1;
-    grid-column: 2;
-    margin-inline-start: var(--spacing-peer);
-  }
-
-  /* Too narrow for a typical title and an action side by side, the actions
-     move under the note, to the row's start, and wrap if they must. 18rem
-     (288px) is measured: "Notifications" with its chevron and a tertiary
-     Reset button need 272px side by side, and a short title with two short
-     buttons 284px. A card on a 390px phone with 16px gutters has 292px. */
-  @container card-header (width < 18rem) {
-    .card-actions {
-      grid-row: auto;
-      grid-column: 1;
-      justify-content: flex-start;
-      margin-inline-start: 0;
-    }
   }
 
   /* The title is the toggle: a button as wide as the title, with the chevron at
@@ -296,11 +291,14 @@
     overflow: hidden;
   }
 
-  /* The render after hydration is the card catching up with what only the
-     browser knows, such as a remembered fold on a card the server drew open.
-     It is drawn at once, so a page never animates on load: a card the server
-     rendered carries data-instant from the server's HTML until two frames
-     after hydration, and nothing it draws moves while it does. */
+  /* Two changes are drawn at once. The render after hydration is the card
+     catching up with what only the browser knows, such as a remembered fold
+     on a card the server drew open, so a page never animates on load: a card
+     the server rendered carries data-instant from the server's HTML until two
+     frames after hydration. And an open by find-in-page or a text fragment
+     link: the browser scrolls to the match as the card opens, so the body has
+     to be its full height then. Nothing the card draws moves while it carries
+     the mark. */
   .card-collapsible[data-instant] > .card-disclosure > .card-header,
   .card-collapsible[data-instant] > .card-disclosure > .card-header .card-chevron,
   .card-collapsible[data-instant] > .card-disclosure > .card-fold {

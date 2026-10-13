@@ -80,8 +80,8 @@ export interface CollapsibleCardProps extends Omit<HTMLAttributes<HTMLElement>, 
 - **The header stays.** The title, the note and the actions stay.
 - **The body.** It is React Aria's `DisclosurePanel`. It folds with a 200ms ease, and reduced motion removes every transition.
 - **Mechanism.** The implementation chooses between the source app's grid-row technique (a row track that transitions between `1fr` and `0fr`) and React Aria's panel-height custom property. The plan prototypes both and records the choice in Appendix B.
-- **Folded content.** It leaves the tab order and the accessibility tree.
-- **Find-in-page.** React Aria renders the folded panel with `hidden="until-found"`, so the browser's find-in-page can reveal text inside a folded card. The card then reports the change through `onExpandedChange` and the stored state.
+- **Folded content.** It leaves the tab order and the accessibility tree. A card that folds while focus is in its body moves the focus to its toggle.
+- **Find-in-page.** React Aria renders the folded panel with `hidden="until-found"`, so in a browser that supports it, find-in-page and text fragment links can reveal text inside a folded card. A browser without it hides the folded body with `display: none`, and does not search it. A reveal opens the card with no transition, as the render after hydration does, so the body is its full height when the browser scrolls to the match. Every card that opens in that render, such as one with the same `storageKey`, opens the same way. The card then reports the change through `onExpandedChange` and the stored state.
 - **Clipping.** The body clips only while folded or folding, as in the source app.
 
 ### Remembering (`storageKey`)
@@ -111,8 +111,8 @@ The CSS lives in `packages/core/src/components/card.css`, which `Card` already u
 
 - **Root classes:** `card card-collapsible`.
 - **States:** the root carries `data-expanded`, from React Aria, while open, and the stylesheet keys folded styles on `:not([data-expanded])`. While the fold transitions, the root also carries `data-folding`, set and cleared by the component.
-- **The header row.** It holds the toggle, which fills the remaining width and puts the chevron at its end, then the actions at the end of the row.
-- **Wrapping.** On a narrow screen a long title wraps inside the toggle, and the actions wrap below or beside it, with no sideways scroll at 320px. The card's `overflow-wrap: anywhere` already applies.
+- **The header row.** It holds the heading, a block of the title and the note, whose toggle fills the heading's width and puts the chevron at its end, then the actions at the end of the row.
+- **Wrapping.** The header is a flex row that wraps, with no size container, so a card placed where it takes its width from its content takes it from the header too, as a plain `Card` does. The heading is `flex: 1 1 12rem`, so it keeps at least 12rem beside the actions, and where the row cannot give it that, the actions wrap under the note. On a narrow screen a long title wraps inside the toggle, and the actions wrap among themselves, with no sideways scroll at 320px. The card's `overflow-wrap: anywhere` already applies. Appendix B records why the first design, a size container with an 18rem query, was replaced.
 
 ### Chevron
 

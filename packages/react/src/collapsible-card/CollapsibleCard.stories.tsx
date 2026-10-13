@@ -10,18 +10,22 @@ import { CollapsibleCard, type CollapsibleCardProps } from './CollapsibleCard';
 /** The parts of the collapsible card that is `card`. */
 function partsOf(card: Element): {
   header: HTMLElement;
+  heading: HTMLElement;
   title: HTMLElement;
   toggle: HTMLElement;
   text: HTMLElement;
   chevron: SVGElement;
 } {
   const header = card.querySelector<HTMLElement>(':scope > .card-disclosure > .card-header');
-  const title = header?.querySelector<HTMLElement>('.card-title');
-  const toggle = header?.querySelector<HTMLElement>('.card-toggle');
+  const heading = header?.querySelector<HTMLElement>(':scope > .card-heading');
+  const title = heading?.querySelector<HTMLElement>(':scope > .card-title');
+  const toggle = title?.querySelector<HTMLElement>('.card-toggle');
   const text = toggle?.querySelector<HTMLElement>('.card-toggle-text');
   const chevron = toggle?.querySelector<SVGElement>('.card-chevron');
-  if (!header || !title || !toggle || !text || !chevron) throw new Error('No header, title or toggle drawn');
-  return { header, title, toggle, text, chevron };
+  if (!header || !heading || !title || !toggle || !text || !chevron) {
+    throw new Error('No header, title or toggle drawn');
+  }
+  return { header, heading, title, toggle, text, chevron };
 }
 
 /** The first element inside `scope` with this test id. */
@@ -35,24 +39,36 @@ function byTestId(scope: Element, id: string): HTMLElement {
 const middle = (box: DOMRect): number => box.top + box.height / 2;
 
 /**
- * Checks where `action`, in the actions of `card`, sits, and says which: on the title's row, at its end
- * and level with the title, or under the note, at the row's start. Either way the note is directly under
- * the title.
+ * Checks where `action`, in the actions of `card`, sits, and says which: beside the title and the note, at
+ * the end of their row and centred on them, or under the note, at the row's start. Either way the note is
+ * directly under the title.
  */
 async function placementOf(card: Element, action: Element): Promise<'row' | 'under'> {
-  const { header, title } = partsOf(card);
-  const note = header.querySelector(':scope > .card-note');
+  const { heading, title } = partsOf(card);
+  const note = heading.querySelector(':scope > .card-note');
   const titleBox = title.getBoundingClientRect();
   const actionBox = action.getBoundingClientRect();
   if (note) await expect(note.getBoundingClientRect().top).toBeGreaterThanOrEqual(titleBox.bottom);
-  if (actionBox.top < titleBox.bottom) {
+  const headingBox = heading.getBoundingClientRect();
+  if (actionBox.top < headingBox.bottom) {
     await expect(actionBox.left).toBeGreaterThanOrEqual(titleBox.right);
-    await expect(Math.abs(middle(actionBox) - middle(titleBox))).toBeLessThan(1);
+    await expect(Math.abs(middle(actionBox) - middle(headingBox))).toBeLessThan(1);
     return 'row';
   }
-  await expect(actionBox.top).toBeGreaterThanOrEqual((note ?? title).getBoundingClientRect().bottom);
+  await expect(actionBox.top).toBeGreaterThanOrEqual(headingBox.bottom);
   await expect(Math.abs(actionBox.left - titleBox.left)).toBeLessThan(0.5);
   return 'under';
+}
+
+/** The width the words of `text` take on one line: a copy that may not wrap is measured beside them. */
+function oneLineWidth(text: Element): number {
+  const copy = text.cloneNode(true);
+  if (!(copy instanceof HTMLElement)) throw new Error('No words to copy');
+  copy.style.cssText = 'position: absolute; width: max-content; white-space: nowrap; visibility: hidden';
+  text.after(copy);
+  const width = copy.getBoundingClientRect().width;
+  copy.remove();
+  return width;
 }
 
 /** The top-left corner in pixels, so a story reads the shape the toolbar has chosen. */
@@ -288,15 +304,19 @@ export const LongTitle: Story = {
 };
 
 /**
- * The actions share the title's row while the header is at least 18rem wide, as on a 390px phone with 16px
- * gutters, and move under the note below that, as on a 320px screen. The note stays directly under the
- * title either way.
+ * The actions share the title's row while the title and the note keep at least 12rem beside them, and move
+ * under the note when they cannot. "Notifications" with a tertiary Reset needs 12rem, the 24px gap and the
+ * button's 87px, 303px inside the card's padding: a 400px card has 334px, a card on a 390px phone with
+ * 16px gutters 292px, and one on a 320px screen 222px. The note stays directly under the title either way.
  */
 export const ActionsPlacement: Story = {
   // A check of where the parts land: the visual suite already shoots both arrangements in WithActions.
   tags: ['no-visual'],
   render: (args) => (
     <div style={{ display: 'grid', gap: 24 }}>
+      <div style={{ width: 400 }}>
+        <CollapsibleCard {...args} actions={<Button variant="tertiary">Reset</Button>} data-testid="wide" />
+      </div>
       <div style={{ width: 358 }}>
         <CollapsibleCard {...args} actions={<Button variant="tertiary">Reset</Button>} data-testid="phone" />
       </div>
@@ -307,13 +327,132 @@ export const ActionsPlacement: Story = {
   ),
   play: async ({ canvasElement }) => {
     for (const [id, placement] of [
-      ['phone', 'row'],
+      ['wide', 'row'],
+      ['phone', 'under'],
       ['small', 'under'],
     ] as const) {
       const card = byTestId(canvasElement, id);
       const action = card.querySelector('.card-actions .button');
       if (!action) throw new Error('No action drawn');
       await expect(await placementOf(card, action)).toBe(placement);
+    }
+  },
+};
+
+/** Two columns that start their items, one as wide as the canvas and one narrower than its title. */
+const COLUMNS = [
+  { id: 'wide', width: undefined, title: 'Why this verdict' },
+  { id: 'narrow', width: 240, title: 'Why this verdict was reached for this listing' },
+] as const;
+
+/**
+ * Placed where it takes its width from what it holds, as in a column that starts its items, a card is as wide
+ * as its header needs, as a plain card is, folded or open, so its title stays on one line. In a column too
+ * narrow for that, the card fills the column and the title wraps between its words.
+ */
+export const ShrinkToFit: Story = {
+  // A check of widths: the visual suite shoots the card at the widths its parents give it.
+  tags: ['no-visual'],
+  args: { note: undefined },
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      {COLUMNS.map(({ id, width, title }) => (
+        <div
+          key={id}
+          data-testid={id}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'start', gap: 24, width }}
+        >
+          <CollapsibleCard {...args} title={title} defaultExpanded={false}>
+            <p>Price is fine.</p>
+          </CollapsibleCard>
+          <CollapsibleCard {...args} title={title}>
+            <p>Price is fine.</p>
+          </CollapsibleCard>
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    for (const { id } of COLUMNS) {
+      const column = byTestId(canvasElement, id);
+      const room = column.getBoundingClientRect().width;
+      const cards = column.querySelectorAll('.card-collapsible');
+      await expect(cards).toHaveLength(2);
+      for (const card of cards) {
+        const { text } = partsOf(card);
+        const width = card.getBoundingClientRect().width;
+        const words = text.textContent.split(' ').length;
+        // At least as wide as the title on one line, or as the column where that is narrower, and never wider.
+        await expect(width).toBeGreaterThanOrEqual(Math.min(oneLineWidth(text), room) - 0.5);
+        await expect(width).toBeLessThanOrEqual(room + 0.5);
+        if (id === 'wide') await expect(lineCount(text)).toBe(1);
+        else await expect(lineCount(text)).toBeLessThan(words);
+      }
+    }
+  },
+};
+
+/**
+ * Beside the actions, the title and the note keep at least 12rem. Two buttons on a 390px phone's card, or
+ * three on a 360px one, leave less than that, so the actions move under the note instead of narrowing the
+ * title to a column of letters.
+ */
+export const TitleRoom: Story = {
+  // A check of where the parts land: the visual suite shoots the actions on both sides in WithActions.
+  tags: ['no-visual'],
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <div style={{ width: 358 }}>
+        <CollapsibleCard
+          {...args}
+          title="Notification preferences"
+          actions={
+            <>
+              <Button variant="secondary">Reset</Button>
+              <Button variant="secondary">Change plan</Button>
+            </>
+          }
+          data-testid="two"
+        />
+      </div>
+      <div style={{ width: 360 }}>
+        <CollapsibleCard
+          {...args}
+          actions={
+            <>
+              <Button variant="secondary">Change plan</Button>
+              <Button variant="secondary">Reset</Button>
+              <Button variant="secondary">Export</Button>
+            </>
+          }
+          data-testid="three"
+        />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const floor = 12 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    for (const id of ['two', 'three']) {
+      const card = byTestId(canvasElement, id);
+      const { title } = partsOf(card);
+      const titleBox = title.getBoundingClientRect();
+      const edge = card.getBoundingClientRect();
+      const buttons = [...card.querySelectorAll('.card-actions .button')].map((button) =>
+        button.getBoundingClientRect(),
+      );
+      await expect(buttons.length).toBeGreaterThan(1);
+      // The title keeps 12rem beside the actions, or the actions sit below it.
+      if (!buttons.every((box) => box.top >= titleBox.bottom)) {
+        await expect(titleBox.width).toBeGreaterThanOrEqual(floor);
+      }
+      for (const box of buttons) {
+        // No button covers the title, and none reaches past the card.
+        await expect(
+          box.bottom <= titleBox.top || box.top >= titleBox.bottom || box.left >= titleBox.right,
+        ).toBe(true);
+        await expect(box.left).toBeGreaterThanOrEqual(edge.left);
+        await expect(box.right).toBeLessThanOrEqual(edge.right);
+      }
     }
   },
 };
@@ -369,16 +508,61 @@ export const OverflowingChild: Story = {
     };
     await expect(drawnWhole()).toBe(true);
     const toggle = canvas.getByRole('button', { name: 'Notifications' });
+    // Each press marks the fold while it moves, so the body clips, and the mark comes off once it settles.
     await userEvent.click(toggle);
+    await expect(card).toHaveAttribute('data-folding', '');
     await waitFor(async () => {
       await expect(card).not.toHaveAttribute('data-folding');
     });
     await userEvent.click(toggle);
+    await expect(card).toHaveAttribute('data-folding', '');
     await waitFor(async () => {
       await expect(card).not.toHaveAttribute('data-folding');
     });
     await expect(card).toHaveAttribute('data-expanded');
     await expect(drawnWhole()).toBe(true);
+  },
+};
+
+/**
+ * Find-in-page or a text fragment link that reaches deep into a long folded body opens the card at once, so
+ * the browser scrolls to where the match will stay: the body is its full height when the browser scrolls,
+ * and nothing it holds is clipped or still moving.
+ */
+export const FindInLongBody: Story = {
+  // A check of the scroll: the open and the folded card are shot in Open and Folded.
+  tags: ['no-visual'],
+  args: { title: 'Why this verdict', note: undefined, defaultExpanded: false },
+  render: (args) => (
+    <CollapsibleCard {...args} data-testid="card">
+      {Array.from({ length: 40 }, (_, line) => (
+        <p key={line}>Reason {line + 1} behind the verdict, written out at length so the body is long.</p>
+      ))}
+      <p>
+        The <span data-testid="match">zebrafinch</span> rule decided it.
+      </p>
+    </CollapsibleCard>
+  ),
+  play: async ({ canvasElement }) => {
+    const card = byTestId(canvasElement, 'card');
+    const match = byTestId(canvasElement, 'match');
+    const fold = card.querySelector(':scope > .card-disclosure > .card-fold');
+    if (!fold) throw new Error('No fold drawn');
+    await expect(fold).toHaveAttribute('hidden', 'until-found');
+    // What the browser does for a match in a hidden="until-found" element, in one task: it fires beforematch
+    // at the element, shows it, and scrolls the match into view.
+    fold.dispatchEvent(new Event('beforematch'));
+    match.scrollIntoView({ block: 'center' });
+    await expect(partsOf(card).toggle).toHaveAttribute('aria-expanded', 'true');
+    await waitFor(async () => {
+      await expect(card).not.toHaveAttribute('data-folding');
+      await expect(card).not.toHaveAttribute('data-instant');
+    });
+    // Where the browser scrolled is where the match stays.
+    const box = match.getBoundingClientRect();
+    await expect(box.top).toBeGreaterThanOrEqual(0);
+    await expect(box.bottom).toBeLessThanOrEqual(window.innerHeight);
+    await expect(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)).toBe(match);
   },
 };
 
