@@ -86,6 +86,8 @@ describe('toast', () => {
     show({ title: 'Synced', tone: 'info' });
     const plain = screen.getByRole('alertdialog', { name: 'Synced' });
     expect(plain.querySelector('.toast-description')).not.toBeInTheDocument();
+    // React Aria's slot id resolves to nothing when no description renders, so nothing points at a missing id.
+    expect(plain).not.toHaveAttribute('aria-describedby');
     expect(plain).toHaveAccessibleDescription('');
   });
 
@@ -128,6 +130,11 @@ describe('toast', () => {
     show({ title: 'Read me', tone: 'error', timeout: null });
     advance(600000);
     expect(toasts()).toHaveLength(1);
+
+    // Zero or less stays as well: React Aria starts no timer for it.
+    show({ title: 'Read me too', tone: 'info', timeout: 0 });
+    advance(600000);
+    expect(toasts()).toHaveLength(2);
   });
 
   it('closes one toast by its id with toast.dismiss, and calls its onClose', () => {
@@ -173,7 +180,9 @@ describe('toast', () => {
   it('announces a polite toast through the status host, the one live element on the page', () => {
     render(<ToastRegion />);
     show({ title: 'Saved', description: 'Your changes are live.', tone: 'success' });
-    expect(host()).toHaveTextContent('Saved Your changes are live.');
+    // The title and the second line are two blocks, so a screen reader pauses between them.
+    const said = [...(host().firstElementChild?.children ?? [])].map((each) => each.textContent);
+    expect(said).toEqual(['Saved', 'Your changes are live.']);
     expect(host()).toHaveAttribute('aria-live', 'polite');
     expect(host()).toHaveAttribute('aria-atomic', 'true');
     // The toast's own content is a group and not a second live region, so nothing is read twice.
@@ -195,10 +204,10 @@ describe('toast', () => {
   it('writes each polite toast into a new node, so the same words twice are announced twice', () => {
     render(<ToastRegion />);
     show({ title: 'Saved', tone: 'success' });
-    const first = host().querySelector('span');
+    const first = host().firstElementChild;
     expect(first).toHaveTextContent('Saved');
     show({ title: 'Saved', tone: 'success' });
-    const second = host().querySelector('span');
+    const second = host().firstElementChild;
     expect(second).toHaveTextContent('Saved');
     expect(second).not.toBe(first);
     expect(first?.isConnected).toBe(false);
@@ -323,16 +332,26 @@ describe('ToastRegion', () => {
     expect(toasts()).toHaveLength(0);
   });
 
-  it('leaves an open dialog open when a toast is pressed', async () => {
+  it('announces a toast raised while a dialog is open, and a press on it leaves the dialog open', async () => {
     const pointer = user();
-    render(
+    const { container } = render(
       <>
-        <ToastRegion />
+        <div>
+          <main>The page</main>
+          <ToastRegion />
+        </div>
         <Dialog defaultOpen title="Rename the workspace" />
       </>,
     );
     show({ title: 'Saved', tone: 'success' });
-    // The dialog hides the page from assistive technology, and the toast stays in it.
+    // The dialog hides the page from assistive technology: the hide pass ran, and it walked around the status
+    // host, which sits beside the hidden page and still holds the toast's words.
+    const HIDDEN = '[aria-hidden="true"], [inert]';
+    expect(container.querySelector('main')?.closest(HIDDEN)).not.toBeNull();
+    expect(host().closest(HIDDEN)).toBeNull();
+    expect(host()).toHaveTextContent('Saved');
+    // The portaled region stays out of the hide too.
+    expect(region().closest(HIDDEN)).toBeNull();
     expect(screen.getByRole('alertdialog', { name: 'Saved' })).toBeInTheDocument();
     await pointer.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Dismiss' }));
     expect(toasts()).toHaveLength(0);
@@ -352,6 +371,39 @@ describe('ToastRegion', () => {
     expect(older).not.toBeInTheDocument();
     const newer = screen.getByRole('alertdialog', { name: 'Newer' });
     expect(newer.contains(document.activeElement)).toBe(true);
+  });
+
+  it.each([
+    ['the pointer', (): void => void fireEvent.pointerOver(region(), { pointerType: 'mouse' })],
+    [
+      'focus',
+      (): void => {
+        act(() => {
+          within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Dismiss' }).focus();
+        });
+      },
+    ],
+  ])('holds a toast that arrives while %s is in the region', (_name, enter) => {
+    render(<ToastRegion />);
+    show({ title: 'Older', tone: 'info' });
+    advance(1000);
+    enter();
+    // The newer toast starts its own timer as it mounts, after React Aria paused the rest.
+    show({ title: 'Newer', tone: 'info' });
+    advance(10000);
+    expect(toasts()).toHaveLength(2);
+  });
+
+  it('warns once when a second region is mounted', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    render(
+      <>
+        <ToastRegion />
+        <ToastRegion />
+      </>,
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('Two <ToastRegion />');
   });
 
   it('has no axe violations with one toast of each tone', async () => {

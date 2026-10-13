@@ -13,16 +13,19 @@ export interface ToastAction {
 }
 
 export interface ToastOptions {
-  /** The message. Say the outcome in words: the tone only repeats it. Preformatted. */
+  /**
+   * The message. Say the outcome in words: the tone only repeats it. Preformatted text: a status region reads
+   * it out, so it holds no control, and a button goes in `action`.
+   */
   title: ReactNode;
-  /** A second line, in slate. */
+  /** A second line, in slate. Preformatted text, as `title` is. */
   description?: ReactNode;
   tone: ToastTone;
   /** A button such as "Undo". A toast with an action stays until it is used or dismissed. */
   action?: ToastAction;
   /**
-   * Milliseconds before it leaves, or `null` to stay until dismissed. Unless given: 6000, 12000 for
-   * `error`, and `null` with an `action`.
+   * Milliseconds before it leaves, or `null` to stay until dismissed; zero or less stays too. Unless given:
+   * 6000, 12000 for `error`, and `null` with an `action`.
    */
   timeout?: number | null;
   /** Called when it leaves, however it leaves. */
@@ -37,7 +40,10 @@ export interface ToastFunction {
   (options: ToastOptions): string;
   /** Closes one toast by id. */
   dismiss: (id: string) => void;
-  /** Drops every toast, errors included: a new save starts and the last result is stale. */
+  /**
+   * Drops every toast, errors included: a new save starts and the last result is stale. Each one's `onClose`
+   * runs; a toast that an `onClose` raises while it runs is dropped as well.
+   */
   clear: () => void;
 }
 
@@ -57,14 +63,22 @@ const open = new Set<string>();
 
 let regions = 0;
 let warned = false;
+let warnedTwice = false;
 
 /**
- * Counts the mounted regions, so a toast called with none can say so.
+ * Counts the mounted regions, so a toast called with none can say so, and so can a second region, which would
+ * show and announce every toast twice.
  *
  * Internal: not exported from the package.
  */
 export function markRegion(delta: 1 | -1): void {
   regions += delta;
+  if (regions > 1 && !warnedTwice) {
+    warnedTwice = true;
+    console.warn(
+      'Two <ToastRegion /> are mounted, so every toast shows and is announced twice. Mount one, at the app root.',
+    );
+  }
 }
 
 function show({ timeout, onClose, ...content }: ToastOptions): string {
@@ -99,5 +113,7 @@ export const toast: ToastFunction = Object.assign(show, {
   clear: (): void => {
     for (const key of [...open]) queue.close(key);
     queue.clear();
+    // A toast an onClose raised in the loop above was dropped with the queue, so its key goes too.
+    open.clear();
   },
 });

@@ -1,5 +1,5 @@
-import { render } from '@testing-library/react';
-import type { ReactElement } from 'react';
+import { act, render, screen } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
@@ -12,6 +12,7 @@ import { Sheet } from '../src/sheet';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
+import { toast, ToastRegion } from '../src/toast';
 
 /** Every part that a label, a hint or a row's text renders into, and the chip beside a label. */
 const PARTS = [
@@ -139,4 +140,28 @@ describe('an optional overlay part of false, null or an empty string', () => {
     expect(document.body.querySelector('.overlay')).not.toBeNull();
     expect(document.body.querySelectorAll(OVERLAY_PARTS)).toHaveLength(0);
   });
+});
+
+describe("a toast's description of false, null or an empty string", () => {
+  // A toast is raised, not rendered, so its row is a call: the queue outlives the region, and each case drops it.
+  it.each<[string, ReactNode]>([
+    ['false', false],
+    ['null', null],
+    ['an empty string', ''],
+  ])(
+    'renders no second line, no description and no empty block in the status host for %s',
+    (_name, description) => {
+      render(<ToastRegion />);
+      act(() => {
+        toast({ title: 'Saved', description, tone: 'success' });
+      });
+      const shown = screen.getByRole('alertdialog', { name: 'Saved' });
+      expect(shown.querySelector('.toast-description')).toBeNull();
+      expect(shown).not.toHaveAttribute('aria-describedby');
+      expect(screen.getByRole('status').firstElementChild?.children).toHaveLength(1);
+      act(() => {
+        toast.clear();
+      });
+    },
+  );
 });

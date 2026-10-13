@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, ToastRegion, toast, type ToastOptions } from '@snapshot-ui/react';
+import { Button, toast, type ToastOptions } from '@snapshot-ui/react';
 import type { ReactElement } from 'react';
 
 const EVENTS: ToastOptions[] = [
@@ -32,8 +32,6 @@ export default function ToastBasic(): ReactElement {
           {options.title}
         </Button>
       ))}
-      {/* Mounted once, at the app root. This page's one region is here. */}
-      <ToastRegion />
     </div>
   );
 }

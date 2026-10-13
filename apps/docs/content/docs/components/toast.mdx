@@ -8,7 +8,7 @@ icon: BellRing
 
 ## Tones
 
-A toast reports an event that just happened, such as a save, in the bottom end corner of the screen, 16px in, above every dialog. It is a float card with a 4px stripe at its start in its tone: slate for `info`, and `success`, `warning` and `error`. The title says what happened and an optional second line says more, in slate. A toast leaves on its own after 6 seconds, or 12 for an error, and its X dismisses it sooner. The newest sits nearest the corner, the older ones rise above it, and three show at once; a fourth waits until one leaves.
+A toast reports an event that just happened, such as a save, in the bottom end corner of the screen, 16px in, above every dialog. It is a float card with a 4px stripe at its start in its tone: slate for `info`, and `success`, `warning` and `error`. The title says what happened and an optional second line says more, in slate. A toast leaves on its own after 6 seconds, or 12 for an error, and its X dismisses it sooner. The newest sits nearest the corner, the older ones rise above it, and three show at once; a fourth hides the oldest until one leaves.
 
 <Preview name="toast-basic" />
 
@@ -28,7 +28,7 @@ A toast can offer one action, such as Undo, as a secondary button before its X. 
 
 ## Usage
 
-Mount `<ToastRegion />` once, at the app root, beside your client providers. Then call `toast()` from any client code: a press handler, an effect, or the line after a server action returns. `tone` is required, so every toast says what kind of event it reports.
+Mount `<ToastRegion />` once, at the app root, beside your client providers, as this site does in its docs layout. Then call `toast()` from any client code: a press handler, an effect, or the line after a server action returns. `tone` is required, so every toast says what kind of event it reports. The title and the second line are text: the status region reads them out, so a link or a button never goes in them, and a toast's one control is its `action`.
 
 ```tsx
 'use client';
@@ -58,11 +58,11 @@ export function SaveBudget({ budget }: { budget: Budget }) {
 
 Toasts follow the page's theme and corners, never the scope around the button that raised them, since a toast reports on the app and not on the card it came from, as [Theming](/docs/theming#overlays) explains.
 
-`toast()` returns the toast's id, and `toast.dismiss(id)` closes that toast. `toast.clear()` drops every toast, errors included: call it when a new save starts, since the last result no longer holds. A toast called with no region mounted shows nothing, and the library warns once in the console.
+`toast()` returns the toast's id, and `toast.dismiss(id)` closes that toast. `toast.clear()` drops every toast, errors included: call it when a new save starts, since the last result no longer holds. A toast called with no region mounted shows nothing, and the library warns once in the console; so does a second region, which would show and announce every toast twice.
 
-Success, info and warning stay 6 seconds and an error 12, and a toast with an action has no timeout. `timeout` sets milliseconds of its own, or `null` to stay until dismissed. While the pointer is over the toasts, or focus is inside them, every timer pauses, and they start again when both leave, so a reader who needs longer can hold a toast by pointing at it.
+Success, info and warning stay 6 seconds and an error 12, and a toast with an action has no timeout. `timeout` sets milliseconds of its own, or `null` to stay until dismissed, as zero does. While the pointer is over the toasts, or focus is inside them, every timer pauses, a toast that arrives meanwhile included, and they start again when both leave, so a reader who needs longer can hold a toast by pointing at it.
 
-Say the outcome in the title, in words. The stripe only repeats it: in Windows high contrast the stripe is repainted in the reader's text color, and a title such as "Saved" or "The import failed" still says what happened. Keep one toast with an action at a time. Three show at once, and a toast with an action stays, so a fourth toast, an error included, would wait unseen behind three of them; when a newer action replaces an older one, dismiss the older one, as the example above does.
+Say the outcome in the title, in words. The stripe only repeats it: in Windows high contrast the stripe is repainted in the reader's text color, and a title such as "Saved" or "The import failed" still says what happened. Keep one toast with an action at a time. Three show at once, and a toast with an action stays, so with three of them on screen a fourth toast, an error included, pushes the oldest Undo out of sight until one leaves; when a newer action replaces an older one, dismiss the older one, as the example above does.
 
 </Section>
 

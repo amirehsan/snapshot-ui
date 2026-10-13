@@ -1529,8 +1529,10 @@ test.describe('the menu page, on a touch screen', () => {
 
 test('the toast page shows a toast that is announced politely and dismissed', async ({ page }) => {
   await visit(page, '/docs/components/toast');
-  // The polite host is in the page before any toast, so a screen reader is already listening to it.
-  const host = page.locator('.stage .toast-status-host');
+  // The polite host is in the page before any toast, so a screen reader is already listening to it. The docs
+  // layout mounts the one region, outside the example's tab panels.
+  const host = page.locator('.toast-status-host');
+  await expect(host).toHaveCount(1);
   await expect(host).toHaveAttribute('role', 'status');
   await expect(host).toBeEmpty();
   await page.getByRole('button', { name: 'Saved', exact: true }).click();
@@ -1541,6 +1543,12 @@ test('the toast page shows a toast that is announced politely and dismissed', as
   await expect(shown.locator('.toast-content')).toHaveAttribute('role', 'group');
   await shown.getByRole('button', { name: 'Dismiss' }).click();
   await expect(shown).toHaveCount(0);
+
+  // Still announced with the first example switched to its code: the host is not in that hidden tab panel.
+  await page.getByRole('tab', { name: 'Code' }).first().click();
+  await page.getByRole('list', { name: 'Accounts' }).getByRole('button', { name: 'Remove Savings' }).click();
+  expect(await host.evaluate((element) => element.closest('[hidden]'))).toBeNull();
+  await expect(host).toContainText('Savings removed');
 });
 
 test('an error toast is an alert', async ({ page }) => {
@@ -1550,7 +1558,7 @@ test('an error toast is an alert', async ({ page }) => {
   await expect(shown).toBeVisible();
   await expect(shown.getByRole('alert')).toContainText('Import failed');
   // An error speaks for itself, assertively, and the polite host leaves it alone.
-  await expect(page.locator('.stage .toast-status-host')).not.toContainText('Import failed');
+  await expect(page.locator('.toast-status-host')).not.toContainText('Import failed');
   await shown.getByRole('button', { name: 'Dismiss' }).click();
   await expect(shown).toHaveCount(0);
 });
