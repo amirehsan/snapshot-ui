@@ -18,7 +18,10 @@
     --app-shell-sidebar: var(--container-sidebar);
   }
 
+  /* Border-box, so the bottom reserve is inside the minimum height and a short page never scrolls, with or
+     without base.css. */
   .app-shell-workspace {
+    box-sizing: border-box;
     min-height: 100dvh;
     margin-inline-start: var(--app-shell-sidebar);
     padding-block-end: var(--app-shell-inset-block-end);

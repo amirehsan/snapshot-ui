@@ -43,7 +43,7 @@
   }
 
   /* 450 at 14px on a white bar reads light, and a destination's name is an action: weight 500. 4px each side
-     inside the pill leaves "Transactions" room in four tabs from 349px; docs/design-system.md has the sums. */
+     inside the pill leaves "Transactions" room in four tabs from 350px; docs/design-system.md has the sums. */
   .tab-bar-item {
     box-sizing: border-box;
     display: flex;
@@ -178,6 +178,14 @@
   @media (width >= 1024px) {
     .tab-bar {
       display: none;
+    }
+  }
+
+  /* While a bar is on the page, toasts rise above it. The toast region is mounted at the app's root, outside
+     the shell, so it reads its offset from the root. */
+  @media (width < 1024px) {
+    :root:has(.tab-bar) {
+      --toast-offset-block: calc(4rem + env(safe-area-inset-bottom, 0px));
     }
   }
 

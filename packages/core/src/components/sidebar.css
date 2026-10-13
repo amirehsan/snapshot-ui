@@ -89,7 +89,8 @@
     outline-offset: var(--focus-ring-offset);
   }
 
-  .sidebar-close {
+  /* Two classes, so it outranks the icon button's own margin whatever order the files load in. */
+  .icon-button.sidebar-close {
     flex: none;
     margin-inline-start: auto;
   }
@@ -400,7 +401,8 @@
 
   /* ---- Collapsed: icons only, names as tooltips, from 1024px up ------------------------------- */
   @media (width >= 1024px) {
-    .sidebar-trigger {
+    /* Two classes, so it outranks the icon button's own display whatever order the files load in. */
+    .icon-button.sidebar-trigger {
       display: none;
     }
 
@@ -441,9 +443,10 @@
       padding: 0;
     }
 
-    /* The icon moves 4px inward as the rail collapses, hidden by the width transition. */
+    /* 15px, so a 40px item centers in the 70px inside the rail's 1px border. The icon moves 3px inward as the
+       rail collapses, hidden by the width transition. */
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-nav {
-      padding-inline: 1rem;
+      padding-inline: calc(1rem - 1px);
       scrollbar-width: none;
     }
 

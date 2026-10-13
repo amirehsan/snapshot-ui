@@ -4147,9 +4147,10 @@ corner with the stripe on the right; the `ToastMirrored` story pins both.
 it, so the tone is carried by the words alone, as it was in the app: the docs
 ask the title to say the outcome.
 
-**Room for a save bar.** `--toast-offset-block` is read with a fallback of 0
-and declared nowhere, so a later save bar can lift the stack by its own
-height.
+**Room for a save bar.** `--toast-offset-block` is read with a fallback of 0,
+so a later save bar can lift the stack by its own height. The bottom tab bar
+declares it below 1024px, on the root while a bar is on the page, so a toast
+rises above the bar instead of covering it.
 
 **`maxVisibleToasts`.** The prop writes the queue's `maxVisibleToasts`, which
 the queue reads each time a toast is added or closed, so a change applies from
@@ -4507,7 +4508,11 @@ control's.
 button were 40px, and the input 48px. The `md` segmented option is 2.5rem in a
 track of the option plus 0.5rem, 48px, and the `sm` option 2rem in a 40px
 track, so the two segmented tracks are exactly `--size-field` and
-`--size-control`. Comfortable draws exactly as 0.1.0 did.
+`--size-control`. Comfortable draws exactly as 0.1.0 did at the default 16px
+root font size. The segmented heights were rem and are now the px size tokens,
+as the button's 40px always was, so under a larger root font they no longer
+grow with the text; a page that raises the root size sees shorter segmented
+tracks than 0.1.0 drew.
 
 **36, not 32.** The first app's toolbar controls are 34 to 36px. 36 also keeps
 the hit-area extension at 2px a side, so two controls 8px apart, the part
@@ -4744,12 +4749,13 @@ float, 1.29 and 1.43, which its lift and its chevron show.
 
 **The focus ring stays outset** on every item, the current one included: an
 ink ring outside an ink pill reads against the float surface, and nothing in a
-static group clips it, with 12px of nav padding (16px collapsed) against a 4px
+static group clips it, with 12px of nav padding (15px collapsed) against a 4px
 ring. The inset ring arrives with foldable groups, whose fold clips, inverted
 to canvas on the current item as the segmented control's is.
 
-**The 4px travel.** Collapsed, the nav pads 16px instead of 12px so a 40px item
-centers in the 72px rail, and the icon moves 4px inward as the rail narrows,
+**The 3px travel.** Collapsed, the nav pads 15px instead of 12px so a 40px item
+centers in the 70px inside the 72px rail's 1px border, and the icon moves 3px
+inward as the rail narrows,
 hidden by the 200ms width transition; under reduced motion it is an instant
 step.
 
@@ -4881,7 +4887,7 @@ Chromium: "Transactions" 77.3px, "Documents" 70.4, "Accounts" 57.5, "Settings"
 50.9, "Insights" 48.4, "Home" 35.9, "Goals" 33.5, "More" 30.6. A label's room
 is `(width - 8) / n - 8`, the bar's 4px each side and the item's 4px each
 side: 70, 83.8 and 87.5px for four tabs at 320, 375 and 390px, and 54, 65 and
-68px for five. So four tabs hold "Transactions" from 349px and never at 320px,
+68px for five. So four tabs hold "Transactions" from 350px and never at 320px,
 where it ellipsizes, and five hold labels up to about 60px at 375px. The
 spec's item rule wrote 8px inside each side, which leaves 75.8px at 375px and
 cuts "Transactions"; its own sums count 4px, which the item takes.

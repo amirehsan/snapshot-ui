@@ -19,7 +19,8 @@
     white-space: nowrap;
   }
 
-  /* --toast-offset-block is 0 and exists so a save bar can lift the stack by its height later. */
+  /* --toast-offset-block is 0 unless chrome docked at the bottom lifts the stack: tab-bar.css sets it while a bar
+     is on a narrow page, and a save bar will too. */
   .toast-region {
     position: fixed;
     inset-block-end: calc(var(--overlay-inset) + var(--toast-offset-block, 0px));
