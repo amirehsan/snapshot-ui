@@ -50,7 +50,27 @@ describe('Radio', () => {
     const labelled = <Radio value="weekly">Weekly</Radio>;
     const byAriaLabel = <Radio value="weekly" aria-label="Weekly" />;
     const byLabelledby = <Radio value="weekly" aria-labelledby="weekly-name" />;
-    expect([nameless, hinted, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+    const jsxChildren = (
+      <Radio value="weekly">
+        <strong>Weekly</strong>
+      </Radio>
+    );
+    const childrenAndAriaLabel = (
+      <Radio value="weekly" aria-label="Every week">
+        Weekly
+      </Radio>
+    );
+    const bothAriaProps = <Radio value="weekly" aria-label="Every week" aria-labelledby="weekly-name" />;
+    expect([
+      nameless,
+      hinted,
+      labelled,
+      byAriaLabel,
+      byLabelledby,
+      jsxChildren,
+      childrenAndAriaLabel,
+      bothAriaProps,
+    ]).toHaveLength(8);
   });
 
   it('ties a hint to the radio as its accessible description', async () => {

@@ -4,7 +4,8 @@ import { createRef, useState, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { root } from '../../test/dom';
-import { TextField, type TextFieldProps } from './TextField';
+import type { AccessibleName } from '../index';
+import { TextField, type TextFieldBaseProps, type TextFieldProps } from './TextField';
 
 /** A field the caller controls, the way a form library would. */
 function Controlled(props: TextFieldProps): ReactElement {
@@ -38,7 +39,28 @@ describe('TextField', () => {
     const labelled = <TextField label="Title" />;
     const byAriaLabel = <TextField aria-label="Title" />;
     const byLabelledby = <TextField aria-labelledby="heading" />;
-    expect([nameless, unnamed, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+    const jsxLabel = <TextField label={<strong>Title</strong>} />;
+    const labelAndAriaLabel = <TextField label="Title" aria-label="Page title" />;
+    const bothAriaProps = <TextField aria-label="Page title" aria-labelledby="heading" />;
+    expect([
+      nameless,
+      unnamed,
+      labelled,
+      byAriaLabel,
+      byLabelledby,
+      jsxLabel,
+      labelAndAriaLabel,
+      bothAriaProps,
+    ]).toHaveLength(8);
+    // A wrapper passes the rule on: omit what it drops from the base type, then add the exported rule.
+    const Wrapper = (
+      props: Omit<TextFieldBaseProps, 'description'> & AccessibleName<'label'>,
+    ): ReactElement => <TextField {...props} />;
+    // @ts-expect-error a wrapper that passes the rule on needs a name too
+    const wrapperNameless = <Wrapper />;
+    const wrapperLabelled = <Wrapper label="Title" />;
+    const wrapperByAriaLabel = <Wrapper aria-label="Title" />;
+    expect([wrapperNameless, wrapperLabelled, wrapperByAriaLabel]).toHaveLength(3);
   });
 
   it('puts its parts in the order the field contract asks for', () => {

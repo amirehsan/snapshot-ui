@@ -64,6 +64,7 @@ export {
   type SegmentedControlProps,
   type SegmentedControlSize,
 } from './segmented-control';
+export type { AccessibleName, AriaName } from './utils/accessible-name';
 export {
   Card,
   CardBody,

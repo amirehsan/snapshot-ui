@@ -1043,7 +1043,11 @@ No component writes a corner of its own, or the shape could not reach it.
   require a name, so code that names nothing does not compile. Every component
   states the rule through one shared type. A union cannot be extended, so each
   field also exports its base props type (`TextFieldBaseProps` and so on) for
-  a wrapper to extend or `Omit`.
+  a wrapper to extend or `Omit`, and a wrapper passes the rule on by
+  intersecting that with the exported `AccessibleName<'label'>` (or
+  `AccessibleName<'children'>`). The error for a field with no name either
+  says the props are not assignable or names only `aria-labelledby`; both
+  mean the field has no name.
 - **A state that only a fill carries is also drawn in forced colors.** Windows
   high contrast repaints every background with the reader's canvas, and it
   draws a border and an outline in the reader's text color. A state that a

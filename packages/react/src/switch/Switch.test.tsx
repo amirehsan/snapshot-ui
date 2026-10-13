@@ -4,7 +4,8 @@ import { createRef, useState, type ReactElement } from 'react';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { formOf, root, visibleParts } from '../../test/dom';
-import { Switch, type SwitchProps } from './Switch';
+import type { AccessibleName } from '../index';
+import { Switch, type SwitchBaseProps, type SwitchProps } from './Switch';
 
 /** A switch the caller controls, the way a form library would. */
 function Controlled(props: SwitchProps): ReactElement {
@@ -34,7 +35,32 @@ describe('Switch', () => {
     const labelled = <Switch>Weekly digest</Switch>;
     const byAriaLabel = <Switch aria-label="Weekly digest" />;
     const byLabelledby = <Switch aria-labelledby="digest-name" />;
-    expect([nameless, hinted, labelled, byAriaLabel, byLabelledby]).toHaveLength(5);
+    const jsxChildren = (
+      <Switch>
+        <strong>Weekly digest</strong>
+      </Switch>
+    );
+    const childrenAndAriaLabel = <Switch aria-label="Digest by email">Weekly digest</Switch>;
+    const bothAriaProps = <Switch aria-label="Digest by email" aria-labelledby="digest-name" />;
+    expect([
+      nameless,
+      hinted,
+      labelled,
+      byAriaLabel,
+      byLabelledby,
+      jsxChildren,
+      childrenAndAriaLabel,
+      bothAriaProps,
+    ]).toHaveLength(8);
+    // A wrapper passes the rule on: omit what it drops from the base type, then add the exported rule.
+    const Wrapper = (
+      props: Omit<SwitchBaseProps, 'description'> & AccessibleName<'children'>,
+    ): ReactElement => <Switch {...props} />;
+    // @ts-expect-error a wrapper that passes the rule on needs a name too
+    const wrapperNameless = <Wrapper />;
+    const wrapperLabelled = <Wrapper>Weekly digest</Wrapper>;
+    const wrapperByAriaLabel = <Wrapper aria-label="Weekly digest" />;
+    expect([wrapperNameless, wrapperLabelled, wrapperByAriaLabel]).toHaveLength(3);
   });
 
   it('draws the track and the thumb as decoration inside the row', () => {
