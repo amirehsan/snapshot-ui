@@ -2074,3 +2074,22 @@ test.describe('a line chart without JavaScript', () => {
     await expect(shown.locator('tbody tr')).toHaveCount(31);
   });
 });
+
+test('the installation page installs the charts package and names the core version it needs', async ({
+  page,
+}) => {
+  await visit(page, '/docs/installation');
+  await expect(page.locator('pre', { hasText: 'pnpm add @snapshot-ui/charts' })).toHaveCount(1);
+  const section = page
+    .locator('.docs-section')
+    .filter({ has: page.getByRole('heading', { name: 'Charts', exact: true }) });
+  await expect(section).toContainText('0.3.0');
+  await expect(section.getByRole('link', { name: 'Line chart', exact: true })).toHaveAttribute(
+    'href',
+    '/docs/charts/line-chart',
+  );
+  await expect(section.getByRole('link', { name: 'Sparkline', exact: true })).toHaveAttribute(
+    'href',
+    '/docs/charts/sparkline',
+  );
+});

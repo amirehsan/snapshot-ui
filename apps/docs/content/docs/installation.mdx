@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Add the two packages, import one stylesheet and load the font.
+description: Add the packages, import one stylesheet and load the font.
 icon: Download
 ---
 
@@ -13,6 +13,20 @@ Both packages, with React 19 or later.
 ```bash
 pnpm add @snapshot-ui/react @snapshot-ui/core
 ```
+
+</Section>
+
+<Section>
+
+## Charts
+
+Charts are a package of their own, with versions of their own.
+
+```bash
+pnpm add @snapshot-ui/charts
+```
+
+It needs `@snapshot-ui/core` 0.3.0 or later, whose `styles.css` already draws the charts, and React 19, and nothing else: no React Aria. See the [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
 
 </Section>
 
@@ -101,7 +115,7 @@ A whole app in one right-to-left language wraps its root the same way. A toast f
 
 ## Next.js server components
 
-Every component file carries `'use client'`, so a server component or an MDX page can render them directly. React Aria itself must never be imported into a server component.
+Interactive components carry `'use client'`. Static ones carry none, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, the field counter and chip, Meter, a StatTile without `href`, and Sparkline. React Aria itself must never be imported into a server component.
 
 </Section>
 

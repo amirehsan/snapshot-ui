@@ -276,19 +276,22 @@ test('the footer lists every component and chart page in the rail order, and a c
   const pages = [...COMPONENT_PAGES, ...CHART_PAGES];
   expect(listed).toEqual(pages.map(({ url, title }) => ({ href: url, name: title })));
 
-  // A chip is a link when the catalog's component has a page, and plain text while it does not.
+  // A chip is a link when the catalog's component has a page, and plain text while it does not. A chip that
+  // names a rail group, such as Charts, links the group's first page.
   const urls = new Map(pages.map(({ url, title }) => [title.toLowerCase(), url]));
+  const groups = new Map([['charts', CHART_PAGES[0]?.url]]);
   const chips = await page
     .locator('.catalog .chip')
     .evaluateAll((elements) =>
       elements.map((element) => ({ name: element.textContent.trim(), href: element.getAttribute('href') })),
     );
   for (const chip of chips) {
-    expect(chip.href, chip.name).toBe(urls.get(chip.name.toLowerCase()) ?? null);
+    const name = chip.name.toLowerCase();
+    expect(chip.href, chip.name).toBe(urls.get(name) ?? groups.get(name) ?? null);
   }
   // Button, Icon button, the six form controls, Stat tile, Dialog, Drawer, Menu, Toast, Command palette, Tooltip
-  // and Sidebar have pages.
-  expect(chips.filter((chip) => chip.href)).toHaveLength(16);
+  // and Sidebar have pages, and Charts links the charts group.
+  expect(chips.filter((chip) => chip.href)).toHaveLength(17);
 });
 
 test('the homepage switches corners and remembers them', async ({ page }) => {
