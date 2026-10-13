@@ -20,6 +20,8 @@ import ConfirmDialogHook from './confirm-dialog-hook';
 import DialogBasic from './dialog-basic';
 import DialogDanger from './dialog-danger';
 import DialogLong from './dialog-long';
+import DrawerEnd from './drawer-end';
+import DrawerNavigation from './drawer-navigation';
 import EyebrowHeading from './eyebrow-heading';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
@@ -75,6 +77,8 @@ export const examples = {
   'dialog-basic': DialogBasic,
   'dialog-danger': DialogDanger,
   'dialog-long': DialogLong,
+  'drawer-end': DrawerEnd,
+  'drawer-navigation': DrawerNavigation,
   'eyebrow-heading': EyebrowHeading,
   'field-counter': LengthCounter,
   'field-parts': FieldParts,

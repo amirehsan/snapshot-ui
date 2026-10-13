@@ -1,10 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
-import { expect, userEvent, waitFor } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { CollapsibleCard } from '../collapsible-card';
+import { DialogTrigger } from '../dialog';
+import { Drawer } from '../drawer';
+import { Link } from '../link';
 import { Radio, RadioGroup } from '../radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
 import { firstLineOffset, lineCount } from '../stories/paint';
@@ -475,6 +478,75 @@ export const CollapsibleCardMirrored: Story = {
     await expect(narrowAction.top).toBeGreaterThanOrEqual(narrowNote.bottom);
     await expectSameEdge(narrowAction.right, narrowTitle.right);
     await expectInside(narrowAction, rect(narrow));
+  },
+};
+
+/**
+ * The drawer at the start comes from the right, the start of a right-to-left line, and the one at the end
+ * from the left. Each floats 16px inside its edge, and its header mirrors: the title at the right and the
+ * close button at the left end. The drawers portal out of the wrapper, so their direction comes from the
+ * locale, which the frame sets on the scrim.
+ */
+export const DrawerMirrored: Story = {
+  render: () => (
+    <Rtl>
+      <div style={{ display: 'flex', gap: 16 }}>
+        <DialogTrigger>
+          <Button variant="secondary">افتح القائمة</Button>
+          <Drawer title="القائمة" closeLabel="إغلاق">
+            <nav aria-label="مساحة العمل">
+              <Link href="#overview">نظرة عامة</Link>
+            </nav>
+          </Drawer>
+        </DialogTrigger>
+        <DialogTrigger>
+          <Button variant="secondary">افتح عوامل التصفية</Button>
+          <Drawer placement="end" title="عوامل التصفية" closeLabel="إغلاق">
+            <p>المشاريع النشطة فقط.</p>
+          </Drawer>
+        </DialogTrigger>
+      </div>
+    </Rtl>
+  ),
+  play: async ({ canvas }) => {
+    const body = within(document.body);
+    /** Opens a drawer from its trigger and returns its panel once it has stopped sliding. */
+    const openFrom = async (trigger: string): Promise<HTMLElement> => {
+      await userEvent.click(canvas.getByRole('button', { name: trigger }));
+      const panel = await waitFor(async () => {
+        const found = find(document, '.drawer');
+        await expect(found).not.toHaveAttribute('data-entering');
+        return found;
+      });
+      await Promise.all(panel.getAnimations().map((animation) => animation.finished.catch(() => null)));
+      return panel;
+    };
+    /** The close button is at the left end of the header, and the title starts at its right end. */
+    const expectMirroredHeader = async (panel: HTMLElement): Promise<void> => {
+      const header = rect(find(panel, '.drawer-header'));
+      const close = rect(find(panel, '.drawer-close'));
+      const title = rect(find(panel, '.drawer-title'));
+      await expect(close.left - header.left).toBeGreaterThanOrEqual(0);
+      await expect(close.left - header.left).toBeLessThanOrEqual(24);
+      await expect(close.right).toBeLessThanOrEqual(title.left + 0.5);
+      await expectSameEdge(header.right - title.right, 24);
+    };
+    const viewport = document.documentElement.clientWidth;
+
+    const start = await openFrom('افتح القائمة');
+    await expect(start.parentElement).toHaveAttribute('dir', 'rtl');
+    await expect(start).toHaveAttribute('data-side', 'right');
+    await expectSameEdge(viewport - rect(start).right, 16);
+    await expectMirroredHeader(start);
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(body.queryByRole('dialog')).not.toBeInTheDocument());
+
+    const end = await openFrom('افتح عوامل التصفية');
+    await expect(end).toHaveAttribute('data-side', 'left');
+    await expectSameEdge(rect(end).left, 16);
+    await expectMirroredHeader(end);
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(body.queryByRole('dialog')).not.toBeInTheDocument());
   },
 };
 

@@ -1539,6 +1539,111 @@ describe('src/components/dialog.css', () => {
   });
 });
 
+describe('src/components/drawer.css', () => {
+  // The rules without their comments, with their whitespace closed up. A header that is the start of a longer
+  // one (`.drawer {` and `.drawer-overlay {`) is looked up with the "} " of the rule before it.
+  const rules = () => closeUp(stripComments(read('src/components/drawer.css')));
+
+  it('is imported after dialog.css', () => {
+    const entry = read('src/styles.css');
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('dialog.css')).toBeGreaterThanOrEqual(0);
+    expect(at('drawer.css')).toBeGreaterThan(at('dialog.css'));
+  });
+
+  it('stretches the panel down the scrim, the overlay inset clear on every side', () => {
+    const overlay = blockAfter(rules(), '.drawer-overlay {');
+    expect(overlay).toContain('align-items: stretch;');
+    expect(overlay).toContain('padding: var(--overlay-inset);');
+    // The scrim's own rule sizes it by its border box, so the padding stays inside the viewport.
+    expect(overlay).not.toContain('box-sizing');
+  });
+
+  it('draws the panel 20rem wide at most, the full height, in the four modal surface tokens', () => {
+    const panel = blockAfter(rules(), '} .drawer {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-direction: column;',
+      'width: min(20rem, 100%);',
+      'height: 100%;',
+      // Without it, the scrim's row grows to a long list and 100% is the list's height, not the viewport's.
+      'min-height: 0;',
+      'background-color: var(--color-float);',
+      'border: 1px solid var(--color-hairline);',
+      'border-radius: var(--radius-stadium);',
+      'box-shadow: var(--shadow-dramatic);',
+      'transition: translate 180ms ease;',
+    ]) {
+      expect(panel, declaration).toContain(declaration);
+    }
+  });
+
+  it('sets the panel against its own side by data-side, on the physical axis the side names', () => {
+    // The scrim carries the locale's dir, so a logical start or end would flip a resolved side back in right to
+    // left: a start drawer, data-side right, would sit on the left and slide in from the right.
+    const css = rules();
+    expect(blockAfter(css, ".drawer[data-side='left'] {")).toContain('justify-self: left;');
+    expect(blockAfter(css, ".drawer[data-side='right'] {")).toContain('justify-self: right;');
+  });
+
+  it('slides in and out from its own side, past the inset, by data-side', () => {
+    const css = rules();
+    expect(blockAfter(css, ".drawer[data-side='left']:is([data-entering], [data-exiting]) {")).toContain(
+      'translate: calc(-100% - var(--overlay-inset)) 0;',
+    );
+    expect(blockAfter(css, ".drawer[data-side='right']:is([data-entering], [data-exiting]) {")).toContain(
+      'translate: calc(100% + var(--overlay-inset)) 0;',
+    );
+  });
+
+  it('pads the header, the body and the footer 24px, the footer clear of the home indicator', () => {
+    const css = rules();
+    expect(blockAfter(css, '.drawer-header {')).toContain(
+      'padding: var(--spacing-peer) var(--spacing-peer) 0;',
+    );
+    expect(blockAfter(css, '.drawer-body {')).toContain('padding: var(--spacing-peer);');
+    expect(blockAfter(css, '.drawer-footer {')).toContain(
+      'padding: 0 var(--spacing-peer) calc(var(--spacing-peer) + env(safe-area-inset-bottom, 0px));',
+    );
+    // The close button lines its icon up with the padding edge.
+    expect(blockAfter(css, '.drawer-close {')).toContain('margin-inline-end: -0.5rem;');
+  });
+
+  it('rings no focus on the content React Aria focuses, and scrolls the body inside the panel, and only the body', () => {
+    const css = rules();
+    const content = blockAfter(css, '.drawer-content {');
+    expect(content).toContain('outline: none;');
+    expect(content).toContain('min-height: 0;');
+    const body = blockAfter(css, '.drawer-body {');
+    for (const declaration of [
+      'flex: 1 1 auto;',
+      'min-height: 0;',
+      'overflow-y: auto;',
+      'overscroll-behavior: contain;',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(body, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.drawer-header {')).toContain('flex: none;');
+    expect(blockAfter(css, '.drawer-footer {')).toContain('flex: none;');
+  });
+
+  it('redraws the edge in CanvasText in forced colors, so the panel keeps its shape', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(forced, '.drawer {')).toContain('border-color: CanvasText;');
+  });
+
+  it('stops the slide under reduced motion, after it', () => {
+    const css = rules();
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    expect(blockAfter(blockAfter(css, reduced), '.drawer {')).toContain('transition: none;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: translate 180ms ease;'));
+    expect(css.indexOf(reduced)).toBeGreaterThan(
+      css.indexOf(".drawer[data-side='right']:is([data-entering], [data-exiting]) {"),
+    );
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

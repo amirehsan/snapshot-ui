@@ -3167,3 +3167,83 @@ caller places it, as the docs example does on the row that takes its place.
 the buttons are Button's tertiary, primary and danger variants, whose labels
 the contrast gate already holds: slate on Float, canvas on ink and canvas on
 error.
+
+## Drawer
+
+The app's drawer becomes `Drawer`: a floating panel inset 16px from the
+viewport's edges, with 40px corners, the float fill and the hairline edge,
+that slid in from the start edge in 180ms over the Deep Well scrim, at 0.4 in
+light and 0.65 in dark, and that Escape and a press on the scrim closed. It hid
+itself with `visibility` when closed and had no focus trap. React Aria's
+`Modal` and `Dialog` give it what it lacked: focus moves in and is held there,
+the page behind is inert and does not scroll, and a closed drawer is unmounted
+rather than hidden. It shares the modal frame with Dialog, so the scrim, the
+stack, the scope copy and the toast-region exception are the ones "Overlays"
+derives.
+
+**One object with the rail.** The panel floats 16px clear of the viewport on
+every side, the overlay inset, which is the gap the app's navigation rail keeps
+from the edge. A shell shows its navigation as that rail on a wide screen and
+as this drawer on a narrow one, so the two are drawn as one object: the same
+float fill, the same 40px corner, the same distance from the edge, the same
+24px of padding. Only the scrim and the shadow tell the drawer from the rail.
+The scrim is a grid that stretches the panel down its height, inside the inset
+(`align-items: stretch`), and the panel is `height: 100%` of that room. Its
+height takes `min-height: 0` for the same reason the dialog's does: a grid
+item's automatic minimum is its content, and a list of forty links grew the
+scrim's row past the viewport, measured at a 1412px body that showed all of
+it and scrolled nothing. With no minimum the row is the scrim's, and the body
+scrolls.
+
+**Width.** `min(20rem, 100%)` of the room inside the scrim's padding, which is
+`min(20rem, 100vw - 2rem)`: 320px wherever the screen holds it with 16px on
+each side, and the screen less 32px on a phone narrower than 352px, so a 320px
+screen keeps 16px of scrim beside a 288px panel and never scrolls sideways.
+
+**Padding is 24px, not the dialog's 32.** A 320px panel at 32px leaves 256px
+for a navigation list, which is tight for a page name beside an icon, and the
+rail the drawer mirrors pads 24. So the header, the body and the footer pad
+`--spacing-peer`. The header is a row: the title at the start and the close
+button at the end, with `margin-inline-end: -0.5rem`: the icon sits 10px
+inside the 40px button, so it lands 2px inside the padding edge instead of
+10px and lines up with the text beneath it. The header pads only
+its top and sides, so the body's own 24px is the gap under it. The footer pads
+its sides and its bottom, plus `env(safe-area-inset-bottom)`, so an account row
+or an action stays clear of a phone's home indicator.
+
+**The slide is by `data-side`, and the side is physical.** The panel moves in
+from its edge by its own width plus the inset, so it starts wholly off the
+screen: `translate: calc(-100% - var(--overlay-inset)) 0` on the left and
+`calc(100% + var(--overlay-inset)) 0` on the right, in 180ms, ease, and not at
+all under reduced motion. `translate` is physical, and `:dir()` is above the
+browser floor, so the component resolves `placement` against the locale's
+direction into `data-side`: `start` is the left in left to right and the right
+in right to left, and `end` the other way. The alignment is physical too,
+`justify-self: left` and `right`: the scrim carries the locale's `dir`, and a
+grid's `start` and `end` follow it, so a right-hand drawer aligned to `end`
+sat on the left in right to left and slid in from the right, across the page.
+
+**The title.** It is React Aria's `Heading` in the dialog's `title` slot, an
+`h2` drawn in the `h3` step in ink, as Dialog's is, and it is required, so
+every drawer has a name. A navigation list names itself, and a title over it
+would say the same thing twice, so `isTitleHidden` wraps the heading in React
+Aria's `VisuallyHidden`: it still names the dialog, and the header shows only
+the close button, at the end.
+
+**The close button is on by default.** Escape and the scrim close a drawer,
+but a drawer is tall and is often opened by touch, where neither is visible as
+a way out, so the X is drawn unless `hasCloseButton` is false. It is the ghost
+IconButton, 40px, with Lucide's `X`, named "Close" unless `closeLabel` says
+otherwise.
+
+**The shadow.** A drawer is a modal surface, so it takes elevation level 3,
+`--shadow-dramatic`, as Dialog does. A shell whose drawer is the rail itself,
+shown over the page on a narrow screen, may set `--shadow-lift`, the rail's
+level 1, on its own class; the library does not, since a drawer it ships is
+always over a scrim.
+
+**Nothing new is measured.** The panel is Float with the hairline over the
+scrim, 3.10 in light and 1.15 in dark with the hairline carrying the edge, as
+"Overlays" records; the title is ink on Float and any secondary line slate on
+Float, pairs the contrast gate already holds. In forced colors the edge is
+drawn in `CanvasText`, so the panel keeps its shape on the scrim.

@@ -1,0 +1,67 @@
+---
+title: Drawer
+description: A floating side panel over the scrim, from the start or end edge, with a title, a scrolling body and a pinned footer.
+icon: PanelLeft
+---
+
+<Section>
+
+## Navigation
+
+A drawer is a float panel that slides in from the start or the end edge and floats 16px inside the viewport on every side, its full height. From the top it holds a header with the title and a close button, a body, and a footer pinned under it. The body scrolls when it is taller than the screen allows, and the header and the footer stay. The title is required, because it names the drawer. A navigation list names itself, so `isTitleHidden` keeps the title for assistive technology only, and the header shows just the close button. The footer is the place for the signed-in account or an action that should stay in view.
+
+<Preview name="drawer-navigation" />
+
+</Section>
+
+<Section>
+
+## From the end
+
+`placement="end"` brings the panel from the other edge, for a filter form beside a list. Its action goes in the footer, where it stays in view however long the form is. A button with `slot="close"` closes the drawer it is in.
+
+<Preview name="drawer-end" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Open a drawer from a `DialogTrigger`, which holds the button that opens it and the drawer, or control it with `isOpen` and `onOpenChange`, or start it open with `defaultOpen`. Drawer is a client component, and a server component can render it, as the examples on this page do. `children` may also be a function that receives `close`, for a link that closes the drawer as it navigates.
+
+An app shell that shows its navigation as a rail on a wide screen and as a drawer on a narrow one controls the drawer with `isOpen`, and closes it when the viewport widens past its breakpoint. That rule is the shell's, not the drawer's: the drawer closes only when it is asked to.
+
+The panel floats 16px from every edge, the inset the toast and a rail keep, and casts the dramatic shadow of a modal surface. It is 20rem wide at most, and never wider than the screen less 2rem. `start` and `end` follow the writing direction: in right to left the start is the right edge, and the drawer slides in from there. A drawer opened from a dark card is dark while the page stays light, as [Theming](/docs/theming#overlays) explains.
+
+</Section>
+
+<Section>
+
+## Props
+
+`ref` goes on the dialog element, the one that takes focus. `className` goes on the panel and `overlayClassName` on the scrim, each merged after the library's classes.
+
+<PropsTable path="../../packages/react/src/drawer/Drawer.tsx" type="Pick<DrawerProps, 'placement' | 'title' | 'isTitleHidden' | 'children' | 'footer' | 'isDismissable' | 'isKeyboardDismissDisabled' | 'hasCloseButton' | 'closeLabel' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'className' | 'overlayClassName'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The drawer is a dialog named by its title, even when the title is hidden. When it opens, focus moves to the drawer, and Tab cycles through the controls inside without reaching the page. When it closes, focus goes back to the button that opened it. While it is open, the page behind is hidden from assistive technology and does not scroll.
+
+<Keys rows={[['Tab', 'Cycles through the controls inside.'], ['Escape', 'Closes the drawer.'], ['Enter Space', 'Press a button or follow a link.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps drawers in the system.
+
+<Rules dos={['Use a drawer for navigation or for a filter form beside a list.', 'Hide the title when the content names itself, such as a navigation list, and keep it otherwise.', 'Keep the close button, so the way out is always in view.']} donts={['Never use a drawer to ask a question. That is a confirm dialog.', 'Never widen a drawer past 20rem. Content that needs more room is a page or a dialog.', 'Never open two drawers at once.']} />
+
+</Section>

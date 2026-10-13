@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { Dialog } from '../src/dialog';
+import { Drawer } from '../src/drawer';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Switch } from '../src/switch';
@@ -75,7 +76,13 @@ describe('a label, a hint or a row text of false or an empty string', () => {
 });
 
 /** Every optional part an overlay draws around what it is given. */
-const OVERLAY_PARTS = ['.dialog-well', '.dialog-description', '.dialog-body', '.dialog-actions'].join(', ');
+const OVERLAY_PARTS = [
+  '.dialog-well',
+  '.dialog-description',
+  '.dialog-body',
+  '.dialog-actions',
+  '.drawer-footer',
+].join(', ');
 
 /**
  * Each overlay rendered open and given `false`, `null` or `''` for every optional part. An overlay portals
@@ -87,6 +94,13 @@ const EMPTY_OVERLAYS: [name: string, element: ReactElement][] = [
     <Dialog isOpen title="Rename" description="" icon={false} actions={null}>
       {''}
     </Dialog>,
+  ],
+  [
+    // The body is always drawn, empty or not, since a drawer is its body; the footer only when given.
+    'Drawer',
+    <Drawer isOpen title="Menu" footer={false}>
+      {''}
+    </Drawer>,
   ],
 ];
 
