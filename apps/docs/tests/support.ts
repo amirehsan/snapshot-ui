@@ -46,14 +46,34 @@ export const withoutClipboard = async (page: Page, mode: 'missing' | 'refusing')
 /**
  * Every axe violation on the page, as "rule: selectors". An empty list is a pass. The check that a control's
  * accessible name holds the text it shows is experimental in this axe and on by default from axe 4.14, the
- * version the packages' own tests run, so it is turned on here too.
+ * version the packages' own tests run, so it is turned on here too. `disableRules` turns rules off for a page
+ * that has a reason, which its caller records.
  */
-export const axeViolations = async (page: Page): Promise<string[]> => {
-  const { violations } = await new AxeBuilder({ page })
-    .options({ rules: { 'label-content-name-mismatch': { enabled: true } } })
-    .analyze();
+export const axeViolations = async (
+  page: Page,
+  { disableRules = [] }: { disableRules?: readonly string[] } = {},
+): Promise<string[]> => {
+  let builder = new AxeBuilder({ page }).options({
+    rules: { 'label-content-name-mismatch': { enabled: true } },
+  });
+  if (disableRules.length > 0) builder = builder.disableRules([...disableRules]);
+  const { violations } = await builder.analyze();
   return violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 };
+
+/**
+ * The color the reader's palette gives a system color keyword, such as `Highlight` or `CanvasText`, read from
+ * a probe on the open page. Under forced colors this is what an element drawn in that keyword computes to.
+ */
+export const systemColor = (page: Page, name: string): Promise<string> =>
+  page.evaluate((keyword) => {
+    const probe = document.createElement('span');
+    probe.style.color = keyword;
+    document.body.append(probe);
+    const { color } = getComputedStyle(probe);
+    probe.remove();
+    return color;
+  }, name);
 
 /** The size a pointer can hit: the element's box, or its ::before or ::after hit area when that is larger. */
 export const hitSize = (locator: Locator): Promise<{ width: number; height: number }> =>

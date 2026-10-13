@@ -346,6 +346,24 @@
     gap: var(--spacing-part);
     align-content: start;
   }
+
+  /* ---- Shell examples ----------------------------------------------------- */
+  /* A frame for an example of the whole app shell. Layout containment makes it the containing block of the
+     rail, which is fixed to the viewport in an app, so the rail floats inside the frame; the frame clips the
+     workspace, which is a screen tall. The stage around it gives up its padding to the frame. */
+  .stage-shell {
+    position: relative;
+    width: 100%;
+    height: 30rem;
+    overflow: hidden;
+    contain: layout;
+    border-radius: var(--radius-surface);
+    background-color: var(--color-canvas);
+  }
+
+  .stage:has(.stage-shell) {
+    padding: 0;
+  }
 }
 
 /*

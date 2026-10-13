@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { axeViolations, COMPONENT_PAGES, settled, sideways } from './support';
+import { axeViolations, COMPONENT_PAGES, settled, sideways, systemColor } from './support';
 
 /**
  * Checks that run across every component page: Windows high contrast, and a
@@ -369,6 +369,31 @@ test.describe('forced colors', () => {
     expect(Number(alpha), fill).toBeLessThan(1);
   });
 
+  test('the current rail item is Highlight and the group dots are CanvasText and Highlight', async ({
+    page,
+  }) => {
+    // The current item is an ink fill and the dots are fills, which the repaint would drop: the item is drawn
+    // in the selection colors and the dots in the reader's text and selection colors, so both still show.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await visit(page, '/docs/components/sidebar');
+    const example = page.locator('.stage').first();
+    const current = example.locator('.sidebar:not(.sidebar-drawer) .sidebar-item[aria-current="page"]');
+    const item = await paint(current);
+    expect(item.fill).toBe(await systemColor(page, 'Highlight'));
+    expect(item.text).toBe(await systemColor(page, 'HighlightText'));
+    const groups = example.locator('.sidebar:not(.sidebar-drawer) .sidebar-group');
+    const lit = await paint(
+      groups.and(page.locator('[data-current]')).locator('.sidebar-group-label'),
+      '::before',
+    );
+    expect(lit.fill).toBe(await systemColor(page, 'Highlight'));
+    const plain = await paint(
+      groups.and(page.locator(':not([data-current])')).first().locator('.sidebar-group-label'),
+      '::before',
+    );
+    expect(plain.fill).toBe(await systemColor(page, 'CanvasText'));
+  });
+
   test('a tooltip keeps a border and loses its arrow', async ({ page }) => {
     // The arrow is an svg fill, which the repaint would turn into a shape of the wrong color or none, so it
     // goes. The tip's transparent border is repainted in the reader's text color, so the tip keeps its shape.
@@ -411,6 +436,7 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
  * app, and never by the card the page is drawn in.
  */
 const LONG_TARGETS: Record<string, string[]> = {
+  'app-shell': ['.stage .app-shell-main p'],
   badge: ['.stage .badge'],
   card: ['.stage .card-title', '.stage .card-note'],
   checkbox: [
@@ -434,6 +460,7 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .radio-text',
   ],
   'segmented-control': ['.stage .field-label', '.stage .segmented-label'],
+  sidebar: ['.stage .sidebar-item-label'],
   switch: ['.stage .switch-text', '.stage .field-description'],
   'text-area': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'text-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
@@ -513,13 +540,27 @@ for (const slug of SLUGS) {
 
 // ---- Accessibility ------------------------------------------------------------------------------
 
+/**
+ * The pages whose examples draw a whole app shell, each with its reason. A docs page is itself a page with one
+ * `<main>`, and an example of the shell renders a second `<main>`, and a nav, inside it. On these pages alone
+ * the three landmark rules that forbid that are off; every other rule stays on, each example's nav has a name
+ * of its own, and the Storybook a11y run checks a lone shell's landmarks with every rule on.
+ */
+const NESTED_SHELL: Record<string, string> = {
+  'app-shell': 'each example is an AppShell, which renders its own <main> inside the page',
+  sidebar: 'each example is a Sidebar in an AppShell, which renders its own <main> inside the page',
+};
+const NESTED_RULES = ['landmark-no-duplicate-main', 'landmark-main-is-top-level', 'landmark-unique'];
+
 for (const slug of SLUGS) {
   for (const theme of ['light', 'dark'] as const) {
     test(`the ${slug} page has no axe violations in ${theme}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: theme });
       await visit(page, `/docs/components/${slug}`);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-      expect(await axeViolations(page)).toEqual([]);
+      expect(await axeViolations(page, { disableRules: slug in NESTED_SHELL ? NESTED_RULES : [] })).toEqual(
+        [],
+      );
     });
   }
 }
@@ -534,6 +575,7 @@ for (const slug of SLUGS) {
  * Node; this proves the production build puts them in the page.
  */
 const SERVER_RENDERED: Record<string, string[]> = {
+  'app-shell': ['.stage .app-shell'],
   badge: ['.stage .badge'],
   button: ['.stage .button'],
   card: ['.stage .card', '.stage .card-title', '.stage .card-note'],
@@ -552,6 +594,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'radio-group': ['.stage .radio-indicator'],
   'segmented-control': ['.stage .segmented-option'],
   sheet: ['.stage .button'],
+  sidebar: ['.stage .sidebar'],
   spinner: ['.stage .spinner'],
   switch: ['.stage .switch-thumb'],
   'text-area': ['.stage .textarea'],

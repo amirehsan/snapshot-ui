@@ -122,3 +122,19 @@ export {
 } from './command-palette';
 export { Tooltip, TooltipTrigger, type TooltipProps, type TooltipTriggerProps } from './tooltip';
 export { AppShell, useAppShell, type AppShellProps, type AppShellState } from './app-shell';
+export {
+  Sidebar,
+  SidebarBrand,
+  SidebarGroup,
+  SidebarItem,
+  SidebarSearch,
+  SidebarTrigger,
+  useSidebar,
+  type SidebarBrandProps,
+  type SidebarGroupProps,
+  type SidebarItemProps,
+  type SidebarProps,
+  type SidebarSearchProps,
+  type SidebarState,
+  type SidebarTriggerProps,
+} from './sidebar';

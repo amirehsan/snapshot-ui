@@ -4673,3 +4673,141 @@ the drawer is closed.
 It is hand-written because the library does not depend on `react-stately`. Its
 setter tells the callback only when the value would change, and never moves a
 controlled value: the owner decides in the callback.
+
+## Sidebar
+
+The source app's rail and the docs site's rail become `Sidebar` and its parts.
+What both did, the library keeps: a float rail 16px clear of the viewport on
+three sides, with the hairline, the stadium corner and the level 1 lift; the
+collapse to a 72px column of 40px icons, remembered by whoever owns the state;
+labels hidden from view and never removed, so no name depends on the state;
+the names as tooltips while collapsed, the search's shortcut on its tip; a
+collapse button drawn small and hit at 40px whose name flips; group labels
+with a dot that lights light signal orange, and turns the label ink, while the
+group holds the current page; the current item as an ink pill with canvas text
+and `aria-current="page"`; a drawer below 1024px that ignores collapse; the
+current item revealed on load through `scrollTop` with a 40px margin; long
+labels that wrap; and reduced motion stopping the width change and the slide.
+
+**Where it departs from the docs rail.** The document decides where the two
+disagree. Items are 8px apart, the document's "one nav item to the next", not
+2px. Items are 16px, the `--text-action` step, not 15px. Group labels are 14px,
+the `--text-overline` step for an uppercase column header and the document's
+minimum for words, not 12px. The hover is the 5% ink wash, the document's hover
+on a float surface; the docs used the canvas fill, which measures the same
+strength. Labels wrap where the docs cut them with an ellipsis. The collapse
+button sits on the rail's edge, and no corner animates.
+
+**The rail's own constants.** Four custom properties on `.sidebar`, each with
+its reason. The gutter, `--sidebar-gutter`, is 12px, half the peer step, the
+one inset the docs rail and the source both use for every gap inside the rail:
+the nav's padding, the search pill's margin, the gap from icon to label and
+the group label's inset; the head and the foot sit at two gutters, 24px, the
+peer step. The icon, `--sidebar-icon`, is 20px. The pill inset,
+`--sidebar-pill-inset`, is 10px, `(--size-target - icon) / 2`, which centers a
+20px icon in a 40px pill, so a group label's first letter, an expanded item's
+icon and a collapsed item's icon share one axis. The row,
+`--sidebar-row`, is `max(--size-target, --size-control)`: 40px in comfortable
+and in compact, 44px in compact on a touch screen. A navigation item is a
+reading target and never shrinks below the 40px floor.
+
+**Items.** `--text-action` with a 1.25 line height, so a 20px first line sits
+beside the 20px icon and a wrapped label grows the row with the icon beside its
+first line. The count is plain text at the row's end in slate, `--text-small`
+at 700 with tabular figures, and canvas on the current item: an outline inside
+a pill would be a pill in a pill. Collapsed, the count is an 8px dot on the
+icon's top-end corner, ink, and canvas on the current item, its number clipped
+inside it and still in the name.
+
+**The group dot** is 6px of ink at 25% over float, a navigation cue beside a
+label that carries the words, recorded and not gated. The current group's dot
+is light signal orange, the attention cue.
+
+**The collapse button** is drawn at 32px on the float fill with the frame
+edge and the level 1 lift, and hit at 40px through a pseudo-element. It
+straddles the rail's end edge 24px from the top; its inset is measured from the
+rail's padding box, so its middle sits on the inner side of the 1px border. The
+chevron turns 180 degrees when collapsed and is mirrored under `[dir='rtl']`
+after the turn, so it points at the rail in both states and both directions.
+The spec's `z-index: 1` on it is dropped: the rail's own `--z-chrome` makes the
+stacking context it paints in, and nothing earlier in the rail overlaps it.
+
+**Measured pairs.** Ink on float 18.43 in light and 17.42 in dark (the items,
+the brand); slate on float 5.49 and 6.94 (the counts, the group labels, the
+search label); canvas on ink 16.25 and 19.31 (the current item). All three are
+gated already as text and cited by the contrast test, not added. The spec gave
+slate on float in dark as 6.44, which is slate on bone; the gate measures 6.94,
+as the dialog's description records. Recorded as cues and not gated: the 25%
+ink dot on float, 1.74 and 2.27; light signal orange on float, 2.87 and 6.07;
+the 5% ink wash on float, 1.11 and 1.14; the collapse button's frame edge on
+float, 1.29 and 1.43, which its lift and its chevron show.
+
+**The focus ring stays outset** on every item, the current one included: an
+ink ring outside an ink pill reads against the float surface, and nothing in a
+static group clips it, with 12px of nav padding (16px collapsed) against a 4px
+ring. The inset ring arrives with foldable groups, whose fold clips, inverted
+to canvas on the current item as the segmented control's is.
+
+**The 4px travel.** Collapsed, the nav pads 16px instead of 12px so a 40px item
+centers in the 72px rail, and the icon moves 4px inward as the rail narrows,
+hidden by the 200ms width transition; under reduced motion it is an instant
+step.
+
+**Two copies of the rail.** The rail renders at every width, and below 1024px
+it is `display: none`, out of the tab order and the accessibility tree. While
+the drawer is open a second copy of the same slots and children renders inside
+it, under a context that says it is not collapsed and is in the drawer, so it
+ignores `data-sidebar="collapsed"` wherever that is set, on `<html>` included;
+every collapsed rule is scoped `:not(.sidebar-drawer)`. Every id the library
+writes comes from `useId`, so the copies never share one, and only the class
+reaches the drawer copy: an `id` or another attribute an app sets on `Sidebar`
+stays on the rail. An app's own slot contents render twice too, so their ids
+come from `useId`, which the sidebar page says.
+
+**The Drawer adaptation.** The Sidebar renders the shipped `Drawer` with the
+title hidden and no close button of its own, so the Drawer draws no header at
+all: the hidden title names the dialog "Menu" and sits out of the flow. The
+close button is the drawer copy's, at the end of its head. The panel takes the
+class `sidebar-drawer-panel`, and `sidebar.css` restyles only `.drawer-body`
+under it, the part the drawer page lets a class on the panel restyle, into a
+column with no padding that the rail copy fills, and names no other part of the
+Drawer. The Drawer keeps its 320px width, its dramatic shadow and its slide,
+and gives focus back to the menu button in the next animation frame. The
+drawer copy's current item carries `autoFocus`, which React Aria applies after
+the Drawer has recorded the trigger as the origin of its theme scope. A press
+on any item in the drawer, the page already open included, closes it, and so
+does a press on the brand, which also navigates.
+
+**The count and the name.** The name of a counted item is "Transactions, 12 to
+review": the number is drawn and the words are visually hidden, so the row
+shows "12" and the name says what it counts. A browser's name joins a link's
+parts as the page lays them out, and puts a space at the edge of every flex
+item and every hidden box, while jsdom trims each element's text. A hidden
+comma before the count, as the spec first drew it, read "Transactions , 12 to
+review" in Chromium and "Transactions,12to review" in jsdom. So the comma ends
+the label, inline and drawn at `font-size: 0` by `.sidebar-comma`, and plain
+spaces sit between the label, the number and the hidden words: the name is the
+same in Chromium, in Playwright and in jsdom. The search pill names itself the
+same way, "Search or jump to, Mod K", with its key chip as part of its text,
+so the visible words are in the name as the docs' label check asks.
+
+**The shortcut.** The search's chip is the shared `Shortcut`, with the
+classes `kbd sidebar-search-shortcut`: `Mod` is "Mod" in the server's HTML and
+becomes the platform's modifier after the page hydrates, and the collapsed
+tooltip passes the same string.
+
+**The tooltips** are the shipped `Tooltip` and `TooltipTrigger`, as built:
+the brand, the search, every item and the collapse button sit in a trigger
+whose `isDisabled` is true unless the rail copy is collapsed, so no tip exists
+while expanded or in the drawer, and each tip takes `placement="end"`. The tip
+copies its theme, shape and density from its trigger, so a tip from a compact
+rail is compact. React Aria passes no `aria-hidden` to a tip, so it is the
+trigger's description while open and a screen reader may hear the name twice,
+which the overlays record accepts.
+
+**The reveal.** On mount each copy finds its `[aria-current="page"]` item and,
+when the nav has a height and the item's bottom is below the nav's visible
+bottom, sets `scrollTop` to the item's `offsetTop` less 40px. `.sidebar-nav` is
+`position: relative`, so `offsetTop` is measured from the nav. `scrollTop` and
+never `scrollIntoView`, which scrolls every ancestor; once per mount, since
+after that the reader chose the item.

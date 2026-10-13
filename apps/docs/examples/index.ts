@@ -1,4 +1,6 @@
 import type { ComponentType } from 'react';
+import AppShellBasic from './app-shell-basic';
+import AppShellCollapsed from './app-shell-collapsed';
 import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
 import ButtonStates from './button-states';
@@ -51,6 +53,10 @@ import SegmentedControlStates from './segmented-control-states';
 import SheetBasic from './sheet-basic';
 import SheetMore from './sheet-more';
 import SheetSnapPoints from './sheet-snap-points';
+import SidebarCollapsed from './sidebar-collapsed';
+import SidebarDrawer from './sidebar-drawer';
+import SidebarGroups from './sidebar-groups';
+import SidebarLongLabels from './sidebar-long-labels';
 import SpinnerSizes from './spinner-sizes';
 import SwitchBasic from './switch-basic';
 import SwitchSettings from './switch-settings';
@@ -71,6 +77,8 @@ import TooltipShortcut from './tooltip-shortcut';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
+  'app-shell-basic': AppShellBasic,
+  'app-shell-collapsed': AppShellCollapsed,
   'badge-counts': BadgeCounts,
   'badge-tones': BadgeTones,
   'button-states': ButtonStates,
@@ -123,6 +131,10 @@ export const examples = {
   'sheet-basic': SheetBasic,
   'sheet-more': SheetMore,
   'sheet-snap-points': SheetSnapPoints,
+  'sidebar-collapsed': SidebarCollapsed,
+  'sidebar-drawer': SidebarDrawer,
+  'sidebar-groups': SidebarGroups,
+  'sidebar-long-labels': SidebarLongLabels,
   'spinner-sizes': SpinnerSizes,
   'switch-basic': SwitchBasic,
   'switch-settings': SwitchSettings,

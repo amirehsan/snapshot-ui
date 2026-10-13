@@ -737,7 +737,9 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/command-palette">
                   Command palette
                 </Link>
-                <span className="chip">Sidebar</span>
+                <Link className="chip" href="/docs/components/sidebar">
+                  Sidebar
+                </Link>
                 <span className="chip">Save bar</span>
               </div>
             </Card>
@@ -780,6 +782,7 @@ export function HomePage(): ReactElement {
             <details className="footer-col" open>
               <summary>Components</summary>
               <div className="footer-links">
+                <Link href="/docs/components/app-shell">App shell</Link>
                 <Link href="/docs/components/badge">Badge</Link>
                 <Link href="/docs/components/button">Button</Link>
                 <Link href="/docs/components/card">Card</Link>
@@ -798,6 +801,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/radio-group">Radio group</Link>
                 <Link href="/docs/components/segmented-control">Segmented control</Link>
                 <Link href="/docs/components/sheet">Sheet</Link>
+                <Link href="/docs/components/sidebar">Sidebar</Link>
                 <Link href="/docs/components/spinner">Spinner</Link>
                 <Link href="/docs/components/switch">Switch</Link>
                 <Link href="/docs/components/text-area">Text area</Link>
