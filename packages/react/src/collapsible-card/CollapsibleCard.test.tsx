@@ -1349,6 +1349,56 @@ describe('CollapsibleCard with a field that fails validation', () => {
     expect(stored()).toEqual(['profile']);
   });
 
+  it('attaches its invalid listener once while folded, however often the parent renders, and asks with the latest onExpandedChange', async () => {
+    const user = userEvent.setup();
+    const asked: number[] = [];
+    function Form(): ReactElement {
+      const [renders, setRenders] = useState(0);
+      return (
+        <form onSubmit={stay}>
+          <button
+            type="button"
+            onClick={() => {
+              setRenders((count) => count + 1);
+            }}
+          >
+            Render
+          </button>
+          <CollapsibleCard
+            title="Billing"
+            defaultExpanded={false}
+            // A new function on every render, as an inline handler is.
+            onExpandedChange={() => {
+              asked.push(renders);
+            }}
+          >
+            <TextField label="Card holder" isRequired />
+          </CollapsibleCard>
+          <button type="submit">Save</button>
+        </form>
+      );
+    }
+    const add = vi.spyOn(EventTarget.prototype, 'addEventListener');
+    const remove = vi.spyOn(EventTarget.prototype, 'removeEventListener');
+    const { container } = render(<Form />);
+    const card = container.querySelector('.card-collapsible');
+    /** How many times the card's root was given, or relieved of, a listener for invalid. */
+    const onCard = (spy: typeof add): number =>
+      spy.mock.calls.filter(([type], index) => type === 'invalid' && spy.mock.contexts[index] === card)
+        .length;
+    expect(onCard(add)).toBe(1);
+    for (let renders = 0; renders < 3; renders++)
+      await user.click(screen.getByRole('button', { name: 'Render' }));
+    expect(onCard(add)).toBe(1);
+    expect(onCard(remove)).toBe(0);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    // The handler of the latest render, not the first.
+    expect(asked).toEqual([3]);
+    expect(toggleOf('Billing')).toHaveAttribute('aria-expanded', 'true');
+    // Open, nothing listens.
+    expect(onCard(remove)).toBe(1);
+  });
+
   it('stays folded for a field in its header that fails, which is in view already', async () => {
     const user = userEvent.setup();
     const onExpandedChange = vi.fn();

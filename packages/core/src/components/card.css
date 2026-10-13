@@ -96,7 +96,8 @@
    *
    * The root carries data-expanded while the card is open, data-folding while
    * the fold moves, and data-instant from a server's HTML until just after
-   * hydration, and for an open by find-in-page. The component sets all three.
+   * hydration, and for an open by find-in-page or for an invalid field. The
+   * component sets all three.
    * The header and the fold sit in React Aria's disclosure element,
    * .card-disclosure, which draws nothing. Every state rule reaches them
    * through it from the root, so a card nested in the body keeps its own
@@ -148,11 +149,12 @@
     gap: var(--spacing-part);
   }
 
-  /* The title is the toggle: a button as wide as the title, with the chevron at
-     its end, so the whole row is the target. Padding takes it to 40px tall and
-     an equal negative margin gives the room back, so the header is as tall as a
-     plain card's. The minimum height covers the rounding of a layout that works
-     in fractions of a pixel, which drew the padded row 39.98px tall. */
+  /* The title is the toggle: a button as wide as the heading block, with the
+     chevron at its end, so the title's row is the target. Padding takes it to
+     40px tall and an equal negative margin gives the room back, so the header
+     is as tall as a plain card's. The minimum height covers the rounding of a
+     layout that works in fractions of a pixel, which drew the padded row
+     39.98px tall. */
   .card-toggle {
     box-sizing: border-box;
     display: flex;
@@ -296,10 +298,11 @@
      catching up with what only the browser knows, such as a remembered fold
      on a card the server drew open, so a page never animates on load: a card
      the server rendered carries data-instant from the server's HTML until two
-     frames after hydration. And an open by find-in-page or a text fragment
-     link: the browser scrolls to the match as the card opens, so the body has
-     to be its full height then. Nothing the card draws moves while it carries
-     the mark. */
+     frames after hydration. And an open by find-in-page, a text fragment
+     link, or a field that fails its validation: the browser scrolls to the
+     match, or focuses the field, as the card opens, so the body has to be its
+     full height then. Nothing the card draws moves while it carries the
+     mark. */
   .card-collapsible[data-instant] > .card-disclosure > .card-header,
   .card-collapsible[data-instant] > .card-disclosure > .card-header .card-chevron,
   .card-collapsible[data-instant] > .card-disclosure > .card-fold {

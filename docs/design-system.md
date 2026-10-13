@@ -1389,7 +1389,8 @@ layout without leaving the accessibility tree, so it costs no gap. Figures are
 tabular so the count does not shimmer as it changes.
 
 **Past the budget the count turns to ink at 700.** The app set it in clay. The
-library keeps clay for the "Changed" chip alone: a value over its budget is
+library keeps clay for unsaved work, which is the "Changed" chip and the
+dot that marks a folded card holding a change: a value over its budget is
 usually a value that was just edited, and two clay words on one field read as
 one status. Error is wrong for the reason the app gave, since a value over its
 budget saves. Ink at 700 is the strongest text the system has and no hue is
@@ -2353,7 +2354,18 @@ not have, so a plain card is unchanged. Eight things were derived.
   `data-instant` until two frames later, the mark a server-rendered card
   carries at hydration: the card itself, each card with its `storageKey`, and
   a controlled card whose parent opens it. Drawn at once, the match landed at
-  399px, centred, as it does under reduced motion.
+  399px, centred, as it does under reduced motion. A card the server renders
+  folded is findable by a text fragment link only while the browser is still
+  looking when the page hydrates. The server's HTML carries `hidden=""` on a
+  folded panel, which no browser searches, and React Aria sets `until-found`
+  in a layout effect after hydration. Measured by loading, with a text
+  fragment link, a page that sets `hidden="until-found"` on its target after
+  a delay, in Playwright's Chromium 156, Firefox 153 and WebKit 27.2:
+  Chromium opened it at 300ms and not at 1.5s, WebKit at 1.5s and not at 5s,
+  and Firefox with the attribute set as the page parsed and not 50ms later.
+  So the docs promise find-in-page on the hydrated page, which needs no
+  retry, qualify the link case with these figures, and tell an app whose link
+  must reach a card to leave it open.
 - **The body clips only while it is folded or folding.** An open card draws a
   popup inside it whole, past its edge. A body that folds has to clip, so the
   component marks the root `data-folding` on every toggle and takes the mark
@@ -2365,15 +2377,16 @@ not have, so a plain card is unchanged. Eight things were derived.
   it comes off at once. `overflow: hidden` is keyed on that mark and on the
   folded state, and on nothing else.
 - **The target is the title's row.** The title is a heading that holds the
-  toggle, a button as wide as the title with the chevron at its end. Padding
-  of half of what 40px has over the title's line, 5.6px, takes it to 40px, and
-  an equal negative margin gives the room back, so the header is as tall as a
-  plain card's. A minimum height of 40px covers the rounding of a layout in
-  fractions of a pixel, which drew the padded row 39.98px tall. A title that
-  wraps keeps its own height, since the margin gives back only the padding.
-  A card that folds while focus is in its body, as after a Done button
-  there, moves the focus to the toggle, since the body is about to be hidden
-  and would take the focus with it. React Aria's disclosure does not.
+  toggle, a button as wide as the block the title and the note share, with
+  the chevron at its end. Padding of half of what 40px has over the title's
+  line, 5.6px, takes it to 40px, and an equal negative margin gives the room
+  back, so the header is as tall as a plain card's. A minimum height of 40px
+  covers the rounding of a layout in fractions of a pixel, which drew the
+  padded row 39.98px tall. A title that wraps keeps its own height, since the
+  margin gives back only the padding. A card that folds while focus is in
+  its body, as after a Done button there, moves the focus to the toggle,
+  since the body is about to be hidden and would take the focus with it.
+  React Aria's disclosure does not.
 - **The header is a row that wraps, and the note stays under the title.**
   The title and the note are one block, the heading, with the note 8px under
   the title, as in a card. The actions end the row, 24px after the heading,
@@ -2391,23 +2404,23 @@ not have, so a plain card is unchanged. Eight things were derived.
   which failed two ways, measured in Chromium with Sofia Sans. A size
   container takes no width from what it holds, and a folded body adds none
   either, so a folded card in a column that starts its items was 66px wide,
-  its padding, with "Why this verdict" 0px wide on 14 lines. It is now 275px
+  its padding, with a 16-character title 0px wide on 14 lines. It is now 275px
   wide, and the open card 259px, each with the title on one line, where a
-  plain card is 227px. Titled "Why this verdict was reached for this
-  listing" in a 240px column, both fill the column, with the title on 4
-  lines. And a query on the header's width cannot see what the
-  actions hold, so above 18rem their column took its full width and left the
-  title the rest: two buttons in a 390px phone's 358px card squeezed
-  "Notifications" to 11px on 13 lines, and three buttons in a 420px card to
-  0px. Both now keep the title on one line, with the actions under the note.
-  The size container also made the header a containing block and a stacking
-  context, which a dropdown among the actions that does not render in a
-  portal would have been positioned and painted against. Nothing contains the
-  header now. One cost of the floor: "Notifications" and a tertiary Reset
-  need 303px, so in a 390px phone's card, 292px inside its padding, the Reset
-  moves under the note, where the 18rem query kept it beside the title. The
-  actions are never inside the toggle, so no control sits inside another,
-  and they stay usable while the card is folded.
+  plain card is 227px. With a 45-character title in a 240px column, both
+  fill the column, with the title on 4 lines. And a query on the header's
+  width cannot see what the actions hold, so above 18rem their column took
+  its full width and left the title the rest: two buttons in a 390px phone's
+  358px card squeezed "Notifications" to 11px on 13 lines, and three buttons
+  in a 420px card to 0px. Both now keep the title on one line, with the
+  actions under the note. The size container also made the header a
+  containing block and a stacking context, which a dropdown among the
+  actions that does not render in a portal would have been positioned and
+  painted against. Nothing contains the header now. One cost of the floor:
+  "Notifications" and a tertiary Reset need 303px, so in a 390px phone's
+  card, 292px inside its padding, the Reset moves under the note, where the
+  18rem query kept it beside the title. The actions are never inside the
+  toggle, so no control sits inside another, and they stay usable while the
+  card is folded.
 - **The chevron turns toward the title.** It is a 24px Lucide `ChevronDown`
   in slate, which turns ink on hover, where hover exists, and on a press,
   since touch has no hover. It sits level with the first line of a title that
@@ -2451,7 +2464,11 @@ the ink ring the gate holds on Lifted.
 **Remembering the fold.** `storageKey` keeps every remembered card's fold in
 one `localStorage` entry, `snapshot-ui:collapsed`, a JSON list of the folded
 keys, so a key the browser has not stored is open, and a fold or an open keeps
-the keys of cards on other pages. The page reads it through
+the keys of cards on other pages. The entry has no version and records only
+folds, so `defaultExpanded={false}` does not apply under a `storageKey`, and
+the JSDoc and the docs say so. Honouring it would need explicit opens
+recorded as well, a change to the entry that has to keep reading the lists
+0.2.0 wrote. The page reads it through
 `useSyncExternalStore`: cards with one key share one state, and the `storage`
 event brings in other tabs. An entry that cannot be read reads as nothing
 folded, a write the browser refuses is skipped, neither throws, and the page
@@ -2522,7 +2539,8 @@ reader, so nothing excused the dot. Clay also measures 4.5 and over as text
 on Lifted, where the chip sets it.
 
 **Opening for an invalid field.** A folded card opens itself when a field in
-its body fails the browser's validation on submit. It listens on its root, in
+its body fails the browser's validation, on submit or when a script calls the
+form's `checkValidity()` or `reportValidity()`. It listens on its root, in
 the capture phase, for the `invalid` event the browser fires at each control
 that fails, and opens through the same setter as its toggle when the control
 is inside the fold, so a remembered fold is forgotten and a controlled card is

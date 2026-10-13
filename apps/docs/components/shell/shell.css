@@ -274,9 +274,9 @@
   }
 
   /* Hidden stays hidden, whatever display another rule gives, except what
-     is hidden until found: a folded collapsible card's body, which the
-     browser's find-in-page has to reach, and which keeps its own layout so
-     that it opens with its transition. */
+     is hidden until found: a folded collapsible card's body. The browser
+     searches that body and opens it for a match, and a display of none
+     would take its text out of the search. */
   [hidden]:not([hidden='until-found' i]) {
     display: none !important;
   }
