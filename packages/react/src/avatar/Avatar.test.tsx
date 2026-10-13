@@ -1,6 +1,6 @@
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import { createRef, type ReactElement } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as library from '../index';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { root } from '../../test/dom';
@@ -125,6 +125,20 @@ describe('Avatar', () => {
       for (const undo of restore.splice(0).reverse()) undo();
     });
 
+    /** Gives every image a `decode` that settles as given; jsdom has none of its own. */
+    const decodes = (result: () => Promise<void>): void => {
+      const own = Object.getOwnPropertyDescriptor(prototype, 'decode');
+      Object.defineProperty(prototype, 'decode', {
+        value: vi.fn(result),
+        configurable: true,
+        writable: true,
+      });
+      restore.push(() => {
+        if (own) Object.defineProperty(prototype, 'decode', own);
+        else Reflect.deleteProperty(prototype, 'decode');
+      });
+    };
+
     it('catches an image that loaded or failed before React listened', () => {
       settledImages(0);
       const failed = render(<Avatar name="Ada Lovelace" src="/missing.png" />);
@@ -137,6 +151,58 @@ describe('Avatar', () => {
       const loaded = render(<Avatar name="Ada Lovelace" src="/ada.png" />);
       expect(loaded.container.querySelector('.avatar-image')).toHaveAttribute('data-loaded', '');
     });
+
+    it('decodes an image with no natural width, such as an SVG with only a viewBox, before calling it failed', async () => {
+      // The HTML standard gives such an image a natural width of 0 even when it loaded.
+      settledImages(0);
+      decodes(() => Promise.resolve());
+      const { container } = render(<Avatar name="Willowford Bank" src="/logo.svg" shape="square" />);
+      await waitFor(() => {
+        expect(container.querySelector('.avatar-image')).toHaveAttribute('data-loaded', '');
+      });
+    });
+
+    it('drops an image with no natural width whose decode fails', async () => {
+      settledImages(0);
+      decodes(() => Promise.reject(new Error('EncodingError')));
+      const { container } = render(<Avatar name="Willowford Bank" src="/broken.svg" shape="square" />);
+      await waitFor(() => {
+        expect(container.querySelector('.avatar-image')).toBeNull();
+      });
+      expect(initialsIn(container)).toBe('WB');
+    });
+  });
+
+  it('tries a failed address again when it comes back before the next one settled', () => {
+    const { container, rerender } = render(<Avatar name="Ada Lovelace" src="/missing.png" />);
+    const failed = container.querySelector('.avatar-image');
+    if (!failed) throw new Error('No image');
+    fireEvent.error(failed);
+    rerender(<Avatar name="Ada Lovelace" src="/ada.png" />);
+    // Back before the second image reported anything.
+    rerender(<Avatar name="Ada Lovelace" src="/missing.png" />);
+    expect(container.querySelector('.avatar-image')).toHaveAttribute('src', '/missing.png');
+  });
+
+  it('hides itself when its name is blank, since an image with no name fails axe', () => {
+    const { container } = render(<Avatar name="  " src="/ada.png" />);
+    const root = container.firstElementChild;
+    expect(root).toHaveAttribute('aria-hidden', 'true');
+    expect(root).not.toHaveAttribute('role');
+  });
+
+  it('takes its name from name alone, and drops a caller name when decorative', () => {
+    const named = render(<Avatar name="Ada Lovelace" aria-label="Someone else" />);
+    expect(named.container.firstElementChild).toHaveAttribute('aria-label', 'Ada Lovelace');
+    named.unmount();
+    const decorative = render(
+      <Avatar name="Ada Lovelace" isDecorative role="img" aria-label="Ada" aria-labelledby="x" />,
+    );
+    const root = decorative.container.firstElementChild;
+    expect(root).toHaveAttribute('aria-hidden', 'true');
+    for (const attribute of ['role', 'aria-label', 'aria-labelledby']) {
+      expect(root, attribute).not.toHaveAttribute(attribute);
+    }
   });
 
   it('starts again at loading when src changes after a failure', () => {
