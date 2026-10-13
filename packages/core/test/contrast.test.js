@@ -637,6 +637,34 @@ describe('the charts', () => {
     expect(dark.line, 'ink over the wash, dark').toBeCloseTo(13.04, 2);
     for (const { line } of [light, dark]) expect(line).toBeGreaterThanOrEqual(NON_TEXT);
   });
+
+  // The line chart's second series, its crosshair and its axis labels are slate, and its readout is ink on Float:
+  // pairs the gate holds as text, so past the 3:1 of a graphic. The gridline and the baseline are cues, not
+  // boundaries, so they are measured and recorded, not gated.
+  it("measures the line chart's pairs, in both modes", () => {
+    for (const ground of ['lifted', 'float', 'canvas']) {
+      expect(CONTRAST_PAIRS, ground).toContainEqual(
+        expect.objectContaining({ text: 'slate', ground, minimum: TEXT }),
+      );
+    }
+    for (const { ground, light, dark } of [
+      { ground: 'lifted', light: 5.31, dark: 6.94 },
+      { ground: 'float', light: 5.49, dark: 6.94 },
+      { ground: 'canvas', light: 4.84, dark: 7.26 },
+    ]) {
+      expect(measured('light', 'slate', ground), `slate on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', 'slate', ground), `slate on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+    expect(measured('light', 'ink', 'float'), 'the readout, light').toBeCloseTo(18.43, 2);
+    expect(measured('dark', 'ink', 'float'), 'the readout, dark').toBeCloseTo(17.42, 2);
+    for (const { name, light, dark } of [
+      { name: 'divider', light: 1.23, dark: 1.34 },
+      { name: 'frame', light: 1.28, dark: 1.43 },
+    ]) {
+      expect(measured('light', name, 'lifted'), `${name} on lifted, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, 'lifted'), `${name} on lifted, dark`).toBeCloseTo(dark, 2);
+    }
+  });
 });
 
 describe('contrastFailures', () => {

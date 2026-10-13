@@ -439,6 +439,31 @@ test.describe('forced colors', () => {
     expect((await paint(meter.locator('.meter-pace'))).fill).toBe(await systemColor(page, 'Highlight'));
   });
 
+  test('a line chart draws its first line CanvasText, its second GrayText, and its crosshair Highlight', async ({
+    page,
+  }) => {
+    // The lines are svg strokes, which the repaint would turn into the one text color: the first keeps it, and
+    // the second, the context, steps back to GrayText, so the two are still told apart.
+    await visit(page, '/docs/charts/line-chart');
+    // The comparison example's chart, by its name, whatever the examples' order.
+    const chart = page.getByRole('figure', { name: 'Spending in October, against September', exact: true });
+    await expect(chart).toHaveCount(1);
+    const stroke = (series: string): Promise<string> =>
+      chart
+        .locator(`svg .line-chart-line[data-series="${series}"]`)
+        .evaluate((element) => getComputedStyle(element).stroke);
+    expect(await stroke('1')).toBe(await systemColor(page, 'CanvasText'));
+    expect(await stroke('2')).toBe(await systemColor(page, 'GrayText'));
+
+    const plot = chart.getByRole('group', { name: 'Spending in October, against September', exact: true });
+    await plot.focus();
+    await expect(chart.locator('.line-chart-crosshair')).toHaveCount(1);
+    expect((await paint(chart.locator('.line-chart-crosshair'))).fill).toBe(
+      await systemColor(page, 'Highlight'),
+    );
+    await expectVisibleRing(plot);
+  });
+
   test('a tooltip keeps a border and loses its arrow', async ({ page }) => {
     // The arrow is an svg fill, which the repaint would turn into a shape of the wrong color or none, so it
     // goes. The tip's transparent border is repainted in the reader's text color, so the tip keeps its shape.
@@ -497,6 +522,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   ],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
   kbd: ['.stage .kbd'],
+  // The legend names the series in the app's words, and wraps at any character, as the meter's legend does.
+  'line-chart': ['.stage .line-chart-legend-label'],
   link: ['.stage .link'],
   meter: ['.stage .meter-label', '.stage .meter-value', '.stage .meter-legend-label'],
   'radio-group': [
@@ -641,6 +668,12 @@ const SERVER_RENDERED: Record<string, string[]> = {
   field: ['.stage .field-counter', '.stage .field-changed'],
   'icon-button': ['.stage .icon-button'],
   kbd: ['.stage .kbd'],
+  // The drawing, the table the toggle shows and the toggle itself; the readout waits for a key or a pointer.
+  'line-chart': [
+    '.stage .line-chart svg .line-chart-line',
+    '.stage .line-chart-table',
+    '.stage .line-chart-toggle',
+  ],
   link: ['.stage .link'],
   menu: ['.stage .button, .stage .icon-button'],
   meter: ['.stage .meter [role="meter"]', '.stage .meter-segment'],

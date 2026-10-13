@@ -23,12 +23,15 @@ export function Trend({ spending }: { spending: number[] }) {
 }
 ```
 
+`LineChart` is a client component for its keys, its pointer and its readout, and its drawing, legend and table still render on the server.
+
 Every figure a chart shows is a string from your app, and nothing is measured, so the server's HTML is final in any locale.
 
 ## Charts
 
 Every name links to its page in the documentation, with examples, props and design rules.
 
+- [Line chart](https://snapshotui.com/docs/charts/line-chart)
 - [Sparkline](https://snapshotui.com/docs/charts/sparkline)
 
 ## Links

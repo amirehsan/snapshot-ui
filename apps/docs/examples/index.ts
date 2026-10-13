@@ -42,6 +42,10 @@ import IconButtonLink from './icon-button-link';
 import IconButtonStates from './icon-button-states';
 import IconButtonVariants from './icon-button-variants';
 import KbdKeys from './kbd-keys';
+import LineChartBasic from './line-chart-basic';
+import LineChartCompare from './line-chart-compare';
+import LineChartGaps from './line-chart-gaps';
+import LineChartRtl from './line-chart-rtl';
 import LinkInline from './link-inline';
 import LinkStates from './link-states';
 import MenuBasic from './menu-basic';
@@ -135,6 +139,10 @@ export const examples = {
   'icon-button-states': IconButtonStates,
   'icon-button-variants': IconButtonVariants,
   'kbd-keys': KbdKeys,
+  'line-chart-basic': LineChartBasic,
+  'line-chart-compare': LineChartCompare,
+  'line-chart-gaps': LineChartGaps,
+  'line-chart-rtl': LineChartRtl,
   'link-inline': LinkInline,
   'link-states': LinkStates,
   'menu-basic': MenuBasic,

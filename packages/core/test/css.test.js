@@ -3671,6 +3671,18 @@ describe('src/components/charts.css, the shared rules and the sparkline', () => 
     expect(css).not.toContain(':dir(');
   });
 
+  it('lays the HTML over a drawing out in the direction the flip comes from, so the two always agree', () => {
+    // The flip reads only an explicit attribute, and logical insets read the computed direction, which
+    // dir="auto" or a CSS direction can change alone. Each drawing's HTML takes its direction from the
+    // same attribute as the flip, ltr when there is none, as the flip's fallback of 1 is.
+    const css = rules();
+    expect(blockAfter(css, ":where([dir='ltr' i]) {")).toContain('--chart-direction: ltr;');
+    expect(blockAfter(css, ":where([dir='rtl' i]) {")).toContain('--chart-direction: rtl;');
+    for (const selector of ['.sparkline-plot {', '.line-chart-plot {', '.line-chart-x {'])
+      expect(blockAfter(css, selector), selector).toContain('direction: var(--chart-direction, ltr);');
+    expect(css).not.toMatch(/--chart-direction\s*:(?!\s*(?:ltr|rtl);)/);
+  });
+
   it('mirrors every chart svg by the flip and lets its strokes overflow the box', () => {
     const svg = blockAfter(rules(), '.sparkline-plot svg {');
     for (const declaration of [
@@ -3753,7 +3765,9 @@ describe('src/components/charts.css, the shared rules and the sparkline', () => 
     ]) {
       expect(dot, declaration).toContain(declaration);
     }
-    expect(css).not.toContain('box-shadow');
+    // No ring is a shadow: the one shadow in the file is the line chart readout's float token.
+    expect(dot).not.toContain('box-shadow');
+    expect([...css.matchAll(/box-shadow:\s*([^;]+);/g)].map((m) => m[1])).toEqual(['var(--shadow-float)']);
     expect(css).not.toMatch(/--chart-surface\s*:/);
     expect(css).not.toMatch(/(?<![\w-])z-index\s*:/);
   });
@@ -3777,6 +3791,249 @@ describe('src/components/charts.css, the shared rules and the sparkline', () => 
     const css = rules();
     expect(css).not.toMatch(/(?<![\w-])transition\s*:/);
     expect(css).not.toMatch(/(?<![\w-])animation\s*:/);
+  });
+});
+
+describe('src/components/charts.css, the line chart', () => {
+  const rules = () => closeUp(stripComments(read('src/components/charts.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const SURFACE = 'var(--chart-surface, var(--color-lifted))';
+  /** The rules outside forced colors, where the look is drawn. */
+  const look = () => outsideForcedColors(rules());
+  const expectAll = (body, declarations, label) => {
+    for (const declaration of declarations) expect(body, `${label}: ${declaration}`).toContain(declaration);
+  };
+
+  it('hides the two views by [hidden] again, after giving them a display', () => {
+    const css = look();
+    expect(blockAfter(css, '.line-chart {')).toContain('display: grid;');
+    expect(blockAfter(css, '.line-chart-chart {')).toContain('display: grid;');
+    const hidden = '.line-chart-chart[hidden], .line-chart-table[hidden] {';
+    expect(blockAfter(css, hidden)).toContain('display: none;');
+    // After every rule that gives either view a display, so it wins on order as well.
+    expect(css.indexOf(hidden)).toBeGreaterThan(css.indexOf('.line-chart-chart {'));
+    expect(css.indexOf(hidden)).toBeGreaterThan(css.indexOf('.line-chart {'));
+    expect(blockAfter(css, '.line-chart-table {')).not.toContain('display:');
+  });
+
+  it('draws the first series 2px ink and the second 1.5px slate, both with round caps and fixed widths', () => {
+    const css = look();
+    expectAll(
+      blockAfter(css, '.line-chart-line {'),
+      [
+        'fill: none;',
+        'stroke-linecap: round;',
+        'stroke-linejoin: round;',
+        'vector-effect: non-scaling-stroke;',
+      ],
+      'line',
+    );
+    expectAll(
+      blockAfter(css, ".line-chart-line[data-series='1'] {"),
+      ['stroke: var(--color-ink);', 'stroke-width: 2px;', 'vector-effect: non-scaling-stroke;'],
+      'first',
+    );
+    expectAll(
+      blockAfter(css, ".line-chart-line[data-series='2'] {"),
+      ['stroke: var(--color-slate);', 'stroke-width: 1.5px;', 'vector-effect: non-scaling-stroke;'],
+      'second',
+    );
+    expectAll(
+      blockAfter(css, '.line-chart-area {'),
+      ['fill: color-mix(in srgb, var(--color-ink) 10%, transparent);', 'stroke: none;'],
+      'area',
+    );
+    // The legend's keys are the lines' colors and strokes.
+    expect(blockAfter(css, '.line-chart-key {')).toContain('border-block-start: 2px solid var(--color-ink);');
+    expect(blockAfter(css, ".line-chart-legend-item[data-series='2'] .line-chart-key {")).toContain(
+      'border-block-start: 1.5px solid var(--color-slate);',
+    );
+  });
+
+  it('mirrors the plot svg by the flip and lets its strokes overflow the box', () => {
+    expectAll(
+      blockAfter(look(), '.line-chart-plot svg {'),
+      [
+        'position: absolute;',
+        'inset: 0;',
+        'display: block;',
+        'width: 100%;',
+        'height: 100%;',
+        'overflow: visible;',
+        'scale: var(--chart-flip, 1) 1;',
+      ],
+      'svg',
+    );
+  });
+
+  it('rules the gridlines in the divider color and the baseline in the frame color, 1px and fixed', () => {
+    const css = look();
+    expectAll(
+      blockAfter(css, '.line-chart-grid {'),
+      ['stroke: var(--color-divider);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
+      'grid',
+    );
+    expectAll(
+      blockAfter(css, '.line-chart-baseline {'),
+      ['stroke: var(--color-frame);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
+      'baseline',
+    );
+  });
+
+  it('places the axis labels as HTML in tabular slate at the small step', () => {
+    const css = look();
+    for (const selector of ['.line-chart-y-label {', '.line-chart-x {']) {
+      expectAll(
+        blockAfter(css, selector),
+        [
+          'font-size: var(--text-small);',
+          'line-height: var(--text-small--line-height);',
+          'font-variant-numeric: tabular-nums;',
+          'color: var(--color-slate);',
+        ],
+        selector,
+      );
+    }
+    expectAll(
+      blockAfter(css, '.line-chart-y-label {'),
+      ['position: absolute;', 'inset-inline-start: 0;', 'translate: 0 -100%;', 'white-space: nowrap;'],
+      'y label',
+    );
+    expect(blockAfter(css, '.line-chart-plot[data-has-y-labels] {')).toContain(
+      'margin-block-start: 1.25rem;',
+    );
+  });
+
+  it('centres the x labels and the readout by the flip, and keeps the end ones inside the plot', () => {
+    const css = look();
+    for (const name of ['.line-chart-x-label', '.line-chart-readout']) {
+      expect(blockAfter(css, `${name} {`), name).toContain('translate: calc(var(--chart-flip, 1) * -50%) 0;');
+    }
+    expect(blockAfter(css, ".line-chart-x-label[data-edge='start'] {")).toContain('translate: none;');
+    expect(blockAfter(css, ".line-chart-x-label[data-edge='end'] {")).toContain(
+      'translate: calc(var(--chart-flip, 1) * -100%) 0;',
+    );
+    expectAll(
+      blockAfter(css, ".line-chart-readout[data-align='start'] {"),
+      ['translate: none;', 'margin-inline-start: var(--spacing-part);'],
+      'start',
+    );
+    expectAll(
+      blockAfter(css, ".line-chart-readout[data-align='end'] {"),
+      [
+        'translate: calc(var(--chart-flip, 1) * -100%) 0;',
+        'margin-inline-start: calc(-1 * var(--spacing-part));',
+      ],
+      'end',
+    );
+  });
+
+  it('draws the readout as a float panel: float, frame edge, surface corner, float shadow', () => {
+    const css = look();
+    expectAll(
+      blockAfter(css, '.line-chart-readout {'),
+      [
+        'position: absolute;',
+        'inset-block-start: 0;',
+        'border: 1px solid var(--color-frame);',
+        'border-radius: var(--radius-surface);',
+        'background-color: var(--color-float);',
+        'box-shadow: var(--shadow-float);',
+        'font-size: var(--text-small);',
+        'color: var(--color-ink);',
+        'white-space: nowrap;',
+      ],
+      'readout',
+    );
+    expect(blockAfter(css, '.line-chart-readout-value {')).toContain('font-weight: 500;');
+    expect(blockAfter(css, '.line-chart-readout-series {')).toContain('color: var(--color-slate);');
+  });
+
+  it('draws the dots as 8px in a 2px border ring of the surface, never a shadow', () => {
+    const css = look();
+    expectAll(
+      blockAfter(css, '.line-chart-dot {'),
+      [
+        'position: absolute;',
+        // The ring is outside the 8px, whatever box-sizing base.css gives every box.
+        'box-sizing: content-box;',
+        'width: 0.5rem;',
+        'height: 0.5rem;',
+        'margin-block-start: -0.375rem;',
+        'margin-inline-start: -0.375rem;',
+        `border: 2px solid ${SURFACE};`,
+        'border-radius: var(--radius-dot);',
+        'background-color: var(--color-ink);',
+      ],
+      'dot',
+    );
+    expect(blockAfter(css, ".line-chart-dot[data-series='2'] {")).toContain(
+      'background-color: var(--color-slate);',
+    );
+    expectAll(
+      blockAfter(css, '.line-chart-crosshair {'),
+      ['position: absolute;', 'inset-block: 0;', 'width: 1px;', 'background-color: var(--color-slate);'],
+      'crosshair',
+    );
+    const shadows = [...css.matchAll(/box-shadow:\s*([^;]+);/g)].map((m) => m[1]);
+    expect(shadows).toEqual(['var(--shadow-float)']);
+  });
+
+  it('rings the focused plot with the token ring', () => {
+    expectAll(
+      blockAfter(look(), '.line-chart-plot:focus-visible {'),
+      [
+        'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
+        'outline-offset: var(--focus-ring-offset);',
+      ],
+      'ring',
+    );
+  });
+
+  it('hides the live region visually only, and gives each of its parts a line of its own', () => {
+    const css = look();
+    const live = blockAfter(css, '.line-chart-live {');
+    expectAll(
+      live,
+      ['position: absolute;', 'width: 1px;', 'height: 1px;', 'overflow: hidden;', 'clip-path: inset(50%);'],
+      'live',
+    );
+    expect(live).not.toContain('display: none');
+    expect(live).not.toContain('visibility');
+    expect(blockAfter(css, '.line-chart-live-part {')).toContain('display: block;');
+  });
+
+  it('rules the table with the divider and right-aligns its values by end', () => {
+    const css = look();
+    expectAll(
+      blockAfter(css, '.line-chart-table :is(th, td) {'),
+      ['border-block-end: 1px solid var(--color-divider);', 'text-align: start;'],
+      'cells',
+    );
+    expect(blockAfter(css, '.line-chart-table tbody td {')).toContain('text-align: end;');
+    expect(blockAfter(css, '.line-chart-table thead th {')).toContain('font-weight: 500;');
+    expect(blockAfter(css, '.line-chart-table caption {')).toContain('text-align: start;');
+    // Weights 400, 450, 500 and 700 only.
+    for (const [, weight] of css.matchAll(/font-weight:\s*(\d+);/g))
+      expect(['400', '450', '500', '700']).toContain(weight);
+  });
+
+  it('draws the first line CanvasText, the second and the rules GrayText, and the crosshair and dots Highlight in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, ".line-chart-line[data-series='1'] {")).toContain('stroke: CanvasText;');
+    expect(
+      blockAfter(forced, ".line-chart-line[data-series='2'], .line-chart-grid, .line-chart-baseline {"),
+    ).toContain('stroke: GrayText;');
+    expect(blockAfter(forced, '.line-chart-key {')).toContain('border-block-start-color: CanvasText;');
+    expect(blockAfter(forced, ".line-chart-legend-item[data-series='2'] .line-chart-key {")).toContain(
+      'border-block-start-color: GrayText;',
+    );
+    expect(blockAfter(forced, '.line-chart-area {')).toContain('fill: none;');
+    expect(blockAfter(forced, '.line-chart-crosshair {')).toContain('background-color: Highlight;');
+    const dot = blockAfter(forced, '.line-chart-dot {');
+    expect(dot).toContain('border-color: canvas;');
+    expect(dot).toContain('background-color: Highlight;');
+    expect(blockAfter(forced, '.line-chart-plot:focus-visible {')).toContain('outline-color: Highlight;');
   });
 });
 
