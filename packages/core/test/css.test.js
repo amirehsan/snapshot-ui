@@ -1434,6 +1434,14 @@ describe('src/components/overlay.css', () => {
     expect(scrim).not.toMatch(/(?<![\w-])opacity\s*:/);
   });
 
+  it('opts every overlay root back into forced colors, which the scrim would otherwise hand its panel', () => {
+    // forced-color-adjust is inherited, and a modal's panel is the scrim's child, so without this the panel
+    // and every control in it would keep the author's colors in Windows high contrast.
+    const css = rules();
+    expect(blockAfter(css, '.overlay {')).toContain('forced-color-adjust: auto;');
+    expect(blockAfter(css, '} .overlay-scrim {')).toContain('forced-color-adjust: none;');
+  });
+
   it('goes transparent while entering, exiting or stacked, and stops the transition under reduced motion, after it', () => {
     const css = rules();
     expect(blockAfter(css, '.overlay-scrim:is([data-entering], [data-exiting], [data-stacked]) {')).toContain(

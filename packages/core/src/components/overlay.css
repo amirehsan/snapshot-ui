@@ -23,6 +23,9 @@
     line-height: var(--text-body--line-height);
     font-weight: var(--text-body--font-weight);
     text-align: start;
+    /* forced-color-adjust is inherited, and a modal's panel sits inside the scrim, which opts out below.
+       The panel opts back in, so it and everything in it follow the reader's palette. */
+    forced-color-adjust: auto;
   }
 
   .overlay-scrim {
@@ -34,7 +37,8 @@
     height: var(--visual-viewport-height, 100dvh);
     background-color: color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent);
     transition: background-color 180ms ease;
-    /* Windows high contrast would repaint the scrim opaque and hide the page. */
+    /* Forced colors would keep the scrim's alpha and swap its color for the reader's background color,
+       which in a light palette is white and washes the page out instead of dimming it. */
     forced-color-adjust: none;
   }
 

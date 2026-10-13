@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { useRef, type ReactElement, type ReactPortal, type RefObject } from 'react';
+import { useLayoutEffect, useRef, type ReactElement, type ReactPortal, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { describe, expect, it } from 'vitest';
 import { SCOPE_ATTRIBUTES, copyScope, useOverlayScope } from './useOverlayScope';
@@ -13,11 +13,22 @@ function inTree(html: string, selector: string): Element {
   return found;
 }
 
-/** An overlay's root as the hook sees one: a div portaled to the body, which leaves every scope. */
-function Overlay({ originRef }: { originRef?: RefObject<Element | null> }): ReactPortal {
-  const rootRef = useRef<HTMLDivElement>(null);
-  useOverlayScope(rootRef, originRef);
-  return createPortal(<div ref={rootRef} data-testid="overlay" />, document.body);
+/**
+ * An overlay as the hook sees one: a component that stays mounted, as a Dialog does inside its trigger, and
+ * a root it renders only while open, a div portaled to the body, which leaves every scope. The root starts
+ * with a stale theme of its own, so a copy that removes it is seen to run.
+ */
+function Overlay({
+  isOpen,
+  originRef,
+}: {
+  isOpen: boolean;
+  originRef?: RefObject<Element | null>;
+}): ReactPortal | null {
+  const scopeRef = useOverlayScope(originRef);
+  return isOpen
+    ? createPortal(<div ref={scopeRef} data-theme="stale" data-testid="overlay" />, document.body)
+    : null;
 }
 
 /**
@@ -36,9 +47,31 @@ function Page({ isOpen, withOriginRef = false }: { isOpen: boolean; withOriginRe
       <div data-theme="light" data-shape="square">
         <button type="button">Elsewhere</button>
       </div>
-      {isOpen && <Overlay originRef={withOriginRef ? triggerRef : undefined} />}
+      <Overlay isOpen={isOpen} originRef={withOriginRef ? triggerRef : undefined} />
     </>
   );
+}
+
+/**
+ * A modal's shape: the hook's ref goes on a panel, and a component inside the panel runs a layout effect at
+ * open. React attaches the panel's ref only after that effect, which is why the copy is a callback ref and
+ * not an effect that reads a ref object. The child reports what it saw on the panel.
+ */
+function Panel({ seen }: { seen: (theme: string | null) => void }): ReactPortal {
+  const scopeRef = useOverlayScope();
+  return createPortal(
+    <div ref={scopeRef} data-testid="overlay">
+      <Inside seen={seen} />
+    </div>,
+    document.body,
+  );
+}
+
+function Inside({ seen }: { seen: (theme: string | null) => void }): null {
+  useLayoutEffect(() => {
+    seen(document.querySelector('[data-testid="overlay"]')?.getAttribute('data-theme') ?? null);
+  }, [seen]);
+  return null;
 }
 
 describe('copyScope', () => {
@@ -89,7 +122,7 @@ describe('copyScope', () => {
 });
 
 describe('useOverlayScope', () => {
-  it('copies the scope of the focused trigger onto the portaled root when it mounts', () => {
+  it('copies the scope of the focused trigger onto the portaled root when it attaches', () => {
     const { rerender } = render(<Page isOpen={false} />);
     screen.getByRole('button', { name: 'Open' }).focus();
     rerender(<Page isOpen />);
@@ -108,7 +141,7 @@ describe('useOverlayScope', () => {
     expect(overlay).not.toHaveAttribute('data-shape');
   });
 
-  it('copies nothing when nothing is focused', () => {
+  it('copies nothing when nothing is focused, and clears what the root had', () => {
     const { rerender } = render(<Page isOpen={false} />);
     expect(document.activeElement).toBe(document.body);
     rerender(<Page isOpen />);
@@ -116,7 +149,44 @@ describe('useOverlayScope', () => {
     for (const name of SCOPE_ATTRIBUTES) expect(overlay, name).not.toHaveAttribute(name);
   });
 
-  it('copies once, at mount, so a later move of focus leaves the open overlay as it was', () => {
+  it('copies when the root attaches, so the copy is there for what the root holds, as a modal panel needs', () => {
+    const outside = document.createElement('div');
+    outside.setAttribute('data-theme', 'dark');
+    const trigger = outside.appendChild(document.createElement('button'));
+    document.body.append(outside);
+    try {
+      trigger.focus();
+      const seen: (string | null)[] = [];
+      const { unmount } = render(
+        <Panel
+          seen={(theme) => {
+            seen.push(theme);
+          }}
+        />,
+      );
+      // The child's layout effect runs before the panel's ref attaches, so it sees no theme on the panel yet...
+      expect(seen).toEqual([null]);
+      // ...and the copy lands as the panel attaches, in the same commit.
+      expect(screen.getByTestId('overlay')).toHaveAttribute('data-theme', 'dark');
+      unmount();
+    } finally {
+      outside.remove();
+    }
+  });
+
+  it('copies again each time the overlay opens, from what is focused then', () => {
+    const { rerender } = render(<Page isOpen={false} />);
+    screen.getByRole('button', { name: 'Open' }).focus();
+    rerender(<Page isOpen />);
+    expect(screen.getByTestId('overlay')).toHaveAttribute('data-theme', 'dark');
+    rerender(<Page isOpen={false} />);
+    screen.getByRole('button', { name: 'Elsewhere' }).focus();
+    rerender(<Page isOpen />);
+    expect(screen.getByTestId('overlay')).toHaveAttribute('data-theme', 'light');
+    expect(screen.getByTestId('overlay')).toHaveAttribute('data-shape', 'square');
+  });
+
+  it('copies once while open, so a later move of focus leaves the open overlay as it was', () => {
     const { rerender } = render(<Page isOpen={false} />);
     screen.getByRole('button', { name: 'Open' }).focus();
     rerender(<Page isOpen />);
