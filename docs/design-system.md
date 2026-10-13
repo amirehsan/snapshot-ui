@@ -1387,11 +1387,15 @@ hover, no focus ring and no touch target.
   on the surface behind the badge, and every pair is one the gate already
   holds. The border is a hairline's weight: a badge labels, it is not a control
   to be found, so it does not need the 1.5px edge a control gets.
-- **Four tones.** Neutral is Slate, info is Link Blue, success is the success
-  color and error is the error color. Neutral is the base, so it has no class
-  of its own. Clay is unsaved work and Signal Orange is consent, and Light
-  Signal Orange is an attention cue that a label has no use for, so none of the
-  three is a tone.
+- **Five tones.** Neutral is Slate, info is Link Blue, success is the success
+  color, warning is the warning color and error is the error color. Neutral is
+  the base, so it has no class of its own. Warning is a state that needs a
+  look soon and is not a failure: Watch, Behind, Needs review, Out of date. It
+  is its own color because Light Signal Orange measures 2.53 to 2.87 on the
+  light surfaces, under the 3:1 a graphic needs, and is already the changed
+  border and the eyebrow dot (see "Why warning is not Light Signal Orange").
+  Clay is unsaved work and Signal Orange is consent, and Light Signal Orange is
+  an attention cue that a label has no use for, so none of the three is a tone.
 - **A short uppercase label.** 12px, the floor for short uppercase text,
   weight 700 and the overline tracking. Figures are tabular, so a column of
   counts such as 12 and 8 lines up. The corners are `--radius-micro`, the step
@@ -1411,13 +1415,15 @@ the same margin. The lowest text pair is 4.81, info on raised in dark.
 | Neutral | Slate | 4.84, 5.31, 5.49, 5.49 | 7.26, 6.94, 6.94, 6.44 |
 | Info | Link Blue | 5.16, 5.67, 5.86, 5.86 | 6.05, 5.46, 5.46, 4.81 |
 | Success | Success | 6.55, 7.20, 7.44, 7.44 | 7.03, 6.34, 6.34, 5.59 |
+| Warning | Warning | 5.58, 6.12, 6.33, 6.33 | 9.89, 8.92, 8.92, 7.86 |
 | Error | Error | 6.58, 7.22, 7.46, 7.46 | 6.36, 5.73, 5.73, 5.06 |
 
-All sixteen pairs are in the contrast gate already, so Badge adds none. Slate
+All twenty pairs are in the contrast gate already, so Badge adds none. Slate
 is also measured on Bone, 4.99 and 6.44, so a neutral badge may sit there. The
 info and success tones are not measured on Bone, so they stay on the four
 surfaces above. Error is gated on Bone too, because a field part draws it
-there.
+there, and warning is gated there as well, 5.75 and 7.86, so a warning badge
+may sit on Bone.
 
 ## IconButton
 

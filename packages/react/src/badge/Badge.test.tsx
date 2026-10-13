@@ -18,7 +18,7 @@ describe('Badge', () => {
     expect(screen.getByText('Beta')).toHaveAttribute('class', 'badge');
   });
 
-  it.each(['info', 'success', 'error'] as const)('renders the %s tone class', async (tone) => {
+  it.each(['info', 'success', 'warning', 'error'] as const)('renders the %s tone class', async (tone) => {
     const { container } = render(<Badge tone={tone}>{tone}</Badge>);
     expect(screen.getByText(tone)).toHaveAttribute('class', `badge badge-${tone}`);
     await expectNoA11yViolations(container);

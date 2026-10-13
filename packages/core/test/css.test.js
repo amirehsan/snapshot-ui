@@ -493,6 +493,10 @@ describe('src/components/badge.css', () => {
   it('is never clay or signal, which mean unsaved work and consent', () => {
     expect(source()).not.toMatch(/--color-(?:clay|signal)/);
   });
+
+  it('draws the warning tone in the warning color and nothing else', () => {
+    expect(closeUp(blockAfter(source(), '.badge-warning {')).trim()).toBe('color: var(--color-warning);');
+  });
 });
 
 describe('src/components/input.css', () => {

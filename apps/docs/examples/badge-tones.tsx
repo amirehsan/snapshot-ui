@@ -7,6 +7,7 @@ export default function BadgeTones(): ReactElement {
       <Badge>Beta</Badge>
       <Badge tone="info">New</Badge>
       <Badge tone="success">Published</Badge>
+      <Badge tone="warning">Needs review</Badge>
       <Badge tone="error">Failed</Badge>
     </div>
   );
