@@ -53,6 +53,13 @@ export function Avatar({
   ...props
 }: AvatarProps): ReactElement {
   const [image, setImage] = useState<ImageState>(null);
+  // A new address starts over, even one that failed before: forget the last verdict as src changes, during
+  // render, so an address that comes back before the next one settled is tried again.
+  const [seenSrc, setSeenSrc] = useState(src);
+  if (seenSrc !== src) {
+    setSeenSrc(src);
+    setImage(null);
+  }
   const status = src !== undefined && image?.src === src ? image.status : 'loading';
   // One function per src, and an update that returns the same object when nothing changed, so React bails out
   // and a ref callback that runs again never renders again.
@@ -67,19 +74,47 @@ export function Avatar({
   );
   // An image that loaded or failed before React listened, as one in the server's HTML can, fires no event
   // React hears, so its state is read as it mounts.
+  // A natural width of 0 is not a failure on its own: the standard gives an SVG with only a viewBox no natural
+  // width, and most logos are such SVGs. Decoding tells the two apart; a verdict for an address the image no
+  // longer shows is dropped.
   const catchEarly = useCallback(
     (img: HTMLImageElement | null) => {
-      if (img?.complete) settle(img.naturalWidth > 0 ? 'loaded' : 'failed');
+      if (!img?.complete) return;
+      if (img.naturalWidth > 0) {
+        settle('loaded');
+        return;
+      }
+      if (typeof img.decode !== 'function') {
+        settle('failed');
+        return;
+      }
+      const address = img.getAttribute('src');
+      const settleIfCurrent = (next: 'loaded' | 'failed'): void => {
+        if (img.getAttribute('src') === address) settle(next);
+      };
+      img.decode().then(
+        () => {
+          settleIfCurrent('loaded');
+        },
+        () => {
+          settleIfCurrent('failed');
+        },
+      );
     },
     [settle],
   );
+  // A blank name would make an image with no name, which assistive technology cannot use: hide it instead.
+  const isHidden = isDecorative || name.trim() === '';
   return (
     <span
       {...props}
       className={cx('avatar', className)}
       data-size={size}
       data-shape={shape}
-      {...(isDecorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': name })}
+      // The name comes from `name` alone; hidden, no role or name a caller passed reaches the element.
+      {...(isHidden
+        ? { 'aria-hidden': true, role: undefined, 'aria-label': undefined, 'aria-labelledby': undefined }
+        : { role: 'img', 'aria-label': name, 'aria-labelledby': undefined })}
     >
       <span className="avatar-initials" aria-hidden="true">
         {initials ?? initialsOf(name)}

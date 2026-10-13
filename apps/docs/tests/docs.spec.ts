@@ -1893,9 +1893,8 @@ test('the phone frame shows the tab bar on a wide screen, and the bar hides itse
 
 test('an avatar whose image fails shows its initials and keeps its size', async ({ page }) => {
   await visit(page, '/docs/components/avatar');
-  // The second example on the page, after the sizes and shapes.
-  const example = page.locator('.stage').nth(1);
-  const failed = example.getByRole('img', { name: 'Mary Ann Evans', exact: true });
+  // The one avatar on the page with this name, in the fallback example, whatever the examples' order.
+  const failed = page.getByRole('img', { name: 'Mary Ann Evans', exact: true });
   // The image is dropped once the browser reports its error, and the initials under it stay.
   await expect(failed.locator('.avatar-image')).toHaveCount(0);
   await expect(failed.locator('.avatar-initials')).toBeVisible();

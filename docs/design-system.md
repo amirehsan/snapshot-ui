@@ -4995,8 +4995,23 @@ of the first two words of `name`, split on whitespace after trimming, taken
 with `Array.from` so a character outside the basic plane counts as one, and
 uppercased with `toUpperCase()`, which is not locale-aware, is enough for
 initials and needs no `Intl`. "Ada Lovelace" is AL, "Northwind" is N, "Mary
-Ann Evans" is MA and "علی رضایی" is عر. An app with a stricter rule passes
-`initials`.
+Ann Evans" is MA and "علی رضایی" is عر. A code point is not always one visible
+character: a decomposed accent, an emoji joined with zero-width joiners or a
+Devanagari cluster is cut part way, so an app with such names, or any stricter
+rule, passes `initials`.
+
+**An image that settled before hydration.** Its state is read as it mounts,
+since it fires no event React hears. A natural width above 0 means it loaded.
+A width of 0 is not a failure on its own: the standard gives an SVG with only a
+`viewBox` no natural width, and most merchant and bank logos are such SVGs, so
+the image is decoded and its decode decides. A verdict for an address the image
+no longer shows is dropped, and a new address forgets the last verdict, so an
+address that failed once is tried again when it comes back.
+
+**The name.** It comes from `name` alone: an `aria-label` a caller passes is
+replaced, and a decorative avatar drops any role or name it was given. A blank
+`name` hides the avatar as if decorative, since an image with no name fails
+WCAG 1.1.1.
 
 **Names.** The root is `role="img"` named by `name`; with `isDecorative` it is
 `aria-hidden` with neither, for a name already in the text beside it.
