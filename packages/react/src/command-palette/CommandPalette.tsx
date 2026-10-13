@@ -28,7 +28,7 @@ import { MenuSection } from '../menu/MenuSection';
 import { ModalFrame } from '../overlay/ModalFrame';
 import { isAnotherModalOpen } from '../overlay/useOverlayStack';
 import { Spinner } from '../spinner/Spinner';
-import { useRecents } from './recentsStore';
+import { push, useRecents } from './recentsStore';
 import { matchesShortcut, parseShortcut } from './shortcut';
 
 export interface CommandPaletteItem {
@@ -59,7 +59,10 @@ export interface CommandPaletteLabels {
   loading: string;
   /** @default 'Recent' */
   recent: string;
-  /** The status line. @default (count, query) => count === 0 ? `No results for ${query}` : `${count} results` */
+  /**
+   * The status line. Replace it to translate, plurals included.
+   * @default (count, query) => count === 0 ? `No results for ${query}` : count === 1 ? '1 result' : `${count} results`
+   */
   status: (count: number, query: string) => string;
   /** @default 'Esc' */ escape: string;
   /** @default 'to move' */ move: string;
@@ -87,7 +90,10 @@ export interface CommandPaletteProps {
   filter?: ((item: CommandPaletteItem, query: string) => boolean) | null;
   /** Shows the Spinner in the field row while the app loads results. The list keeps what it has. */
   isLoading?: boolean;
-  /** The key that opens and closes it. `Mod` is Cmd or Ctrl, either. `false` turns it off. @default 'Mod+K' */
+  /**
+   * The key that opens and closes it. `Mod` is Cmd or Ctrl, either. `false` turns it off. It does nothing while
+   * another of this library's modals is open (Dialog, ConfirmDialog, Drawer, Sheet). @default 'Mod+K'
+   */
   shortcut?: string | false;
   /** Remembers chosen items in this browser under this key. */
   storageKey?: string;
@@ -95,6 +101,10 @@ export interface CommandPaletteProps {
   recentLimit?: number;
   /** Controlled recents, newest first. With `onRecentChange`, the palette stores nothing. */
   recentIds?: Key[];
+  /**
+   * Called with the new list, newest first, each time an item is chosen. With `recentIds` it holds your keys
+   * as given, the chosen item's own first; otherwise it is the list as stored, so every id is a string.
+   */
   onRecentChange?: (ids: Key[]) => void;
   labels?: Partial<CommandPaletteLabels>;
   /** Goes on the surface. */
@@ -110,7 +120,8 @@ const DEFAULT_LABELS: Omit<CommandPaletteLabels, 'placeholder'> = {
   empty: 'No results',
   loading: 'Loading',
   recent: 'Recent',
-  status: (count, query) => (count === 0 ? `No results for ${query}` : `${String(count)} results`),
+  status: (count, query) =>
+    count === 0 ? `No results for ${query}` : count === 1 ? '1 result' : `${String(count)} results`,
   escape: 'Esc',
   move: 'to move',
   open: 'to open',
@@ -346,6 +357,9 @@ export function CommandPalette({
   // The palette's own place in the overlay stack, so its shortcut can tell another modal is open.
   const id = useId();
 
+  // The item chosen, until the close it made has run onAction.
+  const chosen = useRef<CommandPaletteItem | null>(null);
+
   const [ownOpen, setOwnOpen] = useState(defaultOpen);
   const isOpen = isOpenProp ?? ownOpen;
   const isControlled = isOpenProp !== undefined;
@@ -362,6 +376,19 @@ export function CommandPalette({
     },
     [isControlled],
   );
+  // Every open and every close the palette did not make for a choice (Escape, the scrim, the shortcut) drops a
+  // pending choice. A choice whose close never came, because a caller kept the palette open or it reopened
+  // during its exit, then never runs onAction on a later, unrelated close.
+  const setOpenWithoutChoice = useCallback(
+    (next: boolean): void => {
+      chosen.current = null;
+      setOpen(next);
+    },
+    [setOpen],
+  );
+  useEffect(() => {
+    if (isOpen) chosen.current = null;
+  }, [isOpen]);
 
   const words: CommandPaletteLabels = {
     placeholder: labels?.placeholder ?? label,
@@ -392,10 +419,15 @@ export function CommandPalette({
     [remembered, byId, recentLimit],
   );
   const record = (chosenId: string): void => {
-    if (recentIds === undefined) recordStored(chosenId);
+    if (recentIds === undefined) {
+      // The list as stored: every id a string, as storage keeps it.
+      recordStored(chosenId);
+      onRecentChange?.(push(storedIds, chosenId, recentLimit));
+      return;
+    }
     const chosenKey = byId.get(chosenId)?.id ?? chosenId;
     onRecentChange?.(
-      [chosenKey, ...remembered.filter((each) => String(each) !== chosenId)].slice(
+      [chosenKey, ...recentIds.filter((each) => String(each) !== chosenId)].slice(
         0,
         Math.max(0, recentLimit),
       ),
@@ -406,7 +438,6 @@ export function CommandPalette({
   useEffect(() => {
     onActionRef.current = onAction;
   }, [onAction]);
-  const chosen = useRef<CommandPaletteItem | null>(null);
 
   const choose = (item: CommandPaletteItem): void => {
     record(String(item.id));
@@ -434,13 +465,13 @@ export function CommandPalette({
     const onKeyDown = (event: KeyboardEvent): void => {
       if (!matchesShortcut(event, parsed) || isAnotherModalOpen(id)) return;
       event.preventDefault();
-      setOpen(!isOpenRef.current);
+      setOpenWithoutChoice(!isOpenRef.current);
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [parsed, id, setOpen]);
+  }, [parsed, id, setOpenWithoutChoice]);
 
   return (
     <ModalFrame
@@ -450,7 +481,7 @@ export function CommandPalette({
       className={className}
       isDismissable
       isOpen={isOpen}
-      onOpenChange={setOpen}
+      onOpenChange={setOpenWithoutChoice}
       onUnmount={afterClose}
     >
       <RACDialog ref={ref} aria-label={label} className="command-palette-content">

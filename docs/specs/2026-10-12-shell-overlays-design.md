@@ -853,6 +853,13 @@ There is no trigger export: the trigger is the app's own button, opening through
 - **Empty.** With text and no items, `renderEmptyState` draws `labels.empty`.
 - **Scope and direction.** `useOverlayScope` from `document.activeElement` at open (the shortcut's origin is wherever focus was, which is the page's scope); `dir` from `useLocale()` on the overlay.
 
+**Correction, ruled in the CommandPalette review:** comparing `event.key` alone leaves the shortcut dead on a layout that types another script. With Ctrl, a Persian, Arabic, Hebrew, Greek or Russian layout reports its own letter (noon, el), and Option on a Mac types a symbol, so the palette never opened there and the browser took the key. A Latin letter or digit in the shortcut now also matches by position when `event.key` is not itself a Latin letter or digit: `event.code` is `Key` plus the letter or `Digit` plus the number. The character still comes first, so Dvorak and AZERTY match the printed letter. The same review settled five smaller points:
+- The English default status says "1 result" for one, and `labels.status` replaces the whole function, plurals included.
+- The list, not the body, is the scroller, so Page Up and Page Down move by a page of rows instead of jumping to the ends, as React Aria measures the page in the list.
+- "Another modal" means the library's modals in the overlay stack (Dialog, ConfirmDialog, Drawer, Sheet); an app's own modal prevents the shortcut's keydown or passes `shortcut={false}` while it is open.
+- Opening, and any close that is not a choice's, drops a pending choice, so it never runs on a later, unrelated close.
+- Without `recentIds`, `onRecentChange` hears the list as stored, every id a string.
+
 ### 11.3 Look
 
 `command-palette.css`. The surface is the docs site's search dialog look, already derived on the tokens and checked in both themes, not the source's stadium panel: a floating surface takes 24px wherever it opens.

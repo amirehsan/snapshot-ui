@@ -2403,17 +2403,26 @@ describe('src/components/command-palette.css', () => {
     expect(rules()).not.toContain('--color-taupe');
   });
 
-  it('gives the body a floor, so the height holds while the text changes, and makes it the one scroller', () => {
+  it('gives the body a floor, so the height holds while the text changes, and makes the list in it the one scroller', () => {
     const css = rules();
     const body = blockAfter(css, '.command-palette-body {');
     for (const declaration of [
+      'display: flex;',
+      'flex-direction: column;',
       'min-height: min(20rem, 50dvh);',
-      'overflow-y: auto;',
-      'overscroll-behavior: contain;',
     ]) {
       expect(body, declaration).toContain(declaration);
     }
-    expect(blockAfter(css, '.command-palette-list {')).toContain('overflow: visible;');
+    expect(body).not.toContain('overflow');
+    // The menu's own rule makes the list fill the body and shrink into it (flex: 1 1 auto; min-height: 0).
+    const list = blockAfter(css, '.command-palette-list {');
+    expect(list).toContain('overflow-y: auto;');
+    expect(list).toContain('overscroll-behavior: contain;');
+    expect(list).not.toContain('visible');
+  });
+
+  it('lets the key hints wrap, so translated words stay on the surface', () => {
+    expect(blockAfter(rules(), '.command-palette-footer {')).toContain('flex-wrap: wrap;');
   });
 
   it('fills the keyboard-active row in ink with no ring, and inverts its icon, end value, description and key to canvas', () => {
