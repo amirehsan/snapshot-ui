@@ -3087,7 +3087,11 @@ first all resolve no, because silence is never yes.
   question drawn as a harmless one is the costly mistake, and a harmless one
   drawn as destructive teaches people to ignore the warning. So the prop is
   required, and the danger tone draws the warning triangle in the error well
-  unless `icon` replaces it.
+  unless `icon` replaces it. Danger is for an answer that loses something:
+  data, money or work. An action that cannot be taken back but loses nothing,
+  such as sending an invoice, takes the default tone. A caller the type
+  cannot hold, such as plain JavaScript, that leaves the tone out is warned
+  once in the console.
 - **The description is required.** An alert dialog is read out on open by its
   name and its description, so every confirm has both. React Aria points the
   `alertdialog` at the description itself; `Dialog` wires it the same way for
@@ -3102,24 +3106,62 @@ first all resolve no, because silence is never yes.
   shows it and the page's `error` listeners hear it, once. Where
   `reportError` is missing it is thrown again from a microtask. `isPending`
   draws the same state for a caller that tracks the work itself.
+  `pendingLabel` names the spinner, "Loading" by default, and should name the
+  work, such as "Deleting". React Aria joins a spinner's name to a pending
+  button's only when the button is named by an attribute, so the confirm
+  button carries its label as `aria-label` too: pending, it reads "Delete 3
+  transactions Deleting", and React Aria announces that as the wait starts. A
+  dialog that closes while its promise runs, which only a controlled caller
+  can do, drops that run: reopened, it is not pending, and the run's end
+  neither closes it nor calls anyone.
 - **Every other way out is a cancel.** Escape, a press on the scrim and Cancel
   each call `onCancel` once. A confirm never does: the component marks the
   close a confirm asks for before it closes, and its close handler reads and
   clears the mark. To see every close, whether the dialog follows a
   `DialogTrigger`, `isOpen` or `defaultOpen`, it resolves that state itself by
-  React Aria's rule and hands `Dialog` a controlled `isOpen`.
+  React Aria's rule and hands `Dialog` a controlled `isOpen`. Inside a
+  `DialogTrigger` the trigger owns that state, as it does for any modal, so
+  the dialog's own `onOpenChange` is not called there, and the component
+  warns once when it is given one.
 
 **`useConfirm()`.** It returns `{ confirm, dialog }` and needs no provider.
 `confirm(options)` shows the question and returns a promise. A second
-`confirm` while one is open answers the open one no and shows the new one, and
-unmounting the component that asked answers an open question no, so no
-promise is left waiting. `dialog` is `null` until the first question, so a
-page that never asks draws nothing. The hook offers no pending state: the work
-after a yes belongs to the caller's own interface, and a caller that wants the
-dialog itself to wait renders `ConfirmDialog` with `onConfirm`. When the work
-removes the button that asked, such as a row's Delete, React Aria has nowhere
-to give focus back, so the caller places it, as the docs example does on the
-row that takes its place.
+`confirm` while one is open answers the open one no and shows the new one,
+unmounting the component that asked answers an open question no, and a
+question asked after that answers no at once, so no promise is left waiting.
+`dialog` is `null` until the first question, so a page that never asks draws
+nothing. After that the hook keeps the last question rendered: an answered
+one stays, closed, so React Aria plays the panel's and the scrim's exit before
+it removes them, as it does for a dialog from a trigger.
+
+Questions asked one after another are one run: one asked over an open one, or
+chained after an answer, as a follow-up to a yes is. Three rules hold a run
+together.
+
+- **One overlay, a new question in it.** Each question keys the dialog element
+  and its content, inside a panel and scrim that stay, so its initial focus
+  runs again on its own tone's answer, and the overlay does not blink. A
+  remount of the whole overlay would record the outgoing question's focused
+  Cancel as the place to give focus back, since React Aria's focus scope
+  records that as it renders.
+- **The scope of the first trigger.** The hook records what held focus when
+  the first question opened. A question asked while the last panel is still
+  leaving reopens that panel, which keeps its scope. One asked after it has
+  left would open from the body, because focus fell there with the panel, so
+  the hook gives focus back to the recorded trigger first, as the panel
+  leaves, and the next question opens from it, in its theme, shape and
+  density.
+- **Focus goes back to the first trigger.** When the last question is
+  answered and its panel has left, focus returns to the recorded trigger, not
+  to the body and never to a Cancel that has gone. React Aria does this a
+  frame later; the hook does it as the panel leaves, so a question chained in
+  that frame still opens from the trigger.
+
+The hook offers no pending state: the work after a yes belongs to the
+caller's own interface, and a caller that wants the dialog itself to wait
+renders `ConfirmDialog` with `onConfirm`. When the work removes the button
+that asked, such as a row's Delete, focus has nowhere to go back to, so the
+caller places it, as the docs example does on the row that takes its place.
 
 **Nothing new is measured.** The danger well is Dialog's, measured above, and
 the buttons are Button's tertiary, primary and danger variants, whose labels

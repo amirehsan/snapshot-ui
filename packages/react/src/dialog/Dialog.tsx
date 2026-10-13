@@ -1,7 +1,15 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useId, useMemo, type HTMLAttributes, type ReactElement, type ReactNode, type Ref } from 'react';
+import {
+  useId,
+  useMemo,
+  type HTMLAttributes,
+  type Key,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import {
   Dialog as RACDialog,
   Heading,
@@ -64,14 +72,23 @@ export interface DialogProps extends Omit<RACDialogProps, 'className' | 'childre
 }
 
 /**
- * Dialog's props with the role, which only ConfirmDialog sets, to `alertdialog`. A Dialog is a `dialog`, so
- * the public props leave the role out.
+ * Dialog's props with the three that only ConfirmDialog sets: the role, to `alertdialog`, and for `useConfirm`
+ * a key for the content and a call when the panel leaves. A Dialog is a `dialog`, so the public props leave
+ * them out.
  *
  * Internal: not exported from the package.
  */
 export interface DialogInternalProps extends DialogProps {
   /** @default 'dialog' */
   role?: 'dialog' | 'alertdialog';
+  /**
+   * Keys the dialog element and everything in it, inside a panel and scrim that stay: a new key mounts new
+   * content, whose initial focus runs again, while the overlay, its scope and its focus restore stay as the
+   * first question set them.
+   */
+  contentKey?: Key;
+  /** Called when the panel has left the page, after its exit. */
+  onUnmount?: () => void;
 }
 
 /** A part's content, calling it with `close` when it is a function. */
@@ -113,6 +130,8 @@ export function BaseDialog({
   className,
   overlayClassName,
   role = 'dialog',
+  contentKey,
+  onUnmount,
   ...dialogProps
 }: DialogInternalProps): ReactElement {
   const descriptionId = useId();
@@ -129,8 +148,10 @@ export function BaseDialog({
       isOpen={isOpen}
       defaultOpen={defaultOpen}
       onOpenChange={onOpenChange}
+      onUnmount={onUnmount}
     >
       <RACDialog
+        key={contentKey}
         {...dialogProps}
         role={role}
         // React Aria wires the description slot only for an alert dialog, so the dialog points at it here.
