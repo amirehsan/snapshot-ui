@@ -37,11 +37,23 @@
      no wrapping, because a number that breaks is a wrong number. The phone step is measured:
      "$12,345.67" is 293px at 56px and 230px at 44px, and a 320px screen leaves 248px inside a
      20px-padded card. The width is the --breakpoint-sm token, written out because a media query
-     cannot read a custom property; test/css.test.js keeps them equal. */
+     cannot read a custom property; test/css.test.js keeps them equal.
+
+     A figure reads left to right in every direction, as money does in right-to-left scripts
+     too. A leading + or - is neutral to the bidi algorithm, so in a right-to-left block
+     "+$1,980.00" would draw as "$1,980.00+": direction and isolate pin the figure to its
+     written order. match-parent then resolves "start" against the parent's direction, so a
+     block figure still sits at the start of a right-to-left line. Chromium knows only the
+     prefixed name and Firefox only the standard one, so both are written, the standard
+     name last. */
   .copy-numeral,
   .copy-numeral-sm {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: -webkit-match-parent;
+    text-align: match-parent;
   }
 
   .copy-numeral {

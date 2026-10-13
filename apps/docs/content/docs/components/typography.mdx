@@ -30,7 +30,7 @@ Body text in the body or the small step. The muted tone is slate, for secondary 
 
 ## Numerals
 
-A figure that is the point of a tile takes a numeral size. A hero amount is `size="numeral"`: 56px with tabular digits, dropping to 44px under 768px so "$12,345.67" fits a 320px screen. A tile beside others is `size="numeral-sm"`, 32px. A numeral never wraps, because a number that breaks is a wrong number, so keep it to one figure. Give it its sign and unit in the string, since nothing is formatted here.
+A figure that is the point of a tile takes a numeral size. A hero amount is `size="numeral"`: 56px with tabular digits, dropping to 44px under 768px so "$12,345.67" fits a 320px screen. A tile beside others is `size="numeral-sm"`, 32px. A numeral never wraps, because a number that breaks is a wrong number, so keep it to one figure, and let a row of `numeral-sm` tiles wrap (`flex-wrap`) as the example does, since two cannot share a row at 320px. Give it its sign and unit in the string, since nothing is formatted here. A numeral reads left to right in every direction and keeps its sign where it was written, so "+$1,980.00" stays in that order in a right-to-left page.
 
 <Preview name="text-numerals" />
 
