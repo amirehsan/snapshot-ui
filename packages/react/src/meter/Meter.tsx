@@ -20,7 +20,7 @@ export type MeterBaseProps = Omit<
 > & {
   /** The visible label, such as "Groceries". When absent, `aria-label` or `aria-labelledby` names the meter. */
   label?: ReactNode;
-  /** The limit, in the same units. */
+  /** The limit, in the same units. Over 0: a limit of 0 or below draws an empty track and reports 0. */
   max: number;
   segments: MeterSegment[];
   /** The visible value text and the accessible value: "$1,020 of $1,200". Over the limit it must say so in words. */
@@ -73,13 +73,15 @@ export function Meter(props: MeterProps): ReactElement {
     className,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
+    'aria-describedby': ariaDescribedBy,
     ...rest
   }: MeterBaseProps & { 'aria-label'?: string; 'aria-labelledby'?: string } = props;
   const id = useId();
   const labelId = `${id}-label`;
   const valueId = `${id}-value`;
   const paceId = `${id}-pace`;
-  const hasLabel = present(label);
+  // A label of only spaces names nothing, so it counts as absent for the name, as a blank aria-label does.
+  const hasLabel = present(label) && !(typeof label === 'string' && label.trim() === '');
   const sum = segments.reduce((total, { value }) => total + Math.max(0, value), 0);
   const drawn = widths(segments, max);
   const paceLabel = pace && named(pace.label) ? pace.label : undefined;
@@ -107,10 +109,15 @@ export function Meter(props: MeterProps): ReactElement {
         className="meter-bar"
         role="meter"
         aria-valuemin={0}
-        aria-valuemax={max}
+        aria-valuemax={Math.max(0, max)}
         aria-valuenow={max > 0 ? Math.min(sum, max) : 0}
         aria-valuetext={valueLabel}
-        aria-describedby={paceLabel === undefined ? undefined : paceId}
+        // The caller's description, which the root could not carry since it has no role, then the pace.
+        aria-describedby={
+          [named(ariaDescribedBy) ? ariaDescribedBy : undefined, paceLabel === undefined ? undefined : paceId]
+            .filter(Boolean)
+            .join(' ') || undefined
+        }
         {...name}
       >
         <div className="meter-track">

@@ -313,6 +313,34 @@ describe('Meter', () => {
     expect(container.querySelectorAll('.meter-legend-item')).toHaveLength(2);
   });
 
+  it('treats a label of only spaces as no label, so the bar is never named by a blank', () => {
+    render(<Meter label="   " max={1200} segments={[SPENT]} valueLabel="$820 of $1,200" />);
+    expect(bar()).toHaveAccessibleName('$820 of $1,200');
+  });
+
+  it('puts a caller aria-describedby on the bar, beside the pace description', () => {
+    render(
+      <>
+        <p id="note">Resets on the 1st.</p>
+        <Meter
+          label="Groceries"
+          max={1200}
+          segments={[SPENT]}
+          valueLabel="$820 of $1,200"
+          pace={PACE}
+          aria-describedby="note"
+        />
+      </>,
+    );
+    expect(bar()).toHaveAccessibleDescription(`Resets on the 1st. ${PACE.label}`);
+  });
+
+  it('never reports a maximum under its minimum, for a max of 0 or below', () => {
+    render(<Meter label="Groceries" max={-5} segments={[SPENT]} valueLabel="$820" />);
+    expect(bar()).toHaveAttribute('aria-valuemax', '0');
+    expect(bar()).toHaveAttribute('aria-valuenow', '0');
+  });
+
   it('passes className, ref and attributes to the root', () => {
     const ref = createRef<HTMLDivElement>();
     const { container } = render(

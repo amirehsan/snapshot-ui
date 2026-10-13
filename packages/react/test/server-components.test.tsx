@@ -19,11 +19,11 @@ vi.mock('react', async () => {
     default: Record<string, unknown>;
   };
   const client = require('react') as Record<string, unknown>;
+  // Only the hooks a static module may call under React's server build come from ordinary React, which
+  // drives the render here. `use` stays the server build's, since ordinary React's would also accept a context.
+  const SHARED = new Set(['useId', 'useCallback', 'useMemo', 'useDebugValue']);
   const exports = Object.fromEntries(
-    Object.entries(server.default).map(([name, value]) => [
-      name,
-      name.startsWith('use') ? client[name] : value,
-    ]),
+    Object.entries(server.default).map(([name, value]) => [name, SHARED.has(name) ? client[name] : value]),
   );
   return { ...exports, default: exports };
 });
