@@ -2,6 +2,9 @@ import type { ComponentType } from 'react';
 import AppShellBasic from './app-shell-basic';
 import AppShellCollapsed from './app-shell-collapsed';
 import AppShellPhone from './app-shell-phone';
+import AvatarBesideName from './avatar-beside-name';
+import AvatarFallback from './avatar-fallback';
+import AvatarSizes from './avatar-sizes';
 import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
 import BottomTabBarBasic from './bottom-tab-bar-basic';
@@ -83,6 +86,9 @@ export const examples = {
   'app-shell-basic': AppShellBasic,
   'app-shell-collapsed': AppShellCollapsed,
   'app-shell-phone': AppShellPhone,
+  'avatar-beside-name': AvatarBesideName,
+  'avatar-fallback': AvatarFallback,
+  'avatar-sizes': AvatarSizes,
   'badge-counts': BadgeCounts,
   'badge-tones': BadgeTones,
   'bottom-tab-bar-basic': BottomTabBarBasic,

@@ -1,0 +1,90 @@
+/*
+ * Avatar: a person, a merchant or a bank, as an image over its initials, derived in docs/design-system.md
+ * ("Avatar"). The initials are always drawn and the image covers them once it is known to have loaded, so a
+ * slow or a failed image shows the initials, a broken image never shows its icon, and the box never moves. One
+ * neutral fallback for everyone: bone with ink initials. The edge is a 1px frame ring drawn by a pseudo-element
+ * over the image, a border because a shadow is not a token; it is a cue, so a white logo on a white card keeps
+ * an edge. sm is the short-uppercase floor, 12px at 700; md and lg are 14 and 16px at 500.
+ */
+@layer components {
+  .avatar {
+    --avatar-size: 2rem;
+
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: var(--avatar-size);
+    height: var(--avatar-size);
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-bone);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1;
+    font-weight: 500;
+    vertical-align: middle;
+    user-select: none;
+  }
+
+  .avatar[data-size='sm'] {
+    --avatar-size: 1.5rem;
+
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .avatar[data-size='lg'] {
+    --avatar-size: 2.5rem;
+
+    font-size: 1rem;
+  }
+
+  /* A logo reads as a tile, not a person: the nested-radius step for a small mark. */
+  .avatar[data-shape='square'] {
+    border-radius: var(--radius-micro);
+  }
+
+  .avatar-initials {
+    white-space: nowrap;
+  }
+
+  .avatar-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+  }
+
+  .avatar-image[data-loaded] {
+    opacity: 1;
+  }
+
+  /* After the image in paint order, so the ring sits over it. */
+  .avatar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--color-frame);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* The fill is a background, which the repaint drops, so the initials take the reader's colors and the
+     ring their text color. An image is shown as it is. */
+  @media (forced-colors: active) {
+    .avatar {
+      background-color: canvas;
+      color: CanvasText;
+    }
+
+    .avatar::after {
+      border-color: CanvasText;
+    }
+  }
+}

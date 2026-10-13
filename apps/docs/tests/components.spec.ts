@@ -486,6 +486,7 @@ const LONG_TARGETS: Record<string, string[]> = {
 
 /** The pages with no text a person writes, each with its reason. A page is in one list or the other. */
 const NO_LONG_TEXT: Record<string, string> = {
+  avatar: 'two initials in a fixed box; the name is an aria-label that nothing draws',
   'bottom-tab-bar':
     'a tab label is one word on one line and ellipsizes as a last resort; the name holds the full label',
   button: 'a label is a short command on one line by design (white-space: nowrap), not text that wraps',
@@ -594,6 +595,7 @@ for (const slug of SLUGS) {
  */
 const SERVER_RENDERED: Record<string, string[]> = {
   'app-shell': ['.stage .app-shell'],
+  avatar: ['.stage .avatar', '.stage .avatar-initials'],
   badge: ['.stage .badge'],
   'bottom-tab-bar': ['.stage .tab-bar'],
   button: ['.stage .button'],

@@ -4941,3 +4941,71 @@ text, with the default cursor and no hover or press wash.
 **Not in this release.** When the Android soft keyboard opens, the layout
 viewport shrinks and a fixed bar rides up above the keyboard. Recorded for a
 later minor.
+
+## Avatar
+
+A person, a merchant or a bank: `Avatar`, an image over its initials, at
+three sizes and two shapes, with one neutral fallback for everyone and a
+decorative form for an avatar beside its name. The document has no avatar,
+so this one is derived.
+
+**Sizes.** `sm`, `md` and `lg` are 24, 32 and 40px boxes, set by
+`--avatar-size`. The initials are 12px at 700 in `sm`, the floor for short
+uppercase text and the weight the floor asks for, and 14 and 16px at 500 in
+`md` and `lg`, the action weight, since two letters at 450 read light on
+bone. No 600.
+
+**Shapes.** `circle` takes `--radius-pill` and `square` takes
+`--radius-micro`, the nested-radius step for a small mark, so a logo reads
+as a tile and not a person. Both follow the shape axis. In Rounded the circle
+is a circle and the square has 6px corners; in Soft the pill is 12px, a
+circle at 24px and a rounded square at 32 and 40px, and the square keeps its
+6px; in Square both are square.
+
+**One neutral fallback.** Every avatar without an image is bone with ink
+initials. A color per name would need a categorical palette, which belongs
+to phase 6, and a color that identifies a person carries a meaning the name
+already carries. Ink on bone is 16.76 in light and 15.36 in dark, gated
+already as text and cited by the contrast test, not added.
+
+**The ring.** A 1px `--color-frame` edge over the image, so a white logo on a
+white card keeps its edge. It is a `::after` border, after the image in paint
+order, with `border-radius: inherit` and no pointer events, because the
+token rule allows a `box-shadow` only as `none` or a `var()`, so an inset
+shadow cannot draw it. It is a cue, not a boundary: the frame over lifted
+measures 1.28 in light and 1.43 in dark, recorded and not gated.
+
+**The image and its state.** The initials are always in the DOM, hidden from
+assistive technology, and the image comes after them, absolutely placed over
+the whole box with `object-fit: cover` and an empty `alt`, so the layout
+never moves. It is `opacity: 0` until it is known to have loaded, when it
+carries `data-loaded`; an image that fails is removed and the initials it
+covered stay, so a broken image never shows its icon. The state is keyed to
+`src`, so a new address starts again at loading and never shows the last
+image's verdict. The spec drew the image over the initials on the server and
+also kept it invisible until `onLoad`; both cannot hold before any script
+runs, so before hydration the initials show. An image that loaded or failed
+before React listened fires no event React hears, so a ref callback reads
+`complete` and `naturalWidth` as the image mounts, and the update returns
+the same state when nothing changed, so a ref callback that runs again never
+renders again. That one piece of state makes Avatar a client component.
+
+**Initials.** `initials` when given; otherwise the first character of each
+of the first two words of `name`, split on whitespace after trimming, taken
+with `Array.from` so a character outside the basic plane counts as one, and
+uppercased with `toUpperCase()`, which is not locale-aware, is enough for
+initials and needs no `Intl`. "Ada Lovelace" is AL, "Northwind" is N, "Mary
+Ann Evans" is MA and "علی رضایی" is عر. An app with a stricter rule passes
+`initials`.
+
+**Names.** The root is `role="img"` named by `name`; with `isDecorative` it is
+`aria-hidden` with neither, for a name already in the text beside it.
+
+**Forced colors.** The fill is a background, which the repaint drops, so the
+initials take `CanvasText` on `canvas` and the ring `CanvasText`. An image is
+shown as it is.
+
+**Import order.** `avatar.css` is imported after `tab-bar.css`, the first of
+the home files, and a test keeps the stat tile, the meter and the charts after
+it in that order once they exist. The tooltip's test, which allowed only the
+shell files after the last overlay file, now allows the home files too.

@@ -146,3 +146,4 @@ export {
   type BottomTabBarLinkProps,
   type BottomTabBarProps,
 } from './bottom-tab-bar';
+export { Avatar, type AvatarProps } from './avatar';
