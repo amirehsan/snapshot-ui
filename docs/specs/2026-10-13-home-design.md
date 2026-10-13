@@ -1,6 +1,6 @@
 # Home: StatTile, Meter, Avatar, Sparkline and LineChart: design
 
-Status: written for review on 2026-10-13. Nothing in this document has an owner ruling yet. Section 10.1 lists the four questions that need one before the plan is written; everything else is decided here and listed in section 10.2.
+Status: written for review on 2026-10-13. The four rulings in section 10.1 were taken by the owner on 2026-10-13; everything else is decided here and listed in section 10.2.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document pulls forward the phase 4 rows "StatTile", "Avatar, AvatarGroup" (Avatar only) and "ProgressBar, Meter" (Meter only), and a first slice of phase 6, "Charts" (a line chart and a sparkline). It answers batch 2 of the first consumer's roadmap, its Home page. The design authority remains `docs/design-system.md`.
 Released before this: batch 1, `@snapshot-ui/core` and `@snapshot-ui/react` 0.2.0 (the overlays, compact density and the shell). Section 2 lists what this document takes from it.
 
@@ -317,12 +317,12 @@ export type LineChartProps = Omit<HTMLAttributes<HTMLElement>, 'children'> &
 
 ## 10. Decisions
 
-### 10.1 Needs a ruling
+### 10.1 Rulings taken by the owner
 
-1. **Where the charts live.** Recommended: a new `@snapshot-ui/charts` package for Sparkline and LineChart, as the parent spec's phase 6 names, with its CSS in core. The alternative is to put both in `@snapshot-ui/react` now and move them when phase 6 adds the package, which is a breaking import change for the consumer later. A new package adds a release target, its own size limits and a docs section.
-2. **The table alternative's form.** Recommended: a visible toggle under each chart that swaps the plot for a table (section 9.2). The alternative is a table that is always present and visually hidden, which serves only screen readers and gives a sighted keyboard user nothing.
-3. **Time in right to left.** Recommended: the x axis follows the page's direction, so the newest point is at the left in the Persian guide. The alternative keeps time left to right in every language, as many finance apps do; the consumer's guide decides which its readers expect.
-4. **The change line's color.** Recommended: neutral slate by default, `gain` only for money that arrived and `warning` only for a state that needs a look, never red or green for up and down (section 4). The alternative is a `sentiment` prop that maps "good" and "bad" to success and error, which those tokens' meaning rules forbid.
+1. **Where the charts live:** a new `@snapshot-ui/charts` package for Sparkline and LineChart, as the parent spec's phase 6 names, with its CSS in core. Putting them in `@snapshot-ui/react` now was rejected, because phase 6 would then move the imports, a breaking change for the consumer.
+2. **The table alternative:** a visible toggle under each chart that swaps the plot for a table (section 9.2). An always-present, visually hidden table was rejected, because it serves only screen readers and gives a sighted keyboard user nothing.
+3. **Time in right to left:** the x axis follows the page's direction, so the newest point is at the left in the Persian guide. Keeping time left to right in every language was rejected.
+4. **The change line's color:** neutral slate by default, `gain` only for money that arrived and `warning` only for a state that needs a look, never red or green for up and down (section 4). A `sentiment` prop mapping "good" and "bad" to success and error was rejected, because those tokens' meaning rules forbid it.
 
 ### 10.2 Decided here
 
@@ -372,9 +372,9 @@ export type LineChartProps = Omit<HTMLAttributes<HTMLElement>, 'children'> &
 
 ## 13. Docs and release
 
-- **Pages:** `avatar`, `stat-tile`, `meter`, `sparkline` and `line-chart`, each with Usage, Props, Accessibility with a Keys table where there are keys, and Design rules. A "Charts" group in the rail holds the last two if ruling 1 takes the new package.
+- **Pages:** `avatar`, `stat-tile`, `meter`, `sparkline` and `line-chart`, each with Usage, Props, Accessibility with a Keys table where there are keys, and Design rules. A "Charts" group in the rail holds the last two, which live in the new package (ruling 1).
 - **Design record:** a section per part in Appendix B, with every derived value and its reason, and the measured contrast pairs.
-- **Changesets:** one per part, minor. `@snapshot-ui/charts` starts at 0.1.0 (or the parts join the react package's minor, per ruling 1).
+- **Changesets:** one per part, minor. `@snapshot-ui/charts` starts at 0.1.0 (ruling 1).
 - **Release note for the consumer:** every figure is a formatted string; the meter's `valueLabel` must say "over" in words; the table toggle is on every chart; time direction in right to left, per ruling 3.
 
 ## 14. Risks
