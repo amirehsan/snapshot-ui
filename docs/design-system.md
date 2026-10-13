@@ -931,7 +931,7 @@ document. Four were renamed because they described a marketing page:
 | `--text-footer-link` | `--text-small` | It is the hint and helper text step. |
 | `--text-footer-header` | `--text-overline` | Uppercase column headers in tables and stat tiles. |
 
-Five values have no name in the document, so the library gives them one:
+Nine values have no name in the document, so the library gives them one:
 
 - `--font-mono` is `ui-monospace`, `SFMono-Regular`, `Menlo`, then the generic
   `monospace`. It is for code only, and Sofia Sans stays the one family for
@@ -939,28 +939,35 @@ Five values have no name in the document, so the library gives them one:
 - `--container-field` is 44rem (704px), the widest a single control grows. Past
   about 700px the eye has to travel too far from a label to the end of its own
   input.
+- `--spacing-inset` is 16px, how far floating chrome sits clear of the
+  viewport's edge. It is the one step the spacing rhythm skips, recorded as its
+  exception in "Floating chrome and the shell".
+- `--container-sidebar` is 20rem, the navigation rail's full width, and 6.5rem
+  under `data-sidebar="collapsed"`. "Floating chrome and the shell" derives
+  both.
 - `--focus-ring-color` is ink, kept as one reference to `--color-ink` so every
   ring follows the theme and a theme can recolor them all from this one token.
   Each theme scope declares it again, since a variable that holds `var()`
   resolves where it is declared. A scope that sets `--color-ink` itself,
   outside the theme attribute, must set `--focus-ring-color` too, just as it
   would set `color`.
-- `--z-modal` is 1000 and `--z-toast` is 1100. They fix the order in which the
-  overlays stack:
+- `--z-modal` is 1000, `--z-toast` 1100, `--z-chrome` 30 and `--z-header` 20.
+  They fix the order in which the overlays and the app's chrome stack:
 
   | Layer | z-index | Why |
   | --- | --- | --- |
   | Tooltip, popover, menu, any positioned overlay | 100000, inline | React Aria writes it as an inline style when it positions the overlay, and CSS cannot lower it. |
   | Toast region | `--z-toast`, 1100 | Above every modal, so an error raised from an action inside a dialog is not under the scrim. |
   | Dialog, confirm dialog, drawer, sheet, command palette and their scrims | `--z-modal`, 1000 | The ladder has to fit under React Aria's popovers, so a menu opened from a dialog sits above it. |
-  | App chrome: header, rail, save bar, tab bar | below 1000, the app's own | A modal covers the chrome, and the chrome never covers a modal. |
+  | Fixed chrome: the rail, its collapse button, the tab bar, a save bar | `--z-chrome`, 30 | A modal covers the chrome, and the chrome never covers a modal. |
+  | A sticky page header | `--z-header`, 20 | Above the page it scrolls over and under every piece of fixed chrome. A page's own sticky elements stay at or under it. |
 
   Ties inside a layer break by DOM order: React Aria appends each portal after
-  the last, so a stacked dialog sits above the first. The two names are in
+  the last, so a stacked dialog sits above the first. The four names are in
   `tokens.js` and `tokens.css` and not in the Tailwind theme, which has no
   z-index namespace. An app whose chrome already uses larger numbers overrides
-  the two variables. The overlays do not use the browser's top layer, so a
-  third-party overlay at a very large z-index can cover a library dialog.
+  `--z-modal` and `--z-toast`. The overlays do not use the browser's top layer,
+  so a third-party overlay at a very large z-index can cover a library dialog.
 
 ## Six colors added
 
@@ -4465,3 +4472,147 @@ it is given, and not from what holds focus: a tip opened by hover was opened
 by no focus, so focus can be anywhere. A tip opened from a dark card is the
 dark ink, white with black text, while the page stays light. React Aria
 writes no direction on a tip, so `dir` comes from the locale.
+
+## Compact density
+
+A site may draw its controls tighter from one attribute, `data-density`, as it
+cuts its corners from `data-shape`. `data-density="compact"` on any element
+remaps four size tokens for its subtree, and no component knows which density
+is active: Button, IconButton, SegmentedControl, the text input and Card read
+the tokens where they had literals. The first app built on the library asked
+for it, for toolbar controls of 34 to 36px.
+
+**One axis, not sizes.** The alternative was a `size="sm"` prop on Button,
+IconButton, Card, TextField and the rest. That is a prop at every call site, a
+media query for touch repeated in every component's stylesheet, and nothing a
+page that uses the classes without React can reach. One attribute reaches a
+whole region, and the touch growth is one generated block.
+`SegmentedControl size="sm"` stays as it is: it is a type and padding choice
+for a toolbar, and its height now comes from the axis like every other
+control's.
+
+| Token | Comfortable | Compact | Compact, `(pointer: coarse)` | Read by |
+| --- | --- | --- | --- | --- |
+| `--size-control` | 40px | 36px | 44px | a button's minimum height, an icon button's width and height, the `sm` segmented track |
+| `--size-field` | 48px | 36px | 44px | the text input's height, the `md` segmented track |
+| `--size-target` | 40px | 40px | 40px | the floor every hit area is extended to |
+| `--spacing-card` | 32px | 20px | 20px | a card's padding and its header band's bleed |
+
+**40 and 48 are today's literals.** A button's minimum height and an icon
+button were 40px, and the input 48px. The `md` segmented option is 2.5rem in a
+track of the option plus 0.5rem, 48px, and the `sm` option 2rem in a 40px
+track, so the two segmented tracks are exactly `--size-field` and
+`--size-control`. Comfortable draws exactly as 0.1.0 did.
+
+**36, not 32.** The first app's toolbar controls are 34 to 36px. 36 also keeps
+the hit-area extension at 2px a side, so two controls 8px apart, the part
+step, never overlap. At 32 the extension would be 4px a side, which touches at
+an 8px gap and overlaps under it.
+
+**44 on a coarse pointer, and only in compact.** 44px is the first app's
+number, and the target WCAG 2.5.5 asks for. It applies only within compact, so
+on a touch screen a compact control is taller than a comfortable one. The
+inversion is deliberate, and the theming page states it. Comfortable keeps this
+document's 40px floor and does not change on touch: growing it would change the
+sizes 0.1.0 shipped, and 40px is already well past the 24px of WCAG 2.5.8.
+
+**20px of card padding** is the first app's number, and the value the docs
+site already writes by hand for its cards under 768px.
+
+**The hit area.** A control drawn under the target extends its hit area with a
+pseudo-element, as "Rules every component follows" asks, and one formula
+serves every control:
+`inset-block: calc(-1 * max(0px, (var(--size-target) - <height>) / 2))`,
+where `<height>` is what the control draws: `--size-control` for a button or
+an icon button, and the option's height for a segmented option. It reaches 2px
+a side for a 36px compact control; 4px for the 32px option of a comfortable
+`sm` track, as before; 6px for a 28px compact option, 2px past its track as a
+button's is; and nothing for a control 40px or taller, a compact one on touch
+included. `--size-target` has no density modes because it is the floor itself.
+If compact lowered it, the formula would lower every hit area with it, and a
+compact control would be a smaller target, which is the one thing density must
+not change.
+
+**The card.** Compact takes the card's padding, its header band's bleed and the
+header's bottom margin to 20px. The space under the title, above the header's
+rule, is `min(var(--spacing-peer), var(--spacing-card))`: 24px in comfortable,
+as before, and 20px in compact, so a compact card's own spacing is 20px
+everywhere with no second token. The body's row gap stays 24px, the peer step,
+and its column gap 32px, the separate step.
+
+**Stacked segmented rows** are `max(var(--size-target), var(--size-control))`
+tall in both sizes: 40px, and 44px in compact on a coarse pointer. A stacked row
+never drops under the target, so neighboring rows' hit areas never overlap.
+
+**The generator's refinement.** Density is generated as shape is. Each token
+carries its compact value beside its base value in `tokens.json`, and the
+build writes a `[data-density="compact" i]` block and a
+`[data-density="comfortable" i]` reset after the shape blocks. The touch
+growth is a refinement, `compact-coarse`: a second value that the build writes
+again under its media query,
+`@media (pointer: coarse) { [data-density="compact" i] { ... } }`, after the
+compact block, so on a touch screen it wins. It holds only the tokens that give
+it a value. The card's padding has none, so it keeps its compact 20px on touch.
+A token with a refinement value and no value for the variant it refines fails
+the build, naming the token, because the media block would then change a value
+that nothing set: a refinement is its variant again under a condition, and
+cannot stand alone. `tokens.js` lists it beside the variant, as
+`tokens.size.control.modes.density['compact-coarse']`.
+
+**Scope.**
+
+- **Regions.** `data-density="compact"` on any element compacts its subtree,
+  and `data-density="comfortable"` inside it restores the defaults. Matching
+  ignores case. A missing or unknown value is comfortable, with no script.
+- **Phone-wide compact is the site's rule, not an axis value.** The tokens are
+  public, so a site sets them under its own media query, where it knows the
+  width: `@media (width < 768px) { :root { --spacing-card: 20px; } }` is what
+  the docs site does for its cards, and a site that wants every control compact
+  on a phone sets `--size-control` and `--size-field` the same way. There is no
+  `data-density="auto"` tied to a breakpoint: an attribute cannot respond to
+  the viewport without script, and the server cannot know the viewport.
+- **Popups keep their trigger's density.** A menu, a select's popup or a
+  tooltip portals to the body, outside the region it opened from. The overlays'
+  scope hook copies `data-density` onto the overlay's root with the theme and
+  the shape ("Overlays"): from the trigger for a positioned overlay, and from
+  what held focus when it opened for a modal. Only parts that read the size
+  tokens change in a compact scope. A menu row's own 40px, and 44px on a coarse
+  pointer, are the overlays' minimums and are not density-driven.
+- **Comfortable does not change on touch.** A touch screen with no
+  `data-density` draws 40px controls, as 0.1.0 does.
+
+## Floating chrome and the shell
+
+The shell, `AppShell` with its rail and its tab bar, shares three values with
+the overlays and with the page, and the library names them.
+
+**The inset.** `--spacing-inset` is 16px, how far floating chrome sits clear of
+the viewport's edge: the rail, a drawer, the skip link, and the overlays' edge
+inset, which is the same 16px. It is the one step the spacing rhythm skips:
+8px, 24px, 32px and 48px are the part, peer, separate and page steps, and 16px
+is none of them. It is recorded as the rhythm's one exception, for two reasons.
+Chrome kept clear of the viewport's edge is a different thing from the space
+between two parts of a page, so it should not move when a rhythm step does.
+And 16px is what the docs rail, the app's rail and the app's save bar all keep.
+
+**The rail's width.** `--container-sidebar` is 20rem, the rail's full width
+with its insets, and the workspace is offset by it. Under
+`data-sidebar="collapsed"` it is 6.5rem. These are the docs rail's 320px and
+104px. They are rem so that a larger root font widens the expanded rail and
+gives its wrapped labels room; the collapsed rail gains room it does not need,
+which is harmless. The collapsed width comes from a generated `sidebar` axis,
+built as shape and density are: `[data-sidebar="collapsed" i]` remaps the one
+token, and `[data-sidebar="expanded" i]` restores it for a nested subtree. So
+the collapsed width is in `tokens.js`, as
+`tokens.container.sidebar.modes.sidebar.collapsed`, and in no component's
+stylesheet, and `AppShell` writes `data-sidebar="collapsed"` while collapsed
+and never `expanded`. A server paints the right width from a prop, a pre-paint
+script can set the attribute on `<html>`, and nothing is measured.
+
+**The chrome's layers.** `--z-chrome` is 30, for fixed chrome: the rail, its
+collapse button, the tab bar and a save bar. `--z-header` is 20, for a sticky
+page header, above the page it scrolls over and under every piece of fixed
+chrome. Where both sit among the overlays is the ladder in "Token names": under
+every modal, so a modal always covers the chrome. A page's own sticky elements,
+such as a table's header row or a toolbar, use `--z-header` or less, so they
+scroll under the chrome and never over it.

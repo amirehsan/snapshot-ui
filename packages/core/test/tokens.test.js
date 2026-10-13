@@ -54,7 +54,9 @@ describe('tokens.css', () => {
 
   it('writes the blocks in cascade order', () => {
     // Order is behavior: the later [data-theme="light"] must beat the system
-    // media query, and the shape blocks come after both theme scopes.
+    // media query, and the shape blocks come after both theme scopes. Within
+    // density, the coarse-pointer refinement follows compact, so on a touch
+    // screen it wins on the same element.
     const selectors = [...css.matchAll(/^\s*(.+?) \{$/gm)].map((match) => match[1]);
     expect(selectors).toEqual([
       '@layer theme',
@@ -66,6 +68,12 @@ describe('tokens.css', () => {
       '[data-shape="soft" i]',
       '[data-shape="square" i]',
       '[data-shape="rounded" i]',
+      '[data-density="compact" i]',
+      '@media (pointer: coarse)',
+      '[data-density="compact" i]',
+      '[data-density="comfortable" i]',
+      '[data-sidebar="collapsed" i]',
+      '[data-sidebar="expanded" i]',
     ]);
   });
 
@@ -124,14 +132,18 @@ describe('tokens.css', () => {
       ...withLetterSpacing.map((name) => `--text-${name}--letter-spacing`),
       ...['micro', 'control', 'surface', 'stadium', 'pill', 'dot'].map((name) => `--radius-${name}`),
       ...['lift', 'float', 'dramatic'].map((name) => `--shadow-${name}`),
-      ...['part', 'peer', 'separate', 'page'].map((name) => `--spacing-${name}`),
+      ...['part', 'peer', 'separate', 'page', 'card', 'inset'].map((name) => `--spacing-${name}`),
       '--container-field',
+      '--container-sidebar',
+      ...['control', 'field', 'target'].map((name) => `--size-${name}`),
       ...['sm', 'md', 'lg'].map((name) => `--breakpoint-${name}`),
       '--focus-ring-width',
       '--focus-ring-offset',
       '--focus-ring-color',
       '--z-modal',
       '--z-toast',
+      '--z-header',
+      '--z-chrome',
     ];
     const declared = declaredIn(block(':root'));
     // Equality, not inclusion: a variable that leaks into :root fails too. The
@@ -164,6 +176,42 @@ describe('tokens.css', () => {
     expect(root).toContain('--text-numeral-sm--line-height: 1.1;');
     expect(root).toContain('--z-modal: 1000;');
     expect(root).toContain('--z-toast: 1100;');
+    expect(root).toContain('--size-control: 40px;');
+    expect(root).toContain('--size-field: 48px;');
+    expect(root).toContain('--size-target: 40px;');
+    expect(root).toContain('--spacing-card: 32px;');
+    expect(root).toContain('--spacing-inset: 16px;');
+    expect(root).toContain('--container-sidebar: 20rem;');
+    expect(root).toContain('--z-header: 20;');
+    expect(root).toContain('--z-chrome: 30;');
+  });
+
+  it('remaps the sizes and the card padding for compact density, and the sizes again on a coarse pointer', () => {
+    const compact = block('[data-density="compact" i]');
+    expect(compact).toContain('--size-control: 36px;');
+    expect(compact).toContain('--size-field: 36px;');
+    expect(compact).toContain('--spacing-card: 20px;');
+    // The target is the floor a hit area is extended to, so no density moves it.
+    expect(compact).not.toContain('--size-target');
+    // The card padding has no coarse value, so it keeps its compact value on touch.
+    expect(css).toMatch(
+      /@media \(pointer: coarse\) \{\s*\[data-density="compact" i\] \{\s*--size-control: 44px;\s*--size-field: 44px;\s*\}\s*\}/,
+    );
+    const comfortable = block('[data-density="comfortable" i]');
+    expect(comfortable).toContain('--size-control: 40px;');
+    expect(comfortable).toContain('--size-field: 48px;');
+    expect(comfortable).toContain('--spacing-card: 32px;');
+    for (const density of [compact, comfortable]) {
+      expect(density).not.toContain('--color-');
+      expect(density).not.toContain('--radius-');
+    }
+  });
+
+  it('remaps the rail width when the sidebar is collapsed, and nothing else', () => {
+    const collapsed = block('[data-sidebar="collapsed" i]');
+    expect(declaredIn(collapsed)).toEqual(['--container-sidebar']);
+    expect(collapsed).toContain('--container-sidebar: 6.5rem;');
+    expect(block('[data-sidebar="expanded" i]')).toContain('--container-sidebar: 20rem;');
   });
 
   it('keeps the focus ring a reference to ink, declared again in every theme scope', () => {
@@ -194,7 +242,7 @@ describe('tokens.css', () => {
       const axis = /\[(data-[\w-]+)=/.exec(selector)?.[1];
       if (axis) axes.set(axis, [...(axes.get(axis) ?? []), selector]);
     }
-    expect([...axes.keys()].sort()).toEqual(['data-shape', 'data-theme']);
+    expect([...axes.keys()].sort()).toEqual(['data-density', 'data-shape', 'data-sidebar', 'data-theme']);
     const checked = [];
     for (const [axis, scopes] of axes) {
       const declaredByScope = new Map(scopes.map((scope) => [scope, declaredIn(block(scope))]));
@@ -273,7 +321,23 @@ describe('tokens.css', () => {
       expect(shape).not.toContain('--radius-dot');
       expect(shape).not.toContain('--color-');
       expect(shape).not.toContain('--z-');
+      expect(shape).not.toContain('--size-');
+      expect(shape).not.toContain('--spacing-');
+      expect(shape).not.toContain('--container-');
       expect(shape).not.toContain('--text-numeral');
+    }
+  });
+
+  it('keeps the size, spacing, container and z tokens out of every theme scope', () => {
+    for (const selector of [
+      '[data-theme="dark"]',
+      '[data-theme="light"]',
+      ':root:not([data-theme="light"])',
+    ]) {
+      const theme = block(selector);
+      for (const prefix of ['--size-', '--spacing-', '--container-', '--z-']) {
+        expect(theme, `${prefix} in ${selector}`).not.toContain(prefix);
+      }
     }
   });
 });
@@ -289,6 +353,18 @@ describe('tokens.js', () => {
     expect(tokens.z.modal.var).toBe('var(--z-modal)');
     expect(tokens.z.modal.value).toBe(1000);
     expect(tokens.z.toast.value).toBe(1100);
+  });
+
+  it('exposes the density and sidebar modes, the refinement included', () => {
+    expect(tokens.size.control.modes.density.compact).toBe('36px');
+    expect(tokens.size.control.modes.density['compact-coarse']).toBe('44px');
+    expect(tokens.size.field.modes.density).toEqual({ compact: '36px', 'compact-coarse': '44px' });
+    // The floor never moves, so the generated type has no `modes` to read either.
+    expect(tokens.size.target).not.toHaveProperty('modes');
+    expect(tokens.spacing.card.modes.density).toEqual({ compact: '20px' });
+    expect(tokens.container.sidebar.modes.sidebar.collapsed).toBe('6.5rem');
+    expect(tokens.z.header.value).toBe(20);
+    expect(tokens.z.chrome.value).toBe(30);
   });
 
   it('gives a token that refers to ink the modes of ink', () => {
@@ -429,5 +505,108 @@ describe('build-tokens.js', () => {
     expect(fixtureTokens.ring.inner.modes).toEqual({
       shape: { soft: 'calc(10px - 4px)', square: 'calc(0px - 4px)' },
     });
+  });
+
+  it('writes a refinement again under its media query, after its variant and before the base, with the axis followers', () => {
+    const run = buildFixture({
+      size: {
+        $type: 'dimension',
+        control: {
+          $value: px(40),
+          $extensions: { 'snapshot-ui': { density: { compact: px(36), 'compact-coarse': px(44) } } },
+        },
+        field: { $value: px(48), $extensions: { 'snapshot-ui': { density: { compact: px(36) } } } },
+      },
+      ring: {
+        // A follower of a token the density axis changes.
+        $type: 'dimension',
+        hit: { $value: '{size.control}' },
+      },
+    });
+    expect(run.stderr).toBe('');
+    expect(run.status).toBe(0);
+
+    const selectors = [...run.css.matchAll(/^\s*(.+?) \{$/gm)].map((match) => match[1]);
+    expect(selectors.slice(-4)).toEqual([
+      '[data-density="compact" i]',
+      '@media (pointer: coarse)',
+      '[data-density="compact" i]',
+      '[data-density="comfortable" i]',
+    ]);
+    const follower = '--ring-hit: var(--size-control);';
+    const compact = blockOf(run.css, '[data-density="compact" i]');
+    expect(compact).toContain('--size-control: 36px;');
+    expect(compact).toContain('--size-field: 36px;');
+    expect(compact).toContain(follower);
+    // The refinement block holds only the tokens that give it a value, and the followers.
+    const coarse = blockOf(run.css, '@media (pointer: coarse)');
+    expect(coarse).toContain('--size-control: 44px;');
+    expect(coarse).toContain(follower);
+    expect(coarse).not.toContain('--size-field');
+    const comfortable = blockOf(run.css, '[data-density="comfortable" i]');
+    expect(comfortable).toContain('--size-control: 40px;');
+    expect(comfortable).toContain('--size-field: 48px;');
+    expect(comfortable).toContain(follower);
+
+    // tokens.js stores a refinement under the axis as it stores a variant.
+    const fixtureTokens = JSON.parse(run.js.slice(run.js.indexOf('{'), run.js.lastIndexOf('}') + 1));
+    expect(fixtureTokens.size.control.modes).toEqual({
+      density: { compact: '36px', 'compact-coarse': '44px' },
+    });
+    expect(fixtureTokens.size.field.modes).toEqual({ density: { compact: '36px' } });
+    expect(fixtureTokens.ring.hit.modes).toEqual({ density: { compact: '36px', 'compact-coarse': '44px' } });
+  });
+
+  it('rejects a refinement value on a token with no value for the variant it refines, naming the token', () => {
+    // The media block would change a value that nothing set.
+    const run = buildFixture({
+      size: {
+        $type: 'dimension',
+        control: {
+          $value: px(40),
+          $extensions: { 'snapshot-ui': { density: { 'compact-coarse': px(44) } } },
+        },
+      },
+    });
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain('size.control');
+    expect(run.stderr).toContain('density compact-coarse');
+    expect(run.stderr).toContain('no compact value');
+  });
+
+  it('rejects an unknown refinement name as it rejects an unknown variant', () => {
+    const run = buildFixture({
+      size: {
+        $type: 'dimension',
+        control: { $value: px(40), $extensions: { 'snapshot-ui': { density: { 'compact-fine': px(44) } } } },
+      },
+    });
+    expect(run.status).not.toBe(0);
+    expect(run.stderr).toContain('Unknown density variant "compact-fine"');
+  });
+
+  it('emits the axes in AXES order whatever order the tokens come in', () => {
+    const run = buildFixture({
+      // The only density token comes before the only theme token.
+      size: {
+        $type: 'dimension',
+        control: { $value: px(40), $extensions: { 'snapshot-ui': { density: { compact: px(36) } } } },
+      },
+      color: { $type: 'color', ink },
+    });
+    expect(run.stderr).toBe('');
+    expect(run.status).toBe(0);
+
+    const selectors = [...run.css.matchAll(/^\s*(.+?) \{$/gm)].map((match) => match[1]);
+    expect(selectors).toEqual([
+      '@layer theme',
+      ':root',
+      '[data-theme="dark"]',
+      '@media (prefers-color-scheme: dark)',
+      ':root:not([data-theme="light"])',
+      '[data-theme="light"]',
+      '[data-density="compact" i]',
+      '[data-density="comfortable" i]',
+    ]);
   });
 });

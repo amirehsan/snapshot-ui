@@ -7,7 +7,7 @@ const dir = path.join(import.meta.dirname, '.tailwind');
 const cli = path.join(import.meta.dirname, '..', 'node_modules', '.bin', 'tailwindcss');
 
 const USED =
-  'bg-canvas text-ink rounded-control text-body p-part max-w-field md:flex shadow-float text-gain bg-warning text-numeral';
+  'bg-canvas text-ink rounded-control text-body p-part max-w-field md:flex shadow-float text-gain bg-warning text-numeral p-card gap-inset max-w-sidebar';
 const CLEARED = 'rounded-lg text-sm bg-red-500 shadow-md font-serif xl:flex';
 
 /** Compiles a Tailwind entry that imports the tokens and the theme in `order`. */
@@ -43,6 +43,9 @@ describe.each([
     expect(out).toMatch(/\.text-gain \{\s*color: var\(--color-gain\);/);
     expect(out).toMatch(/\.bg-warning \{\s*background-color: var\(--color-warning\);/);
     expect(out).toMatch(/\.text-numeral \{\s*font-size: var\(--text-numeral\);/);
+    expect(out).toMatch(/\.p-card \{\s*padding: var\(--spacing-card\);/);
+    expect(out).toMatch(/\.gap-inset \{\s*gap: var\(--spacing-inset\);/);
+    expect(out).toMatch(/\.max-w-sidebar \{\s*max-width: var\(--container-sidebar\);/);
     expect(out).toContain('@media (width >= 1024px)');
   });
 
@@ -59,8 +62,12 @@ describe.each([
 });
 
 describe('dist/tailwind.css', () => {
-  it('keeps the z tokens out of the theme, which Tailwind has no namespace for', () => {
+  it('keeps size and z out of the theme, which Tailwind has no namespaces for', () => {
     const theme = readFileSync(path.join(import.meta.dirname, '..', 'dist', 'tailwind.css'), 'utf8');
+    expect(theme).toContain('--spacing-inset: var(--spacing-inset);');
+    expect(theme).toContain('--container-sidebar: var(--container-sidebar);');
+    // A Tailwind user reads a size as an arbitrary value: h-(--size-control).
+    expect(theme).not.toContain('--size-');
     expect(theme).not.toContain('--z-');
   });
 });
