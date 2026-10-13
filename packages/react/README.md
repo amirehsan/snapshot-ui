@@ -53,6 +53,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Kbd](https://snapshotui.com/docs/components/kbd)
 - [Link](https://snapshotui.com/docs/components/link)
 - [Menu](https://snapshotui.com/docs/components/menu)
+- [Meter](https://snapshotui.com/docs/components/meter)
 - [Popover](https://snapshotui.com/docs/components/popover)
 - [Radio group](https://snapshotui.com/docs/components/radio-group)
 - [Segmented control](https://snapshotui.com/docs/components/segmented-control)

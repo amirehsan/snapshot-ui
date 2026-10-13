@@ -1916,3 +1916,22 @@ test('a linked stat tile is one link named by everything it shows, and it follow
   await tile.click();
   await expect(page).toHaveURL(/#spending$/);
 });
+
+test('an over-limit meter says over in words and draws its fill in the warning color', async ({ page }) => {
+  await visit(page, '/docs/components/meter');
+  // The over-limit example's meter, by its name, whatever the examples' order.
+  const meter = page.getByRole('meter', { name: 'Dining out', exact: true });
+  await expect(meter).toHaveAttribute('aria-valuetext', /over/);
+  expect(await meter.getAttribute('aria-valuenow')).toBe(await meter.getAttribute('aria-valuemax'));
+  const fill = meter.locator(".meter-segment[data-look='fill']");
+  // The page's warning color, read with a probe inside the meter, so its theme applies.
+  const warning = await meter.evaluate((element) => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = 'var(--color-warning)';
+    element.append(probe);
+    const { backgroundColor } = getComputedStyle(probe);
+    probe.remove();
+    return backgroundColor;
+  });
+  expect(await fill.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(warning);
+});

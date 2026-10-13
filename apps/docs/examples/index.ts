@@ -47,6 +47,9 @@ import LinkStates from './link-states';
 import MenuBasic from './menu-basic';
 import MenuLinks from './menu-links';
 import MenuSelection from './menu-selection';
+import MeterBasic from './meter-basic';
+import MeterOver from './meter-over';
+import MeterPace from './meter-pace';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
 import RadioGroupBasic from './radio-group-basic';
@@ -135,6 +138,9 @@ export const examples = {
   'menu-basic': MenuBasic,
   'menu-links': MenuLinks,
   'menu-selection': MenuSelection,
+  'meter-basic': MeterBasic,
+  'meter-over': MeterOver,
+  'meter-pace': MeterPace,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
   'radio-group-basic': RadioGroupBasic,

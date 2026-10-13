@@ -1,0 +1,103 @@
+---
+title: Meter
+description: "Spending against a budget: spent and held in one bar, a marker for today's pace, and the words that say when it is over."
+icon: Gauge
+---
+
+<Section>
+
+## Segments
+
+Each segment is a share of `max`, stacked from the start of the bar: a solid fill for what is spent and ink stripes for what is held, committed but not gone. The rest of the track is the frame color. What passes `max` is clipped at the end, and a segment left with no room is not drawn.
+
+<Preview name="meter-basic" />
+
+</Section>
+
+<Section>
+
+## Pace and legend
+
+`pace` places a marker where spending would be today if it kept pace, and its label is read with the meter as its description. `hasLegend` draws a row under the bar that names each segment with its value, then the marker.
+
+<Preview name="meter-pace" />
+
+</Section>
+
+<Section>
+
+## Over the limit
+
+When the segments add up to more than `max`, both looks turn the warning color and the bar fills to its end. `valueLabel` must say "over" in words, such as "$340 of $300, $40 over", because color is never the only signal.
+
+<Preview name="meter-over" />
+
+</Section>
+
+<Section>
+
+## On another surface
+
+The cut between two segments and the ring around the pace marker are drawn in `--meter-surface`, which is Lifted by default, the card a meter sits on most. On the page itself, set `--meter-surface: var(--color-canvas)` on the meter or on any ancestor, and every meter inside follows.
+
+```css
+.budget-section {
+  --meter-surface: var(--color-canvas);
+}
+```
+
+</Section>
+
+<Section>
+
+## Usage
+
+Every figure is the app's formatted string: the library formats no number, so the server's HTML is final in any locale. The meter is static, so a server component renders it with no client JavaScript.
+
+```tsx
+import { Meter } from '@snapshot-ui/react';
+
+<Meter
+  label="Groceries"
+  max={1200}
+  segments={[
+    { value: 820, look: 'fill', label: 'Spent', valueLabel: '$820.00' },
+    { value: 200, look: 'hatched', label: 'Held', valueLabel: '$200.00' },
+  ]}
+  valueLabel="$1,020 of $1,200"
+  pace={{ value: 900, label: "Where you'd be today: $900" }}
+  hasLegend
+/>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+A Meter accepts every attribute of an HTML element, on its root. The name, `aria-label` or `aria-labelledby`, goes on the bar.
+
+<PropsTable label="Meter props" path="../../packages/react/src/meter/Meter.tsx" type="Pick<MeterProps, 'label' | 'aria-label' | 'max' | 'segments' | 'valueLabel' | 'pace' | 'hasLegend' | 'className'>" />
+
+<PropsTable label="MeterSegment" path="../../packages/react/src/meter/Meter.tsx" type="MeterSegment" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The bar is a `role="meter"` from 0 to `max`, named by the label or by `aria-label`, its value read as the app's `valueLabel` and never as a percentage, and its pace read as its description. The value text above the bar is hidden, since the meter reads it. The legend is a plain list outside the meter, because a meter's children are presentational. It takes no focus and has no keys.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps meters in the system.
+
+<Rules dos={['Say "over" in the value text when spending passes the limit.', 'Hatch what is held, so it reads as committed but not gone.', 'Set --meter-surface on a page that is not a card.']} donts={['Never let color alone say a meter is over.', 'Never stack more than three segments.', 'Never use a meter for a task that is finishing. That is a progress bar.']} />
+
+</Section>

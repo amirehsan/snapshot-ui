@@ -1,0 +1,199 @@
+/*
+ * Meter: spending against a budget, derived in docs/design-system.md ("Meter"). An 8px track in the frame
+ * color, segments stacked from the inline start: spent as an ink fill, held as ink stripes 2px wide every 6px,
+ * both warning over the limit, where the app's words say so too. Touching segments are cut apart by a 2px
+ * border in the surface the meter sits on, and the pace marker is 2px of ink 16px tall in a 2px ring of that
+ * surface; the surface is --meter-surface, read with Lifted as its fallback so an ancestor can set it once.
+ * Borders, not shadows, because a shadow is not a token. The held segment keeps a 1px ink edge drawn inside
+ * the spacer, so it still shows where backgrounds are not painted.
+ */
+@layer components {
+  .meter {
+    --meter-ink: var(--color-ink);
+
+    display: grid;
+    gap: var(--spacing-part);
+    min-width: 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .meter[data-over] {
+    --meter-ink: var(--color-warning);
+  }
+
+  .meter-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--spacing-part);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    overflow-wrap: anywhere;
+  }
+
+  .meter-label {
+    min-width: 0;
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+
+  .meter-value {
+    min-width: 0;
+    margin-inline-start: auto;
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-slate);
+  }
+
+  .meter-bar {
+    position: relative;
+  }
+
+  .meter-track {
+    display: flex;
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-frame);
+  }
+
+  .meter-segment {
+    position: relative;
+    box-sizing: border-box;
+    flex: none;
+    height: 100%;
+  }
+
+  .meter-segment + .meter-segment {
+    border-inline-start: 2px solid var(--meter-surface, var(--color-lifted));
+  }
+
+  /* The track's overflow rounds the first segment's start; the last segment's end takes the radius too,
+     and the joins between segments stay square. */
+  .meter-segment:last-child {
+    border-start-end-radius: var(--radius-pill);
+    border-end-end-radius: var(--radius-pill);
+  }
+
+  .meter-segment[data-look='fill'] {
+    background-color: var(--meter-ink);
+    background-clip: padding-box;
+  }
+
+  .meter-segment[data-look='hatched'] {
+    background-image: repeating-linear-gradient(45deg, var(--meter-ink) 0 2px, transparent 2px 6px);
+    background-clip: padding-box;
+  }
+
+  /* Inside the spacer: an absolute child's inset is the padding box. */
+  .meter-segment[data-look='hatched']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--meter-ink);
+    border-radius: inherit;
+  }
+
+  .meter-pace {
+    position: absolute;
+    inset-block-start: 50%;
+    box-sizing: content-box;
+    width: 2px;
+    height: 1rem;
+    margin-block-start: calc(-0.5rem - 2px);
+    margin-inline-start: -3px;
+    border: 2px solid var(--meter-surface, var(--color-lifted));
+    background-color: var(--color-ink);
+    background-clip: padding-box;
+  }
+
+  .meter-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-part) var(--spacing-peer);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    overflow-wrap: anywhere;
+  }
+
+  .meter-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  .meter-legend-label {
+    color: var(--color-slate);
+  }
+
+  .meter-legend-value {
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+  }
+
+  .meter-swatch {
+    position: relative;
+    flex: none;
+    box-sizing: border-box;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: var(--radius-micro);
+  }
+
+  .meter-swatch[data-look='fill'] {
+    background-color: var(--meter-ink);
+  }
+
+  .meter-swatch[data-look='hatched'] {
+    border: 1px solid var(--meter-ink);
+    background-image: repeating-linear-gradient(45deg, var(--meter-ink) 0 2px, transparent 2px 6px);
+  }
+
+  .meter-swatch[data-look='pace'] {
+    width: 2px;
+    border-radius: 0;
+    background-color: var(--color-ink);
+  }
+
+  /* The fills are backgrounds and the stripes an image, which the repaint drops. The stripes opt out of the
+     repaint and are drawn again in the reader's colors; the spacers and the marker's ring take canvas. */
+  @media (forced-colors: active) {
+    .meter {
+      --meter-surface: canvas;
+    }
+
+    .meter-track {
+      outline: 1px solid CanvasText;
+    }
+
+    .meter-segment[data-look='fill'],
+    .meter-swatch[data-look='fill'],
+    .meter-swatch[data-look='pace'] {
+      background-color: CanvasText;
+    }
+
+    .meter-segment[data-look='hatched'],
+    .meter-swatch[data-look='hatched'] {
+      forced-color-adjust: none;
+      background-color: canvas;
+      background-image: repeating-linear-gradient(45deg, CanvasText 0 2px, canvas 2px 6px);
+    }
+
+    /* Out of the repaint, so the edges are named here; the segment's spacer stays the surface, canvas. */
+    .meter-segment[data-look='hatched']::after,
+    .meter-swatch[data-look='hatched'] {
+      border-color: CanvasText;
+    }
+
+    .meter-pace {
+      background-color: Highlight;
+    }
+  }
+}

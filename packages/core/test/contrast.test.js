@@ -539,6 +539,52 @@ describe('the stat tile', () => {
   });
 });
 
+describe('the meter', () => {
+  /** A token color over the track, the frame composited over `surface`, and measured against the track. */
+  const onTrack = (mode, name, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const track = composite(parseColor(palette.frame), parseColor(palette[surface]));
+    return contrastRatio(composite(parseColor(palette[name]), track), track);
+  };
+  /** The track, the frame composited over `surface`, against that surface. */
+  const track = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[surface]);
+    return contrastRatio(composite(parseColor(palette.frame), ground), ground);
+  };
+
+  // The label is ink and the value text slate, on the Card's surface. The gate already holds both as text on
+  // lifted, so the meter adds no pair.
+  it('cites ink and slate on lifted, the label and the value text', () => {
+    for (const text of ['ink', 'slate']) {
+      expect(CONTRAST_PAIRS, text).toContainEqual(
+        expect.objectContaining({ text, ground: 'lifted', minimum: TEXT }),
+      );
+    }
+  });
+
+  // The track is the frame, ink at 12%, over the surface: a mix and not a token, so its pairs are measured here
+  // and recorded, not gated. The fills pass the graphic minimum; the track against the surface is a cue, since
+  // the value text carries the meter's extent.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { surface, mode, ink, warning, edge } of [
+      { surface: 'lifted', mode: 'light', ink: 13.88, warning: 4.77, edge: 1.28 },
+      { surface: 'lifted', mode: 'dark', ink: 12.19, warning: 6.24, edge: 1.43 },
+      { surface: 'canvas', mode: 'light', ink: 12.69, warning: 4.36, edge: 1.28 },
+      { surface: 'canvas', mode: 'dark', ink: 14.19, warning: 7.27, edge: 1.36 },
+    ]) {
+      expect(onTrack(mode, 'ink', surface), `ink on the track on ${surface}, ${mode}`).toBeCloseTo(ink, 2);
+      expect(onTrack(mode, 'warning', surface), `warning on the track on ${surface}, ${mode}`).toBeCloseTo(
+        warning,
+        2,
+      );
+      expect(track(mode, surface), `the track on ${surface}, ${mode}`).toBeCloseTo(edge, 2);
+      for (const name of ['ink', 'warning'])
+        expect(onTrack(mode, name, surface), `${name} ${surface} ${mode}`).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 
