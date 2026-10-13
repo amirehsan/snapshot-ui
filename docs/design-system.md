@@ -5234,7 +5234,7 @@ carries the meter's extent. On canvas the ink fill is 12.69 and 14.19, the
 warning fill 4.36 and 7.27, and the track 1.28 and 1.36.
 
 **Forced colors.** The fills are backgrounds and the stripes an image, which
-the repaint drops. The fill and the fill and pace swatches become
+the repaint drops. The fill segment and the fill and pace swatches become
 `CanvasText`; the stripes opt out of the repaint
 (`forced-color-adjust: none`) and are drawn again as `CanvasText` on
 `canvas`, with their edges named `CanvasText`; the track takes a 1px
