@@ -284,6 +284,120 @@ describe('ConfirmDialog', () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
+  it('names the pending spinner with pendingLabel, read with the confirm label', async () => {
+    const user = userEvent.setup();
+    const { confirm } = await ask(user, { pendingLabel: 'Deleting', onConfirm: () => deferred().promise });
+    await user.click(confirm);
+    expect(confirm).toHaveAttribute('data-pending', 'true');
+    expect(screen.getByRole('progressbar', { name: 'Deleting' })).toBeInTheDocument();
+    expect(confirm).toHaveAccessibleName(/Delete 3 transactions/);
+    expect(confirm).toHaveAccessibleName(/Deleting/);
+  });
+
+  it('forgets a running confirm when a controlled caller closes it: reopened, it is not pending, and the run ends quietly', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onCancel = vi.fn();
+    const work = deferred();
+    const view = open({ onOpenChange, onCancel, onConfirm: () => work.promise });
+    await user.click(screen.getByRole('button', { name: 'Delete 3 transactions' }));
+    // The caller closes it while the work runs, then opens the same dialog again before the work ends.
+    view.rerender(
+      <ConfirmDialog
+        isOpen={false}
+        {...QUESTION}
+        onOpenChange={onOpenChange}
+        onCancel={onCancel}
+        onConfirm={() => work.promise}
+      />,
+    );
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    view.rerender(
+      <ConfirmDialog
+        isOpen
+        {...QUESTION}
+        onOpenChange={onOpenChange}
+        onCancel={onCancel}
+        onConfirm={() => work.promise}
+      />,
+    );
+    const confirm = screen.getByRole('button', { name: 'Delete 3 transactions' });
+    expect(confirm).not.toHaveAttribute('data-pending');
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    await act(async () => {
+      work.resolve();
+      await work.promise;
+    });
+    // The old run neither closes the reopened question nor tells the caller anything.
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('tells no one when the confirm settles after the dialog has left the page', async () => {
+    const reportError = vi.fn();
+    vi.stubGlobal('reportError', reportError);
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onCancel = vi.fn();
+    const done = deferred();
+    const view = open({ onOpenChange, onCancel, onConfirm: () => done.promise });
+    await user.click(screen.getByRole('button', { name: 'Delete 3 transactions' }));
+    view.unmount();
+    await act(async () => {
+      done.resolve();
+      await done.promise;
+    });
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+
+    // A failure is still reported: the page should hear of it even when no dialog is left to show it.
+    const failed = deferred();
+    const again = open({ onOpenChange, onCancel, onConfirm: () => failed.promise });
+    await user.click(screen.getByRole('button', { name: 'Delete 3 transactions' }));
+    again.unmount();
+    const failure = new Error('The server is away');
+    await act(async () => {
+      failed.reject(failure);
+      await failed.promise.catch(() => undefined);
+    });
+    expect(reportError).toHaveBeenCalledExactlyOnceWith(failure);
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('warns once when it is given onOpenChange inside a DialogTrigger, which owns the open state', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const user = userEvent.setup();
+      const onOpenChange = vi.fn();
+      const { unmount } = render(<Triggered onOpenChange={onOpenChange} />);
+      await user.click(screen.getByRole('button', { name: 'Delete' }));
+      await user.keyboard('{Escape}');
+      expect(onOpenChange).not.toHaveBeenCalled();
+      unmount();
+      render(<Triggered onOpenChange={onOpenChange} />);
+      const warnings = warn.mock.calls.filter(([message]) => String(message).includes('DialogTrigger'));
+      expect(warnings).toHaveLength(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('warns once when the tone is missing, which the type requires', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      // Plain JavaScript can leave out what the type requires.
+      const untyped = { ...QUESTION, tone: undefined } as unknown as ConfirmDialogProps;
+      const { unmount } = render(<ConfirmDialog isOpen {...untyped} />);
+      unmount();
+      render(<ConfirmDialog isOpen {...untyped} />);
+      const warnings = warn.mock.calls.filter(([message]) => String(message).includes('tone'));
+      expect(warnings).toHaveLength(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it('focuses Cancel when it opens in the danger tone, the safe answer', () => {
     open({ tone: 'danger' });
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();

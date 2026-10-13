@@ -13,6 +13,46 @@ const QUESTION: ConfirmOptions = {
   tone: 'danger',
 };
 
+/** A question that loses nothing, asked after the first is confirmed. */
+const FOLLOW_UP: ConfirmOptions = {
+  title: 'Tell the bookkeeper?',
+  description: 'They get an email saying Groceries was removed.',
+  confirmLabel: 'Send the email',
+  tone: 'default',
+};
+
+/**
+ * Asks the question and, when it is confirmed, chains the follow-up, from a button in a dark, square scope.
+ * Hands the follow-up's answer, or `false` when the first is not confirmed, to `onAnswer`.
+ */
+function Chained({ onAnswer }: { onAnswer: (answer: boolean) => void }): ReactElement {
+  const { confirm, dialog } = useConfirm();
+  const ask = async (): Promise<void> => {
+    const isSure = await confirm(QUESTION);
+    onAnswer(isSure ? await confirm(FOLLOW_UP) : false);
+  };
+  return (
+    <div data-theme="dark" data-shape="square">
+      <Button
+        variant="secondary"
+        onPress={() => {
+          void ask();
+        }}
+      >
+        Delete
+      </Button>
+      {dialog}
+    </div>
+  );
+}
+
+/** The open dialog's panel. */
+function panel(): HTMLElement {
+  const element = document.querySelector<HTMLElement>('.dialog');
+  if (!element) throw new Error('No panel');
+  return element;
+}
+
 /**
  * Calls the hook, renders its dialog beside a button that asks, hands every answer to `onAnswer`, and hands
  * the latest handle to `onHandle` after each render, so a test can ask while a dialog holds the page.
@@ -143,12 +183,115 @@ describe('useConfirm', () => {
     });
   });
 
-  it('has no dialog again once the question is answered', async () => {
+  it('keeps an answered question rendered, closed, so React Aria can play its exit, and leaves nothing behind', async () => {
     const user = userEvent.setup();
     const { latest } = await asked(user);
-    expect(latest().dialog).not.toBeNull();
+    const before = latest().dialog as ReactElement<{ isOpen: boolean }>;
+    expect(before.props.isOpen).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(latest().dialog).toBeNull();
+    // jsdom runs no animations, so React Aria removes the overlay at once; a browser plays the exit first.
+    const after = latest().dialog as ReactElement<{ isOpen: boolean }> | null;
+    expect(after?.props.isOpen).toBe(false);
     expect(document.querySelector('.dialog-overlay')).not.toBeInTheDocument();
+  });
+
+  it('gives a question asked over an open one its own content, so its initial focus runs again', async () => {
+    const user = userEvent.setup();
+    const { latest } = await asked(user);
+    // The first question is a danger one, which starts on Cancel.
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    });
+    act(() => {
+      void latest().confirm(FOLLOW_UP);
+    });
+    // The second loses nothing, so it starts on its answer.
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Send the email' })).toHaveFocus();
+    });
+    expect(screen.getAllByRole('alertdialog')).toHaveLength(1);
+  });
+
+  it('gives a question chained after an answer its own initial focus', async () => {
+    const user = userEvent.setup();
+    render(<Chained onAnswer={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete Groceries' }));
+    const follow = await screen.findByRole('alertdialog', { name: 'Tell the bookkeeper?' });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Send the email' })).toHaveFocus();
+    });
+    expect(follow).toHaveAccessibleDescription('They get an email saying Groceries was removed.');
+  });
+
+  it('opens a question chained after an answer in the scope of the first trigger', async () => {
+    const user = userEvent.setup();
+    render(<Chained onAnswer={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(panel()).toHaveAttribute('data-theme', 'dark');
+    await user.click(screen.getByRole('button', { name: 'Delete Groceries' }));
+    await screen.findByRole('alertdialog', { name: 'Tell the bookkeeper?' });
+    // By now the first panel has gone and focus with it, yet the run still opens from the trigger.
+    expect(panel()).toHaveAttribute('data-theme', 'dark');
+    expect(panel()).toHaveAttribute('data-shape', 'square');
+  });
+
+  it('opens a question asked over an open one in the scope of the first trigger', async () => {
+    const user = userEvent.setup();
+    const latest: { handle: ConfirmHandle | null } = { handle: null };
+    render(
+      <div data-theme="dark">
+        <Probe
+          onAnswer={vi.fn()}
+          onHandle={(next) => {
+            latest.handle = next;
+          }}
+        />
+      </div>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    act(() => {
+      void latest.handle?.confirm(FOLLOW_UP);
+    });
+    await screen.findByRole('alertdialog', { name: 'Tell the bookkeeper?' });
+    expect(panel()).toHaveAttribute('data-theme', 'dark');
+  });
+
+  it('gives focus back to the first trigger when a question asked over the first is answered', async () => {
+    const user = userEvent.setup();
+    const { latest } = await asked(user);
+    const trigger = screen.getByRole('button', { name: 'Delete', hidden: true });
+    act(() => {
+      void latest().confirm(FOLLOW_UP);
+    });
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(trigger).toHaveFocus();
+    });
+  });
+
+  it('gives focus back to the first trigger when a question chained after an answer is answered', async () => {
+    const user = userEvent.setup();
+    const onAnswer = vi.fn<(answer: boolean) => void>();
+    render(<Chained onAnswer={onAnswer} />);
+    const trigger = screen.getByRole('button', { name: 'Delete' });
+    await user.click(trigger);
+    await user.click(screen.getByRole('button', { name: 'Delete Groceries' }));
+    await screen.findByRole('alertdialog', { name: 'Tell the bookkeeper?' });
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(onAnswer).toHaveBeenCalledExactlyOnceWith(false);
+    });
+    await waitFor(() => {
+      expect(trigger).toHaveFocus();
+    });
+  });
+
+  it('answers false at once when asked after the component has unmounted', async () => {
+    const { result, unmount } = renderHook(() => useConfirm());
+    const { confirm } = result.current;
+    unmount();
+    await expect(confirm(QUESTION)).resolves.toBe(false);
   });
 });
