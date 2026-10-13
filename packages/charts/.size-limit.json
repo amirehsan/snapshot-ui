@@ -5,5 +5,12 @@
     "import": "{ Sparkline }",
     "ignore": ["react", "react-dom"],
     "limit": "1.5 kB"
+  },
+  {
+    "name": "import { LineChart } from \"@snapshot-ui/charts\"",
+    "path": "dist/index.js",
+    "import": "{ LineChart }",
+    "ignore": ["react", "react-dom"],
+    "limit": "4 kB"
   }
 ]

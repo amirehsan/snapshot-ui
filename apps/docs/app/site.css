@@ -234,6 +234,12 @@
     max-width: 28rem;
   }
 
+  /* A chart's card up to 40rem: the chart takes the whole width it is given, and the stage centers it. */
+  .chart-sample {
+    width: 100%;
+    max-width: 40rem;
+  }
+
   .setting {
     display: flex;
     align-items: center;

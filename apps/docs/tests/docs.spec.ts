@@ -1981,3 +1981,96 @@ test('the stat tile page draws its trend as a sparkline hidden from assistive te
   await expect(sparkline.locator('svg .sparkline-line')).toHaveCount(1);
   await expect(sparkline.locator('.sparkline-end')).toBeVisible();
 });
+
+/** A line chart on its page, found by the name its example gives it, whatever the examples' order. */
+const lineChart = (page: Page, name: string): Locator => page.getByRole('figure', { name, exact: true });
+
+test("the line chart's toggle swaps the plot for the table and back, keeping focus", async ({ page }) => {
+  await visit(page, '/docs/charts/line-chart');
+  const chart = lineChart(page, 'Spending in October, against September');
+  const plot = chart.locator('.line-chart-plot');
+  const table = chart.getByRole('table', { name: 'Spending in October, against September', exact: true });
+  await expect(plot).toBeVisible();
+  await expect(chart.locator('table')).toHaveCount(1);
+  await expect(chart.locator('table')).toBeHidden();
+
+  // The toggle's name changes with the view, so it is held by its class once its first name is checked.
+  await expect(chart.getByRole('button', { name: 'Show as table', exact: true })).toHaveCount(1);
+  const toggle = chart.locator('.line-chart-toggle');
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(table).toBeVisible();
+  await expect(plot).toBeHidden();
+  await expect(toggle).toHaveText('Show as chart');
+  await expect(toggle).toBeFocused();
+  // The table holds the same strings: a row per day, headed by the day, and a column per month.
+  await expect(table.locator('tbody tr')).toHaveCount(31);
+  await expect(table.getByRole('columnheader')).toHaveText(['This month', 'Last month']);
+  await expect(table.getByRole('rowheader').first()).toHaveText('Oct 1');
+
+  await page.keyboard.press('Space');
+  await expect(plot).toBeVisible();
+  await expect(chart.locator('table')).toBeHidden();
+  await expect(toggle).toHaveText('Show as table');
+  await expect(toggle).toBeFocused();
+});
+
+test('the line chart moves its readout with the arrow keys and reads it out', async ({ page }) => {
+  await visit(page, '/docs/charts/line-chart');
+  const chart = lineChart(page, 'Spending in October');
+  const plot = chart.getByRole('group', { name: 'Spending in October', exact: true });
+  const readout = chart.locator('.line-chart-readout .line-chart-readout-x');
+  await plot.focus();
+  await expect(readout).toHaveText('Oct 31');
+  await page.keyboard.press('ArrowLeft');
+  await expect(readout).toHaveText('Oct 30');
+  await page.keyboard.press('Home');
+  await expect(readout).toHaveText('Oct 1');
+  // Once the keys rest, the live region holds the day and then each series with its value, each part its own
+  // element, so the library adds no punctuation of its own to the app's words.
+  const live = chart.locator('.line-chart-live');
+  await expect(live).toHaveAttribute('aria-live', 'polite');
+  await expect(live.locator('.line-chart-live-part')).toHaveText(['Oct 1', /^This month \$/]);
+  await expect(live).not.toHaveText(/[:,]/);
+});
+
+test('the right-to-left line chart draws its newest day at the left, and Left moves to newer days', async ({
+  page,
+}) => {
+  await visit(page, '/docs/charts/line-chart');
+  const chart = lineChart(page, 'Spending in October, right to left');
+  const first = chart.locator('.line-chart-x-label', { hasText: /^Oct 1$/ });
+  const last = chart.locator('.line-chart-x-label', { hasText: /^Oct 31$/ });
+  const left = async (locator: Locator): Promise<number> => (await locator.boundingBox())?.x ?? Number.NaN;
+  expect(await left(last)).toBeLessThan(await left(first));
+  const plot = chart.locator('.line-chart-plot');
+  await plot.focus();
+  const readout = chart.locator('.line-chart-readout .line-chart-readout-x');
+  await expect(readout).toHaveText('Oct 31');
+  // The crosshair, an HTML mark, and the newest point of the svg line agree: both at the plot's left.
+  const plotBox = await plot.boundingBox();
+  const crosshair = await chart.locator('.line-chart-crosshair').boundingBox();
+  expect(Math.abs((crosshair?.x ?? Number.NaN) - (plotBox?.x ?? 0))).toBeLessThanOrEqual(1);
+  await page.keyboard.press('ArrowRight');
+  await expect(readout).toHaveText('Oct 30');
+  await page.keyboard.press('ArrowLeft');
+  await expect(readout).toHaveText('Oct 31');
+});
+
+test.describe('a line chart without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('shows its table under the plot', async ({ page }) => {
+    await page.goto('/docs/charts/line-chart');
+    const chart = lineChart(page, 'Spending in October');
+    await expect(chart).toHaveCount(1);
+    // The plot is drawn, and the noscript copy of the table is the one shown, under its note.
+    await expect(chart.locator('.line-chart-plot svg .line-chart-line')).toHaveCount(1);
+    await expect(chart.locator('.line-chart-plot')).toBeVisible();
+    await expect(chart.locator('.line-chart-noscript')).toBeVisible();
+    const shown = chart.locator('table:visible');
+    await expect(shown).toHaveCount(1);
+    await expect(shown.locator('caption')).toHaveText('Spending in October');
+    await expect(shown.locator('tbody tr')).toHaveCount(31);
+  });
+});

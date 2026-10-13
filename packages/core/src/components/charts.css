@@ -5,16 +5,20 @@
  * its shape: a dot, a label, the readout. Nothing measures. Time runs from the inline start, so the drawing
  * follows the nearest dir attribute: --chart-flip is 1 or -1, set from the attribute as the card's chevron turn
  * is, because :dir() is past the browser floor; the svg is mirrored by it and the HTML follows by its logical
- * insets. The first series is ink and the second slate; there is no palette. Rings are borders in the surface
- * the chart sits on, --chart-surface, read with Lifted as its fallback.
+ * insets. The HTML over a drawing takes its direction from --chart-direction, set by the same attribute, so a
+ * dir="auto" or a CSS direction can never mirror the marks without the svg. The first series is ink and the
+ * second slate; there is no palette. Rings are borders in the surface the chart sits on, --chart-surface, read
+ * with Lifted as its fallback.
  */
 @layer components {
   :where([dir='ltr' i]) {
     --chart-flip: 1;
+    --chart-direction: ltr;
   }
 
   :where([dir='rtl' i]) {
     --chart-flip: -1;
+    --chart-direction: rtl;
   }
 
   .sparkline {
@@ -30,6 +34,7 @@
   .sparkline-plot {
     position: absolute;
     inset: 0.375rem;
+    direction: var(--chart-direction, ltr);
   }
 
   .sparkline-plot svg {
@@ -70,6 +75,306 @@
     background-color: var(--color-ink);
   }
 
+  .line-chart {
+    display: grid;
+    gap: var(--spacing-part);
+    min-width: 0;
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+  }
+
+  .line-chart-chart {
+    display: grid;
+    gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  /* Author CSS outranks the user agent's [hidden], so the two views the toggle hides say so again. */
+  .line-chart-chart[hidden],
+  .line-chart-table[hidden] {
+    display: none;
+  }
+
+  .line-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-part) var(--spacing-peer);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    overflow-wrap: anywhere;
+  }
+
+  .line-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  /* A 16px key in the series' color and stroke. */
+  .line-chart-key {
+    flex: none;
+    width: 1rem;
+    border-block-start: 2px solid var(--color-ink);
+  }
+
+  .line-chart-legend-item[data-series='2'] .line-chart-key {
+    border-block-start: 1.5px solid var(--color-slate);
+  }
+
+  .line-chart-legend-label {
+    min-width: 0;
+    color: var(--color-ink);
+  }
+
+  /* The marks, the readout and the y labels are laid out in the direction the svg is mirrored by. */
+  .line-chart-plot {
+    position: relative;
+    min-width: 0;
+    direction: var(--chart-direction, ltr);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Room above the plot for the top gridline's label, which sits above its line. */
+  .line-chart-plot[data-has-y-labels] {
+    margin-block-start: 1.25rem;
+  }
+
+  .line-chart-plot:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .line-chart-plot svg {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    scale: var(--chart-flip, 1) 1;
+  }
+
+  .line-chart-grid {
+    stroke: var(--color-divider);
+    stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .line-chart-baseline {
+    stroke: var(--color-frame);
+    stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .line-chart-line {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .line-chart-line[data-series='1'] {
+    stroke: var(--color-ink);
+    stroke-width: 2px;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* Context, recessive: thinner and slate. */
+  .line-chart-line[data-series='2'] {
+    stroke: var(--color-slate);
+    stroke-width: 1.5px;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .line-chart-area {
+    fill: color-mix(in srgb, var(--color-ink) 10%, transparent);
+    stroke: none;
+  }
+
+  .line-chart-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .line-chart-y-label {
+    position: absolute;
+    inset-inline-start: 0;
+    translate: 0 -100%;
+    padding-block-end: 0.125rem;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--color-slate);
+  }
+
+  .line-chart-crosshair {
+    position: absolute;
+    inset-block: 0;
+    width: 1px;
+    margin-inline-start: -0.5px;
+    background-color: var(--color-slate);
+  }
+
+  /*
+   * 8px in the series' color in a 2px ring of the surface: 12px, centred on the point. Content-box, as the
+   * sparkline's end point is, so the ring is outside the 8px whatever base.css makes every box.
+   */
+  .line-chart-dot {
+    position: absolute;
+    box-sizing: content-box;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-block-start: -0.375rem;
+    margin-inline-start: -0.375rem;
+    border: 2px solid var(--chart-surface, var(--color-lifted));
+    border-radius: var(--radius-dot);
+    background-color: var(--color-ink);
+  }
+
+  .line-chart-dot[data-series='2'] {
+    background-color: var(--color-slate);
+  }
+
+  /* A float panel over the active x at the plot's top: centred, or from the x inward in the outer quarters. */
+  .line-chart-readout {
+    position: absolute;
+    inset-block-start: 0;
+    box-sizing: border-box;
+    max-width: min(16rem, 100%);
+    padding: 0.375rem 0.625rem;
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    color: var(--color-ink);
+    white-space: nowrap;
+    translate: calc(var(--chart-flip, 1) * -50%) 0;
+  }
+
+  .line-chart-readout[data-align='start'] {
+    translate: none;
+    margin-inline-start: var(--spacing-part);
+  }
+
+  .line-chart-readout[data-align='end'] {
+    translate: calc(var(--chart-flip, 1) * -100%) 0;
+    margin-inline-start: calc(-1 * var(--spacing-part));
+  }
+
+  .line-chart-readout-x {
+    margin: 0;
+    color: var(--color-slate);
+  }
+
+  .line-chart-readout-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .line-chart-readout-value {
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .line-chart-readout-series {
+    margin-inline-start: 0.25rem;
+    color: var(--color-slate);
+  }
+
+  .line-chart-live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* The day, then each series: a line each, so the parts are told apart with no punctuation between them. */
+  .line-chart-live-part {
+    display: block;
+  }
+
+  /* The x labels are laid out in the direction the svg is mirrored by, as the plot's marks are. */
+  .line-chart-x {
+    position: relative;
+    min-height: calc(var(--text-small) * var(--text-small--line-height));
+    direction: var(--chart-direction, ltr);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-slate);
+  }
+
+  .line-chart-x-label {
+    position: absolute;
+    inset-block-start: 0;
+    white-space: nowrap;
+    translate: calc(var(--chart-flip, 1) * -50%) 0;
+  }
+
+  .line-chart-x-label[data-edge='start'] {
+    translate: none;
+  }
+
+  .line-chart-x-label[data-edge='end'] {
+    translate: calc(var(--chart-flip, 1) * -100%) 0;
+  }
+
+  .line-chart-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .line-chart-table caption {
+    padding-block-end: var(--spacing-part);
+    text-align: start;
+    color: var(--color-slate);
+  }
+
+  .line-chart-table :is(th, td) {
+    padding: 0.5rem 0.75rem;
+    border-block-end: 1px solid var(--color-divider);
+    text-align: start;
+    font-weight: var(--text-small--font-weight);
+    overflow-wrap: anywhere;
+  }
+
+  .line-chart-table thead th {
+    font-weight: 500;
+    color: var(--color-slate);
+  }
+
+  .line-chart-table tbody td {
+    text-align: end;
+  }
+
+  .line-chart-toolbar {
+    display: flex;
+  }
+
+  .line-chart-noscript {
+    margin: 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    color: var(--color-slate);
+  }
+
   @media (forced-colors: active) {
     .sparkline-line {
       stroke: CanvasText;
@@ -82,6 +387,41 @@
     .sparkline-end {
       border-color: canvas;
       background-color: CanvasText;
+    }
+
+    .line-chart-line[data-series='1'] {
+      stroke: CanvasText;
+    }
+
+    .line-chart-line[data-series='2'],
+    .line-chart-grid,
+    .line-chart-baseline {
+      stroke: GrayText;
+    }
+
+    .line-chart-key {
+      border-block-start-color: CanvasText;
+    }
+
+    .line-chart-legend-item[data-series='2'] .line-chart-key {
+      border-block-start-color: GrayText;
+    }
+
+    .line-chart-area {
+      fill: none;
+    }
+
+    .line-chart-crosshair {
+      background-color: Highlight;
+    }
+
+    .line-chart-dot {
+      border-color: canvas;
+      background-color: Highlight;
+    }
+
+    .line-chart-plot:focus-visible {
+      outline-color: Highlight;
     }
   }
 }

@@ -5264,8 +5264,10 @@ The charts live in their own package, `@snapshot-ui/charts`, the package the
 parent spec names for phase 6 (the owner's ruling 1 in the home spec).
 Putting them in `@snapshot-ui/react` now would make phase 6 move the
 imports, a breaking change for the consumer. The package depends on nothing
-at run time but React, and React DOM, both peers; `@snapshot-ui/core` is an
-optional peer. It copies `cx` and the `AriaName` type rather than importing
+at run time but React, its one required peer; `@snapshot-ui/core` is an
+optional peer. React DOM is not a peer: no chart imports it (no portal, no
+`flushSync`), and a peer the code never imports would only be a constraint
+on the app. It copies `cx` and the `AriaName` type rather than importing
 `@snapshot-ui/react`, so neither package depends on the other. Its CSS is
 `charts.css` in core, imported by `styles.css` after `meter.css`, so an app
 still loads one stylesheet. It is versioned on its own, outside the fixed
@@ -5292,8 +5294,14 @@ chevron's pattern, and mirrors the svg with `scale: var(--chart-flip, 1) 1`.
 The nearest attribute wins, since a custom property inherits, so a
 `dir="ltr"` region inside a right-to-left page draws left to right; with no
 attribute at all the fallback is 1. The HTML marks follow by their logical
-insets, with no flip of their own. The domain and the path are the same in
-both directions.
+insets, with no flip of their own. Logical insets read the computed
+`direction`, which `dir="auto"` or a CSS `direction` can change with no
+attribute, so the same two rules set `--chart-direction` to `ltr` or `rtl`,
+and every box that holds HTML over a drawing (`.sparkline-plot`,
+`.line-chart-plot`, `.line-chart-x`) takes
+`direction: var(--chart-direction, ltr)`: the marks and the svg read one
+attribute and always agree. The domain and the path are the same in both
+directions.
 
 **Series colors.** At most two series: the first ink, the second slate in a
 thinner stroke. There is no palette, so the categorical validator of the
@@ -5381,11 +5389,13 @@ far past the 3:1 a graphic needs.
 **Right to left.** The svg is mirrored by `--chart-flip`, so the oldest
 value is at the right and the newest at the left, and the end point sits at
 `inset-inline-start: 100%`, which is the left edge under `dir="rtl"`.
-`--chart-flip` is set only by a `dir="ltr"` or `dir="rtl"` attribute, while
-the dot follows the computed `direction`; under `dir="auto"` or a CSS
-`direction` with no attribute the two can disagree, so the docs ask for an
-explicit `dir`. A domain wider than a number can hold, such as -1e308 to
-1e308, is scaled by halves, so no point is ever NaN.
+`--chart-flip` is set only by a `dir="ltr"` or `dir="rtl"` attribute, and
+since the line chart's task the plot's direction is set by the same
+attribute (`--chart-direction`), so under `dir="auto"` or a CSS `direction`
+with no attribute the dot and the line still agree; the docs still ask for
+an explicit `dir`, since without one the drawing runs left to right. A
+domain wider than a number can hold, such as -1e308 to 1e308, is scaled by
+halves, so no point is ever NaN.
 
 **Where the build departs from the plan.** The size limit is 1.5 kB, above
 the spec's 1 kB budget: the entry measured 843 B, and the rule rounds up to
@@ -5398,3 +5408,162 @@ rule asks for. The plan's CSS gave the end point no `box-sizing`, and under
 0.5rem: the dot drew 8px across with 4px of ink, 2px off its point, which
 the `Wide` and `RightToLeft` stories caught. It is `content-box` now, and
 the CSS test pins it.
+
+## LineChart
+
+The month as a line: `LineChart`, the second chart of `@snapshot-ui/charts`.
+The document has none of its own, so this one is derived from the home
+spec's section 9 and the owner's rulings 2 and 3.
+
+**Anatomy.** `figure.line-chart`, named by its `aria-label` or
+`aria-labelledby`, which the types require, holds `div.line-chart-chart`
+and, after it, the table, the toolbar with the toggle, and a `noscript`.
+The chart view holds the legend (`ul.line-chart-legend`, two series only),
+the plot and the x axis (`div.line-chart-x`, hidden from assistive
+technology). The plot, `div.line-chart-plot`, holds the svg, an HTML
+overlay (`div.line-chart-overlay`, hidden) with the y labels, the
+crosshair, the dots and the readout, and the visually hidden live region.
+`className`, `ref` and the other attributes go on the figure, which says
+which view is shown in `data-view`. The plot is 240px tall by default
+(`height`, as `block-size`) and as wide as its container.
+
+**The series.** One or two: the first is the story, a 2px ink line, and
+the second is context, a 1.5px slate line drawn before the first so ink
+lies on top. Both have round caps and joins and
+`vector-effect: non-scaling-stroke`. Straight segments only, from
+`linePath`, since a smoothed line invents values. A `null` point, a point
+past the x labels, and a value that is not a finite number are gaps that
+break the line. `hasArea` fills under the first series with ink at 10%,
+down to the bottom of the plot, drawn first.
+
+**Gridlines and the baseline.** A 1px `--color-divider` line at each
+`yTicks` value inside the domain, and a 1px `--color-frame` baseline at
+the domain's minimum, always drawn. Both are cues, not boundaries. No
+vertical gridlines.
+
+**Axis labels are HTML.** The y labels sit at the inline start above their
+gridline (`translate: 0 -100%`), only when the app passes `yTicks`, and
+the plot gains 1.25rem above it for the top one. The x labels sit under
+the plot at `xTicks`, or the first, the middle and the last index by
+default, centred on their position by `translate` times `--chart-flip`;
+the first and the last are marked `data-edge` and kept inside the plot.
+They are HTML and not svg text so they never stretch and they follow the
+page's font: `--text-small`, slate, tabular figures. Every label is the
+app's string, hidden from assistive technology, since the readout and the
+table carry the same strings.
+
+**The default domain** runs from zero to the nice ceiling of the data
+(`niceDomain` over the extent with zero included), below zero for negative
+data, and `[0, 1]` with no data. A nice ceiling past the largest number
+falls back to the data's own extent, a `yDomain` that is not finite is
+ignored, and a value far outside a given domain is drawn at most 1e6 past
+the plot, so no coordinate is ever NaN or an infinity.
+
+**One tab stop, not a tooltip per point.** Thirty-one tooltips would be
+thirty-one tab stops (spec 4). The plot is `tabIndex={0}`, `role="group"`,
+`aria-roledescription="chart"`, named as the figure is; a name that is
+blank falls to the other, and with neither the series' column headers in
+the table name it, so the group is never unnamed. Focus activates the
+newest position with data, unless a pointer already holds one, and blur
+ends it. Left and Right move to the previous or next position with data,
+Home and End to the first and the last, Page Up and Page Down seven
+positions, landing on the nearest position with data in that direction or
+at the end, and Escape hides the readout, keeping the crosshair, until the
+next move; a second Escape is left to whatever holds the chart. Every key
+the chart uses is `preventDefault`ed. The one lint exception sits on the
+plot, split over two comments because the tab-index rule reports the
+attribute's line.
+
+**The keys in both directions.** In right to left Left is the next, newer,
+position, as drawn. The direction is read at the key press from the
+nearest `dir="ltr"` or `dir="rtl"` attribute,
+`closest("[dir='ltr' i], [dir='rtl' i]")`, exactly the attributes
+`--chart-flip` comes from, so `dir="auto"` is looked past by both. The
+pointer reads the same attribute.
+
+**The readout** is a float panel (Float, the 1px frame edge,
+`--radius-surface`, `--shadow-float`, `--text-small`) at the top of the
+plot over the active x: the x label in slate, then one line per series
+with a point there, the value first in 500 and tabular, then the series'
+label in slate. It is centred on the x, and in the oldest quarter it
+starts at the x (`data-align="start"`) and in the newest it ends there
+(`"end"`), a `--spacing-part` off it, so it stays inside the plot with no
+measurement. The crosshair is a 1px slate line, and each series with a
+point there has a dot: 8px of its color in a 2px border of
+`--chart-surface`, `content-box` as the sparkline's end point is. Nothing
+transitions.
+
+**The announcement** (risk R2). After a key move or focus, once the
+position rests 150ms, the live region (`aria-live="polite"`,
+`aria-atomic`) takes the day and then each series with a point there; a
+move inside the rest restarts it, so a held key is heard only where it
+stops, and blur or unmount cancels it. A pointer is not announced. The
+library writes no punctuation of its own into it (the plan's open
+question 2): the day and each series are separate elements, each
+`display: block`, so they are read as separate lines, and inside a
+series' line its label and value are joined by a space only. A Persian
+page hears its own words and no English colon or comma, and no `labels`
+entry is needed for joiners. The check in VoiceOver and NVDA is not yet
+verified; it is owed before the release (owner action 3).
+
+**The pointer and touch.** A mouse or a pen over the plot activates the
+position with data nearest its fraction of the plot's width from the
+oldest side, read from `getBoundingClientRect` in the handler, so the hit
+area is the whole column of each day and never the 2px line; leaving
+clears it unless the plot has focus. A touch press does the same and
+holds the position until a press anywhere outside the plot, listened for
+on the document only while a touch holds.
+
+**The table** (ruling 2). A toggle under every chart, a plain
+`button.button.button-tertiary` (the tertiary look comes from its native
+states as well as React Aria's), swaps the chart view and the table with
+the `hidden` attribute, reads "Show as table" or "Show as chart", and
+keeps focus. The table has an empty corner cell, a column header per
+series and a row header per x label, every cell the app's value label and
+empty for a gap. It is named as the chart is (spec correction 11): by a
+caption that repeats the `aria-label`, or, for a chart named by
+`aria-labelledby`, by the same id and no caption. Both views render on the
+server, and `charts.css` says `display: none` again for each under
+`[hidden]`, since its own `display` would beat the user agent's.
+
+**Scripts off.** The `noscript` holds `p.line-chart-noscript` and a second
+copy of the table, shown and with no ids. A browser running scripts does
+not parse it and React renders none of it on the client, so there is one
+table in the DOM; with scripts off the plot, the inert toggle, the note and
+the shown table are what a reader gets. The three strings the chart
+writes, `labels`, are all replaceable, and the type requires all three
+together so no English is left on a translated page.
+
+**Contrast.** The ink line is 17.84 and 17.42 on Lifted and 18.43 and
+17.42 on Float, which is also the readout's text. The slate line, the
+crosshair and the labels are 5.31 and 6.94 on Lifted, 5.49 and 6.94 on
+Float, and 4.84 and 7.26 on canvas: all gated as text, so past the 3:1 of
+a graphic. The gridline is 1.23 and 1.34 against Lifted and the baseline
+1.28 and 1.43, cues measured and recorded, not gated. No pair is added to
+the gate.
+
+**Forced colors.** The first line and its key are `CanvasText`; the second
+line, its key, the gridlines and the baseline are `GrayText`; the wash is
+dropped; the crosshair and the dots are `Highlight`, the dots in a
+`canvas` ring; the focus ring is `Highlight`.
+
+**Right to left** (ruling 3). The x axis runs from the inline start, so
+the newest day is at the left under `dir="rtl"`: the svg is mirrored by
+`--chart-flip`, the marks and labels follow by their logical insets in the
+plot's `--chart-direction`, and the x labels' and the readout's
+translations are multiplied by `--chart-flip`. The figures inside the
+app's strings are the app's.
+
+**Where the build departs from the plan.** `announcement()` is
+`readingsAt()`, which returns each series' label and value, and the live
+region renders the parts as elements instead of one joined string, so no
+English punctuation reaches another language (open question 2). The
+public types take `readonly` arrays. A blank name falls back, and with no
+name at all the series name the plot. A value that is not finite is a
+gap, coordinates are kept finite, `xTicks` that are not whole indices
+inside the labels are dropped, and a series with no point draws no path.
+The dot is `content-box`, the live region's parts are `display: block`,
+and the plot and the x axis take `--chart-direction`, which the plan did
+not have. The lint exception is two comments, not one. React DOM was
+dropped as a peer. The size limit is 4 kB, the spec's budget: the entry
+measured 3.03 kB, and the rule rounds up to 3.5 kB and adds 0.5 kB.
