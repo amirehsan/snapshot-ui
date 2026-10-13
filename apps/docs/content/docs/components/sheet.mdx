@@ -1,0 +1,79 @@
+---
+title: Sheet
+description: A bottom sheet for phones that rises from the edge, swipes away, and still closes from the keyboard.
+icon: PanelBottom
+---
+
+<Section>
+
+## Basic
+
+A sheet is a float panel that rises from the bottom edge of the screen over the scrim. It is as tall as its content, up to 92% of the screen, so a little of the page always shows above it. From the top it holds a grabber, the decorative handle that says it can be swiped, a header with the title, a description and a close button, a body, and a footer pinned under it, which keeps clear of a phone's home indicator. The title is required, because it names the sheet, and it is an `h2` drawn in the card title step. The description, when given, describes it. The sheet is the screen's full width on a phone and 36rem wide, in the middle, on anything wider.
+
+<Preview name="sheet-basic" />
+
+</Section>
+
+<Section>
+
+## A list that names itself
+
+A list of pages names itself, so `isTitleHidden` keeps the title for assistive technology only, and the header shows just the close button. This is the phone shell's "More" sheet: the pages its tab bar has no room for, and the signed-in account pinned in the footer.
+
+<Preview name="sheet-more" />
+
+</Section>
+
+<Section>
+
+## Stop points
+
+`snapPoints` gives the heights the sheet rests at, in pixels or as percentages of the sheet, and it opens at the first. With `snapPoints={['40%', '100%']}` it rises to show 40% of itself, a swipe up carries it to its full height, and a swipe down from there takes it back to 40% or away. The body scrolls only once the sheet is fully open: at a partial stop a swipe on the content moves the sheet instead, as on iOS. Without stop points the sheet opens fully, and a body taller than it scrolls at once.
+
+<Preview name="sheet-snap-points" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Open a sheet from a `SheetTrigger`, which holds the button that opens it and the sheet, or control it with `isOpen` and `onOpenChange`, or start it open with `defaultOpen`. Sheet is a client component, and a server component can render it, as the examples on this page do. A button with `slot="close"` closes the sheet it is in, and `children` may also be a function that receives `close`.
+
+The swipe is an enhancement. React Aria drives it with the browser's own scroll, so it has a phone's momentum, and on a computer a mouse wheel or a trackpad scroll over the sheet moves it the same way. The close button and Escape are always there while the sheet is dismissable, because a swipe is not a way out for a keyboard. `isDismissable={false}` makes a sheet that only a button closes: a swipe, Escape and a press on the scrim then do nothing, and the close button, or a button of your own with `slot="close"`, is the way out.
+
+A sheet is a phone surface. It still reads on a tablet at 36rem, and on a wider screen the same content is usually a dialog or a drawer. A second sheet opened from inside a first, such as a filter sheet from the "More" sheet, stacks over it with one scrim, and Escape closes the top one. A sheet opened from a dark card is dark while the page stays light, as [Theming](/docs/theming#overlays) explains.
+
+What has not been proven yet, in any engine: React Aria's iOS paths, its allowance for Safari's toolbar and its iOS scroll lock, since no desktop engine takes them; a real on-screen keyboard, where the sheet caps at 92% of the visual viewport but only the cap has been measured; stop points under a finger, which are tested with a wheel in Chromium only; and a field with `autoFocus` inside the sheet, which takes focus as it mounts, before React Aria moves focus in. The touch swipe itself has been run in Chromium; WebKit and Firefox were driven with the wheel.
+
+</Section>
+
+<Section>
+
+## Props
+
+`ref` goes on the dialog element, the one that takes focus. `className` goes on the sheet and `overlayClassName` on its scrim, each merged after the library's classes. Inside the sheet, `.sheet-body` and `.sheet-footer` are the parts a class on the sheet may restyle; the header and the other inner parts may change between releases.
+
+<PropsTable path="../../packages/react/src/sheet/Sheet.tsx" type="Pick<SheetProps, 'title' | 'isTitleHidden' | 'description' | 'children' | 'footer' | 'snapPoints' | 'isDismissable' | 'hasGrabber' | 'hasCloseButton' | 'closeLabel' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'className' | 'overlayClassName'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The sheet is a dialog named by its title, even when the title is hidden, and described by its description. When it opens, focus moves to the sheet once it has risen, and Tab cycles through the controls inside without reaching the page. When it closes, focus goes back to the button that opened it. The grabber is decoration and is hidden from assistive technology. While it is open, the page behind is hidden from assistive technology and does not scroll. Under reduced motion the sheet appears and leaves without sliding, and the scrim does not fade.
+
+<Keys rows={[['Tab', 'Cycles through the controls inside.'], ['Escape', 'Closes the sheet.'], ['Enter Space', 'Press a button or follow a link.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps sheets in the system.
+
+<Rules dos={['Use a sheet on a phone, for a list or a short form.', 'Keep the close button, so the way out does not depend on a swipe.', 'Give a long list stop points, so it opens part way and the page stays in view.']} donts={['Never use a sheet on a desktop, where a dialog or a drawer fits.', 'Never hide the close button on a sheet that can be dismissed.', 'Never make a sheet taller than 92% of the screen.']} />
+
+</Section>

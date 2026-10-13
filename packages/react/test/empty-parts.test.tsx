@@ -6,6 +6,7 @@ import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
+import { Sheet } from '../src/sheet';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
@@ -82,6 +83,8 @@ const OVERLAY_PARTS = [
   '.dialog-body',
   '.dialog-actions',
   '.drawer-footer',
+  '.sheet-description',
+  '.sheet-footer',
 ].join(', ');
 
 /**
@@ -101,6 +104,13 @@ const EMPTY_OVERLAYS: [name: string, element: ReactElement][] = [
     <Drawer isOpen title="Menu" footer={false}>
       {''}
     </Drawer>,
+  ],
+  [
+    // The body is always drawn, as a drawer's is; the description and the footer only when given.
+    'Sheet',
+    <Sheet isOpen title="More" description="" footer={false}>
+      {''}
+    </Sheet>,
   ],
 ];
 

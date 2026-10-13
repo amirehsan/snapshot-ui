@@ -37,6 +37,21 @@ export default defineConfig({
           },
         },
       },
+      {
+        // The sheet's stories again in WebKit, the engine a phone runs: only stories tagged webkit.
+        extends: true,
+        plugins: [storybookTest({ configDir, tags: { include: ['webkit'] } })],
+        test: {
+          name: 'storybook-webkit',
+          setupFiles: ['./.storybook/vitest.setup.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({}),
+            instances: [{ browser: 'webkit' }],
+          },
+        },
+      },
     ],
   },
 });
