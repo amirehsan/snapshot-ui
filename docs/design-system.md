@@ -931,7 +931,7 @@ document. Four were renamed because they described a marketing page:
 | `--text-footer-link` | `--text-small` | It is the hint and helper text step. |
 | `--text-footer-header` | `--text-overline` | Uppercase column headers in tables and stat tiles. |
 
-Three values have no name in the document, so the library gives them one:
+Five values have no name in the document, so the library gives them one:
 
 - `--font-mono` is `ui-monospace`, `SFMono-Regular`, `Menlo`, then the generic
   `monospace`. It is for code only, and Sofia Sans stays the one family for
@@ -945,10 +945,26 @@ Three values have no name in the document, so the library gives them one:
   resolves where it is declared. A scope that sets `--color-ink` itself,
   outside the theme attribute, must set `--focus-ring-color` too, just as it
   would set `color`.
+- `--z-modal` is 1000 and `--z-toast` is 1100. They fix the order in which the
+  overlays stack:
 
-## Four colors added
+  | Layer | z-index | Why |
+  | --- | --- | --- |
+  | Tooltip, popover, menu, any positioned overlay | 100000, inline | React Aria writes it as an inline style when it positions the overlay, and CSS cannot lower it. |
+  | Toast region | `--z-toast`, 1100 | Above every modal, so an error raised from an action inside a dialog is not under the scrim. |
+  | Dialog, confirm dialog, drawer, sheet, command palette and their scrims | `--z-modal`, 1000 | The ladder has to fit under React Aria's popovers, so a menu opened from a dialog sits above it. |
+  | App chrome: header, rail, save bar, tab bar | below 1000, the app's own | A modal covers the chrome, and the chrome never covers a modal. |
 
-All four are tokens with a light and a dark value, so no component mixes its
+  Ties inside a layer break by DOM order: React Aria appends each portal after
+  the last, so a stacked dialog sits above the first. The two names are in
+  `tokens.js` and `tokens.css` and not in the Tailwind theme, which has no
+  z-index namespace. An app whose chrome already uses larger numbers overrides
+  the two variables. The overlays do not use the browser's top layer, so a
+  third-party overlay at a very large z-index can cover a library dialog.
+
+## Six colors added
+
+All six are tokens with a light and a dark value, so no component mixes its
 own.
 
 | Token | Light | Dark | Role |
@@ -957,6 +973,8 @@ own.
 | `disabled` | `#F4F4F4` (Bone) | `#1A1A19` (Lifted Surface) | The fill of a disabled control. |
 | `frame` | ink at 12% | white at 12% | The outline of a list, or of a float surface opening over another. |
 | `divider` | ink at 10% | white at 10% | A rule inside a surface. |
+| `warning` | `#8A5300` | `#E8B04F` | A state that needs a look soon and is not a failure. |
+| `gain` | `#2A5F46` | `#6CC195` | Money in: an amount that arrived. |
 
 **Boundary is the document's own value in light, and firmer in dark.** Section
 4 gives the input border as "Ink Black at ~50% opacity". The app dropped it to
@@ -987,6 +1005,71 @@ The `scrollbar` and `scrollbar-hover` colors are the app's thumb colors: ink at
 The app mixed them from ink where it used them. The library writes the values
 out, so no component mixes its own. Standard `scrollbar-color` has no hover
 state, so `base.css` sets only the first.
+
+**Warning and gain.** The two newest colors take the values of the first app
+built on the library, kept exactly so that app can delete its own copies. Both
+are text colors, and both are measured on every surface text may sit on, against
+the real palette with `packages/core/scripts/contrast.js`. The last column is an
+ink fill, to record that neither may sit on one.
+
+Light (canvas `#F3F0EE`, lifted `#FCFBFA`, bone `#F4F4F4`, float and raised
+`#FFFFFF`, disabled `#F4F4F4`):
+
+| Color | canvas | lifted | bone | float | raised | disabled | on an ink fill |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `warning` `#8a5300` | 5.58 | 6.12 | 5.75 | 6.33 | 6.33 | 5.75 | 2.91 (never) |
+| `gain` `#2a5f46` | 6.55 | 7.20 | 6.76 | 7.44 | 7.44 | 6.76 | 2.48 (never) |
+
+Dark (canvas `#0E0E0D`, lifted and float `#1A1A19`, bone and raised `#252523`,
+disabled `#1A1A19`):
+
+| Color | canvas | lifted | bone | float | raised | disabled | on an ink fill |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `warning` `#e8b04f` | 9.89 | 8.92 | 7.86 | 8.92 | 7.86 | 8.92 | 1.95 (never) |
+| `gain` `#6cc195` | 8.92 | 8.04 | 7.09 | 8.04 | 7.09 | 8.04 | 2.17 (never) |
+
+Every pair clears the 4.5:1 of body text, with 5.58 the lowest (`warning` on
+canvas in light), so both work as text, as a graphic (3:1) and as a numeral. The
+gate holds ten pairs, `warning` and `gain` as text on canvas, lifted, bone,
+float and raised, and none on an ink fill. The canvas color as text on a
+`warning` or `gain` fill measures 5.58 and 6.55 in light and 9.89 and 8.92 in
+dark, so a filled part is feasible in both themes. As text on its own 12% wash
+over canvas the colors measure 4.72 (`warning`) and 5.50 (`gain`) in light,
+which caps a tinted wash at about 12% on canvas.
+
+**Keeping them apart.** By CIE76, the metric this document uses (it calls clay
+and Light Signal Orange, 28 apart in light and 29 in dark, far enough):
+
+| Pair | Light | Dark |
+| --- | --- | --- |
+| `warning` to `clay` | 21.1 | 23.1 |
+| `warning` to Light Signal Orange | 36.3 | 37.2 |
+| `warning` to `error` | 35.6 | 44.6 |
+| `gain` to `success` | 0.0 | 7.6 |
+
+Warning to clay is the closest pair in the system. By CIEDE2000 it is 13.4 in
+light and 13.8 in dark, well above the roughly 5 at which two colors are told
+apart at a glance. `gain` and `success` are the same value in light. The two are
+kept apart by rule as well as by value: clay is only the Changed chip on a
+field's label, and warning is a badge, a toast stripe, later an alert or a meter
+fill. They never meet in one component.
+
+**Why warning is not Light Signal Orange.** That color measures 2.53 to 2.87 on
+the light surfaces, under the 3:1 a graphic needs and under any text minimum,
+and it is already the changed border and the eyebrow dot.
+
+**The meaning rules**, beside the existing reservations:
+
+- `warning` means a state that needs the reader's eye soon and is not a failure:
+  Watch, Behind, Needs review, Out of date. Never decoration, never unsaved
+  (clay), never consent (signal), never a stand-in for Light Signal Orange.
+- `gain` means money that arrived. It is drawn with a plus sign, and with a word
+  where it names a state. It is never the outcome of a save, which is `success`,
+  even in light, where the two values are the same: the tokens differ by
+  meaning, and sample content keeps the difference as it does for the other
+  reservations.
+- State is never color alone: the badge label, the sign and the word carry the
+  meaning.
 
 ## The shape axis
 
@@ -1192,6 +1275,48 @@ left edge as the content below it. An indented label reads as a different level
 of hierarchy, which is what the rail's group label learned. Where a label has
 no gutter beside it, the `eyebrow-inset` variant, or the `inset` prop of
 Eyebrow, keeps the dot inline, inside the label's box.
+
+## Numerals
+
+A hero amount and a tile's figure want a display size that the headings do not
+give: between the 64px display step and the 36px section step. The library adds
+two type steps, `numeral` and `numeral-sm`, and two sizes of Text that draw them.
+
+| Step | Token | Size | Line height | Tracking | Weight | Under 768px |
+| --- | --- | --- | --- | --- | --- | --- |
+| `numeral` | `--text-numeral` | 56px | 1 | -3% | 500 | 44px |
+| `numeral-sm` | `--text-numeral-sm` | 32px | 1.1 | -2% | 500 | 32px |
+
+**Size.** 56px for a hero amount and 32px for a tile beside others, both in rem
+so they follow the reader's browser font size.
+
+**Weight and tracking.** Both take the headings' weight, 500. Tracking is
+tighter than the headings' -2% at the large size, because figures at display size
+set loosely. The small size keeps -2%.
+
+**Line height.** 1 and 1.1, as the display step's is 1, since a numeral is one
+line and never a paragraph.
+
+**Tabular figures.** A text token cannot carry `font-variant-numeric`, and Sofia
+Sans has tabular figures, so a column of amounts lines up only when the class
+asks for them. The classes `copy-numeral` and `copy-numeral-sm` set tabular
+digits beside the four properties of their token. Tabular figures are wider:
+"$12,345.67" at 56px is 253px proportional and 293px tabular. Tailwind users have
+`text-numeral` and `tabular-nums`.
+
+**The phone step.** On a 320px screen a card with 20px of padding leaves 248px of
+content, and 293px does not fit. At 44px the same figure is 230px, so the large
+step drops to 2.75rem under 768px. The width is the `--breakpoint-sm` token,
+written out in `copy.css` because a media query cannot read a custom property,
+and a test compares them so they cannot drift. The small step needs none:
+"$1,234,567.89", the widest figure tested, is 216px at 32px.
+
+**Why `nowrap`.** The text classes break a long word anywhere
+(`overflow-wrap: anywhere`), which is right for a sentence and wrong for a
+number: a figure that breaks across two lines reads as two numbers, which is a
+wrong number. Both numeral classes set `white-space: nowrap`, which wins over the
+inherited wrapping. Keep a numeral to one figure, and give it its sign and unit
+in the string, since nothing is formatted here.
 
 ## Link
 
@@ -1443,7 +1568,7 @@ things, each recorded here.
   column and `field` caps the column at `--container-field`, so the control has
   no width limit of its own.
 - **The edge** is `--color-boundary`, 1px, the document's own 50% ink. The app
-  dropped it to 40%, which measures 2.58:1 on white ("Four colors added").
+  dropped it to 40%, which measures 2.58:1 on white ("Six colors added").
 - **Hover** darkens the edge to ink at 65%, the app's value, and only where
   hover exists. It measures 5.72 against the Raised fill in light and 7.30 in
   dark. The changed and invalid edges outrank it.
@@ -1479,7 +1604,7 @@ only color.
 **Disabled** uses the `disabled` fill, taupe text and an ink edge at 15%, the
 app's value and the same edge as a disabled Button. The edge measures 1.37
 against the fill in light and 1.59 in dark. An inactive control is outside the
-3:1 asked of a boundary, and in dark the recessed fill ("Four colors added") is
+3:1 asked of a boundary, and in dark the recessed fill ("Six colors added") is
 what sets it apart. The changed and invalid edges outrank the disabled edge,
 because the chip and the changed border always show together.
 
@@ -1774,7 +1899,7 @@ leaves, every box takes the error edge and the line shows.
 | Error edge, lowest on the five surfaces | 6.58 | 5.06 |
 | Ink fill, lowest on the five surfaces | 16.25 | 15.36 |
 
-The figures are the gate's own arithmetic, rounded to two decimals. "Four
+The figures are the gate's own arithmetic, rounded to two decimals. "Six
 colors added" lists the boundary on Raised as 3.47, which is the same 3.4767
 cut and not rounded. Bone is the one surface the boundary was not yet gated
 on, and a checkbox can sit in a note, so it is now: `CONTRAST_PAIRS` holds the
@@ -1943,7 +2068,7 @@ by a transform, so it reverses in right-to-left text without a direction
 selector, which the browser floor does not have.
 
 **The off track is the boundary color and the on track is ink.** The app mixed
-ink at 22% for the off track, which measured 1.62:1, and "Four colors added"
+ink at 22% for the off track, which measured 1.62:1, and "Six colors added"
 already names a switch's off track as a use of `boundary`. The thumb is the
 Raised fill when off and canvas when on, which on an ink track (white in dark)
 is the inverse, as the primary Button's label is. The off track is painted on
@@ -2094,7 +2219,7 @@ things, each recorded here.
   2x screen, and a height that depended on it would jump with the state. The
   options stay centered, and the edge is all that changes.
 - **The edge** is `--color-boundary`, 1px. The source dropped it to 40%, which
-  measures 2.58:1 on white ("Four colors added"). Hover does not touch it.
+  measures 2.58:1 on white ("Six colors added"). Hover does not touch it.
 - **Labels** are the action step (16px, weight 500) in slate. The options are
   sized by their labels, and the room left over is shared out equally. A label
   too long for its option is cut with an ellipsis, a last resort: the control

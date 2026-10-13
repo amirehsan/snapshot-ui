@@ -70,8 +70,20 @@ describe('tokens.css', () => {
   });
 
   it('declares exactly the variables the components rely on, on :root', () => {
-    const textStyles = ['h1', 'h2', 'h3', 'h4', 'eyebrow', 'body', 'action', 'small', 'overline'];
-    const withLetterSpacing = ['h1', 'h2', 'h3', 'eyebrow', 'action', 'overline'];
+    const textStyles = [
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'eyebrow',
+      'body',
+      'action',
+      'small',
+      'overline',
+      'numeral',
+      'numeral-sm',
+    ];
+    const withLetterSpacing = ['h1', 'h2', 'h3', 'eyebrow', 'action', 'overline', 'numeral', 'numeral-sm'];
     const contract = [
       ...[
         'canvas',
@@ -91,6 +103,8 @@ describe('tokens.css', () => {
         'clay',
         'error',
         'success',
+        'warning',
+        'gain',
         'boundary',
         'frame',
         'divider',
@@ -116,6 +130,8 @@ describe('tokens.css', () => {
       '--focus-ring-width',
       '--focus-ring-offset',
       '--focus-ring-color',
+      '--z-modal',
+      '--z-toast',
     ];
     const declared = declaredIn(block(':root'));
     // Equality, not inclusion: a variable that leaks into :root fails too. The
@@ -141,6 +157,13 @@ describe('tokens.css', () => {
     expect(root).toContain('--shadow-float: 0px 24px 48px 0px rgb(0 0 0 / 0.08);');
     expect(root).toContain('--spacing-peer: 24px;');
     expect(root).toContain('--focus-ring-width: 2px;');
+    expect(root).toContain('--color-warning: #8a5300;');
+    expect(root).toContain('--color-gain: #2a5f46;');
+    expect(root).toContain('--text-numeral: 3.5rem;');
+    expect(root).toContain('--text-numeral--letter-spacing: -0.03em;');
+    expect(root).toContain('--text-numeral-sm--line-height: 1.1;');
+    expect(root).toContain('--z-modal: 1000;');
+    expect(root).toContain('--z-toast: 1100;');
   });
 
   it('keeps the focus ring a reference to ink, declared again in every theme scope', () => {
@@ -197,6 +220,16 @@ describe('tokens.css', () => {
     expect(dark).toContain('--color-hairline: rgb(255 255 255 / 0.12);');
   });
 
+  it('gives warning and gain their dark values', () => {
+    const dark = block('[data-theme="dark"]');
+    expect(dark).toContain('--color-warning: #e8b04f;');
+    expect(dark).toContain('--color-gain: #6cc195;');
+    // The system-preference scope declares the same values, so an unset page follows the system.
+    const system = block(':root:not([data-theme="light"])');
+    expect(system).toContain('--color-warning: #e8b04f;');
+    expect(system).toContain('--color-gain: #6cc195;');
+  });
+
   it('resets text color in every theme scope, so nested themes read', () => {
     for (const selector of [
       '[data-theme="dark"]',
@@ -233,6 +266,8 @@ describe('tokens.css', () => {
     for (const shape of [soft, square, rounded]) {
       expect(shape).not.toContain('--radius-dot');
       expect(shape).not.toContain('--color-');
+      expect(shape).not.toContain('--z-');
+      expect(shape).not.toContain('--text-numeral');
     }
   });
 });

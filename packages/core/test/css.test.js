@@ -305,6 +305,36 @@ describe('type components', () => {
   });
 });
 
+describe('src/components/copy.css, the numerals', () => {
+  // closeUp joins the selector list that Prettier breaks over two lines, and the "} " in front of a header
+  // starts the search at the rule before it, so `.copy-numeral-sm {` finds its own rule and not the tail of
+  // the shared one.
+  const source = () => closeUp(stripComments(read('src/components/copy.css')));
+
+  it('sets tabular digits and no wrapping on both sizes', () => {
+    const shared = blockAfter(source(), '.copy-numeral, .copy-numeral-sm {');
+    expect(shared).toContain('font-variant-numeric: tabular-nums;');
+    expect(shared).toContain('white-space: nowrap;');
+  });
+
+  it.each(['numeral', 'numeral-sm'])('draws copy-%s from its own type token', (name) => {
+    const rule = blockAfter(source(), `} .copy-${name} {`);
+    expect(rule).toContain(`font-size: var(--text-${name});`);
+    expect(rule).toContain(`line-height: var(--text-${name}--line-height);`);
+    expect(rule).toContain(`letter-spacing: var(--text-${name}--letter-spacing);`);
+    expect(rule).toContain(`font-weight: var(--text-${name}--font-weight);`);
+  });
+
+  it('steps the large numeral to 2.75rem under the small breakpoint, written out, and leaves the small one alone', async () => {
+    // A media query cannot read a custom property, so the width is written out and must stay the token.
+    const { tokens } = await import('../dist/tokens.js');
+    const phone = `@media (width < ${tokens.breakpoint.sm.value})`;
+    const built = read('dist/components/copy.css');
+    expect(blockAfter(built, phone)).toMatch(/\.copy-numeral\s*\{\s*font-size:\s*2\.75rem;\s*\}/);
+    expect(blockAfter(built, phone)).not.toContain('.copy-numeral-sm');
+  });
+});
+
 describe('dist/components/heading.css', () => {
   it.each([1, 2, 3, 4])('draws heading-%i from its own type token', (step) => {
     const rule = blockAfter(read('dist/components/heading.css'), `.heading-${step} `);

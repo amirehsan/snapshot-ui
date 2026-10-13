@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
+import { Eyebrow } from './Eyebrow';
 import { Text } from './Text';
 
 const meta = {
@@ -8,7 +9,7 @@ const meta = {
   args: { children: 'Changes apply to everyone in the workspace.' },
   argTypes: {
     as: { control: 'inline-radio', options: ['p', 'span', 'div'] },
-    size: { control: 'inline-radio', options: ['body', 'small'] },
+    size: { control: 'inline-radio', options: ['body', 'small', 'numeral', 'numeral-sm'] },
     tone: { control: 'inline-radio', options: ['default', 'muted'] },
   },
 } satisfies Meta<typeof Text>;
@@ -28,6 +29,35 @@ export const Small: Story = { args: { size: 'small' } };
 export const Muted: Story = { args: { tone: 'muted' } };
 
 export const SmallMuted: Story = { args: { size: 'small', tone: 'muted' } };
+
+/**
+ * A hero amount: 56px with tabular digits, and 44px under 768px so "$12,345.67" fits a 320px screen. The
+ * visual suite shoots 1280px and 375px, so both steps are baselined.
+ */
+export const Numeral: Story = { args: { size: 'numeral', children: '$12,345.67' } };
+
+/**
+ * A figure in a tile beside others is the 32px step. The second tile's plus sign and its word carry the
+ * meaning, with the gain color beside them and never alone.
+ */
+export const NumeralTiles: Story = {
+  render: () => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+      <div style={{ display: 'grid', gap: 8 }}>
+        <Eyebrow>Spent</Eyebrow>
+        <Text as="span" size="numeral-sm">
+          $4,210.00
+        </Text>
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        <Eyebrow>Arrived</Eyebrow>
+        <Text as="span" size="numeral-sm" style={{ color: 'var(--color-gain)' }}>
+          +$1,980.00
+        </Text>
+      </div>
+    </div>
+  ),
+};
 
 /** A paragraph wraps at the width it is given and keeps the body line height. */
 export const LongParagraph: Story = {

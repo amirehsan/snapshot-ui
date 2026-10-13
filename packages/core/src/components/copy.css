@@ -1,9 +1,9 @@
 /*
  * Copy, the body text of a page: the body step by default, the small step for
- * hints and helper lines, and a muted tone for text that is secondary. The
- * class is `copy` and not `text` because a class may not start with a Tailwind
- * namespace such as text-, which would collide in any app that also uses
- * Tailwind.
+ * hints and helper lines, the two numeral sizes for a figure that is the point
+ * of a tile, and a muted tone for text that is secondary. The class is `copy`
+ * and not `text` because a class may not start with a Tailwind namespace such
+ * as text-, which would collide in any app that also uses Tailwind.
  *
  * Muted is slate. Taupe is for placeholders and disabled text only: it fails
  * AA on every surface, and everything here is read.
@@ -31,5 +31,36 @@
 
   .copy-muted {
     color: var(--color-slate);
+  }
+
+  /* A figure that is the point of a tile: tabular digits so a column of amounts lines up, and
+     no wrapping, because a number that breaks is a wrong number. The phone step is measured:
+     "$12,345.67" is 293px at 56px and 230px at 44px, and a 320px screen leaves 248px inside a
+     20px-padded card. The width is the --breakpoint-sm token, written out because a media query
+     cannot read a custom property; test/css.test.js keeps them equal. */
+  .copy-numeral,
+  .copy-numeral-sm {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .copy-numeral {
+    font-size: var(--text-numeral);
+    line-height: var(--text-numeral--line-height);
+    letter-spacing: var(--text-numeral--letter-spacing);
+    font-weight: var(--text-numeral--font-weight);
+  }
+
+  .copy-numeral-sm {
+    font-size: var(--text-numeral-sm);
+    line-height: var(--text-numeral-sm--line-height);
+    letter-spacing: var(--text-numeral-sm--letter-spacing);
+    font-weight: var(--text-numeral-sm--font-weight);
+  }
+
+  @media (width < 768px) {
+    .copy-numeral {
+      font-size: 2.75rem;
+    }
   }
 }
