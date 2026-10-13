@@ -4628,3 +4628,48 @@ chrome. Where both sit among the overlays is the ladder in "Token names": under
 every modal, so a modal always covers the chrome. A page's own sticky elements,
 such as a table's header row or a toolbar, use `--z-header` or less, so they
 scroll under the chrome and never over it.
+
+**Who owns the state.** `AppShell` holds the collapsed state and the drawer
+state, controlled or uncontrolled. The workspace's offset depends on the first
+and the header's menu button on the second, and both live outside the rail, so
+neither can be the rail's alone. `useAppShell()` hands both to the parts and to
+an app's own header or palette, and throws outside a shell.
+
+**One rule for the first paint.** The collapsed width is CSS on
+`data-sidebar="collapsed"` on any ancestor of the rail. The root carries the
+attribute while collapsed, from a prop a server layout reads from its cookie,
+and a pre-paint script can set the same attribute on `<html>`: one rule serves
+both. The root never writes `expanded`, so it never resets an attribute set
+higher up. Nothing is measured, and `matchMedia` and `popstate` are effects.
+
+**The frame.** In DOM order: the skip link, the rail as given, the workspace
+holding the header wrapper and `<main>`, and the tab bar as given. The header
+wrapper is sticky at `--z-header` and draws nothing; the look is the header's.
+`<main>` has `tabIndex={-1}` so it takes the focus the skip link sends, and no
+outline, so the landing never rings the whole page.
+
+**The skip link** is the first tab stop, clipped out of sight until it is
+focused. Focused, it is an ink pill with canvas text in the `--text-action`
+step, 40px tall, `--spacing-inset` from the corner, over the rail's corner at
+`--z-chrome` plus one, with the inverted canvas ring at -4px an ink fill takes.
+
+**Two properties of the shell's own.** `--app-shell-sidebar` is the workspace's
+inline offset: the rail's token with a rail from 1024px up, else 0. The token
+itself is never overridden by a media query; the shell's property is.
+`--app-shell-inset-block-end` is the workspace's bottom padding: the tab bar's
+4rem plus the safe area below 1024px with a tab bar, else 0. A future save bar
+adds to it rather than declaring its own. 1024px is `--breakpoint-md` written
+out, and 4rem is written in the tab bar's stylesheet too; a test keeps both
+equal.
+
+**When the drawer closes.** As the window widens to 1024px, where the rail is
+no longer a drawer, and on Back and Forward. Escape, the scrim and a press on
+an item are the Sidebar's. The shell cannot see the router, so anything else
+that navigates calls `closeDrawer()` from `useAppShell()`; it is a no-op while
+the drawer is closed.
+
+**One controlled-or-uncontrolled hook.** The two states come from a private
+`useControllableState`, in React Aria's shape (`isX`, `defaultX`, `onXChange`).
+It is hand-written because the library does not depend on `react-stately`. Its
+setter tells the callback only when the value would change, and never moves a
+controlled value: the owner decides in the callback.

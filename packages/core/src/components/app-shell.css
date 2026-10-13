@@ -1,0 +1,94 @@
+/*
+ * AppShell: the frame an app runs in. The rail (Sidebar) is fixed and floating, so the workspace is
+ * offset by the rail's full width from 1024px up, and below it reserves room under its content for a
+ * bottom tab bar. The collapsed width comes from the generated sidebar axis: data-sidebar="collapsed"
+ * on any ancestor remaps --container-sidebar, and this file only reads the token. The skip link is the
+ * first tab stop, out of sight until it is focused, then an ink pill over the rail's corner with the
+ * inverted ring an ink fill takes. 1024px is the --breakpoint-md token, written out because a media
+ * query cannot read a custom property, and 4rem is the tab bar's height, written in tab-bar.css too;
+ * test/css.test.js keeps both equal. Derived in docs/design-system.md ("Floating chrome and the shell").
+ */
+@layer components {
+  .app-shell {
+    --app-shell-sidebar: 0px;
+    --app-shell-inset-block-end: 0px;
+  }
+
+  .app-shell[data-has-sidebar] {
+    --app-shell-sidebar: var(--container-sidebar);
+  }
+
+  .app-shell-workspace {
+    min-height: 100dvh;
+    margin-inline-start: var(--app-shell-sidebar);
+    padding-block-end: var(--app-shell-inset-block-end);
+    transition: margin-inline-start 200ms ease;
+  }
+
+  /* The look is the header's own. This only keeps it on top of the page as the page scrolls. */
+  .app-shell-header {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-header);
+  }
+
+  /* The skip link's landing never rings the whole page. */
+  .app-shell-main {
+    outline: none;
+  }
+
+  .app-shell-skip {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Above the chrome, since it lands where the rail's corner is. */
+  .app-shell-skip:focus {
+    position: fixed;
+    inset-block-start: var(--spacing-inset);
+    inset-inline-start: var(--spacing-inset);
+    z-index: calc(var(--z-chrome) + 1);
+    display: inline-flex;
+    align-items: center;
+    width: auto;
+    height: auto;
+    min-height: var(--size-target);
+    margin: 0;
+    padding-inline: 1.25rem;
+    overflow: visible;
+    clip-path: none;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+    font-family: var(--font-sans);
+    font-size: var(--text-action);
+    line-height: var(--text-action--line-height);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: var(--text-action--font-weight);
+    text-decoration: none;
+    outline: var(--focus-ring-width) solid var(--color-canvas);
+    outline-offset: -4px;
+  }
+
+  @media (width < 1024px) {
+    .app-shell[data-has-sidebar] {
+      --app-shell-sidebar: 0px;
+    }
+
+    .app-shell[data-has-bottom-bar] {
+      --app-shell-inset-block-end: calc(4rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-shell-workspace {
+      transition: none;
+    }
+  }
+}
