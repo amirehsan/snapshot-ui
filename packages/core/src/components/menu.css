@@ -1,0 +1,216 @@
+/*
+ * Menu: the rows every list popup shares (the listbox of the choice controls inherits them). A
+ * 24px popup holds 20px rows: the control step, 40px tall (44px on touch), 8px by 12px of padding,
+ * 4px apart so two washes keep a seam, an action-step label, a slate description, a 16px icon, a
+ * key chip at the end and a check whose room every row of a selectable list keeps. Single selection
+ * is the ink pill with a check; multiple is the check alone. Derived in docs/design-system.md ("Menu").
+ */
+@layer components {
+  /* The source's popups are 14.5 and 15rem; 12rem is the floor and a wider trigger wins. The popover is a
+     column the list fills, so under the height cap React Aria writes on it the list scrolls and the popover
+     does not: one scroller, not two. */
+  .menu-popover {
+    display: flex;
+    flex-direction: column;
+    min-width: max(var(--trigger-width), 12rem);
+  }
+
+  /* It shrinks to the popover's room instead of inheriting the cap, which would leave it 2px taller than
+     the room inside the popover's border, and its padding counts inside that room. */
+  .menu {
+    box-sizing: border-box;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-height: 0;
+    padding: var(--spacing-part);
+    overflow: auto;
+    outline: none;
+  }
+
+  .menu-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .menu-heading {
+    padding: 0.5rem 0.75rem 0.25rem;
+    font-size: var(--text-overline);
+    line-height: var(--text-overline--line-height);
+    letter-spacing: var(--text-overline--letter-spacing);
+    font-weight: var(--text-overline--font-weight);
+    text-transform: uppercase;
+    color: var(--color-slate);
+  }
+
+  .menu-separator {
+    flex: none;
+    height: 1px;
+    margin-block: 0.25rem;
+    border: 0;
+    background-color: var(--color-divider);
+  }
+
+  .menu-item {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 40px;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-control);
+    color: var(--color-ink);
+    text-decoration: none;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .menu-item-icon {
+    display: inline-flex;
+    flex: none;
+    color: var(--color-slate);
+  }
+
+  .menu-item-icon svg,
+  .menu-item-check svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .menu-item-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .menu-item-label {
+    font-size: var(--text-action);
+    line-height: var(--text-action--line-height);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: var(--text-action--font-weight);
+    overflow-wrap: anywhere;
+  }
+
+  .menu-item-description {
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+    overflow-wrap: anywhere;
+  }
+
+  /* The one key look (Kbd), at the row's end. */
+  .menu-item-shortcut {
+    flex: none;
+    margin-inline-start: auto;
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-micro);
+    background-color: var(--color-bone);
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1;
+    letter-spacing: var(--text-overline--letter-spacing);
+    font-weight: var(--text-overline--font-weight);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* Every row of a selectable list keeps the check's room, so the width never changes. */
+  .menu-item-check {
+    display: inline-flex;
+    flex: none;
+    visibility: hidden;
+  }
+
+  .menu-item[data-selected] .menu-item-check {
+    visibility: visible;
+  }
+
+  @media (hover: hover) {
+    .menu-item[data-hovered] {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+  }
+
+  /* Hover focuses the item in a React Aria menu, so one state carries the pointer and the keyboard. */
+  .menu-item[data-focused] {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  .menu-item[data-focused] .menu-item-icon {
+    color: var(--color-ink);
+  }
+
+  /* Inset: a scrolling list clips an outset ring. */
+  .menu-item[data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
+  .menu-item-danger {
+    color: var(--color-error);
+  }
+
+  /* The focused row turns its icon ink, and a danger icon stays error with its label, so it outranks that. */
+  .menu-item-danger .menu-item-icon,
+  .menu-item-danger[data-focused] .menu-item-icon {
+    color: var(--color-error);
+  }
+
+  /* Single selection: the ink pill, with every part inverted to canvas. */
+  .menu-item[data-selection-mode='single'][data-selected] {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .menu-item[data-selection-mode='single'][data-selected] :is(.menu-item-icon, .menu-item-check) {
+    color: var(--color-canvas);
+  }
+
+  .menu-item[data-selection-mode='single'][data-selected] .menu-item-description {
+    color: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+  }
+
+  .menu-item[data-selection-mode='single'][data-selected] .menu-item-shortcut {
+    background-color: color-mix(in srgb, var(--color-canvas) 20%, transparent);
+    color: var(--color-canvas);
+  }
+
+  .menu-item[data-selection-mode='single'][data-selected][data-focus-visible] {
+    outline-color: var(--color-canvas);
+  }
+
+  .menu-item[data-disabled] {
+    background-color: transparent;
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  .menu-item[data-disabled] :is(.menu-item-icon, .menu-item-shortcut, .menu-item-description) {
+    color: var(--color-taupe);
+  }
+
+  @media (pointer: coarse) {
+    .menu-item {
+      min-height: 44px;
+    }
+  }
+
+  /* The selected row names its mode, so it outranks the single row's ink fill, which forced colors would
+     otherwise paint over with the page's own background. */
+  @media (forced-colors: active) {
+    .menu-item[data-selection-mode][data-selected] {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .menu-item[data-disabled] {
+      color: GrayText;
+    }
+  }
+}

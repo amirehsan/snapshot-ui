@@ -1,0 +1,124 @@
+---
+title: Menu
+description: 'A menu of actions and choices in a popover: icons, descriptions, key hints, sections, separators, a danger item, and links through your router.'
+icon: EllipsisVertical
+---
+
+<Section>
+
+## Basic
+
+A menu is a list of actions that opens from a button, in a [Popover](/docs/components/popover). Each item has a label and can have a 16px icon at its start, a second line under the label in slate, and a key hint at its end, drawn as a key: `Mod` in a hint is Cmd on Apple platforms and Ctrl elsewhere. Sections group items under a heading, and a separator rules between groups. An item that loses something takes `variant="danger"`, which draws its label and icon in the error color. Rows are 40px tall, and 44px on a touch screen.
+
+<Preview name="menu-basic" />
+
+</Section>
+
+<Section>
+
+## Selection
+
+A menu can also choose. `selectionMode="single"` makes its items radios: the chosen row is the ink pill with a check, and a choice closes the menu, so there is no doubt that it registered. `selectionMode="multiple"` makes them checkboxes: a chosen row shows the check alone, without the fill, and the menu stays open for the next one. Every row of a selectable list keeps the check's room, so the list never changes width as the choice moves. Set the mode on the menu, or on a section, which then chooses apart from the rest, as the theme and the panels do here. `shouldCloseOnSelect` overrides the close on the menu, on a section or on one item.
+
+<Preview name="menu-selection" />
+
+</Section>
+
+<Section>
+
+## Links
+
+An item with `href` is a real link, an anchor with `role="menuitem"`, so a middle click or a modified click opens it as the browser would. A plain press navigates through React Aria's `RouterProvider`, which [Link](/docs/components/link) uses too, so wrap your app in it once. With the Next.js App Router, that is a small client component around the app, with the `RouterConfig` augmentation so `routerOptions` is typed:
+
+```tsx
+'use client';
+
+import { useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { RouterProvider } from 'react-aria-components';
+
+declare module 'react-aria-components' {
+  interface RouterConfig {
+    routerOptions: NonNullable<Parameters<ReturnType<typeof useRouter>['push']>[1]>;
+  }
+}
+
+export function ClientProviders({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  return (
+    <RouterProvider
+      navigate={(href, options) => {
+        router.push(href, options);
+      }}
+    >
+      {children}
+    </RouterProvider>
+  );
+}
+```
+
+Render `<ClientProviders>` around `{children}` in `app/layout.tsx`. Install `react-aria-components` at the version `@snapshot-ui/react` depends on, so the app and the library share one router.
+
+The one trade-off: React Aria renders a plain anchor, so Next does not prefetch the page as the link comes into view. Prefetch it yourself with `router.prefetch(href)` from the item's `onHoverStart` and `onFocus`, or draw Next's own `Link` for an item with the `render` prop it inherits, from a client component:
+
+```tsx
+<MenuItem
+  id="settings"
+  href="/settings"
+  render={(props) => ('href' in props ? <NextLink {...props} href={props.href} /> : <div {...props} />)}
+>
+  Settings
+</MenuItem>
+```
+
+<Preview name="menu-links" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Compose `MenuTrigger`, the button that opens the menu, and `Menu`, which opens in its own popover. `MenuTrigger` takes `isOpen`, `defaultOpen` and `onOpenChange` to control it. Menu is a client component, and a server component can render it, as the examples on this page do.
+
+`onAction` on the menu receives the key, the `id`, of the item that ran; an item's own `onAction` runs for that item alone. A danger item usually asks first: pair it with a [Confirm dialog](/docs/components/confirm-dialog) whose confirm button names the same outcome. The popover opens under the button at its start edge, `placement` changes that, and it flips to the other side where the screen has no room. It is at least 12rem wide, or as wide as the button when that is wider, and a long menu scrolls inside it. A menu opened from a dark card is dark while the page stays light, as [Theming](/docs/theming#overlays) explains.
+
+Focus moves into the menu, and the keys below move it there. The list it replaces had no arrow keys, so it was not a menu; this one is, and focus stays in it until a choice, Escape or a press outside closes it.
+
+</Section>
+
+<Section>
+
+## Props
+
+`ref` and `className` go on the menu element, and `popoverClassName` on the popover around it. The rest of React Aria's menu props, such as `items` with a render function and `renderEmptyState`, pass through.
+
+<PropsTable label="Menu props" path="../../packages/react/src/menu/Menu.tsx" type="Pick<MenuProps<object>, 'onAction' | 'selectionMode' | 'selectedKeys' | 'defaultSelectedKeys' | 'onSelectionChange' | 'disabledKeys' | 'shouldCloseOnSelect' | 'placement' | 'className' | 'popoverClassName'>" />
+
+<PropsTable label="MenuItem props" path="../../packages/react/src/menu/MenuItem.tsx" type="Pick<MenuItemProps, 'children' | 'id' | 'icon' | 'description' | 'shortcut' | 'variant' | 'href' | 'isDisabled' | 'onAction' | 'shouldCloseOnSelect' | 'textValue' | 'className'>" />
+
+<PropsTable label="MenuSection props" path="../../packages/react/src/menu/MenuSection.tsx" type="Pick<MenuSectionProps, 'title' | 'selectionMode' | 'selectedKeys' | 'defaultSelectedKeys' | 'onSelectionChange' | 'shouldCloseOnSelect' | 'className'>" />
+
+<PropsTable label="MenuSeparator props" path="../../packages/react/src/menu/MenuSeparator.tsx" type="MenuSeparatorProps" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A true `role="menu"`, named by its trigger, which says that it opens one and whether it is open. Its items are menu items, radios in single selection and checkboxes in multiple, named by their labels and described by their second lines and their keys. A disabled item is announced as unavailable and the arrows pass it by. Opened from the keyboard, focus starts on the first item, or on the last with Arrow Up; opened with a pointer, it starts on the list, and on the chosen item when the menu itself selects. Escape closes the menu and focus goes back to the trigger. React Aria holds focus inside the open menu, so Tab does not leave it.
+
+<Keys rows={[['Down Up', 'Move between items, stopping at the first and the last.'], ['Home End', 'Jump to the first or last item.'], ['A-Z', 'Jump to an item by its first letters.'], ['Enter Space', 'Activate the item, or choose it.'], ['Escape', 'Closes the menu and returns focus.'], ['Tab', 'Stays in the open menu.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps menus in the system.
+
+<Rules dos={['Say the action in a verb, such as Rename or Duplicate.', 'Group related items in a section with a heading.', 'Put a danger item last, after a separator.']} donts={['Never nest a menu in a menu.', 'Never use a menu for navigation that a list on the page could show.', 'Never mark danger by color alone. Name what is lost, such as Delete the project.']} />
+
+</Section>

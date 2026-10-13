@@ -189,6 +189,13 @@
     "limit": "1.5 kB"
   },
   {
+    "name": "import { Menu, MenuItem, MenuSection, MenuSeparator } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Menu, MenuItem, MenuSection, MenuSeparator }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "2 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

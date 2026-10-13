@@ -1467,3 +1467,62 @@ test('the popover page opens a padded panel that flips near the bottom of the wi
   await expect(popover).toHaveCount(0);
   await expect(trigger).toBeFocused();
 });
+
+test('the menu page opens a menu from the keyboard, moves with the arrows and returns focus on Escape', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/menu');
+  const trigger = page.getByRole('button', { name: 'Project actions' });
+  await trigger.focus();
+  await page.keyboard.press('ArrowDown');
+  const menu = page.getByRole('menu', { name: 'Project actions' });
+  await expect(menu).toBeVisible();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  // Arrow Down opens on the first row; the arrows move and stop at the ends, skipping the disabled row.
+  await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'Duplicate' })).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(page.getByRole('menuitem', { name: 'Delete the project' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  // Enter on a row runs it and closes the menu, and the page says what was chosen.
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(menu).toHaveCount(0);
+  await expect(page.getByText('Chose Duplicate.')).toBeVisible();
+});
+
+test('a menu link navigates through the router', async ({ page }) => {
+  await visit(page, '/docs/components/menu');
+  // A marker on the window survives a client-side navigation and is lost to a full page load.
+  await page.evaluate(() => {
+    (window as Window & { menuMarker?: boolean }).menuMarker = true;
+  });
+  await page.getByRole('button', { name: 'Jump to a component' }).click();
+  const link = page.getByRole('menuitem', { name: 'Button' });
+  await expect(link).toHaveAttribute('href', '/docs/components/button');
+  await link.click();
+  await expect(page).toHaveURL(/\/docs\/components\/button$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Button' })).toBeVisible();
+  expect(await page.evaluate(() => (window as Window & { menuMarker?: boolean }).menuMarker)).toBe(true);
+});
+
+test.describe('the menu page, on a touch screen', () => {
+  test.use({ hasTouch: true, viewport: { width: 375, height: 760 } });
+
+  test('menu rows are 44px on a touch screen', async ({ page }) => {
+    await visit(page, '/docs/components/menu');
+    await page.getByRole('button', { name: 'Project actions' }).tap();
+    const row = page.getByRole('menuitem', { name: 'Rename' });
+    await expect(row).toBeVisible();
+    const box = await row.boundingBox();
+    if (!box) throw new Error('No row');
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(await sideways(page)).toBe(0);
+  });
+});

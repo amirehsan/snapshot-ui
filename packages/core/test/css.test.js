@@ -1943,6 +1943,179 @@ describe('src/components/popover.css', () => {
   });
 });
 
+describe('src/components/menu.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.menu-item {` is the start of no
+  // longer header before the coarse-pointer block, so the first match is the base row.
+  const rules = () => closeUp(stripComments(read('src/components/menu.css')));
+  const WASH = 'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);';
+
+  it('is imported after popover.css', () => {
+    const entry = read('src/styles.css');
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('popover.css')).toBeGreaterThanOrEqual(0);
+    expect(at('menu.css')).toBeGreaterThan(at('popover.css'));
+  });
+
+  it('floors the popup at 12rem, or the trigger when it is wider', () => {
+    expect(blockAfter(rules(), '.menu-popover {')).toContain('min-width: max(var(--trigger-width), 12rem);');
+  });
+
+  it('pads the list 8px with 4px between rows, and rings no focus on the list React Aria focuses', () => {
+    const list = blockAfter(rules(), '.menu {');
+    for (const declaration of [
+      'padding: var(--spacing-part);',
+      'gap: 0.25rem;',
+      'outline: none;',
+      'overflow: auto;',
+    ]) {
+      expect(list, declaration).toContain(declaration);
+    }
+  });
+
+  it('makes the list the one scroller under the height cap: the popover is a column it fills and shrinks into', () => {
+    const css = rules();
+    const popover = blockAfter(css, '.menu-popover {');
+    expect(popover).toContain('display: flex;');
+    expect(popover).toContain('flex-direction: column;');
+    const list = blockAfter(css, '.menu {');
+    for (const declaration of ['box-sizing: border-box;', 'flex: 1 1 auto;', 'min-height: 0;']) {
+      expect(list, declaration).toContain(declaration);
+    }
+    // Inheriting the cap would make the list 2px taller than the room inside the popover's border.
+    expect(list).not.toContain('max-height');
+  });
+
+  it('draws a row 40px tall, padded 8px by 12px, at the control radius, with the pointer cursor', () => {
+    const row = blockAfter(rules(), '.menu-item {');
+    for (const declaration of [
+      'min-height: 40px;',
+      'padding: 0.5rem 0.75rem;',
+      'border-radius: var(--radius-control);',
+      'cursor: pointer;',
+      'gap: 0.75rem;',
+    ]) {
+      expect(row, declaration).toContain(declaration);
+    }
+  });
+
+  it('grows a row to 44px under a coarse pointer', () => {
+    const coarse = blockAfter(rules(), '@media (pointer: coarse)');
+    expect(blockAfter(coarse, '.menu-item {')).toContain('min-height: 44px;');
+  });
+
+  it('washes a hovered row only where hover exists, and a focused row everywhere, in the 5% ink wash', () => {
+    const css = rules();
+    const hover = blockAfter(css, '@media (hover: hover)');
+    expect(blockAfter(hover, '.menu-item[data-hovered] {')).toContain(WASH);
+    // Every data-hovered rule sits inside the hover block.
+    const outside = css.replace(`@media (hover: hover) {${hover}}`, '');
+    expect(outside).not.toContain('[data-hovered]');
+    // Hover focuses the item, so the focused wash is outside it and carries touch and the keyboard.
+    expect(blockAfter(outside, '.menu-item[data-focused] {')).toContain(WASH);
+    expect(blockAfter(outside, '.menu-item[data-focused] .menu-item-icon {')).toContain(
+      'color: var(--color-ink);',
+    );
+  });
+
+  it('rings keyboard focus inset, and inverts the ring to canvas on the selected ink row', () => {
+    const css = rules();
+    const ring = blockAfter(css, '.menu-item[data-focus-visible] {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+    expect(
+      blockAfter(css, ".menu-item[data-selection-mode='single'][data-selected][data-focus-visible] {"),
+    ).toContain('outline-color: var(--color-canvas);');
+  });
+
+  it('fills a single selection in ink and inverts its icon, check, description and key chip to canvas', () => {
+    const css = rules();
+    const selected = ".menu-item[data-selection-mode='single'][data-selected]";
+    const fill = blockAfter(css, `${selected} {`);
+    expect(fill).toContain('background-color: var(--color-ink);');
+    expect(fill).toContain('color: var(--color-canvas);');
+    expect(blockAfter(css, `${selected} :is(.menu-item-icon, .menu-item-check) {`)).toContain(
+      'color: var(--color-canvas);',
+    );
+    expect(blockAfter(css, `${selected} .menu-item-description {`)).toContain(
+      'color: color-mix(in srgb, var(--color-canvas) 70%, transparent);',
+    );
+    const chip = blockAfter(css, `${selected} .menu-item-shortcut {`);
+    expect(chip).toContain('background-color: color-mix(in srgb, var(--color-canvas) 20%, transparent);');
+    expect(chip).toContain('color: var(--color-canvas);');
+  });
+
+  it('keeps the check room on every selectable row and shows the check on a selected one', () => {
+    const css = rules();
+    expect(blockAfter(css, '.menu-item-check {')).toContain('visibility: hidden;');
+    expect(blockAfter(css, '.menu-item[data-selected] .menu-item-check {')).toContain('visibility: visible;');
+  });
+
+  it('draws a disabled row in taupe, with no wash and the not-allowed cursor', () => {
+    const css = rules();
+    const disabled = blockAfter(css, '.menu-item[data-disabled] {');
+    for (const declaration of [
+      'background-color: transparent;',
+      'color: var(--color-taupe);',
+      'cursor: not-allowed;',
+    ]) {
+      expect(disabled, declaration).toContain(declaration);
+    }
+    expect(
+      blockAfter(
+        css,
+        '.menu-item[data-disabled] :is(.menu-item-icon, .menu-item-shortcut, .menu-item-description) {',
+      ),
+    ).toContain('color: var(--color-taupe);');
+  });
+
+  it('draws a danger label and icon in the error color, focused or not', () => {
+    const css = rules();
+    expect(blockAfter(css, '.menu-item-danger {')).toContain('color: var(--color-error);');
+    // A focused row turns its icon ink at a higher specificity, so the danger icon names the focused row too.
+    expect(
+      blockAfter(css, '.menu-item-danger .menu-item-icon, .menu-item-danger[data-focused] .menu-item-icon {'),
+    ).toContain('color: var(--color-error);');
+  });
+
+  it('sets a section heading in the overline step, uppercase and slate', () => {
+    const heading = blockAfter(rules(), '.menu-heading {');
+    for (const declaration of [
+      'font-size: var(--text-overline);',
+      'letter-spacing: var(--text-overline--letter-spacing);',
+      'font-weight: var(--text-overline--font-weight);',
+      'text-transform: uppercase;',
+      'color: var(--color-slate);',
+    ]) {
+      expect(heading, declaration).toContain(declaration);
+    }
+  });
+
+  it('draws a separator as a 1px rule in the divider color', () => {
+    const rule = blockAfter(rules(), '.menu-separator {');
+    expect(rule).toContain('height: 1px;');
+    expect(rule).toContain('background-color: var(--color-divider);');
+  });
+
+  it('draws a selected row in Highlight and a disabled one in GrayText in forced colors', () => {
+    const css = rules();
+    const forced = blockAfter(css, FORCED_COLORS);
+    // As specific as the single row's ink fill and after it, so it wins: a fill the repaint drops would leave
+    // the row in the page's own background.
+    const header = '.menu-item[data-selection-mode][data-selected] {';
+    expect(css.indexOf(FORCED_COLORS)).toBeGreaterThan(
+      css.indexOf(".menu-item[data-selection-mode='single'][data-selected] {"),
+    );
+    const selected = blockAfter(forced, header);
+    expect(selected).toContain('background-color: Highlight;');
+    expect(selected).toContain('color: HighlightText;');
+    expect(blockAfter(forced, '.menu-item[data-disabled] {')).toContain('color: GrayText;');
+  });
+
+  it('animates nothing inside a menu', () => {
+    expect(rules()).not.toMatch(/(?<![\w-])(?:transition|animation)\s*:/);
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

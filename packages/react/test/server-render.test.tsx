@@ -9,6 +9,7 @@ import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
+import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Popover } from '../src/popover';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
@@ -193,6 +194,20 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </DialogTrigger>,
     ['<button', '>Filter<'],
     ['popover'],
+  ],
+  [
+    // React Aria marks a menu trigger with aria-haspopup="true", which assistive technology reads as a menu.
+    'Menu, closed',
+    <MenuTrigger>
+      <IconButton aria-label="More">
+        <svg />
+      </IconButton>
+      <Menu>
+        <MenuItem id="a">Settings</MenuItem>
+      </Menu>
+    </MenuTrigger>,
+    ['<button', 'aria-label="More"', 'aria-haspopup="true"', 'aria-expanded="false"'],
+    ['role="menu"', 'Settings'],
   ],
 ];
 

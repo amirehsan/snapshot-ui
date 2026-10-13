@@ -92,3 +92,15 @@ export {
 export { Drawer, type DrawerPlacement, type DrawerProps } from './drawer';
 export { Sheet, SheetTrigger, type SheetProps, type SheetTriggerProps } from './sheet';
 export { Popover, type PopoverProps } from './popover';
+export {
+  Menu,
+  MenuItem,
+  MenuSection,
+  MenuSeparator,
+  MenuTrigger,
+  type MenuItemProps,
+  type MenuProps,
+  type MenuSectionProps,
+  type MenuSeparatorProps,
+  type MenuTriggerProps,
+} from './menu';
