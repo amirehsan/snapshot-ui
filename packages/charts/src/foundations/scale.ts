@@ -11,6 +11,9 @@ export function linearScale(
   const [d0, d1] = domain;
   const [r0, r1] = range;
   if (d0 === d1) return () => (r0 + r1) / 2;
+  // A span past the largest number overflows to Infinity, so such a domain is scaled by halves, which fit.
+  if (!Number.isFinite(d1 - d0))
+    return (value) => r0 + ((value / 2 - d0 / 2) / (d1 / 2 - d0 / 2)) * (r1 - r0);
   return (value) => r0 + ((value - d0) / (d1 - d0)) * (r1 - r0);
 }
 

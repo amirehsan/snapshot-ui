@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { extent, linearScale, niceDomain } from './scale';
 
 describe('linearScale', () => {
+  it('stays finite for a domain wider than a number can hold, such as -1e308 to 1e308', () => {
+    const scale = linearScale([-1e308, 1e308], [0, 100]);
+    expect(scale(0)).toBe(50);
+    expect(scale(1e308)).toBe(100);
+    expect(scale(-1e308)).toBe(0);
+  });
+
   it('maps the domain onto the range, an inverted range included', () => {
     expect(linearScale([0, 100], [0, 1])(25)).toBe(0.25);
     expect(linearScale([0, 100], [100, 0])(25)).toBe(75);
