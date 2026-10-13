@@ -28,6 +28,16 @@ Body text in the body or the small step. The muted tone is slate, for secondary 
 
 <Section>
 
+## Numerals
+
+A figure that is the point of a tile takes a numeral size. A hero amount is `size="numeral"`: 56px with tabular digits, dropping to 44px under 768px so "$12,345.67" fits a 320px screen. A tile beside others is `size="numeral-sm"`, 32px. A numeral never wraps, because a number that breaks is a wrong number, so keep it to one figure. Give it its sign and unit in the string, since nothing is formatted here.
+
+<Preview name="text-numerals" />
+
+</Section>
+
+<Section>
+
 ## Eyebrow
 
 The small capitalised label above a heading, with the accent dot. The dot hangs into the gutter, so the label lines up with the heading below it. With no gutter beside the label, `inset` keeps the dot inside the label's box. An Eyebrow is an inline-level flex box, so it sits on a line like text, and two of them can share a line. Space it from the heading with the layout, a grid or flex gap as the examples do, and not with margins.
@@ -83,6 +93,8 @@ Each one accepts every attribute of the element it renders, and a `className` th
 ## Accessibility
 
 A Heading is a real h1 to h4 element, so the page outline is what assistive technology reads, whatever size it is drawn in. An Eyebrow is a label and never a heading, so it stays out of the outline. Muted text is slate, which clears 4.5:1 on every surface.
+
+A numeral is read as the digits it shows, so the sign and the unit belong in the text, and a change line beside it says the direction in a word, never in color alone.
 
 </Section>
 

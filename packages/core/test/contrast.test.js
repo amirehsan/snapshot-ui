@@ -69,7 +69,7 @@ describe('CONTRAST_PAIRS', () => {
 
   // The field parts sit on any surface a form can: a page, a card, a note, a
   // floating panel. Each text color they use is gated on all five.
-  it.each(['ink', 'slate', 'clay', 'error'])('gates %s text on every surface', (text) => {
+  it.each(['ink', 'slate', 'clay', 'error', 'warning', 'gain'])('gates %s text on every surface', (text) => {
     const gated = CONTRAST_PAIRS.filter((pair) => pair.text === text && pair.minimum === TEXT).map(
       (pair) => pair.ground,
     );
@@ -200,8 +200,41 @@ describe('contrastFailures', () => {
   });
 });
 
+describe('the warning and gain colors', () => {
+  const surfaces = ['canvas', 'lifted', 'bone', 'float', 'raised'];
+
+  // Neither color is ever the label on a fill. Ink is the primary fill, and both measure far under the
+  // text minimum on it, so the gate holds neither there and the docs forbid it.
+  it('never gates either on an ink fill', () => {
+    const onInk = CONTRAST_PAIRS.filter(
+      (pair) => (pair.text === 'warning' || pair.text === 'gain') && pair.ground === 'ink',
+    );
+    expect(onInk).toEqual([]);
+  });
+
+  it('measures under the text minimum on an ink fill in both themes, which is why', () => {
+    const onInk = (mode, color) => {
+      const palette = paletteFor(tokens, mode);
+      return contrastRatio(parseColor(palette[color]), parseColor(palette.ink));
+    };
+    for (const mode of ['light', 'dark']) {
+      for (const color of ['warning', 'gain']) {
+        expect(onInk(mode, color), `${color} on ink in ${mode}`).toBeLessThan(TEXT);
+      }
+    }
+  });
+
+  it('gates both on exactly the five surfaces, at the text minimum', () => {
+    for (const text of ['warning', 'gain']) {
+      const gated = CONTRAST_PAIRS.filter((pair) => pair.text === text);
+      expect(gated.map((pair) => pair.ground)).toEqual(surfaces);
+      expect(gated.every((pair) => pair.minimum === TEXT)).toBe(true);
+    }
+  });
+});
+
 describe('the text colors Link and Badge draw', () => {
-  it('measures link, success, error and slate text on canvas, lifted, float and raised, and slate on bone', () => {
+  it('measures link, success, error and slate text on canvas, lifted, float and raised, slate on bone, and warning and gain on all five', () => {
     // Badge has no fill and Link draws none, so these pairs are every pair they need.
     const measured = new Set(
       CONTRAST_PAIRS.filter((pair) => pair.minimum === TEXT).map((pair) => `${pair.text} on ${pair.ground}`),
@@ -210,6 +243,12 @@ describe('the text colors Link and Badge draw', () => {
     expect(measured, 'slate on bone').toContain('slate on bone');
     for (const text of ['link', 'success', 'error', 'slate']) {
       for (const ground of ['canvas', 'lifted', 'float', 'raised']) {
+        expect(measured, `${text} on ${ground}`).toContain(`${text} on ${ground}`);
+      }
+    }
+    // The warning tone of Badge and the amount that arrived draw on those four and on bone.
+    for (const text of ['warning', 'gain']) {
+      for (const ground of ['canvas', 'lifted', 'bone', 'float', 'raised']) {
         expect(measured, `${text} on ${ground}`).toContain(`${text} on ${ground}`);
       }
     }

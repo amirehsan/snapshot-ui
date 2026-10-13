@@ -40,6 +40,13 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     </Text>,
     '<span class="copy copy-small copy-muted">Saved a minute ago.</span>',
   ],
+  [
+    'Text numeral',
+    <Text as="span" size="numeral">
+      $12,345.67
+    </Text>,
+    '<span class="copy copy-numeral">$12,345.67</span>',
+  ],
   ['Eyebrow', <Eyebrow>Workspace</Eyebrow>, '<p class="eyebrow">Workspace</p>'],
   ['Kbd', <Kbd>Esc</Kbd>, '<kbd class="kbd">Esc</kbd>'],
   ['Badge', <Badge tone="info">Beta</Badge>, '<span class="badge badge-info">Beta</span>'],

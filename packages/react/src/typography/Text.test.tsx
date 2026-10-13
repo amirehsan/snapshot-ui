@@ -22,6 +22,8 @@ describe('Text', () => {
     ['small', 'default', 'copy copy-small'],
     ['body', 'muted', 'copy copy-muted'],
     ['small', 'muted', 'copy copy-small copy-muted'],
+    ['numeral', 'default', 'copy copy-numeral'],
+    ['numeral-sm', 'muted', 'copy copy-numeral-sm copy-muted'],
   ] as const)('size %s in tone %s renders class "%s"', (size, tone, expected) => {
     render(
       <Text size={size} tone={tone}>

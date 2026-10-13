@@ -42,6 +42,7 @@ import TextAreaStates from './text-area-states';
 import TextFieldBasic from './text-field-basic';
 import TextFieldStates from './text-field-states';
 import TextFieldValidation from './text-field-validation';
+import TextNumerals from './text-numerals';
 import TextTones from './text-tones';
 import ThemeShapes from './theme-shapes';
 
@@ -90,6 +91,7 @@ export const examples = {
   'text-field-basic': TextFieldBasic,
   'text-field-states': TextFieldStates,
   'text-field-validation': TextFieldValidation,
+  'text-numerals': TextNumerals,
   'text-tones': TextTones,
   'theme-shapes': ThemeShapes,
 } satisfies Record<string, ComponentType>;
