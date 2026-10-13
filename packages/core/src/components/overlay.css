@@ -1,0 +1,50 @@
+/*
+ * The layer every overlay shares. A portaled root sits outside whatever the app styled, so `overlay`
+ * restates on it what base.css gives a page, and declares the 16px every floating panel keeps from
+ * the viewport's edge; there is no token for it, and this is the one place it is written. The scrim
+ * is Deep Well at the theme's opacity, as a background color and not `opacity`, so it never fades the
+ * panel with it. One scrim paints when modals stack: every modal overlay that is not the bottom-most
+ * carries data-stacked and goes transparent while it still catches presses. Derived in
+ * docs/design-system.md ("Overlays").
+ */
+@layer components {
+  /* Declared on both roots: a modal's scrim is the panel's parent and reads the inset for its own
+     padding, so a declaration on the panel alone would never reach it. */
+  .overlay,
+  .overlay-scrim {
+    --overlay-inset: 1rem;
+  }
+
+  .overlay {
+    box-sizing: border-box;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    text-align: start;
+  }
+
+  .overlay-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: grid;
+    /* The inline value React Aria writes on the overlay for the on-screen keyboard. */
+    height: var(--visual-viewport-height, 100dvh);
+    background-color: color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent);
+    transition: background-color 180ms ease;
+    /* Windows high contrast would repaint the scrim opaque and hide the page. */
+    forced-color-adjust: none;
+  }
+
+  .overlay-scrim:is([data-entering], [data-exiting], [data-stacked]) {
+    background-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .overlay-scrim {
+      transition: none;
+    }
+  }
+}
