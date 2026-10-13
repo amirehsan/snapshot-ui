@@ -2473,29 +2473,35 @@ link in Chromium and WebKit and by `window.find()` in Firefox, and the other
 card with its key opened and the open was stored.
 
 **The folded marker.** A folded card that holds a change shows a dot after its
-title: 8px, `--radius-dot`, Light Signal Orange, the attention cue the system
-keeps for a change, as on a changed field's edge. It shows while the card is
-folded and either `isChanged` is given or an element in the body carries
-`data-changed`, which every field's root carries while it is changed, a field
-in a nested card included. While `isChanged` is true the card's own root
-carries `data-changed` too, as a field's root does, so a collapsible card
-around it counts the change, whether the inner card is open or folded. The
-core stylesheets key `[data-changed]` only under a field's own classes, so the
-attribute draws nothing on a card. A MutationObserver on the fold watches that
-one attribute in its subtree, and the elements that come and go there, only
-while the card is folded, and is disconnected when it opens or leaves the
-page, so a large open card costs nothing. The render that folds the card reads
-the fold once, so a field changed while the card was open marks it at once.
-The dot hangs off the end of the title's words, out of the flow, a part step
-on, and is centred on their first line, as the chevron is, so a title that
-wraps keeps it beside the words a reader starts with. The words now take their
-own width and no more, and the chevron's auto margin keeps the row's end, so
-on one line the dot follows the last word. A folded title always keeps the
-dot's room, 16px, drawn or not, so the title never moves when the dot comes or
-goes; an open card keeps none, so no open card changed. While the dot shows,
-the toggle is described by `changedLabel`, "Changed" unless given, in an
-element with the `hidden` attribute after the heading, which a description may
-name, so the toggle's name and the heading's text stay the title, and a screen
+title: 8px, `--radius-dot`, in Clay, the color of the Changed chip the dot
+stands for, so it reads as unsaved work, as the chip and the chip's own dot
+do. It shows while the card is folded and either `isChanged` is given or an
+element in the body carries `data-changed`, which every field's root carries
+while it is changed, a field in a nested card included. While `isChanged` is
+true the card's own root carries `data-changed` too, as a field's root does,
+so a collapsible card around it counts the change, whether the inner card is
+open or folded. The core stylesheets key `[data-changed]` only under a field's
+own classes, so the attribute draws nothing on a card. A MutationObserver on
+the fold watches that one attribute in its subtree, and the elements that come
+and go there, only while the card is folded, and is disconnected when it opens
+or leaves the page, so a large open card costs nothing. When the card folds it
+reads the fold once, in the render that folds it or in React's check just
+after, so a field changed while the card was open marks it with no change in
+the body after the fold. The dot is out of the flow, so it moves no word, and
+it sets no inset, so it stays where the flow would put it: after the title's
+last word, on the last line, a part step on and centred on that line. It first
+hung off the end of the words' box, centred on the first line, and on a title
+that wraps the box is as wide as the room: in a 288px card, "Notification
+preferences for every workspace" on three lines put the dot 63.8px past
+"Notification" and 8px from the chevron, where it read as part of the chevron.
+It now sits 8px after "workspace" and 15.3px clear of the chevron, mirrored in
+right to left (measured in Chromium). A folded
+title always keeps the dot's room, 16px, drawn or not, so the title never
+moves when the dot comes or goes and the dot never reaches the chevron; an
+open card keeps none, so no open card changed. While the dot shows, the
+toggle is described by `changedLabel`, "Changed" unless given, in an element
+with the `hidden` attribute after the heading, which a description may name,
+so the toggle's name and the heading's text stay the title, and a screen
 reader reads the title, collapsed, then Changed. In forced colors the dot, a
 background, was painted over with the canvas and vanished (checked in Chromium
 with forced colors emulated), so the forced-colors block draws it in
@@ -2503,15 +2509,17 @@ with forced colors emulated), so the forced-colors block draws it in
 
 | Folded marker on the card's Lifted ground | Light | Dark |
 | --- | --- | --- |
-| Light Signal Orange | 2.78 | 6.07 |
+| Clay | 6.81 | 6.82 |
 
-The dot is under the 3:1 that WCAG 1.4.11 asks of a graphic that carries
-meaning, in light, as the eyebrow's dot and a changed field's edge are. It is
-accepted, and recorded rather than gated, because the dot is not where the
-meaning lives: the toggle's description carries it, so a screen reader reads
-Changed, and the dot is a cue beside the title, supplementary to it. Opening
-the card shows each changed field's clay chip, which is gated. A contrast test
-holds these two numbers and checks that no pair gates the dot.
+The dot carries meaning, and on a folded card it is the only thing a sighted
+reader sees of the change, so it is held to the 3:1 that WCAG 1.4.11 asks of
+such a graphic, and gated: the pair is in the contrast gate at 3:1, on Lifted,
+which is the ground of every card, a card nested in a card included. It was
+first Light Signal Orange, the attention cue a changed field's edge uses, at
+2.78 in light. That edge is never the only cue, since the clay chip beside it
+carries the word, and the toggle's hidden description reaches only a screen
+reader, so nothing excused the dot. Clay also measures 4.5 and over as text
+on Lifted, where the chip sets it.
 
 **Opening for an invalid field.** A folded card opens itself when a field in
 its body fails the browser's validation on submit. It listens on its root, in
@@ -2525,9 +2533,25 @@ control, during the same event, so the card renders the open inside its
 listener with `flushSync`. Without it, a submit started from script left the
 field to take focus while its card was still folded and hidden: in jsdom the
 field was focused with the card's toggle still collapsed and the panel still
-`hidden="until-found"`. In Chromium a story submits the form of a folded card,
-and the field is open, focused, and drawn whole in the window once the fold
-has settled. React Aria's other path, `validationBehavior="aria"`, sets no
+`hidden="until-found"`. The open is drawn at once, as find-in-page's is: the
+listener marks its event as a reveal before it opens the card, so every card
+that opens in that render, each card with its `storageKey` included, carries
+`data-instant` until two frames later. With the 200ms open the body was still
+0px tall and clipped when the field took focus, so the browser scrolled the
+body and not the page, and the field ended out of view. Measured in Chromium
+in an 800 by 700 window, with motion, a required field after 20 others in a
+folded card: focused at 2426px before, at 326px after, as under reduced
+motion; a plain `required` input after 20 fields, which the browser focuses
+itself, at 2424px before and 679px after; and the field in the lower of two
+folded cards with one key, below 20 fields in the upper, at 2601px before and
+539px after. A story submits a folded card whose required field follows 20
+others and checks that the field is focused inside the window. This covers
+every field the browser validates, a React Aria field or a plain one, open or
+folded by a remembered key, with or without motion. The browser fires
+`invalid` at each control that fails, one after another in the same task, so
+the card opens, or asks a controlled card's parent to, once for all of them:
+a controlled card that stayed folded was first asked once per failing field.
+React Aria's other path, `validationBehavior="aria"`, sets no
 `required` attribute and no custom validity, so the browser finds nothing
 wrong, fires no `invalid` event and submits the form. A folded card then stays
 folded, the docs say so, and an app that validates that way opens the card

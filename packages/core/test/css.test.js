@@ -962,11 +962,11 @@ describe('src/components/card.css, the collapsible card', () => {
     }
   });
 
-  it('draws in tokens only: a slate chevron that turns ink, and a light signal orange marker', () => {
+  it('draws in tokens only: a slate chevron that turns ink, and a clay marker', () => {
     const colors = all()
       .filter(({ selector }) => COLLAPSIBLE.test(selector))
       .flatMap(({ body }) => [...body.matchAll(/var\((--color-[a-z-]+)\)/g)].map(([, name]) => name));
-    expect([...new Set(colors)].sort()).toEqual(['--color-ink', '--color-signal-light', '--color-slate']);
+    expect([...new Set(colors)].sort()).toEqual(['--color-clay', '--color-ink', '--color-slate']);
     expect(blockAfter(rules(), '.card-chevron {')).toContain('color: var(--color-slate);');
   });
 
@@ -1131,21 +1131,23 @@ describe('src/components/card.css, the collapsible card', () => {
     expect(blockAfter(css, '.card-chevron {')).toContain('margin-block: calc((1lh - 24px) / 2);');
   });
 
-  it('draws the folded marker as an 8px light signal orange dot after the title, level with its first line', () => {
+  it('draws the folded marker as an 8px clay dot after the last word of the title, level with its line', () => {
     const css = rules();
     const dot = blockAfter(css, '.card-marker {');
     expect(dot).toContain('width: 8px;');
     expect(dot).toContain('height: 8px;');
     expect(dot).toContain('border-radius: var(--radius-dot);');
-    expect(dot).toContain('background-color: var(--color-signal-light);');
-    // Out of the flow, from the end of the title's words, which it sits in, and centred on their first line.
+    // Clay, the color of the Changed chip it stands for, which measures over 3:1 on the card in both modes.
+    expect(dot).toContain('background-color: var(--color-clay);');
+    // Out of the flow, so it never moves a word. With no inset it stays where the flow would put it, after
+    // the last word, on the last line, and the margins take it a part step on and centre it on that line.
     expect(dot).toContain('position: absolute;');
-    expect(dot).toContain('inset-inline-start: calc(100% + var(--spacing-part));');
-    expect(dot).toContain('inset-block-start: calc((1lh - 8px) / 2);');
+    expect(dot).not.toMatch(/(?:^|;\s*)(?:inset|top|left|right|bottom)[a-z-]*\s*:/);
+    expect(dot).toContain('margin-inline-start: var(--spacing-part);');
+    expect(dot).toContain('margin-block-start: calc((1lh - 8px) / 2);');
     const text = blockAfter(css, '.card-toggle-text {');
     expect(text).toContain('position: relative;');
-    // The words take only their own width, so the dot follows the last word of a title on one line, and the
-    // chevron keeps the end of the row.
+    // The words take only their own width, and the chevron keeps the end of the row.
     expect(text).toContain('flex: 0 1 auto;');
     expect(blockAfter(css, '.card-chevron {')).toContain('margin-inline-start: auto;');
     // The marker's words are hidden by the hidden attribute, so no rule draws them, and none can undo it.

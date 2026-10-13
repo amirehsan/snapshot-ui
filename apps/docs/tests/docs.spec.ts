@@ -1269,7 +1269,7 @@ test('a folded collapsible card on its page marks the change it holds, and drops
   // with no hydration warning.
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(dot).toBeVisible();
-  await expect(dot).toHaveCSS('background-color', 'rgb(243, 115, 56)');
+  await expect(dot).toHaveCSS('background-color', 'rgb(154, 58, 10)');
   await expect(toggle).toHaveAccessibleDescription('Changed');
   await expect(page.getByRole('heading', { name: 'Workspace', exact: true })).toBeVisible();
   expect(errors).toEqual([]);

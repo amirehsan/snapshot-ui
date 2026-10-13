@@ -51,6 +51,8 @@ export const CONTRAST_PAIRS = [
     minimum: TEXT,
     shows: `the changed marker on ${ground}`,
   })),
+  // The folded collapsible card's dot, a graphic that carries meaning, on the card it sits on.
+  { text: 'clay', ground: 'lifted', minimum: NON_TEXT, shows: 'the folded card marker on lifted' },
   ...['canvas', 'lifted', 'bone', 'float', 'raised'].map((ground) => ({
     text: 'error',
     ground,
