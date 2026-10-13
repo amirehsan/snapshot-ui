@@ -197,7 +197,8 @@
 
   /*
    * An option drawn under the target is hit at it, from the one formula every
-   * control shares. The small size's 32px option reaches over the track's 4px
+   * control shares, which reads the option's own height, 100%: an option has
+   * no border, so that is its full height. The small size's 32px option reaches over the track's 4px
    * of padding and edge, which is all there is between one control and the
    * next, so nothing shifts. A 28px compact option reaches 6px, 2px past its
    * track, as a compact button does. A 40px option, and a compact one on a
@@ -207,7 +208,7 @@
   .segmented:not([data-stacked]) .segmented-option::before {
     content: '';
     position: absolute;
-    inset-block: calc(-1 * max(0px, (var(--size-target) - var(--segmented-option-height)) / 2));
+    inset-block: min(0px, (100% - var(--size-target)) / 2);
     inset-inline: 0;
   }
 

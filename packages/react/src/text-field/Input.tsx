@@ -13,7 +13,7 @@ export interface InputProps extends RACInputProps {
 }
 
 /**
- * The text control: a 48px pill on the raised fill. Inside a React Aria field
+ * The text control: a pill on the raised fill, `--size-field` tall (48px, 36px in compact). Inside a React Aria field
  * it takes the field's label, hint and error. On its own, give it an
  * `aria-label`. `TextField` renders one; use this directly for a custom layout.
  */

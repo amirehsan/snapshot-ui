@@ -43,14 +43,16 @@
       color 120ms ease;
   }
 
-  /* The hit area, from the one formula every control shares: 2px a side for
-     a 36px compact circle, and nothing for one 40px or larger. It is out of
-     the flow, so nothing moves. */
+  /* The hit area, from the one formula every control shares. A positioned
+     child measures from inside the border, so the formula reads the padding
+     box, 100%, and not the token: a 36px compact circle is hit at 40, a 40px
+     one at exactly its border box, and a 44px one on touch at its own size.
+     It is out of the flow, so nothing moves. */
   .icon-button::before {
     content: '';
     position: absolute;
     inset-inline: 0;
-    inset-block: calc(-1 * max(0px, (var(--size-target) - var(--size-control)) / 2));
+    inset-block: min(0px, (100% - var(--size-target)) / 2);
   }
 
   .icon-button-outline {

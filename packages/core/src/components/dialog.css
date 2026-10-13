@@ -46,7 +46,9 @@
     outline: none;
   }
 
-  .dialog-close {
+  /* Two classes, so it outranks the icon button's own position: relative
+     whatever order the two files load in. */
+  .icon-button.dialog-close {
     position: absolute;
     inset-block-start: 1.5rem;
     inset-inline-end: 1.5rem;
@@ -60,7 +62,7 @@
   }
 
   .dialog-head-with-close {
-    padding-inline-end: 2.5rem;
+    padding-inline-end: var(--size-control);
   }
 
   .dialog-well {
