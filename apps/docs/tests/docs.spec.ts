@@ -309,6 +309,38 @@ test('the corner switch recuts the page and persists', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('data-shape', 'square');
 });
 
+/** The height an element draws, in CSS pixels. */
+const drawnHeight = async (locator: Locator): Promise<number> => {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error('The element is not drawn');
+  return box.height;
+};
+
+test('the theming page draws compact controls at 36px beside comfortable ones at 40', async ({ page }) => {
+  await visit(page, '/docs/theming');
+  const compact = page.locator('.density-sample[data-density="compact"]');
+  const comfortable = page.locator('.density-sample:not([data-density])');
+  await expect(compact).toHaveCount(1);
+  await expect(comfortable).toHaveCount(1);
+  expect(await drawnHeight(compact.locator('.button'))).toBe(36);
+  expect(await drawnHeight(compact.locator('.input'))).toBe(36);
+  expect(await drawnHeight(comfortable.locator('.button'))).toBe(40);
+  expect(await drawnHeight(comfortable.locator('.input'))).toBe(48);
+});
+
+test('a docs card pads 20px on a phone through --spacing-card', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await visit(page, '/docs/theming');
+  // The section is a library card, and its note's band bleeds through the same padding.
+  const section = page.locator('.docs-section').first();
+  const note = page.locator('.docs-section > h2 + p').first();
+  await expect(section).toHaveCSS('padding-top', '20px');
+  await expect(note).toHaveCSS('margin-left', '-20px');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(section).toHaveCSS('padding-top', '32px');
+  await expect(note).toHaveCSS('margin-left', '-32px');
+});
+
 test('Cmd or Ctrl and K opens search and finds a component', async ({ page }) => {
   await visit(page, '/docs');
   await page.keyboard.press('ControlOrMeta+k');

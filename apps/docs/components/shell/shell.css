@@ -781,15 +781,6 @@
       grid-template-columns: 1fr;
     }
 
-    .card {
-      padding: 24px 20px;
-    }
-
-    .card-header {
-      margin: 0 -20px 24px;
-      padding: 0 20px 20px;
-    }
-
     .stage {
       min-height: 0;
       padding: 24px 16px;
@@ -868,11 +859,12 @@
   }
 
   /* The paragraph right after a section's title is its note: slate, with the
-     header band's rule running edge to edge beneath it. */
+     header band's rule running edge to edge beneath it, through the card's own
+     padding, which the site narrows on a phone. */
   .docs-section > h2 + p {
     max-width: none;
-    margin: calc(var(--spacing-part) - var(--spacing-peer)) calc(var(--spacing-separate) * -1) 0;
-    padding: 0 var(--spacing-separate) var(--spacing-peer);
+    margin: calc(var(--spacing-part) - var(--spacing-peer)) calc(var(--spacing-card) * -1) 0;
+    padding: 0 var(--spacing-card) var(--spacing-peer);
     border-bottom: 1px solid var(--color-divider);
     color: var(--color-slate);
   }
@@ -906,13 +898,6 @@
 
   .docs-section pre:not(.shiki) span {
     color: var(--color-charcoal) !important;
-  }
-
-  @media (width < 768px) {
-    .docs-section > h2 + p {
-      margin-inline: -20px;
-      padding-inline: 20px;
-    }
   }
 
   /* ---- Preview ------------------------------------------------------------ */

@@ -27,6 +27,7 @@ type Story = StoryObj<typeof meta>;
 
 /** A label and a control. The placeholder is taupe and never replaces the label. */
 export const Default: Story = {
+  tags: ['density'],
   play: async ({ canvas }) => {
     const input = canvas.getByRole('textbox', { name: 'Workspace name' });
     await expect(input).toHaveAttribute('placeholder', 'Northwind Studio');

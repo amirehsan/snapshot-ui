@@ -189,6 +189,15 @@
       background-color 200ms ease;
   }
 
+  /* A card cannot know how wide the column around it is, and the site can, so
+     the site narrows every card's padding on a phone through the token the
+     card reads. In this layer, so it beats the theme layer's :root. */
+  @media (width < 768px) {
+    :root {
+      --spacing-card: 20px;
+    }
+  }
+
   .stack {
     display: grid;
     gap: var(--spacing-peer);
@@ -314,6 +323,27 @@
   .code pre:focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
+  }
+
+  /* ---- Density ------------------------------------------------------------ */
+  /* The theming page's two densities, side by side, and stacked on a phone. */
+  .density-samples {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-peer);
+    width: 100%;
+  }
+
+  @media (width < 768px) {
+    .density-samples {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .density-sample {
+    display: grid;
+    gap: var(--spacing-part);
+    align-content: start;
   }
 }
 

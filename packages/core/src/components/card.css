@@ -1,15 +1,15 @@
 /*
  * Card, the design system's panel section: Lifted Cream laid on the canvas,
- * a stadium corner and 32px of padding. The header is a band ruled off from
- * the body; its negative margins take the rule to the card's edges, which is
- * what makes it a band rather than an underline on the text. Derived in
- * docs/design-system.md ("Card").
+ * a stadium corner and 32px of padding, 20px under compact density. The
+ * header is a band ruled off from the body; its negative margins take the
+ * rule to the card's edges, which is what makes it a band rather than an
+ * underline on the text. Derived in docs/design-system.md ("Card").
  */
 @layer components {
   .card {
     box-sizing: border-box;
     min-width: 0;
-    padding: var(--spacing-separate);
+    padding: var(--spacing-card);
     /* Transparent in light and white 12% in dark, so the box never reflows
        when the color mode changes. */
     border: 1px solid var(--color-hairline);
@@ -35,11 +35,14 @@
     border-radius: var(--radius-surface);
   }
 
+  /* The bleed and the space under the band are the card's own padding. Under
+     the title it is the peer step or the padding, whichever is less: 24px, and
+     20px in a compact card, so the space inside one is 20px everywhere. */
   .card-header {
     display: grid;
     gap: var(--spacing-part);
-    margin: 0 calc(var(--spacing-separate) * -1) var(--spacing-separate);
-    padding: 0 var(--spacing-separate) var(--spacing-peer);
+    margin: 0 calc(var(--spacing-card) * -1) var(--spacing-card);
+    padding: 0 var(--spacing-card) min(var(--spacing-peer), var(--spacing-card));
     border-bottom: 1px solid var(--color-divider);
   }
 

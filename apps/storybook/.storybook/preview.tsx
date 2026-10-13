@@ -8,6 +8,7 @@ const withTokens: Decorator = (Story, { globals }) => {
   const root = document.documentElement;
   root.dataset.theme = String(globals.theme ?? 'light');
   root.dataset.shape = String(globals.shape ?? 'rounded');
+  root.dataset.density = String(globals.density ?? 'comfortable');
   return <Story />;
 };
 
@@ -38,10 +39,23 @@ const preview: Preview = {
         dynamicTitle: true,
       },
     },
+    density: {
+      description: 'Density',
+      toolbar: {
+        title: 'Density',
+        icon: 'grow',
+        items: [
+          { value: 'comfortable', title: 'Comfortable' },
+          { value: 'compact', title: 'Compact' },
+        ],
+        dynamicTitle: true,
+      },
+    },
   },
   initialGlobals: {
     theme: 'light',
     shape: 'rounded',
+    density: 'comfortable',
   },
   decorators: [withTokens],
   parameters: {

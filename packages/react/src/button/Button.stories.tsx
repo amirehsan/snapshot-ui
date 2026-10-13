@@ -14,9 +14,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Primary: Story = {};
+export const Primary: Story = { tags: ['density'] };
 
-export const Secondary: Story = { args: { variant: 'secondary', children: 'Preview' } };
+export const Secondary: Story = { tags: ['density'], args: { variant: 'secondary', children: 'Preview' } };
 
 export const Tertiary: Story = { args: { variant: 'tertiary', children: 'Discard' } };
 

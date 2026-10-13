@@ -2426,18 +2426,19 @@ The document's panel section becomes `Card`, with a header, a title, a note
 and a body. Lifted Cream, the stadium corner and 32px of padding come straight
 from the document. Seven things were derived.
 
-- **The padding is a spacing step.** It reads `--spacing-separate`, the step
-  for "section header to its body", so the space around a card's content and
-  the space between its header and body are one number. The header's rule
+- **The padding is a spacing step.** It reads `--spacing-card`, 32px, the size
+  of the separate step, "section header to its body", so the space around a
+  card's content and the space between its header and body are one number. The header's rule
   reaches the card's edges through negative margins of the same size, so the
   two cannot drift apart. The rule is `--color-divider`, the app's ink at 10%
   under its own token, and the border is `--color-hairline`, which is why the
   box does not move when the color mode changes.
-- **The card does not narrow on a phone.** The document asks for about 24px of
-  padding on mobile. A card cannot know how wide the column around it is, only
-  the page can, and a card in a narrow dialog on a wide screen would never
-  step down. So the card is 32px everywhere, and a site that wants less on a
-  phone sets it where it knows the width.
+- **The card's padding is `--spacing-card`**, 32px, and 20px under
+  `data-density="compact"`. A card cannot know how wide the column around it
+  is, so a site that wants 20px on a phone sets `--spacing-card` under its own
+  media query, as the docs site does; the under-title padding is
+  `min(var(--spacing-peer), var(--spacing-card))`, so the rule inside a compact
+  card is 20px everywhere.
 - **The header is a div.** A `<header>` outside sectioning content is the
   page's banner. A card is a div unless it is told otherwise, so every card
   header at page level would add a banner, and axe fails two of them as
@@ -2766,9 +2767,10 @@ Sans, the body size, line height and weight, and `text-align: start`. The app
 restated the font on its dialog for the same reason. The page under an
 overlay never sees a library class.
 
-**The inset.** `overlay` also declares `--overlay-inset: 1rem`, the 16px the
-app's rail, save bar and toast all keep from the viewport's edge. There is no
-token for it, and `overlay.css` is the one place it is written. It is
+**The inset.** `overlay` also declares `--overlay-inset` as
+`var(--spacing-inset)`, the 16px the app's rail, save bar and toast all keep
+from the viewport's edge. It reads `--spacing-inset`, which `## Floating chrome
+and the shell` derives, and `overlay.css` is the one place it is declared. It is
 declared on `overlay-scrim` too, in the same rule: a modal's scrim is the
 panel's parent and reads the inset for its own padding, and a custom property
 declared on the panel never reaches its parent, so the scrim would have none.

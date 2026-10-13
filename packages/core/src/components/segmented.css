@@ -40,8 +40,9 @@
   }
 
   /*
-   * A row of 40px options is 48px tall, the height of the field's input: 40px
-   * of option and 4px each side, which is 3px of padding and the 1px edge.
+   * A row of options is as tall as a field, the height of the field's input:
+   * 40px of option and 4px each side, which is 3px of padding and the 1px
+   * edge, so 48px, and 28px of option in a 36px track under compact density.
    * The height is set, not left to add up, because the firmer 1.5px edge a
    * changed or invalid control draws is a width the browser may snap to a whole
    * device pixel, and a height that depended on it would jump with the state.
@@ -52,7 +53,7 @@
    * that is how the component sees it: it compares the track with the room.
    */
   .segmented-track {
-    --segmented-option-height: 2.5rem;
+    --segmented-option-height: calc(var(--size-field) - 0.5rem);
     --segmented-radius: var(--radius-pill);
 
     box-sizing: border-box;
@@ -182,13 +183,9 @@
     outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
   }
 
-  /*
-   * The compact size is drawn at 32px and hit at 40px: the pseudo-element
-   * reaches over the track's 4px of padding and edge, which is all there is
-   * between one control and the next, so nothing shifts.
-   */
+  /* The small size is a track as tall as a control: 32px of option in 40px. */
   .segmented-sm .segmented-track {
-    --segmented-option-height: 2rem;
+    --segmented-option-height: calc(var(--size-control) - 0.5rem);
 
     gap: 0.125rem;
   }
@@ -198,24 +195,34 @@
     font-size: var(--text-small);
   }
 
-  .segmented-sm:not([data-stacked]) .segmented-option::before {
+  /*
+   * An option drawn under the target is hit at it, from the one formula every
+   * control shares. The small size's 32px option reaches over the track's 4px
+   * of padding and edge, which is all there is between one control and the
+   * next, so nothing shifts. A 28px compact option reaches 6px, 2px past its
+   * track, as a compact button does. A 40px option, and a compact one on a
+   * touch screen, which is 36px in a 44px track, reach 0px and 2px, inside
+   * their track. Stacked rows are the target's height already.
+   */
+  .segmented:not([data-stacked]) .segmented-option::before {
     content: '';
     position: absolute;
-    inset-block: -0.25rem;
+    inset-block: calc(-1 * max(0px, (var(--size-target) - var(--segmented-option-height)) / 2));
     inset-inline: 0;
   }
 
   /*
    * Stacked: the same track and the same pills, turned to a column. Every
-   * option is 40px, whatever the size, so the rows are real targets that do
-   * not overlap. Labels start at the left, as a list's options do, because a
-   * column is read down its left edge. The track takes the surface corner
-   * instead of the pill's: a pill's corner is half the height, which on a
-   * column is a blob, and the surface step is the 24px the row had, with the
-   * options 4px inside it at 20px.
+   * option is as tall as the target or a control, whichever is more, so 40px,
+   * and 44px under compact density on a touch screen, whatever the size: the
+   * rows are real targets, and their hit areas never overlap. Labels start at
+   * the left, as a list's options do, because a column is read down its left
+   * edge. The track takes the surface corner instead of the pill's: a pill's
+   * corner is half the height, which on a column is a blob, and the surface
+   * step is the 24px the row had, with the options 4px inside it at 20px.
    */
   .segmented[data-stacked] .segmented-track {
-    --segmented-option-height: 2.5rem;
+    --segmented-option-height: max(var(--size-target), var(--size-control));
     --segmented-radius: var(--radius-surface);
 
     flex-direction: column;

@@ -35,6 +35,7 @@ export const Basic: Story = {
 
 /** The title is the card's heading and names the region when the card is a section. */
 export const WithHeaderAndNote: Story = {
+  tags: ['density'],
   render: (args) => (
     <Card {...args} as="section" aria-labelledby="notifications-title">
       <CardHeader>
