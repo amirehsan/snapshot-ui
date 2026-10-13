@@ -732,7 +732,9 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/drawer">
                   Drawer
                 </Link>
-                <span className="chip">Command palette</span>
+                <Link className="chip" href="/docs/components/command-palette">
+                  Command palette
+                </Link>
                 <span className="chip">Sidebar</span>
                 <span className="chip">Save bar</span>
               </div>
@@ -781,6 +783,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/card">Card</Link>
                 <Link href="/docs/components/checkbox">Checkbox</Link>
                 <Link href="/docs/components/collapsible-card">Collapsible card</Link>
+                <Link href="/docs/components/command-palette">Command palette</Link>
                 <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
                 <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/drawer">Drawer</Link>

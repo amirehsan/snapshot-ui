@@ -287,8 +287,8 @@ test('the footer lists every component page in the rail order, and a catalog chi
     const slug = slugs.get(chip.name.toLowerCase());
     expect(chip.href, chip.name).toBe(slug ? `/docs/components/${slug}` : null);
   }
-  // Button, Icon button, the six form controls, Dialog, Drawer, Menu and Toast have pages.
-  expect(chips.filter((chip) => chip.href)).toHaveLength(12);
+  // Button, Icon button, the six form controls, Dialog, Drawer, Menu, Toast and Command palette have pages.
+  expect(chips.filter((chip) => chip.href)).toHaveLength(13);
 });
 
 test('the homepage switches corners and remembers them', async ({ page }) => {

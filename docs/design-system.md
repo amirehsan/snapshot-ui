@@ -4087,3 +4087,145 @@ the shell, as the page teaches. Mounted inside an example, the host sat in a
 tab panel, which hides with `display: none` while its code shows, and the
 other example's polite toasts went unannounced; outside the shell it is never
 in the workspace the drawer makes inert either.
+
+## CommandPalette
+
+The app's palette was a dialog near the top of the viewport, opened and closed
+by Cmd or Ctrl+K. Focus stayed in its field while the arrows moved the active
+row; every typed word had to match; the last five chosen items were
+remembered, and one the index no longer had was dropped rather than shown with
+a stale name; Escape closed it at once; and it closed before the app
+navigated, so the focus it gave back landed before the app moved it on. The
+library keeps all of it, on React Aria's Modal, Dialog and Autocomplete over
+the Menu's rows ("Menu"), and adds what the app's index did not need: sections,
+a manual mode for results that come from a server, a loading state, and a
+status line. Its look is not the app's stadium panel. It is the docs site's
+search dialog, already drawn on the tokens and checked in both themes: a
+floating surface takes the popup's 24px corner wherever it opens ("Overlays").
+
+**The surface.**
+
+| Part | Value | Why |
+| --- | --- | --- |
+| Scrim | `align-content: start; justify-items: center; padding: 12vh var(--overlay-inset) var(--overlay-inset)` | the docs dialog's 12vh anchor: the field stays put and the list grows down from it, which is steady to read while it changes |
+| Surface | `width: min(40rem, 100%)`; `max-height: min(35rem, calc(88dvh - 1rem))`; `--color-float`, `1px solid var(--color-frame)`, `--radius-surface`, `--shadow-float`; a column that clips | the docs dialog's 640px and 560px; the height is the room under the anchor less the bottom inset, so 12vh, the surface and 1rem make the viewport; the popup's edge, corner and shadow |
+| Field row | `display: flex; align-items: center; gap: 0.75rem; padding: 1rem var(--spacing-peer)`, a divider under it; the 20px slate glass, the field, the spinner while loading, then the Esc key | the docs field's 16px by 20px, regularized onto the peer step; the Esc key sits where the hand reaches to close |
+| Field | `--text-body`, no border, no fill, `outline: none` | the field is the row; its focus is the line below |
+| Placeholder | `--color-slate`, `opacity: 1` | the field's only visible name, so it is read: an exception, below |
+| Body | `flex: 1 1 auto; min-height: min(20rem, 50dvh); overflow-y: auto; overscroll-behavior: contain` | the docs body's floor: one height whether nothing is typed, nothing matches or the list is long, and a longer list scrolls here, the one scroller |
+| Rows | the Menu's list and rows, inline, with no popover; the list's own overflow is `visible` | the rows every list popup shares; the body scrolls, not the list |
+| End value | the Menu's `menu-item-end`: `--text-small`, ink, tabular figures, before the key | an amount belongs to its row, at its end, and reads in columns |
+| Active row, keyboard (`[data-focus-visible]`) | the ink fill; label, icon and end value canvas; the description canvas at 70%; the key chip canvas at 20% with canvas text; no ring | DOM focus never leaves the field, so this is the keyboard user's only focus indicator and must be strong; React Aria sets `data-focus-visible` only when the keyboard moved the row |
+| Active row, pointer (`[data-focused]` alone) | the Menu's 5% wash | the pointer is not choosing yet; hover moves the row, a press chooses |
+| Empty line | `padding: var(--spacing-peer)`, slate, centred | a hint, centred in the body's floor |
+| Status line | clipped to 1px, never `display: none` | it must stay in the accessibility tree |
+| Footer | the up and down keys with "to move", the return key with "to open"; `--text-small`, slate, a divider above; hidden under `@media (pointer: coarse)` | the docs dialog's hints; a phone has no keys to hint |
+| Motion | the dialog's 180ms fade and 8px rise; none under reduced motion | the Dialog's ("Dialog and ConfirmDialog") |
+
+**The placeholder, an exception.** Placeholders are taupe, the whisper
+("TextField"), because a field has a visible label above it and the
+placeholder only shows an example. The palette has no visible label: its name
+is the dialog's, given to assistive technology, and the placeholder is the
+only words a sighted reader gets for what the field searches. So it is slate,
+a hint that is read: 5.49 in light and 6.94 in dark on float, a pair the gate
+already holds as text. It is the one recorded exception to the taupe
+placeholder rule.
+
+**Measured on the active row.** The canvas color on ink is gated as text:
+16.25 in light and 19.31 in dark. The description on the ink fill is canvas at
+70%, a mix and not a token, measured with the gate's composite and pinned by
+the Menu's test for the same pill: 8.34 and 7.31. The end value at rest is ink
+on float, gated. Nothing new joins the gate; `contrast.test.js` cites the three
+pairs the palette rests on.
+
+**The focus line.** The spec drew it as a border color plus a 1px box-shadow.
+The token-only rule rejects any `box-shadow` with literal lengths, even in a
+token color, so the line is what the docs field already draws: a
+`::after` 2px tall, the ring width, laid over the divider at the row's bottom,
+transparent until the field is `:focus-visible` and then
+`--focus-ring-color`. Nothing moves when it shows. In forced colors a fill does
+not survive, so the field's own outline comes back (`outline: auto`).
+
+**Forced colors.** The repaint drops the ink fill, which is the only sign of
+the active row, so that row is drawn in `Highlight` with `HighlightText`, and
+its parts follow it, as on the Menu's chosen row: the icon, the second line
+and the end value in `HighlightText`, and the key chip as its island of the
+system `canvas` with `CanvasText`. Each rule is as specific as the ink rule it
+overrides and comes after it. The surface's frame is redrawn in `CanvasText`.
+A docs test reads every part on the active row.
+
+**The quiet period.** The status line, `role="status"` and in the page from
+the palette's first render, says the count 600ms after typing pauses; each
+keystroke cancels the pending one, so it never talks over the letters being
+typed. It says nothing while the field is empty, and nothing while the app is
+loading: when the results land it says their count. 600ms is the quiet period
+the Pagination digest chose, so the library has one number. The count is the
+items the default filter keeps, or every item in manual mode.
+
+**The filter.** An item stays when every word of the query, split at
+whitespace, appears in its label, its second line or its keywords, through
+React Aria's `useFilter({ sensitivity: 'base' }).contains`, so case and accents
+do not count. React Aria's collection filter hides a section none of whose
+items stay. The filter applies only once there is text. A caller's `filter` is
+given the item itself and the query; `filter={null}` is manual mode, in which
+the app searches, ranks and caps, and the list is what `items` holds, still
+grouped into its sections. While the app loads, the empty line waits too: a
+list still loading has not yet found nothing.
+
+**The shortcut.** Tokens joined by `+`: the modifiers `Mod`, `Shift` and
+`Alt`, in any order and case, then one key compared with `event.key` without
+case. `Mod` is `metaKey` or `ctrlKey`, either, with no platform sniffing, and a
+modifier that is not listed must be up. A typo, such as `Ctrl+K`, throws as the
+palette mounts. One `keydown` listener on the document, in the bubble phase,
+while the palette is mounted: it leaves a key an editor has already handled
+(`defaultPrevented`) and a key typed while composing, and does nothing while
+another modal is in the overlay stack, so a confirm dialog is never skipped
+past. When it acts it takes the key. It toggles: from inside the field, React
+Aria hands the key on to the list, and it reaches the listener from there.
+
+**Close, then act.** Choosing records the item in the recents, closes the
+palette, which tells `onOpenChange(false)`, and waits. The panel leaves after
+React Aria's exit animation; the frame's unmount call fires then; React Aria's
+focus scope gives focus back in the next animation frame; and `onAction(item)`
+runs one frame after that, with the item as the app passed it. React Aria's
+`onExit` fires when the exit starts, not when it ends, so the palette waits on
+the unmount instead. The app's palette closed first for the same reason: focus
+given back after the app has moved it would undo the move, and the last word
+is the app's. The `OnActionKeepsFocus` story pins it in a real browser: a field
+that `onAction` focuses still has focus two frames later.
+
+**Recents.** With `storageKey`, one `localStorage` entry per key,
+`snapshot-ui:recent:<storageKey>`, a JSON list of ids as strings, newest first,
+cut to `recentLimit` (5). A chosen item moves to the front and never doubles.
+It is read through `useSyncExternalStore`, with the `storage` event for other
+tabs and an empty snapshot on the server, so the server's HTML and the first
+render agree, and kept in memory while a palette with the key is on the page,
+so a choice is still listed where storage refuses it. Unreadable JSON, a list
+that is not one, blocked storage and a refused write mean no history and no
+error. With `recentIds` the app owns the list: the palette stores nothing and
+hands the new list to `onRecentChange`. Only ids still in `items` are shown,
+under a Recent section, while the field is empty; their rows carry keys of
+their own, `recent:<id>`, so the list's keys stay unique, and choosing one runs
+`onAction` with the item, not its copy.
+
+**The list: Menu, with ListBox in reserve.** The rows are the Menu's, a true
+`role="menu"` behind the field's `aria-activedescendant`, because the palette's
+items are actions. Whether a screen reader reads that pair well is the owner's
+check, in VoiceOver and NVDA, before the shell ships it; it is pending. If it
+reads badly, the list becomes React Aria's `ListBox` with
+`selectionMode="none"` and `onAction`, which takes the same rows, at no change
+to the props. The stories skip two of axe's checks, each on one element: the
+Menu's label-in-name check on its rows ("Menu"), and the scrollable-region
+check on the body. The field owns the list through `aria-controls` and
+`aria-activedescendant`, as a combobox owns its popup, which axe exempts; the
+arrows, Home, End and the page keys move the active row and React Aria scrolls
+it into view. A tab stop on the body would make the field no longer the
+dialog's only one.
+
+**Scope and direction.** The frame records what held focus when the palette
+opened, before the field's `autoFocus` takes it, and copies its theme, shape
+and density onto the surface: opened by a button in a dark card the palette is
+dark, and opened by the shortcut from the page it is the page's. `dir` comes
+from the locale. The glass is first in the row and the Esc key last, so in
+right to left they swap ends; the label, the end value and the key keep their
+reading order, and every value is logical.

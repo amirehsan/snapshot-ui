@@ -1562,3 +1562,64 @@ test('an error toast is an alert', async ({ page }) => {
   await shown.getByRole('button', { name: 'Dismiss' }).click();
   await expect(shown).toHaveCount(0);
 });
+
+test('the command palette page opens on its shortcut, filters, moves, and acts after the close', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/command-palette');
+  const trigger = page.getByRole('button', { name: 'Search the app' });
+  await trigger.focus();
+  // This site's own search owns Cmd or Ctrl+K, so the example listens for Cmd or Ctrl+J.
+  await page.keyboard.press('ControlOrMeta+j');
+  const palette = page.getByRole('dialog', { name: 'Search the app' });
+  await expect(palette).toBeVisible();
+  const field = palette.getByRole('textbox', { name: 'Search the app' });
+  await expect(field).toBeFocused();
+  await field.pressSequentially('bud');
+  const budgets = palette.getByRole('menuitem', { name: 'Budgets' });
+  await expect(palette.getByRole('menuitem')).toHaveCount(1);
+  await page.keyboard.press('ArrowDown');
+  // The field keeps DOM focus, and points at the active row.
+  await expect(field).toBeFocused();
+  await expect(field).toHaveAttribute('aria-activedescendant', (await budgets.getAttribute('id')) ?? '');
+  await page.keyboard.press('Enter');
+  await expect(palette).toHaveCount(0);
+  // Focus is back on what held it before the palette opened, and then the example says what was opened.
+  await expect(trigger).toBeFocused();
+  await expect(page.getByText('Opened Budgets.')).toBeVisible();
+  await expect(trigger).toBeFocused();
+});
+
+test.describe('the command palette page, on a touch screen', () => {
+  test.use({ hasTouch: true, viewport: { width: 375, height: 760 } });
+
+  test('the palette hides its key hints on a touch screen', async ({ page }) => {
+    await visit(page, '/docs/components/command-palette');
+    await page.getByRole('button', { name: 'Search the app' }).tap();
+    const palette = page.getByRole('dialog', { name: 'Search the app' });
+    await expect(palette).toBeVisible();
+    await expect(palette.locator('.command-palette-footer')).toBeHidden();
+    // The surface is the screen less 16px on each side, and nothing scrolls sideways.
+    const box = await page.locator('.command-palette').boundingBox();
+    if (!box) throw new Error('No surface');
+    expect(box.width).toBeCloseTo(375 - 32, 0);
+    expect(await sideways(page)).toBe(0);
+  });
+});
+
+test('the palette remembers recents across a reload', async ({ page }) => {
+  await visit(page, '/docs/components/command-palette');
+  const trigger = page.getByRole('button', { name: 'Search the app' });
+  await trigger.click();
+  const palette = page.getByRole('dialog', { name: 'Search the app' });
+  await expect(palette.getByRole('group', { name: 'Recent' })).toHaveCount(0);
+  await palette.getByRole('textbox', { name: 'Search the app' }).pressSequentially('rent');
+  await palette.getByRole('menuitem', { name: 'Rent' }).click();
+  await expect(palette).toHaveCount(0);
+  await expect(page.getByText('Opened Rent.')).toBeVisible();
+  await page.reload();
+  await settled(page);
+  await trigger.click();
+  const recent = palette.getByRole('group', { name: 'Recent' });
+  await expect(recent.getByRole('menuitem', { name: 'Rent' })).toBeVisible();
+});

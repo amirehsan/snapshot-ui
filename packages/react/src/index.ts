@@ -112,3 +112,9 @@ export {
   type ToastRegionProps,
   type ToastTone,
 } from './toast';
+export {
+  CommandPalette,
+  type CommandPaletteItem,
+  type CommandPaletteLabels,
+  type CommandPaletteProps,
+} from './command-palette';

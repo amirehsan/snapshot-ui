@@ -313,6 +313,44 @@ describe('the toast', () => {
   });
 });
 
+describe('the command palette', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The palette has no visible label, so its placeholder is the field's only visible name and is read: it is
+  // slate, not taupe, and slate on the float surface is already gated at the text minimum.
+  it('cites slate on float, which the gate holds at the text minimum, for the placeholder', () => {
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'slate', ground: 'float', minimum: TEXT }),
+    );
+    expect(measured('light', 'slate', 'float')).toBeCloseTo(5.49, 2);
+    expect(measured('dark', 'slate', 'float')).toBeCloseTo(6.94, 2);
+  });
+
+  // DOM focus never leaves the field, so the keyboard-active row is the ink fill with canvas on it, the same
+  // pair as the primary button's label, gated at the text minimum.
+  it('cites canvas on ink, which the gate holds at the text minimum, for the keyboard-active row', () => {
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+    expect(measured('light', 'canvas', 'ink')).toBeCloseTo(16.25, 2);
+    expect(measured('dark', 'canvas', 'ink')).toBeCloseTo(19.31, 2);
+  });
+
+  // An amount at a row's end is ink on the float surface, gated at the text minimum.
+  it('cites ink on float, which the gate holds at the text minimum, for the end value', () => {
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'ink', ground: 'float', minimum: TEXT }),
+    );
+    for (const mode of ['light', 'dark'])
+      expect(measured(mode, 'ink', 'float'), mode).toBeGreaterThanOrEqual(TEXT);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

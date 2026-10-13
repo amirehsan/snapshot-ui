@@ -1,0 +1,205 @@
+/*
+ * CommandPalette: the docs site's search dialog look on the tokens, a float at 12vh with the frame,
+ * the surface corner and the float shadow; a field row with the glass, the input, the spinner and
+ * the Esc key; a body with a floor so the height holds while the text changes; the Menu's rows with
+ * the keyboard-active row filled in ink, because DOM focus never leaves the input; a footer of key
+ * hints hidden on touch. Derived in docs/design-system.md ("CommandPalette").
+ */
+@layer components {
+  .command-palette-overlay {
+    align-content: start;
+    justify-items: center;
+    padding: 12vh var(--overlay-inset) var(--overlay-inset);
+  }
+
+  .command-palette {
+    display: flex;
+    flex-direction: column;
+    width: min(40rem, 100%);
+    max-height: min(35rem, calc(88dvh - 1rem));
+    overflow: hidden;
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+    transition:
+      opacity 180ms ease,
+      translate 180ms ease;
+  }
+
+  .command-palette:is([data-entering], [data-exiting]) {
+    opacity: 0;
+    translate: 0 8px;
+  }
+
+  .command-palette-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    outline: none;
+  }
+
+  .command-palette-field {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem var(--spacing-peer);
+    border-block-end: 1px solid var(--color-divider);
+  }
+
+  /* The focus line: a 2px ink line over the divider, with no layout shift. The token-only rule forbids
+     a literal shadow, so it is a pseudo-element and not a box-shadow. */
+  .command-palette-field::after {
+    content: '';
+    position: absolute;
+    inset-block-end: -1px;
+    inset-inline: 0;
+    height: var(--focus-ring-width);
+    background-color: transparent;
+  }
+
+  .command-palette-field:has(.command-palette-input:focus-visible)::after {
+    background-color: var(--focus-ring-color);
+  }
+
+  .command-palette-glass {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    color: var(--color-slate);
+  }
+
+  /* React Aria's TextField is a div; the row lays out its input directly. */
+  .command-palette-textfield {
+    display: contents;
+  }
+
+  .command-palette-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--text-body);
+    outline: none;
+  }
+
+  /* Slate, not taupe: the placeholder is the only visible name of this field. Recorded in Appendix B. */
+  .command-palette-input::placeholder {
+    color: var(--color-slate);
+    opacity: 1;
+  }
+
+  .command-palette-spinner {
+    flex: none;
+    color: var(--color-slate);
+  }
+
+  .command-palette-body {
+    flex: 1 1 auto;
+    min-height: min(20rem, 50dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* The body scrolls, not the list. */
+  .command-palette-list {
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* The keyboard-active row is the only focus indicator, so it is the ink fill; the pointer keeps the wash. */
+  .command-palette-list .menu-item[data-focus-visible] {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+    outline: none;
+  }
+
+  .command-palette-list .menu-item[data-focus-visible] :is(.menu-item-icon, .menu-item-end) {
+    color: var(--color-canvas);
+  }
+
+  .command-palette-list .menu-item[data-focus-visible] .menu-item-description {
+    color: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+  }
+
+  .command-palette-list .menu-item[data-focus-visible] .menu-item-shortcut {
+    background-color: color-mix(in srgb, var(--color-canvas) 20%, transparent);
+    color: var(--color-canvas);
+  }
+
+  .command-palette-empty {
+    padding: var(--spacing-peer);
+    color: var(--color-slate);
+    text-align: center;
+  }
+
+  .command-palette-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .command-palette-footer {
+    display: flex;
+    flex: none;
+    gap: 1rem;
+    padding: 0.5rem var(--spacing-peer);
+    border-block-start: 1px solid var(--color-divider);
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+  }
+
+  /* A phone has no keys to hint. */
+  @media (pointer: coarse) {
+    .command-palette-footer {
+      display: none;
+    }
+  }
+
+  /* Forced colors. A background change does not survive the repaint, so the field's own outline returns, and
+     the active row is the reader's Highlight. Its parts follow it: the repaint would turn each part's own
+     color into CanvasText, and the key chip keeps its canvas island, as on the Menu's chosen row. Each rule is
+     as specific as the ink rule it overrides and comes after it. */
+  @media (forced-colors: active) {
+    .command-palette {
+      border-color: CanvasText;
+    }
+
+    .command-palette-input:focus-visible {
+      outline: auto;
+    }
+
+    .command-palette-list .menu-item[data-focus-visible] {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .command-palette-list
+      .menu-item[data-focus-visible]
+      :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end) {
+      color: HighlightText;
+    }
+
+    .command-palette-list .menu-item[data-focus-visible] .menu-item-shortcut {
+      background-color: canvas;
+      color: CanvasText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .command-palette {
+      transition: none;
+    }
+  }
+}
