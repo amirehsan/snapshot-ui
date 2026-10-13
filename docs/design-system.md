@@ -3933,13 +3933,18 @@ layers.
 three toasts visible at once, so any client code calls `toast()`, the line
 after `await` on a server action included, and the module imports on the
 server, since the queue creates no DOM. `toast()` adds to the queue and
-returns the key; `toast.dismiss(id)` closes one; `toast.clear()` closes every
-open toast one by one, through a registry of open keys, so each `onClose`
-fires, which React Aria's own `clear()` does not, and then clears the queue,
-the toasts waiting unseen included. A toast called with no region mounted is
-queued and shows nothing, and a module flag warns once in the console.
-`process` is not typed in the package, so the warning cannot ask whether it is
-in development, and it is one line.
+returns the key. React Aria puts the newest first and shows the first three,
+so a new toast always shows, and once more than three are open the oldest is
+hidden until one leaves. `toast.dismiss(id)` closes one; `toast.clear()`
+closes every open toast one by one, through a registry of open keys, so each
+`onClose` fires, which React Aria's own `clear()` does not, and then clears
+the queue and the registry, the hidden toasts included; a toast an `onClose`
+raises during the clear is dropped with them. A toast called with no region
+mounted is queued and shows nothing, and a module flag warns once in the
+console; a second flag warns once when a second region mounts, since two
+regions would show and announce every toast twice. `process` is not typed in
+the package, so neither warning can ask whether it is in development, and each
+is one line.
 
 **Two elements, and why.** React Aria's `UNSTABLE_ToastRegion` portals itself
 to the body and renders nothing until the first toast, so it cannot sit inside
@@ -3954,37 +3959,51 @@ region, `div.overlay.toast-region`, a `region` landmark F6 reaches, portaled
 with the first toast, holding `ol.toast-list` and the toasts.
 
 **What the host says.** Only the latest polite toast: its title and its second
-line, in one `span` keyed by the toast's id. With `aria-atomic` a new toast
-never re-reads the older ones, and a repeated "Saved" is a new node, so it is
-announced again. Each toast is seen once, as it arrives at the head of the
-queue, so one that comes back into view when a newer one closes is not read
-twice, and the host empties when its toast leaves the screen, so it never
-holds words nothing shows. An error is left to React Aria's content role,
-`alert`, which is assertive and carries React Aria's `aria-hidden`-then-shown
-step for NVDA. Every other tone's content takes `role="group"`, which React
-Aria merges after its own `alert`, so its visible words are not a second live
-region and nothing is read twice. A test holds both: a polite toast's page has
-one live element, the host, and an error's region has one, its content.
+line, two blocks inside one element keyed by the toast's id, so a screen
+reader pauses between them. With `aria-atomic` a new toast never re-reads the
+older ones, and a repeated "Saved" is a new node, so it is announced again.
+Each toast is seen once, as it arrives at the head of the queue, so one that
+comes back into view when a newer one closes is not read twice, and the host
+empties when its toast leaves the screen, so it never holds words nothing
+shows. Two polite toasts raised in one handler render once, so only the second
+is read: the host announces the latest, never a backlog. The host repeats the
+words, so the title and the second line are text, and a toast's one control is
+its action. An error is left to React Aria's content role, `alert`, which is
+assertive and carries React Aria's `aria-hidden`-then-shown step for NVDA.
+Every other tone's content takes `role="group"`, which React Aria merges after
+its own `alert`, so its visible words are not a second live region and nothing
+is read twice. A test holds both: a polite toast's page has one live element,
+the host, and an error's region has one, its content. A toast with no second
+line has no `aria-describedby`: React Aria's slot id resolves to nothing when
+no description renders, and a test pins it.
 
 **Under a modal.** Both elements carry `data-react-aria-top-layer`, the region
 through React Aria and the host from the library. React Aria's hide pass keeps
-such an element visible while a modal is open, its outside-press check ignores
-a press inside one, and its focus scope lets focus move into one. So a polite
-toast raised while a dialog is open is announced, a press on a toast's action
-or dismiss closes no dialog, and focus can move into a toast and back. Every
-library modal also passes React Aria a predicate that names `.toast-region`
-("Dialog and ConfirmDialog"), which does not depend on the attribute. The
-attribute is React Aria's internal contract, so the hide and the press are
-pinned by tests, and the version is pinned below.
+such an element visible while a modal is open and walks around its ancestors,
+its outside-press check ignores a press inside one, and its focus scope lets
+focus move into one. So a polite toast raised while a dialog is open is
+announced, a press on a toast's action or dismiss closes no dialog, and focus
+can move into a toast and back. Every library modal also passes React Aria a
+predicate that names `.toast-region` ("Dialog and ConfirmDialog"), which does
+not depend on the attribute. The attribute is React Aria's internal contract,
+so a unit test and the `AboveADialog` story pin what rests on it: with a
+dialog open, the page beside the host is hidden and the host is not, and holds
+the new toast's words; the region is not hidden; and a press on the toast's
+dismiss leaves the dialog open. The version is pinned below.
 
 **Timing.** Success, info and warning stay 6 seconds and an error 12, the
 app's: a warning is read, not acted on, so it takes the ordinary time. A toast
 with an action has no timeout, since a reader who needs the action needs the
-time to reach it. `timeout` overrides, and `null` means never. React Aria
-starts a toast's timer when the toast is drawn, so a toast waiting behind
-three starts its time when it shows. Hover over the region and focus inside it
-pause every timer, and the timers resume only when both have ended: WCAG 2.2.1
-with nothing to set.
+time to reach it. `timeout` overrides, and `null` means never; zero or less
+does too, since React Aria starts no timer for it. React Aria starts a toast's
+timer when the toast is drawn, and a toast pushed out of sight starts its time
+again when it shows again. Hover over the region and focus inside it pause
+every timer, and the timers resume only when both have ended: WCAG 2.2.1 with
+nothing to set. React Aria pauses when the pointer or focus enters, and a
+toast that arrives after that would start its own timer as it mounts, so the
+region pauses the queue again whenever the visible toasts change while it is
+hovered or holds focus: its effect runs after the new toast's, since the
+toasts are inside it.
 
 **The card.**
 
@@ -4040,7 +4059,7 @@ such as "2 notifications.", unless `aria-label` names it.
 a toast reports on the app, not on the card whose button raised it, and it may
 outlive that card. React Aria writes `dir` on the region, and the stripe and
 the corner are logical, so in right to left the stack sits in the bottom left
-corner with the stripe on the right.
+corner with the stripe on the right; the `ToastMirrored` story pins both.
 
 **Forced colors.** The frame is redrawn in `CanvasText`, and the stripe with
 it, so the tone is carried by the words alone, as it was in the app: the docs
@@ -4059,5 +4078,12 @@ unmounts puts back the value it found.
 **The pin.** React Aria's toast parts are `UNSTABLE_` in react-aria-components
 1.22 and may change in a minor. They are wrapped entirely, and
 `@snapshot-ui/react` pins `react-aria-components` to exactly 1.22.1, so a bump
-is a deliberate change with the toast tests run behind it. The docs app keeps
-its caret range, which resolves to the same version in the lockfile.
+is a deliberate change with the toast tests run behind it. The README says so:
+an app whose own `react-aria-components` resolves to another version has a
+second copy, whose providers do not reach the library's parts.
+
+**The docs site.** The site mounts its one region in the docs layout, outside
+the shell, as the page teaches. Mounted inside an example, the host sat in a
+tab panel, which hides with `display: none` while its code shows, and the
+other example's polite toasts went unannounced; outside the shell it is never
+in the workspace the drawer makes inert either.

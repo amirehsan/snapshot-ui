@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useEffect, useLayoutEffect, useState, type ReactElement } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import {
   Text,
   UNSTABLE_Toast as RACToast,
@@ -21,7 +21,10 @@ export interface ToastRegionProps {
   'aria-label'?: string;
   /** The dismiss button's accessible name. @default 'Dismiss' */
   dismissLabel?: string;
-  /** How many toasts show at once; the rest wait. Applies from the next toast. @default 3 */
+  /**
+   * How many toasts show at once. The newest always shows, and the oldest is hidden until one leaves. Applies
+   * from the next toast. @default 3
+   */
   maxVisibleToasts?: number;
   /** Goes on the region, after its classes. */
   className?: string;
@@ -29,11 +32,17 @@ export interface ToastRegionProps {
 
 type Queued = QueuedToast<ToastContent>;
 
+const subscribe = (listener: () => void): (() => void) => queue.subscribe(listener);
+const visibleNow = (): readonly Queued[] => queue.visibleToasts;
+const NONE: readonly Queued[] = [];
+const visibleOnServer = (): readonly Queued[] => NONE;
+
 /**
  * The latest polite toast, for the status host to announce: each toast that arrives is seen once, as it
  * arrives at the head of the queue, and a polite one replaces the last. An error is left to its own alert.
  * The toast stays until it leaves the screen, so the host never holds words nothing shows, and one that comes
- * back into view, when a newer one closes, is not read again.
+ * back into view, when a newer one closes, is not read again. Two polite toasts raised in one handler render
+ * once, so only the second is read: the host announces the latest, never a backlog.
  */
 function useAnnouncement(): Queued | null {
   const [latest, setLatest] = useState<Queued | null>(null);
@@ -74,6 +83,18 @@ export function ToastRegion({
   className,
 }: ToastRegionProps): ReactElement {
   const latest = useAnnouncement();
+  const regionRef = useRef<HTMLDivElement>(null);
+  const visible = useSyncExternalStore(subscribe, visibleNow, visibleOnServer);
+
+  // React Aria pauses the timers when hover or focus enters the region, and a toast that arrives after that
+  // starts its own as it mounts. This effect runs after the new toast's, since the toasts are inside the
+  // region, and holds it with the rest while the pointer or focus is still there.
+  useEffect(() => {
+    const region = regionRef.current;
+    if (region && (region.matches('[data-hovered]') || region.contains(document.activeElement))) {
+      queue.pauseAll();
+    }
+  }, [visible]);
 
   // Counted from the layout phase, so a toast that a component raises as it mounts finds the region counted.
   useLayoutEffect(() => {
@@ -105,14 +126,16 @@ export function ToastRegion({
         data-react-aria-top-layer="true"
       >
         {latest ? (
-          // Keyed by the toast, so the same words twice are a new node and are announced twice.
-          <span key={latest.key}>
-            {latest.content.title}
-            {present(latest.content.description) ? <> {latest.content.description}</> : null}
-          </span>
+          // Keyed by the toast, so the same words twice are a new node and are announced twice. The title and
+          // the second line are blocks, so a screen reader pauses between them.
+          <div key={latest.key}>
+            <div>{latest.content.title}</div>
+            {present(latest.content.description) ? <div>{latest.content.description}</div> : null}
+          </div>
         ) : null}
       </div>
       <RACToastRegion
+        ref={regionRef}
         queue={queue}
         aria-label={ariaLabel}
         className={cx('overlay', 'toast-region', className)}
