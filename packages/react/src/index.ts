@@ -141,6 +141,8 @@ export {
 export {
   BottomTabBar,
   BottomTabBarItem,
+  type BottomTabBarButtonProps,
   type BottomTabBarItemProps,
+  type BottomTabBarLinkProps,
   type BottomTabBarProps,
 } from './bottom-tab-bar';

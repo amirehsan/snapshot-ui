@@ -2758,6 +2758,7 @@ describe('src/components/app-shell.css', () => {
     const css = rules();
     const workspace = blockAfter(css, '.app-shell-workspace {');
     for (const declaration of [
+      'box-sizing: border-box;',
       'min-height: 100dvh;',
       'margin-inline-start: var(--app-shell-sidebar);',
       'padding-block-end: var(--app-shell-inset-block-end);',
@@ -2860,6 +2861,16 @@ describe('src/components/sidebar.css', () => {
     expect(css).not.toContain(`${COLLAPSED} .sidebar:not(.sidebar-drawer) .sidebar-search-shortcut {`);
   });
 
+  it('centers a collapsed item inside the rail border, and outranks the icon button for the close button', () => {
+    const css = rules();
+    // The 72px rail less its two 1px edges is 70px: 15px a side leaves a 40px item centered.
+    expect(blockAfter(css, `${COLLAPSED} .sidebar:not(.sidebar-drawer) .sidebar-nav {`)).toContain(
+      'padding-inline: calc(1rem - 1px);',
+    );
+    expect(blockAfter(css, '.icon-button.sidebar-close {')).toContain('margin-inline-start: auto;');
+    expect(css).not.toMatch(/(^|[\s}])\.sidebar-(close|trigger) \{/);
+  });
+
   it('declares the four rail constants as written', () => {
     const rail = blockAfter(rules(), '.sidebar {');
     for (const declaration of [
@@ -2887,7 +2898,7 @@ describe('src/components/sidebar.css', () => {
     expect(blockAfter(blockAfter(css, NARROW), '.sidebar:not(.sidebar-drawer) {')).toContain(
       'display: none;',
     );
-    expect(blockAfter(blockAfter(css, WIDE), '.sidebar-trigger {')).toContain('display: none;');
+    expect(blockAfter(blockAfter(css, WIDE), '.icon-button.sidebar-trigger {')).toContain('display: none;');
     // A media query cannot read a custom property, so the width is written out and must stay the token.
     const { tokens } = await import('../dist/tokens.js');
     const written = [...css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)].map((match) => match[1]);
@@ -3132,6 +3143,13 @@ describe('src/components/tab-bar.css', () => {
     expect(css.indexOf(current)).toBeGreaterThan(css.indexOf(itemHover));
   });
 
+  it('lifts the toasts above the bar on a narrow page, from the root the toast region reads', () => {
+    const narrow = blockAfter(rules(), '@media (width < 1024px)');
+    expect(blockAfter(narrow, ':root:has(.tab-bar) {')).toContain(
+      '--toast-offset-block: calc(4rem + env(safe-area-inset-bottom, 0px));',
+    );
+  });
+
   it('draws a disabled item in taupe with no pointer, and gives it no hover or press wash', () => {
     const disabled = blockAfter(rules(), `.tab-bar-item:is(${DISABLED}) {`);
     expect(disabled).toContain('color: var(--color-taupe);');
@@ -3159,8 +3177,9 @@ describe('src/components/tab-bar.css', () => {
     // A media query cannot read a custom property, so the width is written out and must stay the token.
     const { tokens } = await import('../dist/tokens.js');
     const written = [...css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)].map((match) => match[1]);
-    expect(written).toHaveLength(1);
-    expect(written[0]).toBe(tokens.breakpoint.md.value);
+    // The wide block hides the bar, and the narrow one lifts the toasts above it.
+    expect(written).toHaveLength(2);
+    for (const width of written) expect(width).toBe(tokens.breakpoint.md.value);
   });
 
   it('is as tall as the room app-shell.css reserves under the page', () => {
