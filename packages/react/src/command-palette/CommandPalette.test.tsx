@@ -493,6 +493,70 @@ describe('CommandPalette keys', () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
+  it('never runs an earlier choice on a later close it did not make', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    const onOpenChange = vi.fn();
+    // A caller that keeps the palette open when a choice asks to close it.
+    const { rerender } = render(
+      <CommandPalette label="Search" items={ITEMS} onAction={onAction} isOpen onOpenChange={onOpenChange} />,
+    );
+    await user.type(input(), 'budg{Enter}');
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // Escape asks to close for no choice, and the caller closes it.
+    await user.keyboard('{Escape}');
+    rerender(
+      <CommandPalette
+        label="Search"
+        items={ITEMS}
+        onAction={onAction}
+        isOpen={false}
+        onOpenChange={onOpenChange}
+      />,
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('drops a pending choice when it opens again during its exit', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    const props = { label: 'Search', items: ITEMS, onAction, onOpenChange: () => undefined };
+    const { rerender } = render(<CommandPalette {...props} isOpen />);
+    // jsdom runs no animation, so the panel is given an exit that lasts until the test ends it, as the 180ms
+    // fade does in a browser: React Aria keeps the panel on the page until it finishes.
+    let finish = (): void => undefined;
+    const finished = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    Object.defineProperty(panel(), 'getAnimations', {
+      value: () => [{ playState: 'running', finished }],
+      configurable: true,
+    });
+    await user.type(input(), 'budg{Enter}');
+    rerender(<CommandPalette {...props} isOpen={false} />);
+    expect(panel()).toHaveAttribute('data-exiting');
+    // Opened again before the exit ends, so the panel never left the page for that choice.
+    rerender(<CommandPalette {...props} isOpen />);
+    await user.keyboard('{Escape}');
+    rerender(<CommandPalette {...props} isOpen={false} />);
+    await act(async () => {
+      finish();
+      await finished;
+    });
+    await waitFor(() => {
+      expect(document.querySelector('.command-palette')).not.toBeInTheDocument();
+    });
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it('chooses a row on a press, and closes', async () => {
     const user = userEvent.setup();
     const onAction = vi.fn();
@@ -590,6 +654,12 @@ describe('CommandPalette shortcut', () => {
     unmount();
     render(<CommandPalette label="Search" items={ITEMS} onAction={() => undefined} />);
     expect(ownListeners()).toBe(1);
+  });
+
+  it('opens on Ctrl+K on a Persian layout, where the key types the letter noon', () => {
+    render(<CommandPalette label="Search" items={ITEMS} onAction={() => undefined} />);
+    pressShortcut({ key: '\u0646', code: 'KeyK', ctrlKey: true });
+    expect(screen.getByRole('dialog', { name: 'Search' })).toBeInTheDocument();
   });
 
   it('opens on a shortcut of its own, and not on Mod+K', () => {
@@ -693,6 +763,18 @@ describe('CommandPalette recents', () => {
     expect(setItem).not.toHaveBeenCalled();
   });
 
+  it('reports the list as stored, every id a string, to onRecentChange without recentIds', async () => {
+    const user = userEvent.setup();
+    const onRecentChange = vi.fn();
+    const numbered = ITEMS.map((item, index) => ({ ...item, id: index + 1 }));
+    localStorage.setItem(ENTRY, '["2","7"]');
+    open({ storageKey: 'search', items: numbered, onRecentChange });
+    await user.type(input(), 'budg{Enter}');
+    // Budgets is the fourth item, so its id is the number 4.
+    expect(onRecentChange).toHaveBeenCalledExactlyOnceWith(['4', '2', '7']);
+    expect(JSON.parse(localStorage.getItem(ENTRY) ?? 'null')).toEqual(['4', '2', '7']);
+  });
+
   it.each([
     ['unreadable JSON', '["savings"'],
     ['a list that is not one of ids', '{"savings":true}'],
@@ -763,7 +845,8 @@ describe('CommandPalette status line', () => {
     wait(299);
     expect(status()).toBeEmptyDOMElement();
     wait(1);
-    expect(status()).toHaveTextContent('1 results');
+    // One result is singular, in the English default.
+    expect(status()).toHaveTextContent(/^1 result$/);
   });
 
   it('says the words of labels.status, given the count and the query', () => {
