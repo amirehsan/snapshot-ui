@@ -149,18 +149,19 @@ describe('the collapsible card', () => {
     }
   });
 
-  // The folded marker's dot is light signal orange on the lifted card. It is under the 3:1 a graphic that
-  // carries meaning asks, in light, so it is recorded in the design record rather than gated: the toggle's
-  // description carries the meaning, and the dot is a cue beside it. The numbers here are the record's.
-  it('measures the folded marker on the lifted card under 3:1 in light, so it is recorded and not gated', () => {
+  // The folded marker's dot is clay on the card's lifted ground, a card nested in a card included: the color
+  // of the Changed chip it stands for. It carries meaning, so it is gated at the 3:1 a graphic asks, in both
+  // modes. The numbers here are the record's.
+  it('gates the folded marker, a clay dot, on the lifted card at 3:1 in light and dark', () => {
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'clay', ground: 'lifted', minimum: NON_TEXT }),
+    );
     const measured = (mode) => {
       const palette = paletteFor(tokens, mode);
-      return contrastRatio(parseColor(palette['signal-light']), parseColor(palette.lifted));
+      return contrastRatio(parseColor(palette.clay), parseColor(palette.lifted));
     };
-    expect(measured('light')).toBeCloseTo(2.78, 2);
-    expect(measured('light')).toBeLessThan(NON_TEXT);
-    expect(measured('dark')).toBeCloseTo(6.07, 2);
-    expect(CONTRAST_PAIRS.filter((pair) => pair.text === 'signal-light')).toEqual([]);
+    expect(measured('light')).toBeCloseTo(6.81, 2);
+    expect(measured('dark')).toBeCloseTo(6.82, 2);
   });
 });
 

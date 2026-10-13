@@ -67,9 +67,9 @@ export interface CollapsibleCardProps extends Omit<HTMLAttributes<HTMLElement>, 
    * Marks a folded card as holding a change even when no field inside says so. A folded card already marks
    * itself while any element in its body carries `data-changed`, as every library field's root does while
    * it is changed, so this is for a change the card's fields do not report. While folded, the marker is a
-   * light signal orange dot after the title, and the toggle is described by `changedLabel`. Open, the card
-   * shows no marker, and each field shows its own Changed chip. While it is true, the card's root carries
-   * `data-changed`, as a field's does, so a collapsible card around this one counts the change too.
+   * clay dot after the title, and the toggle is described by `changedLabel`. Open, the card shows no marker,
+   * and each field shows its own Changed chip. While it is true, the card's root carries `data-changed`, as a
+   * field's does, so a collapsible card around this one counts the change too.
    */
   isChanged?: boolean;
   /**

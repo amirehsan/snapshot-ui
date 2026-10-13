@@ -42,7 +42,7 @@ A server-rendered page shows a remembered fold only after it has loaded. The ser
 
 ## The changed marker
 
-While a card is folded, a light signal orange dot after its title says that its body holds a change, so a change never goes out of sight. The card finds the change itself: any element in its body that carries `data-changed`, as every Snapshot UI field's root does while its `isChanged` is true, marks the card, and so does a changed field in a card nested in the body. For a change that no field reports, pass `isChanged` to the card. Its root then carries `data-changed` too, so a collapsible card around it counts the change. Open, the card shows no marker, and each field shows its own Changed chip.
+While a card is folded, a clay dot after its title, the color of the Changed chip, says that its body holds a change, so a change never goes out of sight. The card finds the change itself: any element in its body that carries `data-changed`, as every Snapshot UI field's root does while its `isChanged` is true, marks the card, and so does a changed field in a card nested in the body. For a change that no field reports, pass `isChanged` to the card. Its root then carries `data-changed` too, so a collapsible card around it counts the change. Open, the card shows no marker, and each field shows its own Changed chip.
 
 <Preview name="collapsible-card-changed" />
 
@@ -54,7 +54,7 @@ A screen reader reads the toggle's title, then collapsed, then `changedLabel`, w
 
 ## Opening for an invalid field
 
-A folded card opens itself when a field in its body fails the browser's validation on submit, so the field can be seen and fixed. A field among the header's actions is in view already, so it leaves the card folded. The card hears the browser's `invalid` event before the field takes focus, and opens the way its toggle does: a remembered fold is forgotten, and `onExpandedChange` is called with `true`, so a card that `isExpanded` controls opens once the app sets it open.
+A folded card opens itself when a field in its body fails the browser's validation on submit, so the field can be seen and fixed. A field among the header's actions is in view already, so it leaves the card folded. The card hears the browser's `invalid` event before the field takes focus, and opens the way its toggle does: a remembered fold is forgotten, and `onExpandedChange` is called with `true`, once however many fields fail, so a card that `isExpanded` controls opens once the app sets it open. The open has no transition, and neither has a card with the same `storageKey` that opens with it, so the body is its full height when the field takes focus, and the browser scrolls the field into view however deep in the body it sits, with motion or without. That holds for a React Aria field and for a plain input with `required` alike.
 
 This covers fields that leave validation to the browser, which React Aria does by default, with `validationBehavior="native"`. With `validationBehavior="aria"` the browser sees nothing wrong, fires no `invalid` event and lets the form submit, so the card stays folded. Open it from your own state, with `isExpanded`, when your validation fails.
 

@@ -93,7 +93,7 @@ export interface CollapsibleCardProps extends Omit<HTMLAttributes<HTMLElement>, 
 
 ### The folded marker
 
-- **What it is.** While folded, the card shows a light signal orange dot after the title text when either `isChanged` is true, or any element inside the panel carries `data-changed`. Every library field's root carries `data-changed` while changed.
+- **What it is.** While folded, the card shows a clay dot after the last word of the title when either `isChanged` is true, or any element inside the panel carries `data-changed`. Every library field's root carries `data-changed` while changed. Clay is the color of the Changed chip the dot stands for, and it measures 6.81 in light and 6.82 in dark on the card's lifted ground, over the 3:1 a graphic that carries meaning asks, so the pair is gated.
 - **Accessibility.** The trigger is described by a visually hidden text node holding `changedLabel` while the dot shows, so a screen reader reads "Notifications, collapsed, Changed".
 - **Detection.** A `MutationObserver` on the panel watches the `data-changed` attribute in its subtree, and only while the card is folded.
 - **While open:** no dot and no description. The fields show their own chips.
@@ -101,7 +101,8 @@ export interface CollapsibleCardProps extends Omit<HTMLAttributes<HTMLElement>, 
 ### Opening on an invalid field
 
 - **The mechanism.** A capture-phase `invalid` listener on the card root opens a folded card. The browser fires `invalid` on each control that fails native validation when a form is submitted, so a folded card holding one opens before the browser focuses that control.
-- **Controlled cards.** A controlled card receives the request through `onExpandedChange(true)`.
+- **Controlled cards.** A controlled card receives the request through `onExpandedChange(true)`, once for every control that fails in one check.
+- **Drawn at once.** The open has no transition, as find-in-page's does, and neither has any card that opens with it, such as one with the same `storageKey`. So the body is its full height when the field takes focus, and the browser scrolls the field into view however deep it sits.
 
 ## 6. Look and CSS
 
@@ -124,7 +125,7 @@ The CSS lives in `packages/core/src/components/card.css`, which `Card` already u
 
 - **Focus.** The toggle draws the standard focus ring: `outline: var(--focus-ring-width) solid var(--focus-ring-color)` with the standard offset. It matches `:focus-visible` and `[data-focus-visible]`.
 - **Hover** (inside `@media (hover: hover)`): the chevron goes from slate to ink, and the title keeps its color. The cursor is `pointer`.
-- **Folded marker.** An 8px light signal orange dot, `--radius-dot`, inline after the title text.
+- **Folded marker.** An 8px clay dot, `--radius-dot`, after the last word of the title, centred on its line.
 - **Forced colors.** In a `@media (forced-colors: active)` block, the dot becomes `CanvasText` so it stays visible. The chevron uses `currentColor`, and the focus ring is kept.
 - **Spacing.** The space between the header and the body folds with the body, so a folded card ends at its own padding.
 

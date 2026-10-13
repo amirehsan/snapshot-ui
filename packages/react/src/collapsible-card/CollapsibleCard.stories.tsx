@@ -657,7 +657,17 @@ function lastWords(text: Element): DOMRect {
 }
 
 /**
- * Folded over a changed field, a card shows a light signal orange dot after its title, level with its first
+ * The px from the middle of the last line of `text` to the middle of `dot`, positive when the dot is lower.
+ * The last line box ends at the bottom of the text's box, which has no padding, and is one line height tall.
+ */
+function lastLineOffset(dot: Element, text: Element): number {
+  const bottom = text.getBoundingClientRect().bottom;
+  const dotBox = dot.getBoundingClientRect();
+  return dotBox.top + dotBox.height / 2 - (bottom - parseFloat(getComputedStyle(text).lineHeight) / 2);
+}
+
+/**
+ * Folded over a changed field, a card shows a clay dot after the last word of its title, level with that
  * line, and its toggle is described as changed. A folded title keeps room for the dot whether it shows or
  * not, so a title with the dot sits exactly where the same title without it does, wrapped or not.
  */
@@ -687,12 +697,12 @@ export const FoldedChanged: Story = {
     await expect(toggle).toHaveAccessibleName('Profile');
     await expect(toggle).toHaveAccessibleDescription('Changed');
     await expect(title.textContent).toBe('Profile');
-    // An 8px light signal orange dot, round in every shape.
+    // An 8px clay dot, the color of the Changed chip it stands for, round in every shape.
     const dot = dotOf(changed);
     const style = getComputedStyle(dot);
     await expect(style.width).toBe('8px');
     await expect(style.height).toBe('8px');
-    await expect(style.backgroundColor).toBe(tokenColor('--color-signal-light'));
+    await expect(style.backgroundColor).toBe(tokenColor('--color-clay'));
     await expect(parseFloat(style.borderTopLeftRadius)).toBeGreaterThanOrEqual(4);
     // After the last word of a title on one line, a part step on, level with the line, and short of the chevron.
     const box = dot.getBoundingClientRect();
@@ -701,13 +711,16 @@ export const FoldedChanged: Story = {
     );
     await expect(Math.abs(firstLineOffset(dot, text))).toBeLessThanOrEqual(0.5);
     await expect(box.right).toBeLessThan(chevron.getBoundingClientRect().left);
-    // A title that wraps keeps the dot level with its first line, inside the toggle and clear of the chevron.
+    // A title that wraps keeps the dot after its last word, a part step on, level with the last line, inside
+    // the toggle and clear of the chevron.
     const long = byTestId(canvasElement, 'long');
     const longParts = partsOf(long);
     const longDot = dotOf(long).getBoundingClientRect();
     await expect(lineCount(longParts.text)).toBeGreaterThan(1);
-    await expect(Math.abs(firstLineOffset(dotOf(long), longParts.text))).toBeLessThanOrEqual(0.5);
-    await expect(longDot.left).toBeGreaterThanOrEqual(longParts.text.getBoundingClientRect().right);
+    await expect(
+      Math.abs(longDot.left - lastWords(longParts.text).right - tokenPixels('--spacing-part')),
+    ).toBeLessThan(0.5);
+    await expect(Math.abs(lastLineOffset(dotOf(long), longParts.text))).toBeLessThanOrEqual(0.5);
     await expect(longDot.right).toBeLessThan(longParts.chevron.getBoundingClientRect().left);
     await expect(longDot.right).toBeLessThanOrEqual(longParts.toggle.getBoundingClientRect().right);
     // The same title with nothing changed shows no dot, and its words and header are where the marked one's are.
@@ -760,6 +773,56 @@ export const OpensForInvalid: Story = {
     });
     // Shown whole: nothing clips it and nothing covers it, and it is inside the window.
     await expect(field).toBeVisible();
+    const box = field.getBoundingClientRect();
+    await expect(box.top).toBeGreaterThanOrEqual(0);
+    await expect(box.bottom).toBeLessThanOrEqual(window.innerHeight);
+    await expect(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)).toBe(field);
+  },
+};
+
+/**
+ * A field deep in a long folded body that fails the browser's validation on submit is focused inside the
+ * window: the card opens at once, so the body is its full height when the field takes focus and the browser
+ * scrolls to it, and nothing moves the field after that.
+ */
+export const OpensForInvalidDeep: Story = {
+  // A check of the scroll: the open and the folded card are shot in Open and Folded.
+  tags: ['no-visual'],
+  args: { title: 'Billing', note: 'Paid by card, every month.', defaultExpanded: false },
+  render: (args) => (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+      }}
+      style={{ display: 'grid', gap: 24 }}
+    >
+      <CollapsibleCard {...args} data-testid="card">
+        {Array.from({ length: 20 }, (_, index) => (
+          <TextField
+            key={index}
+            label={`Reference ${String(index + 1)}`}
+            defaultValue={`REF-${String(index + 1)}`}
+          />
+        ))}
+        <TextField label="Card holder" isRequired />
+      </CollapsibleCard>
+      <div>
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const card = byTestId(canvasElement, 'card');
+    await expect(partsOf(card).toggle).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(canvas.getByRole('button', { name: 'Save' }));
+    await expect(partsOf(card).toggle).toHaveAttribute('aria-expanded', 'true');
+    const field = canvas.getByRole('textbox', { name: 'Card holder' });
+    await expect(field).toHaveFocus();
+    await waitFor(async () => {
+      await expect(card).not.toHaveAttribute('data-folding');
+      await expect(card).not.toHaveAttribute('data-instant');
+    });
+    // Focused where the browser scrolled to it, which is where it stays.
     const box = field.getBoundingClientRect();
     await expect(box.top).toBeGreaterThanOrEqual(0);
     await expect(box.bottom).toBeLessThanOrEqual(window.innerHeight);

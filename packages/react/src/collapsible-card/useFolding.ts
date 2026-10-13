@@ -14,16 +14,27 @@ const useHydrated = (): boolean =>
   );
 
 /**
- * The last `beforematch` event the browser fired inside a folded card. The browser fires it at a
- * `hidden="until-found"` element before it shows a find-in-page match or a text fragment there, and scrolls to
- * the match once the event is done. React Aria opens the card inside the event, in a render it flushes at
- * once, and every card that opens with it renders in that same render: each card with its `storageKey`, and a
+ * The last event that revealed something inside a folded card, which the card opens for and the browser then
+ * scrolls to: a `beforematch`, which the browser fires at a `hidden="until-found"` element before it shows a
+ * find-in-page match or a text fragment there, or an `invalid`, which it fires at a control that fails its
+ * validation before a field takes focus. The card opens inside the event, in a render flushed at once, and
+ * every card that opens with it renders in that same render: each card with its `storageKey`, and a
  * controlled card whose parent opens it.
  */
 let reveal: Event | undefined;
 
-/** Whether this render runs while the browser reveals a match, inside the dispatch of its event. */
+/** Whether this render runs while something in a folded card is revealed, inside the dispatch of its event. */
 const isRevealing = (): boolean => reveal !== undefined && reveal.eventPhase !== Event.NONE;
+
+/**
+ * Marks `event`, while it is dispatched, as one that reveals something in a folded card, so every card that
+ * opens or folds in that time is drawn at once. Call it before the card opens.
+ *
+ * Internal: not exported from the package.
+ */
+export function markReveal(event: Event): void {
+  reveal = event;
+}
 
 /**
  * Sets `data-folding` on the card's root each time the card opens or folds, and takes it off once every
@@ -44,10 +55,11 @@ const isRevealing = (): boolean => reveal !== undefined && reveal.eventPhase !==
  * - The render after hydration. A card the server rendered carries the mark from the server's HTML until two
  *   frames after hydration, so the render where the card catches up with what only the browser knows, such
  *   as a remembered fold, is drawn at once: a page never animates on load.
- * - A change made while the browser reveals a match. The browser scrolls to the match as the card opens, and
- *   a body still growing from nothing, clipped while it moves, would leave the match out of view. Every card
- *   that changes in that render takes the mark, so a card with the same key above the match is drawn at once
- *   too, and loses it two frames later.
+ * - A change made while something in a folded card is revealed: a find-in-page match, or a field that failed
+ *   its validation and takes focus. The browser scrolls to it as the card opens, and a body still growing
+ *   from nothing, clipped while it moves, would leave it out of view. Every card that changes in that render
+ *   takes the mark, so a card with the same key above it is drawn at once too, and loses it two frames
+ *   later.
  *
  * The mark is rendered rather than set by an effect, so it is on before anything brings the styles up to
  * date, and two cards that change in one commit are both drawn at once. A card first rendered in the browser
@@ -94,7 +106,7 @@ export function useFolding(
     const root = foldRef.current?.parentElement?.parentElement;
     if (isExpanded || !root) return;
     const onBeforeMatch = (event: Event): void => {
-      reveal = event;
+      markReveal(event);
     };
     root.addEventListener('beforematch', onBeforeMatch, true);
     return () => {

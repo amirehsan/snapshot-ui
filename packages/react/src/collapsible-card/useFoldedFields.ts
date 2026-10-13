@@ -1,5 +1,6 @@
-import { useCallback, useLayoutEffect, useSyncExternalStore, type RefObject } from 'react';
+import { useCallback, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
+import { markReveal } from './useFolding';
 
 /** How the fold is watched: the one attribute a changed field carries, anywhere inside it. */
 const WATCH: MutationObserverInit = { attributeFilter: ['data-changed'], subtree: true, childList: true };
@@ -45,6 +46,12 @@ export function useHoldsChange(foldRef: RefObject<HTMLElement | null>, isFolded:
  * renders the open at once, so the body is shown before anything focuses a field in it. Only a folded card
  * listens, and only a control inside the fold opens it: one among the header's actions is in view already.
  *
+ * The open is a reveal (see `markReveal`), so it is drawn with no transition: the body is its full height
+ * when the field takes focus, and the browser scrolls the page to the field and not a clipped body to it.
+ *
+ * The browser fires `invalid` at every control that fails, one after another in the same task, so the card
+ * opens, or asks a controlled card's parent to, once for all of them, and again for the next check.
+ *
  * The root is the fold's grandparent: the root holds React Aria's disclosure, which holds the fold.
  *
  * Internal: not exported from the package.
@@ -54,12 +61,19 @@ export function useOpenOnInvalid(
   isFolded: boolean,
   open: () => void,
 ): void {
+  const opening = useRef(false);
   useLayoutEffect(() => {
     const fold = foldRef.current;
     const root = fold?.parentElement?.parentElement;
     if (!isFolded || !fold || !root) return;
     const onInvalid = (event: Event): void => {
-      if (event.target instanceof Node && fold.contains(event.target)) flushSync(open);
+      if (opening.current || !(event.target instanceof Node) || !fold.contains(event.target)) return;
+      opening.current = true;
+      setTimeout(() => {
+        opening.current = false;
+      });
+      markReveal(event);
+      flushSync(open);
     };
     root.addEventListener('invalid', onInvalid, true);
     return () => {

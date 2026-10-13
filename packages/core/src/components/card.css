@@ -229,25 +229,26 @@
     rotate: var(--card-chevron-turn, 90deg);
   }
 
-  /* The folded marker: a light signal orange dot after the title's words,
-     the attention cue the system keeps for a change. It hangs off the end of
-     the words, out of the flow, a part step on, and is centred on their first
-     line, as the chevron is, so a title that wraps keeps it beside the words a
-     reader starts with. The toggle's description carries what it means, and
-     the dot is a cue beside it for the eye. */
+  /* The folded marker: a clay dot after the title's last word, the color of
+     the Changed chip it stands for, so it reads as unsaved work and measures
+     over 3:1 on the card in both modes. It is out of the flow, so it moves no
+     word, and with no inset it stays where the flow would put it, after the
+     last word, on the last line. The margins take it a part step on and
+     centre it on that line. */
   .card-marker {
     position: absolute;
-    inset-block-start: calc((1lh - 8px) / 2);
-    inset-inline-start: calc(100% + var(--spacing-part));
     width: 8px;
     height: 8px;
+    margin-block-start: calc((1lh - 8px) / 2);
+    margin-inline-start: var(--spacing-part);
     border-radius: var(--radius-dot);
-    background-color: var(--color-signal-light);
+    background-color: var(--color-clay);
   }
 
   /* A folded title keeps room for the dot and the gap before it, drawn or
-     not, so the title never moves when the dot comes or goes. An open card
-     draws no marker and keeps no room. */
+     not, so the title never moves when the dot comes or goes, and the dot
+     never reaches the chevron. An open card draws no marker and keeps no
+     room. */
   .card-collapsible:not([data-expanded]) > .card-disclosure > .card-header .card-toggle-text {
     margin-inline-end: calc(8px + var(--spacing-part));
   }
