@@ -42,8 +42,10 @@ export function StatTileLink({
       'StatTile with href holds a focusable element; a link cannot hold a link or a button. Move it out of the tile.',
     );
   }, []);
-  // The tile's attributes are an HTML element's, whose focus handlers take an HTMLElement event where React
-  // Aria's take an Element one; React Aria hands them the anchor's own events, so the cast only widens a type.
+  // The tile's attributes are an HTML element's, and React Aria's Link takes its own props: its focus handlers
+  // take an Element event, and it forwards only some DOM attributes (id, data-*, lang, dir, hidden, style, the
+  // naming attributes, aria-current and the handlers). Others, such as title or role, are dropped here; the
+  // props page says so and a test pins it.
   return (
     <RACLink {...(props as RACLinkProps)} href={href} ref={merged}>
       {children}

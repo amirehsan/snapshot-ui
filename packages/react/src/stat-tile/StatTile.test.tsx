@@ -246,6 +246,18 @@ describe('StatTile', () => {
     expect(anchor).toHaveAttribute('data-testid', 'tile');
   });
 
+  it('forwards what React Aria forwards on a linked tile, and drops title, which the docs say', () => {
+    const plain = render(<StatTile label="Spending" value="$1" title="Open spending" />);
+    expect(root(plain.container)).toHaveAttribute('title', 'Open spending');
+    plain.unmount();
+    const linked = render(
+      <StatTile href="/spending" label="Spending" value="$1" title="Open spending" lang="en" />,
+    );
+    const anchor = root(linked.container);
+    expect(anchor).toHaveAttribute('lang', 'en');
+    expect(anchor).not.toHaveAttribute('title');
+  });
+
   it('is exported from the package index', () => {
     expect(library).toHaveProperty('StatTile');
   });
