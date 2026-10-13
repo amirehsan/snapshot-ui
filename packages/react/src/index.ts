@@ -91,3 +91,4 @@ export {
 } from './dialog';
 export { Drawer, type DrawerPlacement, type DrawerProps } from './drawer';
 export { Sheet, SheetTrigger, type SheetProps, type SheetTriggerProps } from './sheet';
+export { Popover, type PopoverProps } from './popover';
