@@ -2724,3 +2724,205 @@ React Aria's other path, `validationBehavior="aria"`, sets no
 wrong, fires no `invalid` event and submits the form. A folded card then stays
 folded, the docs say so, and an app that validates that way opens the card
 from its own state. No second mechanism was added for it.
+
+## Overlays
+
+Dialog, ConfirmDialog, Drawer, Sheet, Popover, Menu, Toast, CommandPalette and
+Tooltip share one layer: a stylesheet, `overlay.css`, and two private hooks,
+`useOverlayScope` and `useOverlayStack`. It is derived here once, before any
+of them is built, and each overlay's own section records only what is its own.
+
+**Two classes.** Every overlay portals to `document.body`, React Aria's
+default, and every portaled root carries the class `overlay` beside its own.
+For a modal the root is the panel, React Aria's `Modal`, and the
+`ModalOverlay` that holds it carries the second class, `overlay-scrim`, as a
+sheet's `SheetOverlay` with its `SheetBackdrop` does. A portal sits outside
+whatever the app styled, and `base.css` is opt-in, so `overlay` restates on
+the root what `base.css` gives a page: `box-sizing: border-box`, ink, Sofia
+Sans, the body size, line height and weight, and `text-align: start`. The app
+restated the font on its dialog for the same reason. The page under an
+overlay never sees a library class.
+
+**The inset.** `overlay` also declares `--overlay-inset: 1rem`, the 16px the
+app's rail, save bar and toast all keep from the viewport's edge. There is no
+token for it, and `overlay.css` is the one place it is written. It is
+declared on `overlay-scrim` too, in the same rule: a modal's scrim is the
+panel's parent and reads the inset for its own padding, and a custom property
+declared on the panel never reaches its parent, so the scrim would have none.
+
+**Theme, shape and density scope.** A portal leaves every nested
+`[data-theme]`, `[data-shape]` and `[data-density]` subtree, so without help
+a dialog opened from a dark card would draw in the page's light theme.
+`useOverlayScope` copies the three onto the overlay's root in a layout effect
+when the root mounts, which is when the overlay opens, since React Aria
+unmounts a closed overlay. It starts from the origin: the trigger, where
+React Aria hands the overlay one (Popover and Menu through `PopoverContext`,
+Tooltip through `TooltipContext`), and otherwise `document.activeElement` at
+that moment, since the pressed trigger still holds focus during the layout
+effect and React Aria's `Dialog` moves focus later, in an effect. For each
+attribute, in the order theme, shape, density, the nearest ancestor of the
+origin that carries it gives the value, and an attribute no ancestor carries
+is removed from the root. So an origin outside every nested scope, or the body
+when nothing is focused, gets the root theme. For a modal the copy lands on
+the panel and not on the scrim, so a light card's dialog is light while the
+scrim keeps the page's opacity. The toast region copies nothing and follows
+the page root. The one escape hatch is React Aria's `UNSAFE_PortalProvider`
+with a container inside the scope: the docs show it, imported from
+`react-aria`, and the library neither uses it nor adds a dependency for it.
+Every overlay has an `InDarkScope` story that proves the copy.
+
+**Direction.** Every overlay root sets `dir` from `useLocale().direction`.
+React Aria does it for `Popover` and the toast region, and the wrappers do it
+for Tooltip, `ModalOverlay` and `SheetOverlay`. Every rule is written in
+logical properties. `:dir()` is above the browser floor (Chrome 120), so no
+rule uses it: where a physical side is needed, as for the drawer's slide, the
+component resolves its `placement` and the direction into a `data-side`
+attribute, and the stylesheet keys on that.
+
+**The scrim.** Only the modal surfaces have one: Dialog, ConfirmDialog,
+Drawer, Sheet and CommandPalette. Popover, Menu, Tooltip and Toast never dim
+the page; React Aria's invisible underlay only catches a press outside. The
+scrim is Deep Well (`#050505`) at the theme's `--opacity-scrim`, 0.4 in light
+and 0.65 in dark, as "Two surfaces the theme switch needed" in Appendix A
+derives. It is never ink, which is white in dark and would lighten the page it
+covers. It is a background color, mixed with `color-mix()`, and not
+`opacity`, so it never fades the panel inside it. `forced-color-adjust: none`
+keeps it translucent where Windows high contrast would repaint it opaque and
+hide the page. It is fixed over the viewport at `--z-modal`, as a grid each
+modal places its panel in, and its height is `--visual-viewport-height`, the
+inline value React Aria writes on the overlay so that the on-screen keyboard
+shortens it, or `100dvh` without one. While the overlay enters or exits the
+scrim is transparent, and its color moves in 180ms, ease. A press on the scrim
+dismisses when the modal is `isDismissable`; a press on the toast region does
+not.
+
+**One scrim when modals stack.** A modal opened from a modal, such as a
+confirm from a dialog, would paint a second scrim over the first and darken
+the page twice. `useOverlayStack` keeps the open modal overlays in a
+module-level list, in the order they opened. A modal is in it while its state
+is open, so one that is exiting has already left. The first in the list is the
+bottom-most and paints the scrim. Every other one carries `data-stacked`, set
+straight on its scrim so React never re-renders React Aria's overlay for it,
+and is transparent while it still catches presses. When the bottom-most
+closes, the next becomes bottom-most and paints. The list creates no DOM, so
+it is safe to import on the server, and it answers two more questions:
+CommandPalette's shortcut is ignored while any other modal is open, and tests
+read it.
+
+**Surfaces.**
+
+| Overlay | Fill | Edge | Shadow | Corners |
+| --- | --- | --- | --- | --- |
+| Dialog, ConfirmDialog | `--color-float` | `--color-hairline` | `--shadow-dramatic` | `--radius-stadium` |
+| Drawer | `--color-float` | `--color-hairline` | `--shadow-dramatic` | `--radius-stadium` |
+| Sheet | `--color-float` | `--color-hairline` | none | `--radius-stadium`, top corners only |
+| Popover, Menu | `--color-float` | `--color-frame` | `--shadow-float` | `--radius-surface` |
+| CommandPalette | `--color-float` | `--color-frame` | `--shadow-float` | `--radius-surface` |
+| Toast | `--color-float` | `--color-frame`, plus a 4px tone stripe | `--shadow-float` | `--radius-surface` |
+| Tooltip | `--color-ink` | a transparent 1px border, for forced colors | `--shadow-float` | `--radius-micro` |
+
+Every overlay but the tooltip sits on Float: this document reserves white for
+floating surfaces, and the app's dialog fill differs from Float by one step in
+light and not at all in dark. A modal sits over a dimmed page and separates
+from it by tone, so it takes the hairline, which is nothing in light and white
+at 12% in dark. Measured against the scrimmed canvas, a dialog's Float is 3.10
+in light and 1.15 in dark, where the hairline carries the edge, as this
+document already accepts for cards. A float that is not modal opens over any
+surface, another float included, so it takes the frame in both themes, as the
+menu popup already does ("Two surfaces the theme switch needed"). The palette
+is a floating surface and not a panel dialog, so it takes the popup's edge,
+corner and shadow. Modal surfaces take elevation level 3 and floats level 2;
+the sheet casts none, since its only edge is at the bottom of the viewport,
+where a shadow shows nothing. Parts step down the nested-radii ladder: a 24px
+popup holds `--radius-control` rows, a 40px dialog holds 24px parts, and
+buttons keep `--radius-control`, because a pill is a shape and not a size.
+Soft and Square descend by construction.
+
+**Spacing.** A list popup pads 8px (`--spacing-part`), a free-content popover
+24px (`--spacing-peer`), a dialog 32px (`--spacing-separate`), and a drawer
+and a sheet 24px (`--spacing-peer`, derived in their own sections). Rows in a
+list sit 4px apart, the app's list gap, kept because two hover washes need a
+seam between them.
+
+**Motion.** Every overlay moves on React Aria's `[data-entering]` and
+`[data-exiting]`, with `transition`. React Aria waits for the transitions
+through `getAnimations()` before it unmounts, and with nothing running, under
+reduced motion or in jsdom, it mounts and unmounts at once.
+
+| Overlay | Enter and exit |
+| --- | --- |
+| Scrim | its background color, 180ms ease |
+| Dialog, ConfirmDialog, CommandPalette | opacity, and an 8px rise to rest, 180ms ease |
+| Drawer | a slide from its edge by `calc(100% + var(--overlay-inset))`, 180ms ease, by `data-side` |
+| Sheet | React Aria drives the slide with scroll and the backdrop fades through its keyframes; the Modal fallback slides up by its own height in 180ms |
+| Popover, Menu | opacity, and 4px toward the trigger by `data-placement`, 140ms ease-out |
+| Tooltip | opacity, and 4px toward the trigger, 140ms ease-out |
+| Toast | opacity and an 8px rise on enter, through `@starting-style`; the exit is instant |
+
+Reduced motion turns every one of them off, transitions and animations alike,
+in a block after the rules it overrides; nothing in an overlay needs the
+spinner's exception. `@starting-style` is above the browser floor (Safari
+17.5, Firefox 129), so only the toast uses it, and on a floor browser a toast
+simply appears.
+
+**Focus.** Dialog, Drawer, Sheet and CommandPalette focus the panel's
+container, or the child with `autoFocus`: the palette's input, or
+ConfirmDialog's Cancel or Confirm. Menu focuses its first item, or its first
+or last when Arrow Down or Arrow Up opened it. A free Popover focuses its
+container. Tooltip and Toast never take focus. On close, React Aria's
+`FocusScope` returns focus to the trigger; a toast closed while focused hands
+focus to its neighbor; and when a confirmed action removes the trigger, the
+caller places focus, which the docs say. Escape closes the topmost overlay
+only, so a tooltip inside a dialog closes first. The containers React Aria
+focuses with `tabIndex="-1"` (`Dialog`, `Popover`, `Menu`) take
+`outline: none`, so opening by keyboard does not ring the whole panel, and
+the rings stay on the controls inside. A ring inside a scrolling list is inset
+(`outline-offset: calc(-1 * var(--focus-ring-width))`), because a scroll
+container clips an outset ring, and on an ink-filled row it inverts to the
+canvas color, as "Rules every component follows" says. Hover on a float is
+the 5% ink wash, inside `@media (hover: hover)`.
+
+**Widths and touch.** Every width caps against the viewport, so a 320px
+screen never scrolls sideways. A dialog is 28rem wide, or 40rem at `lg`, a
+drawer 20rem, a toast 28rem, a tooltip 20rem and the palette 40rem, each at
+most the viewport less 2rem, the inset on both sides. A popover and a menu cap
+at the viewport less 2rem inside React Aria's 12px `containerPadding`, and a
+sheet is `min(100%, 36rem)`. Dialog, drawer and sheet bodies scroll inside the
+panel (`min-height: 0; overflow-y: auto; overscroll-behavior: contain`) while
+the head and the action row stay. Heights use `dvh`, with
+`--visual-viewport-height` for the on-screen keyboard. Targets are 40px: a
+menu row, which grows to 44px under `pointer: coarse`, the toast's dismiss
+button, which is the 40px IconButton, and a dialog's buttons, which are
+Buttons. Tooltips never show on touch.
+
+**Forced colors and right to left.** The scrim keeps `forced-color-adjust:
+none`. The selected menu row and the palette's active row become `Highlight`
+with `HighlightText`, a disabled row `GrayText`, and the sheet's grabber
+`CanvasText`. The tooltip keeps a transparent border, which the browser
+redraws so the tip keeps its shape, and shows no arrow. Every other border
+survives, since the browser redraws borders in the reader's text color. Every
+system color sits inside `@media (forced-colors: active)`, the one place the
+core test allows one. In right to left every root carries `dir`, the rules
+are logical, placements are `start` and `end`, and the drawer and the toast
+mirror.
+
+**Strings.** English defaults, every one replaceable through a prop:
+ConfirmDialog's `cancelLabel` ("Cancel") and its required `confirmLabel`; the
+`closeLabel` of Dialog, Drawer and Sheet ("Close"); Toast's `dismissLabel`
+("Dismiss"); the toast region's `aria-label`, React Aria's localized
+"Notifications" unless given; and CommandPalette's `labels` object. React
+Aria's own hidden "Dismiss" buttons follow `I18nProvider`.
+
+**Server safety.** No overlay formats with `Intl` during render, reads
+`window` or `document` at render or at import, or measures before its first
+paint, and every value an overlay shows may be given as a preformatted string,
+such as the palette's `end` slot or a toast's title. The toast queue and the
+overlay stack are module singletons that create no DOM, so they are safe to
+import on the server. `localStorage` is read only through
+`useSyncExternalStore`, with an empty snapshot on the server. Every client
+file starts with `'use client'`, the two hooks included, since they touch
+`document`.
+
+**Layers.** Modal surfaces and their scrims sit at `--z-modal`, the toast
+region above them at `--z-toast`, and React Aria's positioned overlays at the
+inline 100000 it writes, as "Token names" sets out with the reasons.

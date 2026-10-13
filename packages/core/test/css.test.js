@@ -119,6 +119,27 @@ describe('src/styles.css', () => {
     expect(statement).toBeGreaterThanOrEqual(0);
     expect(statement).toBeLessThan(entry.indexOf('@import'));
   });
+
+  it('imports the overlay layer before every overlay file and after card.css', () => {
+    // Every overlay file builds on the layer. Each one is checked once it exists, so the list holds the
+    // files still to come.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    const overlay = at('overlay.css');
+    expect(at('card.css')).toBeGreaterThanOrEqual(0);
+    expect(overlay).toBeGreaterThan(at('card.css'));
+    for (const file of [
+      'dialog.css',
+      'drawer.css',
+      'sheet.css',
+      'popover.css',
+      'menu.css',
+      'toast.css',
+      'command-palette.css',
+      'tooltip.css',
+    ]) {
+      if (components.includes(file)) expect(at(file), file).toBeGreaterThan(overlay);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -1365,6 +1386,64 @@ describe.each(['checkbox.css', 'radio.css', 'segmented.css'])(
     });
   },
 );
+
+describe('src/components/overlay.css', () => {
+  // The rules without their comments, with their whitespace closed up, so the selector list Prettier breaks
+  // over two lines reads as one. The "} " in front of the scrim's header starts the search at the rule
+  // before it, so `.overlay-scrim {` finds the scrim's own rule and not the tail of the shared one.
+  const rules = () => closeUp(stripComments(read('src/components/overlay.css')));
+
+  it('declares the overlay inset once, here, and restates the page type on every overlay root', () => {
+    const css = rules();
+    // On both roots: a modal's scrim is the panel's parent and reads the inset for its own padding.
+    expect(blockAfter(css, '.overlay, .overlay-scrim {')).toContain('--overlay-inset: 1rem;');
+    expect(css.match(/--overlay-inset\s*:/g) ?? []).toHaveLength(1);
+    const root = blockAfter(css, '.overlay {');
+    for (const declaration of [
+      'box-sizing: border-box;',
+      'color: var(--color-ink);',
+      'font-family: var(--font-sans);',
+      'font-size: var(--text-body);',
+      'line-height: var(--text-body--line-height);',
+      'font-weight: var(--text-body--font-weight);',
+      'text-align: start;',
+    ]) {
+      expect(root, declaration).toContain(declaration);
+    }
+    // There is no token for the inset, so no other file may write one of its own.
+    for (const file of components.filter((each) => each !== 'overlay.css')) {
+      expect(stripComments(read(`src/components/${file}`)), file).not.toMatch(/--overlay-inset\s*:/);
+    }
+  });
+
+  it('paints the scrim in Deep Well at the theme opacity as a background color, fixed at the modal layer, and keeps it translucent in forced colors', () => {
+    const scrim = blockAfter(rules(), '} .overlay-scrim {');
+    for (const declaration of [
+      'position: fixed;',
+      'inset: 0;',
+      'z-index: var(--z-modal);',
+      'display: grid;',
+      'height: var(--visual-viewport-height, 100dvh);',
+      'background-color: color-mix(in srgb, var(--color-scrim) calc(var(--opacity-scrim) * 100%), transparent);',
+      'transition: background-color 180ms ease;',
+      'forced-color-adjust: none;',
+    ]) {
+      expect(scrim, declaration).toContain(declaration);
+    }
+    // A color and not an opacity, so the panel inside never fades with it.
+    expect(scrim).not.toMatch(/(?<![\w-])opacity\s*:/);
+  });
+
+  it('goes transparent while entering, exiting or stacked, and stops the transition under reduced motion, after it', () => {
+    const css = rules();
+    expect(blockAfter(css, '.overlay-scrim:is([data-entering], [data-exiting], [data-stacked]) {')).toContain(
+      'background-color: transparent;',
+    );
+    const reduced = '@media (prefers-reduced-motion: reduce)';
+    expect(blockAfter(blockAfter(css, reduced), '.overlay-scrim {')).toContain('transition: none;');
+    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: background-color'));
+  });
+});
 
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
