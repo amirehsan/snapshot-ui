@@ -1,0 +1,62 @@
+/*
+ * Popover, the float surface a menu, a listbox or a free-content panel opens in: the float fill, the
+ * frame in both themes because a float can open over another float, the surface corner, the float
+ * shadow, 8px from the trigger, no arrow. Derived in docs/design-system.md ("Popover").
+ */
+@layer components {
+  .popover {
+    box-sizing: border-box;
+    max-width: calc(100vw - 2rem);
+    max-height: inherit;
+    overflow: auto;
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+    outline: none;
+    transition:
+      opacity 140ms ease-out,
+      translate 140ms ease-out;
+  }
+
+  .popover-padded {
+    padding: var(--spacing-peer);
+  }
+
+  .popover-match-trigger {
+    min-width: var(--trigger-width);
+  }
+
+  /* 4px toward the trigger: a popover under its trigger drops in from 4px higher, one above rises from 4px lower. */
+  .popover:is([data-entering], [data-exiting]) {
+    opacity: 0;
+  }
+
+  .popover[data-placement='bottom']:is([data-entering], [data-exiting]) {
+    translate: 0 -4px;
+  }
+
+  .popover[data-placement='top']:is([data-entering], [data-exiting]) {
+    translate: 0 4px;
+  }
+
+  .popover[data-placement='right']:is([data-entering], [data-exiting]) {
+    translate: -4px 0;
+  }
+
+  .popover[data-placement='left']:is([data-entering], [data-exiting]) {
+    translate: 4px 0;
+  }
+
+  @media (forced-colors: active) {
+    .popover {
+      border-color: CanvasText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .popover {
+      transition: none;
+    }
+  }
+}

@@ -1436,3 +1436,34 @@ test.describe('the sheet page, on a phone', () => {
     expect(await sideways(page)).toBe(0);
   });
 });
+
+test('the popover page opens a padded panel that flips near the bottom of the window', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await visit(page, '/docs/components/popover');
+  // The second example's trigger, which sits far enough down the page to be scrolled to the window's bottom.
+  const trigger = page.getByRole('button', { name: 'Sort the projects' });
+  // The page scrolled so the trigger sits 24px above the bottom of the window, with no room under it.
+  await trigger.evaluate((element) => {
+    const by = element.getBoundingClientRect().bottom - (window.innerHeight - 24);
+    window.scrollBy({ top: by, behavior: 'instant' });
+  });
+  const box = await trigger.boundingBox();
+  if (!box) throw new Error('No trigger');
+  expect(720 - (box.y + box.height)).toBeCloseTo(24, 0);
+  await trigger.click();
+  const popover = page.getByRole('dialog', { name: 'Sort the projects' });
+  await expect(popover).toBeFocused();
+  await expect(popover).toHaveClass(/\bpopover-padded\b/);
+  // React Aria flips it above the trigger, 8px clear of it once it has slid in.
+  await expect(popover).toHaveAttribute('data-placement', 'top');
+  await expect(popover).not.toHaveAttribute('data-entering');
+  await expect
+    .poll(async () => {
+      const panel = await popover.boundingBox();
+      return panel ? box.y - (panel.y + panel.height) : null;
+    })
+    .toBeCloseTo(8, 0);
+  await page.keyboard.press('Escape');
+  await expect(popover).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+});
