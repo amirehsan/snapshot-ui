@@ -76,3 +76,4 @@ export {
   type CardProps,
   type CardTitleProps,
 } from './card';
+export { CollapsibleCard, type CollapsibleCardProps } from './collapsible-card';

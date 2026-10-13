@@ -2303,3 +2303,106 @@ The title is ink and the note is slate, both on Lifted, and both pairings are
 in the contrast gate. Ink measures 17.84 in light and 17.42 in dark, and slate
 5.31 and 6.94. The app's collapse toggle is not part of Card. It arrives with
 the collapsible card.
+
+## CollapsibleCard
+
+The app's folding card becomes `CollapsibleCard`: a card whose body folds
+under its header, with the title as the toggle. It draws with Card's classes,
+so the two look alike, and every rule it adds names a part a plain card does
+not have, so a plain card is unchanged. Eight things were derived.
+
+- **The fold is the app's grid row, without its visibility step.** Before the
+  component was written, two ways to fold React Aria's `DisclosurePanel` in
+  200ms were built and compared in Playwright's Chromium, Firefox and WebKit:
+  the app's grid row, one track that moves between `1fr` and `0fr`, and React
+  Aria's `--disclosure-panel-height`, which it sets to the panel's
+  `scrollHeight` in pixels and to `auto` once the panel has settled. Both
+  folded smoothly both ways with no flash, took the folded body out of the tab
+  order and the accessibility tree, and stopped moving under reduced motion.
+  React Aria's height failed an open card with a popup in it: `scrollHeight`
+  counts an absolutely positioned child that hangs out of the body, so in
+  Chromium a 147px body with a popup below it folded from 307px, jumping
+  taller first, and opened to 306px before it snapped back to 147px, and
+  Firefox and WebKit did the same. The grid row measures nothing and did
+  neither. The app also hides a folded body with `visibility`, and that failed
+  find-in-page in all three: neither `window.find()` nor a text fragment link
+  reached text that `visibility` hides. So the library keeps the grid row and
+  drops the visibility step. React Aria already sets `hidden="until-found"` on
+  a folded panel once the panel's own transitions have finished, which takes
+  the body out of the tab order and the accessibility tree and leaves it to
+  find-in-page: a text fragment link opened a folded card in Chromium and
+  WebKit, `window.find()` did in Firefox, and each time the card reported it
+  through `onExpandedChange`. The grid is drawn only while the panel is shown,
+  so a browser without `until-found` falls back to the `display: none` that
+  `hidden` gives, which a `display` on the panel would override. That last
+  part is reasoned and not measured, since all three browsers have
+  `until-found`.
+- **The body clips only while it is folded or folding.** An open card draws a
+  popup inside it whole, past its edge. A body that folds has to clip, so the
+  component marks the root `data-folding` on every toggle and takes the mark
+  off when every transition the fold runs has finished, as `getAnimations()`
+  and their `finished` promises report it: 203 to 219ms after a toggle in the
+  three browsers. A toggle that turns a moving fold back replaces its
+  transition, and the replaced one settles late, so only the latest toggle's
+  settling takes the mark off. With nothing running, as under reduced motion,
+  it comes off at once. `overflow: hidden` is keyed on that mark and on the
+  folded state, and on nothing else.
+- **The target is the title's row.** The title is a heading that holds the
+  toggle, a button as wide as the title with the chevron at its end. Padding
+  of half of what 40px has over the title's line, 5.6px, takes it to 40px, and
+  an equal negative margin gives the room back, so the header is as tall as a
+  plain card's. A minimum height of 40px covers the rounding of a layout in
+  fractions of a pixel, which drew the padded row 39.98px tall. A title that
+  wraps keeps its own height, since the margin gives back only the padding.
+- **The header is a grid, and the note stays under the title.** The title
+  takes the first row and the room left in it, the actions end that row, 24px
+  after it, the peer step, and the note sits directly under the title, 8px
+  down, as in a card. The 24px is the actions' margin and not a column gap, so
+  with no actions the toggle spans the row. The header is a size container,
+  and below 18rem (288px) the actions move under the note, to the row's
+  start, and wrap if they must, so the order on screen is always title, note,
+  actions, which is the order in the page and the order a screen reader
+  reads. 18rem is measured: "Notifications" with its chevron and a tertiary
+  Reset button need 272px side by side, a short title with two short buttons
+  284px, and a card on a 390px phone with 16px gutters has 292px. Above it, a
+  long title beside wide actions wraps, and a word too long for the room left
+  breaks. A size container does not size its parent from its content, so a
+  card that takes its width from what it holds takes it from the body. The
+  actions are never inside the toggle, so no control sits inside another, and
+  they stay usable while the card is folded.
+- **The chevron turns toward the title.** It is a 24px Lucide `ChevronDown`
+  in slate, which turns ink on hover, where hover exists, and on a press,
+  since touch has no hover. It sits level with the first line of a title that
+  wraps, beside the words a reader starts with, as a checkbox's box does.
+  Folded, it turns a quarter toward the title, which is the inline start. CSS
+  has no turn that follows the direction, and `:dir()` is past the browser
+  floor (Chrome 120), where Lightning CSS rewrites it as a list of
+  right-to-left languages and so ignores `dir`. So each `dir` attribute sets
+  the turn as a custom property, 90deg for `ltr` and -90deg for `rtl`, and it
+  inherits: the nearest `dir` decides, as it does for the layout.
+- **The space folds with the body.** The header's bottom margin, its bottom
+  padding and its rule move to 0 with the fold, so a folded card ends at its
+  own 32px of padding. The fold, the space and the chevron move in 200ms,
+  ease, and reduced motion stops all three.
+- **The root is the card's own element.** React Aria's `Disclosure` always
+  renders a div, its `render` prop must return one, and it passes on only
+  global attributes, so an `aria-labelledby` would be lost. The root is the
+  `div`, `section` or `article` that `as` picks, and takes `className`, `ref`
+  and every attribute, and the disclosure is a div inside it that draws
+  nothing. The root carries `data-expanded` from the same state the
+  disclosure is given.
+- **Forced colors.** The browser repaints the title in the reader's text
+  color, but an svg keeps a color its author set, so the slate chevron stayed
+  slate. A `@media (forced-colors: active)` block gives it the toggle's own
+  color, at rest, hovered and pressed. The ring is an outline, which the
+  browser keeps (checked in Chromium with forced colors emulated, in light and
+  dark).
+
+| Chevron on the card's Lifted ground | Light | Dark |
+| --- | --- | --- |
+| Slate, at rest | 5.31 | 6.94 |
+| Ink, hovered and pressed | 17.84 | 17.42 |
+
+Both are in the contrast gate already, as text on Lifted at 4.5:1, over the
+3:1 an icon needs, so no pair was added, and a test says so. The focus ring is
+the ink ring the gate holds on Lifted.

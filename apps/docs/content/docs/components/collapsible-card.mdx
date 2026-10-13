@@ -1,0 +1,81 @@
+---
+title: Collapsible card
+description: A card whose body folds under its header. The title is the toggle, and the note and the actions stay in view while the card is folded.
+icon: ChevronsDownUp
+---
+
+<Section>
+
+## Folding
+
+The title is the toggle: press it, or focus it and press Enter or Space, to fold the body under the header and to open it again. The whole row is the target, and the chevron at its end turns toward the title while the card is folded. The header stays as it is, and the space and the rule between the header and the body fold away with the body, in 200ms, or at once under reduced motion.
+
+<Preview name="collapsible-card-basic" />
+
+</Section>
+
+<Section>
+
+## Actions
+
+Controls passed as `actions` sit at the end of the header row, outside the toggle, and stay usable while the card is folded, so a Reset button never hides with the fields it resets. On a card narrower than 18rem inside its padding they move under the note, so the note always stays directly under the title.
+
+<Preview name="collapsible-card-actions" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+A card is open on its first render. Pass `defaultExpanded={false}` to start it folded, or control it with `isExpanded` and `onExpandedChange`. The children are the body, laid out as a card's body is. CollapsibleCard is a client component, and a server component can render it, as the first example on this page does.
+
+```tsx
+import { Button, CollapsibleCard } from '@snapshot-ui/react';
+
+export function Notifications() {
+  return (
+    <CollapsibleCard
+      title="Notifications"
+      note="Where we reach you, and how often."
+      actions={<Button variant="secondary">Reset</Button>}
+    >
+      <p>Product updates, when something ships.</p>
+    </CollapsibleCard>
+  );
+}
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+The rest of the HTML attributes, `className` and `ref` go on the card's root, and `className` is merged after the library's classes.
+
+<PropsTable path="../../packages/react/src/collapsible-card/CollapsibleCard.tsx" type="Pick<CollapsibleCardProps, 'title' | 'level' | 'note' | 'actions' | 'defaultExpanded' | 'isExpanded' | 'onExpandedChange' | 'as' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The title is a heading that holds a button, so the card is in a screen reader's list of headings, and the button says the title and then whether the body is expanded or collapsed. The chevron is decoration. A folded body leaves the tab order and the accessibility tree, and the browser's find-in-page can still find its text: the card opens and reports it through `onExpandedChange`. The toggle is as wide as the title and 40px tall, and the actions are never inside it.
+
+<Keys rows={[['Enter Space', 'Folds or opens the card.'], ['Tab', 'Moves to the toggle, then to the actions. A folded body takes no focus.']]} />
+
+A card is a div unless `as` says otherwise. A `section` with a name, from `aria-label` or from `aria-labelledby` pointing at an element in the title, is a region landmark. An `article` is not a landmark, named or not.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps collapsible cards in the system.
+
+<Rules dos={['Title the card with what it holds, such as Notifications. The title is the toggle and its name.', 'Put a control that acts on the whole card, such as Reset, in actions, so it stays in reach while the card is folded.', 'Leave open what a reader needs on arrival, and fold what they come back to now and then.']} donts={['Never put a link or a button in the title. The title is already a button.', 'Never fold the only card on a page. A fold that hides everything hides the page.', 'Never use a collapsible card for a single control or a short label. A card holds a section.']} />
+
+</Section>

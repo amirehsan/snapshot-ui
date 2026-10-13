@@ -87,4 +87,200 @@
   .card-body > * {
     min-width: 0;
   }
+
+  /*
+   * CollapsibleCard: a card whose body folds under its header, derived in
+   * docs/design-system.md ("CollapsibleCard"). It draws with the card's own
+   * classes, and the rules below add the toggle, the actions, the fold and the
+   * space that folds with it, each through a part a plain card does not have.
+   *
+   * The root carries data-expanded while the card is open and data-folding
+   * while the fold moves, and the component sets both. The header and the fold
+   * sit in React Aria's disclosure element, .card-disclosure, which draws
+   * nothing. Every state rule reaches them through it from the root, so a card
+   * nested in the body keeps its own state.
+   */
+
+  /* The header is a grid. The title, which holds the toggle, takes the first
+     row and the room left in it, and the actions end that row. The note sits
+     directly under the title, in its column. With no actions the second
+     column is empty and has no width, so the toggle spans the row, and with no
+     note there is no second row. The header is a size container, so the
+     actions can move when the row is too narrow for both. */
+  .card-disclosure > .card-header {
+    container: card-header / inline-size;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 0;
+    transition:
+      margin-bottom 200ms ease,
+      padding-bottom 200ms ease,
+      border-bottom-width 200ms ease;
+  }
+
+  .card-disclosure > .card-header > .card-title,
+  .card-disclosure > .card-header > .card-note {
+    grid-column: 1;
+  }
+
+  /* The 24px between the title and the actions is the actions' margin, not a
+     column gap, so a header with no actions keeps no gap. */
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--spacing-part);
+    grid-row: 1;
+    grid-column: 2;
+    margin-inline-start: var(--spacing-peer);
+  }
+
+  /* Too narrow for a typical title and an action side by side, the actions
+     move under the note, to the row's start, and wrap if they must. 18rem
+     (288px) is measured: "Notifications" with its chevron and a tertiary
+     Reset button need 272px side by side, and a short title with two short
+     buttons 284px. A card on a 390px phone with 16px gutters has 292px. */
+  @container card-header (width < 18rem) {
+    .card-actions {
+      grid-row: auto;
+      grid-column: 1;
+      justify-content: flex-start;
+      margin-inline-start: 0;
+    }
+  }
+
+  /* The title is the toggle: a button as wide as the title, with the chevron at
+     its end, so the whole row is the target. Padding takes it to 40px tall and
+     an equal negative margin gives the room back, so the header is as tall as a
+     plain card's. The minimum height covers the rounding of a layout that works
+     in fractions of a pixel, which drew the padded row 39.98px tall. */
+  .card-toggle {
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-part);
+    width: 100%;
+    min-height: 40px;
+    margin: min(0px, calc((1lh - 40px) / 2)) 0;
+    padding: max(0px, calc((40px - 1lh) / 2)) 0;
+    border: 0;
+    border-radius: var(--radius-micro);
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-align: start;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .card-toggle-text {
+    flex: auto;
+    min-width: 0;
+  }
+
+  /* The chevron sits level with the first line of a title that wraps, beside
+     the words a reader starts with, as a checkbox's box does: a margin of half
+     of what the line has over the 24px icon, 2.4px. For one line that is where
+     centring would put it. */
+  .card-chevron {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    margin-block: calc((1lh - 24px) / 2);
+    color: var(--color-slate);
+    transition: rotate 200ms ease;
+  }
+
+  .card-toggle:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  @media (hover: hover) {
+    .card-toggle:is(:hover, [data-hovered]) .card-chevron {
+      color: var(--color-ink);
+    }
+  }
+
+  /* A press shows what hover does, since touch has no hover to show it. */
+  .card-toggle:is(:active, [data-pressed]) .card-chevron {
+    color: var(--color-ink);
+  }
+
+  /* Folded, the chevron turns a quarter toward the title, which is the inline
+     start: left in left to right, and right in right to left. CSS has no turn
+     that follows the direction, and :dir() is past the browser floor, so each
+     dir attribute sets the turn and it inherits: the nearest dir attribute
+     decides, as it does for the layout. */
+  :where([dir='ltr' i]) {
+    --card-chevron-turn: 90deg;
+  }
+
+  :where([dir='rtl' i]) {
+    --card-chevron-turn: -90deg;
+  }
+
+  .card-collapsible:not([data-expanded]) > .card-disclosure > .card-header .card-chevron {
+    rotate: var(--card-chevron-turn, 90deg);
+  }
+
+  /* The space and the rule between the header and the body fold with the
+     body, so a folded card ends at its own padding. */
+  .card-collapsible:not([data-expanded]) > .card-disclosure > .card-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom-width: 0;
+  }
+
+  /* The body folds on a grid row that moves between 1fr, the body's own
+     height, and 0fr. Nothing is measured, so a popup hanging out of the body
+     cannot change the height it folds from. React Aria hides a folded panel
+     with hidden="until-found" once the fold has settled, which takes it out of
+     the tab order and the accessibility tree and leaves it to find-in-page.
+     The grid is drawn only while the panel is shown, so a browser without
+     until-found falls back to the display: none of hidden. */
+  .card-fold {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 200ms ease;
+  }
+
+  .card-fold:not([hidden]) {
+    display: grid;
+  }
+
+  .card-collapsible:not([data-expanded]) > .card-disclosure > .card-fold {
+    grid-template-rows: 0fr;
+  }
+
+  .card-fold > .card-body {
+    min-height: 0;
+  }
+
+  /* The body clips only while it is folded or folding, so a popup in an open
+     card is never cut off at the card's edge. */
+  .card-collapsible:is(:not([data-expanded]), [data-folding]) > .card-disclosure > .card-fold > .card-body {
+    overflow: hidden;
+  }
+
+  /* Forced colors repaint text in the reader's palette, but an svg keeps the
+     color its author set, so the slate or ink chevron would stay as it was. It
+     takes the toggle's color there, the reader's text color, at rest, under the
+     pointer and pressed alike. */
+  @media (forced-colors: active) {
+    .card-chevron,
+    .card-toggle:is(:hover, [data-hovered], :active, [data-pressed]) .card-chevron {
+      color: inherit;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-disclosure > .card-header,
+    .card-chevron,
+    .card-fold {
+      transition: none;
+    }
+  }
 }

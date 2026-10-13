@@ -43,9 +43,15 @@ export const withoutClipboard = async (page: Page, mode: 'missing' | 'refusing')
   }, mode);
 };
 
-/** Every axe violation on the page, as "rule: selectors". An empty list is a pass. */
+/**
+ * Every axe violation on the page, as "rule: selectors". An empty list is a pass. The check that a control's
+ * accessible name holds the text it shows is experimental in this axe and on by default from axe 4.14, the
+ * version the packages' own tests run, so it is turned on here too.
+ */
 export const axeViolations = async (page: Page): Promise<string[]> => {
-  const { violations } = await new AxeBuilder({ page }).analyze();
+  const { violations } = await new AxeBuilder({ page })
+    .options({ rules: { 'label-content-name-mismatch': { enabled: true } } })
+    .analyze();
   return violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 };
 
