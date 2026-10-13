@@ -2,16 +2,18 @@ import type { HTMLAttributes, ReactElement, ReactNode, Ref } from 'react';
 import { cx } from '../utils/cx';
 
 /**
- * What a badge means. Error means invalid or failed and success means success,
- * so neither is ever decoration, in sample content included.
+ * What a badge means. Error means invalid or failed, success means success, and warning means a
+ * state that needs a look soon and is not a failure (Watch, Behind, Needs review, Out of date), so
+ * none is ever decoration, in sample content included.
  */
-export type BadgeTone = 'neutral' | 'info' | 'success' | 'error';
+export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   /**
-   * What the badge means: `info`, `success` and `error` repeat in color what
-   * the label already says. Error means invalid or failed and success means
-   * success, never decoration, in sample content included. Clay and signal
+   * What the badge means: `info`, `success`, `warning` and `error` repeat in
+   * color what the label already says. Error means invalid or failed, success
+   * means success and warning means a state that needs a look soon and is not
+   * a failure, never decoration, in sample content included. Clay and signal
    * orange are deliberately not tones: they mean unsaved work and consent.
    * @default 'neutral'
    */

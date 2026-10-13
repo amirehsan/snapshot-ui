@@ -6,7 +6,7 @@ const meta = {
   component: Badge,
   args: { children: 'Beta' },
   argTypes: {
-    tone: { control: 'inline-radio', options: ['neutral', 'info', 'success', 'error'] },
+    tone: { control: 'inline-radio', options: ['neutral', 'info', 'success', 'warning', 'error'] },
   },
 } satisfies Meta<typeof Badge>;
 
@@ -18,6 +18,8 @@ export const Neutral: Story = {};
 export const Info: Story = { args: { tone: 'info', children: 'New' } };
 
 export const Success: Story = { args: { tone: 'success', children: 'Published' } };
+
+export const Warning: Story = { args: { tone: 'warning', children: 'Needs review' } };
 
 export const ErrorTone: Story = { args: { tone: 'error', children: 'Failed' } };
 

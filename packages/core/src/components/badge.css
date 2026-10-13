@@ -3,8 +3,8 @@
  * derived in docs/design-system.md ("Badge"): a 1px border and a label in one
  * color, with no fill. With no fill the text sits on the surface behind the
  * badge, so every text pair is one the contrast gate already measures. Neutral
- * is the base; info, success and error only change the color. It is never clay
- * or signal orange, which mean unsaved work and consent.
+ * is the base; info, success, warning and error only change the color. It is
+ * never clay or signal orange, which mean unsaved work and consent.
  */
 @layer components {
   .badge {
@@ -34,6 +34,10 @@
 
   .badge-success {
     color: var(--color-success);
+  }
+
+  .badge-warning {
+    color: var(--color-warning);
   }
 
   .badge-error {
