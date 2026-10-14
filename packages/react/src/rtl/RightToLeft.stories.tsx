@@ -6,6 +6,7 @@ import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { CollapsibleCard } from '../collapsible-card';
+import { ComboBox } from '../combo-box';
 import { CommandPalette } from '../command-palette';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
@@ -909,6 +910,40 @@ export const SelectMirrored: Story = {
       await expect(icon.left).toBeGreaterThanOrEqual(text.right - 0.5);
       await expect(check.right).toBeLessThanOrEqual(text.left + 0.5);
     }
+  },
+};
+
+/**
+ * The combo box in Persian: the label starts at the right edge of the field, the text starts at the input's
+ * right padding, and the field button sits at the left end, 6px inside the control, unmirrored.
+ */
+export const ComboBoxMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(28rem, calc(100vw - 2rem))' }}>
+        <ComboBox label="فروشنده" defaultValue="cafe" labels={{ open: 'نمایش گزینه‌ها' }}>
+          <PickerOption id="cafe">کافه لونا</PickerOption>
+          <PickerOption id="mart">بقالی سر کوچه</PickerOption>
+        </ComboBox>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const field = rect(find(canvasElement, '.combo-box'));
+    const label = rect(find(canvasElement, '.field-label'));
+    const control = rect(find(canvasElement, '.combo-box-control'));
+    const input = find(canvasElement, '.combo-box-input');
+    const button = rect(find(canvasElement, '.combo-box-button'));
+    await expectSameEdge(label.right, field.right);
+    await expectInside(button, control);
+    await expect(button.left - control.left).toBeCloseTo(6, 0);
+    // The text's start is the right: the input's start padding there, the room for the button at the left.
+    const style = getComputedStyle(input);
+    await expect(style.textAlign === 'start' || style.textAlign === 'right').toBe(true);
+    await expect(style.direction).toBe('rtl');
+    await expect(parseFloat(style.paddingRight)).toBe(24);
+    await expect(parseFloat(style.paddingLeft)).toBe(48);
+    await expect(getComputedStyle(find(canvasElement, '.combo-box-button svg')).scale).toBe('none');
   },
 };
 

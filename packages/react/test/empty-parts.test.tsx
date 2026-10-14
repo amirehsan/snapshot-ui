@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { AppShell } from '../src/app-shell';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { ComboBox } from '../src/combo-box';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
@@ -84,6 +85,12 @@ const EMPTY: [name: string, element: ReactElement][] = [
     <Select aria-label="Category" label="" description={false} isChanged>
       <PickerOption id="a">A</PickerOption>
     </Select>,
+  ],
+  [
+    'ComboBox',
+    <ComboBox aria-label="Merchant" label={false} description="" isChanged>
+      <PickerOption id="a">A</PickerOption>
+    </ComboBox>,
   ],
 ];
 

@@ -745,6 +745,48 @@ describe('the select', () => {
   });
 });
 
+describe('the combo box', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+  /** Ink over the 5% ink wash on raised, the pressed field button's glyph while the list is open. */
+  const inkOnWash = (mode) => {
+    const palette = paletteFor(tokens, mode);
+    const wash = composite({ ...parseColor(palette.ink), a: 0.05 }, parseColor(palette.raised));
+    return contrastRatio(composite(parseColor(palette.ink), wash), wash);
+  };
+
+  // The field is the input's raised pill: its text is ink, the button's resting glyph slate. The list is the
+  // Select's, the Menu's float panel, its rows ink and slate and the no-matches line slate. The gate holds all of
+  // it at the text minimum.
+  it('cites ink and slate on raised and on float, which the gate holds at the text minimum', () => {
+    for (const ground of ['raised', 'float']) {
+      for (const text of ['ink', 'slate']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // The placeholder is the input's own, an attribute axe never measures, so it keeps the whisper, taupe, which is
+  // recorded and not gated; the text, the Spinner, the button's glyph and the rows are gated. The wash under the
+  // pressed button is a mix, not a token, so ink over it is measured and recorded.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    expect(measured('light', 'ink', 'raised'), 'the text, light').toBeCloseTo(18.43, 2);
+    expect(measured('dark', 'ink', 'raised'), 'the text, dark').toBeCloseTo(15.36, 2);
+    expect(measured('light', 'slate', 'raised'), 'the glyph, light').toBeCloseTo(5.49, 2);
+    expect(measured('dark', 'slate', 'raised'), 'the glyph, dark').toBeCloseTo(6.44, 2);
+    expect(measured('light', 'taupe', 'raised'), 'the placeholder, light').toBeCloseTo(1.58, 2);
+    expect(measured('dark', 'taupe', 'raised'), 'the placeholder, dark').toBeCloseTo(3.68, 2);
+    expect(inkOnWash('light'), 'the pressed glyph, light').toBeCloseTo(16.65, 2);
+    expect(inkOnWash('dark'), 'the pressed glyph, dark').toBeCloseTo(13.24, 2);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

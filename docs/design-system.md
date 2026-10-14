@@ -5870,3 +5870,132 @@ Aria.
 **The size.** The size limit is 3 kB for `Select`, `PickerOption` and
 `PickerSection` together, the spec's budget: the entry measured 2.41 kB,
 and the rule rounds up to 2.5 kB and adds 0.5 kB.
+
+## ComboBox
+
+A text field that filters a list as you type and chooses one option:
+`ComboBox`, the text input's pill with the shared field button at its
+end, opening the Select's list under it. Its rows are the Select's
+`PickerOption` and `PickerSection`.
+
+**The control.** The root is `.field.combo-box`, which carries
+`data-changed` and `data-loading` from the wrapper and React Aria's
+`data-open`, `data-invalid` and `data-disabled`. Under the label row sits
+`div.combo-box-control`, positioned, holding the library's `Input` as
+`input.input.combo-box-input` (role `combobox`), the Spinner while options
+load, and `Button.input-button.combo-box-button` with Lucide `ChevronDown`.
+The input wears `.input`, so every hover, focus, disabled, changed and
+invalid edge `input.css` draws reaches it through the field's root,
+written once. `combo-box.css` only pads its text clear of the button,
+`padding-inline-end: 3rem`, and of the Spinner and the button while
+options load, `4.5rem`, in one-class rules after `input.css`, so they beat
+the input's padding and none of its states. The placeholder is the
+input's own, taupe, the whisper: an input's placeholder is an attribute,
+which axe never measures, and the label above the field names it. A
+disabled field's text is taupe, the disabled text.
+
+**The field button.** `.input-button`, from the search field: a ghost
+circle `calc(var(--size-field) - 0.75rem)` across (36px, 24px compact), 6px
+in from the pill's end, its 16px glyph slate, hit at 40px. It is named
+"Show options" and the field's label (`labels.open`), the library's words
+in place of React Aria's, so a Persian page can name it. React Aria keeps
+it out of the tab order and takes no focus on a press, since the down
+arrow does the same from the field, and holds it pressed while the list
+is open, so it shows the wash and its ink glyph then.
+
+**The Spinner.** The 24px Spinner (`size="md"`), named "Loading"
+(`labels.loading`), in `span.combo-box-spinner`: absolute, centred on the
+block axis, its inline end at `calc(var(--size-field) - 0.25rem)`, which is
+the button's 6px inset and its width plus 2px, so it sits 2px before the
+button in every density. It takes no pointer, and it draws in
+`currentColor`, the field's ink.
+
+**The list.** The Select's, with no CSS of its own:
+`Popover.menu-popover` holding `ListBox.menu.combo-box-list`, the Menu's
+float panel and rows, at most 320px tall. React Aria positions and sizes
+the list against the element its `GroupContext` ref holds, else against
+the input. The control takes that ref, so the list opens under the whole
+control at its start and is at least as wide as it (the control's width
+is `--trigger-width`, which `menu-popover` reads). React Aria's `Group`
+would also take the ref, but it brings a group role and a focus-within
+`data-focus-visible`, which `.input`'s focus rule would turn into a ring
+around the whole control; so the control is a plain `div` that reads the
+ref from `useSlottedContext(GroupContext)` (spec correction 7). The
+multi-select's frame does the same.
+
+**Opening and choosing.** Typing opens the list filtered by the text,
+React Aria's `contains` at base sensitivity, so case and accents do not
+count; the button and the down arrow open it with every option. Focus
+stays in the input and the active option moves virtually, by
+`aria-activedescendant`; the arrows stop at the ends, and Home, End and
+the page keys jump. Enter or a press chooses and closes, and the input
+shows the option's text. Escape closes the list and puts the chosen text
+back in one press: React Aria reverts the text as it closes, so the
+second Escape the spec described has nothing left to do. Tab chooses the
+active option, closes the list and moves on; with no active option it
+puts the chosen text back. Leaving the field puts the chosen text back,
+unless `allowsCustomValue`, and so does scrolling the page while the list
+is open: the popover is not modal, and React Aria closes such a popover
+when the page under it scrolls. With the input uncontrolled, emptying it
+clears the value.
+
+**Nothing matches.** `allowsEmptyCollection` is on by default, so the
+list stays open with `div.picker-empty`, the Select's slate line, saying
+"No matches" (`labels.empty`), or "Loading" (`labels.loading`) while
+options load and the list has none yet, instead of vanishing, which
+reads as a broken field.
+
+**Manual mode.** For options from a server the app passes `items` and
+`inputValue`, fetches in `onInputChange` and sets `isLoading` while it
+waits. React Aria does not filter items the app controls, so the server
+filters, ranks and caps, and the list keeps what it has until the new
+results arrive. While the list is open React Aria hides everything but
+the input and the list from assistive technology, the Spinner too, which
+is why the empty list says "Loading" itself.
+
+**The server.** React Aria builds the collection by rendering the
+combo box's children once into a template, and its popover renders its
+content there too. The combo box puts a bare list there, without the
+library's popover and its focus handling, and renders the popover only
+with the combo box's state, as the Select does. On the server the input
+already holds the chosen option's text and the button its name; the list
+renders nothing until it opens. React Aria makes a collator for its
+filter while a combo box renders, on the server too (risk R1): it
+compares and writes nothing, and the server test renders a combo box
+under `en-US` and `fa-IR` and finds the same HTML.
+
+**Words.** The library writes three of its own, every one replaceable
+through `labels`: `open`, "Show options"; `empty`, "No matches"; and
+`loading`, "Loading". React Aria announces the number of options as the
+list opens, the option as the active one moves, and the choice, in its
+own strings. react-aria 3.53.1 ships them in 34 locales, Arabic and
+Hebrew among them and no Persian, so on a `fa-IR` page they stay English
+(spec correction 8).
+
+**Screen readers.** Virtual focus is what VoiceOver on iOS follows
+unevenly (risk R3). ComboBox with VoiceOver on iOS and TalkBack on
+Android (the option read as the arrows move, a choice, the count): not yet
+verified.
+
+**Measured pairs.** The text, ink on raised: 18.43 in light and 15.36 in
+dark, and the Spinner, which draws in it. The button's glyph at rest,
+slate on raised: 5.49 and 6.44; pressed
+or hovered it is ink on the 5% wash, 16.65 and 13.24, as the search
+field's. The rows and the empty line are the Select's, ink and slate on
+float. All of it is gated as text but the wash, a mix, which is
+recorded. The placeholder, taupe on raised, is 1.58 and 3.68: under the
+text minimum, which is why it is never the field's only label; it is
+recorded and not gated. No pair is added to the gate.
+
+**Right to left.** The label and the text start at the right, the button
+sits at the left, 6px inside the control, its chevron unmirrored since
+it points down, and the list aligns to the control's right edge, its
+start, through React Aria. Nothing in `combo-box.css` is physical.
+
+**Forced colors.** The input keeps `input.css`'s rules, the button
+`.input-button`'s, `CanvasText` and `GrayText` when disabled, and the rows
+the Menu's; the Spinner's `currentColor` is the reader's text color.
+
+**The size.** The size limit is 2.5 kB for `ComboBox`, the spec's
+budget: the entry measured 1.88 kB, and the rule rounds up to 2 kB and
+adds 0.5 kB.

@@ -744,6 +744,71 @@ test.describe('the select page, on a touch screen', () => {
   });
 });
 
+/**
+ * Scrolls a field into view and waits two frames past it. React Aria closes a combo box's list when the page
+ * scrolls and puts the text back as it closes, so the scroll that reaching the field takes must be over before
+ * typing opens the list.
+ */
+const scrolledTo = async (field: Locator): Promise<void> => {
+  await field.scrollIntoViewIfNeeded();
+  await field.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        });
+      }),
+  );
+};
+
+test('a combo box filters as you type and keeps its list open with a no-matches line', async ({ page }) => {
+  await visit(page, '/docs/components/combo-box');
+  // The basic example's field, the one whose hint says to type part of the name.
+  const field = page
+    .locator('.stage .combo-box')
+    .filter({ hasText: 'Type part of the name' })
+    .getByRole('combobox', { name: 'Merchant' });
+  await scrolledTo(field);
+  await field.fill('co');
+  // The rows, by their class: React Aria wraps the no-matches line in an option role of its own.
+  const options = page.getByRole('listbox').locator('.picker-option');
+  await expect(options).toHaveText(['Coastline Rail', 'Cobalt Coffee', 'Corner Mart']);
+  await expect(field).toBeFocused();
+  await field.fill('zzz');
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await expect(options).toHaveCount(0);
+  await expect(page.getByRole('listbox')).toContainText('No matches');
+  await field.press('Escape');
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await expect(field).toHaveValue('');
+});
+
+test('a combo box in manual mode shows the spinner while the app loads, then the results', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/combo-box');
+  const example = page.locator('.stage .combo-box').filter({ hasText: 'Searched on the server' });
+  const field = example.getByRole('combobox', { name: 'Merchant' });
+  await scrolledTo(field);
+  await field.fill('co');
+  // While the list is open React Aria hides the rest of the page from assistive technology, the spinner too.
+  const spinner = example.getByRole('progressbar', { name: 'Loading', includeHidden: true });
+  await expect(spinner).toBeVisible();
+  await expect(example).toHaveAttribute('data-loading', '');
+  // The server's results: the names that start with the text first, then those that hold it.
+  await expect(page.getByRole('listbox').locator('.picker-option')).toHaveText([
+    'Coastline Rail',
+    'Cobalt Coffee',
+    'Corner Mart',
+    'Cove Seafood',
+    'Railway Records',
+  ]);
+  await expect(spinner).toHaveCount(0);
+  await expect(example).not.toHaveAttribute('data-loading');
+});
+
 test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
   await visit(page, '/docs/components/text-area');
   const field = fieldNamed(page, 'About the workspace');

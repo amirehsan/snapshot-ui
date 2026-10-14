@@ -1,0 +1,31 @@
+/*
+ * ComboBox: the text input's pill with the shared field button at its end, derived in docs/design-system.md
+ * ("ComboBox"). The input takes every edge input.css draws through the field's root; this file only pads its
+ * text clear of the button, and of the Spinner while options load, which sits before the button. The button is
+ * .input-button and the list is the Select's, so nothing else is drawn here. The control is positioned for
+ * the two, and React Aria opens the list against it.
+ */
+@layer components {
+  .combo-box-control {
+    position: relative;
+  }
+
+  /* One class, after input.css, so it beats the input's padding and none of its states. */
+  .combo-box-input {
+    padding-inline-end: 3rem;
+  }
+
+  .combo-box[data-loading] .combo-box-input {
+    padding-inline-end: 4.5rem;
+  }
+
+  /* Just before the button: 2px clear of its 6px inset and its width, in every density. */
+  .combo-box-spinner {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: calc(var(--size-field) - 0.25rem);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+  }
+}

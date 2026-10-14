@@ -4352,6 +4352,73 @@ describe('src/components/select.css', () => {
   });
 });
 
+describe('src/components/combo-box.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/combo-box.css')));
+  /** Every selector the file writes, each part of a list on its own. */
+  const selectors = () =>
+    [...rules().matchAll(/([^{}]+)\{/g)]
+      .map((match) => match[1].trim())
+      .filter((selector) => !selector.startsWith('@'))
+      .flatMap((selector) => selector.split(/,(?![^(]*\))/).map((part) => part.trim()));
+
+  it('pads the input clear of the button, and of the Spinner while loading, with one-class rules', () => {
+    const css = rules();
+    expect(blockAfter(css, '.combo-box-input {').trim()).toBe('padding-inline-end: 3rem;');
+    expect(blockAfter(css, '.combo-box[data-loading] .combo-box-input {').trim()).toBe(
+      'padding-inline-end: 4.5rem;',
+    );
+    // One class for the resting padding, after input.css: it beats the input's padding by order and none of the
+    // input's states. Never the two classes together, which would outweigh the hover and focus edges' order.
+    expect(css).not.toMatch(/\.combo-box-input\.input|\.input\.combo-box-input/);
+  });
+
+  it('sets the Spinner just before the button, from the field size', () => {
+    const spinner = blockAfter(rules(), '.combo-box-spinner {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset-block: 0;',
+      'inset-inline-end: calc(var(--size-field) - 0.25rem);',
+      'display: flex;',
+      'align-items: center;',
+      'pointer-events: none;',
+    ]) {
+      expect(spinner, declaration).toContain(declaration);
+    }
+  });
+
+  it('positions the control and draws nothing else: the button is input.css, the list menu.css', () => {
+    expect(blockAfter(rules(), '.combo-box-control {').trim()).toBe('position: relative;');
+    expect(selectors().sort()).toEqual(
+      [
+        '.combo-box-control',
+        '.combo-box-input',
+        '.combo-box[data-loading] .combo-box-input',
+        '.combo-box-spinner',
+      ].sort(),
+    );
+    const css = rules();
+    for (const part of [
+      '.menu',
+      '.input-button',
+      '.picker-',
+      'color',
+      'border',
+      'background',
+      '::placeholder',
+    ]) {
+      expect(css, part).not.toContain(part);
+    }
+  });
+
+  it('writes no physical offset and mirrors nothing', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])(left|right)\s*:|padding-(left|right)|margin-(left|right)/);
+    expect(css).not.toContain('scale');
+    expect(css).not.toContain('rtl');
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 
