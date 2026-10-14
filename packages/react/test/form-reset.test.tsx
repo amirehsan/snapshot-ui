@@ -4,6 +4,7 @@ import { useState, type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { MultiSelect } from '../src/multi-select';
 import { PickerOption } from '../src/picker';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SearchField } from '../src/search-field';
@@ -171,6 +172,28 @@ function SegmentedControlForm(): ReactElement {
         <SegmentedControlItem value="dark">Dark</SegmentedControlItem>
         <SegmentedControlItem value="system">System</SegmentedControlItem>
       </SegmentedControl>
+      <ResetButton />
+    </form>
+  );
+}
+
+function MultiSelectForm(): ReactElement {
+  const [changed, setChanged] = useState(false);
+  return (
+    <form>
+      <MultiSelect
+        label="Categories"
+        name="categories"
+        defaultValue={['food', 'rent']}
+        isChanged={changed}
+        onChange={(value) => {
+          setChanged(value.join() !== 'food,rent');
+        }}
+      >
+        <PickerOption id="food">Food</PickerOption>
+        <PickerOption id="rent">Rent</PickerOption>
+        <PickerOption id="salary">Salary</PickerOption>
+      </MultiSelect>
       <ResetButton />
     </form>
   );
@@ -383,6 +406,28 @@ describe('a native form reset', () => {
     await user.click(screen.getByRole('button', { name: 'Reset' }));
     expect(value()).toBe('Rent');
     expect(sent(container, 'category')).toEqual(['rent']);
+    expect(showsChip(container)).toBe(false);
+  });
+
+  it('puts a MultiSelect back on its default values, without its chip', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MultiSelectForm />);
+    const tags = (): string[] =>
+      [...container.querySelectorAll('.multi-select-tag-text')].map((tag) => tag.textContent);
+    expect(tags()).toEqual(['Food', 'Rent']);
+    expect(showsChip(container)).toBe(false);
+
+    await user.click(screen.getByRole('button', { name: 'Remove Food' }));
+    await user.click(screen.getByRole('button', { name: /^Show options/ }));
+    await user.click(screen.getByRole('option', { name: 'Salary' }));
+    await user.keyboard('{Escape}');
+    expect(tags()).toEqual(['Rent', 'Salary']);
+    expect(sent(container, 'categories')).toEqual(['rent', 'salary']);
+    expect(showsChip(container)).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(tags()).toEqual(['Food', 'Rent']);
+    expect(sent(container, 'categories')).toEqual(['food', 'rent']);
     expect(showsChip(container)).toBe(false);
   });
 });

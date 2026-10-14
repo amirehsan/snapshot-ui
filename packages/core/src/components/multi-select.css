@@ -1,0 +1,187 @@
+/*
+ * MultiSelect: the ComboBox in multiple mode, its chosen values as bone tags in a frame that wears the text
+ * input's edge, derived in docs/design-system.md ("MultiSelect"). The frame is .input on a div, so the hover,
+ * disabled, changed and invalid edges reach it through the field's root; it grows a row at a time, and its
+ * block padding keeps one row exactly a field tall with a 1px or a 1.5px edge. Its corner is the pill while
+ * it is one row and the 24px surface step once it wraps. Its focus ring follows the input inside it, never a
+ * focused tag, which rings itself. A tag is a pill a field step smaller than the field, its label at 500 on
+ * bone, its remove button a 20px circle hit at 24px inside the tag's own padding. The placeholder is taupe
+ * under a visible label and slate without one.
+ */
+@layer components {
+  /* One class, after input.css, so it beats the input's box and none of its states. */
+  .multi-select-control {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    height: auto;
+    min-height: var(--size-field);
+    padding-block: calc(0.375rem - 1.5px);
+    padding-inline: 0.5rem 3rem;
+    border-radius: min(var(--radius-pill), calc(var(--size-field) / 2));
+    cursor: text;
+  }
+
+  .multi-select[data-loading] .multi-select-control {
+    padding-inline-end: 4.5rem;
+  }
+
+  /* Two classes with the test in :where(): it beats the hover edge by order, and the changed and invalid
+     edges, three classes, still beat it. */
+  .multi-select-control.input:where(:has(.multi-select-input:is(:focus-visible, [data-focus-visible]))) {
+    border: 1.5px solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* The field button and the Spinner stay level with the first row as the frame grows. */
+  .multi-select-control :is(.input-button, .combo-box-spinner) {
+    inset-block: calc(0.375rem - 1px) auto;
+    margin-block: 0;
+  }
+
+  .multi-select-control .combo-box-spinner {
+    height: calc(var(--size-field) - 0.75rem);
+  }
+
+  /* The value and the group have no role of their own, so they leave the box tree and their tags flow in
+     the frame. The list keeps its box: an element with a role is never display: contents. */
+  .multi-select-value,
+  .multi-select-tags {
+    display: contents;
+  }
+
+  .multi-select-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    min-width: 0;
+    max-width: 100%;
+    outline: none;
+  }
+
+  .multi-select-input {
+    box-sizing: border-box;
+    flex: 1 1 4rem;
+    min-width: 4rem;
+    height: calc(var(--size-field) - 0.75rem);
+    margin: 0;
+    padding-block: 0;
+    padding-inline: 0.5rem;
+    border: 0;
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+    outline: none;
+  }
+
+  .multi-select-input::placeholder {
+    color: var(--color-taupe);
+    opacity: 1;
+  }
+
+  /* Slate where no visible label names the field, as SearchField's: the placeholder is then all that says
+     what the field is for. Taupe again while disabled. */
+  .multi-select[data-unlabelled]:not([data-disabled]) .multi-select-input::placeholder {
+    color: var(--color-slate);
+  }
+
+  .multi-select-tag {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: 100%;
+    height: calc(var(--size-field) - 0.75rem);
+    padding-inline: 0.75rem 0.25rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-bone);
+    color: var(--color-ink);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    cursor: default;
+    outline: none;
+  }
+
+  .multi-select-tag[data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .multi-select-tag-text {
+    min-width: 0;
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .multi-select-tag-remove {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: var(--color-slate);
+    cursor: pointer;
+  }
+
+  /* Hit at 24px, inside the tag's own padding, so it never covers a neighbor 4px away. */
+  .multi-select-tag-remove::before {
+    content: '';
+    position: absolute;
+    inset: -0.125rem;
+  }
+
+  .multi-select-tag-remove svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  @media (hover: hover) {
+    .multi-select-tag-remove:is(:hover, [data-hovered]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+      color: var(--color-ink);
+    }
+  }
+
+  .multi-select-tag-remove:is(:active, [data-pressed]) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    color: var(--color-ink);
+  }
+
+  .multi-select-tag-remove[data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .multi-select[data-disabled] .multi-select-tag {
+    color: var(--color-taupe);
+  }
+
+  @media (forced-colors: active) {
+    .multi-select-tag {
+      border-color: CanvasText;
+    }
+
+    .multi-select-tag-remove {
+      color: CanvasText;
+    }
+
+    .multi-select[data-disabled] .multi-select-tag {
+      color: GrayText;
+      border-color: GrayText;
+    }
+  }
+}

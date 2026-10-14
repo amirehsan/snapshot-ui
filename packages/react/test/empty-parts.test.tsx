@@ -9,6 +9,7 @@ import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
+import { MultiSelect } from '../src/multi-select';
 import { PickerOption } from '../src/picker';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SearchField } from '../src/search-field';
@@ -91,6 +92,12 @@ const EMPTY: [name: string, element: ReactElement][] = [
     <ComboBox aria-label="Merchant" label={false} description="" isChanged>
       <PickerOption id="a">A</PickerOption>
     </ComboBox>,
+  ],
+  [
+    'MultiSelect',
+    <MultiSelect aria-label="Categories" label="" description={false} isChanged>
+      <PickerOption id="a">A</PickerOption>
+    </MultiSelect>,
   ],
 ];
 

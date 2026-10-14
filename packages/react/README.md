@@ -55,6 +55,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Link](https://snapshotui.com/docs/components/link)
 - [Menu](https://snapshotui.com/docs/components/menu)
 - [Meter](https://snapshotui.com/docs/components/meter)
+- [Multi-select](https://snapshotui.com/docs/components/multi-select)
 - [Popover](https://snapshotui.com/docs/components/popover)
 - [Radio group](https://snapshotui.com/docs/components/radio-group)
 - [Search field](https://snapshotui.com/docs/components/search-field)

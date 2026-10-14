@@ -4419,6 +4419,178 @@ describe('src/components/combo-box.css', () => {
   });
 });
 
+describe('src/components/multi-select.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/multi-select.css')));
+  /** Every selector the file writes, each part of a list on its own. */
+  const selectors = () =>
+    [...rules().matchAll(/([^{}]+)\{/g)]
+      .map((match) => match[1].trim())
+      .filter((selector) => !selector.startsWith('@'))
+      .flatMap((selector) => selector.split(/,(?![^(]*\))/).map((part) => part.trim()));
+
+  it('draws the frame on .input with an auto height and a field-tall minimum, in one-class rules', () => {
+    const frame = blockAfter(rules(), '.multi-select-control {');
+    for (const declaration of [
+      'position: relative;',
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'align-items: center;',
+      'gap: 0.25rem;',
+      'height: auto;',
+      'min-height: var(--size-field);',
+      'padding-inline: 0.5rem 3rem;',
+      'cursor: text;',
+    ]) {
+      expect(frame, declaration).toContain(declaration);
+    }
+    // The edge, the fill and the states are input.css's: the frame's own rule sets none of them.
+    for (const property of ['border:', 'border-color', 'background', 'color:']) {
+      expect(frame, property).not.toContain(property);
+    }
+    expect(blockAfter(rules(), '.multi-select[data-loading] .multi-select-control {').trim()).toBe(
+      'padding-inline-end: 4.5rem;',
+    );
+  });
+
+  it('pads one row to exactly a field with either edge', () => {
+    const css = rules();
+    expect(blockAfter(css, '.multi-select-control {')).toContain('padding-block: calc(0.375rem - 1.5px);');
+    for (const part of ['.multi-select-tag {', '.multi-select-input {']) {
+      expect(blockAfter(css, part), part).toContain('height: calc(var(--size-field) - 0.75rem);');
+    }
+  });
+
+  it('cuts the frame at the pill while one row and the surface step once it wraps', () => {
+    expect(blockAfter(rules(), '.multi-select-control {')).toContain(
+      'border-radius: min(var(--radius-pill), calc(var(--size-field) / 2));',
+    );
+  });
+
+  it('rings the frame only while its input has focus, at two classes with the test in :where()', () => {
+    const ring = blockAfter(
+      rules(),
+      '.multi-select-control.input:where(:has(.multi-select-input:is(:focus-visible, [data-focus-visible]))) {',
+    );
+    for (const declaration of [
+      'border: 1.5px solid var(--color-ink);',
+      'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
+      'outline-offset: var(--focus-ring-offset);',
+    ]) {
+      expect(ring, declaration).toContain(declaration);
+    }
+    // Written plainly, the :has() would weigh three classes, tie the changed edge and replace it by order.
+    expect(selectors().filter((selector) => selector.includes(':has('))).toEqual([
+      '.multi-select-control.input:where(:has(.multi-select-input:is(:focus-visible, [data-focus-visible])))',
+    ]);
+  });
+
+  it('never rings the frame through :focus-within', () => {
+    expect(rules()).not.toContain('focus-within');
+  });
+
+  it('keeps the button and the Spinner level with the first row', () => {
+    const css = rules();
+    const level = blockAfter(css, '.multi-select-control :is(.input-button, .combo-box-spinner) {');
+    expect(level).toContain('inset-block: calc(0.375rem - 1px) auto;');
+    expect(level).toContain('margin-block: 0;');
+    expect(blockAfter(css, '.multi-select-control .combo-box-spinner {')).toContain(
+      'height: calc(var(--size-field) - 0.75rem);',
+    );
+  });
+
+  it('flows the tags with no box for the value and the group, and keeps the list a box', () => {
+    const css = rules();
+    expect(blockAfter(css, '.multi-select-value, .multi-select-tags {').trim()).toBe('display: contents;');
+    const list = blockAfter(css, '.multi-select-tag-list {');
+    expect(list).toContain('display: flex;');
+    expect(list).toContain('flex-wrap: wrap;');
+    // The grid has a role, and an element with a role never leaves the box tree.
+    expect(list).not.toContain('contents');
+  });
+
+  it('draws a tag as a bone pill with its text at 500 in ink, ellipsized past 12rem', () => {
+    const css = rules();
+    const tag = blockAfter(css, '.multi-select-tag {');
+    for (const declaration of [
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-bone);',
+      'color: var(--color-ink);',
+      'font-size: var(--text-small);',
+      'font-weight: 500;',
+      'padding-inline: 0.75rem 0.25rem;',
+    ]) {
+      expect(tag, declaration).toContain(declaration);
+    }
+    const text = blockAfter(css, '.multi-select-tag-text {');
+    for (const declaration of [
+      'max-width: 12rem;',
+      'overflow: hidden;',
+      'text-overflow: ellipsis;',
+      'white-space: nowrap;',
+    ]) {
+      expect(text, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.multi-select-tag[data-focus-visible] {')).toContain(
+      'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
+    );
+  });
+
+  it('hits the remove button at 24px from a 20px circle', () => {
+    const css = rules();
+    const remove = blockAfter(css, '.multi-select-tag-remove {');
+    for (const declaration of [
+      'width: 1.25rem;',
+      'height: 1.25rem;',
+      'border-radius: var(--radius-pill);',
+      'color: var(--color-slate);',
+    ]) {
+      expect(remove, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.multi-select-tag-remove::before {')).toContain('inset: -0.125rem;');
+    expect(blockAfter(css, '@media (hover: hover)')).toContain(
+      '.multi-select-tag-remove:is(:hover, [data-hovered])',
+    );
+    expect(blockAfter(css, '.multi-select-tag-remove:is(:active, [data-pressed]) {')).toContain(
+      'color: var(--color-ink);',
+    );
+  });
+
+  it('draws the placeholder taupe, slate only without a visible label, and never while disabled', () => {
+    const css = rules();
+    expect(blockAfter(css, '.multi-select-input::placeholder {')).toContain('color: var(--color-taupe);');
+    expect(
+      blockAfter(
+        css,
+        '.multi-select[data-unlabelled]:not([data-disabled]) .multi-select-input::placeholder {',
+      ).trim(),
+    ).toBe('color: var(--color-slate);');
+    expect(css.match(/::placeholder/g)).toHaveLength(2);
+  });
+
+  it('draws a disabled tag taupe', () => {
+    expect(blockAfter(rules(), '.multi-select[data-disabled] .multi-select-tag {').trim()).toBe(
+      'color: var(--color-taupe);',
+    );
+  });
+
+  it('edges a tag CanvasText in forced colors, and its glyph too', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(blockAfter(forced, '.multi-select-tag {')).toContain('border-color: CanvasText;');
+    expect(blockAfter(forced, '.multi-select-tag-remove {')).toContain('color: CanvasText;');
+    const disabled = blockAfter(forced, '.multi-select[data-disabled] .multi-select-tag {');
+    expect(disabled).toContain('color: GrayText;');
+    expect(disabled).toContain('border-color: GrayText;');
+  });
+
+  it('writes no physical offset and mirrors nothing', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])(left|right)\s*:|padding-(left|right)|margin-(left|right)/);
+    expect(css).not.toContain('scale');
+    expect(css).not.toContain('rtl');
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

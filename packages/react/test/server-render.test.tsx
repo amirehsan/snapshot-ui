@@ -17,6 +17,7 @@ import { Drawer } from '../src/drawer';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
+import { MultiSelect } from '../src/multi-select';
 import { Shortcut } from '../src/overlay/Shortcut';
 import { PickerOption } from '../src/picker';
 import { Popover } from '../src/popover';
@@ -122,6 +123,29 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'aria-label="Show options"',
     ],
     ['role="listbox"', 'combo-box-spinner'],
+  ],
+  [
+    // The frame holds a tag per chosen option and the form a hidden input per key; the list renders nothing
+    // until it opens, and an option not chosen is nowhere.
+    'MultiSelect',
+    <MultiSelect label="Categories" name="categories" defaultValue={['food', 'rent']}>
+      <PickerOption id="food">Food</PickerOption>
+      <PickerOption id="rent">Rent</PickerOption>
+      <PickerOption id="fun">Fun</PickerOption>
+    </MultiSelect>,
+    [
+      'class="field multi-select"',
+      'class="input multi-select-control"',
+      'role="grid"',
+      'class="multi-select-tag"',
+      '>Food<',
+      '>Rent<',
+      'type="hidden"',
+      'name="categories"',
+      'value="food"',
+      'value="rent"',
+    ],
+    ['role="listbox"', '>Fun<'],
   ],
   [
     'TextArea',

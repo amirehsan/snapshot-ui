@@ -12,6 +12,7 @@ import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { Link } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
+import { MultiSelect } from '../multi-select';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
 import { Radio, RadioGroup } from '../radio-group';
@@ -944,6 +945,46 @@ export const ComboBoxMirrored: Story = {
     await expect(parseFloat(style.paddingRight)).toBe(24);
     await expect(parseFloat(style.paddingLeft)).toBe(48);
     await expect(getComputedStyle(find(canvasElement, '.combo-box-button svg')).scale).toBe('none');
+  },
+};
+
+/**
+ * The multi-select in Persian: the tags run from the frame's right, React Aria's arrows follow the locale, so
+ * Arrow Left moves from the first tag to the second, and the field button sits at the left end, unmirrored.
+ */
+export const MultiSelectMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(28rem, calc(100vw - 2rem))' }}>
+        <MultiSelect
+          label="دسته‌ها"
+          defaultValue={['food', 'rent']}
+          labels={{ open: 'نمایش گزینه‌ها', remove: 'حذف', selected: 'انتخاب‌شده' }}
+        >
+          <PickerOption id="food">خوراک</PickerOption>
+          <PickerOption id="rent">اجاره</PickerOption>
+          <PickerOption id="fun">تفریح</PickerOption>
+        </MultiSelect>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const field = rect(find(canvasElement, '.multi-select'));
+    const label = rect(find(canvasElement, '.field-label'));
+    const frame = rect(find(canvasElement, '.multi-select-control'));
+    const [first, second] = [...canvasElement.querySelectorAll<HTMLElement>('.multi-select-tag')];
+    if (!first || !second) throw new Error('Expected two tags');
+    const button = rect(find(canvasElement, '.combo-box-button'));
+    await expectSameEdge(label.right, field.right);
+    await expect(rect(first).left).toBeGreaterThan(rect(second).right);
+    await expect(frame.right - rect(first).right).toBeCloseTo(9, 0);
+    await expectInside(button, frame);
+    // 6px inside the frame's 1px edge.
+    await expect(button.left - frame.left).toBeCloseTo(7, 0);
+    await userEvent.tab();
+    await expect(first).toHaveFocus();
+    await userEvent.keyboard('{ArrowLeft}');
+    await expect(second).toHaveFocus();
   },
 };
 

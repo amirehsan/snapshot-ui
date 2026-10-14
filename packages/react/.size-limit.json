@@ -280,6 +280,13 @@
     "limit": "2.5 kB"
   },
   {
+    "name": "import { MultiSelect } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ MultiSelect }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "3.5 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

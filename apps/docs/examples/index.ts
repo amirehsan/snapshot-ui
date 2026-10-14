@@ -57,6 +57,9 @@ import MenuSelection from './menu-selection';
 import MeterBasic from './meter-basic';
 import MeterOver from './meter-over';
 import MeterPace from './meter-pace';
+import MultiSelectBasic from './multi-select-basic';
+import MultiSelectMany from './multi-select-many';
+import MultiSelectStates from './multi-select-states';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
 import RadioGroupBasic from './radio-group-basic';
@@ -164,6 +167,9 @@ export const examples = {
   'meter-basic': MeterBasic,
   'meter-over': MeterOver,
   'meter-pace': MeterPace,
+  'multi-select-basic': MultiSelectBasic,
+  'multi-select-many': MultiSelectMany,
+  'multi-select-states': MultiSelectStates,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
   'radio-group-basic': RadioGroupBasic,
