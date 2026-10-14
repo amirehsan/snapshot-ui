@@ -489,6 +489,23 @@ test.describe('forced colors', () => {
     );
   });
 
+  test('the selected tab is Highlight and its changed dot HighlightText', async ({ page }) => {
+    // The ink fill is repainted away, so the selected tab takes the reader's selection colors; the clay dot is
+    // CanvasText on a resting tab and HighlightText on the selected one.
+    await visit(page, '/docs/components/tabs');
+    const colors = await systemColors(page);
+    const example = page.locator('.stage .tabs').filter({ has: page.getByRole('tab', { name: 'Rules' }) });
+    const rules = example.getByRole('tab', { name: 'Rules' });
+    const dot = rules.locator('.tab-changed');
+    await expect(dot).toHaveCSS('background-color', colors.canvasText);
+    await rules.click();
+    await expect(rules).toHaveAttribute('aria-selected', 'true');
+    expect(await paint(rules)).toMatchObject({ fill: colors.highlight, text: colors.highlightText });
+    await expect(dot).toHaveCSS('background-color', colors.highlightText);
+    const unselected = example.getByRole('tab', { name: 'General' });
+    expect((await paint(unselected)).fill).not.toBe(colors.highlight);
+  });
+
   test('a tag keeps a CanvasText edge', async ({ page }) => {
     // The bone fill is repainted away, so the edge is what draws the pill; a disabled tag is GrayText.
     await visit(page, '/docs/components/multi-select');
@@ -571,6 +588,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   sidebar: ['.stage .sidebar-item-label'],
   'stat-tile': ['.stage .stat-tile-label', '.stage .stat-tile-change-label', '.stage .stat-tile-caption'],
   switch: ['.stage .switch-text', '.stage .field-description'],
+  // A long name scrolls the row inside its track; a panel's text wraps by the page's own rules.
+  tabs: ['.stage .tab-label', '.stage .tab-panel p'],
   'text-area': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'text-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // A numeral is a figure and never wraps (white-space: nowrap), so a web address is not put into one.
@@ -727,6 +746,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   spinner: ['.stage .spinner'],
   'stat-tile': ['.stage .stat-tile', '.stage .stat-tile-value', '.stage .stat-tile-change'],
   switch: ['.stage .switch-thumb'],
+  // The row, the selected tab and its panel: the whole selected state is in the server's HTML.
+  tabs: ['.stage .tab-list', '.stage .tab[aria-selected="true"]', '.stage .tab-panel'],
   'text-area': ['.stage .textarea'],
   'text-field': ['.stage .input'],
   // The buttons that raise the toasts, and the polite status host the docs layout mounts, which is in the page

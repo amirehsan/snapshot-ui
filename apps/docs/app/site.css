@@ -118,8 +118,7 @@
   }
 
   .chip:focus-visible,
-  .rail-link:focus-visible,
-  .tab:focus-visible {
+  .rail-link:focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
@@ -177,7 +176,9 @@
   /* The library's controls do not animate; the docs recut theirs. */
   .input,
   .segmented-track,
-  .segmented-option {
+  .segmented-option,
+  .tab-list,
+  .tab {
     transition: border-radius 200ms ease;
   }
 

@@ -66,6 +66,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Spinner](https://snapshotui.com/docs/components/spinner)
 - [Stat tile](https://snapshotui.com/docs/components/stat-tile)
 - [Switch](https://snapshotui.com/docs/components/switch)
+- [Tabs](https://snapshotui.com/docs/components/tabs)
 - [Text area](https://snapshotui.com/docs/components/text-area)
 - [Text field](https://snapshotui.com/docs/components/text-field)
 - [Toast](https://snapshotui.com/docs/components/toast)

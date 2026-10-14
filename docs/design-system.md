@@ -6220,3 +6220,154 @@ removal, what the input's description reads): not yet verified (risk R3).
 **The size.** The size limit is 3.5 kB for `MultiSelect`, the spec's
 budget: the entry measured 2.56 kB, and the rule rounds up to 3 kB and
 adds 0.5 kB.
+
+## Tabs
+
+Views of one page as a row of pills: `Tabs`, `TabList`, `Tab` and
+`TabPanel`, React Aria's tabs with the library's classes. "Still missing"
+derived them with the Design panel's Colors card, and this is the record.
+
+**The track.** The segmented control's row, without its field: the
+`TabList`, `.tab-list`, is a `role="tablist"` row of 40px pills,
+`--size-control`, in a track padded 4px with the surface corner,
+`--radius-surface`, 24px Rounded, 12px Soft and square Square, on canvas
+with no edge. A tab switches what is shown and holds no value, so the
+track does not read as a field. On a card it shows as a tint, canvas on
+lifted, 1.10 in light and 1.11 in dark, a cue the pills carry and never a
+boundary anyone has to find; on the page's own canvas it disappears and
+the pills carry the row. The row is horizontal only: `orientation` is
+not in the props.
+
+**A row that does not fit.** The track scrolls inline inside itself,
+`overflow-x: auto` with the thin scrollbar in `--color-scrollbar`, and a
+tab never wraps or shrinks (`white-space: nowrap; flex: none`), so a long
+row scrolls and the page never scrolls sideways; the root's single
+column is `minmax(0, 1fr)` for the same reason. The track's 4px of
+padding is the room a focus ring stands out, 2px of ring 2px off, so a
+ring on the first or last tab is not cut by the scroll box.
+
+**The scroll after mount.** After the first paint that holds the
+selected tab, once, `TabList` brings it into the row's view by moving
+the row, `list.scrollBy({ left })` by the distance from the tab's edge
+to the row's padding edge, in either direction (spec correction 18).
+`scrollIntoView` would scroll every scrolling ancestor, the page
+included, so a row below the fold would move the page on load. React
+Aria builds its collection after its first render on the client, so the
+effect is keyed to the tab list's state, its selected key and its size,
+and runs until the selected tab is there. A tab that takes focus later
+scrolls into view as the browser does for focus. The server's HTML
+shows the start of the row and the selected tab arrives on hydration
+(R6). The harness shoots at 1280 and 375px and Storybook renders on the
+client, so the `Overflow` story records the look after, eight tabs in a
+20rem box with the last selected, and the docs' test with JavaScript off
+records the look before: the server's row starts at its first tab, its
+last past the row's end (spec correction 19).
+
+**A tab.** `.tab`: `min-height: var(--size-control)`, 40px and 36px
+compact, `padding-inline: 1rem`, `--radius-pill`, `--text-action` at its
+500 weight, slate at rest. It is hit at the target by the formula every
+control shares, `inset-block: min(0px, (100% - var(--size-target)) /
+2)`, so a 36px compact tab reaches 2px into the track's padding. A tab is
+a `div`, or an `a` when it has `href`.
+
+**Hover and press.** The 5% ink wash with the text turned ink, inside
+`@media (hover: hover)`, never on the selected or a disabled tab; a
+press shows the same look on any pointer. Slate on the wash over canvas
+measures 4.38 in light, under the 4.5 text minimum, and 6.93 in dark;
+ink on it is 14.70 and 17.41. SegmentedControl turns its hovered option
+ink for the same reason (spec correction 16).
+
+**Selected.** The ink pill with canvas text, `[data-selected]` beside
+`[aria-selected='true']`, so the server's HTML and a hand-written row
+draw it the same: canvas on ink, 16.25 in light and 19.31 in dark,
+gated. Keyboard focus on an unselected tab is the standard ring outside
+it; on the selected tab the ring inverts to canvas and stands inside the
+pill, as far in as the standard ring stands out, SegmentedControl's
+rule, since an ink ring around an ink pill reads as part of it.
+
+**Disabled.** Taupe text, `cursor: not-allowed`, and no wash. React
+Aria's arrows skip a disabled tab, and it is never selected.
+
+**The changed dot.** `isChanged` is for a tab whose panel holds unsaved
+edits, and only that: clay means unsaved. A 6px dot, `--radius-dot`,
+clay, `margin-inline-start: var(--spacing-part)`, after the name and
+centered on its line. Clay on the canvas track is 6.20 in light and 7.57
+in dark, gated. On the selected ink pill clay would be 2.62 and 2.55,
+under the 3:1 a graphic needs, so there the dot takes a canvas ring the
+focus ring's width, `outline: var(--focus-ring-width) solid
+var(--color-canvas)`, which carries its shape at 16.25 and 19.31. The
+dot is drawn and hidden, `aria-hidden="true"`; the words, "Changed" or
+`changedLabel`, sit in a `hidden` span the tab's `aria-describedby`
+names ahead of the caller's own ids. A description reads a hidden
+element it names directly, so a screen reader hears "Rules, tab, 2 of 4,
+Changed" and the name stays "Rules"; a visually hidden span would join
+the name instead (spec correction 15). A count or a "new" marker goes
+in the tab's name, in a `Badge`, never in clay.
+
+**Link tabs.** Tabs whose views each have a URL (ruling 3): each `Tab`
+has `href`, which React Aria renders as an anchor with the tab role; the
+app passes `selectedKey` from the URL, no `onSelectionChange`, and
+`keyboardActivation="manual"`. The arrows then move focus and load
+nothing, and Enter, Space or a press opens the focused tab's link
+through `RouterProvider`, React Aria's link behavior for tabs, and puts
+the selection back where the URL has it. The app renders one `TabPanel`
+whose `id` is the selected key, holding the route's content, so
+`aria-controls` points at what is there. A modified or middle click
+opens the link as the browser would. A site's top navigation between
+whole pages is a row of plain links with `aria-current="page"` instead.
+
+**Keys.** React Aria's, pinned by the unit tests and the `Keys` story.
+Left and Right move between tabs in the drawn direction, so under a
+right-to-left locale Left moves to the next tab; they wrap from the last
+tab to the first and skip a disabled tab; Up and Down do nothing in the
+horizontal row. Home and End jump to the first and the last. With
+automatic activation, React Aria's default, the tab focused is
+selected; with manual activation Enter or Space selects it, or follows
+its link. Tab enters the row at the selected tab and moves on into the
+panel, which React Aria makes a stop of its own when it holds nothing
+focusable.
+
+**The panel.** `.tab-panel` sits `--spacing-peer` under the track and
+spans the root. Only the selected panel is mounted, unless
+`shouldForceMount` keeps the others; React Aria renders a force-mounted
+panel that is not selected with `inert` and `data-inert` and nothing
+that hides it, so `.tab-panel[data-inert] { display: none; }` does (spec
+correction 17). A panel that takes focus shows the standard ring on
+keyboard focus only.
+
+**Measured pairs.** Gated: slate on canvas, a resting tab, 4.84 in light
+and 7.26 in dark; canvas on ink, the selected tab and the dot's ring,
+16.25 and 19.31; clay on canvas, the dot, 6.20 and 7.57. Measured and
+recorded, not gated: ink on the 5% wash over canvas, a hovered tab,
+14.70 and 17.41; slate on that wash, 4.38 and 6.93, the reason a hovered
+tab turns ink; clay on ink, 2.62 and 2.55, the reason for the dot's
+ring; the canvas track on lifted, 1.10 and 1.11. No pair is added to the
+gate.
+
+**Right to left.** The row runs from the right through logical
+properties, and the dot sits at the name's left. Nothing is mirrored.
+
+**Forced colors.** The selected tab is `Highlight` with `HighlightText`,
+and its inverted ring `HighlightText`; a disabled tab is `GrayText`; the
+dot is `CanvasText`, and `HighlightText` ringed in `Highlight` on the
+selected tab.
+
+**The server.** The row renders in Node with every tab, `aria-selected`
+on the selected one, the dot and its words, and the selected panel; the
+scroll is an effect, which a server never runs.
+
+**The docs' own tabs.** The docs site's Preview and Code tabs are this
+part (spec correction 1): `<Tabs className="preview">` with the
+`TabList` in the preview's head and both panels force-mounted, so both
+stay in the page as before, the one not selected inert and hidden. The
+docs' own `.tabs` and `.tab` rules are gone, so no docs page draws a
+second tab look (risk R4), and its tabs grow from the docs' 36px to the
+part's 40px. A preview whose example holds nothing focusable is now a
+tab stop of its own after the row, React Aria's panel rule.
+
+**Screen readers.** Tabs with a changed dot in VoiceOver on macOS and
+NVDA: not yet verified (risk R3).
+
+**The size.** The size limit is 1.5 kB for `Tabs, TabList, Tab,
+TabPanel`, the spec's budget: the entry measured 731 B, and the rule
+rounds up to 1 kB and adds 0.5 kB.

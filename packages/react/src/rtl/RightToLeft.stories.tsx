@@ -23,6 +23,7 @@ import { Sheet, SheetTrigger } from '../sheet';
 import { MENU_ROW_A11Y } from '../stories/a11y';
 import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
+import { Tab, TabList, TabPanel, Tabs } from '../tabs';
 import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
 import { toast, ToastRegion } from '../toast';
@@ -985,6 +986,51 @@ export const MultiSelectMirrored: Story = {
     await expect(first).toHaveFocus();
     await userEvent.keyboard('{ArrowLeft}');
     await expect(second).toHaveFocus();
+  },
+};
+
+/**
+ * A tab row under a Persian locale and `dir="rtl"`: the tabs run from the right, the first at the track's right
+ * edge inside its padding, and Arrow Left, the reading direction, selects the next tab, since React Aria's
+ * arrows follow the locale. The changed dot sits after the name, at its left. Nothing is mirrored.
+ */
+export const TabsMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(28rem, calc(100vw - 2rem))' }}>
+        <Tabs defaultSelectedKey="all">
+          <TabList aria-label="تراکنش‌ها">
+            <Tab id="all">همه</Tab>
+            <Tab id="spending" isChanged changedLabel="تغییر کرده">
+              هزینه‌ها
+            </Tab>
+            <Tab id="income">درآمد</Tab>
+          </TabList>
+          <TabPanel id="all">همه تراکنش‌ها</TabPanel>
+          <TabPanel id="spending">هزینه‌ها</TabPanel>
+          <TabPanel id="income">درآمد</TabPanel>
+        </Tabs>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const list = rect(find(canvasElement, '.tab-list'));
+    const [first, second, third] = [...canvasElement.querySelectorAll<HTMLElement>('[role="tab"]')];
+    if (!first || !second || !third) throw new Error('Expected three tabs');
+    await expect(list.right - rect(first).right).toBeCloseTo(4, 0);
+    await expect(rect(first).left).toBeGreaterThan(rect(second).right);
+    await expect(rect(second).left).toBeGreaterThan(rect(third).right);
+    // The dot follows the name, so in right to left it is at the name's left.
+    await expect(rect(find(second, '.tab-changed')).right).toBeLessThanOrEqual(
+      rect(find(second, '.tab-label')).left,
+    );
+    await userEvent.tab();
+    await expect(first).toHaveFocus();
+    await userEvent.keyboard('{ArrowLeft}');
+    await expect(second).toHaveFocus();
+    await expect(second).toHaveAttribute('aria-selected', 'true');
+    await userEvent.keyboard('{ArrowRight}');
+    await expect(first).toHaveAttribute('aria-selected', 'true');
   },
 };
 

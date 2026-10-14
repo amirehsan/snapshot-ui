@@ -821,6 +821,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/spinner">Spinner</Link>
                 <Link href="/docs/components/stat-tile">Stat tile</Link>
                 <Link href="/docs/components/switch">Switch</Link>
+                <Link href="/docs/components/tabs">Tabs</Link>
                 <Link href="/docs/components/text-area">Text area</Link>
                 <Link href="/docs/components/text-field">Text field</Link>
                 <Link href="/docs/components/toast">Toast</Link>

@@ -93,6 +93,10 @@ import StatTileTrend from './stat-tile-trend';
 import SwitchBasic from './switch-basic';
 import SwitchSettings from './switch-settings';
 import SwitchStates from './switch-states';
+import TabsBasic from './tabs-basic';
+import TabsChanged from './tabs-changed';
+import TabsLinks from './tabs-links';
+import TabsOverflow from './tabs-overflow';
 import TextAreaBasic from './text-area-basic';
 import TextAreaCounter from './text-area-counter';
 import TextAreaStates from './text-area-states';
@@ -203,6 +207,10 @@ export const examples = {
   'switch-basic': SwitchBasic,
   'switch-settings': SwitchSettings,
   'switch-states': SwitchStates,
+  'tabs-basic': TabsBasic,
+  'tabs-changed': TabsChanged,
+  'tabs-links': TabsLinks,
+  'tabs-overflow': TabsOverflow,
   'text-area-basic': TextAreaBasic,
   'text-area-counter': TextAreaCounter,
   'text-area-states': TextAreaStates,

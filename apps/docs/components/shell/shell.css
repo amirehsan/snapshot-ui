@@ -209,41 +209,6 @@
     top: 150px;
   }
 
-  /* ---- Tabs: pills in a canvas track with no control boundary ---- */
-  .tabs {
-    display: inline-flex;
-    gap: 4px;
-    padding: 4px;
-    border-radius: var(--radius-surface);
-    background-color: var(--color-canvas);
-    transition: border-radius 200ms ease;
-  }
-
-  .tab {
-    position: relative;
-    min-height: 36px;
-    padding: 0 16px;
-    border: 0;
-    border-radius: var(--radius-pill);
-    background: transparent;
-    color: var(--color-slate);
-    font-weight: 500;
-    cursor: pointer;
-    transition: border-radius 200ms ease;
-  }
-
-  /* Drawn at 36px, hit at 40px, with no layout shift. */
-  .tab::after {
-    content: '';
-    position: absolute;
-    inset: -2px 0;
-  }
-
-  .tab[aria-selected='true'] {
-    background-color: var(--color-ink);
-    color: var(--color-canvas);
-  }
-
   /* ---- Preview stage ------------------------------------------- */
   /* The stage resets the wrapping the docs section's Card sets, so each example wraps a long word by
      its own component's rules, the ones an app gets, and not by the card it is shown in. */
@@ -903,8 +868,10 @@
   }
 
   /* ---- Preview ------------------------------------------------------------ */
+  /* The preview is the library's Tabs, whose root starts each child at its line; the head and the panels span it. */
   .preview {
     display: grid;
+    justify-items: stretch;
     gap: 16px;
   }
 
