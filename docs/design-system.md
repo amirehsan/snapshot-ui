@@ -6371,3 +6371,161 @@ NVDA: not yet verified (risk R3).
 **The size.** The size limit is 1.5 kB for `Tabs, TabList, Tab,
 TabPanel`, the spec's budget: the entry measured 731 B, and the rule
 rounds up to 1 kB and adds 0.5 kB.
+
+## Pagination
+
+Pages of rows: Previous, numbered pages with gaps and Next beside the
+range the app writes, as `Pagination`. "Still missing" derived it with
+the Design panel's Colors card, and this is the record.
+
+**The shell on the server.** Ruling 4: the part a server page renders.
+`pagination/Pagination.tsx` has no hooks, no client directive and no
+React Aria import, so a server component renders it and passes it
+functions. It computes the page items, clamps the page, and calls
+`getPageHref`, `pageLabel` and `labels.page` where it renders; its three
+client leaves receive only strings, numbers, booleans and the children
+it renders (the chevrons and the words). `PaginationLink` is React
+Aria's Link, so a press routes through `RouterProvider`;
+`PaginationButton` is React Aria's Button, for button mode, which takes
+`onPageChange` and belongs in a client component, since a function
+cannot cross to the client; `PaginationStatus` is the spoken range. None
+is exported. The two chevrons are inline SVG with Lucide's own geometry,
+`m15 18-6-6 6-6` and `m9 18 6-6-6-6`, 24 by 24, stroke 2, round caps
+and joins, `currentColor`, since a Lucide icon is a client module and
+would make the shell one (spec correction 20).
+
+**Markup.** `nav.pagination`, named by `labels.navigation`, which is why
+`aria-label` is not in the props, holds `div.pagination-row` and then
+the status. The row holds `p.pagination-range`, the visible range, and,
+while there is more than one page, `ol.pagination-list` of
+`li.pagination-item` with `data-kind` `step`, `page` or `gap`: Previous,
+the pages and gaps, Next. With one page or none the range shows alone.
+The range is slate at the `--text-small` step with tabular figures, and
+it is the app's sentence, so it wraps inside the row and breaks a long
+word anywhere, `min-width: 0; overflow-wrap: anywhere`, rather than push
+the page sideways.
+
+**Seven slots.** `pageItems` gives the first page, the last, the current
+one with `siblingCount` each side (1 by default), and a gap where pages
+are left out; a gap that would stand for one page shows that page
+instead. The row always has `2 * siblingCount + 5` slots, seven by
+default, wherever the current page is, so the controls never move under
+the pointer as the page changes; every page shows when there are no more
+pages than slots. Page 1 of 26 is `1 2 3 4 5 … 26`, page 12 is
+`1 … 11 12 13 … 26`, page 26 is `1 … 22 23 24 25 26`.
+
+**A control.** `.pagination-control`: a 40px pill, `--size-control`
+(36px compact), at least as wide as it is tall, `padding-inline: 0.5rem`,
+`--radius-pill`, transparent, ink text at the `--text-action` step and
+its 500 weight, with tabular figures. It is hit at the target by the
+formula every control shares, `inset-block: min(0px, (100% -
+var(--size-target)) / 2)`, so a 36px compact control is hit at 40px. A
+page's text is `pageLabel(n)`, `String(n)` by default, isolated with
+`unicode-bidi: isolate`, so digits in any script read as one run in
+either direction; its name is `labels.page(pageLabel(n))`, "Page 3",
+which contains the text you see. A gap is a slate ellipsis,
+`span.pagination-gap`, hidden from assistive technology.
+
+**Hover and press.** The 5% ink wash inside `@media (hover: hover)`, and
+the same on a press on any pointer, never on the current page or a
+disabled step. Ink on the wash is 14.70 in light and 17.41 in dark over
+canvas, and 16.11 and 15.25 over lifted, so the text stays ink.
+
+**The current page.** The ink pill with canvas text, matched as
+`aria-current` ("page" on a link, "true" on a button) or React Aria's
+`data-current`, so the server's HTML draws it. A press on it calls
+nothing in button mode. Keyboard focus on another control is the
+standard ring outside it; on the current page the ring inverts to canvas
+and stands inside the pill, SegmentedControl's rule.
+
+**The steps.** `pagination-control pagination-step` with `data-step`,
+`padding-inline: 0.75rem`, a 16px chevron and the word,
+`span.pagination-step-label`, which names the step. At either end the
+step is disabled: in link mode a React Aria Link with `isDisabled` and
+no `href`, which React Aria draws as a span with `role="link"`,
+`aria-disabled` and `data-disabled` and no tab stop, and the app's
+`getPageHref` is never asked for a page outside the range; in button
+mode a disabled button. A disabled step is taupe with `cursor:
+not-allowed` and no wash. The chevrons point the way they go:
+`[dir='rtl'] .pagination-step svg { scale: -1 1; }`, the sidebar's rule,
+so Previous, at the right in right to left, points right. Nothing else
+is mirrored.
+
+**Narrow.** The nav is a size container, `container: pagination /
+inline-size`, and under 30rem of it the numbers and gaps leave, the step
+words become visually hidden and stay the steps' names, and the range
+sits centered between the two steps: the list is laid over the range in
+one grid cell and spreads the steps to the ends, and the range is kept
+`2 * var(--size-control) + 1rem` clear of them. A container query styles
+only what is inside the container, never the container, so the row
+inside the nav is what the query re-lays (spec correction 24). A phone
+keeps two 40px targets and the range; a narrow column on a wide page
+narrows too.
+
+**The short form.** `hasPageNumbers={false}`, for an endless or
+cursor-paged list, draws no pages and no gaps, and its row, marked
+`data-page-numbers="false"`, is the narrow row at every width: Previous,
+the range and Next. The steps keep their words as names. Drawn at every
+width, the range sits between two steps of a known size, which a
+centered range between two worded steps would not.
+
+**The spoken range.** `span.pagination-status`, `role="status"` and
+visually hidden, is empty at first render, so loading a page says
+nothing, and takes the range `QUIET_MS` after it last changed: three
+quick presses of Next say one range, the third. The effect compares the
+range with the last one it saw, so the first render and Strict Mode's
+second effect find nothing to say, and a later change back to the first
+range is spoken again. The visible range is not live, so it is never
+read twice. `QUIET_MS`, 600ms, moved from CommandPalette into
+`utils/quiet.ts`, and both parts import it, so the two pauses stay one
+number (spec correction 22).
+
+**The focus handoff.** A step that disables while it holds focus, Next
+on reaching the last page, hands focus on, so it never falls to the
+page: to the current page's control, or, when that cannot take focus
+(the numbers hidden, or not drawn under 30rem), to the other step. The
+step remembers it had focus until focus moves to another element, since
+a disabled link step is a new element (the anchor becomes a span) and a
+disabled button drops focus; after the commit that disables it, a layout
+effect moves focus unless it already went somewhere else on purpose.
+
+**Edges.** A `page` outside 1 to `pageCount`, or not a whole number, is
+clamped, and the status leaf warns once per mount in the console:
+"Pagination: page 0 is outside 1 to 26; showing page 1." The shell has
+no effects, so it passes the sentence to the leaf (spec correction 21).
+
+**URL state and R5.** Link mode is the consumer's: the server page reads
+the page from its search parameters, builds each URL and passes the
+range it formats. The docs' `pagination-links` example reads the page
+in a client component under `Suspense`, since the docs pages are static,
+and the end-to-end test proves the status region stays the same element
+across the soft navigation and speaks the new range: verified for a
+client parent; a server parent that re-renders on a `?page` change is
+not yet verified (spec correction 23). If it does not speak there, the
+docs advise rendering Pagination in the layout segment that persists.
+
+**Measured pairs.** Gated: ink on canvas, a control, 16.25 in light and
+19.31 in dark, and on lifted 17.84 and 17.42; canvas on ink, the current
+page and its ring, 16.25 and 19.31; slate on canvas, the range and the
+gap, 4.84 and 7.26, and on lifted 5.31 and 6.94. Measured and recorded,
+not gated: ink on the 5% wash over canvas, 14.70 and 17.41, and over
+lifted, 16.11 and 15.25. No pair is added to the gate.
+
+**Forced colors.** The current page is `Highlight` with
+`HighlightText`, and its inverted ring `HighlightText`; a disabled step
+is `GrayText`.
+
+**The server.** The shell renders under React's server build with
+`getPageHref`, and its HTML holds every link's `href`, the current
+page's `aria-current`, the gaps, the chevrons and an empty status
+region; with the leaves stood in for, no function reaches them. In
+button mode, rendered as a client tree, the HTML holds the buttons, the
+current page's `aria-current="true"` and no `href`.
+
+**Screen readers.** Pagination's spoken range in VoiceOver on macOS and
+NVDA: not yet verified (risk R3).
+
+**The size.** The size limit is 2.5 kB for `Pagination`, above the
+spec's 1.5 kB budget: the entry measured 1.55 kB, the shell with its
+three client leaves, the page items and the focus handoff, and the rule
+rounds up to 2 kB and adds 0.5 kB.

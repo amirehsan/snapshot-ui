@@ -887,6 +887,60 @@ describe('the tabs', () => {
   });
 });
 
+describe('the pagination', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+  /** Ink over the 5% ink wash on `groundName`, a hovered or pressed control, against the wash. */
+  const onWash = (mode, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const wash = composite({ ...parseColor(palette.ink), a: 0.05 }, parseColor(palette[groundName]));
+    return contrastRatio(composite(parseColor(palette.ink), wash), wash);
+  };
+
+  // A control is ink on the page or on a card, the current page canvas on ink, and the range and the gap slate
+  // on either surface. The gate holds every one at the text minimum.
+  it('cites ink and slate on canvas and lifted, and canvas on ink, which the gate holds at the text minimum', () => {
+    for (const [text, ground] of [
+      ['ink', 'canvas'],
+      ['ink', 'lifted'],
+      ['slate', 'canvas'],
+      ['slate', 'lifted'],
+      ['canvas', 'ink'],
+    ]) {
+      expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+        expect.objectContaining({ text, ground, minimum: TEXT }),
+      );
+    }
+  });
+
+  // The wash is a mix, not a token, so a hovered control is measured and recorded, not gated.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { what, text, ground, light, dark } of [
+      { what: 'a control', text: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { what: 'a control on a card', text: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { what: 'the current page', text: 'canvas', ground: 'ink', light: 16.25, dark: 19.31 },
+      { what: 'the range and the gap', text: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { what: 'the range and the gap on a card', text: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+    ]) {
+      expect(measured('light', text, ground), `${what}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground), `${what}, dark`).toBeCloseTo(dark, 2);
+    }
+    expect(onWash('light', 'canvas'), 'a hovered control, light').toBeCloseTo(14.7, 2);
+    expect(onWash('dark', 'canvas'), 'a hovered control, dark').toBeCloseTo(17.41, 2);
+    expect(onWash('light', 'lifted'), 'a hovered control on a card, light').toBeCloseTo(16.11, 2);
+    expect(onWash('dark', 'lifted'), 'a hovered control on a card, dark').toBeCloseTo(15.25, 2);
+    for (const mode of ['light', 'dark']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(onWash(mode, ground), `${mode} on ${ground}`).toBeGreaterThanOrEqual(TEXT);
+      }
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

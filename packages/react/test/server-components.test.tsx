@@ -32,12 +32,55 @@ vi.mock('react', async () => {
 // server build, so the linked tile's client module is a stand-in here.
 vi.mock('../src/stat-tile/StatTileLink', () => ({ StatTileLink: () => null }));
 
+// Pagination's three client leaves, as stand-ins that write what they were given as plain markup and record
+// their props, so a test can see that the shell hands them no function.
+const leaves = vi.hoisted(() => ({ props: [] as [leaf: string, props: Record<string, unknown>][] }));
+vi.mock('../src/pagination/PaginationLink', async () => {
+  const { createElement } = await import('react');
+  return {
+    PaginationLink: (props: Record<string, unknown>) => {
+      leaves.props.push(['PaginationLink', props]);
+      return createElement(
+        'a',
+        {
+          href: props.href,
+          className: props.className,
+          'aria-label': props['aria-label'],
+          'aria-current': props.isCurrent === true ? 'page' : undefined,
+          'aria-disabled': props.isDisabled === true ? 'true' : undefined,
+          'data-step': props.step,
+        },
+        props.children as never,
+      );
+    },
+  };
+});
+vi.mock('../src/pagination/PaginationButton', async () => {
+  const { createElement } = await import('react');
+  return {
+    PaginationButton: (props: Record<string, unknown>) => {
+      leaves.props.push(['PaginationButton', props]);
+      return createElement('button', { type: 'button', className: props.className }, props.children as never);
+    },
+  };
+});
+vi.mock('../src/pagination/PaginationStatus', async () => {
+  const { createElement } = await import('react');
+  return {
+    PaginationStatus: (props: Record<string, unknown>) => {
+      leaves.props.push(['PaginationStatus', props]);
+      return createElement('span', { className: 'pagination-status', role: 'status' });
+    },
+  };
+});
+
 import * as react from 'react';
 import { Badge } from '../src/badge';
 import { Card, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
 import { Meter } from '../src/meter';
+import { Pagination } from '../src/pagination';
 import { StatTile } from '../src/stat-tile';
 import { Eyebrow, Heading, Text } from '../src/typography';
 
@@ -178,6 +221,61 @@ describe('the home parts in a server component', () => {
   });
 });
 
+describe('the pickers batch in a server component', () => {
+  const pagination = (
+    <Pagination
+      page={12}
+      pageCount={26}
+      rangeLabel="551 to 600 of 1,284"
+      getPageHref={(n) => '?page=' + String(n)}
+    />
+  );
+
+  it('renders Pagination in link mode, calling the app functions on the server', () => {
+    const html = renderToStaticMarkup(pagination);
+    for (const text of [
+      '<nav aria-label="Pagination" class="pagination">',
+      '<div class="pagination-row">',
+      'class="pagination-range">551 to 600 of 1,284<',
+      '<ol class="pagination-list">',
+      'href="?page=11"',
+      'href="?page=13"',
+      'href="?page=26"',
+      'aria-current="page"',
+      'aria-label="Page 12"',
+      'data-step="previous"',
+      'class="pagination-gap"',
+      'm15 18-6-6 6-6',
+      'm9 18 6-6-6-6',
+      '<span class="pagination-status" role="status"></span>',
+    ]) {
+      expect(html).toContain(text);
+    }
+    expect(html).not.toContain('data-rac');
+    expect(html).not.toContain('<button');
+  });
+
+  it('hands the client leaves no function in link mode', () => {
+    leaves.props.length = 0;
+    renderToStaticMarkup(pagination);
+    // Two steps, five page controls (the other two slots are gaps) and the status.
+    expect(leaves.props.map(([leaf]) => leaf).sort()).toEqual([
+      ...Array<string>(7).fill('PaginationLink'),
+      'PaginationStatus',
+    ]);
+    const isElement = (value: unknown): boolean => react.isValidElement(value);
+    for (const [leaf, props] of leaves.props) {
+      for (const [name, value] of Object.entries(props)) {
+        const plain =
+          value === undefined || ['string', 'number', 'boolean'].includes(typeof value) || isElement(value);
+        const elements =
+          Array.isArray(value) && value.every((each) => typeof each === 'string' || isElement(each));
+        expect(plain || elements, `${leaf} ${name}`).toBe(true);
+      }
+    }
+  });
+});
+
 /** The source file of every static component, relative to `src`. */
 const STATIC_MODULES = [
   'typography/Heading.tsx',
@@ -190,6 +288,7 @@ const STATIC_MODULES = [
   'field/FieldChanged.tsx',
   'stat-tile/StatTile.tsx',
   'meter/Meter.tsx',
+  'pagination/Pagination.tsx',
 ];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {

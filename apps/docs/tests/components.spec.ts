@@ -506,6 +506,19 @@ test.describe('forced colors', () => {
     expect((await paint(unselected)).fill).not.toBe(colors.highlight);
   });
 
+  test('the current page is Highlight and a disabled step GrayText', async ({ page }) => {
+    // The ink fill is repainted away, so the current page takes the reader's selection colors, and the taupe of a
+    // disabled step becomes the reader's disabled color.
+    await visit(page, '/docs/components/pagination');
+    const example = page.locator('.stage .pagination').first();
+    const current = await paint(example.locator('.pagination-page[aria-current]'));
+    expect(current.fill).toBe(await systemColor(page, 'Highlight'));
+    expect(current.text).toBe(await systemColor(page, 'HighlightText'));
+    const previous = example.locator('.pagination-step[data-step="previous"]');
+    await expect(previous).toHaveAttribute('aria-disabled', 'true');
+    expect((await paint(previous)).text).toBe(await systemColor(page, 'GrayText'));
+  });
+
   test('a tag keeps a CanvasText edge', async ({ page }) => {
     // The bone fill is repainted away, so the edge is what draws the pill; a disabled tag is GrayText.
     await visit(page, '/docs/components/multi-select');
@@ -575,6 +588,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   link: ['.stage .link'],
   meter: ['.stage .meter-label', '.stage .meter-value', '.stage .meter-legend-label'],
   'multi-select': ['.stage .field-label', '.stage .field-description', '.stage .multi-select-tag-text'],
+  // The range is the app's sentence; the page numbers and the step words are the library's and never long.
+  pagination: ['.stage .pagination-range'],
   'radio-group': [
     '.stage .field-label',
     '.stage .field-description',
@@ -734,6 +749,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   menu: ['.stage .button, .stage .icon-button'],
   meter: ['.stage .meter [role="meter"]', '.stage .meter-segment'],
   'multi-select': ['.stage .multi-select-control', '.stage .multi-select-tag'],
+  // The row and the current page are in the server's HTML; the shell is a server component.
+  pagination: ['.stage .pagination', '.stage .pagination-page[aria-current]'],
   popover: ['.stage .button'],
   'radio-group': ['.stage .radio-indicator'],
   'search-field': ['.stage .search-field-input', '.stage .search-field-icon'],
