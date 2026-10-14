@@ -60,6 +60,10 @@ import MeterPace from './meter-pace';
 import MultiSelectBasic from './multi-select-basic';
 import MultiSelectMany from './multi-select-many';
 import MultiSelectStates from './multi-select-states';
+import PaginationButtons from './pagination-buttons';
+import PaginationLinks from './pagination-links';
+import PaginationNarrow from './pagination-narrow';
+import PaginationPersian from './pagination-persian';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
 import RadioGroupBasic from './radio-group-basic';
@@ -174,6 +178,10 @@ export const examples = {
   'multi-select-basic': MultiSelectBasic,
   'multi-select-many': MultiSelectMany,
   'multi-select-states': MultiSelectStates,
+  'pagination-buttons': PaginationButtons,
+  'pagination-links': PaginationLinks,
+  'pagination-narrow': PaginationNarrow,
+  'pagination-persian': PaginationPersian,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
   'radio-group-basic': RadioGroupBasic,

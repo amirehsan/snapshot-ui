@@ -28,6 +28,7 @@ import { MenuSection } from '../menu/MenuSection';
 import { ModalFrame } from '../overlay/ModalFrame';
 import { isAnotherModalOpen } from '../overlay/useOverlayStack';
 import { Spinner } from '../spinner/Spinner';
+import { QUIET_MS } from '../utils/quiet';
 import { push, useRecents } from './recentsStore';
 import { matchesShortcut, parseShortcut } from './shortcut';
 
@@ -111,9 +112,6 @@ export interface CommandPaletteProps {
   className?: string;
   ref?: Ref<HTMLElement>;
 }
-
-/** How long typing has to pause before the status line says the count. Pagination's digest waits as long. */
-const QUIET_MS = 600;
 
 /** A palette's words, but the placeholder, which defaults to its label. */
 const DEFAULT_LABELS: Omit<CommandPaletteLabels, 'placeholder'> = {

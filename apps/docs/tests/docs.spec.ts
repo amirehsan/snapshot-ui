@@ -905,6 +905,57 @@ test.describe('the tabs page without JavaScript', () => {
   });
 });
 
+test('page links navigate through the router, and the status speaks the new range once', async ({ page }) => {
+  await visit(page, '/docs/components/pagination');
+  // A marker on the window survives a client-side navigation and is lost to a full page load.
+  await page.evaluate(() => {
+    (window as Window & { pagesMarker?: boolean }).pagesMarker = true;
+  });
+  const example = page.locator('.stage .pagination').first();
+  const status = example.getByRole('status');
+  await expect(status).toBeEmpty();
+  await expect(example.getByRole('link', { name: 'Page 1', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  const next = example.getByRole('link', { name: 'Next' });
+  await expect(next).toHaveAttribute('href', '/docs/components/pagination?page=2');
+  await scrolledTo(next);
+  // The region is the same element after the navigation: the client leaves stay mounted, so it can speak (R5).
+  await status.evaluate((element) => {
+    element.setAttribute('data-marker', 'kept');
+  });
+  await next.click();
+  await expect(page).toHaveURL(/\/docs\/components\/pagination\?page=2$/);
+  await expect(example.getByRole('link', { name: 'Page 2', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(example.locator('.pagination-range')).toHaveText('51 to 100 of 1,284');
+  expect(await page.evaluate(() => (window as Window & { pagesMarker?: boolean }).pagesMarker)).toBe(true);
+  await expect(status).toHaveText('51 to 100 of 1,284', { timeout: 1000 });
+  await expect(status).toHaveAttribute('data-marker', 'kept');
+});
+
+test('a narrow pagination row keeps two 40px steps around the range', async ({ page }) => {
+  await visit(page, '/docs/components/pagination');
+  // The narrow example sits in a 20rem column, so its own container query lays it out at any viewport.
+  const example = page.locator('.stage .pagination').filter({ hasText: '551 to 600 of 1,284' });
+  await scrolledTo(example);
+  for (const control of await example.locator('.pagination-page').all()) await expect(control).toBeHidden();
+  const previous = await example.locator('.pagination-step[data-step="previous"]').boundingBox();
+  const next = await example.locator('.pagination-step[data-step="next"]').boundingBox();
+  const range = await example.locator('.pagination-range').boundingBox();
+  if (!previous || !next || !range) throw new Error('No narrow row drawn');
+  for (const step of [previous, next]) {
+    expect(step.width).toBe(40);
+    expect(step.height).toBe(40);
+  }
+  expect(previous.x + previous.width).toBeLessThanOrEqual(range.x);
+  expect(range.x + range.width).toBeLessThanOrEqual(next.x);
+  await expect(example.getByRole('link', { name: 'Previous' })).toBeVisible();
+});
+
 test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
   await visit(page, '/docs/components/text-area');
   const field = fieldNamed(page, 'About the workspace');

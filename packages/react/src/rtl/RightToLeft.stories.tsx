@@ -13,6 +13,7 @@ import { Drawer } from '../drawer';
 import { Link } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { MultiSelect } from '../multi-select';
+import { Pagination } from '../pagination';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
 import { Radio, RadioGroup } from '../radio-group';
@@ -1031,6 +1032,55 @@ export const TabsMirrored: Story = {
     await expect(second).toHaveAttribute('aria-selected', 'true');
     await userEvent.keyboard('{ArrowRight}');
     await expect(first).toHaveAttribute('aria-selected', 'true');
+  },
+};
+
+/**
+ * Pagination under a Persian locale and `dir="rtl"`, page 12 of 26 with Persian digits: the list runs from the
+ * right, so Previous is at the right edge and Next at the left; Previous's chevron is mirrored to point right,
+ * the way it goes; and a page's digits still read left to right, since the number is isolated.
+ */
+export const PaginationMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
+        <Pagination
+          page={12}
+          pageCount={26}
+          rangeLabel="۵۵۱ تا ۶۰۰ از ۱٬۲۸۴"
+          getPageHref={(page) => `#page-${String(page)}`}
+          pageLabel={(page) => String(page).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit)}
+          labels={{ navigation: 'صفحه‌ها', previous: 'قبلی', next: 'بعدی', page: (label) => `صفحه ${label}` }}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const list = rect(find(canvasElement, '.pagination-list'));
+    const previous = find(canvasElement, '.pagination-step[data-step="previous"]');
+    const next = find(canvasElement, '.pagination-step[data-step="next"]');
+    await expect(list.right - rect(previous).right).toBeCloseTo(0, 0);
+    await expect(rect(next).left - list.left).toBeCloseTo(0, 0);
+    const controls = [...canvasElement.querySelectorAll<HTMLElement>('.pagination-control')];
+    for (let index = 1; index < controls.length; index += 1) {
+      const before = controls[index - 1];
+      const after = controls[index];
+      if (!before || !after) continue;
+      // Each control in DOM order sits to the left of the one before it.
+      await expect(rect(after).right).toBeLessThanOrEqual(rect(before).left);
+    }
+    await expect(getComputedStyle(find(previous, 'svg')).scale).toBe('-1 1');
+    // The digits of one number keep their order: "۱" then "۲", left to right.
+    const twelve = controls.find((each) => each.textContent === '۱۲');
+    if (!twelve?.firstChild) throw new Error('No page ۱۲');
+    const digit = (offset: number): DOMRect => {
+      const range = document.createRange();
+      range.setStart(twelve.firstChild as Node, offset);
+      range.setEnd(twelve.firstChild as Node, offset + 1);
+      return range.getBoundingClientRect();
+    };
+    await expect(digit(0).right).toBeLessThanOrEqual(digit(1).left + 0.5);
+    await expect(twelve).toHaveAttribute('aria-current', 'page');
   },
 };
 

@@ -1,0 +1,112 @@
+---
+title: Pagination
+description: "Pages of rows: Previous, numbered pages with gaps and Next beside the range you write, as links a server page builds or as buttons."
+icon: ChevronsLeftRight
+---
+
+<Section>
+
+## Links from a server page
+
+The range you format at the start, and at the end Previous, the first page, the current one with a page each side, the last, gaps for what is left out, and Next. Every control is a link built by `getPageHref`, which runs where Pagination renders: Pagination has no client directive, so a server page renders it and passes the function, and only the links and the status region are client components. In an app the server page reads `searchParams.page` and passes the range it formats; this example reads the page from the URL in the browser, since the docs are static.
+
+<Preview name="pagination-links" />
+
+</Section>
+
+<Section>
+
+## Buttons
+
+Pass `onPageChange` instead of `getPageHref` and every control is a button that calls it with its page. A press on the current page calls nothing. Button mode belongs in a client component, since a function cannot cross from a server page to the client.
+
+<Preview name="pagination-buttons" />
+
+</Section>
+
+<Section>
+
+## Narrow
+
+Under 30rem of its own width the numbers and gaps leave and the row is Previous, the range and Next: two 40px targets and the range between them. It is a container query, not a viewport one, so a narrow column on a wide page narrows too. The step words stay as the steps' names. `hasPageNumbers={false}` gives the same row at every width.
+
+<Preview name="pagination-narrow" />
+
+</Section>
+
+<Section>
+
+## Other digits
+
+`pageLabel` writes a page number your way, here in Persian digits with a string replacement and no `Intl`, so the server and the browser write the same thing. A page's name is `labels.page` given that text, and the other labels translate the rest. In right to left the list runs from the right and the chevrons point the way they go; a number's digits stay in their order.
+
+<Preview name="pagination-persian" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Keep the page in the URL, so it can be shared, reloaded and gone back to. With the Next App Router the server page reads the search parameter, formats the range and renders Pagination itself, with no client component of its own:
+
+```tsx
+// app/transactions/page.tsx, a server component
+import { Pagination } from '@snapshot-ui/react';
+
+const PAGE_SIZE = 50;
+
+export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page: param = '1' } = await searchParams;
+  const total = await countTransactions();
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(Math.max(1, Number.parseInt(param, 10) || 1), pageCount);
+  const first = (page - 1) * PAGE_SIZE + 1;
+  const last = Math.min(page * PAGE_SIZE, total);
+  const range = `${formatCount(first)} to ${formatCount(last)} of ${formatCount(total)}`;
+  return (
+    <>
+      <TransactionList page={page} />
+      <Pagination page={page} pageCount={pageCount} rangeLabel={range} getPageHref={(n) => '?page=' + String(n)} />
+    </>
+  );
+}
+```
+
+`formatCount` is yours: the range arrives formatted, and Pagination never formats a number. The links go through the `RouterProvider` at the app's root, as [Routing](/docs/routing) sets up, so a page change is a soft navigation and the status region stays mounted to speak the new range. If it does not speak after a navigation, render Pagination in the layout segment that persists. Start each `href` from the parameters already in the URL when the page has others, such as a search or a view, so changing the page keeps them.
+
+The row always has seven slots, wherever the current page is, so the controls never move under the pointer. Choose a page size that keeps the page count steady while a person pages. For an endless or cursor-paged list, where the count is unknown, use `hasPageNumbers={false}`: Previous, the range and Next. A `page` outside 1 to `pageCount` is shown as the nearest end, with a console warning.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every `nav` attribute is accepted but `aria-label`, which `labels.navigation` gives. Pass `getPageHref` or `onPageChange`, never both.
+
+<PropsTable label="Pagination props" path="../../packages/react/src/pagination/Pagination.tsx" type="Pick<PaginationProps, 'page' | 'pageCount' | 'rangeLabel' | 'getPageHref' | 'onPageChange' | 'pageLabel' | 'siblingCount' | 'hasPageNumbers' | 'labels' | 'className'>" />
+
+<PropsTable label="PaginationLabels" path="../../packages/react/src/pagination/Pagination.tsx" type="PaginationLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A `nav` named "Pagination", or `labels.navigation`, holding a list of links or buttons, the current page `aria-current`: "page" on a link and "true" on a button. With two on one page, give each its own name, as the examples here do. Each page is named "Page" and its number, which contains the number you see, and the steps are named by their words, also when the narrow row hides them. The range is spoken once, 600ms after it last changed, so three quick presses of Next say one range, and nothing is said when the page loads; the visible range is not live, so it is never read twice. A disabled step is out of the tab order. When a step disables while it has focus, as Next does on reaching the last page, focus moves to the current page, or to the other step when the numbers are hidden or the row is narrow.
+
+<Keys rows={[['Tab', 'Moves between the controls.'], ['Enter', 'Goes to the page; a button also takes Space.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps pagination in the system.
+
+<Rules dos={['Write the range in your own words: "1 to 50 of 1,284".', 'Render link mode from a server page, with the page in the URL.', 'Choose a page size that keeps the controls still while a person pages.']} donts={['Never ask the library to format a page number. Pass pageLabel for other digits.', 'Never show a pager without the range.', 'Never page a list a person reads to the end. Show it whole.']} />
+
+</Section>

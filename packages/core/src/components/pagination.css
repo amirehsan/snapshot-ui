@@ -1,0 +1,275 @@
+/*
+ * Pagination: the range the app writes and a row of page controls, derived in docs/design-system.md
+ * ("Pagination"). A control is a 40px pill (36px compact, hit at 40), transparent with ink text at the action
+ * step and tabular figures; the current page is the ink pill with canvas text and its ring inside it; the
+ * steps carry a 16px chevron and their word, and take taupe with no wash when disabled. The nav is a size
+ * container, and under 30rem of it the numbers and gaps leave, the words become visually hidden names, and
+ * the range sits between the two steps: the row is what the query re-lays, since a container query styles
+ * only what is inside the container. The short form, a row with no page numbers, is that narrow row at every
+ * width. The current page is `aria-current` ("page" on a link, "true" on a button) or React Aria's
+ * `data-current`; a disabled step is a disabled button, or a link React Aria draws as a span with
+ * `aria-disabled` and `data-disabled`.
+ */
+@layer components {
+  .pagination {
+    container: pagination / inline-size;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  .pagination-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-part) var(--spacing-peer);
+  }
+
+  /* The range is the app's sentence: a long one wraps, and breaks a long word anywhere, inside the row. */
+  .pagination-range {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pagination-list {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .pagination-item {
+    display: flex;
+  }
+
+  .pagination-control {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    min-width: var(--size-control);
+    height: var(--size-control);
+    margin: 0;
+    padding-block: 0;
+    padding-inline: 0.5rem;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-action);
+    line-height: var(--text-action--line-height);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: var(--text-action--font-weight);
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .pagination-control::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block: min(0px, (100% - var(--size-target)) / 2);
+  }
+
+  /* Digits in any script read as one run, whatever the row's direction. */
+  .pagination-page {
+    unicode-bidi: isolate;
+  }
+
+  .pagination-step {
+    padding-inline: 0.75rem;
+  }
+
+  .pagination-step svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+
+  /* The chevrons point the way they go: Previous is at the right in right to left. */
+  [dir='rtl'] .pagination-step svg {
+    scale: -1 1;
+  }
+
+  @media (hover: hover) {
+    .pagination-control:is(:hover, [data-hovered]):not(
+        [aria-current='page'],
+        [aria-current='true'],
+        [data-current],
+        :disabled,
+        [data-disabled],
+        [aria-disabled='true']
+      ) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+  }
+
+  .pagination-control:is(:active, [data-pressed]):not(
+      [aria-current='page'],
+      [aria-current='true'],
+      [data-current],
+      :disabled,
+      [data-disabled],
+      [aria-disabled='true']
+    ) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  .pagination-page:is([aria-current='page'], [aria-current='true'], [data-current]) {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+    cursor: default;
+  }
+
+  .pagination-control:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .pagination-page:is([aria-current='page'], [aria-current='true'], [data-current]):is(
+      :focus-visible,
+      [data-focus-visible]
+    ) {
+    outline-color: var(--color-canvas);
+    outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
+  }
+
+  .pagination-control:is(:disabled, [data-disabled], [aria-disabled='true']) {
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  .pagination-gap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--size-control);
+    height: var(--size-control);
+    color: var(--color-slate);
+  }
+
+  .pagination-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* The short form at every width: Previous, the range, Next. Two 40px targets and the range. */
+  .pagination-row[data-page-numbers='false'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .pagination-row[data-page-numbers='false'] .pagination-range {
+    grid-area: 1 / 1;
+    justify-self: center;
+    max-width: calc(100% - 2 * var(--size-control) - 1rem);
+    text-align: center;
+  }
+
+  .pagination-row[data-page-numbers='false'] .pagination-list {
+    grid-area: 1 / 1;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .pagination-row[data-page-numbers='false'] .pagination-item {
+    pointer-events: auto;
+  }
+
+  .pagination-row[data-page-numbers='false'] .pagination-step {
+    padding-inline: 0;
+  }
+
+  .pagination-row[data-page-numbers='false'] .pagination-step-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Under 30rem of the nav: Previous, the range, Next. Two 40px targets and the range stay. */
+  @container pagination (width < 30rem) {
+    .pagination-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: center;
+    }
+
+    .pagination-range {
+      grid-area: 1 / 1;
+      justify-self: center;
+      max-width: calc(100% - 2 * var(--size-control) - 1rem);
+      text-align: center;
+    }
+
+    .pagination-list {
+      grid-area: 1 / 1;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .pagination-item {
+      pointer-events: auto;
+    }
+
+    .pagination-item:is([data-kind='page'], [data-kind='gap']) {
+      display: none;
+    }
+
+    .pagination-step {
+      padding-inline: 0;
+    }
+
+    .pagination-step-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .pagination-page:is([aria-current='page'], [aria-current='true'], [data-current]) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .pagination-page:is([aria-current='page'], [aria-current='true'], [data-current]):is(
+        :focus-visible,
+        [data-focus-visible]
+      ) {
+      outline-color: HighlightText;
+    }
+
+    .pagination-control:is(:disabled, [data-disabled], [aria-disabled='true']) {
+      color: GrayText;
+    }
+  }
+}

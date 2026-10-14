@@ -19,6 +19,7 @@ import { Link } from '../src/link';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { MultiSelect } from '../src/multi-select';
 import { Shortcut } from '../src/overlay/Shortcut';
+import { Pagination } from '../src/pagination';
 import { PickerOption } from '../src/picker';
 import { Popover } from '../src/popover';
 import { Radio, RadioGroup } from '../src/radio-group';
@@ -489,6 +490,14 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '>Money in<',
     ],
     ['>Everything<'],
+  ],
+  [
+    // Button mode, from a client component: the controls are React Aria's buttons, the status region is empty
+    // and nothing is a link.
+    'Pagination, buttons',
+    <Pagination page={2} pageCount={5} rangeLabel="51 to 100 of 230" onPageChange={() => undefined} />,
+    ['<button', 'aria-current="true"', 'role="status"', '>51 to 100 of 230<'],
+    ['href='],
   ],
 ];
 

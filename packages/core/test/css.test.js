@@ -168,14 +168,13 @@ describe('src/styles.css', () => {
   });
 
   it('imports the picker files after the home files, in order', () => {
-    // search-field.css is required; the select, the combo box, the multi-select, the tabs and the pagination
-    // are checked once they exist. Each comes after input.css, so a one-class override of the input wins by order.
+    // Every picker file is required: the batch is complete. Each comes after input.css, so a one-class override
+    // of the input wins by order.
     const at = (file) => entry.indexOf(`'./components/${file}'`);
     expect(at('charts.css')).toBeGreaterThanOrEqual(0);
     expect(at('search-field.css')).toBeGreaterThan(at('charts.css'));
     let previous = at('search-field.css');
     for (const file of ['select.css', 'combo-box.css', 'multi-select.css', 'tabs.css', 'pagination.css']) {
-      if (!components.includes(file)) continue;
       expect(at(file), file).toBeGreaterThan(previous);
       previous = at(file);
     }
@@ -4778,6 +4777,198 @@ describe('src/components/tabs.css', () => {
   });
 
   it('writes no transition, since nothing in a tab row moves', () => {
+    expect(rules()).not.toMatch(/transition|animation/);
+  });
+});
+
+describe('src/components/pagination.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.pagination {` is the start of no other
+  // rule (`.pagination-row {` differs at the next character), so the first match is the nav's own rule.
+  const rules = () => closeUp(stripComments(read('src/components/pagination.css')));
+  const CURRENT = "[aria-current='page'], [aria-current='true'], [data-current]";
+  const DISABLED = ":disabled, [data-disabled], [aria-disabled='true']";
+  const FOCUS = ':focus-visible, [data-focus-visible]';
+  const QUERY = '@container pagination (width < 30rem)';
+  const SHORT = ".pagination-row[data-page-numbers='false']";
+  const HIDDEN = [
+    'position: absolute;',
+    'width: 1px;',
+    'height: 1px;',
+    'margin: -1px;',
+    'overflow: hidden;',
+    'clip-path: inset(50%);',
+    'white-space: nowrap;',
+  ];
+
+  it('makes the nav a size container and re-lays the row inside it', () => {
+    const css = rules();
+    expect(blockAfter(css, '.pagination {')).toContain('container: pagination / inline-size;');
+    const row = blockAfter(css, '.pagination-row {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'align-items: center;',
+      'justify-content: space-between;',
+      'gap: var(--spacing-part) var(--spacing-peer);',
+    ]) {
+      expect(row, declaration).toContain(declaration);
+    }
+    const query = blockAfter(css, QUERY);
+    expect(query).not.toBe('');
+    // A container query styles only what is inside the container, so the nav itself is never in it.
+    expect(query).not.toContain('.pagination {');
+    expect(query).not.toMatch(/\.pagination\s*\{/);
+    expect(blockAfter(query, '.pagination-row {')).toContain('display: grid;');
+    // The range a slate small line with tabular figures.
+    const range = blockAfter(css, '.pagination-range {');
+    expect(range).toContain('color: var(--color-slate);');
+    expect(range).toContain('font-size: var(--text-small);');
+    expect(range).toContain('font-variant-numeric: tabular-nums;');
+    // The app's sentence wraps inside the row, and a long word breaks anywhere rather than push the page.
+    expect(range).toContain('min-width: 0;');
+    expect(range).toContain('overflow-wrap: anywhere;');
+  });
+
+  it('draws a control at the control height, on the pill radius, at the action step with tabular figures', () => {
+    const control = blockAfter(rules(), '.pagination-control {');
+    for (const declaration of [
+      'min-width: var(--size-control);',
+      'height: var(--size-control);',
+      'padding-inline: 0.5rem;',
+      'border: 0;',
+      'border-radius: var(--radius-pill);',
+      'background-color: transparent;',
+      'color: var(--color-ink);',
+      'font-size: var(--text-action);',
+      'line-height: var(--text-action--line-height);',
+      'font-weight: var(--text-action--font-weight);',
+      'font-variant-numeric: tabular-nums;',
+      'text-decoration: none;',
+      'cursor: pointer;',
+    ]) {
+      expect(control, declaration).toContain(declaration);
+    }
+    const step = blockAfter(rules(), '.pagination-step svg {');
+    expect(step).toContain('width: 16px;');
+    expect(step).toContain('height: 16px;');
+  });
+
+  it('hits a control at the target by the shared formula', () => {
+    const hit = blockAfter(rules(), '.pagination-control::before {');
+    expect(hit).toContain('position: absolute;');
+    expect(hit).toContain('inset-inline: 0;');
+    expect(hit).toContain('inset-block: min(0px, (100% - var(--size-target)) / 2);');
+  });
+
+  it('isolates a page number, so digits read as one run in any direction', () => {
+    expect(blockAfter(rules(), '.pagination-page {').trim()).toBe('unicode-bidi: isolate;');
+  });
+
+  it('mirrors the step chevrons under an rtl dir, as the sidebar mirrors its chevron', () => {
+    const css = rules();
+    expect(blockAfter(css, "[dir='rtl'] .pagination-step svg {").trim()).toBe('scale: -1 1;');
+    // Nothing else is mirrored: the list runs from the right by itself, and digits have their own direction.
+    expect(css.match(/scale/g)).toHaveLength(1);
+    expect(css.match(/rtl/g)).toHaveLength(1);
+    expect(css).not.toMatch(/(?<![\w-])(left|right)\s*:|padding-(left|right)|margin-(left|right)/);
+  });
+
+  it('washes a control on hover, only where hover exists, and on a press, never the current page or a disabled step', () => {
+    const css = rules();
+    const wash = 'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);';
+    const hover = blockAfter(
+      blockAfter(css, '@media (hover: hover)'),
+      `.pagination-control:is(:hover, [data-hovered]):not(${CURRENT}, ${DISABLED}) {`,
+    );
+    expect(hover.trim()).toBe(wash);
+    const pressed = blockAfter(
+      css,
+      `.pagination-control:is(:active, [data-pressed]):not(${CURRENT}, ${DISABLED}) {`,
+    );
+    expect(pressed.trim()).toBe(wash);
+    expect(outsideForcedColors(css).replace(blockAfter(css, '@media (hover: hover)'), '')).not.toContain(
+      ':hover',
+    );
+  });
+
+  it('fills the current page ink with canvas text and inverts its ring inside it', () => {
+    const css = rules();
+    const current = blockAfter(css, `.pagination-page:is(${CURRENT}) {`);
+    expect(current).toContain('background-color: var(--color-ink);');
+    expect(current).toContain('color: var(--color-canvas);');
+    expect(current).toContain('cursor: default;');
+    const ring = blockAfter(css, `.pagination-control:is(${FOCUS}) {`);
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+    const inset = blockAfter(css, `.pagination-page:is(${CURRENT}):is(${FOCUS}) {`);
+    expect(inset).toContain('outline-color: var(--color-canvas);');
+    expect(inset).toContain(
+      'outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));',
+    );
+  });
+
+  it('draws a disabled step taupe and not-allowed', () => {
+    const disabled = blockAfter(rules(), `.pagination-control:is(${DISABLED}) {`);
+    expect(disabled).toContain('color: var(--color-taupe);');
+    expect(disabled).toContain('cursor: not-allowed;');
+    // Taupe is for disabled text only, and this is the file's one use of it.
+    expect(rules().match(/--color-taupe/g)).toHaveLength(1);
+  });
+
+  it('hides the numbers and the gaps and keeps the step words as names under 30rem', () => {
+    const query = blockAfter(rules(), QUERY);
+    expect(blockAfter(query, ".pagination-item:is([data-kind='page'], [data-kind='gap']) {").trim()).toBe(
+      'display: none;',
+    );
+    const label = blockAfter(query, '.pagination-step-label {');
+    for (const declaration of HIDDEN) expect(label, declaration).toContain(declaration);
+    expect(label).not.toContain('display: none');
+    // The range sits between the two steps, which stay 40px targets on the list laid over it.
+    const range = blockAfter(query, '.pagination-range {');
+    expect(range).toContain('grid-area: 1 / 1;');
+    expect(range).toContain('justify-self: center;');
+    expect(range).toContain('max-width: calc(100% - 2 * var(--size-control) - 1rem);');
+    const list = blockAfter(query, '.pagination-list {');
+    expect(list).toContain('grid-area: 1 / 1;');
+    expect(list).toContain('justify-content: space-between;');
+    expect(list).toContain('pointer-events: none;');
+    expect(blockAfter(query, '.pagination-item {')).toContain('pointer-events: auto;');
+    expect(blockAfter(query, '.pagination-step {')).toContain('padding-inline: 0;');
+  });
+
+  it('draws the short form as the narrow row at every width', () => {
+    const css = outsideForcedColors(rules()).replace(blockAfter(rules(), QUERY), '');
+    expect(blockAfter(css, `${SHORT} {`)).toContain('display: grid;');
+    const range = blockAfter(css, `${SHORT} .pagination-range {`);
+    expect(range).toContain('grid-area: 1 / 1;');
+    expect(range).toContain('max-width: calc(100% - 2 * var(--size-control) - 1rem);');
+    const list = blockAfter(css, `${SHORT} .pagination-list {`);
+    expect(list).toContain('grid-area: 1 / 1;');
+    expect(list).toContain('justify-content: space-between;');
+    expect(blockAfter(css, `${SHORT} .pagination-item {`)).toContain('pointer-events: auto;');
+    expect(blockAfter(css, `${SHORT} .pagination-step {`)).toContain('padding-inline: 0;');
+    const label = blockAfter(css, `${SHORT} .pagination-step-label {`);
+    for (const declaration of HIDDEN) expect(label, declaration).toContain(declaration);
+  });
+
+  it('keeps the status region in the tree, visually hidden', () => {
+    const status = blockAfter(rules(), '.pagination-status {');
+    for (const declaration of HIDDEN) expect(status, declaration).toContain(declaration);
+    expect(status).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
+  });
+
+  it('draws the current page Highlight and a disabled step GrayText in forced colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    const current = blockAfter(forced, `.pagination-page:is(${CURRENT}) {`);
+    expect(current).toContain('background-color: Highlight;');
+    expect(current).toContain('color: HighlightText;');
+    expect(blockAfter(forced, `.pagination-page:is(${CURRENT}):is(${FOCUS}) {`)).toContain(
+      'outline-color: HighlightText;',
+    );
+    expect(blockAfter(forced, `.pagination-control:is(${DISABLED}) {`)).toContain('color: GrayText;');
+  });
+
+  it('writes no transition, since nothing in a pagination row moves', () => {
     expect(rules()).not.toMatch(/transition|animation/);
   });
 });

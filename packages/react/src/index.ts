@@ -85,6 +85,7 @@ export {
   type TabProps,
   type TabsProps,
 } from './tabs';
+export { Pagination, type PaginationLabels, type PaginationProps } from './pagination';
 export type { AccessibleName, AriaName } from './utils/accessible-name';
 export {
   Card,
