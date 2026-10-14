@@ -115,7 +115,7 @@ A whole app in one right-to-left language wraps its root the same way. A toast f
 
 ## Next.js server components
 
-Stateful or interactive components carry `'use client'`. Static ones carry none, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, the field counter and chip, Meter, a StatTile without `href`, and Sparkline. React Aria itself must never be imported into a server component.
+Stateful or interactive components carry `'use client'`. Static ones carry none, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, the field counter and chip, Meter, a StatTile without `href`, Sparkline, and Pagination, whose page links a server page builds with `getPageHref`; only its controls and its status are client components. React Aria itself must never be imported into a server component.
 
 </Section>
 
