@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, inject, it } from 'vitest';
+import { Calendar, RangeCalendar } from '../src/calendar';
 import { NumberField } from '../src/number-field';
 
 /**
@@ -14,6 +15,11 @@ import { NumberField } from '../src/number-field';
  * Each later part adds its rows to FACES.
  */
 const LOCALES = ['en-US', 'de-DE', 'fa-IR'] as const;
+
+const PRESETS = [
+  { id: 'this-month', label: 'This month', range: { start: '2026-09-01', end: '2026-09-30' } },
+  { id: 'last-7', label: 'Last 7 days', range: { start: '2026-09-12', end: '2026-09-18' } },
+];
 
 const FACES: [name: string, element: ReactElement][] = [
   [
@@ -28,6 +34,15 @@ const FACES: [name: string, element: ReactElement][] = [
       money={{ symbol: 'تومان', symbolPosition: 'end', fractionDigits: 0 }}
       value={null}
       placeholder="0"
+    />,
+  ],
+  ['Calendar', <Calendar aria-label="Date" value="2026-09-14" today="2026-09-18" />],
+  [
+    'RangeCalendar',
+    <RangeCalendar
+      aria-label="Statement period"
+      value={{ start: '2026-09-01', end: '2026-09-30' }}
+      presets={PRESETS}
     />,
   ],
 ];

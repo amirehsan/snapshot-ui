@@ -4,6 +4,7 @@ import { useEffect, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
+import { RangeCalendar } from '../calendar';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { CollapsibleCard } from '../collapsible-card';
 import { ComboBox } from '../combo-box';
@@ -1123,6 +1124,42 @@ export const NumberFieldMirrored: Story = {
       rect(input).left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft),
     );
     await expect(rect(symbol).left).toBeGreaterThan(control.left);
+  },
+};
+
+/**
+ * A range calendar on a Persian page: the previous-month button at the header's right with its chevron pointing
+ * right, the mirror the attribute sets, and React Aria's arrows in the drawn direction, so Arrow Right moves to
+ * the day before.
+ */
+export const CalendarMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(20rem, calc(100vw - 2rem))' }}>
+        <RangeCalendar
+          aria-label="دوره"
+          today="2026-09-18"
+          labels={{ previous: 'ماه قبل', next: 'ماه بعد' }}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const header = rect(find(canvasElement, '.calendar-header'));
+    const previous = within(canvasElement).getByRole('button', { name: 'ماه قبل' });
+    const next = within(canvasElement).getByRole('button', { name: 'ماه بعد' });
+    await expect(header.right - rect(previous).right).toBeLessThan(1);
+    await expect(rect(next).left - header.left).toBeLessThan(1);
+    // ChevronLeft, mirrored, points right: outward, toward the earlier month.
+    const chevron = find(previous, 'svg');
+    await expect(getComputedStyle(chevron).scale).toBe('-1 1');
+    for (let step = 0; step < 8 && !document.activeElement?.classList.contains('calendar-day'); step += 1) {
+      await userEvent.tab();
+    }
+    // Today, 18 September, is 27 Shahrivar; Arrow Right moves to the 26th, the day before.
+    await expect(document.activeElement).toHaveTextContent('۲۷');
+    await userEvent.keyboard('{ArrowRight}');
+    await expect(document.activeElement).toHaveTextContent('۲۶');
   },
 };
 

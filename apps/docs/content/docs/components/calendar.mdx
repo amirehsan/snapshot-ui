@@ -1,0 +1,114 @@
+---
+title: Calendar
+description: "One month of days to choose a day or a range, with your presets and your today, in the calendar and digits of the locale."
+icon: CalendarDays
+---
+
+<Section>
+
+## Basic
+
+A `Calendar` chooses one day. It shows no label of its own, so name it with `aria-label` or `aria-labelledby`. Its value is an ISO date, `'2026-09-14'`, in and out: `value` or `defaultValue` takes one, `onChange` receives one, and a server component can pass it straight from a URL. Pass `today` and the calendar marks that day with a ring and a bold number and opens on its month when there is no value.
+
+<Preview name="calendar-basic" />
+
+</Section>
+
+<Section>
+
+## Range
+
+A `RangeCalendar` chooses a range in two presses: the first anchors it, and until the second the days under the pointer or the focus show the range that would be chosen. A range of one day is two presses on the same day. The value is `{ start, end }`, two ISO dates, and `onChange` fires once, when the range is complete. A half-chosen range is dropped when focus leaves the calendar or a press lands outside it, or on anything in it that is not a button, the month heading included, so a range the person did not finish never reaches the URL.
+
+`presets` adds a row of the app's ranges above the grid, each with the app's words. The library computes no range: "This month" is the app's, from its own today, and is best computed on the server. A press sets the range and moves the view to its start, and a preset shows pressed while the value equals its range.
+
+<Preview name="calendar-range" />
+
+</Section>
+
+<Section>
+
+## Unavailable days
+
+`minValue` and `maxValue` take ISO dates, and the days outside them are taupe and cannot be chosen. `isDateUnavailable` receives each day as an ISO date and returns whether it can be chosen, for a closed day or a weekend: those days are taupe and struck through. A function cannot cross from a server component, so the example is a client file.
+
+<Preview name="calendar-unavailable" />
+
+</Section>
+
+<Section>
+
+## Calendars and digits
+
+The locale chooses the calendar and its digits, through `I18nProvider`. `fa-IR` draws the Persian calendar, Shahrivar 1405, in Persian digits with the week from Saturday; `fa-IR-u-ca-gregory` draws the Gregorian calendar in Persian digits, and `fa-IR-u-nu-latn` the Persian calendar in Latin digits. The values stay Gregorian ISO dates whatever the calendar shown, so a URL means the same day on every page.
+
+<Preview name="calendar-persian" />
+
+React Aria's calendar brings every calendar system. An app that shows only the Gregorian and the Persian calendar can pass a `createCalendar` that returns one of the two, from `@internationalized/date`, which is installed at React Aria's own range (`^3.12.4`) so there is one copy:
+
+```tsx
+'use client';
+
+import { GregorianCalendar, PersianCalendar, type CalendarIdentifier } from '@internationalized/date';
+
+export const createCalendar = (identifier: CalendarIdentifier) =>
+  identifier === 'persian' ? new PersianCalendar() : new GregorianCalendar();
+```
+
+It narrows a calendar's bundle. A date field builds its own calendars whatever is passed, so on a page that also holds a date range picker every system ships anyway.
+
+</Section>
+
+<Section>
+
+## Today
+
+Pass the user's today as an ISO date from the app's time zone, which the app knows and the device may not: near midnight the two can name different days, and a "This month" preset computed on the server would disagree with a mark drawn from the device. Without `today` the calendar marks the device's today once the page has loaded. React Aria's spoken "Today" on a day always follows the device, so pass `today` whenever the app knows its user's zone.
+
+</Section>
+
+<Section>
+
+## Usage
+
+Keep a date in a search parameter as its ISO string, `?from=2026-09-01&to=2026-09-30`, and pass it as `value`: a string a server component can read and pass on. A string that does not parse, or a range whose end is before its start, reads as no value with a warning in the console, so a hand-edited URL never throws.
+
+Before the page hydrates an inline calendar draws an empty frame of its final size, and React Aria's calendar mounts in the next render: its month, its weekdays, its days and its today all come from `Intl` and the device's zone, which the server must not write. Nothing moves when it arrives. A calendar in a popover or a sheet is only ever drawn in the browser.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every date is an ISO string. These are the props each takes.
+
+<PropsTable label="Calendar props" path="../../packages/react/src/calendar/Calendar.tsx" type="Pick<CalendarProps, 'aria-label' | 'value' | 'defaultValue' | 'onChange' | 'today' | 'minValue' | 'maxValue' | 'isDateUnavailable' | 'firstDayOfWeek' | 'createCalendar' | 'isDisabled' | 'isReadOnly' | 'labels' | 'className'>" />
+
+<PropsTable label="RangeCalendar props" path="../../packages/react/src/calendar/RangeCalendar.tsx" type="Pick<RangeCalendarProps, 'aria-label' | 'value' | 'defaultValue' | 'onChange' | 'presets' | 'today' | 'minValue' | 'maxValue' | 'isDateUnavailable' | 'firstDayOfWeek' | 'createCalendar' | 'isDisabled' | 'isReadOnly' | 'labels' | 'className'>" />
+
+<PropsTable label="DateRangePreset" path="../../packages/react/src/calendar/CalendarParts.tsx" type="DateRangePreset" />
+
+<PropsTable label="CalendarLabels" path="../../packages/react/src/calendar/CalendarParts.tsx" type="CalendarLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+An `application` named by its `aria-label` and the visible month, holding a `grid` of days. Each day is named with its full date and described as today, selected or unavailable in React Aria's strings, which have no Persian. React Aria announces the month as it changes and the chosen range. The month buttons are named "Previous month" and "Next month", or `labels`; the presets are a group of toggles named "Presets", each pressed while the value equals its range. Days are 40px wherever there is room and shrink with the room under it, never under 36px on a 320px screen: the one place the 40px target gives way, well above the 24px minimum.
+
+<Keys rows={[['Left Right', 'The previous or next day, in the drawn direction.'], ['Up Down', 'The same day a week before or after.'], ['Home End', 'The first or last day of the month.'], ['PageUp PageDown', 'The same day a month before or after.'], ['Shift+PageUp Shift+PageDown', 'The same day a year before or after.'], ['Enter Space', 'Chooses the day; in a range, the first press anchors it and moves to the next day, and the second completes it.'], ['Escape', 'Drops a half-chosen range and goes on to what holds the calendar, so a popover closes too.'], ['Tab', 'Moves between the month buttons, the presets and the grid, which is one stop.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps calendars in the system.
+
+<Rules dos={['Pass today from the time zone of the app.', 'Compute presets on the server, in the words of the app.', 'Prefer the sheet for a calendar on a phone, where it has the room.']} donts={['Never mark a chosen day by color alone. It is filled and selected.', 'Never put a second month beside the first.', 'Never show a date the app did not write.']} />
+
+</Section>

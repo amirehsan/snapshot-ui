@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import { AppShell } from '../src/app-shell';
 import { Button } from '../src/button';
+import { RangeCalendar } from '../src/calendar';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { ComboBox } from '../src/combo-box';
 import { Dialog } from '../src/dialog';
@@ -25,7 +26,10 @@ import { TextField } from '../src/text-field';
 import { toast, ToastRegion } from '../src/toast';
 import { Tooltip, TooltipTrigger } from '../src/tooltip';
 
-/** Every part that a label, a hint or a row's text renders into, and the chip beside a label. */
+/**
+ * Every part that a label, a hint or a row's text renders into, the chip beside a label, and a range calendar's
+ * row of presets.
+ */
 const PARTS = [
   '.field-label',
   '.field-changed',
@@ -33,6 +37,7 @@ const PARTS = [
   '.checkbox-text',
   '.radio-text',
   '.switch-text',
+  '.calendar-presets',
 ].join(', ');
 
 /**
@@ -83,6 +88,8 @@ const EMPTY: [name: string, element: ReactElement][] = [
   ['TextArea', <TextArea aria-label="Notes" label="" description={false} isChanged />],
   ['SearchField', <SearchField aria-label="Search" label={false} description="" />],
   ['NumberField', <NumberField aria-label="Amount" label={false} description="" isChanged />],
+  // An empty list of presets draws no group.
+  ['RangeCalendar', <RangeCalendar aria-label="Period" presets={[]} />],
   [
     'Select',
     <Select aria-label="Category" label="" description={false} isChanged>

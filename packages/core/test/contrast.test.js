@@ -1021,6 +1021,72 @@ describe('the number field', () => {
   });
 });
 
+describe('the calendar', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+  /** The `percent` ink wash over float: the range band at 10%, a hovered day at 5%. */
+  const wash = (mode, percent) => {
+    const palette = paletteFor(tokens, mode);
+    return composite({ ...parseColor(palette.ink), a: percent / 100 }, parseColor(palette.float));
+  };
+  /** Ink over a wash, against the wash. */
+  const inkOn = (mode, percent) => {
+    const ground = wash(mode, percent);
+    return contrastRatio(composite(parseColor(paletteFor(tokens, mode).ink), ground), ground);
+  };
+
+  // The days and the month are ink, the weekdays slate, today's ring the boundary as a control edge, and a chosen
+  // day canvas on ink with the canvas ring inside it. The gate holds every one of them on the surfaces a calendar
+  // sits on: canvas, a card and the float popover or sheet.
+  it('cites ink, slate and canvas on ink, and the boundary as a track, which the gate holds', () => {
+    for (const ground of ['canvas', 'float', 'raised']) {
+      expect(CONTRAST_PAIRS).toContainEqual(expect.objectContaining({ text: 'ink', ground, minimum: TEXT }));
+      expect(CONTRAST_PAIRS).toContainEqual(
+        expect.objectContaining({ text: 'slate', ground, minimum: TEXT }),
+      );
+      expect(CONTRAST_PAIRS).toContainEqual(
+        expect.objectContaining({ text: 'boundary', ground, minimum: NON_TEXT }),
+      );
+    }
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: NON_TEXT }),
+    );
+  });
+
+  // The band and the hover wash are mixes and not tokens, so they are measured and recorded, not gated. The band is
+  // a cue under 3:1: the filled ends and aria-selected carry the range (R8).
+  it('measures the pairs Appendix B records, in both modes', () => {
+    expect(measured('light', 'slate', 'float'), 'the weekdays on float, light').toBeCloseTo(5.49, 2);
+    expect(measured('dark', 'slate', 'float'), 'the weekdays on float, dark').toBeCloseTo(6.94, 2);
+    expect(measured('light', 'slate', 'canvas'), 'the weekdays on canvas, light').toBeCloseTo(4.84, 2);
+    expect(measured('dark', 'slate', 'canvas'), 'the weekdays on canvas, dark').toBeCloseTo(7.26, 2);
+    expect(measured('light', 'boundary', 'float'), 'the today ring on float, light').toBeCloseTo(3.48, 2);
+    expect(measured('dark', 'boundary', 'float'), 'the today ring on float, dark').toBeCloseTo(5.21, 2);
+    expect(measured('light', 'boundary', 'canvas'), 'the today ring on canvas, light').toBeCloseTo(3.38, 2);
+    expect(measured('dark', 'boundary', 'canvas'), 'the today ring on canvas, dark').toBeCloseTo(5.34, 2);
+    expect(measured('light', 'canvas', 'ink'), 'a chosen day, light').toBeCloseTo(16.25, 2);
+    expect(measured('dark', 'canvas', 'ink'), 'a chosen day, dark').toBeCloseTo(19.31, 2);
+    const float = (mode) => parseColor(paletteFor(tokens, mode).float);
+    expect(contrastRatio(wash('light', 10), float('light')), 'the band, light').toBeCloseTo(1.23, 2);
+    expect(contrastRatio(wash('dark', 10), float('dark')), 'the band, dark').toBeCloseTo(1.34, 2);
+    expect(inkOn('light', 10), 'a day in the band, light').toBeCloseTo(14.97, 2);
+    expect(inkOn('dark', 10), 'a day in the band, dark').toBeCloseTo(13.04, 2);
+    expect(inkOn('light', 5), 'a hovered day, light').toBeCloseTo(16.65, 2);
+    expect(inkOn('dark', 5), 'a hovered day, dark').toBeCloseTo(15.25, 2);
+    for (const mode of ['light', 'dark']) {
+      expect(inkOn(mode, 10), mode).toBeGreaterThanOrEqual(TEXT);
+      expect(inkOn(mode, 5), mode).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

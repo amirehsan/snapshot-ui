@@ -8,6 +8,7 @@ import { Avatar } from '../src/avatar';
 import { StatTile } from '../src/stat-tile';
 import { BottomTabBar, BottomTabBarItem } from '../src/bottom-tab-bar';
 import { Button } from '../src/button';
+import { Calendar } from '../src/calendar';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
@@ -93,6 +94,14 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'value="123450"',
     ],
     ['aria-roledescription', 'role="spinbutton"'],
+  ],
+  [
+    // The face: an empty frame of the calendar's final size; React Aria's month, weekdays and days, all from Intl
+    // and the device's zone, mount after hydration.
+    'Calendar',
+    <Calendar aria-label="Date" value="2026-09-14" />,
+    ['class="calendar"', 'data-face'],
+    ['role="grid"', 'September'],
   ],
   [
     // React Aria writes data-empty as "true" in the HTML. A labelled field is not data-unlabelled.

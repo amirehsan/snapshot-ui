@@ -11,6 +11,10 @@ import BottomTabBarBasic from './bottom-tab-bar-basic';
 import BottomTabBarMore from './bottom-tab-bar-more';
 import ButtonStates from './button-states';
 import ButtonVariants from './button-variants';
+import CalendarBasic from './calendar-basic';
+import CalendarPersian from './calendar-persian';
+import CalendarRange from './calendar-range';
+import CalendarUnavailable from './calendar-unavailable';
 import CardNested from './card-nested';
 import CardParts from './card-parts';
 import CheckboxBasic from './checkbox-basic';
@@ -137,6 +141,10 @@ export const examples = {
   'bottom-tab-bar-more': BottomTabBarMore,
   'button-states': ButtonStates,
   'button-variants': ButtonVariants,
+  'calendar-basic': CalendarBasic,
+  'calendar-persian': CalendarPersian,
+  'calendar-range': CalendarRange,
+  'calendar-unavailable': CalendarUnavailable,
   'card-nested': CardNested,
   'card-parts': CardParts,
   'checkbox-basic': CheckboxBasic,

@@ -1,0 +1,293 @@
+/*
+ * Calendar and RangeCalendar: one month of days, derived in docs/design-system.md ("Calendar"). The calendar is
+ * seven controls wide where there is room and shrinks with the room under it: React Aria's grid is a table, laid
+ * out fixed, and each day is square, so a day is 40px (36px compact) and no less than 36px on a 320px screen.
+ * Days keep the shape's pill. Today is a ring and a weight, keyed on the library's mark on the day's number and
+ * never on React Aria's, which reads the device's zone. A chosen day and a range's two ends are the ink fill;
+ * the days between sit on a 10% ink band that runs under the ends' inner halves, so the range reads as one
+ * shape, and the band is a cue: the fill and aria-selected carry the state. Unavailable days are taupe and struck
+ * through; days outside the month keep their place and show nothing. The month chevrons mirror under
+ * [dir='rtl']. The face is the calendar's final size with nothing in it.
+ */
+@layer components {
+  .calendar {
+    box-sizing: border-box;
+    width: min(100%, calc(7 * var(--size-control)));
+    color: var(--color-ink);
+  }
+
+  /* Six weeks, a weekday row and the header. */
+  .calendar[data-face] {
+    aspect-ratio: 7 / 8;
+  }
+
+  .calendar-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    margin-block-end: var(--spacing-part);
+  }
+
+  .calendar-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    color: var(--color-ink);
+    font-size: var(--text-action);
+    line-height: var(--text-action--line-height);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: 500;
+    text-align: center;
+  }
+
+  [dir='rtl'] .calendar-header .icon-button svg {
+    scale: -1 1;
+  }
+
+  .calendar-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-part);
+    margin-block-end: var(--spacing-part);
+  }
+
+  .calendar-preset {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--size-control);
+    margin: 0;
+    padding-block: 0;
+    padding-inline: 1rem;
+    border: 1px solid var(--color-boundary);
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Hit at the target in height by the formula every control shares, so a compact preset is hit at 40px. */
+  .calendar-preset::before {
+    content: '';
+    position: absolute;
+    inset-block: min(0px, (100% - var(--size-target)) / 2);
+    inset-inline: 0;
+  }
+
+  @media (hover: hover) {
+    .calendar-preset:is(:hover, [data-hovered]):not(:disabled, [data-disabled], [data-selected]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+  }
+
+  .calendar-preset:is(:active, [data-pressed]):not(:disabled, [data-disabled], [data-selected]) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  .calendar-preset:is([data-selected], [aria-pressed='true']) {
+    border-color: var(--color-ink);
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .calendar-preset:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .calendar-preset:is([data-selected], [aria-pressed='true']):is(:focus-visible, [data-focus-visible]) {
+    outline-color: var(--color-canvas);
+    outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
+  }
+
+  .calendar-preset:is(:disabled, [data-disabled]) {
+    border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  .calendar-grid {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+
+  .calendar-grid :is(th, td) {
+    padding: 0;
+  }
+
+  .calendar-weekday {
+    padding-block-end: 0.25rem;
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 450;
+    text-align: center;
+  }
+
+  .calendar-day {
+    position: relative;
+    display: grid;
+    aspect-ratio: 1;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Positioned, so it paints over the band's half under a range's end, by tree order. */
+  .calendar-day-number {
+    position: relative;
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-small);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    unicode-bidi: isolate;
+  }
+
+  @media (hover: hover) {
+    .calendar-day:is(:hover, [data-hovered]):not([data-disabled], [data-unavailable], [data-selected])
+      .calendar-day-number {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+  }
+
+  .calendar-day:is(:active, [data-pressed]):not([data-disabled], [data-unavailable], [data-selected])
+    .calendar-day-number {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  .calendar-day-number[data-today] {
+    border-color: var(--color-boundary);
+    font-weight: 700;
+  }
+
+  /* A single chosen day, and a range's two ends. */
+  .calendar:not(.range-calendar)
+    :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day)
+    .calendar-day-number,
+  .range-calendar .calendar-day:is([data-selection-start], [data-selection-end]) .calendar-day-number {
+    border-color: var(--color-ink);
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  /* A chosen today keeps its weight, and its ring turns canvas inside the fill. */
+  .calendar:not(.range-calendar)
+    :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day)
+    .calendar-day-number[data-today],
+  .range-calendar
+    .calendar-day:is([data-selection-start], [data-selection-end])
+    .calendar-day-number[data-today] {
+    outline: 1px solid var(--color-canvas);
+    outline-offset: -3px;
+  }
+
+  /* The days between the ends: the band, and their numbers at 500. */
+  .range-calendar
+    :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day):not(
+      [data-selection-start],
+      [data-selection-end]
+    ) {
+    background-color: color-mix(in srgb, var(--color-ink) 10%, transparent);
+  }
+
+  .range-calendar
+    :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day):not(
+      [data-selection-start],
+      [data-selection-end]
+    )
+    .calendar-day-number {
+    font-weight: 500;
+  }
+
+  /* The band under the inner half of each end, so the range is one shape. */
+  .range-calendar .calendar-day[data-selection-start]:not([data-selection-end])::before,
+  .range-calendar .calendar-day[data-selection-end]:not([data-selection-start])::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    background-color: color-mix(in srgb, var(--color-ink) 10%, transparent);
+  }
+
+  .range-calendar .calendar-day[data-selection-start]:not([data-selection-end])::before {
+    inset-inline: 50% 0;
+  }
+
+  .range-calendar .calendar-day[data-selection-end]:not([data-selection-start])::before {
+    inset-inline: 0 50%;
+  }
+
+  /* The cells touch, so the ring sits inside the day. */
+  .calendar-day:is(:focus-visible, [data-focus-visible]) .calendar-day-number {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
+  .calendar:not(.range-calendar)
+    .calendar-day[data-selected]:is(:focus-visible, [data-focus-visible])
+    .calendar-day-number,
+  .range-calendar
+    .calendar-day:is([data-selection-start], [data-selection-end]):is(:focus-visible, [data-focus-visible])
+    .calendar-day-number {
+    outline-color: var(--color-canvas);
+    outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
+  }
+
+  .calendar-day:is([data-disabled], [data-unavailable]) {
+    cursor: not-allowed;
+  }
+
+  .calendar-day:is([data-disabled], [data-unavailable]) .calendar-day-number {
+    color: var(--color-taupe);
+  }
+
+  .calendar-day[data-unavailable] .calendar-day-number {
+    text-decoration: line-through;
+  }
+
+  .calendar-day[data-outside-month] {
+    visibility: hidden;
+  }
+
+  @media (forced-colors: active) {
+    .calendar-weekday {
+      color: CanvasText;
+    }
+
+    .calendar-day-number[data-today] {
+      border-color: CanvasText;
+    }
+
+    .calendar:not(.range-calendar) .calendar-day[data-selected] .calendar-day-number,
+    .range-calendar .calendar-day:is([data-selection-start], [data-selection-end]) .calendar-day-number,
+    .calendar-preset:is([data-selected], [aria-pressed='true']) {
+      border-color: Highlight;
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .range-calendar
+      :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day):not(
+        [data-selection-start],
+        [data-selection-end]
+      ) {
+      border-block: 1px solid Highlight;
+    }
+
+    .calendar-day:is([data-disabled], [data-unavailable]) .calendar-day-number,
+    .calendar-preset:is(:disabled, [data-disabled]) {
+      color: GrayText;
+    }
+  }
+}
