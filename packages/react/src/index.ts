@@ -44,6 +44,12 @@ export { PickerOption, PickerSection, type PickerOptionProps, type PickerSection
 export { Select, type SelectBaseProps, type SelectLabels, type SelectProps } from './select';
 export { ComboBox, type ComboBoxBaseProps, type ComboBoxProps, type PickerLabels } from './combo-box';
 export {
+  MultiSelect,
+  type MultiSelectBaseProps,
+  type MultiSelectLabels,
+  type MultiSelectProps,
+} from './multi-select';
+export {
   Checkbox,
   CheckboxGroup,
   type CheckboxBaseProps,

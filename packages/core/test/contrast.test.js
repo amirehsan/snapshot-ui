@@ -787,6 +787,44 @@ describe('the combo box', () => {
   });
 });
 
+describe('the multi-select', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+  /** Ink over the 5% ink wash on bone, the hovered or pressed remove glyph. */
+  const inkOnWash = (mode) => {
+    const palette = paletteFor(tokens, mode);
+    const wash = composite({ ...parseColor(palette.ink), a: 0.05 }, parseColor(palette.bone));
+    return contrastRatio(composite(parseColor(palette.ink), wash), wash);
+  };
+
+  // A tag is a bone pill: its text ink, its remove glyph slate, a graphic that needs 3:1 and gets the text
+  // minimum. The frame is the input's raised pill, whose pairs the combo box cites.
+  it('cites ink and slate on bone, which the gate holds at the text minimum', () => {
+    for (const text of ['ink', 'slate']) {
+      expect(CONTRAST_PAIRS, `${text} on bone`).toContainEqual(
+        expect.objectContaining({ text, ground: 'bone', minimum: TEXT }),
+      );
+    }
+  });
+
+  // The wash is a mix, not a token, so ink over it is measured and recorded; bone against raised is a cue the
+  // tag's own text carries, never a boundary anyone has to find.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    expect(measured('light', 'ink', 'bone'), 'the tag text, light').toBeCloseTo(16.76, 2);
+    expect(measured('dark', 'ink', 'bone'), 'the tag text, dark').toBeCloseTo(15.36, 2);
+    expect(measured('light', 'slate', 'bone'), 'the glyph, light').toBeCloseTo(4.99, 2);
+    expect(measured('dark', 'slate', 'bone'), 'the glyph, dark').toBeCloseTo(6.44, 2);
+    expect(inkOnWash('light'), 'the hovered glyph, light').toBeCloseTo(15.15, 2);
+    expect(inkOnWash('dark'), 'the hovered glyph, dark').toBeCloseTo(13.24, 2);
+    expect(measured('light', 'bone', 'raised'), 'the pill on the frame, light').toBeCloseTo(1.1, 2);
+    expect(measured('dark', 'bone', 'raised'), 'the pill on the frame, dark').toBeCloseTo(1.0, 2);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

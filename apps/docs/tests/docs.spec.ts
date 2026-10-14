@@ -809,6 +809,33 @@ test('a combo box in manual mode shows the spinner while the app loads, then the
   await expect(example).not.toHaveAttribute('data-loading');
 });
 
+test('a multi-select keeps its list open, empties its input, and removes a tag on the second Backspace', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/multi-select');
+  // The basic example's field, the one whose hint says to type to filter.
+  const example = page.locator('.stage .multi-select').filter({ hasText: 'Type to filter' });
+  const field = example.getByRole('combobox', { name: 'Categories' });
+  await scrolledTo(field);
+  await field.fill('fo');
+  await expect(page.getByRole('listbox').locator('.picker-option')).toHaveText(['Food']);
+  await field.press('ArrowDown');
+  await field.press('Enter');
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await expect(field).toHaveValue('');
+  await expect(field).toBeFocused();
+  await expect(example.locator('.multi-select-tag-text')).toHaveText(['Food']);
+  // The first Backspace closes the list and only focuses the tag; the second removes it.
+  await field.press('Backspace');
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  const tag = example.getByRole('row', { name: 'Food' });
+  await expect(tag).toBeFocused();
+  await expect(example.locator('.multi-select-tag-text')).toHaveText(['Food']);
+  await tag.press('Backspace');
+  await expect(example.locator('.multi-select-tag')).toHaveCount(0);
+  await expect(field).toBeFocused();
+});
+
 test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
   await visit(page, '/docs/components/text-area');
   const field = fieldNamed(page, 'About the workspace');

@@ -5999,3 +5999,183 @@ the Menu's; the Spinner's `currentColor` is the reader's text color.
 **The size.** The size limit is 2.5 kB for `ComboBox`, the spec's
 budget: the entry measured 1.88 kB, and the rule rounds up to 2 kB and
 adds 0.5 kB.
+
+## MultiSelect
+
+A field that chooses several values from a list: `MultiSelect`, the
+ComboBox in React Aria's multiple mode (ruling 1), its chosen values drawn
+by `ComboBoxValue`'s render function as a React Aria `TagGroup` of bone
+tags, in a frame that wears the text input's edge and grows a row at a
+time. Its rows are the Select's `PickerOption` and `PickerSection`, and
+its list is the ComboBox's.
+
+**The spike (risk R2).** Before any wrapper code, React Aria's own
+`ComboBox`, `ComboBoxValue`, `TagGroup`, `TagList`, `Tag`, `Input`,
+`Button`, `Popover` and `ListBox` were driven with no wrapper, and the
+tests stay in the suite (`multi-select/multiple-mode.test.tsx`) as the
+record of what the wrapper relies on. Each held on react-aria-components
+1.22.1: a form gets one hidden input per chosen key under the field's
+`name`, `['food', 'rent']`, and one empty value when nothing is chosen,
+`['']`; a choice keeps the list open and empties the input, by Enter and
+by a press; after a tag is removed by Backspace or Delete, focus goes to
+the next tag, or the previous one when it was the last; when the last
+tag goes, React Aria focuses the tag grid itself, now an empty group; and
+React Aria does nothing with Backspace in the input, so an empty input's
+Backspace leaves the value alone. The fallback the spec held back, single
+mode with a hand-kept list, was not needed.
+
+**The frame.** The root is `.field.multi-select`, which carries
+`data-changed`, `data-loading` and `data-unlabelled` from the wrapper and
+React Aria's `data-open`, `data-invalid` and `data-disabled`. Under the
+label row sits `div.input.multi-select-control`, the drawn frame: it is
+`.input` on a `div`, so the hover, disabled, changed and invalid edges
+`input.css` draws reach it through the field's root, written once. It
+holds `ComboBoxValue.multi-select-value` with the tags, then the input,
+`input.multi-select-input`, which has no edge or fill of its own, then
+the Spinner while options load and the ComboBox's field button. The
+frame takes React Aria's group ref, so the list opens under the whole
+frame at its start and at least as wide as it, rather than under the
+input at the input's width; it is a plain `div` and not React Aria's
+`Group`, whose focus-within `data-focus-visible` would ring the whole
+frame while a tag holds focus (spec correction 7). A press on the
+frame's empty room, outside a tag, the input and the button, focuses the
+input. Its rules are one class, after `input.css`, so they beat the
+input's box and none of its states: `display: flex; flex-wrap: wrap;
+gap: 0.25rem`, `height: auto` and `min-height: var(--size-field)`, and
+`padding-inline: 0.5rem 3rem`, 4.5rem while options load.
+
+**One row, a field tall.** A 36px tag in a frame with the spec's 6px of
+block padding and a 1px edge is 50px tall, and 51px with the 1.5px edge
+a focused, changed or invalid frame draws. So the block padding is
+`calc(0.375rem - 1.5px)`, 4.5px, and `min-height` holds a one-row frame
+at `--size-field`, 48, 36 or 44px, with either edge (spec correction 10).
+The button and the Spinner sit `calc(0.375rem - 1px)` from the frame's
+top, level with the first row however many rows the frame grows to.
+
+**The corner.** `min(var(--radius-pill), calc(var(--size-field) / 2))`:
+a full pill while the frame is one row, 24px on a 48px frame, and the
+24px surface step once it wraps, as TextArea's frame is, instead of a
+stadium that clips the tags at its ends. Soft and Square take their own
+smaller pill. The halving is written in `calc()`, since the token rule
+reads a bare `/ 2` as a literal radius (spec correction 11).
+
+**The focus ring.** While the input has keyboard focus the frame draws
+`.input`'s focus edge and ring, by
+`.multi-select-control.input:where(:has(.multi-select-input:is(:focus-visible, [data-focus-visible])))`.
+Written plainly the `:has()` weighs three classes, the weight of the
+changed edge, and coming later it would replace a changed or invalid
+edge with the focus edge, which `input.css` never does; in `:where()` it
+weighs two, so it beats the hover edge by order and loses to the changed
+and invalid edges (spec correction 12). It is never `:focus-within`: a
+focused tag rings itself, outside its pill, and the frame draws nothing.
+
+**The tags.** Built from `state.selectedItems`, React Aria's nodes, by
+`key` and `textValue`, in the order chosen: `ComboBoxValue`'s own values
+are the options' object values, `null` for static children (spec
+correction 13), so an option whose label is not a string needs a
+`textValue`, which its tag shows. `TagGroup.multi-select-tags` is named
+"Selected" (`labels.selected`) and the field's label, "Selected
+Categories", and holds `TagList.multi-select-tag-list`, a `grid`, of
+`Tag.multi-select-tag`. A tag is a pill, `--radius-pill` (a chip takes no
+nested step), `calc(var(--size-field) - 0.75rem)` tall, 36px and 24px
+compact, `padding-inline: 0.75rem 0.25rem`, on bone, its label in
+`--text-small` at 500, ink, one line and ellipsized past 12rem; its
+whole text stays its name. The value and the group are `display:
+contents`, so the tags flow in the frame; the grid keeps its box, since
+an element with a role never leaves the box tree. Nothing collapses into
+"and 3 more": the frame grows a row at a time.
+
+**The remove button.** `Button slot="remove"`,
+`.multi-select-tag-remove`: a 20px ghost circle with a 12px slate `X`,
+ink on the 5% wash when hovered or pressed, named "Remove" and the tag
+(`labels.remove`; React Aria reads it with the tag's text, "Remove
+Food"). Its hit area is extended to 24px by a pseudo-element, which meets
+WCAG 2.5.8 next to a neighbor 4px away because the extension stays
+inside the tag's own padding; it is not extended to 40px, which would
+cover the next tag. It is out of the tab order, so the tags are one
+stop: React Aria's tag grid would otherwise move Tab from a tag into its
+button, and Backspace or Delete on the tag does the same.
+
+**Choosing.** A press or Enter toggles an option, and the list stays
+open for the next: React Aria closes on a choice in single mode only.
+The input empties, so the next search starts clean, unless the app
+controls both `value` and `inputValue`, when it empties the text in its
+own `onChange` (spec correction 14). A chosen row shows the check alone,
+no ink pill: the Menu's multiple rule. One Escape closes the list and
+empties the input. Tab toggles the active option, as Enter does, closes
+the list and moves on; typed text with no active option is dropped on
+leaving the field.
+
+**Removing and focus.** A tag's remove button; Backspace or Delete on a
+focused tag; and Backspace in an empty input, which first focuses the
+last tag and removes it only on a second press, so one key never loses a
+value unseen. After a removal focus goes to the next tag, or the
+previous one when it was the last, React Aria's list state; when none is
+left the tag group leaves the page, and the wrapper hands focus to the
+input once it has. The tags are one tab stop before the input, and the
+arrows move between them in the drawn direction.
+
+**While the list is open.** React Aria hides all but the input and the
+list from assistive technology, the tags too. A hidden tag that could
+still take focus fails axe's `aria-hidden-focus`, so the value is
+`inert` while the list is open: the tags leave the tab order and the
+pointer with it, and come back as the list closes. A Backspace in the
+empty input then closes the list first and focuses the last tag once the
+tags are back.
+
+**Disabled.** The frame's disabled look, the input disabled, and the
+tags taupe with no remove buttons. React Aria's tag grid keeps itself in
+the tab order even with every tag disabled, so a disabled field draws
+its tags in a `group` named as the grid is, with `aria-disabled`, read
+and never focused: a `list` takes no `aria-disabled`, and that attribute
+is what says the taupe text is disabled text.
+
+**The placeholder.** The input's own, shown only while nothing is
+chosen: taupe, the whisper, under a visible label, and slate where only
+an `aria-label` names the field (`data-unlabelled`), the exception the
+search field and the command palette recorded, since the placeholder is
+then all that says what the field is for. Taupe again while disabled.
+
+**Forms and URL state.** `name` submits one value per chosen key through
+React Aria's hidden inputs, and a form's reset puts the default values
+back. `value` is `readonly Key[]` and `onChange` receives `Key[]` (spec
+correction 9). For URL state the app passes `value` from a repeated
+parameter or a comma-joined one and writes it in `onChange`.
+
+**The server.** The frame renders in Node with a tag per chosen option
+and a hidden input per key, and no list; the popover renders only with
+the combo box's state, never in React Aria's hidden collection pass, as
+ComboBox's does.
+
+**The input's description.** React Aria describes the input by
+`ComboBoxValue`'s element, so a screen reader hears each tag's text and
+its remove button's name after the field (open question 4). How it
+sounds is recorded with the screen-reader check below.
+
+**Measured pairs.** The tag's text, ink on bone: 16.76 in light and
+15.36 in dark. The remove glyph at rest, slate on bone: 4.99 and 6.44, a
+graphic that needs 3:1 and has the text minimum. Both are gated. The
+hovered or pressed glyph, ink on the 5% ink wash over bone: 15.15 and
+13.24, a mix, recorded and not gated. Bone against raised, the tag on the
+frame: 1.10 and 1.00, a cue that the tag's own text carries, never a
+boundary anyone has to find. The frame's text, button and placeholder
+are the ComboBox's pairs on raised; the unlabelled placeholder, slate on
+raised, is 5.49 and 6.44. No pair is added to the gate.
+
+**Right to left.** The tags run from the frame's right, the button sits
+at the left, 6px inside the frame's edge, its chevron unmirrored, and
+React Aria's arrows between tags follow the locale, so under `fa-IR`
+Arrow Left moves to the next tag. Nothing in `multi-select.css` is
+physical.
+
+**Forced colors.** The bone fill does not survive, so a tag takes a 1px
+`CanvasText` border and its remove glyph is `CanvasText`; a disabled tag
+is `GrayText`, edge and text. The frame keeps `input.css`'s rules.
+
+**Screen readers.** MultiSelect with VoiceOver on iOS and TalkBack on
+Android (the option announced as the arrows move, a choice, a tag's
+removal, what the input's description reads): not yet verified (risk R3).
+
+**The size.** The size limit is 3.5 kB for `MultiSelect`, the spec's
+budget: the entry measured 2.56 kB, and the rule rounds up to 3 kB and
+adds 0.5 kB.
