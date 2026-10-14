@@ -4818,6 +4818,7 @@ describe('src/components/pagination.css', () => {
   const FOCUS = ':focus-visible, [data-focus-visible]';
   const QUERY = '@container pagination (width < 30rem)';
   const SHORT = ".pagination-row[data-page-numbers='false']";
+  const MIDDLE = '@container pagination (width < 36rem)';
   const HIDDEN = [
     'position: absolute;',
     'width: 1px;',
@@ -4962,6 +4963,31 @@ describe('src/components/pagination.css', () => {
     expect(list).toContain('pointer-events: none;');
     expect(blockAfter(query, '.pagination-item {')).toContain('pointer-events: auto;');
     expect(blockAfter(query, '.pagination-step {')).toContain('padding-inline: 0;');
+  });
+
+  it('hides the step words as names under 36rem, before the worded row can outgrow the nav', () => {
+    // 7 slots of 44px (a coarse pointer's compact control), 8 gaps of 0.25rem and two worded steps of about
+    // 99 and 75px are 514px, 32.1rem: under 36rem the steps are chevron circles, and 36rem leaves room for
+    // longer words in another language.
+    const css = outsideForcedColors(rules());
+    const band = blockAfter(css, MIDDLE);
+    expect(band).not.toBe('');
+    expect(band).not.toMatch(/\.pagination\s*\{/);
+    expect(blockAfter(band, '.pagination-step {').trim()).toBe('padding-inline: 0;');
+    const label = blockAfter(band, '.pagination-step-label {');
+    for (const declaration of HIDDEN) expect(label, declaration).toContain(declaration);
+    expect(label).not.toContain('display: none');
+    // The numbers stay in the band: only the 30rem query takes them out.
+    expect(band).not.toContain('data-kind');
+    // The band comes before the 30rem query, which re-lays the row on top of it.
+    expect(css.indexOf(MIDDLE)).toBeLessThan(css.indexOf(QUERY));
+  });
+
+  it('lets the list wrap to the inline end as a last resort, never past the nav', () => {
+    const list = blockAfter(rules(), '.pagination-list {');
+    expect(list).toContain('flex-wrap: wrap;');
+    // flex-end follows the row's direction, so the list ends at the left in right to left.
+    expect(list).toContain('justify-content: flex-end;');
   });
 
   it('draws the short form as the narrow row at every width', () => {

@@ -3,10 +3,10 @@
  * ("Pagination"). A control is a 40px pill (36px compact, hit at 40), transparent with ink text at the action
  * step and tabular figures; the current page is the ink pill with canvas text and its ring inside it; the
  * steps carry a 16px chevron and their word, and take taupe with no wash when disabled. The nav is a size
- * container, and under 30rem of it the numbers and gaps leave, the words become visually hidden names, and
- * the range sits between the two steps: the row is what the query re-lays, since a container query styles
- * only what is inside the container. The short form, a row with no page numbers, is that narrow row at every
- * width. The current page is `aria-current` ("page" on a link, "true" on a button) or React Aria's
+ * container: under 36rem of it the step words become visually hidden names, and under 30rem the numbers
+ * and gaps leave too and the range sits between the two steps. The row is what the queries re-lay, since a
+ * container query styles only what is inside the container. The short form, a row with no page numbers, is
+ * that narrow row at every width. The current page is `aria-current` ("page" on a link, "true" on a button) or React Aria's
  * `data-current`; a disabled step is a disabled button, or a link React Aria draws as a span with
  * `aria-disabled` and `data-disabled`.
  */
@@ -37,9 +37,15 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /*
+   * The list wraps to the inline end only as a last resort, when even the wordless row is wider than the nav:
+   * many siblings on a coarse pointer just above 30rem. flex-end follows the row's direction.
+   */
   .pagination-list {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: 0.25rem;
     margin: 0;
     padding: 0;
@@ -209,6 +215,30 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  /*
+   * Under 36rem of the nav the step words become visually hidden names and the steps chevron circles, while
+   * the numbers stay. The worded row at the default siblingCount on a coarse pointer, whose compact control is
+   * 44px, is 7 slots of 44px, 8 gaps of 0.25rem and two steps of 0.75rem padding each side, a 16px chevron,
+   * a 0.25rem gap and the word, about 99px for Previous and 75px for Next: 514px, 32.1rem. 36rem leaves room
+   * for longer words in another language; without the words the same row is 9 circles and 8 gaps, 428px,
+   * inside 30rem.
+   */
+  @container pagination (width < 36rem) {
+    .pagination-step {
+      padding-inline: 0;
+    }
+
+    .pagination-step-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
   }
 
   /* Under 30rem of the nav: Previous, the range, Next. Two 40px targets and the range stay. */

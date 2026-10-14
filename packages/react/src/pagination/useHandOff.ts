@@ -36,9 +36,16 @@ export function useHandOff(ref: RefObject<HTMLElement | null>, isDisabled: boole
     onFocus: () => {
       hadFocus.current = true;
     },
-    // Focus lost with its element, or to a disabled button, has no related target; only a move clears the flag.
+    // Focus lost with its element, or to a disabled button, has no related target, so the flag stays for those.
+    // A move to another element clears it, and so does focus going to nothing from a step still in the page
+    // and enabled, such as a click on the page around it.
     onBlur: (event) => {
-      if (event.relatedTarget !== null) hadFocus.current = false;
+      const step = event.target;
+      if (
+        event.relatedTarget !== null ||
+        (step.isConnected && !step.matches(':disabled, [aria-disabled="true"]'))
+      )
+        hadFocus.current = false;
     },
   };
 }

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { useState, type ReactElement } from 'react';
+import { useState, type CSSProperties, type ReactElement } from 'react';
 import { expect, waitFor } from 'storybook/test';
 import { tokenColor, tokenPixels, washColor } from '../stories/paint';
 import { Pagination, type PaginationProps } from '.';
@@ -177,6 +177,64 @@ export const Narrow: Story = {
     await expect(shown.right).toBeLessThanOrEqual(next.left);
     // The words stay the steps' names.
     await expect(step(canvasElement, 'next')).toHaveAccessibleName('Next');
+  },
+};
+
+/** Whether `element` scrolls sideways: its content is wider than its box. */
+const overflows = (element: Element): boolean => element.scrollWidth > element.clientWidth;
+
+/**
+ * Just above 30rem, at 31rem: the numbers stay and the step words become hidden names, so the row fits. Three
+ * rows: comfortable, a coarse pointer's 44px compact control (set on the wrapper, since the runner has no
+ * coarse pointer), and the same with two siblings, whose wordless row is still wider than 31rem and wraps to
+ * the inline end inside the nav. None scrolls sideways, and neither does the page.
+ */
+export const JustAboveNarrow: Story = {
+  tags: ['no-visual'],
+  decorators: [
+    (Story) => (
+      <div style={{ width: '31rem', maxWidth: 'none' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  render: (args) => (
+    <div style={{ display: 'grid', gap: '1rem' }}>
+      <div data-row="comfortable">
+        <Pagination {...args} labels={{ navigation: 'Comfortable pages' }} />
+      </div>
+      <div data-row="coarse" style={{ '--size-control': '44px' } as CSSProperties}>
+        <Pagination {...args} labels={{ navigation: 'Coarse pages' }} />
+      </div>
+      <div data-row="coarse-siblings" style={{ '--size-control': '44px' } as CSSProperties}>
+        <Pagination {...args} siblingCount={2} labels={{ navigation: 'Coarse pages with two siblings' }} />
+      </div>
+    </div>
+  ),
+  args: { page: 12, rangeLabel: range(12) },
+  play: async ({ canvasElement }) => {
+    const rows = [...canvasElement.querySelectorAll<HTMLElement>('[data-row]')];
+    await expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      const nav = find(row, '.pagination');
+      await expect(rect(nav).width).toBe(31 * 16);
+      await expect(overflows(row)).toBe(false);
+      await expect(overflows(nav)).toBe(false);
+      await expect(overflows(find(row, '.pagination-row'))).toBe(false);
+      // Every control is drawn inside the nav.
+      const bounds = rect(nav);
+      for (const control of row.querySelectorAll('.pagination-control')) {
+        await expect(rect(control).left).toBeGreaterThanOrEqual(bounds.left);
+        await expect(rect(control).right).toBeLessThanOrEqual(bounds.right);
+      }
+      // The numbers stay; the steps are chevron circles named by their hidden words.
+      await expect(pageControl(row, '12')).toBeVisible();
+      const next = step(row, 'next');
+      await expect(rect(next).width).toBe(rect(next).height);
+      await expect(next).toHaveAccessibleName('Next');
+    }
+    await expect(rect(step(find(canvasElement, '[data-row="coarse"]'), 'next')).width).toBe(44);
+    await expect(overflows(document.documentElement)).toBe(false);
   },
 };
 
