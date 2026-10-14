@@ -6062,8 +6062,19 @@ block padding and a 1px edge is 50px tall, and 51px with the 1.5px edge
 a focused, changed or invalid frame draws. So the block padding is
 `calc(0.375rem - 1.5px)`, 4.5px, and `min-height` holds a one-row frame
 at `--size-field`, 48, 36 or 44px, with either edge (spec correction 10).
-The button and the Spinner sit `calc(0.375rem - 1px)` from the frame's
-top, level with the first row however many rows the frame grows to.
+The button and the Spinner stay level with the first row however many
+rows the frame grows to, with either edge. A one-row frame centers its
+row in the content box `min-height` holds, so a 1px edge leaves half a
+pixel above the row that a 1.5px edge does not, and a wrapped frame has
+no room to spare, its first row on the padding: no fixed offset fits
+all three. So the button is centered, `margin-block: auto`, between
+`inset-block-start: calc(0.375rem - 1.5px)` and an end that is the
+padding's bottom while the frame is one row and the first row's bottom
+once it wraps: `calc(0.375rem - 1.5px + clamp(0px, (100% + 1px -
+var(--size-field)) * 100, 100% + 3px - var(--size-field)))`, where
+`100% + 3px - var(--size-field)` is the room beyond one row and its
+padding, 0 to 1px for one row and a row and more once wrapped, and the
+clamp turns it into nothing for the first and all of it for the second.
 
 **The corner.** `min(var(--radius-pill), calc(var(--size-field) / 2))`:
 a full pill while the frame is one row, 24px on a 48px frame, and the
@@ -6088,7 +6099,9 @@ are the options' object values, `null` for static children (spec
 correction 13), so an option whose label is not a string needs a
 `textValue`, which its tag shows. `TagGroup.multi-select-tags` is named
 "Selected" (`labels.selected`) and the field's label, "Selected
-Categories", and holds `TagList.multi-select-tag-list`, a `grid`, of
+Categories"; with no visible label, "Selected" and the field's
+`aria-labelledby`, or "Selected" joined to its `aria-label`, never
+"Selected" alone, and holds `TagList.multi-select-tag-list`, a `grid`, of
 `Tag.multi-select-tag`. A tag is a pill, `--radius-pill` (a chip takes no
 nested step), `calc(var(--size-field) - 0.75rem)` tall, 36px and 24px
 compact, `padding-inline: 0.75rem 0.25rem`, on bone, its label in
@@ -6115,9 +6128,13 @@ The input empties, so the next search starts clean, unless the app
 controls both `value` and `inputValue`, when it empties the text in its
 own `onChange` (spec correction 14). A chosen row shows the check alone,
 no ink pill: the Menu's multiple rule. One Escape closes the list and
-empties the input. Tab toggles the active option, as Enter does, closes
-the list and moves on; typed text with no active option is dropped on
-leaving the field.
+empties the input. Tab and Shift+Tab close the list and move on, and
+never change the value: in multiple mode React Aria's Tab commits the
+active option, which toggles it, so a Tab after Enter would undo the
+choice. The frame clears the active option in the capture phase before
+React Aria's handler runs, which sends its commit down the path that
+closes the list and toggles nothing. Typed text is dropped on leaving
+the field.
 
 **Removing and focus.** A tag's remove button; Backspace or Delete on a
 focused tag; and Backspace in an empty input, which first focuses the
@@ -6129,12 +6146,18 @@ input once it has. The tags are one tab stop before the input, and the
 arrows move between them in the drawn direction.
 
 **While the list is open.** React Aria hides all but the input and the
-list from assistive technology, the tags too. A hidden tag that could
-still take focus fails axe's `aria-hidden-focus`, so the value is
-`inert` while the list is open: the tags leave the tab order and the
-pointer with it, and come back as the list closes. A Backspace in the
-empty input then closes the list first and focuses the last tag once the
-tags are back.
+list from assistive technology, the tags too, and leaves them focusable
+by design. They stay in reach: a press on a tag's remove button removes
+it and the list closes, and Shift+Tab from the input reaches the tags
+and closes the list. Axe's `aria-hidden-focus` is skipped on
+`.multi-select-value` alone in the open stories and tests, by the
+rule's selector, as `MENU_ROW_A11Y` scopes its own exception. A
+Backspace in the empty input closes the list first and focuses the last
+tag once the tags are read again.
+
+**Read only.** `isReadOnly` keeps the tags a grid, focused and read,
+with no remove buttons, no `onRemove` and no Backspace removal from the
+input, so React Aria's "Press Delete to remove tag." is not read either.
 
 **Disabled.** The frame's disabled look, the input disabled, and the
 tags taupe with no remove buttons. React Aria's tag grid keeps itself in
@@ -6164,6 +6187,11 @@ ComboBox's does.
 `ComboBoxValue`'s element, so a screen reader hears each tag's text and
 its remove button's name after the field (open question 4). How it
 sounds is recorded with the screen-reader check below.
+
+**React Aria's words.** Beside ComboBox's announcements, React Aria
+describes a focused removable tag with its own "Press Delete to remove
+tag.", from the same locales, which have no Persian, so on a `fa-IR`
+page it stays English as they do.
 
 **Measured pairs.** The tag's text, ink on bone: 16.76 in light and
 15.36 in dark. The remove glyph at rest, slate on bone: 4.99 and 6.44, a

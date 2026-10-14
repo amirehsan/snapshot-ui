@@ -133,18 +133,45 @@ const DEFAULT_LABELS: MultiSelectLabels = {
 /** React Aria does not re-export the combo box state's type, so it is read from its context. */
 type State = NonNullable<ContextType<typeof ComboBoxStateContext>>;
 
+/** How the tags are named: "Selected" and the field's own name. */
+interface TagsName {
+  /** The field's label, or its `aria-labelledby` when no visible label names it. */
+  labelledBy: string | undefined;
+  /** The field's `aria-label`, read after "Selected" when nothing labels it by id. */
+  label: string | undefined;
+}
+
 interface ControlProps {
   placeholder: string | undefined;
   inputRef: Ref<HTMLInputElement> | undefined;
   isLoading: boolean;
   isDisabled: boolean;
+  isReadOnly: boolean;
+  isLabelled: boolean;
+  name: TagsName;
   labels: MultiSelectLabels;
 }
 
 interface DisabledTagsProps {
   items: { id: Key; text: string }[];
   label: string;
-  labelId: string | undefined;
+  labelledBy: string | undefined;
+}
+
+/**
+ * The tags' `aria-label` and `aria-labelledby`: "Selected" with the visible label or the field's own
+ * `aria-labelledby`, which React Aria reads after the group's own label; with an `aria-label` alone, the two
+ * joined, since nothing then labels the field by id.
+ */
+function tagsName(
+  selected: string,
+  name: TagsName,
+): { 'aria-label': string; 'aria-labelledby': string | undefined } {
+  if (name.labelledBy !== undefined) return { 'aria-label': selected, 'aria-labelledby': name.labelledBy };
+  return {
+    'aria-label': name.label === undefined ? selected : `${selected} ${name.label}`,
+    'aria-labelledby': undefined,
+  };
 }
 
 /**
@@ -152,7 +179,7 @@ interface DisabledTagsProps {
  * keeps itself in the tab order even when every tag is disabled, so a disabled field draws no grid. A group, not a
  * list, since a list takes no `aria-disabled`, and that is what says the taupe text is disabled text.
  */
-function DisabledTags({ items, label, labelId }: DisabledTagsProps): ReactElement {
+function DisabledTags({ items, label, labelledBy }: DisabledTagsProps): ReactElement {
   const id = useId();
   return (
     <div className="multi-select-tags">
@@ -161,7 +188,7 @@ function DisabledTags({ items, label, labelId }: DisabledTagsProps): ReactElemen
         role="group"
         className="multi-select-tag-list"
         aria-label={label}
-        aria-labelledby={labelId === undefined ? undefined : `${id} ${labelId}`}
+        aria-labelledby={labelledBy === undefined ? undefined : `${id} ${labelledBy}`}
         aria-disabled="true"
       >
         {items.map(({ id: key, text }) => (
@@ -185,11 +212,19 @@ function MultiSelectControl({
   inputRef,
   isLoading,
   isDisabled,
+  isReadOnly,
+  isLabelled,
+  name,
   labels,
 }: ControlProps): ReactElement {
   const group = useSlottedContext(GroupContext);
-  // The field label's id, so the tags' grid is named "Selected" and the label.
+  // The field label's id, so the tags' grid is named "Selected" and the label. React Aria gives the label
+  // context an id even when no label is drawn, so it is taken only with a visible label.
   const labelId = useSlottedContext(LabelContext)?.id;
+  const named = tagsName(labels.selected, {
+    labelledBy: isLabelled ? labelId : name.labelledBy,
+    label: name.label,
+  });
   const frameRef = useRef<HTMLDivElement>(null);
   const ownInputRef = useRef<HTMLInputElement>(null);
   const focusInputNext = useRef(false);
@@ -209,11 +244,12 @@ function MultiSelectControl({
   };
 
   // React Aria's TagGroup focuses its own grid when the last tag goes, but the grid leaves with it. This effect,
-  // keyed on the number of tags, runs once they have gone and hands focus to the input.
+  // keyed on the number of tags, runs once they have gone and hands focus to the input. The flag is spent on
+  // the next change whatever it is, so a removal the app refused never pulls focus on a later one.
   useEffect(() => {
-    if (!focusInputNext.current) return;
+    const wanted = focusInputNext.current;
     focusInputNext.current = false;
-    ownInputRef.current?.focus();
+    if (wanted && count === 0) ownInputRef.current?.focus();
   }, [count]);
 
   /** The last tag, while there is one. */
@@ -222,8 +258,8 @@ function MultiSelectControl({
     return tags?.[tags.length - 1];
   };
 
-  // The tags rest while the list is open, so a Backspace then closes the list first, and the last tag takes
-  // focus once they are back.
+  // React Aria hides the tags from assistive technology while the list is open, so a Backspace then closes the
+  // list first, and the last tag takes focus once they are read again.
   const focusLastTagNext = useRef(false);
   useEffect(() => {
     if (isOpen || !focusLastTagNext.current) return;
@@ -233,7 +269,7 @@ function MultiSelectControl({
 
   /** The first Backspace in an empty input focuses the last tag; the tag's own Backspace removes it. */
   const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key !== 'Backspace' || event.currentTarget.value !== '') return;
+    if (isReadOnly || event.key !== 'Backspace' || event.currentTarget.value !== '') return;
     const last = lastTag();
     if (!last) return;
     event.preventDefault();
@@ -243,6 +279,17 @@ function MultiSelectControl({
       return;
     }
     last.focus();
+  };
+
+  /**
+   * Tab and Shift+Tab leave the field and never change its value. In multiple mode React Aria's Tab commits
+   * the active option, which toggles it, so a Tab after Enter would undo the choice. Clearing the active
+   * option first, before React Aria's own handler on the input, sends its commit down the path that closes the
+   * list and empties the input and toggles nothing.
+   */
+  const onFrameKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== 'Tab' || event.target !== ownInputRef.current || !comboBox?.isOpen) return;
+    comboBox.selectionManager.setFocusedKey(null);
   };
 
   /** A press on the frame's empty room, outside a tag, the input and the button, is a press on the input. */
@@ -260,25 +307,31 @@ function MultiSelectControl({
       className="input multi-select-control"
       data-disabled={isDisabled ? '' : undefined}
       onMouseDown={onFrameMouseDown}
+      onKeyDownCapture={onFrameKeyDownCapture}
     >
-      {/* While the list is open React Aria hides all but the input and the list from assistive technology, so
-          the tags leave the tab order too: nothing hidden can take focus. They come back as the list closes. */}
-      <ComboBoxValue className="multi-select-value" inert={isOpen || undefined}>
+      {/* While the list is open React Aria hides all but the input and the list from assistive technology, the
+          tags too, and leaves them focusable by design: a press on a remove button still removes its tag, and
+          Shift+Tab still reaches them, closing the list. */}
+      <ComboBoxValue className="multi-select-value">
         {({ state }) =>
           state.selectedItems.length === 0 ? null : isDisabled ? (
             <DisabledTags
               items={state.selectedItems.map((node) => ({ id: node.key, text: node.textValue }))}
-              label={labels.selected}
-              labelId={labelId}
+              label={named['aria-label']}
+              labelledBy={named['aria-labelledby']}
             />
           ) : (
             <TagGroup
               className="multi-select-tags"
-              aria-label={labels.selected}
-              aria-labelledby={labelId}
-              onRemove={(keys) => {
-                remove(state, keys);
-              }}
+              {...named}
+              // Read only, the tags are read and focused and never removed: no onRemove, no remove buttons.
+              onRemove={
+                isReadOnly
+                  ? undefined
+                  : (keys) => {
+                      remove(state, keys);
+                    }
+              }
             >
               <TagList
                 className="multi-select-tag-list"
@@ -289,7 +342,7 @@ function MultiSelectControl({
                 {(item) => (
                   <Tag id={item.id} textValue={item.text} className="multi-select-tag">
                     <span className="multi-select-tag-text">{item.text}</span>
-                    {
+                    {isReadOnly ? null : (
                       // Out of the tab order: the tags are one stop, and Backspace or Delete on a tag removes it.
                       <Button
                         slot="remove"
@@ -299,7 +352,7 @@ function MultiSelectControl({
                       >
                         <X aria-hidden="true" />
                       </Button>
-                    }
+                    )}
                   </Tag>
                 )}
               </TagList>
@@ -416,6 +469,9 @@ export function MultiSelect<T extends object = object>({
         inputRef={inputRef}
         isLoading={isLoading}
         isDisabled={props.isDisabled ?? false}
+        isReadOnly={props.isReadOnly ?? false}
+        isLabelled={isLabelled}
+        name={{ labelledBy: props['aria-labelledby'], label: props['aria-label'] }}
         labels={words}
       />
       {present(description) ? <Description>{description}</Description> : null}

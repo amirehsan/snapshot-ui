@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import axe from 'axe-core';
 import { createRef, useState, type ReactElement } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { describe, expect, it, vi } from 'vitest';
@@ -30,6 +31,17 @@ vi.mock('../popover/Popover', async (importOriginal) => {
 
 /** Option rows are named by their label and described by their hint, so axe's label-in-name check is off. */
 const ROW_A11Y = { rules: { 'label-content-name-mismatch': { enabled: false } } };
+
+/**
+ * While the list is open React Aria hides everything but the input and the list from assistive technology,
+ * the tags too, and leaves them focusable by design, so a press can still remove one and Shift+Tab still
+ * reaches them, closing the list. Axe's `aria-hidden-focus` is skipped on the value alone, by the rule's
+ * selector, as the stories' MENU_ROW_A11Y scopes its own exception; it runs on everything else.
+ */
+const OPEN_VALUE_RULE = {
+  id: 'aria-hidden-focus',
+  selector: '[aria-hidden="true"]:not(.multi-select-value)',
+};
 
 function element(selector: string, scope: ParentNode = document): HTMLElement {
   const found = scope.querySelector<HTMLElement>(selector);
@@ -169,18 +181,40 @@ describe('MultiSelect', () => {
     expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
 
-  it('takes the tags out of the tab order while the list is open, when React Aria hides them', async () => {
+  it('keeps the tags reachable while the list is open, when React Aria hides them from assistive technology', async () => {
     const user = userEvent.setup();
-    render(<Five defaultValue={['food']} />);
+    render(
+      <>
+        <Five defaultValue={['food']} />
+        <button type="button">Next</button>
+      </>,
+    );
     const value = element('.multi-select-value');
-    expect(value).not.toHaveAttribute('inert');
     await user.click(input());
     await user.keyboard('{ArrowDown}');
     expect(value).toHaveAttribute('aria-hidden', 'true');
-    expect(value).toHaveAttribute('inert');
-    await user.keyboard('{Escape}');
     expect(value).not.toHaveAttribute('inert');
+    // Shift+Tab from the input still reaches the tags, closes the list and changes nothing.
+    await user.tab({ shift: true });
+    expect(tag('Food')).toHaveFocus();
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(tags()).toEqual(['Food']);
     expect(value).not.toHaveAttribute('aria-hidden');
+  });
+
+  it('removes a tag by its button while the list is open', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Five defaultValue={['food']} onChange={onChange} />);
+    await user.click(input());
+    await user.keyboard('re{ArrowDown}{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith(['food', 'rent']);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    // React Aria hides it from assistive technology while the list is open; the pointer still reaches it.
+    await user.click(screen.getByRole('button', { name: 'Remove Food', hidden: true }));
+    expect(onChange).toHaveBeenLastCalledWith(['rent']);
+    expect(tags()).toEqual(['Rent']);
+    expect(screen.queryByRole('listbox')).toBeNull();
   });
 
   it('checks the chosen rows and draws no ink pill', async () => {
@@ -267,7 +301,7 @@ describe('MultiSelect', () => {
     expect(tags()).toEqual(['Food']);
     expect(tag('Food')).toHaveFocus();
 
-    // Right after a choice the list is still open and the tags rest: Backspace closes it and focuses the last.
+    // Right after a choice the list is still open: Backspace closes it and focuses the last tag.
     await user.click(input());
     await user.keyboard('fu{ArrowDown}{Enter}');
     expect(screen.getByRole('listbox')).toBeInTheDocument();
@@ -359,7 +393,7 @@ describe('MultiSelect', () => {
     expect(tag('Food')).toHaveFocus();
   });
 
-  it('closes the list and empties the input on one Escape, and toggles the active option on Tab', async () => {
+  it('closes the list and empties the input on one Escape, and leaves the value alone on Tab', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(
@@ -377,18 +411,116 @@ describe('MultiSelect', () => {
     expect(input()).toHaveFocus();
     expect(onChange).not.toHaveBeenCalled();
 
-    // Tab toggles the active option, as Enter does, then leaves; the list closes behind it.
-    await user.keyboard('{ArrowDown}{ArrowDown}');
+    // Tab closes the list and moves on; the active option, Food, which is chosen, stays chosen.
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('option', { name: 'Food' })).toHaveAttribute('data-focused');
     await user.tab();
-    expect(onChange).toHaveBeenLastCalledWith(['food', 'rent']);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(tags()).toEqual(['Food']);
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(screen.getByRole('button', { name: 'Next' })).toHaveFocus();
+    // Enter adds Rent; the Tab after it keeps it.
+    await user.click(input());
+    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith(['food', 'rent']);
+    await user.tab();
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(tags()).toEqual(['Food', 'Rent']);
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Next' })).toHaveFocus();
+    // Shift+Tab with an active option leaves the value alone too.
+    await user.click(input());
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}');
+    await user.tab({ shift: true });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(tags()).toEqual(['Food', 'Rent']);
+    expect(screen.queryByRole('listbox')).toBeNull();
     // Typed text with no active option is dropped on leaving.
     await user.click(input());
     await user.keyboard('zz');
     await user.tab();
     expect(input()).toHaveValue('');
     expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the tags read only, with no remove buttons and no removal, while isReadOnly', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Five defaultValue={['food', 'rent']} isReadOnly onChange={onChange} />);
+    expect(input()).toHaveAttribute('readonly');
+    expect(tags()).toEqual(['Food', 'Rent']);
+    expect(document.querySelector('.multi-select-tag-remove')).toBeNull();
+    // The tags stay a grid that is read and focused.
+    expect(screen.getByRole('grid', { name: 'Selected Categories' })).toBeInTheDocument();
+    await user.tab();
+    expect(tag('Food')).toHaveFocus();
+    await user.keyboard('{Backspace}{Delete}');
+    await user.click(input());
+    await user.keyboard('{Backspace}{Backspace}');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(tags()).toEqual(['Food', 'Rent']);
+  });
+
+  it('names the tags by the aria-label or the aria-labelledby of a field with no visible label', () => {
+    const { unmount } = render(<Five label={undefined} aria-label="Categories" defaultValue={['food']} />);
+    expect(screen.getByRole('grid', { name: 'Selected Categories' })).toBeInTheDocument();
+    unmount();
+
+    const labelled = render(
+      <>
+        <h2 id="heading">Budget lines</h2>
+        <Five label={undefined} aria-labelledby="heading" defaultValue={['food']} />
+      </>,
+    );
+    expect(screen.getByRole('grid', { name: 'Selected Budget lines' })).toBeInTheDocument();
+    labelled.unmount();
+
+    const disabled = render(
+      <Five label={undefined} aria-label="Categories" defaultValue={['food']} isDisabled />,
+    );
+    expect(screen.getByRole('group', { name: 'Selected Categories' })).toBeInTheDocument();
+    disabled.unmount();
+
+    render(
+      <>
+        <h2 id="heading">Budget lines</h2>
+        <Five label={undefined} aria-labelledby="heading" defaultValue={['food']} isDisabled />
+      </>,
+    );
+    expect(screen.getByRole('group', { name: 'Selected Budget lines' })).toBeInTheDocument();
+  });
+
+  it('never moves focus to the input when a removal of the last tag was refused', async () => {
+    const user = userEvent.setup();
+    function Refusing(): ReactElement {
+      const [value, setValue] = useState<readonly Key[]>(['food']);
+      return (
+        <>
+          {/* The app keeps at least one category: it refuses to empty the value. */}
+          <Five
+            value={value}
+            onChange={(next) => {
+              if (next.length > 0) setValue(next);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setValue(['food', 'rent']);
+            }}
+          >
+            Add Rent
+          </button>
+        </>
+      );
+    }
+    render(<Refusing />);
+    await user.click(screen.getByRole('button', { name: 'Remove Food' }));
+    expect(tags()).toEqual(['Food']);
+    const add = screen.getByRole('button', { name: 'Add Rent' });
+    await user.click(add);
+    expect(tags()).toEqual(['Food', 'Rent']);
+    expect(add).toHaveFocus();
   });
 
   it('draws no remove buttons and no removal while disabled', async () => {
@@ -540,14 +672,19 @@ describe('MultiSelect', () => {
         <Five key="unlabelled" label={undefined} aria-label="Categories" defaultValue={['fun']} />,
       ],
     ];
-    for (const [name, field, act] of cases) {
-      const { unmount } = render(field);
-      if (act) await act();
-      // An open list portals to the body, so the whole body is checked.
-      await expectNoA11yViolations(document.body, ROW_A11Y).catch((error: unknown) => {
-        throw new Error(`${name}: ${String(error)}`);
-      });
-      unmount();
+    axe.configure({ rules: [OPEN_VALUE_RULE] });
+    try {
+      for (const [name, field, act] of cases) {
+        const { unmount } = render(field);
+        if (act) await act();
+        // An open list portals to the body, so the whole body is checked.
+        await expectNoA11yViolations(document.body, ROW_A11Y).catch((error: unknown) => {
+          throw new Error(`${name}: ${String(error)}`);
+        });
+        unmount();
+      }
+    } finally {
+      axe.reset();
     }
   });
 
