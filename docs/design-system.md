@@ -6709,8 +6709,18 @@ while the value is under zero: `aria-pressed` and `data-selected` are
 the state and its twin the CSS keys on. Pressed, it is the ink fill with
 a canvas glyph, after `input.css`'s hover and press rules and as heavy,
 so the fill holds under the pointer, and its focus ring is the canvas
-ring inside it, the rule for an ink fill. A press negates the value, or
-on an empty field puts a minus in the input and focus there.
+ring inside it, the rule for an ink fill. A press negates the value,
+held within `minValue` and `maxValue` as React Aria's commit clamps, so
+5000 with a `minValue` of -1000 turns to -1000, and then commits
+validation as React Aria's steppers do. On an empty field, or at zero,
+which has no sign to turn, it puts a minus in the input and focus
+there, so a field never shows "-0.00"; left as a bare minus, the field
+goes back to its value. `onChange` never receives -0: minor units add
+0 after rounding, and a plain number does too. On a disabled or
+read-only field the button is disabled with it, so a negative value
+draws it pressed but recessed, a 15% ink fill with a taupe glyph, a
+rule after the pressed fill and heavier, never the full ink fill of a
+button that can be pressed.
 
 **The steppers.** For a plain number only, with `hasStepper`: React
 Aria's slotted buttons as two field buttons, 36px (24px compact), the
@@ -6720,7 +6730,17 @@ keeps React Aria's `aria-labelledby` of the button and the field's label
 after it, so "Increase Guests" survives on a Persian page with its own
 word; React Aria's `incrementAriaLabel` would drop the label (spec
 correction 10). With an `aria-label` and no visible label the name is the
-word and that label. Out of the tab order, disabled at a bound.
+word and that label. Out of the tab order, disabled at a bound. Each is
+hit at `--size-target` by the field button's `::before`, wider than the
+2px between them, so the two hit areas would overlap and the
+increment's, later in the order, would win: by 2px comfortable, all in
+the gap, and by 14px compact, 6px of it on the decrement itself.
+The facing sides split the gap: the decrement's `::before` ends 1px past
+its inline end and the increment's starts 1px before its inline start.
+The buttons follow the field's direction, only the input is left to
+right, so the logical sides face each other on a right-to-left page too.
+A play tagged `density` hit-tests the pixel either side of each facing
+side, comfortable, compact, and compact right to left.
 
 **The keyboard.** `inputMode` is `decimal` in money mode, and for a
 plain number `decimal` when its options allow a fraction digit, read
@@ -6728,7 +6748,9 @@ from the props with ECMA-402's defaults (3 for a decimal or a unit, 0
 for a percent) and never from `Intl`, else `numeric`. It is set through
 the input context in both passes, so React Aria's platform choice, a
 text keyboard on an iPhone when negatives are allowed, never reaches the
-DOM (ruling 5).
+DOM (ruling 5). `formatOptions` refuses `notation` and `compactDisplay`
+in its types: compact notation rounds by rules only `Intl` knows, so
+neither the face before hydration nor the keyboard could follow it.
 
 **Money.** The value is an integer count of minor units (ruling 4).
 React Aria holds `minor / 10 ** d`, with `d` from `fractionDigits`, 2
@@ -6739,8 +6761,11 @@ is never snapped; and `onChange` receives `Math.round(n * 10 ** d)`, or
 null for React Aria's `NaN`. React Aria rounds the committed text to `d`
 places before it calls `onChange`, so the product is an integer up to
 float error and the rounding makes it exact. The bounds are minor units
-too. A value that is not a safe integer is rounded, with a warning once
-per mount.
+too. A value that is not an integer is rounded, with a warning once per
+mount. The trip through whole units and back is exact only up to
+`2 ** 52 / 10 ** d` minor units, about 45 trillion cents, so a value
+past that warns once per mount too, well before
+`Number.MAX_SAFE_INTEGER`.
 
 **Negatives.** Off unless `allowsNegative`: the lower bound is then 0,
 or the app's `minValue` when it is above 0, and a `minValue` under 0
@@ -6774,19 +6799,22 @@ field it starts at the lower bound, 0 without negatives (spec correction
 and the maximum, so on a money field with a lower bound of 0 Home would
 set the amount to zero. The group's `onKeyDownCapture` stops their
 propagation when the input is the target, before React Aria's handler,
-and the browser's default moves the caret (R3). The spike's play, on a
-bare React Aria NumberField and then on the wrapper, passes in Chromium,
-and without the guard fails there; WebKit and Firefox run it in CI as
-the `storybook-webkit` and `storybook-firefox` projects: not yet
-verified on a machine with those engines.
+and the browser's default moves the caret (R3). The stop keeps the key
+from the app's `onKeyDown` too, so the guard calls it first, with the
+event in the shape React Aria's keyboard handlers receive. The spike's
+play, on a bare React Aria NumberField and then on the wrapper, passes
+in Chromium, and without the guard fails there; WebKit and Firefox run
+it in CI as the `storybook-webkit` and `storybook-firefox` projects: not
+yet verified on a machine with those engines.
 
 **The paste.** React Aria commits a paste that replaces the whole text
 as it is, and refuses one carrying the symbol. The group's
 `onPasteCapture`, in money mode, when the clipboard text contains the
 symbol and the selection covers the whole input, prevents the default,
 stops the event and commits the text without the symbol, so a copied
-"$1,234.50" lands as 123450 (spec correction 8). A partial paste is
-React Aria's.
+"$1,234.50" lands as 123450 (spec correction 8). It calls the app's
+`onPaste` first, which the stop would otherwise keep from it. A partial
+paste is React Aria's.
 
 **The unlabelled placeholder.** Taupe under a visible label; slate under
 `data-unlabelled`, and taupe again while disabled, the rule the search
@@ -6797,11 +6825,14 @@ and stepper glyphs and the unlabelled placeholder, 5.49 in light and
 6.44 in dark; canvas on ink, the pressed sign and its inverted ring,
 16.25 and 19.31. Measured and recorded, not gated: ink on the 5% wash
 over raised, a hovered button's glyph, 16.65 and 13.24. No pair is added
-to the gate.
+to the gate; taupe on the disabled sign's 15% fill is disabled text,
+which the gate leaves out.
 
 **Forced colors.** The input keeps `input.css`'s rules; the symbol is
 `CanvasText`, and `GrayText` while disabled; the pressed sign button is
-`Highlight` with `HighlightText`.
+`Highlight` with `HighlightText`, and pressed and disabled a `GrayText`
+glyph and 1px edge on the system `canvas`, as a disabled checked
+checkbox is.
 
 **Devices.** The decimal keyboard, the sign button on an empty field,
 and VoiceOver and TalkBack reading the field as a text field named by
@@ -6812,7 +6843,9 @@ phone: not yet verified.
 the entry measured 2.45 kB, the field parts the TextField entry also
 pulls in, the money arithmetic and its face, the input context, the two
 guards, the sign toggle, the hidden input and the two warnings, and the
-rule rounds up to 2.5 kB and adds 0.5 kB.
+rule rounds up to 2.5 kB and adds 0.5 kB. The guards calling the app's
+handlers, the sign's clamp and validation and the precision warning
+bring it to 2.66 kB, still under the limit, which is unchanged.
 
 ## Calendar
 

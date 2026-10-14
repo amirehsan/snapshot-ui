@@ -5126,6 +5126,27 @@ describe('src/components/number-field.css', () => {
     );
   });
 
+  it('draws a pressed sign button that is disabled, and so read-only, as a 15% ink fill with a taupe glyph, after the pressed fill', () => {
+    const css = closeUp(outsideForcedColors(read('src/components/number-field.css')));
+    const header = `${PRESSED}:is(:disabled, [data-disabled]) {`;
+    const locked = blockAfter(css, header);
+    expect(locked).toContain('background-color: color-mix(in srgb, var(--color-ink) 15%, transparent);');
+    expect(locked).toContain('color: var(--color-taupe);');
+    expect(css.indexOf(header)).toBeGreaterThan(css.indexOf(`${PRESSED} {`));
+  });
+
+  it('splits the 2px between the steppers, so neither 40px hit area covers the other button', () => {
+    // Each field button's hit area grows to --size-target; in compact the two 24px steppers are 2px apart, so
+    // the facing sides stop 1px past each button, half the gap each.
+    const css = rules();
+    expect(blockAfter(css, ".number-field-step[slot='decrement']::before {").trim()).toBe(
+      'inset-inline-end: -1px;',
+    );
+    expect(blockAfter(css, ".number-field-step[slot='increment']::before {").trim()).toBe(
+      'inset-inline-start: -1px;',
+    );
+  });
+
   it('rings a pressed sign button with the canvas ring inside it', () => {
     const ring = blockAfter(rules(), `${PRESSED}:is(:focus-visible, [data-focus-visible]) {`);
     expect(ring).toContain('outline-color: var(--color-canvas);');
@@ -5160,6 +5181,11 @@ describe('src/components/number-field.css', () => {
     const pressed = blockAfter(forced, `${PRESSED} {`);
     expect(pressed).toContain('background-color: Highlight;');
     expect(pressed).toContain('color: HighlightText;');
+    // Disabled and pressed: a GrayText glyph and edge on the system canvas, as a disabled checked checkbox is.
+    const locked = blockAfter(forced, `${PRESSED}:is(:disabled, [data-disabled]) {`);
+    expect(locked).toContain('background-color: canvas;');
+    expect(locked).toContain('border: 1px solid GrayText;');
+    expect(locked).toContain('color: GrayText;');
   });
 });
 

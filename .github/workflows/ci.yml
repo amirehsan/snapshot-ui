@@ -64,7 +64,7 @@ jobs:
           path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-
-      - name: Install Chromium and WebKit for story and end-to-end tests
+      - name: Install Chromium, WebKit and Firefox for story and end-to-end tests
         run: pnpm --filter @snapshot-ui/storybook exec playwright install --with-deps chromium webkit firefox
       - name: Public names, root tests, format, lint, types, build, tests, packages, size
         run: pnpm verify

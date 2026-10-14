@@ -17,6 +17,12 @@ describe('money', () => {
     expect(toMinor(1.01, 3)).toBe(1010);
   });
 
+  it('never returns -0: a negative zero, or a negative that rounds to zero, is 0', () => {
+    expect(Object.is(toMinor(-0, 2), 0)).toBe(true);
+    expect(Object.is(toMinor(-0.001, 2), 0)).toBe(true);
+    expect(Object.is(toMinor(-0, 0), 0)).toBe(true);
+  });
+
   it('reads NaN as null and null as NaN', () => {
     expect(toMinor(Number.NaN, 2)).toBeNull();
     expect(toUnits(null, 2)).toBeNaN();

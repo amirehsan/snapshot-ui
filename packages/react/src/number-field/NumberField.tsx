@@ -113,8 +113,11 @@ interface NumberFieldShared extends Omit<
 
 interface NumberMode {
   money?: undefined;
-  /** `Intl` options for a plain number, applied after hydration. Not `style: 'currency'`. */
-  formatOptions?: Omit<Intl.NumberFormatOptions, 'style' | 'currency'> & {
+  /**
+   * `Intl` options for a plain number, applied after hydration. Not `style: 'currency'`, and not compact notation,
+   * whose rounding only `Intl` knows, so the face before hydration and the keyboard could not follow it.
+   */
+  formatOptions?: Omit<Intl.NumberFormatOptions, 'style' | 'currency' | 'notation' | 'compactDisplay'> & {
     style?: 'decimal' | 'percent' | 'unit';
   };
   /** The arrows' step, which a committed value also snaps to. @default 1 */
@@ -162,14 +165,31 @@ function fractionDigitsOf(options: NumberMode['formatOptions']): number {
   return Math.max(options?.minimumFractionDigits ?? 0, options?.style === 'percent' ? 0 : 3);
 }
 
-// React Aria's spin button takes Home and End for the bounds (useSpinButton.mjs:85-98) and prevents the caret's
-// move. Stopped here, on the group in the capture phase, before it, the browser's default still moves the caret
-// (risk R3).
-const guardKeys = (event: KeyboardEvent<HTMLElement>): void => {
-  if ((event.key === 'Home' || event.key === 'End') && event.target instanceof HTMLInputElement) {
+type AppKeyDown = RACNumberFieldProps['onKeyDown'];
+type AppPaste = RACNumberFieldProps['onPaste'];
+
+/**
+ * React Aria's spin button takes Home and End for the bounds (useSpinButton.mjs:85-98) and prevents the caret's
+ * move. Stopped here, on the group in the capture phase, before it, the browser's default still moves the caret
+ * (risk R3). The stop keeps them from the app's `onKeyDown` on the input too, so the guard calls it first, with
+ * the event in the shape React Aria's keyboard handlers receive; its propagation is stopped either way.
+ */
+function guardKeys(onKeyDown: AppKeyDown): (event: KeyboardEvent<HTMLElement>) => void {
+  return (event) => {
+    if ((event.key !== 'Home' && event.key !== 'End') || !(event.target instanceof HTMLInputElement)) return;
+    onKeyDown?.({
+      ...event,
+      preventDefault: () => {
+        event.preventDefault();
+      },
+      isDefaultPrevented: () => event.isDefaultPrevented(),
+      stopPropagation: () => undefined,
+      continuePropagation: () => undefined,
+      isPropagationStopped: () => true,
+    });
     event.stopPropagation();
-  }
-};
+  };
+}
 
 interface InputPartProps {
   inputMode: 'decimal' | 'numeric';
@@ -221,6 +241,9 @@ interface ControlProps {
   placeholder: string | undefined;
   inputRef: Ref<HTMLInputElement> | undefined;
   isLocked: boolean;
+  /** The app's handlers, called from the guards that stop an event before the input. */
+  onKeyDown: AppKeyDown;
+  onPaste: AppPaste;
 }
 
 /** The pill: the sign button, the symbol, the input and the steppers, on React Aria's state. */
@@ -235,6 +258,8 @@ function NumberFieldControl({
   placeholder,
   inputRef,
   isLocked,
+  onKeyDown,
+  onPaste,
 }: ControlProps): ReactElement {
   const state = useContext(NumberFieldStateContext);
   const hydrated = useHydrated();
@@ -253,12 +278,14 @@ function NumberFieldControl({
 
   // A copied figure carries the field's own symbol, which React Aria would refuse whole: its paste handler
   // commits the clipboard text as it is when the paste replaces the whole text (useNumberField.mjs:149-162).
+  // The stop keeps the paste from the app's onPaste on the input too, so the guard calls it first.
   const onPasteCapture = (event: ClipboardEvent<HTMLDivElement>): void => {
     const target = event.target;
     if (!money || !state || !(target instanceof HTMLInputElement)) return;
     const text = event.clipboardData.getData('text/plain');
     if (!text.includes(money.symbol)) return;
     if ((target.selectionEnd ?? -1) - (target.selectionStart ?? 0) !== target.value.length) return;
+    onPaste?.(event as unknown as ClipboardEvent<HTMLInputElement>);
     event.preventDefault();
     event.stopPropagation();
     state.commit(text.replaceAll(money.symbol, '').trim());
@@ -266,11 +293,18 @@ function NumberFieldControl({
 
   const toggleSign = (): void => {
     if (!state) return;
-    if (!isEmpty) {
-      state.setNumberValue(-numberValue);
+    if (!isEmpty && numberValue !== 0) {
+      // Held within the bounds as React Aria's commit clamps, then validated as its steppers are.
+      const negated = Math.min(
+        Math.max(-numberValue, state.minValue ?? -Infinity),
+        state.maxValue ?? Infinity,
+      );
+      state.setNumberValue(negated);
+      state.commitValidation();
       return;
     }
-    // An empty field takes a minus to type after, since neither phone's decimal keyboard has one.
+    // An empty field, or zero, which has no sign to turn, takes a minus to type after, since neither phone's
+    // decimal keyboard has one.
     flushSync(() => {
       state.setInputValue('-');
     });
@@ -287,7 +321,11 @@ function NumberFieldControl({
   const symbolAtEnd = money?.symbolPosition === 'end';
 
   return (
-    <Group className="number-field-control" onKeyDownCapture={guardKeys} onPasteCapture={onPasteCapture}>
+    <Group
+      className="number-field-control"
+      onKeyDownCapture={guardKeys(onKeyDown)}
+      onPasteCapture={onPasteCapture}
+    >
       {allowsNegative ? (
         // A toggle, since a Button inside a NumberField must name one of its slots (spec correction 7).
         <ToggleButton
@@ -391,14 +429,21 @@ export function NumberField({
   const names = { ...DEFAULT_LABELS, ...labels };
   const digits = money ? (money.fractionDigits ?? 2) : 0;
 
-  // Money is an integer count of minor units; one that is not is rounded, with a warning.
-  const unsafe = [value, defaultValue].find(
-    (each): each is number => money !== undefined && typeof each === 'number' && !Number.isSafeInteger(each),
-  );
+  // Money is an integer count of minor units; one that is not is rounded, with a warning. React Aria holds it
+  // as minor / 10 ** digits, and a count past 2 ** 52 / 10 ** digits is not held to the minor unit: a warning.
+  const given = money ? [value, defaultValue].filter((each) => typeof each === 'number') : [];
+  const fractional = given.find((each) => !Number.isInteger(each));
   useWarnOnce(
-    unsafe === undefined
+    fractional === undefined
       ? null
-      : `NumberField takes an integer count of minor units in money mode; ${String(unsafe)} is rounded to ${String(Math.round(unsafe))}.`,
+      : `NumberField takes an integer count of minor units in money mode; ${String(fractional)} is rounded to ${String(Math.round(fractional))}.`,
+  );
+  const exactLimit = 2 ** 52 / 10 ** digits;
+  const inexact = given.find((each) => Math.abs(each) > exactLimit);
+  useWarnOnce(
+    inexact === undefined
+      ? null
+      : `NumberField holds money exactly only up to 2 ** 52 / 10 ** fractionDigits minor units (${String(exactLimit)}); ${String(inexact)} is past it and can come back a minor unit off.`,
   );
   useWarnOnce(
     !allowsNegative && minValue !== undefined && minValue < 0
@@ -433,7 +478,8 @@ export function NumberField({
       value={toAria(value)}
       defaultValue={toAria(defaultValue)}
       onChange={(next) => {
-        onChange?.(money ? toMinor(next, digits) : Number.isNaN(next) ? null : next);
+        // Adding 0 turns a typed "-0" into 0.
+        onChange?.(money ? toMinor(next, digits) : Number.isNaN(next) ? null : next + 0);
       }}
       minValue={boundToAria(lower)}
       maxValue={boundToAria(maxValue)}
@@ -473,6 +519,8 @@ export function NumberField({
         placeholder={placeholder}
         inputRef={inputRef}
         isLocked={props.isDisabled === true || props.isReadOnly === true}
+        onKeyDown={props.onKeyDown}
+        onPaste={props.onPaste}
       />
       {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
