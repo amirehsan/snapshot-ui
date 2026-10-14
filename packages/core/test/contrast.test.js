@@ -885,6 +885,46 @@ describe('the tabs', () => {
       expect(measured(mode, 'clay', 'ink'), mode).toBeLessThan(NON_TEXT);
     }
   });
+
+  // A badge in a tab takes the tab's color. Its own slate would sit on the ink pill, 3.36 in light and 1.00 in
+  // dark, and on the hover wash, 4.38 in light; in the tab's color it reads at the pairs above.
+  it('measures the badge in its own slate on the selected and the hovered tab, under the text minimum', () => {
+    expect(measured('light', 'slate', 'ink'), 'slate on the ink pill, light').toBeCloseTo(3.36, 2);
+    expect(measured('dark', 'slate', 'ink'), 'slate on the ink pill, dark').toBeCloseTo(1.0, 2);
+    for (const mode of ['light', 'dark']) {
+      expect(measured(mode, 'slate', 'ink'), mode).toBeLessThan(TEXT);
+      expect(measured(mode, 'canvas', 'ink'), mode).toBeGreaterThanOrEqual(TEXT);
+    }
+    expect(onWash('light', 'slate'), 'slate on the wash, light').toBeLessThan(TEXT);
+  });
+
+  /** A token color over the taupe pill on the canvas track, a disabled selected tab, against the pill. */
+  const onPill = (mode, name) => {
+    const palette = paletteFor(tokens, mode);
+    const pill = composite(parseColor(palette.taupe), parseColor(palette.canvas));
+    return contrastRatio(composite(parseColor(palette[name]), pill), pill);
+  };
+
+  // A disabled selected tab is the taupe pill with the disabled fill for its text, SegmentedControl's rule;
+  // disabled is outside the text and the graphic minimums, so these are recorded, never gated. The dot keeps
+  // its canvas ring there: in light the clay reads on the pill itself and in dark the ring carries it, and the
+  // clay inside the ring is clay on canvas either way.
+  it('measures the disabled selected tab and its dot on the taupe pill, in both modes', () => {
+    for (const { what, name, light, dark } of [
+      { what: 'the text on the pill', name: 'disabled', light: 1.44, dark: 3.43 },
+      { what: 'the pill on the track', name: 'canvas', light: 1.4, dark: 3.81 },
+      { what: 'the dot on the pill', name: 'clay', light: 4.45, dark: 1.99 },
+    ]) {
+      expect(onPill('light', name), `${what}, light`).toBeCloseTo(light, 2);
+      expect(onPill('dark', name), `${what}, dark`).toBeCloseTo(dark, 2);
+    }
+    // Clay on the pill in light, or the canvas ring on it in dark, holds the 3:1 a graphic needs.
+    expect(onPill('light', 'clay')).toBeGreaterThanOrEqual(NON_TEXT);
+    expect(onPill('dark', 'canvas')).toBeGreaterThanOrEqual(NON_TEXT);
+    for (const mode of ['light', 'dark']) {
+      expect(measured(mode, 'clay', 'canvas'), mode).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
 });
 
 describe('the pagination', () => {

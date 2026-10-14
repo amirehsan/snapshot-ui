@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import type { ReactElement, ReactNode } from 'react';
-import { I18nProvider, RouterProvider } from 'react-aria-components';
+import { useState, type ReactElement, type ReactNode } from 'react';
+import { I18nProvider, RouterProvider, type Key } from 'react-aria-components';
 import { expect, fn, waitFor } from 'storybook/test';
+import { Badge } from '../badge';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
 import { tokenColor, tokenPixels, washColor } from '../stories/paint';
 import { Text } from '../typography';
@@ -175,14 +176,85 @@ export const ManualFocus: Story = {
   },
 };
 
-/** "Transfers" cannot be chosen: taupe, with the not-allowed cursor, and skipped by the arrows. */
+/**
+ * In the first row "Transfers" cannot be chosen: taupe, with the not-allowed cursor, and skipped by the arrows.
+ * In the second the whole row is disabled: the selected tab keeps its place as a taupe pill with the disabled
+ * fill for its text, its changed dot still ringed in canvas, where taupe on the ink pill would be gone in dark.
+ */
 export const Disabled: Story = {
-  args: { disabled: 'transfers' },
-  play: async ({ canvasElement }) => {
-    const transfers = tabNamed(canvasElement, 'Transfers');
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <div data-testid="one">
+        <Views {...args} disabled="transfers" />
+      </div>
+      <div data-testid="row">
+        <Views {...args} isDisabled changed="spending" />
+      </div>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const transfers = tabNamed(canvas.getByTestId('one'), 'Transfers');
     await expect(transfers).toHaveAttribute('aria-disabled', 'true');
     await expect(getComputedStyle(transfers).color).toBe(tokenColor('--color-taupe'));
     await expect(getComputedStyle(transfers).cursor).toBe('not-allowed');
+
+    const row = canvas.getByTestId('row');
+    const spending = tabNamed(row, 'Spending');
+    await expect(spending).toHaveAttribute('aria-selected', 'true');
+    await expect(spending).toHaveAttribute('aria-disabled', 'true');
+    await expect(getComputedStyle(spending).backgroundColor).toBe(tokenColor('--color-taupe'));
+    await expect(getComputedStyle(spending).color).toBe(tokenColor('--color-disabled'));
+    await expect(getComputedStyle(spending).cursor).toBe('not-allowed');
+    await expect(getComputedStyle(tabNamed(row, 'All')).color).toBe(tokenColor('--color-taupe'));
+    const dot = find(spending, '.tab-changed');
+    await expect(getComputedStyle(dot).backgroundColor).toBe(tokenColor('--color-clay'));
+    await expect(getComputedStyle(dot).outlineStyle).toBe('solid');
+    await expect(getComputedStyle(dot).outlineColor).toBe(tokenColor('--color-canvas'));
+  },
+};
+
+const QUEUES = [
+  { id: 'inbox', name: 'Inbox', count: 12 },
+  { id: 'review', name: 'Review', count: 3 },
+  { id: 'done', name: 'Done', count: 48 },
+] as const;
+
+/**
+ * A count in each tab's name, in a `Badge`. A badge in a tab takes the tab's color, its edge too: canvas on the
+ * selected ink pill, slate at rest and ink under the pointer, where the badge's own slate would be faint on ink
+ * and under the text minimum on the wash.
+ */
+export const WithBadge: Story = {
+  render: () => (
+    <Tabs defaultSelectedKey="review">
+      <TabList aria-label="Queues">
+        {QUEUES.map((queue) => (
+          <Tab key={queue.id} id={queue.id}>
+            {queue.name} <Badge>{queue.count}</Badge>
+          </Tab>
+        ))}
+      </TabList>
+      {QUEUES.map((queue) => (
+        <TabPanel key={queue.id} id={queue.id}>
+          <Text>{`${String(queue.count)} items in ${queue.name.toLowerCase()}.`}</Text>
+        </TabPanel>
+      ))}
+    </Tabs>
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const review = canvas.getByRole('tab', { name: 'Review 3' });
+    await expect(review).toHaveAttribute('aria-selected', 'true');
+    const badge = find(review, '.badge');
+    await expect(getComputedStyle(badge).color).toBe(tokenColor('--color-canvas'));
+    await expect(getComputedStyle(badge).borderTopColor).toBe(tokenColor('--color-canvas'));
+    const inbox = canvas.getByRole('tab', { name: 'Inbox 12' });
+    const resting = find(inbox, '.badge');
+    await expect(getComputedStyle(resting).color).toBe(tokenColor('--color-slate'));
+    await userEvent.hover(inbox);
+    await expect(getComputedStyle(inbox).backgroundColor).toBe(washColor(canvasElement));
+    await expect(getComputedStyle(resting).color).toBe(tokenColor('--color-ink'));
+    await expect(getComputedStyle(resting).borderTopColor).toBe(tokenColor('--color-ink'));
+    await userEvent.unhover(inbox);
   },
 };
 
@@ -418,6 +490,89 @@ export const NoPageScroll: Story = {
     const list = find(canvasElement, '.tab-list');
     await waitFor(() => expect(Math.abs(list.scrollLeft)).toBeGreaterThan(0));
     await expect(window.scrollY).toBe(0);
+  },
+};
+
+/** Eight tabs in a 20rem box whose selection the caller holds, moved from a button outside the row as Back moves it. */
+function FollowedMany({ hidden = false }: { hidden?: boolean }): ReactElement {
+  const [view, setView] = useState<Key>('all');
+  const [shown, setShown] = useState(!hidden);
+  return (
+    <div style={{ display: 'grid', gap: 16, justifyItems: 'start' }}>
+      <button
+        type="button"
+        onClick={() => {
+          setView('archived');
+        }}
+      >
+        Back to Archived
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setShown(true);
+        }}
+      >
+        Show the row
+      </button>
+      <div style={{ width: '20rem', maxWidth: '100%' }} hidden={!shown}>
+        <Tabs selectedKey={view} onSelectionChange={setView}>
+          <TabList aria-label="Transactions">
+            {MANY.map((name) => (
+              <Tab key={name} id={name.toLowerCase()}>
+                {name}
+              </Tab>
+            ))}
+          </TabList>
+          {MANY.map((name) => (
+            <TabPanel key={name} id={name.toLowerCase()}>
+              <Text>{`The ${name.toLowerCase()} view.`}</Text>
+            </TabPanel>
+          ))}
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The selection moves later from outside the row, as Back moves it with link tabs: focus is on a button, so the
+ * row brings the newly selected last tab into view by moving itself, and the page stays where it is.
+ */
+export const FollowsSelection: Story = {
+  tags: ['no-visual'],
+  render: () => <FollowedMany />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const list = find(canvasElement, '.tab-list');
+    await expect(list.scrollLeft).toBe(0);
+    await userEvent.click(canvas.getByRole('button', { name: 'Back to Archived' }));
+    await expect(selectedName(canvasElement)).toBe('Archived');
+    await waitFor(() => expect(Math.abs(list.scrollLeft)).toBeGreaterThan(0));
+    const room = list.getBoundingClientRect();
+    const box = tabNamed(canvasElement, 'Archived').getBoundingClientRect();
+    await expect(box.right).toBeLessThanOrEqual(room.right);
+    await expect(box.left).toBeGreaterThanOrEqual(room.left);
+    await expect(window.scrollY).toBe(0);
+  },
+};
+
+/**
+ * A row mounted hidden with its last tab selected, then shown: hidden, it has no width to measure, so it waits,
+ * and once drawn it brings the selected tab into view.
+ */
+export const MountedHidden: Story = {
+  tags: ['no-visual'],
+  render: () => <FollowedMany hidden />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Back to Archived' }));
+    const list = find(canvasElement, '.tab-list');
+    await expect(list.clientWidth).toBe(0);
+    await userEvent.click(canvas.getByRole('button', { name: 'Show the row' }));
+    await waitFor(() => expect(Math.abs(list.scrollLeft)).toBeGreaterThan(0));
+    const room = list.getBoundingClientRect();
+    const box = tabNamed(canvasElement, 'Archived').getBoundingClientRect();
+    await expect(box.right).toBeLessThanOrEqual(room.right);
+    await expect(box.left).toBeGreaterThanOrEqual(room.left);
   },
 };
 

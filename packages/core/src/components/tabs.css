@@ -5,7 +5,8 @@
  * as a field; on a card it shows as a tint, and on the page's own canvas the pills carry the row. A row that
  * does not fit scrolls inside its track, whose 4px of padding holds the 4px a focus ring stands out. Hover is
  * the 5% wash with the text turned ink, since slate on the wash is under the text minimum. The changed dot is
- * clay, and on the selected ink pill it takes a canvas ring, since clay on ink is under 3:1.
+ * clay, and on the selected ink pill it takes a canvas ring, since clay on ink is under 3:1. A disabled tab that
+ * is selected keeps its place as SegmentedControl's taupe pill, and a badge in a tab takes the tab's color.
  *
  * Each state is React Aria's data attribute beside its native or ARIA twin, so the server's HTML and a tab
  * row written by hand draw the same.
@@ -108,6 +109,19 @@
     cursor: not-allowed;
   }
 
+  /* A disabled tab that is selected keeps its place in the row: a taupe pill with the disabled fill for text,
+     SegmentedControl's rule. Taupe on the ink pill would be gone in dark. */
+  .tab:is([aria-selected='true'], [data-selected]):is([aria-disabled='true'], [data-disabled]) {
+    background-color: var(--color-taupe);
+    color: var(--color-disabled);
+  }
+
+  /* A badge in a tab is the tab's color, its edge too, since badge.css draws the edge in currentColor: slate on
+     the ink pill or the hover wash is under the text minimum. */
+  .tab .badge {
+    color: inherit;
+  }
+
   .tab-label {
     min-width: 0;
   }
@@ -156,6 +170,11 @@
 
     .tab:is([aria-disabled='true'], [data-disabled]) {
       color: GrayText;
+    }
+
+    .tab:is([aria-selected='true'], [data-selected]):is([aria-disabled='true'], [data-disabled]) {
+      background-color: GrayText;
+      color: canvas;
     }
 
     .tab-changed {

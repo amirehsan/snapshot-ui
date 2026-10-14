@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, StrictMode, useState, type ReactElement } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
@@ -58,6 +58,9 @@ const tab = (name: string): HTMLElement => screen.getByRole('tab', { name });
 const selectedName = (): string | null =>
   screen.getAllByRole('tab').find((each) => each.getAttribute('aria-selected') === 'true')?.textContent ??
   null;
+
+/** Gives every element the client width `width`, which jsdom leaves at zero, as a row the page draws. */
+const drawn = (width = 320) => vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(width);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -322,6 +325,7 @@ describe('Tabs', () => {
     const scrollIntoView = vi.fn();
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
+    drawn();
     const box = (left: number, right: number): DOMRect =>
       ({ left, right, top: 0, bottom: 40, width: right - left, height: 40, x: left, y: 0 }) as DOMRect;
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
@@ -361,6 +365,7 @@ describe('Tabs', () => {
 
   it('scrolls the list back toward its start when the selected tab is before it', () => {
     const scrollBy = vi.spyOn(Element.prototype, 'scrollBy');
+    drawn();
     const box = (left: number, right: number): DOMRect =>
       ({ left, right, top: 0, bottom: 40, width: right - left, height: 40, x: left, y: 0 }) as DOMRect;
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
@@ -377,9 +382,137 @@ describe('Tabs', () => {
 
   it('leaves the list alone when the selected tab is already in view', () => {
     const scrollBy = vi.spyOn(Element.prototype, 'scrollBy');
+    drawn();
     // jsdom draws every box at zero, inside the list.
     render(<Views defaultSelectedKey="transfers" />);
     expect(scrollBy).not.toHaveBeenCalled();
+  });
+
+  /** A 320px list with its four tabs 100px wide from 4px, so "Transfers", 304 to 404, ends past it. */
+  const rowOfFour = (): void => {
+    const box = (left: number, right: number): DOMRect =>
+      ({ left, right, top: 0, bottom: 40, width: right - left, height: 40, x: left, y: 0 }) as DOMRect;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('role') === 'tablist') return box(0, 320);
+      const index = VIEWS.findIndex((view) => view === this.textContent);
+      return this.getAttribute('role') === 'tab' && index >= 0
+        ? box(4 + index * 100, 104 + index * 100)
+        : box(0, 0);
+    });
+  };
+
+  /** Selection held by the caller, as an app with its view in the URL holds it, and moved from outside the row. */
+  function Followed({ initial }: { initial: string }): ReactElement {
+    const [view, setView] = useState<Key>(initial);
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            setView('transfers');
+          }}
+        >
+          Back
+        </button>
+        <Views selectedKey={view} onSelectionChange={setView} keyboardActivation="manual" />
+      </>
+    );
+  }
+
+  it('brings the selected tab into view when the selection moves later from outside the row', async () => {
+    const user = userEvent.setup();
+    const scrollBy = vi.spyOn(Element.prototype, 'scrollBy');
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', { configurable: true, value: scrollIntoView });
+    drawn();
+    rowOfFour();
+    try {
+      render(<Followed initial="all" />);
+      expect(scrollBy).not.toHaveBeenCalled();
+      // Back moves the selection while focus is on the button, outside the row.
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      expect(selectedName()).toBe('Transfers');
+      expect(scrollBy).toHaveBeenCalledOnce();
+      expect(scrollBy).toHaveBeenCalledWith({ left: 404 - 320 });
+      expect(scrollBy.mock.contexts[0]).toBe(screen.getByRole('tablist'));
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
+  it('follows the selection when focus stays on another tab, as after a link tab and Back', async () => {
+    const user = userEvent.setup();
+    const scrollBy = vi.spyOn(Element.prototype, 'scrollBy');
+    drawn();
+    rowOfFour();
+    render(<Followed initial="all" />);
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(scrollBy).toHaveBeenCalledOnce();
+    scrollBy.mockClear();
+    // Focus on "All", still in the row, while the selection moves to "Transfers" again from outside.
+    tab('All').focus();
+    await user.keyboard('{Enter}');
+    expect(selectedName()).toBe('All');
+    expect(scrollBy).not.toHaveBeenCalled();
+    act(() => {
+      screen.getByRole('button', { name: 'Back' }).click();
+    });
+    expect(tab('All')).toHaveFocus();
+    expect(selectedName()).toBe('Transfers');
+    expect(scrollBy).toHaveBeenCalledOnce();
+  });
+
+  it('leaves the row to the browser when the newly selected tab holds focus', async () => {
+    const user = userEvent.setup();
+    const scrollBy = vi.spyOn(Element.prototype, 'scrollBy');
+    drawn();
+    rowOfFour();
+    render(<Views defaultSelectedKey="all" />);
+    await user.tab();
+    // The arrows wrap to "Transfers", which takes focus and the selection; the browser shows a focused element.
+    await user.keyboard('{ArrowLeft}');
+    expect(tab('Transfers')).toHaveFocus();
+    expect(selectedName()).toBe('Transfers');
+    expect(scrollBy).not.toHaveBeenCalled();
+  });
+
+  it('waits for a row mounted hidden to take a width before it brings the selected tab into view', () => {
+    const scrollBy = vi.spyOn(Element.prototype, 'scrollBy');
+    const width = drawn(0);
+    rowOfFour();
+    const observers: { callback: () => void; disconnected: boolean }[] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        record: { callback: () => void; disconnected: boolean };
+        constructor(callback: () => void) {
+          this.record = { callback, disconnected: false };
+          observers.push(this.record);
+        }
+        observe = (): void => undefined;
+        unobserve = (): void => undefined;
+        disconnect(): void {
+          this.record.disconnected = true;
+        }
+      },
+    );
+    try {
+      render(<Views defaultSelectedKey="transfers" />);
+      // Hidden, every box is zero: nothing is measured, and the row is watched until it is drawn.
+      expect(scrollBy).not.toHaveBeenCalled();
+      const live = observers.filter((each) => !each.disconnected);
+      expect(live).toHaveLength(1);
+      width.mockReturnValue(320);
+      act(() => {
+        live[0]?.callback();
+      });
+      expect(scrollBy).toHaveBeenCalledOnce();
+      expect(scrollBy).toHaveBeenCalledWith({ left: 404 - 320 });
+      expect(live[0]?.disconnected).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('passes className and ref to each part', () => {
