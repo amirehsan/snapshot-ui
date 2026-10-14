@@ -116,8 +116,8 @@ interface ListProps<T extends object> {
 
 /**
  * The list in the popover. It mounts each time the list opens, since React Aria's popover renders nothing while
- * closed, so the filter's text starts empty on every open and its collator is made only in a browser that opened
- * the list. It counts the options from React Aria's collection, which counts items and never headings, inside
+ * closed and `SelectPopover` keeps it out of the hidden pass that builds the collection, so the filter's text
+ * starts empty on every open and its collator is made only in a browser that opened the list. It counts the options from React Aria's collection, which counts items and never headings, inside
  * sections too.
  */
 function SelectList<T extends object>({
@@ -173,6 +173,27 @@ function SelectList<T extends object>({
 }
 
 /**
+ * The popover and its list, or the options alone. React Aria renders a Select's children a second time, hidden,
+ * to build its collection, and its Popover renders its content in that pass too, on the server as well. There
+ * the Select's state is not provided yet, so this renders a bare ListBox, which is all the collection needs:
+ * the filter, its collator and the library popover's focus handling stay out of the hidden pass.
+ */
+function SelectPopover<T extends object>({
+  className,
+  placement,
+  ...list
+}: ListProps<T> & { className: string; placement: Placement }): ReactElement {
+  if (useContext(SelectStateContext) === null) {
+    return <ListBox<T> items={list.items}>{list.children}</ListBox>;
+  }
+  return (
+    <Popover className={className} matchTriggerWidth maxHeight={320} placement={placement}>
+      <SelectList<T> {...list} />
+    </Popover>
+  );
+}
+
+/**
  * A field that chooses one value from a list: the text input's pill as a button showing the chosen option's
  * icon and label, opening the Menu's rows (`PickerOption`, `PickerSection`) in a popover under it. From nine
  * options the list has a filter field at its top, where every word typed must appear in an option, case and
@@ -205,11 +226,14 @@ export function Select<T extends object = object>({
     describedBy: props['aria-describedby'],
   });
   // Whether the filter takes focus as the list opens: not on a coarse pointer, where a phone's keyboard would
-  // cover the list. It is read when the user opens the list, an event, and never while rendering; a list opened
-  // by `defaultOpen` or by the app's `isOpen` keeps the default and focuses its filter.
+  // cover the list. It is read when the user opens the list, an event, and never while rendering, and goes back
+  // to the default as the list closes, so a list opened by `defaultOpen` or by the app's `isOpen` focuses its
+  // filter. A test environment may have no matchMedia, which reads as a fine pointer.
   const [focusFilter, setFocusFilter] = useState(true);
   const openChange = (isOpen: boolean): void => {
-    if (isOpen) setFocusFilter(!window.matchMedia('(pointer: coarse)').matches);
+    const isCoarse =
+      isOpen && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+    setFocusFilter(!isCoarse);
     onOpenChange?.(isOpen);
   };
   return (
@@ -232,21 +256,16 @@ export function Select<T extends object = object>({
       </Button>
       {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
-      <Popover
+      <SelectPopover<T>
         className={cx('menu-popover', 'select-popover', popoverClassName)}
-        matchTriggerWidth
-        maxHeight={320}
         placement={placement}
+        items={items}
+        isFilterable={isFilterable}
+        focusFilter={focusFilter}
+        labels={{ ...DEFAULT_LABELS, ...labels }}
       >
-        <SelectList<T>
-          items={items}
-          isFilterable={isFilterable}
-          focusFilter={focusFilter}
-          labels={{ ...DEFAULT_LABELS, ...labels }}
-        >
-          {children}
-        </SelectList>
-      </Popover>
+        {children}
+      </SelectPopover>
     </RACSelect>
   );
 }
