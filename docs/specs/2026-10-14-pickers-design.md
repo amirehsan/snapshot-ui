@@ -1,6 +1,6 @@
 # Pickers: Select, ComboBox, MultiSelect, SearchField, Tabs and Pagination: design
 
-Status: written for review on 2026-10-14. The seven rulings in section 10.1 are open for the owner, each with the answer this document recommends and is drawn on; everything else is decided here and listed in section 10.2.
+Status: approved on 2026-10-14. The owner took the seven rulings in section 10.1 as recommended; everything else is decided here and listed in section 10.2.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document pulls forward the phase 2 rows "Select", "ComboBox", "MultiSelect", "Tabs" and "Pagination", and the phase 3 row "SearchField". It answers batch 3a, the first third of batch 3 of the first consumer's roadmap, its Transactions page. The design authority remains `docs/design-system.md`.
 Released before this: batch 2, `@snapshot-ui/core` and `@snapshot-ui/react` 0.3.0 and `@snapshot-ui/charts` 0.1.0 (the Home figures). Section 2 lists what this document takes from batches 1 and 2.
 
@@ -447,7 +447,7 @@ export type PaginationProps = PaginationBase & (PaginationLinks | PaginationButt
 
 ## 10. Decisions
 
-### 10.1 Rulings for the owner
+### 10.1 Rulings taken by the owner
 
 1. **MultiSelect's basis.** Recommended: React Aria's `ComboBox` in `selectionMode="multiple"` with the chosen values as a `TagGroup` in the field, as the parent spec's "ComboBox, TagGroup" row asked, now with React Aria's own multiple mode and `ComboBoxValue` instead of a hand-kept selection. Alternatives: `Select` in multiple mode with the filter inside the popover and a summary in the trigger ("Food, Rent and 2 more"), which suits a compact toolbar and is what 3b's filter chip will draw, but cannot hold removable tags in a button; or `TokenField`, new in 1.22 and `contenteditable`, rejected in section 4.
 2. **The list on phones.** Recommended: the popover at every width (section 6.3); React Aria flips and caps it, and the rows are 44px on a coarse pointer. A Sheet under 768px was considered: it is a modal with a title and a second focus model for one control, React Aria's Select and ComboBox hand their list to a `PopoverContext` and not to a sheet, and a combo box's input would be covered by the soft keyboard under a bottom sheet. 3b's single Filters sheet covers the phone case the consumer named.
