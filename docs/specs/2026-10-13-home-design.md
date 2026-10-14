@@ -108,7 +108,7 @@ export interface AvatarProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'chil
 - **Shape.** `circle` takes `--radius-pill`, so it is a circle in Rounded and follows the shape axis elsewhere, as the parent spec says. `square` takes `--radius-micro` (6px), the nested-radius step for a small mark, so a logo reads as a tile and not a person.
 - **Fallback fill and text.** `--color-bone` with `--color-ink` text: 16.76:1 in light and 15.36:1 in dark, measured.
 - **Edge.** A 1px inset `--color-frame` ring over the image, so a white logo on a white card has an edge. It is a cue, not a boundary.
-- **Forced colors.** The initials are `CanvasText` on `Canvas` with a 1px `CanvasText` border; an image is shown as is.
+- **Forced colors.** The initials are `CanvasText` on `canvas` with a 1px `CanvasText` border; an image is shown as is.
 
 ## 6. StatTile
 
@@ -217,7 +217,7 @@ export type MeterProps = Omit<HTMLAttributes<HTMLDivElement>, 'children'> &
 - **Pace marker.** A 2px ink line 16px tall, centered on the track, with a 2px surface ring (the spacer rule), so it reads over both fill and track. It is HTML, placed by `inset-inline-start: calc(pace / max * 100%)`, so it mirrors in right to left with the segments.
 - **Label row.** The label at `--text-small` weight 500, ink, at the start, and `valueLabel` at the end in `--text-small` slate with tabular figures, 8px above the bar.
 - **Contrast**, measured over Lifted. The fill against the track: 13.88:1 in light and 12.19:1 in dark, far past the 3:1 a graphic needs. Warning against the track: 4.77:1 and 6.24:1. The track against the card is a cue (1.28 and 1.43) and not a boundary: the meter's extent is carried by the value text, which is required. The plan re-measures each with `contrast.js` and records them in Appendix B.
-- **Forced colors.** The fill becomes `CanvasText`, hatched becomes `CanvasText` stripes on `Canvas`, the track gets a 1px `CanvasText` border so its end shows, the over state keeps its words, and the pace marker is `Highlight`.
+- **Forced colors.** The fill becomes `CanvasText`, hatched becomes `CanvasText` stripes on `canvas`, the track gets a 1px `CanvasText` border so its end shows, the over state keeps its words, and the pace marker is `Highlight`.
 - **Right to left.** Every offset is logical, so the bar fills from the right. The hatch keeps its 45-degree angle in both directions: it is a texture, not an arrow.
 
 ## 8. Sparkline and the chart foundations
