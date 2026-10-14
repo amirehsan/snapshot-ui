@@ -1,5 +1,22 @@
 # @snapshot-ui/react
 
+## 0.3.0
+
+### Minor Changes
+
+- dc43eff: Add Avatar: a person, a merchant or a bank as an image over its initials, at 24, 32 and 40px (`size` `sm`, `md`, `lg`), a circle for a person or a square for a logo (`shape`), with one neutral fallback, initials from the first two words of `name` or from `initials`, and `isDecorative` for an avatar beside its name. A failed image shows the initials; the image stays hidden until it has loaded, so the initials show before the page hydrates. A blank `name` hides the avatar from assistive technology, and its accessible name always comes from `name`: an `aria-label` or a `role` a caller passes is replaced. `AvatarProps` is exported. `avatar.css` in `styles.css`.
+- cf5f1b3: Add Meter, for spending against a budget: `segments` stacked in one bar (`look` `fill` for spent, `hatched` for held), a `max`, the app's `valueLabel` as the visible text and the accessible value, a `pace` marker for where spending would be today, an optional legend (`hasLegend`), and a `label` or an `aria-label`. Over the limit both looks turn the warning color, and `valueLabel` must say "over" in words, such as "$1,340 of $1,200, $140 over": color is never the only signal. The meter is static, so a server component renders it with no client JavaScript. On a surface other than a card, set `--meter-surface` to that surface's color. Every figure, each segment's `valueLabel`, the meter's `valueLabel` and the pace's `label`, is the app's formatted string. `MeterProps` and `MeterSegment` are exported, and `MeterBaseProps` for wrappers. `meter.css` in `styles.css`.
+- 5faae7a: Add StatTile: one headline figure on the Card's surface, with an overline `label`, a `numeral-sm` `value`, a `change` line (`direction` up, down or flat, the app's whole sentence as `label`, and a `tone` that is neutral by default, `gain` only for money that arrived and `warning` only for a state that needs a look, never red or green for up and down), a `caption`, a `trend` slot that moves under the caption on a narrow tile, `level` to put the label in the outline, and `href` to make the whole tile one link through `RouterProvider`. Every figure is your formatted string. A tile without `href` is a static component that a server component renders with no client JavaScript. A linked tile is named by everything it shows and must hold no link or button, and it forwards only the attributes React Aria's Link forwards, so not `title` or `role`, for example. The tile is a size container, so it takes its width from its column. `StatTileProps` and `StatTileChange` are exported. `stat-tile.css` in `styles.css`.
+
+### Patch Changes
+
+- Updated dependencies [dc43eff]
+- Updated dependencies [4d09265]
+- Updated dependencies [cf5f1b3]
+- Updated dependencies [e6c2d6b]
+- Updated dependencies [5faae7a]
+  - @snapshot-ui/core@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
