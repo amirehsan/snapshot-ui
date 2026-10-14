@@ -831,6 +831,62 @@ describe('the multi-select', () => {
   });
 });
 
+describe('the tabs', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+  /** A token color over the 5% ink wash on canvas, a hovered or pressed tab, against the wash. */
+  const onWash = (mode, name) => {
+    const palette = paletteFor(tokens, mode);
+    const wash = composite({ ...parseColor(palette.ink), a: 0.05 }, parseColor(palette.canvas));
+    return contrastRatio(composite(parseColor(palette[name]), wash), wash);
+  };
+
+  // The track is canvas. A resting tab is slate on it, the selected tab canvas on ink, the dot clay on canvas
+  // and, on the selected tab, its ring canvas on ink. The gate holds all four at the text minimum.
+  it('cites slate, ink and clay on canvas, and canvas on ink, which the gate holds at the text minimum', () => {
+    for (const [text, ground] of [
+      ['slate', 'canvas'],
+      ['ink', 'canvas'],
+      ['clay', 'canvas'],
+      ['canvas', 'ink'],
+    ]) {
+      expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+        expect.objectContaining({ text, ground, minimum: TEXT }),
+      );
+    }
+  });
+
+  // The wash is a mix, not a token, so the hovered pairs are measured and recorded, not gated. Clay on ink fails
+  // the 3:1 a graphic needs, the reason the dot takes a canvas ring on the selected tab; it is recorded, never
+  // gated. The track against lifted is a tint, a cue the pills carry and never a boundary.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { what, text, ground, light, dark } of [
+      { what: 'a resting tab', text: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { what: 'the selected tab', text: 'canvas', ground: 'ink', light: 16.25, dark: 19.31 },
+      { what: 'the dot', text: 'clay', ground: 'canvas', light: 6.2, dark: 7.57 },
+      { what: 'the dot on the ink pill', text: 'clay', ground: 'ink', light: 2.62, dark: 2.55 },
+      { what: 'the track on a card', text: 'canvas', ground: 'lifted', light: 1.1, dark: 1.11 },
+    ]) {
+      expect(measured('light', text, ground), `${what}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground), `${what}, dark`).toBeCloseTo(dark, 2);
+    }
+    expect(onWash('light', 'ink'), 'a hovered tab, light').toBeCloseTo(14.7, 2);
+    expect(onWash('dark', 'ink'), 'a hovered tab, dark').toBeCloseTo(17.41, 2);
+    expect(onWash('light', 'slate'), 'slate on the wash, light').toBeCloseTo(4.38, 2);
+    expect(onWash('dark', 'slate'), 'slate on the wash, dark').toBeCloseTo(6.93, 2);
+    // Slate on the wash is under the text minimum in light, the reason a hovered tab turns ink.
+    expect(onWash('light', 'slate')).toBeLessThan(TEXT);
+    for (const mode of ['light', 'dark']) {
+      expect(onWash(mode, 'ink'), mode).toBeGreaterThanOrEqual(TEXT);
+      expect(measured(mode, 'clay', 'ink'), mode).toBeLessThan(NON_TEXT);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

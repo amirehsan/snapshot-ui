@@ -4612,6 +4612,176 @@ describe('src/components/multi-select.css', () => {
   });
 });
 
+describe('src/components/tabs.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.tab {` is the start of no earlier rule
+  // (`.tabs {` and `.tab-list {` differ at the next character), so the first match is the tab's own rule.
+  const rules = () => closeUp(stripComments(read('src/components/tabs.css')));
+  const SELECTED = "[aria-selected='true'], [data-selected]";
+  const DISABLED = "[aria-disabled='true'], [data-disabled]";
+  const FOCUS = ':focus-visible, [data-focus-visible]';
+
+  it('draws the track as canvas with no edge, on the surface corner, padded 4px', () => {
+    const list = blockAfter(rules(), '.tab-list {');
+    for (const declaration of [
+      'display: inline-flex;',
+      'gap: 0.25rem;',
+      'max-width: 100%;',
+      'padding: 0.25rem;',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-canvas);',
+    ]) {
+      expect(list, declaration).toContain(declaration);
+    }
+    // A tab switches what is shown and holds no value, so the track never reads as a field.
+    expect(list).not.toMatch(/(?<![\w-])border(?!-radius)[\w-]*\s*:/);
+    expect(list).not.toContain('box-shadow');
+  });
+
+  it('scrolls the row inside its track and never wraps a tab', () => {
+    const css = rules();
+    const list = blockAfter(css, '.tab-list {');
+    for (const declaration of [
+      'overflow-x: auto;',
+      'overscroll-behavior-inline: contain;',
+      'scrollbar-width: thin;',
+      'scrollbar-color: var(--color-scrollbar) transparent;',
+    ]) {
+      expect(list, declaration).toContain(declaration);
+    }
+    const tab = blockAfter(css, '.tab {');
+    expect(tab).toContain('white-space: nowrap;');
+    expect(tab).toContain('flex: none;');
+    // The root's single column never grows past its container, so a long row scrolls instead of the page.
+    const tabs = blockAfter(css, '.tabs {');
+    expect(tabs).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(tabs).toContain('min-width: 0;');
+  });
+
+  it('draws a tab at the control height, on the pill radius, at the action step', () => {
+    const tab = blockAfter(rules(), '.tab {');
+    for (const declaration of [
+      'min-height: var(--size-control);',
+      'padding-inline: 1rem;',
+      'border-radius: var(--radius-pill);',
+      'color: var(--color-slate);',
+      'font-size: var(--text-action);',
+      'line-height: var(--text-action--line-height);',
+      'font-weight: var(--text-action--font-weight);',
+      'text-decoration: none;',
+      'cursor: pointer;',
+    ]) {
+      expect(tab, declaration).toContain(declaration);
+    }
+  });
+
+  it('hits a tab at the target by the shared formula', () => {
+    const hit = blockAfter(rules(), '.tab::before {');
+    expect(hit).toContain('position: absolute;');
+    expect(hit).toContain('inset-inline: 0;');
+    expect(hit).toContain('inset-block: min(0px, (100% - var(--size-target)) / 2);');
+  });
+
+  it('washes and inks an unselected tab on hover, only where hover exists, and on a press, never the selected one', () => {
+    const css = rules();
+    const wash = 'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);';
+    const hover = blockAfter(
+      blockAfter(css, '@media (hover: hover)'),
+      `.tab:is(:hover, [data-hovered]):not(${SELECTED}, ${DISABLED}) {`,
+    );
+    expect(hover).toContain(wash);
+    expect(hover).toContain('color: var(--color-ink);');
+    const pressed = blockAfter(css, `.tab:is(:active, [data-pressed]):not(${SELECTED}, ${DISABLED}) {`);
+    expect(pressed).toContain(wash);
+    expect(pressed).toContain('color: var(--color-ink);');
+    // Hover is written only inside the media query.
+    expect(outsideForcedColors(css).replace(blockAfter(css, '@media (hover: hover)'), '')).not.toContain(
+      ':hover',
+    );
+  });
+
+  it('fills the selected tab ink with canvas text, and inverts its ring inside it', () => {
+    const css = rules();
+    const selected = blockAfter(css, `.tab:is(${SELECTED}) {`);
+    expect(selected).toContain('background-color: var(--color-ink);');
+    expect(selected).toContain('color: var(--color-canvas);');
+    const ring = blockAfter(css, `.tab:is(${FOCUS}) {`);
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+    const inset = blockAfter(css, `.tab:is(${SELECTED}):is(${FOCUS}) {`);
+    expect(inset).toContain('outline-color: var(--color-canvas);');
+    expect(inset).toContain(
+      'outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));',
+    );
+  });
+
+  it('draws a disabled tab taupe and not-allowed', () => {
+    const disabled = blockAfter(rules(), `.tab:is(${DISABLED}) {`);
+    expect(disabled).toContain('color: var(--color-taupe);');
+    expect(disabled).toContain('cursor: not-allowed;');
+  });
+
+  it('draws the changed dot 6px clay, ringed in canvas on the selected tab', () => {
+    const css = rules();
+    const dot = blockAfter(css, '.tab-changed {');
+    for (const declaration of [
+      'flex: none;',
+      'width: 0.375rem;',
+      'height: 0.375rem;',
+      'margin-inline-start: var(--spacing-part);',
+      'border-radius: var(--radius-dot);',
+      'background-color: var(--color-clay);',
+    ]) {
+      expect(dot, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, `.tab:is(${SELECTED}) .tab-changed {`).trim()).toBe(
+      'outline: var(--focus-ring-width) solid var(--color-canvas);',
+    );
+    // Clay is the unsaved color, and the dot is the file's only use of it.
+    expect(css.match(/--color-clay/g)).toHaveLength(1);
+  });
+
+  it('spans the panel across the root and breaks a long word in it anywhere', () => {
+    const panel = blockAfter(rules(), '.tab-panel {');
+    expect(panel).toContain('justify-self: stretch;');
+    expect(panel).toContain('min-width: 0;');
+    expect(panel).toContain('overflow-wrap: anywhere;');
+  });
+
+  it('hides a force-mounted panel that is not selected', () => {
+    const css = rules();
+    expect(blockAfter(css, '.tab-panel[data-inert] {').trim()).toBe('display: none;');
+    expect(blockAfter(css, `.tab-panel:is(${FOCUS}) {`)).toContain(
+      'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
+    );
+  });
+
+  it('draws the selected tab Highlight, a disabled one GrayText and the dot CanvasText in forced colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    const selected = blockAfter(forced, `.tab:is(${SELECTED}) {`);
+    expect(selected).toContain('background-color: Highlight;');
+    expect(selected).toContain('color: HighlightText;');
+    expect(blockAfter(forced, `.tab:is(${SELECTED}):is(${FOCUS}) {`)).toContain(
+      'outline-color: HighlightText;',
+    );
+    expect(blockAfter(forced, `.tab:is(${DISABLED}) {`)).toContain('color: GrayText;');
+    expect(blockAfter(forced, '.tab-changed {')).toContain('background-color: CanvasText;');
+    const onSelected = blockAfter(forced, `.tab:is(${SELECTED}) .tab-changed {`);
+    expect(onSelected).toContain('background-color: HighlightText;');
+    expect(onSelected).toContain('outline-color: Highlight;');
+  });
+
+  it('mirrors nothing', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])(left|right)\s*:|padding-(left|right)|margin-(left|right)/);
+    expect(css).not.toContain('scale');
+    expect(css).not.toContain('rtl');
+  });
+
+  it('writes no transition, since nothing in a tab row moves', () => {
+    expect(rules()).not.toMatch(/transition|animation/);
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

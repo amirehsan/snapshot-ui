@@ -1,0 +1,132 @@
+---
+title: Tabs
+description: "Views of one page as a row of pills: panels that switch, or links your router follows, with a dot for unsaved edits."
+icon: PanelTop
+---
+
+<Section>
+
+## Basic
+
+A row of pills in a canvas track, the selected one the ink pill, over one panel per tab. Each `Tab` and its `TabPanel` share an `id`. Only the selected panel is mounted. The arrow keys move along the row and select as they go, which is React Aria's automatic activation: a panel that is already there costs nothing to show.
+
+<Preview name="tabs-basic" />
+
+</Section>
+
+<Section>
+
+## Tabs that are links
+
+When each view has its own URL, give each `Tab` an `href`, pass `selectedKey` from the URL and no `onSelectionChange`, and set `keyboardActivation="manual"`. The arrows then move focus without loading a route at every key, and Enter, Space or a press follows the focused tab's link through `RouterProvider`. The selection stays the URL's: it moves when the route does. Render one `TabPanel` whose `id` is the selected key, holding the route's content, so the tab's `aria-controls` points at what is there. A modified or middle click opens the link as the browser would.
+
+<Preview name="tabs-links" />
+
+Tabs are for views of one page. A site's top navigation between whole pages is a row of plain links with `aria-current="page"`, which Tab moves between: choose that instead.
+
+</Section>
+
+<Section>
+
+## Unsaved edits
+
+`isChanged` draws a small clay dot after the name of a tab whose panel holds unsaved edits, and nothing else: clay means unsaved. A screen reader hears it as a word, "Changed" or your `changedLabel`, after the tab, and the tab's name stays its words. On the selected ink pill the dot takes a canvas ring, since clay on ink is too faint for a mark that means something. A count or a "new" marker belongs in the tab's name, in a `Badge`.
+
+<Preview name="tabs-changed" />
+
+</Section>
+
+<Section>
+
+## A row that does not fit
+
+The row scrolls inside its track, and the page never scrolls sideways. A tab that takes focus scrolls into view as the browser does for focus. After hydration the row brings the selected tab into view by moving itself, never the page, so the server's HTML shows the start of the row and the selected tab arrives a moment later. Views are few on most pages; keep the names short and this rarely shows.
+
+<Preview name="tabs-overflow" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Keep the view in the URL, so it can be shared, reloaded and gone back to. With the Next App Router, the server page reads the search parameter and hands it to a client component that draws the tabs, and the route's content goes in the one panel:
+
+```tsx
+// app/transactions/page.tsx, a server component
+import { TransactionList } from './transaction-list';
+import { TransactionViews } from './transaction-views';
+
+const VIEWS = ['all', 'spending', 'income'];
+
+export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+  const { view = 'all' } = await searchParams;
+  const current = VIEWS.includes(view) ? view : 'all';
+  return (
+    <TransactionViews view={current}>
+      <TransactionList view={current} />
+    </TransactionViews>
+  );
+}
+```
+
+```tsx
+// app/transactions/transaction-views.tsx
+'use client';
+
+import type { ReactNode } from 'react';
+import { Tab, TabList, TabPanel, Tabs } from '@snapshot-ui/react';
+
+export function TransactionViews({ view, children }: { view: string; children: ReactNode }) {
+  return (
+    <Tabs selectedKey={view} keyboardActivation="manual">
+      <TabList aria-label="Transactions">
+        <Tab id="all" href="?view=all">All</Tab>
+        <Tab id="spending" href="?view=spending">Spending</Tab>
+        <Tab id="income" href="?view=income">Income</Tab>
+      </TabList>
+      <TabPanel id={view}>{children}</TabPanel>
+    </Tabs>
+  );
+}
+```
+
+The links go through the `RouterProvider` at the app's root, as [Routing](/docs/routing) sets up, so a tab is a soft navigation. Start each `href` from the parameters already in the URL when the page has others, such as a search or a page number, so choosing a view keeps them.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria Tabs, TabList, Tab and TabPanel prop is accepted, except `orientation`: the row is horizontal only. These are the ones that matter most.
+
+<PropsTable label="Tabs props" path="../../packages/react/src/tabs/Tabs.tsx" type="Pick<TabsProps, 'selectedKey' | 'defaultSelectedKey' | 'onSelectionChange' | 'keyboardActivation' | 'isDisabled' | 'disabledKeys' | 'className'>" />
+
+<PropsTable label="TabList props" path="../../packages/react/src/tabs/TabList.tsx" type="Pick<TabListProps, 'aria-label' | 'aria-labelledby' | 'className'>" />
+
+<PropsTable label="Tab props" path="../../packages/react/src/tabs/Tab.tsx" type="Pick<TabProps, 'id' | 'children' | 'href' | 'isChanged' | 'changedLabel' | 'isDisabled' | 'className'>" />
+
+<PropsTable label="TabPanel props" path="../../packages/react/src/tabs/TabPanel.tsx" type="Pick<TabPanelProps, 'id' | 'shouldForceMount' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A `tablist` of `tab`s, each with `aria-selected`, named by `aria-label` or `aria-labelledby` on the `TabList`, and each `tabpanel` named by its tab. A panel with nothing focusable in it is itself the next stop after the row. The changed dot is hidden and read through the tab's description as "Changed", so the name stays the tab's words. Link tabs keep the tab roles and the arrow keys of a tab list, with manual activation, so a key press never loads a page. A disabled tab is skipped by the arrows and cannot be selected.
+
+<Keys rows={[['Left Right', 'Move between tabs in the drawn direction, wrapping at the ends and skipping a disabled tab; with automatic activation, the tab focused is selected.'], ['Home End', 'Jump to the first or last tab.'], ['Enter Space', 'With manual activation, select the focused tab, or follow its link.'], ['Tab', 'Moves into the panel.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps tabs in the system.
+
+<Rules dos={['Use two to six short names, a word or two each.', 'Use tabs for views of one page, with a panel for each.', 'Keep the view in the URL, with link tabs and manual activation.']} donts={['Never use the clay dot for a count or a "new" marker. It means unsaved edits.', 'Never use tabs for the steps of a flow.', 'Never stand tabs on their side. The row is horizontal only.']} />
+
+</Section>

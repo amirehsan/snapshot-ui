@@ -36,6 +36,7 @@ import {
 } from '../src/sidebar';
 import { Spinner } from '../src/spinner';
 import { Switch } from '../src/switch';
+import { Tab, TabList, TabPanel, Tabs } from '../src/tabs';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
 import { ToastRegion } from '../src/toast';
@@ -463,6 +464,31 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       change={{ direction: 'down', label: 'Down 4% from last month', tone: 'gain' }}
     />,
     ['<a', 'href="/spending"', 'class="stat-tile"', 'data-direction="down"', 'data-tone="gain"'],
+  ],
+  [
+    // The selected tab and its panel are in the HTML; the panel of a tab not selected is not mounted. The scroll
+    // that brings the selected tab into view is an effect, which never runs here.
+    'Tabs',
+    <Tabs defaultSelectedKey="income">
+      <TabList aria-label="Views">
+        <Tab id="all">All</Tab>
+        <Tab id="income" isChanged>
+          Income
+        </Tab>
+      </TabList>
+      <TabPanel id="all">Everything</TabPanel>
+      <TabPanel id="income">Money in</TabPanel>
+    </Tabs>,
+    [
+      'class="tabs"',
+      'role="tablist"',
+      'class="tab-list"',
+      'aria-selected="true"',
+      'class="tab-changed"',
+      'role="tabpanel"',
+      '>Money in<',
+    ],
+    ['>Everything<'],
   ],
 ];
 

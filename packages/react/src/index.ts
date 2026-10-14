@@ -75,6 +75,16 @@ export {
   type SegmentedControlProps,
   type SegmentedControlSize,
 } from './segmented-control';
+export {
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
+  type TabListProps,
+  type TabPanelProps,
+  type TabProps,
+  type TabsProps,
+} from './tabs';
 export type { AccessibleName, AriaName } from './utils/accessible-name';
 export {
   Card,

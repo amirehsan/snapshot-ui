@@ -1,67 +1,31 @@
 'use client';
 
-import { Eyebrow } from '@snapshot-ui/react';
-import { useId, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
+import { Eyebrow, Tab, TabList, TabPanel, Tabs } from '@snapshot-ui/react';
+import type { ReactElement, ReactNode } from 'react';
 
-const TABS = ['Preview', 'Code'] as const;
-
-/** Preview and Code as WAI-ARIA tabs: arrow keys move, the selected tab is the ink pill. */
+/**
+ * Preview and Code as the library's own Tabs, so a docs page never draws a second tab look. Both panels stay in
+ * the page, force-mounted: the one not selected is inert, and tabs.css hides it.
+ */
 export function PreviewTabs({ preview, code }: { preview: ReactNode; code: ReactNode }): ReactElement {
-  const id = useId();
-  const [selected, setSelected] = useState<(typeof TABS)[number]>('Preview');
-
-  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-    event.preventDefault();
-    const next = selected === 'Preview' ? 'Code' : 'Preview';
-    setSelected(next);
-    document.getElementById(`${id}-tab-${next}`)?.focus();
-  };
-
   return (
-    <div className="preview">
+    <Tabs className="preview" defaultSelectedKey="preview">
       <div className="preview-head">
         <Eyebrow>Example</Eyebrow>
-        <div className="tabs" role="tablist" aria-label="Example">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              id={`${id}-tab-${tab}`}
-              className="tab"
-              type="button"
-              role="tab"
-              aria-selected={selected === tab}
-              aria-controls={`${id}-panel-${tab}`}
-              tabIndex={selected === tab ? 0 : -1}
-              onClick={() => {
-                setSelected(tab);
-              }}
-              onKeyDown={onKeyDown}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        <TabList aria-label="Example">
+          <Tab id="preview">Preview</Tab>
+          <Tab id="code">Code</Tab>
+        </TabList>
       </div>
-      <div
-        id={`${id}-panel-Preview`}
-        role="tabpanel"
-        aria-labelledby={`${id}-tab-Preview`}
-        hidden={selected !== 'Preview'}
-      >
+      <TabPanel id="preview" shouldForceMount>
         <div className="stage">{preview}</div>
         <div className="stage-bar">
           <span>Follows the page theme and corners</span>
         </div>
-      </div>
-      <div
-        id={`${id}-panel-Code`}
-        role="tabpanel"
-        aria-labelledby={`${id}-tab-Code`}
-        hidden={selected !== 'Code'}
-      >
+      </TabPanel>
+      <TabPanel id="code" shouldForceMount>
         {code}
-      </div>
-    </div>
+      </TabPanel>
+    </Tabs>
   );
 }

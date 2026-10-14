@@ -847,6 +847,64 @@ test('a multi-select keeps its list open, empties its input, and removes a tag o
   await expect(field).toBeFocused();
 });
 
+test('link tabs follow their link through the router, and the arrows only move focus', async ({ page }) => {
+  await visit(page, '/docs/components/tabs');
+  // A marker on the window survives a client-side navigation and is lost to a full page load.
+  await page.evaluate(() => {
+    (window as Window & { tabsMarker?: boolean }).tabsMarker = true;
+  });
+  const example = page.locator('.stage .tabs').filter({ has: page.locator('a.tab') });
+  const all = example.getByRole('tab', { name: 'All' });
+  const income = example.getByRole('tab', { name: 'Income' });
+  await expect(income).toHaveAttribute('href', '/docs/components/tabs?view=income');
+  await scrolledTo(all);
+  await expect(all).toHaveAttribute('aria-selected', 'true');
+  await all.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(example.getByRole('tab', { name: 'Spending' })).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expect(income).toBeFocused();
+  await expect(page).toHaveURL(/\/docs\/components\/tabs$/);
+  await expect(all).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/docs\/components\/tabs\?view=income$/);
+  await expect(income).toHaveAttribute('aria-selected', 'true');
+  await expect(example.getByRole('tabpanel', { name: 'Income' })).toContainText('Money in');
+  expect(await page.evaluate(() => (window as Window & { tabsMarker?: boolean }).tabsMarker)).toBe(true);
+});
+
+test('a tab row that does not fit scrolls inside itself to its selected tab', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await visit(page, '/docs/components/tabs');
+  const example = page.locator('.stage .tabs').filter({ has: page.getByRole('tab', { name: 'Archived' }) });
+  const list = example.locator('.tab-list');
+  await scrolledTo(list);
+  await expect.poll(() => list.evaluate((element) => Math.abs(element.scrollLeft))).toBeGreaterThan(0);
+  const room = await list.boundingBox();
+  const last = await example.getByRole('tab', { name: 'Archived' }).boundingBox();
+  if (!room || !last) throw new Error('No tab row drawn');
+  expect(last.x).toBeGreaterThanOrEqual(room.x);
+  expect(last.x + last.width).toBeLessThanOrEqual(room.x + room.width);
+  expect(await sideways(page)).toBe(0);
+});
+
+test.describe('the tabs page without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('a tab row arrives from the server starting at its first tab', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto('/docs/components/tabs');
+    const example = page.locator('.stage .tabs').filter({ has: page.getByRole('tab', { name: 'Archived' }) });
+    await expect(example.getByRole('tab', { name: 'Archived' })).toHaveAttribute('aria-selected', 'true');
+    const room = await example.locator('.tab-list').boundingBox();
+    const first = await example.getByRole('tab', { name: 'All' }).boundingBox();
+    const last = await example.getByRole('tab', { name: 'Archived' }).boundingBox();
+    if (!room || !first || !last) throw new Error('No tab row drawn');
+    expect(first.x).toBeGreaterThanOrEqual(room.x);
+    expect(last.x + last.width).toBeGreaterThan(room.x + room.width);
+  });
+});
+
 test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
   await visit(page, '/docs/components/text-area');
   const field = fieldNamed(page, 'About the workspace');
@@ -1248,7 +1306,7 @@ test('reduced motion stops the shell transitions', async ({ page }) => {
   await visit(page);
   await expect(page.locator('.rail')).not.toHaveCSS('transition-duration', '0s');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const selector of ['.rail', '.workspace', '.scrim', '.tabs', '.icon-button']) {
+  for (const selector of ['.rail', '.workspace', '.scrim', '.tab-list', '.icon-button']) {
     await expect(page.locator(selector).first()).toHaveCSS('transition-duration', '0s');
   }
 });
@@ -1833,7 +1891,7 @@ test('the toast page shows a toast that is announced politely and dismissed', as
   // Still announced with the first example switched to its code: the host is not in that hidden tab panel.
   await page.getByRole('tab', { name: 'Code' }).first().click();
   await page.getByRole('list', { name: 'Accounts' }).getByRole('button', { name: 'Remove Savings' }).click();
-  expect(await host.evaluate((element) => element.closest('[hidden]'))).toBeNull();
+  expect(await host.evaluate((element) => element.closest('[hidden], [data-inert]'))).toBeNull();
   await expect(host).toContainText('Savings removed');
 });
 
