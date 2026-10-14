@@ -701,6 +701,40 @@ describe('the search field', () => {
   });
 });
 
+describe('the select', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The trigger is the input's raised pill: its value is ink, its chevron and an option's icon slate. The list is
+  // the Menu's float panel, its rows ink and slate, the chosen row canvas on the ink pill. The gate holds all of it.
+  it('cites ink and slate on raised and on float, and canvas on ink, which the gate holds at the text minimum', () => {
+    for (const ground of ['raised', 'float']) {
+      for (const text of ['ink', 'slate']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+  });
+
+  // The filter's divider is a separator inside the panel, not a control's boundary, so it is recorded and not gated.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    expect(measured('light', 'ink', 'raised'), 'the value, light').toBeCloseTo(18.43, 2);
+    expect(measured('dark', 'ink', 'raised'), 'the value, dark').toBeCloseTo(15.36, 2);
+    expect(measured('light', 'slate', 'raised'), 'the chevron and the icon, light').toBeCloseTo(5.49, 2);
+    expect(measured('dark', 'slate', 'raised'), 'the chevron and the icon, dark').toBeCloseTo(6.44, 2);
+    expect(measured('light', 'divider', 'float'), 'the filter divider, light').toBeCloseTo(1.23, 2);
+    expect(measured('dark', 'divider', 'float'), 'the filter divider, dark').toBeCloseTo(1.34, 2);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

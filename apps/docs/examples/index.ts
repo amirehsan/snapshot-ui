@@ -66,6 +66,10 @@ import SearchFieldToolbar from './search-field-toolbar';
 import SegmentedControlBasic from './segmented-control-basic';
 import SegmentedControlStacking from './segmented-control-stacking';
 import SegmentedControlStates from './segmented-control-states';
+import SelectBasic from './select-basic';
+import SelectDetails from './select-details';
+import SelectFilter from './select-filter';
+import SelectStates from './select-states';
 import SheetBasic from './sheet-basic';
 import SheetMore from './sheet-more';
 import SheetSnapPoints from './sheet-snap-points';
@@ -166,6 +170,10 @@ export const examples = {
   'segmented-control-basic': SegmentedControlBasic,
   'segmented-control-stacking': SegmentedControlStacking,
   'segmented-control-states': SegmentedControlStates,
+  'select-basic': SelectBasic,
+  'select-details': SelectDetails,
+  'select-filter': SelectFilter,
+  'select-states': SelectStates,
   'sheet-basic': SheetBasic,
   'sheet-more': SheetMore,
   'sheet-snap-points': SheetSnapPoints,

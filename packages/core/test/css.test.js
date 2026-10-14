@@ -4212,6 +4212,110 @@ describe('src/components/search-field.css', () => {
   });
 });
 
+describe('src/components/select.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.select-trigger {` and `.select-chevron {`
+  // are the start of no earlier rule, so the first match is each part's own rule.
+  const rules = () => closeUp(stripComments(read('src/components/select.css')));
+
+  it('lays the trigger out as a row of the value and the chevron, in one-class rules', () => {
+    const trigger = blockAfter(rules(), '.select-trigger {');
+    for (const declaration of [
+      'display: flex;',
+      'align-items: center;',
+      'gap: var(--spacing-part);',
+      'padding-inline: 1.5rem 1rem;',
+      'text-align: start;',
+    ]) {
+      expect(trigger, declaration).toContain(declaration);
+    }
+    // One class, after input.css: it beats the input's padding by order and none of the input's states.
+    expect(rules()).not.toMatch(/\.select-trigger\.input|\.input\.select-trigger/);
+  });
+
+  it('keeps the not-allowed cursor of a disabled trigger', () => {
+    const css = rules();
+    expect(blockAfter(css, '.select-trigger:not(:disabled, [data-disabled]) {')).toContain(
+      'cursor: pointer;',
+    );
+    expect(blockAfter(css, '.select-trigger {')).not.toContain('cursor');
+  });
+
+  it('ellipsizes the value on one line and draws the placeholder taupe', () => {
+    const css = rules();
+    const value = blockAfter(css, '.select-value {');
+    expect(value).toContain('min-width: 0;');
+    expect(value).toContain('white-space: nowrap;');
+    expect(value).toContain('overflow: hidden;');
+    expect(blockAfter(css, '.select-value-label {')).toContain('text-overflow: ellipsis;');
+    expect(blockAfter(css, '.select-value[data-placeholder] {')).toContain('color: var(--color-taupe);');
+    // Named only by aria-label, the placeholder is the only words shown, so it is slate (open question 3).
+    expect(blockAfter(css, '.select[data-unlabelled] .select-value[data-placeholder] {')).toContain(
+      'color: var(--color-slate);',
+    );
+  });
+
+  it('turns the chevron half a turn while open, in 140ms, and not under reduced motion', () => {
+    const css = rules();
+    const chevron = blockAfter(css, '.select-chevron {');
+    expect(chevron).toContain('color: var(--color-slate);');
+    expect(chevron).toContain('transition: rotate 140ms ease;');
+    expect(blockAfter(css, '.select-chevron svg {')).toContain('width: 16px;');
+    expect(blockAfter(css, '.select[data-open] .select-chevron {')).toContain('rotate: 180deg;');
+    const reduced = blockAfter(css, '@media (prefers-reduced-motion: reduce)');
+    expect(blockAfter(reduced, '.select-chevron {')).toContain('transition: none;');
+  });
+
+  it('never mirrors the chevron', () => {
+    const css = rules();
+    expect(css).not.toContain('scale');
+    expect(css).not.toContain('rtl');
+  });
+
+  it('steps the filter row down to the control size, with a divider under it', () => {
+    const filter = blockAfter(rules(), '.select-filter {');
+    expect(filter).toContain('--size-field: var(--size-control);');
+    expect(filter).toContain('border-block-end: 1px solid var(--color-divider);');
+    expect(filter).toContain('padding: var(--spacing-part);');
+    expect(filter).toContain('flex: none;');
+  });
+
+  it('draws the empty line in slate at the small step', () => {
+    const empty = blockAfter(rules(), '.picker-empty {');
+    for (const declaration of [
+      'padding: 0.5rem 0.75rem;',
+      'color: var(--color-slate);',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: var(--text-small--font-weight);',
+    ]) {
+      expect(empty, declaration).toContain(declaration);
+    }
+  });
+
+  it('writes no row CSS: the list is menu.css', () => {
+    // A row part appears only under the trigger, where the chosen option's icon is drawn.
+    const selectors = [...rules().matchAll(/([^{}]+)\{/g)].map((match) => match[1].trim());
+    // A selector list split at its own commas, not at those inside :is() or :not().
+    const parts = (selector) => selector.split(/,(?![^(]*\))/).map((part) => part.trim());
+    const rows = selectors.flatMap(parts).filter((part) => part.includes('.menu-'));
+    expect(rows.length).toBeGreaterThan(0);
+    for (const part of rows) expect(part).toContain('.select-trigger');
+  });
+
+  it('draws the chevron CanvasText, and GrayText when disabled, in forced colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(blockAfter(forced, '.select-chevron, .select-trigger .menu-item-icon {')).toContain(
+      'color: CanvasText;',
+    );
+    expect(
+      blockAfter(
+        forced,
+        '.select-trigger:is(:disabled, [data-disabled]) :is(.select-chevron, .menu-item-icon) {',
+      ),
+    ).toContain('color: GrayText;');
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

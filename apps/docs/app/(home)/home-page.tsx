@@ -685,7 +685,9 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/segmented-control">
                   Segmented control
                 </Link>
-                <span className="chip">Select</span>
+                <Link className="chip" href="/docs/components/select">
+                  Select
+                </Link>
                 <span className="chip">Combo box</span>
                 <span className="chip">Tag input</span>
               </div>
@@ -809,6 +811,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/radio-group">Radio group</Link>
                 <Link href="/docs/components/search-field">Search field</Link>
                 <Link href="/docs/components/segmented-control">Segmented control</Link>
+                <Link href="/docs/components/select">Select</Link>
                 <Link href="/docs/components/sheet">Sheet</Link>
                 <Link href="/docs/components/sidebar">Sidebar</Link>
                 <Link href="/docs/components/spinner">Spinner</Link>

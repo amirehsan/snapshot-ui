@@ -1,0 +1,102 @@
+/*
+ * Select: a field whose control is the text input's pill drawn on a button, opening the Menu's float list,
+ * derived in docs/design-system.md ("Select"). The trigger wears .input, so every edge and state input.css
+ * draws reaches it through the field's root; this file lays out its value and chevron and nothing else, in
+ * one-class rules after input.css. The value is one line, ellipsized; the placeholder is taupe. The chevron
+ * turns half a turn while the list is open. The list is menu.css's, with a filter row that steps the field
+ * size down to the control size for its subtree, so a field inside a popup is 40px (36px compact), and an
+ * empty line in slate, which the combo box and the multi-select share.
+ */
+@layer components {
+  .select-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    padding-inline: 1.5rem 1rem;
+    text-align: start;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* A disabled trigger keeps the input's not-allowed cursor. */
+  .select-trigger:not(:disabled, [data-disabled]) {
+    cursor: pointer;
+  }
+
+  .select-value {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .select-value-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .select-value[data-placeholder] {
+    color: var(--color-taupe);
+  }
+
+  /* Named only by aria-label: the placeholder is the only words a sighted reader gets, so slate (open question 3). */
+  .select[data-unlabelled] .select-value[data-placeholder] {
+    color: var(--color-slate);
+  }
+
+  .select-chevron {
+    display: inline-flex;
+    flex: none;
+    color: var(--color-slate);
+    transition: rotate 140ms ease;
+  }
+
+  .select-chevron svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .select[data-open] .select-chevron {
+    rotate: 180deg;
+  }
+
+  .select-trigger:is(:disabled, [data-disabled]) :is(.select-chevron, .menu-item-icon) {
+    color: var(--color-taupe);
+  }
+
+  .select-filter {
+    --size-field: var(--size-control);
+
+    flex: none;
+    padding: var(--spacing-part);
+    border-block-end: 1px solid var(--color-divider);
+  }
+
+  .picker-empty {
+    padding: 0.5rem 0.75rem;
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+  }
+
+  @media (forced-colors: active) {
+    .select-chevron,
+    .select-trigger .menu-item-icon {
+      color: CanvasText;
+    }
+
+    .select-trigger:is(:disabled, [data-disabled]) :is(.select-chevron, .menu-item-icon) {
+      color: GrayText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .select-chevron {
+      transition: none;
+    }
+  }
+}

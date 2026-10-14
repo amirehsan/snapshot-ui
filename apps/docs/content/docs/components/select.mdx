@@ -1,0 +1,127 @@
+---
+title: Select
+description: "Choose one value from a list: the chosen option's icon and label in a field, a filter from nine options, hints and amounts on the rows."
+icon: ChevronsUpDown
+---
+
+<Section>
+
+## Basic
+
+Pass a label, a hint if the label cannot say it all, and the options as `PickerOption`s. The field shows "Choose an option" until one is chosen, or the `placeholder` you pass. A select is for one value from a list known in advance; when there are only a few short options and they fit side by side, a segmented control shows them all at once and takes one press.
+
+<Preview name="select-basic" />
+
+</Section>
+
+<Section>
+
+## Rows
+
+An option takes the menu's row: an `icon` at the start, a `description` under the label for options that need telling apart, and a preformatted `end` value, such as this month's total, at the end. Group options with `PickerSection`, whose title is an overline heading. The trigger shows the chosen option's icon and label only, never its hint or its amount. A string label is also the option's text value, which typing, the filter and the trigger read; a label that is not a string needs a `textValue`.
+
+<Preview name="select-details" />
+
+</Section>
+
+<Section>
+
+## Filtering
+
+From nine options the list opens with a filter field at its top. An option stays when every word typed appears in it, in any order, with case and accents aside, so "cafe" finds "Café" and "rent home" finds "Home rent"; a section with nothing left hides, and "No matches" shows when nothing stays. Pass `isFilterable` to show the field on a shorter list, or `isFilterable={false}` to keep it off a longer one. The field is empty each time the list opens. On a phone the filter does not take focus as the list opens, so the keyboard does not cover a list that is often short enough to scroll; the field is one tap away.
+
+<Preview name="select-filter" />
+
+</Section>
+
+<Section>
+
+## States
+
+A changed select shows the Changed chip and the light signal orange edge until the value is saved. An invalid one draws the error edge and its error line. A disabled one is recessed, with its chevron in taupe.
+
+<Preview name="select-states" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Keep the choice in the URL, so a filtered view can be shared, reloaded and gone back to. Pass the search parameter as `value` and write the URL in `onChange`. With the Next App Router:
+
+```tsx
+'use client';
+
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { PickerOption, Select } from '@snapshot-ui/react';
+
+export function CategoryFilter() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  return (
+    <Select
+      label="Category"
+      value={searchParams.get('category') ?? 'any'}
+      onChange={(key) => {
+        const params = new URLSearchParams(searchParams);
+        if (key === null || key === 'any') params.delete('category');
+        else params.set('category', String(key));
+        router.replace(`${pathname}?${params.toString()}`);
+      }}
+    >
+      <PickerOption id="any">Any category</PickerOption>
+      <PickerOption id="groceries">Groceries</PickerOption>
+      <PickerOption id="rent">Rent</PickerOption>
+    </Select>
+  );
+}
+```
+
+The select takes `value`, `defaultValue` and `onChange`; React Aria's older `selectedKey`, `defaultSelectedKey` and `onSelectionChange` are deprecated and not accepted. A select has no clear action of its own: when "any" is a real answer, add it as an option, as above. In a plain form, give it a `name` and the chosen key is submitted with the form.
+
+When the options come from data, pass them as `items` and render each with a function child. Each item needs an `id`, or a `key`, which becomes the option's key:
+
+```tsx
+<Select label="Account" items={accounts}>
+  {(account) => <PickerOption end={account.balance}>{account.name}</PickerOption>}
+</Select>
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+Every React Aria Select prop is accepted, except the deprecated selection names. These are the ones Snapshot UI adds or shapes.
+
+<PropsTable label="Select props" path="../../packages/react/src/select/Select.tsx" type="Pick<SelectBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'items' | 'isFilterable' | 'labels' | 'placement' | 'name' | 'isRequired' | 'isDisabled' | 'isInvalid' | 'disabledKeys' | 'className' | 'popoverClassName'>" />
+
+<PropsTable label="PickerOption props" path="../../packages/react/src/picker/PickerOption.tsx" type="Pick<PickerOptionProps, 'id' | 'children' | 'description' | 'icon' | 'end' | 'textValue' | 'isDisabled' | 'className'>" />
+
+<PropsTable label="PickerSection props" path="../../packages/react/src/picker/PickerSection.tsx" type="Pick<PickerSectionProps, 'title' | 'items' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The trigger is a button with `aria-haspopup="listbox"`, named by its value and its label, so a screen reader hears "Groceries, Category, button". It opens a `listbox` of `option`s. An option is named by its label and described by its end value and its hint. The chosen option has a check as well as the filled row, so the choice never rests on color alone. With a filter, focus stays in the field and the arrows move the active option. React Aria's own announcements, such as the list's name while it is filtered, come from its own strings, which have no Persian.
+
+<Keys rows={[['Enter Space Down Up', 'Open the list.'], ['A-Z', 'Chooses the next option starting with the letter, without opening.'], ['Left Right', 'Choose the previous or the next option, without opening.'], ['Down Up Home End PageUp PageDown', 'Move through the open list, stopping at the ends.'], ['Enter Space', 'Choose the option and close.'], ['Escape', 'Clears the filter, then closes and returns focus.'], ['Tab', 'Stays in the open list; Escape closes it.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps selects in the system.
+
+<Rules dos={['Use a select for one value from a list known in advance.', 'Give options a hint where they need telling apart.', 'Pass amounts and counts preformatted, as the end value.']} donts={['Never use a select for two or three options that fit side by side. Use a segmented control.', 'Never make an option that navigates. That is a menu item.', 'Never use the placeholder as the only label on a form.']} />
+
+</Section>
