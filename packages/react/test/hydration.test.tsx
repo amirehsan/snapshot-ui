@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Calendar, RangeCalendar } from '../src/calendar';
 import { NumberField } from '../src/number-field';
 
 /**
@@ -30,6 +31,34 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
     <NumberField label="Guests" hasStepper value={2} />,
     (container) => {
       expect(container.querySelector('.number-field-input')).toHaveValue('2');
+    },
+  ],
+  [
+    'Calendar',
+    <Calendar aria-label="Date" value="2026-09-14" today="2026-09-18" />,
+    (container) => {
+      expect(container.querySelector('[data-face]')).toBeNull();
+      expect(container.querySelector('[role="grid"]')).not.toBeNull();
+      expect(container.querySelector('.calendar-heading')).toHaveTextContent('September 2026');
+      const marked = [...container.querySelectorAll('.calendar-day-number[data-today]')];
+      expect(marked.map((number) => number.textContent)).toEqual(['18']);
+    },
+  ],
+  [
+    'RangeCalendar',
+    <RangeCalendar
+      aria-label="Statement period"
+      value={{ start: '2026-09-01', end: '2026-09-30' }}
+      today="2026-09-18"
+      presets={[{ id: 'this-month', label: 'This month', range: { start: '2026-09-01', end: '2026-09-30' } }]}
+    />,
+    (container) => {
+      expect(container.querySelector('[data-face]')).toBeNull();
+      expect(container.querySelector('[role="grid"]')).not.toBeNull();
+      expect(container.querySelector('.calendar-heading')).toHaveTextContent('September 2026');
+      expect(container.querySelector('.calendar-preset')).toHaveAttribute('aria-pressed', 'true');
+      const marked = [...container.querySelectorAll('.calendar-day-number[data-today]')];
+      expect(marked.map((number) => number.textContent)).toEqual(['18']);
     },
   ],
 ];

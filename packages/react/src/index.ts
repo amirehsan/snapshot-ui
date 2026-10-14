@@ -57,6 +57,15 @@ export {
   type NumberFieldProps,
 } from './number-field';
 export {
+  Calendar,
+  RangeCalendar,
+  type CalendarLabels,
+  type CalendarProps,
+  type DateRange,
+  type DateRangePreset,
+  type RangeCalendarProps,
+} from './calendar';
+export {
   Checkbox,
   CheckboxGroup,
   type CheckboxBaseProps,

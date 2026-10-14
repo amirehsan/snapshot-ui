@@ -176,6 +176,29 @@ test.describe('forced colors', () => {
     await expectVisibleRing(group.locator('.segmented-option[data-selected]'));
   });
 
+  test('a chosen range is Highlight at its ends with a Highlight band edge', async ({ page }) => {
+    await visit(page, '/docs/components/calendar');
+    const system = await systemColors(page);
+    const calendar = page
+      .locator('.stage .range-calendar')
+      .filter({ has: page.locator('[data-selection-start]') })
+      .first();
+    for (const end of ['[data-selection-start]', '[data-selection-end]']) {
+      const drawn = await paint(calendar.locator(`.calendar-day${end} .calendar-day-number`).first());
+      expect(drawn.fill, end).toBe(system.highlight);
+      expect(drawn.text, end).toBe(system.highlightText);
+    }
+    const middle = calendar
+      .locator('[aria-selected="true"] > .calendar-day:not([data-selection-start]):not([data-selection-end])')
+      .first();
+    expect(await middle.evaluate((element) => getComputedStyle(element).borderTopColor)).toBe(
+      system.highlight,
+    );
+    expect(await middle.evaluate((element) => getComputedStyle(element).borderBottomColor)).toBe(
+      system.highlight,
+    );
+  });
+
   test('a pressed sign button is Highlight and the symbol CanvasText', async ({ page }) => {
     await visit(page, '/docs/components/number-field');
     const system = await systemColors(page);
@@ -632,6 +655,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   'bottom-tab-bar':
     'a tab label is one word on one line and ellipsizes as a last resort; the name holds the full label',
   button: 'a label is a short command on one line by design (white-space: nowrap), not text that wraps',
+  calendar: 'a calendar draws dates and the app preset words, which wrap as pills',
   'command-palette':
     "its text is in a portal that opens on a press or a key; the Narrow story's 375px baseline pins its wrapping",
   'confirm-dialog':
@@ -742,6 +766,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   badge: ['.stage .badge'],
   'bottom-tab-bar': ['.stage .tab-bar'],
   button: ['.stage .button'],
+  // With scripts off an inline calendar is its face: an empty frame of its final size.
+  calendar: ['.stage .calendar[data-face]'],
   card: ['.stage .card', '.stage .card-title', '.stage .card-note'],
   checkbox: ['.stage .checkbox-box'],
   'collapsible-card': ['.stage .card-collapsible', '.stage .card-toggle', '.stage .card-chevron'],

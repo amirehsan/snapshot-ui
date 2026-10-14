@@ -181,13 +181,14 @@ describe('src/styles.css', () => {
   });
 
   it('imports the filter files after the picker files, in order', () => {
-    // number-field.css is required; the calendar, the range picker, the chip and the bar are checked once they
-    // exist. Each comes after input.css, so a one-class override of the input wins by order.
+    // number-field.css and calendar.css are required; the range picker, the chip and the bar are checked once
+    // they exist. Each comes after input.css, so a one-class override of the input wins by order.
     const at = (file) => entry.indexOf(`'./components/${file}'`);
     expect(at('pagination.css')).toBeGreaterThanOrEqual(0);
     expect(at('number-field.css')).toBeGreaterThan(at('pagination.css'));
-    let previous = at('number-field.css');
-    for (const file of ['calendar.css', 'date-range-picker.css', 'filter-chip.css', 'filter-bar.css']) {
+    expect(at('calendar.css')).toBeGreaterThan(at('number-field.css'));
+    let previous = at('calendar.css');
+    for (const file of ['date-range-picker.css', 'filter-chip.css', 'filter-bar.css']) {
       if (!components.includes(file)) continue;
       expect(at(file), file).toBeGreaterThan(previous);
       previous = at(file);
@@ -5159,6 +5160,218 @@ describe('src/components/number-field.css', () => {
     const pressed = blockAfter(forced, `${PRESSED} {`);
     expect(pressed).toContain('background-color: Highlight;');
     expect(pressed).toContain('color: HighlightText;');
+  });
+});
+
+describe('src/components/calendar.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/calendar.css')));
+  const outside = () => closeUp(outsideForcedColors(read('src/components/calendar.css')));
+  const SINGLE =
+    ".calendar:not(.range-calendar) :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day)";
+  const ENDS = '.range-calendar .calendar-day:is([data-selection-start], [data-selection-end])';
+  const MIDDLE =
+    ".range-calendar :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day):not([data-selection-start], [data-selection-end])";
+
+  it('sizes the calendar seven controls wide at most, and the face to its final aspect', () => {
+    const css = rules();
+    const calendar = blockAfter(css, '.calendar {');
+    expect(calendar).toContain('width: min(100%, calc(7 * var(--size-control)));');
+    expect(calendar).toContain('box-sizing: border-box;');
+    expect(calendar).toContain('color: var(--color-ink);');
+    expect(blockAfter(css, '.calendar[data-face] {').trim()).toBe('aspect-ratio: 7 / 8;');
+  });
+
+  it('lays the grid out fixed, with square days', () => {
+    const css = rules();
+    const grid = blockAfter(css, '.calendar-grid {');
+    expect(grid).toContain('width: 100%;');
+    expect(grid).toContain('table-layout: fixed;');
+    expect(grid).toContain('border-collapse: collapse;');
+    expect(blockAfter(css, '.calendar-grid :is(th, td) {')).toContain('padding: 0;');
+    expect(blockAfter(css, '.calendar-day {')).toContain('aspect-ratio: 1;');
+    const number = blockAfter(css, '.calendar-day-number {');
+    expect(number).toContain('font-variant-numeric: tabular-nums;');
+    expect(number).toContain('unicode-bidi: isolate;');
+    expect(number).toContain('font-size: var(--text-small);');
+  });
+
+  it('keeps the shape pill on days and presets', () => {
+    const css = rules();
+    expect(blockAfter(css, '.calendar-day-number {')).toContain('border-radius: var(--radius-pill);');
+    const preset = blockAfter(css, '.calendar-preset {');
+    expect(preset).toContain('border-radius: var(--radius-pill);');
+    expect(preset).toContain('min-height: var(--size-control);');
+    expect(preset).toContain('border: 1px solid var(--color-boundary);');
+    expect(preset).toContain('font-weight: 500;');
+    // Hit at the target in height, the formula every control shares.
+    expect(blockAfter(css, '.calendar-preset::before {')).toContain(
+      'inset-block: min(0px, (100% - var(--size-target)) / 2);',
+    );
+    expect(css.match(/border-radius:[^;]*;/g)?.every((each) => each.includes('var(--radius-pill)'))).toBe(
+      true,
+    );
+  });
+
+  it('draws today as a boundary ring and weight 700 on the number data-today, never on the cell data-today', () => {
+    const css = rules();
+    const today = blockAfter(css, '.calendar-day-number[data-today] {');
+    expect(today).toContain('border-color: var(--color-boundary);');
+    expect(today).toContain('font-weight: 700;');
+    // React Aria's own mark reads the device's zone, so nothing keys on it (plan, spec correction 14).
+    expect(css).not.toMatch(/\.calendar-day\[data-today\]/);
+    expect(css).not.toMatch(/(?<!-number)\[data-today\]/);
+    // The weights the system allows, and nothing else.
+    for (const [, weight] of css.matchAll(/font-weight: (\d+);/g))
+      expect(['450', '500', '700']).toContain(weight);
+  });
+
+  it('fills a single day and the range ends ink with canvas text, keyed on data-selected and aria-selected', () => {
+    const css = outside();
+    const fill = blockAfter(css, `${SINGLE} .calendar-day-number, ${ENDS} .calendar-day-number {`);
+    expect(fill).toContain('border-color: var(--color-ink);');
+    expect(fill).toContain('background-color: var(--color-ink);');
+    expect(fill).toContain('color: var(--color-canvas);');
+    // A chosen today keeps its weight and turns its ring canvas, an outline inside the fill and never a shadow.
+    const chosenToday = blockAfter(
+      css,
+      `${SINGLE} .calendar-day-number[data-today], ${ENDS} .calendar-day-number[data-today] {`,
+    );
+    expect(chosenToday).toContain('outline: 1px solid var(--color-canvas);');
+    expect(chosenToday).toContain('outline-offset: -3px;');
+  });
+
+  it('runs a 10% ink band under the middle days and the ends inner halves, with logical insets', () => {
+    const css = outside();
+    const band = 'background-color: color-mix(in srgb, var(--color-ink) 10%, transparent);';
+    expect(blockAfter(css, `${MIDDLE} {`)).toContain(band);
+    expect(blockAfter(css, `${MIDDLE} .calendar-day-number {`)).toContain('font-weight: 500;');
+    const halves = blockAfter(
+      css,
+      '.range-calendar .calendar-day[data-selection-start]:not([data-selection-end])::before, .range-calendar .calendar-day[data-selection-end]:not([data-selection-start])::before {',
+    );
+    expect(halves).toContain(band);
+    expect(halves).toContain('inset-block: 0;');
+    expect(
+      blockAfter(
+        css,
+        '.range-calendar .calendar-day[data-selection-start]:not([data-selection-end])::before {',
+      ),
+    ).toContain('inset-inline: 50% 0;');
+    // Its own rule, after the shared one, whose selector list ends with the same text.
+    expect(
+      blockAfter(
+        css,
+        '} .range-calendar .calendar-day[data-selection-end]:not([data-selection-start])::before {',
+      ),
+    ).toContain('inset-inline: 0 50%;');
+    expect(css).not.toMatch(/(?<![\w-])(left|right)\s*:/);
+  });
+
+  it('rings a day inside it, and an ink day with the canvas ring', () => {
+    const css = rules();
+    const ring = blockAfter(
+      css,
+      '.calendar-day:is(:focus-visible, [data-focus-visible]) .calendar-day-number {',
+    );
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+    const inverted = blockAfter(
+      css,
+      `.calendar:not(.range-calendar) .calendar-day[data-selected]:is(:focus-visible, [data-focus-visible]) .calendar-day-number, ${ENDS}:is(:focus-visible, [data-focus-visible]) .calendar-day-number {`,
+    );
+    expect(inverted).toContain('outline-color: var(--color-canvas);');
+    expect(inverted).toContain(
+      'outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));',
+    );
+    const preset = blockAfter(css, '.calendar-preset:is(:focus-visible, [data-focus-visible]) {');
+    expect(preset).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(preset).toContain('outline-offset: var(--focus-ring-offset);');
+    expect(
+      blockAfter(
+        css,
+        ".calendar-preset:is([data-selected], [aria-pressed='true']):is(:focus-visible, [data-focus-visible]) {",
+      ),
+    ).toContain('outline-color: var(--color-canvas);');
+    const pressed = blockAfter(outside(), ".calendar-preset:is([data-selected], [aria-pressed='true']) {");
+    expect(pressed).toContain('background-color: var(--color-ink);');
+    expect(pressed).toContain('color: var(--color-canvas);');
+  });
+
+  it('draws unavailable days taupe and struck through, and disabled ones taupe', () => {
+    const css = outside();
+    expect(
+      blockAfter(css, '.calendar-day:is([data-disabled], [data-unavailable]) .calendar-day-number {'),
+    ).toContain('color: var(--color-taupe);');
+    expect(blockAfter(css, '.calendar-day:is([data-disabled], [data-unavailable]) {')).toContain(
+      'cursor: not-allowed;',
+    );
+    expect(blockAfter(css, '.calendar-day[data-unavailable] .calendar-day-number {')).toContain(
+      'text-decoration: line-through;',
+    );
+    const preset = blockAfter(css, '.calendar-preset:is(:disabled, [data-disabled]) {');
+    expect(preset).toContain('color: var(--color-taupe);');
+    expect(preset).toContain('cursor: not-allowed;');
+    // Taupe is for disabled text only; signal, clay, error and success have no place here.
+    expect(css).not.toMatch(/--color-(?:error|gain|success|warning|signal|clay)/);
+  });
+
+  it('hides days outside the month and keeps their place', () => {
+    expect(blockAfter(rules(), '.calendar-day[data-outside-month] {').trim()).toBe('visibility: hidden;');
+  });
+
+  it('mirrors the month chevrons under [dir=rtl] only', () => {
+    const css = rules();
+    expect(blockAfter(css, "[dir='rtl'] .calendar-header .icon-button svg {").trim()).toBe('scale: -1 1;');
+    expect(css.match(/scale:/g)).toHaveLength(1);
+  });
+
+  it('hovers inside @media (hover: hover) only, and presses with the hover look', () => {
+    const css = rules();
+    const wash = 'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);';
+    const hover = blockAfter(css, '@media (hover: hover)');
+    expect(hover).toContain(':is(:hover, [data-hovered])');
+    expect(
+      stripComments(read('src/components/calendar.css')).match(/:is\(:hover, \[data-hovered\]\)/g),
+    ).toHaveLength(2);
+    expect(
+      blockAfter(
+        css,
+        '.calendar-day:is(:active, [data-pressed]):not([data-disabled], [data-unavailable], [data-selected]) .calendar-day-number {',
+      ),
+    ).toContain(wash);
+    expect(
+      blockAfter(
+        css,
+        '.calendar-preset:is(:active, [data-pressed]):not(:disabled, [data-disabled], [data-selected]) {',
+      ),
+    ).toContain(wash);
+  });
+
+  it('uses no z-index and no box-shadow', () => {
+    const css = stripComments(read('src/components/calendar.css'));
+    expect(css).not.toMatch(/z-index/);
+    expect(css).not.toMatch(/box-shadow/);
+  });
+
+  it('draws the chosen days Highlight, the band edges Highlight, today CanvasText and unavailable days GrayText in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    const chosen = blockAfter(
+      forced,
+      `.calendar:not(.range-calendar) .calendar-day[data-selected] .calendar-day-number, ${ENDS} .calendar-day-number, .calendar-preset:is([data-selected], [aria-pressed='true']) {`,
+    );
+    expect(chosen).toContain('background-color: Highlight;');
+    expect(chosen).toContain('color: HighlightText;');
+    expect(chosen).toContain('border-color: Highlight;');
+    expect(blockAfter(forced, `${MIDDLE} {`)).toContain('border-block: 1px solid Highlight;');
+    expect(blockAfter(forced, '.calendar-day-number[data-today] {')).toContain('border-color: CanvasText;');
+    expect(blockAfter(forced, '.calendar-weekday {')).toContain('color: CanvasText;');
+    expect(
+      blockAfter(
+        forced,
+        '.calendar-day:is([data-disabled], [data-unavailable]) .calendar-day-number, .calendar-preset:is(:disabled, [data-disabled]) {',
+      ),
+    ).toContain('color: GrayText;');
   });
 });
 

@@ -796,6 +796,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/badge">Badge</Link>
                 <Link href="/docs/components/bottom-tab-bar">Bottom tab bar</Link>
                 <Link href="/docs/components/button">Button</Link>
+                <Link href="/docs/components/calendar">Calendar</Link>
                 <Link href="/docs/components/card">Card</Link>
                 <Link href="/docs/components/checkbox">Checkbox</Link>
                 <Link href="/docs/components/collapsible-card">Collapsible card</Link>

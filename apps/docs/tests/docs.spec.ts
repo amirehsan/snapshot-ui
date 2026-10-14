@@ -1102,6 +1102,67 @@ test('a money field shows the decimal keyboard and keeps Home and End for the ca
   await expect(input).toHaveValue('1234.5');
 });
 
+test('a range calendar chooses a range in two presses and a preset in one', async ({ page }) => {
+  await visit(page, '/docs/components/calendar');
+  const calendar = page.getByRole('application', { name: /^Statement period/ });
+  await scrolledTo(calendar);
+  const dayOf = (number: string): Locator =>
+    calendar
+      .locator('.calendar-day:not([data-outside-month])')
+      .filter({ hasText: new RegExp(`^${number}$`) });
+  // It opens on the app's range, the last seven days, with that preset pressed.
+  await expect(calendar.getByRole('button', { name: 'Last 7 days' })).toHaveAttribute('aria-pressed', 'true');
+  await dayOf('3').click();
+  await expect(dayOf('3')).toHaveAttribute('data-selection-start');
+  await expect(calendar.getByRole('button', { name: 'Last 7 days' })).toHaveAttribute('aria-pressed', 'true');
+  await dayOf('9').click();
+  await expect(dayOf('3')).toHaveAttribute('data-selection-start');
+  await expect(dayOf('9')).toHaveAttribute('data-selection-end');
+  await expect(calendar.locator('[aria-selected="true"]')).toHaveCount(7);
+  await expect(calendar.getByRole('button', { name: 'Last 7 days' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+  await calendar.getByRole('button', { name: 'Last month' }).click();
+  await expect(calendar.getByRole('button', { name: 'Last month' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(calendar.locator('.calendar-heading')).toHaveText('August 2026');
+  await expect(calendar.locator('[aria-selected="true"]')).toHaveCount(31);
+});
+
+test('the Persian calendar draws Persian digits, and the two locale extensions draw the Gregorian calendar and Latin digits', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/calendar');
+  const example = page.locator('[data-calendar-persian]');
+  await scrolledTo(example);
+  const headings = example.locator('.calendar-heading');
+  await expect(headings).toHaveCount(3);
+  // fa-IR: Shahrivar 1405 in Persian digits; fa-IR-u-ca-gregory: September 2026 in Persian digits;
+  // fa-IR-u-nu-latn: Shahrivar 1405 in Latin digits.
+  await expect(headings.nth(0)).toHaveText(/۱۴۰۵/);
+  await expect(headings.nth(1)).toHaveText(/۲۰۲۶/);
+  await expect(headings.nth(2)).toHaveText(/1405/);
+  await expect(headings.nth(0)).not.toHaveText(/\d/);
+});
+
+test('a calendar fits a 320px screen without scrolling the page sideways', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await visit(page, '/docs/components/calendar');
+  expect(await sideways(page)).toBe(0);
+  // Each calendar shrinks with the room its stage gives it, with square days, and stays inside the stage.
+  for (const calendar of await page.locator('.stage .calendar').all()) {
+    await scrolledTo(calendar);
+    const box = await calendar.boundingBox();
+    const stage = await calendar.locator('xpath=ancestor::*[contains(@class, "stage")][1]').boundingBox();
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
+      (stage?.x ?? 0) + (stage?.width ?? 0) + 0.5,
+    );
+    const day = await calendar.locator('.calendar-day').first().boundingBox();
+    expect(day?.width ?? 0).toBeCloseTo(day?.height ?? -1, 0);
+  }
+  expect(await sideways(page)).toBe(0);
+});
+
 test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
   await visit(page, '/docs/components/text-area');
   const field = fieldNamed(page, 'About the workspace');

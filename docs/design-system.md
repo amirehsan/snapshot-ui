@@ -6813,3 +6813,159 @@ the entry measured 2.45 kB, the field parts the TextField entry also
 pulls in, the money arithmetic and its face, the input context, the two
 guards, the sign toggle, the hidden input and the two warnings, and the
 rule rounds up to 2.5 kB and adds 0.5 kB.
+
+## Calendar
+
+One month of days that chooses a day or a range: `Calendar` and
+`RangeCalendar`, on React Aria's calendars, with the app's presets and
+the app's today. The document draws no calendar of its own, so this one
+is derived from the controls' size, the pill and the ink fill.
+
+**The width.** `width: min(100%, calc(7 * var(--size-control)))`: seven
+controls wide where there is room, 280px, and 252px under compact
+density, shrinking with the room under it. React Aria's grid is a
+`table`, which a grid template cannot lay out, so it is
+`table-layout: fixed` at the calendar's width, which gives seven equal
+columns, and each day keeps `aspect-ratio: 1` (plan, spec correction
+15). A day is 40px, and 36px compact, wherever there is room; at 320px
+it is 36.29px in a popover (254px of room) and 38.86px in the sheet
+(272px): the one place the 40px target gives way, above WCAG's 24px
+minimum and never under 36px (R4).
+
+**The header.** The month in `--text-action` at weight 500, ink,
+centred between two ghost `IconButton`s, React Aria's previous and next
+slots, named by `labels` ("Previous month", "Next month"). Their 16px
+chevrons mirror under `[dir='rtl']`, the sidebar's rule, so the
+previous month's points outward on either side. The header is a `div`:
+a `header` outside a section is a banner landmark, which axe refuses
+inside the calendar. React Aria's heading is hidden from a reader, who
+hears the month in the root's and the grid's names; React Aria also
+writes its own visually hidden `h2` and next button.
+
+**Weekdays.** `--text-small` at weight 450, slate, React Aria's narrow
+names, not interactive.
+
+**Days.** On the shape's pill, `--radius-pill`, wherever they sit: a
+circle in Rounded, a soft square in Soft and a square in Square. The
+number is `--text-small` with tabular figures, `unicode-bidi: isolate`,
+ink; the number's `span` fills the cell and carries the fill and the
+ring. Hover is the 5% ink wash inside `@media (hover: hover)`, and a
+press shows it too. Days outside the month are `visibility: hidden`:
+React Aria still lays the week out, and their places stay empty.
+
+**Today.** A 1px `--color-boundary` ring on the number and weight 700:
+a shape and a weight, never color alone (ruling 3). The mark is the
+library's: the cell's render function writes `data-today` on the number
+when the day is the app's `today`, compared with `isSameDay`, which
+converts across calendars, or React Aria's own `isToday` when no `today`
+is given. React Aria writes its own `data-today` on the cell from the
+device's zone, which `calendar.css` never keys on, and a test reads the
+file for it (spec correction 14). The opening month is the value's;
+else `today`'s, passed as React Aria's `defaultFocusedValue` only while
+there is no value, since React Aria prefers it to the value (spec
+correction 13); else the device's. React Aria's spoken "Today" follows
+the device, so near midnight across zones the mark and the voice can
+name different days (R7): the docs say to pass `today` whenever the app
+knows its user's zone.
+
+**Chosen.** A single day and a range's two ends are the ink fill with
+canvas text. A chosen today keeps its weight and turns its ring canvas,
+a 1px outline 3px inside the fill, never a shadow. The keyboard's ring
+sits inside the day, `outline-offset: calc(-1 * var(--focus-ring-width))`,
+since the cells touch; on an ink day it is the canvas ring inside the
+fill, the rule for an ink fill, and it replaces today's inner ring.
+
+**The band.** The days between a range's ends sit on
+`color-mix(in srgb, var(--color-ink) 10%, transparent)`, and their
+numbers take weight 500. The band runs under each end's inner half
+through a `::before` with logical insets (`50% 0` at the start, `0 50%`
+at the end), so the range reads as one shape, and the end's number,
+positioned, paints over it by tree order: no z-index. The band is a cue
+(R8): 1.23 against float in light and 1.34 in dark, under 3:1, so the
+filled ends, the weight and `aria-selected` carry the range; ink on the
+band measures 14.97 and 13.04. A stronger band is the fallback if review
+finds the range unreadable.
+
+**Unavailable and out of bounds.** React Aria writes `data-unavailable`
+for a day `isDateUnavailable` refuses and `data-disabled` for one
+outside the bounds; both draw taupe, the color of disabled text, with
+`cursor: not-allowed`, and an unavailable day is also struck through, so
+the state is never color alone.
+
+**Presets.** A wrapping row, `gap: var(--spacing-part)`, of pills
+`--size-control` tall, `padding-inline: 1rem`, a 1px boundary edge,
+`--text-small` at weight 500, ink: FilterChip's pill look. They are
+React Aria's `ToggleButton`s in a `role="group"` named `labels.presets`,
+since a plain button inside a calendar must name one of its slots (spec
+correction 7); `aria-pressed` and `data-selected` are the state and its
+twin the CSS keys on. Pressed, the ink fill with canvas text and the
+canvas ring inside; disabled with the calendar, taupe on a 15% ink
+edge. Each is hit at the target in height by the formula every control
+shares. A press sets the range through React Aria's state, drops a
+half-chosen one, and moves the view to its start; inside a picker the
+same state reaches the picker's range and closes its popover (spec
+correction 17). A preset whose range does not parse is left out, with
+one warning. The library computes no range.
+
+**A range.** The first choice anchors, the second completes, and a
+range of one day is allowed. From the keyboard, the first Enter or Space
+anchors the day and, as React Aria does, moves focus to the next day.
+`commitBehavior="reset"` drops a half-chosen range on a blur out of the
+calendar and on a press released outside it or on anything in it that
+is not a button, the month heading included (spec correction 16), so no
+range the person did not finish is written. Escape drops it too and goes
+on to whatever holds the calendar (spec correction 32).
+`allowsNonContiguousRanges` is never passed.
+
+**Values.** ISO strings in and out: `'2026-09-14'` and `{ start, end }`
+(ruling 2). The wrapper reads each with `@internationalized/date`'s
+`parseDate`, whose pattern and range checks throw; a string that does
+not parse, or a range whose end is before its start, reads as no value
+with one warning, so a hand-edited URL never throws. `onChange`
+receives `toCalendarDate(date).toString()`, the Gregorian ISO date
+whatever calendar the date is in, and `isDateUnavailable` receives the
+ISO date. `@internationalized/date` is a dependency at React Aria's own
+range, `^3.12.4`, so there is one copy and it adds no bytes.
+
+**The Persian calendar.** The locale chooses the calendar and the
+digits: `fa-IR` draws Shahrivar 1405 in Persian digits with the week
+from Saturday, `fa-IR-u-ca-gregory` the Gregorian calendar in Persian
+digits, and `fa-IR-u-nu-latn` Latin digits, all from `Intl` in the
+browser; the values stay Gregorian. `createCalendar` is passed through:
+one that returns `GregorianCalendar` or `PersianCalendar` narrows a
+calendar's bundle, but React Aria's date fields build theirs with its
+full `createCalendar` whatever is passed, so on a page with a date range
+picker every system ships anyway (spec correction 18).
+
+**The face.** On the server and through hydration the root is
+`div.calendar[data-face]` (with `.range-calendar` for a range), empty, at
+the calendar's final size: the width rule and `aspect-ratio: 7 / 8`, six
+weeks, a weekday row and the header, so nothing moves when the grid
+arrives. React Aria's calendar mounts in the next render; the root
+changes element, the one remount the server face allows, and an inline
+calendar holds no focus then. A calendar in a popover or a sheet is
+first rendered in the browser and never shows the face.
+
+**Measured pairs.** Gated: slate on float, the weekdays in a popover,
+5.49 in light and 6.94 in dark, and on canvas 4.84 and 7.26; the
+boundary on float, today's ring, 3.48 and 5.21, and on canvas 3.38 and
+5.34; canvas on ink, a chosen day and its inverted ring, 16.25 and
+19.31. Measured and recorded, not gated: the 10% band against float,
+1.23 and 1.34, a cue, and ink on it, 14.97 and 13.04; ink on the 5% wash
+over float, a hovered day, 16.65 and 15.25. No pair is added to the
+gate.
+
+**Forced colors.** A chosen day, a range's ends and a pressed preset are
+`Highlight` with `HighlightText`; the days between take a 1px
+`Highlight` edge on their top and bottom; today's ring and the weekdays
+are `CanvasText`; unavailable and disabled days and a disabled preset
+are `GrayText`.
+
+**Screen readers.** The month change and a chosen range announced, and
+a preset read as a pressed toggle, with VoiceOver on macOS and NVDA: not
+yet verified.
+
+**The size.** The size limit is 2.5 kB, under the spec's 3 kB budget:
+the entry `{ Calendar, RangeCalendar }` measured 1.85 kB without React
+Aria, Lucide and `@internationalized/date`, and the rule rounds up to
+2 kB and adds 0.5 kB.
