@@ -211,7 +211,9 @@ test.describe('forced colors', () => {
     expect(drawn.text).toBe(system.highlightText);
   });
 
-  test('an active filter chip is Highlight with HighlightText', async ({ page }) => {
+  test('an active filter chip is Highlight with HighlightText, and a disabled one GrayText on canvas', async ({
+    page,
+  }) => {
     // The ink fill is repainted away, so the system's own "on" carries the state; at rest the pill keeps a
     // CanvasText edge, and a disabled one is GrayText.
     await visit(page, '/docs/components/filter-chip');
@@ -226,6 +228,12 @@ test.describe('forced colors', () => {
     expect((await paint(rest)).edge).toBe(system.canvasText);
     const disabled = page.locator('.stage .filter-chip[data-disabled]').first();
     expect((await paint(disabled)).text).toBe(system.grayText);
+    // A disabled active chip leaves Highlight, which would say "on" for a control that is off: GrayText on canvas.
+    const disabledActive = page.locator('.stage .filter-chip[data-disabled][data-active]').first();
+    const off = await paint(disabledActive);
+    expect(off.fill).toBe(system.canvas);
+    expect(off.text).toBe(system.grayText);
+    expect(off.edge).toBe(system.grayText);
   });
 
   test('a pressed sign button is Highlight and the symbol CanvasText', async ({ page }) => {

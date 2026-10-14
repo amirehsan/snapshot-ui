@@ -454,39 +454,60 @@ export const HoverWash: Story = {
 };
 
 /**
- * The clear button is the pill's last 2rem and its full height, 32 by 40 at the comfortable size, and touches
- * the trigger without reaching over it: the trigger's hit area is its own width, and the button has none beyond
- * its box.
+ * The clear button is the pill's last 2rem and its full height, and is hit 40px tall in every density, 32 by 40,
+ * by the trigger's formula in height alone, so it touches the trigger without reaching over it: the trigger's hit
+ * area is its own width, and the button's is its own width too, comfortable and compact.
  */
 export const ClearHitArea: Story = {
   tags: ['no-visual'],
   render: () => (
-    <Row>
-      <Category initial="food" />
-    </Row>
+    <div style={{ display: 'grid', gap: 24 }}>
+      <div data-density="comfortable">
+        <Category initial="food" />
+      </div>
+      <div data-density="compact">
+        <Category initial="rent" label="Budget" />
+      </div>
+    </div>
   ),
   play: async ({ canvasElement }) => {
-    const pill = pillOf(canvasElement, 'Category');
-    const clear = find(pill, '.filter-chip-clear');
-    const trigger = triggerOf(canvasElement, 'Category');
-    await expect(rect(clear).width).toBeCloseTo(32, 1);
-    // The pill's height less its two 1px edges.
-    await expect(rect(clear).height).toBeCloseTo(rect(pill).height - 2, 1);
-    await expect(rect(pill).height).toBeCloseTo(tokenPixels('--size-control'), 1);
-    await expect(rect(clear).left).toBeGreaterThanOrEqual(rect(trigger).right - 0.5);
-    // The trigger's hit area is as wide as the trigger.
-    const hit = getComputedStyle(trigger, '::before');
-    await expect(hit.left).toBe('0px');
-    await expect(hit.right).toBe('0px');
-    // The point just past the trigger's end is the clear button's.
-    const y = rect(clear).top + rect(clear).height / 2;
-    await expect(document.elementFromPoint(rect(clear).left + 1, y)?.closest('.filter-chip-clear')).toBe(
-      clear,
-    );
-    await expect(document.elementFromPoint(rect(trigger).right - 1, y)?.closest('.filter-chip-trigger')).toBe(
-      trigger,
-    );
-    // The icon is a 24px circle with a 12px X.
+    for (const label of ['Category', 'Budget']) {
+      const pill = pillOf(canvasElement, label);
+      const clear = find(pill, '.filter-chip-clear');
+      const trigger = triggerOf(canvasElement, label);
+      const control = parseFloat(getComputedStyle(pill).getPropertyValue('--size-control'));
+      const target = tokenPixels('--size-target');
+      await expect(rect(clear).width, label).toBeCloseTo(32, 1);
+      // The pill's height less its two 1px edges.
+      await expect(rect(clear).height, label).toBeCloseTo(rect(pill).height - 2, 1);
+      await expect(rect(pill).height, label).toBeCloseTo(control, 1);
+      await expect(rect(clear).left, label).toBeGreaterThanOrEqual(rect(trigger).right - 0.5);
+      // The trigger's hit area is as wide as the trigger, and the button's as wide as the button.
+      for (const element of [trigger, clear]) {
+        const hit = getComputedStyle(element, '::before');
+        await expect(hit.position, label).toBe('absolute');
+        await expect(hit.left, label).toBe('0px');
+        await expect(hit.right, label).toBe('0px');
+      }
+      // The button is hit at the target in height, about its middle.
+      const hit = getComputedStyle(clear, '::before');
+      await expect(parseFloat(hit.height), label).toBeCloseTo(target, 1);
+      await expect(parseFloat(hit.top), label).toBeCloseTo((rect(clear).height - target) / 2, 1);
+      // At the middle and a pixel inside the hit area's top and bottom edges, the point just past the trigger's
+      // end is the clear button's, and the point just before it is the trigger's.
+      const middle = rect(clear).top + rect(clear).height / 2;
+      for (const y of [middle, middle - target / 2 + 1, middle + target / 2 - 1]) {
+        await expect(
+          document.elementFromPoint(rect(clear).left + 1, y)?.closest('.filter-chip-clear'),
+          `${label} at ${String(y)}`,
+        ).toBe(clear);
+        await expect(
+          document.elementFromPoint(rect(trigger).right - 1, y)?.closest('.filter-chip-trigger'),
+          `${label} at ${String(y)}`,
+        ).toBe(trigger);
+      }
+    }
+    const clear = find(pillOf(canvasElement, 'Category'), '.filter-chip-clear');
     const icon = find(clear, '.filter-chip-clear-icon');
     await expect(rect(icon).width).toBeCloseTo(24, 1);
     await expect(rect(find(icon, 'svg')).width).toBeCloseTo(12, 1);

@@ -27,6 +27,7 @@ import { SelectPopover, isCoarsePointer, type ListLabels } from '../picker/Selec
 import { Popover, type Placement } from '../popover/Popover';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
+import { useWarnOnce } from '../utils/useWarnOnce';
 
 export interface FilterChipLabels {
   /** The clear button's name, given the chip's label. @default (label) => `Clear ${label}` */
@@ -159,17 +160,42 @@ function chosenTexts(state: ChipSelectState): string[] {
     .map((item) => item.textValue);
 }
 
+/** The keys a list chip's value holds, in the value's order. */
+const keysOf = (value: Key | null | readonly Key[]): Key[] =>
+  Array.isArray(value) ? [...(value as readonly Key[])] : value == null ? [] : [value as Key];
+
 /**
  * The value a list chip shows: the app's `valueLabel`, else the summary of what React Aria's state holds chosen.
- * React Aria's state is null in its hidden collection pass, where nothing is shown.
+ * A value none of whose keys is an option, a stale one from the URL, shows its keys as written, with a warning,
+ * so an active chip never says so by its fill alone. React Aria's state is null in its hidden collection pass,
+ * where nothing is shown.
  */
 function useListText(
+  label: string,
+  value: Key | null | readonly Key[],
   valueLabel: string | undefined,
   summary: FilterChipLabels['summary'],
 ): string | undefined {
   const state = useContext(SelectStateContext);
+  const keys = keysOf(value);
+  // Read once the collection is built: on the first render it is empty and nothing is chosen yet.
+  const options = state === null ? [] : [...state.collection.getKeys()];
+  const isStale =
+    !present(valueLabel) &&
+    state !== null &&
+    state.selectedItems.length === 0 &&
+    options.length > 0 &&
+    keys.length > 0 &&
+    !keys.some((key) => options.includes(key));
+  useWarnOnce(
+    isStale
+      ? `FilterChip "${label}" has the value ${keys.map(String).join(', ')}, which is none of its options, so it shows the key as written. Drop the stale value, or pass valueLabel.`
+      : null,
+  );
   if (present(valueLabel)) return valueLabel;
-  return state !== null && state.selectedItems.length > 0 ? summary(chosenTexts(state)) : undefined;
+  if (state === null) return undefined;
+  if (isStale) return summary(keys.map(String));
+  return state.selectedItems.length > 0 ? summary(chosenTexts(state)) : undefined;
 }
 
 interface ChipButtonProps {
@@ -220,14 +246,16 @@ function ChipButton({ label, text, ids, triggerRef, isDisabled }: ChipButtonProp
 
 /** A list chip's trigger, inside React Aria's Select, whose state it reads for the summary. */
 function ListChipButton({
+  value,
   valueLabel,
   summary,
   ...button
 }: Omit<ChipButtonProps, 'text' | 'isDisabled'> & {
+  value: Key | null | readonly Key[];
   valueLabel: string | undefined;
   summary: FilterChipLabels['summary'];
 }): ReactElement {
-  return <ChipButton {...button} text={useListText(valueLabel, summary)} />;
+  return <ChipButton {...button} text={useListText(button.label, value, valueLabel, summary)} />;
 }
 
 /** Whether a list chip's value holds a choice, read from its props so the server knows. */
@@ -315,7 +343,7 @@ function ChipPill<T extends object>({
   onCleared,
 }: {
   resolved: Resolved<T>;
-  /** Where focus goes once cleared: the trigger, unless the chip leaves the row with its value. */
+  /** Called once cleared, after focus is on the trigger: FilterBar's, for a chip that may leave the row. */
   onCleared: (() => void) | undefined;
 }): ReactElement {
   const { props, names, isActive, isClearable, isDisabled, clear } = resolved;
@@ -359,6 +387,7 @@ function ChipPill<T extends object>({
         >
           <ListChipButton
             label={label}
+            value={props.value}
             valueLabel={valueLabel}
             summary={names.summary}
             ids={ids}
@@ -403,9 +432,10 @@ function ChipPill<T extends object>({
           aria-label={names.clear(label)}
           onPress={() => {
             clear();
-            // The button leaves with the value, so focus goes to the trigger.
-            if (onCleared) onCleared();
-            else triggerRef.current?.focus();
+            // The button leaves with the value, so focus goes to the trigger; a secondary chip may then leave the
+            // row, so FilterBar hears of it and moves focus to More once the chip has gone.
+            triggerRef.current?.focus();
+            onCleared?.();
           }}
         >
           <span className="filter-chip-clear-icon" aria-hidden="true">
@@ -419,18 +449,22 @@ function ChipPill<T extends object>({
 
 /** A list chip's trigger in a section: Select's look, showing the summary or `labels.any`. */
 function SectionTrigger({
+  label,
+  value,
   titleId,
   valueLabel,
   names,
   triggerRef,
 }: {
+  label: string;
+  value: Key | null | readonly Key[];
   titleId: string;
   valueLabel: string | undefined;
   names: FilterChipLabels;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }): ReactElement {
   const valueId = useId();
-  const text = useListText(valueLabel, names.summary);
+  const text = useListText(label, value, valueLabel, names.summary);
   return (
     <RACButton ref={triggerRef} className="input select-trigger" aria-labelledby={`${valueId} ${titleId}`}>
       <span id={valueId} className="select-value" data-placeholder={text === undefined ? '' : undefined}>
@@ -441,6 +475,27 @@ function SectionTrigger({
       </span>
     </RACButton>
   );
+}
+
+/** The controls a custom section's content may hold, each only while enabled and in the tab order. */
+const TAB_STOP = ['input:not([type="hidden"])', 'button', 'select', 'textarea', '[tabindex="0"]']
+  .map((each) => `${each}:not(:disabled):not([tabindex="-1"])`)
+  .join(', ');
+
+/**
+ * The first control of a custom section that Tab would reach. A group of radios is one tab stop: its checked
+ * radio, or with none checked its first enabled one.
+ */
+function firstTabStop(scope: HTMLElement | null): HTMLElement | undefined {
+  if (scope === null) return undefined;
+  return [...scope.querySelectorAll<HTMLElement>(TAB_STOP)].find((each) => {
+    if (!(each instanceof HTMLInputElement) || each.type !== 'radio' || each.name === '') return true;
+    const group = [...scope.querySelectorAll<HTMLInputElement>('input[type="radio"]:not(:disabled)')].filter(
+      (radio) => radio.name === each.name,
+    );
+    const checked = group.find((radio) => radio.checked);
+    return each === (checked ?? group[0]);
+  });
 }
 
 /** The section a chip draws as in the More panel and the Filters sheet. */
@@ -472,11 +527,7 @@ function ChipSection<T extends object>({
               clear();
               // The button leaves with the value: focus goes to the section's trigger, or a custom chip's first
               // control.
-              const target =
-                triggerRef.current ??
-                bodyRef.current?.querySelector<HTMLElement>(
-                  'input:not([type="hidden"]), button, select, textarea, [tabindex="0"]',
-                );
+              const target = triggerRef.current ?? firstTabStop(bodyRef.current);
               target?.focus();
             }}
           >
@@ -492,7 +543,14 @@ function ChipSection<T extends object>({
           isDisabled={isDisabled}
           onOpenChange={onOpenFilter}
         >
-          <SectionTrigger titleId={titleId} valueLabel={valueLabel} names={names} triggerRef={triggerRef} />
+          <SectionTrigger
+            label={label}
+            value={props.value}
+            titleId={titleId}
+            valueLabel={valueLabel}
+            names={names}
+            triggerRef={triggerRef}
+          />
           <SelectPopover<T>
             className={cx('menu-popover', 'select-popover', popoverClassName)}
             placement={placement}
@@ -540,13 +598,15 @@ export function FilterChip<T extends object = object>(props: FilterChipProps<T>)
   if (place === null) return <ChipPill resolved={resolved} onCleared={undefined} />;
   if (place.place === 'row') {
     // Behind More while inactive, when FilterBar draws More; an active chip, or one More cannot hold, is in the row.
-    const leavesRow = props.isSecondary === true && place.hasMore;
-    if (leavesRow && !isActive) return null;
+    const isSecondary = props.isSecondary === true;
+    if (isSecondary && place.hasMore && !isActive) return null;
     return (
       <ChipPill
         resolved={resolved}
-        // A secondary chip leaves the row with its value, so FilterBar gives focus to More instead.
-        onCleared={leavesRow ? place.onSecondaryCleared : undefined}
+        // A secondary chip may leave the row with its value, even when More is not drawn as it clears: with every
+        // secondary chip active there is no More, and clearing one brings it back. FilterBar always hears of it,
+        // and gives focus to More once the chip has gone.
+        onCleared={isSecondary ? place.onSecondaryCleared : undefined}
       />
     );
   }
