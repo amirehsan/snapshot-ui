@@ -4172,9 +4172,15 @@ describe('src/components/search-field.css', () => {
   // The rules without their comments, with their whitespace closed up.
   const rules = () => closeUp(stripComments(read('src/components/search-field.css')));
 
-  it('pads the input 3rem at both ends with one class', () => {
+  it('pads the input 3rem at both ends with one class, as a block without the search appearance', () => {
     // One class, imported after input.css, beats the input's padding by order and none of its states.
-    expect(blockAfter(rules(), '.search-field-input {').trim()).toBe('padding-inline: 3rem;');
+    const input = blockAfter(rules(), '.search-field-input {');
+    expect(input).toContain('padding-inline: 3rem;');
+    // A block, so the control is as tall as the input and no line box around it adds a strut.
+    expect(input).toContain('display: block;');
+    // WebKit's searchfield appearance can override the pill's padding and corners.
+    expect(input).toContain('appearance: none;');
+    expect(blockAfter(rules(), '.search-field-control {')).not.toMatch(/line-height|display/);
   });
 
   it('hides the browser cancel button, so there is one clear control', () => {
@@ -4189,12 +4195,36 @@ describe('src/components/search-field.css', () => {
     );
   });
 
-  it('draws the placeholder slate only without a visible label', () => {
-    const css = rules();
-    expect(blockAfter(css, '.search-field[data-unlabelled] .search-field-input::placeholder {')).toContain(
-      'color: var(--color-slate);',
+  it('hides the clear button on a read-only field, whose text cannot be cleared', () => {
+    expect(blockAfter(rules(), '.search-field[data-readonly] .search-field-clear {')).toContain(
+      'display: none;',
     );
+  });
+
+  it('draws the placeholder slate only without a visible label, and never while disabled', () => {
+    const css = rules();
+    expect(
+      blockAfter(
+        css,
+        '.search-field[data-unlabelled]:not([data-disabled]) .search-field-input::placeholder {',
+      ),
+    ).toContain('color: var(--color-slate);');
     expect(css.match(/::placeholder/g)).toHaveLength(1);
+  });
+
+  it("keeps the input's hover edge while the pointer is on the clear button, with one class of weight", () => {
+    const hover = blockAfter(rules(), '@media (hover: hover)');
+    const edge = blockAfter(
+      hover,
+      '.search-field-input:where(.search-field-control:has(> .search-field-clear:is(:hover, [data-hovered]):not(:disabled, [data-disabled])) > *) {',
+    );
+    // The value the input's own hover draws, so the edge does not change as the pointer crosses to the button.
+    const inputHover = blockAfter(
+      blockAfter(closeUp(stripComments(read('src/components/input.css'))), '@media (hover: hover)'),
+      '.input:is(:hover, [data-hovered]) {',
+    );
+    expect(inputHover).toContain('border-color: color-mix(in srgb, var(--color-ink) 65%, transparent);');
+    expect(edge.trim()).toBe('border-color: color-mix(in srgb, var(--color-ink) 65%, transparent);');
   });
 
   it('never mirrors the magnifier', () => {
@@ -4240,18 +4270,24 @@ describe('src/components/select.css', () => {
     expect(blockAfter(css, '.select-trigger {')).not.toContain('cursor');
   });
 
-  it('ellipsizes the value on one line and draws the placeholder taupe', () => {
+  it('ellipsizes the value on one line and draws the placeholder slate', () => {
     const css = rules();
     const value = blockAfter(css, '.select-value {');
     expect(value).toContain('min-width: 0;');
     expect(value).toContain('white-space: nowrap;');
     expect(value).toContain('overflow: hidden;');
     expect(blockAfter(css, '.select-value-label {')).toContain('text-overflow: ellipsis;');
-    expect(blockAfter(css, '.select-value[data-placeholder] {')).toContain('color: var(--color-taupe);');
-    // Named only by aria-label, the placeholder is the only words shown, so it is slate (open question 3).
-    expect(blockAfter(css, '.select[data-unlabelled] .select-value[data-placeholder] {')).toContain(
-      'color: var(--color-slate);',
-    );
+    // The placeholder is the trigger's visible text, so it is slate, which meets text contrast (open question 3).
+    expect(blockAfter(css, '.select-value[data-placeholder] {')).toContain('color: var(--color-slate);');
+    expect(css).not.toContain('data-unlabelled');
+  });
+
+  it('draws the value and the placeholder of a disabled trigger taupe, the disabled text', () => {
+    const css = rules();
+    const disabled = '.select-trigger:is(:disabled, [data-disabled]) .select-value {';
+    expect(blockAfter(css, disabled)).toContain('color: var(--color-taupe);');
+    // After the placeholder's slate, and heavier, so a disabled placeholder is taupe.
+    expect(css.indexOf(disabled)).toBeGreaterThan(css.indexOf('.select-value[data-placeholder] {'));
   });
 
   it('turns the chevron half a turn while open, in 140ms, and not under reduced motion', () => {

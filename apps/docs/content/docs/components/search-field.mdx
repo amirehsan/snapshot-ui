@@ -38,7 +38,7 @@ A disabled field is recessed and its magnifier turns taupe. An invalid field dra
 
 ## Usage
 
-Keep the query in the URL, so a search can be shared, reloaded and gone back to. Pass the search parameter as `value`, keep the text being typed in state, and write the URL after a pause of your own in `onChange`. With the Next App Router:
+Keep the query in the URL, so a search can be shared, reloaded and gone back to. Keep the text being typed in state, pass it as `value`, and write the URL after a pause of your own in `onChange`. Take the query again whenever the URL changes under the field, as Back and Forward do, and read the URL as it is when the pause ends, so a tab or a page chosen meanwhile is kept. With the Next App Router:
 
 ```tsx
 'use client';
@@ -51,8 +51,17 @@ export function TransactionSearch() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [text, setText] = useState(searchParams.get('q') ?? '');
+  const q = searchParams.get('q') ?? '';
+  const [text, setText] = useState(q);
+  // The query the field last took from the URL, or last wrote to it.
+  const [seen, setSeen] = useState(q);
   const pause = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // The URL changed under the field, by Back, Forward or a link: show its query.
+  if (q !== seen) {
+    setSeen(q);
+    setText(q);
+  }
 
   useEffect(() => () => clearTimeout(pause.current), []);
 
@@ -65,10 +74,13 @@ export function TransactionSearch() {
         setText(next);
         clearTimeout(pause.current);
         pause.current = setTimeout(() => {
-          const params = new URLSearchParams(searchParams);
+          // The parameters as they are now, not as they were at the keystroke.
+          const params = new URLSearchParams(window.location.search);
           if (next) params.set('q', next);
           else params.delete('q');
-          router.replace(`${pathname}?${params.toString()}`);
+          const query = params.toString();
+          setSeen(next);
+          router.replace(query ? `${pathname}?${query}` : pathname);
         }, 300);
       }}
     />
@@ -76,20 +88,43 @@ export function TransactionSearch() {
 }
 ```
 
-For a search that runs only on Enter, such as one that queries a slow service, write the URL in `onSubmit` and in `onClear` instead, and leave `onChange` out:
+On a statically rendered route, `useSearchParams` needs a `Suspense` boundary: render the search inside `<Suspense>`, or the build stops and asks for one.
+
+For a search that runs only on Enter, such as one that queries a slow service, write the URL in `onSubmit` and in `onClear` instead, and let `onChange` keep only the text. Start from the parameters already there, so the tab, the page and the filters stay:
 
 ```tsx
-<SearchField
-  aria-label="Search transactions"
-  placeholder="Search transactions"
-  defaultValue={searchParams.get('q') ?? ''}
-  onSubmit={(query) => {
-    router.push(`${pathname}?q=${encodeURIComponent(query)}`);
-  }}
-  onClear={() => {
-    router.push(pathname);
-  }}
-/>
+export function TransactionSearchOnEnter() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const q = searchParams.get('q') ?? '';
+  const [text, setText] = useState(q);
+  const [seen, setSeen] = useState(q);
+
+  if (q !== seen) {
+    setSeen(q);
+    setText(q);
+  }
+
+  const search = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (next) params.set('q', next);
+    else params.delete('q');
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
+  };
+
+  return (
+    <SearchField
+      aria-label="Search transactions"
+      placeholder="Search transactions"
+      value={text}
+      onChange={setText}
+      onSubmit={search}
+      onClear={() => search('')}
+    />
+  );
+}
 ```
 
 The field has no debounce of its own. How long to wait, and whether to wait at all, belongs to the app's router and its data fetching, which already know what a request costs; a pause hidden inside the field would be a second timer the app cannot see.

@@ -2,18 +2,23 @@
  * SearchField: the text input's pill with a magnifier at its start and a clear button at its end, derived in
  * docs/design-system.md ("SearchField"). The input takes every edge input.css draws through the field's root;
  * this file only pads its text clear of the two glyphs. The clear button leaves the layout while the field is
- * empty, and the browser's own cancel button is hidden, so there is one clear control. Without a visible label
- * the placeholder is the only words a sighted reader gets, so it is slate there, the exception CommandPalette
- * recorded; under a label it stays the input's taupe. Nothing is mirrored: a magnifier has no direction.
+ * empty or read-only, and the browser's own cancel button is hidden, so there is one clear control. Without a
+ * visible label the placeholder is the only words a sighted reader gets, so it is slate there, the exception
+ * CommandPalette recorded; under a label, or disabled, it stays the input's taupe. Nothing is mirrored: a
+ * magnifier has no direction.
  */
 @layer components {
   .search-field-control {
     position: relative;
   }
 
-  /* One class, after input.css, so it beats the input's padding and none of its states. */
+  /* One class, after input.css, so it beats the input's padding and none of its states. A block, so the control
+     is as tall as the input whatever the line height around it, and without the search appearance, which WebKit
+     draws with padding and corners of its own. */
   .search-field-input {
+    display: block;
     padding-inline: 3rem;
+    appearance: none;
   }
 
   .search-field-input::-webkit-search-cancel-button {
@@ -43,8 +48,27 @@
     display: none;
   }
 
-  .search-field[data-unlabelled] .search-field-input::placeholder {
+  /* A read-only field's text cannot be cleared, so it has no clear button. */
+  .search-field[data-readonly] .search-field-clear {
+    display: none;
+  }
+
+  /* A disabled field keeps the input's taupe, the disabled text. */
+  .search-field[data-unlabelled]:not([data-disabled]) .search-field-input::placeholder {
     color: var(--color-slate);
+  }
+
+  /* The clear button sits on the input, so a pointer on it has left the input: the input keeps its hover edge.
+     One class of weight, after input.css, so the focus, disabled, changed and invalid edges still win. */
+  @media (hover: hover) {
+    .search-field-input:where(
+      .search-field-control:has(
+          > .search-field-clear:is(:hover, [data-hovered]):not(:disabled, [data-disabled])
+        )
+        > *
+    ) {
+      border-color: color-mix(in srgb, var(--color-ink) 65%, transparent);
+    }
   }
 
   @media (forced-colors: active) {

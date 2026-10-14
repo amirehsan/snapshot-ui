@@ -709,8 +709,10 @@ describe('the select', () => {
     return contrastRatio(composite(parseColor(palette[name]), ground), ground);
   };
 
-  // The trigger is the input's raised pill: its value is ink, its chevron and an option's icon slate. The list is
-  // the Menu's float panel, its rows ink and slate, the chosen row canvas on the ink pill. The gate holds all of it.
+  // The trigger is the input's raised pill: its value is ink, its placeholder, its chevron and an option's icon
+  // slate. The placeholder is the button's text, which axe measures, so it is slate and held as text, not taupe.
+  // The list is the Menu's float panel, its rows ink and slate, the chosen row canvas on the ink pill. The gate
+  // holds all of it.
   it('cites ink and slate on raised and on float, and canvas on ink, which the gate holds at the text minimum', () => {
     for (const ground of ['raised', 'float']) {
       for (const text of ['ink', 'slate']) {
@@ -728,8 +730,16 @@ describe('the select', () => {
   it('measures the pairs Appendix B records, in both modes', () => {
     expect(measured('light', 'ink', 'raised'), 'the value, light').toBeCloseTo(18.43, 2);
     expect(measured('dark', 'ink', 'raised'), 'the value, dark').toBeCloseTo(15.36, 2);
-    expect(measured('light', 'slate', 'raised'), 'the chevron and the icon, light').toBeCloseTo(5.49, 2);
-    expect(measured('dark', 'slate', 'raised'), 'the chevron and the icon, dark').toBeCloseTo(6.44, 2);
+    expect(
+      measured('light', 'slate', 'raised'),
+      'the placeholder, the chevron and the icon, light',
+    ).toBeCloseTo(5.49, 2);
+    expect(
+      measured('dark', 'slate', 'raised'),
+      'the placeholder, the chevron and the icon, dark',
+    ).toBeCloseTo(6.44, 2);
+    // Taupe, the placeholder's color before, fails the text minimum on the trigger; it is left to a disabled one.
+    expect(measured('light', 'taupe', 'raised'), 'taupe, light').toBeLessThan(TEXT);
     expect(measured('light', 'divider', 'float'), 'the filter divider, light').toBeCloseTo(1.23, 2);
     expect(measured('dark', 'divider', 'float'), 'the filter divider, dark').toBeCloseTo(1.34, 2);
   });

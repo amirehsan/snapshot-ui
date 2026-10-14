@@ -2,7 +2,8 @@
  * Select: a field whose control is the text input's pill drawn on a button, opening the Menu's float list,
  * derived in docs/design-system.md ("Select"). The trigger wears .input, so every edge and state input.css
  * draws reaches it through the field's root; this file lays out its value and chevron and nothing else, in
- * one-class rules after input.css. The value is one line, ellipsized; the placeholder is taupe. The chevron
+ * one-class rules after input.css. The value is one line, ellipsized; the placeholder is slate, since it is the
+ * trigger's visible text and must meet text contrast, and taupe, the disabled text, when disabled. The chevron
  * turns half a turn while the list is open. The list is menu.css's, with a filter row that steps the field
  * size down to the control size for its subtree, so a field inside a popup is 40px (36px compact), and an
  * empty line in slate, which the combo box and the multi-select share.
@@ -38,13 +39,15 @@
     text-overflow: ellipsis;
   }
 
+  /* Unlike an input's placeholder, an attribute, this is the button's text, so it meets text contrast (open
+     question 3). */
   .select-value[data-placeholder] {
-    color: var(--color-taupe);
+    color: var(--color-slate);
   }
 
-  /* Named only by aria-label: the placeholder is the only words a sighted reader gets, so slate (open question 3). */
-  .select[data-unlabelled] .select-value[data-placeholder] {
-    color: var(--color-slate);
+  /* After the placeholder and heavier: a disabled trigger's value and placeholder are the disabled text. */
+  .select-trigger:is(:disabled, [data-disabled]) .select-value {
+    color: var(--color-taupe);
   }
 
   .select-chevron {
