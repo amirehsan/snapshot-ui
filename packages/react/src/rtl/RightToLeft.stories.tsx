@@ -13,6 +13,7 @@ import { Link } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { Popover } from '../popover';
 import { Radio, RadioGroup } from '../radio-group';
+import { SearchField } from '../search-field';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
 import { Sheet, SheetTrigger } from '../sheet';
 import { MENU_ROW_A11Y } from '../stories/a11y';
@@ -824,6 +825,36 @@ export const CommandPaletteMirrored: Story = {
     await expect(glass.left).toBeGreaterThanOrEqual(input.right - 0.5);
     await expect(escape.right).toBeLessThanOrEqual(input.left + 0.5);
     await expect(getComputedStyle(find(panel, '.command-palette-input')).direction).toBe('rtl');
+  },
+};
+
+/**
+ * The search field in Persian, as the consumer's guide is: the magnifier sits at the right end of the control,
+ * the start of a right-to-left line, and the clear button at the left end, both inside the input's box. Neither
+ * glyph is mirrored, since a magnifier and a cross have no reading direction.
+ */
+export const SearchFieldMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(28rem, calc(100vw - 2rem))' }}>
+        <SearchField label="جستجوی تراکنش‌ها" defaultValue="قهوه" clearLabel="پاک کردن جستجو" />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const control = rect(find(canvasElement, '.search-field-control'));
+    const input = rect(find(canvasElement, '.search-field-input'));
+    const icon = rect(find(canvasElement, '.search-field-icon svg'));
+    const clear = rect(find(canvasElement, '.search-field-clear'));
+    await expectInside(icon, input);
+    await expectInside(clear, input);
+    // The icon in the right half of the control, the clear button in the left half.
+    const middle = control.left + control.width / 2;
+    await expect(icon.left).toBeGreaterThan(middle);
+    await expect(clear.right).toBeLessThan(middle);
+    await expect(input.right - icon.right).toBeCloseTo(16, 0);
+    await expect(clear.left - input.left).toBeCloseTo(6, 0);
+    await expect(getComputedStyle(find(canvasElement, '.search-field-icon svg')).scale).toBe('none');
   },
 };
 

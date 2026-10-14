@@ -56,6 +56,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Meter](https://snapshotui.com/docs/components/meter)
 - [Popover](https://snapshotui.com/docs/components/popover)
 - [Radio group](https://snapshotui.com/docs/components/radio-group)
+- [Search field](https://snapshotui.com/docs/components/search-field)
 - [Segmented control](https://snapshotui.com/docs/components/segmented-control)
 - [Sheet](https://snapshotui.com/docs/components/sheet)
 - [Sidebar](https://snapshotui.com/docs/components/sidebar)

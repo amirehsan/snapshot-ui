@@ -3,7 +3,8 @@
  * tall as a field, 48px, or 36px under compact density, on the raised fill.
  * Its changed and invalid borders are keyed on the field's root, as the field
  * contract in field.css says, and invalid is declared last so it outranks
- * changed.
+ * changed. `.input-button` is a button inside a field: the search field's
+ * clear button and the combo box's button.
  */
 @layer components {
   .input {
@@ -68,5 +69,73 @@
 
   :is(.field[data-invalid] .input, .input[aria-invalid='true']) {
     border: 1.5px solid var(--color-error);
+  }
+
+  /* A button inside a field: a ghost circle a field step smaller than the field (36px, 24px compact), 6px in
+     from the field's inline end, with a 16px slate glyph that turns ink. Hit at the target in both axes by the
+     formula every control shares, so a compact one is still hit at 40px; the field pads its text clear of it,
+     and the control around both is positioned. */
+  .input-button {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0.375rem;
+    box-sizing: border-box;
+    display: inline-grid;
+    place-items: center;
+    width: calc(var(--size-field) - 0.75rem);
+    height: calc(var(--size-field) - 0.75rem);
+    margin-block: auto;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: var(--color-slate);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .input-button::before {
+    content: '';
+    position: absolute;
+    inset-block: min(0px, (100% - var(--size-target)) / 2);
+    inset-inline: min(0px, (100% - var(--size-target)) / 2);
+  }
+
+  .input-button svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  @media (hover: hover) {
+    .input-button:is(:hover, [data-hovered]):not(:disabled, [data-disabled]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+      color: var(--color-ink);
+    }
+  }
+
+  /* A press shows what hover does, since touch has no hover to show it. */
+  .input-button:is(:active, [data-pressed]):not(:disabled, [data-disabled]) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    color: var(--color-ink);
+  }
+
+  .input-button:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .input-button:is(:disabled, [data-disabled]) {
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  @media (forced-colors: active) {
+    .input-button {
+      color: CanvasText;
+    }
+
+    .input-button:is(:disabled, [data-disabled]) {
+      color: GrayText;
+    }
   }
 }

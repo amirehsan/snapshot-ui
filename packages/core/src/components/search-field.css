@@ -1,0 +1,59 @@
+/*
+ * SearchField: the text input's pill with a magnifier at its start and a clear button at its end, derived in
+ * docs/design-system.md ("SearchField"). The input takes every edge input.css draws through the field's root;
+ * this file only pads its text clear of the two glyphs. The clear button leaves the layout while the field is
+ * empty, and the browser's own cancel button is hidden, so there is one clear control. Without a visible label
+ * the placeholder is the only words a sighted reader gets, so it is slate there, the exception CommandPalette
+ * recorded; under a label it stays the input's taupe. Nothing is mirrored: a magnifier has no direction.
+ */
+@layer components {
+  .search-field-control {
+    position: relative;
+  }
+
+  /* One class, after input.css, so it beats the input's padding and none of its states. */
+  .search-field-input {
+    padding-inline: 3rem;
+  }
+
+  .search-field-input::-webkit-search-cancel-button {
+    appearance: none;
+  }
+
+  .search-field-icon {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 1rem;
+    display: flex;
+    align-items: center;
+    color: var(--color-slate);
+    pointer-events: none;
+  }
+
+  .search-field-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .search-field[data-disabled] .search-field-icon {
+    color: var(--color-taupe);
+  }
+
+  .search-field[data-empty] .search-field-clear {
+    display: none;
+  }
+
+  .search-field[data-unlabelled] .search-field-input::placeholder {
+    color: var(--color-slate);
+  }
+
+  @media (forced-colors: active) {
+    .search-field-icon {
+      color: CanvasText;
+    }
+
+    .search-field[data-disabled] .search-field-icon {
+      color: GrayText;
+    }
+  }
+}

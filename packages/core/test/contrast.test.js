@@ -667,6 +667,40 @@ describe('the charts', () => {
   });
 });
 
+describe('the search field', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+  /** Ink over the 5% ink wash on raised, the hovered or pressed field button's glyph, against the wash. */
+  const inkOnWash = (mode) => {
+    const palette = paletteFor(tokens, mode);
+    const wash = composite({ ...parseColor(palette.ink), a: 0.05 }, parseColor(palette.raised));
+    return contrastRatio(composite(parseColor(palette.ink), wash), wash);
+  };
+
+  // The field is the input's raised pill. Without a visible label its placeholder is slate, the magnifier and the
+  // resting clear glyph are slate, and a hovered glyph is ink. The gate holds slate and ink on raised as text.
+  it('cites slate and ink on raised, which the gate holds at the text minimum', () => {
+    for (const text of ['slate', 'ink']) {
+      expect(CONTRAST_PAIRS, text).toContainEqual(
+        expect.objectContaining({ text, ground: 'raised', minimum: TEXT }),
+      );
+    }
+  });
+
+  // The wash is a mix and not a token, so ink over it is measured and recorded, not gated.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    expect(measured('light', 'slate', 'raised'), 'slate on raised, light').toBeCloseTo(5.49, 2);
+    expect(measured('dark', 'slate', 'raised'), 'slate on raised, dark').toBeCloseTo(6.44, 2);
+    expect(inkOnWash('light'), 'ink on the wash over raised, light').toBeCloseTo(16.65, 2);
+    expect(inkOnWash('dark'), 'ink on the wash over raised, dark').toBeCloseTo(13.24, 2);
+    for (const mode of ['light', 'dark']) expect(inkOnWash(mode), mode).toBeGreaterThanOrEqual(TEXT);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

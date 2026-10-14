@@ -166,6 +166,20 @@ describe('src/styles.css', () => {
       previous = at(file);
     }
   });
+
+  it('imports the picker files after the home files, in order', () => {
+    // search-field.css is required; the select, the combo box, the multi-select, the tabs and the pagination
+    // are checked once they exist. Each comes after input.css, so a one-class override of the input wins by order.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('charts.css')).toBeGreaterThanOrEqual(0);
+    expect(at('search-field.css')).toBeGreaterThan(at('charts.css'));
+    let previous = at('search-field.css');
+    for (const file of ['select.css', 'combo-box.css', 'multi-select.css', 'tabs.css', 'pagination.css']) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -597,6 +611,75 @@ describe('src/components/input.css', () => {
   });
 });
 
+describe('src/components/input.css, the field button', () => {
+  // The rules without their comments, with their whitespace closed up. `.input-button {` is the start of no longer
+  // header before the forced-colors block, so the first match is the button's own rule.
+  const rules = () => closeUp(stripComments(read('src/components/input.css')));
+  const WASH = 'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);';
+  const ENABLED = ':not(:disabled, [data-disabled])';
+
+  it('sizes the field button a field step smaller than the field, on the pill radius', () => {
+    const button = blockAfter(rules(), '.input-button {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset-inline-end: 0.375rem;',
+      'width: calc(var(--size-field) - 0.75rem);',
+      'height: calc(var(--size-field) - 0.75rem);',
+      'border-radius: var(--radius-pill);',
+      'background-color: transparent;',
+      'color: var(--color-slate);',
+    ]) {
+      expect(button, declaration).toContain(declaration);
+    }
+    expect(blockAfter(rules(), '.input-button svg {')).toContain('width: 16px;');
+  });
+
+  it('extends its hit area to the target in both axes by the shared formula', () => {
+    const area = blockAfter(rules(), '.input-button::before {');
+    for (const declaration of [
+      "content: '';",
+      'position: absolute;',
+      'inset-block: min(0px, (100% - var(--size-target)) / 2);',
+      'inset-inline: min(0px, (100% - var(--size-target)) / 2);',
+    ]) {
+      expect(area, declaration).toContain(declaration);
+    }
+  });
+
+  it('washes it 5% ink and turns its glyph ink on hover, only where hover exists, and on a press', () => {
+    const css = rules();
+    const HOVER = `.input-button:is(:hover, [data-hovered])${ENABLED} {`;
+    // The one hover rule sits in the last hover media block before it, the input's own being the first.
+    expect(css.split('.input-button:is(:hover')).toHaveLength(2);
+    const media = css.lastIndexOf('@media (hover: hover)', css.indexOf(HOVER));
+    expect(media).toBeGreaterThan(-1);
+    const hover = blockAfter(blockAfter(css.slice(media), '@media (hover: hover)'), HOVER);
+    expect(hover).toContain(WASH);
+    expect(hover).toContain('color: var(--color-ink);');
+    const press = blockAfter(css, `.input-button:is(:active, [data-pressed])${ENABLED} {`);
+    expect(press).toContain(WASH);
+    expect(press).toContain('color: var(--color-ink);');
+  });
+
+  it('rings it with the token ring outside it, and draws it taupe and not-allowed when disabled', () => {
+    const css = rules();
+    const ring = blockAfter(css, '.input-button:is(:focus-visible, [data-focus-visible]) {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+    const disabled = blockAfter(css, '.input-button:is(:disabled, [data-disabled]) {');
+    expect(disabled).toContain('color: var(--color-taupe);');
+    expect(disabled).toContain('cursor: not-allowed;');
+  });
+
+  it('draws its glyph CanvasText, and GrayText when disabled, in forced colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(blockAfter(forced, '.input-button {')).toContain('color: CanvasText;');
+    expect(blockAfter(forced, '.input-button:is(:disabled, [data-disabled]) {')).toContain(
+      'color: GrayText;',
+    );
+  });
+});
+
 describe('src/components/textarea.css', () => {
   /** The innermost blocks of a stylesheet, as { selector, properties }, comments left out. */
   const blocks = (file) =>
@@ -631,8 +714,9 @@ describe('src/components/textarea.css', () => {
 
   it('never sets what the input draws for its states, so no state rule wins or loses against it', () => {
     // Everything but the base .input rule is a state: the placeholder, hover, focus, disabled, changed and invalid.
+    // The field button's rules draw another element, so they are not the input's states.
     const states = blocks('src/components/input.css')
-      .filter(({ selector }) => selector !== '.input')
+      .filter(({ selector }) => selector !== '.input' && !selector.includes('.input-button'))
       .flatMap(({ properties }) => properties);
     expect(states).toContain('border');
     expect(states).toContain('border-color');
@@ -2629,7 +2713,7 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is the last overlay file imported, right after command-palette.css, with only the shell and home files after it', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell, home and picker files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     const tooltip = imported.indexOf('tooltip.css');
@@ -2643,6 +2727,12 @@ describe('src/components/tooltip.css', () => {
         'stat-tile.css',
         'meter.css',
         'charts.css',
+        'search-field.css',
+        'select.css',
+        'combo-box.css',
+        'multi-select.css',
+        'tabs.css',
+        'pagination.css',
       ]).toContain(file);
     }
   });
@@ -4075,6 +4165,50 @@ describe('src/components/charts.css, the line chart', () => {
     expect(dot).toContain('border-color: canvas;');
     expect(dot).toContain('background-color: Highlight;');
     expect(blockAfter(forced, '.line-chart-plot:focus-visible {')).toContain('outline-color: Highlight;');
+  });
+});
+
+describe('src/components/search-field.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/search-field.css')));
+
+  it('pads the input 3rem at both ends with one class', () => {
+    // One class, imported after input.css, beats the input's padding by order and none of its states.
+    expect(blockAfter(rules(), '.search-field-input {').trim()).toBe('padding-inline: 3rem;');
+  });
+
+  it('hides the browser cancel button, so there is one clear control', () => {
+    expect(blockAfter(rules(), '.search-field-input::-webkit-search-cancel-button {')).toContain(
+      'appearance: none;',
+    );
+  });
+
+  it('hides the clear button while the field is empty', () => {
+    expect(blockAfter(rules(), '.search-field[data-empty] .search-field-clear {')).toContain(
+      'display: none;',
+    );
+  });
+
+  it('draws the placeholder slate only without a visible label', () => {
+    const css = rules();
+    expect(blockAfter(css, '.search-field[data-unlabelled] .search-field-input::placeholder {')).toContain(
+      'color: var(--color-slate);',
+    );
+    expect(css.match(/::placeholder/g)).toHaveLength(1);
+  });
+
+  it('never mirrors the magnifier', () => {
+    const css = rules();
+    expect(css).not.toContain('scale');
+    expect(css).not.toContain('rtl');
+  });
+
+  it('draws the icon CanvasText in forced colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(blockAfter(forced, '.search-field-icon {')).toContain('color: CanvasText;');
+    expect(blockAfter(forced, '.search-field[data-disabled] .search-field-icon {')).toContain(
+      'color: GrayText;',
+    );
   });
 });
 

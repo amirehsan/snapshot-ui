@@ -939,7 +939,7 @@
     opacity: var(--opacity-scrim);
   }
 
-  .search-field {
+  .search-dialog-field {
     position: relative;
     display: flex;
     align-items: center;
@@ -949,7 +949,7 @@
   }
 
   /* The focus line under the field, drawn above the divider. */
-  .search-field::after {
+  .search-dialog-field::after {
     content: '';
     position: absolute;
     inset: auto 0 0;
@@ -957,11 +957,11 @@
     background-color: transparent;
   }
 
-  .search-field:has(.search-input:focus-visible)::after {
+  .search-dialog-field:has(.search-input:focus-visible)::after {
     background-color: var(--color-ink);
   }
 
-  .search-field svg {
+  .search-dialog-field svg {
     flex: none;
     width: 20px;
     height: 20px;

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { Radio, RadioGroup } from '../src/radio-group';
+import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
@@ -17,7 +18,7 @@ import { TextField } from '../src/text-field';
  * show, as it knows the saved value, so each harness below does what an app
  * does: it compares the value it is told about with the saved one.
  *
- * These checks sit together because the same event reaches seven different
+ * These checks sit together because the same event reaches eight different
  * pieces of React Aria, each with its own way of listening for it.
  */
 
@@ -321,5 +322,24 @@ describe('a native form reset', () => {
     expect(screen.getByRole('radio', { name: 'System' })).not.toBeChecked();
     expect(sent(container, 'theme')).toEqual(['dark']);
     expect(showsChip(container)).toBe(false);
+  });
+
+  it('puts a SearchField back to its default text', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <SearchField label="Search transactions" name="q" defaultValue="coffee" />
+        <ResetButton />
+      </form>,
+    );
+    const input = screen.getByRole('searchbox', { name: 'Search transactions' });
+    await user.clear(input);
+    await user.type(input, 'rent');
+    expect(sent(container, 'q')).toEqual(['rent']);
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(input).toHaveValue('coffee');
+    expect(sent(container, 'q')).toEqual(['coffee']);
+    expect(container.querySelector('.search-field')).not.toHaveAttribute('data-empty');
   });
 });

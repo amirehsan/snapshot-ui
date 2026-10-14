@@ -9,6 +9,7 @@ import { Drawer } from '../src/drawer';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
 import { Radio, RadioGroup } from '../src/radio-group';
+import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Sheet } from '../src/sheet';
 import { Sidebar, SidebarGroup, SidebarItem } from '../src/sidebar';
@@ -75,6 +76,7 @@ const EMPTY: [name: string, element: ReactElement][] = [
   ],
   ['TextField', <TextField aria-label="Name" label={false} description="" isChanged />],
   ['TextArea', <TextArea aria-label="Notes" label="" description={false} isChanged />],
+  ['SearchField', <SearchField aria-label="Search" label={false} description="" />],
 ];
 
 describe('a label, a hint or a row text of false or an empty string', () => {

@@ -18,6 +18,7 @@ import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Shortcut } from '../src/overlay/Shortcut';
 import { Popover } from '../src/popover';
 import { Radio, RadioGroup } from '../src/radio-group';
+import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Sheet, SheetTrigger } from '../src/sheet';
 import {
@@ -65,6 +66,21 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'Shown to your team.',
       'class="field-counter"',
     ],
+  ],
+  [
+    // React Aria writes data-empty as "true" in the HTML. A labelled field is not data-unlabelled.
+    'SearchField',
+    <SearchField label="Search transactions" placeholder="Merchant or note" />,
+    [
+      'class="field search-field"',
+      'data-empty="true"',
+      'type="search"',
+      'class="input search-field-input"',
+      'placeholder="Merchant or note"',
+      'class="search-field-icon"',
+      'aria-label="Clear search"',
+    ],
+    ['data-unlabelled'],
   ],
   [
     'TextArea',
