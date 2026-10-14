@@ -52,6 +52,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Dialog](https://snapshotui.com/docs/components/dialog)
 - [Drawer](https://snapshotui.com/docs/components/drawer)
 - [Field parts](https://snapshotui.com/docs/components/field)
+- [Filter chip](https://snapshotui.com/docs/components/filter-chip)
 - [Icon button](https://snapshotui.com/docs/components/icon-button)
 - [Kbd](https://snapshotui.com/docs/components/kbd)
 - [Link](https://snapshotui.com/docs/components/link)

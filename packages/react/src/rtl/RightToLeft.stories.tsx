@@ -12,6 +12,7 @@ import { CommandPalette } from '../command-palette';
 import { DateRangePicker } from '../date-range-picker';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
+import { FilterChip } from '../filter-chip';
 import { Link } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { MultiSelect } from '../multi-select';
@@ -1207,6 +1208,47 @@ export const DateRangePickerMirrored: Story = {
     await expect(focused).toHaveClass('date-segment');
     await expect(focused).not.toBe(first);
     await expect(rect(focused).right).toBeLessThanOrEqual(from.left + 0.5);
+  },
+};
+
+/**
+ * A filter chip in right to left: the pill runs from the right, so its label is at the right and its clear button
+ * at the left end, and neither the chevron nor the X is mirrored, since neither has a direction.
+ */
+export const FilterChipMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa">
+        <FilterChip
+          label="دسته"
+          selectionMode="multiple"
+          value={['food', 'rent']}
+          onChange={() => undefined}
+          labels={{ summary: (texts) => texts.join('، '), clear: (label) => `پاک کردن ${label}` }}
+        >
+          <PickerOption id="food">غذا</PickerOption>
+          <PickerOption id="rent">اجاره</PickerOption>
+        </FilterChip>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const pill = find(canvasElement, '.filter-chip');
+    const label = find(pill, '.filter-chip-label');
+    const value = find(pill, '.filter-chip-value');
+    const chevron = find(pill, '.filter-chip-chevron');
+    const clear = within(canvasElement).getByRole('button', { name: 'پاک کردن دسته' });
+    // From the right: the label, the value, the chevron, then the clear button at the left end.
+    await expect(rect(pill).right - rect(label).right).toBeCloseTo(17, 0);
+    await expect(rect(label).left).toBeGreaterThan(rect(value).right - 0.5);
+    await expect(rect(value).left).toBeGreaterThan(rect(chevron).right - 0.5);
+    await expect(rect(chevron).left).toBeGreaterThan(rect(clear).right - 0.5);
+    await expect(rect(clear).left - rect(pill).left).toBeCloseTo(1, 0);
+    // Nothing mirrors.
+    for (const glyph of [find(chevron, 'svg'), find(clear, 'svg')]) {
+      await expect(getComputedStyle(glyph).scale).toBe('none');
+      await expect(getComputedStyle(glyph).transform).toBe('none');
+    }
   },
 };
 

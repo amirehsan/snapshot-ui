@@ -72,6 +72,13 @@ export {
   type DateRangePickerProps,
 } from './date-range-picker';
 export {
+  FilterChip,
+  type FilterChipCustomProps,
+  type FilterChipLabels,
+  type FilterChipListProps,
+  type FilterChipProps,
+} from './filter-chip';
+export {
   Checkbox,
   CheckboxGroup,
   type CheckboxBaseProps,

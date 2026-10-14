@@ -1,0 +1,239 @@
+/*
+ * FilterChip: a pill that names a filter and opens its list or panel, derived in docs/design-system.md
+ * ("FilterChip"). At rest it is the boundary edge on nothing, a control tall, its label at 500 and a slate
+ * chevron that turns half a turn while open; hover, a press and an open chip wash it 5% ink. Active, it is the
+ * system's "on", the ink fill with canvas text: the label at 450 and the value at 700, one line, ellipsized past
+ * 16rem, never signal orange and never clay. Its clear button is its last 2rem, the pill's full height, drawing a
+ * 24px circle with a 12px canvas X, washed 15% canvas on hover and ringed in canvas inside on focus. Keyboard focus
+ * on the trigger rings the whole pill. React Aria's Select root has no role, so it leaves the box tree. Nothing
+ * mirrors: a down chevron and an X have no direction.
+ */
+@layer components {
+  .filter-chip {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: stretch;
+    /* Never wider than what holds it, and never held wider by its own value: as a grid or flex item its
+       automatic minimum would be the whole summary, which would widen a grid's track past a phone's width. */
+    min-width: 0;
+    max-width: 100%;
+    min-height: var(--size-control);
+    border: 1px solid var(--color-boundary);
+    border-radius: var(--radius-pill);
+    background-color: transparent;
+    color: var(--color-ink);
+    vertical-align: middle;
+  }
+
+  .filter-chip-select {
+    display: contents;
+  }
+
+  .filter-chip-trigger {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+    margin: 0;
+    padding-block: 0;
+    padding-inline: 1rem 0.75rem;
+    border: 0;
+    border-radius: inherit;
+    background-color: transparent;
+    color: inherit;
+    font-family: var(--font-sans);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    text-align: start;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Hit at the target in height by the formula every control shares, so a compact chip is hit at 40px. */
+  .filter-chip-trigger::before {
+    content: '';
+    position: absolute;
+    inset-block: min(0px, (100% - var(--size-target)) / 2);
+    inset-inline: 0;
+  }
+
+  /* The clear button follows the trigger, so the trigger pads only 4px to it; an active chip with no clear button,
+     a custom chip without onClear or a disabled one, keeps the trigger's own padding. */
+  .filter-chip[data-active]:has(> .filter-chip-clear) .filter-chip-trigger {
+    padding-inline-end: 0.25rem;
+  }
+
+  .filter-chip-label {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .filter-chip[data-active] .filter-chip-label {
+    font-weight: 450;
+  }
+
+  .filter-chip-value {
+    min-width: 0;
+    max-width: 16rem;
+    overflow: hidden;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .filter-chip-chevron {
+    display: inline-flex;
+    flex: none;
+    color: var(--color-slate);
+    transition: rotate 140ms ease;
+  }
+
+  .filter-chip-chevron svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .filter-chip[data-open] .filter-chip-chevron {
+    rotate: 180deg;
+  }
+
+  @media (hover: hover) {
+    .filter-chip:not([data-active], [data-disabled]):has(.filter-chip-trigger:is(:hover, [data-hovered])) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+  }
+
+  .filter-chip:not([data-active], [data-disabled]):is(
+      [data-open],
+      :has(.filter-chip-trigger:is(:active, [data-pressed]))
+    ) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  .filter-chip[data-active] {
+    border-color: var(--color-ink);
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .filter-chip[data-active] .filter-chip-chevron {
+    color: var(--color-canvas);
+  }
+
+  .filter-chip:has(.filter-chip-trigger:is(:focus-visible, [data-focus-visible])) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .filter-chip-clear {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 2rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: transparent;
+    color: inherit;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .filter-chip-clear-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--radius-pill);
+  }
+
+  .filter-chip-clear-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  @media (hover: hover) {
+    .filter-chip-clear:is(:hover, [data-hovered]) .filter-chip-clear-icon {
+      background-color: color-mix(in srgb, var(--color-canvas) 15%, transparent);
+    }
+  }
+
+  .filter-chip-clear:is(:active, [data-pressed]) .filter-chip-clear-icon {
+    background-color: color-mix(in srgb, var(--color-canvas) 15%, transparent);
+  }
+
+  .filter-chip-clear:is(:focus-visible, [data-focus-visible]) .filter-chip-clear-icon {
+    outline: var(--focus-ring-width) solid var(--color-canvas);
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
+  .filter-chip[data-disabled] {
+    border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    color: var(--color-taupe);
+  }
+
+  /* A disabled active chip keeps its value but loses the ink, the disabled fill with the disabled text. */
+  .filter-chip[data-disabled][data-active] {
+    background-color: var(--color-disabled);
+  }
+
+  .filter-chip[data-disabled] .filter-chip-trigger {
+    cursor: not-allowed;
+  }
+
+  .filter-chip[data-disabled] .filter-chip-chevron {
+    color: var(--color-taupe);
+  }
+
+  /* Two classes, after popover.css's one: the panel pads 16px and stays inside a phone's margins. */
+  .filter-chip-panel.popover-padded {
+    max-width: min(22rem, 100vw - 2rem);
+    padding: var(--spacing-inset);
+  }
+
+  /* The tabIndex="-1" dialog React Aria focuses as the panel opens: no ring on the whole panel, as dialog.css. */
+  .filter-chip-dialog {
+    outline: none;
+  }
+
+  @media (forced-colors: active) {
+    .filter-chip {
+      border-color: CanvasText;
+    }
+
+    .filter-chip-chevron {
+      color: CanvasText;
+    }
+
+    .filter-chip[data-active] {
+      border-color: Highlight;
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .filter-chip[data-active] :is(.filter-chip-chevron, .filter-chip-clear) {
+      color: HighlightText;
+    }
+
+    .filter-chip[data-disabled],
+    .filter-chip[data-disabled] .filter-chip-chevron {
+      border-color: GrayText;
+      color: GrayText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .filter-chip-chevron {
+      transition: none;
+    }
+  }
+}

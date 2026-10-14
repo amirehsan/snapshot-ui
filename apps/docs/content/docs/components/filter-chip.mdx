@@ -1,0 +1,121 @@
+---
+title: Filter chip
+description: "A pill that names a filter and opens its choices or a panel, shows the value once it has one, and clears with one press."
+icon: ListFilter
+---
+
+<Section>
+
+## One choice
+
+A `FilterChip` with `selectionMode="single"` opens Select's list under the pill: the Menu's rows, with Select's filter from nine options. A press or Enter chooses and closes. Once it has a value the chip is the ink fill, showing its label and the value, and a clear button follows it. The list has no empty choice, as React Aria's single mode has none, so the clear button is the way back to none, and it is a tab stop.
+
+<Preview name="filter-chip-single" />
+
+</Section>
+
+<Section>
+
+## Several choices
+
+With `selectionMode="multiple"` a press, Enter or Space toggles a row and the list stays open, and `onChange` receives every chosen id each time. The chip writes its summary from the chosen options' text, in the list's order whatever the order of the value: "Groceries", "Groceries, Rent", or "Groceries, Rent and 2 more". The default is English and is built with no `Intl`; pass `labels.summary` to write it in another language, or `valueLabel` to write it yourself.
+
+<Preview name="filter-chip-multiple" />
+
+</Section>
+
+<Section>
+
+## Your own content
+
+Without `selectionMode` the chip opens a panel padded 16px around your content: two money fields, a range calendar, a segmented control. The value it shows is your `valueLabel`, in your words, and its clear button calls your `onClear`; a chip with no `valueLabel` is at rest, and one with no `onClear` draws no clear button. A function child receives `close`, for a Done or Apply button.
+
+<Preview name="filter-chip-custom" />
+
+</Section>
+
+<Section>
+
+## States
+
+At rest a chip is the boundary edge on nothing, its label at 500 and a slate chevron; active, it is the ink fill, its label at 450 and its value at 700. A disabled chip is taupe on a faint edge, keeps its value on the disabled fill, and has no clear button. A filter is neither consent nor unsaved, so a chip is never signal orange and never clay.
+
+<Preview name="filter-chip-states" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+A chip is always controlled: its value belongs in the URL, a key or a list of keys, and a FilterBar draws each chip twice. Read the value from the search parameters and write it back with the router, starting from the parameters already there so the other filters stay, deleting the parameter for no value, never writing a bare `?`, and passing `{ scroll: false }` so the page does not jump:
+
+```tsx
+'use client';
+
+import { FilterChip, PickerOption, type Key } from '@snapshot-ui/react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
+export function CategoryFilter() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  return (
+    <FilterChip
+      label="Category"
+      selectionMode="single"
+      value={searchParams.get('category')}
+      onChange={(next: Key | null) => {
+        const params = new URLSearchParams(searchParams);
+        if (next === null) params.delete('category');
+        else params.set('category', String(next));
+        const query = params.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      }}
+    >
+      <PickerOption id="groceries">Groceries</PickerOption>
+      <PickerOption id="rent">Rent</PickerOption>
+    </FilterChip>
+  );
+}
+```
+
+A multiple chip writes one parameter per key with `params.append`, and reads them back with `searchParams.getAll`. On a statically rendered route, read the parameters inside `<Suspense>` with the same chip, empty, as the fallback.
+
+A closed chip ignores letters and Left and Right, which a Select turns into a choice nobody sees: on a filter that would be a query and a URL write behind the reader's back. The popover is modal, so the page behind it is inert while it is open, and a press on the next chip first closes this one. Inside a FilterBar a chip is also a section of More and of the Filters sheet, where it draws as a titled field.
+
+</Section>
+
+<Section>
+
+## Props
+
+The props of a chip with a list, then of a chip with your content, then its words. A chip takes no `name`: it submits nothing, since its value is in the URL.
+
+<PropsTable label="FilterChip props (a list)" path="../../packages/react/src/filter-chip/FilterChip.tsx" type="Pick<FilterChipListProps, 'label' | 'selectionMode' | 'value' | 'onChange' | 'items' | 'isFilterable' | 'valueLabel' | 'onClear' | 'isSecondary' | 'isDisabled' | 'labels' | 'placement' | 'className' | 'popoverClassName'>" />
+
+<PropsTable label="FilterChip props (your content)" path="../../packages/react/src/filter-chip/FilterChip.tsx" type="Pick<FilterChipCustomProps, 'label' | 'children' | 'valueLabel' | 'onClear' | 'isSecondary' | 'isDisabled' | 'className' | 'popoverClassName'>" />
+
+<PropsTable label="FilterChipLabels" path="../../packages/react/src/filter-chip/FilterChip.tsx" type="FilterChipLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A list chip is a button with `aria-haspopup="listbox"`, named by its label and then its value, the order it shows them in: "Category Groceries". Its list is named by the label. A chip with your content is a button that opens a `dialog` named the same way. The clear button is named "Clear" and the label, from `labels.clear`, and is a tab stop after the chip. The popover is modal: focus moves into it, the page behind is inert, and focus goes back to the chip as it closes. React Aria's own announcements have no Persian.
+
+<Keys rows={[['Enter Space', 'Open the list or the panel; on the clear button, clear, and focus goes to the chip.'], ['Down Up', 'Open the list; a panel opens on Enter and Space only.'], ['A-Z Left Right', 'Do nothing on a closed chip, which keeps them from choosing unseen.'], ['Down Up Home End PageUp PageDown', 'Move through the open list, stopping at the ends.'], ['A-Z', 'In an open list, move to the option starting with the letters typed; with a filter, type into it.'], ['Enter', 'Chooses and closes with one choice; toggles and stays open with several, as Space does.'], ['Escape', 'Clears the list filter first, then closes; closes a panel. Focus goes back to the chip.'], ['Tab', 'Does not close an open list; in a panel, moves through its content; from the chip, to its clear button.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps filter chips in the system.
+
+<Rules dos={['Give each filter a short label.', 'Write the summary in the language of the app.', 'Use a filter chip for a filter that writes the URL.']} donts={['Never draw an active chip in signal orange or clay.', 'Never leave a chip without a clear way back to no value.', 'Never let a letter on a closed chip choose a filter.']} />
+
+</Section>

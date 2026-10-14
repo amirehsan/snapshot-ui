@@ -1118,6 +1118,78 @@ describe('the date range picker', () => {
   });
 });
 
+describe('the filter chip', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+  /** `top` at `percent` painted over `ground`, as color-mix with transparent paints it. */
+  const mix = (mode, top, percent, ground) => {
+    const palette = paletteFor(tokens, mode);
+    return composite({ ...parseColor(palette[top]), a: percent / 100 }, parseColor(palette[ground]));
+  };
+  /** A token color painted over a mixed ground, against that ground. */
+  const on = (mode, name, ground) =>
+    contrastRatio(composite(parseColor(paletteFor(tokens, mode)[name]), ground), ground);
+
+  // A chip at rest is the boundary edge on whatever it sits on, its label ink and its chevron slate; active, it is
+  // canvas on the ink fill, with the canvas ring inside its clear button. The gate holds each on canvas and a card.
+  it('cites canvas on ink, ink and slate on canvas and on a card, and the boundary as a track, which the gate holds', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      expect(CONTRAST_PAIRS).toContainEqual(expect.objectContaining({ text: 'ink', ground, minimum: TEXT }));
+      expect(CONTRAST_PAIRS).toContainEqual(
+        expect.objectContaining({ text: 'slate', ground, minimum: TEXT }),
+      );
+      // The switch's off track: the boundary painted on the surface itself, as the chip's edge is.
+      expect(CONTRAST_PAIRS).toContainEqual(
+        expect.objectContaining({ text: 'boundary', ground, minimum: NON_TEXT }),
+      );
+    }
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: NON_TEXT }),
+    );
+  });
+
+  // The washes are mixes and not tokens, and the disabled edge is a disabled part, so they are measured and
+  // recorded, not gated (spec corrections 27 and 31).
+  it('measures the pairs Appendix B records, in both modes', () => {
+    expect(measured('light', 'boundary', 'canvas'), 'the edge on canvas, light').toBeCloseTo(3.38, 2);
+    expect(measured('dark', 'boundary', 'canvas'), 'the edge on canvas, dark').toBeCloseTo(5.34, 2);
+    expect(measured('light', 'boundary', 'lifted'), 'the edge on a card, light').toBeCloseTo(3.45, 2);
+    expect(measured('dark', 'boundary', 'lifted'), 'the edge on a card, dark').toBeCloseTo(5.21, 2);
+    expect(measured('light', 'canvas', 'ink'), 'an active chip, light').toBeCloseTo(16.25, 2);
+    expect(measured('dark', 'canvas', 'ink'), 'an active chip, dark').toBeCloseTo(19.31, 2);
+    expect(measured('light', 'ink', 'canvas'), 'the label at rest, light').toBeCloseTo(16.25, 2);
+    expect(measured('dark', 'ink', 'canvas'), 'the label at rest, dark').toBeCloseTo(19.31, 2);
+    expect(measured('light', 'slate', 'canvas'), 'the chevron, light').toBeCloseTo(4.84, 2);
+    expect(measured('dark', 'slate', 'canvas'), 'the chevron, dark').toBeCloseTo(7.26, 2);
+    expect(on('light', 'ink', mix('light', 'ink', 5, 'canvas')), 'a hovered chip, light').toBeCloseTo(
+      14.7,
+      2,
+    );
+    expect(on('dark', 'ink', mix('dark', 'ink', 5, 'canvas')), 'a hovered chip, dark').toBeCloseTo(17.41, 2);
+    const ink = (mode) => parseColor(paletteFor(tokens, mode).ink);
+    const clearWash = (mode) => mix(mode, 'canvas', 15, 'ink');
+    expect(contrastRatio(clearWash('light'), ink('light')), 'the clear wash, light').toBeCloseTo(1.5, 2);
+    expect(contrastRatio(clearWash('dark'), ink('dark')), 'the clear wash, dark').toBeCloseTo(1.39, 2);
+    expect(on('light', 'canvas', clearWash('light')), 'the clear glyph, light').toBeCloseTo(10.81, 2);
+    expect(on('dark', 'canvas', clearWash('dark')), 'the clear glyph, dark').toBeCloseTo(13.93, 2);
+    const canvas = (mode) => parseColor(paletteFor(tokens, mode).canvas);
+    const disabledEdge = (mode) => contrastRatio(mix(mode, 'ink', 15, 'canvas'), canvas(mode));
+    expect(disabledEdge('light'), 'the disabled edge, light').toBeCloseTo(1.37, 2);
+    expect(disabledEdge('dark'), 'the disabled edge, dark').toBeCloseTo(1.51, 2);
+    for (const mode of ['light', 'dark']) {
+      expect(on(mode, 'canvas', clearWash(mode)), mode).toBeGreaterThanOrEqual(TEXT);
+      expect(on(mode, 'ink', mix(mode, 'ink', 5, 'canvas')), mode).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

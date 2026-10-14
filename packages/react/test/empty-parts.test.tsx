@@ -9,6 +9,7 @@ import { ComboBox } from '../src/combo-box';
 import { DateRangePicker } from '../src/date-range-picker';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
+import { FilterChip } from '../src/filter-chip';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
 import { MultiSelect } from '../src/multi-select';
@@ -28,8 +29,8 @@ import { toast, ToastRegion } from '../src/toast';
 import { Tooltip, TooltipTrigger } from '../src/tooltip';
 
 /**
- * Every part that a label, a hint or a row's text renders into, the chip beside a label, and a range calendar's
- * row of presets.
+ * Every part that a label, a hint or a row's text renders into, the chip beside a label, a range calendar's row
+ * of presets, and a filter chip's value and the clear button that comes with one.
  */
 const PARTS = [
   '.field-label',
@@ -39,6 +40,8 @@ const PARTS = [
   '.radio-text',
   '.switch-text',
   '.calendar-presets',
+  '.filter-chip-value',
+  '.filter-chip-clear',
 ].join(', ');
 
 /**
@@ -94,6 +97,13 @@ const EMPTY: [name: string, element: ReactElement][] = [
   [
     'DateRangePicker',
     <DateRangePicker aria-label="Period" label="" description={false} valueLabel="" isChanged />,
+  ],
+  [
+    // An empty valueLabel is no value: the chip is inactive, with no value span and no clear button.
+    'FilterChip',
+    <FilterChip label="Amount" valueLabel="" onClear={() => undefined}>
+      <p>Two amounts</p>
+    </FilterChip>,
   ],
   [
     'Select',

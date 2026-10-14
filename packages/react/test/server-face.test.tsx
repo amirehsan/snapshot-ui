@@ -5,7 +5,9 @@ import { I18nProvider } from 'react-aria-components';
 import { describe, expect, inject, it } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { DateRangePicker } from '../src/date-range-picker';
+import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
+import { PickerOption } from '../src/picker';
 
 /**
  * The server face (ruling 1): every date and number part writes one HTML, byte for byte, under en-US, de-DE and
@@ -21,6 +23,15 @@ const PRESETS = [
   { id: 'this-month', label: 'This month', range: { start: '2026-09-01', end: '2026-09-30' } },
   { id: 'last-7', label: 'Last 7 days', range: { start: '2026-09-12', end: '2026-09-18' } },
 ];
+
+const noop = (): void => undefined;
+
+/** Six categories, a list chip's options. */
+const CATEGORIES = ['Food', 'Rent', 'Salary', 'Transport', 'Utilities', 'Health'].map((name) => (
+  <PickerOption key={name} id={name.toLowerCase()}>
+    {name}
+  </PickerOption>
+));
 
 const FACES: [name: string, element: ReactElement][] = [
   [
@@ -56,6 +67,29 @@ const FACES: [name: string, element: ReactElement][] = [
       endName="to"
       today="2026-09-18"
     />,
+  ],
+  [
+    'FilterChip single',
+    <FilterChip label="Category" selectionMode="single" value="food" onChange={noop}>
+      {CATEGORIES}
+    </FilterChip>,
+  ],
+  [
+    'FilterChip multiple',
+    <FilterChip
+      label="Category"
+      selectionMode="multiple"
+      value={['health', 'salary', 'rent', 'food']}
+      onChange={noop}
+    >
+      {CATEGORIES}
+    </FilterChip>,
+  ],
+  [
+    'FilterChip custom',
+    <FilterChip label="Amount" valueLabel="Over $100" onClear={noop}>
+      <p>Two amounts</p>
+    </FilterChip>,
   ],
 ];
 

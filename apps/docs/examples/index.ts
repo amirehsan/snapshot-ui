@@ -48,6 +48,10 @@ import EyebrowHeading from './eyebrow-heading';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
 import FieldStates from './field-states';
+import FilterChipCustom from './filter-chip-custom';
+import FilterChipMultiple from './filter-chip-multiple';
+import FilterChipSingle from './filter-chip-single';
+import FilterChipStates from './filter-chip-states';
 import HeadingSizes from './heading-sizes';
 import IconButtonLink from './icon-button-link';
 import IconButtonStates from './icon-button-states';
@@ -182,6 +186,10 @@ export const examples = {
   'field-counter': LengthCounter,
   'field-parts': FieldParts,
   'field-states': FieldStates,
+  'filter-chip-custom': FilterChipCustom,
+  'filter-chip-multiple': FilterChipMultiple,
+  'filter-chip-single': FilterChipSingle,
+  'filter-chip-states': FilterChipStates,
   'heading-sizes': HeadingSizes,
   'icon-button-link': IconButtonLink,
   'icon-button-states': IconButtonStates,

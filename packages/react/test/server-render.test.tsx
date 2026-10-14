@@ -16,6 +16,7 @@ import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
 import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
 import { Drawer } from '../src/drawer';
+import { FilterChip } from '../src/filter-chip';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
@@ -128,6 +129,25 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'aria-label="Choose dates"',
     ],
     ['role="spinbutton"', 'role="dialog"', 'date-range-arrow'],
+  ],
+  [
+    // The summary from React Aria's hidden pass, in list order, and the clear button; no list and no filter.
+    'FilterChip',
+    <FilterChip label="Category" selectionMode="multiple" value={['rent', 'food']} onChange={() => undefined}>
+      <PickerOption id="food">Food</PickerOption>
+      <PickerOption id="rent">Rent</PickerOption>
+      <PickerOption id="salary">Salary</PickerOption>
+    </FilterChip>,
+    [
+      'class="filter-chip"',
+      'data-active',
+      'class="filter-chip-label"',
+      '>Category<',
+      'class="filter-chip-value"',
+      '>Food, Rent<',
+      'aria-label="Clear Category"',
+    ],
+    ['role="listbox"', 'select-filter', 'search-field'],
   ],
   [
     // React Aria writes data-empty as "true" in the HTML. A labelled field is not data-unlabelled.

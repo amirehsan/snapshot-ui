@@ -5,7 +5,9 @@ import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { DateRangePicker } from '../src/date-range-picker';
+import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
+import { PickerOption } from '../src/picker';
 
 /**
  * Each part's server HTML, hydrated in the browser on a mocked iPhone (plan, spec corrections 1 and 2). The HTML
@@ -16,6 +18,8 @@ import { NumberField } from '../src/number-field';
  *
  * Each later part adds its rows to HYDRATED.
  */
+const noop = (): void => undefined;
+
 const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLElement) => void][] = [
   [
     'NumberField money',
@@ -84,6 +88,28 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
       expect(segments[0]).toHaveAccessibleName(/Start date, Statement period$/);
       expect(segments[0]).toHaveTextContent('9');
       expect(container.querySelector('input[name="from"]')).toHaveValue('2026-09-01');
+    },
+  ],
+  [
+    'FilterChip multiple',
+    <FilterChip
+      label="Category"
+      selectionMode="multiple"
+      value={['health', 'salary', 'rent', 'food']}
+      onChange={noop}
+    >
+      {['Food', 'Rent', 'Salary', 'Transport', 'Utilities', 'Health'].map((name) => (
+        <PickerOption key={name} id={name.toLowerCase()}>
+          {name}
+        </PickerOption>
+      ))}
+    </FilterChip>,
+    (container) => {
+      // The summary is the library's own words, the same before and after hydration.
+      expect(container.querySelector('.filter-chip-value')).toHaveTextContent(/^Food, Rent and 2 more$/);
+      expect(container.querySelector('.filter-chip-trigger')).toHaveAccessibleName(
+        'Category Food, Rent and 2 more',
+      );
     },
   ],
 ];

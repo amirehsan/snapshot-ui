@@ -1102,6 +1102,44 @@ test('a money field shows the decimal keyboard and keeps Home and End for the ca
   await expect(input).toHaveValue('1234.5');
 });
 
+test('a multiple filter chip stays open as it toggles, and its clear button clears it and focuses the chip', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/filter-chip');
+  const chip = page.locator('.stage .filter-chip').filter({ hasText: 'Tags' }).first();
+  await scrolledTo(chip);
+  await expect(chip.locator('.filter-chip-value')).toHaveText('Rent');
+  await chip.locator('.filter-chip-trigger').click();
+  const popover = page.locator('.select-popover');
+  await expect(popover).toBeVisible();
+  await expect(popover).not.toHaveAttribute('data-entering');
+  await popover.getByRole('option', { name: 'Groceries' }).click();
+  await popover.getByRole('option', { name: 'Health' }).click();
+  // Still open, and the chip behind it summarizes in the list's order.
+  await expect(popover).toBeVisible();
+  await expect(chip.locator('.filter-chip-value')).toHaveText('Groceries, Rent and 1 more');
+  await page.keyboard.press('Escape');
+  await expect(popover).toHaveCount(0);
+  await chip.getByRole('button', { name: 'Clear Tags' }).click();
+  await expect(chip).not.toHaveAttribute('data-active');
+  await expect(chip.locator('.filter-chip-trigger')).toBeFocused();
+});
+
+test('a closed filter chip ignores a letter', async ({ page }) => {
+  await visit(page, '/docs/components/filter-chip');
+  const chip = page.locator('.stage .filter-chip').filter({ hasText: 'Category' }).first();
+  await scrolledTo(chip);
+  const trigger = chip.locator('.filter-chip-trigger');
+  await trigger.focus();
+  await page.keyboard.press('r');
+  await page.keyboard.press('ArrowRight');
+  await expect(chip).not.toHaveAttribute('data-active');
+  await expect(page.locator('.select-popover')).toHaveCount(0);
+  await expect(trigger).toHaveAccessibleName('Category');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.select-popover')).toBeVisible();
+});
+
 test('a date range picker writes from and to to the URL and reads them back after a reload', async ({
   page,
 }) => {
