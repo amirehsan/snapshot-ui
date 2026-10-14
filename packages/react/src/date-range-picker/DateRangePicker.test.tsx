@@ -85,14 +85,13 @@ describe('DateRangePicker', () => {
       'input-button',
       'date-range-button',
     );
-    // In the frame, in DOM order: the start date, the arrow, the end date, the button. Each date's hidden input
-    // follows it and carries no class.
-    expect(visibleParts(group)).toEqual([
-      'date-range-input',
-      'date-range-arrow',
-      'date-range-input',
-      'input-button date-range-button',
-    ]);
+    // In the frame, in DOM order: the dates' row, which alone clips, then the button, so its hit area reaches past
+    // the frame. In the row: the start date, the arrow, the end date. Each date's hidden input follows it and
+    // carries no class.
+    expect(visibleParts(group)).toEqual(['date-range-dates', 'input-button date-range-button']);
+    const dates = group.querySelector('.date-range-dates');
+    if (!dates) throw new Error('No dates row');
+    expect(visibleParts(dates)).toEqual(['date-range-input', 'date-range-arrow', 'date-range-input']);
     expect(group.querySelector('.date-range-arrow')).toHaveAttribute('aria-hidden', 'true');
   });
 
@@ -223,6 +222,58 @@ describe('DateRangePicker', () => {
     await user.keyboard('12');
     expect(onChange).toHaveBeenLastCalledWith({ start: '2026-12-01', end: '2026-12-30' });
     expect(texts(container)).toEqual(['12', '1', '2026', '12', '30', '2026']);
+  });
+
+  it('lets go of a held reversed range when an outside control clears the field', async () => {
+    const user = userEvent.setup();
+    function Cleared(): ReactElement {
+      const [range, setRange] = useState<DateRange | null>(SEPTEMBER);
+      return (
+        <>
+          <DateRangePicker label="Statement period" value={range} onChange={setRange} />
+          <button
+            type="button"
+            onClick={() => {
+              setRange(null);
+            }}
+          >
+            Clear all
+          </button>
+        </>
+      );
+    }
+    const { container } = render(<Cleared />);
+    // December 1 to September 30: reversed, so the app holds null and the field holds what was typed.
+    focus(segment(0, container));
+    await user.keyboard('12');
+    expect(texts(container)).toEqual(['12', '1', '2026', '9', '30', '2026']);
+    // The app's null is the null it already holds; the field still clears.
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
+    expect(segments(container).every((each) => each.hasAttribute('data-placeholder'))).toBe(true);
+  });
+
+  it('never brings a held reversed range back once the app has set another value', async () => {
+    const user = userEvent.setup();
+    let set: (range: DateRange | null) => void = () => undefined;
+    function Driven(): ReactElement {
+      const [range, setRange] = useState<DateRange | null>(SEPTEMBER);
+      set = setRange;
+      return <DateRangePicker label="Statement period" value={range} onChange={setRange} />;
+    }
+    const { container } = render(<Driven />);
+    focus(segment(0, container));
+    await user.keyboard('12');
+    expect(texts(container)).toEqual(['12', '1', '2026', '9', '30', '2026']);
+    // The app sets August while the field keeps focus, then clears it.
+    act(() => {
+      set({ start: '2026-08-01', end: '2026-08-31' });
+    });
+    expect(texts(container)).toEqual(['8', '1', '2026', '8', '31', '2026']);
+    act(() => {
+      set(null);
+    });
+    expect(texts(container)).not.toEqual(['12', '1', '2026', '9', '30', '2026']);
+    expect(segments(container).every((each) => each.hasAttribute('data-placeholder'))).toBe(true);
   });
 
   it('reads an invalid or reversed value as none, warns once, and never throws', () => {

@@ -5446,13 +5446,25 @@ describe('src/components/date-range-picker.css', () => {
       'gap: var(--spacing-part);',
       'min-width: 0;',
       'padding-inline: 1.5rem 3rem;',
-      // Clipped across only, so the button's hit area still reaches past the frame's top and bottom.
-      'overflow-x: clip;',
       'cursor: text;',
     ]) {
       expect(frame, declaration).toContain(declaration);
     }
-    expect(frame).not.toContain('overflow: hidden');
+    // The frame clips nothing, so the button's 40px hit area reaches past it on every side at either density.
+    expect(frame).not.toContain('overflow');
+    // The dates clip instead, across only, so a date too wide for a narrow frame never spills out of it.
+    const dates = blockAfter(rules(), '.date-range-dates {');
+    for (const declaration of [
+      'display: flex;',
+      'flex: auto;',
+      'align-items: center;',
+      'gap: var(--spacing-part);',
+      'min-width: 0;',
+      'overflow-x: clip;',
+    ]) {
+      expect(dates, declaration).toContain(declaration);
+    }
+    expect(dates).not.toContain('overflow: hidden');
     // The edge, the fill, the height and the states are input.css's: the frame's own rule sets none of them.
     for (const property of ['border', 'background', 'color:', 'height']) {
       expect(frame, property).not.toContain(property);
@@ -5501,31 +5513,83 @@ describe('src/components/date-range-picker.css', () => {
     );
   });
 
-  it('draws segments ink in tabular figures, the placeholder taupe, slate only without a label and never while disabled', () => {
+  it('draws segments ink in tabular figures, the placeholder slate, labelled or not, and taupe only while disabled', () => {
     const css = outside();
     expect(blockAfter(css, '.date-range-input {')).toContain('font-variant-numeric: tabular-nums;');
     const segment = blockAfter(css, '.date-segment {');
     expect(segment).toContain('color: var(--color-ink);');
     expect(segment).toContain('caret-color: transparent;');
-    expect(blockAfter(css, '.date-segment[data-placeholder] {')).toContain('color: var(--color-taupe);');
-    expect(
-      blockAfter(
-        css,
-        '.date-range-picker[data-unlabelled]:not([data-disabled]) .date-segment[data-placeholder] {',
-      ),
-    ).toContain('color: var(--color-slate);');
+    // Empty segments are text axe measures, so slate with a label or without one, as Select's placeholder is.
+    expect(blockAfter(css, '.date-segment[data-placeholder] {')).toContain('color: var(--color-slate);');
     expect(
       blockAfter(
         css,
         '.date-range-picker[data-disabled] :is(.date-segment, .date-range-arrow, .date-range-face) {',
       ),
     ).toContain('color: var(--color-taupe);');
-    // Slate never reaches a placeholder by another rule.
-    const slate = selectors().filter((selector) => selector.includes('data-placeholder'));
-    expect(slate).toEqual([
+    // One placeholder rule, and nothing keys on the missing label.
+    expect(selectors().filter((selector) => selector.includes('data-placeholder'))).toEqual([
       '.date-segment[data-placeholder]',
-      '.date-range-picker[data-unlabelled]:not([data-disabled]) .date-segment[data-placeholder]',
     ]);
+    expect(css).not.toContain('data-unlabelled');
+  });
+
+  it('lets no placeholder rule outrank the focused segment, so a focused empty segment takes the focus colors', () => {
+    const FOCUSED = '.date-segment:is(:focus, [data-focused])';
+    /** A selector's specificity as [ids, classes, types], :is() and :not() at their heaviest part, :where() at 0. */
+    const weigh = (selector) => {
+      let weight = [0, 0, 0];
+      const add = (other) => {
+        weight = weight.map((each, index) => each + other[index]);
+      };
+      const heaviest = (list) =>
+        list
+          .split(/,(?![^(]*\))/)
+          .map((part) => weigh(part.trim()))
+          .reduce((a, b) =>
+            a[0] !== b[0]
+              ? a[0] > b[0]
+                ? a
+                : b
+              : a[1] !== b[1]
+                ? a[1] > b[1]
+                  ? a
+                  : b
+                : a[2] >= b[2]
+                  ? a
+                  : b,
+          );
+      let rest = selector;
+      for (const match of selector.matchAll(/:(is|not|has|where)\(((?:[^()]|\([^()]*\))*)\)/g)) {
+        if (match[1] !== 'where') add(heaviest(match[2]));
+        rest = rest.replace(match[0], ' ');
+      }
+      add([(rest.match(/#[\w-]+/g) ?? []).length, 0, 0]);
+      add([0, (rest.match(/\.[\w-]+|\[[^\]]*\]|:(?!:)[\w-]+/g) ?? []).length, 0]);
+      add([0, 0, (rest.replace(/\[[^\]]*\]/g, '').match(/(?:^|[\s>+~])[a-z][\w-]*/gi) ?? []).length]);
+      return weight;
+    };
+    const compare = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+    const order = selectors();
+    const focusAt = order.indexOf(FOCUSED);
+    expect(focusAt).toBeGreaterThan(-1);
+    // Disabled segments take no focus, so the disabled rule may weigh more.
+    const placeholders = order
+      .map((selector, index) => ({ selector, index }))
+      .filter(({ selector }) => selector.includes('data-placeholder'));
+    expect(placeholders.length).toBeGreaterThan(0);
+    for (const { selector, index } of placeholders) {
+      const against = compare(weigh(selector), weigh(FOCUSED));
+      expect(against, selector).toBeLessThanOrEqual(0);
+      if (against === 0) expect(index, `${selector} comes before the focus rule`).toBeLessThan(focusAt);
+    }
+    // The calculator itself: the old unlabelled rule outranked the focus rule.
+    expect(
+      compare(
+        weigh('.date-range-picker[data-unlabelled]:not([data-disabled]) .date-segment[data-placeholder]'),
+        weigh(FOCUSED),
+      ),
+    ).toBeGreaterThan(0);
   });
 
   it('fills the focused segment ink on the micro radius', () => {

@@ -4,7 +4,6 @@ import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import type { DateRange, DateRangePreset } from '../calendar';
-import { DATE_PLACEHOLDER_A11Y } from '../stories/a11y';
 import { tokenColor, tokenPixels } from '../stories/paint';
 import { DateRangePicker } from './DateRangePicker';
 
@@ -128,14 +127,20 @@ export const Default: Story = {
   },
 };
 
-/** Nothing chosen: the placeholder segments in taupe under the label. */
+/**
+ * Nothing chosen: the empty segments in slate under the label, text axe measures as it measures any other, and
+ * the canvas on the ink chip once one has focus.
+ */
 export const Empty: Story = {
-  parameters: { a11y: DATE_PLACEHOLDER_A11Y },
   render: (args) => <DateRangePicker label="Statement period" today={TODAY} onChange={args.onChange} />,
   play: async ({ canvasElement }) => {
     const placeholder = segment(canvasElement, 0);
     await expect(placeholder).toHaveAttribute('data-placeholder');
-    await expect(getComputedStyle(placeholder).color).toBe(tokenColor('--color-taupe'));
+    await expect(getComputedStyle(placeholder).color).toBe(tokenColor('--color-slate'));
+    await tabToFirstSegment(canvasElement);
+    await expect(getComputedStyle(placeholder).backgroundColor).toBe(tokenColor('--color-ink'));
+    await expect(getComputedStyle(placeholder).color).toBe(tokenColor('--color-canvas'));
+    placeholder.blur();
   },
 };
 
@@ -177,11 +182,19 @@ export const Open: Story = {
   },
 };
 
-/** Named by an aria-label alone: the placeholders slate, the only words shown. */
+/**
+ * Named by an aria-label alone: the empty segments slate, as they are under a label, and a focused one the canvas
+ * on the ink chip, which no placeholder rule outranks.
+ */
 export const Unlabelled: Story = {
   render: (args) => <DateRangePicker aria-label="Statement period" today={TODAY} onChange={args.onChange} />,
   play: async ({ canvasElement }) => {
-    await expect(getComputedStyle(segment(canvasElement, 0)).color).toBe(tokenColor('--color-slate'));
+    const placeholder = segment(canvasElement, 0);
+    await expect(getComputedStyle(placeholder).color).toBe(tokenColor('--color-slate'));
+    await tabToFirstSegment(canvasElement);
+    await expect(getComputedStyle(placeholder).backgroundColor).toBe(tokenColor('--color-ink'));
+    await expect(getComputedStyle(placeholder).color).toBe(tokenColor('--color-canvas'));
+    placeholder.blur();
   },
 };
 
@@ -523,6 +536,41 @@ export const NoSideScroll320: Story = {
       popover.style.maxWidth = '';
       await userEvent.keyboard('{Escape}');
       await closed();
+    }
+  },
+};
+
+/**
+ * The calendar button's 40px hit area, whole at either density: the frame clips nothing, so a point 19.5px either
+ * side of the button's center, across and up and down, still lands on it, though a compact frame is shorter.
+ */
+export const ButtonHitArea: Story = {
+  tags: ['no-visual'],
+  render: () => <DateRangePicker label="Statement period" defaultValue={SEPTEMBER} today={TODAY} />,
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: /^Choose dates/ });
+    const root = document.documentElement;
+    const density = root.dataset.density;
+    const reach = tokenPixels('--size-target') / 2 - 0.5;
+    try {
+      for (const level of ['comfortable', 'compact']) {
+        root.dataset.density = level;
+        const box = rect(button);
+        const x = box.left + box.width / 2;
+        const y = box.top + box.height / 2;
+        for (const [dx, dy] of [
+          [-reach, 0],
+          [reach, 0],
+          [0, -reach],
+          [0, reach],
+        ] as const) {
+          const hit = document.elementFromPoint(x + dx, y + dy);
+          await expect(button.contains(hit), `${level} ${String(dx)},${String(dy)}`).toBe(true);
+        }
+      }
+    } finally {
+      if (density === undefined) delete root.dataset.density;
+      else root.dataset.density = density;
     }
   },
 };

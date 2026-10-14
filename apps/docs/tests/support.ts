@@ -67,27 +67,11 @@ export const axeViolations = async (
   page: Page,
   { disableRules = [] }: { disableRules?: readonly string[] } = {},
 ): Promise<string[]> => {
-  // A date field's placeholder segments ("mm", "dd", "yyyy") are the field's placeholder, taupe under a visible
-  // label as every field's is, which in a text input is a pseudo-element axe never measures. On a page that draws
-  // one, contrast runs in a pass of its own that skips them alone and measures everything else, typed segments
-  // included (design-system.md, "DateRangePicker").
-  const split = (await page.locator('.date-segment[data-placeholder]').count()) > 0;
-  const skipped = split ? ['color-contrast'] : [];
   let builder = new AxeBuilder({ page }).options({
-    rules: {
-      'label-content-name-mismatch': { enabled: true },
-      ...Object.fromEntries(skipped.map((rule) => [rule, { enabled: false }])),
-    },
+    rules: { 'label-content-name-mismatch': { enabled: true } },
   });
-  if (disableRules.length > 0) builder = builder.disableRules([...disableRules, ...skipped]);
+  if (disableRules.length > 0) builder = builder.disableRules([...disableRules]);
   const { violations } = await builder.analyze();
-  if (split && !disableRules.includes('color-contrast')) {
-    const contrast = await new AxeBuilder({ page })
-      .withRules(['color-contrast'])
-      .exclude('.date-segment[data-placeholder]')
-      .analyze();
-    violations.push(...contrast.violations);
-  }
   return violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 };
 

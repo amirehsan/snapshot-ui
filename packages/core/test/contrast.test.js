@@ -1095,9 +1095,10 @@ describe('the date range picker', () => {
     return contrastRatio(composite(parseColor(palette[name]), ground), ground);
   };
 
-  // The segments are ink on the raised pill, the arrow and an unlabelled placeholder slate on it, and the focused
-  // segment canvas on its ink chip. The gate holds all three; the calendar it opens is the calendar's record.
-  it('cites ink, slate and canvas on ink on raised, which the gate holds', () => {
+  // The segments are ink on the raised pill, the arrow and every empty segment slate on it, labelled or not, and
+  // the focused segment canvas on its ink chip, empty or not. The gate holds all three; the calendar it opens is
+  // the calendar's record.
+  it('cites ink, slate and canvas on ink, which the gate holds, for the segments, the placeholder and the arrow', () => {
     for (const text of ['ink', 'slate']) {
       expect(CONTRAST_PAIRS).toContainEqual(
         expect.objectContaining({ text, ground: 'raised', minimum: TEXT }),
@@ -1113,6 +1114,9 @@ describe('the date range picker', () => {
     expect(measured('dark', 'ink', 'raised'), 'a segment, dark').toBeCloseTo(15.36, 2);
     expect(measured('light', 'slate', 'raised'), 'the arrow, light').toBeCloseTo(5.49, 2);
     expect(measured('dark', 'slate', 'raised'), 'the arrow, dark').toBeCloseTo(6.44, 2);
+    for (const mode of ['light', 'dark']) {
+      expect(measured(mode, 'slate', 'raised'), `an empty segment, ${mode}`).toBeGreaterThanOrEqual(TEXT);
+    }
     expect(measured('light', 'canvas', 'ink'), 'the focused segment, light').toBeCloseTo(16.25, 2);
     expect(measured('dark', 'canvas', 'ink'), 'the focused segment, dark').toBeCloseTo(19.31, 2);
   });
