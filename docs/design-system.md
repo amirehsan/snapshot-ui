@@ -6501,6 +6501,25 @@ inside the nav is what the query re-lays (spec correction 24). A phone
 keeps two 40px targets and the range; a narrow column on a wide page
 narrows too.
 
+**Just above narrow.** Under 36rem of the nav the step words become
+visually hidden names and the steps chevron circles, `padding-inline:
+0`, while the numbers stay. The threshold is the worded row at the
+default `siblingCount` on a coarse pointer, whose compact control is
+44px: 7 slots of 44px are 308px, the 8 gaps of 0.25rem 32px, and the
+two steps 0.75rem of padding each side, the 16px chevron, the 0.25rem
+gap and the word, measured at 99px for Previous and 75px for Next, 174px
+together: 514px, 32.1rem, wider than its container from 30rem to about
+32rem before this band. 36rem leaves about 62px for longer words in
+another language. Without the words the same row is 9 circles and 8
+gaps, 428px, inside 30rem. Two siblings on a coarse pointer are 11
+circles and 10 gaps without the words, 524px, still wider than a nav
+just above 30rem, so as a last resort `.pagination-list` takes
+`flex-wrap: wrap; justify-content: flex-end`, and wraps to the inline
+end, the left in right to left, rather than push the page sideways.
+The `JustAboveNarrow` story, in a 31rem column, and the docs'
+`pagination-siblings` example, in a 30.5rem one, hold this with no
+sideways scroll.
+
 **The short form.** `hasPageNumbers={false}`, for an endless or
 cursor-paged list, draws no pages and no gaps, and its row, marked
 `data-page-numbers="false"`, is the narrow row at every width: Previous,
@@ -6526,12 +6545,27 @@ page: to the current page's control, or, when that cannot take focus
 step remembers it had focus until focus moves to another element, since
 a disabled link step is a new element (the anchor becomes a span) and a
 disabled button drops focus; after the commit that disables it, a layout
-effect moves focus unless it already went somewhere else on purpose.
+effect moves focus unless it already went somewhere else on purpose. A
+blur with no related target keeps the flag only while the step is gone
+from the page or disabled, `:disabled, [aria-disabled="true"]`: focus
+that goes to nothing from a step still there and enabled, a click on
+the page around it, clears the flag, so a later disable does not pull
+focus back into the row.
 
-**Edges.** A `page` outside 1 to `pageCount`, or not a whole number, is
-clamped, and the status leaf warns once per mount in the console:
-"Pagination: page 0 is outside 1 to 26; showing page 1." The shell has
-no effects, so it passes the sentence to the leaf (spec correction 21).
+**Edges.** The shell cleans its inputs once and uses only the clean
+values, for the page items, the clamp, the steps' disabling and whether
+the list is drawn: `pageCount` is its whole pages, `Math.max(0,
+Math.trunc(pageCount))`, and none when it is not a finite number, so
+25.5 is 25 and `NaN` or `Infinity` draws the range alone; `siblingCount`
+is likewise whole and at least 0, and 1, the default, when it is not a
+finite number. A cursor-paged list needs no infinite count: the docs
+pass `pageCount={hasMore ? page + 1 : page}`. A `page` that is not a
+whole number from 1 to the count is clamped, and the status leaf warns
+once per mount in the console: "Pagination: page 2.5 is not a page of 1
+to 26; showing page 2.", and with no pages, "Pagination: page 3 is not
+a page, since there are no pages; showing the range alone." The shell
+has no effects, so it passes the sentence to the leaf (spec correction
+21).
 
 **URL state and R5.** Link mode is the consumer's: the server page reads
 the page from its search parameters, builds each URL and passes the
@@ -6567,4 +6601,5 @@ NVDA: not yet verified (risk R3).
 **The size.** The size limit is 2.5 kB for `Pagination`, above the
 spec's 1.5 kB budget: the entry measured 1.55 kB, the shell with its
 three client leaves, the page items and the focus handoff, and the rule
-rounds up to 2 kB and adds 0.5 kB.
+rounds up to 2 kB and adds 0.5 kB. With the cleaned inputs, the warning
+for no pages and the blur rule it measures 1.63 kB, inside the limit.

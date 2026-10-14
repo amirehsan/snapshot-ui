@@ -264,7 +264,7 @@ describe('Pagination', () => {
     );
     expect(screen.getByRole('link', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page');
     expect(warn).toHaveBeenCalledOnce();
-    expect(warn).toHaveBeenCalledWith('Pagination: page 0 is outside 1 to 26; showing page 1.');
+    expect(warn).toHaveBeenCalledWith('Pagination: page 0 is not a page of 1 to 26; showing page 1.');
     rerender(<Pagination page={0} pageCount={26} rangeLabel={range(1)} getPageHref={href} />);
     rerender(<Pagination page={40} pageCount={26} rangeLabel={range(26)} getPageHref={href} />);
     expect(screen.getByRole('link', { name: 'Page 26' })).toHaveAttribute('aria-current', 'page');
@@ -273,6 +273,53 @@ describe('Pagination', () => {
     warn.mockClear();
     render(<Pagination page={3} pageCount={26} rangeLabel={range(3)} getPageHref={href} />);
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('says a page that is not a whole number, or a range with no pages, in its warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const half = render(<Pagination page={2.5} pageCount={26} rangeLabel={range(2)} getPageHref={href} />);
+    expect(screen.getByRole('link', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page');
+    expect(warn).toHaveBeenCalledWith('Pagination: page 2.5 is not a page of 1 to 26; showing page 2.');
+    half.unmount();
+    warn.mockClear();
+    render(<Pagination page={3} pageCount={0} rangeLabel="No rows" getPageHref={href} />);
+    expect(warn).toHaveBeenCalledWith(
+      'Pagination: page 3 is not a page, since there are no pages; showing the range alone.',
+    );
+  });
+
+  it('cleans pageCount and siblingCount once, and uses the clean values everywhere', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // A fractional count is its whole pages: 25, so page 25 is the last and Next goes nowhere.
+    const fraction = render(
+      <Pagination page={25} pageCount={25.5} rangeLabel={range(25)} getPageHref={href} />,
+    );
+    expect(row()).toEqual(['Previous', '1', '…', '21', '22', '23', '24', '25', 'Next']);
+    expect(screen.getByRole('link', { name: 'Page 25' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Next' })).toHaveAttribute('aria-disabled', 'true');
+    expect(warn).not.toHaveBeenCalled();
+    fraction.unmount();
+    // A count that is not a finite number is no pages: the range alone, and nothing to warn about on page 1.
+    for (const pageCount of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      const { container, unmount } = render(
+        <Pagination page={1} pageCount={pageCount} rangeLabel="No rows" getPageHref={href} />,
+      );
+      expect(container.querySelector('.pagination-list')).toBeNull();
+      expect(container.querySelector('.pagination-range')).toHaveTextContent('No rows');
+      unmount();
+    }
+    expect(warn).not.toHaveBeenCalled();
+    // A siblingCount that is not a finite number is the default, 1.
+    render(
+      <Pagination
+        page={12}
+        pageCount={26}
+        rangeLabel={range(12)}
+        getPageHref={href}
+        siblingCount={Number.NaN}
+      />,
+    );
+    expect(row()).toEqual(['Previous', '1', '…', '11', '12', '13', '…', '26', 'Next']);
   });
 
   it('leaves the status empty on first render, and in Strict Mode', () => {
@@ -395,6 +442,31 @@ describe('Pagination', () => {
     expect(four).toHaveFocus();
     rerender(<Pagination page={5} pageCount={5} rangeLabel={range(5)} getPageHref={href} />);
     expect(four).toHaveFocus();
+  });
+
+  it('forgets its focus when focus leaves to nowhere while the step is still enabled', () => {
+    for (const mode of ['link', 'button'] as const) {
+      const view = (page: number): ReactElement =>
+        mode === 'link' ? (
+          <Pagination page={page} pageCount={5} rangeLabel={range(page)} getPageHref={href} />
+        ) : (
+          <Pagination page={page} pageCount={5} rangeLabel={range(page)} onPageChange={() => undefined} />
+        );
+      const { rerender, unmount } = render(view(4));
+      const next = screen.getByRole(mode, { name: 'Next' });
+      next.focus();
+      expect(next).toHaveFocus();
+      // A click on the page around it: focus goes to nothing, and the step is still there and enabled.
+      act(() => {
+        next.blur();
+      });
+      expect(document.body).toHaveFocus();
+      // Next disables later, by some other route: focus is not pulled back into the row.
+      rerender(view(5));
+      expect(screen.getByRole(mode, { name: 'Page 5' })).not.toHaveFocus();
+      expect(document.body).toHaveFocus();
+      unmount();
+    }
   });
 
   it('passes className, ref and attributes to the nav', () => {

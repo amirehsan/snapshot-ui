@@ -61,9 +61,11 @@ import MultiSelectBasic from './multi-select-basic';
 import MultiSelectMany from './multi-select-many';
 import MultiSelectStates from './multi-select-states';
 import PaginationButtons from './pagination-buttons';
+import PaginationCursor from './pagination-cursor';
 import PaginationLinks from './pagination-links';
 import PaginationNarrow from './pagination-narrow';
 import PaginationPersian from './pagination-persian';
+import PaginationSiblings from './pagination-siblings';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
 import RadioGroupBasic from './radio-group-basic';
@@ -179,9 +181,11 @@ export const examples = {
   'multi-select-many': MultiSelectMany,
   'multi-select-states': MultiSelectStates,
   'pagination-buttons': PaginationButtons,
+  'pagination-cursor': PaginationCursor,
   'pagination-links': PaginationLinks,
   'pagination-narrow': PaginationNarrow,
   'pagination-persian': PaginationPersian,
+  'pagination-siblings': PaginationSiblings,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
   'radio-group-basic': RadioGroupBasic,

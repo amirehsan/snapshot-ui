@@ -956,6 +956,79 @@ test('a narrow pagination row keeps two 40px steps around the range', async ({ p
   await expect(example.getByRole('link', { name: 'Previous' })).toBeVisible();
 });
 
+/**
+ * The siblings example: 26 pages, two siblings each side, in a 30.5rem column, just above the narrow row. The
+ * numbers stay, the step words hide as names, and nothing in the row, its column or the page scrolls sideways.
+ */
+const siblingsFit = async (page: Page, size: number): Promise<void> => {
+  const example = page.getByRole('navigation', { name: 'Ledger pages' });
+  await scrolledTo(example);
+  const box = await example.boundingBox();
+  if (!box) throw new Error('No siblings row drawn');
+  expect(box.width).toBe(30.5 * 16);
+  // 2 times 2 plus 5 slots: 1, a gap, 11 to 15, a gap, 26.
+  await expect(example.locator('.pagination-page')).toHaveCount(7);
+  for (const control of await example.locator('.pagination-page').all()) await expect(control).toBeVisible();
+  const next = example.getByRole('link', { name: 'Next' });
+  await expect(next).toBeVisible();
+  const step = await next.boundingBox();
+  if (!step) throw new Error('No Next drawn');
+  expect(step.width).toBe(size);
+  expect(step.height).toBe(size);
+  for (const control of await example.locator('.pagination-control').all()) {
+    const each = await control.boundingBox();
+    if (!each) throw new Error('A control is not drawn');
+    expect(each.x).toBeGreaterThanOrEqual(box.x);
+    expect(each.x + each.width).toBeLessThanOrEqual(box.x + box.width);
+  }
+  expect(await example.evaluate((nav) => nav.scrollWidth - nav.clientWidth)).toBeLessThanOrEqual(0);
+  expect(
+    await example.evaluate((nav) => {
+      const column = nav.parentElement;
+      return column ? column.scrollWidth - column.clientWidth : 1;
+    }),
+  ).toBeLessThanOrEqual(0);
+  expect(await sideways(page)).toBe(0);
+};
+
+test('a pagination row with two siblings at 30.5rem stays inside its column', async ({ page }) => {
+  await visit(page, '/docs/components/pagination');
+  await siblingsFit(page, 40);
+});
+
+test.describe('the pagination page, on a touch screen', () => {
+  // Wide enough for the 30.5rem column, with a coarse pointer, under which a compact control is 44px.
+  test.use({ hasTouch: true, viewport: { width: 900, height: 760 } });
+
+  test('a pagination row with two siblings at 30.5rem and 44px controls stays inside its column', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/pagination');
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+    await page.evaluate(() => {
+      document.documentElement.dataset.density = 'compact';
+    });
+    await siblingsFit(page, 44);
+  });
+});
+
+test('a cursor-paged row enables Next while there is more and disables it on the last page', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/pagination');
+  const example = page.getByRole('navigation', { name: 'Activity pages' });
+  await scrolledTo(example);
+  await expect(example.locator('.pagination-page')).toHaveCount(0);
+  await expect(example.locator('.pagination-range')).toHaveText('1 to 25');
+  const next = example.getByRole('button', { name: 'Next' });
+  for (const range of ['26 to 50', '51 to 75', '76 to 87']) {
+    await next.click();
+    await expect(example.locator('.pagination-range')).toHaveText(range);
+  }
+  await expect(next).toBeDisabled();
+  await expect(example.getByRole('button', { name: 'Previous' })).toBeEnabled();
+});
+
 test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
   await visit(page, '/docs/components/text-area');
   const field = fieldNamed(page, 'About the workspace');

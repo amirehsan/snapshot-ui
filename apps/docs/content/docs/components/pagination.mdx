@@ -28,9 +28,29 @@ Pass `onPageChange` instead of `getPageHref` and every control is a button that 
 
 ## Narrow
 
-Under 30rem of its own width the numbers and gaps leave and the row is Previous, the range and Next: two 40px targets and the range between them. It is a container query, not a viewport one, so a narrow column on a wide page narrows too. The step words stay as the steps' names. `hasPageNumbers={false}` gives the same row at every width.
+Under 36rem of its own width the step words hide, and under 30rem the numbers and gaps leave too and the row is Previous, the range and Next: two 40px targets and the range between them. It is a container query, not a viewport one, so a narrow column on a wide page narrows too. The step words stay as the steps' names. `hasPageNumbers={false}` gives the same row at every width.
 
 <Preview name="pagination-narrow" />
+
+</Section>
+
+<Section>
+
+## More siblings
+
+`siblingCount` sets the pages each side of the current one, 1 by default. Under 36rem the step words hide and stay the steps' names, so the numbers keep their room just above 30rem; here two siblings each side in a 30.5rem column. When even the row without words is wider than the nav, as many siblings on a phone's larger controls can be, the list wraps to the end of the row rather than push the page sideways.
+
+<Preview name="pagination-siblings" />
+
+</Section>
+
+<Section>
+
+## Without numbers
+
+For a cursor-paged list, where the API says only whether another page follows, pass `hasPageNumbers={false}` and `pageCount={hasMore ? page + 1 : page}`: one page past this one while there is more, which enables Next, and this page on the last, which disables it. The range is what you know, here "1 to 25" with no total.
+
+<Preview name="pagination-cursor" />
 
 </Section>
 
@@ -63,7 +83,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const page = Math.min(Math.max(1, Number.parseInt(param, 10) || 1), pageCount);
   const first = (page - 1) * PAGE_SIZE + 1;
   const last = Math.min(page * PAGE_SIZE, total);
-  const range = `${formatCount(first)} to ${formatCount(last)} of ${formatCount(total)}`;
+  const range =
+    total === 0 ? 'No transactions' : `${formatCount(first)} to ${formatCount(last)} of ${formatCount(total)}`;
   return (
     <>
       <TransactionList page={page} />
@@ -73,9 +94,9 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
 }
 ```
 
-`formatCount` is yours: the range arrives formatted, and Pagination never formats a number. The links go through the `RouterProvider` at the app's root, as [Routing](/docs/routing) sets up, so a page change is a soft navigation and the status region stays mounted to speak the new range. If it does not speak after a navigation, render Pagination in the layout segment that persists. Start each `href` from the parameters already in the URL when the page has others, such as a search or a view, so changing the page keeps them.
+`formatCount` is yours: the range arrives formatted, and Pagination never formats a number, so with no rows you word the range yourself. The links go through the `RouterProvider` at the app's root, as [Routing](/docs/routing) sets up, so a page change is a soft navigation and the status region stays mounted to speak the new range. If it does not speak after a navigation, render Pagination in the layout segment that persists. Start each `href` from the parameters already in the URL when the page has others, such as a search or a view, so changing the page keeps them.
 
-The row always has seven slots, wherever the current page is, so the controls never move under the pointer. Choose a page size that keeps the page count steady while a person pages. For an endless or cursor-paged list, where the count is unknown, use `hasPageNumbers={false}`: Previous, the range and Next. A `page` outside 1 to `pageCount` is shown as the nearest end, with a console warning.
+The row always has 2 times `siblingCount` plus 5 slots, seven by default, wherever the current page is, so the controls never move under the pointer. Choose a page size that keeps the page count steady while a person pages. For an endless or cursor-paged list, where the count is unknown, use `hasPageNumbers={false}` with `pageCount={hasMore ? page + 1 : page}`: Previous, the range and Next, as [Without numbers](#without-numbers) shows. `pageCount` and `siblingCount` count whole pages, and a count that is not a finite number is no pages. A `page` that is not a whole number from 1 to `pageCount` is shown as the nearest page, with a console warning.
 
 </Section>
 

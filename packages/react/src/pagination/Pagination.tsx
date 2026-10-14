@@ -19,13 +19,13 @@ export interface PaginationLabels {
 interface PaginationBase extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'onChange' | 'aria-label'> {
   /** The current page, counted from 1. */
   page: number;
-  /** How many pages there are. */
+  /** How many pages there are, in whole pages; a count that is not a finite number is none. */
   pageCount: number;
   /** The range, formatted by the app: "1 to 50 of 1,284". Shown, and spoken after a change. */
   rangeLabel: string;
   /** How a page number is written, such as Persian digits. Runs in the shell. @default String(page) */
   pageLabel?: (page: number) => string;
-  /** Page numbers shown each side of the current one. @default 1 */
+  /** Page numbers shown each side of the current one, in whole pages; one that is not a finite number is 1. @default 1 */
   siblingCount?: number;
   /** @default true */
   hasPageNumbers?: boolean;
@@ -111,11 +111,17 @@ export function Pagination(props: PaginationProps): ReactElement {
     page: given?.page ?? DEFAULT_LABELS.page,
   };
   const write = (n: number): string => (pageLabel === undefined ? String(n) : pageLabel(n));
-  const current = clampPage(page, pageCount);
+  // The inputs cleaned once, and only these used below: whole pages, none for a count that is not a finite
+  // number, and the default siblings for a siblingCount that is not one.
+  const count = Number.isFinite(pageCount) ? Math.max(0, Math.trunc(pageCount)) : 0;
+  const siblings = Number.isFinite(siblingCount) ? Math.max(0, Math.trunc(siblingCount)) : 1;
+  const current = clampPage(page, count);
   const warning =
     current === page
       ? undefined
-      : `Pagination: page ${String(page)} is outside 1 to ${String(pageCount)}; showing page ${String(current)}.`;
+      : count === 0
+        ? `Pagination: page ${String(page)} is not a page, since there are no pages; showing the range alone.`
+        : `Pagination: page ${String(page)} is not a page of 1 to ${String(count)}; showing page ${String(current)}.`;
 
   /** A control that goes to page `target`: a link built from `getPageHref`, or a button calling `onPageChange`. */
   const control = (target: number, { isDisabled = false, ...each }: ControlProps): ReactElement =>
@@ -132,7 +138,7 @@ export function Pagination(props: PaginationProps): ReactElement {
       <li key={which} className="pagination-item" data-kind="step">
         {control(target, {
           className: 'pagination-control pagination-step',
-          isDisabled: target < 1 || target > pageCount,
+          isDisabled: target < 1 || target > count,
           step: which,
           children: (
             <>
@@ -146,7 +152,7 @@ export function Pagination(props: PaginationProps): ReactElement {
   };
 
   const items = hasPageNumbers
-    ? pageItems(current, pageCount, Math.max(0, Math.trunc(siblingCount))).map((item) => {
+    ? pageItems(current, count, siblings).map((item) => {
         if (item.type === 'gap')
           return (
             <li key={`gap-${item.side}`} className="pagination-item" data-kind="gap">
@@ -176,7 +182,7 @@ export function Pagination(props: PaginationProps): ReactElement {
     { ...rest, 'aria-label': labels.navigation, className: cx('pagination', className) },
     <div className="pagination-row" data-page-numbers={hasPageNumbers ? undefined : 'false'}>
       <p className="pagination-range">{rangeLabel}</p>
-      {pageCount > 1 ? (
+      {count > 1 ? (
         <ol className="pagination-list">
           {stepItem('previous')}
           {items}
