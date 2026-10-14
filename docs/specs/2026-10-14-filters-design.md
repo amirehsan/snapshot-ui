@@ -1,6 +1,6 @@
 # Filters: FilterChip, FilterBar, Calendar, RangeCalendar, DateRangePicker and NumberField: design
 
-Status: draft for the owner's review on 2026-10-14. Ten rulings in section 10.1 wait on the owner, each with a recommended answer; everything else is decided here and listed in section 10.2.
+Status: approved on 2026-10-14. The owner took the ten rulings in section 10.1 as recommended; everything else is decided here and listed in section 10.2.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document pulls forward the phase 3 rows "NumberField", "DatePicker, DateTimePicker, Calendar" (its Calendar only) and "DateRangePicker", and adds FilterChip and FilterBar, which the parent spec does not list. It answers batch 3b, the second third of batch 3 of the first consumer's roadmap, its Transactions page. The design authority remains `docs/design-system.md`.
 Released before this: batch 3a, `@snapshot-ui/core` and `@snapshot-ui/react` 0.4.0 and `@snapshot-ui/charts` 0.1.1 (the pickers). Section 2 lists what this document takes from batches 1 to 3a.
 
@@ -502,7 +502,7 @@ export interface FilterBarProps {
 
 ## 10. Decisions
 
-### 10.1 Rulings for the owner
+### 10.1 Rulings taken by the owner
 
 1. **What "no `Intl` at render" allows for dates and money.** Recommended: the server face (section 4): React Aria's parts render on the server and hydrate with every `Intl`-, clock- and platform-derived text left out or replaced by an `Intl`-free string, and React Aria's text arrives in the first render after hydration; React Aria may build formatters inside a render, as 3a's R1 accepted its collator, and a server-render test pins the HTML byte for byte across locales, time zones and a mocked iPhone. Alternatives: mount the fields only in the browser, which drops the label, hint and hidden inputs from the server's HTML; or render React Aria's text on the server under a pinned locale and zone, which breaks the rule's letter and still differs where Node's and a browser's `Intl` data differ (`fa-IR` currency output carries bidi marks and a U+2212 minus).
 2. **The date value type.** Recommended: ISO strings, `'YYYY-MM-DD'` and `{ start, end }`, with `@internationalized/date` a direct dependency of the react package at React Aria's own range (`^3.12.4`), so it adds no bytes, and the first new dependency since 3a's plan recorded none. A server component can pass a string, a URL holds one, and the app never imports a date library. Alternative: React Aria's `CalendarDate`, which a server component cannot pass and every app must construct.
