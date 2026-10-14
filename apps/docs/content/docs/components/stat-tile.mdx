@@ -48,7 +48,7 @@ Any small drawing goes in `trend`, at the end of the value's row, 96 by 32 at mo
 
 ## In a row
 
-A tile takes its width from its column, never from its content, because it measures itself to move its trend. Lay tiles in a grid such as `repeat(auto-fit, minmax(16rem, 1fr))`, never in a row that sizes them by what they hold. Cap the minimum at the row's width, as below, so a column narrower than 16rem holds one tile and nothing scrolls sideways.
+A tile takes its width from its column, never from its content, because it is a size container. Lay tiles in a grid such as `repeat(auto-fit, minmax(16rem, 1fr))`, never in a row that sizes them by what they hold. Cap the minimum at the row's width, as below, so a column narrower than 16rem holds one tile and nothing scrolls sideways.
 
 ```css
 .tiles {

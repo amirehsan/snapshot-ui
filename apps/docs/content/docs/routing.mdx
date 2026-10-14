@@ -47,7 +47,7 @@ Render `<ClientRouter>` around `{children}` in `app/layout.tsx`. `routerOptions`
 
 ## What goes through it
 
-Every part that draws a link: [Link](/docs/components/link), [IconButton](/docs/components/icon-button) with `href`, a [Menu](/docs/components/menu) item with `href`, and the shell's links, [SidebarItem and SidebarBrand](/docs/components/sidebar) and [BottomTabBarItem](/docs/components/bottom-tab-bar). Breadcrumbs will too, when they ship.
+Every part that draws a link: [Link](/docs/components/link), [IconButton](/docs/components/icon-button) with `href`, [StatTile](/docs/components/stat-tile) with `href`, a [Menu](/docs/components/menu) item with `href`, and the shell's links, [SidebarItem and SidebarBrand](/docs/components/sidebar) and [BottomTabBarItem](/docs/components/bottom-tab-bar). Breadcrumbs will too, when they ship.
 
 </Section>
 
@@ -79,7 +79,7 @@ export function TransactionsItem({ isCurrent }: { isCurrent: boolean }) {
 }
 ```
 
-Or draw Next's own `Link` with the `render` prop every link part inherits, for its viewport prefetch. It is a function, so it is passed from a client component, which the app has anyway for `usePathname()`:
+Or draw Next's own `Link` with the `render` prop every link part inherits, for its viewport prefetch. A linked StatTile is the exception: it takes no `render` or `routerOptions`, so Next's `Link` never prefetches it. It is a function, so it is passed from a client component, which the app has anyway for `usePathname()`:
 
 ```tsx
 'use client';

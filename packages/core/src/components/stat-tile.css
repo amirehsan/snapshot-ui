@@ -141,12 +141,19 @@
 
   @media (hover: hover) {
     a.stat-tile:is(:hover, [data-hovered]) {
+      --chart-surface: color-mix(in srgb, var(--color-ink) 5%, var(--color-lifted));
+
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-lifted));
     }
   }
 
-  /* A press shows what hover does, since touch has no hover to show it. */
+  /*
+   * A press shows what hover does, since touch has no hover to show it. The washed tile is the surface a
+   * sparkline's end dot is ringed in, so the ring takes the wash too.
+   */
   a.stat-tile:is(:active, [data-pressed]) {
+    --chart-surface: color-mix(in srgb, var(--color-ink) 5%, var(--color-lifted));
+
     background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-lifted));
   }
 

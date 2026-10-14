@@ -3440,6 +3440,14 @@ describe('src/components/stat-tile.css', () => {
     expect(blockAfter(css, 'a.stat-tile {')).toContain('cursor: pointer;');
   });
 
+  it("rings a sparkline's end dot in the washed tile's color on hover and on a press", () => {
+    const css = rules();
+    const surface = '--chart-surface: color-mix(in srgb, var(--color-ink) 5%, var(--color-lifted));';
+    const hover = blockAfter(css, '@media (hover: hover)');
+    expect(blockAfter(hover, 'a.stat-tile:is(:hover, [data-hovered]) {')).toContain(surface);
+    expect(blockAfter(css, 'a.stat-tile:is(:active, [data-pressed]) {')).toContain(surface);
+  });
+
   it('rings a linked tile with the token ring outside it', () => {
     const ring = blockAfter(rules(), 'a.stat-tile:is(:focus-visible, [data-focus-visible]) {');
     expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
@@ -3785,6 +3793,15 @@ describe('src/components/charts.css, the shared rules and the sparkline', () => 
     const dot = blockAfter(forced, '.sparkline-end {');
     expect(dot).toContain('border-color: canvas;');
     expect(dot).toContain('background-color: CanvasText;');
+  });
+
+  it('keeps the dots when the page is printed without backgrounds', () => {
+    const css = rules();
+    for (const selector of ['.sparkline {', '.line-chart {']) {
+      const block = blockAfter(css, selector);
+      expect(block, selector).toContain('-webkit-print-color-adjust: exact;');
+      expect(block, selector).toContain('print-color-adjust: exact;');
+    }
   });
 
   it('moves nothing, so it needs no reduced-motion block', () => {

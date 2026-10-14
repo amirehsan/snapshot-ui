@@ -28,7 +28,7 @@ export function Save() {
 }
 ```
 
-Every component file carries `'use client'`, so a Next.js server component can render them directly.
+Stateful or interactive components carry `'use client'`. Static ones carry none, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, the field counter and chip, Meter and a StatTile without `href`. Either kind can be rendered from a Next.js server component directly.
 
 Body text is set at weight 450, which only a variable font has. Load Sofia Sans as one; the installation guide shows how.
 

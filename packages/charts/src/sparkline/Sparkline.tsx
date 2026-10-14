@@ -59,7 +59,7 @@ export function Sparkline({
     ? { role: 'img', 'aria-labelledby': ariaLabelledBy }
     : named(ariaLabel)
       ? { role: 'img', 'aria-label': ariaLabel }
-      : { 'aria-hidden': true };
+      : { 'aria-hidden': true, role: undefined };
 
   return (
     <span {...rest} {...name} className={cx('sparkline', className)}>

@@ -8,7 +8,7 @@ export interface AvatarProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'chil
   name: string;
   /** The image. When absent, or when it fails to load, the initials show. */
   src?: string;
-  /** Override the initials derived from `name`, such as "WF" for a bank. One or two characters. */
+  /** Override the initials derived from `name`, such as "WF" for a bank. One or two characters; blank falls back to `name`'s. */
   initials?: string;
   /** @default 'md' */
   size?: 'sm' | 'md' | 'lg';
@@ -117,7 +117,7 @@ export function Avatar({
         : { role: 'img', 'aria-label': name, 'aria-labelledby': undefined })}
     >
       <span className="avatar-initials" aria-hidden="true">
-        {initials ?? initialsOf(name)}
+        {initials !== undefined && initials.trim() !== '' ? initials : initialsOf(name)}
       </span>
       {src !== undefined && src !== '' && status !== 'failed' ? (
         <img

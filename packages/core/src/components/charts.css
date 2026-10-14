@@ -28,6 +28,9 @@
     width: 6rem;
     height: 2rem;
     vertical-align: middle;
+    /* The dot and its ring are backgrounds, which a print without backgrounds would drop. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   /* Inset by half the end point's 12px box, so the dot and its ring stay inside the sparkline's own box. */
@@ -82,6 +85,8 @@
     margin: 0;
     font-family: var(--font-sans);
     color: var(--color-ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .line-chart-chart {

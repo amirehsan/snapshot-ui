@@ -107,7 +107,7 @@ export function PersianGuide({ children }) {
 }
 ```
 
-A whole app in one right-to-left language wraps its root the same way. A toast follows the locale where `ToastRegion` is mounted, not the region it was raised from, so an app with a right-to-left section mounts its `ToastRegion` inside the same `I18nProvider` if it wants right-to-left toasts.
+A whole app in one right-to-left language wraps its root the same way. A toast follows the locale where `ToastRegion` is mounted, not the region it was raised from, so an app with a right-to-left section mounts its `ToastRegion` inside the same `I18nProvider` if it wants right-to-left toasts. The charts follow the nearest `dir` attribute, not the React Aria locale, so set `dir` on a chart's own region, such as a chart inside a Popover.
 
 </Section>
 
@@ -115,7 +115,7 @@ A whole app in one right-to-left language wraps its root the same way. A toast f
 
 ## Next.js server components
 
-Interactive components carry `'use client'`. Static ones carry none, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, the field counter and chip, Meter, a StatTile without `href`, and Sparkline. React Aria itself must never be imported into a server component.
+Stateful or interactive components carry `'use client'`. Static ones carry none, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, the field counter and chip, Meter, a StatTile without `href`, and Sparkline. React Aria itself must never be imported into a server component.
 
 </Section>
 

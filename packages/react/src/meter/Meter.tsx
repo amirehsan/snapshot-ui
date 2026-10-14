@@ -22,7 +22,7 @@ export type MeterBaseProps = Omit<
   label?: ReactNode;
   /** The limit, in the same units. Over 0: a limit of 0 or below draws an empty track and reports 0. */
   max: number;
-  segments: MeterSegment[];
+  segments: readonly MeterSegment[];
   /** The visible value text and the accessible value: "$1,020 of $1,200". Over the limit it must say so in words. */
   valueLabel: string;
   /** Where spending would be today if it kept pace, in the same units. */
