@@ -4,6 +4,7 @@ import { hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
+import { DateRangePicker } from '../src/date-range-picker';
 import { NumberField } from '../src/number-field';
 
 /**
@@ -59,6 +60,30 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
       expect(container.querySelector('.calendar-preset')).toHaveAttribute('aria-pressed', 'true');
       const marked = [...container.querySelectorAll('.calendar-day-number[data-today]')];
       expect(marked.map((number) => number.textContent)).toEqual(['18']);
+    },
+  ],
+  [
+    'DateRangePicker',
+    <DateRangePicker
+      label="Statement period"
+      value={{ start: '2026-09-01', end: '2026-09-30' }}
+      valueLabel="1 to 30 Sep 2026"
+      startName="from"
+      endName="to"
+      today="2026-09-18"
+    />,
+    (container) => {
+      expect(container.querySelector('.date-range-face')).toBeNull();
+      // On an iPhone React Aria makes each segment a text box (useDateSegment.mjs:303-309).
+      const segments = [...container.querySelectorAll('.date-segment:not([data-type="literal"])')];
+      expect(segments).toHaveLength(6);
+      for (const segment of segments) {
+        expect(segment).toHaveAttribute('role', 'textbox');
+        expect(segment).toHaveAttribute('contenteditable', 'true');
+      }
+      expect(segments[0]).toHaveAccessibleName(/Start date, Statement period$/);
+      expect(segments[0]).toHaveTextContent('9');
+      expect(container.querySelector('input[name="from"]')).toHaveValue('2026-09-01');
     },
   ],
 ];

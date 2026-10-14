@@ -1,0 +1,135 @@
+---
+title: Date range picker
+description: "Two dates typed in the locale's order or chosen on a range calendar, with your presets, as ISO strings for your URL."
+icon: CalendarRange
+---
+
+<Section>
+
+## Basic
+
+A `DateRangePicker` takes a range of two days. Type each date into its segments, in the order the locale writes a date, or choose the range on the calendar: the button at the field's end, Alt+Arrow Down or Alt+Arrow Up opens it, on the value's start month, else on `today`'s. Its value is `{ start, end }`, two ISO dates, in and out, and `onChange` receives one once both dates are whole and the end is on or after the start, or `null` while they are not: once every segment of a date is cleared, or while the end is typed before the start. Clearing one segment keeps the range until the rest of its date goes too, as React Aria keeps a date typed as February 30 until focus leaves it. Days only: a range never has times. `startName` and `endName` submit the two ISO dates with a plain form.
+
+<Preview name="date-range-picker-basic" />
+
+</Section>
+
+<Section>
+
+## Presets
+
+`presets` adds a row of your ranges above the calendar, each with your words. The library computes no range: "Last 7 days" is the app's, from its own today, and is best computed on the server. A press sets the range and closes the calendar, and focus goes back to what opened it. A preset whose range starts before `minValue`, ends after `maxValue` or holds a day `isDateUnavailable` refuses is disabled.
+
+<Preview name="date-range-picker-presets" />
+
+</Section>
+
+<Section>
+
+## States
+
+A changed field shows the Changed chip and the light signal orange edge, an invalid one its error edge and line, and a disabled one is recessed with its dates in taupe.
+
+<Preview name="date-range-picker-states" />
+
+</Section>
+
+<Section>
+
+## Before hydration
+
+The segments' text, their order and their names all come from `Intl`, which the server must not write. So until the page hydrates the field draws its face: the label, the frame at its final size, the calendar button, the hint, the two hidden inputs with their ISO dates, and your `valueLabel` where the segments go. Write it as you write every other string in the app, "1 to 30 Sep 2026", and pass it wherever the server's HTML should show the range. React Aria's segments replace it in the next render, starting where it starts, and nothing moves.
+
+</Section>
+
+<Section>
+
+## Usage
+
+Keep the range in two search parameters, `?from=2026-09-01&to=2026-09-30`. With the Next App Router, a server page reads them, writes `valueLabel` in its own words, and passes both to a client component:
+
+```tsx
+// app/transactions/page.tsx, a server component
+import { Period } from './period';
+import { periodLabel } from './words'; // the app's own: "1 to 30 Sep 2026"
+
+export default async function Transactions({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  const { from, to } = await searchParams;
+  const range = from && to ? { start: from, end: to } : null;
+  return <Period range={range} valueLabel={range ? periodLabel(range) : ''} />;
+}
+```
+
+The client component writes the URL when the range changes, setting both parameters or deleting both for `null`. It starts from the parameters already there, so the other filters stay, never writes a bare `?`, and passes `{ scroll: false }` so the page does not jump:
+
+```tsx
+'use client';
+
+import { DateRangePicker, type DateRange } from '@snapshot-ui/react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
+export function Period({ range, valueLabel }: { range: DateRange | null; valueLabel: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  return (
+    <DateRangePicker
+      label="Statement period"
+      value={range}
+      valueLabel={valueLabel}
+      onChange={(next) => {
+        const params = new URLSearchParams(searchParams);
+        if (next === null) {
+          params.delete('from');
+          params.delete('to');
+        } else {
+          params.set('from', next.start);
+          params.set('to', next.end);
+        }
+        const query = params.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      }}
+    />
+  );
+}
+```
+
+A pair that does not parse, or whose end is before its start, reads as no range with a warning in the console, so a hand-edited URL never throws. While a person types an end before its start, the field tells you `null` and keeps what is typed, so your `null` coming back never clears it. On a statically rendered route, as this page is, read the parameters with `useSearchParams()` inside `<Suspense>` with the same field, empty, as the fallback; the example below does, and writes its own `valueLabel` from a list of twelve month names, with no `Intl`.
+
+<Preview name="date-range-picker-url" />
+
+The field takes no `createCalendar`: React Aria's date fields bring every calendar system whatever is passed, so a page with a date range picker ships them all.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every date is an ISO string. `startName`, `endName`, `isRequired`, `isDisabled`, `isReadOnly`, `isInvalid`, `validate`, `firstDayOfWeek`, `isOpen`, `onOpenChange` and `shouldCloseOnSelect` are React Aria's.
+
+<PropsTable label="DateRangePicker props" path="../../packages/react/src/date-range-picker/DateRangePicker.tsx" type="Pick<DateRangePickerBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'valueLabel' | 'today' | 'presets' | 'minValue' | 'maxValue' | 'isDateUnavailable' | 'labels' | 'placement' | 'startName' | 'endName' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'className' | 'popoverClassName'>" />
+
+<PropsTable label="DateRangePickerLabels" path="../../packages/react/src/date-range-picker/DateRangePicker.tsx" type="DateRangePickerLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A `group` named by the label. Each date is a presentation element, and each segment a `spinbutton` named by its type, the date's name and the label: "month, Start date, Statement period". On iOS React Aria makes each segment a text box. The button is named "Choose dates" and the label, and opens a `dialog` holding the range calendar. "Choose dates", "Start date" and "End date" come from `labels`; React Aria's segment type names come from the browser, and its announcements, such as the chosen range, have no Persian.
+
+<Keys rows={[['Tab', 'Through each segment of the start date, then the end date, then the button.'], ['Left Right', 'Move between segments, in the drawn direction.'], ['Up Down', 'Change the focused segment by one, wrapping at its ends.'], ['PageUp PageDown', 'Change it by a larger step: a week, two months, or to the next multiple of five years.'], ['Home End', 'Set it to its least or greatest value.'], ['0-9', 'Type into the segment; the next one takes focus when it is full.'], ['Backspace Delete', 'Clear its last digit; in an empty segment, move to the one before.'], ['Alt+Down Alt+Up', 'Open the calendar.'], ['Escape', 'Closes the calendar; focus goes back to what opened it.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps range fields in the system.
+
+<Rules dos={['Pass valueLabel where the server HTML should show the range.', 'Compute presets from the today of the app, on the server.', 'Pass today from the time zone of the app.']} donts={['Never put a second month beside the first.', 'Never put times in a range.', 'Never show a date string the app did not write.']} />
+
+</Section>

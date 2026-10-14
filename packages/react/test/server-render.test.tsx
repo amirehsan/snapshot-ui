@@ -10,6 +10,7 @@ import { BottomTabBar, BottomTabBarItem } from '../src/bottom-tab-bar';
 import { Button } from '../src/button';
 import { Calendar } from '../src/calendar';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { DateRangePicker } from '../src/date-range-picker';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
@@ -102,6 +103,31 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     <Calendar aria-label="Date" value="2026-09-14" />,
     ['class="calendar"', 'data-face'],
     ['role="grid"', 'September'],
+  ],
+  [
+    // The face: the frame, the app's valueLabel and the button, and the two hidden ISO dates; the segments, from
+    // Intl, arrive after hydration, and the calendar renders nothing until it opens.
+    'DateRangePicker',
+    <DateRangePicker
+      label="Statement period"
+      value={{ start: '2026-09-01', end: '2026-09-30' }}
+      valueLabel="1 to 30 Sep 2026"
+      startName="from"
+      endName="to"
+      today="2026-09-18"
+    />,
+    [
+      'class="field date-range-picker"',
+      'class="input date-range-control"',
+      'class="date-range-face"',
+      '1 to 30 Sep 2026',
+      'name="from"',
+      'value="2026-09-01"',
+      'name="to"',
+      'value="2026-09-30"',
+      'aria-label="Choose dates"',
+    ],
+    ['role="spinbutton"', 'role="dialog"', 'date-range-arrow'],
   ],
   [
     // React Aria writes data-empty as "true" in the HTML. A labelled field is not data-unlabelled.

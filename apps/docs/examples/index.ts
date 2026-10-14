@@ -34,6 +34,10 @@ import CommandPaletteBasic from './command-palette-basic';
 import ConfirmDialogBasic from './confirm-dialog-basic';
 import ConfirmDialogDanger from './confirm-dialog-danger';
 import ConfirmDialogHook from './confirm-dialog-hook';
+import DateRangePickerBasic from './date-range-picker-basic';
+import DateRangePickerPresets from './date-range-picker-presets';
+import DateRangePickerStates from './date-range-picker-states';
+import DateRangePickerUrl from './date-range-picker-url';
 import DensityControls from './density-controls';
 import DialogBasic from './dialog-basic';
 import DialogDanger from './dialog-danger';
@@ -164,6 +168,10 @@ export const examples = {
   'confirm-dialog-basic': ConfirmDialogBasic,
   'confirm-dialog-danger': ConfirmDialogDanger,
   'confirm-dialog-hook': ConfirmDialogHook,
+  'date-range-picker-basic': DateRangePickerBasic,
+  'date-range-picker-presets': DateRangePickerPresets,
+  'date-range-picker-states': DateRangePickerStates,
+  'date-range-picker-url': DateRangePickerUrl,
   'density-controls': DensityControls,
   'dialog-basic': DialogBasic,
   'dialog-danger': DialogDanger,

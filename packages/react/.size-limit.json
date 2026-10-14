@@ -315,6 +315,13 @@
     "limit": "2.5 kB"
   },
   {
+    "name": "import { DateRangePicker } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ DateRangePicker }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "4 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

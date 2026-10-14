@@ -1102,6 +1102,38 @@ test('a money field shows the decimal keyboard and keeps Home and End for the ca
   await expect(input).toHaveValue('1234.5');
 });
 
+test('a date range picker writes from and to to the URL and reads them back after a reload', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/date-range-picker');
+  const field = page
+    .locator('.date-range-picker')
+    .filter({ has: page.getByRole('group', { name: 'Statement period' }) })
+    .last();
+  await scrolledTo(field);
+  await field.getByRole('button', { name: /^Choose dates/ }).click();
+  const popover = page.locator('.date-range-popover');
+  await expect(popover).toBeVisible();
+  await expect(popover).not.toHaveAttribute('data-entering');
+  await popover.getByRole('button', { name: 'Last month' }).click();
+  await expect(popover).toHaveCount(0);
+  await expect(page).toHaveURL(/\/docs\/components\/date-range-picker\?from=2026-08-01&to=2026-08-31$/);
+  await page.reload();
+  await settled(page);
+  const reloaded = page
+    .locator('.date-range-picker')
+    .filter({ has: page.getByRole('group', { name: 'Statement period' }) })
+    .last();
+  await expect(reloaded.locator('.date-segment:not([data-type="literal"])')).toHaveText([
+    '8',
+    '1',
+    '2026',
+    '8',
+    '31',
+    '2026',
+  ]);
+});
+
 test('a range calendar chooses a range in two presses and a preset in one', async ({ page }) => {
   await visit(page, '/docs/components/calendar');
   const calendar = page.getByRole('application', { name: /^Statement period/ });
@@ -2578,6 +2610,31 @@ test('the right-to-left line chart draws its newest day at the left, and Left mo
   await expect(readout).toHaveText('Oct 30');
   await page.keyboard.press('ArrowLeft');
   await expect(readout).toHaveText('Oct 31');
+});
+
+test.describe('a date range picker without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('with scripts off a date range picker shows its value label and its hidden dates', async ({
+    page,
+  }) => {
+    await page.goto('/docs/components/date-range-picker');
+    const field = page
+      .locator('.stage .date-range-picker')
+      .filter({ has: page.locator('input[name="from"]') });
+    await expect(field).toHaveCount(1);
+    await expect(field.locator('.date-range-face')).toHaveText('1 to 30 Sep 2026');
+    await expect(field.locator('.date-range-face')).toBeVisible();
+    await expect(field.locator('.date-segment')).toHaveCount(0);
+    await expect(field.locator('input[name="from"]')).toHaveValue('2026-09-01');
+    await expect(field.locator('input[name="to"]')).toHaveValue('2026-09-30');
+    // The frame is a field tall, with the button at its end: 6px in from the inside of the frame's 1px edge.
+    const frame = await field.locator('.date-range-control').boundingBox();
+    const button = await field.locator('.date-range-button').boundingBox();
+    if (!frame || !button) throw new Error('No frame drawn');
+    expect(frame.height).toBe(48);
+    expect(frame.x + frame.width - (button.x + button.width)).toBeCloseTo(7, 1);
+  });
 });
 
 test.describe('a line chart without JavaScript', () => {

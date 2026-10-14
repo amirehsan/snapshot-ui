@@ -289,9 +289,9 @@ test('the footer lists every component and chart page in the rail order, and a c
     const name = chip.name.toLowerCase();
     expect(chip.href, chip.name).toBe(urls.get(name) ?? groups.get(name) ?? null);
   }
-  // Button, Icon button, the six form controls, Select, Combo box, Stat tile, Dialog, Drawer, Menu, Toast, Command
-  // palette, Tooltip and Sidebar have pages, and Charts links the charts group.
-  expect(chips.filter((chip) => chip.href)).toHaveLength(19);
+  // Button, Icon button, the six form controls, Select, Combo box, Date range picker, Stat tile, Dialog, Drawer,
+  // Menu, Toast, Command palette, Tooltip and Sidebar have pages, and Charts links the charts group.
+  expect(chips.filter((chip) => chip.href)).toHaveLength(20);
 });
 
 test('the homepage switches corners and remembers them', async ({ page }) => {

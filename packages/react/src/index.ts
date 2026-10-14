@@ -66,6 +66,12 @@ export {
   type RangeCalendarProps,
 } from './calendar';
 export {
+  DateRangePicker,
+  type DateRangePickerBaseProps,
+  type DateRangePickerLabels,
+  type DateRangePickerProps,
+} from './date-range-picker';
+export {
   Checkbox,
   CheckboxGroup,
   type CheckboxBaseProps,

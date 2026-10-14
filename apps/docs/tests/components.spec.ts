@@ -199,6 +199,18 @@ test.describe('forced colors', () => {
     );
   });
 
+  test('a focused date segment is Highlight', async ({ page }) => {
+    await visit(page, '/docs/components/date-range-picker');
+    const system = await systemColors(page);
+    const segment = page
+      .locator('.stage .date-range-picker .date-segment:not([data-type="literal"])')
+      .first();
+    await segment.focus();
+    const drawn = await paint(segment);
+    expect(drawn.fill).toBe(system.highlight);
+    expect(drawn.text).toBe(system.highlightText);
+  });
+
   test('a pressed sign button is Highlight and the symbol CanvasText', async ({ page }) => {
     await visit(page, '/docs/components/number-field');
     const system = await systemColors(page);
@@ -618,6 +630,7 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .card-collapsible .card-body p',
   ],
   'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
+  'date-range-picker': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
   kbd: ['.stage .kbd'],
   // The legend names the series in the app's words, and wraps at any character, as the meter's legend does.
@@ -775,6 +788,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'combo-box': ['.stage .combo-box-input', '.stage .combo-box-button'],
   'command-palette': ['.stage .button'],
   'confirm-dialog': ['.stage .button'],
+  // The frame and its button, with the app's valueLabel where the segments go; the calendar waits for a press.
+  'date-range-picker': ['.stage .date-range-control', '.stage .date-range-button'],
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],
   field: ['.stage .field-counter', '.stage .field-changed'],
