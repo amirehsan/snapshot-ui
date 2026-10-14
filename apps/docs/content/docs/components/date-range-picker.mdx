@@ -46,7 +46,7 @@ The segments' text, their order and their names all come from `Intl`, which the 
 
 ## Usage
 
-Keep the range in two search parameters, `?from=2026-09-01&to=2026-09-30`. With the Next App Router, a server page reads them, writes `valueLabel` in its own words, and passes both to a client component:
+Keep the range in two search parameters, `?from=2026-09-01&to=2026-09-30`. With the Next App Router, a server page reads them and writes `valueLabel` in its own words for the HTML it sends:
 
 ```tsx
 // app/transactions/page.tsx, a server component
@@ -55,29 +55,46 @@ import { periodLabel } from './words'; // the app's own: "1 to 30 Sep 2026"
 
 export default async function Transactions({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const { from, to } = await searchParams;
-  const range = from && to ? { start: from, end: to } : null;
-  return <Period range={range} valueLabel={range ? periodLabel(range) : ''} />;
+  return <Period valueLabel={from && to ? periodLabel({ start: from, end: to }) : ''} />;
 }
 ```
 
-The client component writes the URL when the range changes, setting both parameters or deleting both for `null`. It starts from the parameters already there, so the other filters stay, never writes a bare `?`, and passes `{ scroll: false }` so the page does not jump:
+The client component reads the parameters itself and keeps the range in its own state, so the field shows each change at once and never waits on the router: driven by the server's props, it would draw the old range again after each change until the new page arrived. It takes the URL's range again only when the URL changes under it, by Back, Forward or a link. It writes the URL when the range changes, setting both parameters or deleting both for `null`, starting from the parameters already there, so the other filters stay; it never writes a bare `?`, and passes `{ scroll: false }` so the page does not jump:
 
 ```tsx
 'use client';
 
-import { DateRangePicker, type DateRange } from '@snapshot-ui/react';
+import { useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { DateRangePicker, type DateRange } from '@snapshot-ui/react';
 
-export function Period({ range, valueLabel }: { range: DateRange | null; valueLabel: string }) {
+const rangeOf = (from: string | null, to: string | null): DateRange | null =>
+  from && to ? { start: from, end: to } : null;
+
+export function Period({ valueLabel }: { valueLabel: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const from = searchParams.get('from');
+  const to = searchParams.get('to');
+  const key = `${from ?? ''}/${to ?? ''}`;
+  const [range, setRange] = useState(() => rangeOf(from, to));
+  const [seen, setSeen] = useState(key);
+
+  // The URL changed under the field, by Back, Forward or a link: show its range.
+  if (key !== seen) {
+    setSeen(key);
+    setRange(rangeOf(from, to));
+  }
+
   return (
     <DateRangePicker
       label="Statement period"
       value={range}
       valueLabel={valueLabel}
       onChange={(next) => {
+        setRange(next);
+        setSeen(next ? `${next.start}/${next.end}` : '/');
         const params = new URLSearchParams(searchParams);
         if (next === null) {
           params.delete('from');
@@ -94,7 +111,7 @@ export function Period({ range, valueLabel }: { range: DateRange | null; valueLa
 }
 ```
 
-A pair that does not parse, or whose end is before its start, reads as no range with a warning in the console, so a hand-edited URL never throws. While a person types an end before its start, the field tells you `null` and keeps what is typed, so your `null` coming back never clears it. On a statically rendered route, as this page is, read the parameters with `useSearchParams()` inside `<Suspense>` with the same field, empty, as the fallback; the example below does, and writes its own `valueLabel` from a list of twelve month names, with no `Intl`.
+A pair that does not parse, or whose end is before its start, reads as no range with a warning in the console, so a hand-edited URL never throws. While a person types an end before its start, the field tells you `null` and keeps what is typed, so your `null` coming back never clears it. It keeps it only for that `null`: once you set any other value, or focus leaves the field, it lets go, so a "Clear all" that sets `null` again clears it. On a statically rendered route, as this page is, read the parameters with `useSearchParams()` inside `<Suspense>` with the same field, empty, as the fallback; the example below does, and writes its own `valueLabel` from a list of twelve month names, with no `Intl`.
 
 <Preview name="date-range-picker-url" />
 

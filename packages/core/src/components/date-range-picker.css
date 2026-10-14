@@ -4,14 +4,13 @@
  * ("DateRangePicker"). The frame is .input on a plain element, so the hover, disabled, changed and invalid edges
  * reach it through the field's root, and it rings only while a segment has keyboard focus, never for the button.
  * Each date is isolated, so a right-to-left page keeps it in its locale's order; its segments are ink in tabular
- * figures, the placeholder taupe under a label and slate without one, and the focused segment the ink fill on the
- * text chip's radius. The arrow points from start to end, so it mirrors under [dir='rtl']. The popover pads 16px
+ * figures, an empty one slate, labelled or not, since axe measures it as text, and the focused segment the ink
+ * fill on the text chip's radius. The arrow points from start to end, so it mirrors under [dir='rtl']. The popover pads 16px
  * and is the month's width, so a 280px month fits, and shrinks to fit beside a 320px screen's margins.
  */
 @layer components {
-  /* One class, after input.css, so it beats the input's box and none of its states. Clipped across only, so a
-     date too wide for a narrow frame never spills out of it, while the button's hit area, taller than a compact
-     frame, still reaches past its top and bottom. */
+  /* One class, after input.css, so it beats the input's box and none of its states. It clips nothing, so the
+     button's 40px hit area reaches past the frame at either density. */
   .date-range-control {
     position: relative;
     display: flex;
@@ -19,8 +18,18 @@
     gap: var(--spacing-part);
     min-width: 0;
     padding-inline: 1.5rem 3rem;
-    overflow-x: clip;
     cursor: text;
+  }
+
+  /* The two dates, the arrow and the server's face, clipped across only, so a date too wide for a narrow frame
+     never spills out of it, and the button, outside this box, keeps its whole hit area. */
+  .date-range-dates {
+    display: flex;
+    flex: auto;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+    overflow-x: clip;
   }
 
   /* Two classes with the test in :where(): it beats the hover edge by order, and the changed and invalid edges,
@@ -52,11 +61,9 @@
     padding-inline: 0;
   }
 
+  /* An empty segment is text that axe measures, so slate, labelled or not, as Select's placeholder is; taupe
+     only while disabled, below. Before the focus rule at its weight, so a focused empty segment takes the fill. */
   .date-segment[data-placeholder] {
-    color: var(--color-taupe);
-  }
-
-  .date-range-picker[data-unlabelled]:not([data-disabled]) .date-segment[data-placeholder] {
     color: var(--color-slate);
   }
 

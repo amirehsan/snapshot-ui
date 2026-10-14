@@ -7054,10 +7054,15 @@ correction 20). Being `.input`, it takes the hover, disabled, changed
 and invalid edges through the field's root, and the wrapper writes
 `data-disabled` on it. Its own rule is one class after `input.css`:
 `display: flex`, `align-items: center`, `gap: var(--spacing-part)`
-(8px), `padding-inline: 1.5rem 3rem`, clear of the button, and
-`overflow-x: clip`, so a date too wide for a narrow frame never spills,
-while the button's hit area, 40px against a 36px compact frame, still
-reaches past its top and bottom, which `overflow: hidden` would cut.
+(8px) and `padding-inline: 1.5rem 3rem`, clear of the button, and it
+clips nothing: the button's hit area, 40px against a 36px compact frame
+and a 24px button 6px in from its end, reaches past the frame's top,
+bottom and end, and a story finds the button 19.5px each side of its
+center at both densities. The two dates, the arrow and the face sit in
+`div.date-range-dates`, a flex row that fills the frame, and that row is
+clipped, `overflow-x: clip`, so a date too wide for a narrow frame never
+spills; clipping the frame instead would cut the hit area to 38px across
+in compact.
 While a segment has keyboard focus the frame draws the focus edge and
 ring, `.date-range-control.input:where(:has(.date-segment:is(:focus-visible, [data-focus-visible])))`:
 two classes with the test in `:where()`, so it beats the hover edge by
@@ -7070,21 +7075,23 @@ nothing; nothing keys on `:focus-within` or on the root's
 `inline-flex` row that never shrinks, in tabular figures, and React Aria
 isolates it (`unicode-bidi: isolate`), so a right-to-left page keeps
 each date in its locale's order. A segment is ink, padded 2px at each
-side, with a transparent caret and no outline. A placeholder segment is
-taupe under a visible label and slate under `data-unlabelled`, never
-while disabled. The focused segment is the ink fill with canvas text on
-`--radius-micro`, the text-sized chip's radius. Disabled, the segments,
-the arrow and the face are taupe.
+side, with a transparent caret and no outline. An empty segment,
+`data-placeholder`, is slate, labelled or not, and taupe only while
+disabled. The focused segment is the ink fill with canvas text on
+`--radius-micro`, the text-sized chip's radius, empty or not: the
+placeholder rule is one class and one attribute, the focus rule's weight,
+and comes before it, and a test holds that no placeholder rule outranks
+it. Disabled, the segments, the arrow and the face are taupe.
 
-**The placeholder and axe.** A text input's placeholder is a
-pseudo-element, which axe never measures; a date field's placeholder
-segments, "mm", "dd" and "yyyy", are elements, and taupe on raised
-measures 1.58. They are the field's placeholder, drawn as every field's
-is, React Aria reads each as "Empty", and the label names the field, so
-axe's contrast check skips them alone: in the stories through
-`DATE_PLACEHOLDER_A11Y`, which overrides the rule's selector, and on the
-docs site through a contrast pass of its own on a page that draws one.
-Every other node, typed segments included, is measured.
+**The placeholder and axe.** As Select's placeholder (open question 3).
+An input's placeholder is an attribute, which axe never measures, so a
+text field's placeholder can be taupe, the whisper. A date field's empty
+segments, "mm", "dd" and "yyyy", are elements, the field's visible text,
+and must meet text contrast: taupe on raised is 1.58 in light and 3.68 in
+dark, so they are slate, 5.49 and 6.44, under a label or without one,
+and axe checks them with no exception in the stories or on the docs
+page. A disabled field's segments are taupe, the disabled text, which
+WCAG exempts.
 
 **The arrow.** Lucide's `ArrowRight`, 16px, slate, in
 `span.date-range-arrow[aria-hidden="true"]` between the dates. It points
@@ -7120,6 +7127,12 @@ Aria also takes each digit of a year as it is typed and emits a range
 whose end is before its start, flagged invalid; the app is told `null`
 for it, since it is no range, and a controlled field keeps it in place
 of the app's `null`, which would otherwise clear what is being typed.
+The hold answers that `null` alone: it is keyed to the value it was
+held against, so it goes once the app sets any other value, and it goes
+once focus leaves the picker, so an outside "Clear all" that sets the
+`null` the app already holds clears the field. React Aria's focus within
+ignores focus moving into the calendar and is off while it is open
+(`useDateRangePicker.mjs:103-114`), so opening it keeps the hold.
 The hidden inputs hold Gregorian ISO dates in every calendar.
 
 **Today and the opening month.** `today` is passed to React Aria as the
@@ -7151,7 +7164,7 @@ under the frame at its start, and React Aria flips and shifts it.
 
 **The face.** On the server and through hydration each `DateInput`
 renders no segments, but its hidden input and every id are written, the
-arrow is left out, and `span.date-range-face`, first in the frame, shows
+arrow is left out, and `span.date-range-face`, first in the dates row, shows
 the app's `valueLabel`, or nothing (R2). The segments' text, order and
 names all come from `Intl`. The face is padded as a segment is, so its
 text starts where the first segment's will; the frame is its full width
@@ -7176,8 +7189,8 @@ before; Alt+Arrow Down and Alt+Arrow Up open the calendar; Escape closes
 it and gives focus back to what opened it.
 
 **Measured pairs.** Gated: ink on raised, the segments, 18.43 in light
-and 15.36 in dark; slate on raised, the arrow and an unlabelled
-placeholder, 5.49 and 6.44; canvas on ink, the focused segment, 16.25
+and 15.36 in dark; slate on raised, the arrow and every empty segment,
+5.49 and 6.44; canvas on ink, the focused segment, empty or not, 16.25
 and 19.31. No pair is added to the gate.
 
 **Forced colors.** As the text input; the arrow `CanvasText`; the

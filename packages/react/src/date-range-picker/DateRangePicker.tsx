@@ -269,9 +269,17 @@ export function DateRangePicker({
 
   // A range typed with its end before its start, such as a start whose month is typed past the end's, or an
   // end whose year is part typed. React Aria holds and flags it, and the app is told null, since it is no range;
-  // a controlled field keeps it in place of the app's null, which would otherwise clear what is being typed.
-  const [unordered, setUnordered] = useState<{ start: CalendarDate; end: CalendarDate } | null>(null);
+  // a controlled field keeps it in place of that null, which would otherwise clear what is being typed. The hold
+  // answers that null alone: it goes once the app sets any other value, and once focus leaves the picker, so an
+  // app that clears the field from outside, setting the null it already holds, clears it.
+  const [held, setHeld] = useState<{
+    range: { start: CalendarDate; end: CalendarDate };
+    key: string;
+  } | null>(null);
   const chosen = parsedValue === 'invalid' ? null : parsedValue;
+  const valueKey = chosen ? `${toIso(chosen.start)}/${toIso(chosen.end)}` : '';
+  if (held !== null && held.key !== valueKey) setHeld(null);
+  const unordered = held?.key === valueKey ? held.range : null;
   const initial = parsedDefault === 'invalid' ? null : parsedDefault;
   const segment = hydrated ? drawSegment : noSegment;
 
@@ -287,8 +295,12 @@ export function DateRangePicker({
         const end = range?.end;
         const isComplete = start != null && end != null;
         const isOrdered = isComplete && end.compare(start) >= 0;
-        setUnordered(isComplete && !isOrdered ? { start, end } : null);
+        setHeld(isComplete && !isOrdered ? { range: { start, end }, key: '' } : null);
         onChange?.(isOrdered ? { start: toIso(start), end: toIso(end) } : null);
+      }}
+      onFocusChange={(isFocused) => {
+        props.onFocusChange?.(isFocused);
+        if (!isFocused) setHeld(null);
       }}
       minValue={dates.minValue}
       maxValue={dates.maxValue}
@@ -306,20 +318,23 @@ export function DateRangePicker({
     >
       {isLabelled ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
       <DateRangeFrame isDisabled={props.isDisabled === true}>
-        {hydrated ? null : <span className="date-range-face">{valueLabel}</span>}
-        <DateFieldNames start={names.start} end={names.end}>
-          <DateInput slot="start" className="date-range-input">
-            {segment}
-          </DateInput>
-          {hydrated ? (
-            <span className="date-range-arrow" aria-hidden="true">
-              <ArrowRight />
-            </span>
-          ) : null}
-          <DateInput slot="end" className="date-range-input">
-            {segment}
-          </DateInput>
-        </DateFieldNames>
+        {/* Clipped across, apart from the button, so its hit area reaches past the frame. */}
+        <div className="date-range-dates">
+          {hydrated ? null : <span className="date-range-face">{valueLabel}</span>}
+          <DateFieldNames start={names.start} end={names.end}>
+            <DateInput slot="start" className="date-range-input">
+              {segment}
+            </DateInput>
+            {hydrated ? (
+              <span className="date-range-arrow" aria-hidden="true">
+                <ArrowRight />
+              </span>
+            ) : null}
+            <DateInput slot="end" className="date-range-input">
+              {segment}
+            </DateInput>
+          </DateFieldNames>
+        </div>
         <Button className="input-button date-range-button" aria-label={names.open}>
           <CalendarDays aria-hidden="true" />
         </Button>
