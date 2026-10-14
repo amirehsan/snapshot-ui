@@ -642,47 +642,45 @@ describe('MultiSelect', () => {
     expect(element('.menu-popover')).toHaveClass('my-popover');
   });
 
-  it('has no axe violations empty, with tags, open, with a focused tag, changed, invalid and disabled', async () => {
+  // One test per state, so each axe pass has its own time limit on a slow runner.
+  const AXE_CASES: [
+    name: string,
+    field: () => ReactElement,
+    act?: (user: ReturnType<typeof userEvent.setup>) => Promise<void>,
+  ][] = [
+    ['empty', () => <Five placeholder="Add a category" description="Pick any." />],
+    ['with tags', () => <Five defaultValue={['food', 'rent']} />],
+    [
+      'open',
+      () => <Five defaultValue={['food']} />,
+      async (user) => {
+        await user.click(input());
+        await user.keyboard('{ArrowDown}');
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+      },
+    ],
+    [
+      'with a focused tag',
+      () => <Five defaultValue={['food', 'rent']} />,
+      async (user) => {
+        await user.tab();
+        expect(tag('Food')).toHaveFocus();
+      },
+    ],
+    ['changed', () => <Five defaultValue={['food']} isChanged />],
+    ['invalid', () => <Five isInvalid errorMessage="Choose a category" />],
+    ['disabled', () => <Five defaultValue={['food', 'rent']} isDisabled />],
+    ['unlabelled', () => <Five label={undefined} aria-label="Categories" defaultValue={['fun']} />],
+  ];
+
+  it.each(AXE_CASES)('has no axe violations %s', async (_name, field, act) => {
     const user = userEvent.setup();
-    const cases: [name: string, field: ReactElement, act?: () => Promise<void>][] = [
-      ['empty', <Five key="empty" placeholder="Add a category" description="Pick any." />],
-      ['with tags', <Five key="tags" defaultValue={['food', 'rent']} />],
-      [
-        'open',
-        <Five key="open" defaultValue={['food']} />,
-        async () => {
-          await user.click(input());
-          await user.keyboard('{ArrowDown}');
-          expect(screen.getByRole('listbox')).toBeInTheDocument();
-        },
-      ],
-      [
-        'a focused tag',
-        <Five key="focused" defaultValue={['food', 'rent']} />,
-        async () => {
-          await user.tab();
-          expect(tag('Food')).toHaveFocus();
-        },
-      ],
-      ['changed', <Five key="changed" defaultValue={['food']} isChanged />],
-      ['invalid', <Five key="invalid" isInvalid errorMessage="Choose a category" />],
-      ['disabled', <Five key="disabled" defaultValue={['food', 'rent']} isDisabled />],
-      [
-        'unlabelled',
-        <Five key="unlabelled" label={undefined} aria-label="Categories" defaultValue={['fun']} />,
-      ],
-    ];
     axe.configure({ rules: [OPEN_VALUE_RULE] });
     try {
-      for (const [name, field, act] of cases) {
-        const { unmount } = render(field);
-        if (act) await act();
-        // An open list portals to the body, so the whole body is checked.
-        await expectNoA11yViolations(document.body, ROW_A11Y).catch((error: unknown) => {
-          throw new Error(`${name}: ${String(error)}`);
-        });
-        unmount();
-      }
+      render(field());
+      if (act) await act(user);
+      // An open list portals to the body, so the whole body is checked.
+      await expectNoA11yViolations(document.body, ROW_A11Y);
     } finally {
       axe.reset();
     }
