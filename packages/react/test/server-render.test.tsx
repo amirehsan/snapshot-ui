@@ -454,6 +454,22 @@ describe('the client components on the server', () => {
     }
   });
 
+  // React Aria renders a Select's children once more, hidden, to build its collection, and its Popover renders
+  // its content there too. Only the options belong in that pass: no filter, so no collator for it, and no
+  // focus handling of the library's popover.
+  it("keeps a closed Select's filter out of React Aria's hidden pass", () => {
+    const html = renderToString(
+      <Select label="Category" isFilterable>
+        <PickerOption id="food">Food</PickerOption>
+        <PickerOption id="rent">Rent</PickerOption>
+      </Select>,
+    );
+    expect(html).toContain('Food');
+    for (const part of ['search-field', 'select-filter', 'select-list', 'select-popover']) {
+      expect(html, part).not.toContain(part);
+    }
+  });
+
   it('names triggerRef for a Popover opened outside a trigger without one, with no browser', () => {
     expect(() => renderToString(<Popover isOpen>Panel</Popover>)).toThrow(/needs `triggerRef`/);
   });

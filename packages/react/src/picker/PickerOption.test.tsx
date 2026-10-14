@@ -1,10 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
-import { createRef, type ReactElement } from 'react';
+import { createRef, type ComponentProps, type ReactElement } from 'react';
 import { ListBox, type Selection } from 'react-aria-components';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { Select } from '../select';
-import { PickerOption } from './PickerOption';
+import { PickerOption, type PickerOptionProps } from './PickerOption';
 import { PickerSection } from './PickerSection';
 
 /** Option rows are named by their label and described by their hint, so axe's label-in-name check is off. */
@@ -46,6 +46,62 @@ describe('PickerOption', () => {
     expect(end.id).not.toBe('');
     expect(option.getAttribute('aria-describedby')?.split(' ')[0]).toBe(end.id);
     expect(option).toHaveAccessibleDescription('$1,204.50 Groceries and markets');
+  });
+
+  it("reads a caller's aria-describedby between its end value and its hint, with a hint and without", () => {
+    for (const description of ['Groceries and markets', undefined]) {
+      const { unmount } = render(
+        <>
+          <span id="note">Over budget</span>
+          <ListBox aria-label="Category" selectionMode="single">
+            <PickerOption id="food" description={description} end="$1,204.50" aria-describedby="note">
+              Food
+            </PickerOption>
+          </ListBox>
+        </>,
+      );
+      const option = screen.getByRole('option', { name: 'Food' });
+      const end = element('.menu-item-end', option);
+      const ids = option.getAttribute('aria-describedby')?.split(' ');
+      if (description === undefined) {
+        expect(ids, 'no hint').toEqual([end.id, 'note']);
+        expect(option).toHaveAccessibleDescription('$1,204.50 Over budget');
+      } else {
+        expect(ids, 'hint').toEqual([end.id, 'note', element('.menu-item-description', option).id]);
+        expect(option).toHaveAccessibleDescription('$1,204.50 Over budget Groceries and markets');
+      }
+      unmount();
+    }
+  });
+
+  it("calls a caller's render with the merged aria-describedby, and its element is the option", () => {
+    const render_ = vi.fn<NonNullable<PickerOptionProps['render']>>((props) => (
+      <div {...(props as ComponentProps<'div'>)} data-rendered="" />
+    ));
+    render(
+      <ListBox aria-label="Category" selectionMode="single">
+        <PickerOption
+          id="food"
+          description="Groceries and markets"
+          end="$1,204.50"
+          aria-describedby="note"
+          render={render_}
+        >
+          Food
+        </PickerOption>
+      </ListBox>,
+    );
+    const option = screen.getByRole('option', { name: 'Food' });
+    expect(option).toHaveAttribute('data-rendered', '');
+    expect(option).toHaveClass('picker-option');
+    const merged = [
+      element('.menu-item-end', option).id,
+      'note',
+      element('.menu-item-description', option).id,
+    ].join(' ');
+    expect(option).toHaveAttribute('aria-describedby', merged);
+    expect(render_).toHaveBeenCalled();
+    expect(render_.mock.lastCall?.[0]['aria-describedby']).toBe(merged);
   });
 
   it('hides its icon and its check from assistive technology', () => {

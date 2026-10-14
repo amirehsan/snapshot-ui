@@ -5807,8 +5807,11 @@ on the second press.
 so a phone's keyboard does not cover a list that is often short enough to
 scroll (ruling 7). The check reads `matchMedia('(pointer: coarse)')` in
 `onOpenChange`, an event, never while rendering; React Aria calls it for
-an open the user starts, so a list opened by `defaultOpen` or by the app's
-`isOpen` focuses its filter (spec correction 3). Where focus lands then was
+an open the user starts, and the choice goes back to the default as the
+list closes, so a list opened by `defaultOpen` or by the app's `isOpen`
+focuses its filter, after a touch open too (spec correction 3). Where no
+`matchMedia` exists, as in a test environment, the pointer reads as fine.
+Where focus lands then was
 settled by a spike: with the field's autofocus off, React Aria leaves focus
 on the popover, where the arrows reach nothing. So the filter's
 `Autocomplete` also turns off its virtual focus there
@@ -5829,15 +5832,19 @@ which React Aria does in single mode (spec correction 4). They are
 physical keys and do not follow the reading direction. Open, the arrows
 stop at the ends, Home and End jump, the page keys move a page, a letter
 finds an option when there is no filter, and Enter or Space chooses and
-closes. Tab stays in the open list, as in the Menu: React Aria holds focus
-in the popover. Escape closes and gives focus back to the trigger.
+closes. Tab does not close the list, as in the Menu: the popover is modal
+and React Aria holds focus in it (spec correction 27). Escape closes and
+gives focus back to the trigger.
 
 **Forms and the server.** `name` submits the chosen key through React
 Aria's hidden select, which follows a native form reset. A Select has no
 clear action of its own: an app that needs "Any" adds it as an option.
 React Aria builds the collection by rendering the Select's children once
 into a template, so the field's label row is drawn there too, where
-nothing reads it. On the server the trigger already shows the chosen
+nothing reads it. React Aria's popover renders its content in that
+template too, so the Select puts a bare list there, without the popover,
+the filter or its collator, and renders them only with the Select's state.
+On the server the trigger already shows the chosen
 option's label, or the placeholder, and the hidden select; the popover
 renders nothing until it opens. React Aria makes a collator while a
 Select renders, for the closed type-to-select, on the server too (spec

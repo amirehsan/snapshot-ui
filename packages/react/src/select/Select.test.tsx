@@ -400,6 +400,68 @@ describe('Select', () => {
     expect(screen.getByRole('searchbox', { name: 'Filter' })).toHaveFocus();
   });
 
+  it('focuses the filter of a list the app opens after the user opened it on a coarse pointer', async () => {
+    const user = userEvent.setup();
+    coarsePointer();
+    function AppOpened(): ReactElement {
+      const [isOpen, setOpen] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(true);
+            }}
+          >
+            Open from the app
+          </button>
+          <Select label="Category" isFilterable isOpen={isOpen} onOpenChange={setOpen}>
+            <PickerOption id="food">Food</PickerOption>
+            <PickerOption id="rent">Rent</PickerOption>
+          </Select>
+        </>
+      );
+    }
+    render(<AppOpened />);
+    await user.click(trigger());
+    expect(screen.getByRole('searchbox', { name: 'Filter' })).not.toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    // The app opens it itself, with no press on the trigger: React Aria calls no onOpenChange, so the default
+    // holds again.
+    await user.click(screen.getByRole('button', { name: 'Open from the app' }));
+    expect(screen.getByRole('searchbox', { name: 'Filter' })).toHaveFocus();
+  });
+
+  it('opens with no matchMedia, which a test environment may lack', async () => {
+    const user = userEvent.setup();
+    // test/setup.ts installs the stub once per file and jsdom has none of its own, so it goes back after.
+    const stub = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    if (!stub) throw new Error('No matchMedia stub');
+    Object.defineProperty(window, 'matchMedia', { value: undefined, configurable: true, writable: true });
+    try {
+      render(<Sectioned spending={SPENDING} income={INCOME} />);
+      await user.click(trigger());
+      expect(screen.getByRole('listbox')).toBeInTheDocument();
+      expect(screen.getByRole('searchbox', { name: 'Filter' })).toHaveFocus();
+    } finally {
+      Object.defineProperty(window, 'matchMedia', stub);
+    }
+  });
+
+  it('keeps the list open on Tab, as the Menu does, and closes it on Escape', async () => {
+    const user = userEvent.setup();
+    render(<Five />);
+    await user.tab();
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    await user.tab();
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(trigger()).toHaveFocus();
+  });
+
   it('shows the Changed chip and reads it with the trigger while changed and valid', () => {
     const { container, rerender } = render(<Five defaultValue="food" isChanged />);
     expect(root(container)).toHaveAttribute('data-changed', '');

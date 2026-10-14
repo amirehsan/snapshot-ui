@@ -110,9 +110,9 @@ Every React Aria Select prop is accepted, except the deprecated selection names.
 
 ## Accessibility
 
-The trigger is a button with `aria-haspopup="listbox"`, named by its value and its label, so a screen reader hears "Groceries, Category, button". It opens a `listbox` of `option`s. An option is named by its label and described by its end value and its hint. The chosen option has a check as well as the filled row, so the choice never rests on color alone. With a filter, focus stays in the field and the arrows move the active option. React Aria's own announcements, such as the list's name while it is filtered, come from its own strings, which have no Persian.
+The trigger is a button with `aria-haspopup="listbox"`, named by its value and its label, so a screen reader hears "Groceries, Category, button". It opens a `listbox` of `option`s. An option is named by its label and described by its end value and its hint. The chosen option has a check as well as the filled row, so the choice never rests on color alone. With a filter, focus stays in the field and the arrows move the active option. On a touch screen focus is in the list instead, and the filter does not take focus until it is tapped. React Aria's own announcements, such as the list's name while it is filtered, come from its own strings, which have no Persian.
 
-<Keys rows={[['Enter Space Down Up', 'Open the list.'], ['A-Z', 'Chooses the next option starting with the letter, without opening.'], ['Left Right', 'Choose the previous or the next option, without opening.'], ['Down Up Home End PageUp PageDown', 'Move through the open list, stopping at the ends.'], ['Enter Space', 'Choose the option and close.'], ['Escape', 'Clears the filter, then closes and returns focus.'], ['Tab', 'Stays in the open list; Escape closes it.']]} />
+<Keys rows={[['Enter Space Down Up', 'Open the list.'], ['A-Z', 'Chooses the next option starting with the letter, without opening.'], ['Left Right', 'Choose the previous or the next option, without opening.'], ['Down Up Home End PageUp PageDown', 'Move through the open list, stopping at the ends.'], ['Enter Space', 'Choose the option and close.'], ['Escape', 'Clears the filter, then closes and returns focus.'], ['Tab', 'Does not close the list; Escape closes it.']]} />
 
 </Section>
 

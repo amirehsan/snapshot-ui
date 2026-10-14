@@ -733,10 +733,13 @@ test.describe('the select page, on a touch screen', () => {
     const filter = page.getByRole('searchbox', { name: 'Filter' });
     await expect(filter).toBeVisible();
     await expect(filter).not.toBeFocused();
+    // The popover scales in, so the row is measured once its entering animation has finished, and to the
+    // nearest pixel, since layout can land a fraction of a pixel off a whole one.
+    await expect(page.locator('.select-popover')).not.toHaveAttribute('data-entering');
     const row = page.getByRole('option', { name: 'Groceries' });
     const box = await row.boundingBox();
     if (!box) throw new Error('No row');
-    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(Math.round(box.height)).toBeGreaterThanOrEqual(44);
     expect(await sideways(page)).toBe(0);
   });
 });
