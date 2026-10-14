@@ -807,6 +807,17 @@ test('a combo box in manual mode shows the spinner while the app loads, then the
   ]);
   await expect(spinner).toHaveCount(0);
   await expect(example).not.toHaveAttribute('data-loading');
+  // Choose, then search for something with no results: Escape still puts the chosen text back.
+  await page.getByRole('listbox').locator('.picker-option', { hasText: 'Corner Mart' }).click();
+  await expect(field).toHaveValue('Corner Mart');
+  await expect(example).not.toHaveAttribute('data-loading');
+  await field.press('End');
+  await field.pressSequentially('zz');
+  await expect(example).toHaveAttribute('data-loading', '');
+  await expect(example).not.toHaveAttribute('data-loading');
+  await field.press('Escape');
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await expect(field).toHaveValue('Corner Mart');
 });
 
 test('a multi-select keeps its list open, empties its input, and removes a tag on the second Backspace', async ({

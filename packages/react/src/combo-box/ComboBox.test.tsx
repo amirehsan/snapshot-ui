@@ -113,6 +113,46 @@ const SERVER_RESULTS: Merchant[] = [
   { id: 'corner', name: 'Corner Mart' },
 ];
 
+const SERVER_MERCHANTS: Merchant[] = [
+  { id: 'cafe', name: 'Café Luna' },
+  { id: 'corner', name: 'Corner Mart' },
+  { id: 'cobalt', name: 'Cobalt Coffee' },
+  { id: 'grocer', name: 'Green Grocer' },
+];
+
+/** The app's search, as its server would answer it: the names that contain the text. */
+const lookUp = (text: string): Merchant[] =>
+  SERVER_MERCHANTS.filter(({ name }) => name.toLowerCase().includes(text.toLowerCase()));
+
+/**
+ * A server search. React Aria puts the chosen text back from the items, so `keepChosen` holds the chosen
+ * merchant among them and skips the search for its own text, as the docs' example does; without it the items
+ * are only the last results.
+ */
+function ServerSearch({ keepChosen }: { keepChosen: boolean }): ReactElement {
+  const [text, setText] = useState('');
+  const [results, setResults] = useState<Merchant[]>(() => lookUp(''));
+  const [chosen, setChosen] = useState<Merchant | null>(null);
+  const items = keepChosen && chosen ? [chosen, ...results.filter(({ id }) => id !== chosen.id)] : results;
+  return (
+    <ComboBox<Merchant>
+      label="Merchant"
+      items={items}
+      inputValue={text}
+      onInputChange={(next) => {
+        setText(next);
+        if (keepChosen && chosen !== null && next === chosen.name) return;
+        setResults(lookUp(next));
+      }}
+      onChange={(key) => {
+        setChosen(items.find(({ id }) => id === key) ?? null);
+      }}
+    >
+      {(item) => <PickerOption>{item.name}</PickerOption>}
+    </ComboBox>
+  );
+}
+
 describe('ComboBox', () => {
   it('is a combobox named by its label, with a button named Show options and the label', () => {
     const { container } = render(<Five description="Where you paid." placeholder="Type a merchant" />);
@@ -137,6 +177,16 @@ describe('ComboBox', () => {
     ]);
     expect(root(container)).not.toHaveAttribute('data-loading');
     expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
+  it('marks its root data-unlabelled only when no visible label names it', () => {
+    const { container, unmount } = render(<Five />);
+    expect(root(container)).not.toHaveAttribute('data-unlabelled');
+    unmount();
+    const unlabelled = render(<Five label={undefined} aria-label="Merchant" placeholder="Type a merchant" />);
+    expect(screen.getByRole('combobox', { name: 'Merchant' })).toBeInTheDocument();
+    expect(root(unlabelled.container)).toHaveAttribute('data-unlabelled', '');
+    expect(unlabelled.container.querySelector('.field-head')).toBeNull();
   });
 
   it('opens filtered as you type, contains at base sensitivity: "cafe" keeps "Café"', async () => {
@@ -326,6 +376,45 @@ describe('ComboBox', () => {
     await user.type(input(), 'zzz');
     expect(input()).toHaveValue('zzz');
     expect(shown()).toEqual(['Café Luna', 'Corner Mart']);
+  });
+
+  it('puts the chosen text back on Escape and on leaving, from a server search that keeps the chosen item', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <ServerSearch keepChosen />
+        <button type="button">Next</button>
+      </>,
+    );
+    await user.type(input(), 'co');
+    expect(shown()).toEqual(['Corner Mart', 'Cobalt Coffee']);
+    await user.click(screen.getByRole('option', { name: 'Corner Mart' }));
+    expect(input()).toHaveValue('Corner Mart');
+    // React Aria writes the chosen text back through onInputChange, and the app skips that search.
+    await user.click(button());
+    expect(shown()).toEqual(['Corner Mart', 'Cobalt Coffee']);
+    await user.keyboard('{Escape}');
+
+    // A search that finds nothing: the chosen merchant is still among the items, so its text comes back.
+    await user.type(input(), 'zz');
+    expect(input()).toHaveValue('Corner Martzz');
+    await user.keyboard('{Escape}');
+    expect(input()).toHaveValue('Corner Mart');
+    await user.type(input(), 'zz');
+    await user.click(screen.getByText('Next'));
+    expect(input()).toHaveValue('Corner Mart');
+  });
+
+  it('loses the chosen text to a server search that drops the chosen item, which is why the app keeps it', async () => {
+    const user = userEvent.setup();
+    render(<ServerSearch keepChosen={false} />);
+    await user.type(input(), 'co');
+    await user.click(screen.getByRole('option', { name: 'Corner Mart' }));
+    expect(input()).toHaveValue('Corner Mart');
+    await user.type(input(), 'zz');
+    await user.keyboard('{Escape}');
+    // React Aria finds the chosen key nowhere in the items, so it writes an empty text over a kept value.
+    expect(input()).toHaveValue('');
   });
 
   it('shows the Spinner named Loading while isLoading, with data-loading on the root, and says Loading in an empty list', async () => {

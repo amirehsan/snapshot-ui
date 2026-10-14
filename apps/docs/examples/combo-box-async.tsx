@@ -78,8 +78,11 @@ function search(text: string): Merchant[] {
 export default function ComboBoxAsync(): ReactElement {
   const [text, setText] = useState('');
   const [results, setResults] = useState<Merchant[]>(() => search(''));
+  const [chosen, setChosen] = useState<Merchant | null>(null);
   const [isLoading, setLoading] = useState(false);
   const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /** The latest request's number, so an answer to an older one is dropped. */
+  const latest = useRef(0);
   useEffect(
     () => () => {
       clearTimeout(pending.current);
@@ -87,13 +90,25 @@ export default function ComboBoxAsync(): ReactElement {
     [],
   );
 
+  // React Aria puts the chosen text back from the items, on Escape and on leaving the field, so the chosen
+  // merchant stays among them whatever the last search found.
+  const items = chosen ? [chosen, ...results.filter((merchant) => merchant.id !== chosen.id)] : results;
+
   const change = (value: string): void => {
     setText(value);
     clearTimeout(pending.current);
+    const request = ++latest.current;
+    // A choice writes its own text back through here; that is not a search.
+    if (chosen !== null && value === chosen.name) {
+      setLoading(false);
+      return;
+    }
     // The list keeps what it has while the next results load.
     setLoading(true);
-    // A stand-in for a request to the server, 300ms away.
+    // A stand-in for a request to the server, 300ms away. With a real fetch, pass an AbortController's signal
+    // and abort the last one here, or check the number below, so a slow answer never replaces a newer one.
     pending.current = setTimeout(() => {
+      if (request !== latest.current) return;
       setResults(search(value));
       setLoading(false);
     }, 300);
@@ -104,9 +119,12 @@ export default function ComboBoxAsync(): ReactElement {
       label="Merchant"
       description="Searched on the server as you type."
       placeholder="Type a merchant"
-      items={results}
+      items={items}
       inputValue={text}
       onInputChange={change}
+      onChange={(key) => {
+        setChosen(items.find((merchant) => merchant.id === key) ?? null);
+      }}
       isLoading={isLoading}
       style={{ width: '100%', maxWidth: '24rem' }}
     >

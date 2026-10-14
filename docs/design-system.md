@@ -5879,7 +5879,7 @@ end, opening the Select's list under it. Its rows are the Select's
 `PickerOption` and `PickerSection`.
 
 **The control.** The root is `.field.combo-box`, which carries
-`data-changed` and `data-loading` from the wrapper and React Aria's
+`data-changed`, `data-loading` and `data-unlabelled` from the wrapper and React Aria's
 `data-open`, `data-invalid` and `data-disabled`. Under the label row sits
 `div.combo-box-control`, positioned, holding the library's `Input` as
 `input.input.combo-box-input` (role `combobox`), the Spinner while options
@@ -5891,7 +5891,12 @@ written once. `combo-box.css` only pads its text clear of the button,
 options load, `4.5rem`, in one-class rules after `input.css`, so they beat
 the input's padding and none of its states. The placeholder is the
 input's own, taupe, the whisper: an input's placeholder is an attribute,
-which axe never measures, and the label above the field names it. A
+which axe never measures, and the label above the field names it. It is
+taupe only while a visible label names the field: where only an
+`aria-label` or `aria-labelledby` does, the root carries `data-unlabelled`
+and the placeholder is slate, since it is then the only words shown, the
+exception the search field, the command palette and the multi-select
+recorded. Disabled, it is taupe again. A
 disabled field's text is taupe, the disabled text.
 
 **The field button.** `.input-button`, from the search field: a ghost
@@ -5936,7 +5941,11 @@ active option, closes the list and moves on; with no active option it
 puts the chosen text back. Leaving the field puts the chosen text back,
 unless `allowsCustomValue`, and so does scrolling the page while the list
 is open: the popover is not modal, and React Aria closes such a popover
-when the page under it scrolls. With the input uncontrolled, emptying it
+when the page under it scrolls. It ignores scrolls while the visual
+viewport resizes, for 500ms after each resize (`useOverlayPosition`), so
+the soft keyboard opening on a phone, which resizes and scrolls the
+visual viewport, repositions the list and does not close it; phones are
+covered. With the input uncontrolled, emptying it
 clears the value.
 
 **Nothing matches.** `allowsEmptyCollection` is on by default, so the
@@ -5951,7 +5960,10 @@ waits. React Aria does not filter items the app controls, so the server
 filters, ranks and caps, and the list keeps what it has until the new
 results arrive. While the list is open React Aria hides everything but
 the input and the list from assistive technology, the Spinner too, which
-is why the empty list says "Loading" itself.
+is why the empty list says "Loading" itself. React Aria puts the chosen
+text back from the items, so the docs' example keeps the chosen item
+among them whatever the last search found, skips the search a choice's
+own text would start, and drops an answer to an older request.
 
 **The server.** React Aria builds the collection by rendering the
 combo box's children once into a template, and its popover renders its
@@ -5985,7 +5997,8 @@ field's. The rows and the empty line are the Select's, ink and slate on
 float. All of it is gated as text but the wash, a mix, which is
 recorded. The placeholder, taupe on raised, is 1.58 and 3.68: under the
 text minimum, which is why it is never the field's only label; it is
-recorded and not gated. No pair is added to the gate.
+recorded and not gated. The unlabelled placeholder, slate on raised, is
+5.49 and 6.44, gated as text already. No pair is added to the gate.
 
 **Right to left.** The label and the text start at the right, the button
 sits at the left, 6px inside the control, its chevron unmirrored since

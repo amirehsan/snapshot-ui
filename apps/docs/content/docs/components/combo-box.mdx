@@ -20,6 +20,8 @@ Type part of a name and the list opens with the options that contain it, with ca
 
 When the options live on your server, control the text and the options: pass `items` and `inputValue`, fetch in `onInputChange`, and set `isLoading` while you wait. The field shows a spinner before its button, and the list keeps what it has until the new results arrive, or says "Loading" while it has nothing yet. React Aria does no filtering of items you control, so your server filters, ranks and caps them; the example waits 300ms as a request would and returns at most eight.
 
+React Aria puts the chosen text back on Escape and on leaving the field by finding the chosen option among the items, so keep it there: hold the chosen item from `onChange` and pass it first, then the results without it. A choice also writes its own text back through `onInputChange`, so skip the search when the text is the chosen option's. And drop an answer that arrives after a newer request: abort the last fetch with an `AbortController`, or number your requests and keep only the latest, as the example does.
+
 <Preview name="combo-box-async" />
 
 </Section>
@@ -69,7 +71,7 @@ export function MerchantFilter({ merchants }: { merchants: { id: string; name: s
 }
 ```
 
-The combo box takes `value`, `defaultValue` and `onChange`; React Aria's older `selectedKey`, `defaultSelectedKey` and `onSelectionChange` are deprecated and not accepted. Emptying the field clears the value, and `onChange` reports `null`. Leaving the field puts the chosen option's text back; pass `allowsCustomValue` to keep free text instead, which is then what a form submits. In a plain form, give it a `name` and the chosen key is submitted, or its text with `formValue="text"`.
+The combo box takes `value`, `defaultValue` and `onChange`; React Aria's older `selectedKey`, `defaultSelectedKey` and `onSelectionChange` are deprecated and not accepted. Emptying the field clears the value, and `onChange` reports `null`, unless you control both `value` and `inputValue`, when clearing it is yours to do in `onInputChange`. Leaving the field puts the chosen option's text back, and so does scrolling the page while the list is open, which closes it; pass `allowsCustomValue` to keep free text instead, which is then what a form submits. In a plain form, give it a `name` and the chosen key is submitted, or its text with `formValue="text"`.
 
 </Section>
 
@@ -79,7 +81,7 @@ The combo box takes `value`, `defaultValue` and `onChange`; React Aria's older `
 
 Every React Aria ComboBox prop is accepted, except the deprecated selection names. These are the ones Snapshot UI adds or shapes. The options are `PickerOption` and `PickerSection`, documented on the [select](/docs/components/select) page.
 
-<PropsTable label="ComboBox props" path="../../packages/react/src/combo-box/ComboBox.tsx" type="Pick<ComboBoxBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'items' | 'defaultItems' | 'inputValue' | 'onInputChange' | 'isLoading' | 'allowsCustomValue' | 'labels' | 'placement' | 'name' | 'isDisabled' | 'isInvalid' | 'className' | 'popoverClassName'>" />
+<PropsTable label="ComboBox props" path="../../packages/react/src/combo-box/ComboBox.tsx" type="Pick<ComboBoxBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'items' | 'defaultItems' | 'inputValue' | 'onInputChange' | 'isLoading' | 'allowsCustomValue' | 'allowsEmptyCollection' | 'labels' | 'placement' | 'name' | 'isDisabled' | 'isInvalid' | 'className' | 'popoverClassName'>" />
 
 <PropsTable label="PickerLabels" path="../../packages/react/src/combo-box/ComboBox.tsx" type="PickerLabels" />
 
@@ -89,7 +91,7 @@ Every React Aria ComboBox prop is accepted, except the deprecated selection name
 
 ## Accessibility
 
-The input is a `combobox` with `aria-expanded` and `aria-controls` over a `listbox` of `option`s, named by the field's label; the button is named "Show options" and the label, and stays out of the tab order, since the down arrow does the same from the field. Focus stays in the field while the list is open, and the active option moves with `aria-activedescendant`, which VoiceOver on iOS follows unevenly; how it reads with VoiceOver and TalkBack is not yet verified. React Aria announces the number of options and the choice in its own strings, which have no Persian, so on a Persian page they stay English; the button's name and the list's lines are the library's own `labels`. While the list is open, React Aria hides the rest of the page from assistive technology, the spinner too, so a list with nothing yet says "Loading" itself.
+The input is a `combobox` with `aria-expanded` and `aria-controls` over a `listbox` of `option`s, named by the field's label; the button is named "Show options" and the label, and stays out of the tab order, since the down arrow does the same from the field. Focus stays in the field while the list is open, and the active option moves with `aria-activedescendant`, which VoiceOver on iOS follows unevenly; how it reads with VoiceOver and TalkBack is not yet verified. React Aria announces the number of options and the choice in its own strings, which have no Persian, so on a Persian page they stay English; the button's name and the list's lines are the library's own `labels`. While the list is open, React Aria hides the rest of the page from assistive technology, the spinner too, so a list with nothing yet says "Loading" itself. Scrolling the page while the list is open closes it and puts the chosen text back, since the list would otherwise drift from its field; the soft keyboard opening on a phone resizes the page without closing it. Without a visible label, name the field with `aria-label`; its placeholder is then slate, since it is the only words shown.
 
 <Keys rows={[['A-Z', 'Filters the list as you type.'], ['Down Up', 'Open the list with every option, then move through it, stopping at the ends.'], ['Home End PageUp PageDown', 'Move through the open list.'], ['Enter', 'Chooses the active option and closes.'], ['Escape', 'Closes the list and puts the chosen text back.'], ['Tab', 'Chooses the active option, closes the list and moves on.']]} />
 

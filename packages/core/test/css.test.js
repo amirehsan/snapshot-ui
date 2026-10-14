@@ -4395,9 +4395,14 @@ describe('src/components/combo-box.css', () => {
         '.combo-box-input',
         '.combo-box[data-loading] .combo-box-input',
         '.combo-box-spinner',
+        '.combo-box[data-unlabelled]:not([data-disabled]) .combo-box-input::placeholder',
       ].sort(),
     );
-    const css = rules();
+    // Only the unlabelled placeholder's color; everything else is input.css's and menu.css's.
+    const css = rules().replace(
+      /\.combo-box\[data-unlabelled\]:not\(\[data-disabled\]\) \.combo-box-input::placeholder \{[^}]*\}/,
+      '',
+    );
     for (const part of [
       '.menu',
       '.input-button',
@@ -4409,6 +4414,17 @@ describe('src/components/combo-box.css', () => {
     ]) {
       expect(css, part).not.toContain(part);
     }
+  });
+
+  it('draws the placeholder slate only without a visible label, and never while disabled', () => {
+    const css = rules();
+    expect(
+      blockAfter(
+        css,
+        '.combo-box[data-unlabelled]:not([data-disabled]) .combo-box-input::placeholder {',
+      ).trim(),
+    ).toBe('color: var(--color-slate);');
+    expect(css.match(/::placeholder/g)).toHaveLength(1);
   });
 
   it('writes no physical offset and mirrors nothing', () => {
