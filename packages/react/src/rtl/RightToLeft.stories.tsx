@@ -13,6 +13,7 @@ import { Drawer } from '../drawer';
 import { Link } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { MultiSelect } from '../multi-select';
+import { NumberField } from '../number-field';
 import { Pagination } from '../pagination';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
@@ -1081,6 +1082,47 @@ export const PaginationMirrored: Story = {
     };
     await expect(digit(0).right).toBeLessThanOrEqual(digit(1).left + 0.5);
     await expect(twelve).toHaveAttribute('aria-current', 'page');
+  },
+};
+
+/**
+ * A money field on a Persian page: the sign button at the control's right, the field's start, and "تومان" at its
+ * end, left of the figure. The input is a figure, left to right on every page, so its paddings are swapped:
+ * its right padding is the lead, the sign button's room, and its left padding the trail and the symbol's room
+ * (plan, spec correction 9).
+ */
+export const NumberFieldMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(20rem, calc(100vw - 2rem))' }}>
+        <NumberField
+          label="مبلغ"
+          money={{ symbol: 'تومان', symbolPosition: 'end', fractionDigits: 0 }}
+          allowsNegative
+          defaultValue={1250000}
+          labels={{ negative: 'منفی' }}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const control = rect(find(canvasElement, '.number-field-control'));
+    const input = find(canvasElement, '.number-field-input');
+    const sign = rect(find(canvasElement, '.number-field-sign'));
+    const symbol = find(canvasElement, '.number-field-symbol');
+    await expect(symbol).toHaveTextContent('تومان');
+    // The sign button is at the right, 6px in.
+    await expect(control.right - sign.right).toBeCloseTo(6, 0);
+    const style = getComputedStyle(input);
+    await expect(style.direction).toBe('ltr');
+    // The paddings are swapped: the right is the lead, which the sign button sets to a field's height.
+    await expect(parseFloat(style.paddingRight)).toBeCloseTo(rect(input).height, 0);
+    await expect(parseFloat(style.paddingLeft)).toBeGreaterThan(24);
+    // The symbol sits in the left padding, left of the figure.
+    await expect(rect(symbol).right).toBeLessThanOrEqual(
+      rect(input).left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft),
+    );
+    await expect(rect(symbol).left).toBeGreaterThan(control.left);
   },
 };
 

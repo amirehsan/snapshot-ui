@@ -10,6 +10,7 @@ import { Drawer } from '../src/drawer';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
 import { MultiSelect } from '../src/multi-select';
+import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SearchField } from '../src/search-field';
@@ -81,6 +82,7 @@ const EMPTY: [name: string, element: ReactElement][] = [
   ['TextField', <TextField aria-label="Name" label={false} description="" isChanged />],
   ['TextArea', <TextArea aria-label="Notes" label="" description={false} isChanged />],
   ['SearchField', <SearchField aria-label="Search" label={false} description="" />],
+  ['NumberField', <NumberField aria-label="Amount" label={false} description="" isChanged />],
   [
     'Select',
     <Select aria-label="Category" label="" description={false} isChanged>

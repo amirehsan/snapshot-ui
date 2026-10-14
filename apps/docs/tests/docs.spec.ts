@@ -1076,6 +1076,32 @@ test('a cursor-paged row enables Next while there is more and disables it on the
   await expect(example.getByRole('button', { name: 'Previous' })).toBeEnabled();
 });
 
+test('a money field writes minor units to the URL and reads them back after a reload', async ({ page }) => {
+  await visit(page, '/docs/components/number-field');
+  const input = page.getByRole('textbox', { name: 'Minimum amount' });
+  await scrolledTo(input);
+  await input.fill('20');
+  await input.press('Enter');
+  await expect(page).toHaveURL(/\/docs\/components\/number-field\?min=2000$/);
+  await page.reload();
+  await settled(page);
+  await expect(page.getByRole('textbox', { name: 'Minimum amount' })).toHaveValue('20.00');
+});
+
+test('a money field shows the decimal keyboard and keeps Home and End for the caret', async ({ page }) => {
+  await visit(page, '/docs/components/number-field');
+  const input = page.getByRole('textbox', { name: 'Amount' }).first();
+  await expect(input).toHaveAttribute('inputmode', 'decimal');
+  await scrolledTo(input);
+  await input.fill('234.50');
+  await input.press('Home');
+  await input.press('1');
+  await expect(input).toHaveValue('1234.50');
+  await input.press('End');
+  await input.press('Backspace');
+  await expect(input).toHaveValue('1234.5');
+});
+
 test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
   await visit(page, '/docs/components/text-area');
   const field = fieldNamed(page, 'About the workspace');

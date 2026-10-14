@@ -21,6 +21,7 @@
     "menu",
     "meter",
     "multi-select",
+    "number-field",
     "pagination",
     "popover",
     "radio-group",

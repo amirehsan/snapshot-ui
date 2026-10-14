@@ -60,6 +60,12 @@ import MeterPace from './meter-pace';
 import MultiSelectBasic from './multi-select-basic';
 import MultiSelectMany from './multi-select-many';
 import MultiSelectStates from './multi-select-states';
+import NumberFieldBasic from './number-field-basic';
+import NumberFieldMoney from './number-field-money';
+import NumberFieldNegative from './number-field-negative';
+import NumberFieldPersian from './number-field-persian';
+import NumberFieldStates from './number-field-states';
+import NumberFieldUrl from './number-field-url';
 import PaginationButtons from './pagination-buttons';
 import PaginationCursor from './pagination-cursor';
 import PaginationLinks from './pagination-links';
@@ -180,6 +186,12 @@ export const examples = {
   'multi-select-basic': MultiSelectBasic,
   'multi-select-many': MultiSelectMany,
   'multi-select-states': MultiSelectStates,
+  'number-field-basic': NumberFieldBasic,
+  'number-field-money': NumberFieldMoney,
+  'number-field-negative': NumberFieldNegative,
+  'number-field-persian': NumberFieldPersian,
+  'number-field-states': NumberFieldStates,
+  'number-field-url': NumberFieldUrl,
   'pagination-buttons': PaginationButtons,
   'pagination-cursor': PaginationCursor,
   'pagination-links': PaginationLinks,

@@ -50,6 +50,13 @@ export {
   type MultiSelectProps,
 } from './multi-select';
 export {
+  NumberField,
+  type MoneyFormat,
+  type NumberFieldBaseProps,
+  type NumberFieldLabels,
+  type NumberFieldProps,
+} from './number-field';
+export {
   Checkbox,
   CheckboxGroup,
   type CheckboxBaseProps,

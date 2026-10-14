@@ -18,6 +18,7 @@ import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { MultiSelect } from '../src/multi-select';
+import { NumberField } from '../src/number-field';
 import { Shortcut } from '../src/overlay/Shortcut';
 import { Pagination } from '../src/pagination';
 import { PickerOption } from '../src/picker';
@@ -73,6 +74,25 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'Shown to your team.',
       'class="field-counter"',
     ],
+  ],
+  [
+    // The face: the plain figure, the decimal keyboard and no role description, and the minor units in the
+    // field's own hidden input.
+    'NumberField',
+    <NumberField label="Amount" money={{ symbol: '$' }} value={123450} name="amount" />,
+    [
+      'class="field number-field"',
+      'data-money',
+      'data-symbol="start"',
+      'class="input number-field-input"',
+      'value="1234.50"',
+      'inputMode="decimal"',
+      'class="number-field-symbol"',
+      'type="hidden"',
+      'name="amount"',
+      'value="123450"',
+    ],
+    ['aria-roledescription', 'role="spinbutton"'],
   ],
   [
     // React Aria writes data-empty as "true" in the HTML. A labelled field is not data-unlabelled.
