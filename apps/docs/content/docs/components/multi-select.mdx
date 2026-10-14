@@ -68,7 +68,9 @@ export function CategoryFilter({ categories }: { categories: { id: string; name:
         const params = new URLSearchParams(searchParams);
         params.delete('category');
         for (const key of keys) params.append('category', String(key));
-        router.replace(`${pathname}?${params.toString()}`);
+        const query = params.toString();
+        // No bare "?" once the last filter goes, and no jump to the top: the reader stays at the field.
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
       }}
     >
       {(category) => <PickerOption>{category.name}</PickerOption>}
@@ -87,7 +89,7 @@ The multi-select takes `value`, `defaultValue` and `onChange`; React Aria's olde
 
 Every React Aria ComboBox prop of its multiple mode is accepted, except the deprecated selection names and `allowsCustomValue`. These are the ones Snapshot UI adds or shapes. The options are `PickerOption` and `PickerSection`, documented on the [select](/docs/components/select) page.
 
-<PropsTable label="MultiSelect props" path="../../packages/react/src/multi-select/MultiSelect.tsx" type="Pick<MultiSelectBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'items' | 'inputValue' | 'onInputChange' | 'isLoading' | 'labels' | 'placement' | 'name' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'className' | 'popoverClassName'>" />
+<PropsTable label="MultiSelect props" path="../../packages/react/src/multi-select/MultiSelect.tsx" type="Pick<MultiSelectBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'items' | 'inputValue' | 'onInputChange' | 'isLoading' | 'allowsEmptyCollection' | 'labels' | 'placement' | 'name' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'className' | 'popoverClassName'>" />
 
 <PropsTable label="MultiSelectLabels" path="../../packages/react/src/multi-select/MultiSelect.tsx" type="MultiSelectLabels" />
 

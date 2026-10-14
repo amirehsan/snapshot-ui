@@ -14,7 +14,7 @@ function ViewTabs({ view }: { view: string }): ReactElement {
   const pathname = usePathname();
   const current = VIEWS.find(({ id }) => id === view) ?? VIEWS[0];
   return (
-    // The URL holds the selection; the arrows only move focus, and Enter follows the focused tab's link.
+    // The URL holds the selection; the arrows only move focus, and Enter or Space follows the focused tab's link.
     <Tabs selectedKey={current.id} keyboardActivation="manual">
       <TabList aria-label="Transactions">
         {VIEWS.map(({ id, name }) => (

@@ -79,7 +79,7 @@ export interface MultiSelectBaseProps<T extends object = object> extends Omit<
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
    * Example text, the input's placeholder, shown only while nothing is chosen: taupe under a visible label, slate
-   * when only an `aria-label` names the field.
+   * when only an `aria-label` or an `aria-labelledby` names the field, since it is then the only words shown.
    */
   placeholder?: string;
   /**
@@ -98,6 +98,12 @@ export interface MultiSelectBaseProps<T extends object = object> extends Omit<
    * tag shows its option's text value, so an option whose label is not a string needs a `textValue`.
    */
   children: ReactNode | ((item: T) => ReactElement);
+  /**
+   * Whether the list stays open when nothing matches, saying so with the no-matches line, or the loading line
+   * while options load, rather than vanishing as if the field broke.
+   * @default true
+   */
+  allowsEmptyCollection?: boolean;
   /** Shows the Spinner in the field while the app loads options. The list keeps what it has. */
   isLoading?: boolean;
   /** The library's own words: the button's name, the list's lines, the tags' name and the remove buttons. */
