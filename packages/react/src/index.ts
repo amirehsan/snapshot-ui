@@ -42,6 +42,7 @@ export { TextArea, type TextAreaBaseProps, type TextAreaProps } from './text-are
 export { SearchField, type SearchFieldBaseProps, type SearchFieldProps } from './search-field';
 export { PickerOption, PickerSection, type PickerOptionProps, type PickerSectionProps } from './picker';
 export { Select, type SelectBaseProps, type SelectLabels, type SelectProps } from './select';
+export { ComboBox, type ComboBoxBaseProps, type ComboBoxProps, type PickerLabels } from './combo-box';
 export {
   Checkbox,
   CheckboxGroup,

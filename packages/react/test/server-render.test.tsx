@@ -10,6 +10,7 @@ import { BottomTabBar, BottomTabBarItem } from '../src/bottom-tab-bar';
 import { Button } from '../src/button';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { CollapsibleCard } from '../src/collapsible-card';
+import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
 import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
 import { Drawer } from '../src/drawer';
@@ -103,6 +104,24 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '<select',
     ],
     ['role="listbox"', 'menu-item-end'],
+  ],
+  [
+    // The input holds the chosen option's text; the list renders nothing until it opens, and the Spinner shows
+    // only while options load.
+    'ComboBox',
+    <ComboBox label="Merchant" defaultValue="cafe">
+      <PickerOption id="cafe">Café Luna</PickerOption>
+      <PickerOption id="mart">Corner Mart</PickerOption>
+    </ComboBox>,
+    [
+      'class="field combo-box"',
+      'role="combobox"',
+      'class="input combo-box-input"',
+      'value="Café Luna"',
+      'class="input-button combo-box-button"',
+      'aria-label="Show options"',
+    ],
+    ['role="listbox"', 'combo-box-spinner'],
   ],
   [
     'TextArea',
@@ -435,8 +454,9 @@ describe('the client components on the server', () => {
     for (const part of excludes) expect(html).not.toContain(part);
   });
 
-  // React Aria makes a collator while a Select renders, for its closed type-to-select; it compares and writes
-  // nothing, so the HTML is the same in every locale (spec correction 5, risk R1).
+  // React Aria makes a collator while a Select renders, for its closed type-to-select, and while a ComboBox
+  // renders, for its filter; it compares and writes nothing, so the HTML is the same in every locale (spec
+  // correction 5, risk R1).
   it('renders a Select and a ComboBox to the same HTML in two locales', () => {
     const parts: [name: string, element: ReactElement][] = [
       [
@@ -445,6 +465,14 @@ describe('the client components on the server', () => {
           <PickerOption id="food">Food</PickerOption>
           <PickerOption id="rent">Rent</PickerOption>
         </Select>,
+      ],
+      [
+        // React Aria's ComboBox builds its filter's collator while it renders (ComboBox.mjs:101).
+        'ComboBox',
+        <ComboBox label="Merchant" defaultValue="cafe">
+          <PickerOption id="cafe">Café Luna</PickerOption>
+          <PickerOption id="mart">Corner Mart</PickerOption>
+        </ComboBox>,
       ],
     ];
     for (const [name, element] of parts) {
@@ -466,6 +494,21 @@ describe('the client components on the server', () => {
     );
     expect(html).toContain('Food');
     for (const part of ['search-field', 'select-filter', 'select-list', 'select-popover']) {
+      expect(html, part).not.toContain(part);
+    }
+  });
+
+  // A closed ComboBox's popover renders its content in the hidden pass too, where only the options belong:
+  // no library popover and no list of its own. The options write nothing to the HTML.
+  it("keeps a closed ComboBox's popover and list out of React Aria's hidden pass", () => {
+    const html = renderToString(
+      <ComboBox label="Merchant">
+        <PickerOption id="cafe">Café Luna</PickerOption>
+        <PickerOption id="mart">Corner Mart</PickerOption>
+      </ComboBox>,
+    );
+    expect(html).toContain('class="input combo-box-input"');
+    for (const part of ['menu-popover', 'combo-box-list', 'picker-empty', 'role="listbox"']) {
       expect(html, part).not.toContain(part);
     }
   });

@@ -22,6 +22,9 @@ import CollapsibleCardActions from './collapsible-card-actions';
 import CollapsibleCardBasic from './collapsible-card-basic';
 import CollapsibleCardChanged from './collapsible-card-changed';
 import CollapsibleCardRemembered from './collapsible-card-remembered';
+import ComboBoxAsync from './combo-box-async';
+import ComboBoxBasic from './combo-box-basic';
+import ComboBoxStates from './combo-box-states';
 import CommandPaletteAsync from './command-palette-async';
 import CommandPaletteBasic from './command-palette-basic';
 import ConfirmDialogBasic from './confirm-dialog-basic';
@@ -126,6 +129,9 @@ export const examples = {
   'collapsible-card-basic': CollapsibleCardBasic,
   'collapsible-card-changed': CollapsibleCardChanged,
   'collapsible-card-remembered': CollapsibleCardRemembered,
+  'combo-box-async': ComboBoxAsync,
+  'combo-box-basic': ComboBoxBasic,
+  'combo-box-states': ComboBoxStates,
   'command-palette-async': CommandPaletteAsync,
   'command-palette-basic': CommandPaletteBasic,
   'confirm-dialog-basic': ConfirmDialogBasic,

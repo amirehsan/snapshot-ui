@@ -273,6 +273,13 @@
     "limit": "3 kB"
   },
   {
+    "name": "import { ComboBox } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ ComboBox }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "2.5 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

@@ -528,6 +528,7 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .field-error',
     '.stage .checkbox-text',
   ],
+  'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'collapsible-card': [
     '.stage .card-toggle-text',
     '.stage .card-note',
@@ -677,6 +678,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   card: ['.stage .card', '.stage .card-title', '.stage .card-note'],
   checkbox: ['.stage .checkbox-box'],
   'collapsible-card': ['.stage .card-collapsible', '.stage .card-toggle', '.stage .card-chevron'],
+  // The input and its button; the list renders nothing until it opens.
+  'combo-box': ['.stage .combo-box-input', '.stage .combo-box-button'],
   'command-palette': ['.stage .button'],
   'confirm-dialog': ['.stage .button'],
   dialog: ['.stage .button'],
