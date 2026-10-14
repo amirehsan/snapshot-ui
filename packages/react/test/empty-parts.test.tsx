@@ -8,9 +8,11 @@ import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
+import { PickerOption } from '../src/picker';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
+import { Select } from '../src/select';
 import { Sheet } from '../src/sheet';
 import { Sidebar, SidebarGroup, SidebarItem } from '../src/sidebar';
 import { StatTile } from '../src/stat-tile';
@@ -77,6 +79,12 @@ const EMPTY: [name: string, element: ReactElement][] = [
   ['TextField', <TextField aria-label="Name" label={false} description="" isChanged />],
   ['TextArea', <TextArea aria-label="Notes" label="" description={false} isChanged />],
   ['SearchField', <SearchField aria-label="Search" label={false} description="" />],
+  [
+    'Select',
+    <Select aria-label="Category" label="" description={false} isChanged>
+      <PickerOption id="a">A</PickerOption>
+    </Select>,
+  ],
 ];
 
 describe('a label, a hint or a row text of false or an empty string', () => {
@@ -139,6 +147,15 @@ const EMPTY_OVERLAYS: [name: string, element: ReactElement][] = [
         </MenuItem>
       </Menu>
     </MenuTrigger>,
+  ],
+  [
+    // The label is always drawn, since it names the option; the icon, the hint and the end value only when given.
+    'PickerOption',
+    <Select aria-label="Category" defaultOpen>
+      <PickerOption id="a" icon={false} description="" end={null}>
+        A
+      </PickerOption>
+    </Select>,
   ],
   [
     // The text is always drawn; the key chip only when a shortcut is given.

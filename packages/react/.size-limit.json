@@ -266,6 +266,13 @@
     "limit": "1.5 kB"
   },
   {
+    "name": "import { Select, PickerOption, PickerSection } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Select, PickerOption, PickerSection }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
+    "limit": "3 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

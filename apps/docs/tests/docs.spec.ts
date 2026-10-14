@@ -706,6 +706,41 @@ test('the docs search keeps its own row, and the library search field draws none
   expect((await glyph.boundingBox())?.width).toBe(16);
 });
 
+test('a select with nine options or more opens to a filter that keeps an option when every word matches, accents aside', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/select');
+  // The filter example's select, the one whose value is Home rent.
+  const trigger = page.getByRole('button', { name: 'Home rent Category', exact: true });
+  await trigger.click();
+  const filter = page.getByRole('searchbox', { name: 'Filter' });
+  await expect(filter).toBeFocused();
+  await expect(page.getByRole('option')).toHaveCount(12);
+  await filter.fill('cafe');
+  await expect(page.getByRole('option')).toHaveCount(1);
+  await expect(page.getByRole('option', { name: 'Café' })).toBeVisible();
+  await filter.press('Enter');
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Café Category', exact: true })).toBeFocused();
+});
+
+test.describe('the select page, on a touch screen', () => {
+  test.use({ hasTouch: true, viewport: { width: 375, height: 760 } });
+
+  test('a filterable select opens with its filter unfocused and 44px rows', async ({ page }) => {
+    await visit(page, '/docs/components/select');
+    await page.getByRole('button', { name: 'Home rent Category', exact: true }).tap();
+    const filter = page.getByRole('searchbox', { name: 'Filter' });
+    await expect(filter).toBeVisible();
+    await expect(filter).not.toBeFocused();
+    const row = page.getByRole('option', { name: 'Groceries' });
+    const box = await row.boundingBox();
+    if (!box) throw new Error('No row');
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(await sideways(page)).toBe(0);
+  });
+});
+
 test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
   await visit(page, '/docs/components/text-area');
   const field = fieldNamed(page, 'About the workspace');

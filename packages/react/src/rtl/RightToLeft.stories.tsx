@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Settings, User } from 'lucide-react';
+import { House, Settings, ShoppingCart, User } from 'lucide-react';
 import { useEffect, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
@@ -11,10 +11,12 @@ import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { Link } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
+import { PickerOption } from '../picker';
 import { Popover } from '../popover';
 import { Radio, RadioGroup } from '../radio-group';
 import { SearchField } from '../search-field';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
+import { Select } from '../select';
 import { Sheet, SheetTrigger } from '../sheet';
 import { MENU_ROW_A11Y } from '../stories/a11y';
 import { firstLineOffset, lineCount } from '../stories/paint';
@@ -855,6 +857,58 @@ export const SearchFieldMirrored: Story = {
     await expect(input.right - icon.right).toBeCloseTo(16, 0);
     await expect(clear.left - input.left).toBeCloseTo(6, 0);
     await expect(getComputedStyle(find(canvasElement, '.search-field-icon svg')).scale).toBe('none');
+  },
+};
+
+/**
+ * The select in Persian: the label starts at the right edge of the field, the value starts at the trigger's
+ * right padding, and the chevron sits at the left end, unmirrored. The open list's rows put the icon at the
+ * right, the start of the line, and the check at the left, the end.
+ */
+export const SelectMirrored: Story = {
+  // An option is named by its label and described by its hint and its end value, as MENU_ROW_A11Y says why.
+  parameters: { a11y: MENU_ROW_A11Y },
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(28rem, calc(100vw - 2rem))' }}>
+        <Select label="دسته" defaultValue="groceries" defaultOpen>
+          <PickerOption id="groceries" icon={<ShoppingCart />} end="۱٬۲۰۴ دلار">
+            خرید روزانه
+          </PickerOption>
+          <PickerOption id="rent" icon={<House />}>
+            اجاره
+          </PickerOption>
+        </Select>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const popover = await waitFor(async () => {
+      const found = find(document, '.select-popover');
+      await expect(found).not.toHaveAttribute('data-entering');
+      return found;
+    });
+    const field = rect(find(canvasElement, '.select'));
+    const label = rect(find(canvasElement, '.field-label'));
+    const trigger = find(canvasElement, '.select-trigger');
+    const value = rect(find(trigger, '.select-value'));
+    const chevron = rect(find(trigger, '.select-chevron'));
+    await expectSameEdge(label.right, field.right);
+    // The value starts 1.5rem in from the trigger's right edge: its start padding, past the 1px edge.
+    const startPadding = parseFloat(getComputedStyle(trigger).paddingRight);
+    const edge = parseFloat(getComputedStyle(trigger).borderRightWidth);
+    await expectSameEdge(value.right, rect(trigger).right - edge - startPadding);
+    await expect(chevron.right).toBeLessThanOrEqual(value.left + 0.5);
+    await expect(getComputedStyle(find(trigger, '.select-chevron svg')).scale).toBe('none');
+    await expect(popover).toHaveAttribute('dir', 'rtl');
+    for (const name of ['خرید روزانه', 'اجاره']) {
+      const row = within(document.body).getByRole('option', { name });
+      const icon = rect(find(row, '.menu-item-icon'));
+      const text = rect(find(row, '.menu-item-label'));
+      const check = rect(find(row, '.menu-item-check'));
+      await expect(icon.left).toBeGreaterThanOrEqual(text.right - 0.5);
+      await expect(check.right).toBeLessThanOrEqual(text.left + 0.5);
+    }
   },
 };
 

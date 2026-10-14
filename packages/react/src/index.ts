@@ -40,6 +40,8 @@ export {
 } from './text-field';
 export { TextArea, type TextAreaBaseProps, type TextAreaProps } from './text-area';
 export { SearchField, type SearchFieldBaseProps, type SearchFieldProps } from './search-field';
+export { PickerOption, PickerSection, type PickerOptionProps, type PickerSectionProps } from './picker';
+export { Select, type SelectBaseProps, type SelectLabels, type SelectProps } from './select';
 export {
   Checkbox,
   CheckboxGroup,

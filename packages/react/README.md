@@ -58,6 +58,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Radio group](https://snapshotui.com/docs/components/radio-group)
 - [Search field](https://snapshotui.com/docs/components/search-field)
 - [Segmented control](https://snapshotui.com/docs/components/segmented-control)
+- [Select](https://snapshotui.com/docs/components/select)
 - [Sheet](https://snapshotui.com/docs/components/sheet)
 - [Sidebar](https://snapshotui.com/docs/components/sidebar)
 - [Spinner](https://snapshotui.com/docs/components/spinner)

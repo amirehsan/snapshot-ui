@@ -5705,3 +5705,158 @@ no longer counts the field button's rules as input states.
 
 **The size.** The size limit is 1.5 kB, the spec's budget: the entry
 measured 514 B, and the rule rounds up to 1 kB and adds 0.5 kB.
+
+## Select
+
+A field that chooses one value from a list: `Select`, the text input's
+pill drawn on a button, showing the chosen option's icon and label and
+opening the Menu's rows in a popover under it. Its rows are two shared
+parts, `PickerOption` and `PickerSection`, which the combo box and the
+multi-select reuse.
+
+**The trigger.** A button wearing `.input select-trigger`, so the pill is
+the input's: `--size-field` tall (48px, 36px compact), the raised fill,
+the boundary edge, and every hover, focus, disabled, changed and invalid
+edge `input.css` draws through the field's root, written once. The root is
+`.field.select`, which carries `data-changed` and React Aria's
+`data-invalid`, `data-disabled` and `data-open`. `select.css` lays the
+trigger out as a row of the value and the chevron in one-class rules after
+`input.css`: `display: flex`, `gap: var(--spacing-part)`, `padding-inline:
+1.5rem 1rem` (the chevron needs less room at the end than text at the
+start), `text-align: start`, and a pointer cursor only while enabled, so a
+disabled trigger keeps the input's not-allowed cursor.
+
+**The value.** The chosen option's icon and label, in ink, on one line,
+ellipsized (`min-width: 0`, `white-space: nowrap`, `text-overflow:
+ellipsis` on the label). React Aria's `SelectValue` renders the chosen
+option's own content in the trigger, which for `PickerOption` is the
+whole row: its label and hint as slots, its end value with an id, and its
+check. Hidden by CSS, the end value's id would still be written twice
+while the list is open, and the option's description would resolve to
+whichever came first. So the trigger draws the row by render, not by CSS:
+`Select` provides a private context around its value, inside which an
+option draws only `span.menu-item-icon` and `span.select-value-label`, with
+no slot, no id, no hint, no end value and no check (spec correction 2).
+The trigger is named by its value and its label, in React Aria's order:
+"Groceries, Category".
+
+**The placeholder.** "Choose an option" until something is chosen, or the
+`placeholder` passed, in taupe, the whisper every field's placeholder is
+drawn in. React Aria marks it `data-placeholder`. A Select with no visible
+label is named by `aria-label`, its root carries `data-unlabelled`, and its
+placeholder is slate, because it is the only words a sighted reader gets:
+the exception SearchField and CommandPalette recorded, extended to Select
+(open question 3). An input's placeholder is an attribute, which axe never
+measures; this one is text in a button, which axe does. Taupe text fails
+its contrast check, so the Select stories and the docs page skip that
+check on `.select-value[data-placeholder]` alone, with every other element
+and every other rule still checked, and the reason written where each
+skip is. Under a visible label the label names the field and the
+placeholder only says nothing is chosen.
+
+**The chevron.** Lucide `ChevronDown` at 16px in slate at the trigger's
+end, hidden from assistive technology. It turns half a turn while the list
+is open (`rotate: 180deg`, 140ms), and not at all under reduced motion; it
+is the only thing in the pickers that moves. An option's icon in the
+trigger is the Menu's 16px slate icon. Disabled, both are taupe.
+
+**The list.** The Menu's float panel and rows, with no row CSS of its own:
+`Popover.menu-popover.select-popover` holding `ListBox.menu.select-list`.
+`PickerOption` is MenuItem's anatomy without the key hint, the danger
+variant or a link: an icon, a label that names it, a hint under it, a
+preformatted end value, and a check whose room every row of a selecting
+list keeps; the chosen row is the ink pill with its check. It omits every
+link prop (`href`, `hrefLang`, `target`, `rel`, `download`, `ping`,
+`referrerPolicy` and `routerOptions`), since an option that navigates is a
+menu item (spec correction 6). The end value describes the option ahead of
+its hint, as on MenuItem; React Aria's option writes its own
+`aria-describedby` over the one it is given, so the option joins the end
+value's id to it through React Aria's `render` prop, on the element
+itself. `PickerSection` is MenuSection's look, an overline heading that
+names the group.
+
+**The popover.** At least the trigger's width (`matchTriggerWidth`) and at
+least 12rem, capped at the viewport less 2rem, under the trigger at its
+start. React Aria's `maxHeight` is 320px, about seven rows with hints, so a
+long list scrolls inside a panel that stops short of the screen's edge; the
+list is the one scroller. It is a popover at every width (ruling 2): React
+Aria flips it above the trigger when there is more room there, caps its
+height to the room left and keeps it 12px inside the viewport.
+
+**The filter.** From 9 options, counted from React Aria's collection,
+which counts items and never headings, inside sections too, the list sits
+in React Aria's `Autocomplete` under `div.select-filter`, a `SearchField`
+named and placeholdered "Filter" (`labels.filter`). `isFilterable` turns it
+on for a shorter list or off for a longer one (ruling 7). An option stays
+when every whitespace-separated word of the text appears in its text
+value, at base sensitivity, CommandPalette's rule, so case and accents do
+not count; a section with nothing left hides. The list mounts each time it
+opens, so the text is empty on every open. The row pads
+`var(--spacing-part)` with a 1px divider under it and sets `--size-field:
+var(--size-control)` for its subtree, so its field is 40px (36px compact):
+a field inside a popup is one step smaller than a field on the page, read
+from the tokens. It is unlabelled, so its placeholder is slate. Focus goes
+to the field, the arrows move a virtual focus through the list, Enter
+chooses the active option, and Escape clears the text first and closes
+on the second press.
+
+**On a coarse pointer** the filter does not take focus as the list opens,
+so a phone's keyboard does not cover a list that is often short enough to
+scroll (ruling 7). The check reads `matchMedia('(pointer: coarse)')` in
+`onOpenChange`, an event, never while rendering; React Aria calls it for
+an open the user starts, so a list opened by `defaultOpen` or by the app's
+`isOpen` focuses its filter (spec correction 3). Where focus lands then was
+settled by a spike: with the field's autofocus off, React Aria leaves focus
+on the popover, where the arrows reach nothing. So the filter's
+`Autocomplete` also turns off its virtual focus there
+(`disableVirtualFocus`): the options take real focus, as an unfiltered
+list's do, focus starts on the list, the arrows move through it, Enter
+chooses, and Escape closes and gives focus back to the trigger. The field
+is one tap away. This also keeps the active descendant, which mobile
+screen readers follow unevenly (risk R3), off the touch path.
+
+**The empty line.** `div.picker-empty`, "No matches" or `labels.empty`:
+`padding: 0.5rem 0.75rem`, `--text-small`, slate. The combo box and the
+multi-select share it.
+
+**Keys.** Closed, Enter, Space and the up and down arrows open the list;
+a letter chooses the next option starting with it without opening; and
+Left and Right choose the previous and the next option without opening,
+which React Aria does in single mode (spec correction 4). They are
+physical keys and do not follow the reading direction. Open, the arrows
+stop at the ends, Home and End jump, the page keys move a page, a letter
+finds an option when there is no filter, and Enter or Space chooses and
+closes. Tab stays in the open list, as in the Menu: React Aria holds focus
+in the popover. Escape closes and gives focus back to the trigger.
+
+**Forms and the server.** `name` submits the chosen key through React
+Aria's hidden select, which follows a native form reset. A Select has no
+clear action of its own: an app that needs "Any" adds it as an option.
+React Aria builds the collection by rendering the Select's children once
+into a template, so the field's label row is drawn there too, where
+nothing reads it. On the server the trigger already shows the chosen
+option's label, or the placeholder, and the hidden select; the popover
+renders nothing until it opens. React Aria makes a collator while a
+Select renders, for the closed type-to-select, on the server too (spec
+correction 5, risk R1): it compares and writes nothing, and the server
+test renders a Select under `en-US` and `fa-IR` and finds the same HTML.
+
+**Measured pairs.** The value, ink on raised: 18.43 in light and 15.36 in
+dark. The chevron and an option's icon, slate on raised: 5.49 and 6.44;
+the filter's placeholder is the same pair. Both are gated as text, and so
+are the rows on float and canvas on the ink pill. The filter's divider on
+float is 1.23 and 1.34: a separator inside the panel, not a control's
+boundary, so it is recorded and not gated. No pair is added to the gate.
+
+**Right to left.** The label and the value start at the right, the
+chevron sits at the left and is not mirrored, since it points down, and
+the popover aligns to the trigger's right edge, its start, through React
+Aria.
+
+**Forced colors.** The chevron and an option's icon in the trigger are
+`CanvasText`, and `GrayText` when disabled; the trigger keeps
+`input.css`'s rules and the rows keep the Menu's.
+
+**The size.** The size limit is 3 kB for `Select`, `PickerOption` and
+`PickerSection` together, the spec's budget: the entry measured 2.41 kB,
+and the rule rounds up to 2.5 kB and adds 0.5 kB.

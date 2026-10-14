@@ -4,9 +4,11 @@ import { useState, type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { PickerOption } from '../src/picker';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
+import { Select } from '../src/select';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
@@ -18,7 +20,7 @@ import { TextField } from '../src/text-field';
  * show, as it knows the saved value, so each harness below does what an app
  * does: it compares the value it is told about with the saved one.
  *
- * These checks sit together because the same event reaches eight different
+ * These checks sit together because the same event reaches nine different
  * pieces of React Aria, each with its own way of listening for it.
  */
 
@@ -169,6 +171,28 @@ function SegmentedControlForm(): ReactElement {
         <SegmentedControlItem value="dark">Dark</SegmentedControlItem>
         <SegmentedControlItem value="system">System</SegmentedControlItem>
       </SegmentedControl>
+      <ResetButton />
+    </form>
+  );
+}
+
+function SelectForm(): ReactElement {
+  const [changed, setChanged] = useState(false);
+  return (
+    <form>
+      <Select
+        label="Category"
+        name="category"
+        defaultValue="rent"
+        isChanged={changed}
+        onChange={(value) => {
+          setChanged(value !== 'rent');
+        }}
+      >
+        <PickerOption id="food">Food</PickerOption>
+        <PickerOption id="rent">Rent</PickerOption>
+        <PickerOption id="salary">Salary</PickerOption>
+      </Select>
       <ResetButton />
     </form>
   );
@@ -341,5 +365,24 @@ describe('a native form reset', () => {
     expect(input).toHaveValue('coffee');
     expect(sent(container, 'q')).toEqual(['coffee']);
     expect(container.querySelector('.search-field')).not.toHaveAttribute('data-empty');
+  });
+
+  it('puts a Select back on its default option, without its chip', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<SelectForm />);
+    const value = (): string | null | undefined => container.querySelector('.select-value')?.textContent;
+    expect(value()).toBe('Rent');
+    expect(showsChip(container)).toBe(false);
+
+    await user.click(screen.getByRole('button', { name: 'Rent Category' }));
+    await user.click(screen.getByRole('option', { name: 'Salary' }));
+    expect(value()).toBe('Salary');
+    expect(sent(container, 'category')).toEqual(['salary']);
+    expect(showsChip(container)).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(value()).toBe('Rent');
+    expect(sent(container, 'category')).toEqual(['rent']);
+    expect(showsChip(container)).toBe(false);
   });
 });

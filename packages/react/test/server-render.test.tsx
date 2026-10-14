@@ -1,6 +1,7 @@
 // @vitest-environment node
 import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
+import { I18nProvider } from 'react-aria-components';
 import { describe, expect, it } from 'vitest';
 import { AppShell } from '../src/app-shell';
 import { Avatar } from '../src/avatar';
@@ -16,10 +17,12 @@ import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Shortcut } from '../src/overlay/Shortcut';
+import { PickerOption } from '../src/picker';
 import { Popover } from '../src/popover';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
+import { Select } from '../src/select';
 import { Sheet, SheetTrigger } from '../src/sheet';
 import {
   Sidebar,
@@ -81,6 +84,25 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'aria-label="Clear search"',
     ],
     ['data-unlabelled'],
+  ],
+  [
+    // The trigger draws the chosen option's icon and label; the list renders nothing until it opens.
+    'Select',
+    <Select label="Category" defaultValue="food">
+      <PickerOption id="food" icon={<svg />}>
+        Food
+      </PickerOption>
+      <PickerOption id="rent">Rent</PickerOption>
+    </Select>,
+    [
+      'class="field select"',
+      'class="input select-trigger"',
+      'aria-haspopup="listbox"',
+      'class="select-value-label"',
+      '>Food<',
+      '<select',
+    ],
+    ['role="listbox"', 'menu-item-end'],
   ],
   [
     'TextArea',
@@ -411,6 +433,25 @@ describe('the client components on the server', () => {
     const html = renderToString(element);
     for (const part of contains) expect(html).toContain(part);
     for (const part of excludes) expect(html).not.toContain(part);
+  });
+
+  // React Aria makes a collator while a Select renders, for its closed type-to-select; it compares and writes
+  // nothing, so the HTML is the same in every locale (spec correction 5, risk R1).
+  it('renders a Select and a ComboBox to the same HTML in two locales', () => {
+    const parts: [name: string, element: ReactElement][] = [
+      [
+        'Select',
+        <Select label="Category" defaultValue="food">
+          <PickerOption id="food">Food</PickerOption>
+          <PickerOption id="rent">Rent</PickerOption>
+        </Select>,
+      ],
+    ];
+    for (const [name, element] of parts) {
+      const english = renderToString(<I18nProvider locale="en-US">{element}</I18nProvider>);
+      const persian = renderToString(<I18nProvider locale="fa-IR">{element}</I18nProvider>);
+      expect(persian, name).toBe(english);
+    }
   });
 
   it('names triggerRef for a Popover opened outside a trigger without one, with no browser', () => {
