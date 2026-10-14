@@ -400,6 +400,28 @@ test('the routing page is in the rail after Theming, has no axe violations and f
   }
 });
 
+/** The docs card that holds the second-level heading `name`. */
+const guideSection = (page: Page, name: string): Locator =>
+  page.locator('.docs-section', { has: page.getByRole('heading', { level: 2, name, exact: true }) });
+
+test('the installation page names Pagination among the parts a server component renders', async ({
+  page,
+}) => {
+  await visit(page, '/docs/installation');
+  const section = guideSection(page, 'Next.js server components');
+  await expect(section).toHaveCount(1);
+  await expect(section).toContainText('Pagination');
+  await expect(section).toContainText('getPageHref');
+});
+
+test('the routing page names the tabs and the page links among the parts that navigate', async ({ page }) => {
+  await visit(page, '/docs/routing');
+  const section = guideSection(page, 'What goes through it');
+  await expect(section).toHaveCount(1);
+  await expect(section.locator('a[href="/docs/components/tabs"]')).toHaveCount(1);
+  await expect(section.locator('a[href="/docs/components/pagination"]')).toHaveCount(1);
+});
+
 test('a docs card pads 20px on a phone through --spacing-card', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await visit(page, '/docs/theming');
