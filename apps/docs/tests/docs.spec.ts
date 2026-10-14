@@ -1157,7 +1157,9 @@ test('a calendar fits a 320px screen without scrolling the page sideways', async
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
       (stage?.x ?? 0) + (stage?.width ?? 0) + 0.5,
     );
+    // Inline, a day shrinks with the stage but never below the 24px target minimum.
     const day = await calendar.locator('.calendar-day').first().boundingBox();
+    expect(day?.width ?? 0).toBeGreaterThanOrEqual(24);
     expect(day?.width ?? 0).toBeCloseTo(day?.height ?? -1, 0);
   }
   expect(await sideways(page)).toBe(0);

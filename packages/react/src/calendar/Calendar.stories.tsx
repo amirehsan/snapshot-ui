@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
@@ -258,8 +258,8 @@ export const Narrow: Story = {
 
 /**
  * The page as a browser paints it before the scripts run: the server's HTML of a calendar and a range calendar,
- * two empty frames of their final size, outlined here by a story-only dashed border so the shot shows them
- * (plan, spec correction 12).
+ * two faces of their final size, the parts with no date in them and the range's preset words, outlined here by
+ * a story-only dashed border so the shot shows them (plan, spec correction 12).
  */
 export const Face: Story = {
   render: () => {
@@ -286,11 +286,109 @@ export const Face: Story = {
   play: async ({ canvasElement }) => {
     const faces = [...canvasElement.querySelectorAll<HTMLElement>('.calendar[data-face]')];
     await expect(faces).toHaveLength(2);
+    const [single, range] = faces;
+    if (!single || !range) throw new Error('No faces');
+    // No date, weekday or month; the range's face writes only the app's preset words.
+    await expect(single.textContent.trim()).toBe('');
+    await expect([...range.querySelectorAll('.calendar-preset')].map((preset) => preset.textContent)).toEqual(
+      PRESETS.map((preset) => preset.label),
+    );
     for (const face of faces) {
-      await expect(face).toBeEmptyDOMElement();
+      await expect(face).toHaveAttribute('aria-hidden', 'true');
       await expect(rect(face).width).toBeCloseTo(7 * tokenPixels('--size-control'), 1);
-      await expect(rect(face).height).toBeCloseTo((rect(face).width * 8) / 7, 1);
+      await expect(face.querySelectorAll('tbody tr')).toHaveLength(6);
     }
+  },
+};
+
+/** The server's HTML of a calendar, as the page paints it before the scripts run, beside the calendar itself. */
+function FaceBeside({ id, children }: { id: string; children: ReactElement }): ReactElement {
+  return (
+    <div data-pair={id} style={{ display: 'grid', gap: 16 }}>
+      {/* The library's own server HTML of its own story, never input from a reader. */}
+      <div data-side="face" dangerouslySetInnerHTML={{ __html: renderToString(children) }} />
+      <div data-side="live">{children}</div>
+    </div>
+  );
+}
+
+/** The face's box against the hydrated calendar's, in one pair, and the number of weeks the month drew. */
+async function expectSameBox(scope: ParentNode, id: string, weeks: number): Promise<void> {
+  const pair = find(scope, `[data-pair="${id}"]`);
+  const face = find(pair, '[data-side="face"] .calendar[data-face]');
+  const live = find(pair, '[data-side="live"] .calendar');
+  await expect(live).not.toHaveAttribute('data-face');
+  await expect(live.querySelectorAll('tbody tr'), id).toHaveLength(weeks);
+  await expect(rect(face).width, id).toBeCloseTo(rect(live).width, 1);
+  await expect(rect(face).height, id).toBeCloseTo(rect(live).height, 1);
+}
+
+/**
+ * Nothing moves when the calendar arrives: the face of a month of five weeks, of four (February 2026, from a
+ * Sunday) and of six, and of a range calendar with presets, each the box of the calendar that replaces it, at
+ * either density.
+ */
+export const FaceMatches: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <div style={{ display: 'grid', gap: 32 }}>
+      <FaceBeside id="five">
+        <Calendar aria-label="Date" value="2026-09-14" today={TODAY} />
+      </FaceBeside>
+      <FaceBeside id="four">
+        <Calendar aria-label="Date" value="2026-02-10" today={TODAY} />
+      </FaceBeside>
+      <FaceBeside id="six">
+        <Calendar aria-label="Date" value="2026-08-10" today={TODAY} />
+      </FaceBeside>
+      <FaceBeside id="presets">
+        <RangeCalendar
+          aria-label="Statement period"
+          value={{ start: '2026-09-01', end: '2026-09-30' }}
+          today={TODAY}
+          presets={PRESETS}
+        />
+      </FaceBeside>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const root = document.documentElement;
+    const density = root.dataset.density;
+    try {
+      for (const level of [density, 'compact']) {
+        if (level === undefined) delete root.dataset.density;
+        else root.dataset.density = level;
+        await expectSameBox(canvasElement, 'five', 5);
+        await expectSameBox(canvasElement, 'four', 4);
+        await expectSameBox(canvasElement, 'six', 6);
+        await expectSameBox(canvasElement, 'presets', 5);
+      }
+    } finally {
+      if (density === undefined) delete root.dataset.density;
+      else root.dataset.density = density;
+    }
+  },
+};
+
+/** The calendar holds six weeks, so its height never changes from a month of five to one of four or six. */
+export const MonthChange: Story = {
+  tags: ['no-visual'],
+  render: (args) => (
+    <Calendar aria-label="Date" today={TODAY} onChange={args.onChange} defaultValue="2026-01-14" />
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const calendar = find(canvasElement, '.calendar');
+    const height = rect(calendar).height;
+    const next = canvas.getByRole('button', { name: 'Next month' });
+    const weeks = new Set<number>();
+    // January 2026 to August 2026: five weeks, four in February, and six in August.
+    for (let month = 1; month <= 8; month += 1) {
+      if (month > 1) await userEvent.click(next);
+      weeks.add(calendar.querySelectorAll('tbody tr').length);
+      await expect(rect(calendar).height, `month ${String(month)}`).toBeCloseTo(height, 1);
+    }
+    await expect(find(canvasElement, '.calendar-heading')).toHaveTextContent('August 2026');
+    await expect([...weeks].sort((a, b) => a - b)).toEqual([4, 5, 6]);
   },
 };
 

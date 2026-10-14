@@ -20,6 +20,15 @@ describe('the ISO helpers', () => {
     }
   });
 
+  it('reads a date that parses but is not written the canonical way as invalid', () => {
+    // parseDate takes a six-digit signed year and year zero, which write back differently.
+    for (const value of ['+002026-09-14', '0000-01-01', '-000001-01-01']) {
+      expect(parseIso(value), value).toBe('invalid');
+    }
+    expect(parseIsoRange({ start: '+002026-09-01', end: '2026-09-30' })).toBe('invalid');
+    expect(parseIso('0001-01-01')).not.toBe('invalid');
+  });
+
   it('reads a reversed range as invalid and a one-day range as a range', () => {
     expect(parseIsoRange({ start: '2026-09-18', end: '2026-09-07' })).toBe('invalid');
     expect(parseIsoRange({ start: '2026-09-07', end: 'soon' })).toBe('invalid');

@@ -280,6 +280,36 @@ describe('Calendar', () => {
     container.remove();
   });
 
+  it('draws the face from the calendar parts, six weeks of them, with no date and hidden from everyone', async () => {
+    const container = document.createElement('div');
+    container.innerHTML = renderToString(
+      <Calendar aria-label="Date" value="2026-09-14" today="2026-09-18" />,
+    );
+    document.body.append(container);
+    try {
+      const face = container.querySelector<HTMLElement>('.calendar[data-face]');
+      if (!face) throw new Error('No face');
+      expect(face).toHaveAttribute('aria-hidden', 'true');
+      expect(face).toHaveAttribute('inert');
+      expect([...face.children].map((child) => child.className)).toEqual([
+        'calendar-header',
+        'calendar-grid',
+      ]);
+      expect(face.querySelectorAll('.calendar-header > .icon-button')).toHaveLength(2);
+      expect(face.querySelectorAll('.calendar-header > .calendar-heading')).toHaveLength(1);
+      expect(face.querySelectorAll('thead .calendar-weekday')).toHaveLength(7);
+      const rows = [...face.querySelectorAll('tbody tr')];
+      expect(rows).toHaveLength(6);
+      for (const row of rows) expect(row.querySelectorAll('td > .calendar-day')).toHaveLength(7);
+      // No date, no weekday and no month: those come from Intl in the browser.
+      expect(face.textContent.trim()).toBe('');
+      expect(face.querySelector('button, [tabindex], [role]')).toBeNull();
+      await expectNoA11yViolations(container);
+    } finally {
+      container.remove();
+    }
+  });
+
   it('passes className, ref and data attributes', () => {
     const ref = createRef<HTMLDivElement>();
     const { container } = render(

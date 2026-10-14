@@ -162,27 +162,49 @@ export function CalendarDays({ today }: { today: CalendarDate | null }): ReactEl
   );
 }
 
+/** The bounds and the unavailable days a range calendar was given, parsed: the props', never React Aria's. */
+export type CalendarBounds = Pick<CalendarDates, 'minValue' | 'maxValue' | 'isDateUnavailable'>;
+
 interface PresetsProps {
   presets: readonly DateRangePreset[];
   /** The group's name. */
   label: string;
+  bounds: CalendarBounds;
+}
+
+/**
+ * Whether a preset's range leaves the calendar's bounds or holds a day it refuses. The bounds are the props'
+ * and not React Aria's state's, which narrows them around a half-chosen range's anchor, while a preset
+ * replaces that range whole.
+ */
+function isOutOfReach(range: { start: CalendarDate; end: CalendarDate }, bounds: CalendarBounds): boolean {
+  const { minValue, maxValue, isDateUnavailable } = bounds;
+  if (minValue !== undefined && range.start.compare(minValue) < 0) return true;
+  if (maxValue !== undefined && range.end.compare(maxValue) > 0) return true;
+  if (isDateUnavailable === undefined) return false;
+  for (let date = range.start; date.compare(range.end) <= 0; date = date.add({ days: 1 })) {
+    if (isDateUnavailable(date)) return true;
+  }
+  return false;
 }
 
 /**
  * The presets of whichever range calendar holds them: the app's RangeCalendar, or the picker's. Each is a
  * ToggleButton, since a plain Button inside a calendar must name one of its slots (spec correction 7), and a
  * press sets the range through React Aria's state, which inside a picker reaches the picker's range and closes
- * its popover (spec correction 17).
+ * its popover (spec correction 17). A preset whose range starts or ends outside the bounds, or holds an
+ * unavailable day, is disabled: React Aria's own choice never makes such a range, and the press would.
  */
-export function CalendarPresets({ presets, label }: PresetsProps): ReactElement | null {
+export function CalendarPresets({ presets, label, bounds }: PresetsProps): ReactElement | null {
   const state = useContext(RangeCalendarStateContext);
   const parsed = useMemo(
     () =>
       presets.map((preset) => {
         const range = parseIsoRange(preset.range);
-        return { preset, range: range === 'invalid' ? null : range };
+        if (range === 'invalid' || range === null) return { preset, range: null, outOfReach: false };
+        return { preset, range, outOfReach: isOutOfReach(range, bounds) };
       }),
-    [presets],
+    [presets, bounds],
   );
   const broken = parsed.find((each) => each.range === null);
   useWarnOnce(
@@ -196,14 +218,13 @@ export function CalendarPresets({ presets, label }: PresetsProps): ReactElement 
   const isLocked = state.isDisabled || state.isReadOnly;
   return (
     <div className="calendar-presets" role="group" aria-label={label}>
-      {usable.map(({ preset, range }) => (
+      {usable.map(({ preset, range, outOfReach }) => (
         <ToggleButton
           key={preset.id}
           className="calendar-preset"
-          isSelected={chosen === `${preset.range.start}/${preset.range.end}`}
-          isDisabled={isLocked}
+          isSelected={chosen === `${toIso(range.start)}/${toIso(range.end)}`}
+          isDisabled={isLocked || outOfReach}
           onChange={() => {
-            if (range === null) return;
             // A preset pressed over a half-chosen range replaces it.
             state.setAnchorDate(null);
             state.setValue(range);
@@ -218,10 +239,75 @@ export function CalendarPresets({ presets, label }: PresetsProps): ReactElement 
   );
 }
 
+/** The seven days of a week and the six weeks every calendar holds, for the face. */
+const WEEK = [0, 1, 2, 3, 4, 5, 6];
+const WEEKS = [0, 1, 2, 3, 4, 5];
+
+interface FaceProps {
+  className: string;
+  ref?: Ref<HTMLDivElement>;
+  /** A range calendar's presets, whose words are the app's, so the face can write them. */
+  presets?: readonly DateRangePreset[];
+}
+
+/**
+ * What the server writes and hydration keeps: the calendar's own parts, with the classes that size them, and
+ * no date, weekday or month in them, since those come from `Intl` and the device's zone. The header, a weekday
+ * row, six weeks of days and a range calendar's presets, so its box is the calendar's to the pixel, which
+ * always holds six weeks. Hidden from a reader and inert, with nothing in it that takes focus or a press. A
+ * line's height is held by a no-break space where the calendar writes a name.
+ */
+export function CalendarFace({ className, ref, presets = [] }: FaceProps): ReactElement {
+  const drawn = presets.filter((preset) => parseIsoRange(preset.range) !== 'invalid');
+  return (
+    <div ref={ref} className={className} data-face="" aria-hidden="true" inert>
+      <div className="calendar-header">
+        <span className="icon-button" />
+        <span className="calendar-heading">{'\u00a0'}</span>
+        <span className="icon-button" />
+      </div>
+      {drawn.length > 0 && (
+        <div className="calendar-presets">
+          {drawn.map((preset) => (
+            // A button, so it is drawn by the same rules as the one that replaces it; inert, and out of the tab order.
+            <button key={preset.id} type="button" tabIndex={-1} className="calendar-preset">
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <table className="calendar-grid">
+        <thead>
+          <tr>
+            {WEEK.map((day) => (
+              <th key={day} className="calendar-weekday">
+                {'\u00a0'}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {WEEKS.map((week) => (
+            <tr key={week}>
+              {WEEK.map((day) => (
+                <td key={day}>
+                  <span className="calendar-day" />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 interface FrameProps {
   presets: readonly DateRangePreset[];
   labels: CalendarLabels;
   today: CalendarDate | null;
+  /** The bounds and unavailable days the range calendar was given, for its presets. */
+  bounds: CalendarBounds;
 }
 
 /**
@@ -229,11 +315,11 @@ interface FrameProps {
  * React Aria RangeCalendar holds it, so DateRangePicker can put it in one that passes no value of its own and
  * the picker's context supplies it (plan, spec correction 17).
  */
-export function RangeCalendarFrame({ presets, labels, today }: FrameProps): ReactElement {
+export function RangeCalendarFrame({ presets, labels, today, bounds }: FrameProps): ReactElement {
   return (
     <>
       <CalendarHeader labels={labels} />
-      <CalendarPresets presets={presets} label={labels.presets} />
+      <CalendarPresets presets={presets} label={labels.presets} bounds={bounds} />
       <CalendarDays today={today} />
     </>
   );

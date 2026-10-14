@@ -5199,13 +5199,35 @@ describe('src/components/calendar.css', () => {
   const MIDDLE =
     ".range-calendar :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day):not([data-selection-start], [data-selection-end])";
 
-  it('sizes the calendar seven controls wide at most, and the face to its final aspect', () => {
+  it('sizes the calendar seven controls wide at most and seven 24px days at least', () => {
     const css = rules();
     const calendar = blockAfter(css, '.calendar {');
     expect(calendar).toContain('width: min(100%, calc(7 * var(--size-control)));');
+    expect(calendar).toContain('min-width: calc(7 * 1.5rem);');
+    // A flow root, so the grid's reserved margin stays in the calendar's box.
+    expect(calendar).toContain('display: flow-root;');
     expect(calendar).toContain('box-sizing: border-box;');
     expect(calendar).toContain('color: var(--color-ink);');
-    expect(blockAfter(css, '.calendar[data-face] {').trim()).toBe('aspect-ratio: 7 / 8;');
+  });
+
+  it('holds six weeks: a month of five or four reserves the missing rows below the grid, a day each', () => {
+    const css = rules();
+    // A margin's percentage reads the calendar's width, which is the grid's, so a seventh of it is one day.
+    expect(blockAfter(css, '.calendar-grid:not(:has(> tbody > tr:nth-child(6))) {').trim()).toBe(
+      'margin-block-end: calc(100% / 7);',
+    );
+    expect(blockAfter(css, '.calendar-grid:not(:has(> tbody > tr:nth-child(5))) {').trim()).toBe(
+      'margin-block-end: calc(2 * 100% / 7);',
+    );
+    // The face is the same parts, so it takes no size of its own, and nothing in it answers the pointer.
+    expect(css).not.toContain('aspect-ratio: 7 / 8');
+    const face = blockAfter(css, '.calendar[data-face] {');
+    expect(face).toContain('pointer-events: none;');
+    expect(face).not.toMatch(/(?:width|height|aspect-ratio):/);
+  });
+
+  it('sizes a day by its border box, so the forced-colors band edge never grows it', () => {
+    expect(blockAfter(rules(), '.calendar-day {')).toContain('box-sizing: border-box;');
   });
 
   it('lays the grid out fixed, with square days', () => {
