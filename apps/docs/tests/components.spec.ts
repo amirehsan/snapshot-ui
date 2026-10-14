@@ -211,6 +211,23 @@ test.describe('forced colors', () => {
     expect(drawn.text).toBe(system.highlightText);
   });
 
+  test('an active filter chip is Highlight with HighlightText', async ({ page }) => {
+    // The ink fill is repainted away, so the system's own "on" carries the state; at rest the pill keeps a
+    // CanvasText edge, and a disabled one is GrayText.
+    await visit(page, '/docs/components/filter-chip');
+    const system = await systemColors(page);
+    const active = page.locator('.stage .filter-chip[data-active]:not([data-disabled])').first();
+    const drawn = await paint(active);
+    expect(drawn.fill).toBe(system.highlight);
+    expect(drawn.edge).toBe(system.highlight);
+    expect(drawn.text).toBe(system.highlightText);
+    expect((await paint(active.locator('.filter-chip-clear'))).text).toBe(system.highlightText);
+    const rest = page.locator('.stage .filter-chip:not([data-active], [data-disabled])').first();
+    expect((await paint(rest)).edge).toBe(system.canvasText);
+    const disabled = page.locator('.stage .filter-chip[data-disabled]').first();
+    expect((await paint(disabled)).text).toBe(system.grayText);
+  });
+
   test('a pressed sign button is Highlight and the symbol CanvasText', async ({ page }) => {
     await visit(page, '/docs/components/number-field');
     const system = await systemColors(page);
@@ -632,6 +649,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'date-range-picker': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
+  // A chip's value stays on one line and ellipsizes past 16rem, so the pill stays inside 320px.
+  'filter-chip': ['.stage .filter-chip-value'],
   kbd: ['.stage .kbd'],
   // The legend names the series in the app's words, and wraps at any character, as the meter's legend does.
   'line-chart': ['.stage .line-chart-legend-label'],
@@ -793,6 +812,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],
   field: ['.stage .field-counter', '.stage .field-changed'],
+  // The pill and an active chip's summary, from React Aria's hidden pass; the list renders nothing until it opens.
+  'filter-chip': ['.stage .filter-chip-trigger', '.stage .filter-chip-value'],
   'icon-button': ['.stage .icon-button'],
   kbd: ['.stage .kbd'],
   // The drawing, the table the toggle shows and the toggle itself; the readout waits for a key or a pointer.

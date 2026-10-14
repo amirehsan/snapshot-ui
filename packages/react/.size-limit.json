@@ -322,6 +322,13 @@
     "limit": "4 kB"
   },
   {
+    "name": "import { FilterChip } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ FilterChip }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "4 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

@@ -7192,3 +7192,146 @@ pulls in, the range calendar's frame included (spec correction 30), and
 the plan started it at 5.5 kB. It measured 3.37 kB without React Aria,
 Lucide and `@internationalized/date`, and the rule rounds up to 3.5 kB
 and adds 0.5 kB: 4 kB.
+
+## FilterChip
+
+A pill that names a filter and opens a list or a panel: `FilterChip`,
+on React Aria's Select in single or multiple mode for a list, and on
+its DialogTrigger for the app's own content. The document draws no
+filter chip, so this one is derived from the control size, the shape's
+pill, the boundary edge and the system's "on", the ink fill.
+
+**The pill.** `div.filter-chip`, `display: inline-flex` at
+`max-width: 100%`, `min-height: var(--size-control)`, 40px and 36px
+compact, on `--radius-pill`, so it keeps the shape's pill: round in
+Rounded, 12px in Soft, square in Square. Its edge is a 1px
+`--color-boundary` on nothing: the chip is transparent, so the edge is
+the boundary over the surface itself, 3.38 on canvas and 3.45 on a card
+in light, 5.34 and 5.21 in dark (spec correction 27). The 3.06 and 3.36
+the spec quoted are the gated boundary over a raised fill; the switch's
+off track gates the boundary on each surface, which holds this edge, and
+no pair is added.
+
+**The trigger.** `Button.filter-chip-trigger` pads `1rem 0.75rem` with an
+8px gap, the label in `--text-small` at 500 in ink and a 16px slate
+chevron (4.84 on canvas in light, 7.26 in dark) that turns half a turn
+in 140ms while open, Select's rule, and not under reduced motion. It is
+hit at the target in height by the formula every control shares,
+`inset-block: min(0px, (100% - var(--size-target)) / 2)`, so a compact
+chip is hit at 40px, and `inset-inline: 0`, so its hit area is its own
+width. React Aria's Select root has no role, so it is `display:
+contents` and leaves the box tree.
+
+**Hover and open.** An inactive chip washes 5% ink on hover, inside
+`@media (hover: hover)`, on a press and while open: ink on that wash over
+canvas measures 14.70 in light and 17.41 in dark.
+
+**Active.** The ink fill with canvas text, the system's "on", as the
+selected tab, the chosen option and the chosen segment are: canvas on
+ink, 16.25 in light and 19.31 in dark, gated. The label steps to 450 and
+the value follows at 700, one line, ellipsized past 16rem; its whole
+text is in the trigger's name. A filter is neither consent nor unsaved,
+so an active chip is never signal orange and never clay.
+
+**The summary and the name** (ruling 7, spec correction 23). React
+Aria's `SelectValue` would build an `Intl.ListFormat` while it renders,
+and React Aria names the trigger by the value and then the label, the
+reverse of what the chip shows, which axe's label-in-name check flags.
+So the chip draws no `SelectValue`: it reads `state.selectedItems`,
+built in the hidden collection pass on the server too, sorts them by the
+collection's order, since React Aria keeps them in the value's order,
+and writes `labels.summary` of their text values into
+`span.filter-chip-value`: "Food", "Food, Rent", "Food, Rent and 2 more"
+by default, with concatenation and `String()`. `valueLabel` overrides
+it. The trigger is `aria-labelledby` its label span and then its value
+span, "Category Food", the visible order. Axe joins the text of the
+spans as it is written, so a space sits between them in the DOM, which
+the flex row does not draw. A custom chip's trigger is named the same
+way, and so is its dialog, since a name computed through the trigger
+skips the trigger's own `aria-labelledby`.
+
+**The clear button.** While active, clearable (a list chip, or a custom
+chip with `onClear`) and not disabled, `Button.filter-chip-clear`
+follows the trigger as the Select's sibling, never inside it: Select
+hands its trigger's props to every Button in it, so a clear button there
+would open the list (spec correction 25). It is the pill's last 2rem and
+its full height, a 32 by 40 target (32 by 36 compact), and the trigger
+pads only 4px to it, so the two touch and never overlap: neither
+reaches over the other, the lesson of NumberField's steppers. It draws a
+24px circle with a 12px canvas X; the circle washes 15% canvas on hover
+and on a press, 1.50 against ink in light and 1.39 in dark, a mix and a
+cue, with the glyph at 10.81 and 13.93 on it; keyboard focus draws the
+canvas ring inside the circle, SegmentedControl's rule on an ink fill.
+It is named `labels.clear(label)`, "Clear Category", and is a tab stop:
+for a single chip it is the only keyboard way back to no value. A press
+clears through `onClear`, else `onChange(null)` or `onChange([])`, and
+puts focus on the trigger, since the button leaves with the value.
+
+**Focus.** Keyboard focus on the trigger rings the whole pill,
+`.filter-chip:has(.filter-chip-trigger:is(:focus-visible,
+[data-focus-visible]))`, in the focus ring color outside it.
+
+**Disabled.** Taupe text and chevron on an edge of ink at 15%, 1.37
+against canvas in light and 1.51 in dark, a disabled edge, recorded and
+not gated; `cursor: not-allowed`. A disabled active chip keeps its value
+on the disabled fill, and draws no clear button.
+
+**The panel.** A custom chip opens `Popover.filter-chip-panel`, the
+float, frame and corner, padded 16px, `--spacing-inset`, with two
+classes after `popover.css`'s one, and capped at `min(22rem, 100vw -
+2rem)`, inside a phone's margins. It holds React Aria's `Dialog`, which
+takes focus as it opens and draws no ring of its own, as `dialog.css`'s
+content does.
+
+**A closed chip's keys** (R3, spec correction 24). React Aria's Select
+chooses the next option on a letter, or on Left and Right, without
+opening, which on a filter is a silent query and a URL write. The pill's
+`onKeyDownCapture`, while closed and when the trigger is the target,
+stops a printable key that is not Space and has no Control, Meta or Alt,
+and Arrow Left and Arrow Right, before React Aria's handlers. Enter,
+Space, Arrow Down and Arrow Up still open a list; a panel opens on Enter
+and Space, as any dialog trigger. Multiple mode is already quiet while
+closed, and the guard runs for it too, one code path. A play proves the
+guard in Chromium, WebKit and Firefox.
+
+**Modality** (ruling 10). React Aria's popover is modal, so the page is
+inert while a list or a panel is open: a press on the next chip first
+closes this one, Escape and an outside press close it, and focus goes
+back to the trigger. Tab in an open list does not close it.
+
+**The section face.** Where a FilterBar draws a chip in its More panel or
+its Filters sheet, the chip is `section.filter-section`, named by its
+`h3.filter-section-title`, the label. While active and clearable its
+head holds a tertiary Button showing FilterBar's `labels.clear`,
+"Clear", named `labels.clear(label)`, "Clear Category", which starts
+with the visible word; it clears and puts focus on the section's
+trigger. A list chip's section holds Select's look, `.field.select` with
+`.input.select-trigger`, showing the summary, or `labels.any`, "Any", as
+the slate placeholder; a custom chip's holds its content. The two words,
+`labels.any` and FilterBar's `labels.clear`, are new (spec correction
+26). A chip in a section draws no pill and no guard.
+
+**The shared list.** Select's list, its filter and the popover that
+keeps them out of React Aria's hidden collection pass moved from
+`select/Select.tsx` to `picker/SelectList.tsx`, internal, with Select's
+behavior unchanged (10.2 item 12): Select's tests, stories and baselines
+are the proof. The chip opens the same list, from nine options with the
+same filter, and a test counts the library popover's renders in the
+hidden pass at zero.
+
+**Forced colors.** The edge and the chevron `CanvasText`; active,
+`Highlight` with `HighlightText`, the chevron and the clear glyph
+`HighlightText`; disabled, `GrayText`.
+
+**Right to left.** The pill runs from the right: the label at the right
+and the clear button at the left end. Neither the chevron nor the X has
+a direction, so nothing mirrors.
+
+**Screen readers.** "Category Food, Rent and 2 more, button" with
+VoiceOver on macOS and NVDA: not yet verified.
+
+**The size.** The entry `{ FilterChip }` measures what its import pulls
+in: the shared list, the library Popover, SearchField and the tertiary
+Button of the section face (spec correction 30). It measured 3.44 kB
+without React Aria, Lucide and `@internationalized/date`, above the
+spec's 2.5 kB, and the rule rounds up to 3.5 kB and adds 0.5 kB: 4 kB.

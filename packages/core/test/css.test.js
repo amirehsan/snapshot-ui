@@ -5586,6 +5586,242 @@ describe('src/components/date-range-picker.css', () => {
   });
 });
 
+describe('src/components/filter-chip.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/filter-chip.css')));
+  const outside = () => closeUp(outsideForcedColors(read('src/components/filter-chip.css')));
+  /** Every selector the file writes, each part of a list on its own. */
+  const selectors = () =>
+    [...rules().matchAll(/([^{}]+)\{/g)]
+      .map((match) => match[1].trim())
+      .filter((selector) => !selector.startsWith('@'))
+      .flatMap((selector) => selector.split(/,(?![^(]*\))/).map((part) => part.trim()));
+  const WASH = 'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);';
+
+  it('draws the pill a control tall on the shape pill with the boundary edge on nothing', () => {
+    const pill = blockAfter(outside(), '.filter-chip {');
+    for (const declaration of [
+      'position: relative;',
+      'display: inline-flex;',
+      'min-width: 0;',
+      'max-width: 100%;',
+      'min-height: var(--size-control);',
+      'border: 1px solid var(--color-boundary);',
+      'border-radius: var(--radius-pill);',
+      'background-color: transparent;',
+      'color: var(--color-ink);',
+    ]) {
+      expect(pill, declaration).toContain(declaration);
+    }
+    const trigger = blockAfter(outside(), '.filter-chip-trigger {');
+    for (const declaration of [
+      'padding-inline: 1rem 0.75rem;',
+      'gap: var(--spacing-part);',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: 500;',
+      'border-radius: inherit;',
+      'outline: none;',
+    ]) {
+      expect(trigger, declaration).toContain(declaration);
+    }
+    // The trigger pads 4px to the clear button, and only where one follows it.
+    expect(
+      blockAfter(outside(), '.filter-chip[data-active]:has(> .filter-chip-clear) .filter-chip-trigger {'),
+    ).toContain('padding-inline-end: 0.25rem;');
+    const chevron = blockAfter(outside(), '.filter-chip-chevron {');
+    expect(chevron).toContain('color: var(--color-slate);');
+    expect(blockAfter(outside(), '.filter-chip-chevron svg {')).toContain('width: 16px;');
+  });
+
+  it('takes the Select root out of the box tree', () => {
+    expect(blockAfter(rules(), '.filter-chip-select {')).toContain('display: contents;');
+  });
+
+  it('hits the trigger at the target in height by the shared formula', () => {
+    const hit = blockAfter(rules(), '.filter-chip-trigger::before {');
+    expect(hit).toContain("content: '';");
+    expect(hit).toContain('position: absolute;');
+    expect(hit).toContain('inset-block: min(0px, (100% - var(--size-target)) / 2);');
+    expect(hit).toContain('inset-inline: 0;');
+  });
+
+  it('washes an inactive chip 5% ink on hover, only where hover exists, on a press and while open', () => {
+    const hover = blockAfter(rules(), '@media (hover: hover) {');
+    expect(
+      blockAfter(
+        hover,
+        '.filter-chip:not([data-active], [data-disabled]):has(.filter-chip-trigger:is(:hover, [data-hovered])) {',
+      ),
+    ).toContain(WASH);
+    expect(
+      blockAfter(
+        rules(),
+        '.filter-chip:not([data-active], [data-disabled]):is([data-open], :has(.filter-chip-trigger:is(:active, [data-pressed]))) {',
+      ),
+    ).toContain(WASH);
+    // Every hover rule sits inside the hover query.
+    const outsideHover = rules().replace(/@media \(hover: hover\) \{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
+    expect(outsideHover).not.toMatch(/:hover/);
+  });
+
+  it('fills an active chip ink with canvas text, the label at 450 and the value at 700, ellipsized past 16rem', () => {
+    const css = outside();
+    const active = blockAfter(css, '.filter-chip[data-active] {');
+    expect(active).toContain('border-color: var(--color-ink);');
+    expect(active).toContain('background-color: var(--color-ink);');
+    expect(active).toContain('color: var(--color-canvas);');
+    expect(blockAfter(css, '.filter-chip[data-active] .filter-chip-label {')).toContain('font-weight: 450;');
+    expect(blockAfter(css, '.filter-chip[data-active] .filter-chip-chevron {')).toContain(
+      'color: var(--color-canvas);',
+    );
+    const value = blockAfter(css, '.filter-chip-value {');
+    for (const declaration of [
+      'min-width: 0;',
+      'max-width: 16rem;',
+      'overflow: hidden;',
+      'font-weight: 700;',
+      'text-overflow: ellipsis;',
+      'white-space: nowrap;',
+    ]) {
+      expect(value, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.filter-chip-label {')).toContain('white-space: nowrap;');
+    // Weights 400, 450, 500 and 700 only.
+    for (const [, weight] of css.matchAll(/font-weight: (\d+);/g)) {
+      expect(['400', '450', '500', '700']).toContain(weight);
+    }
+  });
+
+  it('never uses signal orange, clay, error or success', () => {
+    const css = rules();
+    for (const token of [
+      '--color-signal',
+      '--color-clay',
+      '--color-error',
+      '--color-success',
+      '--color-gain',
+    ]) {
+      expect(css, token).not.toContain(token);
+    }
+  });
+
+  it('rings the whole pill for a focused trigger', () => {
+    const ring = blockAfter(
+      rules(),
+      '.filter-chip:has(.filter-chip-trigger:is(:focus-visible, [data-focus-visible])) {',
+    );
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+  });
+
+  it('draws the clear button 2rem wide with a 24px circle, a 15% canvas wash and an inset canvas ring', () => {
+    const css = rules();
+    const clear = blockAfter(css, '.filter-chip-clear {');
+    for (const declaration of [
+      'display: inline-grid;',
+      'flex: none;',
+      'place-items: center;',
+      'width: 2rem;',
+      'padding: 0;',
+      'border: 0;',
+      'background-color: transparent;',
+      'outline: none;',
+    ]) {
+      expect(clear, declaration).toContain(declaration);
+    }
+    // No hit area of its own beyond its box, so it never reaches over the trigger's.
+    expect(css).not.toContain('.filter-chip-clear::before');
+    const icon = blockAfter(css, '.filter-chip-clear-icon {');
+    expect(icon).toContain('width: 1.5rem;');
+    expect(icon).toContain('height: 1.5rem;');
+    expect(icon).toContain('border-radius: var(--radius-pill);');
+    expect(blockAfter(css, '.filter-chip-clear-icon svg {')).toContain('width: 12px;');
+    const WASH15 = 'background-color: color-mix(in srgb, var(--color-canvas) 15%, transparent);';
+    expect(
+      blockAfter(
+        blockAfter(css.slice(css.indexOf('.filter-chip-clear-icon svg')), '@media (hover: hover) {'),
+        '.filter-chip-clear:is(:hover, [data-hovered]) .filter-chip-clear-icon {',
+      ),
+    ).toContain(WASH15);
+    expect(
+      blockAfter(css, '.filter-chip-clear:is(:active, [data-pressed]) .filter-chip-clear-icon {'),
+    ).toContain(WASH15);
+    const ring = blockAfter(
+      css,
+      '.filter-chip-clear:is(:focus-visible, [data-focus-visible]) .filter-chip-clear-icon {',
+    );
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--color-canvas);');
+    expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+  });
+
+  it('draws a disabled chip with a 15% ink edge and taupe text', () => {
+    const css = outside();
+    const disabled = blockAfter(css, '.filter-chip[data-disabled] {');
+    expect(disabled).toContain('border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);');
+    expect(disabled).toContain('color: var(--color-taupe);');
+    expect(blockAfter(css, '.filter-chip[data-disabled][data-active] {')).toContain(
+      'background-color: var(--color-disabled);',
+    );
+    expect(blockAfter(css, '.filter-chip[data-disabled] .filter-chip-trigger {')).toContain(
+      'cursor: not-allowed;',
+    );
+    expect(blockAfter(css, '.filter-chip[data-disabled] .filter-chip-chevron {')).toContain(
+      'color: var(--color-taupe);',
+    );
+    // Taupe only where disabled.
+    for (const selector of selectors().filter((each) =>
+      blockAfter(css, `${each} {`).includes('--color-taupe'),
+    )) {
+      expect(selector).toContain('[data-disabled]');
+    }
+  });
+
+  it('pads the panel 16px with two classes and caps it inside the viewport', () => {
+    const panel = blockAfter(rules(), '.filter-chip-panel.popover-padded {');
+    expect(panel).toContain('max-width: min(22rem, 100vw - 2rem);');
+    expect(panel).toContain('padding: var(--spacing-inset);');
+    // The dialog React Aria focuses as the panel opens draws no ring of its own.
+    expect(blockAfter(rules(), '.filter-chip-dialog {')).toContain('outline: none;');
+  });
+
+  it('turns the chevron half a turn while open, in 140ms, and not under reduced motion', () => {
+    const css = rules();
+    expect(blockAfter(css, '.filter-chip-chevron {')).toContain('transition: rotate 140ms ease;');
+    expect(blockAfter(css, '.filter-chip[data-open] .filter-chip-chevron {')).toContain('rotate: 180deg;');
+    const reduced = blockAfter(css, '@media (prefers-reduced-motion: reduce) {');
+    expect(blockAfter(reduced, '.filter-chip-chevron {')).toContain('transition: none;');
+  });
+
+  it('mirrors nothing', () => {
+    const css = rules();
+    expect(css).not.toContain("[dir='rtl']");
+    expect(css).not.toContain('scale: -1');
+    expect(css).not.toMatch(
+      /(?:margin|padding|inset|border)-(?:left|right|top|bottom)\b|(?<![\w-])(?:left|right|top|bottom):/,
+    );
+  });
+
+  it('draws the edge CanvasText, an active chip Highlight and HighlightText, and a disabled one GrayText in forced colors', () => {
+    const forced = closeUp(blockAfter(stripComments(read('src/components/filter-chip.css')), FORCED_COLORS));
+    expect(blockAfter(forced, '.filter-chip {')).toContain('border-color: CanvasText;');
+    expect(blockAfter(forced, '.filter-chip-chevron {')).toContain('color: CanvasText;');
+    const active = blockAfter(forced, '.filter-chip[data-active] {');
+    expect(active).toContain('border-color: Highlight;');
+    expect(active).toContain('background-color: Highlight;');
+    expect(active).toContain('color: HighlightText;');
+    expect(
+      blockAfter(forced, '.filter-chip[data-active] :is(.filter-chip-chevron, .filter-chip-clear) {'),
+    ).toContain('color: HighlightText;');
+    const disabled = blockAfter(
+      forced,
+      '.filter-chip[data-disabled], .filter-chip[data-disabled] .filter-chip-chevron {',
+    );
+    expect(disabled).toContain('border-color: GrayText;');
+    expect(disabled).toContain('color: GrayText;');
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 
