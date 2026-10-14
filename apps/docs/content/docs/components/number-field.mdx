@@ -8,7 +8,7 @@ icon: Hash
 
 ## Basic
 
-A plain number takes a label and, with `hasStepper`, a minus and a plus button at the end. The arrow keys step by `step`, 1 unless given, and Page Up and Page Down step as the arrows do. An arrow first snaps the value to the step and then moves, so from an empty field it starts at the lower bound. Enter commits the value and formats it. Home and End move the caret, as in any text box.
+A plain number takes a label and, with `hasStepper`, a minus and a plus button at the end. The arrow keys step by `step`, 1 unless given, and Page Up and Page Down step as the arrows do. An arrow first snaps the value to the step and then moves, so from an empty field it starts at the lower bound. Enter commits the value and formats it. Home and End move the caret, as in any text box, and still reach your `onKeyDown`. Each stepper is hit past its circle, 40px tall even when compact density draws it at 24px, and the two split the 2px between them, so a press lands on the button under it. `formatOptions` takes `Intl`'s options for a decimal, a percent or a unit, but not compact notation, whose rounding only `Intl` knows.
 
 <Preview name="number-field-basic" />
 
@@ -18,9 +18,9 @@ A plain number takes a label and, with `hasStepper`, a minus and a plus button a
 
 ## Money
 
-Pass `money={{ symbol: '$' }}` and the value becomes an integer count of minor units: `123450` is 1,234.50. A URL and a database hold it exactly, and sums never drift. `fractionDigits` is 2 unless given, from 0 for a currency with no minor unit to 3. The readout under the example shows the value the field holds.
+Pass `money={{ symbol: '$' }}` and the value becomes an integer count of minor units: `123450` is 1,234.50. A URL and a database hold it exactly, and sums never drift. `fractionDigits` is 2 unless given, from 0 for a currency with no minor unit to 3. An amount is exact up to `2 ** 52 / 10 ** fractionDigits` minor units, about 45 trillion cents, and the field warns in the console past that. The readout under the example shows the value the field holds.
 
-The symbol is drawn beside the figure, slate, and never typed, so the caret can never land in it. A copied figure that carries it, "$1,234.50", pastes as the amount. There is no currency style: the app writes its own strings, and `Intl`'s currency style would put the caret inside the symbol and decide its place while the page renders. A money field has no steppers and no wheel: an amount is typed, never nudged, and a typed 12.50 is never snapped to a whole step.
+The symbol is drawn beside the figure, slate, and never typed, so the caret can never land in it. A copied figure that carries it, "$1,234.50", pastes as the amount, and your `onPaste` still runs. There is no currency style: the app writes its own strings, and `Intl`'s currency style would put the caret inside the symbol and decide its place while the page renders. A money field has no steppers and no wheel: an amount is typed, never nudged, and a typed 12.50 is never snapped to a whole step.
 
 <Preview name="number-field-money" />
 
@@ -30,7 +30,7 @@ The symbol is drawn beside the figure, slate, and never typed, so the caret can 
 
 ## Negatives
 
-Values under zero are off unless `allowsNegative` is set, and the lower bound is then 0. With it, a sign button sits at the field's start: a toggle, pressed while the value is under zero, that negates it, or on an empty field puts a minus in it and focus there. It is there because neither the iPhone's nor Android's decimal keyboard has a minus key; a minus typed on a hardware keyboard works too, and the button follows it. A negative amount is ink, with its sign: never red, since nothing failed.
+Values under zero are off unless `allowsNegative` is set, and the lower bound is then 0. With it, a sign button sits at the field's start: a toggle, pressed while the value is under zero, that negates it, held within `minValue` and `maxValue`, or on an empty field or at zero puts a minus in it and focus there, so the field never shows "-0.00" and `onChange` never receives -0. It is there because neither the iPhone's nor Android's decimal keyboard has a minus key; a minus typed on a hardware keyboard works too, and the button follows it. A negative amount is ink, with its sign: never red, since nothing failed. On a disabled or read-only field the sign button is disabled too, and a negative value draws it pressed but recessed, a light ink fill with a taupe minus.
 
 <Preview name="number-field-negative" />
 

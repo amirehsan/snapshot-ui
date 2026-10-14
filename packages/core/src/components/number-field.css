@@ -6,8 +6,8 @@
  * right too, so this file writes them from two custom properties and swaps them under [dir='rtl'] (plan, spec
  * correction 9). The symbol is slate, never typed, at the side the app names, and the input pads clear of it by
  * its own length in ch. The sign button is the shared field button at the start; pressed, it is the ink fill with
- * a canvas glyph. A negative amount is ink. Without a visible label the placeholder is slate, never while
- * disabled.
+ * a canvas glyph, and while disabled a 15% ink fill with a taupe one. A negative amount is ink. Without a visible
+ * label the placeholder is slate, never while disabled. The steppers' hit areas split the 2px between them.
  */
 @layer components {
   .number-field {
@@ -101,8 +101,26 @@
     outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
   }
 
+  /* A negative value on a disabled or read-only field, whose sign button is disabled with it: still pressed, but
+     recessed, a 15% ink fill with a taupe glyph, never the full ink fill of a button that can be pressed. */
+  .number-field-sign.input-button:is([data-selected], [aria-pressed='true']):is(:disabled, [data-disabled]) {
+    background-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    color: var(--color-taupe);
+  }
+
   .number-field-step[slot='decrement'] {
     inset-inline-end: calc(var(--size-field) - 0.25rem);
+  }
+
+  /* Each stepper is hit at the target, wider than the 2px between them, so the later one's hit area would cover
+     the decrement's inner edge, most of it in compact. The facing sides split the gap and stop 1px past each
+     button, in the field's direction, which the buttons follow; only the input is left to right. */
+  .number-field-step[slot='decrement']::before {
+    inset-inline-end: -1px;
+  }
+
+  .number-field-step[slot='increment']::before {
+    inset-inline-start: -1px;
   }
 
   @media (forced-colors: active) {
@@ -117,6 +135,16 @@
     .number-field-sign.input-button:is([data-selected], [aria-pressed='true']) {
       background-color: Highlight;
       color: HighlightText;
+    }
+
+    /* Disabled and pressed: a GrayText glyph and edge on the system canvas, as a disabled checked checkbox is. */
+    .number-field-sign.input-button:is([data-selected], [aria-pressed='true']):is(
+        :disabled,
+        [data-disabled]
+      ) {
+      border: 1px solid GrayText;
+      background-color: canvas;
+      color: GrayText;
     }
   }
 }

@@ -200,6 +200,24 @@ describe('NumberField', () => {
     expect(String(warn.mock.calls[0]?.[0])).toMatch(/integer/);
   });
 
+  it('warns once for an amount past 2 ** 52 / 10 ** fractionDigits minor units, where whole units lose a cent', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // 2 ** 52 / 100 is 45035996273704.96: the largest whole count of cents under it is held exactly.
+    const { unmount } = render(<NumberField label="Amount" money={{ symbol: '$' }} value={45035996273704} />);
+    expect(warn).not.toHaveBeenCalled();
+    unmount();
+    const { unmount: again } = render(
+      <NumberField label="Amount" money={{ symbol: '$' }} value={45035996273705} />,
+    );
+    expect(warn).toHaveBeenCalledOnce();
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/2 \*\* 52/);
+    expect(String(warn.mock.calls[0]?.[0])).not.toMatch(/rounded/);
+    again();
+    // At 0 digits the bound is 2 ** 52 itself.
+    render(<NumberField label="Amount" money={{ symbol: '$', fractionDigits: 0 }} value={-(2 ** 52) - 1} />);
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
   it('draws the sign button with allowsNegative only, a toggle named Negative, pressed under zero', () => {
     const { rerender } = render(<NumberField label="Amount" money={{ symbol: '$' }} value={4250} />);
     expect(screen.queryByRole('button', { name: 'Negative' })).toBeNull();
@@ -254,6 +272,87 @@ describe('NumberField', () => {
     expect(sign()).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('treats zero as empty on a press of the sign button: a minus in the input, never "-0.00"', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <NumberField
+        label="Amount"
+        money={{ symbol: '$' }}
+        allowsNegative
+        defaultValue={0}
+        onChange={onChange}
+      />,
+    );
+    await user.click(sign());
+    expect(amount()).toHaveValue('-');
+    expect(amount()).toHaveFocus();
+    expect(sign()).toHaveAttribute('aria-pressed', 'false');
+    expect(onChange).not.toHaveBeenCalled();
+    // Left as a bare minus, the field goes back to its zero.
+    await user.tab();
+    expect(amount()).toHaveValue('0.00');
+    await user.click(sign());
+    await user.keyboard('3');
+    await user.tab();
+    expect(onChange).toHaveBeenLastCalledWith(-300);
+  });
+
+  it('never calls onChange with -0', async () => {
+    const user = userEvent.setup();
+    const money = vi.fn();
+    const plain = vi.fn();
+    render(
+      <>
+        <NumberField label="Amount" money={{ symbol: '$' }} allowsNegative onChange={money} />
+        <NumberField label="Count" allowsNegative onChange={plain} />
+      </>,
+    );
+    await user.type(amount(), '-0');
+    await user.tab();
+    expect(Object.is(money.mock.lastCall?.[0], 0)).toBe(true);
+    await user.type(amount('Count'), '-0');
+    await user.tab();
+    expect(Object.is(plain.mock.lastCall?.[0], 0)).toBe(true);
+  });
+
+  it('clamps a negated value to the bounds, as a commit does, and validates it', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { unmount } = render(
+      <NumberField
+        label="Amount"
+        money={{ symbol: '$' }}
+        allowsNegative
+        minValue={-1000}
+        defaultValue={5000}
+        onChange={onChange}
+      />,
+    );
+    await user.click(sign());
+    expect(onChange).toHaveBeenLastCalledWith(-1000);
+    expect(amount()).toHaveValue('-10.00');
+    unmount();
+
+    render(
+      <NumberField
+        label="Amount"
+        money={{ symbol: '$' }}
+        allowsNegative
+        maxValue={1000}
+        defaultValue={-5000}
+        onChange={onChange}
+        validate={(next) => (next < 0 ? null : 'Enter a refund')}
+      />,
+    );
+    await user.click(sign());
+    expect(onChange).toHaveBeenLastCalledWith(1000);
+    expect(amount()).toHaveValue('10.00');
+    // React Aria's own steppers commit validation; the sign button does too, so the error shows at once.
+    expect(screen.getByText('Enter a refund')).toBeInTheDocument();
+    expect(amount()).toHaveAttribute('aria-invalid', 'true');
+  });
+
   it('follows a minus typed on the keyboard once the value commits', async () => {
     const user = userEvent.setup();
     render(<NumberField label="Amount" money={{ symbol: '$' }} allowsNegative />);
@@ -302,6 +401,53 @@ describe('NumberField', () => {
     await user.paste('$3');
     expect(amount()).toHaveValue('1,234.50');
     expect(onChange).toHaveBeenCalledOnce();
+  });
+
+  it('calls the app onPaste on a paste the symbol guard takes, and on one it leaves', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const onPaste = vi.fn();
+    render(
+      <NumberField
+        label="Amount"
+        money={{ symbol: '$' }}
+        defaultValue={100}
+        onChange={onChange}
+        onPaste={onPaste}
+      />,
+    );
+    await user.click(amount());
+    selectAll(amount());
+    await user.paste('$1,234.50');
+    expect(onPaste).toHaveBeenCalledOnce();
+    expect(onChange).toHaveBeenLastCalledWith(123450);
+    selectAll(amount());
+    await user.paste('20');
+    expect(onPaste).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenLastCalledWith(2000);
+  });
+
+  it('calls the app onKeyDown for Home and End, which it keeps from React Aria, once each', async () => {
+    const user = userEvent.setup();
+    const onKeyDown = vi.fn();
+    render(
+      <NumberField
+        label="Amount"
+        money={{ symbol: '$' }}
+        defaultValue={1250}
+        minValue={0}
+        maxValue={1000000}
+        onKeyDown={onKeyDown}
+      />,
+    );
+    await user.click(amount());
+    await user.keyboard('{Home}{End}{ArrowUp}');
+    expect(onKeyDown.mock.calls.map((call) => (call[0] as { key: string }).key)).toEqual([
+      'Home',
+      'End',
+      'ArrowUp',
+    ]);
+    expect(amount()).toHaveValue('13.00');
   });
 
   it('sets inputMode decimal in money mode and for a fractional number, and numeric for whole numbers, on a mocked iPhone too', () => {
@@ -538,10 +684,14 @@ describe('NumberField', () => {
     const nameless = <NumberField money={{ symbol: '$' }} />;
     // @ts-expect-error the steppers are named from labels, which keep the field's label after them
     const named = <NumberField label="Guests" hasStepper incrementAriaLabel="More" />;
+    // @ts-expect-error compact notation's text comes from Intl, so the server's face could not match it
+    const compact = <NumberField label="Views" formatOptions={{ notation: 'compact' }} />;
+    // @ts-expect-error compactDisplay belongs to compact notation
+    const display = <NumberField label="Views" formatOptions={{ compactDisplay: 'short' }} />;
     const money = <NumberField label="Amount" money={{ symbol: '$', fractionDigits: 0 }} />;
     const plain = (
       <NumberField aria-label="Guests" hasStepper step={2} formatOptions={{ style: 'unit', unit: 'day' }} />
     );
-    expect([stepped, step, currency, nameless, named, money, plain]).toHaveLength(7);
+    expect([stepped, step, currency, nameless, named, compact, display, money, plain]).toHaveLength(9);
   });
 });

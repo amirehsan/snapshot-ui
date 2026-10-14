@@ -329,6 +329,98 @@ export const WheelOff: Story = {
   },
 };
 
+/**
+ * Each stepper is hit at 40px, but the two sit 2px apart, so their hit areas stop half the gap past each button:
+ * a press at a stepper's inner edge lands on that stepper, comfortable and compact, left to right and right to
+ * left.
+ */
+export const StepperHitAreas: Story = {
+  tags: ['no-visual', 'density'],
+  render: () => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <div data-density="comfortable">
+        <NumberField label="Guests" hasStepper defaultValue={2} />
+      </div>
+      <div data-density="compact">
+        <NumberField label="Rooms" hasStepper defaultValue={2} />
+      </div>
+      <div data-density="compact" dir="rtl" lang="fa">
+        <NumberField
+          label="شب‌ها"
+          hasStepper
+          defaultValue={2}
+          labels={{ increment: 'افزایش', decrement: 'کاهش' }}
+        />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const fields = [...canvasElement.querySelectorAll<HTMLElement>('.number-field')];
+    await expect(fields).toHaveLength(3);
+    const sizes: number[] = [];
+    for (const field of fields) {
+      const decrease = find(field, ".number-field-step[slot='decrement']");
+      const increase = find(field, ".number-field-step[slot='increment']");
+      const rtl = getComputedStyle(field).direction === 'rtl';
+      const [d, i] = [rect(decrease), rect(increase)];
+      sizes.push(d.width);
+      // The facing sides, the decrement's inline end and the increment's inline start, in whole pixels, as a
+      // hit test reads a point.
+      const decreaseEdge = Math.round(rtl ? d.left : d.right);
+      const increaseEdge = Math.round(rtl ? i.right : i.left);
+      await expect(Math.abs(increaseEdge - decreaseEdge)).toBe(2);
+      const y = d.top + d.height / 2;
+      const hit = (x: number): Element | null | undefined =>
+        document.elementFromPoint(x, y)?.closest('.number-field-step');
+      const name = field.querySelector('label')?.textContent ?? '';
+      // The pixel either side of each facing side: one inside the button, one in the gap on its own half.
+      for (const x of [decreaseEdge - 1, decreaseEdge]) {
+        await expect(hit(x), `${name}: decrement at ${String(x)}`).toBe(decrease);
+      }
+      for (const x of [increaseEdge - 1, increaseEdge]) {
+        await expect(hit(x), `${name}: increment at ${String(x)}`).toBe(increase);
+      }
+    }
+    // The compact steppers are drawn smaller.
+    const [comfortable, compact] = sizes;
+    await expect(compact).toBeLessThan(comfortable ?? 0);
+  },
+};
+
+/** A paint of `percent` ink over nothing, as a background color, read inside `scope`. */
+function inkFill(percent: number, scope: Element = document.body): string {
+  const probe = document.createElement('span');
+  probe.style.backgroundColor = `color-mix(in srgb, var(--color-ink) ${String(percent)}%, transparent)`;
+  scope.append(probe);
+  const { backgroundColor } = getComputedStyle(probe);
+  probe.remove();
+  return backgroundColor;
+}
+
+/**
+ * A negative amount on a disabled or read-only field: the sign button is disabled with it, so its pressed state
+ * is a 15% ink fill with a taupe glyph, never the full ink fill of a button that can be pressed.
+ */
+export const LockedNegative: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <NumberField label="Refund" money={{ symbol: '$' }} allowsNegative defaultValue={-4250} isDisabled />
+      <NumberField label="Credit" money={{ symbol: '$' }} allowsNegative defaultValue={-1000} isReadOnly />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const signs = canvas.getAllByRole('button', { name: 'Negative' });
+    await expect(signs).toHaveLength(2);
+    for (const sign of signs) {
+      await expect(sign).toHaveAttribute('aria-pressed', 'true');
+      await expect(sign).toBeDisabled();
+      await expect(getComputedStyle(sign).backgroundColor).toBe(inkFill(15));
+      await expect(getComputedStyle(sign).color).toBe(tokenColor('--color-taupe'));
+    }
+  },
+};
+
 /** A hovered stepper takes the field button's 5% wash and an ink glyph. */
 export const HoverButton: Story = {
   tags: ['no-visual'],
