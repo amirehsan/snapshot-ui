@@ -56,7 +56,10 @@ export interface ComboBoxBaseProps<T extends object = object> extends Omit<
    * it the field shows its own validation messages.
    */
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
-  /** Example text while the input is empty, in taupe, the input's placeholder. */
+  /**
+   * Example text while the input is empty, the input's placeholder: taupe under a visible label, slate when only
+   * an `aria-label` or an `aria-labelledby` names the field, since it is then the only words shown.
+   */
   placeholder?: string;
   /**
    * Whether the value differs from the saved one. Shows the clay Changed chip in the label row and the light
@@ -71,6 +74,12 @@ export interface ComboBoxBaseProps<T extends object = object> extends Omit<
   changedLabel?: string;
   /** `PickerOption`s and `PickerSection`s, or a function that renders one option of `items` or `defaultItems`. */
   children: ReactNode | ((item: T) => ReactElement);
+  /**
+   * Whether the list stays open when nothing matches, saying so with the no-matches line, or the loading line
+   * while options load, rather than vanishing as if the field broke.
+   * @default true
+   */
+  allowsEmptyCollection?: boolean;
   /** Shows the Spinner in the field while the app loads options. The list keeps what it has. */
   isLoading?: boolean;
   /** The library's own words: the button's name, the no-matches line and the loading line. */
@@ -175,8 +184,9 @@ function ComboBoxPopover<T extends object>({
  * button at its end that shows every option, opening Select's list of `PickerOption` rows under it. An option
  * stays while its text contains what was typed, case and accents aside. With nothing matching the list stays
  * open with a line that says so. For options from a server, pass `items` and `inputValue`, fetch in
- * `onInputChange`, and set `isLoading` while you wait: React Aria does not filter controlled items. It takes
- * `value`, `defaultValue` and `onChange`. Built on React Aria's ComboBox.
+ * `onInputChange`, and set `isLoading` while you wait: React Aria does not filter controlled items. Keep the
+ * chosen item among `items`, since React Aria puts its text back from them. It takes `value`, `defaultValue` and
+ * `onChange`. Built on React Aria's ComboBox.
  */
 export function ComboBox<T extends object = object>({
   label,
@@ -210,6 +220,8 @@ export function ComboBox<T extends object = object>({
       aria-describedby={describedBy}
       data-changed={isChanged ? '' : undefined}
       data-loading={isLoading ? '' : undefined}
+      // Without a visible label the placeholder is the only words shown, so combo-box.css draws it slate.
+      data-unlabelled={isLabelled ? undefined : ''}
       className={composeRenderProps(className, (userClassName) => cx('field', 'combo-box', userClassName))}
     >
       {isLabelled ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}

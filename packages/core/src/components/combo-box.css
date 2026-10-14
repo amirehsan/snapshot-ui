@@ -2,8 +2,8 @@
  * ComboBox: the text input's pill with the shared field button at its end, derived in docs/design-system.md
  * ("ComboBox"). The input takes every edge input.css draws through the field's root; this file only pads its
  * text clear of the button, and of the Spinner while options load, which sits before the button. The button is
- * .input-button and the list is the Select's, so nothing else is drawn here. The control is positioned for
- * the two, and React Aria opens the list against it.
+ * .input-button and the list is the Select's, so nothing else is drawn here but the unlabelled placeholder.
+ * The control is positioned for the two, and React Aria opens the list against it.
  */
 @layer components {
   .combo-box-control {
@@ -27,5 +27,11 @@
     display: flex;
     align-items: center;
     pointer-events: none;
+  }
+
+  /* Without a visible label the placeholder is the only words shown, so it is slate, as the search field's.
+     A disabled field keeps the input's taupe, the disabled text. */
+  .combo-box[data-unlabelled]:not([data-disabled]) .combo-box-input::placeholder {
+    color: var(--color-slate);
   }
 }

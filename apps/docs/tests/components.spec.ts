@@ -545,12 +545,12 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .field-error',
     '.stage .checkbox-text',
   ],
-  'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'collapsible-card': [
     '.stage .card-toggle-text',
     '.stage .card-note',
     '.stage .card-collapsible .card-body p',
   ],
+  'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
   kbd: ['.stage .kbd'],
   // The legend names the series in the app's words, and wraps at any character, as the meter's legend does.

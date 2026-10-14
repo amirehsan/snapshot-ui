@@ -772,14 +772,20 @@ describe('the combo box', () => {
     }
   });
 
-  // The placeholder is the input's own, an attribute axe never measures, so it keeps the whisper, taupe, which is
-  // recorded and not gated; the text, the Spinner, the button's glyph and the rows are gated. The wash under the
+  // The placeholder is the input's own, an attribute axe never measures, so under a visible label it keeps the
+  // whisper, taupe, which is recorded and not gated; without one it is slate, the only words shown, and gated with
+  // the button's glyph. The text, the Spinner, the button's glyph and the rows are gated. The wash under the
   // pressed button is a mix, not a token, so ink over it is measured and recorded.
   it('measures the pairs Appendix B records, in both modes', () => {
     expect(measured('light', 'ink', 'raised'), 'the text, light').toBeCloseTo(18.43, 2);
     expect(measured('dark', 'ink', 'raised'), 'the text, dark').toBeCloseTo(15.36, 2);
     expect(measured('light', 'slate', 'raised'), 'the glyph, light').toBeCloseTo(5.49, 2);
     expect(measured('dark', 'slate', 'raised'), 'the glyph, dark').toBeCloseTo(6.44, 2);
+    for (const mode of ['light', 'dark']) {
+      expect(measured(mode, 'slate', 'raised'), `the unlabelled placeholder, ${mode}`).toBeGreaterThanOrEqual(
+        TEXT,
+      );
+    }
     expect(measured('light', 'taupe', 'raised'), 'the placeholder, light').toBeCloseTo(1.58, 2);
     expect(measured('dark', 'taupe', 'raised'), 'the placeholder, dark').toBeCloseTo(3.68, 2);
     expect(inkOnWash('light'), 'the pressed glyph, light').toBeCloseTo(16.65, 2);
