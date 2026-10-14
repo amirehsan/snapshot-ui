@@ -4719,6 +4719,28 @@ describe('src/components/tabs.css', () => {
     expect(disabled).toContain('cursor: not-allowed;');
   });
 
+  it('keeps a disabled selected tab in its place as a taupe pill with the disabled fill for its text', () => {
+    const css = rules();
+    const both = `.tab:is(${SELECTED}):is(${DISABLED}) {`;
+    const pill = blockAfter(css, both);
+    expect(pill).toContain('background-color: var(--color-taupe);');
+    expect(pill).toContain('color: var(--color-disabled);');
+    // After the selected and the disabled rules, which it outranks only by coming later.
+    expect(css.indexOf(both)).toBeGreaterThan(css.indexOf(`.tab:is(${SELECTED}) {`));
+    expect(css.indexOf(both)).toBeGreaterThan(css.indexOf(`.tab:is(${DISABLED}) {`));
+    // The dot keeps its canvas ring there, the selected tab's rule.
+    expect(css).toContain(`.tab:is(${SELECTED}) .tab-changed {`);
+  });
+
+  it('draws a badge in a tab in the tab color, so its text and its edge follow the tab', () => {
+    const css = rules();
+    expect(blockAfter(css, '.tab .badge {').trim()).toBe('color: inherit;');
+    // badge.css draws the edge in currentColor, so the edge follows the text.
+    expect(closeUp(stripComments(read('src/components/badge.css')))).toContain(
+      'border: 1px solid currentColor;',
+    );
+  });
+
   it('draws the changed dot 6px clay, ringed in canvas on the selected tab', () => {
     const css = rules();
     const dot = blockAfter(css, '.tab-changed {');
@@ -4763,6 +4785,12 @@ describe('src/components/tabs.css', () => {
       'outline-color: HighlightText;',
     );
     expect(blockAfter(forced, `.tab:is(${DISABLED}) {`)).toContain('color: GrayText;');
+    const both = blockAfter(forced, `.tab:is(${SELECTED}):is(${DISABLED}) {`);
+    expect(both).toContain('background-color: GrayText;');
+    expect(both).toContain('color: canvas;');
+    expect(forced.indexOf(`.tab:is(${SELECTED}):is(${DISABLED}) {`)).toBeGreaterThan(
+      forced.indexOf(`.tab:is(${DISABLED}) {`),
+    );
     expect(blockAfter(forced, '.tab-changed {')).toContain('background-color: CanvasText;');
     const onSelected = blockAfter(forced, `.tab:is(${SELECTED}) .tab-changed {`);
     expect(onSelected).toContain('background-color: HighlightText;');

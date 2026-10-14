@@ -6255,7 +6255,18 @@ included, so a row below the fold would move the page on load. React
 Aria builds its collection after its first render on the client, so the
 effect is keyed to the tab list's state, its selected key and its size,
 and runs until the selected tab is there. A tab that takes focus later
-scrolls into view as the browser does for focus. The server's HTML
+scrolls into view as the browser does for focus. The selection can also
+move later from outside the row, as Back does with link tabs: each time
+the selected key changes and the selected tab does not hold focus, the
+row brings it into view the same way. The condition is the selected tab
+and not the whole row because after a press on a link tab focus stays on
+that tab, so Back would otherwise leave the new selection out of view;
+when the selected tab holds focus the browser has shown it already. A
+row mounted hidden, in a closed section or a panel not yet shown, has no
+width and every box at zero, so while `list.clientWidth` is 0 nothing is
+measured and the key is not marked as shown; a `ResizeObserver` watches
+the row and brings the tab into view once it is drawn, then disconnects.
+Nothing is measured before the first paint. The server's HTML
 shows the start of the row and the selected tab arrives on hydration
 (R6). The harness shoots at 1280 and 375px and Storybook renders on the
 client, so the `Overflow` story records the look after, eight tabs in a
@@ -6286,7 +6297,16 @@ pill, as far in as the standard ring stands out, SegmentedControl's
 rule, since an ink ring around an ink pill reads as part of it.
 
 **Disabled.** Taupe text, `cursor: not-allowed`, and no wash. React
-Aria's arrows skip a disabled tab, and it is never selected.
+Aria's arrows skip a disabled tab, and a single disabled tab is never
+selected. A whole row with `isDisabled` keeps its selection, and taupe on
+the ink pill would be 11.65 in light, reading as live, and 1.00 in dark,
+gone, so a disabled tab
+that is selected is SegmentedControl's chosen disabled option: a taupe
+pill, `--color-taupe`, with the disabled fill, `--color-disabled`, for
+its text. The text on the pill measures 1.44 in light and 3.43 in dark
+and the pill on the track 1.40 and 3.81, recorded, since disabled is
+outside the text and graphic minimums. The `Disabled` story draws a row
+with one disabled tab and a whole disabled row.
 
 **The changed dot.** `isChanged` is for a tab whose panel holds unsaved
 edits, and only that: clay means unsaved. A 6px dot, `--radius-dot`,
@@ -6301,8 +6321,23 @@ dot is drawn and hidden, `aria-hidden="true"`; the words, "Changed" or
 names ahead of the caller's own ids. A description reads a hidden
 element it names directly, so a screen reader hears "Rules, tab, 2 of 4,
 Changed" and the name stays "Rules"; a visually hidden span would join
-the name instead (spec correction 15). A count or a "new" marker goes
-in the tab's name, in a `Badge`, never in clay.
+the name instead (spec correction 15). On a disabled selected tab's
+taupe pill the dot keeps its canvas ring: clay on the pill is 4.45 in
+light, which reads without the ring, and 1.99 in dark, where the ring
+on the pill, 3.81, carries the shape; the clay inside the ring is clay
+on canvas, 6.20 and 7.57, either way. A count or a "new" marker goes in
+the tab's name, in a `Badge`, never in clay.
+
+**A badge in a tab.** `.tab .badge { color: inherit; }`: a badge takes
+the tab's color, and its edge follows, since badge.css draws the border
+in `currentColor`. In its own slate it would be 3.36 on the selected ink
+pill in light and 1.00, gone, in dark, and 4.38 on the hover wash in
+light, under the text minimum; in the tab's color it is slate on canvas
+at rest, canvas on ink selected and ink on the wash under the pointer,
+the pairs below. A tone class on a badge in a tab gives way to the
+tab's color for the same reason: link, success, warning and error are
+not measured on ink. The `WithBadge` story selects the tab with the
+badge and runs in the light and dark projects under axe.
 
 **Link tabs.** Tabs whose views each have a URL (ruling 3): each `Tab`
 has `href`, which React Aria renders as an anchor with the tab role; the
@@ -6341,16 +6376,20 @@ and 7.26 in dark; canvas on ink, the selected tab and the dot's ring,
 recorded, not gated: ink on the 5% wash over canvas, a hovered tab,
 14.70 and 17.41; slate on that wash, 4.38 and 6.93, the reason a hovered
 tab turns ink; clay on ink, 2.62 and 2.55, the reason for the dot's
-ring; the canvas track on lifted, 1.10 and 1.11. No pair is added to the
-gate.
+ring; the canvas track on lifted, 1.10 and 1.11; slate on ink, 3.36 and
+1.00, the reason a badge in a tab takes the tab's color; on the taupe
+pill of a disabled selected tab, the disabled fill as text 1.44 and
+3.43, the pill on the track 1.40 and 3.81, and clay 4.45 and 1.99. No
+pair is added to the gate.
 
 **Right to left.** The row runs from the right through logical
 properties, and the dot sits at the name's left. Nothing is mirrored.
 
 **Forced colors.** The selected tab is `Highlight` with `HighlightText`,
-and its inverted ring `HighlightText`; a disabled tab is `GrayText`; the
-dot is `CanvasText`, and `HighlightText` ringed in `Highlight` on the
-selected tab.
+and its inverted ring `HighlightText`; a disabled tab is `GrayText`, and
+a disabled selected one a `GrayText` pill with `canvas` text,
+SegmentedControl's rule; the dot is `CanvasText`, and `HighlightText`
+ringed in `Highlight` on the selected tab.
 
 **The server.** The row renders in Node with every tab, `aria-selected`
 on the selected one, the dot and its words, and the selected panel; the
