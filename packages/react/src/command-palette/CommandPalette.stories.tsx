@@ -263,6 +263,14 @@ export const Recent: Story = {
     await waitFor(() => expect(field()).not.toHaveAttribute('aria-activedescendant'));
     list.scrollTop = 0;
     await waitFor(() => expect(list.querySelector('.menu-item[data-focus-visible]')).toBeNull());
+    // A list that has scrolled keeps Chrome's scrolling layer, which rasterizes the key chip's corners a few
+    // pixels differently from a list that never scrolled, and which of the two the picture gets depends on
+    // timing. Hiding the list for a frame drops the layer, so it paints as it opened, every run.
+    list.style.display = 'none';
+    await twoFrames();
+    list.style.removeProperty('display');
+    await twoFrames();
+    await expect(list.scrollTop).toBe(0);
   },
 };
 
