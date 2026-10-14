@@ -84,6 +84,11 @@ describe('Sparkline', () => {
     rerender(<Sparkline data={[10, 20, 15]} aria-label="  " aria-labelledby="" />);
     expect(root(container)).toHaveAttribute('aria-hidden', 'true');
     expect(root(container)).not.toHaveAttribute('role');
+
+    // Hidden, a caller's role never sits beside aria-hidden.
+    rerender(<Sparkline data={[10, 20, 15]} role="img" />);
+    expect(root(container)).toHaveAttribute('aria-hidden', 'true');
+    expect(root(container)).not.toHaveAttribute('role');
   });
 
   it('draws the line through the data extent, oldest at x 0 and newest at x 100', () => {

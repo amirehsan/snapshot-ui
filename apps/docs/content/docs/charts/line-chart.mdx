@@ -70,15 +70,15 @@ The svg, the axis labels, the legend and the table render on the server; the cli
 import { LineChart } from '@snapshot-ui/charts';
 
 <LineChart
-  aria-label="Spending in October"
+  aria-label="هزینه‌های مهر"
   series={[
-    { label: 'This month', points: [{ value: 42.1, valueLabel: '$42.10' }, null] },
-    { label: 'Last month', points: [{ value: 35, valueLabel: '$35.00' }, { value: 41.2, valueLabel: '$41.20' }] },
+    { label: 'این ماه', points: [{ value: 42.1, valueLabel: '۴۲٫۱۰ دلار' }, null] },
+    { label: 'ماه گذشته', points: [{ value: 35, valueLabel: '۳۵ دلار' }, { value: 41.2, valueLabel: '۴۱٫۲۰ دلار' }] },
   ]}
-  xLabels={['Oct 1', 'Oct 2']}
+  xLabels={['۱ مهر', '۲ مهر']}
   yTicks={[
-    { value: 0, label: '$0' },
-    { value: 50, label: '$50' },
+    { value: 0, label: '۰ دلار' },
+    { value: 50, label: '۵۰ دلار' },
   ]}
   labels={{
     showTable: 'نمایش جدول',

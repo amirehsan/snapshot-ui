@@ -4990,8 +4990,9 @@ before React listened fires no event React hears, so a ref callback reads
 the same state when nothing changed, so a ref callback that runs again never
 renders again. That one piece of state makes Avatar a client component.
 
-**Initials.** `initials` when given; otherwise the first character of each
-of the first two words of `name`, split on whitespace after trimming, taken
+**Initials.** `initials` when given and not blank, since an empty or
+all-space `initials` would draw an empty circle; otherwise the first
+character of each of the first two words of `name`, split on whitespace after trimming, taken
 with `Array.from` so a character outside the basic plane counts as one, and
 uppercased with `toUpperCase()`, which is not locale-aware, is enough for
 initials and needs no `Intl`. "Ada Lovelace" is AL, "Northwind" is N, "Mary
@@ -5024,6 +5025,9 @@ shown as it is.
 the home files, and a test keeps the stat tile, the meter and the charts after
 it in that order once they exist. The tooltip's test, which allowed only the
 shell files after the last overlay file, now allows the home files too.
+
+**The size.** The size limit is 1.5 kB: the entry measured 616 B, and the
+rule rounds up to 1 kB and adds 0.5 kB.
 
 ## StatTile
 
@@ -5111,6 +5115,8 @@ client module that is the link and owns the warning.
 hover, inside `@media (hover: hover)`, and on a press, since touch has no
 hover to show it. No lift and no shadow: the tile is a surface, not a
 button. Cursor pointer. The focus ring is the token ring outside the tile.
+The washed tile also sets `--chart-surface` to the same mix, so a
+sparkline's end dot keeps a ring in the tile's color.
 
 **Contrast.** On Lifted, gated already as text and cited by the contrast
 test, not added: ink 17.84 in light and 17.42 in dark, slate 5.31 and 6.94,
@@ -5313,7 +5319,9 @@ worth adding.
 sits on, `var(--chart-surface, var(--color-lifted))`: read with a fallback
 and never declared by a chart, so an app sets `--chart-surface` once on any
 ancestor and every chart inside follows. No shadow draws a ring, as the
-token rule requires.
+token rule requires. A dot and its ring are backgrounds, which a page
+printed without backgrounds drops, so `.sparkline` and `.line-chart` set
+`print-color-adjust: exact`, as `.meter` does.
 
 **The foundations.** Pure modules, private to the package in 0.1.0.
 `linearScale(domain, range)` maps a value linearly and sends every value to

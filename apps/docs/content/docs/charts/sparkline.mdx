@@ -52,7 +52,7 @@ The default box is 96 by 32. Give it a width and a height, by `className` or `st
 
 ## Right to left
 
-The oldest value is at the inline start and the newest at the inline end: the left under `dir="rtl"`. The direction comes from the nearest `dir="ltr"` or `dir="rtl"` attribute, so a `dir="ltr"` region inside a right-to-left page draws left to right. Set that attribute explicitly: `dir="auto"` and a CSS `direction` alone are not read, and would draw the line and its end dot in different directions.
+The oldest value is at the inline start and the newest at the inline end: the left under `dir="rtl"`. The direction comes from the nearest `dir="ltr"` or `dir="rtl"` attribute, so a `dir="ltr"` region inside a right-to-left page draws left to right. The plot reads `--chart-direction`, which only that attribute sets, so without an explicit `dir="ltr"` or `dir="rtl"`, under `dir="auto"` or a CSS `direction` alone, the sparkline draws left to right, the line and its end dot together.
 
 </Section>
 

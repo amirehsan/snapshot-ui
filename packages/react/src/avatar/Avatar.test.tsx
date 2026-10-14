@@ -42,6 +42,13 @@ describe('Avatar', () => {
     expect(initialsIn(container)).toBe('');
   });
 
+  it('falls back to the initials of name when the initials given are blank', () => {
+    const { container, rerender } = render(<Avatar name="Wells Fargo Bank" initials="" />);
+    expect(initialsIn(container)).toBe('WF');
+    rerender(<Avatar name="Wells Fargo Bank" initials="  " />);
+    expect(initialsIn(container)).toBe('WF');
+  });
+
   it('is an img named by its name, with data-size md and data-shape circle by default', () => {
     const { container } = render(<Avatar name="Ada Lovelace" />);
     const avatar = root(container);
