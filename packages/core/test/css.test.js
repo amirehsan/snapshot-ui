@@ -5794,8 +5794,14 @@ describe('src/components/filter-chip.css', () => {
     ]) {
       expect(clear, declaration).toContain(declaration);
     }
-    // No hit area of its own beyond its box, so it never reaches over the trigger's.
-    expect(css).not.toContain('.filter-chip-clear::before');
+    // Hit at the target in height by the trigger's formula, and only in height, so it never reaches over the
+    // trigger: 32 by 40 in every density.
+    expect(clear).toContain('position: relative;');
+    const hit = blockAfter(css, '.filter-chip-clear::before {');
+    expect(hit).toContain("content: '';");
+    expect(hit).toContain('position: absolute;');
+    expect(hit).toContain('inset-block: min(0px, (100% - var(--size-target)) / 2);');
+    expect(hit).toContain('inset-inline: 0;');
     const icon = blockAfter(css, '.filter-chip-clear-icon {');
     expect(icon).toContain('width: 1.5rem;');
     expect(icon).toContain('height: 1.5rem;');
@@ -5866,7 +5872,7 @@ describe('src/components/filter-chip.css', () => {
     );
   });
 
-  it('draws the edge CanvasText, an active chip Highlight and HighlightText, and a disabled one GrayText in forced colors', () => {
+  it('draws the edge CanvasText, an active chip Highlight and HighlightText, and a disabled one GrayText on canvas in forced colors', () => {
     const forced = closeUp(blockAfter(stripComments(read('src/components/filter-chip.css')), FORCED_COLORS));
     expect(blockAfter(forced, '.filter-chip {')).toContain('border-color: CanvasText;');
     expect(blockAfter(forced, '.filter-chip-chevron {')).toContain('color: CanvasText;');
@@ -5883,6 +5889,10 @@ describe('src/components/filter-chip.css', () => {
     );
     expect(disabled).toContain('border-color: GrayText;');
     expect(disabled).toContain('color: GrayText;');
+    // A disabled active chip leaves Highlight for canvas, so GrayText is drawn on the page's own ground.
+    expect(blockAfter(forced, '.filter-chip[data-disabled][data-active] {')).toContain(
+      'background-color: canvas;',
+    );
   });
 });
 

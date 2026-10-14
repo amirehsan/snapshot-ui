@@ -3,10 +3,10 @@
  * ("FilterChip"). At rest it is the boundary edge on nothing, a control tall, its label at 500 and a slate
  * chevron that turns half a turn while open; hover, a press and an open chip wash it 5% ink. Active, it is the
  * system's "on", the ink fill with canvas text: the label at 450 and the value at 700, one line, ellipsized past
- * 16rem, never signal orange and never clay. Its clear button is its last 2rem, the pill's full height, drawing a
- * 24px circle with a 12px canvas X, washed 15% canvas on hover and ringed in canvas inside on focus. Keyboard focus
- * on the trigger rings the whole pill. React Aria's Select root has no role, so it leaves the box tree. Nothing
- * mirrors: a down chevron and an X have no direction.
+ * 16rem, never signal orange and never clay. Its clear button is its last 2rem, the pill's full height and hit
+ * 40px tall, drawing a 24px circle with a 12px canvas X, washed 15% canvas on hover and ringed in canvas inside on
+ * focus. Keyboard focus on the trigger rings the whole pill. React Aria's Select root has no role, so it leaves
+ * the box tree. Nothing mirrors: a down chevron and an X have no direction.
  */
 @layer components {
   .filter-chip {
@@ -148,6 +148,15 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Hit at the target in height by the trigger's formula, and only in height, so it never reaches over the
+     trigger: 32 by 40 in every density, as spec 11 asks. */
+  .filter-chip-clear::before {
+    content: '';
+    position: absolute;
+    inset-block: min(0px, (100% - var(--size-target)) / 2);
+    inset-inline: 0;
+  }
+
   .filter-chip-clear-icon {
     display: inline-grid;
     place-items: center;
@@ -228,6 +237,11 @@
     .filter-chip[data-disabled] .filter-chip-chevron {
       border-color: GrayText;
       color: GrayText;
+    }
+
+    /* A disabled active chip leaves Highlight, which would claim the system's "on" for a control that is off. */
+    .filter-chip[data-disabled][data-active] {
+      background-color: canvas;
     }
   }
 

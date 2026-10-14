@@ -610,6 +610,83 @@ describe('FilterChip', () => {
     expect(document.querySelector('.filter-chip')).toBeNull();
   });
 
+  it('focuses the trigger and calls onSecondaryCleared when every secondary chip is active and More is not drawn', async () => {
+    // With every secondary chip active More is not drawn, so hasMore is false as the clear is pressed; once the
+    // value is gone More comes back and the chip leaves the row, so FilterBar must still hear of it.
+    const user = userEvent.setup();
+    const onSecondaryCleared = vi.fn(() => {
+      expect(trigger()).toHaveFocus();
+    });
+    const onChange = vi.fn();
+    render(
+      <FilterChipPlaceContext value={place({ place: 'row', hasMore: false, onSecondaryCleared })}>
+        <Single isSecondary initial="rent" onChange={onChange} />
+      </FilterChipPlaceContext>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Clear Category' }));
+    expect(onChange).toHaveBeenLastCalledWith(null);
+    expect(onSecondaryCleared).toHaveBeenCalledTimes(1);
+    expect(trigger()).toHaveFocus();
+  });
+
+  it('focuses only a tabbable control of a custom section once cleared: no disabled one, no tabindex -1, and a group of radios at its checked radio', async () => {
+    const user = userEvent.setup();
+    function Section({ checked }: { checked: string | null }): ReactElement {
+      const [valueLabel, setValueLabel] = useState<string | undefined>('Over $100');
+      return (
+        <FilterChipPlaceContext value={place({ place: 'sheet' })}>
+          <FilterChip
+            label="Amount"
+            valueLabel={valueLabel}
+            onClear={() => {
+              setValueLabel(undefined);
+            }}
+          >
+            <button type="button" disabled>
+              Dead
+            </button>
+            <span tabIndex={-1}>Roving</span>
+            <input aria-label="Skipped" tabIndex={-1} />
+            <label>
+              <input type="radio" name="kind" value="any" disabled /> Any
+            </label>
+            <label>
+              <input type="radio" name="kind" value="in" checked={checked === 'in'} readOnly /> In
+            </label>
+            <label>
+              <input type="radio" name="kind" value="out" checked={checked === 'out'} readOnly /> Out
+            </label>
+            <button type="button">Apply</button>
+          </FilterChip>
+        </FilterChipPlaceContext>
+      );
+    }
+    const { unmount } = render(<Section checked="out" />);
+    await user.click(screen.getByRole('button', { name: 'Clear Amount' }));
+    expect(screen.getByRole('radio', { name: 'Out' })).toHaveFocus();
+    unmount();
+    // With no radio checked, the group's first enabled radio is its tab stop.
+    render(<Section checked={null} />);
+    await user.click(screen.getByRole('button', { name: 'Clear Amount' }));
+    expect(screen.getByRole('radio', { name: 'In' })).toHaveFocus();
+  });
+
+  it('shows a stale value that is none of its options as its key, warning once, so the active state is not color alone', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { rerender } = render(<Single initial="archived" />);
+    expect(pill()).toHaveAttribute('data-active', '');
+    expect(element('.filter-chip-value')).toHaveTextContent('archived');
+    expect(trigger()).toHaveAccessibleName('Category archived');
+    rerender(<Single initial="archived" />);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('FilterChip "Category"');
+    expect(warn.mock.calls[0]?.[0]).toContain('archived');
+    // A value among the options warns nothing.
+    warn.mockClear();
+    render(<Multiple initial={['rent']} />);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it('passes className, popoverClassName, ref and data attributes', async () => {
     const user = userEvent.setup();
     const ref = createRef<HTMLDivElement>();

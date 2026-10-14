@@ -80,7 +80,7 @@ export function CategoryFilter() {
 }
 ```
 
-A multiple chip writes one parameter per key with `params.append`, and reads them back with `searchParams.getAll`. On a statically rendered route, read the parameters inside `<Suspense>` with the same chip, empty, as the fallback.
+A multiple chip writes one parameter per key: `params.delete('tags')`, then `append` each key, and reads them back with `searchParams.getAll`. On a statically rendered route, read the parameters inside `<Suspense>` with the same chip, empty, as the fallback.
 
 A closed chip ignores letters and Left and Right, which a Select turns into a choice nobody sees: on a filter that would be a query and a URL write behind the reader's back. The popover is modal, so the page behind it is inert while it is open, and a press on the next chip first closes this one. Inside a FilterBar a chip is also a section of More and of the Filters sheet, where it draws as a titled field.
 

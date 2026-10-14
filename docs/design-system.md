@@ -7256,7 +7256,10 @@ collection's order, since React Aria keeps them in the value's order,
 and writes `labels.summary` of their text values into
 `span.filter-chip-value`: "Food", "Food, Rent", "Food, Rent and 2 more"
 by default, with concatenation and `String()`. `valueLabel` overrides
-it. The trigger is `aria-labelledby` its label span and then its value
+it. A value none of whose keys is an option, a stale one from the URL,
+would leave an active chip saying so by its fill alone, so the chip
+shows the keys as written, through `labels.summary`, and warns once in
+the console. The trigger is `aria-labelledby` its label span and then its value
 span, "Category Food", the visible order. Axe joins the text of the
 spans as it is written, so a space sits between them in the DOM, which
 the flex row does not draw. A custom chip's trigger is named the same
@@ -7268,9 +7271,13 @@ chip with `onClear`) and not disabled, `Button.filter-chip-clear`
 follows the trigger as the Select's sibling, never inside it: Select
 hands its trigger's props to every Button in it, so a clear button there
 would open the list (spec correction 25). It is the pill's last 2rem and
-its full height, a 32 by 40 target (32 by 36 compact), and the trigger
-pads only 4px to it, so the two touch and never overlap: neither
-reaches over the other, the lesson of NumberField's steppers. It draws a
+its full height, 38px and 34px compact inside the pill's edges, and is
+hit at the target in height by the trigger's formula,
+`inset-block: min(0px, (100% - var(--size-target)) / 2)` with
+`inset-inline: 0`, so it is a 32 by 40 target in every density, as spec
+11 asks. The trigger pads only 4px to it, so the two touch and never
+overlap: each hit area grows in height alone, and neither reaches over
+the other, the lesson of NumberField's steppers. It draws a
 24px circle with a 12px canvas X; the circle washes 15% canvas on hover
 and on a press, 1.50 against ink in light and 1.39 in dark, a mix and a
 cue, with the glyph at 10.81 and 13.93 on it; keyboard focus draws the
@@ -7278,7 +7285,11 @@ canvas ring inside the circle, SegmentedControl's rule on an ink fill.
 It is named `labels.clear(label)`, "Clear Category", and is a tab stop:
 for a single chip it is the only keyboard way back to no value. A press
 clears through `onClear`, else `onChange(null)` or `onChange([])`, and
-puts focus on the trigger, since the button leaves with the value.
+puts focus on the trigger, since the button leaves with the value. A
+secondary chip in a FilterBar's row then always tells FilterBar, even
+when no More is drawn as it clears: with every secondary chip active
+there is no More, and clearing one brings it back and takes the chip
+out of the row, so FilterBar gives focus to More once the chip has gone.
 
 **Focus.** Keyboard focus on the trigger rings the whole pill,
 `.filter-chip:has(.filter-chip-trigger:is(:focus-visible,
@@ -7318,7 +7329,9 @@ its Filters sheet, the chip is `section.filter-section`, named by its
 head holds a tertiary Button showing FilterBar's `labels.clear`,
 "Clear", named `labels.clear(label)`, "Clear Category", which starts
 with the visible word; it clears and puts focus on the section's
-trigger. A list chip's section holds Select's look, `.field.select` with
+trigger, or a custom chip's first tab stop: an enabled control not at
+`tabindex="-1"`, and of a group of radios its checked radio, or with
+none checked its first enabled one. A list chip's section holds Select's look, `.field.select` with
 `.input.select-trigger`, showing the summary, or `labels.any`, "Any", as
 the slate placeholder; a custom chip's holds its content. The two words,
 `labels.any` and FilterBar's `labels.clear`, are new (spec correction
@@ -7334,7 +7347,9 @@ hidden pass at zero.
 
 **Forced colors.** The edge and the chevron `CanvasText`; active,
 `Highlight` with `HighlightText`, the chevron and the clear glyph
-`HighlightText`; disabled, `GrayText`.
+`HighlightText`; disabled, `GrayText`, and a disabled active chip
+`GrayText` on canvas, never on `Highlight`, which would say "on" for a
+control that is off.
 
 **Right to left.** The pill runs from the right: the label at the right
 and the clear button at the left end. Neither the chevron nor the X has
