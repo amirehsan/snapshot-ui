@@ -4505,11 +4505,16 @@ describe('src/components/multi-select.css', () => {
     expect(rules()).not.toContain('focus-within');
   });
 
-  it('keeps the button and the Spinner level with the first row', () => {
+  it('keeps the button and the Spinner level with the first row, with either edge', () => {
     const css = rules();
     const level = blockAfter(css, '.multi-select-control :is(.input-button, .combo-box-spinner) {');
-    expect(level).toContain('inset-block: calc(0.375rem - 1px) auto;');
-    expect(level).toContain('margin-block: 0;');
+    // Centered between the padding's top and, while the frame is one row, the padding's bottom, or, once it
+    // wraps, the first row's bottom: never a fixed offset, which a 1px and a 1.5px edge would put apart.
+    expect(level).toContain('inset-block-start: calc(0.375rem - 1.5px);');
+    expect(level).toContain(
+      'inset-block-end: calc(0.375rem - 1.5px + clamp(0px, (100% + 1px - var(--size-field)) * 100, 100% + 3px - var(--size-field)));',
+    );
+    expect(level).toContain('margin-block: auto;');
     expect(blockAfter(css, '.multi-select-control .combo-box-spinner {')).toContain(
       'height: calc(var(--size-field) - 0.75rem);',
     );

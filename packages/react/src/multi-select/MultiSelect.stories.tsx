@@ -49,6 +49,14 @@ const listbox = (): HTMLElement => within(document.body).getByRole('listbox');
 const fieldSize = (element: Element): number =>
   parseFloat(getComputedStyle(element).getPropertyValue('--size-field'));
 
+/** Whether the field button sits level with the frame's first tag, the two the same height. */
+async function expectButtonLevel(frame: Element): Promise<void> {
+  const tag = find(frame, '.multi-select-tag').getBoundingClientRect();
+  const button = find(frame, '.combo-box-button').getBoundingClientRect();
+  await expect(button.height).toBe(tag.height);
+  await expect(button.top).toBeCloseTo(tag.top, 2);
+}
+
 /** Twelve budget categories. */
 const CATEGORIES = [
   'Food',
@@ -66,6 +74,21 @@ const CATEGORIES = [
 ];
 
 const idOf = (name: string): string => name.toLowerCase();
+
+/**
+ * The Menu's row exception, and axe's `aria-hidden-focus` skipped on the value alone. While the list is open
+ * React Aria hides everything but the input and the list from assistive technology, the tags too, and leaves
+ * them focusable by design, so a press can still remove one and Shift+Tab still reaches them, closing the
+ * list. Overriding the rule's selector keeps it running on every other hidden element on the page.
+ */
+const OPEN_A11Y = {
+  config: {
+    rules: [
+      ...MENU_ROW_A11Y.config.rules,
+      { id: 'aria-hidden-focus', selector: '[aria-hidden="true"]:not(.multi-select-value)' },
+    ],
+  },
+};
 
 const TWELVE = CATEGORIES.map((name) => (
   <PickerOption key={name} id={idOf(name)}>
@@ -117,6 +140,7 @@ export const Default: Story = {
     const remove = find(canvasElement, '.multi-select-tag-remove');
     await expect(getComputedStyle(remove).color).toBe(tokenColor('--color-slate'));
     await expect(remove.getBoundingClientRect().width).toBe(20);
+    await expectButtonLevel(frame);
   },
 };
 
@@ -147,6 +171,7 @@ export const ManyValues: Story = {
     );
     await expect(rows.size).toBeGreaterThanOrEqual(2);
     await expect(frame.getBoundingClientRect().height).toBeGreaterThan(fieldSize(frame) * 2);
+    await expectButtonLevel(frame);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   },
 };
@@ -157,7 +182,7 @@ export const ManyValues: Story = {
  */
 export const Open: Story = {
   tags: ['density'],
-  parameters: { a11y: MENU_ROW_A11Y },
+  parameters: { a11y: OPEN_A11Y },
   play: async ({ canvas, canvasElement }) => {
     await userEvent.tab();
     await userEvent.tab();
@@ -216,6 +241,8 @@ export const States: Story = {
     const [changed, invalid, disabled] = [...canvasElement.querySelectorAll('.multi-select-control')];
     if (!changed || !invalid || !disabled) throw new Error('Expected three frames');
     await expect(getComputedStyle(changed).borderTopColor).toBe(tokenColor('--color-signal-light'));
+    // The 1.5px edge keeps the button level with the tags, as the 1px edge does.
+    await expectButtonLevel(changed);
     await expect(canvas.getByRole('combobox', { name: 'Categories' })).toHaveAccessibleDescription(/Changed/);
     await expect(getComputedStyle(invalid).borderTopColor).toBe(tokenColor('--color-error'));
     await expect(canvas.getByText('Choose at least one category')).toBeVisible();
@@ -257,15 +284,25 @@ export const RightToLeft: Story = {
 };
 
 /**
- * The keys: Enter toggles and the list stays open; Backspace twice from the empty input removes the last tag;
- * Delete on a tag removes it; the arrows move between tags.
+ * The keys: Tab leaves and never changes the value; Enter toggles and the list stays open; Backspace twice from
+ * the empty input removes the last tag; Delete on a tag removes it; the arrows move between tags.
  */
 export const Keys: Story = {
   tags: ['no-visual'],
-  parameters: { a11y: MENU_ROW_A11Y },
+  parameters: { a11y: OPEN_A11Y },
   args: { defaultValue: ['food', 'rent', 'fun'], onChange: fn() },
   play: async ({ args, canvas, canvasElement }) => {
     const input = canvas.getByRole('combobox', { name: 'Categories' });
+    // Tab closes the list and moves on; Food, active and chosen, stays chosen.
+    await userEvent.click(input);
+    await userEvent.keyboard('{ArrowDown}');
+    await waitFor(() => expect(listbox()).toBeVisible());
+    await userEvent.tab();
+    await expect(args.onChange).not.toHaveBeenCalled();
+    await expect(input).not.toHaveFocus();
+    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull());
+    await expect(tagTexts(canvasElement)).toEqual(['Food', 'Rent', 'Fun']);
+    // Enter adds Travel and the list stays open; the Tab after it keeps the choice.
     await userEvent.click(input);
     await userEvent.keyboard('trav');
     await waitFor(() => expect(listbox()).toBeVisible());
@@ -273,9 +310,12 @@ export const Keys: Story = {
     await expect(args.onChange).toHaveBeenLastCalledWith(['food', 'rent', 'fun', 'travel']);
     await expect(listbox()).toBeVisible();
     await expect(input).toHaveValue('');
-    await userEvent.keyboard('{Escape}');
+    await userEvent.tab();
+    await expect(args.onChange).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull());
+    await expect(tagTexts(canvasElement)).toEqual(['Food', 'Rent', 'Fun', 'Travel']);
     // Backspace twice: the first focuses the last tag, the second removes it.
+    await userEvent.click(input);
     await userEvent.keyboard('{Backspace}');
     await expect(within(canvasElement).getByRole('row', { name: 'Travel' })).toHaveFocus();
     await expect(tagTexts(canvasElement)).toHaveLength(4);
@@ -288,6 +328,31 @@ export const Keys: Story = {
     await userEvent.keyboard('{Delete}');
     await expect(tagTexts(canvasElement)).toEqual(['Food', 'Fun']);
     await expect(within(canvasElement).getByRole('row', { name: 'Fun' })).toHaveFocus();
+  },
+};
+
+/**
+ * While the list is open a tag's remove button is still under the pointer and still removes its tag; the
+ * list closes.
+ */
+export const RemoveWhileOpen: Story = {
+  tags: ['no-visual'],
+  parameters: { a11y: OPEN_A11Y },
+  args: { onChange: fn() },
+  play: async ({ args, canvas, canvasElement }) => {
+    await userEvent.click(canvas.getByRole('combobox', { name: 'Categories' }));
+    await userEvent.keyboard('{ArrowDown}');
+    await atRest();
+    const remove = find(canvasElement, '.multi-select-tag-remove');
+    const box = remove.getBoundingClientRect();
+    // The button itself is hit, not the frame behind it: nothing takes the tags out of reach.
+    await expect(
+      remove.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)),
+    ).toBe(true);
+    await userEvent.click(remove);
+    await expect(args.onChange).toHaveBeenLastCalledWith(['rent']);
+    await expect(tagTexts(canvasElement)).toEqual(['Rent']);
+    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull());
   },
 };
 
@@ -320,7 +385,7 @@ export const PressFrame: Story = {
 /** The list opens against the frame: its left edge is the frame's, and it is at least as wide. */
 export const PopoverAlign: Story = {
   tags: ['no-visual'],
-  parameters: { a11y: MENU_ROW_A11Y },
+  parameters: { a11y: OPEN_A11Y },
   decorators: [
     (Story) => (
       <div style={{ paddingInlineStart: '1.5rem' }}>
@@ -370,5 +435,6 @@ export const OneRowHeight: Story = {
     await expect(canvas.getByRole('combobox', { name: 'Categories' })).toHaveFocus();
     await expect(getComputedStyle(frame).borderTopColor).toBe(tokenColor('--color-ink'));
     await expect(frame.getBoundingClientRect().height).toBe(fieldSize(frame));
+    await expectButtonLevel(frame);
   },
 };
