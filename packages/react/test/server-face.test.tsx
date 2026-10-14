@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, inject, it } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
+import { DateRangePicker } from '../src/date-range-picker';
 import { NumberField } from '../src/number-field';
 
 /**
@@ -43,6 +44,17 @@ const FACES: [name: string, element: ReactElement][] = [
       aria-label="Statement period"
       value={{ start: '2026-09-01', end: '2026-09-30' }}
       presets={PRESETS}
+    />,
+  ],
+  [
+    'DateRangePicker',
+    <DateRangePicker
+      label="Statement period"
+      value={{ start: '2026-09-01', end: '2026-09-30' }}
+      valueLabel="1 to 30 Sep 2026"
+      startName="from"
+      endName="to"
+      today="2026-09-18"
     />,
   ],
 ];

@@ -1,0 +1,120 @@
+/*
+ * DateRangePicker: two date fields in the text input's pill with an arrow between them and the shared field
+ * button at the end, opening the range calendar in a popover, derived in docs/design-system.md
+ * ("DateRangePicker"). The frame is .input on a plain element, so the hover, disabled, changed and invalid edges
+ * reach it through the field's root, and it rings only while a segment has keyboard focus, never for the button.
+ * Each date is isolated, so a right-to-left page keeps it in its locale's order; its segments are ink in tabular
+ * figures, the placeholder taupe under a label and slate without one, and the focused segment the ink fill on the
+ * text chip's radius. The arrow points from start to end, so it mirrors under [dir='rtl']. The popover pads 16px
+ * and is the month's width, so a 280px month fits, and shrinks to fit beside a 320px screen's margins.
+ */
+@layer components {
+  /* One class, after input.css, so it beats the input's box and none of its states. Clipped across only, so a
+     date too wide for a narrow frame never spills out of it, while the button's hit area, taller than a compact
+     frame, still reaches past its top and bottom. */
+  .date-range-control {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+    padding-inline: 1.5rem 3rem;
+    overflow-x: clip;
+    cursor: text;
+  }
+
+  /* Two classes with the test in :where(): it beats the hover edge by order, and the changed and invalid edges,
+     three classes, still beat it. */
+  .date-range-control.input:where(:has(.date-segment:is(:focus-visible, [data-focus-visible]))) {
+    border: 1.5px solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .date-range-input {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .date-segment {
+    box-sizing: border-box;
+    padding-inline: 0.125rem;
+    border-radius: var(--radius-micro);
+    color: var(--color-ink);
+    caret-color: transparent;
+    outline: none;
+  }
+
+  .date-segment[data-type='literal'] {
+    padding-inline: 0;
+  }
+
+  .date-segment[data-placeholder] {
+    color: var(--color-taupe);
+  }
+
+  .date-range-picker[data-unlabelled]:not([data-disabled]) .date-segment[data-placeholder] {
+    color: var(--color-slate);
+  }
+
+  .date-segment:is(:focus, [data-focused]) {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .date-range-picker[data-disabled] :is(.date-segment, .date-range-arrow, .date-range-face) {
+    color: var(--color-taupe);
+  }
+
+  .date-range-arrow {
+    display: inline-flex;
+    flex: none;
+    color: var(--color-slate);
+  }
+
+  .date-range-arrow svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  [dir='rtl'] .date-range-arrow svg {
+    scale: -1 1;
+  }
+
+  /* Padded as a segment is, so the app's text starts where the first segment's will. */
+  .date-range-face {
+    min-width: 0;
+    padding-inline: 0.125rem;
+    overflow: hidden;
+    color: var(--color-ink);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Two classes, after popover.css's one, so the calendar's popover pads 16px, not 24px. Its width is the
+     month's seven controls, its padding and its 1px frame on each side: the grid is a table at 100% of it, which
+     would otherwise stretch a popover sized to its content across the screen. popover.css caps it at the
+     viewport less 2rem, so at 320px the month has 254px and a day is 36.29px (R4). */
+  .date-range-popover.popover-padded {
+    width: calc(7 * var(--size-control) + 2 * var(--spacing-inset) + 2px);
+    padding: var(--spacing-inset);
+  }
+
+  @media (forced-colors: active) {
+    .date-range-arrow {
+      color: CanvasText;
+    }
+
+    .date-segment:is(:focus, [data-focused]) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .date-range-picker[data-disabled] :is(.date-segment, .date-range-arrow, .date-range-face) {
+      color: GrayText;
+    }
+  }
+}

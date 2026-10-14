@@ -9,6 +9,7 @@ import { Checkbox, CheckboxGroup } from '../checkbox';
 import { CollapsibleCard } from '../collapsible-card';
 import { ComboBox } from '../combo-box';
 import { CommandPalette } from '../command-palette';
+import { DateRangePicker } from '../date-range-picker';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { Link } from '../link';
@@ -1160,6 +1161,52 @@ export const CalendarMirrored: Story = {
     await expect(document.activeElement).toHaveTextContent('۲۷');
     await userEvent.keyboard('{ArrowRight}');
     await expect(document.activeElement).toHaveTextContent('۲۶');
+  },
+};
+
+/**
+ * A range field on a Persian page: the start date at the frame's right, the arrow pointing left from it to the
+ * end date, and the calendar button at the left, the frame's end. Each date keeps its own order, and Arrow Left
+ * moves to the segment drawn to the left of the focused one, as React Aria reads the drawn direction.
+ */
+export const DateRangePickerMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(24rem, calc(100vw - 2rem))' }}>
+        <DateRangePicker
+          label="دوره"
+          defaultValue={{ start: '2026-09-01', end: '2026-09-30' }}
+          today="2026-09-18"
+          labels={{ open: 'انتخاب تاریخ', start: 'تاریخ شروع', end: 'تاریخ پایان' }}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const frame = find(canvasElement, '.date-range-control');
+    const [start, end] = [...frame.querySelectorAll('.date-range-input')];
+    if (!start || !end) throw new Error('Two dates');
+    const arrow = find(frame, '.date-range-arrow');
+    const button = within(canvasElement).getByRole('button', { name: /^انتخاب تاریخ/ });
+    // The start is at the right, the end to its left, the button at the left end.
+    await expect(rect(start).left).toBeGreaterThan(rect(arrow).right - 0.5);
+    await expect(rect(arrow).left).toBeGreaterThan(rect(end).right - 0.5);
+    await expect(rect(end).left).toBeGreaterThan(rect(button).right - 0.5);
+    await expect(rect(button).left - rect(frame).left).toBeLessThan(12);
+    // ArrowRight, mirrored, points left: from the start toward the end.
+    await expect(getComputedStyle(find(arrow, 'svg')).scale).toBe('-1 1');
+    // Arrow Left moves to the segment drawn to the left of the focused one.
+    const segments = [...frame.querySelectorAll<HTMLElement>('.date-segment:not([data-type="literal"])')];
+    const first = segments[0];
+    if (!first) throw new Error('No segment');
+    first.focus();
+    const from = rect(first);
+    await userEvent.keyboard('{ArrowLeft}');
+    const focused = document.activeElement;
+    if (!(focused instanceof HTMLElement)) throw new Error('No focus');
+    await expect(focused).toHaveClass('date-segment');
+    await expect(focused).not.toBe(first);
+    await expect(rect(focused).right).toBeLessThanOrEqual(from.left + 0.5);
   },
 };
 

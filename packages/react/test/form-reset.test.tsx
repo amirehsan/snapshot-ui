@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { DateRangePicker } from '../src/date-range-picker';
 import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
@@ -410,6 +411,33 @@ describe('a native form reset', () => {
     await user.click(screen.getByRole('button', { name: 'Reset' }));
     expect(input).toHaveValue('1,234.50');
     expect(sent(container, 'min')).toEqual(['123450']);
+  });
+
+  it('puts a DateRangePicker back on its default range', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <DateRangePicker
+          label="Statement period"
+          startName="from"
+          endName="to"
+          defaultValue={{ start: '2026-09-01', end: '2026-09-30' }}
+        />
+        <ResetButton />
+      </form>,
+    );
+    const day = screen.getAllByRole('spinbutton')[1];
+    if (!day) throw new Error('No day segment');
+    act(() => {
+      day.focus();
+    });
+    await user.keyboard('{ArrowUp}');
+    expect(sent(container, 'from')).toEqual(['2026-09-02']);
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(sent(container, 'from')).toEqual(['2026-09-01']);
+    expect(sent(container, 'to')).toEqual(['2026-09-30']);
+    expect(day).toHaveTextContent('1');
   });
 
   it('puts a Select back on its default option, without its chip', async () => {

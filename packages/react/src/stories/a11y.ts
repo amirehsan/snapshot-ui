@@ -16,3 +16,15 @@
 export const MENU_ROW_A11Y = {
   config: { rules: [{ id: 'label-content-name-mismatch', selector: '*:not(.menu-item)' }] },
 };
+
+/**
+ * Axe's contrast check, skipped on a date field's placeholder segments alone: "mm", "dd" and "yyyy" where no date
+ * is typed yet. They are the field's placeholder, which the system draws taupe under a visible label, as every
+ * field draws its placeholder; a text input's placeholder is a pseudo-element that axe never measures, and a
+ * segment is an element that it does. React Aria reads each as "Empty", and the field's label names the field.
+ * Overriding the rule's selector keeps it on everything else on the page, every typed segment included. Put it in
+ * a story's `parameters.a11y`. Recorded in docs/design-system.md ("DateRangePicker").
+ */
+export const DATE_PLACEHOLDER_A11Y = {
+  config: { rules: [{ id: 'color-contrast', selector: '*:not(.date-segment[data-placeholder])' }] },
+};

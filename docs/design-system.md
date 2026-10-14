@@ -7033,3 +7033,162 @@ yet verified.
 the entry `{ Calendar, RangeCalendar }` measured 1.85 kB without React
 Aria, Lucide and `@internationalized/date`, and the rule rounds up to
 2 kB and adds 0.5 kB.
+
+## DateRangePicker
+
+A range of two days in the text input's pill: `DateRangePicker`, on
+React Aria's date range picker, with its two date fields typed in the
+locale's order and its range calendar in a popover. The document draws
+no date field of its own, so this one is derived from the text input,
+the field button and the calendar.
+
+**The frame.** React Aria's picker gives its group the role, the
+labelling, Alt+Arrow Down and the focus within
+(`useDateRangePicker.mjs:126-139`, `useDatePickerGroup.mjs:24-37`), so
+the frame is a plain `div.input.date-range-control` that spreads that
+whole group value less its non-DOM keys, and takes its ref, which React
+Aria positions the popover against. It is not React Aria's `Group`,
+whose focus-within `data-focus-visible` would turn `.input`'s focus rule
+into a ring on the frame while the calendar button holds focus (spec
+correction 20). Being `.input`, it takes the hover, disabled, changed
+and invalid edges through the field's root, and the wrapper writes
+`data-disabled` on it. Its own rule is one class after `input.css`:
+`display: flex`, `align-items: center`, `gap: var(--spacing-part)`
+(8px), `padding-inline: 1.5rem 3rem`, clear of the button, and
+`overflow-x: clip`, so a date too wide for a narrow frame never spills,
+while the button's hit area, 40px against a 36px compact frame, still
+reaches past its top and bottom, which `overflow: hidden` would cut.
+While a segment has keyboard focus the frame draws the focus edge and
+ring, `.date-range-control.input:where(:has(.date-segment:is(:focus-visible, [data-focus-visible])))`:
+two classes with the test in `:where()`, so it beats the hover edge by
+order and the changed and invalid edges, three classes, still beat it.
+While the button has focus the button rings itself and the frame draws
+nothing; nothing keys on `:focus-within` or on the root's
+`data-focus-visible`, which React Aria writes then too.
+
+**Segments.** Each date is `DateInput.date-range-input`, an
+`inline-flex` row that never shrinks, in tabular figures, and React Aria
+isolates it (`unicode-bidi: isolate`), so a right-to-left page keeps
+each date in its locale's order. A segment is ink, padded 2px at each
+side, with a transparent caret and no outline. A placeholder segment is
+taupe under a visible label and slate under `data-unlabelled`, never
+while disabled. The focused segment is the ink fill with canvas text on
+`--radius-micro`, the text-sized chip's radius. Disabled, the segments,
+the arrow and the face are taupe.
+
+**The placeholder and axe.** A text input's placeholder is a
+pseudo-element, which axe never measures; a date field's placeholder
+segments, "mm", "dd" and "yyyy", are elements, and taupe on raised
+measures 1.58. They are the field's placeholder, drawn as every field's
+is, React Aria reads each as "Empty", and the label names the field, so
+axe's contrast check skips them alone: in the stories through
+`DATE_PLACEHOLDER_A11Y`, which overrides the rule's selector, and on the
+docs site through a contrast pass of its own on a page that draws one.
+Every other node, typed segments included, is measured.
+
+**The arrow.** Lucide's `ArrowRight`, 16px, slate, in
+`span.date-range-arrow[aria-hidden="true"]` between the dates. It points
+from the start to the end, so it mirrors under `[dir='rtl']`, the
+sidebar's rule, and is the only thing that does.
+
+**The button.** The shared `.input-button` at the frame's end, Lucide
+`CalendarDays`, named by `labels.open` ("Choose dates") and the label,
+React Aria's `aria-labelledby` of itself and the label
+(`useDateRangePicker.mjs:145-155`). React Aria's own name for it is
+localized, so the library's replaces it in both passes.
+
+**Names.** The group is named by the label. Each date field is a
+presentation element (`useDateField.mjs:100-104`), and React Aria names
+each segment by its type, the field's name and the label
+(`useDateSegment.mjs:321-325`): "month, Start date, Statement period".
+`DateInput` takes only its slot from the date field context
+(`DateField.mjs:253-258`), so the wrapper re-provides that context with
+`labels.start` and `labels.end` as the two slots' `aria-label` (spec
+correction 19). On iOS React Aria makes each segment a text box
+(`useDateSegment.mjs:303-309`).
+
+**Values.** ISO strings in and out (ruling 2): `value` and
+`defaultValue` are read with `parseIsoRange`, and one that does not
+parse, is not written `YYYY-MM-DD`, or whose end is before its start
+reads as no range with one warning; the bounds are read with
+`parseIso`, and `isDateUnavailable` receives ISO dates. `onChange`
+receives the two Gregorian ISO dates once both are whole and in order.
+React Aria keeps a date while one of its segments is cleared, as it
+keeps February 30 until blur, so `onChange(null)` comes once every
+segment of a date is cleared (`useDateFieldState.mjs`, `setValue`). React
+Aria also takes each digit of a year as it is typed and emits a range
+whose end is before its start, flagged invalid; the app is told `null`
+for it, since it is no range, and a controlled field keeps it in place
+of the app's `null`, which would otherwise clear what is being typed.
+The hidden inputs hold Gregorian ISO dates in every calendar.
+
+**Today and the opening month.** `today` is passed to React Aria as the
+picker's `placeholderValue`, which React Aria gives the calendar as its
+`defaultFocusedValue` only while there is no range
+(`useDateRangePicker.mjs:211`), so the calendar opens on the value's
+start month, else `today`'s, else the device's (spec correction 13),
+and an arrow in an empty segment starts from the app's today. The
+calendar marks `today` as Calendar does.
+
+**The calendar in the picker.** The popover holds React Aria's `Dialog`
+around a bare `RangeCalendar.calendar.range-calendar` with
+`commitBehavior="reset"`, holding `RangeCalendarFrame`: the picker's
+context gives it the value, `onChange`, the bounds and its focus, and it
+passes none of its own (spec correction 17). The presets are checked
+against the picker's own bounds and unavailable days. A preset press or
+a completed range closes the popover (`shouldCloseOnSelect`, React
+Aria's default), and focus goes back to what opened it: the button, or
+the segment where Alt+Arrow Down was pressed.
+
+**The popover.** `isPadded` steps down to `--spacing-inset`, 16px, with
+two classes after `popover.css`'s one. The grid is a table at 100% of
+its calendar, which would stretch a popover sized to its content across
+the screen, so the popover's width is the month's:
+`calc(7 * var(--size-control) + 2 * var(--spacing-inset) + 2px)`, 314px,
+the 2px its frame. `popover.css` caps it at the viewport less 2rem, so
+at 320px the month has 254px and a day is 36.29px (R4). It opens 8px
+under the frame at its start, and React Aria flips and shifts it.
+
+**The face.** On the server and through hydration each `DateInput`
+renders no segments, but its hidden input and every id are written, the
+arrow is left out, and `span.date-range-face`, first in the frame, shows
+the app's `valueLabel`, or nothing (R2). The segments' text, order and
+names all come from `Intl`. The face is padded as a segment is, so its
+text starts where the first segment's will; the frame is its full width
+and the field's height either way, and a story compares the face's
+field, frame and button with the hydrated ones at both densities, so
+nothing moves. The face ellipsizes on one line. The server's HTML is one
+string under `en-US`, `de-DE` and `fa-IR` and in UTC and Asia/Tehran.
+
+**React Aria's descriptions.** The picker formats the chosen range for
+its spoken description while it renders, and each date field formats its
+value; both go into a node a layout effect creates, never the HTML (R1,
+spec correction 22).
+
+**Keys.** React Aria's (spec correction 21): Tab runs through the start's
+segments, the end's and the button; Left and Right move between segments
+in the drawn direction; Up and Down change a segment by one, wrapping at
+its ends, a day from 1 to 31 in any month until blur; Page Up and Page
+Down by a larger step, a week, two months, or to the next multiple of
+five years; Home and End to the least and greatest value; Backspace and
+Delete clear the last digit and, in an empty segment, move to the one
+before; Alt+Arrow Down and Alt+Arrow Up open the calendar; Escape closes
+it and gives focus back to what opened it.
+
+**Measured pairs.** Gated: ink on raised, the segments, 18.43 in light
+and 15.36 in dark; slate on raised, the arrow and an unlabelled
+placeholder, 5.49 and 6.44; canvas on ink, the focused segment, 16.25
+and 19.31. No pair is added to the gate.
+
+**Forced colors.** As the text input; the arrow `CanvasText`; the
+focused segment `Highlight` with `HighlightText`; disabled segments, the
+arrow and the face `GrayText`.
+
+**Devices.** The segments reached and typed with VoiceOver on iOS, as
+text boxes: not yet verified.
+
+**The size.** The entry `{ DateRangePicker }` measures what its import
+pulls in, the range calendar's frame included (spec correction 30), and
+the plan started it at 5.5 kB. It measured 3.37 kB without React Aria,
+Lucide and `@internationalized/date`, and the rule rounds up to 3.5 kB
+and adds 0.5 kB: 4 kB.

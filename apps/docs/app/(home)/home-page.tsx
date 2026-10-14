@@ -698,7 +698,9 @@ export function HomePage(): ReactElement {
               <Eyebrow>Dates and media</Eyebrow>
               <div className="chips">
                 <span className="chip">Date picker</span>
-                <span className="chip chip-new">Date range</span>
+                <Link className="chip chip-new" href="/docs/components/date-range-picker">
+                  Date range picker
+                </Link>
                 <span className="chip">Time field</span>
                 <span className="chip">Color field</span>
                 <span className="chip">Icon picker</span>
@@ -803,6 +805,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/combo-box">Combo box</Link>
                 <Link href="/docs/components/command-palette">Command palette</Link>
                 <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
+                <Link href="/docs/components/date-range-picker">Date range picker</Link>
                 <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/drawer">Drawer</Link>
                 <Link href="/docs/components/field">Field parts</Link>

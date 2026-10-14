@@ -181,14 +181,15 @@ describe('src/styles.css', () => {
   });
 
   it('imports the filter files after the picker files, in order', () => {
-    // number-field.css and calendar.css are required; the range picker, the chip and the bar are checked once
-    // they exist. Each comes after input.css, so a one-class override of the input wins by order.
+    // number-field.css, calendar.css and date-range-picker.css are required; the chip and the bar are checked
+    // once they exist. Each comes after input.css, so a one-class override of the input wins by order.
     const at = (file) => entry.indexOf(`'./components/${file}'`);
     expect(at('pagination.css')).toBeGreaterThanOrEqual(0);
     expect(at('number-field.css')).toBeGreaterThan(at('pagination.css'));
     expect(at('calendar.css')).toBeGreaterThan(at('number-field.css'));
-    let previous = at('calendar.css');
-    for (const file of ['date-range-picker.css', 'filter-chip.css', 'filter-bar.css']) {
+    expect(at('date-range-picker.css')).toBeGreaterThan(at('calendar.css'));
+    let previous = at('date-range-picker.css');
+    for (const file of ['filter-chip.css', 'filter-bar.css']) {
       if (!components.includes(file)) continue;
       expect(at(file), file).toBeGreaterThan(previous);
       previous = at(file);
@@ -5420,6 +5421,168 @@ describe('src/components/calendar.css', () => {
         '.calendar-day:is([data-disabled], [data-unavailable]) .calendar-day-number, .calendar-preset:is(:disabled, [data-disabled]) {',
       ),
     ).toContain('color: GrayText;');
+  });
+});
+
+describe('src/components/date-range-picker.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/date-range-picker.css')));
+  const outside = () => closeUp(outsideForcedColors(read('src/components/date-range-picker.css')));
+  /** Every selector the file writes, each part of a list on its own. */
+  const selectors = () =>
+    [...rules().matchAll(/([^{}]+)\{/g)]
+      .map((match) => match[1].trim())
+      .filter((selector) => !selector.startsWith('@'))
+      .flatMap((selector) => selector.split(/,(?![^(]*\))/).map((part) => part.trim()));
+  const RING =
+    '.date-range-control.input:where(:has(.date-segment:is(:focus-visible, [data-focus-visible])))';
+
+  it('lays the frame out as a row on .input with one-class rules, padded clear of the button', () => {
+    const frame = blockAfter(rules(), '.date-range-control {');
+    for (const declaration of [
+      'position: relative;',
+      'display: flex;',
+      'align-items: center;',
+      'gap: var(--spacing-part);',
+      'min-width: 0;',
+      'padding-inline: 1.5rem 3rem;',
+      // Clipped across only, so the button's hit area still reaches past the frame's top and bottom.
+      'overflow-x: clip;',
+      'cursor: text;',
+    ]) {
+      expect(frame, declaration).toContain(declaration);
+    }
+    expect(frame).not.toContain('overflow: hidden');
+    // The edge, the fill, the height and the states are input.css's: the frame's own rule sets none of them.
+    for (const property of ['border', 'background', 'color:', 'height']) {
+      expect(frame, property).not.toContain(property);
+    }
+    // Each date keeps its own box and never shrinks; the face ellipsizes on one line.
+    const input = blockAfter(rules(), '.date-range-input {');
+    expect(input).toContain('display: inline-flex;');
+    expect(input).toContain('flex: none;');
+    expect(input).toContain('white-space: nowrap;');
+    const face = blockAfter(rules(), '.date-range-face {');
+    for (const declaration of [
+      'min-width: 0;',
+      // A segment's padding, so the app's text starts where the first segment's will.
+      'padding-inline: 0.125rem;',
+      'overflow: hidden;',
+      'text-overflow: ellipsis;',
+      'white-space: nowrap;',
+      'color: var(--color-ink);',
+    ]) {
+      expect(face, declaration).toContain(declaration);
+    }
+  });
+
+  it('rings the frame only for a focused segment, at two classes with the test in :where()', () => {
+    const ring = blockAfter(rules(), `${RING} {`);
+    for (const declaration of [
+      'border: 1.5px solid var(--color-ink);',
+      'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
+      'outline-offset: var(--focus-ring-offset);',
+    ]) {
+      expect(ring, declaration).toContain(declaration);
+    }
+    // Written plainly, the :has() would weigh three classes, tie the changed edge and replace it by order.
+    expect(selectors().filter((selector) => selector.includes(':has('))).toEqual([RING]);
+  });
+
+  it('never rings the frame through :focus-within or data-focus-visible on the frame', () => {
+    const css = rules();
+    expect(css).not.toContain('focus-within');
+    expect(
+      selectors().filter((selector) => /\.date-range-control[^ ]*\[data-focus-visible\]/.test(selector)),
+    ).toEqual([]);
+    // React Aria's picker writes data-focus-visible on its root while the button holds focus; nothing keys on it.
+    expect(selectors().filter((selector) => /\.date-range-picker[^ ]*\[data-focus/.test(selector))).toEqual(
+      [],
+    );
+  });
+
+  it('draws segments ink in tabular figures, the placeholder taupe, slate only without a label and never while disabled', () => {
+    const css = outside();
+    expect(blockAfter(css, '.date-range-input {')).toContain('font-variant-numeric: tabular-nums;');
+    const segment = blockAfter(css, '.date-segment {');
+    expect(segment).toContain('color: var(--color-ink);');
+    expect(segment).toContain('caret-color: transparent;');
+    expect(blockAfter(css, '.date-segment[data-placeholder] {')).toContain('color: var(--color-taupe);');
+    expect(
+      blockAfter(
+        css,
+        '.date-range-picker[data-unlabelled]:not([data-disabled]) .date-segment[data-placeholder] {',
+      ),
+    ).toContain('color: var(--color-slate);');
+    expect(
+      blockAfter(
+        css,
+        '.date-range-picker[data-disabled] :is(.date-segment, .date-range-arrow, .date-range-face) {',
+      ),
+    ).toContain('color: var(--color-taupe);');
+    // Slate never reaches a placeholder by another rule.
+    const slate = selectors().filter((selector) => selector.includes('data-placeholder'));
+    expect(slate).toEqual([
+      '.date-segment[data-placeholder]',
+      '.date-range-picker[data-unlabelled]:not([data-disabled]) .date-segment[data-placeholder]',
+    ]);
+  });
+
+  it('fills the focused segment ink on the micro radius', () => {
+    const css = outside();
+    expect(blockAfter(css, '.date-segment {')).toContain('border-radius: var(--radius-micro);');
+    expect(blockAfter(css, '.date-segment {')).toContain('outline: none;');
+    const focused = blockAfter(css, '.date-segment:is(:focus, [data-focused]) {');
+    expect(focused).toContain('background-color: var(--color-ink);');
+    expect(focused).toContain('color: var(--color-canvas);');
+    // The literal separators take no padding of their own.
+    expect(blockAfter(css, ".date-segment[data-type='literal'] {")).toContain('padding-inline: 0;');
+  });
+
+  it('mirrors the arrow under [dir=rtl] and nothing else', () => {
+    const css = rules();
+    expect(blockAfter(css, "[dir='rtl'] .date-range-arrow svg {")).toContain('scale: -1 1;');
+    expect(css.match(/\[dir='rtl'\]/g)).toHaveLength(1);
+    expect(blockAfter(css, '.date-range-arrow {')).toContain('color: var(--color-slate);');
+    const glyph = blockAfter(css, '.date-range-arrow svg {');
+    expect(glyph).toContain('width: 16px;');
+    expect(glyph).toContain('height: 16px;');
+    // Logical properties only.
+    expect(css).not.toMatch(
+      /(?:margin|padding|inset|border)-(?:left|right|top|bottom)\b|(?<![\w-])(?:left|right|top|bottom):/,
+    );
+  });
+
+  it('pads the calendar popover 16px with two classes, and sizes it to the month', () => {
+    const popover = blockAfter(rules(), '.date-range-popover.popover-padded {');
+    expect(popover).toContain('padding: var(--spacing-inset);');
+    // Seven controls, the padding and the 1px frame on each side; popover.css caps it at the viewport less 2rem.
+    expect(popover).toContain('width: calc(7 * var(--size-control) + 2 * var(--spacing-inset) + 2px);');
+    expect(blockAfter(closeUp(stripComments(read('src/components/popover.css'))), '.popover {')).toContain(
+      'max-width: calc(100vw - 2rem);',
+    );
+  });
+
+  it('draws the focused segment Highlight and the arrow CanvasText in forced colors', () => {
+    const forced = closeUp(
+      blockAfter(stripComments(read('src/components/date-range-picker.css')), FORCED_COLORS),
+    );
+    expect(blockAfter(forced, '.date-range-arrow {')).toContain('color: CanvasText;');
+    const focused = blockAfter(forced, '.date-segment:is(:focus, [data-focused]) {');
+    expect(focused).toContain('background-color: Highlight;');
+    expect(focused).toContain('color: HighlightText;');
+    expect(
+      blockAfter(
+        forced,
+        '.date-range-picker[data-disabled] :is(.date-segment, .date-range-arrow, .date-range-face) {',
+      ),
+    ).toContain('color: GrayText;');
+  });
+
+  it('moves nothing, so it needs no reduced-motion block', () => {
+    const css = rules();
+    expect(css).not.toContain('transition');
+    expect(css).not.toContain('animation');
   });
 });
 
