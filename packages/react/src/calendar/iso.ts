@@ -8,16 +8,20 @@ export interface DateRange {
 
 /**
  * An ISO date, 'YYYY-MM-DD', as a Gregorian date; null for no date, and 'invalid' for a string that does not
- * parse or names a day that does not exist. `parseDate` throws on both (its pattern and range checks), so a
- * hand-edited URL is caught here and never reaches React Aria.
+ * parse, names a day that does not exist, or is not written the one way the library writes it. `parseDate`
+ * throws on the first two (its pattern and range checks), so a hand-edited URL is caught here and never reaches
+ * React Aria; it also takes '+002026-09-14' and year zero, which write back differently, so a date is kept only
+ * when it writes back as the very string given.
  */
 export function parseIso(value: string | null | undefined): CalendarDate | null | 'invalid' {
   if (value === null || value === undefined) return null;
+  let parsed: CalendarDate;
   try {
-    return parseDate(value);
+    parsed = parseDate(value);
   } catch {
     return 'invalid';
   }
+  return toIso(parsed) === value ? parsed : 'invalid';
 }
 
 /** A range of ISO dates; 'invalid' when either end does not parse or the end is before the start. */

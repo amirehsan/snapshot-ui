@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
+import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { root } from '../../test/dom';
@@ -228,6 +229,72 @@ describe('RangeCalendar', () => {
     rerender(<RangeCalendar aria-label="Statement period" today="2026-09-18" presets={presets} />);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toMatch(/Broken/);
+  });
+
+  it('disables a preset that starts or ends outside the bounds, or spans an unavailable day', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const presets: DateRangePreset[] = [
+      { id: 'inside', label: 'Inside', range: { start: '2026-09-07', end: '2026-09-11' } },
+      { id: 'early', label: 'Early', range: { start: '2026-08-31', end: '2026-09-04' } },
+      { id: 'late', label: 'Late', range: { start: '2026-09-21', end: '2026-10-02' } },
+      { id: 'weekend', label: 'Over a weekend', range: { start: '2026-09-10', end: '2026-09-15' } },
+      { id: 'saturday', label: 'Ends on Saturday', range: { start: '2026-09-14', end: '2026-09-19' } },
+    ];
+    render(
+      <RangeCalendar
+        aria-label="Statement period"
+        today="2026-09-18"
+        minValue="2026-09-01"
+        maxValue="2026-09-30"
+        isDateUnavailable={(date) => ['2026-09-12', '2026-09-13', '2026-09-19'].includes(date)}
+        presets={presets}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Inside' })).toBeEnabled();
+    for (const label of ['Early', 'Late', 'Over a weekend', 'Ends on Saturday']) {
+      const preset = screen.getByRole('button', { name: label });
+      expect(preset, label).toBeDisabled();
+      await user.click(preset);
+    }
+    expect(onChange).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Inside' }));
+    expect(onChange).toHaveBeenLastCalledWith({ start: '2026-09-07', end: '2026-09-11' });
+  });
+
+  it('draws the presets in its face, the app words, out of reach of the pointer, the keys and a reader', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const presets: DateRangePreset[] = [
+      ...PRESETS,
+      { id: 'broken', label: 'Broken', range: { start: '2026-09-18', end: '2026-09-01' } },
+    ];
+    const container = document.createElement('div');
+    container.innerHTML = renderToString(
+      <RangeCalendar aria-label="Statement period" today="2026-09-18" presets={presets} />,
+    );
+    document.body.append(container);
+    try {
+      const face = container.querySelector<HTMLElement>('.calendar.range-calendar[data-face]');
+      if (!face) throw new Error('No face');
+      expect(face).toHaveAttribute('aria-hidden', 'true');
+      expect(face).toHaveAttribute('inert');
+      expect([...face.children].map((child) => child.className)).toEqual([
+        'calendar-header',
+        'calendar-presets',
+        'calendar-grid',
+      ]);
+      const drawn = [...face.querySelectorAll<HTMLElement>('.calendar-presets > .calendar-preset')];
+      expect(drawn.map((each) => each.textContent)).toEqual(['This month', 'Last month', 'Last 7 days']);
+      for (const each of drawn) expect(each).toHaveAttribute('tabindex', '-1');
+      expect(face.querySelectorAll('tbody tr')).toHaveLength(6);
+      await expectNoA11yViolations(container);
+    } finally {
+      container.remove();
+    }
+    // With no presets, no row.
+    const bare = renderToString(<RangeCalendar aria-label="Statement period" today="2026-09-18" />);
+    expect(bare).not.toContain('calendar-presets');
   });
 
   it('disables the presets with the calendar', () => {

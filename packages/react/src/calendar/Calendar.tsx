@@ -8,6 +8,7 @@ import { useHydrated } from '../utils/useHydrated';
 import { useWarnOnce } from '../utils/useWarnOnce';
 import {
   CalendarDays,
+  CalendarFace,
   CalendarHeader,
   DEFAULT_CALENDAR_LABELS,
   invalidDate,
@@ -32,10 +33,10 @@ export type CalendarProps = CalendarShared &
 
 /**
  * One month of days that chooses a day. ISO strings in and out whatever calendar the locale shows, the app's
- * `today` for the mark and the opening month, and the device's today after hydration without it. On the server
- * and through hydration it draws an empty frame of its final size, and React Aria's calendar mounts on the next
- * render: its month, weekdays, days and today all come from `Intl` and the device's zone. Built on React Aria's
- * Calendar.
+ * `today` for the mark and the opening month, and the device's today after hydration without it. It always
+ * holds six weeks. On the server and through hydration it draws its face, its own parts with no date in them,
+ * whose box is the calendar's, and React Aria's calendar mounts on the next render: its month, weekdays, days
+ * and today all come from `Intl` and the device's zone. Built on React Aria's Calendar.
  */
 export function Calendar({
   value,
@@ -60,7 +61,7 @@ export function Calendar({
   else if (parsedDefault === 'invalid') invalid = `defaultValue "${String(defaultValue)}"`;
   useWarnOnce(invalid === null ? null : invalidDate('Calendar', invalid));
 
-  if (!hydrated) return <div ref={ref} className={cx('calendar', className)} data-face="" />;
+  if (!hydrated) return <CalendarFace ref={ref} className={cx('calendar', className)} />;
 
   const chosen = parsedValue === 'invalid' ? null : parsedValue;
   const initial = parsedDefault === 'invalid' ? null : parsedDefault;

@@ -7,6 +7,7 @@ import { cx } from '../utils/cx';
 import { useHydrated } from '../utils/useHydrated';
 import { useWarnOnce } from '../utils/useWarnOnce';
 import {
+  CalendarFace,
   DEFAULT_CALENDAR_LABELS,
   RangeCalendarFrame,
   invalidDate,
@@ -37,8 +38,8 @@ const NO_PRESETS: readonly DateRangePreset[] = [];
 /**
  * One month of days that chooses a range in two presses, with a row of the app's presets. A half-chosen range is
  * dropped when focus or a press leaves the calendar, so no range the person did not finish is written. ISO
- * strings in and out, the app's `today`, and an empty frame of its final size until the page hydrates, as
- * Calendar. Built on React Aria's RangeCalendar.
+ * strings in and out, the app's `today`, six weeks always, and a face of its final size, its presets' words
+ * included, until the page hydrates, as Calendar. Built on React Aria's RangeCalendar.
  */
 export function RangeCalendar({
   value,
@@ -67,7 +68,7 @@ export function RangeCalendar({
   useWarnOnce(invalid === null ? null : invalidDate('RangeCalendar', invalid));
 
   const classes = cx('calendar', 'range-calendar', className);
-  if (!hydrated) return <div ref={ref} className={classes} data-face="" />;
+  if (!hydrated) return <CalendarFace ref={ref} className={classes} presets={presets} />;
 
   const chosen = parsedValue === 'invalid' ? null : parsedValue;
   const initial = parsedDefault === 'invalid' ? null : parsedDefault;
@@ -93,7 +94,7 @@ export function RangeCalendar({
       // drops a half-chosen range (useRangeCalendar.mjs:41-58, plan, spec correction 16).
       commitBehavior="reset"
     >
-      <RangeCalendarFrame presets={presets} labels={names} today={dates.today} />
+      <RangeCalendarFrame presets={presets} labels={names} today={dates.today} bounds={dates} />
     </RACRangeCalendar>
   );
 }

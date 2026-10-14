@@ -6634,7 +6634,7 @@ popover or a sheet, which therefore never shows a face.
 | --- | --- | --- |
 | NumberField | The input's text; `inputMode` from an iPhone or Android check; a localized `aria-roledescription` | The value by integer arithmetic in ASCII digits with no grouping ("-1234.50") as the input's `value`; `inputMode` from props in both passes; the role description removed in both |
 | DateRangePicker | Each segment's text, order and name | No segments: the frame, the calendar button and the app's `valueLabel` |
-| Calendar, RangeCalendar | The heading, the weekdays, the days, every cell's name, which month shows and which day is today | The frame at its final size, empty; the calendar mounts after hydration |
+| Calendar, RangeCalendar | The heading, the weekdays, the days, every cell's name, which month shows and which day is today | Its parts at their final size, six weeks and a range's presets, with no date; the calendar mounts after hydration |
 | FilterChip, multiple | `SelectValue`'s text, joined by `Intl.ListFormat` | Never drawn: the chip writes `labels.summary` |
 
 **The tests.** `test/server-face.test.tsx` renders each part's rows
@@ -6862,8 +6862,21 @@ density, shrinking with the room under it. React Aria's grid is a
 columns, and each day keeps `aspect-ratio: 1` (plan, spec correction
 15). A day is 40px, and 36px compact, wherever there is room; at 320px
 it is 36.29px in a popover (254px of room) and 38.86px in the sheet
-(272px): the one place the 40px target gives way, above WCAG's 24px
-minimum and never under 36px (R4).
+(272px): 36px or more there, where the 40px target gives way (R4).
+Inline, the days shrink with their container but never below WCAG's
+24px minimum: `min-width: calc(7 * 1.5rem)`, 168px, holds seven of
+them, and a narrower container is overflowed rather than a day shrunk.
+
+**Six weeks.** React Aria draws only the weeks the month has, four,
+five or six (`CalendarGridBody`), so the calendar reserves the missing
+rows: `.calendar-grid:not(:has(> tbody > tr:nth-child(6)))` takes
+`margin-block-end: calc(100% / 7)` and the five-row selector twice
+that. A margin's percentage reads the containing block's width, the
+calendar's, which is the grid's, so a seventh of it is one square day,
+with no container query. The root is `display: flow-root`, so the
+margin stays inside its box. The calendar's height never changes with
+the month, and a story walks January to August 2026, four, five and
+six weeks, at one height.
 
 **The header.** The month in `--text-action` at weight 500, ink,
 centred between two ghost `IconButton`s, React Aria's previous and next
@@ -6938,7 +6951,13 @@ shares. A press sets the range through React Aria's state, drops a
 half-chosen one, and moves the view to its start; inside a picker the
 same state reaches the picker's range and closes its popover (spec
 correction 17). A preset whose range does not parse is left out, with
-one warning. The library computes no range.
+one warning. A preset whose range starts before `minValue`, ends after
+`maxValue` or holds a day `isDateUnavailable` refuses is disabled: the
+press would set a range React Aria's own choice never makes. The check
+reads the props' bounds, not React Aria's state, which narrows them
+around a half-chosen range's anchor that a preset replaces. A preset
+shows pressed when the value's ends, written back with `toIso`, equal
+its range's. The library computes no range.
 
 **A range.** The first choice anchors, the second completes, and a
 range of one day is allowed. From the keyboard, the first Enter or Space
@@ -6952,8 +6971,10 @@ on to whatever holds the calendar (spec correction 32).
 
 **Values.** ISO strings in and out: `'2026-09-14'` and `{ start, end }`
 (ruling 2). The wrapper reads each with `@internationalized/date`'s
-`parseDate`, whose pattern and range checks throw; a string that does
-not parse, or a range whose end is before its start, reads as no value
+`parseDate`, whose pattern and range checks throw, and keeps the date
+only when it writes back as the very string given, since `parseDate`
+also takes `'+002026-09-14'` and year zero; a string that does not
+parse, or a range whose end is before its start, reads as no value
 with one warning, so a hand-edited URL never throws. `onChange`
 receives `toCalendarDate(date).toString()`, the Gregorian ISO date
 whatever calendar the date is in, and `isDateUnavailable` receives the
@@ -6971,13 +6992,22 @@ full `createCalendar` whatever is passed, so on a page with a date range
 picker every system ships anyway (spec correction 18).
 
 **The face.** On the server and through hydration the root is
-`div.calendar[data-face]` (with `.range-calendar` for a range), empty, at
-the calendar's final size: the width rule and `aspect-ratio: 7 / 8`, six
-weeks, a weekday row and the header, so nothing moves when the grid
-arrives. React Aria's calendar mounts in the next render; the root
-changes element, the one remount the server face allows, and an inline
-calendar holds no focus then. A calendar in a popover or a sheet is
-first rendered in the browser and never shows the face.
+`div.calendar[data-face]` (with `.range-calendar` for a range), built
+from the calendar's own parts and classes: the header with two
+`.icon-button` boxes and the heading, a range calendar's presets as
+`button.calendar-preset`s with the app's words (no `Intl` in them), a
+`table.calendar-grid` with a weekday row and six weeks of
+`.calendar-day`s, and no date, weekday or month. A no-break space holds
+a line where the calendar writes a name. It is `aria-hidden` and
+`inert`, its buttons are `tabindex="-1"`, and `pointer-events: none`
+keeps the pointer off it. Its box is the hydrated calendar's, since the
+calendar always holds six weeks: stories compare the two for a month of
+five weeks, of four (February 2026, from a Sunday) and of six, and a
+range calendar with presets, at both densities, so nothing moves when
+the grid arrives. React Aria's calendar mounts in the next render; the
+root changes element, the one remount the server face allows, and an
+inline calendar holds no focus then. A calendar in a popover or a sheet
+is first rendered in the browser and never shows the face.
 
 **Measured pairs.** Gated: slate on float, the weekdays in a popover,
 5.49 in light and 6.94 in dark, and on canvas 4.84 and 7.26; the
@@ -6990,9 +7020,10 @@ gate.
 
 **Forced colors.** A chosen day, a range's ends and a pressed preset are
 `Highlight` with `HighlightText`; the days between take a 1px
-`Highlight` edge on their top and bottom; today's ring and the weekdays
-are `CanvasText`; unavailable and disabled days and a disabled preset
-are `GrayText`.
+`Highlight` edge on their top and bottom, inside the day, which is
+`box-sizing: border-box` so the edge never grows it; today's ring and
+the weekdays are `CanvasText`; unavailable and disabled days and a
+disabled preset are `GrayText`.
 
 **Screen readers.** The month change and a chosen range announced, and
 a preset read as a pressed toggle, with VoiceOver on macOS and NVDA: not

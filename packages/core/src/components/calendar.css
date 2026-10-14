@@ -1,24 +1,31 @@
 /*
  * Calendar and RangeCalendar: one month of days, derived in docs/design-system.md ("Calendar"). The calendar is
  * seven controls wide where there is room and shrinks with the room under it: React Aria's grid is a table, laid
- * out fixed, and each day is square, so a day is 40px (36px compact) and no less than 36px on a 320px screen.
+ * out fixed, and each day is square, so a day is 40px (36px compact), 36px or more in a popover or the sheet at
+ * 320px, and never under 24px. It always holds six weeks: React Aria draws only the month's four, five or six,
+ * and the rows it leaves out are reserved below the grid, so changing months moves nothing.
  * Days keep the shape's pill. Today is a ring and a weight, keyed on the library's mark on the day's number and
  * never on React Aria's, which reads the device's zone. A chosen day and a range's two ends are the ink fill;
  * the days between sit on a 10% ink band that runs under the ends' inner halves, so the range reads as one
  * shape, and the band is a cue: the fill and aria-selected carry the state. Unavailable days are taupe and struck
  * through; days outside the month keep their place and show nothing. The month chevrons mirror under
- * [dir='rtl']. The face is the calendar's final size with nothing in it.
+ * [dir='rtl']. The face is the same parts, six weeks of them, with no date in them, so its box is the calendar's.
  */
 @layer components {
+  /* A flow root, so the grid's reserved rows stay inside the calendar's box and never collapse out of it. */
   .calendar {
     box-sizing: border-box;
+    display: flow-root;
     width: min(100%, calc(7 * var(--size-control)));
+    /* Seven days of 24px, the target minimum, however narrow the room. */
+    min-width: calc(7 * 1.5rem);
     color: var(--color-ink);
   }
 
-  /* Six weeks, a weekday row and the header. */
+  /* The face draws the calendar's parts with nothing in them, and nothing in it answers the pointer. */
   .calendar[data-face] {
-    aspect-ratio: 7 / 8;
+    pointer-events: none;
+    user-select: none;
   }
 
   .calendar-header {
@@ -123,6 +130,19 @@
     padding: 0;
   }
 
+  /*
+   * Six weeks always. React Aria draws only the weeks the month has, so a month of five or four reserves the
+   * rest below the grid: a margin's percentage reads the calendar's width, which is the grid's, so a seventh of
+   * it is one square day.
+   */
+  .calendar-grid:not(:has(> tbody > tr:nth-child(6))) {
+    margin-block-end: calc(100% / 7);
+  }
+
+  .calendar-grid:not(:has(> tbody > tr:nth-child(5))) {
+    margin-block-end: calc(2 * 100% / 7);
+  }
+
   .calendar-weekday {
     padding-block-end: 0.25rem;
     color: var(--color-slate);
@@ -132,8 +152,10 @@
     text-align: center;
   }
 
+  /* Sized by its border box, so the band's edge in forced colors never grows a day. */
   .calendar-day {
     position: relative;
+    box-sizing: border-box;
     display: grid;
     aspect-ratio: 1;
     cursor: pointer;
