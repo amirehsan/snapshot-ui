@@ -6605,3 +6605,211 @@ spec's 1.5 kB budget: the entry measured 1.55 kB, the shell with its
 three client leaves, the page items and the focus handoff, and the rule
 rounds up to 2 kB and adds 0.5 kB. With the cleaned inputs, the warning
 for no pages and the blur rule it measures 1.63 kB, inside the limit.
+
+## The server face
+
+The rule every date and number part shares (filters spec, ruling 1).
+Each renders React Aria's component on the server and in the browser,
+so the label, the hint, the error line, the hidden form inputs and every
+id are in the server's HTML. What React Aria derives from `Intl`, the
+clock or the platform never is: on the server and through the hydration
+pass each part draws its face, the same element tree with that text left
+out or replaced by a string written without `Intl`, and from the first
+render after hydration React Aria's own text. React Aria may build a
+formatter inside a render, as the pickers' risk R1 accepted its
+collator, as long as nothing it formats reaches the server's HTML or the
+hydration pass. The face is never a second component, so nothing
+remounts on hydration.
+
+**When.** `useHydrated()` in `utils/useHydrated.ts`, moved from the
+collapsible card, is `useSyncExternalStore` with a client snapshot of
+true and a server snapshot of false: false on the server and through the
+hydration pass, true from the render after, and true from the first
+render of a part first rendered in the browser, such as one inside a
+popover or a sheet, which therefore never shows a face.
+
+**Per part.**
+
+| Part | What React Aria writes from `Intl`, the clock or the platform | The face |
+| --- | --- | --- |
+| NumberField | The input's text; `inputMode` from an iPhone or Android check; a localized `aria-roledescription` | The value by integer arithmetic in ASCII digits with no grouping ("-1234.50") as the input's `value`; `inputMode` from props in both passes; the role description removed in both |
+| DateRangePicker | Each segment's text, order and name | No segments: the frame, the calendar button and the app's `valueLabel` |
+| Calendar, RangeCalendar | The heading, the weekdays, the days, every cell's name, which month shows and which day is today | The frame at its final size, empty; the calendar mounts after hydration |
+| FilterChip, multiple | `SelectValue`'s text, joined by `Intl.ListFormat` | Never drawn: the chip writes `labels.summary` |
+
+**The tests.** `test/server-face.test.tsx` renders each part's rows
+under `en-US`, `de-DE` and `fa-IR` and asserts one HTML, then snapshots
+it. It runs in two Vitest projects of its own, `face-utc` and
+`face-tehran`, which set `TZ` and name the zone through `provide`; each
+project's first test asserts `Intl`'s resolved zone is the one named, so
+the run proves it moved, and both write the same test names to one
+snapshot file, so a zone that changes a byte fails against the other.
+The `unit` project leaves the file out. The mocked iPhone belongs to
+`test/hydration.test.tsx`, not the server test: on the server there is
+no `window`, and every platform check in React Aria returns false before
+it reads anything. The hydration test writes the HTML with jsdom's own
+navigator, mocks `navigator.platform` as an iPhone, and hydrates. React
+19 recovers from a text mismatch through `onRecoverableError`, but an
+attribute that differs is only logged with `console.error` and never
+patched, so the test fails on either. A control in the NumberField spike
+proves the test can fail: without the fixed `inputMode`, an iPhone's
+hydration pass logs the mismatch.
+
+**The face stories.** Storybook renders in the browser with no
+hydration, where a part never shows its face, so each part's `Face`
+story renders `renderToString` of the part into a `div`: the page as a
+browser paints it before the scripts run.
+
+**R1 and R2.** React Aria runs `Intl`, the clock and a platform check
+inside its render; none of it reaches the HTML under the face, and the
+two tests, run on every change to React Aria's version, catch a release
+that starts writing one into an attribute. The face changes on
+hydration: a Persian page sees Latin digits in an amount until the first
+render after, which changes the digits and the grouping in place, with
+nothing moving.
+
+## NumberField
+
+A number, or with `money` an amount of money: `NumberField`, the text
+input's pill holding a figure, the app's symbol beside it, a sign toggle
+for negatives, and steppers for a plain number. The document draws no
+number field of its own, so this one is derived from the input and the
+field button.
+
+**The figure.** The input is `direction: ltr`, `unicode-bidi: isolate`,
+with tabular figures, the numeral rule, so a sign stays in front of its
+digits on every page. In left to right it sits at the start; under
+`[dir='rtl']` it takes `text-align: end`, the right of a left-to-right
+box and the start of a right-to-left line. Because the input is left to
+right everywhere, its logical paddings resolve left to right too, so
+`number-field.css` writes them from two custom properties, the lead and
+the trail, and swaps them under `[dir='rtl']` (plan, spec correction 9).
+The lead is 1.5rem, the input's own, or `--size-field` with the sign
+button; the trail is 1.5rem, or `2 * --size-field - 0.75rem` with the
+steppers.
+
+**The symbol.** `span.number-field-symbol`, `--text-body` in slate,
+inside the pill and out of the input, at the lead from the start or at
+the trail from the end, as the app names it in the field's direction
+(ruling 6), taking no pointer events, so a press lands in the input. The
+input pads clear of it by `--number-field-symbol`, which the wrapper
+writes inline as the symbol's length in `ch` plus 0.5rem: a property of
+the string, not a measurement. Its id joins the input's
+`aria-describedby` after React Aria's, so "Amount, 1,234.50, $" is
+heard. Taupe on a disabled field. A word in the Persian face of the font
+is not exactly its length in zero widths; the right-to-left story shows
+the room, and a per-script factor in CSS is the fix if review finds it
+tight.
+
+**The sign button.** The shared field button, `.input-button`, moved to
+the start (`inset-inline: 0.375rem auto`), with a 16px slate `Minus`.
+It is React Aria's `ToggleButton`, since a plain button inside a
+NumberField must name one of its slots (spec correction 7), pressed
+while the value is under zero: `aria-pressed` and `data-selected` are
+the state and its twin the CSS keys on. Pressed, it is the ink fill with
+a canvas glyph, after `input.css`'s hover and press rules and as heavy,
+so the fill holds under the pointer, and its focus ring is the canvas
+ring inside it, the rule for an ink fill. A press negates the value, or
+on an empty field puts a minus in the input and focus there.
+
+**The steppers.** For a plain number only, with `hasStepper`: React
+Aria's slotted buttons as two field buttons, 36px (24px compact), the
+increment 6px in from the end and the decrement 2px before it. They are
+named `labels.increment` and `labels.decrement` as `aria-label`, which
+keeps React Aria's `aria-labelledby` of the button and the field's label
+after it, so "Increase Guests" survives on a Persian page with its own
+word; React Aria's `incrementAriaLabel` would drop the label (spec
+correction 10). With an `aria-label` and no visible label the name is the
+word and that label. Out of the tab order, disabled at a bound.
+
+**The keyboard.** `inputMode` is `decimal` in money mode, and for a
+plain number `decimal` when its options allow a fraction digit, read
+from the props with ECMA-402's defaults (3 for a decimal or a unit, 0
+for a percent) and never from `Intl`, else `numeric`. It is set through
+the input context in both passes, so React Aria's platform choice, a
+text keyboard on an iPhone when negatives are allowed, never reaches the
+DOM (ruling 5).
+
+**Money.** The value is an integer count of minor units (ruling 4).
+React Aria holds `minor / 10 ** d`, with `d` from `fractionDigits`, 2
+unless given; its format options are one constant object per `d`,
+`{ style: 'decimal', minimumFractionDigits: d, maximumFractionDigits: d }`,
+so React Aria never sees new options; `step` is unset, so a typed 12.50
+is never snapped; and `onChange` receives `Math.round(n * 10 ** d)`, or
+null for React Aria's `NaN`. React Aria rounds the committed text to `d`
+places before it calls `onChange`, so the product is an integer up to
+float error and the rounding makes it exact. The bounds are minor units
+too. A value that is not a safe integer is rounded, with a warning once
+per mount.
+
+**Negatives.** Off unless `allowsNegative`: the lower bound is then 0,
+or the app's `minValue` when it is above 0, and a `minValue` under 0
+without it warns once and is held at 0. A negative amount is ink: never
+error, since nothing failed, and never gain; the sign carries it.
+
+**The hidden input.** React Aria's hidden input holds its number, which
+in money mode is whole units, so the wrapper passes React Aria no `name`
+and no `form` there and renders its own `input type="hidden"` with the
+minor units, or an empty value, from React Aria's state, so it follows a
+native form reset (spec correction 4). A plain number keeps React
+Aria's.
+
+**The role description.** React Aria writes a localized
+`aria-roledescription` on the input, "Number field" or "Nummernfeld",
+which would break the face, and a prop of `undefined` cannot remove it,
+since React Aria merges the context first and the props after. The
+wrapper re-provides the input context with a copy of React Aria's props
+less that key, and sets `inputMode` and, before hydration, `value` the
+same way (spec correction 5). The input is a `textbox`, named by its
+label.
+
+**Keys and the snap.** React Aria's: the arrows step by `step`, and a
+money amount by one whole unit; Page Up and Page Down step as the arrows
+do, since no page step is given. An arrow first snaps the value to the
+step and then moves, so 12.50 then Arrow Up is 13.00, and from an empty
+field it starts at the lower bound, 0 without negatives (spec correction
+6). Enter commits and formats. The wheel is off in money mode.
+
+**Home and End.** React Aria's spin button takes them for the minimum
+and the maximum, so on a money field with a lower bound of 0 Home would
+set the amount to zero. The group's `onKeyDownCapture` stops their
+propagation when the input is the target, before React Aria's handler,
+and the browser's default moves the caret (R3). The spike's play, on a
+bare React Aria NumberField and then on the wrapper, passes in Chromium,
+and without the guard fails there; WebKit and Firefox run it in CI as
+the `storybook-webkit` and `storybook-firefox` projects: not yet
+verified on a machine with those engines.
+
+**The paste.** React Aria commits a paste that replaces the whole text
+as it is, and refuses one carrying the symbol. The group's
+`onPasteCapture`, in money mode, when the clipboard text contains the
+symbol and the selection covers the whole input, prevents the default,
+stops the event and commits the text without the symbol, so a copied
+"$1,234.50" lands as 123450 (spec correction 8). A partial paste is
+React Aria's.
+
+**The unlabelled placeholder.** Taupe under a visible label; slate under
+`data-unlabelled`, and taupe again while disabled, the rule the search
+field set.
+
+**Measured pairs.** Gated: slate on raised, the symbol, the resting sign
+and stepper glyphs and the unlabelled placeholder, 5.49 in light and
+6.44 in dark; canvas on ink, the pressed sign and its inverted ring,
+16.25 and 19.31. Measured and recorded, not gated: ink on the 5% wash
+over raised, a hovered button's glyph, 16.65 and 13.24. No pair is added
+to the gate.
+
+**Forced colors.** The input keeps `input.css`'s rules; the symbol is
+`CanvasText`, and `GrayText` while disabled; the pressed sign button is
+`Highlight` with `HighlightText`.
+
+**Devices.** The decimal keyboard, the sign button on an empty field,
+and VoiceOver and TalkBack reading the field as a text field named by
+its label and described by its symbol, on a real iPhone and an Android
+phone: not yet verified.
+
+**The size.** The size limit is 3 kB, above the spec's 2.5 kB budget:
+the entry measured 2.45 kB, the field parts the TextField entry also
+pulls in, the money arithmetic and its face, the input context, the two
+guards, the sign toggle, the hidden input and the two warnings, and the
+rule rounds up to 2.5 kB and adds 0.5 kB.

@@ -2,6 +2,13 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
+declare module 'vitest' {
+  interface ProvidedContext {
+    /** The time zone the server-face project sets, so its first test can prove Intl moved to it. */
+    zone: string;
+  }
+}
+
 // React Aria's Sheet needs these and jsdom has none of them: an open SheetOverlay observes its content with an
 // IntersectionObserver as it mounts, one with preventDismissal and snapPoints measures with a ResizeObserver,
 // and its enter and exit scroll with scrollTo and read the reduced motion setting with matchMedia. They do

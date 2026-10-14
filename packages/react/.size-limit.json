@@ -301,6 +301,13 @@
     "limit": "2.5 kB"
   },
   {
+    "name": "import { NumberField } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ NumberField }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "3 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

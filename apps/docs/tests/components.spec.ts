@@ -176,6 +176,20 @@ test.describe('forced colors', () => {
     await expectVisibleRing(group.locator('.segmented-option[data-selected]'));
   });
 
+  test('a pressed sign button is Highlight and the symbol CanvasText', async ({ page }) => {
+    await visit(page, '/docs/components/number-field');
+    const system = await systemColors(page);
+    const field = page
+      .locator('.stage .number-field[data-signed]')
+      .filter({ has: page.locator('[aria-pressed="true"]') })
+      .first();
+    const pressed = await paint(field.locator('.number-field-sign'));
+    expect(pressed.fill).toBe(system.highlight);
+    expect(pressed.text).toBe(system.highlightText);
+    const symbol = await paint(field.locator('.number-field-symbol'));
+    expect(symbol.text).toBe(system.canvasText);
+  });
+
   test('a checked box shows its mark and a selected radio shows its check', async ({ page }) => {
     await visit(page, '/docs/components/checkbox');
     const remember = page.locator('label.checkbox').filter({ hasText: 'Remember me on this device' });
@@ -588,6 +602,7 @@ const LONG_TARGETS: Record<string, string[]> = {
   link: ['.stage .link'],
   meter: ['.stage .meter-label', '.stage .meter-value', '.stage .meter-legend-label'],
   'multi-select': ['.stage .field-label', '.stage .field-description', '.stage .multi-select-tag-text'],
+  'number-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // The range is the app's sentence; the page numbers and the step words are the library's and never long.
   pagination: ['.stage .pagination-range'],
   'radio-group': [
@@ -749,6 +764,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   menu: ['.stage .button, .stage .icon-button'],
   meter: ['.stage .meter [role="meter"]', '.stage .meter-segment'],
   'multi-select': ['.stage .multi-select-control', '.stage .multi-select-tag'],
+  // The figure is the server face's plain text, and the symbol is drawn beside it.
+  'number-field': ['.stage .number-field-input', '.stage .number-field-symbol'],
   // The row and the current page are in the server's HTML; the shell is a server component.
   pagination: ['.stage .pagination', '.stage .pagination-page[aria-current]'],
   popover: ['.stage .button'],

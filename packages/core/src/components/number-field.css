@@ -1,0 +1,122 @@
+/*
+ * NumberField: the text input's pill holding a figure, derived in docs/design-system.md ("NumberField"). The input
+ * takes every edge input.css draws through the field's root. Its text is a figure, left to right and isolated with
+ * tabular digits, so its sign stays at the left of its digits on every page; on a right-to-left page it sits at
+ * the line's start, the right. Because the input is left to right everywhere, its logical paddings resolve left to
+ * right too, so this file writes them from two custom properties and swaps them under [dir='rtl'] (plan, spec
+ * correction 9). The symbol is slate, never typed, at the side the app names, and the input pads clear of it by
+ * its own length in ch. The sign button is the shared field button at the start; pressed, it is the ink fill with
+ * a canvas glyph. A negative amount is ink. Without a visible label the placeholder is slate, never while
+ * disabled.
+ */
+@layer components {
+  .number-field {
+    --number-field-lead: 1.5rem;
+    --number-field-trail: 1.5rem;
+    --number-field-symbol-start: 0px;
+    --number-field-symbol-end: 0px;
+  }
+
+  .number-field[data-signed] {
+    --number-field-lead: var(--size-field);
+  }
+
+  /* Two buttons a field step smaller than the field, 2px apart, 6px in from the end, and 4px to the text. */
+  .number-field[data-stepper] {
+    --number-field-trail: calc(2 * var(--size-field) - 0.75rem);
+  }
+
+  .number-field[data-symbol='start'] {
+    --number-field-symbol-start: var(--number-field-symbol);
+  }
+
+  .number-field[data-symbol='end'] {
+    --number-field-symbol-end: var(--number-field-symbol);
+  }
+
+  .number-field-control {
+    position: relative;
+  }
+
+  /* One class, after input.css, so it beats the input's padding and none of its states. */
+  .number-field-input {
+    direction: ltr;
+    unicode-bidi: isolate;
+    padding-inline: calc(var(--number-field-lead) + var(--number-field-symbol-start))
+      calc(var(--number-field-trail) + var(--number-field-symbol-end));
+    font-variant-numeric: tabular-nums;
+    text-align: start;
+  }
+
+  [dir='rtl'] .number-field-input {
+    padding-inline: calc(var(--number-field-trail) + var(--number-field-symbol-end))
+      calc(var(--number-field-lead) + var(--number-field-symbol-start));
+    text-align: end;
+  }
+
+  .number-field[data-unlabelled]:not([data-disabled]) .number-field-input::placeholder {
+    color: var(--color-slate);
+  }
+
+  .number-field-symbol {
+    position: absolute;
+    inset-block: 0;
+    display: flex;
+    align-items: center;
+    color: var(--color-slate);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .number-field[data-symbol='start'] .number-field-symbol {
+    inset-inline-start: var(--number-field-lead);
+  }
+
+  .number-field[data-symbol='end'] .number-field-symbol {
+    inset-inline-end: var(--number-field-trail);
+  }
+
+  .number-field[data-disabled] .number-field-symbol {
+    color: var(--color-taupe);
+  }
+
+  /* The shared field button, moved to the field's start. */
+  .number-field-sign {
+    inset-inline: 0.375rem auto;
+  }
+
+  /* After input.css's hover and press rules and as heavy, so the pressed fill holds under the pointer. */
+  .number-field-sign.input-button:is([data-selected], [aria-pressed='true']) {
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .number-field-sign.input-button:is([data-selected], [aria-pressed='true']):is(
+      :focus-visible,
+      [data-focus-visible]
+    ) {
+    outline-color: var(--color-canvas);
+    outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));
+  }
+
+  .number-field-step[slot='decrement'] {
+    inset-inline-end: calc(var(--size-field) - 0.25rem);
+  }
+
+  @media (forced-colors: active) {
+    .number-field-symbol {
+      color: CanvasText;
+    }
+
+    .number-field[data-disabled] .number-field-symbol {
+      color: GrayText;
+    }
+
+    .number-field-sign.input-button:is([data-selected], [aria-pressed='true']) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+  }
+}

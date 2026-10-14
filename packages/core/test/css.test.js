@@ -179,6 +179,20 @@ describe('src/styles.css', () => {
       previous = at(file);
     }
   });
+
+  it('imports the filter files after the picker files, in order', () => {
+    // number-field.css is required; the calendar, the range picker, the chip and the bar are checked once they
+    // exist. Each comes after input.css, so a one-class override of the input wins by order.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('pagination.css')).toBeGreaterThanOrEqual(0);
+    expect(at('number-field.css')).toBeGreaterThan(at('pagination.css'));
+    let previous = at('number-field.css');
+    for (const file of ['calendar.css', 'date-range-picker.css', 'filter-chip.css', 'filter-bar.css']) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -2712,7 +2726,7 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is the last overlay file imported, right after command-palette.css, with only the shell, home and picker files after it', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker and filter files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     const tooltip = imported.indexOf('tooltip.css');
@@ -2732,6 +2746,11 @@ describe('src/components/tooltip.css', () => {
         'multi-select.css',
         'tabs.css',
         'pagination.css',
+        'number-field.css',
+        'calendar.css',
+        'date-range-picker.css',
+        'filter-chip.css',
+        'filter-bar.css',
       ]).toContain(file);
     }
   });
@@ -5024,6 +5043,122 @@ describe('src/components/pagination.css', () => {
 
   it('writes no transition, since nothing in a pagination row moves', () => {
     expect(rules()).not.toMatch(/transition|animation/);
+  });
+});
+
+describe('src/components/number-field.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/number-field.css')));
+  const PRESSED = ".number-field-sign.input-button:is([data-selected], [aria-pressed='true'])";
+  const LEAD = 'calc(var(--number-field-lead) + var(--number-field-symbol-start))';
+  const TRAIL = 'calc(var(--number-field-trail) + var(--number-field-symbol-end))';
+
+  it('draws the input as a figure: left to right, isolated, tabular', () => {
+    const input = blockAfter(rules(), '.number-field-input {');
+    expect(input).toContain('direction: ltr;');
+    expect(input).toContain('unicode-bidi: isolate;');
+    expect(input).toContain('font-variant-numeric: tabular-nums;');
+    expect(input).toContain('text-align: start;');
+  });
+
+  it('pads the input from the lead, the trail and the symbol, and swaps the paddings under [dir=rtl]', () => {
+    // The input is left to right on every page, so its logical start is its left even in a right-to-left line.
+    const css = rules();
+    expect(blockAfter(css, '.number-field-input {')).toContain(`padding-inline: ${LEAD} ${TRAIL};`);
+    const mirrored = blockAfter(css, "[dir='rtl'] .number-field-input {");
+    expect(mirrored).toContain(`padding-inline: ${TRAIL} ${LEAD};`);
+    expect(mirrored).toContain('text-align: end;');
+    const root = blockAfter(css, '.number-field {');
+    expect(root).toContain('--number-field-lead: 1.5rem;');
+    expect(root).toContain('--number-field-trail: 1.5rem;');
+    expect(root).toContain('--number-field-symbol-start: 0px;');
+    expect(root).toContain('--number-field-symbol-end: 0px;');
+  });
+
+  it('sets the symbol room only from data-symbol, and the lead from data-signed, the trail from data-stepper', () => {
+    const css = rules();
+    expect(blockAfter(css, ".number-field[data-symbol='start'] {").trim()).toBe(
+      '--number-field-symbol-start: var(--number-field-symbol);',
+    );
+    expect(blockAfter(css, ".number-field[data-symbol='end'] {").trim()).toBe(
+      '--number-field-symbol-end: var(--number-field-symbol);',
+    );
+    expect(blockAfter(css, '.number-field[data-signed] {').trim()).toBe(
+      '--number-field-lead: var(--size-field);',
+    );
+    expect(blockAfter(css, '.number-field[data-stepper] {').trim()).toBe(
+      '--number-field-trail: calc(2 * var(--size-field) - 0.75rem);',
+    );
+    // The room is a property of the string the wrapper writes inline, never set anywhere else here.
+    expect(css.match(/--number-field-symbol:/g)).toBeNull();
+    expect(css.match(/var\(--number-field-symbol\)/g)).toHaveLength(2);
+  });
+
+  it('draws the symbol slate and never interactive, taupe while disabled', () => {
+    const css = rules();
+    const symbol = blockAfter(css, '.number-field-symbol {');
+    expect(symbol).toContain('color: var(--color-slate);');
+    expect(symbol).toContain('pointer-events: none;');
+    expect(symbol).toContain('position: absolute;');
+    expect(symbol).toContain('font-size: var(--text-body);');
+    expect(blockAfter(css, ".number-field[data-symbol='start'] .number-field-symbol {")).toContain(
+      'inset-inline-start: var(--number-field-lead);',
+    );
+    expect(blockAfter(css, ".number-field[data-symbol='end'] .number-field-symbol {")).toContain(
+      'inset-inline-end: var(--number-field-trail);',
+    );
+    expect(blockAfter(css, '.number-field[data-disabled] .number-field-symbol {')).toContain(
+      'color: var(--color-taupe);',
+    );
+    expect(blockAfter(css, '.number-field-control {')).toContain('position: relative;');
+  });
+
+  it('moves the sign button to the start and fills it ink with a canvas glyph while pressed, keyed on data-selected and aria-pressed', () => {
+    const css = outsideForcedColors(read('src/components/number-field.css'));
+    const closed = closeUp(css);
+    expect(blockAfter(closed, '.number-field-sign {')).toContain('inset-inline: 0.375rem auto;');
+    const pressed = blockAfter(closed, `${PRESSED} {`);
+    expect(pressed).toContain('background-color: var(--color-ink);');
+    expect(pressed).toContain('color: var(--color-canvas);');
+    expect(blockAfter(closed, ".number-field-step[slot='decrement'] {")).toContain(
+      'inset-inline-end: calc(var(--size-field) - 0.25rem);',
+    );
+  });
+
+  it('rings a pressed sign button with the canvas ring inside it', () => {
+    const ring = blockAfter(rules(), `${PRESSED}:is(:focus-visible, [data-focus-visible]) {`);
+    expect(ring).toContain('outline-color: var(--color-canvas);');
+    expect(ring).toContain(
+      'outline-offset: calc(-1 * (var(--focus-ring-width) + var(--focus-ring-offset)));',
+    );
+  });
+
+  it('draws the placeholder slate only without a label and never while disabled', () => {
+    const css = rules();
+    expect(
+      blockAfter(
+        css,
+        '.number-field[data-unlabelled]:not([data-disabled]) .number-field-input::placeholder {',
+      ),
+    ).toContain('color: var(--color-slate);');
+    expect(css.match(/::placeholder/g)).toHaveLength(1);
+  });
+
+  it('never colors a negative amount: no error or gain in the file', () => {
+    const css = stripComments(read('src/components/number-field.css'));
+    expect(css).not.toMatch(/--color-(?:error|gain|success|warning|signal|clay)/);
+    expect(css).not.toMatch(/data-negative/);
+  });
+
+  it('draws the symbol CanvasText, GrayText while disabled, and a pressed sign Highlight in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(forced, '.number-field-symbol {')).toContain('color: CanvasText;');
+    expect(blockAfter(forced, '.number-field[data-disabled] .number-field-symbol {')).toContain(
+      'color: GrayText;',
+    );
+    const pressed = blockAfter(forced, `${PRESSED} {`);
+    expect(pressed).toContain('background-color: Highlight;');
+    expect(pressed).toContain('color: HighlightText;');
   });
 });
 

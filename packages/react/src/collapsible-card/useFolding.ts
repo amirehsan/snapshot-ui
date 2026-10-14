@@ -1,17 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useHydrated } from '../utils/useHydrated';
 
 /** The attribute the card's root carries while its fold moves. */
 const FOLDING = 'data-folding';
-
-const subscribeNothing = (): (() => void) => () => undefined;
-
-/** False on the server and while the page hydrates, and true from the render after. */
-const useHydrated = (): boolean =>
-  useSyncExternalStore(
-    subscribeNothing,
-    () => true,
-    () => false,
-  );
 
 /**
  * The last event that revealed something inside a folded card, which the card opens for and the browser then

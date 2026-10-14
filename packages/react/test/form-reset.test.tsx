@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { MultiSelect } from '../src/multi-select';
+import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SearchField } from '../src/search-field';
@@ -388,6 +389,27 @@ describe('a native form reset', () => {
     expect(input).toHaveValue('coffee');
     expect(sent(container, 'q')).toEqual(['coffee']);
     expect(container.querySelector('.search-field')).not.toHaveAttribute('data-empty');
+  });
+
+  it('puts a money NumberField back to its default, in its own hidden input too', async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <NumberField label="Minimum" name="min" money={{ symbol: '$' }} defaultValue={123450} />
+        <ResetButton />
+      </form>,
+    );
+    const input = screen.getByRole('textbox', { name: 'Minimum' });
+    expect(sent(container, 'min')).toEqual(['123450']);
+    await user.clear(input);
+    await user.type(input, '20');
+    await user.tab();
+    expect(input).toHaveValue('20.00');
+    expect(sent(container, 'min')).toEqual(['2000']);
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(input).toHaveValue('1,234.50');
+    expect(sent(container, 'min')).toEqual(['123450']);
   });
 
   it('puts a Select back on its default option, without its chip', async () => {

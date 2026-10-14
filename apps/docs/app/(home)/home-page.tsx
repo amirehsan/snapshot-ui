@@ -811,6 +811,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/menu">Menu</Link>
                 <Link href="/docs/components/meter">Meter</Link>
                 <Link href="/docs/components/multi-select">Multi-select</Link>
+                <Link href="/docs/components/number-field">Number field</Link>
                 <Link href="/docs/components/pagination">Pagination</Link>
                 <Link href="/docs/components/popover">Popover</Link>
                 <Link href="/docs/components/radio-group">Radio group</Link>

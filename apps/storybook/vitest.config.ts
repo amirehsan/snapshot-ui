@@ -52,6 +52,21 @@ export default defineConfig({
           },
         },
       },
+      {
+        // Stories tagged firefox again in Firefox, so a key guard is proved in the third engine too (risk R3).
+        extends: true,
+        plugins: [storybookTest({ configDir, tags: { include: ['firefox'] } })],
+        test: {
+          name: 'storybook-firefox',
+          setupFiles: ['./.storybook/vitest.setup.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({}),
+            instances: [{ browser: 'firefox' }],
+          },
+        },
+      },
     ],
   },
 });

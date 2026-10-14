@@ -981,6 +981,46 @@ describe('the pagination', () => {
   });
 });
 
+describe('the number field', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+  /** Ink over the 5% ink wash on raised, a hovered or pressed field button's glyph, against the wash. */
+  const inkOnWash = (mode) => {
+    const palette = paletteFor(tokens, mode);
+    const wash = composite({ ...parseColor(palette.ink), a: 0.05 }, parseColor(palette.raised));
+    return contrastRatio(composite(parseColor(palette.ink), wash), wash);
+  };
+
+  // The symbol, the resting sign glyph and an unlabelled placeholder are slate on the raised pill; a pressed sign
+  // button is a canvas glyph on ink with the canvas ring inside it. The gate holds all three.
+  it('cites slate on raised, canvas on ink and the inverted ring, which the gate holds', () => {
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'slate', ground: 'raised', minimum: TEXT }),
+    );
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: NON_TEXT }),
+    );
+  });
+
+  // The wash is a mix and not a token, so ink over it is measured and recorded, not gated.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    expect(measured('light', 'slate', 'raised'), 'the symbol, light').toBeCloseTo(5.49, 2);
+    expect(measured('dark', 'slate', 'raised'), 'the symbol, dark').toBeCloseTo(6.44, 2);
+    expect(measured('light', 'canvas', 'ink'), 'the pressed sign, light').toBeCloseTo(16.25, 2);
+    expect(measured('dark', 'canvas', 'ink'), 'the pressed sign, dark').toBeCloseTo(19.31, 2);
+    expect(inkOnWash('light'), 'a hovered button, light').toBeCloseTo(16.65, 2);
+    expect(inkOnWash('dark'), 'a hovered button, dark').toBeCloseTo(13.24, 2);
+    for (const mode of ['light', 'dark']) expect(inkOnWash(mode), mode).toBeGreaterThanOrEqual(TEXT);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 
