@@ -5630,11 +5630,14 @@ box of its own, so this one is derived from the input.
 **The control.** The `.input` pill, unchanged: `--size-field` tall (48px,
 36px compact), the raised fill, the boundary edge, and the hover, focus,
 disabled and invalid edges `input.css` draws through the field's root.
-`search-field.css` sets one property on it, `padding-inline: 3rem` in one
-class after `input.css`, which beats the input's 1.5rem by order and none
-of its states. At the start, 3rem clears the 20px magnifier set 16px in
-and leaves 12px before the text; at the end it clears the clear button,
-36px set 6px in, with 6px to spare.
+`search-field.css` sets three properties on it in one class after
+`input.css`, which beats the input's by order and none of its states:
+`padding-inline: 3rem`, over the input's 1.5rem; `display: block`, so the
+control around it is as tall as the input whatever line height it sits
+in; and `appearance: none`, since WebKit's searchfield appearance can draw
+padding and corners of its own. At the start, 3rem clears the 20px
+magnifier set 16px in and leaves 12px before the text; at the end it
+clears the clear button, 36px set 6px in, with 6px to spare.
 
 **The magnifier.** Lucide `Search` at 20px, slate, at
 `inset-inline-start: 1rem`, centred on the block axis, hidden from
@@ -5656,7 +5659,11 @@ hit at 40px.
 
 **The clear button.** It leaves the layout while the field is empty
 (`.search-field[data-empty] .search-field-clear { display: none }`), so an
-empty field has no stray target. React Aria keeps it out of the tab order,
+empty field has no stray target, and on a read-only field
+(`data-readonly`), whose text cannot be cleared. The button sits on the
+input, so a pointer on it has left the input: the input keeps its hover
+edge there, inside `@media (hover: hover)`, in a rule of one class's
+weight, so the focus, disabled, changed and invalid edges still win. React Aria keeps it out of the tab order,
 because Escape does the same from the field, and a press clears the text
 and leaves focus in the input. Its name is the library's "Clear search",
 or `clearLabel`: React Aria's own name is localized, but has no Persian, so
@@ -5669,7 +5676,7 @@ clear control.
 the input's taupe, the whisper color. A field in a toolbar has no label
 row and is named by `aria-label`; its root then carries `data-unlabelled`
 and its placeholder is slate, because it is the only words a sighted
-reader gets. It is the exception CommandPalette recorded for its own
+reader gets. Disabled, it is the input's taupe again, the disabled text. It is the exception CommandPalette recorded for its own
 field. Slate on raised is 5.49 in light and 6.44 in dark, the resting
 magnifier and clear glyph too, and is gated as text already. The hovered
 glyph, ink over the 5% wash on raised, is 16.65 and 13.24: the wash is a
@@ -5741,18 +5748,14 @@ The trigger is named by its value and its label, in React Aria's order:
 "Groceries, Category".
 
 **The placeholder.** "Choose an option" until something is chosen, or the
-`placeholder` passed, in taupe, the whisper every field's placeholder is
-drawn in. React Aria marks it `data-placeholder`. A Select with no visible
-label is named by `aria-label`, its root carries `data-unlabelled`, and its
-placeholder is slate, because it is the only words a sighted reader gets:
-the exception SearchField and CommandPalette recorded, extended to Select
-(open question 3). An input's placeholder is an attribute, which axe never
-measures; this one is text in a button, which axe does. Taupe text fails
-its contrast check, so the Select stories and the docs page skip that
-check on `.select-value[data-placeholder]` alone, with every other element
-and every other rule still checked, and the reason written where each
-skip is. Under a visible label the label names the field and the
-placeholder only says nothing is chosen.
+`placeholder` passed, in slate, labelled or not. React Aria marks it
+`data-placeholder`. An input's placeholder is an attribute, which axe
+never measures, so a field's placeholder can be taupe, the whisper. This
+one is the trigger's visible text, the button's own words, and must meet
+text contrast: taupe on raised is 1.58 in light and 3.68 in dark, so it is
+slate, 5.49 and 6.44, and axe checks it with no exception in the stories or on the
+docs page (open question 3). A disabled trigger's placeholder and value
+are taupe, the disabled text, which WCAG exempts.
 
 **The chevron.** Lucide `ChevronDown` at 16px in slate at the trigger's
 end, hidden from assistive technology. It turns half a turn while the list
@@ -5842,8 +5845,8 @@ correction 5, risk R1): it compares and writes nothing, and the server
 test renders a Select under `en-US` and `fa-IR` and finds the same HTML.
 
 **Measured pairs.** The value, ink on raised: 18.43 in light and 15.36 in
-dark. The chevron and an option's icon, slate on raised: 5.49 and 6.44;
-the filter's placeholder is the same pair. Both are gated as text, and so
+dark. The placeholder, the chevron and an option's icon, slate on raised:
+5.49 and 6.44; the filter's placeholder is the same pair. Both are gated as text, and so
 are the rows on float and canvas on the ink pill. The filter's divider on
 float is 1.23 and 1.34: a separator inside the panel, not a control's
 boundary, so it is recorded and not gated. No pair is added to the gate.

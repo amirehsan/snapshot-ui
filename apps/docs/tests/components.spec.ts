@@ -646,31 +646,15 @@ const NESTED_SHELL: Record<string, string> = {
 };
 const NESTED_RULES = ['landmark-no-duplicate-main', 'landmark-main-is-top-level', 'landmark-unique'];
 
-/**
- * Text whose contrast axe skips, per page, each with its reason, and only that text: every other element on the
- * page is still measured, and the control that holds it is still checked by every rule.
- */
-const CONTRAST_EXEMPT: Record<string, { selector: string; reason: string }> = {
-  select: {
-    selector: '.select-value[data-placeholder]',
-    reason:
-      "the trigger's taupe placeholder, the whisper every field's placeholder is drawn in; an input's placeholder " +
-      'is an attribute axe never measures, and this one is text in a button. Recorded in docs/design-system.md.',
-  },
-};
-
 for (const { slug, url } of PAGES) {
   for (const theme of ['light', 'dark'] as const) {
     test(`the ${slug} page has no axe violations in ${theme}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: theme });
       await visit(page, url);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-      expect(
-        await axeViolations(page, {
-          disableRules: slug in NESTED_SHELL ? NESTED_RULES : [],
-          contrastExempt: CONTRAST_EXEMPT[slug]?.selector,
-        }),
-      ).toEqual([]);
+      expect(await axeViolations(page, { disableRules: slug in NESTED_SHELL ? NESTED_RULES : [] })).toEqual(
+        [],
+      );
     });
   }
 }

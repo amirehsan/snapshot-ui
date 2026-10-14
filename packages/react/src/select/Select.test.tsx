@@ -139,8 +139,8 @@ describe('Select', () => {
     unmount();
     const { container } = render(<Five aria-label="Category" label={undefined} placeholder="Any category" />);
     expect(element('.select-value')).toHaveTextContent('Any category');
-    // Named only by aria-label: the placeholder is then the only words shown, so the root says so.
-    expect(root(container)).toHaveAttribute('data-unlabelled', '');
+    // Named only by aria-label. The placeholder is slate either way, so the root carries no mark for it.
+    expect(root(container)).not.toHaveAttribute('data-unlabelled');
     expect(container.querySelector('.field-head')).toBeNull();
   });
 

@@ -172,23 +172,16 @@ function CoarsePointerScope({ children }: { children: ReactNode }): ReactNode {
 }
 
 /**
- * Axe's settings for every Select story: the Menu's row rule, and two checks skipped on one element each, still
- * skipping what axe skips by default.
- *
- * - Contrast, on the placeholder alone. It is the field's placeholder in taupe, the whisper, as TextField's is;
- *   an input's placeholder is an attribute that axe never measures, and this one is text in the trigger, so axe
- *   would measure what it never asks of TextField. Under a visible label the label names the field and the
- *   placeholder only says nothing is chosen; without one it is slate, and passes. Recorded in
- *   docs/design-system.md ("Select").
- * - The scrollable-region check, on the list alone. With a filter the field keeps focus and owns the list through
- *   aria-activedescendant, as a combobox owns its popup, so the list is no tab stop and the arrows scroll it, as
- *   CommandPalette's does; without one the options take real focus.
+ * Axe's settings for every Select story: the Menu's row rule, and the scrollable-region check skipped on the list
+ * alone, still skipping what axe skips by default. With a filter the field keeps focus and owns the list through
+ * aria-activedescendant, as a combobox owns its popup, so the list is no tab stop and the arrows scroll it, as
+ * CommandPalette's does; without one the options take real focus. Contrast runs everywhere: the placeholder is
+ * the trigger's text, in slate.
  */
 const SELECT_A11Y = {
   config: {
     rules: [
       ...MENU_ROW_A11Y.config.rules,
-      { id: 'color-contrast', selector: '*:not(.select-value[data-placeholder])' },
       { id: 'scrollable-region-focusable', selector: '*:not(select, textarea, .select-list)' },
     ],
   },
@@ -217,7 +210,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A label and nothing chosen: the taupe placeholder and a slate chevron at the end of the field's pill. */
+/**
+ * A label and nothing chosen: the placeholder and the chevron, both slate, at the ends of the field's pill. The
+ * placeholder is the trigger's visible text, so it meets text contrast, unlike an input's taupe placeholder.
+ */
 export const Default: Story = {
   tags: ['density'],
   play: async ({ canvas, canvasElement }) => {
@@ -225,7 +221,7 @@ export const Default: Story = {
     await expect(trigger).toHaveAttribute('aria-haspopup', 'listbox');
     const value = find(canvasElement, '.select-value');
     await expect(value).toHaveAttribute('data-placeholder');
-    await expect(getComputedStyle(value).color).toBe(tokenColor('--color-taupe'));
+    await expect(getComputedStyle(value).color).toBe(tokenColor('--color-slate'));
     await expect(getComputedStyle(find(canvasElement, '.select-chevron')).color).toBe(
       tokenColor('--color-slate'),
     );
@@ -297,7 +293,10 @@ export const FilterNoMatches: Story = {
   },
 };
 
-/** A changed Select with its chip and light orange edge, an invalid one with its error, a disabled one. */
+/**
+ * A changed Select with its chip and light orange edge, an invalid one with its error, a disabled one, whose value
+ * is the disabled text, taupe.
+ */
 export const States: Story = {
   render: (): ReactElement => (
     <div style={{ display: 'grid', gap: 24 }}>
@@ -325,7 +324,20 @@ export const States: Story = {
     const disabled = canvas.getByRole('button', { name: 'Transport Archived category' });
     await expect(disabled).toBeDisabled();
     await expect(getComputedStyle(find(disabled, '.select-chevron')).color).toBe(tokenColor('--color-taupe'));
+    await expect(getComputedStyle(find(disabled, '.select-value')).color).toBe(tokenColor('--color-taupe'));
     await expect(getComputedStyle(disabled).cursor).toBe('not-allowed');
+  },
+};
+
+/** Disabled with nothing chosen, the placeholder is the disabled text, taupe, and not the resting slate. */
+export const DisabledPlaceholder: Story = {
+  tags: ['no-visual'],
+  args: { label: 'Closed category', isDisabled: true },
+  play: async ({ canvas }) => {
+    const trigger = canvas.getByRole('button', { name: 'Choose an option Closed category' });
+    const value = find(trigger, '.select-value');
+    await expect(value).toHaveAttribute('data-placeholder');
+    await expect(getComputedStyle(value).color).toBe(tokenColor('--color-taupe'));
   },
 };
 

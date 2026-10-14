@@ -61,20 +61,16 @@ export const withoutClipboard = async (page: Page, mode: 'missing' | 'refusing')
  * Every axe violation on the page, as "rule: selectors". An empty list is a pass. The check that a control's
  * accessible name holds the text it shows is experimental in this axe and on by default from axe 4.14, the
  * version the packages' own tests run, so it is turned on here too. `disableRules` turns rules off for a page
- * that has a reason, which its caller records; `contrastExempt` is a selector of text, with no element inside it,
- * that is left out of the run for its contrast, which its caller records too.
+ * that has a reason, which its caller records.
  */
 export const axeViolations = async (
   page: Page,
-  { disableRules = [], contrastExempt }: { disableRules?: readonly string[]; contrastExempt?: string } = {},
+  { disableRules = [] }: { disableRules?: readonly string[] } = {},
 ): Promise<string[]> => {
   let builder = new AxeBuilder({ page }).options({
     rules: { 'label-content-name-mismatch': { enabled: true } },
   });
   if (disableRules.length > 0) builder = builder.disableRules([...disableRules]);
-  // The Playwright builder cannot narrow one rule's selector, as the Storybook addon can, so the text is left
-  // out of the run; it holds no element of its own, and what holds it is still checked.
-  if (contrastExempt !== undefined) builder = builder.exclude(contrastExempt);
   const { violations } = await builder.analyze();
   return violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 };

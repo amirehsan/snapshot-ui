@@ -3,7 +3,7 @@ import type { ComponentType } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { expect, fn, waitFor } from 'storybook/test';
 import { Button } from '../button';
-import { tokenColor, washColor } from '../stories/paint';
+import { paint, tokenColor, tokenPixels, washColor } from '../stories/paint';
 import { SearchField, type SearchFieldBaseProps } from './SearchField';
 
 const meta = {
@@ -39,6 +39,10 @@ export const Default: Story = {
     await expect(getComputedStyle(find(canvasElement, '.search-field-clear')).display).toBe('none');
     // Under a visible label the placeholder keeps the input's taupe.
     await expect(getComputedStyle(input, '::placeholder').color).toBe(tokenColor('--color-taupe'));
+    // The control is the input's height, whatever line height it sits in.
+    await expect(find(canvasElement, '.search-field-control').getBoundingClientRect().height).toBe(
+      input.getBoundingClientRect().height,
+    );
   },
 };
 
@@ -70,6 +74,32 @@ export const Unlabelled: Story = {
     const input = canvas.getByRole('searchbox', { name: 'Search transactions' });
     await expect(input.closest('.search-field')).toHaveAttribute('data-unlabelled', '');
     await expect(getComputedStyle(input, '::placeholder').color).toBe(tokenColor('--color-slate'));
+  },
+};
+
+/** Disabled, an unlabelled field's placeholder is the disabled text, taupe, and not slate. */
+export const UnlabelledDisabled: Story = {
+  tags: ['no-visual'],
+  args: {
+    label: undefined,
+    'aria-label': 'Search archived',
+    placeholder: 'Search archived',
+    isDisabled: true,
+  },
+  play: async ({ canvas }) => {
+    const input = canvas.getByRole('searchbox', { name: 'Search archived' });
+    await expect(input.closest('.search-field')).toHaveAttribute('data-unlabelled', '');
+    await expect(getComputedStyle(input, '::placeholder').color).toBe(tokenColor('--color-taupe'));
+  },
+};
+
+/** A read-only field shows its text and no clear button, since the text cannot be cleared. */
+export const ReadOnly: Story = {
+  tags: ['no-visual'],
+  args: { defaultValue: 'coffee', isReadOnly: true },
+  play: async ({ canvasElement }) => {
+    await expect(find(canvasElement, '.search-field')).toHaveAttribute('data-readonly');
+    await expect(getComputedStyle(find(canvasElement, '.search-field-clear')).display).toBe('none');
   },
 };
 
@@ -174,13 +204,20 @@ export const ClearPress: Story = {
   },
 };
 
-/** Under the pointer the clear button takes the 5% ink wash and its glyph turns ink. */
+/**
+ * Under the pointer the clear button takes the 5% ink wash and its glyph turns ink, and the input keeps the
+ * hover edge it had a moment before, as the pointer crossed it.
+ */
 export const HoverButton: Story = {
   tags: ['no-visual'],
   args: { defaultValue: 'coffee' },
   play: async ({ canvasElement, userEvent }) => {
     const clear = find(canvasElement, '.search-field-clear');
+    const input = find(canvasElement, '.search-field-input');
     await userEvent.hover(clear);
+    await expect(getComputedStyle(input).borderTopColor).toBe(
+      paint('color-mix(in srgb, var(--color-ink) 65%, transparent)', find(canvasElement, '.search-field')),
+    );
     await expect(getComputedStyle(clear).backgroundColor).toBe(
       washColor(find(canvasElement, '.search-field')),
     );
@@ -206,7 +243,8 @@ export const CompactHitArea: Story = {
     const field = find(canvasElement, '.search-field-input').getBoundingClientRect().height;
     await expect(clear.getBoundingClientRect().height).toBe(field - 12);
     if (field === 36) await expect(clear.getBoundingClientRect().width).toBe(24);
-    await expect(getComputedStyle(clear, '::before').height).toBe('40px');
-    await expect(getComputedStyle(clear, '::before').width).toBe('40px');
+    const target = `${tokenPixels('--size-target')}px`;
+    await expect(getComputedStyle(clear, '::before').height).toBe(target);
+    await expect(getComputedStyle(clear, '::before').width).toBe(target);
   },
 };

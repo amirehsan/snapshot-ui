@@ -54,7 +54,7 @@ export interface SelectBaseProps<T extends object = object> extends Omit<
    */
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
-   * Shown in taupe while nothing is chosen; in slate without a visible label, where it is the only words shown.
+   * Shown in slate while nothing is chosen, since it is the trigger's visible text; taupe while disabled.
    * @default 'Choose an option'
    */
   placeholder?: string;
@@ -219,7 +219,6 @@ export function Select<T extends object = object>({
       aria-describedby={describedBy}
       onOpenChange={openChange}
       data-changed={isChanged ? '' : undefined}
-      data-unlabelled={isLabelled ? undefined : ''}
       className={composeRenderProps(className, (userClassName) => cx('field', 'select', userClassName))}
     >
       {isLabelled ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
