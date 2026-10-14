@@ -39,6 +39,7 @@ export {
   type TextFieldProps,
 } from './text-field';
 export { TextArea, type TextAreaBaseProps, type TextAreaProps } from './text-area';
+export { SearchField, type SearchFieldBaseProps, type SearchFieldProps } from './search-field';
 export {
   Checkbox,
   CheckboxGroup,

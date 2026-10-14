@@ -103,7 +103,7 @@ export function SearchDialog({
         if (event.target === dialog.current) close();
       }}
     >
-      <div className="search-field">
+      <div className="search-dialog-field">
         <svg
           viewBox="0 0 24 24"
           fill="none"

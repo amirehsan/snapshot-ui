@@ -5619,3 +5619,89 @@ first key in a plot focused before its data came takes the newest day,
 and a pointer clears the last announcement. The tab stop is set after
 mount, so the server's HTML has none. The entry measures 3.25 kB now,
 inside the same 4 kB.
+
+## SearchField
+
+A search box: `SearchField`, the text input's pill with a magnifier at its
+start and a clear button at its end once there is text, Escape to clear
+and Enter to submit. The document draws the palette's field and no search
+box of its own, so this one is derived from the input.
+
+**The control.** The `.input` pill, unchanged: `--size-field` tall (48px,
+36px compact), the raised fill, the boundary edge, and the hover, focus,
+disabled and invalid edges `input.css` draws through the field's root.
+`search-field.css` sets one property on it, `padding-inline: 3rem` in one
+class after `input.css`, which beats the input's 1.5rem by order and none
+of its states. At the start, 3rem clears the 20px magnifier set 16px in
+and leaves 12px before the text; at the end it clears the clear button,
+36px set 6px in, with 6px to spare.
+
+**The magnifier.** Lucide `Search` at 20px, slate, at
+`inset-inline-start: 1rem`, centred on the block axis, hidden from
+assistive technology and taking no pointer events, so a press on it
+lands in the input. Taupe on a disabled field.
+
+**The field button.** A new shared class in `input.css`, `.input-button`,
+for a button inside a field: this clear button, and the combo box's button
+later. A ghost circle a field step smaller than the field,
+`calc(var(--size-field) - 0.75rem)`, so 36px and 24px compact, on
+`--radius-pill`, set `0.375rem` in from the field's inline end and centred
+by `inset-block: 0` and `margin-block: auto`. Its glyph is 16px and slate,
+and turns ink under the 5% ink wash on hover, inside `@media (hover:
+hover)`, and on a press, since touch has no hover to show it. The ring is
+the token ring outside it. Disabled, the glyph is taupe and the cursor
+not-allowed. A `::before` takes the hit area to `--size-target` in both
+axes by the formula every control shares, so a compact button is still
+hit at 40px.
+
+**The clear button.** It leaves the layout while the field is empty
+(`.search-field[data-empty] .search-field-clear { display: none }`), so an
+empty field has no stray target. React Aria keeps it out of the tab order,
+because Escape does the same from the field, and a press clears the text
+and leaves focus in the input. Its name is the library's "Clear search",
+or `clearLabel`: React Aria's own name is localized, but has no Persian, so
+an `aria-label` replaces it and a Persian page passes its own. The
+browser's own cancel button is hidden
+(`::-webkit-search-cancel-button { appearance: none }`), so there is one
+clear control.
+
+**The unlabelled placeholder.** Under a visible label the placeholder is
+the input's taupe, the whisper color. A field in a toolbar has no label
+row and is named by `aria-label`; its root then carries `data-unlabelled`
+and its placeholder is slate, because it is the only words a sighted
+reader gets. It is the exception CommandPalette recorded for its own
+field. Slate on raised is 5.49 in light and 6.44 in dark, the resting
+magnifier and clear glyph too, and is gated as text already. The hovered
+glyph, ink over the 5% wash on raised, is 16.65 and 13.24: the wash is a
+mix, so the pair is measured and recorded, not gated. No pair is added to
+the gate.
+
+**No changed state, no debounce.** A query is not saved data, so the
+field has no `isChanged` and its label row holds the label alone. It has
+no debounce either (ruling 6): an app that keeps the query in its URL
+passes `value` and writes the URL after its own pause in `onChange`, or
+in `onSubmit`, and the docs page shows both with the Next App Router.
+
+**Right to left.** Nothing is mirrored. A magnifier and a cross have no
+reading direction; the logical insets put the magnifier at the right and
+the clear button at the left.
+
+**Forced colors.** The magnifier and the clear glyph are `CanvasText`, and
+`GrayText` when disabled; the input keeps `input.css`'s rules.
+
+**The docs search row.** The docs site's own search dialog drew its row
+with a class named `.search-field`, which would have restyled the
+library's part on its own page (padding, a divider, a focus line and a
+20px glyph). It is renamed `search-dialog-field` in the same change, and
+the docs test checks that each keeps its own look (spec correction 1).
+
+**Import order.** `search-field.css` is imported after `charts.css`, the
+last of the home files, and a test keeps the select, the combo box, the
+multi-select, the tabs and the pagination after it in that order once
+they exist. The tooltip's test, which allowed only the shell and home
+files after the last overlay file, now allows the picker files too, and
+the text area's test, which forbids it any property an input state sets,
+no longer counts the field button's rules as input states.
+
+**The size.** The size limit is 1.5 kB, the spec's budget: the entry
+measured 514 B, and the rule rounds up to 1 kB and adds 0.5 kB.

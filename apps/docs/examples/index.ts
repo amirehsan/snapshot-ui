@@ -60,6 +60,9 @@ import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
 import RadioGroupValidation from './radio-group-validation';
+import SearchFieldBasic from './search-field-basic';
+import SearchFieldStates from './search-field-states';
+import SearchFieldToolbar from './search-field-toolbar';
 import SegmentedControlBasic from './segmented-control-basic';
 import SegmentedControlStacking from './segmented-control-stacking';
 import SegmentedControlStates from './segmented-control-states';
@@ -157,6 +160,9 @@ export const examples = {
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,
   'radio-group-validation': RadioGroupValidation,
+  'search-field-basic': SearchFieldBasic,
+  'search-field-states': SearchFieldStates,
+  'search-field-toolbar': SearchFieldToolbar,
   'segmented-control-basic': SegmentedControlBasic,
   'segmented-control-stacking': SegmentedControlStacking,
   'segmented-control-states': SegmentedControlStates,

@@ -665,6 +665,47 @@ test('a focused text field firms its edge and keeps the ring, and a changed one 
   await expect(changed).toHaveCSS('outline-style', 'solid');
 });
 
+test('a search field clears with Escape and with its button, and the button leaves while it is empty', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/search-field');
+  // The basic example's field, the one the page names "Search transactions".
+  const field = page.getByRole('searchbox', { name: 'Search transactions', exact: true });
+  const clear = page.locator('.stage .search-field').filter({ has: field }).locator('.search-field-clear');
+  await expect(clear).toBeHidden();
+  await field.fill('coffee');
+  await expect(clear).toBeVisible();
+  await field.press('Escape');
+  await expect(field).toHaveValue('');
+  await expect(clear).toBeHidden();
+  await field.fill('rent');
+  await clear.click();
+  await expect(field).toHaveValue('');
+  await expect(field).toBeFocused();
+  await expect(clear).toBeHidden();
+});
+
+test('the docs search keeps its own row, and the library search field draws none of it', async ({ page }) => {
+  await visit(page, '/docs/components/search-field');
+  await page.keyboard.press('ControlOrMeta+k');
+  const dialog = page.getByRole('dialog', { name: 'Search the docs' });
+  await expect(dialog).toBeVisible();
+  const row = dialog.locator('.search-dialog-field');
+  await expect(row).toHaveCSS('padding-top', '16px');
+  await expect(row).toHaveCSS('border-bottom-style', 'solid');
+  await expect(row).toHaveCSS('border-bottom-width', '1px');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  const library = page
+    .locator('.stage .search-field')
+    .filter({ has: page.getByRole('searchbox', { name: 'Search transactions', exact: true }) });
+  await expect(library).toHaveCSS('padding-top', '0px');
+  await expect(library).toHaveCSS('border-bottom-style', 'none');
+  await library.getByRole('searchbox').fill('coffee');
+  const glyph = library.locator('.search-field-clear svg');
+  expect((await glyph.boundingBox())?.width).toBe(16);
+});
+
 test('the text area page takes lines with Enter, counts them and never blocks typing', async ({ page }) => {
   await visit(page, '/docs/components/text-area');
   const field = fieldNamed(page, 'About the workspace');
