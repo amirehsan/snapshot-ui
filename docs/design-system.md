@@ -5868,7 +5868,7 @@ Aria.
 `input.css`'s rules and the rows keep the Menu's.
 
 **The size.** The size limit is 3 kB for `Select`, `PickerOption` and
-`PickerSection` together, the spec's budget: the entry measured 2.41 kB,
+`PickerSection` together, the spec's budget: the entry measured 2.46 kB,
 and the rule rounds up to 2.5 kB and adds 0.5 kB.
 
 ## ComboBox
@@ -6010,7 +6010,7 @@ start, through React Aria. Nothing in `combo-box.css` is physical.
 the Menu's; the Spinner's `currentColor` is the reader's text color.
 
 **The size.** The size limit is 2.5 kB for `ComboBox`, the spec's
-budget: the entry measured 1.88 kB, and the rule rounds up to 2 kB and
+budget: the entry measured 1.9 kB, and the rule rounds up to 2 kB and
 adds 0.5 kB.
 
 ## MultiSelect
@@ -6218,7 +6218,7 @@ Android (the option announced as the arrows move, a choice, a tag's
 removal, what the input's description reads): not yet verified (risk R3).
 
 **The size.** The size limit is 3.5 kB for `MultiSelect`, the spec's
-budget: the entry measured 2.56 kB, and the rule rounds up to 3 kB and
+budget: the entry measured 2.72 kB, and the rule rounds up to 3 kB and
 adds 0.5 kB.
 
 ## Tabs
@@ -6345,7 +6345,9 @@ app passes `selectedKey` from the URL, no `onSelectionChange`, and
 `keyboardActivation="manual"`. The arrows then move focus and load
 nothing, and Enter, Space or a press opens the focused tab's link
 through `RouterProvider`, React Aria's link behavior for tabs, and puts
-the selection back where the URL has it. The app renders one `TabPanel`
+the selection back where the URL has it. React Aria leaves Space's
+default to the anchor, and Chromium then scrolls the page as well, so a
+link tab stops that default itself. The app renders one `TabPanel`
 whose `id` is the selected key, holding the route's content, so
 `aria-controls` points at what is there. A modified or middle click
 opens the link as the browser would. A site's top navigation between
@@ -6408,7 +6410,7 @@ tab stop of its own after the row, React Aria's panel rule.
 NVDA: not yet verified (risk R3).
 
 **The size.** The size limit is 1.5 kB for `Tabs, TabList, Tab,
-TabPanel`, the spec's budget: the entry measured 731 B, and the rule
+TabPanel`, the spec's budget: the entry measured 919 B, and the rule
 rounds up to 1 kB and adds 0.5 kB.
 
 ## Pagination

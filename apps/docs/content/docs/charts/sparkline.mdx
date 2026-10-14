@@ -78,7 +78,7 @@ The ring around the end point is drawn in `--chart-surface`, which is Lifted by 
 pnpm add @snapshot-ui/charts @snapshot-ui/core
 ```
 
-It needs `@snapshot-ui/core` 0.3.0 or later, whose `styles.css` draws it. The data are numbers, oldest first. The domain is their extent, not from zero, because a sparkline shows a shape, not a magnitude. It is static, so a server component renders it with no client JavaScript.
+It needs the same 0.x minor of `@snapshot-ui/core` (0.4 for charts 0.1.1), whose `styles.css` draws it. The data are numbers, oldest first. The domain is their extent, not from zero, because a sparkline shows a shape, not a magnitude. It is static, so a server component renders it with no client JavaScript.
 
 ```tsx
 import { Sparkline } from '@snapshot-ui/charts';

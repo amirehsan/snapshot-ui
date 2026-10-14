@@ -515,7 +515,7 @@ export type PaginationProps = PaginationBase & (PaginationLinks | PaginationButt
 
 - **Pages:** `search-field`, `select`, `combo-box`, `multi-select`, `tabs` and `pagination`, each with Usage, Props, Accessibility with its Keys table, and Design rules. Tabs, Pagination and SearchField each show the URL-state recipe with the Next App Router (reading the search parameters on the server, writing them with the router on change), which is the consumer's pattern.
 - **Design record:** a section per part in Appendix B of `docs/design-system.md`, written by the plan, with every derived value, its reason and the measured pairs.
-- **Changesets:** one per part, minor, for `@snapshot-ui/core` and `@snapshot-ui/react`; the batch releases as 0.4.0. `@snapshot-ui/charts` is unchanged.
+- **Changesets:** one per part, minor, for `@snapshot-ui/core` and `@snapshot-ui/react`; the batch releases as 0.4.0. `@snapshot-ui/charts` has no change of its own, but its `@snapshot-ui/core` peer (`workspace:^`) publishes as `^0.4.0`, so a patch changeset takes it to 0.1.1, which needs core 0.4.
 - **Release note for the consumer:** the pickers take `value` and `onChange`, never `selectedKey`; link tabs need `selectedKey` from the URL and `keyboardActivation="manual"`; Pagination in link mode belongs in a server component and in button mode in a client one; `rangeLabel` arrives formatted; the changed dot is for unsaved panels only.
 
 ## 14. Risks

@@ -69,7 +69,9 @@ export function CategoryFilter() {
         const params = new URLSearchParams(searchParams);
         if (key === null || key === 'any') params.delete('category');
         else params.set('category', String(key));
-        router.replace(`${pathname}?${params.toString()}`);
+        const query = params.toString();
+        // No bare "?" once the last filter goes, and no jump to the top: the reader stays at the field.
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
       }}
     >
       <PickerOption id="any">Any category</PickerOption>

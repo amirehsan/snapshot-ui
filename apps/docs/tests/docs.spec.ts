@@ -895,6 +895,31 @@ test('link tabs follow their link through the router, and the arrows only move f
   expect(await page.evaluate(() => (window as Window & { tabsMarker?: boolean }).tabsMarker)).toBe(true);
 });
 
+test('Space on a link tab follows its link and never scrolls the page down', async ({ page }) => {
+  await visit(page, '/docs/components/tabs');
+  const example = page.locator('.stage .tabs').filter({ has: page.locator('a.tab') });
+  const all = example.getByRole('tab', { name: 'All' });
+  const income = example.getByRole('tab', { name: 'Income' });
+  await scrolledTo(all);
+  await all.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(income).toBeFocused();
+  // The furthest the page goes while the key is handled: Space's default on an anchor would scroll it a screen down.
+  const before = await page.evaluate(() => {
+    const own = window as Window & { furthest?: number };
+    own.furthest = window.scrollY;
+    window.addEventListener('scroll', () => {
+      own.furthest = Math.max(own.furthest ?? 0, window.scrollY);
+    });
+    return window.scrollY;
+  });
+  await page.keyboard.press('Space');
+  await expect(page).toHaveURL(/\/docs\/components\/tabs\?view=income$/);
+  await expect(income).toHaveAttribute('aria-selected', 'true');
+  expect(await page.evaluate(() => (window as Window & { furthest?: number }).furthest)).toBe(before);
+});
+
 test('a tab row that does not fit scrolls inside itself to its selected tab', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await visit(page, '/docs/components/tabs');
@@ -2494,7 +2519,7 @@ test('the installation page installs the charts package and names the core versi
   const section = page
     .locator('.docs-section')
     .filter({ has: page.getByRole('heading', { name: 'Charts', exact: true }) });
-  await expect(section).toContainText('0.3.0');
+  await expect(section).toContainText('0.4 for charts 0.1.1');
   await expect(section.getByRole('link', { name: 'Line chart', exact: true })).toHaveAttribute(
     'href',
     '/docs/charts/line-chart',

@@ -4,7 +4,7 @@
  * Its changed and invalid borders are keyed on the field's root, as the field
  * contract in field.css says, and invalid is declared last so it outranks
  * changed. `.input-button` is a button inside a field: the search field's
- * clear button and the combo box's button.
+ * clear button and the button of the combo box and of the multi-select.
  */
 @layer components {
   .input {

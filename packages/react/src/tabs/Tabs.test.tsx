@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, createEvent, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, StrictMode, useState, type ReactElement } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
@@ -213,7 +213,7 @@ describe('Tabs', () => {
     expect(screen.getByRole('tabpanel', { name: 'Spending' })).toHaveTextContent('The spending view');
   });
 
-  it('moves focus without navigating on the arrows under manual activation, and opens the link on Enter and on a press', async () => {
+  it('moves focus without navigating on the arrows under manual activation, and opens the link on Enter, on Space and on a press', async () => {
     const user = userEvent.setup();
     const navigate = vi.fn<(path: string) => void>();
     render(
@@ -239,6 +239,25 @@ describe('Tabs', () => {
     await user.click(tab('All'));
     expect(navigate).toHaveBeenCalledTimes(3);
     expect(navigate.mock.calls[2]?.[0]).toBe('?view=all');
+  });
+
+  it('keeps Space on a link tab from scrolling the page, and leaves Space on a tab without href to React Aria', () => {
+    const { unmount } = render(
+      <RouterProvider navigate={vi.fn()}>
+        <LinkViews view="spending" />
+      </RouterProvider>,
+    );
+    const onLink = createEvent.keyDown(tab('Income'), { key: ' ' });
+    fireEvent(tab('Income'), onLink);
+    expect(onLink.defaultPrevented).toBe(true);
+    const enter = createEvent.keyDown(tab('Income'), { key: 'Enter' });
+    fireEvent(tab('Income'), enter);
+    expect(enter.defaultPrevented).toBe(false);
+    unmount();
+    render(<Views keyboardActivation="manual" />);
+    const onTab = createEvent.keyDown(tab('Income'), { key: ' ' });
+    fireEvent(tab('Income'), onTab);
+    expect(onTab.defaultPrevented).toBe(true);
   });
 
   it('selects the focused tab on Enter or Space under manual activation, and not on the arrows', async () => {

@@ -6,11 +6,22 @@ import { PaginationLink } from './PaginationLink';
 import { PaginationStatus } from './PaginationStatus';
 
 export interface PaginationLabels {
-  /** @default 'Pagination' */
+  /**
+   * The navigation landmark's name, which tells this row from the page's other navigation.
+   * @default 'Pagination'
+   */
   navigation: string;
-  /** @default 'Previous' */
+  /**
+   * The name of the step to the page before: shown beside its chevron where the row has room, and its hidden name
+   * where it does not.
+   * @default 'Previous'
+   */
   previous: string;
-  /** @default 'Next' */
+  /**
+   * The name of the step to the page after: shown beside its chevron where the row has room, and its hidden name
+   * where it does not.
+   * @default 'Next'
+   */
   next: string;
   /** A page control's name, given the page's written label. @default (label) => `Page ${label}` */
   page: (label: string) => string;
@@ -27,8 +38,13 @@ interface PaginationBase extends Omit<HTMLAttributes<HTMLElement>, 'children' | 
   pageLabel?: (page: number) => string;
   /** Page numbers shown each side of the current one, in whole pages; one that is not a finite number is 1. @default 1 */
   siblingCount?: number;
-  /** @default true */
+  /**
+   * Shows the numbered pages and their gaps between Previous and Next while the row is 30rem wide or more. Off,
+   * the short form: Previous, the range and Next at every width.
+   * @default true
+   */
   hasPageNumbers?: boolean;
+  /** The library's own words: the landmark's name, Previous, Next and each page control's name. */
   labels?: Partial<PaginationLabels>;
   ref?: Ref<HTMLElement>;
 }

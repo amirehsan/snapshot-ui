@@ -62,7 +62,9 @@ export function MerchantFilter({ merchants }: { merchants: { id: string; name: s
         const params = new URLSearchParams(searchParams);
         if (key === null) params.delete('merchant');
         else params.set('merchant', String(key));
-        router.replace(`${pathname}?${params.toString()}`);
+        const query = params.toString();
+        // No bare "?" once the last filter goes, and no jump to the top: the reader stays at the field.
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
       }}
     >
       {(merchant) => <PickerOption>{merchant.name}</PickerOption>}
