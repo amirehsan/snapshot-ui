@@ -383,7 +383,9 @@ export const ClosedKeys: Story = {
     await user.keyboard('{ArrowDown}');
     await waitFor(() => expect(document.querySelector('[role="listbox"]')).not.toBeNull());
     await user.keyboard('{Escape}');
-    await closed();
+    // The closed state, not the popover's removal: WebKit and Firefox can hold the exit transition on a busy runner.
+    await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'false'));
+    await waitFor(() => expect(trigger).toHaveFocus());
   },
 };
 
