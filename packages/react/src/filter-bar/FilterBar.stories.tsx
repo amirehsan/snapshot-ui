@@ -472,6 +472,58 @@ export const MoreKeepsChoice: Story = {
   },
 };
 
+/**
+ * More leaves as its panel closes: with Date active, Tags is the last chip behind More, and a choice in the
+ * panel makes it active. Focus goes to Tags in the row, once React Aria has lifted the inert page.
+ */
+export const MoreLeavesFocus: Story = {
+  tags: ['no-visual'],
+  parameters: { a11y: LIST_A11Y },
+  render: () => <Transactions initial={{ date: { start: '2026-09-01', end: '2026-09-30' } }} />,
+  play: async ({ canvasElement }) => {
+    await expect(rowLabels(canvasElement)).toEqual(['Category', 'Account', 'Amount', 'Date', 'More']);
+    await userEvent.click(triggerOf(canvasElement, 'More'));
+    const panel = await popoverAtRest('.filter-bar-more-panel');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Any Tags' }));
+    const list = await popoverAtRest('.select-popover');
+    await userEvent.click(within(list).getByRole('option', { name: 'Rent' }));
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(document.querySelector('.select-popover')).toBeNull());
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(document.querySelector('.filter-bar-more-panel')).toBeNull());
+    await expect(canvasElement.querySelector('.filter-bar-more')).toBeNull();
+    await waitFor(() => expect(triggerOf(canvasElement, 'Tags')).toHaveFocus());
+  },
+};
+
+/**
+ * A secondary chip whose last option is unchecked in the row keeps its place while its list is open, so the list
+ * stays under the pointer; as the list closes the chip goes behind More, and More takes focus, never the page.
+ */
+export const SecondaryUncheckedFocus: Story = {
+  tags: ['no-visual'],
+  parameters: { a11y: LIST_A11Y },
+  render: () => <Transactions initial={{ tags: ['rent'] }} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(triggerOf(canvasElement, 'Tags'));
+    const list = await popoverAtRest('.select-popover');
+    await userEvent.click(within(list).getByRole('option', { name: 'Rent' }));
+    await expect(within(list).getByRole('option', { name: 'Rent' })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+    // Inactive, and still in the row with its list open.
+    await expect(triggerOf(canvasElement, 'Tags').closest('.filter-chip')).not.toHaveAttribute('data-active');
+    await expect(list.isConnected).toBe(true);
+    await expect(list.contains(document.activeElement)).toBe(true);
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(document.querySelector('.select-popover')).toBeNull());
+    await expect(rowLabels(canvasElement)).toEqual(['Category', 'Account', 'Amount', 'More']);
+    await waitFor(() => expect(triggerOf(canvasElement, 'More')).toHaveFocus());
+    await expect(document.activeElement).not.toBe(document.body);
+  },
+};
+
 /** Clear all by keyboard: every filter clears and focus lands on the first chip, never on the page. */
 export const ClearAllFocus: Story = {
   tags: ['no-visual'],
@@ -544,7 +596,8 @@ export const ManyOptions: Story = {
     find(canvasElement, '.filter-bar-sheet-button').click();
     await waitFor(() => expect(document.querySelector('.sheet .filter-section')).not.toBeNull());
     times['sheet sections'] = performance.now() - start;
-    // The sheet moves focus in once it has slid up, so the list is opened from a sheet at rest.
+    // The sheet's content takes no pointer until it has slid up and moved focus in, so the list is opened from a
+    // sheet at rest.
     const sheet = await sheetAtRest();
     start = performance.now();
     await userEvent.click(within(sheet).getByRole('button', { name: 'Any Category' }));

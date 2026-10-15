@@ -1,14 +1,13 @@
 import { Children, Fragment, createElement, isValidElement, type ReactNode } from 'react';
-import { FilterChip, type FilterChipProps } from '../filter-chip/FilterChip';
+import { FilterChip, hasChoice, type FilterChipProps } from '../filter-chip/FilterChip';
 import { present } from '../utils/present';
 
-/** Whether a FilterChip's props say it has a value: a list chip by its value, a custom chip by its valueLabel. */
+/**
+ * Whether a FilterChip's props say it has a value: a list chip by its value, as the chip reads it, so undefined is
+ * no value in both; a custom chip by its valueLabel.
+ */
 const isActive = (props: FilterChipProps): boolean =>
-  props.selectionMode === undefined
-    ? present(props.valueLabel)
-    : Array.isArray(props.value)
-      ? props.value.length > 0
-      : props.value !== null;
+  props.selectionMode === undefined ? present(props.valueLabel) : hasChoice(props.value);
 
 /** The props of `node` when it is a FilterChip element the bar can read, else null. */
 const chipProps = (node: ReactNode): FilterChipProps | null =>

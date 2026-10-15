@@ -61,8 +61,8 @@ const nothing = (): void => undefined;
 
 /**
  * Where focus goes once a commit has taken away the element that held it: the first chip after Clear all leaves,
- * More after a secondary chip leaves the row with its value, and the chip the panel made active after More leaves
- * as its panel closes. Focus never rests on the body (2.4.3).
+ * More after a secondary chip leaves the row with its value or as its list closes without one, and the chip the
+ * panel made active after More leaves as its panel closes. Focus never rests on the body (2.4.3).
  */
 interface FocusAfter {
   /** The element that held focus, which the commit is expected to take away. */
@@ -75,6 +75,9 @@ interface FocusAfter {
 /** The text of a chip trigger's label. */
 const labelOf = (trigger: Element): string | null =>
   trigger.querySelector('.filter-chip-label')?.textContent ?? null;
+
+/** The event React Aria, and the Sheet, dispatch on the element they give focus back to as an overlay closes. */
+const RESTORE_EVENT = 'react-aria-focus-scope-restore';
 
 /**
  * The filters of a list page: the app's search first, then the chips in a group that wraps, "More" holding the
@@ -100,12 +103,17 @@ export function FilterBar({
   // The labels the open More panel took as it opened, kept until it closes, so a choice made in it never
   // unmounts the field in use (spec correction 29); null while closed.
   const [panelLabels, setPanelLabels] = useState<ReadonlySet<string> | null>(null);
+  // The secondary chips in the row whose list or panel is open. A change there may leave such a chip with no
+  // value, and it stays in the row until it closes, so the list in use never unmounts. Held here, not in the
+  // chip: the close must re-render the bar, whose effects then give focus to More.
+  const [heldInRow, setHeldInRow] = useState<ReadonlySet<string>>(() => new Set());
   // More stays while its panel is open, though a choice there may have left nothing behind it.
   const hasMore = census.inactiveSecondary.length > 0 || panelLabels !== null;
   const hasClearAll = count > 0 && onClearAll !== undefined;
   const rowRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
   const doneRef = useRef<HTMLButtonElement>(null);
+  const sheetButtonRef = useRef<HTMLButtonElement>(null);
   const focusAfter = useRef<FocusAfter | null>(null);
 
   const expectLeave = (
@@ -116,22 +124,32 @@ export function FilterBar({
     focusAfter.current = from === null ? null : { from, to, labels: held };
   };
 
-  /** Moves focus once the element that held it has gone; forgets it once focus has moved on by itself. */
+  /** The triggers of the row's chips, More left out, in the order they show. */
+  const rowChips = (): HTMLElement[] =>
+    [...(rowRef.current?.querySelectorAll<HTMLElement>('.filter-chip-trigger') ?? [])].filter(
+      (trigger) => trigger !== moreRef.current,
+    );
+
+  /**
+   * Moves focus once the element that held it has gone; forgets it once focus has moved on by itself. Focus on
+   * the body is focus in transit, as a closing list leaves it, so the move still waits for the element to go.
+   */
   const settleFocus = (when: 'layout' | 'passive'): void => {
     const pending = focusAfter.current;
     if (pending === null) return;
     // The panel's case waits for the passive phase, where React Aria lifts the inert page its popover made.
-    if ((pending.to === 'panel') !== (when === 'passive')) return;
+    if (pending.to === 'panel' && when === 'layout') return;
+    const active = document.activeElement;
+    const isInTransit = active === null || active === document.body;
     if (pending.from.isConnected) {
-      if (document.activeElement !== pending.from) focusAfter.current = null;
+      if (active !== pending.from && !isInTransit) focusAfter.current = null;
       return;
     }
-    focusAfter.current = null;
-    const active = document.activeElement;
-    if (active !== null && active !== document.body) return;
-    const chips = [...(rowRef.current?.querySelectorAll<HTMLElement>('.filter-chip-trigger') ?? [])].filter(
-      (trigger) => trigger !== moreRef.current,
-    );
+    if (!isInTransit) {
+      focusAfter.current = null;
+      return;
+    }
+    const chips = rowChips();
     const more = moreRef.current;
     const target =
       pending.to === 'more'
@@ -139,6 +157,10 @@ export function FilterBar({
         : pending.to === 'panel'
           ? (chips.find((trigger) => pending.labels.has(labelOf(trigger) ?? '')) ?? more ?? chips[0])
           : (chips[0] ?? more);
+    // In Chromium the inert page a closing popover made lifts only in the passive phase, and an inert element
+    // takes no focus, so the move waits for it.
+    if (when === 'layout' && target?.closest('[inert]')) return;
+    focusAfter.current = null;
     target?.focus();
   };
 
@@ -150,6 +172,24 @@ export function FilterBar({
     settleFocus('passive');
   });
 
+  // The sheet gives focus back to the Filters button as it closes. A phone turned past 768px with the sheet open
+  // has hidden the button, which then takes no focus, so the row's first chip takes it in its place.
+  useEffect(() => {
+    const button = sheetButtonRef.current;
+    if (button === null) return;
+    const onRestore = (event: Event): void => {
+      if (getComputedStyle(button).display !== 'none') return;
+      const first = [...(rowRef.current?.querySelectorAll<HTMLElement>('.filter-chip-trigger') ?? [])][0];
+      if (first === undefined) return;
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    };
+    button.addEventListener(RESTORE_EVENT, onRestore);
+    return () => {
+      button.removeEventListener(RESTORE_EVENT, onRestore);
+    };
+  }, []);
+
   const closePanel = (): void => {
     if (panelLabels !== null) expectLeave('panel', moreRef.current, panelLabels);
     setPanelLabels(null);
@@ -158,10 +198,27 @@ export function FilterBar({
   // What every place shares: the chips More holds, the sections' clear word, and the row's report of a secondary
   // chip cleared there, called with focus on its trigger, so More takes focus once the chip has left the row.
   const shared = {
-    behindMore: new Set(census.inactiveSecondary) as ReadonlySet<string>,
+    behindMore: new Set(
+      census.inactiveSecondary.filter((label) => !heldInRow.has(label)),
+    ) as ReadonlySet<string>,
     clearWord: names.clear,
     onSecondaryCleared: (): void => {
       expectLeave('more', document.activeElement);
+    },
+    onRowOpenChange: (label: string, isOpen: boolean): void => {
+      if (!isOpen) {
+        // The chip leaves for More as it closes if it has no value by then, or once the app's value arrives. What
+        // is expected to leave is its trigger: focus is still in the closing list, which goes either way.
+        const trigger = rowChips().find((each) => labelOf(each) === label);
+        expectLeave('more', trigger ?? document.activeElement);
+      }
+      setHeldInRow((held) => {
+        if (held.has(label) === isOpen) return held;
+        const next = new Set(held);
+        if (isOpen) next.add(label);
+        else next.delete(label);
+        return next;
+      });
     },
   };
 
@@ -212,7 +269,7 @@ export function FilterBar({
         </Button>
       ) : null}
       <SheetTrigger>
-        <Button variant="secondary" className="filter-bar-sheet-button">
+        <Button ref={sheetButtonRef} variant="secondary" className="filter-bar-sheet-button">
           <ListFilter aria-hidden="true" />
           {names.filters}
           {count > 0 ? (

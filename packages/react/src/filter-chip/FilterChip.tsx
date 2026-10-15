@@ -131,6 +131,12 @@ export interface ChipPlace {
   close: () => void;
   /** Called when a secondary chip in the row is cleared, so FilterBar can give focus to More. */
   onSecondaryCleared: () => void;
+  /**
+   * Called as a secondary chip in the row opens or closes its list or panel. FilterBar keeps an open chip in the
+   * row though a change made in it leaves the chip without a value, so the list in use never unmounts; as it
+   * closes the chip leaves for More, and More takes focus.
+   */
+  onRowOpenChange: (label: string, isOpen: boolean) => void;
 }
 
 /** Internal: FilterBar's place for the chips under it. */
@@ -262,8 +268,11 @@ function ListChipButton({
   return <ChipButton {...button} text={useListText(button.label, value, valueLabel, summary)} />;
 }
 
-/** Whether a list chip's value holds a choice, read from its props so the server knows. */
-const hasChoice = (value: Key | null | readonly Key[]): boolean =>
+/**
+ * Whether a list chip's value holds a choice, read from its props so the server knows: null and undefined are
+ * none. Internal: FilterBar's census reads it too, so the two never disagree.
+ */
+export const hasChoice = (value: Key | null | readonly Key[]): boolean =>
   Array.isArray(value) ? value.length > 0 : value != null;
 
 /**
@@ -345,10 +354,13 @@ function ChoiceSelect({ choice, children, ...common }: ChoiceSelectProps): React
 function ChipPill<T extends object>({
   resolved,
   onCleared,
+  onOpenChange,
 }: {
   resolved: Resolved<T>;
   /** Called once cleared, after focus is on the trigger: FilterBar's, for a chip that may leave the row. */
   onCleared: (() => void) | undefined;
+  /** Called as the list or the panel opens and closes: FilterBar's, for a chip that may leave the row. */
+  onOpenChange: ((isOpen: boolean) => void) | undefined;
 }): ReactElement {
   const { props, names, isActive, isClearable, isDisabled, clear } = resolved;
   const { label, valueLabel, placement = 'bottom start', popoverClassName, className, ref } = props;
@@ -387,6 +399,7 @@ function ChipPill<T extends object>({
           onOpenChange={(open) => {
             onOpenFilter(open);
             setOpen(open);
+            onOpenChange?.(open);
           }}
         >
           <ListChipButton
@@ -406,7 +419,12 @@ function ChipPill<T extends object>({
           </SelectPopover>
         </ChoiceSelect>
       ) : (
-        <DialogTrigger onOpenChange={setOpen}>
+        <DialogTrigger
+          onOpenChange={(open) => {
+            setOpen(open);
+            onOpenChange?.(open);
+          }}
+        >
           <ChipButton
             label={label}
             text={present(valueLabel) ? valueLabel : undefined}
@@ -599,10 +617,11 @@ export function FilterChip<T extends object = object>(props: FilterChipProps<T>)
     },
   };
 
-  if (place === null) return <ChipPill resolved={resolved} onCleared={undefined} />;
+  if (place === null) return <ChipPill resolved={resolved} onCleared={undefined} onOpenChange={undefined} />;
   if (place.place === 'row') {
-    // Behind More while inactive, when FilterBar read it and so More holds it; an active chip, or one More cannot
-    // hold, is in the row.
+    // Behind More while inactive, when FilterBar read it and so More holds it; an active chip, one More cannot
+    // hold, or one whose list or panel is open, which FilterBar leaves out of behindMore until it closes, is in
+    // the row.
     const isSecondary = props.isSecondary === true;
     if (isSecondary && !isActive && place.behindMore.has(props.label)) return null;
     return (
@@ -612,6 +631,13 @@ export function FilterChip<T extends object = object>(props: FilterChipProps<T>)
         // secondary chip active there is no More, and clearing one brings it back. FilterBar always hears of it,
         // and gives focus to More once the chip has gone.
         onCleared={isSecondary ? place.onSecondaryCleared : undefined}
+        onOpenChange={
+          isSecondary
+            ? (open) => {
+                place.onRowOpenChange(props.label, open);
+              }
+            : undefined
+        }
       />
     );
   }
