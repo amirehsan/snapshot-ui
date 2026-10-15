@@ -7622,8 +7622,8 @@ contrast test recomputes them.
 an inline block on the text's line box, `vertical-align: middle`, so a
 line of skeletons is the height of a line of the text it stands for (the
 `TextLines` story measures it at the body and small steps). A `block` is
-a field tall, `--size-field` (48px, 36px compact, 44px on a coarse
-pointer), at `--radius-control`, so it takes the shape axis as a field
+a field tall, `--size-field` (48px, 36px compact, 44px compact on a
+coarse pointer), at `--radius-control`, so it takes the shape axis as a field
 does: 20px corners in Rounded, 10px in Soft, square in Square. A
 `circle` is the 40px target, `--size-target`, at `--radius-dot`, an
 avatar's place. `width` and `height` write `inline-size` and

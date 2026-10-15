@@ -24,7 +24,9 @@
     border-radius: var(--radius-control);
   }
 
+  /* A fixed shape: flex: none keeps it round beside lines that take the rest of a flex row. */
   .skeleton[data-shape='circle'] {
+    flex: none;
     inline-size: var(--size-target);
     block-size: var(--size-target);
     border-radius: var(--radius-dot);

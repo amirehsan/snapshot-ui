@@ -140,7 +140,7 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
   [
     'Skeleton circle',
     <Skeleton shape="circle" width="2rem" />,
-    '<span class="skeleton" data-shape="circle" aria-hidden="true" style="inline-size:2rem"></span>',
+    '<span class="skeleton" data-shape="circle" aria-hidden="true" style="inline-size:2rem;block-size:2rem"></span>',
   ],
 ];
 
