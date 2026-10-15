@@ -40,11 +40,13 @@ export default defineConfig({
         },
       },
       {
-        // The sheet's stories again in WebKit, the engine a phone runs: only stories tagged webkit.
+        // Stories tagged webkit again in WebKit, the engine a phone runs.
         extends: true,
         plugins: [storybookTest({ configDir, tags: { include: ['webkit'] } })],
         test: {
           name: 'storybook-webkit',
+          // One file at a time: WebKit slows the timers and animations of a page that is not in front.
+          fileParallelism: false,
           setupFiles: ['./.storybook/vitest.setup.ts'],
           browser: {
             enabled: true,
@@ -60,6 +62,8 @@ export default defineConfig({
         plugins: [storybookTest({ configDir, tags: { include: ['firefox'] } })],
         test: {
           name: 'storybook-firefox',
+          // One file at a time: as in WebKit, so no page waits behind another.
+          fileParallelism: false,
           setupFiles: ['./.storybook/vitest.setup.ts'],
           browser: {
             enabled: true,

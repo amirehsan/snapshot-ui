@@ -381,7 +381,7 @@ export const ClosedKeys: Story = {
     await expect(document.querySelector('[role="listbox"]')).toBeNull();
     await expect(trigger).toHaveAccessibleName('Category');
     await user.keyboard('{ArrowDown}');
-    // Settled first, as a person's Escape always is: closed mid-entry, WebKit can hold the popover and its focus.
+    // Settled first, as a person's Escape is.
     await atRest();
     await user.keyboard('{Escape}');
     await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'false'));
