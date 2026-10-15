@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Receipt } from 'lucide-react';
 import { useState, type ComponentType, type CSSProperties, type ReactElement, type ReactNode } from 'react';
-import { I18nProvider } from 'react-aria-components';
+import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
+import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
 import { EmptyState } from '../empty-state';
 import { RouterProvider } from '../link';
@@ -709,5 +710,394 @@ export const LoadingStatus: Story = {
     await expect(busy.contains(status)).toBe(false);
     await waitFor(() => expect(status).toHaveTextContent('Loading'), { timeout: QUIET_MS + 2000 });
     await expect(canvasElement.querySelectorAll('.data-table-skeleton-row')).toHaveLength(8);
+  },
+};
+
+/** The bar's two actions in every selection story: a secondary Categorize and a danger Delete. */
+const ACTIONS = (
+  <>
+    <Button variant="secondary">Categorize</Button>
+    <Button variant="danger">Delete</Button>
+  </>
+);
+
+/** The sorted table with selection in local state, as a page holds it, and the bar's two actions. */
+function Selecting({ initial = [], ...props }: Props & { initial?: Key[] }): ReactElement {
+  const [keys, setKeys] = useState<Key[]>(initial);
+  return (
+    <Sorted
+      {...props}
+      selectedKeys={keys}
+      onSelectionChange={setKeys}
+      bulkActions={props.bulkActions ?? ACTIONS}
+    />
+  );
+}
+
+/** The selected rows' keys, in the order drawn. */
+const selectedKeysOf = (scope: ParentNode): string[] =>
+  bodyRows(scope)
+    .filter((row) => row.getAttribute('aria-selected') === 'true')
+    .map((row) => row.getAttribute('data-key') ?? '');
+
+/** Three rows selected: their boxes checked, the header box's dash, the 8% rows and the bar under the table. */
+export const Selected: Story = {
+  tags: ['viewport-desktop', 'density'],
+  render: () => (
+    <Box>
+      <Selecting initial={['t2', 't4', 't5']} />
+    </Box>
+  ),
+};
+
+/** Every row selected: every box checked, the header's too. */
+export const AllSelected: Story = {
+  render: () => (
+    <Box>
+      <Selecting initial={EIGHT.map(keyOf)} />
+    </Box>
+  ),
+};
+
+/** Persian digits, written by the app, as formatCount gives them. */
+const persianDigits = (count: number): string =>
+  String(count).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit);
+
+/** The Persian table with selection in local state. */
+function PersianSelecting({ initial }: { initial: Key[] }): ReactElement {
+  const [keys, setKeys] = useState<Key[]>(initial);
+  return (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa">
+        <DataTable
+          aria-label="تراکنش‌ها"
+          items={PERSIAN}
+          columns={PERSIAN_COLUMNS}
+          getKey={(row) => row.id}
+          getRowHref={(row) => `/transactions/${row.id}`}
+          sortDescriptor={{ column: 'date', direction: 'descending' }}
+          onSortChange={noop}
+          selectedKeys={keys}
+          onSelectionChange={setKeys}
+          formatCount={persianDigits}
+          bulkActions={
+            <>
+              <Button variant="secondary">دسته‌بندی</Button>
+              <Button variant="danger">حذف</Button>
+            </>
+          }
+          labels={{
+            total: 'جمع',
+            loading: 'در حال بارگذاری',
+            selectAll: 'انتخاب همه',
+            select: 'انتخاب',
+            clearSelection: 'پاک کردن انتخاب',
+            selected: (count) => `${count} انتخاب شده`,
+            toolbar: 'کارهای گروهی',
+          }}
+        />
+      </div>
+    </I18nProvider>
+  );
+}
+
+/** Right to left with two selected: the checkboxes at the right, the count in Persian digits at the bar's right. */
+export const SelectedRightToLeft: Story = {
+  render: () => (
+    <Box>
+      <PersianSelecting initial={['p1', 'p3']} />
+    </Box>
+  ),
+};
+
+/** The bar's ring: two rows selected by X, then Tab from the table lands on Categorize with the ring. */
+export const BarKeyboardFocus: Story = {
+  render: () => (
+    <Box>
+      <Selecting />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await focusRow(canvasElement, 0);
+    await userEvent.keyboard('x');
+    await userEvent.keyboard('{ArrowDown}');
+    await userEvent.keyboard('x');
+    await expect(selectedKeysOf(canvasElement)).toEqual(['t1', 't2']);
+    await userEvent.tab();
+    const categorize = within(canvasElement).getByRole('button', { name: 'Categorize' });
+    await waitFor(() => expect(categorize).toHaveFocus());
+    await expect(categorize).toHaveAttribute('data-focus-visible');
+  },
+};
+
+/**
+ * The keys in order: J and J move down two rows, K back up one, X selects that row, Space unselects it, X again,
+ * Enter opens it through the router without selecting it, and Shift with Arrow Up extends from it. Run in all
+ * three engines, since the handler dispatches the arrows itself (spec correction 7).
+ */
+export const Keys: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <RouterProvider navigate={navigate}>
+      <div style={{ width: 'min(60rem, 100%)' }}>
+        <Selecting />
+      </div>
+    </RouterProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    navigate.mockClear();
+    await focusRow(canvasElement, 0);
+    await userEvent.keyboard('j');
+    await waitFor(() => expect(rowAt(canvasElement, 1)).toHaveFocus());
+    await userEvent.keyboard('j');
+    await waitFor(() => expect(rowAt(canvasElement, 2)).toHaveFocus());
+    await userEvent.keyboard('k');
+    await waitFor(() => expect(rowAt(canvasElement, 1)).toHaveFocus());
+    await userEvent.keyboard('x');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2']));
+    await expect(rowAt(canvasElement, 1)).toHaveFocus();
+    await userEvent.keyboard(' ');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual([]));
+    await userEvent.keyboard('x');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2']));
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+    await expect(navigate.mock.calls[0]?.[0]).toBe('/transactions/t2');
+    await expect(selectedKeysOf(canvasElement)).toEqual(['t2']);
+    // Shift and an arrow extend from the anchor X set, t2, as from Space's.
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}');
+    await waitFor(() => expect(rowAt(canvasElement, 3)).toHaveFocus());
+    await userEvent.keyboard('{Shift>}{ArrowUp}{/Shift}');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2', 't3']));
+  },
+};
+
+/** A Persian layout's J and X: key ت with code KeyJ moves down, key ط with code KeyX selects. Three engines. */
+export const PersianLayoutKeys: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box>
+      <Selecting />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const first = await focusRow(canvasElement, 0);
+    first.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ت', code: 'KeyJ', bubbles: true, cancelable: true }),
+    );
+    await waitFor(() => expect(rowAt(canvasElement, 1)).toHaveFocus());
+    rowAt(canvasElement, 1).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ط', code: 'KeyX', bubbles: true, cancelable: true }),
+    );
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2']));
+    rowAt(canvasElement, 1).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ن', code: 'KeyK', bubbles: true, cancelable: true }),
+    );
+    await waitFor(() => expect(first).toHaveFocus());
+  },
+};
+
+/** A letter never moves focus, with selection on: React Aria's typeahead would go to City Transit. Three engines. */
+export const TypeaheadStopped: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box>
+      <Selecting />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const first = await focusRow(canvasElement, 0);
+    for (const letter of ['c', 'i', 'n', 'a']) {
+      await userEvent.keyboard(letter);
+      await expect(first).toHaveFocus();
+    }
+    await expect(selectedKeysOf(canvasElement)).toEqual([]);
+  },
+};
+
+/**
+ * Ctrl+Enter on a row: the handler dispatches a click carrying Ctrl on the row's link, so React Aria's link
+ * leaves it to the browser, and the row is not selected. The play records what reached the link and keeps the
+ * page where it is, so what each browser would then open is not seen here. Three engines; the record reads
+ * each engine's result.
+ */
+export const ModifierEnter: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <RouterProvider navigate={navigate}>
+      <div style={{ width: 'min(60rem, 100%)' }}>
+        <Selecting />
+      </div>
+    </RouterProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    navigate.mockClear();
+    const clicks: MouseEvent[] = [];
+    // React Aria's press handling stops a link's click at React's root, so the play listens in the capture phase,
+    // and keeps the page: a new tab, or in WebKit the same tab navigating, is not the play's to open.
+    const keep = (event: MouseEvent): void => {
+      if (!(event.target instanceof Element) || event.target.closest('.data-table-link') === null) return;
+      clicks.push(event);
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) event.preventDefault();
+    };
+    window.addEventListener('click', keep, true);
+    try {
+      await focusRow(canvasElement, 1);
+      await userEvent.keyboard('{Control>}{Enter}{/Control}');
+      await waitFor(() => expect(clicks).toHaveLength(1));
+      await expect(clicks[0]?.ctrlKey).toBe(true);
+      await expect((clicks[0]?.target as Element).getAttribute('href')).toBe('/transactions/t2');
+      await expect(navigate).not.toHaveBeenCalled();
+      await expect(selectedKeysOf(canvasElement)).toEqual([]);
+      // Without the modifier the router opens it.
+      await userEvent.keyboard('{Enter}');
+      await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+      await expect(clicks[1]?.ctrlKey).toBe(false);
+      await expect(selectedKeysOf(canvasElement)).toEqual([]);
+    } finally {
+      window.removeEventListener('click', keep, true);
+    }
+  },
+};
+
+/**
+ * The table is one tab stop (spec 7.2): Tab from before it lands in it once, the next Tab leaves it for the bar,
+ * Shift+Tab from the bar returns to the row last focused, and with nothing selected Tab leaves for what follows.
+ * No row link and no checkbox is in the tab order; the arrows reach them. Three engines.
+ */
+export const TabStop: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box>
+      <button type="button">Before</button>
+      <Selecting />
+      <button type="button">After</button>
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const before = within(canvasElement).getByRole('button', { name: 'Before' });
+    const after = within(canvasElement).getByRole('button', { name: 'After' });
+    const grid = only(canvasElement, '[role="grid"]');
+    for (const element of grid.querySelectorAll('a, input')) {
+      await expect(element).toHaveAttribute('tabindex', '-1');
+    }
+    before.focus();
+    await userEvent.tab();
+    await waitFor(() => expect(rowAt(canvasElement, 0)).toHaveFocus());
+    // Nothing selected: the next stop is after the table.
+    await userEvent.tab();
+    await waitFor(() => expect(after).toHaveFocus());
+    await userEvent.tab({ shift: true });
+    await waitFor(() => expect(rowAt(canvasElement, 0)).toHaveFocus());
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}x');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t3']));
+    // With the bar shown, the next stop is the bar, and Shift+Tab comes back to the third row.
+    await userEvent.tab();
+    const categorize = within(canvasElement).getByRole('button', { name: 'Categorize' });
+    await waitFor(() => expect(categorize).toHaveFocus());
+    await userEvent.tab({ shift: true });
+    await waitFor(() => expect(rowAt(canvasElement, 2)).toHaveFocus());
+    await userEvent.tab({ shift: true });
+    await waitFor(() => expect(before).toHaveFocus());
+  },
+};
+
+/** Escape in the table clears the selection; the bar leaves and focus stays on the row. */
+export const EscapeClears: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box>
+      <Selecting initial={['t1', 't2']} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('toolbar', { name: 'Bulk actions' })).toBeVisible();
+    const row = await focusRow(canvasElement, 1);
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual([]));
+    await expect(within(canvasElement).queryByRole('toolbar')).toBeNull();
+    await expect(row).toHaveFocus();
+  },
+};
+
+/** Clear selection, and Escape in the bar, clear and put focus back in the table. */
+export const ClearFocus: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box>
+      <Selecting initial={['t1', 't2']} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const grid = only(canvasElement, '[role="grid"]');
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Clear selection' }));
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual([]));
+    await expect(within(canvasElement).queryByRole('toolbar')).toBeNull();
+    await waitFor(() => expect(grid.contains(document.activeElement)).toBe(true));
+    // Again by Escape from an action.
+    await userEvent.keyboard('x');
+    const categorize = await within(canvasElement).findByRole('button', { name: 'Categorize' });
+    categorize.focus();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual([]));
+    await waitFor(() => expect(grid.contains(document.activeElement)).toBe(true));
+  },
+};
+
+/** A selected row is the 8% wash, held under the pointer; an unselected one hovered is 5%. */
+export const HoverSelected: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box>
+      <Selecting initial={['t1']} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const hovered = (row: HTMLElement): string => {
+      row.setAttribute('data-hovered', 'true');
+      const { backgroundColor } = getComputedStyle(row);
+      row.removeAttribute('data-hovered');
+      return backgroundColor;
+    };
+    const first = rowAt(canvasElement, 0);
+    const second = rowAt(canvasElement, 1);
+    const eight = paint('color-mix(in srgb, var(--color-ink) 8%, var(--color-canvas))', first);
+    await expect(getComputedStyle(first).backgroundColor).toBe(eight);
+    await expect(hovered(first)).toBe(eight);
+    await expect(hovered(second)).toBe(
+      paint('color-mix(in srgb, var(--color-ink) 5%, var(--color-canvas))', second),
+    );
+    // The checked box marks it too: never color alone.
+    await expect(within(first).getByRole('checkbox')).toBeChecked();
+  },
+};
+
+/**
+ * Sixty rows with two selected: scrolled so the table's end is below the viewport, the bar sits 16px over the
+ * bottom edge (the tab bar's reserve is 0 here); scrolled to the end, it sits under the table.
+ */
+export const StickyBar: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box>
+      <Selecting items={manyTransactions(60)} initial={['m1', 'm2']} />
+      <p style={{ blockSize: 400 }}>After the table</p>
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = only(canvasElement, '.data-table-bar');
+    window.scrollTo(0, 400);
+    await waitFor(() => expect(window.scrollY).toBe(400));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const table = only(canvasElement, '.data-table-table');
+    await expect(table.getBoundingClientRect().bottom).toBeGreaterThan(window.innerHeight);
+    await expect(Math.round(window.innerHeight - bar.getBoundingClientRect().bottom)).toBe(16);
+    // At the end of the page the bar has come to rest under the table.
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await expect(bar.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      table.getBoundingClientRect().bottom,
+    );
+    window.scrollTo(0, 0);
   },
 };

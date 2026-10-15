@@ -37,6 +37,7 @@ import ConfirmDialogHook from './confirm-dialog-hook';
 import DataTableBasic from './data-table-basic';
 import DataTableColumns from './data-table-columns';
 import DataTableFigures from './data-table-figures';
+import DataTableSelection from './data-table-selection';
 import DataTableStates from './data-table-states';
 import DateRangePickerBasic from './date-range-picker-basic';
 import DateRangePickerPresets from './date-range-picker-presets';
@@ -186,6 +187,7 @@ export const examples = {
   'data-table-basic': DataTableBasic,
   'data-table-columns': DataTableColumns,
   'data-table-figures': DataTableFigures,
+  'data-table-selection': DataTableSelection,
   'data-table-states': DataTableStates,
   'date-range-picker-basic': DateRangePickerBasic,
   'date-range-picker-presets': DateRangePickerPresets,

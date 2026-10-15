@@ -2968,6 +2968,77 @@ test('a press anywhere on a data table row opens its link, and a middle click op
   await tab.close();
 });
 
+/** The data table page's selection example: its stage and its grid, drawn as a table. */
+const selectionTable = async (page: Page): Promise<{ stage: Locator; table: Locator }> => {
+  await visit(page, '/docs/components/data-table');
+  const stage = page.locator('.stage').filter({ has: page.getByRole('checkbox', { name: 'Select all' }) });
+  const table = stage.getByRole('grid', { name: 'Transactions' });
+  await expectTableFace(table);
+  return { stage, table };
+};
+
+test('a data table selects with X and Space, shows the bar with the count, and opens a row on Enter without selecting it', async ({
+  page,
+}) => {
+  const { stage, table } = await selectionTable(page);
+  const rows = table.locator('tbody [role="row"]');
+  await expect(stage.getByRole('toolbar')).toHaveCount(0);
+  await rows.first().focus();
+  await page.keyboard.press('x');
+  await expect(rows.first()).toHaveAttribute('aria-selected', 'true');
+  const bar = stage.getByRole('toolbar', { name: 'Bulk actions' });
+  await expect(bar).toContainText('1 selected');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press(' ');
+  await expect(rows.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(bar).toContainText('2 selected');
+  // X again unselects the row.
+  await page.keyboard.press('x');
+  await expect(rows.nth(1)).toHaveAttribute('aria-selected', 'false');
+  await expect(bar).toContainText('1 selected');
+  const id = await rows.nth(1).getAttribute('data-key');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new RegExp(`#${id ?? ''}$`));
+  await expect(rows.nth(1)).toHaveAttribute('aria-selected', 'false');
+  await expect(rows.nth(1)).toHaveAttribute('data-current', '');
+  await expect(bar).toContainText('1 selected');
+  // The count is said politely, in the bar's words, once it has held.
+  await expect(stage.locator('.data-table-count')).toHaveText('1 selected');
+});
+
+test('a data table keeps focus on its row when a letter is typed', async ({ page }) => {
+  const { table } = await selectionTable(page);
+  const first = table.locator('tbody [role="row"]').first();
+  await first.focus();
+  for (const letter of ['c', 'n', 'a', 'g']) {
+    await page.keyboard.press(letter);
+    await expect(first).toBeFocused();
+  }
+  // J and K move as the arrows.
+  await page.keyboard.press('j');
+  await expect(table.locator('tbody [role="row"]').nth(1)).toBeFocused();
+  await page.keyboard.press('k');
+  await expect(first).toBeFocused();
+});
+
+test('select all selects the rows on the page and Clear selection puts focus back in the table', async ({
+  page,
+}) => {
+  const { stage, table } = await selectionTable(page);
+  const rows = table.locator('tbody [role="row"]');
+  // The box is the target, as a reader presses it; the input under it is hidden from sight.
+  await stage.locator('thead .checkbox-box').click();
+  await expect(table.locator('tbody [aria-selected="true"]')).toHaveCount(await rows.count());
+  const bar = stage.getByRole('toolbar', { name: 'Bulk actions' });
+  await expect(bar).toContainText(`${String(await rows.count())} selected`);
+  // The bar sticks to the bottom of the window inside the table's box, so it is in reach wherever the reader is.
+  await expect(bar).toBeInViewport();
+  await bar.getByRole('button', { name: 'Clear selection' }).click();
+  await expect(table.locator('tbody [aria-selected="true"]')).toHaveCount(0);
+  await expect(stage.getByRole('toolbar')).toHaveCount(0);
+  expect(await table.evaluate((grid) => grid.contains(document.activeElement))).toBe(true);
+});
+
 test('a data table drops its md column under 48rem of its box and its sm column under 40rem', async ({
   page,
 }) => {
@@ -3030,7 +3101,7 @@ test('a data table example has a stage as wide as the content, so its columns le
     await visit(page, '/docs/components/data-table');
     // Every data table example is drawn on a wide stage, its box 40rem or wider, so it draws its table face.
     const stages = page.locator('.stage').filter({ has: page.locator('.data-table') });
-    expect(await stages.count()).toBe(4);
+    expect(await stages.count()).toBe(5);
     for (const stage of await stages.all()) {
       await expect(stage).toHaveClass(/\bstage-wide\b/);
       await expectTableFace(stage.locator('.data-table').first());
