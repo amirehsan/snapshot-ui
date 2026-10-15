@@ -31,10 +31,9 @@ export interface RadioGroupBaseProps extends Omit<RACRadioGroupProps, 'children'
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
    * Whether the choice differs from the saved one. Shows the clay Changed chip
-   * in the label row, which is the whole cue (the options draw no edge of their
-   * own), and has a screen reader read the chip with the group. An invalid
-   * group shows its error instead. A group with no visible `label` has no label
-   * row to hold the chip, so it shows nothing: it still sets `data-changed`.
+   * in the label row, which a screen reader reads with the group. An invalid
+   * group shows its error instead. Without a visible `label` no chip shows,
+   * but `data-changed` is still set.
    */
   isChanged?: boolean;
   /**

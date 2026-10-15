@@ -1,6 +1,6 @@
 ---
 title: Typography
-description: Heading, Text and Eyebrow set the type scale. They are plain elements, so they work in a server component.
+description: Heading, Text and Eyebrow set the type scale as plain elements that work in server components.
 icon: Type
 ---
 
@@ -8,11 +8,14 @@ icon: Type
 
 ## Heading
 
-The level picks the element and the size picks the look. The size follows the level unless you give one, so a card title can be an h2 drawn in the card-title step.
+`level` picks the element and `size` picks the look. The size follows the level unless you set it, so a card title can be an h2 in the card-title step.
 
 <Preview name="heading-sizes" />
 
-Headings scale down on small screens. The display step is 48px under 1024px and 40px under 768px, and the section step is 28px under 768px.
+Headings scale down on small screens:
+
+- Display: 48px under 1024px, 40px under 768px.
+- Section: 28px under 768px.
 
 </Section>
 
@@ -30,7 +33,12 @@ Body text in the body or the small step. The muted tone is slate, for secondary 
 
 ## Numerals
 
-A figure that is the point of a tile takes a numeral size. A hero amount is `size="numeral"`: 56px with tabular digits, dropping to 44px under 768px so "$12,345.67" fits a 320px screen. A tile beside others is `size="numeral-sm"`, 32px. A numeral never wraps, because a number that breaks is a wrong number, so keep it to one figure, and let a row of `numeral-sm` tiles wrap (`flex-wrap`) as the example does, since two cannot share a row at 320px. Give it its sign and unit in the string, since nothing is formatted here. A numeral reads left to right in every direction and keeps its sign where it was written, so "+$1,980.00" stays in that order in a right-to-left page.
+Use a numeral size for a figure that is the point of a tile. Both use tabular digits.
+
+- `size="numeral"`: a hero amount, 56px, dropping to 44px under 768px so "$12,345.67" fits a 320px screen.
+- `size="numeral-sm"`: a tile beside others, 32px.
+
+A numeral never wraps, because a broken number reads wrong. Keep it to one figure. Two `numeral-sm` tiles cannot share a row at 320px, so let the row wrap (`flex-wrap`), as the example does. Put the sign and unit in the string, since nothing is formatted here. A numeral reads left to right in every direction, so "+$1,980.00" keeps its order on a right-to-left page.
 
 <Preview name="text-numerals" />
 
@@ -40,7 +48,7 @@ A figure that is the point of a tile takes a numeral size. A hero amount is `siz
 
 ## Eyebrow
 
-The small capitalised label above a heading, with the accent dot. The dot hangs into the gutter, so the label lines up with the heading below it. With no gutter beside the label, `inset` keeps the dot inside the label's box. An Eyebrow is an inline-level flex box, so it sits on a line like text, and two of them can share a line. Space it from the heading with the layout, a grid or flex gap as the examples do, and not with margins.
+The small capitalised label above a heading, with the accent dot. The dot hangs into the gutter, so the label lines up with the heading below. With no gutter, `inset` keeps the dot inside the label's box. An Eyebrow is an inline-level flex box, so it sits on a line like text, and two can share a line. Space it from the heading with a grid or flex gap, as the examples do, not with margins.
 
 <Preview name="eyebrow-heading" />
 
@@ -72,7 +80,7 @@ export function SectionIntro() {
 
 ## Props
 
-Each one accepts every attribute of the element it renders, and a `className` that is added after its own.
+Each accepts every attribute of the element it renders, and a `className` added after its own.
 
 ### Heading props
 
@@ -92,9 +100,9 @@ Each one accepts every attribute of the element it renders, and a `className` th
 
 ## Accessibility
 
-A Heading is a real h1 to h4 element, so the page outline is what assistive technology reads, whatever size it is drawn in. An Eyebrow is a label and never a heading, so it stays out of the outline. Muted text is slate, which clears 4.5:1 on every surface.
+A Heading is a real h1 to h4 element, so assistive technology reads the page outline whatever size it is drawn in. An Eyebrow is a label, never a heading, so it stays out of the outline. Muted text is slate, which clears 4.5:1 on every surface.
 
-A numeral is read as the digits it shows, so the sign and the unit belong in the text, and a change line beside it says the direction in a word, never in color alone.
+A numeral is read as the digits it shows, so the sign and unit belong in the text. A change line beside it says the direction in a word, never in color alone.
 
 </Section>
 

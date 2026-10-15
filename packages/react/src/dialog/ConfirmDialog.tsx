@@ -27,37 +27,32 @@ export interface ConfirmDialogProps extends Omit<
   /** The cancel button's label. @default 'Cancel' */
   cancelLabel?: string;
   /**
-   * `danger` draws the error icon well and the danger Button, for a question that loses something.
-   * `default` draws no well unless `icon` is given, and a primary Button.
-   * Required, with no default: a destructive question drawn as a harmless one is the costly mistake,
-   * and a harmless one drawn as destructive teaches people to ignore the warning, so the caller chooses.
+   * `danger` shows the error icon well and the danger Button, for a question that loses something.
+   * `default` shows a primary Button, and no well unless `icon` is given. Required, with no default.
    */
   tone: 'default' | 'danger';
   /** The well's icon. In the danger tone it is Lucide's TriangleAlert unless given. */
   icon?: ReactNode;
   /**
-   * Called when the confirm button is pressed. If it returns a promise, the dialog is pending until it
-   * settles: it closes when the promise resolves, and stays open, no longer pending, when it rejects.
-   * The rejection is reported through `reportError`, as if uncaught, never swallowed.
+   * Called when the confirm button is pressed. A returned promise keeps the dialog pending until it settles.
+   * It closes on resolve. On reject it stays open and reports the error through `reportError`.
    */
   onConfirm?: () => void | Promise<void>;
   /** Called on every other way out: Cancel, Escape, a scrim press. */
   onCancel?: () => void;
   /**
-   * Pending from outside: the confirm button shows Button's pending state, Cancel is disabled, and
-   * Escape and the scrim are ignored, so a half-finished action cannot be abandoned.
+   * Shows the pending state for work you track yourself. The confirm button shows its spinner, Cancel is
+   * disabled, and Escape and the scrim are ignored.
    */
   isPending?: boolean;
   /**
-   * The accessible name of the spinner in the pending confirm button, read with its label. Name the work in
-   * progress with the outcome's verb, such as "Deleting".
+   * The pending spinner's accessible name, read with the confirm label. Use the outcome's verb, such as "Deleting".
    * @default 'Loading'
    */
   pendingLabel?: string;
   /**
-   * Called when the dialog opens or closes, for one controlled by `isOpen` or started by `defaultOpen`.
-   * Inside a `DialogTrigger` the trigger owns the open state and this is not called: put `onOpenChange` on
-   * the trigger.
+   * Called when the dialog opens or closes, with `isOpen` or `defaultOpen`. Not called inside a
+   * `DialogTrigger`: put `onOpenChange` on the trigger.
    */
   onOpenChange?: (isOpen: boolean) => void;
 }

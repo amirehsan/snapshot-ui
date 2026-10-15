@@ -1,6 +1,6 @@
 ---
 title: Command palette
-description: 'A search-and-jump dialog on Cmd or Ctrl+K: type to filter, arrows to move, Enter to go, with recents and an app-driven async mode.'
+description: 'A search-and-jump dialog on Cmd or Ctrl+K, with recent items and an async mode.'
 icon: Command
 ---
 
@@ -8,9 +8,14 @@ icon: Command
 
 ## Basic
 
-A command palette is a dialog near the top of the screen with a field over a list. Type to filter: an item stays when every word you type appears in its label, its second line or its keywords, whatever the case and accents, so "cafe lumiere" finds Café Lumière. The arrows move the active row while focus stays in the field, and Enter opens it. Each item can have a 16px icon, a second line in slate, a value at its end such as a balance, given already formatted, and a key hint drawn as a key. Items with a `section` are grouped under it, in the order the sections are first seen, after the items with none. With `storageKey`, the palette remembers the last five items chosen in this browser and lists them first, under Recent, while the field is empty.
+A dialog with a search field over a list. Type to filter, use the arrows to move, and press Enter to open the active item.
 
-Cmd or Ctrl+K opens and closes a palette, and `shortcut` changes the key. The key is matched by the letter it types, and on a layout that types another script, such as Persian, Arabic, Hebrew or Russian, by where it sits, so Ctrl+K works there too. This site's own search already owns Cmd or Ctrl+K, so the example below listens for Cmd or Ctrl+J.
+- Filtering: an item matches when every word you type appears in its label, second line or keywords, ignoring case and accents. "cafe lumiere" finds Café Lumière.
+- Items: each can have an icon, a second line, a preformatted value at its end, and a key hint.
+- Sections: items with a `section` are grouped under it, after the items without one.
+- Recent: with `storageKey`, the last five chosen items are listed first while the field is empty.
+
+Cmd or Ctrl+K opens and closes the palette, and `shortcut` changes the key. It also works on layouts that type another script, such as Persian or Russian. This site's search already uses Cmd or Ctrl+K, so the example below uses Cmd or Ctrl+J.
 
 <Preview name="command-palette-basic" />
 
@@ -20,7 +25,7 @@ Cmd or Ctrl+K opens and closes a palette, and `shortcut` changes the key. The ke
 
 ## Async results
 
-When the results come from your server, take over the filtering: `filter={null}` is manual mode, in which the palette shows `items` as given. Control the field with `inputValue` and `onInputChange`, search, rank and cap the results yourself, and pass them as `items`. While a search runs, `isLoading` turns the spinner at the end of the field row, and the list keeps what it has until the new results land. Here a 400ms timer stands in for the request, and the palette opens from its button only.
+To search on your server, pass `filter={null}`, and the palette shows `items` as given. Control the field with `inputValue` and `onInputChange`, then fetch, rank and cap the results yourself. Set `isLoading` while a request runs: the field shows a spinner, and the list keeps its results until new ones arrive. Here a 400ms timer stands in for the request.
 
 <Preview name="command-palette-async" />
 
@@ -30,9 +35,7 @@ When the results come from your server, take over the filtering: `filter={null}`
 
 ## Usage
 
-There is no trigger to import: your app's own button opens the palette through `isOpen` and `onOpenChange`, and a `Kbd` beside it can show the key. The shortcut listens on the whole page while the palette is mounted, open or closed. It leaves a key that something else has already handled, such as an editor that uses the same key, and a key typed while composing text. It does nothing while another of this library's modals is open (a Dialog, ConfirmDialog, Drawer or Sheet), so a confirm dialog is never skipped past. A modal of your own is not in that count: while one is open, call `preventDefault()` on the shortcut's keydown in it, or pass `shortcut={false}`. `shortcut={false}` also turns it off for good.
-
-`onAction` receives the item, as you passed it, once the palette has closed and focus has gone back to where it was. So navigate there, or move focus, and nothing the palette does afterwards fights it. There is no `href` and no routing inside the palette.
+Open the palette from your own button with `isOpen` and `onOpenChange`, and show the key beside it with a `Kbd`. Navigate in `onAction`: it runs after the palette has closed and focus has returned, so nothing undoes your navigation. The palette has no `href` or routing of its own.
 
 ```tsx
 'use client';
@@ -63,7 +66,12 @@ export function AppSearch({ isOpen, onOpenChange }: AppSearchProps) {
 }
 ```
 
-`labels` replaces any of the palette's own words: the placeholder, which is the `label` unless you give one, the empty line, the spinner's name, the Recent heading, the status line, and the key hints. To keep the history yourself, on your server for example, pass `recentIds`, newest first, and `onRecentChange`, which receives the new list each time an item is chosen, your keys as given; the palette then stores nothing. Without `recentIds`, `onRecentChange` still hears each new list, as stored, so every id in it is a string. A remembered id that is no longer in `items` is dropped rather than shown with a stale name. Values in `end` are shown as given, so format them before you pass them. On a right-to-left page, wrap a signed amount in an element with `dir="ltr"`, so its sign stays in front of the figure.
+The shortcut listens on the whole page while the palette is mounted. It skips keys another handler has already taken and keys typed while composing text, and it is off while a Dialog, ConfirmDialog, Drawer or Sheet is open. For a modal of your own, call `preventDefault()` on the shortcut's keydown inside it. `shortcut={false}` turns the shortcut off.
+
+- `labels` replaces the palette's own words: the placeholder (the `label` by default), the empty line, the spinner's name, the Recent heading, the status line and the key hints.
+- To keep recent items yourself, such as on your server, pass `recentIds` (newest first) and `onRecentChange`. The palette then stores nothing. Without `recentIds`, `onRecentChange` still receives each stored list, with every id as a string.
+- A remembered id that is no longer in `items` is dropped.
+- Values in `end` are shown as given, so format them first. On a right-to-left page, wrap a signed amount in an element with `dir="ltr"` to keep its sign in front.
 
 </Section>
 
@@ -71,7 +79,7 @@ export function AppSearch({ isOpen, onOpenChange }: AppSearchProps) {
 
 ## Props
 
-`ref` goes on the dialog element and `className` on the surface. Each item is described by the second table, and the palette's words by the third.
+`ref` goes on the dialog element and `className` on the surface.
 
 <PropsTable label="CommandPalette props" path="../../packages/react/src/command-palette/CommandPalette.tsx" type="Pick<CommandPaletteProps, 'label' | 'items' | 'onAction' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'inputValue' | 'defaultInputValue' | 'onInputChange' | 'filter' | 'isLoading' | 'shortcut' | 'storageKey' | 'recentLimit' | 'recentIds' | 'onRecentChange' | 'labels' | 'className'>" />
 
@@ -85,11 +93,11 @@ export function AppSearch({ isOpen, onOpenChange }: AppSearchProps) {
 
 ## Accessibility
 
-A dialog named by `label`, over a field named by it too. The field keeps DOM focus, and the list has virtual focus: the field points at the active row, so a screen reader reads the row as the arrows move, and the active row is drawn as the ink fill, since no focus ring can show where Enter goes. A status line, in the page from the moment the palette opens, says how many results there are once typing has paused, and says nothing while you type. Escape closes the palette at once, with or without text, and focus goes back to where it was.
+The dialog and its field are both named by `label`. Focus stays in the field while the arrows move a virtual active row, which a screen reader announces and which is drawn as the ink fill. Once typing pauses, a status line announces the number of results. Escape closes the palette and returns focus.
 
 <Keys rows={[['Mod K', 'Opens and closes the palette (Mod is Cmd or Ctrl).'], ['Down Up', 'Move the active row, wrapping.'], ['Home End', 'Jump to the first or last row.'], ['PageUp PageDown', 'Move the active row by a page of the list.'], ['Enter', 'Opens the active item.'], ['Escape', 'Closes the palette.'], ['Tab', 'Stays in the dialog.']]} />
 
-The list is React Aria's menu, and how a screen reader reads a `role="menu"` behind `aria-activedescendant` is still to be checked in VoiceOver and NVDA before an app shell ships it. If it reads badly, the list becomes React Aria's listbox, with no change to these props.
+The list is React Aria's menu. How VoiceOver and NVDA read it is not yet checked. If it reads badly, it becomes a listbox, with the same props.
 
 </Section>
 

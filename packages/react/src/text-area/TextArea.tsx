@@ -38,17 +38,16 @@ export interface TextAreaBaseProps extends Omit<
   /** Example text shown while the control is empty. It never replaces the label. */
   placeholder?: string;
   /**
-   * How many lines tall the control is. It is never shorter than 6rem, which is
-   * the height of three lines and their padding, so fewer lines look the same.
-   * The reader can drag the corner to make it taller or shorter.
+   * How many lines tall the control is. It is never shorter than 6rem (three
+   * lines and their padding), so fewer rows look the same. The reader can drag
+   * the corner to resize it.
    * @default 3
    */
   rows?: number;
   /**
    * Whether the value differs from the saved one. Shows the clay Changed chip
-   * in the label row and the light signal orange border, and has a screen
-   * reader read the chip with the field. An invalid field shows its error
-   * instead.
+   * and the light signal orange border, and a screen reader reads the chip with
+   * the field. An invalid field shows its error instead.
    */
   isChanged?: boolean;
   /**
@@ -57,20 +56,16 @@ export interface TextAreaBaseProps extends Omit<
    */
   changedLabel?: string;
   /**
-   * About how long the value should be. Shows a count of the value's length
-   * from 70% of the budget on. It advises and never blocks typing, so the count
-   * can pass the budget. The length is measured as JavaScript and `maxLength`
-   * measure it, in UTF-16 code units: a line break counts as one, and an emoji
-   * or an accented letter built from two code points can count as two.
-   * `maxLength` is a hard stop that the count does not read, so set `budget` at
-   * or below it.
+   * About how long the value should be. Shows a length count from 70% of the
+   * budget. It never blocks typing, so the count can pass it. The length is in
+   * UTF-16 code units, as `maxLength` measures it. Set `budget` at or below
+   * `maxLength`, which the count does not read.
    */
   budget?: number;
   /**
-   * Options for the count that `budget` shows. `label` replaces its text, for
-   * another language or other words: it receives the count, the budget and
-   * whether the count is past it. `showFrom` is the share of the budget the
-   * count first appears at, from 0 to 1, and is 0.7 unless given.
+   * Options for the `budget` count. `label` returns its text from the count,
+   * the budget and whether the count is past it. `showFrom` is the share of the
+   * budget, from 0 to 1, where the count appears (0.7 by default).
    */
   counter?: Pick<FieldCounterProps, 'label' | 'showFrom'>;
   /** A class name, or a function of the field's state, merged after the library's own class. */

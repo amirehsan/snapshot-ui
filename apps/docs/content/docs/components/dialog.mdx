@@ -1,6 +1,6 @@
 ---
 title: Dialog
-description: A modal panel on the scrim with a title, a description, an optional icon well and a pinned action row. Escape and a press on the scrim close it.
+description: A modal panel on the scrim with a title, optional icon well and pinned action row.
 icon: MessageSquare
 ---
 
@@ -8,7 +8,7 @@ icon: MessageSquare
 
 ## Basic
 
-A dialog is a float panel centred on the scrim, with 16px clear on every side. From the top it holds an optional icon well, the title, which names the dialog, a description, which describes it, a body and an action row. Each part is drawn only when it is given. The title is required, and it is an `h2` drawn in the card title step.
+A float panel centred on the scrim, with 16px clear on every side. From the top: an optional icon well, the title, a description, a body and an action row. Each part shows only when given. The `title` is required and renders as an `h2` in the card title step.
 
 <Preview name="dialog-basic" />
 
@@ -18,7 +18,7 @@ A dialog is a float panel centred on the scrim, with 16px clear on every side. F
 
 ## Danger
 
-`tone="danger"` tints the icon well with error, for a question that loses something. The tone draws only the well: the actions are yours, and a danger dialog ends its row with a danger Button after a tertiary Cancel.
+`tone="danger"` tints the icon well with error, for a question that loses something. It changes only the well. The actions are yours: end the row with a tertiary Cancel, then a danger Button.
 
 <Preview name="dialog-danger" />
 
@@ -28,7 +28,11 @@ A dialog is a float panel centred on the scrim, with 16px clear on every side. F
 
 ## Long content
 
-A body taller than the screen allows scrolls inside the panel, and the head and the action row stay where they are. While it scrolls and holds nothing to focus, such as a page of terms, the body is a tab stop of its own, so the keyboard can reach it and scroll it. A body that holds a field is reached through the field. Escape and a press on the scrim already close a dialog, so the close button in the top end corner is opt-in, with `hasCloseButton`, for a long dialog whose way out has scrolled away. `size="lg"` widens the panel from 28rem to 40rem, and both widths stop at the screen less 2rem.
+A tall body scrolls inside the panel, and the head and action row stay put.
+
+- A scrolling body with nothing to focus, such as a page of terms, is its own Tab stop so the keyboard can scroll it.
+- `hasCloseButton` adds an X in the top end corner, for a long dialog. Escape and the scrim already close it.
+- `size="lg"` widens the panel from 28rem to 40rem. Both widths are capped at the screen less 2rem.
 
 <Preview name="dialog-long" />
 
@@ -38,9 +42,9 @@ A body taller than the screen allows scrolls inside the panel, and the head and 
 
 ## Usage
 
-Open a dialog from a `DialogTrigger`, which holds the button that opens it and the dialog, or control it with `isOpen` and `onOpenChange`, or start it open with `defaultOpen`. Dialog is a client component, and a server component can render it, as the examples on this page do. A button with `slot="close"` closes the dialog it is in, and `children` and `actions` may also be functions that receive `close`.
+Open a dialog from a `DialogTrigger`, which holds the button and the dialog. Or control it with `isOpen` and `onOpenChange`, or start it open with `defaultOpen`. Dialog is a client component, and a server component can render it, as the examples here do. To close it, use a button with `slot="close"`, or pass `children` and `actions` as functions that receive `close`.
 
-A dialog that asks for input holds a form. The form goes in `children`, which is the body, with an `id`, and its submit button goes in `actions`, the row that stays in view, joined to the form by its `form` attribute. Pressing the button submits the form, and so does Enter in a field. The form's `onSubmit` reads what was typed, does the work and closes the dialog:
+For input, put a form with an `id` in `children`, and its submit button in `actions`, linked by the button's `form` attribute. The button and Enter in a field both submit. The form's `onSubmit` reads the values, does the work and closes the dialog:
 
 ```tsx
 'use client';
@@ -81,13 +85,12 @@ export function RenameWorkspace({ name, onRename }: { name: string; onRename: (n
 }
 ```
 
-The body and the action row are the dialog's own parts and are not exported: anything given as `children` lands inside the body, so a second action row there would scroll away with it. `actions` is the one row that stays.
+The body and action row are not exported. Everything in `children` lands in the body, so buttons there scroll away. `actions` is the one row that stays in view.
 
-A dialog opened from a dialog stacks over it, such as a confirm over the form it guards. One scrim paints, Escape closes the top one, and focus goes back into the first when the second closes. A dialog opened from a dark card is dark while the page stays light: it takes the theme, the shape and the density of what it opened from, as [Theming](/docs/theming#overlays) explains.
-
-Dialogs do not use the browser's native top layer. Overlays are ordered by two variables, `--z-modal` (1000) for the modal surfaces and their scrims and `--z-toast` (1100) for the toast region above them, and an app whose own chrome uses larger numbers sets them higher. A third-party overlay with a very large z-index can still cover a dialog.
-
-When the action a dialog confirms removes the button that opened it, such as deleting a row, focus has nowhere to go back to. Place it yourself after the action, on the next row or on the list.
+- Stacking: a dialog opened from a dialog stacks over it, such as a confirm over the form it guards. One scrim shows, Escape closes the top one, and focus returns to the first.
+- Theme: a dialog takes the theme, shape and density of what opened it, so one opened from a dark card is dark on a light page. See [Theming](/docs/theming#overlays).
+- Layering: dialogs do not use the browser's top layer. `--z-modal` (1000) orders modal surfaces and their scrims, and `--z-toast` (1100) the toast region above them. Raise both if your app's chrome uses larger numbers. A third-party overlay with a very large z-index can still cover a dialog.
+- Focus after removal: when the action removes the button that opened the dialog, such as deleting a row, move focus yourself to the next row or the list.
 
 </Section>
 
@@ -95,7 +98,7 @@ When the action a dialog confirms removes the button that opened it, such as del
 
 ## Props
 
-The rest of React Aria's dialog props and `ref` go on the dialog element, the one that takes focus. `className` goes on the panel and `overlayClassName` on the scrim, each merged after the library's classes.
+The rest of React Aria's dialog props and `ref` go on the dialog element, which takes focus. `className` goes on the panel and `overlayClassName` on the scrim.
 
 <PropsTable path="../../packages/react/src/dialog/Dialog.tsx" type="Pick<DialogProps, 'title' | 'description' | 'icon' | 'tone' | 'size' | 'children' | 'actions' | 'isDismissable' | 'isKeyboardDismissDisabled' | 'hasCloseButton' | 'closeLabel' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'className' | 'overlayClassName'>" />
 
@@ -105,7 +108,7 @@ The rest of React Aria's dialog props and `ref` go on the dialog element, the on
 
 ## Accessibility
 
-The dialog is named by its title and described by its description. When it opens, focus moves to the dialog, or to the control inside that asks for it, and Tab cycles through the controls inside without reaching the page. When it closes, focus goes back to the button that opened it. While it is open, the page behind is hidden from assistive technology and does not scroll.
+The dialog is named by its title and described by its description. On open, focus moves to the dialog, or to a control inside that requests it, and Tab stays inside. On close, focus returns to the button that opened it. While open, the page behind is hidden from assistive technology and does not scroll.
 
 <Keys rows={[['Tab', 'Cycles through the controls inside.'], ['Escape', 'Closes the dialog.'], ['Enter Space', 'Press a button.']]} />
 

@@ -1,6 +1,6 @@
 ---
 title: Text area
-description: A multi-line text field. The same field as Text field with a taller box, so the label, the hint, the error line, the changed state and the length count work the same way.
+description: A multi-line Text field, with the same label, hint, error, changed state and length count.
 icon: TextAlignStart
 ---
 
@@ -18,7 +18,12 @@ Pass a label, and a hint if the label cannot say it all. The box is three lines 
 
 ## States
 
-The states are the ones Text field draws, on the taller box. A changed field gets a light signal orange edge and a clay chip beside its label. An invalid field gets the error edge and an error line, and invalid outranks changed, so the chip steps aside. A disabled field is recessed. A read-only field looks like an enabled one and still submits.
+The states match Text field, on the taller box.
+
+- Changed: a light signal orange edge and a clay chip beside the label.
+- Invalid: the error edge and an error line. Invalid outranks changed, so the chip steps aside.
+- Disabled: recessed.
+- Read-only: looks enabled and still submits.
 
 <Preview name="text-area-states" />
 
@@ -28,15 +33,15 @@ The states are the ones Text field draws, on the taller box. A changed field get
 
 ## Length and height
 
-Pass `budget` to count the value's length against about how long it should be. The count appears from 70% of the budget and never blocks typing. Pass `rows` for a taller box: the height is the rows times the line height, plus the padding and the edge, and never less than 6rem.
+Pass `budget` to count the value's length against a rough target. The count appears from 70% of the budget and never blocks typing. Pass `rows` for a taller box: the height is the rows times the line height, plus padding and edge, and never less than 6rem.
 
 <Preview name="text-area-counter" />
 
-The count is the value's length as JavaScript and `maxLength` measure it, in UTF-16 code units. A line break counts as one, as it does in the value `onChange` receives, and an emoji, or an accented letter built from two code points, can count as two. A browser sends each line break in a form request as two characters, so a server that measures the request sees one more per line.
+- Units: the count is in UTF-16 code units, as JavaScript and `maxLength` measure it. A line break counts as one, as in the value `onChange` receives. An emoji, or an accented letter built from two code points, can count as two.
+- Forms: a browser sends each line break as two characters, so a server measuring the request sees one more per line.
+- Limits: the budget is a soft target the count can pass. `maxLength` is a hard stop the counter does not read, so set `budget` at or below `maxLength`.
 
-The budget is a soft target and the count can pass it. `maxLength` is a hard stop that the counter does not read, so set `budget` at or below `maxLength`.
-
-To word the count another way, such as in another language, pass `counter` with a `label` function. It receives the count, the budget and whether the count is past it, and returns the text. `counter.showFrom` moves the share of the budget the count first appears at.
+To word the count another way, such as in another language, pass `counter` with a `label` function. It receives the count, the budget and whether the count is past it, and returns the text. `counter.showFrom` sets the share of the budget where the count first appears.
 
 ```tsx
 <TextArea
@@ -46,7 +51,7 @@ To word the count another way, such as in another language, pass `counter` with 
 />
 ```
 
-The count is announced each time it changes. If that is too often for your readers, build the field from its parts and pass FieldCounter a count that settles after a pause, as [Field parts](/docs/components/field) describes.
+The count is announced each time it changes. If that is too often, build the field from its parts and pass FieldCounter a count that settles after a pause, as [Field parts](/docs/components/field) describes.
 
 </Section>
 
@@ -77,9 +82,9 @@ export function ShortDescription({ saved }: { saved: string }) {
 }
 ```
 
-A field needs a name, and the types require one: a `label`, an `aria-label` when no label is shown, or an `aria-labelledby` that points at a label shown elsewhere.
+The types require an accessible name: a `label`, an `aria-label` when no label is shown, or an `aria-labelledby` that points at a label elsewhere.
 
-For a custom layout, use the parts inside React Aria's own TextField: Label, Description and FieldError from Snapshot UI, and React Aria's TextArea with the classes `input textarea`. There is no bare textarea part, because the pair of classes is all it adds. [Field parts](/docs/components/field) has the layout.
+For a custom layout, use Snapshot UI's Label, Description and FieldError inside React Aria's TextField, with React Aria's TextArea and the classes `input textarea`. There is no bare textarea part, since those classes are all it would add. [Field parts](/docs/components/field) has the layout.
 
 </Section>
 
@@ -87,7 +92,7 @@ For a custom layout, use the parts inside React Aria's own TextField: Label, Des
 
 ## Props
 
-Every React Aria TextField prop is accepted, except `type` and `pattern`, which belong to a single line. These are the ones Snapshot UI adds or shapes.
+Every React Aria TextField prop is accepted except `type` and `pattern`, which belong to a single line. These are the ones Snapshot UI adds or shapes.
 
 <PropsTable path="../../packages/react/src/text-area/TextArea.tsx" type="Pick<TextAreaProps, 'label' | 'description' | 'errorMessage' | 'placeholder' | 'rows' | 'isChanged' | 'changedLabel' | 'budget' | 'counter' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate' | 'textAreaRef'>" />
 
@@ -97,13 +102,14 @@ Every React Aria TextField prop is accepted, except `type` and `pattern`, which 
 
 ## Accessibility
 
-A native textarea, labelled by the label and described by the hint and the error line, with React Aria handling the wiring. A screen reader reads the Changed chip with the field, after the hint, while the field is changed and valid. An invalid field reads its hint and then its error line, and the chip steps aside.
+A native textarea, labelled by the label and described by the hint and error line, with React Aria handling the wiring. While the field is changed and valid, a screen reader reads the Changed chip after the hint. An invalid field reads its hint, then its error line.
 
 <Keys rows={[['Tab', 'Moves focus into the field. The edge firms to 1.5px ink and the 2px ring sits outside it.'], ['Shift Tab', 'Moves focus back out.'], ['Enter', 'Adds a new line. It never submits the form.']]} />
 
-The corner handle resizes with a pointer, in the browsers that draw one, and the keyboard has no way to resize, so set `rows` to the height the content needs. The placeholder is taupe, which is quiet by design, so it never carries anything the label does not. The count is a polite status region.
-
-A field with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means the field has no accessible name.
+- Resizing: the corner handle works with a pointer, in browsers that draw one. The keyboard cannot resize, so set `rows` to the height the content needs.
+- Placeholder: taupe and quiet by design, so it never carries anything the label does not.
+- Count: a polite status region.
+- Missing name: the field does not compile. TypeScript either names only `aria-labelledby` or says the props are not assignable. Both mean the field has no accessible name.
 
 </Section>
 

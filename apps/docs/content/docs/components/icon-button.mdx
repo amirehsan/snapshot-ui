@@ -1,6 +1,6 @@
 ---
 title: Icon button
-description: A button that holds one icon and no text. Ghost for bars and headers, outline when it needs an edge, and a link when it goes somewhere.
+description: A button with one icon and no text, in ghost or outline, or as a link.
 icon: CircleDot
 ---
 
@@ -28,7 +28,7 @@ Hover and press wash the circle with a little ink, in dark as well. Disabled tur
 
 ## As a link
 
-Give it an `href` and it renders an anchor with the same classes and the same need for a name. Use the link form for an icon that goes somewhere, and the button form for one that does something. The link form follows the app's router, as [Routing](/docs/routing) sets up.
+Give it an `href` to render an anchor with the same look, which still needs a name. Use the link form for an icon that goes somewhere, and the button form for one that does something. The link form follows the app's router, as set up in [Routing](/docs/routing).
 
 <Preview name="icon-button-link" />
 
@@ -59,7 +59,7 @@ export function SettingsButton({ onOpen }: { onOpen: () => void }) {
 
 ## Props
 
-Every React Aria Button prop is accepted, or every Link prop when there is an `href`. These are the ones Snapshot UI adds or shapes.
+Every React Aria Button prop is accepted, or every Link prop when there is an `href`. These are the ones Snapshot UI adds or changes.
 
 <PropsTable path="../../packages/react/src/icon-button/IconButton.tsx" type="Pick<IconButtonProps, 'variant' | 'aria-label' | 'aria-labelledby' | 'href' | 'onPress'>" />
 

@@ -57,14 +57,13 @@ export interface ComboBoxBaseProps<T extends object = object> extends Omit<
    */
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
-   * Example text while the input is empty, the input's placeholder: taupe under a visible label, slate when only
-   * an `aria-label` or an `aria-labelledby` names the field, since it is then the only words shown.
+   * Example text while the input is empty. Taupe under a visible label; slate when only an `aria-label` or
+   * `aria-labelledby` names the field, since it is then the only words shown.
    */
   placeholder?: string;
   /**
-   * Whether the value differs from the saved one. Shows the clay Changed chip in the label row and the light
-   * signal orange edge, and has a screen reader read the chip with the input. An invalid field shows its error
-   * instead.
+   * Whether the value differs from the saved one. Shows the clay Changed chip and the light signal orange edge,
+   * read with the input. An invalid field shows its error instead.
    */
   isChanged?: boolean;
   /**
@@ -75,8 +74,8 @@ export interface ComboBoxBaseProps<T extends object = object> extends Omit<
   /** `PickerOption`s and `PickerSection`s, or a function that renders one option of `items` or `defaultItems`. */
   children: ReactNode | ((item: T) => ReactElement);
   /**
-   * Whether the list stays open when nothing matches, saying so with the no-matches line, or the loading line
-   * while options load, rather than vanishing as if the field broke.
+   * Whether the list stays open when nothing matches, showing the no-matches or loading line instead of
+   * vanishing.
    * @default true
    */
   allowsEmptyCollection?: boolean;

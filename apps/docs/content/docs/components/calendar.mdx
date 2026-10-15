@@ -1,6 +1,6 @@
 ---
 title: Calendar
-description: "One month of days to choose a day or a range, with your presets and your today, in the calendar and digits of the locale."
+description: "A month grid for choosing a day or a range, in the locale's calendar and digits."
 icon: CalendarDays
 ---
 
@@ -8,7 +8,7 @@ icon: CalendarDays
 
 ## Basic
 
-A `Calendar` chooses one day. It shows no label of its own, so name it with `aria-label` or `aria-labelledby`. Its value is an ISO date, `'2026-09-14'`, in and out: `value` or `defaultValue` takes one, `onChange` receives one, and a server component can pass it straight from a URL. Pass `today` and the calendar marks that day with a ring and a bold number and opens on its month when there is no value.
+A `Calendar` chooses one day. It has no visible label, so name it with `aria-label` or `aria-labelledby`. Its value is an ISO date, `'2026-09-14'`, in `value` or `defaultValue` and out of `onChange`. A server component can pass it straight from a URL. Pass `today` to mark that day with a ring and a bold number, and to open on its month when there is no value.
 
 <Preview name="calendar-basic" />
 
@@ -18,9 +18,15 @@ A `Calendar` chooses one day. It shows no label of its own, so name it with `ari
 
 ## Range
 
-A `RangeCalendar` chooses a range in two presses: the first anchors it, and until the second the days under the pointer or the focus show the range that would be chosen. A range of one day is two presses on the same day. The value is `{ start, end }`, two ISO dates, and `onChange` fires once, when the range is complete. A half-chosen range is dropped when focus leaves the calendar or a press lands outside it, or on anything in it that is not a button, the month heading included, so a range the person did not finish never reaches the URL.
+A `RangeCalendar` chooses a range in two presses. The first press anchors it, and the days under the pointer or focus preview the range until the second. For a one-day range, press the same day twice. The value is `{ start, end }`, two ISO dates, and `onChange` fires once the range is complete.
 
-`presets` adds a row of the app's ranges above the grid, each with the app's words. The library computes no range: "This month" is the app's, from its own today, and is best computed on the server. A press sets the range and moves the view to its start, and a preset shows pressed while the value equals its range. A preset whose range starts before `minValue`, ends after `maxValue` or holds a day `isDateUnavailable` refuses is disabled, since a press would choose a range the days themselves cannot.
+A half-chosen range is dropped when focus leaves the calendar, or when a press lands outside it or on anything in it that is not a button, such as the month heading. An unfinished range never reaches the URL.
+
+`presets` adds a row of the app's own ranges above the grid. The library computes no ranges: compute "This month" from the app's today, ideally on the server.
+
+- A press sets the range and moves the view to its start.
+- A preset shows pressed while the value equals its range.
+- A preset is disabled when it falls outside `minValue` or `maxValue`, or holds a day `isDateUnavailable` rejects.
 
 <Preview name="calendar-range" />
 
@@ -30,7 +36,10 @@ A `RangeCalendar` chooses a range in two presses: the first anchors it, and unti
 
 ## Unavailable days
 
-`minValue` and `maxValue` take ISO dates, and the days outside them are taupe and cannot be chosen. `isDateUnavailable` receives each day as an ISO date and returns whether it can be chosen, for a closed day or a weekend: those days are taupe and struck through. A function cannot cross from a server component, so the example is a client file.
+- `minValue` and `maxValue`: ISO dates. Days outside them are taupe and cannot be chosen.
+- `isDateUnavailable`: receives each day as an ISO date and returns true for a day that cannot be chosen, such as a closed day or a weekend. Those days are taupe and struck through.
+
+A function cannot cross from a server component, so the example is a client file.
 
 <Preview name="calendar-unavailable" />
 
@@ -40,11 +49,17 @@ A `RangeCalendar` chooses a range in two presses: the first anchors it, and unti
 
 ## Calendars and digits
 
-The locale chooses the calendar and its digits, through `I18nProvider`. `fa-IR` draws the Persian calendar, Shahrivar 1405, in Persian digits with the week from Saturday; `fa-IR-u-ca-gregory` draws the Gregorian calendar in Persian digits, and `fa-IR-u-nu-latn` the Persian calendar in Latin digits. The values stay Gregorian ISO dates whatever the calendar shown, so a URL means the same day on every page.
+The locale, set through `I18nProvider`, chooses the calendar and its digits:
+
+- `fa-IR`: the Persian calendar (Shahrivar 1405) in Persian digits, with weeks from Saturday.
+- `fa-IR-u-ca-gregory`: the Gregorian calendar in Persian digits.
+- `fa-IR-u-nu-latn`: the Persian calendar in Latin digits.
+
+Values stay Gregorian ISO dates whatever the calendar shown, so a URL means the same day on every page.
 
 <Preview name="calendar-persian" />
 
-React Aria's calendar brings every calendar system. An app that shows only the Gregorian and the Persian calendar can pass a `createCalendar` that returns one of the two, from `@internationalized/date`, which is installed at React Aria's own range (`^3.12.4`) so there is one copy:
+React Aria's calendar brings every calendar system. To ship only Gregorian and Persian, pass a `createCalendar` that returns one of the two, from `@internationalized/date`. Install it at React Aria's own range (`^3.12.4`) so there is one copy:
 
 ```tsx
 'use client';
@@ -55,7 +70,7 @@ export const createCalendar = (identifier: CalendarIdentifier) =>
   identifier === 'persian' ? new PersianCalendar() : new GregorianCalendar();
 ```
 
-It narrows a calendar's bundle. A date field builds its own calendars whatever is passed, so on a page that also holds a date range picker every system ships anyway.
+This narrows only a calendar's bundle. Date fields always build their own calendars, so a page with a date range picker ships every system anyway.
 
 </Section>
 
@@ -63,7 +78,7 @@ It narrows a calendar's bundle. A date field builds its own calendars whatever i
 
 ## Today
 
-Pass the user's today as an ISO date from the app's time zone, which the app knows and the device may not: near midnight the two can name different days, and a "This month" preset computed on the server would disagree with a mark drawn from the device. Without `today` the calendar marks the device's today once the page has loaded. React Aria's spoken "Today" on a day always follows the device, so pass `today` whenever the app knows its user's zone.
+Pass `today` as an ISO date in the app's time zone. Near midnight the device can be on a different day, and a "This month" preset computed on the server would disagree with a mark from the device. Without `today`, the calendar marks the device's today once the page has loaded. React Aria's spoken "Today" always follows the device.
 
 </Section>
 
@@ -71,9 +86,12 @@ Pass the user's today as an ISO date from the app's time zone, which the app kno
 
 ## Usage
 
-Keep a date in a search parameter as its ISO string, `?from=2026-09-01&to=2026-09-30`, and pass it as `value`: a string a server component can read and pass on. A string that does not parse, or a range whose end is before its start, reads as no value with a warning in the console, so a hand-edited URL never throws.
+Keep a date in a search parameter as its ISO string, `?from=2026-09-01&to=2026-09-30`, and pass it as `value`. A string that does not parse, or a range that ends before it starts, reads as no value and warns in the console. A hand-edited URL never throws.
 
-A calendar always holds six weeks, so a month of four or five weeks keeps the room of the sixth and changing months moves nothing. Before the page hydrates an inline calendar draws its face: the same header, weekday row and six weeks of days, and a range calendar's presets in your words, with no date in them, hidden from a screen reader and inert. React Aria's calendar mounts in the next render: its month, its weekdays, its days and its today all come from `Intl` and the device's zone, which the server must not write. Nothing moves when it arrives. A calendar in a popover or a sheet is only ever drawn in the browser.
+- A calendar always holds six weeks, so changing months never moves the layout.
+- Before hydration, an inline calendar draws its face: the header, weekday row, six weeks of days and a range calendar's presets, with no dates. The face is inert and hidden from screen readers.
+- React Aria's calendar mounts in the next render, since its month, weekdays, days and today come from `Intl` and the device's zone. Nothing moves when it arrives.
+- A calendar in a popover or a sheet is only drawn in the browser.
 
 </Section>
 
@@ -81,7 +99,7 @@ A calendar always holds six weeks, so a month of four or five weeks keeps the ro
 
 ## Props
 
-Every date is an ISO string. These are the props each takes.
+Every date is an ISO string.
 
 <PropsTable label="Calendar props" path="../../packages/react/src/calendar/Calendar.tsx" type="Pick<CalendarProps, 'aria-label' | 'value' | 'defaultValue' | 'onChange' | 'today' | 'minValue' | 'maxValue' | 'isDateUnavailable' | 'firstDayOfWeek' | 'createCalendar' | 'isDisabled' | 'isReadOnly' | 'labels' | 'className'>" />
 
@@ -97,9 +115,14 @@ Every date is an ISO string. These are the props each takes.
 
 ## Accessibility
 
-An `application` named by its `aria-label` and the visible month, holding a `grid` of days. Each day is named with its full date and described as today, selected or unavailable in React Aria's strings, which have no Persian. React Aria announces the month as it changes and the chosen range. The month buttons are named "Previous month" and "Next month", or `labels`; the presets are a group of toggles named "Presets", each pressed while the value equals its range. Days are 40px wherever there is room, and 36px or more in a popover or the sheet on a 320px screen, where the 40px target gives way. Inline, days shrink with their container but never below 24px, the target minimum: the calendar is never narrower than seven of them, 168px.
+The calendar is an `application` named by its `aria-label` and the visible month, holding a `grid` of days. Each day is named with its full date and described as today, selected or unavailable, in React Aria's strings, which have no Persian. React Aria announces month changes and the chosen range.
 
-<Keys rows={[['Left Right', 'The previous or next day, in the drawn direction.'], ['Up Down', 'The same day a week before or after.'], ['Home End', 'The first or last day of the month.'], ['PageUp PageDown', 'The same day a month before or after.'], ['Shift+PageUp Shift+PageDown', 'The same day a year before or after.'], ['Enter Space', 'Chooses the day; in a range, the first press anchors it and moves to the next day, and the second completes it.'], ['Escape', 'Drops a half-chosen range and goes on to what holds the calendar, so a popover closes too.'], ['Tab', 'Moves between the month buttons, the presets and the grid, which is one stop.']]} />
+- The month buttons are named "Previous month" and "Next month", or by `labels`.
+- The presets are a group of toggles named "Presets", each pressed while the value equals its range.
+- Days are 40px where there is room, and at least 36px in a popover, or in the sheet on a 320px screen.
+- Inline, days shrink with their container but never below the 24px target minimum, so the calendar is at least 168px wide.
+
+<Keys rows={[['Left Right', 'The previous or next day, in the drawn direction.'], ['Up Down', 'The same day a week before or after.'], ['Home End', 'The first or last day of the month.'], ['PageUp PageDown', 'The same day a month before or after.'], ['Shift+PageUp Shift+PageDown', 'The same day a year before or after.'], ['Enter Space', 'Chooses the day. In a range, the first press anchors it and moves to the next day, and the second completes it.'], ['Escape', 'Drops a half-chosen range and passes the key on, so a popover closes too.'], ['Tab', 'Moves between the month buttons, the presets and the grid, which is one stop.']]} />
 
 </Section>
 

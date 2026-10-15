@@ -1,6 +1,6 @@
 ---
 title: Confirm dialog
-description: An alert dialog that asks one question. It resolves yes only when the confirm button is pressed; Escape, the scrim and Cancel are no.
+description: An alert dialog that asks one question, where only the confirm button means yes.
 icon: CircleHelp
 ---
 
@@ -8,7 +8,9 @@ icon: CircleHelp
 
 ## Basic
 
-A confirm dialog is a [Dialog](/docs/components/dialog) that asks one question and offers two answers: Cancel, then the confirm button, which names what it does. The title asks, and the description, which is required, says what will happen. Only the confirm button is a yes: Escape, a press on the scrim and Cancel all mean no. The default tone is for a question whose answer loses nothing, even one that cannot be taken back, such as sending an invoice: the confirm button is primary and takes focus when the dialog opens.
+A [Dialog](/docs/components/dialog) that asks one question with two answers: Cancel, then a confirm button that names what it does. The title asks, and the required description says what will happen. Only the confirm button means yes. Escape, a press on the scrim and Cancel all mean no.
+
+Use the default tone when the answer loses nothing, even if it cannot be taken back, such as sending an invoice. The confirm button is primary and takes focus on open.
 
 <Preview name="confirm-dialog-basic" />
 
@@ -18,7 +20,9 @@ A confirm dialog is a [Dialog](/docs/components/dialog) that asks one question a
 
 ## Danger
 
-The tone is required, because a destructive question drawn as a harmless one is the costly mistake, and a harmless one drawn as destructive teaches people to ignore the warning. Use the danger tone when the answer loses something: data, money or work. `tone="danger"` draws the warning triangle in the error well and the danger Button, and focus starts on Cancel, the safe answer. `icon` replaces the triangle. The confirm label names the outcome, such as Delete the workspace, never OK.
+Use `tone="danger"` when the answer loses something: data, money or work. It shows the warning triangle in the error well and the danger Button, and focus starts on Cancel, the safe answer. `icon` replaces the triangle. Name the outcome on the confirm button, such as Delete the workspace, never OK.
+
+The tone is required. A destructive question shown as harmless is the costly mistake, and a harmless one shown as destructive teaches people to ignore the warning.
 
 <Preview name="confirm-dialog-danger" />
 
@@ -28,9 +32,13 @@ The tone is required, because a destructive question drawn as a harmless one is 
 
 ## Asking from code
 
-`useConfirm()` asks from an event handler. `confirm(options)` opens the dialog and returns a promise that is `true` only when the confirm button is pressed. Render `dialog` once, in the component that asks; it is `null` until the first question. A second question asked while one is open answers the first no, and unmounting the component answers an open question no, as does a question asked after it has unmounted, so silence is never yes. Questions asked one after another, over an open one or chained after an answer such as a follow-up to a yes, are one run: each opens in the theme of the button that asked first, starts on its own answer, and when the last is answered the dialog fades out and focus goes back to that button. The hook has no pending state: the work after a yes belongs to your own interface, and a dialog that should itself show it pending is a `ConfirmDialog` rendered directly, with `onConfirm`.
+`useConfirm()` asks from an event handler. `confirm(options)` opens the dialog and returns a promise that is `true` only when the confirm button is pressed. Render `dialog` once, in the component that asks. It is `null` until the first question.
 
-When the action removes the button that asked, such as a row's Delete, focus has nowhere to go back to. Place it yourself after the action, as this example does: it moves focus to the row now in the removed row's place.
+- Silence is never yes. A second question over an open one answers the first no. Unmounting answers an open question no, and so does a question asked after unmount.
+- Questions asked back to back, over an open one or chained after an answer, are one run. Each opens in the theme of the button that asked first and starts on its own answer. After the last answer, focus returns to that button.
+- The hook has no pending state. Show the work after a yes in your own interface, or render a `ConfirmDialog` directly with `onConfirm`.
+
+When the action removes the button that asked, such as a row's Delete, focus has nowhere to return. Move it yourself after the action. This example moves it to the row that takes the removed row's place.
 
 <Preview name="confirm-dialog-hook" />
 
@@ -40,7 +48,15 @@ When the action removes the button that asked, such as a row's Delete, focus has
 
 ## Usage
 
-Open a confirm dialog from a `DialogTrigger`, or control it with `isOpen` and `onOpenChange`, as a Dialog. Inside a `DialogTrigger` the trigger owns the open state, so `onOpenChange` goes on the trigger: given to the dialog there, it is not called, and the library warns once. `onConfirm` runs when the confirm button is pressed and `onCancel` on every other way out. When `onConfirm` returns a promise, the dialog is pending until it settles: the confirm button shows its spinner with its label kept, Cancel is disabled, and Escape and the scrim do nothing, so a half-finished action cannot be abandoned. It closes when the promise resolves. When it rejects, the dialog stays open and no longer pending, so the question can be answered again, and the error is reported as if nothing had caught it, through `reportError`. `isPending` shows the same state for a caller that tracks the work itself, and nothing closes the dialog until that caller does. `pendingLabel` names the spinner, which is read with the confirm label: name the work with the outcome's verb, such as Deleting.
+Open a confirm dialog from a `DialogTrigger`, or control it with `isOpen` and `onOpenChange`, as with Dialog. Inside a `DialogTrigger`, put `onOpenChange` on the trigger. On the dialog it is not called, and the library warns once.
+
+`onConfirm` runs when the confirm button is pressed, and `onCancel` on every other way out. When `onConfirm` returns a promise, the dialog is pending until it settles:
+
+- The confirm button shows its spinner and keeps its label. Cancel is disabled, and Escape and the scrim do nothing.
+- On resolve, the dialog closes.
+- On reject, it stays open and leaves the pending state so the question can be answered again. The error goes to `reportError`, as if uncaught.
+- `isPending` shows the same state for work you track yourself. The dialog stays open until you close it.
+- `pendingLabel` names the spinner and is read with the confirm label. Use the outcome's verb, such as Deleting.
 
 ```tsx
 'use client';
@@ -63,7 +79,7 @@ export function DeleteWorkspace({ onDelete }: { onDelete: () => Promise<void> })
 }
 ```
 
-A press on the scrim cancels. For a question that must be answered, `isDismissable={false}` keeps the scrim out, and Escape still cancels.
+A press on the scrim cancels. For a question that must be answered, set `isDismissable={false}`. Escape still cancels.
 
 </Section>
 
@@ -85,7 +101,7 @@ The rest of React Aria's dialog props and `ref` go on the dialog element, as on 
 
 ## Accessibility
 
-A confirm dialog is an `alertdialog`, named by its title and described by its description, so both are read when it opens. Focus starts on the safe answer in the danger tone, Cancel, and on the confirm button in the default tone. Tab moves between the two buttons without reaching the page, and when the dialog closes focus goes back to the button that opened it. While the confirm button is pending its name is its label and then the spinner's, such as Delete 3 transactions Deleting, and React Aria reads it out when the pending state starts.
+An `alertdialog`, named by its title and described by its description, so both are read on open. Focus starts on Cancel in the danger tone and on the confirm button in the default tone. Tab moves between the two buttons, and on close focus returns to the button that opened it. While pending, the confirm button's name is its label then the spinner's, such as Delete 3 transactions Deleting, and React Aria announces it.
 
 <Keys rows={[['Tab', 'Moves between Cancel and the confirm button.'], ['Escape', 'Cancels.'], ['Enter Space', 'Press the focused button.']]} />
 

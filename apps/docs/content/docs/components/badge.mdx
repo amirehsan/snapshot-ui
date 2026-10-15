@@ -1,6 +1,6 @@
 ---
 title: Badge
-description: A short outlined label for a state or a count, in neutral, info, success, warning or error. Static, with no fill.
+description: A short outlined label for a state or a count, in five tones and with no fill.
 icon: Tag
 ---
 
@@ -8,7 +8,13 @@ icon: Tag
 
 ## Tones
 
-Neutral is the base. Info, success, warning and error only change the color. Error means invalid or failed, success means success, and warning means a state that needs a look soon and is not a failure, such as Watch, Behind, Needs review or Out of date. Name the state in the label: none of them is ever decoration, in sample content included, and warning is never a stand-in for the attention cue, the light orange that marks a change, such as a changed field's border. Clay and signal orange are never tones: they mean unsaved work and consent.
+Neutral is the base. The other tones only change the color, and the label always names the state.
+
+- Error: invalid or failed.
+- Success: success.
+- Warning: needs a look soon but is not a failure, such as Watch, Behind, Needs review or Out of date.
+
+No tone is ever decoration, even in sample content. Warning never stands in for the attention cue, the light orange that marks a change, such as a changed field's border. Clay and signal orange are never tones: they mean unsaved work and consent.
 
 <Preview name="badge-tones" />
 
@@ -58,7 +64,7 @@ A Badge accepts every attribute of an HTML element.
 
 ## Accessibility
 
-Color is never the only signal. The label says what the badge means, and the tone repeats it. A badge is not announced when it changes: if a count updates while the page is open, put it in a live region.
+Color is never the only signal. The label says what the badge means, and the tone repeats it. A badge is not announced when it changes, so put a count that updates in a live region.
 
 </Section>
 

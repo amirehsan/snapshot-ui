@@ -47,9 +47,8 @@ export interface DialogProps extends Omit<RACDialogProps, 'className' | 'childre
   /** The body, under the description. It scrolls when it is taller than the viewport allows. */
   children?: ReactNode | ((opts: { close: () => void }) => ReactNode);
   /**
-   * The action row, pinned under the body, aligned to the inline end: the one place for buttons that stay
-   * in view. For a form, put the `<form id={formId}>` in `children` and its submit button here, joined to it
-   * by its `form` attribute: `<Button type="submit" form={formId}>`. Enter in a field still submits it.
+   * The button row, pinned under the body at the inline end. For a form, put `<form id={formId}>` in
+   * `children` and `<Button type="submit" form={formId}>` here. Enter in a field still submits.
    */
   actions?: ReactNode | ((opts: { close: () => void }) => ReactNode);
   /** A press on the scrim closes the dialog. @default true */

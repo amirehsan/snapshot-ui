@@ -1,6 +1,6 @@
 ---
 title: Number field
-description: "A number or an amount of money: the figure in the field, the symbol beside it, a sign toggle for negatives, and integer minor units for your URL."
+description: 'A number or money field, with a sign toggle for negatives and integer minor units for money.'
 icon: Hash
 ---
 
@@ -8,7 +8,14 @@ icon: Hash
 
 ## Basic
 
-A plain number takes a label and, with `hasStepper`, a minus and a plus button at the end. The arrow keys step by `step`, 1 unless given, and Page Up and Page Down step as the arrows do. An arrow first snaps the value to the step and then moves, so from an empty field it starts at the lower bound. Enter commits the value and formats it. Home and End move the caret, as in any text box, and still reach your `onKeyDown`. Each stepper is hit past its circle, 40px tall even when compact density draws it at 24px, and the two split the 2px between them, so a press lands on the button under it. `formatOptions` takes `Intl`'s options for a decimal, a percent or a unit, but not compact notation, whose rounding only `Intl` knows.
+A plain number takes a label. `hasStepper` adds minus and plus buttons at the end.
+
+- Arrows and Page Up or Page Down step by `step` (1 by default). They snap to the step first, so an empty field starts at the lower bound.
+- Enter commits and formats the value.
+- Home and End move the caret, as in any text box, and still reach your `onKeyDown`.
+- `formatOptions` takes `Intl` options for a decimal, a percent or a unit. Compact notation is not supported, since only `Intl` knows its rounding.
+
+Each stepper's hit area is 40px tall, even when compact density draws it at 24px, and the two split the 2px between them.
 
 <Preview name="number-field-basic" />
 
@@ -18,9 +25,13 @@ A plain number takes a label and, with `hasStepper`, a minus and a plus button a
 
 ## Money
 
-Pass `money={{ symbol: '$' }}` and the value becomes an integer count of minor units: `123450` is 1,234.50. A URL and a database hold it exactly, and sums never drift. `fractionDigits` is 2 unless given, from 0 for a currency with no minor unit to 3. An amount is exact up to `2 ** 52 / 10 ** fractionDigits` minor units, about 45 trillion cents, and the field warns in the console past that. The readout under the example shows the value the field holds.
+Pass `money={{ symbol: '$' }}` and the value becomes an integer count of minor units: `123450` is 1,234.50. A URL and a database hold it exactly, and sums never drift. The readout under the example shows the value the field holds.
 
-The symbol is drawn beside the figure, slate, and never typed, so the caret can never land in it. A copied figure that carries it, "$1,234.50", pastes as the amount, and your `onPaste` still runs. There is no currency style: the app writes its own strings, and `Intl`'s currency style would put the caret inside the symbol and decide its place while the page renders. A money field has no steppers and no wheel: an amount is typed, never nudged, and a typed 12.50 is never snapped to a whole step.
+- `fractionDigits`: 2 by default, from 0 for a currency with no minor unit up to 3.
+- Precision: exact up to `2 ** 52 / 10 ** fractionDigits` minor units, about 45 trillion cents. Past that, the field warns in the console.
+- Symbol: drawn beside the figure in slate and never typed, so the caret never lands in it. A pasted "$1,234.50" reads as the amount, and your `onPaste` still runs.
+- No currency style: `Intl`'s would put the caret inside the symbol and choose its side during render.
+- No steppers and no wheel: an amount is typed, and a typed 12.50 is never snapped to a step.
 
 <Preview name="number-field-money" />
 
@@ -30,7 +41,13 @@ The symbol is drawn beside the figure, slate, and never typed, so the caret can 
 
 ## Negatives
 
-Values under zero are off unless `allowsNegative` is set, and the lower bound is then 0. With it, a sign button sits at the field's start: a toggle, pressed while the value is under zero, that negates it, held within `minValue` and `maxValue`, or on an empty field or at zero puts a minus in it and focus there, so the field never shows "-0.00" and `onChange` never receives -0. It is there because neither the iPhone's nor Android's decimal keyboard has a minus key; a minus typed on a hardware keyboard works too, and the button follows it. A negative amount is ink, with its sign: never red, since nothing failed. On a disabled or read-only field the sign button is disabled too, and a negative value draws it pressed but recessed, a light ink fill with a taupe minus.
+Without `allowsNegative`, the lower bound is 0. With it, a sign button sits at the field's start, because neither iPhone nor Android decimal keyboards have a minus key.
+
+- The button is a toggle, pressed while the value is under zero. It negates the value, kept within `minValue` and `maxValue`.
+- On an empty field or at zero, it types a minus and focuses the field, so the field never shows "-0.00" and `onChange` never receives -0.
+- A minus typed on a hardware keyboard works too, and the button follows it.
+- A negative amount is ink, with its sign. Never red, since nothing failed.
+- On a disabled or read-only field the button is disabled. A negative value then shows it pressed but recessed: a light ink fill with a taupe minus.
 
 <Preview name="number-field-negative" />
 
@@ -40,7 +57,7 @@ Values under zero are off unless `allowsNegative` is set, and the lower bound is
 
 ## Right to left
 
-Name the symbol's side with `symbolPosition`, in the field's direction: "تومان" at the end on a Persian page, and "$" at the end there too, where Persian writing puts it left of the digits. The figure stays left to right on every page, so its sign stays in front of its digits; React Aria writes it in the locale's digits after the page loads.
+Set the symbol's side with `symbolPosition`, in the field's direction. On a Persian page, both "تومان" and "$" go at the end, which Persian writing puts left of the digits. The figure stays left to right on every page, so its sign stays in front. React Aria writes it in the locale's digits after the page loads.
 
 <Preview name="number-field-persian" />
 
@@ -50,7 +67,9 @@ Name the symbol's side with `symbolPosition`, in the field's direction: "توم�
 
 ## States
 
-A changed field shows the Changed chip and the light signal orange edge, an invalid one its error edge and line, and a disabled one is recessed with its symbol in taupe.
+- Changed: the Changed chip and the light signal orange edge.
+- Invalid: the error edge and error line.
+- Disabled: recessed, with its symbol in taupe.
 
 <Preview name="number-field-states" />
 
@@ -60,7 +79,7 @@ A changed field shows the Changed chip and the light signal orange edge, an inva
 
 ## Usage
 
-Keep an amount filter in the URL as minor units, `?min=2000`. A client component reads the parameter with `Number()`, reading an absent or malformed one as `null`, passes it as `value`, and writes the URL in `onChange`, which fires when the value commits, on blur, Enter, a step or the sign button, never on a keystroke. With the Next App Router:
+Keep an amount filter in the URL as minor units, `?min=2000`. A client component reads it with `Number()`, treating an absent or malformed value as `null`, and passes it as `value`. It writes the URL in `onChange`, which fires when the value commits (on blur, Enter, a step or the sign button), never on a keystroke. With the Next App Router:
 
 ```tsx
 'use client';
@@ -105,9 +124,9 @@ export function MinimumAmount() {
 }
 ```
 
-On a statically rendered route, render it inside `<Suspense>` with the same field, empty, as the fallback. In a form, `name` sends the minor units in money mode and the number for a plain field.
-
-Before the page hydrates, the field shows the plain figure, "1234.50", in ASCII digits with no grouping, and React Aria's formatted text, "1,234.50" or "۱٬۲۳۴٫۵۰", from the next render. The server's HTML is then the same in every locale and time zone, and nothing moves when the text changes.
+- On a statically rendered route, render it inside `<Suspense>` with an empty field as the fallback.
+- In a form, `name` sends minor units in money mode and the number otherwise.
+- Before hydration, the field shows the plain figure, "1234.50", in ASCII digits with no grouping. React Aria's formatted text, "1,234.50" or "۱٬۲۳۴٫۵۰", follows in the next render. The server's HTML is the same in every locale and time zone, and nothing moves.
 
 <Preview name="number-field-url" />
 
@@ -117,7 +136,7 @@ Before the page hydrates, the field shows the plain figure, "1234.50", in ASCII 
 
 ## Props
 
-Every React Aria NumberField prop is accepted except the steppers' names, which come from `labels`. These are the ones Snapshot UI adds or shapes. `validate` receives the value as `onChange` does: minor units in money mode, the number otherwise, and `null` for an empty field.
+Every React Aria NumberField prop is accepted except the steppers' names, which come from `labels`. These are the ones Snapshot UI adds or changes. `validate` receives the value as `onChange` does.
 
 <PropsTable label="NumberField props" path="../../packages/react/src/number-field/NumberField.tsx" type="Pick<NumberFieldBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'validate' | 'money' | 'formatOptions' | 'step' | 'hasStepper' | 'allowsNegative' | 'minValue' | 'maxValue' | 'labels' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'className'>" />
 
@@ -131,9 +150,12 @@ Every React Aria NumberField prop is accepted except the steppers' names, which 
 
 ## Accessibility
 
-A `textbox`, since React Aria removes the spin button role, named by its label and described by its hint, its symbol and the Changed chip, so "Amount, 1,234.50, $" is heard. The sign button is a toggle with `aria-pressed`, named "Negative" or `labels.negative`, and is its own tab stop. The steppers are named "Increase" and "Decrease" followed by the field's label, and are out of the tab order, since the arrows do the same from the field. React Aria announces a committed value in its own strings.
+The field is a `textbox` (React Aria removes the spin button role), named by its label and described by its hint, symbol and Changed chip: "Amount, 1,234.50, $". React Aria announces a committed value in its own strings.
 
-<Keys rows={[['0-9 . -', 'Type, in the locale digits or Latin ones; a minus only where negatives are allowed.'], ['Up Down', 'Step by the step, or one whole unit for money, after snapping to it.'], ['PageUp PageDown', 'Step as the arrows do.'], ['Home End', 'Move the caret. The field keeps them from React Aria, which would set the minimum or maximum.'], ['Enter', 'Commits and formats the value.'], ['Tab', 'Leaves the field; the sign button is its own stop, the steppers are not.']]} />
+- Sign button: a toggle with `aria-pressed`, named "Negative" or `labels.negative`. It is its own tab stop.
+- Steppers: named "Increase" and "Decrease" plus the field's label. They are out of the tab order, since the arrows do the same.
+
+<Keys rows={[['0-9 . -', 'Type in locale or Latin digits. A minus only where negatives are allowed.'], ['Up Down', 'Step by the step, or one whole unit for money, after snapping to it.'], ['PageUp PageDown', 'Step as the arrows do.'], ['Home End', 'Move the caret, instead of setting the minimum or maximum.'], ['Enter', 'Commits and formats the value.'], ['Tab', 'Leaves the field. The sign button is its own stop, the steppers are not.']]} />
 
 </Section>
 

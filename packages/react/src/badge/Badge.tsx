@@ -11,11 +11,9 @@ export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   /**
-   * What the badge means: `info`, `success`, `warning` and `error` repeat in
-   * color what the label already says. Error means invalid or failed, success
-   * means success and warning means a state that needs a look soon and is not
-   * a failure, never decoration, in sample content included. Clay and signal
-   * orange are deliberately not tones: they mean unsaved work and consent.
+   * What the badge means, repeated in color. Error means invalid or failed,
+   * success means success, and warning means needs a look soon, not a failure.
+   * Never decoration. Clay and signal orange are not tones.
    * @default 'neutral'
    */
   tone?: BadgeTone;

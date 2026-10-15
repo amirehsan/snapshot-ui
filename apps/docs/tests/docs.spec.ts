@@ -2317,15 +2317,16 @@ test('the popover page opens a padded panel that flips near the bottom of the wi
   const popover = page.getByRole('dialog', { name: 'Sort the projects' });
   await expect(popover).toBeFocused();
   await expect(popover).toHaveClass(/\bpopover-padded\b/);
-  // React Aria flips it above the trigger, 8px clear of it once it has slid in.
+  // React Aria flips it above the trigger, 8px clear of it once it has slid in. Within a pixel, since a trigger
+  // at a fractional offset down the page leaves the panel's rounded position up to a pixel off.
   await expect(popover).toHaveAttribute('data-placement', 'top');
   await expect(popover).not.toHaveAttribute('data-entering');
   await expect
     .poll(async () => {
       const panel = await popover.boundingBox();
-      return panel ? box.y - (panel.y + panel.height) : null;
+      return panel ? Math.abs(box.y - (panel.y + panel.height) - 8) : null;
     })
-    .toBeCloseTo(8, 0);
+    .toBeLessThan(1);
   await page.keyboard.press('Escape');
   await expect(popover).toHaveCount(0);
   await expect(trigger).toBeFocused();

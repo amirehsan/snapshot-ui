@@ -1,6 +1,6 @@
 ---
 title: Radio group
-description: A choice of one from a short list. Each option is a full-pill row, and the chosen row is the ink pill with a check in its ring.
+description: A choice of one from a short list, with each option a full-pill row and the chosen one filled ink.
 icon: CircleDot
 ---
 
@@ -8,7 +8,7 @@ icon: CircleDot
 
 ## Basic
 
-Pass a label, and a hint if the label cannot say it all. Each `Radio` can carry a hint of its own, which sits under its row. Choose another option to see the Changed chip.
+Pass a label, and a hint if the label cannot say it all. Each `Radio` can have its own hint under its row. Choose another option to see the Changed chip.
 
 <Preview name="radio-group-basic" />
 
@@ -18,7 +18,7 @@ Pass a label, and a hint if the label cannot say it all. Each `Radio` can carry 
 
 ## Horizontal
 
-Set `orientation="horizontal"` for a short row of options. The rows keep their width and wrap onto the next line when the row runs out of room. A hint under an option wraps to the width of its own pill.
+Set `orientation="horizontal"` for a short row of options. Options keep their width and wrap onto the next line when the row runs out of room.
 
 <Preview name="radio-group-horizontal" />
 
@@ -28,7 +28,9 @@ Set `orientation="horizontal"` for a short row of options. The rows keep their w
 
 ## States
 
-A changed group shows a clay chip beside its label and nothing else: unlike a text field, a choice has no control edge to recolor, so the chip is the whole cue. An invalid group draws the error edge on every row and an error line, and invalid outranks changed, so the chip steps aside. A disabled group is recessed and keeps the check of its choice, and one option can be disabled on its own. A disabled option draws its label in taupe, as a disabled checkbox and switch do. The chip lives in the label row, so a changed group with no visible `label` shows nothing.
+- Changed: a clay chip beside the label is the only cue, since a choice has no control edge to recolor. A group with no visible `label` shows no chip.
+- Invalid: every row gets the error edge, and an error line shows. Invalid outranks changed, so the chip hides.
+- Disabled: the group is recessed and keeps the check on its choice. One option can be disabled on its own, with its label in taupe.
 
 <Preview name="radio-group-states" />
 
@@ -38,7 +40,7 @@ A changed group shows a clay chip beside its label and nothing else: unlike a te
 
 ## Validation
 
-Set `isRequired` or a `validate` function, and the browser's own checks run when the form is submitted. The error line shows the message, and choosing an option clears it. The first failed submit moves focus to the group.
+Set `isRequired` or a `validate` function, and the browser's checks run on submit. The error line shows the message, and choosing an option clears it. The first failed submit moves focus to the group.
 
 <Preview name="radio-group-validation" />
 
@@ -48,7 +50,7 @@ Set `isRequired` or a `validate` function, and the browser's own checks run when
 
 ## Usage
 
-Every value works controlled and uncontrolled, and a group with a `name` submits the chosen option's `value` in a plain form. `onChange` receives the value as a string.
+Every value works controlled and uncontrolled. A group with a `name` submits the chosen `value` in a plain form. `onChange` receives the value as a string.
 
 ```tsx
 import { useState } from 'react';
@@ -74,9 +76,9 @@ export function Frequency({ saved }: { saved: string }) {
 }
 ```
 
-The types require a name. A group takes a `label`, an `aria-label` or an `aria-labelledby`, and a `Radio` takes its text, an `aria-label` or an `aria-labelledby`.
+The types require a name. A group takes a `label`, an `aria-label` or an `aria-labelledby`. A `Radio` takes its text, an `aria-label` or an `aria-labelledby`.
 
-For a choice of two with the same weight, such as a setting that is simply on or off, use a switch instead. For a choice that changes the view in place, such as a mode, use a segmented control.
+For an on or off setting, use a switch. For a choice that changes the view in place, such as a mode, use a segmented control.
 
 </Section>
 
@@ -98,13 +100,15 @@ Each option is a `Radio`.
 
 ## Accessibility
 
-A group of native radio inputs, named by the label and described by the hint, the error line and, while it shows, the Changed chip. React Aria keeps the group to one tab stop and moves the choice with the arrow keys. The dot and the check are decoration, so an option's name is its label text alone.
+A group of native radio inputs, named by the label. The hint, the error line and, while it shows, the Changed chip describe it. The group is one tab stop, and the arrow keys move the choice. The dot and the check are decoration, so an option's name is its label text.
 
 <Keys rows={[['Tab', 'Moves focus into the group, to the chosen option or the first one. The 2px ring sits outside an unchosen row and inside the ink of the chosen one.'], ['Down Right', 'Moves to the next option and chooses it.'], ['Up Left', 'Moves to the previous option and chooses it.'], ['Space', 'Chooses the focused option.']]} />
 
-Disabled options are skipped by the arrow keys. A read-only group keeps its choice and takes no hover wash. Do not disable the chosen option of a group the reader can still change: React Aria gives the tab stop to the chosen radio alone and takes it from a disabled one, so Tab skips the group.
+- The arrow keys skip disabled options.
+- A read-only group keeps its choice and has no hover wash.
+- Do not disable the chosen option of a group the reader can still change. Only the chosen radio gets the tab stop, and a disabled one loses it, so Tab skips the group.
 
-A group or an option with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means it has no accessible name.
+A group or option with no name does not compile. TypeScript's message names only `aria-labelledby` or says the props are not assignable. Either one means a missing accessible name.
 
 </Section>
 

@@ -1,6 +1,6 @@
 ---
 title: Link
-description: An inline link in Link Blue, always underlined, with a thicker underline on hover and press and the standard focus ring.
+description: An inline link in Link Blue, always underlined, with a thicker underline on hover and press.
 icon: Link
 ---
 
@@ -54,7 +54,7 @@ Every link follows the app's router through one `RouterProvider`; see [Routing](
 
 ## Props
 
-Every React Aria Link prop is accepted. These are the ones Snapshot UI adds or shapes.
+Every React Aria Link prop is accepted. These are the ones Snapshot UI adds or changes.
 
 <PropsTable path="../../packages/react/src/link/Link.tsx" type="Pick<LinkProps, 'href' | 'target' | 'rel' | 'isDisabled' | 'onPress' | 'className'>" />
 
@@ -66,7 +66,7 @@ Every React Aria Link prop is accepted. These are the ones Snapshot UI adds or s
 
 A native anchor, with React Aria handling press across mouse, touch and keyboard. A disabled link is announced as disabled and cannot be followed.
 
-Link sets no `rel` of its own. Browsers already treat `target="_blank"` as `noopener`, so add `rel="noreferrer"` only when the destination should not learn where the visitor came from. A link that opens a new tab should say so in its text or the words beside it, since the move is a surprise to someone who cannot see the tab bar.
+Link sets no `rel` of its own. Browsers already treat `target="_blank"` as `noopener`, so add `rel="noreferrer"` only to hide where the visitor came from. A link that opens a new tab should say so in or beside its text, for people who cannot see the tab bar.
 
 <Keys rows={[['Enter', 'Follows the link.'], ['Tab', 'Moves focus to it. The 2px ink ring sits outside the text.']]} />
 

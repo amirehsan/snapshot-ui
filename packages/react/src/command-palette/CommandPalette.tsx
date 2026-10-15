@@ -44,9 +44,9 @@ export interface CommandPaletteItem {
   icon?: ReactNode;
   /** A preformatted value at the end, such as an amount. Never formatted here. */
   end?: ReactNode;
-  /** A key hint, drawn as keys. "Mod" draws as the platform's modifier after mount and as "Mod" on the server. */
+  /** A key hint, drawn as keys. "Mod" shows as Cmd or Ctrl once mounted. */
   shortcut?: string;
-  /** Items with the same section are grouped under it, in first-seen order. Items without one come first. */
+  /** Groups items under this heading. Items without one come first. */
   section?: string;
   isDisabled?: boolean;
 }
@@ -71,11 +71,11 @@ export interface CommandPaletteLabels {
 }
 
 export interface CommandPaletteProps {
-  /** The dialog's and the input's accessible name, and the placeholder unless `labels.placeholder` is given. Required. */
+  /** Names the dialog and the field, and is the placeholder unless `labels.placeholder` is set. */
   label: string;
-  /** Every item that may show. In manual mode (`filter={null}`) the app passes the current results, already ordered and capped. */
+  /** The items to search. With `filter={null}`, the current results, already ranked and capped. */
   items: CommandPaletteItem[];
-  /** Runs when an item is chosen, after the palette has closed and focus has returned. The app navigates here. */
+  /** Runs with the chosen item after the palette closes and focus returns. Navigate here. */
   onAction: (item: CommandPaletteItem) => void;
   isOpen?: boolean;
   defaultOpen?: boolean;
@@ -84,16 +84,15 @@ export interface CommandPaletteProps {
   defaultInputValue?: string;
   onInputChange?: (value: string) => void;
   /**
-   * Keeps or drops an item for a query. Unless given: every whitespace-separated word of the query
-   * appears in the label, description or keywords, case and accent insensitive. `null` is manual mode:
-   * the items are shown as given, and the app filters, ranks and caps them from `inputValue`.
+   * Keeps or drops an item for a query. By default, every word must appear in the label, description or
+   * keywords, ignoring case and accents. `null` shows `items` as given, for app-side search.
    */
   filter?: ((item: CommandPaletteItem, query: string) => boolean) | null;
-  /** Shows the Spinner in the field row while the app loads results. The list keeps what it has. */
+  /** Shows a spinner in the field while results load. The list keeps its current results. */
   isLoading?: boolean;
   /**
-   * The key that opens and closes it. `Mod` is Cmd or Ctrl, either. `false` turns it off. It does nothing while
-   * another of this library's modals is open (Dialog, ConfirmDialog, Drawer, Sheet). @default 'Mod+K'
+   * The key that opens and closes it. `Mod` is Cmd or Ctrl. `false` turns it off. Inactive while a Dialog,
+   * ConfirmDialog, Drawer or Sheet is open. @default 'Mod+K'
    */
   shortcut?: string | false;
   /** Remembers chosen items in this browser under this key. */
@@ -103,8 +102,8 @@ export interface CommandPaletteProps {
   /** Controlled recents, newest first. With `onRecentChange`, the palette stores nothing. */
   recentIds?: Key[];
   /**
-   * Called with the new list, newest first, each time an item is chosen. With `recentIds` it holds your keys
-   * as given, the chosen item's own first; otherwise it is the list as stored, so every id is a string.
+   * Called with the new list, newest first, each time an item is chosen. Ids are your keys with `recentIds`,
+   * and strings otherwise.
    */
   onRecentChange?: (ids: Key[]) => void;
   labels?: Partial<CommandPaletteLabels>;

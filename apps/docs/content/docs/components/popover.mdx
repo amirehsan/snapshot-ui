@@ -1,6 +1,6 @@
 ---
 title: Popover
-description: The float surface a menu, a listbox or a small panel opens in, 8px from its trigger, flipped to fit.
+description: The float surface that menus, listboxes and small panels open in, flipped to fit the screen.
 icon: MessageSquareMore
 ---
 
@@ -8,7 +8,7 @@ icon: MessageSquareMore
 
 ## Free content
 
-A popover is a float surface that opens beside the button that opened it, with the float fill, the frame, the surface corner and the float shadow, 8px under the button at its start edge. It is the surface a menu and a list of options open in, and it also holds free content of its own, such as the filter panel of a chip over a list, whose choices apply as they change. `isPadded` pads free content 24px. A list or a menu pads itself, so the padding is off unless asked for.
+A popover opens beside its trigger, with the float fill, frame, surface corner and float shadow. Menus and lists of options open in it, and it also holds free content, such as a filter panel whose choices apply as they change. `isPadded` pads free content 24px. It is off by default, because a list or a menu pads itself.
 
 <Preview name="popover-basic" />
 
@@ -18,7 +18,7 @@ A popover is a float surface that opens beside the button that opened it, with t
 
 ## Matching the trigger
 
-`matchTriggerWidth` makes the trigger's width the popover's minimum, so a panel under a wide trigger lines up with both of its edges and never sits narrower than the button. Content wider than the trigger still widens the popover.
+`matchTriggerWidth` makes the trigger's width the popover's minimum, so a panel under a wide trigger lines up with both edges. Wider content still widens the popover.
 
 <Preview name="popover-match-width" />
 
@@ -28,11 +28,17 @@ A popover is a float surface that opens beside the button that opened it, with t
 
 ## Usage
 
-Open a popover of free content from a `DialogTrigger`, which holds the button that opens it and the popover, or control it with `isOpen` and `onOpenChange` and point `triggerRef` at the element it opens from. Popover is a client component, and a server component can render it, as the examples on this page do. A menu, a select or a combo box brings its own trigger, which opens the popover and hands it its state, so none of them is wrapped in a `DialogTrigger`.
+Wrap free content and its button in a `DialogTrigger`. Or control the popover with `isOpen` and `onOpenChange`, and point `triggerRef` at the element it opens from. A menu, a select or a combo box brings its own trigger, so do not wrap it in a `DialogTrigger`. Popover is a client component that a server component can render, as the examples on this page do.
 
-It opens under its trigger at the start edge, 8px clear, and `placement` and `offset` change that: `placement="top end"` opens it above the trigger at the end edge. Where the screen has no room on that side, it flips to the other side, and it shifts along the trigger to stay 12px inside the window, so it never runs off the screen. `data-placement` on the popover says the side it landed on. It is never wider than the screen less 2rem, and taller content scrolls inside it. In right to left, `start` and `end` follow the writing direction. There is no arrow: the gap and the shadow tie the popover to its trigger.
+It opens 8px under its trigger at the start edge. `placement` and `offset` change that: `placement="top end"` opens it above the trigger at the end edge.
 
-A popover opened from a dark card is dark while the page stays light: it takes the theme, the shape and the density of its trigger, as [Theming](/docs/theming#overlays) explains.
+- Fitting: with no room on its side, it flips to the other side, and it shifts along the trigger to stay 12px inside the window.
+- `data-placement`: names the side the popover landed on.
+- Size: never wider than the screen less 2rem. Taller content scrolls inside it.
+- Right to left: `start` and `end` follow the writing direction.
+- No arrow: the gap and the shadow tie it to its trigger.
+
+A popover takes the theme, shape and density of its trigger, so one opened from a dark card is dark on a light page. See [Theming](/docs/theming#overlays).
 
 </Section>
 
@@ -40,7 +46,7 @@ A popover opened from a dark card is dark while the page stays light: it takes t
 
 ## Props
 
-`ref` and `className` go on the popover element, the one that takes focus, and `className` is merged after the library's classes. `triggerRef` is the element it opens against: a trigger component hands it over, and a popover opened with `isOpen` or `defaultOpen` outside one needs it, or it throws an error that names `triggerRef`. The rest of React Aria's popover props pass through.
+`ref` and `className` go on the popover element, the one that takes focus. `className` is merged after the library's classes. `triggerRef` is the element it opens against. A trigger component hands it over. Outside one, a popover opened with `isOpen` or `defaultOpen` needs it, or it throws an error that names `triggerRef`. The rest of React Aria's popover props pass through.
 
 <PropsTable path="../../packages/react/src/popover/Popover.tsx" type="Pick<PopoverProps, 'children' | 'isPadded' | 'matchTriggerWidth' | 'placement' | 'offset' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'triggerRef' | 'className'>" />
 
@@ -50,7 +56,7 @@ A popover opened from a dark card is dark while the page stays light: it takes t
 
 ## Accessibility
 
-Opened from a `DialogTrigger`, the popover is a dialog named by its trigger. When it opens, focus moves to the popover, and Tab cycles through the controls inside without reaching the page. Escape and a press outside it close it, and focus goes back to the trigger. While it is open, the page behind is hidden from assistive technology and does not scroll.
+Opened from a `DialogTrigger`, the popover is a dialog named by its trigger. Focus moves into it, and Tab cycles through its controls without reaching the page. Escape or a press outside closes it and returns focus to the trigger. While it is open, the page behind is hidden from assistive technology and does not scroll.
 
 <Keys rows={[['Escape', 'Closes the popover.'], ['Tab', 'Cycles through the controls inside.']]} />
 

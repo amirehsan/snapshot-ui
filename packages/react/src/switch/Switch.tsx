@@ -28,9 +28,8 @@ export interface SwitchBaseProps extends Omit<
   description?: ReactNode;
   /**
    * Whether the setting differs from the saved one. Shows the clay Changed chip
-   * beside the label and a light signal orange ring around the track, and has a
-   * screen reader read the chip with the switch. A switch without a visible
-   * label draws the ring and no chip.
+   * beside the label, which a screen reader reads with the switch, and a light
+   * signal orange ring around the track. Without a visible label, only the ring shows.
    */
   isChanged?: boolean;
   /**
@@ -39,9 +38,8 @@ export interface SwitchBaseProps extends Omit<
    */
   changedLabel?: string;
   /**
-   * A class name, or a function of the switch's state, merged after the library's own class. It goes
-   * on the field's root, the element with the `field` class that also holds the hint, and not on the
-   * row, which carries `switch`.
+   * A class name, or a function of the switch's state, merged after the library's class. It goes on
+   * the field's root (the `field` element that also holds the hint), not on the `switch` row.
    */
   className?:
     string | ((values: SwitchFieldRenderProps & { defaultClassName: string | undefined }) => string);

@@ -1,6 +1,6 @@
 ---
 title: Filter chip
-description: "A pill that names a filter and opens its choices or a panel, shows the value once it has one, and clears with one press."
+description: 'A pill that names a filter, opens its choices or a panel, and shows its value with a clear button.'
 icon: ListFilter
 ---
 
@@ -8,7 +8,7 @@ icon: ListFilter
 
 ## One choice
 
-A `FilterChip` with `selectionMode="single"` opens Select's list under the pill: the Menu's rows, with Select's filter from nine options. A press or Enter chooses and closes. Once it has a value the chip is the ink fill, showing its label and the value, and a clear button follows it. The list has no empty choice, as React Aria's single mode has none, so the clear button is the way back to none, and it is a tab stop.
+A `FilterChip` with `selectionMode="single"` opens Select's list under the pill. The list gets a filter field at nine options or more. A press or Enter chooses and closes. With a value, the chip is the ink fill, shows its label and value, and is followed by a clear button. The list has no empty choice, as React Aria's single mode has none, so the clear button is the way back to none. It is a tab stop.
 
 <Preview name="filter-chip-single" />
 
@@ -18,7 +18,7 @@ A `FilterChip` with `selectionMode="single"` opens Select's list under the pill:
 
 ## Several choices
 
-With `selectionMode="multiple"` a press, Enter or Space toggles a row and the list stays open, and `onChange` receives every chosen id each time. The chip writes its summary from the chosen options' text, in the list's order whatever the order of the value: "Groceries", "Groceries, Rent", or "Groceries, Rent and 2 more". The default is English and is built with no `Intl`; pass `labels.summary` to write it in another language, or `valueLabel` to write it yourself.
+With `selectionMode="multiple"`, a press, Enter or Space toggles a row and the list stays open. `onChange` receives every chosen id each time. The chip summarizes the chosen options' text in list order, whatever the order of the value: "Groceries", "Groceries, Rent", or "Groceries, Rent and 2 more". The default summary is English and uses no `Intl`. Pass `labels.summary` for another language, or `valueLabel` to write it yourself.
 
 <Preview name="filter-chip-multiple" />
 
@@ -28,7 +28,11 @@ With `selectionMode="multiple"` a press, Enter or Space toggles a row and the li
 
 ## Your own content
 
-Without `selectionMode` the chip opens a panel padded 16px around your content: two money fields, a range calendar, a segmented control. The value it shows is your `valueLabel`, in your words, and its clear button calls your `onClear`; a chip with no `valueLabel` is at rest, and one with no `onClear` draws no clear button. A function child receives `close`, for a Done or Apply button.
+Without `selectionMode`, the chip opens a panel with 16px padding around your content, such as two money fields, a range calendar or a segmented control.
+
+- `valueLabel`: the value the chip shows. Without it, the chip is at rest.
+- `onClear`: called by the clear button. Without it, there is no clear button.
+- A function child receives `close`, for a Done or Apply button.
 
 <Preview name="filter-chip-custom" />
 
@@ -38,7 +42,11 @@ Without `selectionMode` the chip opens a panel padded 16px around your content: 
 
 ## States
 
-At rest a chip is the boundary edge on nothing, its label at 500 and a slate chevron; active, it is the ink fill, its label at 450 and its value at 700. A disabled chip is taupe on a faint edge, keeps its value on the disabled fill, and has no clear button. A filter is neither consent nor unsaved, so a chip is never signal orange and never clay.
+- At rest: a boundary edge with no fill, the label at 500 and a slate chevron.
+- Active: the ink fill, the label at 450 and the value at 700.
+- Disabled: taupe on a faint edge. It keeps its value on the disabled fill and has no clear button.
+
+A filter is neither consent nor unsaved, so a chip is never signal orange and never clay.
 
 <Preview name="filter-chip-states" />
 
@@ -48,7 +56,13 @@ At rest a chip is the boundary edge on nothing, its label at 500 and a slate che
 
 ## Usage
 
-A chip is always controlled: its value belongs in the URL, a key or a list of keys, and a FilterBar draws each chip twice. Read the value from the search parameters and write it back with the router, starting from the parameters already there so the other filters stay, deleting the parameter for no value, never writing a bare `?`, and passing `{ scroll: false }` so the page does not jump. Show a mirror of the value in your own state: a write goes through the router before the new parameters arrive, and until then the chip would show its old value. The `seen` key, the value it last read or wrote, takes the URL again only when it changes under the chip, by Back, Forward or a link:
+A chip is always controlled. Its value, a key or a list of keys, belongs in the URL, and a FilterBar draws each chip twice. Read the value from the search parameters and write it back with the router:
+
+- Start from the current parameters so the other filters stay.
+- Delete the parameter for no value, and never write a bare `?`.
+- Pass `{ scroll: false }` so the page does not jump.
+
+Show a mirror of the value in your own state. A write goes through the router before the new parameters arrive, and until then the chip would show its old value. `seen` holds the value it last read or wrote, and the mirror reloads from the URL only when it changes under the chip, by Back, Forward or a link:
 
 ```tsx
 'use client';
@@ -93,9 +107,11 @@ export function CategoryFilter() {
 }
 ```
 
-A multiple chip writes one parameter per key: `params.delete('tag')`, then `append` each key, and reads them back with `searchParams.getAll('tag')`, keeping the whole query as its `seen` key. Several chips share one mirror and one key, as the [FilterBar recipe](/docs/components/filter-bar#the-transactions-recipe) shows. On a statically rendered route, read the parameters inside `<Suspense>` with the same chip, empty, as the fallback.
+- Multiple chips: write one parameter per key with `params.delete('tag')`, then `append` each key. Read them back with `searchParams.getAll('tag')`, and use the whole query as `seen`.
+- Several chips share one mirror and one `seen`, as the [FilterBar recipe](/docs/components/filter-bar#the-transactions-recipe) shows.
+- On a statically rendered route, read the parameters inside `<Suspense>`, with the same chip, empty, as the fallback.
 
-A closed chip ignores letters and Left and Right, which a Select turns into a choice nobody sees: on a filter that would be a query and a URL write behind the reader's back. The popover is modal, so the page behind it is inert while it is open, and a press on the next chip first closes this one. Inside a FilterBar a chip is also a section of More and of the Filters sheet, where it draws as a titled field.
+A closed chip ignores letters and Left and Right. A Select turns those into a choice nobody sees, which on a filter would be a query and a URL write behind the reader's back. The popover is modal, so a press on the next chip first closes this one. Inside a FilterBar, a chip is also a titled section of More and of the Filters sheet.
 
 </Section>
 
@@ -103,7 +119,7 @@ A closed chip ignores letters and Left and Right, which a Select turns into a ch
 
 ## Props
 
-The props of a chip with a list, then of a chip with your content, then its words. A chip takes no `name`: it submits nothing, since its value is in the URL.
+A chip with a list, a chip with your content, then its words. A chip takes no `name` and submits nothing, since its value is in the URL.
 
 <PropsTable label="FilterChip props (a list)" path="../../packages/react/src/filter-chip/FilterChip.tsx" type="Pick<FilterChipListProps, 'label' | 'selectionMode' | 'value' | 'onChange' | 'items' | 'isFilterable' | 'valueLabel' | 'onClear' | 'isSecondary' | 'isDisabled' | 'labels' | 'placement' | 'className' | 'popoverClassName'>" />
 
@@ -117,7 +133,7 @@ The props of a chip with a list, then of a chip with your content, then its word
 
 ## Accessibility
 
-A list chip is a button with `aria-haspopup="listbox"`, named by its label and then its value, the order it shows them in: "Category Groceries". Its list is named by the label. A chip with your content is a button that opens a `dialog` named the same way. The clear button is named "Clear" and the label, from `labels.clear`, and is a tab stop after the chip. The popover is modal: focus moves into it, the page behind is inert, and focus goes back to the chip as it closes. React Aria's own announcements have no Persian.
+A list chip is a button with `aria-haspopup="listbox"`, named by its label and then its value, as shown: "Category Groceries". Its list is named by the label. A chip with your content is a button that opens a `dialog` named the same way. The clear button is named "Clear" plus the label, from `labels.clear`, and is a tab stop after the chip. The popover is modal: focus moves into it, the page behind is inert, and focus returns to the chip on close. React Aria's own announcements have no Persian.
 
 <Keys rows={[['Enter Space', 'Open the list or the panel; on the clear button, clear, and focus goes to the chip.'], ['Down Up', 'Open the list; a panel opens on Enter and Space only.'], ['A-Z Left Right', 'Do nothing on a closed chip, which keeps them from choosing unseen.'], ['Down Up Home End PageUp PageDown', 'Move through the open list, stopping at the ends.'], ['A-Z', 'In an open list, move to the option starting with the letters typed; with a filter, type into it.'], ['Enter', 'Chooses and closes with one choice; toggles and stays open with several, as Space does.'], ['Escape', 'Clears the list filter first, then closes; closes a panel. Focus goes back to the chip.'], ['Tab', 'Does not close an open list; in a panel, moves through its content; from the chip, to its clear button.']]} />
 

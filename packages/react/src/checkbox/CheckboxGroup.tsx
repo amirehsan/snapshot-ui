@@ -35,8 +35,8 @@ export interface CheckboxGroupBaseProps extends Omit<RACCheckboxGroupProps, 'chi
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
    * Whether the selection differs from the saved one. Shows the clay Changed
-   * chip in the label row and has a screen reader read it with the group. The
-   * boxes keep their edges. An invalid group shows its error instead.
+   * chip in the label row, read with the group; the boxes keep their edges. An
+   * invalid group shows its error instead.
    */
   isChanged?: boolean;
   /**

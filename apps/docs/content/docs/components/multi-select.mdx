@@ -1,6 +1,6 @@
 ---
 title: Multi-select
-description: "Choose several values from a list: type to filter, chosen values as tags you can remove, every key sent with a form."
+description: 'Choose several values from a filterable list, shown as removable tags and sent with a form.'
 icon: ListChecks
 ---
 
@@ -8,7 +8,7 @@ icon: ListChecks
 
 ## Basic
 
-Type part of a name and the list opens with the options that contain it, or open every option with the button or the down arrow. A press or Enter toggles an option: the list stays open for the next choice, the input empties so the next search starts clean, and each chosen row shows a check. The chosen values sit in the field as tags, in the order you chose them.
+Type part of a name to list the options that contain it, or open every option with the button or the down arrow. A press or Enter toggles an option. The list stays open for the next choice, the input empties for the next search, and each chosen row shows a check. Chosen values show in the field as tags, in the order chosen.
 
 <Preview name="multi-select-basic" />
 
@@ -18,7 +18,7 @@ Type part of a name and the list opens with the options that contain it, or open
 
 ## Many values
 
-The field grows a row at a time, so every chosen value stays in view; nothing collapses into "and 3 more". Its corner is a full pill while it is one row and the surface step once it wraps. A long label ends in an ellipsis past 12rem, and its whole text stays the tag's name.
+The field grows a row at a time, so every chosen value stays in view. Nothing collapses into "and 3 more". Its corner is a full pill on one row and the surface step once it wraps. A tag label longer than 12rem ends in an ellipsis, and its full text stays the tag's name.
 
 <Preview name="multi-select-many" />
 
@@ -28,7 +28,12 @@ The field grows a row at a time, so every chosen value stays in view; nothing co
 
 ## Removing
 
-Each tag has a remove button. From the keyboard, the tags are one stop before the input: the arrow keys move between them, and Backspace or Delete removes the focused one, after which focus goes to the next tag, or the previous one when it was the last, or the input when none is left. Backspace in an empty input focuses the last tag first and removes it only on a second press, so one key never loses a value you did not see go. While the list is open a tag's remove button still removes it, and the list closes; Backspace in the empty input closes the list and then focuses the last tag.
+Each tag has a remove button. From the keyboard, the tags are one tab stop before the input.
+
+- Arrow keys move between tags.
+- Backspace or Delete removes the focused tag. Focus moves to the next tag, the previous one if it was last, or the input if none are left.
+- Backspace in an empty input focuses the last tag, and a second press removes it. One key never removes a value you did not see.
+- While the list is open, a remove button still works and closes the list. Backspace in the empty input closes the list, then focuses the last tag.
 
 </Section>
 
@@ -36,7 +41,10 @@ Each tag has a remove button. From the keyboard, the tags are one stop before th
 
 ## States
 
-A changed multi-select shows the Changed chip and the light signal orange edge until the values are saved. An invalid one draws the error edge and its error line. A disabled one is recessed, its tags in taupe with no remove buttons, and nothing in it takes focus. A read-only one keeps its tags in reach of the keyboard, to be read, with no remove buttons and no removal.
+- Changed: shows the Changed chip and the light signal orange edge until the values are saved.
+- Invalid: shows the error edge and its error line.
+- Disabled: recessed, with taupe tags and no remove buttons. Nothing in it takes focus.
+- Read-only: tags stay reachable by keyboard for reading, with no remove buttons and no removal.
 
 <Preview name="multi-select-states" />
 
@@ -46,7 +54,7 @@ A changed multi-select shows the Changed chip and the light signal orange edge u
 
 ## Usage
 
-The value is `readonly Key[]`, and `onChange` receives `Key[]`. Keep it in the URL, so a filtered view can be shared, reloaded and gone back to: read a repeated parameter with `searchParams.getAll('category')`, or split a comma-joined one, and write it back in `onChange`. With the Next App Router:
+The value is `readonly Key[]`, and `onChange` receives `Key[]`. Keep it in the URL so a filtered view can be shared, reloaded and returned to. Read a repeated parameter with `searchParams.getAll('category')`, or split a comma-joined one, and write it back in `onChange`. With the Next App Router:
 
 ```tsx
 'use client';
@@ -79,7 +87,11 @@ export function CategoryFilter({ categories }: { categories: { id: string; name:
 }
 ```
 
-The multi-select takes `value`, `defaultValue` and `onChange`; React Aria's older `selectedKey`, `defaultSelectedKey` and `onSelectionChange` are not accepted. If you control `inputValue` too, as a server search does, empty it in your `onChange`: React Aria empties the input after a choice only while one of the two is uncontrolled. In a plain form, give it a `name` and every chosen key is submitted as its own value under that name. A tag shows its option's text value, so an option whose label is not a string takes a `textValue`. There is no `allowsCustomValue`: a multi-select chooses from its list, and free text is a tag input's job.
+- Value props: use `value`, `defaultValue` and `onChange`. React Aria's older `selectedKey`, `defaultSelectedKey` and `onSelectionChange` are not accepted.
+- Controlled input: if you also control `inputValue`, as a server search does, empty it in your `onChange`. React Aria empties the input after a choice only while one of the two is uncontrolled.
+- Forms: give it a `name`, and each chosen key is submitted as its own value under that name.
+- Tag text: a tag shows its option's text value, so an option whose label is not a string needs a `textValue`.
+- No `allowsCustomValue`: a multi-select chooses from its list. Free text is a tag input's job.
 
 </Section>
 
@@ -87,7 +99,7 @@ The multi-select takes `value`, `defaultValue` and `onChange`; React Aria's olde
 
 ## Props
 
-Every React Aria ComboBox prop of its multiple mode is accepted, except the deprecated selection names and `allowsCustomValue`. These are the ones Snapshot UI adds or shapes. The options are `PickerOption` and `PickerSection`, documented on the [select](/docs/components/select) page.
+Every React Aria ComboBox prop of its multiple mode is accepted, except the deprecated selection names and `allowsCustomValue`. These are the ones Snapshot UI adds or shapes. The options, `PickerOption` and `PickerSection`, are documented on the [select](/docs/components/select) page.
 
 <PropsTable label="MultiSelect props" path="../../packages/react/src/multi-select/MultiSelect.tsx" type="Pick<MultiSelectBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'items' | 'inputValue' | 'onInputChange' | 'isLoading' | 'allowsEmptyCollection' | 'labels' | 'placement' | 'name' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'className' | 'popoverClassName'>" />
 
@@ -99,7 +111,16 @@ Every React Aria ComboBox prop of its multiple mode is accepted, except the depr
 
 ## Accessibility
 
-The input is a `combobox` with `aria-expanded` and `aria-controls` over a `listbox` of `option`s that allows several, named by the field's label; each chosen row has a check as well as its selected state. The tags are a `grid` named "Selected" and the label, or the field's `aria-label` or `aria-labelledby` when no label is drawn, one tab stop before the input, and each remove button is named "Remove" and the tag's text; the remove buttons stay out of the tab order, since Backspace and Delete do the same on a focused tag. The input is described by the chosen values, so a screen reader hears them after the field's name. While the list is open React Aria hides the rest of the page from assistive technology, the tags too, and leaves them focusable: a press on a remove button still works, and Shift+Tab still reaches them and closes the list. A disabled field draws its tags in a disabled group, read and never focused. React Aria announces the number of options in its own strings, which have no Persian, and describes a focused tag with its own "Press Delete to remove tag.", which has no Persian string either; the field's names and lines are the library's own `labels`. How it reads with VoiceOver on iOS and TalkBack is not yet verified.
+The input is a `combobox` with `aria-expanded` and `aria-controls`, over a multi-select `listbox` of `option`s named by the field's label. Each chosen row has a check as well as its selected state.
+
+- Tags: a `grid` named "Selected" plus the label (or the field's `aria-label` or `aria-labelledby` when no label is shown), one tab stop before the input.
+- Remove buttons: each is named "Remove" plus the tag's text. They stay out of the tab order, since Backspace and Delete do the same on a focused tag.
+- Description: the input is described by the chosen values, so a screen reader hears them after the field's name.
+- Open list: React Aria hides the rest of the page from assistive technology, tags included, but leaves them focusable. A remove button still works, and Shift+Tab still reaches the tags and closes the list.
+- Disabled: the tags are a disabled group, read but never focused.
+- Strings: React Aria's option count and its focused tag hint, "Press Delete to remove tag.", have no Persian strings. The field's names and lines come from the library's `labels`.
+
+How it reads with VoiceOver on iOS and TalkBack is not yet verified.
 
 <Keys rows={[['A-Z', 'Filters the list as you type.'], ['Down Up', 'Open the list with every option, then move through it.'], ['Enter', 'Toggles the active option; the list stays open and the input empties.'], ['Escape', 'Closes the list and empties the input.'], ['Tab', 'Closes the list and moves on; the value is unchanged.'], ['Backspace', 'In an empty input, closes the list and focuses the last tag; again, removes it.'], ['Backspace Delete', 'On a tag, remove it; focus goes to its neighbor, or the input.'], ['Left Right', 'Move between tags, in the drawn direction.']]} />
 

@@ -8,7 +8,9 @@ icon: TextSearch
 
 ## Basic
 
-Type part of a name and the list opens with the options that contain it, with case and accents aside, so "cafe" finds "Café Luna" and "co" finds "Corner Mart" and "Cobalt Coffee". The button at the field's end, or the down arrow, opens every option. Choose with Enter or a press, and the field shows the option's text. A combo box beats a select when the list is long, or when people know the option by name and would rather type it than scroll to it. The options are the select's: `PickerOption` and `PickerSection`, with their hints, icons and end values.
+A text field over a list. Type part of a name and the list shows the options that contain it, ignoring case and accents: "cafe" finds "Café Luna", and "co" finds "Corner Mart" and "Cobalt Coffee". The button at the field's end, or the down arrow, shows every option. Choose with Enter or a press, and the field shows the option's text.
+
+Use a combo box over a select when the list is long, or when people know the option by name. The options are the select's `PickerOption` and `PickerSection`, with their hints, icons and end values.
 
 <Preview name="combo-box-basic" />
 
@@ -18,9 +20,11 @@ Type part of a name and the list opens with the options that contain it, with ca
 
 ## From a server
 
-When the options live on your server, control the text and the options: pass `items` and `inputValue`, fetch in `onInputChange`, and set `isLoading` while you wait. The field shows a spinner before its button, and the list keeps what it has until the new results arrive, or says "Loading" while it has nothing yet. React Aria does no filtering of items you control, so your server filters, ranks and caps them; the example waits 300ms as a request would and returns at most eight.
+To search on your server, pass `items` and `inputValue`, fetch in `onInputChange`, and set `isLoading` while you wait. The field shows a spinner, and the list keeps its results until new ones arrive, or says "Loading" while it has none. React Aria does not filter items you control, so your server filters, ranks and caps them. The example waits 300ms and returns at most eight.
 
-React Aria puts the chosen text back on Escape and on leaving the field by finding the chosen option among the items, so keep it there: hold the chosen item from `onChange` and pass it first, then the results without it. A choice also writes its own text back through `onInputChange`, so skip the search when the text is the chosen option's. And drop an answer that arrives after a newer request: abort the last fetch with an `AbortController`, or number your requests and keep only the latest, as the example does.
+- Keep the chosen item in `items`. React Aria finds it there to put its text back on Escape and on leaving the field. Hold it from `onChange` and pass it first, then the results without it.
+- A choice writes its text back through `onInputChange`, so skip the search when the text is the chosen option's.
+- Drop answers that arrive after a newer request. Abort the last fetch with an `AbortController`, or number requests and keep only the latest, as the example does.
 
 <Preview name="combo-box-async" />
 
@@ -30,7 +34,10 @@ React Aria puts the chosen text back on Escape and on leaving the field by findi
 
 ## States
 
-When nothing matches, the list stays open and says "No matches" rather than vanishing, which would read as a broken field. A changed combo box shows the Changed chip and the light signal orange edge until the value is saved. An invalid one draws the error edge and its error line. A disabled one is recessed, its text in taupe.
+- No matches: the list stays open and says "No matches" instead of vanishing, which would read as a broken field.
+- Changed: the Changed chip and the light signal orange edge, until the value is saved.
+- Invalid: the error edge and its error line.
+- Disabled: recessed, with its text in taupe.
 
 <Preview name="combo-box-states" />
 
@@ -40,7 +47,7 @@ When nothing matches, the list stays open and says "No matches" rather than vani
 
 ## Usage
 
-Keep the choice in the URL, so a filtered view can be shared, reloaded and gone back to. Pass the search parameter as `value` and write the URL in `onChange`. With the Next App Router:
+Keep the choice in the URL, so a filtered view can be shared, reloaded and revisited. Pass the search parameter as `value` and write the URL in `onChange`. With the Next.js App Router:
 
 ```tsx
 'use client';
@@ -73,7 +80,10 @@ export function MerchantFilter({ merchants }: { merchants: { id: string; name: s
 }
 ```
 
-The combo box takes `value`, `defaultValue` and `onChange`; React Aria's older `selectedKey`, `defaultSelectedKey` and `onSelectionChange` are deprecated and not accepted. Emptying the field clears the value, and `onChange` reports `null`, unless you control both `value` and `inputValue`, when clearing it is yours to do in `onInputChange`. Leaving the field puts the chosen option's text back, and so does scrolling the page while the list is open, which closes it; pass `allowsCustomValue` to keep free text instead, which is then what a form submits. In a plain form, give it a `name` and the chosen key is submitted, or its text with `formValue="text"`.
+- Selection: use `value`, `defaultValue` and `onChange`. React Aria's deprecated `selectedKey`, `defaultSelectedKey` and `onSelectionChange` are not accepted.
+- Clearing: emptying the field clears the value, and `onChange` reports `null`. If you control both `value` and `inputValue`, clear it yourself in `onInputChange`.
+- Free text: leaving the field, or scrolling the page while the list is open, puts the chosen option's text back. Pass `allowsCustomValue` to keep free text instead, which a form then submits.
+- Forms: give it a `name` to submit the chosen key, or its text with `formValue="text"`.
 
 </Section>
 
@@ -81,7 +91,7 @@ The combo box takes `value`, `defaultValue` and `onChange`; React Aria's older `
 
 ## Props
 
-Every React Aria ComboBox prop is accepted, except the deprecated selection names. These are the ones Snapshot UI adds or shapes. The options are `PickerOption` and `PickerSection`, documented on the [select](/docs/components/select) page.
+Every React Aria ComboBox prop is accepted except the deprecated selection names. These are the ones Snapshot UI adds or shapes. `PickerOption` and `PickerSection` are documented on the [select](/docs/components/select) page.
 
 <PropsTable label="ComboBox props" path="../../packages/react/src/combo-box/ComboBox.tsx" type="Pick<ComboBoxBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'items' | 'defaultItems' | 'inputValue' | 'onInputChange' | 'isLoading' | 'allowsCustomValue' | 'allowsEmptyCollection' | 'labels' | 'placement' | 'name' | 'isDisabled' | 'isInvalid' | 'className' | 'popoverClassName'>" />
 
@@ -93,7 +103,12 @@ Every React Aria ComboBox prop is accepted, except the deprecated selection name
 
 ## Accessibility
 
-The input is a `combobox` with `aria-expanded` and `aria-controls` over a `listbox` of `option`s, named by the field's label; the button is named "Show options" and the label, and stays out of the tab order, since the down arrow does the same from the field. Focus stays in the field while the list is open, and the active option moves with `aria-activedescendant`, which VoiceOver on iOS follows unevenly; how it reads with VoiceOver and TalkBack is not yet verified. React Aria announces the number of options and the choice in its own strings, which have no Persian, so on a Persian page they stay English; the button's name and the list's lines are the library's own `labels`. While the list is open, React Aria hides the rest of the page from assistive technology, the spinner too, so a list with nothing yet says "Loading" itself. Scrolling the page while the list is open closes it and puts the chosen text back, since the list would otherwise drift from its field; the soft keyboard opening on a phone resizes the page without closing it. Without a visible label, name the field with `aria-label`; its placeholder is then slate, since it is the only words shown.
+The input is a `combobox` with `aria-expanded` and `aria-controls`, over a `listbox` of `option`s, named by the field's label. The button is named "Show options" plus the label. It stays out of the tab order, since the down arrow does the same. Without a visible label, name the field with `aria-label`; its placeholder is then slate, since it is the only words shown.
+
+- Focus: stays in the field while the active option moves with `aria-activedescendant`. VoiceOver on iOS follows it unevenly, and reading with VoiceOver and TalkBack is not yet verified.
+- Announcements: React Aria announces the option count and the choice in its own strings, which have no Persian, so they stay English on a Persian page. The button's name and the list's lines come from `labels`.
+- Hidden page: while the list is open, React Aria hides the rest of the page from assistive technology, the spinner too, so an empty list says "Loading" itself.
+- Scrolling: scrolling the page closes the list and puts the chosen text back, so the list never drifts from its field. The phone's soft keyboard resizes the page without closing it.
 
 <Keys rows={[['A-Z', 'Filters the list as you type.'], ['Down Up', 'Open the list with every option, then move through it, stopping at the ends.'], ['Home End PageUp PageDown', 'Move through the open list.'], ['Enter', 'Chooses the active option and closes.'], ['Escape', 'Closes the list and puts the chosen text back.'], ['Tab', 'Chooses the active option, closes the list and moves on.']]} />
 

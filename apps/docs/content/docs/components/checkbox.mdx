@@ -1,6 +1,6 @@
 ---
 title: Checkbox
-description: A single checkbox, or a labelled group of them. The whole row is the label, at least 40px tall, with a hint and an error line, and a group shows when its selection is unsaved or invalid.
+description: A single checkbox or a labeled group, where the whole row is the target.
 icon: SquareCheck
 ---
 
@@ -8,7 +8,7 @@ icon: SquareCheck
 
 ## Basic
 
-The label sits beside the box and the whole row is the target, so a press on the text, the gap or the box toggles it. A hint goes under the label's text.
+The label sits beside the box, and a press anywhere on the row toggles it. A hint goes under the label's text.
 
 <Preview name="checkbox-basic" />
 
@@ -18,7 +18,14 @@ The label sits beside the box and the whole row is the target, so a press on the
 
 ## States
 
-Checked is an ink fill with a canvas mark, drawn with a mask so it reads in both themes. Indeterminate is a canvas bar. Invalid turns only the edge to the error color, so a checked box that is invalid still reads as checked. A disabled box is recessed with a taupe label, and a read-only box looks like an enabled one and cannot be pressed. A changed checkbox shows a clay chip beside its label and nothing else, and a screen reader reads the chip with it. Invalid outranks changed, so the chip steps aside for the error line, and a checkbox with no visible label shows no chip. Inside a group a checkbox ignores `isChanged`, because the group's own chip covers it.
+- Checked: an ink fill with a canvas mark, drawn with a mask so it reads in both themes.
+- Indeterminate: a canvas bar.
+- Invalid: only the edge turns to the error color, so an invalid checked box still reads as checked.
+- Disabled: recessed, with a taupe label.
+- Read-only: looks enabled but cannot be pressed.
+- Changed: a clay chip beside the label and nothing else, read with the checkbox.
+
+Invalid outranks changed, so the chip gives way to the error line. A checkbox with no visible label shows no chip. Inside a group, a checkbox ignores `isChanged`; the group's own chip covers it.
 
 <Preview name="checkbox-states" />
 
@@ -28,11 +35,16 @@ Checked is an ink fill with a canvas mark, drawn with a mask so it reads in both
 
 ## Group
 
-A group names several checkboxes and holds their values as one array. Vertical is the default. Horizontal lays the rows out side by side and wraps them when the row is full. The first group is controlled and starts at its saved selection. Toggle a box and `isChanged` shows the clay chip beside the label, and the chip goes again when the selection is back to the saved one. The boxes keep their edges: the chip marks the field, not each box.
+A group names several checkboxes and holds their values as one array. It is vertical by default. `orientation="horizontal"` lays the rows side by side and wraps them.
+
+The first group is controlled and starts at its saved selection. Toggle a box and `isChanged` shows the clay chip beside the label, until the selection matches the saved one again. The chip marks the field, so the boxes keep their edges.
 
 <Preview name="checkbox-group" />
 
-A form reset returns a group to its `defaultValue`, with two limits that come from React Aria: a reset that unchecks more than one box leaves all but the last of them checked, and a reset that checks a box and also unchecks one further down the group loses the checked box. A reset that only checks boxes, or unchecks a single box, works.
+A form reset returns a group to its `defaultValue`. A reset that only checks boxes, or unchecks a single box, works. Two cases fail because of React Aria:
+
+- A reset that unchecks more than one box leaves all but the last of them checked.
+- A reset that checks a box and unchecks one further down the group loses the checked box.
 
 </Section>
 
@@ -40,7 +52,7 @@ A form reset returns a group to its `defaultValue`, with two limits that come fr
 
 ## Select all
 
-A parent checkbox is indeterminate while only some of its children are checked. Pass `isIndeterminate` and `isSelected` from the children's state, and it follows. Pressing an indeterminate checkbox reports `true`, which here checks every child.
+A parent checkbox is indeterminate while only some of its children are checked. Derive `isIndeterminate` and `isSelected` from the children's state. Pressing an indeterminate checkbox reports `true`, which here checks every child.
 
 <Preview name="checkbox-select-all" />
 
@@ -50,7 +62,7 @@ A parent checkbox is indeterminate while only some of its children are checked. 
 
 ## Validation
 
-Set `isRequired` on a checkbox, or on a group where one checked box is enough, and the browser's own checks run when the form is submitted. The error line then shows the message, and every box in an invalid group turns its edge to the error color. A `validate` function works too. A group shows one error line, its own, so an `errorMessage` on a checkbox inside a group is not shown.
+Set `isRequired` on a checkbox, or on a group where one checked box is enough, and the browser checks it on submit. The error line shows the message, and every box in an invalid group gets the error edge. A `validate` function works too. A group shows only its own error line, so an `errorMessage` on a checkbox inside it is not shown.
 
 <Preview name="checkbox-validation" />
 
@@ -60,7 +72,7 @@ Set `isRequired` on a checkbox, or on a group where one checked box is enough, a
 
 ## Usage
 
-Every value works controlled and uncontrolled. A checked checkbox with a `name` submits its `value`, or "on", and an unchecked one is left out of the form. A group submits one entry per checked box, all under the group's `name`.
+Every value works controlled and uncontrolled. A checked checkbox with a `name` submits its `value`, or "on". An unchecked one is left out of the form. A group submits one entry per checked box under the group's `name`.
 
 ```tsx
 import { useState } from 'react';
@@ -82,7 +94,7 @@ export function Preferences() {
 }
 ```
 
-The types require a name. A checkbox takes its text, an `aria-label` or an `aria-labelledby`, and a group takes a `label`, an `aria-label` or an `aria-labelledby`.
+The types require a name: text, `aria-label` or `aria-labelledby` for a checkbox, and `label`, `aria-label` or `aria-labelledby` for a group.
 
 </Section>
 
@@ -106,13 +118,17 @@ Every React Aria checkbox prop is accepted. These are the ones Snapshot UI adds 
 
 ## Accessibility
 
-A native checkbox input inside its label, with React Aria handling the wiring. The mixed state is exposed as mixed. A group is a `group` named by its label, and its hint and error line describe every checkbox in it. A screen reader reads the Changed chip of a group with the group, and the chip of a standalone checkbox as part of its description, after the hint, while it is changed and valid. A standalone checkbox's chip sits beside the row, so it is no part of the checkbox's name and a press on it does not toggle the box. An invalid group or checkbox reads its error line alone, and a checkbox with no visible label has no chip.
+A native checkbox input inside its label, wired by React Aria. The indeterminate state is exposed as mixed. A group is a `group` named by its label, and its hint and error line describe every checkbox in it.
+
+- A group's Changed chip is read with the group.
+- A standalone checkbox's chip is read as part of its description, after the hint, while changed and valid. It sits beside the row, so it is not part of the name and pressing it does not toggle the box.
+- An invalid group or checkbox reads its error line alone.
 
 <Keys rows={[['Tab', 'Moves to the next checkbox. Each one is its own stop, in a group too.'], ['Space', 'Toggles the focused checkbox.'], ['Arrow keys', 'Do nothing. Only a radio group moves between its choices with them.']]} />
 
-The row is 40px tall at the least, and the box is drawn at 20px inside it. A checkbox with no text, named by `aria-label`, keeps a 40px square target around its box. The target overhangs the box by 10px on each side, so leave 10px beside a scroll edge. In Windows high contrast the box takes the system colors, so the mark never disappears.
+The row is at least 40px tall, with a 20px box. A checkbox with no text, named by `aria-label`, keeps a 40px square target that overhangs the box by 10px on each side, so leave 10px beside a scroll edge. In Windows high contrast the box takes the system colors, so the mark never disappears.
 
-A checkbox or a group with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means it has no accessible name.
+A checkbox or group with no name does not compile. TypeScript's error either names only `aria-labelledby` or says the props are not assignable. Both mean it has no accessible name.
 
 </Section>
 

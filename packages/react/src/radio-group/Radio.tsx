@@ -15,9 +15,8 @@ import { present } from '../utils/present';
 
 export interface RadioBaseProps extends Omit<RadioFieldProps, 'children' | 'className' | 'style'> {
   /**
-   * The option's label. It wraps inside the row when it is long, even a word
-   * with no break in it, and inline markup stays in one run of text. Required
-   * unless the radio has an `aria-label` or an `aria-labelledby`.
+   * The option's label. Long text, even an unbroken word, wraps inside the
+   * row. Required unless the radio has an `aria-label` or an `aria-labelledby`.
    */
   children?: ReactNode;
   /** A hint under the option's row. It becomes the radio's accessible description. */

@@ -12,10 +12,9 @@ export interface TextProps extends HTMLAttributes<HTMLElement> {
    */
   as?: TextElement;
   /**
-   * `body` is 16px; `small` is 14px, for hints and helper lines. `numeral` is a 56px figure (44px under
-   * 768px) and `numeral-sm` a 32px one, both with tabular digits and no wrapping, for an amount or a
-   * count that is the point of a tile. Give a figure its sign and unit in the string; nothing is
-   * formatted here.
+   * `body` is 16px. `small` is 14px, for hints. `numeral` (56px, 44px under 768px) and `numeral-sm`
+   * (32px) are tabular figures that never wrap, for a tile's main amount. Put the sign and unit in the
+   * string.
    * @default 'body'
    */
   size?: TextSize;

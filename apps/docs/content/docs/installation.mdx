@@ -20,13 +20,13 @@ pnpm add @snapshot-ui/react @snapshot-ui/core
 
 ## Charts
 
-Charts are a package of their own, with versions of their own.
+Charts are a separate package with their own versions.
 
 ```bash
 pnpm add @snapshot-ui/charts
 ```
 
-It needs the same 0.x minor of `@snapshot-ui/core` (0.5 for charts 0.1.2), whose `styles.css` already draws the charts, and React 19, and nothing else: no React Aria. See the [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
+It needs React 19 and the same 0.x minor of `@snapshot-ui/core` (0.5 for charts 0.1.2), whose `styles.css` already draws the charts. It does not need React Aria. See the [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
 
 </Section>
 
@@ -34,14 +34,14 @@ It needs the same 0.x minor of `@snapshot-ui/core` (0.5 for charts 0.1.2), whose
 
 ## Import the stylesheet
 
-Once, at the root of your app. `styles.css` holds the tokens and every component. `base.css` is optional: it sets the page background, the body type, the font rendering details and an ink focus ring for your own links and fields.
+Import it once, at the root of your app. `styles.css` holds the tokens and every component. `base.css` is optional: it sets the page background, body type, font rendering and an ink focus ring for your own links and fields.
 
 ```tsx
 import '@snapshot-ui/core/styles.css';
 import '@snapshot-ui/core/base.css';
 ```
 
-The CSS sits in cascade layers, so your own unlayered CSS always wins, and Tailwind's utilities win over the components.
+The CSS sits in cascade layers, so your unlayered CSS always wins, and Tailwind's utilities win over the components.
 
 </Section>
 
@@ -49,7 +49,7 @@ The CSS sits in cascade layers, so your own unlayered CSS always wins, and Tailw
 
 ## Load the font
 
-Snapshot UI sets body text at weight 450, which only a variable font has. In Next.js, `next/font` self-hosts it and sets the family the tokens read:
+Body text is weight 450, which needs a variable font. In Next.js, `next/font` self-hosts it and sets the family the tokens read:
 
 ```tsx
 import { Sofia_Sans } from 'next/font/google';
@@ -73,7 +73,7 @@ Anywhere else, install `@fontsource-variable/sofia-sans` and import it once. The
 
 ## React Aria, if you install it too
 
-`@snapshot-ui/react` pins `react-aria-components` to exactly 1.22.1, because the toast parts it wraps are unstable in React Aria. If your app installs `react-aria-components` itself, pin it to that same version, with no range, so the app and the library share one copy of React Aria:
+`@snapshot-ui/react` pins `react-aria-components` to exactly 1.22.1, because the toast parts it wraps are unstable in React Aria. If your app installs `react-aria-components` itself, pin the same version with no range, so there is one copy of React Aria:
 
 ```json
 {
@@ -83,9 +83,9 @@ Anywhere else, install `@fontsource-variable/sofia-sans` and import it once. The
 }
 ```
 
-Take `RouterProvider` and `I18nProvider` from `@snapshot-ui/react`, which re-exports React Aria's own, so they always reach the library's parts. [Routing](/docs/routing) sets up the router.
+Import `RouterProvider` and `I18nProvider` from `@snapshot-ui/react`, which re-exports React Aria's own, so they always reach the library's parts. [Routing](/docs/routing) sets up the router.
 
-Dates come and go as ISO strings, so an app needs no date library. An app that passes `createCalendar` to a calendar imports its calendars from `@internationalized/date`; install it in React Aria's range, `^3.12.4`, so there is one copy.
+Dates are ISO strings, so you need no date library. To pass `createCalendar` to a calendar, import calendars from `@internationalized/date`. Install it in React Aria's range, `^3.12.4`, so there is one copy.
 
 </Section>
 
@@ -93,7 +93,7 @@ Dates come and go as ISO strings, so an app needs no date library. An app that p
 
 ## Right to left
 
-Every part reads its direction from the locale, through React Aria. A `dir` on a page section lays out what is inside it, but a dialog, a menu, a popover or a tooltip opened from there is portaled to the end of the body and never sees that `dir`. So wrap a right-to-left region, such as a guide in Persian, in `I18nProvider` with the region's locale, beside its `dir` and `lang`:
+Every part reads its direction from the locale, through React Aria. A `dir` on a page section lays out what is inside it. But a dialog, menu, popover or tooltip opened from there renders at the end of the body and never sees that `dir`. So wrap a right-to-left region, such as a guide in Persian, in `I18nProvider` with its locale, beside its `dir` and `lang`:
 
 ```tsx
 import { I18nProvider } from '@snapshot-ui/react';
@@ -109,7 +109,9 @@ export function PersianGuide({ children }) {
 }
 ```
 
-A whole app in one right-to-left language wraps its root the same way. A toast follows the locale where `ToastRegion` is mounted, not the region it was raised from, so an app with a right-to-left section mounts its `ToastRegion` inside the same `I18nProvider` if it wants right-to-left toasts. The charts follow the nearest `dir` attribute, not the React Aria locale, so set `dir` on a chart's own region, such as a chart inside a Popover.
+- A whole app in one right-to-left language wraps its root the same way.
+- A toast follows the locale where `ToastRegion` is mounted, not where it was raised. For right-to-left toasts, mount `ToastRegion` inside the same `I18nProvider`.
+- Charts follow the nearest `dir` attribute, not the React Aria locale. Set `dir` on a chart's own region, such as a chart inside a Popover.
 
 </Section>
 
@@ -117,9 +119,9 @@ A whole app in one right-to-left language wraps its root the same way. A toast f
 
 ## Next.js server components
 
-Stateful or interactive components carry `'use client'`. Static ones carry none, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, the field counter and chip, Meter, a StatTile without `href`, Sparkline, and Pagination, whose page links a server page builds with `getPageHref`; only its controls and its status are client components. React Aria itself must never be imported into a server component.
+Stateful or interactive components carry `'use client'`. Static ones do not, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, the field counter and chip, Meter, a StatTile without `href`, Sparkline, and Pagination. A server page builds Pagination's links with `getPageHref`, and only its controls and status are client components. Never import React Aria into a server component.
 
-The date and number fields render their label, hint, error line and hidden inputs on the server, and draw their formatted text, which React Aria writes with `Intl`, from the first render after hydration: before it a number field shows its plain figure and a date range picker its `valueLabel`, and an inline calendar its empty frame. So the server's HTML is the same in every locale and time zone. Pass `today` from your user's zone, and `valueLabel` where the server's HTML should show a range.
+The date and number fields render their label, hint, error line and hidden inputs on the server. Their formatted text, which React Aria writes with `Intl`, appears from the first render after hydration. Before it, a number field shows its plain figure, a date range picker its `valueLabel`, and an inline calendar its empty frame. So the server's HTML is the same in every locale and time zone. Pass `today` from your user's time zone, and `valueLabel` where the server's HTML should show a range.
 
 </Section>
 

@@ -12,7 +12,7 @@ import { useSidebar } from './Sidebar';
 export interface SidebarSearchProps extends Omit<RACButtonProps, 'children' | 'className'> {
   /** The label, such as "Search or jump to". */
   children: ReactNode;
-  /** The shortcut as keys separated by spaces, such as "Mod K" or "Ctrl K", drawn as a key chip and shown in the collapsed tooltip. `Mod` becomes the platform's modifier after mount. */
+  /** Keys separated by spaces, such as "Mod K", shown as a key chip and in the collapsed tooltip. `Mod` becomes the platform's modifier after mount. */
   shortcut?: string;
   className?: string;
   ref?: Ref<HTMLButtonElement>;

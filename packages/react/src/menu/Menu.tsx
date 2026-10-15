@@ -21,10 +21,7 @@ export type { Key } from 'react-aria-components';
 export interface MenuProps<T extends object> extends Omit<RACMenuProps<T>, 'className' | 'style'> {
   /** Where the popover opens. @default 'bottom start' */
   placement?: Placement;
-  /**
-   * Goes on the menu element: a string, or a function of the menu's state (`isEmpty`, `defaultClassName`).
-   * React Aria does not export the state's type, so it is read from its own `className`.
-   */
+  /** Goes on the menu element: a string, or a function of the menu's state (`isEmpty`, `defaultClassName`). */
   className?: RACMenuProps<T>['className'];
   /** Goes on the popover around it. */
   popoverClassName?: string;

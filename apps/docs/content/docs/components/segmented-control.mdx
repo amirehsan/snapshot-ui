@@ -1,6 +1,6 @@
 ---
 title: Segmented control
-description: A few short options seen at once, of which one is chosen. When its row does not fit, it stacks one option per row.
+description: Pick one of a few short options, all in view, that stacks when its row does not fit.
 icon: Columns3
 ---
 
@@ -8,7 +8,7 @@ icon: Columns3
 
 ## Basic
 
-Pass a label, and the options as children, each with its own `value`. The chosen option is the ink pill. A segmented control is for a few short options that are all worth seeing at once. For more, or for options that need explaining, use a list.
+Pass a label, and the options as children, each with its own `value`. The chosen option is the ink pill. Use it for a few short options that are all worth seeing at once. For more, or for options that need explaining, use a list.
 
 <Preview name="segmented-control-basic" />
 
@@ -18,7 +18,13 @@ Pass a label, and the options as children, each with its own `value`. The chosen
 
 ## States
 
-The track's edge carries the state, as in every field. A changed control gets a light signal orange edge and a clay chip beside its label. An invalid control gets the error edge and an error line, and invalid outranks changed, so the chip steps aside. A disabled control is recessed, and its chosen option stays in view as a quiet taupe pill. A single option can be disabled on its own, with `isDisabled` on its item, and the rest stay open. The compact size, `sm`, draws 32px options in a 40px track and still hits each one at 40px.
+The track's edge carries the state, as in every field.
+
+- Changed: a light signal orange edge and a clay chip beside the label.
+- Invalid: the error edge and an error line. Invalid outranks changed, so the chip steps aside.
+- Disabled: recessed, with the chosen option kept in view as a quiet taupe pill.
+- One disabled option: set `isDisabled` on its item, and the rest stay open.
+- Compact: `size="sm"` draws 32px options in a 40px track, still hit at 40px.
 
 <Preview name="segmented-control-states" />
 
@@ -28,7 +34,13 @@ The track's edge carries the state, as in every field. A changed control gets a 
 
 ## Stacking
 
-The options are all in one row or all in a column, never some of each. When the row does not fit the room the control has, it stacks one option per row, each 40px tall. When the room comes back, the row does too. The control compares its own row with its own width, so give it a column to fill, as you would a text field. A control sized to its content, in a flex row or a centered grid, has no room to compare with and never stacks. Stacking is decided in the browser, so before the page hydrates, or with scripts off, a row that does not fit overflows its root. Give the control's spacing outside it, as a margin or a wrapper: horizontal padding added to the root through `className` makes the room the control measures wider than the room its track has.
+The options sit all in one row or all in a column, never a mix. When the row does not fit, the control stacks one 40px option per row, and returns to a row when the room comes back.
+
+The control compares its row with its own width, so give it a column to fill, as you would a text field.
+
+- Content-sized: a control sized to its content, such as in a flex row or a centered grid, has nothing to compare with and never stacks.
+- Before hydration: stacking is decided in the browser, so before hydration or with scripts off, a row that does not fit overflows its root.
+- Spacing: add spacing outside the control, as a margin or a wrapper. Horizontal padding on the root through `className` makes the measured room wider than the track's.
 
 <Preview name="segmented-control-stacking" />
 
@@ -62,7 +74,7 @@ export function Appearance({ saved }: { saved: string }) {
 }
 ```
 
-Without a visible label, name the control with `aria-label` or `aria-labelledby`, as a toolbar's switch is named by what it sits beside. The types require one of the three. An option always takes `children`, and an option that shows only an icon passes the icon there and adds an `aria-label`.
+Without a visible label, name the control with `aria-label` or `aria-labelledby`, such as a toolbar switch named by what it sits beside. The types require one of the three. Every option takes `children`. An icon-only option passes the icon there and adds an `aria-label`.
 
 </Section>
 
@@ -70,7 +82,7 @@ Without a visible label, name the control with `aria-label` or `aria-labelledby`
 
 ## Props
 
-Every React Aria RadioGroup prop is accepted, except `orientation`: the options are always laid out in a row, and stack on their own. These are the ones Snapshot UI adds or shapes.
+Every React Aria RadioGroup prop is accepted except `orientation`, since the options always start in a row and stack on their own. These are the ones Snapshot UI adds or shapes.
 
 <PropsTable label="SegmentedControl props" path="../../packages/react/src/segmented-control/SegmentedControl.tsx" type="Pick<SegmentedControlBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'size' | 'value' | 'defaultValue' | 'onChange' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate'>" />
 
@@ -84,13 +96,15 @@ Each option is a SegmentedControlItem.
 
 ## Accessibility
 
-A native radio group: each option is a radio, the control is named by its label, and React Aria handles the wiring. A screen reader reads the Changed chip with the control, after the hint, while the control is changed and valid. An invalid control reads its error line alone. The group is one tab stop, and focus lands on the chosen option, unless that option is disabled (see below).
+A native radio group: each option is a radio, the label names the group, and React Aria handles the wiring. While the control is changed and valid, a screen reader reads the Changed chip after the hint. An invalid control reads its error line alone. The group is one tab stop, and focus lands on the chosen option.
 
 <Keys rows={[['Tab', 'Moves focus into the control, onto the chosen option, or the first when nothing is chosen.'], ['Right Down', 'Chooses the next option, and wraps from the last to the first.'], ['Left Up', 'Chooses the previous option, and wraps from the first to the last.'], ['Space', 'Chooses the focused option.']]} />
 
-The 2px ring sits outside an option that is not chosen. On the chosen option, which is an ink fill, the ring is drawn inside it in the canvas color, so it still reads. A disabled option is skipped by the arrow keys. A read-only control keeps its choice and takes no hover wash. Do not disable the chosen option of a control the reader can still change: React Aria gives the tab stop to the chosen option alone and takes it from a disabled one, so Tab skips the control.
-
-A control with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means the control has no accessible name.
+- Focus ring: 2px, outside an unchosen option. On the chosen ink option it is drawn inside, in the canvas color.
+- Disabled option: skipped by the arrow keys.
+- Read-only: keeps its choice and shows no hover wash.
+- Never disable the chosen option of a control the reader can still change. React Aria gives the tab stop only to the chosen option and takes it from a disabled one, so Tab skips the control.
+- Missing name: the control does not compile. TypeScript either names only `aria-labelledby` or says the props are not assignable. Both mean the control has no accessible name.
 
 </Section>
 

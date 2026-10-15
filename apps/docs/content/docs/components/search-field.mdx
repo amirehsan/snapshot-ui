@@ -1,6 +1,6 @@
 ---
 title: Search field
-description: "A search box: a magnifier, a clear button once there is text, Escape to clear and Enter to submit."
+description: "A search box with a clear button, Escape to clear and Enter to submit."
 icon: Search
 ---
 
@@ -8,7 +8,7 @@ icon: Search
 
 ## Basic
 
-Pass a label, and a hint if the label cannot say it all. The placeholder shows what the field searches and never replaces the label. Once there is text, a clear button shows at the end; while the field is empty it leaves, so there is no stray target. Escape clears the text too, and Enter submits it to `onSubmit`.
+Pass a label, and a hint if the label cannot say it all. The placeholder shows what the field searches and never replaces the label. A clear button shows at the end only while there is text. Escape also clears, and Enter submits the text to `onSubmit`.
 
 <Preview name="search-field-basic" />
 
@@ -18,7 +18,7 @@ Pass a label, and a hint if the label cannot say it all. The placeholder shows w
 
 ## In a toolbar
 
-Above a list there is often no room for a label row. Name the field with `aria-label` and give it a placeholder that says what it searches. With no visible label the placeholder is the only words a sighted reader gets, so it is drawn in slate rather than the quieter taupe: it is the one place a placeholder is read, the exception the command palette's field also makes.
+Above a list there is often no room for a label row. Name the field with `aria-label`, and use a placeholder that says what it searches. With no visible label, the placeholder is the only text a sighted reader gets, so it is slate instead of taupe. The command palette's field makes the same exception.
 
 <Preview name="search-field-toolbar" />
 
@@ -28,7 +28,7 @@ Above a list there is often no room for a label row. Name the field with `aria-l
 
 ## States
 
-A disabled field is recessed and its magnifier turns taupe. An invalid field draws the error edge and its error line. There is no changed state: a query is not saved data, so it is never unsaved.
+A disabled field is recessed, with a taupe magnifier. An invalid field shows the error edge and error line. There is no changed state, since a query is not saved data.
 
 <Preview name="search-field-states" />
 
@@ -38,7 +38,12 @@ A disabled field is recessed and its magnifier turns taupe. An invalid field dra
 
 ## Usage
 
-Keep the query in the URL, so a search can be shared, reloaded and gone back to. Keep the text being typed in state, pass it as `value`, and write the URL after a pause of your own in `onChange`. Take the query again whenever the URL changes under the field, as Back and Forward do, and read the URL as it is when the pause ends, so a tab or a page chosen meanwhile is kept. With the Next App Router:
+Keep the query in the URL, so a search can be shared, reloaded and revisited. Keep the typed text in state, pass it as `value`, and write the URL after your own pause in `onChange`.
+
+- When the URL changes under the field, as with Back and Forward, take its query again.
+- When the pause ends, read the URL as it is then, so a tab or page chosen meanwhile is kept.
+
+With the Next App Router:
 
 ```tsx
 'use client';
@@ -88,9 +93,9 @@ export function TransactionSearch() {
 }
 ```
 
-On a statically rendered route, `useSearchParams` needs a `Suspense` boundary: render the search inside `<Suspense>`, or the build stops and asks for one.
+On a statically rendered route, render the search inside `<Suspense>`, or the build fails asking for one around `useSearchParams`.
 
-For a search that runs only on Enter, such as one that queries a slow service, write the URL in `onSubmit` and in `onClear` instead, and let `onChange` keep only the text. Start from the parameters already there, so the tab, the page and the filters stay:
+To search only on Enter, such as against a slow service, write the URL in `onSubmit` and `onClear`, and let `onChange` keep only the text. Start from the existing parameters, so the tab, page and filters stay:
 
 ```tsx
 export function TransactionSearchOnEnter() {
@@ -127,7 +132,7 @@ export function TransactionSearchOnEnter() {
 }
 ```
 
-The field has no debounce of its own. How long to wait, and whether to wait at all, belongs to the app's router and its data fetching, which already know what a request costs; a pause hidden inside the field would be a second timer the app cannot see.
+The field has no debounce of its own. The app's router and data fetching know what a request costs, so they decide how long to wait. A pause inside the field would be a second timer the app cannot see.
 
 </Section>
 
@@ -145,7 +150,10 @@ Every React Aria SearchField prop is accepted. These are the ones Snapshot UI ad
 
 ## Accessibility
 
-A native input of type `search`, so a `searchbox`, named by its label or by `aria-label` and described by the hint and the error line. The clear button is named "Clear search", or `clearLabel`, and is out of the tab order, because Escape does the same from the field; a press clears the text and leaves focus in the input. The magnifier is hidden from assistive technology.
+A native input of type `search` (a `searchbox`), named by its label or `aria-label` and described by the hint and error line.
+
+- Clear button: named "Clear search", or `clearLabel`. It is out of the tab order, since Escape does the same. A press clears the text and keeps focus in the input.
+- Magnifier: hidden from assistive technology.
 
 <Keys rows={[['Escape', 'Clears the text; with nothing to clear, it goes on to whatever holds the field.'], ['Enter', 'Submits the text.']]} />
 
