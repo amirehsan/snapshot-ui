@@ -12,6 +12,7 @@ import { CommandPalette } from '../command-palette';
 import { DateRangePicker } from '../date-range-picker';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
+import { EmptyState } from '../empty-state';
 import { FilterBar } from '../filter-bar';
 import { FilterChip } from '../filter-chip';
 import { Link } from '../link';
@@ -1302,6 +1303,39 @@ export const FilterBarMirrored: Story = {
     // Clear all at the left end, past the last chip.
     await expect(rect(clearAll).left - rect(bar).left).toBeCloseTo(0, 0);
     await expect(rect(clearAll).right).toBeLessThanOrEqual(previous + 0.5);
+  },
+};
+
+/**
+ * An empty state on a Persian page: the column is centered, so the title and the action sit on the box's middle
+ * as on an English page, and the description reads right to left.
+ */
+export const EmptyStateMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
+        <EmptyState
+          title="تراکنشی در این ماه نیست"
+          description="تراکنش‌هایی که اضافه یا وارد می‌کنید اینجا نشان داده می‌شوند."
+          action={<Button variant="secondary">وارد کردن تراکنش‌ها</Button>}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = rect(find(canvasElement, '.empty-state'));
+    const middle = box.left + box.width / 2;
+    const centre = (element: HTMLElement): number => {
+      const { left, width } = rect(element);
+      return left + width / 2;
+    };
+    await expect(Math.abs(centre(find(canvasElement, '.empty-state-title')) - middle)).toBeLessThan(1);
+    await expect(Math.abs(centre(find(canvasElement, '.empty-state-action .button')) - middle)).toBeLessThan(
+      1,
+    );
+    const description = find(canvasElement, '.empty-state-description');
+    await expect(getComputedStyle(description).direction).toBe('rtl');
+    await expectInside(rect(description), box);
   },
 };
 

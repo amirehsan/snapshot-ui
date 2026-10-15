@@ -44,6 +44,8 @@ import DialogDanger from './dialog-danger';
 import DialogLong from './dialog-long';
 import DrawerEnd from './drawer-end';
 import DrawerNavigation from './drawer-navigation';
+import EmptyStateBasic from './empty-state-basic';
+import EmptyStateInCard from './empty-state-in-card';
 import EyebrowHeading from './eyebrow-heading';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
@@ -110,6 +112,8 @@ import SidebarCollapsed from './sidebar-collapsed';
 import SidebarDrawer from './sidebar-drawer';
 import SidebarGroups from './sidebar-groups';
 import SidebarLongLabels from './sidebar-long-labels';
+import SkeletonCard from './skeleton-card';
+import SkeletonShapes from './skeleton-shapes';
 import SparklineTile from './sparkline-tile';
 import SparklineVariants from './sparkline-variants';
 import SpinnerSizes from './spinner-sizes';
@@ -185,6 +189,8 @@ export const examples = {
   'dialog-long': DialogLong,
   'drawer-end': DrawerEnd,
   'drawer-navigation': DrawerNavigation,
+  'empty-state-basic': EmptyStateBasic,
+  'empty-state-in-card': EmptyStateInCard,
   'eyebrow-heading': EyebrowHeading,
   'field-counter': LengthCounter,
   'field-parts': FieldParts,
@@ -251,6 +257,8 @@ export const examples = {
   'sidebar-drawer': SidebarDrawer,
   'sidebar-groups': SidebarGroups,
   'sidebar-long-labels': SidebarLongLabels,
+  'skeleton-card': SkeletonCard,
+  'skeleton-shapes': SkeletonShapes,
   'sparkline-tile': SparklineTile,
   'sparkline-variants': SparklineVariants,
   'spinner-sizes': SpinnerSizes,

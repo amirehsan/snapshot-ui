@@ -1,0 +1,77 @@
+---
+title: Empty state
+description: 'What a page or a table shows where it has nothing yet: what is missing, what to do, and one action.'
+icon: Inbox
+---
+
+<Section>
+
+## Basic
+
+An icon, a title, one line and one action, centered in a column. The title says what is missing in the reader's words, and the line says what to do about it. The action is the one thing that fixes it.
+
+<Preview name="empty-state-basic" />
+
+</Section>
+
+<Section>
+
+## In a card
+
+An empty state is a card's empty body, or a table's. Set `headingLevel` to the step under the heading that holds it: under a card title at level 3, the empty state's title is level 4.
+
+<Preview name="empty-state-in-card" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Empty state is static. It renders in a server component and ships no client JavaScript. Pass a Lucide icon element, which the empty state draws at 24px in slate and hides from assistive technology. Give it one action at most, such as a `Button` that clears the filters or imports the first rows.
+
+```tsx
+import { Button, EmptyState } from '@snapshot-ui/react';
+import { Receipt } from 'lucide-react';
+
+export function NoTransactions() {
+  return (
+    <EmptyState
+      icon={<Receipt />}
+      title="No transactions this month"
+      description="Transactions you add or import show here."
+      action={<Button variant="secondary">Import transactions</Button>}
+    />
+  );
+}
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+The root also takes `ref`, and `className` is merged after its own class.
+
+<PropsTable label="EmptyState props" path="../../packages/react/src/empty-state/EmptyState.tsx" type="Pick<EmptyStateProps, 'title' | 'description' | 'icon' | 'action' | 'headingLevel' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The title is a heading at `headingLevel`, a level 3 by default, so the empty state fits the page's outline: pick the step under the heading that holds it. The icon is hidden from assistive technology, since the title says what it shows. The action is your own control and is named by its own text. The text is slate and ink, which pass AA on the page, a card and a floating panel.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps empty states in the system.
+
+<Rules dos={["Say what is missing, in the reader's words.", 'Say what to do about it, and offer the one action that does it.', 'Match headingLevel to the heading that holds the empty state.']} donts={["Never draw the text in taupe or with a placeholder's look. The reader needs to read it.", 'Never offer two actions. One clear way out is enough.', 'Never put an illustration in place of the words.']} />
+
+</Section>

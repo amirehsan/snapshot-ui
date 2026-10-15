@@ -1219,6 +1219,66 @@ describe('the filter bar', () => {
   });
 });
 
+describe('the empty state', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The title is ink and the description and the icon slate, on the page, a card or a floating panel. The gate
+  // holds each as text on all three, so the empty state adds no pair.
+  it('cites ink and slate on canvas, lifted and float, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { text, ground, light, dark } of [
+      { text: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { text: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { text: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { text: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+    ]) {
+      expect(measured('light', text, ground), `${text} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground), `${text} on ${ground}, dark`).toBeCloseTo(dark, 2);
+      for (const mode of ['light', 'dark'])
+        expect(measured(mode, text, ground), `${text} on ${ground}, ${mode}`).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+});
+
+describe('the skeleton', () => {
+  /** The divider, or the divider at `share` of its opacity, painted over `ground` and measured against it. */
+  const fill = (mode, groundName, share = 1) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    const divider = parseColor(palette.divider);
+    return contrastRatio(composite({ ...divider, a: divider.a * share }, ground), ground);
+  };
+
+  // The fill is the divider, ink at 10% (white at 10% in dark), and the pulse takes it to half of that. A
+  // skeleton is a decoration hidden from assistive technology, so its fill is measured and recorded, not gated.
+  it('measures the fill and its pulse against canvas and lifted, recorded and not gated', () => {
+    for (const { ground, share, light, dark } of [
+      { ground: 'canvas', share: 1, light: 1.23, dark: 1.28 },
+      { ground: 'lifted', share: 1, light: 1.23, dark: 1.34 },
+      { ground: 'canvas', share: 0.5, light: 1.11, dark: 1.11 },
+      { ground: 'lifted', share: 0.5, light: 1.11, dark: 1.14 },
+    ]) {
+      expect(fill('light', ground, share), `${String(share)} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(fill('dark', ground, share), `${String(share)} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+    expect(CONTRAST_PAIRS.some((pair) => pair.text === 'divider' || pair.ground === 'divider')).toBe(false);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

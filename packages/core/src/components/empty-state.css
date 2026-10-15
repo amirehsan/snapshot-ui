@@ -1,0 +1,60 @@
+/*
+ * EmptyState: what a page or a table shows where it has nothing yet, derived in docs/design-system.md
+ * ("EmptyState"). A centered column: the app's icon at 24px in slate, a part step over the title; the title at
+ * the h4 step at 700 in ink; a slate line, at most 32rem wide, that says what to do; and one action a peer step
+ * under them. The text is slate and never taupe: the document's empty state text is slate, and the reader
+ * needs to read it. Static: no state, so a server component draws it.
+ */
+@layer components {
+  .empty-state {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-separate) var(--spacing-peer);
+    color: var(--color-ink);
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    display: inline-flex;
+    margin-block-end: var(--spacing-part);
+    color: var(--color-slate);
+  }
+
+  .empty-state-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .empty-state-title {
+    margin: 0;
+    color: var(--color-ink);
+    font-size: var(--text-h4);
+    line-height: var(--text-h4--line-height);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .empty-state-description {
+    max-inline-size: 32rem;
+    margin: 0;
+    margin-block-start: 0.25rem;
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    overflow-wrap: anywhere;
+  }
+
+  .empty-state-action {
+    margin-block-start: var(--spacing-peer);
+  }
+
+  /* The text takes the reader's colors on its own; the icon is named so it follows the text. */
+  @media (forced-colors: active) {
+    .empty-state-icon {
+      color: CanvasText;
+    }
+  }
+}

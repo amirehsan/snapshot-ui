@@ -7,6 +7,7 @@ import { RangeCalendar } from '../src/calendar';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { ComboBox } from '../src/combo-box';
 import { DateRangePicker } from '../src/date-range-picker';
+import { EmptyState } from '../src/empty-state';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { FilterBar } from '../src/filter-bar';
@@ -310,5 +311,16 @@ describe('an empty meter label', () => {
     expect(container.querySelector('.meter')).not.toBeNull();
     expect(container.querySelector('.meter-label')).toBeNull();
     expect(screen.getByRole('meter', { name: 'Groceries' })).not.toHaveAttribute('aria-labelledby');
+  });
+});
+
+describe('an empty data part slot', () => {
+  it('draws no icon, description or action in an EmptyState given false, an empty string or null', () => {
+    const { container } = render(<EmptyState title="Nothing" icon={false} description="" action={null} />);
+    expect(container.querySelector('.empty-state')).not.toBeNull();
+    expect(container.querySelector('.empty-state-title')).toHaveTextContent('Nothing');
+    expect(
+      container.querySelector('.empty-state-icon, .empty-state-description, .empty-state-action'),
+    ).toBeNull();
   });
 });

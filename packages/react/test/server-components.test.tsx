@@ -77,10 +77,12 @@ vi.mock('../src/pagination/PaginationStatus', async () => {
 import * as react from 'react';
 import { Badge } from '../src/badge';
 import { Card, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { EmptyState } from '../src/empty-state';
 import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
 import { Meter } from '../src/meter';
 import { Pagination } from '../src/pagination';
+import { Skeleton } from '../src/skeleton';
 import { StatTile } from '../src/stat-tile';
 import { Eyebrow, Heading, Text } from '../src/typography';
 
@@ -128,6 +130,18 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     '<span role="status" class="field-counter">9 of about 12</span>',
   ],
   ['FieldChanged', <FieldChanged />, '<span class="field-changed">Changed</span>'],
+  [
+    'EmptyState',
+    <EmptyState title="No transactions this month" description="Try another month." />,
+    '<div class="empty-state"><h3 class="empty-state-title">No transactions this month</h3>' +
+      '<p class="empty-state-description">Try another month.</p></div>',
+  ],
+  ['Skeleton', <Skeleton />, '<span class="skeleton" data-shape="line" aria-hidden="true"></span>'],
+  [
+    'Skeleton circle',
+    <Skeleton shape="circle" width="2rem" />,
+    '<span class="skeleton" data-shape="circle" aria-hidden="true" style="inline-size:2rem"></span>',
+  ],
 ];
 
 describe('the static components in a server component', () => {
@@ -289,6 +303,8 @@ const STATIC_MODULES = [
   'stat-tile/StatTile.tsx',
   'meter/Meter.tsx',
   'pagination/Pagination.tsx',
+  'empty-state/EmptyState.tsx',
+  'skeleton/Skeleton.tsx',
 ];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {

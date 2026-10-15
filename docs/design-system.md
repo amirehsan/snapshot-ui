@@ -7536,3 +7536,123 @@ which have entries or budgets of their own (spec correction 30). It
 measured 5.87 kB without React Aria, Lucide and
 `@internationalized/date`, above the spec's 4.5 kB, and the rule rounds
 up to 6 kB and adds 0.5 kB: 6.5 kB.
+
+## EmptyState
+
+What a page or a table shows where it has nothing yet: `EmptyState`, an
+icon, a title that says what is missing, a line that says what to do and
+one action. The document has no empty state of its own beyond a text
+color, so this one is derived from the card's steps and the text table.
+
+**The column.** `div.empty-state` is a flex column, its items centered and
+its text centered, padded a separate step by a peer step, 32px above and
+below and 24px at the sides (`--spacing-separate`, `--spacing-peer`), so
+it sits inside a card's body or a table's empty cell with room of its own
+and never touches the holder's edge. It draws no surface: it takes the
+fill of whatever holds it.
+
+**The icon.** The app's Lucide element in `span.empty-state-icon`, drawn
+24px in slate, a part step, 8px, over the title, and hidden from
+assistive technology, since the title says what it shows. The library
+imports no icon: lucide-react's `Icon` is a client module (see
+"StatTile"), and the empty state stays a server part.
+
+**The title.** A heading at `headingLevel`, 3 by default, the step under
+a card's title, and 2 or 4 where the page asks; one look at every level.
+It is the h4 step, `--text-h4` with its line height, at 700 in ink, the
+field label's and the filter section's step: a short line that names a
+state, not a page heading. It breaks anywhere, so a long word in the
+app's sentence never pushes a phone's page sideways.
+
+**The description.** `--text-small` with its line height and weight, in
+slate, 4px under the title and at most 32rem wide, so a long line still
+reads as one short paragraph in a wide table. The text table names an
+empty state slate (`docs/design-system.md:886`, "A label, a hint, an
+eyebrow, an empty state"), which overrides the older Dust Taupe line
+that called empty state labels "placeholder-like" (`:42`). Never taupe:
+the reader needs to read it, and taupe fails AA on every surface.
+
+**The action.** One, in `div.empty-state-action`, a peer step, 24px,
+under the text: a secondary Button that imports, a tertiary one that
+clears the filters. The library draws no second slot.
+
+**Measured.** The title is ink, 16.25 on canvas in light and 19.31 in
+dark, 17.84 and 17.42 on lifted; the description and the icon are slate,
+4.84 and 7.26 on canvas, 5.31 and 6.94 on lifted. Each is gated already
+as text on canvas, lifted and float, and the contrast test cites the
+gate and recomputes the values here.
+
+**Forced colors.** The text takes the reader's palette on its own; the
+icon is named `CanvasText` so it follows the text.
+
+**Right to left.** Nothing mirrors: the column is centered, and the
+description reads right to left from its own direction.
+
+**Where it is used.** A page's empty card, DataTable's empty body and its
+list face's (Tasks 2 and 4 of the data table plan). Static: no state, no
+effect and no context, so a server component renders it.
+
+**Import order.** `empty-state.css` is imported after `filter-bar.css`,
+the first of the data files, and a test keeps `skeleton.css`, then
+`data-table.css` and `side-panel.css` once they exist, after it in that
+order. The tooltip's test, which allowed only the shell, home, picker and
+filter files after the last overlay file, now allows the four data files
+too.
+
+**The size.** The entry `{ EmptyState, Skeleton }` measured 357 B without
+React Aria, Lucide and `@internationalized/date`; the rule rounds up to
+0.5 kB and adds 0.5 kB: 1 kB, the spec's budget.
+
+## Skeleton
+
+A still shape where content will be: `Skeleton`, a line, a block or a
+circle with no text, so a loading page keeps its layout. The document
+has no loading state ("Loading state is unspecified; derive it"), so this
+one is derived from the divider, the field and the target.
+
+**The fill.** `--color-divider`, ink at 10% in light and white at 10% in
+dark: the color the system already draws its quietest rule in, which
+reads as a shape once it fills a bar and not a 1px line. It measures
+1.23 against canvas in light and 1.28 in dark, 1.23 and 1.34 against
+lifted. A skeleton is a decoration hidden from assistive technology, not
+a boundary or text, so the values are recorded and not gated; the
+contrast test recomputes them.
+
+**The shapes.** A `line` is `1em` tall and 100% wide at `--radius-micro`,
+an inline block on the text's line box, `vertical-align: middle`, so a
+line of skeletons is the height of a line of the text it stands for (the
+`TextLines` story measures it at the body and small steps). A `block` is
+a field tall, `--size-field` (48px, 36px compact, 44px on a coarse
+pointer), at `--radius-control`, so it takes the shape axis as a field
+does: 20px corners in Rounded, 10px in Soft, square in Square. A
+`circle` is the 40px target, `--size-target`, at `--radius-dot`, an
+avatar's place. `width` and `height` write `inline-size` and
+`block-size` inline, only when given, so a skeleton with neither writes
+no `style` attribute and the server's HTML is the same everywhere.
+
+**The pulse** (ruling 9). The opacity runs from 1 to 0.5 and back over
+1.6s, ease in and out, forever: between the fill and half of it, which
+measures 1.11 against canvas in both modes and 1.11 and 1.14 against
+lifted. Only the opacity moves, never a sweep of color, so nothing
+crosses the shape. Under `prefers-reduced-motion: reduce` it stands
+still at the full fill. Playwright's screenshots run with animations
+disabled, which holds it at its first frame.
+
+**Forced colors.** A skeleton is only a fill, which the repaint would
+drop, so it opts out (`forced-color-adjust: none`) and draws `GrayText`,
+then `color-mix(in srgb, CanvasText 20%, canvas)` where the browser can
+mix, so the shape stays in the reader's palette.
+
+**The holder speaks.** `span.skeleton[aria-hidden="true"]` says nothing
+and takes no focus. The part that shows skeletons says "Loading" once,
+in a polite status of its own, and marks itself busy, as DataTable's
+loading body does (spec 6.2).
+
+**Where it is used.** DataTable's loading body and its list face's
+(Tasks 2 and 4 of the data table plan), and any card that is loading.
+Static, a server part.
+
+**Right to left.** Nothing mirrors; a line's width runs from the inline
+start, so a 60% line sits at the right on a Persian page.
+
+**The size.** Measured with EmptyState, above.

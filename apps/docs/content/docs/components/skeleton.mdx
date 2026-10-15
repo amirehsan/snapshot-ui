@@ -1,0 +1,77 @@
+---
+title: Skeleton
+description: A still shape where content will be, so a loading page keeps its layout.
+icon: SquareDashed
+---
+
+<Section>
+
+## Shapes
+
+A `line` is the height of one line of the text it stands for and fills its holder's width; a `block` is a field tall; a `circle` is 40px, the size of a target. Set `width` and `height` as CSS lengths, such as `12rem` or `60%`.
+
+<Preview name="skeleton-shapes" />
+
+</Section>
+
+<Section>
+
+## A card that is loading
+
+Draw the shape of what is coming: a circle and two lines for a header, a block for the body. When the content arrives it takes the same room, so nothing on the page moves.
+
+<Preview name="skeleton-card" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Skeleton is static. It renders in a server component and ships no client JavaScript. It is hidden from assistive technology, so say "Loading" once in your own status beside the skeletons, as the data table does, and mark the holder `aria-busy`. Size each shape as the content it stands for. The shape pulses gently, and stands still when the reader asks for reduced motion.
+
+```tsx
+import { Skeleton } from '@snapshot-ui/react';
+
+export function LoadingRow() {
+  return (
+    <div aria-busy="true">
+      <p role="status" className="visually-hidden">
+        Loading
+      </p>
+      <Skeleton shape="circle" />
+      <Skeleton width="60%" />
+    </div>
+  );
+}
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+`className` is merged after the skeleton's own class.
+
+<PropsTable label="Skeleton props" path="../../packages/react/src/skeleton/Skeleton.tsx" type="SkeletonProps" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A skeleton is `aria-hidden`, holds no text and takes no focus. Saying that the page is loading is the holder's job: one polite status that says "Loading", and `aria-busy` on the part that is loading. In forced colors the shape keeps a fill of its own, so it does not vanish.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps skeletons in the system.
+
+<Rules dos={['Draw the shape of what is coming, at its size.', 'Say Loading once, in one status line.']} donts={['Never show a skeleton for a fetch shorter than a moment.', 'Never put text inside a skeleton.', 'Never put a spinner beside skeletons. One loading signal is enough.']} />
+
+</Section>

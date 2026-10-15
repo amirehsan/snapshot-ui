@@ -593,6 +593,27 @@ test.describe('forced colors', () => {
     expect((await paint(previous)).text).toBe(await systemColor(page, 'GrayText'));
   });
 
+  test('a skeleton keeps a fill and an empty state icon is CanvasText', async ({ page }) => {
+    // A skeleton is only a fill, which the repaint would drop: it opts out and draws CanvasText at 20% over the
+    // reader's canvas, so the shape stays. The empty state's text takes the palette on its own, and its icon
+    // is named CanvasText so it follows the text.
+    await visit(page, '/docs/components/skeleton');
+    const canvas = await systemColor(page, 'canvas');
+    const skeletons = page.locator('.stage .skeleton');
+    expect(await skeletons.count()).toBeGreaterThan(0);
+    for (const skeleton of await skeletons.all()) {
+      const { fill } = await paint(skeleton);
+      expect(fill).not.toMatch(/(?:, 0\)|transparent)$/);
+      expect(fill).not.toBe(canvas);
+    }
+    await visit(page, '/docs/components/empty-state');
+    const canvasText = await systemColor(page, 'CanvasText');
+    const icons = page.locator('.stage .empty-state-icon');
+    expect(await icons.count()).toBeGreaterThan(0);
+    for (const icon of await icons.all()) await expect(icon).toHaveCSS('color', canvasText);
+    await expect(page.locator('.stage .empty-state-title').first()).toHaveCSS('color', canvasText);
+  });
+
   test('a tag keeps a CanvasText edge', async ({ page }) => {
     // The bone fill is repainted away, so the edge is what draws the pill; a disabled tag is GrayText.
     await visit(page, '/docs/components/multi-select');
@@ -656,6 +677,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   ],
   'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'date-range-picker': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
+  // The title and the line are the app's sentences, and both wrap at any character inside the column.
+  'empty-state': ['.stage .empty-state-title', '.stage .empty-state-description'],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
   // A chip's value stays on one line and ellipsizes past 16rem, so the pill stays inside 320px.
   'filter-chip': ['.stage .filter-chip-value'],
@@ -707,6 +730,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   menu: "its text is in a portal that opens on a press; the EndValues story's 375px baseline pins its wrapping",
   popover: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   sheet: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
+  skeleton: 'a skeleton draws shapes and no text',
   sparkline: 'a drawing with no text; its name, when it has one, is an aria-label nothing draws',
   spinner: 'a progress mark with no text a person writes',
   toast: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
@@ -820,6 +844,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'date-range-picker': ['.stage .date-range-control', '.stage .date-range-button'],
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],
+  // A static part: the whole column is in the server's HTML.
+  'empty-state': ['.stage .empty-state', '.stage .empty-state-title'],
   field: ['.stage .field-counter', '.stage .field-changed'],
   // The row with its chips, and the Filters button a phone shows; More's panel and the sheet wait for a press.
   'filter-bar': ['.stage .filter-bar-row', '.stage .filter-bar-sheet-button'],
@@ -849,6 +875,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   select: ['.stage .select-trigger', '.stage .select-value'],
   sheet: ['.stage .button'],
   sidebar: ['.stage .sidebar'],
+  // A static part: the shapes are in the server's HTML, hidden from assistive technology.
+  skeleton: ['.stage .skeleton'],
   sparkline: ['.stage .sparkline svg .sparkline-line'],
   spinner: ['.stage .spinner'],
   'stat-tile': ['.stage .stat-tile', '.stage .stat-tile-value', '.stage .stat-tile-change'],

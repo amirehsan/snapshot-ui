@@ -1,0 +1,58 @@
+/*
+ * Skeleton: a still shape where content will be, derived in docs/design-system.md ("Skeleton"). The fill is the
+ * divider color, ink at 10% (white at 10% in dark), which reads as a shape once it is a filled bar and not a 1px
+ * rule. A line is 1em tall at the micro radius and sits on the text's line box; a block is a field tall at the
+ * control radius; a circle is the 40px target at the dot radius. It pulses between the fill and half of it over
+ * 1.6s and stands still under reduced motion. It is hidden from assistive technology; the part using it says
+ * "Loading" once.
+ */
+@layer components {
+  .skeleton {
+    box-sizing: border-box;
+    display: inline-block;
+    inline-size: 100%;
+    block-size: 1em;
+    vertical-align: middle;
+    border-radius: var(--radius-micro);
+    background-color: var(--color-divider);
+    animation: skeleton-pulse 1.6s ease-in-out infinite;
+  }
+
+  .skeleton[data-shape='block'] {
+    display: block;
+    block-size: var(--size-field);
+    border-radius: var(--radius-control);
+  }
+
+  .skeleton[data-shape='circle'] {
+    inline-size: var(--size-target);
+    block-size: var(--size-target);
+    border-radius: var(--radius-dot);
+  }
+
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton {
+      animation: none;
+    }
+  }
+
+  /* Out of the forced repaint, so the shape keeps a fill: CanvasText at 20%, or GrayText where color-mix fails. */
+  @media (forced-colors: active) {
+    .skeleton {
+      forced-color-adjust: none;
+      background-color: GrayText;
+      background-color: color-mix(in srgb, CanvasText 20%, canvas);
+    }
+  }
+}
