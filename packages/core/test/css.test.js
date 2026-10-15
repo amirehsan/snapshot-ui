@@ -1977,6 +1977,17 @@ describe('src/components/sheet.css', () => {
     expect(content).toContain('outline: none;');
   });
 
+  it('takes no pointer on the content while the sheet slides in, so no list opens before focus moves in', () => {
+    // React Aria hides the page and moves focus in only once the sheet has entered: a list opened during the
+    // slide portals outside it and is made inert with focus in it. The rule names the content alone, so a press
+    // lands on the sheet inside React Aria's scroller and a swipe still moves it.
+    const css = rules();
+    expect(blockAfter(css, '.sheet-overlay[data-entering] .sheet-content {').trim()).toBe(
+      'pointer-events: none;',
+    );
+    expect(css.match(/pointer-events\s*:/g)).toHaveLength(1);
+  });
+
   it('draws the grabber 40px by 4px in boundary, as a dot, centred in a 44px band', () => {
     const css = rules();
     const band = blockAfter(css, '.sheet-grabber-band {');

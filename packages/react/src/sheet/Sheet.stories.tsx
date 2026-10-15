@@ -5,6 +5,8 @@ import { Button } from '../button';
 import { Card, CardBody } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { Link } from '../link';
+import { PickerOption } from '../picker';
+import { Select } from '../select';
 import { tokenColor, tokenPixels } from '../stories/paint';
 import { TextField } from '../text-field';
 import { Text } from '../typography';
@@ -544,5 +546,57 @@ export const KeyboardUp: Story = {
     // The body scrolls inside what is left.
     const body = only('.sheet-body');
     await expect(body.scrollHeight).toBeGreaterThan(body.clientHeight);
+  },
+};
+
+/** The center of `element`, in the viewport. */
+function centerOf(element: Element): { x: number; y: number } {
+  const box = element.getBoundingClientRect();
+  return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+}
+
+/**
+ * A press on a list in the sheet while it is still rising. React Aria moves focus in and hides the page only once
+ * the sheet has entered, so a list opened during the slide would be made inert there and focus would fall to the
+ * page. The content takes no pointer until then: the press lands where the pointer is, found by the browser's
+ * hit test as a finger's would be, and nothing opens. Once the sheet is at rest focus is in it, and the list
+ * opens and takes focus as usual. Chromium only: the play times the slide frame by frame.
+ */
+export const PressWhileEntering: Story = {
+  tags: ['no-visual', '!webkit'],
+  args: {
+    title: 'Filter transactions',
+    children: (
+      <Select label="Category">
+        <PickerOption id="food">Food</PickerOption>
+        <PickerOption id="rent">Rent</PickerOption>
+      </Select>
+    ),
+  },
+  render: (args) => <Opened {...args} />,
+  play: async ({ userEvent }) => {
+    const overlay = only('.sheet-overlay');
+    const trigger = only('.sheet .select-trigger');
+    // Wait, a frame at a time, until the trigger has risen into view while the sheet is still entering.
+    for (let frame = 0; frame < 120; frame += 1) {
+      const { y } = centerOf(trigger);
+      if (y > 0 && y < window.innerHeight) break;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    await expect(overlay).toHaveAttribute('data-entering');
+    const { x, y } = centerOf(trigger);
+    const hit = document.elementFromPoint(x, y);
+    if (!hit) throw new Error('Nothing under the pointer');
+    await userEvent.click(hit);
+    await waitFor(() => expect(overlay).not.toHaveAttribute('data-entering'), { timeout: 5000 });
+    await waitFor(() => expect(only('.sheet').contains(document.activeElement)).toBe(true), {
+      timeout: 5000,
+    });
+    await expect(document.activeElement).not.toBe(document.body);
+    await expect(document.querySelector('[role="listbox"]')).toBeNull();
+    await atRest();
+    await userEvent.click(trigger);
+    const list = await within(document.body).findByRole('listbox');
+    await waitFor(() => expect(list.contains(document.activeElement)).toBe(true));
   },
 };

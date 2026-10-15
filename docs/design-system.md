@@ -3646,6 +3646,23 @@ outside and a swipe do nothing, React Aria draws no hidden Dismiss button, and
 the close button, on by default, is the way out. A press in the toast region
 never closes a sheet, as for every library modal.
 
+**No pointer while it rises.** React Aria moves focus in, and hides the
+page with `ariaHideOutside`, only once the enter scroll has ended. A list or
+popover opened from the content during the slide portals outside the sheet,
+so on entry it was made inert with focus in it, and focus fell to the page
+with the list left open. While the overlay is `[data-entering]`,
+`.sheet-content` takes `pointer-events: none`: a press then lands on the
+sheet itself, inside React Aria's `[data-sheet-scroll]` scroller, so a swipe
+still scrolls it, and nothing in the content opens. The Chromium story
+`PressWhileEntering` presses where a Select's trigger is mid-slide, through
+the browser's hit test, and finds focus in the sheet once it has entered
+and the list opening normally at rest. The keyboard is unchanged: focus
+stays on the trigger behind until the sheet takes it, but a Tab during the
+slide does reach the content, so a reader quick enough to Tab twice and open
+a list before the slide ends still meets the old fault. It was not closed,
+since the window is the slide's length and the fix would mean `inert` on the
+content from script.
+
 **Stacking and scope.** A sheet is not built on the modal frame, so it renders
 the frame's `FrameEffects` first in its content: it records what held focus
 as the sheet opened, for the scope copy on the sheet, and joins the overlay
