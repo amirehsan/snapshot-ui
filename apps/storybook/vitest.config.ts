@@ -7,6 +7,8 @@ const configDir = path.join(import.meta.dirname, '.storybook');
 
 export default defineConfig({
   test: {
+    // CI runs four browsers beside the unit tests, and WebKit stalls first on a busy runner; locally the default holds.
+    testTimeout: process.env.CI ? 30_000 : 15_000,
     projects: [
       {
         extends: true,
