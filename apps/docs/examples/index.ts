@@ -34,6 +34,10 @@ import CommandPaletteBasic from './command-palette-basic';
 import ConfirmDialogBasic from './confirm-dialog-basic';
 import ConfirmDialogDanger from './confirm-dialog-danger';
 import ConfirmDialogHook from './confirm-dialog-hook';
+import DataTableBasic from './data-table-basic';
+import DataTableColumns from './data-table-columns';
+import DataTableFigures from './data-table-figures';
+import DataTableStates from './data-table-states';
 import DateRangePickerBasic from './date-range-picker-basic';
 import DateRangePickerPresets from './date-range-picker-presets';
 import DateRangePickerStates from './date-range-picker-states';
@@ -179,6 +183,10 @@ export const examples = {
   'confirm-dialog-basic': ConfirmDialogBasic,
   'confirm-dialog-danger': ConfirmDialogDanger,
   'confirm-dialog-hook': ConfirmDialogHook,
+  'data-table-basic': DataTableBasic,
+  'data-table-columns': DataTableColumns,
+  'data-table-figures': DataTableFigures,
+  'data-table-states': DataTableStates,
   'date-range-picker-basic': DateRangePickerBasic,
   'date-range-picker-presets': DateRangePickerPresets,
   'date-range-picker-states': DateRangePickerStates,

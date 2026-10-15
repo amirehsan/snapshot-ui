@@ -9,13 +9,14 @@ import { Checkbox, CheckboxGroup } from '../checkbox';
 import { CollapsibleCard } from '../collapsible-card';
 import { ComboBox } from '../combo-box';
 import { CommandPalette } from '../command-palette';
+import { DataTable } from '../data-table';
 import { DateRangePicker } from '../date-range-picker';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { EmptyState } from '../empty-state';
 import { FilterBar } from '../filter-bar';
 import { FilterChip } from '../filter-chip';
-import { Link } from '../link';
+import { Link, RouterProvider } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { MultiSelect } from '../multi-select';
 import { NumberField } from '../number-field';
@@ -1405,5 +1406,58 @@ export const NumeralInASentence: Story = {
     // The sentence starts at the right, so the figure sits left of its first word.
     const sentence = rect(find(canvasElement, 'p'));
     await expect(rect(figure).right).toBeLessThan(sentence.right);
+  },
+};
+
+/**
+ * A data table on a Persian page: the columns run from the right, so the row header, the first column, is the
+ * rightmost cell; an amount sits at its cell's left edge and stays a left-to-right run inside; and the current
+ * row's bar is the first cell's inline-start border, which is its right edge.
+ */
+export const DataTableMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <RouterProvider navigate={() => undefined}>
+        <div dir="rtl" lang="fa" style={{ width: 'min(48rem, calc(100vw - 2rem))' }}>
+          <DataTable
+            aria-label="تراکنش‌ها"
+            items={[
+              { id: 'p1', payee: 'فروشگاه سر کوچه', category: 'خوراک', amount: '-۱۲۵٬۰۰۰ تومان' },
+              { id: 'p2', payee: 'مترو', category: 'رفت و آمد', amount: '-۸٬۰۰۰ تومان' },
+            ]}
+            columns={[
+              { id: 'payee', header: 'گیرنده', cell: (row) => row.payee },
+              { id: 'category', header: 'دسته', cell: (row) => row.category },
+              { id: 'amount', header: 'مبلغ', cell: (row) => row.amount, align: 'end', width: '10rem' },
+            ]}
+            getKey={(row) => row.id}
+            getRowHref={(row) => `/transactions/${row.id}`}
+            currentKey="p2"
+          />
+        </div>
+      </RouterProvider>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const rows = canvasElement.querySelectorAll<HTMLElement>('.data-table-body > [role="row"]');
+    const current = rows[1];
+    if (current === undefined) throw new Error('No current row');
+    const cells = [...current.querySelectorAll<HTMLElement>('[role="rowheader"], [role="gridcell"]')];
+    const [header, , amount] = cells;
+    if (header === undefined || amount === undefined) throw new Error('No cells');
+    // The row header is the first column, at the right.
+    await expect(header.getAttribute('role')).toBe('rowheader');
+    for (const cell of cells.slice(1)) await expect(rect(cell).right).toBeLessThan(rect(header).right);
+    await expect(Math.abs(rect(header).right - rect(current).right)).toBeLessThan(1);
+    // The figure at the cell's left, its run left to right.
+    const figure = find(amount, '.data-table-figure');
+    await expect(getComputedStyle(figure).direction).toBe('ltr');
+    const padding = parseFloat(getComputedStyle(amount).paddingLeft);
+    await expect(Math.abs(rect(figure).left - (rect(amount).left + padding))).toBeLessThan(1);
+    // The current bar: a 3px border at the first cell's right, none at its left.
+    const style = getComputedStyle(header);
+    await expect(style.borderRightWidth).toBe('3px');
+    await expect(style.borderRightStyle).toBe('solid');
+    await expect(style.borderLeftWidth).toBe('0px');
   },
 };

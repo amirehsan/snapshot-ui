@@ -1279,6 +1279,59 @@ describe('the skeleton', () => {
   });
 });
 
+describe('the data table', () => {
+  /** A token color over `ground`, or over the 5% ink wash on it, measured against what it sits on. */
+  const measured = (mode, name, groundName, { washed = false } = {}) => {
+    const palette = paletteFor(tokens, mode);
+    const base = parseColor(palette[groundName]);
+    const ground = washed ? composite({ ...parseColor(palette.ink), a: 0.05 }, base) : base;
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A cell is ink and a header slate, on the page or in a card. The gate holds each as text on both, so the
+  // table adds no pair.
+  it('cites ink and slate on canvas and lifted, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // The hover wash is a mix and not a token, so its pairs are measured and recorded, not gated. Slate falls
+  // under 4.5 on it over canvas in light, so a sorted or hovered header is ink, and no slate text sits on a
+  // washed row. The rules are the divider and the frame, recorded as drawn.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { text, ground, washed, light, dark } of [
+      { text: 'ink', ground: 'canvas', washed: false, light: 16.25, dark: 19.31 },
+      { text: 'ink', ground: 'lifted', washed: false, light: 17.84, dark: 17.42 },
+      { text: 'slate', ground: 'canvas', washed: false, light: 4.84, dark: 7.26 },
+      { text: 'slate', ground: 'lifted', washed: false, light: 5.31, dark: 6.94 },
+      { text: 'ink', ground: 'canvas', washed: true, light: 14.7, dark: 17.41 },
+      { text: 'ink', ground: 'lifted', washed: true, light: 16.11, dark: 15.25 },
+      { text: 'slate', ground: 'canvas', washed: true, light: 4.38, dark: 6.93 },
+      { text: 'slate', ground: 'lifted', washed: true, light: 4.8, dark: 6.41 },
+      { text: 'divider', ground: 'canvas', washed: false, light: 1.23, dark: 1.28 },
+      { text: 'frame', ground: 'canvas', washed: false, light: 1.28, dark: 1.36 },
+    ]) {
+      const what = `${text} on ${washed ? 'the wash over ' : ''}${ground}`;
+      expect(measured('light', text, ground, { washed }), `${what}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground, { washed }), `${what}, dark`).toBeCloseTo(dark, 2);
+    }
+    expect(measured('light', 'slate', 'canvas', { washed: true })).toBeLessThan(TEXT);
+    for (const mode of ['light', 'dark']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(
+          measured(mode, 'ink', ground, { washed: true }),
+          `ink washed ${ground} ${mode}`,
+        ).toBeGreaterThanOrEqual(TEXT);
+      }
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

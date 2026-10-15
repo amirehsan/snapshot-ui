@@ -10,6 +10,7 @@ import { BottomTabBar, BottomTabBarItem } from '../src/bottom-tab-bar';
 import { Button } from '../src/button';
 import { Calendar } from '../src/calendar';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
@@ -41,6 +42,7 @@ import {
   SidebarTrigger,
 } from '../src/sidebar';
 import { Spinner } from '../src/spinner';
+import { COLUMNS, columnsWithTotal, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Switch } from '../src/switch';
 import { Tab, TabList, TabPanel, Tabs } from '../src/tabs';
 import { TextArea } from '../src/text-area';
@@ -603,6 +605,41 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     <Pagination page={2} pageCount={5} rangeLabel="51 to 100 of 230" onPageChange={() => undefined} />,
     ['<button', 'aria-current="true"', 'role="status"', '>51 to 100 of 230<'],
     ['href='],
+  ],
+  [
+    // Every row and its link, the current row, the sort marks, the figures and the totals, from a client
+    // component; nothing is busy and the status is empty.
+    'DataTable',
+    <DataTable
+      aria-label="Transactions"
+      items={TRANSACTIONS.slice(0, 5)}
+      columns={columnsWithTotal(TRANSACTIONS.slice(0, 5))}
+      getKey={keyOf}
+      getRowHref={hrefOf}
+      currentKey="t2"
+      sortDescriptor={{ column: 'date', direction: 'descending' }}
+      onSortChange={() => undefined}
+    />,
+    [
+      'class="data-table"',
+      'role="grid"',
+      'aria-sort="descending"',
+      'class="link data-table-link"',
+      'aria-current="true"',
+      'data-current=""',
+      '<tfoot',
+      'data-align="end"',
+      'class="data-table-figure"',
+      '>Total<',
+    ],
+    ['aria-busy'],
+  ],
+  [
+    // Loading with no rows: skeleton rows in React Aria's one empty cell, the grid busy, no totals.
+    'DataTable loading',
+    <DataTable aria-label="Transactions" items={[]} columns={COLUMNS} getKey={keyOf} isLoading />,
+    ['aria-busy="true"', 'class="data-table-skeleton-row"', 'class="skeleton"', 'class="data-table-loading"'],
+    ['<tfoot', 'aria-selected'],
   ],
 ];
 
