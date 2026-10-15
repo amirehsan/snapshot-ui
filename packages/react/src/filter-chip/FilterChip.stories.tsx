@@ -428,7 +428,8 @@ export const Modality: Story = {
     await userEvent.click(document.body);
     await closed();
     await expect(tags.closest('[inert], [aria-hidden="true"]')).toBeNull();
-    await expect(triggerOf(canvasElement, 'Category')).toHaveFocus();
+    // React Aria gives focus back in the next animation frame, which a busy runner can delay.
+    await waitFor(() => expect(triggerOf(canvasElement, 'Category')).toHaveFocus());
   },
 };
 
