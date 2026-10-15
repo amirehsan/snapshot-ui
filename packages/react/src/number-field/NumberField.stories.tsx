@@ -248,7 +248,10 @@ export const HomeEnd: Story = {
   play: async ({ canvas, userEvent }) => {
     const input = canvas.getByRole<HTMLInputElement>('textbox', { name: 'Amount' });
     await userEvent.click(input);
+    // Focus and the typed text land before Home: a busy Firefox runner can take a moment over each.
+    await waitFor(() => expect(input).toHaveFocus());
     await userEvent.keyboard('1234.50');
+    await waitFor(() => expect(input).toHaveValue('1234.50'));
     await userEvent.keyboard('{Home}');
     await expect(input.selectionStart).toBe(0);
     await expect(input).toHaveValue('1234.50');
