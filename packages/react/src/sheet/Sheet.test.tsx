@@ -376,6 +376,18 @@ describe('Sheet', () => {
     });
   });
 
+  it('leaves the content open to the keyboard once the sheet has entered, which jsdom finishes at once', async () => {
+    // The content is inert only while the sheet slides in; the Chromium story TabWhileEntering times the slide.
+    const user = userEvent.setup();
+    render(<Triggered title="More">{MORE}</Triggered>);
+    await user.click(screen.getByRole('button', { name: 'Filter transactions' }));
+    const dialog = screen.getByRole('dialog', { name: 'More' });
+    expect(overlay()).not.toHaveAttribute('data-entering');
+    expect(dialog).not.toHaveAttribute('inert');
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+  });
+
   it('makes the body a tab stop while it scrolls and holds nothing to focus, and only then', () => {
     // jsdom lays nothing out, so the body's heights are given: taller inside than it shows, then not.
     const inside = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(900);

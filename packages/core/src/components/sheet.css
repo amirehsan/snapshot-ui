@@ -45,7 +45,8 @@
   /* While the sheet rises its content takes no pointer. React Aria moves focus in and hides the page only once
      the sheet has entered, so a list opened during the slide would be left outside, made inert, with focus on
      the page. A press then lands on the sheet itself, inside React Aria's scroller, so a swipe still moves it.
-     The keyboard is still on the trigger behind until focus moves in. */
+     The React Sheet also makes the content inert while it enters, which keeps the keyboard out too; this rule
+     is the backup for markup that does not. */
   .sheet-overlay[data-entering] .sheet-content {
     pointer-events: none;
   }

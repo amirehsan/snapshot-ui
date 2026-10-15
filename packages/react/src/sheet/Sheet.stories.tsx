@@ -600,3 +600,44 @@ export const PressWhileEntering: Story = {
     await waitFor(() => expect(list.contains(document.activeElement)).toBe(true));
   },
 };
+
+/**
+ * The keyboard while the sheet is still rising. The content is inert until the sheet has entered, so a Tab from
+ * the trigger behind cannot reach a list in it and open the list outside the sheet before React Aria hides the
+ * page. Once the sheet is at rest the content is no longer inert, focus is in it, and the list opens as usual.
+ */
+export const TabWhileEntering: Story = {
+  tags: ['no-visual'],
+  args: {
+    title: 'Filter transactions',
+    children: (
+      <Select label="Category">
+        <PickerOption id="food">Food</PickerOption>
+        <PickerOption id="rent">Rent</PickerOption>
+      </Select>
+    ),
+  },
+  render: (args) => (
+    <SheetTrigger>
+      <Button variant="secondary">Filter transactions</Button>
+      <Sheet {...args} />
+    </SheetTrigger>
+  ),
+  play: async ({ canvasElement, userEvent }) => {
+    const opener = within(canvasElement).getByRole('button', { name: 'Filter transactions' });
+    opener.focus();
+    await userEvent.keyboard('{Enter}');
+    const overlay = await waitFor(() => only('.sheet-overlay'));
+    await expect(overlay).toHaveAttribute('data-entering');
+    await expect(only('.sheet-content')).toHaveAttribute('inert');
+    await userEvent.tab();
+    await userEvent.tab();
+    await expect(only('.sheet').contains(document.activeElement)).toBe(false);
+    await expect(document.querySelector('[role="listbox"]')).toBeNull();
+    await atRest();
+    await expect(only('.sheet-content')).not.toHaveAttribute('inert');
+    await userEvent.click(only('.sheet .select-trigger'));
+    const list = await within(document.body).findByRole('listbox');
+    await waitFor(() => expect(list.contains(document.activeElement)).toBe(true));
+  },
+};
