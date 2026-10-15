@@ -195,6 +195,21 @@ describe('src/styles.css', () => {
       previous = at(file);
     }
   });
+
+  it('imports the data files after the filter files, in order', () => {
+    // The empty state and the skeleton are required; the data table and the side panel are checked once they
+    // exist, each after the one before.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('filter-bar.css')).toBeGreaterThanOrEqual(0);
+    expect(at('empty-state.css')).toBeGreaterThan(at('filter-bar.css'));
+    expect(at('skeleton.css')).toBeGreaterThan(at('empty-state.css'));
+    let previous = at('skeleton.css');
+    for (const file of ['data-table.css', 'side-panel.css']) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -2739,7 +2754,7 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker and filter files after it', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter and data files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     const tooltip = imported.indexOf('tooltip.css');
@@ -2764,6 +2779,10 @@ describe('src/components/tooltip.css', () => {
         'date-range-picker.css',
         'filter-chip.css',
         'filter-bar.css',
+        'empty-state.css',
+        'skeleton.css',
+        'data-table.css',
+        'side-panel.css',
       ]).toContain(file);
     }
   });
@@ -6025,6 +6044,166 @@ describe('src/components/filter-bar.css', () => {
     expect(css).not.toContain("[dir='rtl']");
     expect(css).not.toMatch(
       /(?:margin|padding|inset|border)-(?:left|right|top|bottom)\b|(?<![\w-])(?:left|right|top|bottom):/,
+    );
+  });
+});
+
+describe('src/components/empty-state.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/empty-state.css')));
+  const FORCED = '@media (forced-colors: active)';
+
+  it('centers a column, padded a separate step by a peer step', () => {
+    const root = blockAfter(rules(), '.empty-state {');
+    for (const declaration of [
+      'box-sizing: border-box;',
+      'display: flex;',
+      'flex-direction: column;',
+      'align-items: center;',
+      'padding: var(--spacing-separate) var(--spacing-peer);',
+      'color: var(--color-ink);',
+      'text-align: center;',
+    ]) {
+      expect(root, declaration).toContain(declaration);
+    }
+  });
+
+  it('draws the icon 24px in slate, a part step over the title', () => {
+    const css = rules();
+    const icon = blockAfter(css, '.empty-state-icon {');
+    expect(icon).toContain('display: inline-flex;');
+    expect(icon).toContain('margin-block-end: var(--spacing-part);');
+    expect(icon).toContain('color: var(--color-slate);');
+    const svg = blockAfter(css, '.empty-state-icon svg {');
+    expect(svg).toContain('width: 24px;');
+    expect(svg).toContain('height: 24px;');
+  });
+
+  it('sets the title at the h4 step at 700 in ink', () => {
+    const title = blockAfter(rules(), '.empty-state-title {');
+    for (const declaration of [
+      'margin: 0;',
+      'color: var(--color-ink);',
+      'font-size: var(--text-h4);',
+      'line-height: var(--text-h4--line-height);',
+      'font-weight: 700;',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(title, declaration).toContain(declaration);
+    }
+    for (const [, weight] of rules().matchAll(/font-weight: (\d+);/g)) {
+      expect(['400', '450', '500', '700']).toContain(weight);
+    }
+  });
+
+  it('sets the description at the small step in slate, never taupe, 32rem at most', () => {
+    const css = rules();
+    const description = blockAfter(css, '.empty-state-description {');
+    for (const declaration of [
+      'max-inline-size: 32rem;',
+      'margin: 0;',
+      'margin-block-start: 0.25rem;',
+      'color: var(--color-slate);',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: var(--text-small--font-weight);',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(description, declaration).toContain(declaration);
+    }
+    // The reader needs to read it: no taupe and no reserved color anywhere in the part.
+    for (const token of [
+      '--color-taupe',
+      '--color-signal',
+      '--color-clay',
+      '--color-error',
+      '--color-success',
+    ]) {
+      expect(css, token).not.toContain(token);
+    }
+  });
+
+  it('puts the action a peer step under the text', () => {
+    expect(blockAfter(rules(), '.empty-state-action {')).toContain(
+      'margin-block-start: var(--spacing-peer);',
+    );
+  });
+
+  it('draws the icon CanvasText in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.empty-state-icon {')).toContain('color: CanvasText;');
+  });
+
+  it('mirrors nothing, moves nothing and writes only logical sides', () => {
+    const css = rules();
+    expect(css).not.toContain("[dir='rtl']");
+    expect(css).not.toMatch(/(?<![\w-])(?:transition|animation)\s*:/);
+    expect(css).not.toMatch(
+      /(?:margin|padding|inset|border)-(?:left|right|top|bottom)\b|(?<![\w-])(?:left|right|top|bottom):/,
+    );
+  });
+});
+
+describe('src/components/skeleton.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/skeleton.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const REDUCED = '@media (prefers-reduced-motion: reduce)';
+
+  it('fills a line 1em tall at the micro radius with the divider color, on the line box', () => {
+    const line = blockAfter(rules(), '.skeleton {');
+    for (const declaration of [
+      'box-sizing: border-box;',
+      'display: inline-block;',
+      'inline-size: 100%;',
+      'block-size: 1em;',
+      'vertical-align: middle;',
+      'border-radius: var(--radius-micro);',
+      'background-color: var(--color-divider);',
+    ]) {
+      expect(line, declaration).toContain(declaration);
+    }
+  });
+
+  it('draws a block a field tall at the control radius and a circle the target at the dot radius', () => {
+    const css = rules();
+    const block = blockAfter(css, ".skeleton[data-shape='block'] {");
+    expect(block).toContain('display: block;');
+    expect(block).toContain('block-size: var(--size-field);');
+    expect(block).toContain('border-radius: var(--radius-control);');
+    const circle = blockAfter(css, ".skeleton[data-shape='circle'] {");
+    expect(circle).toContain('inline-size: var(--size-target);');
+    expect(circle).toContain('block-size: var(--size-target);');
+    expect(circle).toContain('border-radius: var(--radius-dot);');
+  });
+
+  it('pulses between the fill and half of it over 1.6s, and stands still under reduced motion', () => {
+    const css = rules();
+    expect(blockAfter(css, '.skeleton {')).toContain('animation: skeleton-pulse 1.6s ease-in-out infinite;');
+    const frames = blockAfter(css, '@keyframes skeleton-pulse {');
+    expect(blockAfter(frames, '0%, 100% {')).toContain('opacity: 1;');
+    expect(blockAfter(frames, '50% {')).toContain('opacity: 0.5;');
+    expect(blockAfter(blockAfter(css, REDUCED), '.skeleton {')).toContain('animation: none;');
+    // Only the opacity moves: never a sweep of color across the shape.
+    expect(css).not.toContain('linear-gradient');
+    expect(css).not.toMatch(/(?<![\w-])transition\s*:/);
+  });
+
+  it('opts out of the forced repaint with GrayText and then CanvasText at 20% through color-mix', () => {
+    const forced = blockAfter(blockAfter(rules(), FORCED), '.skeleton {');
+    expect(forced).toContain('forced-color-adjust: none;');
+    const fallback = forced.indexOf('background-color: GrayText;');
+    const mixed = forced.indexOf('background-color: color-mix(in srgb, CanvasText 20%, canvas);');
+    expect(fallback).toBeGreaterThanOrEqual(0);
+    // The mix comes second, so a browser that cannot read it keeps GrayText.
+    expect(mixed).toBeGreaterThan(fallback);
+  });
+
+  it('mirrors nothing and writes only logical sides', () => {
+    const css = rules();
+    expect(css).not.toContain("[dir='rtl']");
+    expect(css).not.toMatch(
+      /(?:margin|padding|inset|border)-(?:left|right|top|bottom)\b|(?<![\w-])(?:left|right|top|bottom|width|height):/,
     );
   });
 });

@@ -720,7 +720,9 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/stat-tile">
                   Stat tile
                 </Link>
-                <span className="chip">Empty state</span>
+                <Link className="chip" href="/docs/components/empty-state">
+                  Empty state
+                </Link>
                 <Link className="chip chip-new" href="/docs/charts/line-chart">
                   Charts
                 </Link>
@@ -808,6 +810,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/date-range-picker">Date range picker</Link>
                 <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/drawer">Drawer</Link>
+                <Link href="/docs/components/empty-state">Empty state</Link>
                 <Link href="/docs/components/field">Field parts</Link>
                 <Link href="/docs/components/filter-bar">Filter bar</Link>
                 <Link href="/docs/components/filter-chip">Filter chip</Link>
@@ -826,6 +829,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/select">Select</Link>
                 <Link href="/docs/components/sheet">Sheet</Link>
                 <Link href="/docs/components/sidebar">Sidebar</Link>
+                <Link href="/docs/components/skeleton">Skeleton</Link>
                 <Link href="/docs/components/spinner">Spinner</Link>
                 <Link href="/docs/components/stat-tile">Stat tile</Link>
                 <Link href="/docs/components/switch">Switch</Link>
