@@ -62,8 +62,7 @@ export default defineConfig({
         plugins: [storybookTest({ configDir, tags: { include: ['firefox'] } })],
         test: {
           name: 'storybook-firefox',
-          // One file at a time: as in WebKit, so no page waits behind another.
-          fileParallelism: false,
+          // Not one file at a time as in WebKit: run that way, Firefox stopped moving focus into a story.
           setupFiles: ['./.storybook/vitest.setup.ts'],
           browser: {
             enabled: true,
