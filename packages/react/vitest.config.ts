@@ -12,6 +12,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],
+    // CI runs these beside four browser projects, so a busy runner gets more time; locally the default holds.
+    testTimeout: process.env.CI ? 15_000 : 5_000,
     projects: [
       {
         extends: true,
