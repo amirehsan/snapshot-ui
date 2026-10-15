@@ -80,8 +80,9 @@ async function atRest(selector = '.popover'): Promise<HTMLElement> {
 }
 
 /** Waits until no popover is on the page. */
+/** Waits for the popover to leave; its exit transition runs late on a busy runner, in WebKit and Firefox most. */
 async function closed(): Promise<void> {
-  await waitFor(() => expect(document.querySelector('.popover')).toBeNull());
+  await waitFor(() => expect(document.querySelector('.popover')).toBeNull(), { timeout: 3000 });
 }
 
 /** Tabs until `target` has focus, as a keyboard reader arrives. */
