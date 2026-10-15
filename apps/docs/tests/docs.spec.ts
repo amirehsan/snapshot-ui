@@ -1172,6 +1172,118 @@ test('a date range picker writes from and to to the URL and reads them back afte
   ]);
 });
 
+/** The filter bar page's URL example, the last bar on the page. */
+const urlBar = (page: Page): Locator => page.locator('.stage .filter-bar').last();
+
+/** The trigger of the chip, or More, whose label is `label`, in `bar`'s row. */
+const chipIn = (bar: Locator, label: string): Locator =>
+  bar
+    .locator('.filter-bar-row .filter-chip-trigger')
+    .filter({ has: bar.page().locator('.filter-chip-label', { hasText: new RegExp(`^${label}$`) }) });
+
+test('a filter bar writes its chips to the URL and reads them back after a reload', async ({ page }) => {
+  await visit(page, '/docs/components/filter-bar');
+  const bar = urlBar(page);
+  await scrolledTo(bar);
+  await chipIn(bar, 'Category').click();
+  await page.getByRole('option', { name: 'Rent' }).click();
+  await expect(page).toHaveURL(/\/docs\/components\/filter-bar\?category=rent$/);
+  // The secondary Tags chip is behind More.
+  await chipIn(bar, 'More').click();
+  const panel = page.locator('.filter-bar-more-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel).not.toHaveAttribute('data-entering');
+  await panel.getByRole('button', { name: 'Any Tags' }).click();
+  await page.getByRole('option', { name: 'Shared' }).click();
+  await expect(page).toHaveURL(/\/docs\/components\/filter-bar\?category=rent&tag=shared$/);
+  // Escape closes the list, and then the panel, which kept Tags as it was chosen.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.select-popover')).toHaveCount(0);
+  await expect(panel.getByRole('region', { name: 'Tags' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+  await page.reload();
+  await settled(page);
+  const reloaded = urlBar(page);
+  await expect(reloaded.locator('.filter-bar-row .filter-chip[data-active] .filter-chip-label')).toHaveText([
+    'Category',
+    'Tags',
+  ]);
+  await expect(reloaded.locator('.filter-bar-sheet-button .badge')).toHaveText('2');
+});
+
+test('Clear all clears every filter in one URL write', async ({ page }) => {
+  await visit(page, '/docs/components/filter-bar?category=rent&tag=shared&tag=refund');
+  const bar = urlBar(page);
+  await scrolledTo(bar);
+  await expect(bar.locator('.filter-bar-row .filter-chip[data-active]')).toHaveCount(2);
+  const entries = await page.evaluate(() => history.length);
+  const urls: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) urls.push(frame.url());
+  });
+  await bar.getByRole('button', { name: 'Clear all' }).click();
+  await expect(page).toHaveURL(/\/docs\/components\/filter-bar$/);
+  await expect(bar.locator('.filter-bar-row .filter-chip[data-active]')).toHaveCount(0);
+  await expect(chipIn(bar, 'Category')).toBeFocused();
+  // One write: the history keeps its length, and the address changed once.
+  expect(await page.evaluate(() => history.length)).toBe(entries);
+  expect(urls.filter((url) => !url.endsWith('/docs/components/filter-bar'))).toEqual([]);
+});
+
+test.describe('the filter bar on a phone', () => {
+  test.use({ viewport: { width: 320, height: 720 } });
+
+  test('shows the search and the Filters button, opens one sheet with every filter, and never scrolls the page sideways', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/filter-bar');
+    const bar = page.locator('.stage .filter-bar').first();
+    await scrolledTo(bar);
+    await expect(bar.locator('.filter-bar-row')).toBeHidden();
+    await expect(bar.getByRole('searchbox', { name: 'Search transactions' })).toBeVisible();
+    const button = bar.locator('.filter-bar-sheet-button');
+    await expect(button).toBeVisible();
+    await expect(button).toHaveAccessibleName('Filters 2');
+    await button.click();
+    const overlay = page.locator('.sheet-overlay');
+    await expect(overlay).toBeVisible();
+    await expect(overlay).not.toHaveAttribute('data-entering');
+    const sheet = page.getByRole('dialog', { name: 'Filters' });
+    await expect(sheet.getByRole('heading', { level: 3 })).toHaveText([
+      'Category',
+      'Account',
+      'Date',
+      'Tags',
+    ]);
+    await expect(sheet.getByRole('button', { name: 'Done' })).toBeVisible();
+    // The calendar section fits inside the sheet, and the page never scrolls sideways.
+    const calendar = sheet.locator('.calendar');
+    await calendar.scrollIntoViewIfNeeded();
+    const sheetBox = await page.locator('.sheet').boundingBox();
+    const calendarBox = await calendar.boundingBox();
+    if (!sheetBox || !calendarBox) throw new Error('No box');
+    expect(calendarBox.x).toBeGreaterThanOrEqual(sheetBox.x);
+    expect(calendarBox.x + calendarBox.width).toBeLessThanOrEqual(sheetBox.x + sheetBox.width + 0.5);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth),
+    ).toBe(0);
+    expect(await sideways(page)).toBe(0);
+  });
+});
+
+test('switches to the Filters button at 767px and back to the row at 768px', async ({ page }) => {
+  await page.setViewportSize({ width: 767, height: 900 });
+  await visit(page, '/docs/components/filter-bar');
+  const bar = page.locator('.stage .filter-bar').first();
+  await expect(bar.locator('.filter-bar-row')).toBeHidden();
+  await expect(bar.locator('.filter-bar-sheet-button')).toBeVisible();
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expect(bar.locator('.filter-bar-row')).toBeVisible();
+  await expect(bar.locator('.filter-bar-sheet-button')).toBeHidden();
+  await expect(bar.locator('.filter-bar-clear-all')).toBeVisible();
+});
+
 test('a range calendar chooses a range in two presses and a preset in one', async ({ page }) => {
   await visit(page, '/docs/components/calendar');
   const calendar = page.getByRole('application', { name: /^Statement period/ });

@@ -78,6 +78,7 @@ export {
   type FilterChipListProps,
   type FilterChipProps,
 } from './filter-chip';
+export { FilterBar, type FilterBarLabels, type FilterBarProps } from './filter-bar';
 export {
   Checkbox,
   CheckboxGroup,

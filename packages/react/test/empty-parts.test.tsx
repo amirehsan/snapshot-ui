@@ -9,6 +9,7 @@ import { ComboBox } from '../src/combo-box';
 import { DateRangePicker } from '../src/date-range-picker';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
+import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
@@ -30,7 +31,8 @@ import { Tooltip, TooltipTrigger } from '../src/tooltip';
 
 /**
  * Every part that a label, a hint or a row's text renders into, the chip beside a label, a range calendar's row
- * of presets, and a filter chip's value and the clear button that comes with one.
+ * of presets, a filter chip's value and the clear button that comes with one, and a filter bar's search slot,
+ * its More, its Clear all and its count.
  */
 const PARTS = [
   '.field-label',
@@ -42,6 +44,10 @@ const PARTS = [
   '.calendar-presets',
   '.filter-chip-value',
   '.filter-chip-clear',
+  '.filter-bar-search',
+  '.filter-bar-more',
+  '.filter-bar-clear-all',
+  '.filter-bar-sheet-button .badge',
 ].join(', ');
 
 /**
@@ -104,6 +110,11 @@ const EMPTY: [name: string, element: ReactElement][] = [
     <FilterChip label="Amount" valueLabel="" onClear={() => undefined}>
       <p>Two amounts</p>
     </FilterChip>,
+  ],
+  [
+    // No search slot, no chip and so no More, no Clear all and no count.
+    'FilterBar',
+    <FilterBar search={false}>{false}</FilterBar>,
   ],
   [
     'Select',

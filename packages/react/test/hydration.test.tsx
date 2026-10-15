@@ -5,9 +5,11 @@ import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { DateRangePicker } from '../src/date-range-picker';
+import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
+import { SearchField } from '../src/search-field';
 
 /**
  * Each part's server HTML, hydrated in the browser on a mocked iPhone (plan, spec corrections 1 and 2). The HTML
@@ -110,6 +112,38 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
       expect(container.querySelector('.filter-chip-trigger')).toHaveAccessibleName(
         'Category Food, Rent and 2 more',
       );
+    },
+  ],
+  [
+    'FilterBar',
+    <FilterBar search={<SearchField aria-label="Search transactions" />} onClearAll={noop}>
+      <FilterChip label="Category" selectionMode="single" value="food" onChange={noop}>
+        {['Food', 'Rent'].map((name) => (
+          <PickerOption key={name} id={name.toLowerCase()}>
+            {name}
+          </PickerOption>
+        ))}
+      </FilterChip>
+      <FilterChip label="Tags" selectionMode="multiple" isSecondary value={[]} onChange={noop}>
+        {['Food', 'Rent'].map((name) => (
+          <PickerOption key={name} id={name.toLowerCase()}>
+            {name}
+          </PickerOption>
+        ))}
+      </FilterChip>
+      <FilterChip label="Amount" valueLabel="Over $100" onClear={noop}>
+        <p>Two amounts</p>
+      </FilterChip>
+    </FilterBar>,
+    (container) => {
+      // The count is the props', the same before and after hydration; the Tags chip is behind More.
+      expect(container.querySelector('.filter-bar-sheet-button .badge')).toHaveTextContent(/^2$/);
+      expect(container.querySelector('.filter-bar-sheet-button')).toHaveAccessibleName('Filters 2');
+      expect(
+        [...container.querySelectorAll('.filter-bar-row .filter-chip-label')].map(
+          (label) => label.textContent,
+        ),
+      ).toEqual(['Category', 'Amount', 'More']);
     },
   ],
 ];

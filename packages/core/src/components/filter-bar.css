@@ -1,0 +1,113 @@
+/*
+ * FilterBar: the search, a wrapping row of filter chips, More and Clear all, and on a phone one Filters button
+ * that opens one sheet of every filter, derived in docs/design-system.md ("FilterBar"). The row's group box holds
+ * every chip; Clear all sits at the inline end. More is an inactive chip's look. Its panel and the sheet hold the
+ * chips as sections, each headed by its label at the field label's step with a tertiary Clear at the end; the
+ * panel rules a divider between them. Under 768px, the --breakpoint-sm token written out as copy.css writes it,
+ * the row, More and Clear all leave and the Filters button shows beside the search. Never signal orange.
+ */
+@layer components {
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-part);
+  }
+
+  .filter-bar-search {
+    flex: 1 1 16rem;
+    min-width: 0;
+    max-width: 24rem;
+  }
+
+  .filter-bar-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  .filter-bar-clear-all {
+    margin-inline-start: auto;
+  }
+
+  /* After button.css, so it beats the button's display by order. */
+  .filter-bar-sheet-button {
+    display: none;
+  }
+
+  /* The 16px icon before the word, as a chip's chevron is drawn. */
+  .filter-bar-sheet-button svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Two classes, after popover.css's one: the panel pads 16px and stays inside a phone's margins. */
+  .filter-bar-more-panel.popover-padded {
+    max-width: min(22rem, 100vw - 2rem);
+    padding: var(--spacing-inset);
+  }
+
+  /* The tabIndex="-1" dialog React Aria focuses as the panel opens: no ring on the whole panel, as dialog.css. */
+  .filter-bar-more-dialog {
+    outline: none;
+  }
+
+  .filter-bar-more-panel .filter-section + .filter-section {
+    margin-block-start: var(--spacing-peer);
+    padding-block-start: var(--spacing-peer);
+    border-block-start: 1px solid var(--color-divider);
+  }
+
+  .sheet .filter-section + .filter-section {
+    margin-block-start: var(--spacing-peer);
+  }
+
+  .filter-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-part);
+    margin-block-end: var(--spacing-part);
+  }
+
+  .filter-section-title {
+    min-width: 0;
+    margin: 0;
+    color: var(--color-ink);
+    font-size: var(--text-h4);
+    line-height: var(--text-h4--line-height);
+    font-weight: 700;
+  }
+
+  /* The sheet's footer: Clear all at the start while a filter is active, Done at the end. */
+  .filter-bar-sheet-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--spacing-part);
+  }
+
+  .filter-bar-sheet-clear-all {
+    margin-inline-end: auto;
+  }
+
+  @media (width < 768px) {
+    .filter-bar-row,
+    .filter-bar-clear-all {
+      display: none;
+    }
+
+    .filter-bar-sheet-button {
+      display: inline-flex;
+    }
+
+    .filter-bar-search {
+      flex: 1 1 0;
+      max-width: none;
+    }
+  }
+}

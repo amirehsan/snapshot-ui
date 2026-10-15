@@ -12,6 +12,7 @@ import { CommandPalette } from '../command-palette';
 import { DateRangePicker } from '../date-range-picker';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
+import { FilterBar } from '../filter-bar';
 import { FilterChip } from '../filter-chip';
 import { Link } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
@@ -1249,6 +1250,58 @@ export const FilterChipMirrored: Story = {
       await expect(getComputedStyle(glyph).scale).toBe('none');
       await expect(getComputedStyle(glyph).transform).toBe('none');
     }
+  },
+};
+
+/**
+ * A filter bar in right to left: the bar runs from the right, so the search is at its right edge, the chips follow
+ * leftward from it, and Clear all is at the left end, its inline end.
+ */
+export const FilterBarMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: '60rem', maxWidth: '100%' }}>
+        <FilterBar
+          search={<SearchField aria-label="جستجو" />}
+          onClearAll={() => undefined}
+          labels={{ filters: 'فیلترها', more: 'بیشتر', clearAll: 'پاک کردن همه' }}
+        >
+          <FilterChip label="دسته" selectionMode="single" value="food" onChange={() => undefined}>
+            <PickerOption id="food">غذا</PickerOption>
+            <PickerOption id="rent">اجاره</PickerOption>
+          </FilterChip>
+          <FilterChip label="حساب" selectionMode="multiple" value={[]} onChange={() => undefined}>
+            <PickerOption id="checking">جاری</PickerOption>
+          </FilterChip>
+          <FilterChip
+            label="برچسب"
+            selectionMode="multiple"
+            isSecondary
+            value={[]}
+            onChange={() => undefined}
+          >
+            <PickerOption id="rent">اجاره</PickerOption>
+          </FilterChip>
+        </FilterBar>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = find(canvasElement, '.filter-bar');
+    const search = find(bar, '.filter-bar-search');
+    const pills = [...bar.querySelectorAll<HTMLElement>('.filter-bar-row .filter-chip')];
+    const clearAll = find(bar, '.filter-bar-clear-all');
+    // The search at the right edge, the chips leftward from it in declared order, More last.
+    await expect(rect(bar).right - rect(search).right).toBeCloseTo(0, 0);
+    let previous = rect(search).left;
+    for (const pill of pills) {
+      await expect(rect(pill).right).toBeLessThanOrEqual(previous + 0.5);
+      previous = rect(pill).left;
+    }
+    await expect(pills.at(-1)).toHaveClass('filter-bar-more');
+    // Clear all at the left end, past the last chip.
+    await expect(rect(clearAll).left - rect(bar).left).toBeCloseTo(0, 0);
+    await expect(rect(clearAll).right).toBeLessThanOrEqual(previous + 0.5);
   },
 };
 

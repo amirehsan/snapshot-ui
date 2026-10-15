@@ -176,7 +176,7 @@ function Custom({
 function place(overrides: Partial<ChipPlace>): ChipPlace {
   return {
     place: 'sheet',
-    hasMore: false,
+    behindMore: new Set(),
     panelLabels: null,
     clearWord: 'Clear',
     close: () => undefined,
@@ -550,29 +550,29 @@ describe('FilterChip', () => {
     expect(screen.queryByRole('button', { name: 'Reset Tags' })).toBeNull();
   });
 
-  it('renders nothing in the row for an inactive secondary chip while More is drawn, and stays in the row otherwise', () => {
+  it('renders nothing in the row for an inactive secondary chip More holds, and stays in the row otherwise', () => {
     const { container, rerender } = render(
-      <FilterChipPlaceContext value={place({ place: 'row', hasMore: true })}>
+      <FilterChipPlaceContext value={place({ place: 'row', behindMore: new Set(['Category']) })}>
         <Single isSecondary />
       </FilterChipPlaceContext>,
     );
     expect(container).toBeEmptyDOMElement();
     // Active, it joins the row.
     rerender(
-      <FilterChipPlaceContext value={place({ place: 'row', hasMore: true })}>
+      <FilterChipPlaceContext value={place({ place: 'row', behindMore: new Set(['Category']) })}>
         <Single isSecondary initial="rent" key="a" />
       </FilterChipPlaceContext>,
     );
     expect(pill()).toHaveAttribute('data-active', '');
-    // With no More drawn, an inactive secondary chip stays in the row, as a primary one does.
+    // One More does not hold, as a wrapped chip FilterBar cannot read, stays in the row, as a primary one does.
     rerender(
-      <FilterChipPlaceContext value={place({ place: 'row', hasMore: false })}>
+      <FilterChipPlaceContext value={place({ place: 'row', behindMore: new Set() })}>
         <Single isSecondary key="b" />
       </FilterChipPlaceContext>,
     );
     expect(pill()).not.toHaveAttribute('data-active');
     rerender(
-      <FilterChipPlaceContext value={place({ place: 'row', hasMore: true })}>
+      <FilterChipPlaceContext value={place({ place: 'row', behindMore: new Set(['Category']) })}>
         <Single key="c" />
       </FilterChipPlaceContext>,
     );
@@ -599,7 +599,9 @@ describe('FilterChip', () => {
     const onSecondaryCleared = vi.fn();
     const onChange = vi.fn();
     render(
-      <FilterChipPlaceContext value={place({ place: 'row', hasMore: true, onSecondaryCleared })}>
+      <FilterChipPlaceContext
+        value={place({ place: 'row', behindMore: new Set(['Category']), onSecondaryCleared })}
+      >
         <Single isSecondary initial="rent" onChange={onChange} />
       </FilterChipPlaceContext>,
     );
@@ -611,7 +613,7 @@ describe('FilterChip', () => {
   });
 
   it('focuses the trigger and calls onSecondaryCleared when every secondary chip is active and More is not drawn', async () => {
-    // With every secondary chip active More is not drawn, so hasMore is false as the clear is pressed; once the
+    // With every secondary chip active More is not drawn and holds nothing as the clear is pressed; once the
     // value is gone More comes back and the chip leaves the row, so FilterBar must still hear of it.
     const user = userEvent.setup();
     const onSecondaryCleared = vi.fn(() => {
@@ -619,7 +621,7 @@ describe('FilterChip', () => {
     });
     const onChange = vi.fn();
     render(
-      <FilterChipPlaceContext value={place({ place: 'row', hasMore: false, onSecondaryCleared })}>
+      <FilterChipPlaceContext value={place({ place: 'row', behindMore: new Set(), onSecondaryCleared })}>
         <Single isSecondary initial="rent" onChange={onChange} />
       </FilterChipPlaceContext>,
     );

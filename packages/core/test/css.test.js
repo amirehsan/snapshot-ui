@@ -5896,6 +5896,128 @@ describe('src/components/filter-chip.css', () => {
   });
 });
 
+describe('src/components/filter-bar.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/filter-bar.css')));
+  const PHONE = '@media (width < 768px)';
+
+  it('lays the bar and its row out as wrapping flex rows with the part gap', () => {
+    for (const selector of ['.filter-bar {', '.filter-bar-row {']) {
+      const rule = blockAfter(rules(), selector);
+      for (const declaration of [
+        'display: flex;',
+        'flex-wrap: wrap;',
+        'align-items: center;',
+        'gap: var(--spacing-part);',
+      ]) {
+        expect(rule, `${selector} ${declaration}`).toContain(declaration);
+      }
+    }
+    expect(blockAfter(rules(), '.filter-bar-row {')).toContain('min-width: 0;');
+  });
+
+  it('gives the search 16rem to grow from and 24rem at most', () => {
+    const search = blockAfter(rules(), '.filter-bar-search {');
+    expect(search).toContain('flex: 1 1 16rem;');
+    expect(search).toContain('min-width: 0;');
+    expect(search).toContain('max-width: 24rem;');
+  });
+
+  it('puts Clear all at the inline end', () => {
+    expect(blockAfter(rules(), '.filter-bar-clear-all {')).toContain('margin-inline-start: auto;');
+  });
+
+  it('hides the Filters button above the phone width and shows it below, where the row, More and Clear all leave', () => {
+    const css = rules();
+    expect(blockAfter(css.slice(0, css.indexOf(PHONE)), '.filter-bar-sheet-button {')).toContain(
+      'display: none;',
+    );
+    const icon = blockAfter(css, '.filter-bar-sheet-button svg {');
+    expect(icon).toContain('width: 16px;');
+    expect(icon).toContain('height: 16px;');
+    const phone = blockAfter(css, PHONE);
+    expect(blockAfter(phone, '.filter-bar-row, .filter-bar-clear-all {')).toContain('display: none;');
+    expect(blockAfter(phone, '.filter-bar-sheet-button {')).toContain('display: inline-flex;');
+    const search = blockAfter(phone, '.filter-bar-search {');
+    expect(search).toContain('flex: 1 1 0;');
+    expect(search).toContain('max-width: none;');
+  });
+
+  it('switches at the small breakpoint, written out', async () => {
+    // A media query cannot read a custom property, so the width is written out and must stay the token.
+    const { tokens } = await import('../dist/tokens.js');
+    const css = rules();
+    expect(css).toContain(`@media (width < ${tokens.breakpoint.sm.value})`);
+    expect([...css.matchAll(/@media \(([^)]*)\)/g)].map((match) => match[1])).toEqual([
+      `width < ${tokens.breakpoint.sm.value}`,
+    ]);
+  });
+
+  it('stacks the panel sections a peer step apart with a divider, and the sheet sections a peer step apart', () => {
+    const css = rules();
+    const panel = blockAfter(css, '.filter-bar-more-panel .filter-section + .filter-section {');
+    expect(panel).toContain('margin-block-start: var(--spacing-peer);');
+    expect(panel).toContain('padding-block-start: var(--spacing-peer);');
+    expect(panel).toContain('border-block-start: 1px solid var(--color-divider);');
+    const sheet = blockAfter(css, '.sheet .filter-section + .filter-section {');
+    expect(sheet).toContain('margin-block-start: var(--spacing-peer);');
+    expect(sheet).not.toContain('border');
+    // The panel pads 16px with two classes, after popover.css's one, and stays inside a phone's margins.
+    const padded = blockAfter(css, '.filter-bar-more-panel.popover-padded {');
+    expect(padded).toContain('max-width: min(22rem, 100vw - 2rem);');
+    expect(padded).toContain('padding: var(--spacing-inset);');
+    // The dialog React Aria focuses as the panel opens draws no ring of its own.
+    expect(blockAfter(css, '.filter-bar-more-dialog {')).toContain('outline: none;');
+  });
+
+  it('heads a section at the h4 step at 700 in ink, its clear word at the inline end and its body a part step under it', () => {
+    const css = rules();
+    const head = blockAfter(css, '.filter-section-head {');
+    expect(head).toContain('display: flex;');
+    expect(head).toContain('justify-content: space-between;');
+    expect(head).toContain('margin-block-end: var(--spacing-part);');
+    const title = blockAfter(css, '.filter-section-title {');
+    expect(title).toContain('color: var(--color-ink);');
+    expect(title).toContain('font-size: var(--text-h4);');
+    expect(title).toContain('line-height: var(--text-h4--line-height);');
+    expect(title).toContain('font-weight: 700;');
+    for (const [, weight] of css.matchAll(/font-weight: (\d+);/g)) {
+      expect(['400', '450', '500', '700']).toContain(weight);
+    }
+  });
+
+  it('lays the sheet footer out with Clear all at the start and Done at the end', () => {
+    const css = rules();
+    const actions = blockAfter(css, '.filter-bar-sheet-actions {');
+    expect(actions).toContain('display: flex;');
+    expect(actions).toContain('justify-content: flex-end;');
+    expect(actions).toContain('gap: var(--spacing-part);');
+    expect(blockAfter(css, '.filter-bar-sheet-clear-all {')).toContain('margin-inline-end: auto;');
+  });
+
+  it('never uses signal orange, clay, error, success or taupe', () => {
+    const css = rules();
+    for (const token of [
+      '--color-signal',
+      '--color-clay',
+      '--color-error',
+      '--color-success',
+      '--color-gain',
+      '--color-taupe',
+    ]) {
+      expect(css, token).not.toContain(token);
+    }
+  });
+
+  it('mirrors nothing and writes only logical sides', () => {
+    const css = rules();
+    expect(css).not.toContain("[dir='rtl']");
+    expect(css).not.toMatch(
+      /(?:margin|padding|inset|border)-(?:left|right|top|bottom)\b|(?<![\w-])(?:left|right|top|bottom):/,
+    );
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

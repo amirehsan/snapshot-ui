@@ -117,8 +117,12 @@ export type FilterChipProps<T extends object = object> = FilterChipListProps<T> 
 /** Where FilterBar draws a chip. Internal: FilterBar provides it; a chip on its own reads null and is a pill. */
 export interface ChipPlace {
   place: 'row' | 'panel' | 'sheet';
-  /** Whether FilterBar draws More; only then does an inactive secondary chip leave the row. */
-  hasMore: boolean;
+  /**
+   * The labels of the inactive secondary chips FilterBar read from its children, which More holds; only these
+   * leave the row. A secondary chip wrapped in the app's own component is not among them, so it stays in the row
+   * rather than vanish (spec correction 29).
+   */
+  behindMore: ReadonlySet<string>;
   /** The labels the More panel opened with; null outside the panel. */
   panelLabels: ReadonlySet<string> | null;
   /** FilterBar's labels.clear, the visible word of a section's clear button. */
@@ -597,9 +601,10 @@ export function FilterChip<T extends object = object>(props: FilterChipProps<T>)
 
   if (place === null) return <ChipPill resolved={resolved} onCleared={undefined} />;
   if (place.place === 'row') {
-    // Behind More while inactive, when FilterBar draws More; an active chip, or one More cannot hold, is in the row.
+    // Behind More while inactive, when FilterBar read it and so More holds it; an active chip, or one More cannot
+    // hold, is in the row.
     const isSecondary = props.isSecondary === true;
-    if (isSecondary && place.hasMore && !isActive) return null;
+    if (isSecondary && !isActive && place.behindMore.has(props.label)) return null;
     return (
       <ChipPill
         resolved={resolved}

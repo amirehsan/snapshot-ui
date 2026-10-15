@@ -7363,3 +7363,129 @@ in: the shared list, the library Popover, SearchField and the tertiary
 Button of the section face (spec correction 30). It measured 3.44 kB
 without React Aria, Lucide and `@internationalized/date`, above the
 spec's 2.5 kB, and the rule rounds up to 3.5 kB and adds 0.5 kB: 4 kB.
+
+## FilterBar
+
+The filters of a list page: `FilterBar`, which lays out the app's
+search, a row of `FilterChip`s, More for the inactive secondary chips,
+Clear all, and on a phone one Filters button that opens one sheet of
+every filter. The document draws no filter bar, so this one is derived
+from the chip's look, the Popover's float, the Sheet and the field
+label's step.
+
+**The row.** `div.filter-bar` is a wrapping flex row with the part gap,
+8px: the search slot, `div.filter-bar-search`, grows from 16rem and stops
+at 24rem; the chips sit in `div.filter-bar-row`, a `group` named
+`labels.filters`, "Filters", which is a wrapping flex row of its own
+with the same gap, so the group's box holds every chip; Clear all, a
+tertiary Button, sits at the inline end with `margin-inline-start:
+auto`. Nothing is measured (ruling 8): the browser wraps the row under
+the search when it does not fit, and wraps the chips inside it. The
+chips' hit areas grow 2px above and below a compact pill at most, inside
+the 8px gap, so no hit area reaches a neighbor's.
+
+**More.** An inactive chip's look, `div.filter-chip.filter-bar-more`
+around a `filter-chip-trigger` with `labels.more` and the chevron, which
+turns while its panel is open. It opens `Popover.filter-bar-more-panel`,
+the float, frame and corner, padded 16px (`--spacing-inset`) with two
+classes after `popover.css`'s one and capped at `min(22rem, 100vw -
+2rem)`, holding React Aria's `Dialog`, named by the trigger, "More", with
+no ring of its own. Its sections stack a peer step apart, 24px, with a
+1px `--color-divider` rule between them and 24px under it: a separator,
+1.23 against float in light and 1.34 in dark, measured and recorded, not
+gated. More is a modal popover, as the chip's is (ruling 10).
+
+**Sections.** In the panel and the sheet each chip draws as
+`section.filter-section`, its head a flex row with the title,
+`h3.filter-section-title`, at the field label's step, `--text-h4` at
+700 in ink (18.43 on float in light, 17.42 in dark, gated as ink on
+float), and the chip's tertiary clear at the inline end, showing
+FilterBar's `labels.clear`, "Clear", and named by the chip's
+`labels.clear(label)` (spec correction 26). The body sits a part step,
+8px, under the head. In the sheet sections stack 24px apart with no
+rule, since the sheet's body is one surface.
+
+**The phone.** Under 768px of viewport, `@media (width < 768px)`, the
+`--breakpoint-sm` token written out as `copy.css` writes it, with a test
+that keeps them equal (spec correction 28), the row, More and Clear all
+leave (`display: none`) and `Button.filter-bar-sheet-button` shows
+beside the search, which takes the rest of the line. It is the
+viewport, not the bar's own width, because a sheet is a phone surface.
+The button is a secondary Button with Lucide's `ListFilter` at 16px,
+`labels.filters` and, while any filter is active, a neutral Badge with
+`formatCount(count)`: slate on float, gated. Its name is its text,
+"Filters 2", a space in the DOM between the word and the Badge that the
+flex row does not draw. It is never signal orange: a filter is not
+consent. It opens one `Sheet` titled `labels.filters`, holding every
+filter as a section in declared order, primary and secondary alike; its
+footer, `div.filter-bar-sheet-actions`, holds Clear all
+(`filter-bar-sheet-clear-all`, tertiary, at the start) while any filter
+is active and Done, primary, at the end, `slot="close"`.
+
+**The census** (spec 9.2). `censusOf` walks the children through
+fragments, as BottomTabBar counts its items, and reads each `FilterChip`
+element's props: a list chip with a value that is not null or empty,
+and a custom chip with a `valueLabel`, is active; an inactive chip with
+`isSecondary` adds its label to the chips behind More. Anything else
+counts as nothing, a false slot included. The count is in the server's
+HTML. A chip wrapped in the app's own component cannot be read, so
+`activeCount` replaces the count, and such a chip stays in the row: the
+row's place carries the labels More holds, and only those leave it
+(spec correction 29), so a wrapped secondary chip never vanishes.
+
+**The row's order.** Spec 9.2 puts an active secondary chip after the
+primary ones. The row flattens the children through fragments and moves
+each secondary chip it can read after the rest, each keyed by its place
+in the tree, so a chip that moves keeps its state. A wrapped chip stays
+where it is declared.
+
+**More's rules** (ruling 8, spec correction 29). More is drawn while a
+readable secondary chip is inactive, and stays while its panel is open.
+As the panel opens, it takes the labels behind More and shows those
+until it closes, so a choice made in it, a multiple list's first toggle
+included, never unmounts the field in use; the row shows the chip as
+soon as it is active. FilterBar renders its children three times, in
+the row, the panel and the sheet, each under the chip's place; the
+panel and the sheet render nothing while closed, so their sections
+mount only while open (R6). The copies share the app's value.
+
+**Live** (ruling 9). A change in a chip, the panel or the sheet calls
+the app's `onChange` at once, so the URL and the results behind the
+scrim follow; there is no draft, and Done only closes. The app may name
+Done with its result count, which it writes.
+
+**Focus** (2.4.3). Focus never falls to the page. Clear all leaves with
+the last active filter, so after the commit the first chip's trigger in
+the row takes focus; in the sheet, Done takes it. A secondary chip
+cleared in the row leaves it with its value, so after the commit More
+takes focus, even when More was not drawn as the clear was pressed. A
+choice in More that leaves nothing behind it takes More away as the
+panel closes, so the chip the panel made active takes focus in the row,
+once React Aria has lifted the inert page. Each waits for the commit
+that removes the element holding focus, since a URL write may arrive
+several renders after the press, and forgets the move once focus has
+gone elsewhere by itself.
+
+**R6, measured.** The `ManyOptions` story holds a 200-option chip, in
+the row and in the sheet, and its play records the time from the press
+to the list, in Chromium headless on the implementer's machine, five
+runs: the row's list in 460 to 515ms, the sheet's sections in 140 to
+156ms, and the sheet's list, from a sheet at rest, in 380 to 420ms.
+Each includes the test driver's press and the list's filter taking
+focus; the sheet's open time is over 100ms.
+
+**Forced colors and right to left.** As the parts it holds: the chips,
+the Buttons, the Badge and the Sheet carry their own forced-colors
+rules. The bar runs from the right: the search at the right edge, the
+chips leftward from it, Clear all at the left end.
+
+**Devices.** The Filters sheet on a real iPhone and an Android phone, a
+chip's list opened over it and Done closing it: not yet verified.
+
+**The size.** The entry `{ FilterBar, FilterChip }` measures what its
+import pulls in: the chip with its list and the library Popover, and
+the Sheet with its frame, the IconButton, the Button and the Badge,
+which have entries or budgets of their own (spec correction 30). It
+measured 5.87 kB without React Aria, Lucide and
+`@internationalized/date`, above the spec's 4.5 kB, and the rule rounds
+up to 6 kB and adds 0.5 kB: 6.5 kB.

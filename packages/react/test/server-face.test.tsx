@@ -5,9 +5,11 @@ import { I18nProvider } from 'react-aria-components';
 import { describe, expect, inject, it } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { DateRangePicker } from '../src/date-range-picker';
+import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
+import { SearchField } from '../src/search-field';
 
 /**
  * The server face (ruling 1): every date and number part writes one HTML, byte for byte, under en-US, de-DE and
@@ -90,6 +92,21 @@ const FACES: [name: string, element: ReactElement][] = [
     <FilterChip label="Amount" valueLabel="Over $100" onClear={noop}>
       <p>Two amounts</p>
     </FilterChip>,
+  ],
+  [
+    // The count in the Filters button's Badge, More and Clear all; no panel and no sheet.
+    'FilterBar',
+    <FilterBar search={<SearchField aria-label="Search transactions" />} onClearAll={noop}>
+      <FilterChip label="Category" selectionMode="single" value="food" onChange={noop}>
+        {CATEGORIES}
+      </FilterChip>
+      <FilterChip label="Tags" selectionMode="multiple" isSecondary value={[]} onChange={noop}>
+        {CATEGORIES}
+      </FilterChip>
+      <FilterChip label="Amount" valueLabel="Over $100" onClear={noop}>
+        <p>Two amounts</p>
+      </FilterChip>
+    </FilterBar>,
   ],
 ];
 
