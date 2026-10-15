@@ -712,7 +712,9 @@ export function HomePage(): ReactElement {
             <Card className="catalog-group">
               <Eyebrow>Lists and data</Eyebrow>
               <div className="chips">
-                <span className="chip chip-new">Data table</span>
+                <Link className="chip chip-new" href="/docs/components/data-table">
+                  Data table
+                </Link>
                 <span className="chip">Sortable list</span>
                 <span className="chip">Tree builder</span>
                 <span className="chip">Master detail</span>
@@ -807,6 +809,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/combo-box">Combo box</Link>
                 <Link href="/docs/components/command-palette">Command palette</Link>
                 <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
+                <Link href="/docs/components/data-table">Data table</Link>
                 <Link href="/docs/components/date-range-picker">Date range picker</Link>
                 <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/drawer">Drawer</Link>

@@ -7656,3 +7656,228 @@ Static, a server part.
 start, so a 60% line sits at the right on a Persian page.
 
 **The size.** Measured with EmptyState, above.
+
+## Dense data
+
+The document has no rules for dense data. Its known gaps say so ("No
+data-dense or tabular component patterns are defined", `:439`), Appendix
+A quotes the line (`:448`), and the parent spec's risk R6 asks that dense
+data, loading and empty states each get a recorded derivation before
+they are built. This section is that derivation for the table and the
+list that follow it; every value comes from a part that already has a
+recorded rule.
+
+**A row.** `max(var(--size-target), var(--size-field))`: 48px, 40px in
+compact density and 44px compact on a coarse pointer, the field's height
+and never under the 40px target, so a row holds a 40px checkbox in every
+density and a finger always has a row to press. Cells are padded the
+inset step, 16px, at their inline ends and centered on the line.
+
+**Rules, not stripes.** One 1px `--color-divider` rule under each row and
+under the header, none above the first row, and a 1px `--color-frame`
+rule above a totals row, the one rule that marks the end of a sum. No
+zebra: the document's rhythm comes "from tone and whitespace, not lines",
+and a rule per row is already the most a list draws.
+
+**The header.** The overline step, `--text-overline` at its token weight
+and tracking, uppercase, in slate: the token's own purpose ("Uppercase
+column headers in tables and stat tiles"). It is the target's 40px tall,
+so a sortable header, whose whole cell is its button, is hit at 40px.
+
+**Text in a row.** `--text-small` at 450 in ink, the row header at 500,
+the field label's weight; one line, ending in an ellipsis, with the full
+text in the row's name. Figures follow the numeral rule of `copy.css`:
+tabular digits, never broken, an isolated left-to-right run at the
+line's end in either direction, so a column of amounts lines up at its
+last digit on an English and a Persian page alike.
+
+**The washes.** A row under the pointer takes the 5% ink wash over the
+holder's fill, Menu's hover, only where hover exists; a selected row
+takes 8%, one step over, with its checked box, never color alone. Slate
+on the 5% wash measures 4.38 over canvas in light, under 4.5, as the tabs
+found, so no slate text sits on a washed row: a sorted or hovered header
+is ink, and the list face's slate meta line turns ink on a hovered or
+selected row.
+
+**Focus.** The inset 2px ring in the focus ring token on the row, the
+cell or the header, never under the pointer: a table can sit in a
+scrolling region, where an outset ring is clipped (Menu's rule).
+
+**The current row.** The row whose detail is open draws a 3px ink bar at
+its inline start and its row header at 700, beside `aria-current` on its
+link: a mark, a weight and a name, never color alone, and no ink fill, so
+eight marked rows never draw a block of ink.
+
+**Sticky and its layer.** A table's header row is the page's own sticky
+element, so it sits at `calc(var(--z-header) - 1)`, under the page's
+header and every piece of chrome ("The chrome's layers"), and sticks at
+`--page-sticky-top`, the app's header height, which the app sets once on
+an ancestor. The shell's header is the app's content and has no fixed
+height, so no token is added.
+
+**Never sideways.** A table never scrolls sideways in its own box: a
+sticky header sticks to its nearest scroller, so inside one it would no
+longer stick under the page's header, and a page that scrolls sideways
+at 320px fails the parent spec. Columns leave instead, by a container
+query on the table's own box at 48rem and 40rem (widths, not breakpoint
+tokens), cells ellipsize, and under 40rem the list face takes over.
+
+**Loading and empty.** A table that loads keeps its shape: skeleton rows
+in its own columns, never a spinner in place of the rows, with one
+spoken "Loading" in a status outside the busy part. A table with no rows
+draws an EmptyState across every column: what is missing, in the app's
+words.
+
+## DataTable
+
+Rows of data: `DataTable`'s table face, React Aria's Table with sorting,
+a row header that links to the row's detail, a sticky header, figures,
+columns that leave, totals, and an empty and a loading body. The values
+come from "Dense data" above.
+
+**The markup.** `div.data-table`, a size container named `data-table`,
+holds `div.data-table-grid` with React Aria's `table.data-table-table`
+(`thead`, `tbody` and, with totals, `tfoot`), then `span.data-table-status`,
+the polite status. The table is `table-layout: fixed` at full width, so a
+column's `width` on its header cell is its width (spec correction 1) and
+the rest share what is left. It draws no surface of its own; the sticky
+header's fill is `--data-table-surface`, the canvas by default, which an
+app sets to `--color-lifted` for a table in a card.
+
+**Measured.** A cell is ink, 16.25 on canvas in light and 19.31 in dark,
+17.84 and 17.42 on lifted; a header is slate, 4.84 and 7.26 on canvas,
+5.31 and 6.94 on lifted; all four are gated already. A hovered row is the
+5% wash, a mix and not a token, so its pairs are measured and recorded:
+ink 14.70 and 17.41 over canvas, 16.11 and 15.25 over lifted; slate 4.38
+and 6.93 over canvas, 4.80 and 6.41 over lifted, which is why no slate
+sits on it. The rules are drawn, not read: the divider 1.23 and 1.28 over
+canvas, the frame 1.28 and 1.36. The contrast test recomputes each.
+
+**The stretched link** (ruling 2, risk R1). With `getRowHref`, the row
+header's cell holds the library's `Link`, `a.data-table-link`, in the
+row header's ink with no underline, around the cell's content. Its
+`::after` is absolutely positioned at `inset: 0`, and the row is
+`position: relative`, its containing block, so the link covers the whole
+row and a press anywhere on it is a press on a real anchor: the router
+opens it, and a middle click, a modifier click and the context menu are
+the browser's. No cell is positioned, so none becomes the containing
+block and clips the link to one cell; that is also why the current bar
+is a border and not a `::before` (spec correction 13). React Aria never
+sees the press as the row's: the link's own press stops there, and its
+pointer down is a child's interaction the row ignores.
+
+**Controls above the link** (spec correction 14). A button, an input, a
+select, a text area, a `role="button"`, a link other than the row's and a
+checkbox field in a cell are `position: relative` at
+`calc(var(--z-header) - 2)`: above the stretched link, so they take their
+own press, and under the sticky header cells at one less than the
+header's layer, so they scroll under it.
+
+**The spike, in three engines.** Before the table was built, React
+Aria's own Table wearing these classes, with the library's Checkbox,
+Link and Menu, was run as six plays in Chromium, WebKit and Firefox
+(`Checks/React Aria table`, commit 61e10a5, CI green in all three): the
+browser's hit test finds the row's link under its amount cell and a
+press there opens it and selects nothing; Enter on a focused row, taken
+by a capture handler, clicks the link and selects nothing; the checkbox
+and a cell's Menu trigger are what the hit test finds at their centers
+and take their own press; a letter stopped by the capture handler never
+reaches React Aria's typeahead (risk R2); an arrow that React Aria would
+send to a hidden cell lands on the next shown one; and the header cells
+stick at `--page-sticky-top` under a fixed 64px header. A table row is
+the `::after`'s containing block in all three engines, so R1's fallback,
+React Aria's `href` on the row, was not needed.
+
+**The sticky cells** (spec correction 16). Each header cell is
+`position: sticky` at `var(--page-sticky-top, 0px)`, not the `thead`,
+which the spike proved in all three engines, at `calc(var(--z-header) -
+1)` on the surface fill.
+
+**Sorting** (ruling 12). A sortable header is React Aria's: a press,
+Enter or Space calls `onSortChange` with that column ascending, or
+descending when it is the column sorted ascending; there is no unsorted
+state. The table shows what `sortDescriptor` says. The mark is a 16px
+Lucide `ArrowUp` or `ArrowDown` on the sorted column, in ink with the
+header, and `ArrowUpDown` in slate on a sortable column at rest, so a
+sortable column shows itself before it is used; the marks never mirror,
+up is ascending in both directions. React Aria writes `aria-sort` and
+announces a change assertively in its own words (spec correction 9), with
+no Persian (risk R5).
+
+**Totals** (spec correction 3). A footer row counts in React Aria's
+collection, so the empty body never renders while one exists: totals
+render only while there are rows. The row is a `tfoot` row with a cell
+per column, `isDisabled` with `disabledBehavior="selection"`, so the
+arrows reach it and nothing selects it; its row header cell says
+`labels.total` unless that column has its own total, at 700 under the
+frame's rule, and it is not sticky.
+
+**The empty and loading bodies** (spec correction 4). React Aria's empty
+body is one row whose one cell spans every column. With no rows it holds
+the app's `emptyState`. While loading with no rows it holds
+`loadingRowCount` flex rows of skeleton lines, a row tall and ruled as
+rows are, one line per column at the column's alignment and at 40% to
+80% of its width in a fixed pattern, so the server and the browser draw
+the same; the grid counts only the one empty row, so nothing can be
+focused, selected or typed to. That cell is a `rowheader`, which axe
+fails when it has no text, so it also holds `labels.loading`, visually
+hidden (spec correction 22). While loading with rows, the rows stay.
+
+**Busy and the status** (spec corrections 2 and 22). React Aria drops
+`aria-busy` and `aria-current` from its Table and Row, so `aria-busy`
+goes on `div.data-table-grid`, the face that loads. The status is that
+element's sibling, outside the busy part and always mounted, empty in
+the server's HTML: a screen reader may hold back what changes inside a
+busy part, and a live region that appears with its text is often not
+announced, as Skeleton's record says. It says `labels.loading`
+`QUIET_MS` after loading starts and empties when it ends, so a load
+shorter than that says nothing.
+
+**The current row** (spec correction 2). The row takes `data-current`
+and its link `aria-current="true"`; the first cell draws a 3px ink
+`border-inline-start`, its padding 3px less so nothing moves, at the
+right on a right-to-left page; the row header is 700.
+
+**Columns that leave** (ruling 6, spec correction 15). `hideBelow: 'md'`
+leaves under 48rem of the table's box and `'sm'` under 40rem, by
+container query: their header and cells are `display: none`. The row
+header never leaves. React Aria's keyboard delegate walks its
+collection, not the DOM, so an arrow could land on a hidden cell (spec
+correction 8): DataTable's capture handler reads the computed display at
+key time and, where React Aria would reach a hidden cell with Arrow
+Right, Arrow Left, Home or End, focuses the nearest shown one instead,
+whose focus sets React Aria's focused key. Arrow Right is the next cell
+on a left-to-right row and the previous on a right-to-left one.
+
+**Hover and disabled.** The 5% wash is drawn on a row with a link (and,
+once selection is on, on every selectable row) under `:hover` or React
+Aria's `data-hovered`, inside `@media (hover: hover)`. A row with no
+selection is not React Aria's hoverable item, since its press is the
+link's, so `:hover` is what draws it. A disabled row is taupe with
+`cursor: not-allowed`, takes no focus and draws no link.
+
+**Page Up and Page Down** (risk R4). React Aria measures a page against
+the whole table when the page itself scrolls, so they move to the first
+and last row; recorded in the Keys table.
+
+**The sticky offset** (risk R8). A wrong `--page-sticky-top` puts the
+header under or below the page's header; the `StickyHeader` story pins
+it under a 64px bar.
+
+**Forced colors.** Rules and the skeleton rows' rules are `CanvasText`;
+the current bar `CanvasText`; the focus ring `Highlight`; a disabled
+row `GrayText`.
+
+**Right to left.** Columns run from the right, an `align: 'end'` column
+sits at the left with its figures a left-to-right run, the sort arrows
+keep up for ascending, and the current bar is at the right
+(`DataTableMirrored`).
+
+**The size.** The entry `{ DataTable }` measured 2.62 kB without React
+Aria, Lucide and `@internationalized/date`, Link and Skeleton included;
+the rule rounds up to 3 kB and adds 0.5 kB: 3.5 kB, under the spec's
+4 kB budget. Tasks 3 and 4 measure it again.
+
+**Screen readers.** Not yet verified with VoiceOver and NVDA (owner
+action 4): a row read by its row header and cells, the current row's
+link read as current, and the sort change.

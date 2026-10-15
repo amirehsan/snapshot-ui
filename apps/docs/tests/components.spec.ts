@@ -614,6 +614,20 @@ test.describe('forced colors', () => {
     await expect(page.locator('.stage .empty-state-title').first()).toHaveCSS('color', canvasText);
   });
 
+  test('a data table current row draws its bar in CanvasText', async ({ page }) => {
+    // The bar is a border at the first cell's start, so the repaint keeps it; it is named CanvasText, as the
+    // rules are, and the row header's weight still marks the row.
+    await visit(page, '/docs/components/data-table');
+    const canvasText = await systemColor(page, 'CanvasText');
+    const current = page.locator('.stage .data-table-row[data-current]').first();
+    await expect(current).toHaveCount(1);
+    const first = current.locator('> :first-child');
+    await expect(first).toHaveCSS('border-left-color', canvasText);
+    await expect(first).toHaveCSS('border-left-width', '3px');
+    await expect(current.locator('[role="rowheader"]')).toHaveCSS('font-weight', '700');
+    await expect(current.locator('.data-table-link')).toHaveAttribute('aria-current', 'true');
+  });
+
   test('a tag keeps a CanvasText edge', async ({ page }) => {
     // The bone fill is repainted away, so the edge is what draws the pill; a disabled tag is GrayText.
     await visit(page, '/docs/components/multi-select');
@@ -676,6 +690,8 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .card-collapsible .card-body p',
   ],
   'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
+  // A cell keeps to one line and ellipsizes, so a long payee leaves the table inside 320px.
+  'data-table': ['.stage .data-table-cell'],
   'date-range-picker': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // The title and the line are the app's sentences, and both wrap at any character inside the column.
   'empty-state': ['.stage .empty-state-title', '.stage .empty-state-description'],
@@ -840,6 +856,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'combo-box': ['.stage .combo-box-input', '.stage .combo-box-button'],
   'command-palette': ['.stage .button'],
   'confirm-dialog': ['.stage .button'],
+  // The header and the row links: every row is in the server's HTML; the loading status waits for a pause.
+  'data-table': ['.stage .data-table-table thead', '.stage .data-table-link'],
   // The frame and its button, with the app's valueLabel where the segments go; the calendar waits for a press.
   'date-range-picker': ['.stage .date-range-control', '.stage .date-range-button'],
   dialog: ['.stage .button'],

@@ -1,11 +1,12 @@
 import { act, render, screen } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AppShell } from '../src/app-shell';
 import { Button } from '../src/button';
 import { RangeCalendar } from '../src/calendar';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { ComboBox } from '../src/combo-box';
+import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
@@ -24,6 +25,7 @@ import { Select } from '../src/select';
 import { Sheet } from '../src/sheet';
 import { Sidebar, SidebarGroup, SidebarItem } from '../src/sidebar';
 import { StatTile } from '../src/stat-tile';
+import { COLUMNS, keyOf } from '../src/stories/transactions';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
@@ -322,5 +324,23 @@ describe('an empty data part slot', () => {
     expect(
       container.querySelector('.empty-state-icon, .empty-state-description, .empty-state-action'),
     ).toBeNull();
+  });
+
+  it('draws no empty state for an emptyState of false, an empty string or null', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    for (const emptyState of [false, '', null]) {
+      const { container, unmount } = render(
+        <DataTable
+          aria-label="Transactions"
+          items={[]}
+          columns={COLUMNS}
+          getKey={keyOf}
+          emptyState={emptyState}
+        />,
+      );
+      const cell = container.querySelector('tbody td');
+      expect(cell, String(emptyState)).toBeEmptyDOMElement();
+      unmount();
+    }
   });
 });

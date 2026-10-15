@@ -6210,6 +6210,308 @@ describe('src/components/skeleton.css', () => {
   });
 });
 
+describe('src/components/data-table.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/data-table.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const HOVER = '@media (hover: hover)';
+  /** Every rule block, as [selector, body] pairs, outside the media and container blocks too. */
+  const blocks = () =>
+    [...rules().matchAll(/([^{};]+)\{([^{}]*)\}/g)].map((match) => [match[1].trim(), match[2]]);
+
+  it('makes the table a size container named data-table, laid out fixed at full width', () => {
+    const css = rules();
+    const root = blockAfter(css, '.data-table {');
+    for (const declaration of [
+      '--data-table-row: max(var(--size-target), var(--size-field));',
+      '--data-table-fill: var(--data-table-surface, var(--color-canvas));',
+      'container: data-table / inline-size;',
+      'min-inline-size: 0;',
+      'color: var(--color-ink);',
+    ]) {
+      expect(root, declaration).toContain(declaration);
+    }
+    const table = blockAfter(css, '.data-table-table {');
+    for (const declaration of [
+      'inline-size: 100%;',
+      'table-layout: fixed;',
+      'border-collapse: separate;',
+      'border-spacing: 0;',
+    ]) {
+      expect(table, declaration).toContain(declaration);
+    }
+    // No surface of its own and never a scroller: the header sticks to the page (ruling 6).
+    expect(css).not.toMatch(/overflow(?:-x|-inline)?: (?:auto|scroll)/);
+    expect(root).not.toContain('background');
+  });
+
+  it('sticks the header cells at --page-sticky-top, one layer under the header token, on the surface fill', () => {
+    const column = blockAfter(rules(), '.data-table-column {');
+    for (const declaration of [
+      'position: sticky;',
+      'inset-block-start: var(--page-sticky-top, 0px);',
+      'z-index: calc(var(--z-header) - 1);',
+      'background-color: var(--data-table-fill);',
+    ]) {
+      expect(column, declaration).toContain(declaration);
+    }
+    // The cells stick, not the thead (spec correction 16).
+    expect(rules()).not.toMatch(/\.data-table-header \{[^}]*position: sticky/);
+  });
+
+  it('draws the header at the overline step in slate, ink while sorted and on hover only where hover exists', () => {
+    const css = rules();
+    const column = blockAfter(css, '.data-table-column {');
+    for (const declaration of [
+      'block-size: var(--size-target);',
+      'border-block-end: 1px solid var(--color-divider);',
+      'color: var(--color-slate);',
+      'font-size: var(--text-overline);',
+      'line-height: var(--text-overline--line-height);',
+      'letter-spacing: var(--text-overline--letter-spacing);',
+      'font-weight: var(--text-overline--font-weight);',
+      'text-transform: uppercase;',
+    ]) {
+      expect(column, declaration).toContain(declaration);
+    }
+    expect(
+      blockAfter(
+        css,
+        ".data-table-column:is([data-sort-direction], [aria-sort='ascending'], [aria-sort='descending']) {",
+      ),
+    ).toContain('color: var(--color-ink);');
+    const sort = blockAfter(css, '.data-table-sort svg {');
+    expect(sort).toContain('width: 16px;');
+    expect(sort).toContain('height: 16px;');
+    expect(blockAfter(css, '.data-table-sort {')).toContain('color: var(--color-slate);');
+    const hovered = '.data-table-column[data-allows-sorting]:is(:hover, [data-hovered])';
+    expect(blockAfter(blockAfter(css, HOVER), `${hovered} {`)).toContain('color: var(--color-ink);');
+    expect(outsideForcedColors(css).replace(blockAfter(css, HOVER), '')).not.toContain(':hover');
+  });
+
+  it('makes a row max(--size-target, --size-field) tall with a divider under each cell and no zebra', () => {
+    const css = rules();
+    expect(blockAfter(css, '.data-table-row {')).toContain('block-size: var(--data-table-row);');
+    expect(blockAfter(css, '.data-table-cell {')).toContain(
+      'border-block-end: 1px solid var(--color-divider);',
+    );
+    expect(css).not.toMatch(/nth-child\((?:odd|even|2n)/);
+  });
+
+  it('sets cells at the small step at 450, row headers at 500, and ellipsizes on one line', () => {
+    const css = rules();
+    const cell = blockAfter(css, '.data-table-cell {');
+    for (const declaration of [
+      'padding-inline: var(--data-table-pad);',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: var(--text-small--font-weight);',
+      'white-space: nowrap;',
+      'overflow: hidden;',
+      'text-overflow: ellipsis;',
+      'vertical-align: middle;',
+    ]) {
+      expect(cell, declaration).toContain(declaration);
+    }
+    expect(cell).toContain('--data-table-pad: var(--spacing-inset);');
+    expect(blockAfter(css, ".data-table-cell[role='rowheader'] {")).toContain('font-weight: 500;');
+    for (const [, weight] of css.matchAll(/font-weight: (\d+);/g)) {
+      expect(['400', '450', '500', '700']).toContain(weight);
+    }
+  });
+
+  it('sets end columns at the line end with tabular, unbroken, isolated left-to-right figures', () => {
+    const css = rules();
+    expect(
+      blockAfter(css, ".data-table-column[data-align='end'], .data-table-cell[data-align='end'] {"),
+    ).toContain('text-align: end;');
+    const figure = blockAfter(css, '.data-table-figure {');
+    for (const declaration of [
+      'font-variant-numeric: tabular-nums;',
+      'white-space: nowrap;',
+      'direction: ltr;',
+      'unicode-bidi: isolate;',
+    ]) {
+      expect(figure, declaration).toContain(declaration);
+    }
+  });
+
+  it('stretches the row link over its row, the row positioned and no cell positioned', () => {
+    const css = rules();
+    expect(blockAfter(css, '.data-table-row {')).toContain('position: relative;');
+    const after = blockAfter(css, '.data-table-link::after {');
+    expect(after).toContain("content: '';");
+    expect(after).toContain('position: absolute;');
+    expect(after).toContain('inset: 0;');
+    const link = blockAfter(css, '.data-table-link {');
+    expect(link).toContain('color: inherit;');
+    expect(link).toContain('text-decoration-line: none;');
+    // A positioned cell would become the link's containing block and clip it to one cell.
+    expect(blockAfter(css, '.data-table-cell {')).not.toContain('position');
+    expect(blockAfter(css, ".data-table-cell[role='rowheader'] {")).not.toContain('position');
+  });
+
+  it('raises a cell control above the link through the header token', () => {
+    const raised = blockAfter(
+      rules(),
+      ".data-table-cell :is(button, input, select, textarea, [role='button'], a:not(.data-table-link)), .data-table-cell .checkbox-field {",
+    );
+    expect(raised).toContain('position: relative;');
+    expect(raised).toContain('z-index: calc(var(--z-header) - 2);');
+  });
+
+  it('washes a row with a link or selection 5% ink over the fill, only where hover exists', () => {
+    const css = rules();
+    const hover = blockAfter(css, HOVER);
+    expect(
+      blockAfter(
+        hover,
+        '.data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled]) {',
+      ),
+    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));');
+    expect(outsideForcedColors(css).replace(hover, '')).not.toContain('color-mix');
+  });
+
+  it('rings a focused row, cell or header inside, in the focus ring token', () => {
+    const ring = blockAfter(
+      rules(),
+      '.data-table-row:is(:focus-visible, [data-focus-visible]), .data-table-cell:is(:focus-visible, [data-focus-visible]), .data-table-column:is(:focus-visible, [data-focus-visible]) {',
+    );
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+    expect(blockAfter(rules(), '.data-table-link:is(:focus-visible, [data-focus-visible]) {')).toContain(
+      'outline-offset: calc(-1 * var(--focus-ring-width));',
+    );
+  });
+
+  it('draws the current bar as a 3px ink inline-start border on the first cell, its padding 3px less, and its row header at 700', () => {
+    const css = outsideForcedColors(rules());
+    const bar = blockAfter(css, '.data-table-row[data-current] > :first-child {');
+    expect(bar).toContain('border-inline-start: 3px solid var(--color-ink);');
+    expect(bar).toContain('padding-inline-start: calc(var(--data-table-pad) - 3px);');
+    expect(blockAfter(css, ".data-table-row[data-current] > .data-table-cell[role='rowheader'] {")).toContain(
+      'font-weight: 700;',
+    );
+    // A border, not a ::before or a box-shadow (spec correction 13).
+    expect(css).not.toContain('[data-current] > :first-child::before');
+    expect(css).not.toMatch(/box-shadow: (?!none)/);
+  });
+
+  it('draws a disabled row taupe, not-allowed', () => {
+    const disabled = blockAfter(
+      outsideForcedColors(rules()),
+      ".data-table-row:is([data-disabled], [aria-disabled='true']) {",
+    );
+    expect(disabled).toContain('color: var(--color-taupe);');
+    expect(disabled).toContain('cursor: not-allowed;');
+    // Taupe is for that and nothing else.
+    const taupe = blocks().filter(([, body]) => body.includes('--color-taupe'));
+    expect(taupe.map(([selector]) => selector)).toEqual([
+      ".data-table-row:is([data-disabled], [aria-disabled='true'])",
+    ]);
+  });
+
+  it('rules the totals with the frame color at 700, with no divider under the last body row', () => {
+    const css = rules();
+    const totals = blockAfter(css, '.data-table-footer .data-table-cell {');
+    expect(totals).toContain('border-block-start: 1px solid var(--color-frame);');
+    expect(totals).toContain('border-block-end: 0;');
+    expect(totals).toContain('font-weight: 700;');
+    expect(
+      blockAfter(
+        css,
+        '.data-table-table:has(> .data-table-footer) .data-table-body > .data-table-row:last-child > .data-table-cell {',
+      ),
+    ).toContain('border-block-end: 0;');
+    // Not sticky: the totals end the list.
+    expect(totals).not.toContain('sticky');
+  });
+
+  it('lays out skeleton rows as flex rows a row tall', () => {
+    const css = rules();
+    expect(blockAfter(css, '.data-table-body[data-empty] > tr > td {')).toContain('padding: 0;');
+    const row = blockAfter(css, '.data-table-skeleton-row {');
+    for (const declaration of [
+      'display: flex;',
+      'align-items: center;',
+      'block-size: var(--data-table-row);',
+      'border-block-end: 1px solid var(--color-divider);',
+    ]) {
+      expect(row, declaration).toContain(declaration);
+    }
+    const cell = blockAfter(css, '.data-table-skeleton-cell {');
+    expect(cell).toContain('flex: 1 1 0;');
+    expect(cell).toContain('padding-inline: var(--spacing-inset);');
+    expect(blockAfter(css, ".data-table-skeleton-cell[data-align='end'] {")).toContain('text-align: end;');
+  });
+
+  it('hides the status and the loading words from sight, never from a screen reader', () => {
+    const hidden = blockAfter(rules(), '.data-table-status, .data-table-loading {');
+    for (const declaration of [
+      'position: absolute;',
+      'width: 1px;',
+      'height: 1px;',
+      'clip-path: inset(50%);',
+    ]) {
+      expect(hidden, declaration).toContain(declaration);
+    }
+    expect(rules()).not.toMatch(
+      /\.data-table-(?:status|loading)[^{]*\{[^}]*(?:display: none|visibility: hidden)/,
+    );
+  });
+
+  it('hides md columns under 48rem and sm columns under 40rem of the table box, by container query only', () => {
+    const css = rules();
+    expect(
+      blockAfter(
+        blockAfter(css, '@container data-table (width < 48rem)'),
+        ".data-table [data-hide-below='md'] {",
+      ),
+    ).toContain('display: none;');
+    expect(
+      blockAfter(
+        blockAfter(css, '@container data-table (width < 40rem)'),
+        ".data-table [data-hide-below='sm'] {",
+      ),
+    ).toContain('display: none;');
+    // Never by the viewport.
+    expect(css).not.toMatch(/@media \((?:min-|max-)?width/);
+    expect(css.match(/\[data-hide-below/g)).toHaveLength(2);
+  });
+
+  it('never uses signal orange, clay, error or success', () => {
+    const css = rules();
+    for (const token of [
+      '--color-signal',
+      '--color-clay',
+      '--color-error',
+      '--color-success',
+      '--color-gain',
+    ]) {
+      expect(css, token).not.toContain(token);
+    }
+  });
+
+  it('draws rules CanvasText, the current bar CanvasText, the ring Highlight and a disabled row GrayText in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.data-table-column, .data-table-cell, .data-table-skeleton-row {')).toContain(
+      'border-color: CanvasText;',
+    );
+    expect(blockAfter(forced, '.data-table-row[data-current] > :first-child {')).toContain(
+      'border-inline-start-color: CanvasText;',
+    );
+    expect(
+      blockAfter(
+        forced,
+        '.data-table-row:is(:focus-visible, [data-focus-visible]), .data-table-cell:is(:focus-visible, [data-focus-visible]), .data-table-column:is(:focus-visible, [data-focus-visible]) {',
+      ),
+    ).toContain('outline-color: Highlight;');
+    expect(blockAfter(forced, ".data-table-row:is([data-disabled], [aria-disabled='true']) {")).toContain(
+      'color: GrayText;',
+    );
+  });
+});
+
 describe('dist/styles.css', () => {
   const built = read('dist/styles.css');
 

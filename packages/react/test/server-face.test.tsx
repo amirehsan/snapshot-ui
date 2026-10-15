@@ -4,12 +4,14 @@ import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, inject, it } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
+import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { SearchField } from '../src/search-field';
+import { columnsWithTotal, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 
 /**
  * The server face (ruling 1): every date and number part writes one HTML, byte for byte, under en-US, de-DE and
@@ -27,6 +29,9 @@ const PRESETS = [
 ];
 
 const noop = (): void => undefined;
+
+/** Five of the household's transactions, the data table's rows. */
+const FIVE = TRANSACTIONS.slice(0, 5);
 
 /** Six categories, a list chip's options. */
 const CATEGORIES = ['Food', 'Rent', 'Salary', 'Transport', 'Utilities', 'Health'].map((name) => (
@@ -107,6 +112,20 @@ const FACES: [name: string, element: ReactElement][] = [
         <p>Two amounts</p>
       </FilterChip>
     </FilterBar>,
+  ],
+  [
+    // The rows, the row header's links, the current row, the sort marks and the totals; the status is empty.
+    'DataTable',
+    <DataTable
+      aria-label="Transactions"
+      items={FIVE}
+      columns={columnsWithTotal(FIVE)}
+      getKey={keyOf}
+      getRowHref={hrefOf}
+      currentKey="t2"
+      sortDescriptor={{ column: 'date', direction: 'descending' }}
+      onSortChange={noop}
+    />,
   ],
 ];
 

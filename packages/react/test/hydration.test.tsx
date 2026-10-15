@@ -4,12 +4,14 @@ import { hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
+import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { SearchField } from '../src/search-field';
+import { columnsWithTotal, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 
 /**
  * Each part's server HTML, hydrated in the browser on a mocked iPhone (plan, spec corrections 1 and 2). The HTML
@@ -144,6 +146,29 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
           (label) => label.textContent,
         ),
       ).toEqual(['Category', 'Amount', 'More']);
+    },
+  ],
+  [
+    'DataTable',
+    <DataTable
+      aria-label="Transactions"
+      items={TRANSACTIONS.slice(0, 5)}
+      columns={columnsWithTotal(TRANSACTIONS.slice(0, 5))}
+      getKey={keyOf}
+      getRowHref={hrefOf}
+      currentKey="t2"
+      sortDescriptor={{ column: 'date', direction: 'descending' }}
+      onSortChange={noop}
+    />,
+    (container) => {
+      expect(container.querySelector('[data-current] .data-table-link')).toHaveAttribute(
+        'aria-current',
+        'true',
+      );
+      const date = container.querySelector('[role="columnheader"][aria-sort="descending"]');
+      expect(date).toHaveTextContent('Date');
+      expect(date?.querySelector('.data-table-sort .lucide-arrow-down')).not.toBeNull();
+      expect(container.querySelector('tfoot [role="rowheader"]')).toHaveTextContent('Total');
     },
   ],
 ];

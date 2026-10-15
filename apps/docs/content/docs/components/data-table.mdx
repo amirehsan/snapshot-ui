@@ -1,0 +1,116 @@
+---
+title: Data table
+description: 'Rows of data with sorting, links to a detail, a sticky header, columns of figures, totals, and loading and empty states.'
+icon: Table
+---
+
+<Section>
+
+## Basic
+
+Pass the rows as `items`, the columns as definitions and a key for each row. Each column says how its cell reads: a string or any node. With `getRowHref`, a press anywhere on a row opens its detail through your router, as a real link in the row header's cell, so a middle click or a modifier click opens a new tab and the link's menu is the browser's. A sortable header is a button: `sortDescriptor` and `onSortChange` are controlled, ascending first and then descending, with no unsorted state. `currentKey` marks the row whose detail is open.
+
+<Preview name="data-table-basic" />
+
+</Section>
+
+<Section>
+
+## Figures and totals
+
+A column with `align: 'end'` sets figures: tabular digits, never broken, at the line's end in either direction, so a column of amounts lines up at its last digit. Your strings carry the sign, the currency and the unit. A column's `total` adds one totals row under the rows, its header cell saying "Total". In a card, set `--data-table-surface` to the card's fill so the sticky header matches it.
+
+<Preview name="data-table-figures" />
+
+</Section>
+
+<Section>
+
+## Columns that leave
+
+The table never scrolls sideways. A column with `hideBelow: 'md'` leaves when the table's own box is narrower than 48rem, and one with `hideBelow: 'sm'` when it is narrower than 40rem. They are widths of the table's box, not of the screen, so a table beside an open panel drops its columns too. Cells keep to one line and end in an ellipsis; the full text is still the row's name. The row header never leaves.
+
+<Preview name="data-table-columns" />
+
+</Section>
+
+<Section>
+
+## Empty and loading
+
+`emptyState` takes an `EmptyState`, drawn across every column when there are no rows. While `isLoading` and there are no rows yet, the table draws skeleton rows in its own shape and says "Loading" once, after a short pause, in a status of its own. While it loads with rows already shown, such as the next page, it keeps them and only marks itself busy.
+
+<Preview name="data-table-states" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+Render DataTable from a client component: its columns, keys and links are functions, which a server component cannot pass. Load the rows in a server page and pass them as data; a node a server rendered can reach a cell as a field of its row. Wrap the app in a `RouterProvider` once, so the row links go through your router. Set `--page-sticky-top` to your header's height on an ancestor, once for every sticky part of the page, so the table's header sticks under yours. Every string in the table is yours: the library formats no date, amount or count.
+
+```tsx
+'use client';
+
+import { DataTable, EmptyState, type DataTableColumn } from '@snapshot-ui/react';
+
+const columns: DataTableColumn<Transaction>[] = [
+  { id: 'date', header: 'Date', cell: (row) => row.dateLabel, allowsSorting: true, width: '7rem' },
+  { id: 'payee', header: 'Payee', cell: (row) => row.payee, isRowHeader: true },
+  { id: 'category', header: 'Category', cell: (row) => row.category, hideBelow: 'md' },
+  { id: 'amount', header: 'Amount', cell: (row) => row.amountLabel, align: 'end', total: '-$1,284.50' },
+];
+
+export function Transactions({ rows, sort, openId }: TransactionsProps) {
+  return (
+    <DataTable
+      aria-label="Transactions"
+      items={rows}
+      columns={columns}
+      getKey={(row) => row.id}
+      getRowHref={(row) => `?open=${row.id}`}
+      currentKey={openId}
+      sortDescriptor={sort}
+      onSortChange={(next) => writeSortToUrl(next)}
+      emptyState={<EmptyState title="No transactions this month" />}
+    />
+  );
+}
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+The root also takes `ref`, and `className` is merged after its own class. A name is required: `aria-label`, or `aria-labelledby` with the id of a visible heading.
+
+<PropsTable label="DataTable props" path="../../packages/react/src/data-table/DataTable.tsx" type="Pick<DataTableBaseProps<object>, 'items' | 'columns' | 'getKey' | 'getRowHref' | 'currentKey' | 'sortDescriptor' | 'onSortChange' | 'disabledKeys' | 'isLoading' | 'loadingRowCount' | 'emptyState' | 'labels' | 'className'>" />
+
+<PropsTable label="DataTableColumn" path="../../packages/react/src/data-table/DataTable.tsx" type="DataTableColumn<object>" />
+
+<PropsTable label="DataTableLabels" path="../../packages/react/src/data-table/DataTable.tsx" type="DataTableLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The table is a `grid` named by your `aria-label` or heading. Each header is a `columnheader`, with `aria-sort` on the sortable ones; the row header's cell is a `rowheader`, so a screen reader names each row by it. The current row's link is `aria-current`, and the row draws a bar and a bolder name, so the state is never color alone. React Aria announces a sort in its own words. While loading, the table is busy and a polite status outside it says "Loading" once; the skeletons are hidden from assistive technology. The table is one tab stop, and the arrows move inside it.
+
+<Keys rows={[['Down Up', 'Move to the next or previous row; from the first row, Up reaches the headers.'], ['Right Left', 'Into and between the cells of a row, skipping a column that has left, and back to the row.'], ['Home End', 'The first or last row; in a cell, the row first or last cell.'], ['PageUp PageDown', 'The first or last row, since the page itself scrolls.'], ['Enter Space', 'On a sortable header, sorts.'], ['Tab', 'Into and out of the table, one stop.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps data tables in the system.
+
+<Rules dos={['Make the payee or the name the row header, the column a reader looks a row up by.', 'Put figures at the end, with their sign and currency in the string.', 'Add a totals row only for figures that add up.', 'Give the empty body an EmptyState that says what is missing and what to do.']} donts={['Never let the table scroll sideways. Let columns leave instead.', 'Never stripe the rows. A hairline between them is enough.', 'Never mark a row by color alone.', 'Never draw a spinner in place of the rows. Skeleton rows keep the shape.']} />
+
+</Section>

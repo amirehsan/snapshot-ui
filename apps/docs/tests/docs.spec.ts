@@ -2903,3 +2903,94 @@ test('the installation page installs the charts package and names the core versi
     '/docs/charts/sparkline',
   );
 });
+
+test('a data table header sorts on a press, writing aria-sort', async ({ page }) => {
+  await visit(page, '/docs/components/data-table');
+  const table = page.locator('.stage').first().getByRole('grid', { name: 'Transactions' });
+  const amount = table.getByRole('columnheader', { name: 'Amount' });
+  const date = table.getByRole('columnheader', { name: 'Date' });
+  await expect(date).toHaveAttribute('aria-sort', 'descending');
+  await expect(amount).toHaveAttribute('aria-sort', 'none');
+  await amount.click();
+  await expect(amount).toHaveAttribute('aria-sort', 'ascending');
+  await expect(date).toHaveAttribute('aria-sort', 'none');
+  await expect(table.locator('tbody [role="rowheader"]').first()).toHaveText('Northside Rent');
+  await amount.click();
+  await expect(amount).toHaveAttribute('aria-sort', 'descending');
+  await expect(table.locator('tbody [role="rowheader"]').first()).toHaveText('Acme Payroll');
+});
+
+test('a press anywhere on a data table row opens its link, and a middle click opens a new tab', async ({
+  page,
+  context,
+}) => {
+  await visit(page, '/docs/components/data-table');
+  const table = page.locator('.stage').first().getByRole('grid', { name: 'Transactions' });
+  /** The middle of a row's amount cell, brought to the middle of the window, as a pointer finds it. */
+  const amountOf = async (payee: string): Promise<{ x: number; y: number }> => {
+    const cell = table
+      .locator('tbody [role="row"]')
+      .filter({ hasText: payee })
+      .locator('[role="gridcell"]')
+      .last();
+    await cell.evaluate((element) => {
+      element.scrollIntoView({ block: 'center' });
+    });
+    const box = await cell.boundingBox();
+    if (!box) throw new Error(`No amount for ${payee}`);
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const corner = await amountOf('Corner Mart');
+  // The stretched link is what the browser finds under the amount cell.
+  const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.textContent, corner);
+  expect(hit).toBe('Corner Mart');
+  await page.mouse.click(corner.x, corner.y);
+  await expect(page).toHaveURL(/#t1$/);
+  const row = table.locator('tbody [role="row"]').filter({ hasText: 'Corner Mart' });
+  await expect(row).toHaveAttribute('data-current', '');
+  await expect(row.getByRole('link', { name: 'Corner Mart' })).toHaveAttribute('aria-current', 'true');
+  // A middle click is the browser's own: a new tab with the row's address.
+  const transit = await amountOf('City Transit');
+  const opened = context.waitForEvent('page');
+  await page.mouse.click(transit.x, transit.y, { button: 'middle' });
+  const tab = await opened;
+  await tab.waitForURL(/#t2$/);
+  await tab.close();
+});
+
+test('a data table drops its md column under 48rem of its box and its sm column under 40rem', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const box = page.getByTestId('data-table-box');
+  const shown = (): Promise<string[]> =>
+    box
+      .locator('[role="columnheader"]')
+      .evaluateAll((cells) =>
+        cells.filter((cell) => getComputedStyle(cell).display !== 'none').map((cell) => cell.textContent),
+      );
+  // The widths are the table's own box, not the window's: the stage is narrower than the page, so the box is
+  // set wider than it here, as a table in a wide content column would be.
+  const setWidth = (width: string): Promise<void> =>
+    box.evaluate((element, value) => {
+      (element as HTMLElement).style.width = value;
+    }, width);
+  await setWidth('60rem');
+  await expect.poll(shown).toEqual(['Date', 'Payee', 'Category', 'Account', 'Amount']);
+  await setWidth('47.5rem');
+  await expect.poll(shown).toEqual(['Date', 'Payee', 'Account', 'Amount']);
+  await setWidth('40rem');
+  await expect.poll(shown).toEqual(['Date', 'Payee', 'Account', 'Amount']);
+  await setWidth('39.5rem');
+  await expect.poll(shown).toEqual(['Date', 'Payee', 'Amount']);
+  // The example's own control narrows the box the same way, within the stage.
+  await setWidth('');
+  const widths = page.getByRole('radiogroup', { name: "Width of the table's box" });
+  await widths.getByRole('radio', { name: 'Full' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(widths.getByRole('radio', { name: '38rem' })).toBeChecked();
+  await expect.poll(shown).toEqual(['Date', 'Payee', 'Amount']);
+  expect(await sideways(page)).toBe(0);
+});

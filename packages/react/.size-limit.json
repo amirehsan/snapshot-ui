@@ -343,6 +343,13 @@
     "limit": "1 kB"
   },
   {
+    "name": "import { DataTable } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ DataTable }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "3.5 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

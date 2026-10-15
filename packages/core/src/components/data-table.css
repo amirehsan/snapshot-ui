@@ -4,7 +4,10 @@
  * in a card). A row is max(--size-target, --size-field) tall, ruled by the divider and never striped. The row
  * header's link is stretched over its row by ::after, the row being its containing block, so a press anywhere
  * on the row opens it; what a cell holds that takes its own press sits above the link and under the header.
- * The header cells stick at --page-sticky-top, one layer under the page's header.
+ * Hover is the 5% ink wash where hover exists, focus the inset ring, the current row a 3px ink border at its
+ * first cell's inline start and its row header at 700. The header cells stick at --page-sticky-top, one layer
+ * under the page's header. A column with data-hide-below leaves by a container query on the table's own box,
+ * 48rem for md and 40rem for sm, widths and not breakpoint tokens.
  */
 @layer components {
   .data-table {
@@ -53,6 +56,46 @@
     outline: none;
   }
 
+  /* The whole cell is the sort button, hit at its full 40px. */
+  .data-table-column[data-allows-sorting] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Ink while sorted: slate on the 5% wash measures 4.38 over canvas, so a header never sits in slate on it. */
+  .data-table-column:is([data-sort-direction], [aria-sort='ascending'], [aria-sort='descending']) {
+    color: var(--color-ink);
+  }
+
+  .data-table-column-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    max-inline-size: 100%;
+    vertical-align: middle;
+  }
+
+  .data-table-column-label {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .data-table-sort {
+    display: inline-flex;
+    flex: none;
+    color: var(--color-slate);
+  }
+
+  .data-table-column[data-sort-direction] .data-table-sort {
+    color: inherit;
+  }
+
+  .data-table-sort svg {
+    width: 16px;
+    height: 16px;
+  }
+
   /* ---- Rows and cells -------------------------------------------------------------------------- */
   .data-table-row {
     position: relative;
@@ -86,6 +129,19 @@
     font-weight: 500;
   }
 
+  .data-table-column[data-align='end'],
+  .data-table-cell[data-align='end'] {
+    text-align: end;
+  }
+
+  /* The numeral rule of copy.css: tabular, unbroken and an isolated left-to-right run. */
+  .data-table-figure {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
   /* The row's link: the row header's ink and no underline, one class after link.css. Its ::after covers the row,
      whose position: relative makes it the containing block; a cell is never positioned, so none clips it. */
   .data-table-link {
@@ -116,5 +172,118 @@
   .data-table-column:is(:focus-visible, [data-focus-visible]) {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
+  @media (hover: hover) {
+    .data-table-column[data-allows-sorting]:is(:hover, [data-hovered]) {
+      color: var(--color-ink);
+    }
+
+    .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
+    }
+  }
+
+  /* The current row: a 3px ink border at its first cell's inline start, its padding 3px less so nothing moves. */
+  .data-table-row[data-current] > :first-child {
+    padding-inline-start: calc(var(--data-table-pad) - 3px);
+    border-inline-start: 3px solid var(--color-ink);
+  }
+
+  .data-table-row[data-current] > .data-table-cell[role='rowheader'] {
+    font-weight: 700;
+  }
+
+  .data-table-row:is([data-disabled], [aria-disabled='true']) {
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  /* ---- Totals ---------------------------------------------------------------------------------- */
+  .data-table-footer .data-table-cell {
+    border-block-start: 1px solid var(--color-frame);
+    border-block-end: 0;
+    font-weight: 700;
+  }
+
+  .data-table-table:has(> .data-table-footer)
+    .data-table-body
+    > .data-table-row:last-child
+    > .data-table-cell {
+    border-block-end: 0;
+  }
+
+  /* ---- The empty and loading bodies: React Aria's one row with one cell spanning every column ----- */
+  .data-table-body[data-empty] > tr > td {
+    padding: 0;
+  }
+
+  .data-table-skeleton-row {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    block-size: var(--data-table-row);
+    border-block-end: 1px solid var(--color-divider);
+  }
+
+  .data-table-skeleton-cell {
+    box-sizing: border-box;
+    flex: 1 1 0;
+    min-inline-size: 0;
+    padding-inline: var(--spacing-inset);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    text-align: start;
+  }
+
+  .data-table-skeleton-cell[data-align='end'] {
+    text-align: end;
+  }
+
+  /* The status, outside the busy grid, and the loading words in React Aria's empty cell: read, never seen. */
+  .data-table-status,
+  .data-table-loading {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* ---- Columns that leave, by the table's own box ----------------------------------------------- */
+  @container data-table (width < 48rem) {
+    .data-table [data-hide-below='md'] {
+      display: none;
+    }
+  }
+
+  @container data-table (width < 40rem) {
+    .data-table [data-hide-below='sm'] {
+      display: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .data-table-column,
+    .data-table-cell,
+    .data-table-skeleton-row {
+      border-color: CanvasText;
+    }
+
+    .data-table-row[data-current] > :first-child {
+      border-inline-start-color: CanvasText;
+    }
+
+    .data-table-row:is(:focus-visible, [data-focus-visible]),
+    .data-table-cell:is(:focus-visible, [data-focus-visible]),
+    .data-table-column:is(:focus-visible, [data-focus-visible]) {
+      outline-color: Highlight;
+    }
+
+    .data-table-row:is([data-disabled], [aria-disabled='true']) {
+      color: GrayText;
+    }
   }
 }

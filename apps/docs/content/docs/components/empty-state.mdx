@@ -26,6 +26,14 @@ An empty state is a card's empty body, or a table's. Set `headingLevel` to the s
 
 <Section>
 
+## In a data table
+
+[Data table](/docs/components/data-table)'s `emptyState` takes one, drawn across every column of its empty body. Its title says what the table is missing, such as "No transactions this month", and its action is the one that brings rows back, such as clearing the filters.
+
+</Section>
+
+<Section>
+
 ## Usage
 
 Empty state is static. It renders in a server component and ships no client JavaScript. Pass a Lucide icon element, which the empty state draws at 24px in slate and hides from assistive technology. Give it one action at most, such as a `Button` that clears the filters or imports the first rows.
