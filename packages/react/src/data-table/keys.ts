@@ -2,13 +2,22 @@ import type { KeyboardEvent } from 'react';
 
 /*
  * DataTable's capture-phase key handler, on its root, so it runs before React Aria's handlers on the grid, its
- * rows and its cells (spec 7.2, ruling 3). This task's part is the hidden-cell arrows: React Aria's keyboard
- * delegate walks the collection, not the DOM, so an arrow would land on a cell the container query hid (spec
- * correction 8). Every DOM read is here, at key time, never at render.
+ * rows and its cells (spec 7.2, ruling 3). This task's part is the hidden-cell keys: React Aria's keyboard
+ * delegate walks the collection, not the DOM, so a key would land its focused key, and the grid's one tab stop,
+ * on a cell or a column header the container query hid (spec correction 8). The handler works out the cell
+ * React Aria would reach, as `TableKeyboardDelegate` does, and only when that cell has left does it take the key
+ * and focus the nearest shown one, whose focus event sets React Aria's focused key. Every DOM read is here, at
+ * key time, never at render.
  */
 
-const CELL = '[role="gridcell"], [role="rowheader"]';
+const CELL = '[role="gridcell"], [role="rowheader"], [role="columnheader"]';
+const ROW_CELLS = ':scope > [role="gridcell"], :scope > [role="rowheader"], :scope > [role="columnheader"]';
 const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+/** What the handler needs from DataTable: the locale's direction, which React Aria's delegate reads too. */
+export interface TableKeyOptions {
+  direction: 'ltr' | 'rtl';
+}
 
 /** A cell that has left stays in its row at zero width and hidden, so it is shown only while visible. */
 const isShown = (cell: Element): boolean => {
@@ -16,13 +25,27 @@ const isShown = (cell: Element): boolean => {
   return style.display !== 'none' && style.visibility !== 'hidden';
 };
 
-const cellsOf = (row: Element): HTMLElement[] => [
-  ...row.querySelectorAll<HTMLElement>(':scope > [role="gridcell"], :scope > [role="rowheader"]'),
-];
+const isRow = (element: Element): boolean => element.getAttribute('role') === 'row';
+const isHeader = (element: Element): boolean => element.getAttribute('role') === 'columnheader';
+
+const cellsOf = (row: Element): HTMLElement[] => [...row.querySelectorAll<HTMLElement>(ROW_CELLS)];
+
+const rowOf = (from: Element): Element | null => (isRow(from) ? from : from.closest('[role="row"]'));
+
+/**
+ * React Aria's platform test (`utils/platform.mjs`): on a Mac its grid moves with Alt where elsewhere it moves
+ * with Ctrl, and only off a Mac does Ctrl take Home and End to the grid's corners. Read at key time only.
+ */
+function isMac(): boolean {
+  const { navigator } = globalThis;
+  const reported = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
+    ?.platform;
+  return /^Mac/i.test(reported === undefined || reported === '' ? navigator.platform : reported);
+}
 
 /** The nearest shown cell from `from` in DOM order (1 next, -1 previous), or the row's first or last shown one. */
 export function nextVisibleCell(from: Element, step: 1 | -1 | 'first' | 'last'): HTMLElement | null {
-  const row = from.getAttribute('role') === 'row' ? from : from.closest('[role="row"]');
+  const row = rowOf(from);
   if (row === null) return null;
   const cells = cellsOf(row);
   const shown = cells.filter(isShown);
@@ -43,48 +66,113 @@ function hasFocusableBeyond(cell: Element, active: Element, step: 1 | -1): boole
   return index !== -1 && inside[index + step] !== undefined;
 }
 
-/** The cell or row an arrow starts from: the focused cell, the cell holding focus, or the focused row. */
+/** The cell or row a key starts from: the focused cell or header, the cell holding focus, or the focused row. */
 function startOf(active: Element, root: Element): Element | null {
   if (!root.contains(active)) return null;
-  if (active.getAttribute('role') === 'row') return active;
+  if (isRow(active)) return active;
   return active.closest(CELL);
 }
 
+/** The rows React Aria's keys reach, in order: its rows take a tabindex, the header row and a disabled row none. */
+const reachableRows = (grid: Element): Element[] => [...grid.querySelectorAll('[role="row"][tabindex]')];
+
+/** The header row: the row of column headers. */
+const headerRowOf = (grid: Element): Element | undefined =>
+  [...grid.querySelectorAll('[role="row"]')].find((row) =>
+    row.querySelector(':scope > [role="columnheader"]'),
+  );
+
+/** The first shown header from `cells[index]` on in `step`'s direction, wrapping around as React Aria does. */
+function wrapToShown(cells: readonly HTMLElement[], index: number, step: 1 | -1): HTMLElement | null {
+  for (let count = 0; count < cells.length; count += 1) {
+    const cell = cells[(((index + count * step) % cells.length) + cells.length) % cells.length];
+    if (cell !== undefined && isShown(cell)) return cell;
+  }
+  return null;
+}
+
+/** Arrow Left or Right: React Aria's next cell or header in `step`'s DOM direction, and where to go instead. */
+function sideways(from: Element, row: Element, active: Element, step: 1 | -1): HTMLElement | null {
+  const cells = cellsOf(row);
+  if (from === row) {
+    // From a row React Aria enters its first cell in reading order.
+    const reached = step === 1 ? cells[0] : cells.at(-1);
+    if (reached === undefined || isShown(reached)) return null;
+    return nextVisibleCell(row, step);
+  }
+  if (hasFocusableBeyond(from, active, step)) return null;
+  const index = cells.indexOf(from as HTMLElement);
+  if (isHeader(from)) {
+    // In the header row React Aria wraps from the last header to the first and back.
+    const next = (((index + step) % cells.length) + cells.length) % cells.length;
+    const reached = cells[next];
+    if (reached === undefined || isShown(reached)) return null;
+    return wrapToShown(cells, next, step);
+  }
+  const reached = cells[index + step];
+  // Past the last cell React Aria returns to the row, which is shown.
+  if (reached === undefined || isShown(reached)) return null;
+  // Past the last shown cell the handler returns to the row, as React Aria does past the last cell.
+  return nextVisibleCell(from, step) ?? (row as HTMLElement);
+}
+
+/** Home or End: the row's first or last cell, or with `corner` the first row's first or last row's last. */
+function toEnd(from: Element, row: Element, home: boolean, corner: boolean): HTMLElement | null {
+  // From a row React Aria moves between rows, with Ctrl or without.
+  if (from === row) return null;
+  let target: Element | undefined = row;
+  if (corner) {
+    const grid = row.closest('[role="grid"]');
+    const rows = grid === null ? [] : reachableRows(grid);
+    target = home ? rows[0] : rows.at(-1);
+  }
+  if (target === undefined) return null;
+  const cells = cellsOf(target);
+  const reached = home ? cells[0] : cells.at(-1);
+  if (reached === undefined || isShown(reached)) return null;
+  return nextVisibleCell(reached, home ? 'first' : 'last');
+}
+
+/** Arrow Up from the first row: React Aria goes to the first column's header, which may have left. */
+function upToHeader(from: Element, row: Element): HTMLElement | null {
+  // From a cell React Aria goes to its own column's header, which is shown while the cell is.
+  if (from !== row) return null;
+  const grid = row.closest('[role="grid"]');
+  if (grid === null || reachableRows(grid)[0] !== row) return null;
+  const header = headerRowOf(grid);
+  const reached = header === undefined ? undefined : cellsOf(header)[0];
+  if (reached === undefined || isShown(reached)) return null;
+  return nextVisibleCell(reached, 'first');
+}
+
 /**
- * Moves an arrow, Home or End past a cell the CSS hid: when the cell React Aria would reach has left,
- * the key stops here and focus goes to the nearest shown cell in that direction, whose focus event sets React
- * Aria's focused key. Every other key passes through. Arrow Right is the next cell in DOM order on a
- * left-to-right row and the previous on a right-to-left one.
+ * Moves an arrow, Home or End past a cell or a column header the CSS hid: when the one React Aria would reach
+ * has left, the key stops here and focus goes to the nearest shown one in that direction, whose focus event sets
+ * React Aria's focused key. Every other key passes through. It takes the keys with the modifiers React Aria's
+ * grid moves with (`useSelectableCollection.mjs`): none, Shift, and Ctrl off a Mac or Alt on one, with Ctrl
+ * taking Home and End to the grid's corners off a Mac. Arrow Right is the next cell in DOM order in a
+ * left-to-right locale and the previous in a right-to-left one, as React Aria reads it from the locale.
  */
-export function handleTableKey(event: KeyboardEvent<HTMLElement>): void {
-  if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.nativeEvent.isComposing)
-    return;
+export function handleTableKey(event: KeyboardEvent<HTMLElement>, { direction }: TableKeyOptions): void {
   const { key } = event;
-  if (key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'Home' && key !== 'End') return;
+  if (key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'ArrowUp' && key !== 'Home' && key !== 'End')
+    return;
+  if (event.metaKey || event.nativeEvent.isComposing) return;
+  const mac = isMac();
+  if (mac ? event.ctrlKey : event.altKey) return;
   const active = event.currentTarget.ownerDocument.activeElement;
   if (active === null) return;
   const from = startOf(active, event.currentTarget);
   if (from === null) return;
-  const row = from.getAttribute('role') === 'row' ? from : from.closest('[role="row"]');
+  const row = rowOf(from);
   if (row === null) return;
-  const cells = cellsOf(row);
-  if (cells.length === 0) return;
   let target: HTMLElement | null;
   if (key === 'Home' || key === 'End') {
-    // From a row React Aria moves between rows; from a cell, to the row's first or last cell.
-    if (from === row) return;
-    const reached = key === 'Home' ? cells[0] : cells.at(-1);
-    if (reached === undefined || isShown(reached)) return;
-    target = nextVisibleCell(from, key === 'Home' ? 'first' : 'last');
+    target = toEnd(from, row, key === 'Home', !mac && event.ctrlKey);
+  } else if (key === 'ArrowUp') {
+    target = upToHeader(from, row);
   } else {
-    const rtl = getComputedStyle(row).direction === 'rtl';
-    const step = (key === 'ArrowRight') !== rtl ? 1 : -1;
-    if (from !== row && hasFocusableBeyond(from, active, step)) return;
-    const start = from === row ? (step === 1 ? -1 : cells.length) : cells.indexOf(from as HTMLElement);
-    const reached = cells[start + step];
-    if (reached === undefined || isShown(reached)) return;
-    // Past the last shown cell React Aria returns to the row, as it does past the last cell.
-    target = nextVisibleCell(from, step) ?? (from === row ? null : (row as HTMLElement));
+    target = sideways(from, row, active, (key === 'ArrowRight') === (direction === 'ltr') ? 1 : -1);
   }
   if (target === null) return;
   event.preventDefault();

@@ -10,7 +10,7 @@ icon: Table
 
 Pass the rows as `items`, the columns as definitions and a key for each row. Each column says how its cell reads: a string or any node. With `getRowHref`, a press anywhere on a row opens its detail through your router, as a real link in the row header's cell, so a middle click or a modifier click opens a new tab and the link's menu is the browser's. A sortable header is a button: `sortDescriptor` and `onSortChange` are controlled, ascending first and then descending, with no unsorted state. `currentKey` marks the row whose detail is open.
 
-<Preview name="data-table-basic" />
+<Preview name="data-table-basic" wide />
 
 </Section>
 
@@ -20,7 +20,7 @@ Pass the rows as `items`, the columns as definitions and a key for each row. Eac
 
 A column with `align: 'end'` sets figures: tabular digits, never broken, at the line's end in either direction, so a column of amounts lines up at its last digit. Your strings carry the sign, the currency and the unit. A column's `total` adds one totals row under the rows, its header cell saying "Total". In a card, set `--data-table-surface` to the card's fill so the sticky header matches it.
 
-<Preview name="data-table-figures" />
+<Preview name="data-table-figures" wide />
 
 </Section>
 
@@ -30,7 +30,7 @@ A column with `align: 'end'` sets figures: tabular digits, never broken, at the 
 
 The table never scrolls sideways. A column with `hideBelow: 'md'` leaves when the table's own box is narrower than 48rem, and one with `hideBelow: 'sm'` when it is narrower than 40rem. They are widths of the table's box, not of the screen, so a table beside an open panel drops its columns too. Cells keep to one line and end in an ellipsis; the full text is still the row's name. The row header never leaves.
 
-<Preview name="data-table-columns" />
+<Preview name="data-table-columns" wide />
 
 </Section>
 
@@ -40,7 +40,7 @@ The table never scrolls sideways. A column with `hideBelow: 'md'` leaves when th
 
 `emptyState` takes an `EmptyState`, drawn across every column when there are no rows. While `isLoading` and there are no rows yet, the table draws skeleton rows in its own shape and says "Loading" once, after a short pause, in a status of its own. While it loads with rows already shown, such as the next page, it keeps them and only marks itself busy.
 
-<Preview name="data-table-states" />
+<Preview name="data-table-states" wide />
 
 </Section>
 
@@ -48,7 +48,7 @@ The table never scrolls sideways. A column with `hideBelow: 'md'` leaves when th
 
 ## Usage
 
-Render DataTable from a client component: its columns, keys and links are functions, which a server component cannot pass. Load the rows in a server page and pass them as data; a node a server rendered can reach a cell as a field of its row. Wrap the app in a `RouterProvider` once, so the row links go through your router. Set `--page-sticky-top` to your header's height on an ancestor, once for every sticky part of the page, so the table's header sticks under yours. Every string in the table is yours: the library formats no date, amount or count.
+Render DataTable from a client component: its columns, keys and links are functions, which a server component cannot pass. Load the rows in a server page and pass them as data; a node a server rendered can reach a cell as a field of its row. Wrap the app in a `RouterProvider` once, so the row links go through your router. `currentKey` is compared with each row's key by strict equality, so a key read from the URL, which is a string, never matches a numeric key: convert it first, as `Number(params.get('open'))`. The row's link is stretched over the whole row, so text in a row cannot be selected by dragging across it; put text a reader copies in the detail the row opens. A control in a cell takes its own press above the row's link: a button, a link, an input, a label, a field, anything with a control role such as `checkbox`, `switch` or `menuitem`, and anything in the tab order. Give anything else that takes a press the class `data-table-control`. Set `--page-sticky-top` to your header's height on an ancestor, once for every sticky part of the page, so the table's header sticks under yours. Every string in the table is yours: the library formats no date, amount or count.
 
 ```tsx
 'use client';
@@ -101,7 +101,7 @@ The root also takes `ref`, and `className` is merged after its own class. A name
 
 The table is a `grid` named by your `aria-label` or heading. Each header is a `columnheader`, with `aria-sort` on the sortable ones; the row header's cell is a `rowheader`, so a screen reader names each row by it. The current row's link is `aria-current`, and the row draws a bar and a bolder name, so the state is never color alone. React Aria announces a sort in its own words. While loading, the table is busy and a polite status outside it says "Loading" once; the skeletons are hidden from assistive technology. The table is one tab stop, and the arrows move inside it.
 
-<Keys rows={[['Down Up', 'Move to the next or previous row; from the first row, Up reaches the headers.'], ['Right Left', 'Into and between the cells of a row, skipping a column that has left, and back to the row.'], ['Home End', 'The first or last row; in a cell, the row first or last cell.'], ['PageUp PageDown', 'The first or last row, since the page itself scrolls.'], ['Enter Space', 'On a sortable header, sorts.'], ['Tab', 'Into and out of the table, one stop.']]} />
+<Keys rows={[['Down Up', 'Move to the next or previous row; from the first row, Up reaches the headers.'], ['Right Left', 'Into and between the cells of a row, skipping a column that has left, and back to the row; in the header row, between the headers, wrapping around.'], ['Home End', "The first or last row; in a cell or a header, the row's first or last one that has not left. With Ctrl, from a cell, the table's first or last cell."], ['PageUp PageDown', 'The first or last row, since the page itself scrolls.'], ['Enter Space', 'On a sortable header, sorts.'], ['Tab', 'Into and out of the table, one stop.']]} />
 
 </Section>
 

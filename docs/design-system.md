@@ -7768,11 +7768,17 @@ sees the press as the row's: the link's own press stops there, and its
 pointer down is a child's interaction the row ignores.
 
 **Controls above the link** (spec correction 14). A button, an input, a
-select, a text area, a `role="button"`, a link other than the row's and a
-checkbox field in a cell are `position: relative` at
-`calc(var(--z-header) - 2)`: above the stretched link, so they take their
-own press, and under the sticky header cells at one less than the
-header's layer, so they scroll under it.
+label, a select, a text area, a `summary`, a link other than the row's,
+anything with the role `button`, `checkbox`, `combobox`, `menuitem`,
+`radio`, `slider` or `switch`, anything in the tab order, a field, a
+checkbox field and anything with the opt-in class `data-table-control`
+in a cell are `position: relative` at `calc(var(--z-header) - 2)`: above
+the stretched link, so they take their own press, and under the sticky
+header cells at one less than the header's layer, so they scroll under
+it. The row's own link is never raised, since a position would hold its
+`::after` to its own box (the `CellControlsRaised` play, in three
+engines). The stretched link also means text in a row is not selected by
+a drag.
 
 **The spike, in three engines.** Before the table was built, React
 Aria's own Table wearing these classes, with the library's Checkbox,
@@ -7835,9 +7841,12 @@ announced, as Skeleton's record says. It says `labels.loading`
 shorter than that says nothing.
 
 **The current row** (spec correction 2). The row takes `data-current`
-and its link `aria-current="true"`; the first cell draws a 3px ink
+and its link `aria-current="true"`; the first shown cell draws a 3px ink
 `border-inline-start`, its padding 3px less so nothing moves, at the
-right on a right-to-left page; the row header is 700.
+right on a right-to-left page; the row header is 700. The rule is
+written in `:where()`, under a leaving cell's, so a first column that has
+left draws no bar, and each container width draws it on the first cell
+that has not left (the `CurrentBarPastHidden` play, in three engines).
 
 **Columns that leave** (ruling 6, spec correction 15). `hideBelow: 'md'`
 leaves under 48rem of the table's box and `'sm'` under 40rem, by
@@ -7857,10 +7866,15 @@ and drop a column that left, lines up under the header. The row header
 never leaves. React Aria's keyboard delegate walks its collection, not
 the DOM, so an arrow could land on a hidden cell (spec correction 8):
 DataTable's capture handler reads the computed visibility at key time
-and, where React Aria would reach a hidden cell with Arrow
-Right, Arrow Left, Home or End, focuses the nearest shown one instead,
-whose focus sets React Aria's focused key. Arrow Right is the next cell
-on a left-to-right row and the previous on a right-to-left one.
+and, where React Aria would reach a hidden cell or column header with
+Arrow Right or Arrow Left (wrapping around the header row, as React Aria
+does), Home or End, Ctrl+Home or Ctrl+End, or Arrow Up from the first
+row into the first column's header, focuses the nearest shown one
+instead, whose focus sets React Aria's focused key and its one tab stop.
+It takes these keys with the modifiers React Aria's grid moves with:
+none, Shift, and Ctrl off a Mac or Alt on one. Arrow Right is the next
+cell in a left-to-right locale and the previous in a right-to-left one,
+read from the locale as React Aria reads it, not from the CSS.
 
 **Hover and disabled.** The 5% wash is drawn on a row with a link (and,
 once selection is on, on every selectable row) under `:hover` or React

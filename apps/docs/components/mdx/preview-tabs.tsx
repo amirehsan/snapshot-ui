@@ -5,9 +5,18 @@ import type { ReactElement, ReactNode } from 'react';
 
 /**
  * Preview and Code as the library's own Tabs, so a docs page never draws a second tab look. Both panels stay in
- * the page, force-mounted: the one not selected is inert, and tabs.css hides it.
+ * the page, force-mounted: the one not selected is inert, and tabs.css hides it. A `wide` stage takes the
+ * content grid's full width at every window width (shell.css, "A page with a wide example").
  */
-export function PreviewTabs({ preview, code }: { preview: ReactNode; code: ReactNode }): ReactElement {
+export function PreviewTabs({
+  preview,
+  code,
+  wide = false,
+}: {
+  preview: ReactNode;
+  code: ReactNode;
+  wide?: boolean;
+}): ReactElement {
   return (
     <Tabs className="preview" defaultSelectedKey="preview">
       <div className="preview-head">
@@ -18,7 +27,7 @@ export function PreviewTabs({ preview, code }: { preview: ReactNode; code: React
         </TabList>
       </div>
       <TabPanel id="preview" shouldForceMount>
-        <div className="stage">{preview}</div>
+        <div className={wide ? 'stage stage-wide' : 'stage'}>{preview}</div>
         <div className="stage-bar">
           <span>Follows the page theme and corners</span>
         </div>

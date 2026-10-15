@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Receipt } from 'lucide-react';
 import { useState, type ComponentType, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
-import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
 import { EmptyState } from '../empty-state';
 import { RouterProvider } from '../link';
@@ -40,6 +40,21 @@ type Story = StoryObj<typeof meta>;
 const EIGHT = TRANSACTIONS.slice(0, 8);
 
 const noop = (): void => undefined;
+
+/** The story columns in the order of `ids`, each with `changes` applied. */
+const columnsOf = (
+  ids: readonly string[],
+  changes: Partial<Record<string, Partial<DataTableColumn<Transaction>>>> = {},
+): DataTableColumn<Transaction>[] =>
+  ids.map((id) => {
+    const column = COLUMNS.find((each) => each.id === id);
+    if (column === undefined) throw new Error(`No column ${id}`);
+    return { ...column, ...changes[id] };
+  });
+
+/** Whether a cell is drawn: not display none and not hidden, as a column that has left is. */
+const isShown = (cell: Element): boolean =>
+  getComputedStyle(cell).display !== 'none' && getComputedStyle(cell).visibility !== 'hidden';
 
 /** A box the width of a list page's content, or `width`. */
 function Box({
@@ -460,15 +475,35 @@ export const FullWidth: Story = {
   },
 };
 
+/** The first and last columns leave under 48rem: Category first and Account last, both md. */
+const EDGE_COLUMNS = columnsOf(['category', 'date', 'payee', 'amount', 'account'], {
+  account: { hideBelow: 'md' },
+});
+
+/** After `step`, focus is on `element`, and the grid's one tab stop is never a cell or header that has left. */
+async function expectFocus(grid: HTMLElement, element: HTMLElement | undefined, step: string): Promise<void> {
+  await waitFor(() => expect(element?.contains(document.activeElement), `focus after ${step}`).toBe(true));
+  const stops = [...grid.querySelectorAll('[tabindex="0"]')];
+  await expect(stops.every(isShown), `tab stop after ${step}`).toBe(true);
+}
+
 /**
  * The arrows step over a column that has left: in a 44rem box Category is hidden, and Arrow Right from the
- * payee lands on Account, Arrow Left back on the payee (spec correction 8). Run in all three engines.
+ * payee lands on Account, Arrow Left back on the payee (spec correction 8). In a second table the first and last
+ * columns have left: Arrow Up from the first row lands on the first shown header, Arrow Left and Right in the
+ * header row wrap past them as React Aria wraps, Home and End stop at the shown ends, and Ctrl+Home and Ctrl+End
+ * (off a Mac, where React Aria takes them) reach the first and last shown cells. Run in all three engines.
  */
 export const ArrowsSkipHidden: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
   render: () => (
     <Box width="min(44rem, 100%)">
-      <Sorted />
+      <div style={{ display: 'grid', gap: 32 }}>
+        <Sorted />
+        <div data-edges="">
+          <Sorted aria-label="Transactions with edge columns" columns={EDGE_COLUMNS} />
+        </div>
+      </div>
     </Box>
   ),
   play: async ({ canvasElement }) => {
@@ -483,6 +518,179 @@ export const ArrowsSkipHidden: Story = {
     await waitFor(() => expect(cells[3]?.contains(document.activeElement)).toBe(true));
     await userEvent.keyboard('{ArrowLeft}');
     await waitFor(() => expect(cells[1]?.contains(document.activeElement)).toBe(true));
+
+    // The header row of the same table: Payee's header, then over Category to Account's and back.
+    const grid = only(canvasElement, '[role="grid"]');
+    const headers = [...grid.querySelectorAll<HTMLElement>('[role="columnheader"]')];
+    await userEvent.keyboard('{ArrowUp}');
+    await expectFocus(grid, headers[1], 'Arrow Up');
+    await userEvent.keyboard('{ArrowRight}');
+    await expectFocus(grid, headers[3], 'Arrow Right');
+    await userEvent.keyboard('{ArrowLeft}');
+    await expectFocus(grid, headers[1], 'Arrow Left');
+
+    // The table whose first and last columns have left.
+    const edgeTable = only(canvasElement, '[data-edges]');
+    const edgeGrid = only(edgeTable, '[role="grid"]');
+    const edgeHeaders = [...edgeGrid.querySelectorAll<HTMLElement>('[role="columnheader"]')];
+    await expect(edgeHeaders.map((cell) => isShown(cell))).toEqual([false, true, true, true, false]);
+    // Tab from the first table walks its row links, so the play puts focus on the second table's first row.
+    rowAt(edgeTable, 0).focus();
+    await expect(rowAt(edgeTable, 0)).toHaveFocus();
+    await userEvent.keyboard('{ArrowUp}');
+    await expectFocus(edgeGrid, edgeHeaders[1], 'Arrow Up');
+    await userEvent.keyboard('{ArrowLeft}');
+    await expectFocus(edgeGrid, edgeHeaders[3], 'Arrow Left');
+    await userEvent.keyboard('{ArrowRight}');
+    await expectFocus(edgeGrid, edgeHeaders[1], 'Arrow Right');
+    await userEvent.keyboard('{End}');
+    await expectFocus(edgeGrid, edgeHeaders[3], 'End');
+    await userEvent.keyboard('{Home}');
+    await expectFocus(edgeGrid, edgeHeaders[1], 'Home');
+    const first = rowAt(edgeTable, 0).querySelectorAll<HTMLElement>('[role="gridcell"], [role="rowheader"]');
+    await userEvent.keyboard('{ArrowDown}');
+    await expectFocus(edgeGrid, first[1], 'Arrow Down');
+    if (/^Mac/i.test(navigator.platform)) return;
+    const last = bodyRows(edgeTable).at(-1);
+    if (last === undefined) throw new Error('No last row');
+    const lastCells = last.querySelectorAll<HTMLElement>('[role="gridcell"], [role="rowheader"]');
+    await userEvent.keyboard('{Control>}{End}{/Control}');
+    await expectFocus(edgeGrid, lastCells[3], 'Ctrl+End');
+    await userEvent.keyboard('{Control>}{Home}{/Control}');
+    await expectFocus(edgeGrid, first[1], 'Ctrl+Home');
+  },
+};
+
+/** An app's own checkbox in a cell, a span with the checkbox role, as a star or a flag toggle is drawn. */
+function FlagBox({ name }: { name: string }): ReactElement {
+  const [checked, setChecked] = useState(false);
+  return (
+    <span
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={`Flag ${name}`}
+      tabIndex={0}
+      data-flag=""
+      style={{ display: 'inline-block', inlineSize: 24, blockSize: 24, border: '1px solid currentColor' }}
+      onClick={() => {
+        setChecked((value) => !value);
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== ' ') return;
+        event.preventDefault();
+        setChecked((value) => !value);
+      }}
+    />
+  );
+}
+
+/** The router's navigate, a spy, so a play can tell a press that opened the row from one that did not. */
+const navigate = fn();
+
+/** Columns with a cell of the app's own controls: its checkbox, a label around an input, an opt-in mark. */
+const CONTROL_COLUMNS: readonly DataTableColumn<Transaction>[] = [
+  ...columnsOf(['date', 'payee', 'amount']),
+  {
+    id: 'controls',
+    header: 'Flag',
+    width: '10rem',
+    cell: (row) => (
+      <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+        <FlagBox name={row.payee} />
+        <label data-label="">
+          <input type="checkbox" aria-label={`Reviewed ${row.payee}`} />
+        </label>
+        <span className="data-table-control" data-opt-in="">
+          Note
+        </span>
+      </span>
+    ),
+  },
+];
+
+/**
+ * A cell's own controls take their own press over the stretched row link: an app's span with the checkbox role,
+ * a label, and anything with the opt-in data-table-control class are what the browser finds under the pointer,
+ * and a press on the checkbox checks it and never opens the row. Run in all three engines.
+ */
+export const CellControlsRaised: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <RouterProvider navigate={navigate}>
+      <div style={{ width: 'min(60rem, 100%)' }}>
+        <DataTable
+          aria-label="Transactions"
+          items={EIGHT}
+          columns={CONTROL_COLUMNS}
+          getKey={keyOf}
+          getRowHref={hrefOf}
+        />
+      </div>
+    </RouterProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    navigate.mockClear();
+    const row = rowAt(canvasElement, 1);
+    const at = (element: Element): Element | null => {
+      const { left, top, width, height } = element.getBoundingClientRect();
+      return document.elementFromPoint(left + width / 2, top + height / 2);
+    };
+    const flag = only(row, '[data-flag]');
+    await expect(at(flag)).toBe(flag);
+    await expect(at(only(row, '[data-label] input'))).toBe(only(row, '[data-label] input'));
+    await expect(at(only(row, '[data-opt-in]'))).toBe(only(row, '[data-opt-in]'));
+    // Elsewhere on the row the stretched link is what the browser finds.
+    const amount = row.querySelectorAll('[role="gridcell"]')[1];
+    if (amount === undefined) throw new Error('No amount cell');
+    await expect(at(amount)?.closest('.data-table-link')).not.toBeNull();
+    await userEvent.click(flag);
+    await expect(flag).toHaveAttribute('aria-checked', 'true');
+    await expect(navigate).not.toHaveBeenCalled();
+  },
+};
+
+/** The widths of the box for the current bar: all columns, md gone, md and sm gone. */
+const BAR_COLUMNS = columnsOf(['category', 'account', 'date', 'payee', 'amount']);
+
+/**
+ * The current row's bar is drawn on its first shown cell: Category at full width, Account once Category has
+ * left under 48rem, and Date once both have left under 40rem; a cell that has left draws no bar, and every shown
+ * cell keeps its header's edges, so nothing moves. Run in all three engines.
+ */
+export const CurrentBarPastHidden: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box>
+      <div style={{ display: 'grid', gap: 32 }}>
+        {BOX_WIDTHS.map((width) => (
+          <div key={width} style={{ width: `min(${width}, 100%)` }} data-width={width}>
+            <Sorted columns={BAR_COLUMNS} currentKey="t2" />
+          </div>
+        ))}
+      </div>
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const barred = { '100%': 'Category', '44rem': 'Account', '38rem': 'Date' };
+    for (const width of BOX_WIDTHS) {
+      const holder = only(canvasElement, `[data-width="${width}"]`);
+      const current = only(holder, '.data-table-row[data-current]');
+      const headers = [...only(holder, 'thead [role="row"]').children];
+      const cells = [...current.children] as HTMLElement[];
+      const shown = cells.filter(isShown);
+      const index = cells.indexOf(shown[0] ?? current);
+      await expect(headers[index]?.textContent, `bar in ${width}`).toBe(barred[width]);
+      await expect(getComputedStyle(shown[0] ?? current).borderLeftWidth, `bar in ${width}`).toBe('3px');
+      await expect(getComputedStyle(shown[0] ?? current).borderLeftColor).toBe(
+        tokenColor('--color-ink', current),
+      );
+      for (const cell of cells.filter((each) => each !== shown[0])) {
+        await expect(getComputedStyle(cell).borderLeftWidth, `no bar in ${width}`).toBe('0px');
+      }
+      for (const cell of shown) {
+        await expect(edges(cell), `edges in ${width}`).toEqual(edges(headers[cells.indexOf(cell)] ?? cell));
+      }
+    }
   },
 };
 

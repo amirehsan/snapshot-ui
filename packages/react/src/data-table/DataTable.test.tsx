@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, type ReactElement } from 'react';
+import { I18nProvider } from 'react-aria-components';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { EmptyState } from '../empty-state';
@@ -20,7 +21,9 @@ const FIVE = TRANSACTIONS.slice(0, 5);
 
 type Props = Partial<DataTableProps<Transaction>>;
 
-/** The household's table, with whatever a test changes. */
+const noop = (): void => undefined;
+
+/** The household's table, with whatever a test changes. Its Date and Amount sort, so it takes onSortChange. */
 function Spending(props: Props): ReactElement {
   return (
     <DataTable
@@ -28,6 +31,7 @@ function Spending(props: Props): ReactElement {
       items={FIVE}
       columns={COLUMNS}
       getKey={keyOf}
+      onSortChange={noop}
       {...(props as object)}
     />
   );
@@ -378,6 +382,73 @@ describe('DataTable', () => {
     expect(rowAt(2)).toHaveFocus();
   });
 
+  it('warns once for a sortDescriptor that names no column', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { rerender } = render(<Spending sortDescriptor={{ column: 'when', direction: 'ascending' }} />);
+    rerender(<Spending sortDescriptor={{ column: 'when', direction: 'descending' }} />);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toMatch(/sortDescriptor names "when", which is no column's id/);
+    rerender(<Spending sortDescriptor={{ column: 'date', direction: 'descending' }} />);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws only the first row for a key that two rows share, and warns once', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { unmount } = render(<Spending />);
+    unmount();
+    expect(warn).not.toHaveBeenCalled();
+    // React Aria throws for a repeated key outside production and can loop forever in it, so the table never
+    // hands it one: the first row with the key is drawn and the next is left out.
+    const shared = (item: Transaction): string => (item.id === 't3' ? 't1' : item.id);
+    const { rerender } = render(<Spending items={FIVE.slice(0, 3)} getKey={shared} />);
+    rerender(<Spending items={FIVE.slice(0, 4)} getKey={shared} />);
+    expect(bodyRows().map((row) => within(row).getByRole('rowheader').textContent)).toEqual([
+      'Corner Mart',
+      'City Transit',
+      'Acme Payroll',
+    ]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toMatch(/getKey gives "t1" to more than one row/);
+  });
+
+  it('warns once when a column sorts and there is no onSortChange', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { unmount } = render(<Spending />);
+    unmount();
+    // A table whose columns do not sort needs none.
+    const still = COLUMNS.map((column) => ({ ...column, allowsSorting: undefined }));
+    render(<Spending columns={still} onSortChange={undefined} />).unmount();
+    expect(warn).not.toHaveBeenCalled();
+    const { rerender } = render(<Spending onSortChange={undefined} />);
+    rerender(<Spending onSortChange={undefined} items={FIVE.slice(0, 3)} />);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toMatch(/"date" allowsSorting, and there is no onSortChange/);
+  });
+
+  it('moves past a column that has left in the direction of the locale, as React Aria does, not of the CSS', async () => {
+    const user = userEvent.setup();
+    render(
+      <I18nProvider locale="fa-IR">
+        <Spending />
+      </I18nProvider>,
+    );
+    // jsdom applies no container query, so Category is hidden here as the stylesheet hides it under 48rem.
+    for (const cell of document.querySelectorAll<HTMLElement>('[data-hide-below="md"]')) {
+      cell.style.visibility = 'hidden';
+    }
+    const cells = [...rowAt(0).querySelectorAll<HTMLElement>('[role="gridcell"], [role="rowheader"]')];
+    const [, payee, , account] = cells;
+    if (payee === undefined || account === undefined) throw new Error('No cells');
+    act(() => {
+      account.focus();
+    });
+    // In Persian Arrow Right goes to the previous column, Category, which has left; the CSS says left to right.
+    await user.keyboard('{ArrowRight}');
+    expect(payee).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(account).toHaveFocus();
+  });
+
   it('passes className and ref to the root', () => {
     const ref = createRef<HTMLDivElement>();
     const { container } = render(<Spending className="extra" ref={ref} />);
@@ -398,7 +469,6 @@ describe('DataTable', () => {
     ['empty', { items: [], emptyState: <EmptyState title="No transactions this month" /> }],
     ['loading', { items: [], isLoading: true }],
     ['a disabled row', { getRowHref: hrefOf, disabledKeys: ['t3'] }],
-    ['hidden columns', { columns: COLUMNS.map((column) => ({ ...column, hideBelow: undefined })) }],
   ];
 
   it.each(AXE_CASES)('has no axe violations %s', async (_state, props) => {

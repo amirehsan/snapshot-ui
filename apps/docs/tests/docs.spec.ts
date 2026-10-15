@@ -1,6 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { axeViolations, hitSize, hitsAt, settled, sideways, withoutClipboard } from './support';
+import {
+  axeViolations,
+  expectTableFace,
+  hitSize,
+  hitsAt,
+  settled,
+  sideways,
+  withoutClipboard,
+} from './support';
 
 const PAGE = '/docs/components/button';
 
@@ -2907,6 +2915,7 @@ test('the installation page installs the charts package and names the core versi
 test('a data table header sorts on a press, writing aria-sort', async ({ page }) => {
   await visit(page, '/docs/components/data-table');
   const table = page.locator('.stage').first().getByRole('grid', { name: 'Transactions' });
+  await expectTableFace(table);
   const amount = table.getByRole('columnheader', { name: 'Amount' });
   const date = table.getByRole('columnheader', { name: 'Date' });
   await expect(date).toHaveAttribute('aria-sort', 'descending');
@@ -2926,6 +2935,7 @@ test('a press anywhere on a data table row opens its link, and a middle click op
 }) => {
   await visit(page, '/docs/components/data-table');
   const table = page.locator('.stage').first().getByRole('grid', { name: 'Transactions' });
+  await expectTableFace(table);
   /** The middle of a row's amount cell, brought to the middle of the window, as a pointer finds it. */
   const amountOf = async (payee: string): Promise<{ x: number; y: number }> => {
     const cell = table
@@ -2972,8 +2982,7 @@ test('a data table drops its md column under 48rem of its box and its sm column 
           .filter((cell) => getComputedStyle(cell).visibility !== 'hidden')
           .map((cell) => cell.textContent),
       );
-  // The widths are the table's own box, not the window's: the stage is narrower than the page, so the box is
-  // set wider than it here, as a table in a wide content column would be.
+  // The widths are the table's own box, not the window's: the box is set on each side of 48rem and 40rem.
   const setWidth = (width: string): Promise<void> =>
     box.evaluate((element, value) => {
       (element as HTMLElement).style.width = value;
@@ -3011,6 +3020,52 @@ test('a data table drops its md column under 48rem of its box and its sm column 
   await expect(box).toHaveCSS('outline-width', '1px');
   await expect(page.getByText("The table's box: 38rem")).toBeVisible();
   expect(await sideways(page)).toBe(0);
+});
+
+test('a data table example has a stage as wide as the content, so its columns leave at the box widths it names', async ({
+  page,
+}) => {
+  for (const width of [1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page, '/docs/components/data-table');
+    // Every data table example is drawn on a wide stage, its box 40rem or wider, so it draws its table face.
+    const stages = page.locator('.stage').filter({ has: page.locator('.data-table') });
+    expect(await stages.count()).toBe(4);
+    for (const stage of await stages.all()) {
+      await expect(stage).toHaveClass(/\bstage-wide\b/);
+      await expectTableFace(stage.locator('.data-table').first());
+    }
+    // The page's content takes the grid's every column, the side column under it.
+    const main = await page.locator('.panel-main').boundingBox();
+    const panel = await page.locator('.panel').boundingBox();
+    expect(main?.width).toBe(panel?.width);
+    // Full, 44rem and 38rem each draw their own columns.
+    const box = page.getByTestId('data-table-box');
+    const shown = (): Promise<string[]> =>
+      box
+        .locator('[role="columnheader"]')
+        .evaluateAll((cells) =>
+          cells
+            .filter((cell) => getComputedStyle(cell).visibility !== 'hidden')
+            .map((cell) => cell.textContent),
+        );
+    const widths = page.getByRole('radiogroup', { name: "Width of the table's box" });
+    await expect.poll(shown).toEqual(['Date', 'Payee', 'Category', 'Account', 'Amount']);
+    await widths.getByRole('radio', { name: 'Full' }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(widths.getByRole('radio', { name: '44rem' })).toBeChecked();
+    await expect.poll(shown).toEqual(['Date', 'Payee', 'Account', 'Amount']);
+    await page.keyboard.press('ArrowRight');
+    await expect.poll(shown).toEqual(['Date', 'Payee', 'Amount']);
+    expect(await sideways(page)).toBe(0);
+  }
+  // A page without a wide example keeps its side column beside the content at 1440px.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page, '/docs/components/button');
+  const main = await page.locator('.panel-main').boundingBox();
+  const side = await page.locator('.panel-side').boundingBox();
+  expect((main?.x ?? 0) + (main?.width ?? 0)).toBeLessThan(side?.x ?? 0);
+  await expect(page.locator('.toc-card')).toBeVisible();
 });
 
 test('a loading data table draws its skeleton cells under its header cells, at full width', async ({

@@ -1,5 +1,13 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { axeViolations, CHART_PAGES, COMPONENT_PAGES, settled, sideways, systemColor } from './support';
+import {
+  axeViolations,
+  CHART_PAGES,
+  COMPONENT_PAGES,
+  expectTableFace,
+  settled,
+  sideways,
+  systemColor,
+} from './support';
 
 /**
  * Checks that run across every component page: Windows high contrast, and a
@@ -615,12 +623,13 @@ test.describe('forced colors', () => {
   });
 
   test('a data table current row draws its bar in CanvasText', async ({ page }) => {
-    // The bar is a border at the first cell's start, so the repaint keeps it; it is named CanvasText, as the
+    // The bar is a border at the first shown cell's start, so the repaint keeps it; it is named CanvasText, as the
     // rules are, and the row header's weight still marks the row.
     await visit(page, '/docs/components/data-table');
     const canvasText = await systemColor(page, 'CanvasText');
     const current = page.locator('.stage .data-table-row[data-current]').first();
     await expect(current).toHaveCount(1);
+    await expectTableFace(current);
     const first = current.locator('> :first-child');
     await expect(first).toHaveCSS('border-left-color', canvasText);
     await expect(first).toHaveCSS('border-left-width', '3px');
