@@ -55,6 +55,20 @@ describe('Skeleton', () => {
     expect(style.height).toBe('');
   });
 
+  it('gives a circle one diameter for both sides, from width or else height, so it stays round', () => {
+    const { container, rerender } = render(<Skeleton shape="circle" width="2rem" />);
+    let style = (root(container) as HTMLElement).style;
+    expect(style.inlineSize).toBe('2rem');
+    expect(style.blockSize).toBe('2rem');
+    rerender(<Skeleton shape="circle" height="3rem" />);
+    style = (root(container) as HTMLElement).style;
+    expect(style.inlineSize).toBe('3rem');
+    expect(style.blockSize).toBe('3rem');
+    rerender(<Skeleton shape="circle" width="2rem" height="5rem" />);
+    style = (root(container) as HTMLElement).style;
+    expect(style.blockSize).toBe('2rem');
+  });
+
   it('passes className', () => {
     const { container } = render(<Skeleton shape="circle" className="extra" />);
     expect(root(container)).toHaveAttribute('class', 'skeleton extra');

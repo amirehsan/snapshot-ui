@@ -28,20 +28,23 @@ Draw the shape of what is coming: a circle and two lines for a header, a block f
 
 ## Usage
 
-Skeleton is static. It renders in a server component and ships no client JavaScript. It is hidden from assistive technology, so say "Loading" once in your own status beside the skeletons, as the data table does, and mark the holder `aria-busy`. Size each shape as the content it stands for. The shape pulses gently, and stands still when the reader asks for reduced motion.
+Skeleton is static. It renders in a server component and ships no client JavaScript. It is hidden from assistive technology, so say "Loading" once in your own status, as the data table does, and mark the holder `aria-busy`. Keep the status outside the busy holder and mounted all the time, and give it its text when loading starts: a screen reader may hold back what changes inside a busy part, and a live region that appears with its text already in it is often not announced. Size each shape as the content it stands for. The shape pulses gently, and stands still when the reader asks for reduced motion.
 
 ```tsx
 import { Skeleton } from '@snapshot-ui/react';
 
-export function LoadingRow() {
+export function LoadingRow({ isLoading }: { isLoading: boolean }) {
   return (
-    <div aria-busy="true">
+    <>
+      {/* Your app's visually hidden class: the library ships none. */}
       <p role="status" className="visually-hidden">
-        Loading
+        {isLoading ? 'Loading' : ''}
       </p>
-      <Skeleton shape="circle" />
-      <Skeleton width="60%" />
-    </div>
+      <div aria-busy={isLoading}>
+        <Skeleton shape="circle" />
+        <Skeleton width="60%" />
+      </div>
+    </>
   );
 }
 ```
@@ -62,7 +65,7 @@ export function LoadingRow() {
 
 ## Accessibility
 
-A skeleton is `aria-hidden`, holds no text and takes no focus. Saying that the page is loading is the holder's job: one polite status that says "Loading", and `aria-busy` on the part that is loading. In forced colors the shape keeps a fill of its own, so it does not vanish.
+A skeleton is `aria-hidden`, holds no text and takes no focus. Saying that the page is loading is the holder's job: one polite status, outside the busy part and always mounted, that says "Loading", and `aria-busy` on the part that is loading. In forced colors the shape keeps a fill of its own, so it does not vanish.
 
 </Section>
 

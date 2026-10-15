@@ -6175,6 +6175,8 @@ describe('src/components/skeleton.css', () => {
     expect(circle).toContain('inline-size: var(--size-target);');
     expect(circle).toContain('block-size: var(--size-target);');
     expect(circle).toContain('border-radius: var(--radius-dot);');
+    // A fixed shape in a flex row, as Avatar's and Spinner's, so lines beside it never squeeze it to an oval.
+    expect(circle).toContain('flex: none;');
   });
 
   it('pulses between the fill and half of it over 1.6s, and stands still under reduced motion', () => {
