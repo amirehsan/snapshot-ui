@@ -46,7 +46,7 @@ export interface CalendarLabels {
 
 /** The props a calendar and a range calendar share. */
 export interface CalendarShared {
-  /** The earliest and latest day that can be chosen, as ISO dates. */
+  /** The earliest day that can be chosen, as an ISO date. */
   minValue?: string;
   /** The latest day that can be chosen, as an ISO date. */
   maxValue?: string;

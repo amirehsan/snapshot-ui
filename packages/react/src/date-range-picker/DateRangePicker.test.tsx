@@ -224,6 +224,33 @@ describe('DateRangePicker', () => {
     expect(texts(container)).toEqual(['12', '1', '2026', '12', '30', '2026']);
   });
 
+  it('hands validate the range as two ISO dates, never React Aria dates', async () => {
+    const user = userEvent.setup();
+    const validate = vi.fn((range: DateRange | null) =>
+      range !== null && range.end > '2026-09-15' ? 'End by 15 September' : true,
+    );
+    const { container } = render(
+      <DateRangePicker
+        label="Statement period"
+        defaultValue={SEPTEMBER}
+        validate={validate}
+        validationBehavior="aria"
+      />,
+    );
+    expect(validate).toHaveBeenLastCalledWith(SEPTEMBER);
+    expect(screen.getByText('End by 15 September')).toBeInTheDocument();
+    // A Backspace in the end's day leaves 3: September 1 to 3, inside the app's bound.
+    focus(segment(4, container));
+    await user.keyboard('{Backspace}');
+    expect(validate).toHaveBeenLastCalledWith({ start: '2026-09-01', end: '2026-09-03' });
+    expect(screen.queryByText('End by 15 September')).toBeNull();
+    expect(
+      validate.mock.calls.every(
+        ([range]) => range === null || (typeof range.start === 'string' && typeof range.end === 'string'),
+      ),
+    ).toBe(true);
+  });
+
   it('lets go of a held reversed range when an outside control clears the field', async () => {
     const user = userEvent.setup();
     function Cleared(): ReactElement {
@@ -621,7 +648,10 @@ describe('DateRangePicker', () => {
     const typed = <DateRangePicker label="Period" value={aria} />;
     // @ts-expect-error a field with no label, aria-label or aria-labelledby has no name
     const nameless = <DateRangePicker defaultValue={SEPTEMBER} />;
+    const ariaCheck = (range: typeof aria): boolean => range.start.year > 2000;
+    // @ts-expect-error validate receives ISO strings, never React Aria's CalendarDate
+    const checked = <DateRangePicker label="Period" validate={ariaCheck} />;
     const named = <DateRangePicker aria-label="Period" startName="from" endName="to" />;
-    expect([granular, typed, nameless, named]).toHaveLength(4);
+    expect([granular, typed, nameless, checked, named]).toHaveLength(5);
   });
 });

@@ -65,6 +65,7 @@ interface NumberFieldShared extends Omit<
   | 'value'
   | 'defaultValue'
   | 'onChange'
+  | 'validate'
   | 'formatOptions'
   | 'step'
   | 'isWheelDisabled'
@@ -96,8 +97,16 @@ interface NumberFieldShared extends Omit<
   value?: number | null;
   /** The number the field starts with when `value` is not given. In money mode an integer count of minor units. */
   defaultValue?: number | null;
-  /** Called when the value commits, on blur or Enter, with null for an empty field. */
+  /**
+   * Called when the value commits (blur, Enter, a step or the sign button), with null for an empty field. In
+   * money mode an integer count of minor units.
+   */
   onChange?: (value: number | null) => void;
+  /**
+   * Checks the value, in the terms `onChange` uses: an integer count of minor units in money mode, the number
+   * otherwise, and null for an empty field. Returns an error message, or true or null when the value is valid.
+   */
+  validate?: (value: number | null) => ReturnType<NonNullable<RACNumberFieldProps['validate']>>;
   /** Values under zero, and the sign button (ruling 5). @default false */
   allowsNegative?: boolean;
   /** The names the field writes, in English unless replaced. */
@@ -410,6 +419,7 @@ export function NumberField({
   value,
   defaultValue,
   onChange,
+  validate,
   allowsNegative = false,
   labels,
   className,
@@ -457,6 +467,10 @@ export function NumberField({
     if (each === null) return Number.NaN;
     return money ? toUnits(Math.round(each), digits) : each;
   };
+  /** React Aria's number in the app's terms: minor units in money mode, null for empty, never -0. */
+  const fromAria = (each: number): number | null =>
+    // Adding 0 turns a typed "-0" into 0.
+    money ? toMinor(each, digits) : Number.isNaN(each) ? null : each + 0;
   // Negatives are off unless asked for: the lower bound is then 0, or the app's bound when it is above 0.
   const lower = allowsNegative ? minValue : Math.max(minValue ?? 0, 0);
   const boundToAria = (bound: number | undefined): number | undefined =>
@@ -478,9 +492,10 @@ export function NumberField({
       value={toAria(value)}
       defaultValue={toAria(defaultValue)}
       onChange={(next) => {
-        // Adding 0 turns a typed "-0" into 0.
-        onChange?.(money ? toMinor(next, digits) : Number.isNaN(next) ? null : next + 0);
+        onChange?.(fromAria(next));
       }}
+      // React Aria checks its own number, whole units in money mode and NaN for empty; the app's check gets its own.
+      validate={validate === undefined ? undefined : (next) => validate(fromAria(next))}
       minValue={boundToAria(lower)}
       maxValue={boundToAria(maxValue)}
       formatOptions={money ? MONEY_FORMATS[money.fractionDigits ?? 2] : formatOptions}
