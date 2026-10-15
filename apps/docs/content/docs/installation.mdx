@@ -26,7 +26,7 @@ Charts are a package of their own, with versions of their own.
 pnpm add @snapshot-ui/charts
 ```
 
-It needs the same 0.x minor of `@snapshot-ui/core` (0.4 for charts 0.1.1), whose `styles.css` already draws the charts, and React 19, and nothing else: no React Aria. See the [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
+It needs the same 0.x minor of `@snapshot-ui/core` (0.5 for charts 0.1.2), whose `styles.css` already draws the charts, and React 19, and nothing else: no React Aria. See the [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
 
 </Section>
 
@@ -85,6 +85,8 @@ Anywhere else, install `@fontsource-variable/sofia-sans` and import it once. The
 
 Take `RouterProvider` and `I18nProvider` from `@snapshot-ui/react`, which re-exports React Aria's own, so they always reach the library's parts. [Routing](/docs/routing) sets up the router.
 
+Dates come and go as ISO strings, so an app needs no date library. An app that passes `createCalendar` to a calendar imports its calendars from `@internationalized/date`; install it in React Aria's range, `^3.12.4`, so there is one copy.
+
 </Section>
 
 <Section>
@@ -116,6 +118,8 @@ A whole app in one right-to-left language wraps its root the same way. A toast f
 ## Next.js server components
 
 Stateful or interactive components carry `'use client'`. Static ones carry none, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, the field counter and chip, Meter, a StatTile without `href`, Sparkline, and Pagination, whose page links a server page builds with `getPageHref`; only its controls and its status are client components. React Aria itself must never be imported into a server component.
+
+The date and number fields render their label, hint, error line and hidden inputs on the server, and draw their formatted text, which React Aria writes with `Intl`, from the first render after hydration: before it a number field shows its plain figure and a date range picker its `valueLabel`, and an inline calendar its empty frame. So the server's HTML is the same in every locale and time zone. Pass `today` from your user's zone, and `valueLabel` where the server's HTML should show a range.
 
 </Section>
 
