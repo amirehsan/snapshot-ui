@@ -1,0 +1,120 @@
+/*
+ * DataTable: rows of data, derived in docs/design-system.md ("Dense data", "DataTable"). It draws no surface:
+ * rows take the holder's fill, and --data-table-surface names it for the sticky header (the canvas, or lifted
+ * in a card). A row is max(--size-target, --size-field) tall, ruled by the divider and never striped. The row
+ * header's link is stretched over its row by ::after, the row being its containing block, so a press anywhere
+ * on the row opens it; what a cell holds that takes its own press sits above the link and under the header.
+ * The header cells stick at --page-sticky-top, one layer under the page's header.
+ */
+@layer components {
+  .data-table {
+    --data-table-row: max(var(--size-target), var(--size-field));
+    --data-table-fill: var(--data-table-surface, var(--color-canvas));
+
+    container: data-table / inline-size;
+    min-inline-size: 0;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  .data-table-table {
+    box-sizing: border-box;
+    inline-size: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    outline: none;
+  }
+
+  /* ---- The header ------------------------------------------------------------------------------ */
+  .data-table-column {
+    --data-table-pad: var(--spacing-inset);
+
+    position: sticky;
+    inset-block-start: var(--page-sticky-top, 0px);
+    z-index: calc(var(--z-header) - 1);
+    box-sizing: border-box;
+    block-size: var(--size-target);
+    padding-block: 0;
+    padding-inline: var(--data-table-pad);
+    border-block-end: 1px solid var(--color-divider);
+    background-color: var(--data-table-fill);
+    color: var(--color-slate);
+    font-size: var(--text-overline);
+    line-height: var(--text-overline--line-height);
+    letter-spacing: var(--text-overline--letter-spacing);
+    font-weight: var(--text-overline--font-weight);
+    text-align: start;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    outline: none;
+  }
+
+  /* ---- Rows and cells -------------------------------------------------------------------------- */
+  .data-table-row {
+    position: relative;
+    block-size: var(--data-table-row);
+    outline: none;
+  }
+
+  .data-table-row[data-link] {
+    cursor: pointer;
+  }
+
+  .data-table-cell {
+    --data-table-pad: var(--spacing-inset);
+
+    box-sizing: border-box;
+    padding-block: 0;
+    padding-inline: var(--data-table-pad);
+    border-block-end: 1px solid var(--color-divider);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    text-align: start;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    outline: none;
+  }
+
+  .data-table-cell[role='rowheader'] {
+    font-weight: 500;
+  }
+
+  /* The row's link: the row header's ink and no underline, one class after link.css. Its ::after covers the row,
+     whose position: relative makes it the containing block; a cell is never positioned, so none clips it. */
+  .data-table-link {
+    color: inherit;
+    text-decoration-line: none;
+    overflow-wrap: normal;
+  }
+
+  .data-table-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .data-table-link:is(:focus-visible, [data-focus-visible]) {
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
+  /* What a cell holds that takes its own press: above the stretched link and under the sticky header. */
+  .data-table-cell :is(button, input, select, textarea, [role='button'], a:not(.data-table-link)),
+  .data-table-cell .checkbox-field {
+    position: relative;
+    z-index: calc(var(--z-header) - 2);
+  }
+
+  .data-table-row:is(:focus-visible, [data-focus-visible]),
+  .data-table-cell:is(:focus-visible, [data-focus-visible]),
+  .data-table-column:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+}
