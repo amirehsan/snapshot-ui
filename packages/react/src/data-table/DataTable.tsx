@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, type ReactElement, type ReactNode, type Ref } from 'react';
-import type { Key } from 'react-aria-components';
+import { useMemo, type KeyboardEvent, type ReactElement, type ReactNode, type Ref } from 'react';
+import { useLocale, type Key } from 'react-aria-components';
 import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
@@ -49,11 +49,17 @@ export interface DataTableBaseProps<T> {
   items: readonly T[];
   /** The columns, in the order to draw them. */
   columns: readonly DataTableColumn<T>[];
-  /** Each row's key, stable across renders. `__total` is reserved. */
+  /**
+   * Each row's key, stable across renders and unique: a later row with a key already used is not drawn.
+   * `__total` is reserved.
+   */
   getKey: (item: T) => Key;
   /** The row's detail, a URL the router opens (ruling 2). Rows without one do not open. */
   getRowHref?: (item: T) => string;
-  /** The row whose detail is open: its link is aria-current and the row draws the current bar. */
+  /**
+   * The row whose detail is open: its link is aria-current and the row draws the current bar. It is compared
+   * with each row's key by strict equality, so a string from the URL never matches a numeric key.
+   */
   currentKey?: Key | null;
   /** Controlled from the URL: the column's id and its direction. */
   sortDescriptor?: { column: string; direction: 'ascending' | 'descending' };
@@ -79,14 +85,29 @@ export type DataTableProps<T> = DataTableBaseProps<T> & AriaName;
 
 const DEFAULT_LABELS: DataTableLabels = { loading: 'Loading', total: 'Total' };
 
-/** The first key that repeats, or null. */
-function repeatedKey(keys: readonly Key[]): Key | null {
+/**
+ * The rows of the face, one per key: a row whose key an earlier row has is left out, since React Aria throws for
+ * a repeated key outside production and can loop forever in it. `repeated` is the first such key, or null.
+ */
+function faceRows<T>(
+  items: readonly T[],
+  getKey: (item: T) => Key,
+  rowHeader: DataTableColumn<T> | undefined,
+  getRowHref: ((item: T) => string) | undefined,
+): { rows: FaceRow<T>[]; repeated: Key | null } {
   const seen = new Set<Key>();
-  for (const key of keys) {
-    if (seen.has(key)) return key;
+  const rows: FaceRow<T>[] = [];
+  let repeated: Key | null = null;
+  for (const value of items) {
+    const key = getKey(value);
+    if (seen.has(key)) {
+      repeated ??= key;
+      continue;
+    }
     seen.add(key);
+    rows.push({ key, value, text: textOf(value, rowHeader), href: getRowHref?.(value) });
   }
-  return null;
+  return { rows, repeated };
 }
 
 /**
@@ -114,12 +135,8 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   } = props;
   const words = { ...DEFAULT_LABELS, ...labels };
   const rowHeader = rowHeaderOf(columns);
-  const rows: FaceRow<T>[] = items.map((value) => ({
-    key: getKey(value),
-    value,
-    text: textOf(value, rowHeader),
-    href: getRowHref?.(value),
-  }));
+  const { rows, repeated } = faceRows(items, getKey, rowHeader, getRowHref);
+  const { direction } = useLocale();
   const disabled = useMemo(() => new Set<Key>(disabledKeys ?? []), [disabledKeys]);
 
   const marked = columns.filter((column) => column.isRowHeader === true);
@@ -138,11 +155,17 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
       ? `DataTable: sortDescriptor names "${sortDescriptor.column}", which is no column's id.`
       : null,
   );
-  const repeated = repeatedKey(rows.map((row) => row.key));
+  const sortable =
+    onSortChange === undefined ? columns.find((column) => column.allowsSorting === true) : undefined;
+  useWarnOnce(
+    sortable === undefined
+      ? null
+      : `DataTable: the column "${sortable.id}" allowsSorting, and there is no onSortChange, so a press on its header changes nothing. Pass onSortChange and sortDescriptor from your URL.`,
+  );
   useWarnOnce(
     repeated === null
       ? null
-      : `DataTable: getKey gives "${String(repeated)}" to more than one row; every row needs a key of its own.`,
+      : `DataTable: getKey gives "${String(repeated)}" to more than one row; every row needs a key of its own. Only the first row with it is drawn.`,
   );
   useWarnOnce(
     items.length === 0 && !isLoading && !present(emptyState)
@@ -153,7 +176,14 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   return (
     // The capture handler takes keys before React Aria's grid does (spec 7.2): a capture listener, which
     // jsx-a11y does not read, so the root needs no role of its own.
-    <div ref={ref} className={cx('data-table', className)} onKeyDownCapture={handleTableKey}>
+    <div
+      ref={ref}
+      className={cx('data-table', className)}
+      onKeyDownCapture={(event: KeyboardEvent<HTMLDivElement>) => {
+        // The locale's direction, which React Aria's keyboard delegate reads, not the CSS's.
+        handleTableKey(event, { direction });
+      }}
+    >
       {/* Busy while loading. The status sits outside the busy part and stays mounted, so it is heard. */}
       <div className="data-table-grid" aria-busy={isLoading ? 'true' : undefined}>
         <TableFace

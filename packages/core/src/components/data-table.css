@@ -5,10 +5,10 @@
  * header's link is stretched over its row by ::after, the row being its containing block, so a press anywhere
  * on the row opens it; what a cell holds that takes its own press sits above the link and under the header.
  * Hover is the 5% ink wash where hover exists, focus the inset ring, the current row a 3px ink border at its
- * first cell's inline start and its row header at 700. The header cells stick at --page-sticky-top, one layer
- * under the page's header. A column with data-hide-below leaves by a container query on the table's own box,
- * 48rem for md and 40rem for sm, widths and not breakpoint tokens. A column that leaves keeps its cells, drawn
- * zero wide and hidden, so every row and React Aria's spanning empty cell count the same columns in every
+ * first shown cell's inline start and its row header at 700. The header cells stick at --page-sticky-top, one
+ * layer under the page's header. A column with data-hide-below leaves by a container query on the table's own
+ * box, 48rem for md and 40rem for sm, widths and not breakpoint tokens. A column that leaves keeps its cells,
+ * drawn zero wide and hidden, so every row and React Aria's spanning empty cell count the same columns in every
  * engine, and the table stays the full width of its box; a skeleton row's cell for it is not drawn at all.
  */
 @layer components {
@@ -164,9 +164,28 @@
     outline-offset: calc(-1 * var(--focus-ring-width));
   }
 
-  /* What a cell holds that takes its own press: above the stretched link and under the sticky header. */
-  .data-table-cell :is(button, input, select, textarea, [role='button'], a:not(.data-table-link)),
-  .data-table-cell .checkbox-field {
+  /* What a cell holds that takes its own press: above the stretched link and under the sticky header. Every
+     native control and control role, anything in the tab order, a field, and the opt-in data-table-control for
+     anything else an app draws; never the row's own link, whose ::after a position would hold to its own box. */
+  .data-table-cell
+    :is(
+      a,
+      button,
+      input,
+      label,
+      select,
+      summary,
+      textarea,
+      [role='button'],
+      [role='checkbox'],
+      [role='combobox'],
+      [role='menuitem'],
+      [role='radio'],
+      [role='slider'],
+      [role='switch'],
+      [tabindex]:not([tabindex='-1'])
+    ):not(.data-table-link),
+  .data-table-cell :is(.checkbox-field, .field, .data-table-control) {
     position: relative;
     z-index: calc(var(--z-header) - 2);
   }
@@ -188,8 +207,10 @@
     }
   }
 
-  /* The current row: a 3px ink border at its first cell's inline start, its padding 3px less so nothing moves. */
-  .data-table-row[data-current] > :first-child {
+  /* The current row: a 3px ink border at its first shown cell's inline start, its padding 3px less so nothing
+     moves. :where() keeps the rule under a hidden cell's, so a cell that has left never draws it, and the
+     container queries below move it to the first cell that has not left. */
+  .data-table-row[data-current] > :where(:first-child) {
     padding-inline-start: calc(var(--data-table-pad) - 3px);
     border-inline-start: 3px solid var(--color-ink);
   }
@@ -271,6 +292,13 @@
     .data-table .data-table-skeleton-cell[data-hide-below='md'] {
       display: none;
     }
+
+    /* The current bar on the first cell that is not an md column. */
+    .data-table-row[data-current]
+      > :where(:not([data-hide-below='md']):not(:not([data-hide-below='md']) ~ *)) {
+      padding-inline-start: calc(var(--data-table-pad) - 3px);
+      border-inline-start: 3px solid var(--color-ink);
+    }
   }
 
   @container data-table (width < 40rem) {
@@ -284,6 +312,12 @@
     .data-table .data-table-skeleton-cell[data-hide-below='sm'] {
       display: none;
     }
+
+    /* The current bar on the first cell that leaves at neither width. */
+    .data-table-row[data-current] > :where(:not([data-hide-below]):not(:not([data-hide-below]) ~ *)) {
+      padding-inline-start: calc(var(--data-table-pad) - 3px);
+      border-inline-start: 3px solid var(--color-ink);
+    }
   }
 
   @media (forced-colors: active) {
@@ -293,7 +327,7 @@
       border-color: CanvasText;
     }
 
-    .data-table-row[data-current] > :first-child {
+    .data-table-row[data-current] > * {
       border-inline-start-color: CanvasText;
     }
 

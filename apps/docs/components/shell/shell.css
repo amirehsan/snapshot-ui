@@ -233,6 +233,12 @@
     gap: 12px;
   }
 
+  /* A wide stage keeps the phone's 16px sides at every width, so a part that changes with its own box gets
+     every pixel the content can give it. */
+  .stage-wide {
+    padding-inline: 16px;
+  }
+
   .stage-bar {
     display: flex;
     align-items: center;
@@ -649,6 +655,27 @@
     }
 
     .panel-side .toc-card {
+      display: none;
+    }
+  }
+
+  /* ---- A page with a wide example: the side column folds from 1440 too -- */
+  /* A wide stage (Preview's wide) is for a part that changes with its own box, as a data table drops its
+     columns at 48rem and 40rem of it: the page's content takes every column of the grid at every width, so the
+     stage is as wide as the page can give it, and the side column folds under the content as it does under
+     1440, its contents in two columns and the page's outline left out. Pages without one keep their side. */
+  @media (width >= 1440px) {
+    .panel:has(.stage-wide) > :is(.panel-main, .panel-side) {
+      grid-column: 1 / -1;
+    }
+
+    .panel:has(.stage-wide) > .panel-side {
+      position: static;
+      grid-template-columns: repeat(2, 1fr);
+      align-items: start;
+    }
+
+    .panel:has(.stage-wide) > .panel-side .toc-card {
       display: none;
     }
   }

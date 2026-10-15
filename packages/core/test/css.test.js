@@ -6351,13 +6351,36 @@ describe('src/components/data-table.css', () => {
     expect(blockAfter(css, ".data-table-cell[role='rowheader'] {")).not.toContain('position');
   });
 
-  it('raises a cell control above the link through the header token', () => {
-    const raised = blockAfter(
-      rules(),
-      ".data-table-cell :is(button, input, select, textarea, [role='button'], a:not(.data-table-link)), .data-table-cell .checkbox-field {",
-    );
-    expect(raised).toContain('position: relative;');
-    expect(raised).toContain('z-index: calc(var(--z-header) - 2);');
+  it('raises every control a cell can hold above the link through the header token, and an opt-in class', () => {
+    const raised = blocks().filter(([selector]) => selector.includes('.data-table-cell :is('));
+    expect(raised).toHaveLength(1);
+    const [selector = '', body = ''] = raised[0] ?? [];
+    for (const control of [
+      'a',
+      'button',
+      'input',
+      'label',
+      'select',
+      'summary',
+      'textarea',
+      "[role='button']",
+      "[role='checkbox']",
+      "[role='combobox']",
+      "[role='menuitem']",
+      "[role='radio']",
+      "[role='slider']",
+      "[role='switch']",
+      "[tabindex]:not([tabindex='-1'])",
+      '.checkbox-field',
+      '.field',
+      '.data-table-control',
+    ]) {
+      expect(selector, control).toMatch(new RegExp(`[(,] ?${control.replace(/[[\]().*'=-]/g, '\\$&')}[,)]`));
+    }
+    // The row's own link is never raised: positioned, it would hold its ::after to its own box.
+    expect(selector).toContain(':not(.data-table-link)');
+    expect(body).toContain('position: relative;');
+    expect(body).toContain('z-index: calc(var(--z-header) - 2);');
   });
 
   it('washes a row with a link or selection 5% ink over the fill, only where hover exists', () => {
@@ -6384,11 +6407,29 @@ describe('src/components/data-table.css', () => {
     );
   });
 
-  it('draws the current bar as a 3px ink inline-start border on the first cell, its padding 3px less, and its row header at 700', () => {
+  it('draws the current bar as a 3px ink inline-start border on the first shown cell, its padding 3px less, and its row header at 700', () => {
     const css = outsideForcedColors(rules());
-    const bar = blockAfter(css, '.data-table-row[data-current] > :first-child {');
-    expect(bar).toContain('border-inline-start: 3px solid var(--color-ink);');
-    expect(bar).toContain('padding-inline-start: calc(var(--data-table-pad) - 3px);');
+    const BAR = [
+      'border-inline-start: 3px solid var(--color-ink);',
+      'padding-inline-start: calc(var(--data-table-pad) - 3px);',
+    ];
+    // At full width the first cell; :where() keeps the rule under a hidden cell's, so a cell that has left never
+    // draws it, and under each width the first cell that has not left draws it instead.
+    for (const [scope, selector] of [
+      [css, '.data-table-row[data-current] > :where(:first-child) {'],
+      [
+        blockAfter(css, '@container data-table (width < 48rem)'),
+        ".data-table-row[data-current] > :where(:not([data-hide-below='md']):not(:not([data-hide-below='md']) ~ *)) {",
+      ],
+      [
+        blockAfter(css, '@container data-table (width < 40rem)'),
+        '.data-table-row[data-current] > :where(:not([data-hide-below]):not(:not([data-hide-below]) ~ *)) {',
+      ],
+    ]) {
+      const bar = blockAfter(scope, selector);
+      for (const declaration of BAR) expect(bar, `${selector} ${declaration}`).toContain(declaration);
+    }
+    expect(css).not.toContain('.data-table-row[data-current] > :first-child');
     expect(blockAfter(css, ".data-table-row[data-current] > .data-table-cell[role='rowheader'] {")).toContain(
       'font-weight: 700;',
     );
@@ -6490,7 +6531,8 @@ describe('src/components/data-table.css', () => {
     );
     // Never by the viewport.
     expect(css).not.toMatch(/@media \((?:min-|max-)?width/);
-    expect(css.match(/\[data-hide-below/g)).toHaveLength(4);
+    // The cells that leave, and the current bar that moves past them, each under both widths.
+    expect(css.match(/\[data-hide-below/g)).toHaveLength(8);
   });
 
   it('never uses signal orange, clay, error or success', () => {
@@ -6511,7 +6553,7 @@ describe('src/components/data-table.css', () => {
     expect(blockAfter(forced, '.data-table-column, .data-table-cell, .data-table-skeleton-row {')).toContain(
       'border-color: CanvasText;',
     );
-    expect(blockAfter(forced, '.data-table-row[data-current] > :first-child {')).toContain(
+    expect(blockAfter(forced, '.data-table-row[data-current] > * {')).toContain(
       'border-inline-start-color: CanvasText;',
     );
     expect(

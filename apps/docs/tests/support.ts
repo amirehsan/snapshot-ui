@@ -37,6 +37,18 @@ export const CHART_PAGES: SectionPage[] = pagesOf('charts');
 export const sideways = (page: Page): Promise<number> =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
+/**
+ * Fails unless the data table holding `inside` draws its table face: its box is 40rem or wider, where its list
+ * face never takes over, so a test of rows, headers and cells cannot pass by finding a face nobody sees. The
+ * data table page's examples have a wide stage for this (plan, spec correction 23).
+ */
+export const expectTableFace = async (inside: Locator): Promise<void> => {
+  const width = await inside.evaluate(
+    (element) => element.closest('.data-table')?.getBoundingClientRect().width ?? 0,
+  );
+  expect(width, 'the data table box, 40rem or wider for its table face').toBeGreaterThanOrEqual(640);
+};
+
 /** The color and corner switches in the docs header settle after hydration: one radio is checked in each. */
 export const settled = (page: Page): Promise<void> =>
   expect(page.locator('.header input[type="radio"]:checked')).toHaveCount(2);

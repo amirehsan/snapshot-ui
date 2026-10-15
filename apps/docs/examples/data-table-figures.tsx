@@ -21,7 +21,7 @@ const COLUMNS: readonly DataTableColumn<Transaction>[] = [
 
 export default function DataTableFigures(): ReactElement {
   return (
-    <Card as="section" aria-labelledby="data-table-figures-title" style={{ width: '100%', maxWidth: 640 }}>
+    <Card as="section" aria-labelledby="data-table-figures-title" style={{ width: '100%' }}>
       <CardHeader>
         <CardTitle id="data-table-figures-title" level={3}>
           This week
