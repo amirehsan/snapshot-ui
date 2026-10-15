@@ -24,7 +24,15 @@ export default function DataTableColumns(): ReactElement {
         <SegmentedControlItem value="medium">44rem</SegmentedControlItem>
         <SegmentedControlItem value="narrow">38rem</SegmentedControlItem>
       </SegmentedControl>
-      <div data-testid="data-table-box" style={{ width: `min(${WIDTHS[width] ?? '100%'}, 100%)` }}>
+      {/* A narrower box is drawn as a dashed outline, which takes no room, so its width reads as chosen. */}
+      <div
+        data-testid="data-table-box"
+        style={{
+          width: `min(${WIDTHS[width] ?? '100%'}, 100%)`,
+          outline: width === 'full' ? undefined : '1px dashed var(--color-frame)',
+          outlineOffset: 0,
+        }}
+      >
         <DataTable
           aria-label="Transactions"
           items={TRANSACTIONS.slice(0, 5)}
@@ -32,6 +40,18 @@ export default function DataTableColumns(): ReactElement {
           getKey={(row) => row.id}
         />
       </div>
+      {width === 'full' ? null : (
+        <p
+          style={{
+            margin: 0,
+            color: 'var(--color-slate)',
+            fontSize: 'var(--text-small)',
+            lineHeight: 'var(--text-small--line-height)',
+          }}
+        >
+          {`The table's box: ${WIDTHS[width] ?? ''}`}
+        </p>
+      )}
     </div>
   );
 }
