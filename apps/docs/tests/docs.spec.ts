@@ -39,6 +39,48 @@ for (const width of [375, 768, 1024, 1440]) {
   });
 }
 
+/** How far the header and the content sit in from the workspace's left and right edges. */
+const workspaceGutters = (page: Page): Promise<number[][]> =>
+  page.locator('.workspace').evaluate((workspace) => {
+    const outer = workspace.getBoundingClientRect();
+    return ['.header-inner', '.content'].map((selector) => {
+      const inner = workspace.querySelector(selector)?.getBoundingClientRect();
+      return inner ? [inner.left - outer.left, outer.right - inner.right] : [];
+    });
+  });
+
+for (const width of [1920, 2560]) {
+  for (const rail of ['open', 'collapsed'] as const) {
+    test(`a docs page is centered beside the ${rail} rail at ${String(width)}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await visit(page);
+      if (rail === 'collapsed') {
+        await page.getByRole('button', { name: 'Collapse the menu' }).click();
+        await expect(page.locator('html')).toHaveAttribute('data-rail', 'collapsed');
+      }
+      // Past its cap the column stays whole, and the room left over is shared out evenly on
+      // both sides, so the header and the content keep one left edge.
+      await expect
+        .poll(async () => {
+          const [header = [], content = []] = await workspaceGutters(page);
+          return [...header, ...content].every((gutter) => Math.abs(gutter - (header[0] ?? 0)) <= 1);
+        })
+        .toBe(true);
+      const [[left = 0] = []] = await workspaceGutters(page);
+      expect(left).toBeGreaterThan(0);
+    });
+  }
+}
+
+test('a docs page fills the workspace below its cap', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page);
+  expect(await workspaceGutters(page)).toEqual([
+    [0, 0],
+    [0, 0],
+  ]);
+});
+
 for (const theme of ['light', 'dark'] as const) {
   test(`a docs page has no axe violations in ${theme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: theme });
