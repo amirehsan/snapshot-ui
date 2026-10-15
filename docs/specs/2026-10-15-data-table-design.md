@@ -1,6 +1,6 @@
 # Data table: DataTable, EmptyState, Skeleton and SidePanel: design
 
-Status: draft for the owner's rulings in section 10.1. Everything else is decided here and listed in section 10.2.
+Status: approved on 2026-10-15. The owner took the twelve rulings in section 10.1 as recommended; everything else is decided here and listed in section 10.2.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document pulls forward the phase 4 rows "DataTable", "EmptyState" and "Skeleton", and adds SidePanel, which the parent spec does not list (the shell overlays spec deferred "the non-modal desktop side panel (batch 3)"). It answers batch 3c, the last third of batch 3 of the first consumer's roadmap, its Transactions page. The design authority remains `docs/design-system.md`.
 Released before this: batch 3b, `@snapshot-ui/core` and `@snapshot-ui/react` 0.5.0 and `@snapshot-ui/charts` 0.1.2 (the filters). Section 2 lists what this document takes from batches 1 to 3b.
 
@@ -358,7 +358,7 @@ export interface SidePanelLayoutProps {
 
 ## 10. Decisions
 
-### 10.1 Rulings for the owner
+### 10.1 Rulings taken by the owner
 
 1. **The API's shape.** Recommended: data-driven, `items` and `columns` with a `cell` function per column and `listSlot` for the list face, because the table and the list grouped by day must draw the same rows, totals and skeletons need to know the columns, and the app writes one definition. Alternative: React Aria's compositional shape (`<Column>`, `<Row>`, `<Cell>` as children), more flexible per row, with the list face as a second component the app fills from the same data.
 2. **Opening versus selecting a row.** Recommended: a press anywhere on a row opens its detail through a real link in its first cell, stretched over the row, and selection is only the checkbox, X and Space, so a click always does one thing and the row's link works as any link (middle click, a new tab, the context menu). Alternatives: React Aria's default, where a click opens only while nothing is selected and selects once anything is; or React Aria's "replace" mode, where a click selects and Enter or a double click opens, a file manager's model.
