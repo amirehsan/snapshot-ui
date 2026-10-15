@@ -6462,21 +6462,35 @@ describe('src/components/data-table.css', () => {
 
   it('hides md columns under 48rem and sm columns under 40rem of the table box, by container query only', () => {
     const css = rules();
-    expect(
-      blockAfter(
-        blockAfter(css, '@container data-table (width < 48rem)'),
-        ".data-table [data-hide-below='md'] {",
-      ),
-    ).toContain('display: none;');
-    expect(
-      blockAfter(
-        blockAfter(css, '@container data-table (width < 40rem)'),
-        ".data-table [data-hide-below='sm'] {",
-      ),
-    ).toContain('display: none;');
+    for (const [query, size] of [
+      ['@container data-table (width < 48rem)', 'md'],
+      ['@container data-table (width < 40rem)', 'sm'],
+    ]) {
+      const block = blockAfter(css, query);
+      // A header or body cell stays in its row, zero wide and hidden, so every row and React Aria's spanning
+      // empty cell count the same columns and the table stays the full width of its box (spec correction 26).
+      const cell = blockAfter(block, `.data-table :is(th, td)[data-hide-below='${size}'] {`);
+      for (const declaration of [
+        'inline-size: 0;',
+        'padding-inline: 0;',
+        'border-inline-width: 0;',
+        'visibility: hidden;',
+      ]) {
+        expect(cell, `${size}: ${declaration}`).toContain(declaration);
+      }
+      expect(cell).not.toContain('display');
+      // A skeleton row is a flex row inside that one cell, so its cell for the column is not drawn at all.
+      expect(
+        blockAfter(block, `.data-table .data-table-skeleton-cell[data-hide-below='${size}'] {`),
+      ).toContain('display: none;');
+    }
+    // The header cell takes the column's width from its definition, so a fixed table sizes the column by it.
+    expect(blockAfter(css, '.data-table-column {')).toContain(
+      'inline-size: var(--data-table-column-width, auto);',
+    );
     // Never by the viewport.
     expect(css).not.toMatch(/@media \((?:min-|max-)?width/);
-    expect(css.match(/\[data-hide-below/g)).toHaveLength(2);
+    expect(css.match(/\[data-hide-below/g)).toHaveLength(4);
   });
 
   it('never uses signal orange, clay, error or success', () => {

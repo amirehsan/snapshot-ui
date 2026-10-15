@@ -8,7 +8,8 @@ function grid(direction: 'ltr' | 'rtl' = 'ltr', hidden: number[] = [2]): HTMLEle
   const cells = [0, 1, 2, 3, 4]
     .map((index) => {
       const role = index === 1 ? 'rowheader' : 'gridcell';
-      const style = hidden.includes(index) ? ' style="display: none"' : '';
+      // A column that has left keeps its cell, zero wide and hidden, as data-table.css draws it.
+      const style = hidden.includes(index) ? ' style="visibility: hidden; width: 0"' : '';
       const link = index === 1 ? '<a href="/t1">Corner Mart</a>' : `cell ${String(index)}`;
       return `<td role="${role}" tabindex="-1" data-index="${String(index)}"${style}>${link}</td>`;
     })
@@ -52,12 +53,15 @@ afterEach(() => {
 });
 
 describe('keys', () => {
-  it('finds the next and previous shown cell in a row, skipping cells with display none', () => {
+  it('finds the next and previous shown cell in a row, skipping cells that have left', () => {
     const root = grid();
     expect(nextVisibleCell(cellAt(root, 1), 1)).toBe(cellAt(root, 3));
     expect(nextVisibleCell(cellAt(root, 3), -1)).toBe(cellAt(root, 1));
     expect(nextVisibleCell(cellAt(root, 4), 1)).toBeNull();
     expect(nextVisibleCell(cellAt(root, 0), -1)).toBeNull();
+    // A cell with display none is skipped too.
+    cellAt(root, 3).style.display = 'none';
+    expect(nextVisibleCell(cellAt(root, 1), 1)).toBe(cellAt(root, 4));
   });
 
   it('finds the first and last shown cell', () => {

@@ -7,7 +7,9 @@
  * Hover is the 5% ink wash where hover exists, focus the inset ring, the current row a 3px ink border at its
  * first cell's inline start and its row header at 700. The header cells stick at --page-sticky-top, one layer
  * under the page's header. A column with data-hide-below leaves by a container query on the table's own box,
- * 48rem for md and 40rem for sm, widths and not breakpoint tokens.
+ * 48rem for md and 40rem for sm, widths and not breakpoint tokens. A column that leaves keeps its cells, drawn
+ * zero wide and hidden, so every row and React Aria's spanning empty cell count the same columns in every
+ * engine, and the table stays the full width of its box; a skeleton row's cell for it is not drawn at all.
  */
 @layer components {
   .data-table {
@@ -35,6 +37,8 @@
 
     position: sticky;
     inset-block-start: var(--page-sticky-top, 0px);
+    /* The column's width, from its definition (spec correction 1); a fixed table takes it from this row. */
+    inline-size: var(--data-table-column-width, auto);
     z-index: calc(var(--z-header) - 1);
     box-sizing: border-box;
     block-size: var(--size-target);
@@ -253,14 +257,31 @@
   }
 
   /* ---- Columns that leave, by the table's own box ----------------------------------------------- */
+  /* A header or body cell that leaves stays in its row at zero width, hidden from sight, the pointer and
+     assistive technology; display: none would drop it from the row while React Aria's spanning empty cell
+     still counts it, and leave an empty column at the table's end (spec correction 26). */
   @container data-table (width < 48rem) {
-    .data-table [data-hide-below='md'] {
+    .data-table :is(th, td)[data-hide-below='md'] {
+      inline-size: 0;
+      padding-inline: 0;
+      border-inline-width: 0;
+      visibility: hidden;
+    }
+
+    .data-table .data-table-skeleton-cell[data-hide-below='md'] {
       display: none;
     }
   }
 
   @container data-table (width < 40rem) {
-    .data-table [data-hide-below='sm'] {
+    .data-table :is(th, td)[data-hide-below='sm'] {
+      inline-size: 0;
+      padding-inline: 0;
+      border-inline-width: 0;
+      visibility: hidden;
+    }
+
+    .data-table .data-table-skeleton-cell[data-hide-below='sm'] {
       display: none;
     }
   }

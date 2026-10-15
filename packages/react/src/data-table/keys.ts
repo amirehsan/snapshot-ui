@@ -10,7 +10,11 @@ import type { KeyboardEvent } from 'react';
 const CELL = '[role="gridcell"], [role="rowheader"]';
 const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-const isShown = (cell: Element): boolean => getComputedStyle(cell).display !== 'none';
+/** A cell that has left stays in its row at zero width and hidden, so it is shown only while visible. */
+const isShown = (cell: Element): boolean => {
+  const style = getComputedStyle(cell);
+  return style.display !== 'none' && style.visibility !== 'hidden';
+};
 
 const cellsOf = (row: Element): HTMLElement[] => [
   ...row.querySelectorAll<HTMLElement>(':scope > [role="gridcell"], :scope > [role="rowheader"]'),
@@ -47,7 +51,7 @@ function startOf(active: Element, root: Element): Element | null {
 }
 
 /**
- * Moves an arrow, Home or End past a cell the CSS hid: when the cell React Aria would reach is `display: none`,
+ * Moves an arrow, Home or End past a cell the CSS hid: when the cell React Aria would reach has left,
  * the key stops here and focus goes to the nearest shown cell in that direction, whose focus event sets React
  * Aria's focused key. Every other key passes through. Arrow Right is the next cell in DOM order on a
  * left-to-right row and the previous on a right-to-left one.

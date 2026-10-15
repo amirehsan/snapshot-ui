@@ -2968,7 +2968,9 @@ test('a data table drops its md column under 48rem of its box and its sm column 
     box
       .locator('[role="columnheader"]')
       .evaluateAll((cells) =>
-        cells.filter((cell) => getComputedStyle(cell).display !== 'none').map((cell) => cell.textContent),
+        cells
+          .filter((cell) => getComputedStyle(cell).visibility !== 'hidden')
+          .map((cell) => cell.textContent),
       );
   // The widths are the table's own box, not the window's: the stage is narrower than the page, so the box is
   // set wider than it here, as a table in a wide content column would be.
@@ -2992,5 +2994,50 @@ test('a data table drops its md column under 48rem of its box and its sm column 
   await page.keyboard.press('ArrowRight');
   await expect(widths.getByRole('radio', { name: '38rem' })).toBeChecked();
   await expect.poll(shown).toEqual(['Date', 'Payee', 'Amount']);
+  // The table is the full width of its box, its last header cell ending at the box's end (spec correction 26).
+  const ends = await box.evaluate((element) => {
+    const right = (selector: string): number =>
+      Math.round(element.querySelector(selector)?.getBoundingClientRect().right ?? 0);
+    return {
+      box: Math.round(element.getBoundingClientRect().right),
+      table: right('.data-table-table'),
+      header: right('thead [role="columnheader"]:last-child'),
+    };
+  });
+  expect(ends.table).toBe(ends.box);
+  expect(ends.header).toBe(ends.box);
   expect(await sideways(page)).toBe(0);
+});
+
+test('a loading data table draws its skeleton cells under its header cells, at full width', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const state = page.getByRole('radiogroup', { name: 'State' });
+  await state.getByRole('radio', { name: 'Rows' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(state.getByRole('radio', { name: 'Loading' })).toBeChecked();
+  const root = page.locator('.stage .data-table').filter({ has: page.locator('.data-table-skeleton-row') });
+  await expect(root).toHaveCount(1);
+  const layout = await root.evaluate((element) => {
+    const edges = (cell: Element): [number, number] => {
+      const { left, right } = cell.getBoundingClientRect();
+      return [Math.round(left), Math.round(right)];
+    };
+    const shown = (cell: Element): boolean =>
+      getComputedStyle(cell).display !== 'none' && getComputedStyle(cell).visibility !== 'hidden';
+    return {
+      root: edges(element),
+      table: edges(element.querySelector('.data-table-table') ?? element),
+      headers: [...element.querySelectorAll('thead [role="columnheader"]')].filter(shown).map(edges),
+      skeleton: [...(element.querySelector('.data-table-skeleton-row')?.children ?? [])]
+        .filter(shown)
+        .map(edges),
+    };
+  });
+  expect(layout.table).toEqual(layout.root);
+  expect(layout.headers.at(-1)?.[1]).toBe(layout.root[1]);
+  expect(layout.skeleton).toEqual(layout.headers);
 });

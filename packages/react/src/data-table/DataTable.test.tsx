@@ -207,8 +207,9 @@ describe('DataTable', () => {
 
   it('writes a column width on its header cell style', () => {
     render(<Spending />);
-    expect(header('Date').style.width).toBe('7rem');
-    expect(header('Amount').style.width).toBe('8rem');
+    // As a property, which the stylesheet reads as the cell's width and sets to zero when the column leaves.
+    expect(header('Date').style.getPropertyValue('--data-table-column-width')).toBe('7rem');
+    expect(header('Amount').style.getPropertyValue('--data-table-column-width')).toBe('8rem');
     expect(header('Payee').getAttribute('style')).toBeNull();
   });
 

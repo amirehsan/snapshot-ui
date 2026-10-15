@@ -193,7 +193,7 @@ export const ColumnsHidden: Story = {
   ),
   play: async ({ canvasElement }) => {
     const headers = within(canvasElement).getAllByRole('columnheader', { hidden: true });
-    const shown = headers.filter((cell) => getComputedStyle(cell).display !== 'none');
+    const shown = headers.filter((cell) => getComputedStyle(cell).visibility !== 'hidden');
     await expect(shown.map((cell) => cell.textContent)).toEqual(['Date', 'Payee', 'Account', 'Amount']);
   },
 };
@@ -309,7 +309,7 @@ export const StickyHeader: Story = {
     await waitFor(() => expect(window.scrollY).toBe(600));
     await new Promise((resolve) => requestAnimationFrame(resolve));
     for (const header of within(canvasElement).getAllByRole('columnheader', { hidden: true })) {
-      if (getComputedStyle(header).display === 'none') continue;
+      if (getComputedStyle(header).visibility === 'hidden') continue;
       await expect(Math.round(header.getBoundingClientRect().top)).toBe(64);
     }
   },
@@ -373,6 +373,93 @@ export const HoverWash: Story = {
   },
 };
 
+/** The three widths of the table's box the full-width check draws: all columns, md gone, md and sm gone. */
+const BOX_WIDTHS = ['100%', '44rem', '38rem'] as const;
+
+/** The left and right edges of a box, rounded to a tenth of a pixel. */
+const edges = (element: Element): [number, number] => {
+  const { left, right } = element.getBoundingClientRect();
+  return [Math.round(left * 10) / 10, Math.round(right * 10) / 10];
+};
+
+const shownCells = (row: Element): HTMLElement[] =>
+  [...row.children].filter(
+    (cell): cell is HTMLElement =>
+      cell instanceof HTMLElement &&
+      getComputedStyle(cell).display !== 'none' &&
+      getComputedStyle(cell).visibility !== 'hidden',
+  );
+
+/**
+ * The table is the full width of its box at every width, its header and its rows ruled edge to edge, and in the
+ * loading body each skeleton cell sits under its header cell, an end-aligned line ending under its header's
+ * end. A column that has left keeps its cells at zero width, so React Aria's empty cell, which spans every
+ * column, and the header count the same columns (spec correction 26). Run in all three engines.
+ */
+export const FullWidth: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box>
+      <div style={{ display: 'grid', gap: 32 }}>
+        {BOX_WIDTHS.map((width) => (
+          <div
+            key={width}
+            style={{ display: 'grid', gap: 16, width: `min(${width}, 100%)` }}
+            data-width={width}
+          >
+            <Sorted columns={columnsWithTotal(TRANSACTIONS.slice(0, 3))} items={TRANSACTIONS.slice(0, 3)} />
+            <Sorted items={[]} isLoading loadingRowCount={2} aria-label="Loading transactions" />
+          </div>
+        ))}
+      </div>
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const expected = {
+      '100%': ['Date', 'Payee', 'Category', 'Account', 'Amount'],
+      '44rem': ['Date', 'Payee', 'Account', 'Amount'],
+      '38rem': ['Date', 'Payee', 'Amount'],
+    };
+    for (const width of BOX_WIDTHS) {
+      const holder = only(canvasElement, `[data-width="${width}"]`);
+      for (const root of holder.querySelectorAll<HTMLElement>('.data-table')) {
+        const table = only(root, '.data-table-table');
+        const [start, end] = edges(root);
+        await expect(edges(table), `table in ${width}`).toEqual([start, end]);
+        const headers = shownCells(only(root, 'thead [role="row"]'));
+        await expect(
+          headers.map((cell) => cell.textContent),
+          `columns in ${width}`,
+        ).toEqual(expected[width]);
+        // The header cells, and their rule, run from the table's start to its end with no gap.
+        await expect(edges(headers[0] ?? table)[0]).toBe(start);
+        await expect(edges(headers.at(-1) ?? table)[1]).toBe(end);
+        for (const [index, cell] of headers.slice(1).entries()) {
+          await expect(edges(cell)[0]).toBeCloseTo(edges(headers[index] ?? cell)[1], 0);
+        }
+        const rows = [...root.querySelectorAll('tbody [role="row"], tfoot [role="row"]')];
+        const skeleton = root.querySelector('.data-table-skeleton-row');
+        if (skeleton === null) {
+          for (const row of rows) {
+            const cells = shownCells(row);
+            await expect(cells.map(edges), `a row in ${width}`).toEqual(headers.map(edges));
+          }
+          continue;
+        }
+        await expect(edges(skeleton)).toEqual([start, end]);
+        const cells = shownCells(skeleton);
+        await expect(cells.map(edges), `skeleton cells in ${width}`).toEqual(headers.map(edges));
+        // The amount's line ends under the amount header's text, at the cell's end less its padding.
+        const amount = cells.at(-1);
+        const line = amount?.querySelector('.skeleton');
+        const label = headers.at(-1)?.querySelector('.data-table-column-inner');
+        if (!line || !label) throw new Error(`No amount line in ${width}`);
+        await expect(edges(line)[1]).toBeCloseTo(edges(label)[1], 0);
+      }
+    }
+  },
+};
+
 /**
  * The arrows step over a column that has left: in a 44rem box Category is hidden, and Arrow Right from the
  * payee lands on Account, Arrow Left back on the payee (spec correction 8). Run in all three engines.
@@ -387,7 +474,7 @@ export const ArrowsSkipHidden: Story = {
   play: async ({ canvasElement }) => {
     const row = await focusRow(canvasElement, 0);
     const cells = [...row.querySelectorAll<HTMLElement>('[role="gridcell"], [role="rowheader"]')];
-    await expect(getComputedStyle(cells[2] ?? row).display).toBe('none');
+    await expect(getComputedStyle(cells[2] ?? row).visibility).toBe('hidden');
     await userEvent.keyboard('{ArrowRight}');
     await waitFor(() => expect(cells[0]?.contains(document.activeElement)).toBe(true));
     await userEvent.keyboard('{ArrowRight}');
