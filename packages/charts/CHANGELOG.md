@@ -1,5 +1,18 @@
 # @snapshot-ui/charts
 
+## 0.1.2
+
+### Patch Changes
+
+- e057652: The `@snapshot-ui/core` peer now asks for `^0.5.0`, the release that draws the filters, so charts 0.1.2 needs core 0.5. A 0.x caret range accepts only its own minor: charts needs the same 0.x minor of `@snapshot-ui/core`, whose `styles.css` draws the charts.
+- Updated dependencies [d9f683a]
+- Updated dependencies [a224f54]
+- Updated dependencies [7394e7b]
+- Updated dependencies [ef012c5]
+- Updated dependencies [6af2f59]
+- Updated dependencies [a467ed5]
+  - @snapshot-ui/core@0.5.0
+
 ## 0.1.1
 
 ### Patch Changes
