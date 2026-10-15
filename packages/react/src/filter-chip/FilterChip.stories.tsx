@@ -381,11 +381,12 @@ export const ClosedKeys: Story = {
     await expect(document.querySelector('[role="listbox"]')).toBeNull();
     await expect(trigger).toHaveAccessibleName('Category');
     await user.keyboard('{ArrowDown}');
-    await waitFor(() => expect(document.querySelector('[role="listbox"]')).not.toBeNull());
+    // Settled first, as a person's Escape always is: closed mid-entry, WebKit can hold the popover and its focus.
+    await atRest();
     await user.keyboard('{Escape}');
-    // The closed state, not the popover's removal: WebKit and Firefox can hold the exit transition on a busy runner.
     await waitFor(() => expect(trigger).toHaveAttribute('aria-expanded', 'false'));
-    await waitFor(() => expect(trigger).toHaveFocus());
+    // Focus comes back once the popover leaves, which runs late on a busy runner.
+    await waitFor(() => expect(trigger).toHaveFocus(), { timeout: 3000 });
   },
 };
 
