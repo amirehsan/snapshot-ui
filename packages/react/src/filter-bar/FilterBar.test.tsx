@@ -278,7 +278,7 @@ describe('FilterBar', () => {
         {OPTIONS}
       </FilterChip>
     );
-    const { rerender } = render(<FilterBar>{primary}</FilterBar>);
+    const { rerender, unmount } = render(<FilterBar>{primary}</FilterBar>);
     expect(document.querySelector('.filter-bar-more')).toBeNull();
     // Only a wrapped secondary chip: no More, and the chip stays in the row rather than vanish.
     rerender(
@@ -300,9 +300,10 @@ describe('FilterBar', () => {
       </FilterBar>,
     );
     expect(rowLabels()).toEqual(['Category', 'Payee', 'More']);
+    unmount();
     // Every secondary chip active: no More.
     render(<Bar initial={{ date: 'This month', tags: ['rent'] }} />);
-    expect(document.querySelectorAll('.filter-bar-more')).toHaveLength(1);
+    expect(document.querySelector('.filter-bar-more')).toBeNull();
   });
 
   it('moves an inactive secondary chip into More and an active one into the row, after the primary ones', () => {
@@ -401,6 +402,86 @@ describe('FilterBar', () => {
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Clear Accounts' }));
     expect(rowTrigger('Accounts')).toHaveFocus();
+  });
+
+  it('keeps an open secondary chip in the row after its last option is unchecked, until the list closes, then focuses More', async () => {
+    const user = userEvent.setup();
+    render(<Bar initial={{ tags: ['rent'], date: 'This month' }} />);
+    expect(document.querySelector('.filter-bar-more')).toBeNull();
+    await user.click(rowTrigger('Tags'));
+    const list = screen.getByRole('listbox', { name: 'Tags' });
+    await user.click(within(list).getByRole('option', { name: 'Rent' }));
+    // Inactive now, but its list is open: the chip stays in the row, and so does the list.
+    expect(rowTrigger('Tags').closest('.filter-chip')).not.toHaveAttribute('data-active');
+    expect(screen.getByRole('listbox', { name: 'Tags' })).toBe(list);
+    expect(list.contains(document.activeElement)).toBe(true);
+    // As the list closes the chip goes behind More, and More takes focus.
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(rowLabels()).toEqual(['Category', 'Accounts', 'Amount', 'Date', 'More']);
+    await waitFor(() => {
+      expect(more()).toHaveFocus();
+    });
+  });
+
+  it('keeps an open secondary custom chip in the row after its panel clears its value, until the panel closes, then focuses More', async () => {
+    const user = userEvent.setup();
+    /** A Date chip whose panel clears its own value and stays open. */
+    function DateBar(): ReactElement {
+      const [date, setDate] = useState<string | undefined>('This month');
+      return (
+        <FilterBar>
+          <FilterChip label="Category" selectionMode="single" value={null} onChange={() => undefined}>
+            {OPTIONS}
+          </FilterChip>
+          <FilterChip
+            label="Date"
+            isSecondary
+            valueLabel={date}
+            onClear={() => {
+              setDate(undefined);
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setDate(undefined);
+              }}
+            >
+              Any time
+            </button>
+          </FilterChip>
+        </FilterBar>
+      );
+    }
+    render(<DateBar />);
+    expect(document.querySelector('.filter-bar-more')).toBeNull();
+    await user.click(rowTrigger('Date'));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Any time' }));
+    expect(rowTrigger('Date').closest('.filter-chip')).not.toHaveAttribute('data-active');
+    expect(screen.getByRole('dialog')).toBe(dialog);
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(rowLabels()).toEqual(['Category', 'More']);
+    await waitFor(() => {
+      expect(more()).toHaveFocus();
+    });
+  });
+
+  it('gives focus to the first chip when the sheet closes with the Filters button hidden, as a phone turned wide', async () => {
+    const user = userEvent.setup();
+    render(<Bar initial={{ category: 'food' }} />);
+    await user.click(sheetButton());
+    const sheet = screen.getByRole('dialog', { name: 'Filters' });
+    // Turned past 768px with the sheet open: the stylesheet hides the Filters button and shows the row.
+    sheetButton().style.display = 'none';
+    await user.click(within(sheet).getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => {
+      expect(rowTrigger('Category')).toHaveFocus();
+    });
   });
 
   it('names the Filters button by its text and the count, written by formatCount', () => {

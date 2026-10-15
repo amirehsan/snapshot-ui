@@ -76,6 +76,25 @@ describe('censusOf', () => {
     expect(census).toEqual({ active: 2, inactiveSecondary: ['Account', 'Date'] });
   });
 
+  it('counts an undefined list value as no value, as the chip itself does', () => {
+    // A JavaScript caller, or a URL read that yields undefined, passes what the types refuse.
+    const loose = (
+      <FilterChip
+        label="Account"
+        selectionMode="single"
+        value={undefined as unknown as null}
+        onChange={noop}
+        isSecondary
+      >
+        {OPTIONS}
+      </FilterChip>
+    );
+    expect(censusOf([loose, single('Category', null)])).toEqual({
+      active: 0,
+      inactiveSecondary: ['Account'],
+    });
+  });
+
   it('skips a false slot, as {isAdmin && <FilterChip />} renders', () => {
     const isAdmin = false as boolean;
     const census = censusOf(

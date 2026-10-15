@@ -1284,6 +1284,24 @@ test('switches to the Filters button at 767px and back to the row at 768px', asy
   await expect(bar.locator('.filter-bar-clear-all')).toBeVisible();
 });
 
+test('gives focus to the first chip when the sheet closes after the phone turns wide', async ({ page }) => {
+  await page.setViewportSize({ width: 767, height: 900 });
+  await visit(page, '/docs/components/filter-bar');
+  const bar = page.locator('.stage .filter-bar').first();
+  await bar.locator('.filter-bar-sheet-button').click();
+  const overlay = page.locator('.sheet-overlay');
+  await expect(overlay).toBeVisible();
+  await expect(overlay).not.toHaveAttribute('data-entering');
+  const sheet = page.getByRole('dialog', { name: 'Filters' });
+  await expect(sheet).toBeFocused();
+  // Turned wide with the sheet open: the Filters button it would give focus back to is hidden.
+  await page.setViewportSize({ width: 900, height: 767 });
+  await expect(bar.locator('.filter-bar-sheet-button')).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.sheet')).toHaveCount(0);
+  await expect(bar.locator('.filter-bar-row .filter-chip-trigger').first()).toBeFocused();
+});
+
 test('a range calendar chooses a range in two presses and a preset in one', async ({ page }) => {
   await visit(page, '/docs/components/calendar');
   const calendar = page.getByRole('application', { name: /^Statement period/ });

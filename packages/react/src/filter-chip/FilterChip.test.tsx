@@ -181,6 +181,7 @@ function place(overrides: Partial<ChipPlace>): ChipPlace {
     clearWord: 'Clear',
     close: () => undefined,
     onSecondaryCleared: () => undefined,
+    onRowOpenChange: () => undefined,
     ...overrides,
   };
 }

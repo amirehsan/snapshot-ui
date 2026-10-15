@@ -69,15 +69,26 @@ export default async function TransactionsPage({
 }
 ```
 
-The client component writes each chip's change with the router, starting from the parameters already there so the search and the other filters stay. A repeated parameter is deleted and then appended once per key, a filter with no value deletes its parameter, a bare `?` is never written, and `{ scroll: false }` keeps the page where it is. Clear all deletes every filter parameter in one write. The sheet's Done names the server's count:
+The client component writes each chip's change with the router, starting from the parameters already there so the search and the other filters stay. A repeated parameter is deleted and then appended once per key, a filter with no value deletes its parameter, a bare `?` is never written, and `{ scroll: false }` keeps the page where it is. Clear all deletes every filter parameter in one write.
+
+It also mirrors the filters in its own state and shows that mirror, not the props. A write goes to the server and back before new props arrive, and until then a chip would show its old value: a multiple list would undo a toggle under the pointer, and a cleared chip would stay active. The mirror takes each change at once; the `seen` key, the query it last read or wrote, takes the server's filters again only when the URL changes under it, by Back, Forward or a link. The amount and date words come from the server's own formatters, so the mirror holds them too and blanks them as their chip clears. The sheet's Done names the server's count, "Show 1 result" or "Show 128 results":
 
 ```tsx
 'use client';
 
-import { FilterBar, FilterChip, PickerOption, SearchField } from '@snapshot-ui/react';
+import { FilterBar, FilterChip, PickerOption, SearchField, type Key } from '@snapshot-ui/react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { AmountFields, DateFields } from './filter-fields';
 
 const FILTERS = ['category', 'account', 'min', 'max', 'from', 'to'];
+
+interface Shown {
+  category: Key | null;
+  accounts: readonly Key[];
+  amountLabel?: string;
+  dateLabel?: string;
+}
 
 interface TransactionFiltersProps {
   filters: { category: string | null; accounts: string[] };
@@ -87,28 +98,45 @@ interface TransactionFiltersProps {
   dateLabel?: string;
 }
 
-export function TransactionFilters({ filters, count }: TransactionFiltersProps) {
+export function TransactionFilters({ filters, count, amountLabel, dateLabel }: TransactionFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const write = (change: (params: URLSearchParams) => void) => {
+  const query = searchParams.toString();
+  const fromServer: Shown = { ...filters, amountLabel, dateLabel };
+  const [shown, setShown] = useState(fromServer);
+  // The query the bar last read from the URL, or last wrote to it.
+  const [seen, setSeen] = useState(query);
+  if (query !== seen) {
+    setSeen(query);
+    setShown(fromServer);
+  }
+  const write = (next: Partial<Shown>, change: (params: URLSearchParams) => void) => {
+    setShown((current) => ({ ...current, ...next }));
     const params = new URLSearchParams(searchParams);
     change(params);
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    const written = params.toString();
+    setSeen(written);
+    router.replace(written ? `${pathname}?${written}` : pathname, { scroll: false });
   };
   return (
     <FilterBar
       search={<SearchField aria-label="Search transactions" />}
-      labels={{ done: `Show ${count} results` }}
-      onClearAll={() => write((params) => FILTERS.forEach((name) => params.delete(name)))}
+      labels={{ done: count === 1 ? 'Show 1 result' : `Show ${count} results` }}
+      onClearAll={() =>
+        write({ category: null, accounts: [], amountLabel: undefined, dateLabel: undefined }, (params) =>
+          FILTERS.forEach((name) => params.delete(name)),
+        )
+      }
     >
       <FilterChip
         label="Category"
         selectionMode="single"
-        value={filters.category}
-        onChange={(next) =>
-          write((params) => (next === null ? params.delete('category') : params.set('category', String(next))))
+        value={shown.category}
+        onChange={(category) =>
+          write({ category }, (params) =>
+            category === null ? params.delete('category') : params.set('category', String(category)),
+          )
         }
       >
         <PickerOption id="groceries">Groceries</PickerOption>
@@ -117,24 +145,48 @@ export function TransactionFilters({ filters, count }: TransactionFiltersProps) 
       <FilterChip
         label="Account"
         selectionMode="multiple"
-        value={filters.accounts}
-        onChange={(next) =>
-          write((params) => {
+        value={shown.accounts}
+        onChange={(accounts) =>
+          write({ accounts }, (params) => {
             params.delete('account');
-            for (const key of next) params.append('account', String(key));
+            for (const key of accounts) params.append('account', String(key));
           })
         }
       >
         <PickerOption id="checking">Checking</PickerOption>
         <PickerOption id="savings">Savings</PickerOption>
       </FilterChip>
-      {/* Amount and Date are custom chips with the server's amountLabel and dateLabel. */}
+      <FilterChip
+        label="Amount"
+        valueLabel={shown.amountLabel}
+        onClear={() =>
+          write({ amountLabel: undefined }, (params) => {
+            params.delete('min');
+            params.delete('max');
+          })
+        }
+      >
+        {({ close }) => <AmountFields onDone={close} />}
+      </FilterChip>
+      <FilterChip
+        label="Date"
+        isSecondary
+        valueLabel={shown.dateLabel}
+        onClear={() =>
+          write({ dateLabel: undefined }, (params) => {
+            params.delete('from');
+            params.delete('to');
+          })
+        }
+      >
+        <DateFields />
+      </FilterChip>
     </FilterBar>
   );
 }
 ```
 
-Render it inside `<Suspense>` with the same bar, at its first state, as the fallback. The search keeps its own pause before it writes, as the search field page shows. The example below writes `category` and a repeated `tag` and reads them back after a reload.
+`AmountFields` and `DateFields` are your own: two money NumberFields writing `min` and `max`, and a RangeCalendar writing `from` and `to`, in the same way. The words for a new amount or range are the server's, so they arrive with its next render. Render it inside `<Suspense>` with the same bar, at its first state, as the fallback. The search keeps its own pause before it writes, as the search field page shows. The example below writes `category` and a repeated `tag` and reads them back after a reload.
 
 <Preview name="filter-bar-url" />
 
@@ -156,7 +208,7 @@ The bar's props, then its words. Each chip's props are on the filter chip page.
 
 ## Accessibility
 
-The row is a `group` named "Filters", from `labels.filters`. More is a button that opens a `dialog` it names, and each section in it, and in the sheet, is a region named by its `h3` title. The sheet is a `dialog` titled "Filters". The Filters button is named by its text and the count, "Filters 2". Focus never falls to the page: after Clear all it goes to the first chip, after a secondary chip is cleared in the row it goes to More, after a choice in More leaves nothing behind it the closing panel gives focus to that chip in the row, and after Clear all in the sheet it goes to Done.
+The row is a `group` named "Filters", from `labels.filters`. More is a button that opens a `dialog` it names, and each section in it, and in the sheet, is a region named by its `h3` title. The sheet is a `dialog` titled "Filters". The Filters button is named by its text and the count, "Filters 2". Focus never falls to the page: after Clear all it goes to the first chip, after a secondary chip is cleared in the row it goes to More, as it does when a secondary chip's list or panel closes with its value gone (the chip stays in the row while it is open), after a choice in More leaves nothing behind it the closing panel gives focus to that chip in the row, after Clear all in the sheet it goes to Done, and when the sheet closes with the Filters button hidden, as on a phone turned wide, it goes to the first chip.
 
 <Keys rows={[['Tab', 'Through the search, each chip and its clear button, More and Clear all; on a phone, the search and the Filters button.'], ['Enter Space', 'Open a chip, the More panel or the sheet.'], ['Escape', 'Closes the open panel or the sheet; focus goes back to what opened it.']]} />
 

@@ -7441,7 +7441,8 @@ is active and Done, primary, at the end, `slot="close"`.
 
 **The census** (spec 9.2). `censusOf` walks the children through
 fragments, as BottomTabBar counts its items, and reads each `FilterChip`
-element's props: a list chip with a value that is not null or empty,
+element's props: a list chip with a value that is not null, undefined
+or empty, read by the chip's own `hasChoice` so the two never disagree,
 and a custom chip with a `valueLabel`, is active; an inactive chip with
 `isSecondary` adds its label to the chips behind More. Anything else
 counts as nothing, a false slot included. The count is in the server's
@@ -7481,13 +7482,41 @@ panel closes, so the chip the panel made active takes focus in the row,
 once React Aria has lifted the inert page. Each waits for the commit
 that removes the element holding focus, since a URL write may arrive
 several renders after the press, and forgets the move once focus has
-gone elsewhere by itself.
+gone elsewhere by itself; focus on the body is focus in transit, so it
+does not count as gone elsewhere.
+
+**An open chip stays in the row.** A secondary chip in the row whose
+last option is unchecked, or whose panel clears its own value, has no
+value while its list or panel is open. It would go behind More at once,
+taking the list in use with it and leaving focus on the body. Each such
+chip reports its open state through the row's place,
+`onRowOpenChange(label, isOpen)`, and FilterBar keeps the open labels in
+its own state, `heldInRow`, and leaves them out of `behindMore`. The state
+is the bar's, not the chip's, so the close re-renders the bar and its
+focus effects run. As the list closes the label leaves `heldInRow`, the
+chip goes behind More if it still has no value, and More takes focus.
+The element expected to leave is the chip's trigger, since focus is
+still in the closing list then. In Chromium the inert page a closing
+popover made lifts only in React's passive phase, and an inert element
+takes no focus, so any move whose target is inside `[inert]` waits for
+that phase, not only the panel's.
+
+**Turned wide with the sheet open.** Turning a phone past 768px with the
+sheet open hides the Filters button, which the sheet gives focus back to
+as it closes and which then takes none. The bar listens on the button
+for React Aria's `react-aria-focus-scope-restore` event, which the
+sheet's frame dispatches first, and while the button computes
+`display: none` it takes the event and gives focus to the row's first
+chip. A jsdom test hides the button inline, and the docs test turns the
+viewport from 767px to 900px with the sheet open.
 
 **R6, measured.** The `ManyOptions` story holds a 200-option chip, in
 the row and in the sheet, and its play records the time from the press
 to the list, in Chromium headless on the implementer's machine, five
 runs: the row's list in 460 to 515ms, the sheet's sections in 140 to
 156ms, and the sheet's list, from a sheet at rest, in 380 to 420ms.
+The play waits for the sheet to come to rest before it opens the list:
+the sheet's content takes no pointer while it slides in (see "Sheet").
 Each includes the test driver's press and the list's filter taking
 focus; the sheet's open time is over 100ms.
 
