@@ -247,8 +247,7 @@ export const HomeEnd: Story = {
   render: () => <NumberField label="Amount" money={{ symbol: '$' }} minValue={0} maxValue={999999} />,
   play: async ({ canvas, userEvent }) => {
     const input = canvas.getByRole<HTMLInputElement>('textbox', { name: 'Amount' });
-    // Focused directly: on a busy runner Firefox can take a click without moving focus, and the story is about the keys.
-    input.focus();
+    await userEvent.click(input);
     await waitFor(() => expect(input).toHaveFocus());
     await userEvent.keyboard('1234.50');
     await waitFor(() => expect(input).toHaveValue('1234.50'));
