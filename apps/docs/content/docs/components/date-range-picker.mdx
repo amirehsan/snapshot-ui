@@ -1,6 +1,6 @@
 ---
 title: Date range picker
-description: "Two dates typed in the locale's order or chosen on a range calendar, with your presets, as ISO strings for your URL."
+description: 'A range of two days, typed or chosen on a range calendar, with presets and ISO strings in and out.'
 icon: CalendarRange
 ---
 
@@ -8,7 +8,12 @@ icon: CalendarRange
 
 ## Basic
 
-A `DateRangePicker` takes a range of two days. Type each date into its segments, in the order the locale writes a date, or choose the range on the calendar: the button at the field's end, Alt+Arrow Down or Alt+Arrow Up opens it, on the value's start month, else on `today`'s. Its value is `{ start, end }`, two ISO dates, in and out, and `onChange` receives one once both dates are whole and the end is on or after the start, or `null` while they are not: once every segment of a date is cleared, or while the end is typed before the start. Clearing one segment keeps the range until the rest of its date goes too, as React Aria keeps a date typed as February 30 until focus leaves it. Days only: a range never has times. `startName` and `endName` submit the two ISO dates with a plain form.
+A field for a range of two days. Type each date into its segments, in the locale's order, or choose the range on the calendar. The button at the field's end, or Alt+Arrow Down, opens the calendar on the start month, or on `today`'s month when there is no value.
+
+- Value: `{ start, end }`, two ISO dates, in and out. Days only, never times.
+- `onChange`: receives the range once both dates are complete and the end is on or after the start. It receives `null` once every segment of a date is cleared, or while the end is before the start.
+- Clearing one segment keeps the range until the rest of that date is cleared.
+- Forms: `startName` and `endName` submit the two ISO dates.
 
 <Preview name="date-range-picker-basic" />
 
@@ -18,7 +23,7 @@ A `DateRangePicker` takes a range of two days. Type each date into its segments,
 
 ## Presets
 
-`presets` adds a row of your ranges above the calendar, each with your words. The library computes no range: "Last 7 days" is the app's, from its own today, and is best computed on the server. A press sets the range and closes the calendar, and focus goes back to what opened it. A preset whose range starts before `minValue`, ends after `maxValue` or holds a day `isDateUnavailable` refuses is disabled.
+`presets` adds a row of your own ranges above the calendar. The library computes no ranges: compute "Last 7 days" from the app's today, ideally on the server. A press sets the range, closes the calendar and returns focus. A preset is disabled when it falls outside `minValue` or `maxValue`, or holds a day `isDateUnavailable` rejects.
 
 <Preview name="date-range-picker-presets" />
 
@@ -28,7 +33,9 @@ A `DateRangePicker` takes a range of two days. Type each date into its segments,
 
 ## States
 
-A changed field shows the Changed chip and the light signal orange edge, an invalid one its error edge and line, and a disabled one is recessed with its dates in taupe.
+- Changed: the Changed chip and the light signal orange edge.
+- Invalid: the error edge and error line.
+- Disabled: recessed, with its dates in taupe.
 
 <Preview name="date-range-picker-states" />
 
@@ -38,7 +45,7 @@ A changed field shows the Changed chip and the light signal orange edge, an inva
 
 ## Before hydration
 
-The segments' text, their order and their names all come from `Intl`, which the server must not write. So until the page hydrates the field draws its face: the label, the frame at its final size, the calendar button, the hint, the two hidden inputs with their ISO dates, and your `valueLabel` where the segments go. Write it as you write every other string in the app, "1 to 30 Sep 2026", and pass it wherever the server's HTML should show the range. React Aria's segments replace it in the next render, starting where it starts, and nothing moves.
+Pass `valueLabel` wherever the server's HTML should show the range, written like any other string in the app: "1 to 30 Sep 2026". The segments' text, order and names come from `Intl`, which the server must not write. Until hydration, the field draws the label, the frame at its final size, the calendar button, the hint, the two hidden inputs and your `valueLabel` in place of the segments. The segments replace it in the next render without moving anything.
 
 </Section>
 
@@ -46,7 +53,7 @@ The segments' text, their order and their names all come from `Intl`, which the 
 
 ## Usage
 
-Keep the range in two search parameters, `?from=2026-09-01&to=2026-09-30`. With the Next App Router, a server page reads them and writes `valueLabel` in its own words for the HTML it sends:
+Keep the range in two search parameters, `?from=2026-09-01&to=2026-09-30`. With the Next App Router, a server page reads them and writes `valueLabel`:
 
 ```tsx
 // app/transactions/page.tsx, a server component
@@ -59,7 +66,11 @@ export default async function Transactions({ searchParams }: { searchParams: Pro
 }
 ```
 
-The client component reads the parameters itself and keeps the range in its own state, so the field shows each change at once and never waits on the router: driven by the server's props, it would draw the old range again after each change until the new page arrived. It takes the URL's range again only when the URL changes under it, by Back, Forward or a link. It writes the URL when the range changes, setting both parameters or deleting both for `null`, starting from the parameters already there, so the other filters stay; it never writes a bare `?`, and passes `{ scroll: false }` so the page does not jump:
+The client component keeps the range in its own state, so each change shows at once. Driven by the server's props instead, it would show the old range until the new page arrived.
+
+- It rereads the URL only when the URL changes under it, by Back, Forward or a link.
+- On change it sets both parameters, or deletes both for `null`, and keeps the other parameters.
+- It never writes a bare `?`, and passes `{ scroll: false }` so the page does not jump.
 
 ```tsx
 'use client';
@@ -111,11 +122,13 @@ export function Period({ valueLabel }: { valueLabel: string }) {
 }
 ```
 
-A pair that does not parse, or whose end is before its start, reads as no range with a warning in the console, so a hand-edited URL never throws. While a person types an end before its start, the field tells you `null` and keeps what is typed, so your `null` coming back never clears it. It keeps it only for that `null`: once you set any other value, or focus leaves the field, it lets go, so a "Clear all" that sets `null` again clears it. On a statically rendered route, as this page is, read the parameters with `useSearchParams()` inside `<Suspense>` with the same field, empty, as the fallback; the example below does, and writes its own `valueLabel` from a list of twelve month names, with no `Intl`.
+- A pair that does not parse, or ends before it starts, reads as no range and warns in the console. A hand-edited URL never throws.
+- While someone types an end before its start, the field sends `null` but keeps what is typed, so your `null` coming back does not clear it. Setting any other value, or focus leaving the field, ends this, so a "Clear all" that sets `null` still clears it.
+- On a statically rendered route, like this page, call `useSearchParams()` inside `<Suspense>` with an empty field as the fallback. The example below does this, and writes its `valueLabel` from twelve month names, with no `Intl`.
 
 <Preview name="date-range-picker-url" />
 
-The field takes no `createCalendar`: React Aria's date fields bring every calendar system whatever is passed, so a page with a date range picker ships them all.
+The field takes no `createCalendar`. React Aria's date fields always bring every calendar system, so a page with a date range picker ships them all.
 
 </Section>
 
@@ -123,7 +136,7 @@ The field takes no `createCalendar`: React Aria's date fields bring every calend
 
 ## Props
 
-Every date is an ISO string. `startName`, `endName`, `isRequired`, `isDisabled`, `isReadOnly`, `isInvalid`, `firstDayOfWeek`, `isOpen`, `onOpenChange` and `shouldCloseOnSelect` are React Aria's. `validate` receives the range as `onChange` does, two ISO dates, and React Aria runs it once both dates are complete, so an empty field is `isRequired`'s to check.
+Every date is an ISO string. `startName`, `endName`, `isRequired`, `isDisabled`, `isReadOnly`, `isInvalid`, `firstDayOfWeek`, `isOpen`, `onOpenChange` and `shouldCloseOnSelect` are React Aria's. `validate` receives the range as `onChange` does and runs once both dates are complete, so use `isRequired` to catch an empty field.
 
 <PropsTable label="DateRangePicker props" path="../../packages/react/src/date-range-picker/DateRangePicker.tsx" type="Pick<DateRangePickerBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'valueLabel' | 'today' | 'presets' | 'minValue' | 'maxValue' | 'isDateUnavailable' | 'labels' | 'placement' | 'startName' | 'endName' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate' | 'className' | 'popoverClassName'>" />
 
@@ -135,9 +148,11 @@ Every date is an ISO string. `startName`, `endName`, `isRequired`, `isDisabled`,
 
 ## Accessibility
 
-A `group` named by the label. Each date is a presentation element, and each segment a `spinbutton` named by its type, the date's name and the label: "month, Start date, Statement period". On iOS React Aria makes each segment a text box. The button is named "Choose dates" and the label, and opens a `dialog` holding the range calendar. "Choose dates", "Start date" and "End date" come from `labels`; React Aria's segment type names come from the browser, and its announcements, such as the chosen range, have no Persian.
+The field is a `group` named by the label. Each segment is a `spinbutton` named by its type, its date and the label: "month, Start date, Statement period". On iOS, each segment is a text box. The button, named "Choose dates" plus the label, opens a `dialog` with the range calendar.
 
-<Keys rows={[['Tab', 'Through each segment of the start date, then the end date, then the button.'], ['Left Right', 'Move between segments, in the drawn direction.'], ['Up Down', 'Change the focused segment by one, wrapping at its ends.'], ['PageUp PageDown', 'Change it by a larger step: a week, two months, or to the next multiple of five years.'], ['Home End', 'Set it to its least or greatest value.'], ['0-9', 'Type into the segment; the next one takes focus when it is full.'], ['Backspace Delete', 'Clear its last digit; in an empty segment, move to the one before.'], ['Alt+Down Alt+Up', 'Open the calendar.'], ['Escape', 'Closes the calendar; focus goes back to what opened it.']]} />
+"Choose dates", "Start date" and "End date" come from `labels`. Segment type names come from the browser. React Aria's announcements, such as the chosen range, have no Persian.
+
+<Keys rows={[['Tab', 'Through the start date segments, the end date segments, then the button.'], ['Left Right', 'Move between segments, in the drawn direction.'], ['Up Down', 'Change the focused segment by one, wrapping at its ends.'], ['PageUp PageDown', 'Change it by a larger step: a week, two months, or to the next multiple of five years.'], ['Home End', 'Set it to its least or greatest value.'], ['0-9', 'Type into the segment. Focus moves on when it is full.'], ['Backspace Delete', 'Clear its last digit, or move back from an empty segment.'], ['Alt+Down Alt+Up', 'Open the calendar.'], ['Escape', 'Closes the calendar and returns focus.']]} />
 
 </Section>
 

@@ -44,33 +44,25 @@ export interface CollapsibleCardProps extends Omit<HTMLAttributes<HTMLElement>, 
    */
   defaultExpanded?: boolean;
   /**
-   * Whether the card is open. Given, it controls the card: pair it with `onExpandedChange`. It wins over
+   * Whether the card is open, for a controlled card. Pair it with `onExpandedChange`. It wins over
    * `storageKey`, and the card then reads and stores nothing.
    */
   isExpanded?: boolean;
   /**
-   * Called with the new state when someone opens or folds this card, by its toggle or by find-in-page. A
-   * card that follows another card or tab with the same `storageKey` is syncing state, not being used, and
-   * does not call it.
+   * Called with the new state when someone folds or opens this card, by its toggle or by find-in-page. Not
+   * called when the card only syncs with another card or tab.
    */
   onExpandedChange?: (isExpanded: boolean) => void;
   /**
-   * Remembers the fold in this browser under this key, so the card is folded again the next time the page
-   * opens. Cards with the same key fold together, on the page and in other tabs. The stored entry is a plain
-   * list of the folded keys, and a key the browser has not stored means open, so `defaultExpanded={false}`
-   * does not apply under a `storageKey`. Ignored when `isExpanded` is given. The server cannot see the
-   * browser's storage, so a server-rendered card is drawn open and folds, with no transition, once the page
-   * has hydrated. Where the browser blocks storage or refuses a write, a fold lasts only while a card with a
-   * `storageKey` is on the page.
+   * Remembers the fold in this browser under this key. Cards with the same key fold together, across
+   * tabs. Ignored when `isExpanded` is given, and `defaultExpanded={false}` does not apply. A
+   * server-rendered card is drawn open and folds on hydration.
    */
   storageKey?: string;
   /**
-   * Marks a folded card as holding a change even when no field inside says so. A folded card already marks
-   * itself while any element in its body carries `data-changed`, as every library field's root does while
-   * it is changed, so this is for a change the card's fields do not report. While folded, the marker is a
-   * clay dot after the title, and the toggle is described by `changedLabel`. Open, the card shows no marker,
-   * and each field shows its own Changed chip. While it is true, the card's root carries `data-changed`, as a
-   * field's does, so a collapsible card around this one counts the change too.
+   * Marks a folded card as changed when no field in its body reports it with `data-changed`. The marker
+   * is a clay dot after the title, described by `changedLabel`. The root then carries `data-changed`, so
+   * an outer card counts it.
    */
   isChanged?: boolean;
   /**

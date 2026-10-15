@@ -38,9 +38,8 @@ export interface SegmentedControlBaseProps extends Omit<
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
    * Whether the value differs from the saved one. Shows the clay Changed chip
-   * in the label row and the light signal orange edge on the track, and has a
-   * screen reader read the chip with the control. An invalid control shows its
-   * error instead.
+   * and the light signal orange edge, and a screen reader reads the chip with
+   * the control. An invalid control shows its error instead.
    */
   isChanged?: boolean;
   /**

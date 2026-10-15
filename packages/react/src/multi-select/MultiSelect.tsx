@@ -78,14 +78,13 @@ export interface MultiSelectBaseProps<T extends object = object> extends Omit<
    */
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
-   * Example text, the input's placeholder, shown only while nothing is chosen: taupe under a visible label, slate
-   * when only an `aria-label` or an `aria-labelledby` names the field, since it is then the only words shown.
+   * The input's placeholder, shown only while nothing is chosen. Taupe under a visible label. Slate when only an
+   * `aria-label` or `aria-labelledby` names the field, since it is then the only visible text.
    */
   placeholder?: string;
   /**
    * Whether the value differs from the saved one. Shows the clay Changed chip in the label row and the light
-   * signal orange edge, and has a screen reader read the chip with the input. An invalid field shows its error
-   * instead.
+   * signal orange edge. A screen reader reads the chip with the input. An invalid field shows its error instead.
    */
   isChanged?: boolean;
   /**
@@ -94,13 +93,13 @@ export interface MultiSelectBaseProps<T extends object = object> extends Omit<
    */
   changedLabel?: string;
   /**
-   * `PickerOption`s and `PickerSection`s, or a function that renders one option of `items` or `defaultItems`. A
-   * tag shows its option's text value, so an option whose label is not a string needs a `textValue`.
+   * `PickerOption`s and `PickerSection`s, or a function that renders one of `items` or `defaultItems`. An option
+   * whose label is not a string needs a `textValue` for its tag.
    */
   children: ReactNode | ((item: T) => ReactElement);
   /**
-   * Whether the list stays open when nothing matches, saying so with the no-matches line, or the loading line
-   * while options load, rather than vanishing as if the field broke.
+   * Whether the list stays open when nothing matches, showing the no-matches line, or the loading line while
+   * options load, instead of closing.
    * @default true
    */
   allowsEmptyCollection?: boolean;

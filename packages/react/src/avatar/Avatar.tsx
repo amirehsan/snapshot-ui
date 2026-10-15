@@ -8,7 +8,7 @@ export interface AvatarProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'chil
   name: string;
   /** The image. When absent, or when it fails to load, the initials show. */
   src?: string;
-  /** Override the initials derived from `name`, such as "WF" for a bank. One or two characters; blank falls back to `name`'s. */
+  /** Replaces the initials from `name`, such as "WF" for a bank. One or two characters. Blank uses `name`'s. */
   initials?: string;
   /** @default 'md' */
   size?: 'sm' | 'md' | 'lg';

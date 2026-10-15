@@ -12,14 +12,12 @@ export interface PaginationLabels {
    */
   navigation: string;
   /**
-   * The name of the step to the page before: shown beside its chevron where the row has room, and its hidden name
-   * where it does not.
+   * The step to the page before. Shown beside its chevron when the row has room, and its hidden name otherwise.
    * @default 'Previous'
    */
   previous: string;
   /**
-   * The name of the step to the page after: shown beside its chevron where the row has room, and its hidden name
-   * where it does not.
+   * The step to the page after. Shown beside its chevron when the row has room, and its hidden name otherwise.
    * @default 'Next'
    */
   next: string;
@@ -30,17 +28,17 @@ export interface PaginationLabels {
 interface PaginationBase extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'onChange' | 'aria-label'> {
   /** The current page, counted from 1. */
   page: number;
-  /** How many pages there are, in whole pages; a count that is not a finite number is none. */
+  /** How many pages there are, in whole pages. A count that is not a finite number means none. */
   pageCount: number;
   /** The range, formatted by the app: "1 to 50 of 1,284". Shown, and spoken after a change. */
   rangeLabel: string;
   /** How a page number is written, such as Persian digits. Runs in the shell. @default String(page) */
   pageLabel?: (page: number) => string;
-  /** Page numbers shown each side of the current one, in whole pages; one that is not a finite number is 1. @default 1 */
+  /** Page numbers shown each side of the current one, in whole pages. A non-finite value means 1. @default 1 */
   siblingCount?: number;
   /**
-   * Shows the numbered pages and their gaps between Previous and Next while the row is 30rem wide or more. Off,
-   * the short form: Previous, the range and Next at every width.
+   * Shows numbered pages and gaps between Previous and Next when the row is at least 30rem wide. Off, the row is
+   * Previous, the range and Next at every width.
    * @default true
    */
   hasPageNumbers?: boolean;

@@ -49,14 +49,13 @@ export interface SelectBaseProps<T extends object = object> extends Omit<
    */
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
-   * Shown in slate while nothing is chosen, since it is the trigger's visible text; taupe while disabled.
+   * The trigger's text while nothing is chosen. Slate, or taupe while disabled.
    * @default 'Choose an option'
    */
   placeholder?: string;
   /**
-   * Whether the value differs from the saved one. Shows the clay Changed chip in the label row and the light
-   * signal orange edge, and has a screen reader read the chip with the trigger. An invalid field shows its
-   * error instead.
+   * The value differs from the saved one. Shows the clay Changed chip and the light signal orange edge, and a
+   * screen reader reads the chip with the trigger. An invalid field shows its error instead.
    */
   isChanged?: boolean;
   /**

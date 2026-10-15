@@ -1,6 +1,6 @@
 ---
 title: Card
-description: A lifted surface for one section of an app. A header names it, a body holds its content, and a card inside a card steps its corner down.
+description: A lifted surface for one section of an app, with a header, a body and nesting.
 icon: PanelTop
 ---
 
@@ -8,7 +8,7 @@ icon: PanelTop
 
 ## Header and body
 
-The header holds a title and a note and is ruled off from the body. The title is the card's heading. A long word breaks anywhere in a card, and an element that must not break, such as a code sample, can set `overflow-wrap: normal`.
+The header holds a title and a note, ruled off from the body. The title is the card's heading. Long words break anywhere in a card; set `overflow-wrap: normal` on an element that must not break, such as a code sample.
 
 <Preview name="card-parts" />
 
@@ -18,7 +18,7 @@ The header holds a title and a note and is ruled off from the body. The title is
 
 ## Nesting
 
-A card placed in another card, directly or in its body, steps its corner down to the surface radius and takes an outline, because a card on a card has no tone step to set it apart.
+A card inside another card, directly or in its body, steps its corner down to the surface radius and takes an outline. A card on a card has no tone step to set it apart.
 
 <Preview name="card-nested" />
 
@@ -54,7 +54,7 @@ export function Notifications() {
 
 ## Props
 
-Every part takes `className`, which is merged after its own class, `ref`, and the rest of its HTML attributes. These are the props that choose an element.
+Every part takes `className` (merged after its own class), `ref` and its other HTML attributes. These are the props that choose an element.
 
 ### Card
 
@@ -70,11 +70,11 @@ Every part takes `className`, which is merged after its own class, `ref`, and th
 
 ## Accessibility
 
-A card is a div unless `as` says otherwise. A `section` with a name, from `aria-labelledby` or `aria-label`, is a region landmark, and without a name it is not announced. An `article` is not a landmark, named or not.
+A card is a div unless `as` says otherwise. A `section` named by `aria-labelledby` or `aria-label` is a region landmark; without a name it is not announced. An `article` is never a landmark.
 
-The header is a div rather than a header element. A header outside sectioning content is the page's banner, so two cards at page level would add two. The title renders the heading level you choose and looks the same at every level.
+The header is a div, not a header element. A header outside sectioning content is the page's banner, so two cards at page level would add two banners. The title renders the heading level you choose and looks the same at every level.
 
-A card is not interactive: to make one lead somewhere, put a link in its title, and never nest buttons or links in a card that is clickable.
+A card is not interactive. To make one lead somewhere, put a link in its title. Never nest buttons or links in a clickable card.
 
 </Section>
 

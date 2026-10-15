@@ -35,10 +35,9 @@ export interface TextFieldBaseProps extends Omit<RACTextFieldProps, 'children' |
   /** Example text shown while the control is empty. It never replaces the label. */
   placeholder?: string;
   /**
-   * Whether the value differs from the saved one. Shows the clay Changed chip
-   * in the label row and the light signal orange border, and has a screen
-   * reader read the chip with the field. An invalid field shows its error
-   * instead.
+   * Whether the value differs from the saved one. Shows the clay Changed chip,
+   * which a screen reader reads with the field, and the light signal orange
+   * border. An invalid field shows its error instead.
    */
   isChanged?: boolean;
   /**
@@ -47,19 +46,15 @@ export interface TextFieldBaseProps extends Omit<RACTextFieldProps, 'children' |
    */
   changedLabel?: string;
   /**
-   * About how long the value should be. Shows a count of the value's length
-   * from 70% of the budget on. It advises and never blocks typing, so the count
-   * can pass the budget. The length is measured as JavaScript and `maxLength`
-   * measure it, in UTF-16 code units, so an emoji or an accented letter built
-   * from two code points can count as two. `maxLength` is a hard stop that the
-   * count does not read, so set `budget` at or below it.
+   * About how long the value should be. Shows a length count from 70% of the
+   * budget. It never blocks typing. Length is in UTF-16 code units, as
+   * `maxLength` counts. Set `budget` at or below `maxLength`.
    */
   budget?: number;
   /**
-   * Options for the count that `budget` shows. `label` replaces its text, for
-   * another language or other words: it receives the count, the budget and
-   * whether the count is past it. `showFrom` is the share of the budget the
-   * count first appears at, from 0 to 1, and is 0.7 unless given.
+   * Options for the `budget` count. `label` returns its text from the count,
+   * the budget and whether the count is past it. `showFrom` is the share of
+   * the budget where the count appears, from 0 to 1 (0.7 by default).
    */
   counter?: Pick<FieldCounterProps, 'label' | 'showFrom'>;
   /** A class name, or a function of the field's state, merged after the library's own class. */

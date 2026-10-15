@@ -52,7 +52,7 @@ export interface NumberFieldLabels {
 export interface MoneyFormat {
   /** The currency's symbol or word, drawn beside the figure and never typed: '$', 'تومان'. */
   symbol: string;
-  /** The side of the figure it sits on, in the field's direction (ruling 6). @default 'start' */
+  /** The side of the figure it sits on, in the field's direction. @default 'start' */
   symbolPosition?: 'start' | 'end';
   /** Digits after the decimal separator; the value counts in these minor units. @default 2 */
   fractionDigits?: 0 | 1 | 2 | 3;
@@ -87,8 +87,8 @@ interface NumberFieldShared extends Omit<
   /** Example text while empty. Taupe under a visible label, slate without one, taupe while disabled. */
   placeholder?: string;
   /**
-   * Whether the value differs from the saved one. Shows the clay Changed chip in the label row and the light
-   * signal orange border, and has a screen reader read the chip with the field.
+   * Whether the value differs from the saved one. Shows the clay Changed chip and the light signal orange border.
+   * A screen reader reads the chip with the field.
    */
   isChanged?: boolean;
   /** @default 'Changed' */
@@ -103,11 +103,11 @@ interface NumberFieldShared extends Omit<
    */
   onChange?: (value: number | null) => void;
   /**
-   * Checks the value, in the terms `onChange` uses: an integer count of minor units in money mode, the number
-   * otherwise, and null for an empty field. Returns an error message, or true or null when the value is valid.
+   * Checks the value as `onChange` sends it: minor units in money mode, null when empty. Returns an error message,
+   * or true or null when valid.
    */
   validate?: (value: number | null) => ReturnType<NonNullable<RACNumberFieldProps['validate']>>;
-  /** Values under zero, and the sign button (ruling 5). @default false */
+  /** Values under zero, and the sign button. @default false */
   allowsNegative?: boolean;
   /** The names the field writes, in English unless replaced. */
   labels?: Partial<NumberFieldLabels>;
@@ -123,8 +123,8 @@ interface NumberFieldShared extends Omit<
 interface NumberMode {
   money?: undefined;
   /**
-   * `Intl` options for a plain number, applied after hydration. Not `style: 'currency'`, and not compact notation,
-   * whose rounding only `Intl` knows, so the face before hydration and the keyboard could not follow it.
+   * `Intl` options for a plain number, applied after hydration. No currency style and no compact notation, whose
+   * rounding only `Intl` knows.
    */
   formatOptions?: Omit<Intl.NumberFormatOptions, 'style' | 'currency' | 'notation' | 'compactDisplay'> & {
     style?: 'decimal' | 'percent' | 'unit';

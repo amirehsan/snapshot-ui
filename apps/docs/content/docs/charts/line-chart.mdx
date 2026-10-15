@@ -1,6 +1,6 @@
 ---
 title: Line chart
-description: "The month as a line: one or two series drawn on the server, a readout reached by arrow keys, and a table of the same strings."
+description: "One or two series drawn on the server, with an arrow-key readout and a table view."
 icon: ChartLine
 ---
 
@@ -8,7 +8,7 @@ icon: ChartLine
 
 ## One series
 
-A line chart draws a figure across a run of days: a 2px ink line in an svg stretched to the plot, gridlines at the `yTicks` with their labels above them, and the first, middle and last day under it. Focus the plot, or point at it, and a readout shows the day and its value.
+A line chart shows a value across a run of days as a 2px ink line. Gridlines sit at the `yTicks`, with their labels above them, and the first, middle and last day are labeled underneath. Focus or point at the plot to see a readout of the day and its value.
 
 <Preview name="line-chart-basic" />
 
@@ -18,7 +18,7 @@ A line chart draws a figure across a run of days: a 2px ink line in an svg stret
 
 ## Compared with last month
 
-A second series is context, not a second story: it is drawn thinner and in slate, under the first, and a legend names both. The readout and the table name each series beside its value, so the two are never told apart by color alone.
+A second series is context, not a second story. It is drawn thinner, in slate, under the first, and a legend names both. The readout and the table name each series beside its value, so color is never the only difference.
 
 <Preview name="line-chart-compare" />
 
@@ -28,7 +28,7 @@ A second series is context, not a second story: it is drawn thinner and in slate
 
 ## Gaps
 
-A day with no value, such as one still to come, is `null`. The line breaks there, the keys and the pointer skip it, the readout leaves out a series with no value, and the table's cell is empty. `hasArea` fills under the first series with a 10% ink wash, which breaks with the line.
+Pass `null` for a day with no value, such as one still to come. The line breaks there, the keys and pointer skip it, the readout leaves out that series, and the table cell is empty. `hasArea` fills under the first series with a 10% ink wash, which breaks with the line.
 
 <Preview name="line-chart-gaps" />
 
@@ -38,9 +38,9 @@ A day with no value, such as one still to come, is `null`. The line breaks there
 
 ## The table
 
-Every chart has a toggle under it, Show as table, that swaps the plot for a table of the same strings: a row per day and a column per series. It is for anyone who would rather read the numbers, not only for a screen reader, so it is visible when chosen. With scripts off the toggle cannot work, so the table is shown under the plot with a note that says so.
+The Show as table toggle under every chart swaps the plot for a table of the same strings, with a row per day and a column per series. It is visible to everyone who would rather read the numbers, not only screen reader users. With scripts off, the table is shown under the plot with a note saying so.
 
-The table is named as the chart is: by a caption that repeats the `aria-label`, or, when the chart is named by `aria-labelledby`, by the same heading and no caption.
+The table is named like the chart. With `aria-label`, a caption repeats it. With `aria-labelledby`, the table points at the same heading and has no caption.
 
 </Section>
 
@@ -48,7 +48,7 @@ The table is named as the chart is: by a caption that repeats the `aria-label`, 
 
 ## Right to left
 
-Time follows the page's direction, so under `dir="rtl"` the newest day is at the left, and Left moves to newer days. The direction comes from the nearest `dir="ltr"` or `dir="rtl"` attribute, which the svg, the marks over it and the keys all read, so they always agree; `dir="auto"` is looked past. The figures inside the labels are the app's strings.
+Time follows the page's direction. Under `dir="rtl"` the newest day is at the left, and Left moves to newer days. The svg, its marks and the keys all read the nearest `dir="ltr"` or `dir="rtl"` attribute, so they always agree; `dir="auto"` is skipped. The figures inside the labels are your strings.
 
 <Preview name="line-chart-rtl" />
 
@@ -62,9 +62,12 @@ Time follows the page's direction, so under `dir="rtl"` the newest day is at the
 pnpm add @snapshot-ui/charts @snapshot-ui/core
 ```
 
-It needs the same 0.x minor of `@snapshot-ui/core` (0.5 for charts 0.1.2), whose `styles.css` draws it. Every label and value is your formatted string: `valueLabel` says a point and `value` only places it, so a currency, a compact figure or Persian digits are yours, and the server's HTML is final. Pass `yTicks` for gridlines with labels; without them the chart draws only its baseline and relies on the readout and the table. Pass the same `yDomain` to charts read side by side, so their scales match. In another language, pass `labels` with all four of the strings the chart writes itself: the toggle's two, the note shown with scripts off, and the plot's role description, which a screen reader says in place of "chart".
+It needs the same 0.x minor of `@snapshot-ui/core` (0.5 for charts 0.1.2), whose `styles.css` styles it. The svg, axis labels, legend and table render on the server, and the client adds the keys, pointer and readout. A server component can render it with plain data.
 
-The svg, the axis labels, the legend and the table render on the server; the client adds the keys, the pointer and the readout. A server component can render it and pass it plain data.
+- Formatting: every label and value is your formatted string. `valueLabel` is what the reader sees, and `value` only places the point. Currency, compact figures and Persian digits are yours, and the server's HTML is final.
+- `yTicks`: gridlines with labels. Without them, the chart draws only its baseline and relies on the readout and the table.
+- `yDomain`: pass the same one to charts read side by side, so their scales match.
+- `labels`: in another language, pass all four strings the chart writes itself: the toggle's two, the note shown with scripts off, and the role description a screen reader says in place of "chart".
 
 ```tsx
 import { LineChart } from '@snapshot-ui/charts';
@@ -95,7 +98,7 @@ import { LineChart } from '@snapshot-ui/charts';
 
 ## Props
 
-A LineChart accepts every attribute of an HTML element, on its root, a `figure`.
+A LineChart accepts every HTML attribute, applied to its root `figure`.
 
 <PropsTable label="LineChart props" path="../../packages/charts/src/line-chart/LineChart.tsx" type="Pick<LineChartProps, 'series' | 'xLabels' | 'xTicks' | 'yTicks' | 'yDomain' | 'hasArea' | 'labels' | 'height' | 'aria-label' | 'aria-labelledby' | 'className'>" />
 
@@ -111,7 +114,13 @@ A LineChart accepts every attribute of an HTML element, on its root, a `figure`.
 
 ## Accessibility
 
-The chart is a `figure` named by its `aria-label` or `aria-labelledby`, which the types require. The plot is one tab stop for the whole chart, a group with the role description "chart" (`labels.roleDescription`) named as the figure is, so thirty-one days are never thirty-one tab stops. It becomes a tab stop once scripts run, since its keys need them. The arrow keys move a readout and a crosshair through the days with data; the readout sits above the day's dots, or below them when they are near the top, so it never covers the point it describes. A key with Alt, Control or Meta is left to the browser. A screen reader hears the day and each series with its value once the keys rest for 150ms, so a held key is heard only where it stops; each part is announced on its own, with no punctuation of the library's between your words. The pointer snaps to the nearest day across the whole column, never only on the line. The table is the full alternative. In forced colors the first line is drawn in the reader's text color, the second and the gridlines in GrayText, and the crosshair and dots in Highlight.
+The chart is a `figure` named by `aria-label` or `aria-labelledby`, which the types require. The plot is a single tab stop, so thirty-one days are never thirty-one stops. It is a group named like the figure, with the role description "chart" (`labels.roleDescription`), and becomes focusable once scripts run. The table is the full alternative.
+
+- Keys: the arrows move a readout and a crosshair through the days with data. Keys with Alt, Control or Meta are left to the browser.
+- Readout: it sits above the day's dots, or below them near the top, so it never covers its point.
+- Announcements: once the keys rest for 150ms, a screen reader hears the day and each series with its value, so a held key is heard only where it stops. Each part is announced on its own, with no punctuation added between your words.
+- Pointer: snaps to the nearest day anywhere in its column, not only on the line.
+- Forced colors: the first line uses the reader's text color, the second line and gridlines GrayText, and the crosshair and dots Highlight.
 
 <Keys rows={[['Tab', 'Moves to the plot, one stop for the whole chart, then to the table toggle.'], ['Left Right', 'The previous or next day with data, in the drawn direction.'], ['Home End', 'The first or last day with data.'], ['PageUp PageDown', 'Seven days back or forward.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter Space', 'On the toggle, swaps the plot and the table.']]} />
 

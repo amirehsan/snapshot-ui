@@ -1,6 +1,6 @@
 ---
 title: Sidebar
-description: "The floating rail: labelled groups of links with icons and counts, collapsed to icons with their names as tooltips, and a drawer on a phone."
+description: 'A floating rail of grouped links that collapses to icons and becomes a drawer on phones.'
 icon: PanelLeft
 ---
 
@@ -8,7 +8,11 @@ icon: PanelLeft
 
 ## Groups and items
 
-A sidebar is a float rail 16px inside the edges of the screen: the brand at the top, a search action under it, labelled groups of links, and an account row ruled off at the bottom. A `SidebarGroup` names its list with its label, drawn as a small uppercase line with a dot. A `SidebarItem` is a link with an icon and a label, and an optional count at the end of the row. The page shown is an ink pill, and its group's dot lights up. The rail goes inside an [App shell](/docs/components/app-shell), which owns its collapsed and drawer states.
+A float rail 16px inside the screen edges, with the brand at the top, a search action, labelled groups of links, and an account row ruled off at the bottom. Put it inside an [App shell](/docs/components/app-shell), which owns its collapsed and drawer states.
+
+- `SidebarGroup`: names its list with its label, a small uppercase line with a dot.
+- `SidebarItem`: a link with an icon, a label and an optional count at the end.
+- Current page: shown as an ink pill, and its group's dot lights up.
 
 <Preview name="sidebar-groups" />
 
@@ -18,7 +22,7 @@ A sidebar is a float rail 16px inside the edges of the screen: the brand at the 
 
 ## Collapsed
 
-Collapsed, the rail is a 72px column of icons. Each name shows as a tooltip on hover and on keyboard focus, beside the icon, and a count becomes a dot on the icon's corner, its number and words on the tooltip's second line. Every item is still a tab stop, and no name changes: the labels are hidden from view, not removed.
+Collapsed, the rail is a 72px column of icons. Each name shows as a tooltip on hover and keyboard focus. A count becomes a dot on the icon's corner, with its number and words on the tooltip's second line. Every item stays a tab stop, and the labels are hidden from view, not removed, so no name changes.
 
 <Preview name="sidebar-collapsed" />
 
@@ -28,7 +32,7 @@ Collapsed, the rail is a 72px column of icons. Each name shows as a tooltip on h
 
 ## The drawer
 
-Below 1024px the rail is hidden, and `SidebarTrigger`, an outline menu button for the page header, opens the same rail as a drawer from the start edge. The drawer always shows the labels, whatever the collapsed state says, and opens with focus on the page shown. Pressing any item in it closes it, the page already open included. This example opens the real drawer from a button on the page, at any width.
+Below 1024px the rail is hidden. `SidebarTrigger`, an outline menu button for the page header, opens the same rail as a drawer from the start edge. The drawer always shows the labels and opens with focus on the current page. Pressing any item closes it, including the current one. This example opens the real drawer from a button, at any width.
 
 <Preview name="sidebar-drawer" />
 
@@ -38,7 +42,7 @@ Below 1024px the rail is hidden, and `SidebarTrigger`, an outline menu button fo
 
 ## Long labels
 
-A long label wraps onto a second line, with the icon beside the first. It is never cut short: a truncated label hides which page an item is.
+A long label wraps onto a second line, with the icon beside the first. It is never truncated, since that would hide which page the item opens.
 
 <Preview name="sidebar-long-labels" />
 
@@ -48,7 +52,7 @@ A long label wraps onto a second line, with the icon beside the first. It is nev
 
 ## The current page
 
-The library cannot see the router, so the current page is the app's to say. A client component reads `usePathname()` and passes `isCurrent` to the item and to its group. Only the item that is the page shown is current, and no prefix match ships: whether `/budgets/2026` makes Budgets current is the app's rule.
+The library cannot see the router, so the app marks the current page. Read `usePathname()` in a client component and pass `isCurrent` to the item and its group. There is no built-in prefix match: whether `/budgets/2026` makes Budgets current is the app's rule.
 
 ```tsx
 'use client';
@@ -78,7 +82,13 @@ export function InsightsGroup() {
 
 ## Slots
 
-`brand` takes a `SidebarBrand`, the mark and the name as a link home; `search` takes a `SidebarSearch`, a pill that opens the app's search in `onPress`; `footer` takes anything, such as the signed-in account. Each slot is drawn only when given. Collapsed, the brand keeps its mark and the search its icon, each with its name as a tooltip, and the footer is centered: read `useSidebar().isCollapsed` to draw the account row as an avatar alone. While the drawer is open the slots render twice, once in the rail and once in the drawer, so give any id inside a slot from `useId`, never a fixed string. `useSidebar().inDrawer` says which copy a slot is in. The same holds for a `SidebarGroup`: an `id` you pass it is repeated in the drawer copy, so leave the id to the library.
+Each slot renders only when given.
+
+- `brand`: a `SidebarBrand`, the mark and name as a link home. Collapsed, it keeps the mark, with the name as a tooltip.
+- `search`: a `SidebarSearch`, a pill that opens the app's search in `onPress`. Collapsed, it keeps its icon, with the name as a tooltip.
+- `footer`: anything, such as the signed-in account. Collapsed, it is centered. Read `useSidebar().isCollapsed` to show the account as an avatar alone.
+
+While the drawer is open, the slots render twice, once in the rail and once in the drawer. Generate any id inside a slot with `useId`, never a fixed string, and read `useSidebar().inDrawer` to tell the copies apart. The same applies to `SidebarGroup`: an `id` you pass is repeated in the drawer copy, so leave the id to the library.
 
 </Section>
 
@@ -86,7 +96,12 @@ export function InsightsGroup() {
 
 ## Usage
 
-Sidebar and its parts are client components, and a server component can render them. Put the `Sidebar` in the shell's `sidebar` slot and a `SidebarTrigger` in its header. The search's `shortcut` is keys separated by spaces, such as `"Mod K"`, drawn as a key chip: `Mod` becomes Cmd on Apple platforms and Ctrl elsewhere after the page loads, and the server's HTML says Mod. The chip is part of the button's name, in both states: "Search or jump to, Ctrl K", or the Command symbol and K on Apple platforms ("Mod K" in the server's HTML, before the page loads). An item's `count` comes with its `countLabel`, so the item reads "Transactions, 12 to review". Items and the brand are React Aria links: `href` works before any script runs, a `RouterProvider` routes every press as [Routing](/docs/routing) shows, and `render` draws a router's own link for one item.
+Sidebar and its parts are client components, and a server component can render them. Put the `Sidebar` in the shell's `sidebar` slot and a `SidebarTrigger` in its header.
+
+- Search shortcut: `shortcut` takes keys separated by spaces, such as `"Mod K"`, shown as a key chip. After the page loads, `Mod` becomes Cmd on Apple platforms and Ctrl elsewhere. The server's HTML says Mod.
+- Search name: the chip is part of the button's name in both states, such as "Search or jump to, Ctrl K".
+- Counts: an item's `count` comes with its `countLabel`, so the item reads "Transactions, 12 to review".
+- Links: items and the brand are React Aria links. `href` works before any script runs, a `RouterProvider` routes every press as [Routing](/docs/routing) shows, and `render` draws a router's own link for one item.
 
 </Section>
 
@@ -94,7 +109,7 @@ Sidebar and its parts are client components, and a server component can render t
 
 ## Props
 
-`className` and `ref` go on the rail's root for `Sidebar`, and the drawer copy takes the class too; its id and other attributes stay on the rail alone. Each part takes `className` and `ref` on its own element, merged after the library's class.
+On `Sidebar`, `className` and `ref` go on the rail's root. The drawer copy also gets the class, but the id and other attributes stay on the rail. Each part takes `className` and `ref` on its own element, with the class merged after the library's.
 
 <PropsTable label="Sidebar props" path="../../packages/react/src/sidebar/Sidebar.tsx" type="Pick<SidebarProps, 'aria-label' | 'aria-labelledby' | 'brand' | 'search' | 'children' | 'footer' | 'collapseLabel' | 'expandLabel' | 'drawerLabel' | 'closeLabel' | 'className'>" />
 
@@ -114,7 +129,11 @@ Sidebar and its parts are client components, and a server component can render t
 
 ## Accessibility
 
-The rail is a `<nav>` named by its `aria-label`, and each group's list is named by the group's label, a paragraph and not a heading. The page shown carries `aria-current="page"`. Tab walks the rail in order, with no arrow keys to learn. Names never depend on state: a collapsed label is hidden from view and stays in the name, and a count's words are always in it. The collapse button names what it will do, and says whether the rail is expanded. The drawer opens with focus on the page shown, holds Tab inside, hides the page behind it, and gives focus back to the menu button when it closes.
+The rail is a `<nav>` named by its `aria-label`. Each group's list is named by the group's label, which is a paragraph, not a heading. The current page has `aria-current="page"`. Tab walks the rail in order, with no arrow keys to learn.
+
+- Names never depend on state: a collapsed label stays in the name, and a count's words are always in it.
+- The collapse button names what it will do and says whether the rail is expanded.
+- The drawer opens with focus on the current page, keeps Tab inside, hides the page behind it, and returns focus to the menu button when it closes.
 
 <Keys rows={[['Tab Shift+Tab', 'Walk the brand, the collapse button, the search, every item in order, then the footer. Collapsed, every icon is still a stop.'], ['Enter', 'Follows an item, or opens the search. Space does nothing on a link.'], ['Enter Space', 'On the collapse button, folds or unfolds the rail.'], ['Escape', 'Closes an open tooltip. In the drawer, closes the drawer and returns focus to the menu button.']]} />
 

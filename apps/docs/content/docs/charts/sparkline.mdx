@@ -1,6 +1,6 @@
 ---
 title: Sparkline
-description: "A tile's trend as a line, drawn on the server: decorative by default, named when it says something the tile does not."
+description: "A tile's trend as a small line, rendered on the server and decorative unless named."
 icon: Activity
 ---
 
@@ -8,7 +8,7 @@ icon: Activity
 
 ## In a stat tile
 
-A sparkline is a figure's shape over time, small enough to sit beside the figure. Give it to a `StatTile` as its `trend`, and it takes the end of the value's row, 96 by 32.
+A sparkline shows a figure's shape over time, small enough to sit beside the figure. Pass it to a `StatTile` as its `trend`, and it takes the end of the value's row, 96 by 32.
 
 <Preview name="sparkline-tile" />
 
@@ -18,7 +18,11 @@ A sparkline is a figure's shape over time, small enough to sit beside the figure
 
 ## Area and end point
 
-The line is 2px of ink with round caps and joins. The last value is marked with an 8px dot in a ring of the surface, which `hasEndPoint={false}` leaves out. `hasArea` fills under the line with a 10% ink wash, down to the bottom of the box. A series whose values are all equal is drawn as a flat line at mid-height.
+The line is 2px of ink with round caps and joins.
+
+- End point: an 8px dot in a ring of the surface marks the last value. `hasEndPoint={false}` leaves it out.
+- Area: `hasArea` fills under the line with a 10% ink wash, down to the bottom of the box.
+- Flat series: when all values are equal, the line is flat at mid-height.
 
 <Preview name="sparkline-variants" />
 
@@ -28,7 +32,7 @@ The line is 2px of ink with round caps and joins. The last value is marked with 
 
 ## Naming it
 
-A sparkline is hidden from assistive technology by default, since the tile beside it says what it means. When it says something the tile does not, give it an `aria-label`, such as "Spending, last 30 days, rising", or an `aria-labelledby`, and it becomes one image with that name. A blank name is ignored, so it never becomes an image with no name.
+A sparkline is hidden from assistive technology by default, since the tile beside it says what it means. When it says something the tile does not, give it an `aria-label`, such as "Spending, last 30 days, rising", or an `aria-labelledby`. It then becomes one image with that name. A blank name is ignored, so it never becomes an unnamed image.
 
 ```tsx
 <Sparkline data={spending} aria-label="Spending, last 30 days, rising" />
@@ -40,7 +44,7 @@ A sparkline is hidden from assistive technology by default, since the tile besid
 
 ## Size
 
-The default box is 96 by 32. Give it a width and a height, by `className` or `style`, and the drawing stretches to fill it: the line stays 2px wide and the dot stays round, because the dot is drawn over the line rather than in it. Nothing is measured, so the server's HTML is final.
+The default box is 96 by 32. Set a width and height with `className` or `style`, and the drawing stretches to fill it. The line stays 2px wide and the dot stays round, because the dot is drawn over the line. Nothing is measured, so the server's HTML is final.
 
 ```tsx
 <Sparkline data={spending} style={{ width: '100%', height: '3rem' }} />
@@ -52,7 +56,7 @@ The default box is 96 by 32. Give it a width and a height, by `className` or `st
 
 ## Right to left
 
-The oldest value is at the inline start and the newest at the inline end: the left under `dir="rtl"`. The direction comes from the nearest `dir="ltr"` or `dir="rtl"` attribute, so a `dir="ltr"` region inside a right-to-left page draws left to right. The plot reads `--chart-direction`, which only that attribute sets, so without an explicit `dir="ltr"` or `dir="rtl"`, under `dir="auto"` or a CSS `direction` alone, the sparkline draws left to right, the line and its end dot together.
+The oldest value is at the inline start and the newest at the inline end, which is the left under `dir="rtl"`. The direction comes from the nearest `dir="ltr"` or `dir="rtl"` attribute, so a `dir="ltr"` region inside a right-to-left page draws left to right. Only that attribute sets `--chart-direction`, which the plot reads. Under `dir="auto"` or a CSS `direction` alone, the line and its end dot draw left to right.
 
 </Section>
 
@@ -60,7 +64,7 @@ The oldest value is at the inline start and the newest at the inline end: the le
 
 ## On another surface
 
-The ring around the end point is drawn in `--chart-surface`, which is Lifted by default, the card a sparkline sits on most. On the page itself, set `--chart-surface: var(--color-canvas)` on the sparkline or on any ancestor, and every chart inside follows.
+The ring around the end point uses `--chart-surface`, which is Lifted by default, the card a sparkline usually sits on. On the page itself, set `--chart-surface: var(--color-canvas)` on the sparkline or any ancestor, and every chart inside follows.
 
 ```css
 .overview-section {
@@ -78,7 +82,7 @@ The ring around the end point is drawn in `--chart-surface`, which is Lifted by 
 pnpm add @snapshot-ui/charts @snapshot-ui/core
 ```
 
-It needs the same 0.x minor of `@snapshot-ui/core` (0.5 for charts 0.1.2), whose `styles.css` draws it. The data are numbers, oldest first. The domain is their extent, not from zero, because a sparkline shows a shape, not a magnitude. It is static, so a server component renders it with no client JavaScript.
+It needs the same 0.x minor of `@snapshot-ui/core` (0.5 for charts 0.1.2), whose `styles.css` draws it. Pass numbers, oldest first. The domain is their extent, not from zero, because a sparkline shows a shape, not a magnitude. It is static, so a server component renders it with no client JavaScript.
 
 ```tsx
 import { Sparkline } from '@snapshot-ui/charts';
@@ -98,7 +102,7 @@ import { StatTile } from '@snapshot-ui/react';
 
 ## Props
 
-A Sparkline accepts every attribute of an HTML element, on its root, a `span`.
+A Sparkline accepts every HTML element attribute on its root, a `span`.
 
 <PropsTable label="Sparkline props" path="../../packages/charts/src/sparkline/Sparkline.tsx" type="Pick<SparklineProps, 'data' | 'hasEndPoint' | 'hasArea' | 'aria-label' | 'aria-labelledby' | 'className'>" />
 
@@ -108,7 +112,7 @@ A Sparkline accepts every attribute of an HTML element, on its root, a `span`.
 
 ## Accessibility
 
-Hidden from assistive technology (`aria-hidden`) unless it is named. Named by `aria-label` or `aria-labelledby`, it is one `role="img"` with that name, and the drawing inside it stays hidden. It takes no focus and has no keys. In forced colors the line and the dot are drawn in the reader's text color, and the wash is dropped.
+Hidden from assistive technology (`aria-hidden`) unless named. With an `aria-label` or `aria-labelledby`, it is one `role="img"` with that name, and the drawing inside stays hidden. It takes no focus and has no keys. In forced colors, the line and dot use the reader's text color, and the wash is dropped.
 
 </Section>
 

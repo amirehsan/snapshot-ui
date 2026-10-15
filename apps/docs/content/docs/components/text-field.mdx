@@ -1,6 +1,6 @@
 ---
 title: Text field
-description: A single-line text field. One element draws the label, the control, the hint, the error line and an optional length count, and shows when a value is unsaved or invalid.
+description: A single-line text field with label, hint, error line and an optional length count in one element.
 icon: TextCursor
 ---
 
@@ -18,7 +18,12 @@ Pass a label, and a hint if the label cannot say it all. The placeholder shows a
 
 ## States
 
-The edge carries the state. A changed field gets a light signal orange edge and a clay chip beside its label. An invalid field gets the error edge and an error line, and invalid outranks changed, so the chip steps aside. A disabled field is recessed. A read-only field looks like an enabled one and still submits.
+The edge carries the state.
+
+- Changed: a light signal orange edge and a clay chip beside the label.
+- Invalid: the error edge and an error line. Invalid outranks changed, so the chip hides.
+- Disabled: the field is recessed.
+- Read-only: looks like an enabled field and still submits.
 
 <Preview name="text-field-states" />
 
@@ -28,7 +33,7 @@ The edge carries the state. A changed field gets a light signal orange edge and 
 
 ## Validation
 
-Set `isRequired`, a `type`, or a `validate` function, and the browser's own checks run when the form is submitted. The error line then shows the message, or the one you build from the validation result. The first failed submit shows the error and moves focus to the field.
+Set `isRequired`, a `type`, or a `validate` function, and the browser's checks run on submit. The error line shows the message, or one you build from the validation result. The first failed submit moves focus to the field.
 
 <Preview name="text-field-validation" />
 
@@ -38,9 +43,12 @@ Set `isRequired`, a `type`, or a `validate` function, and the browser's own chec
 
 ## Length count
 
-Pass `budget` to count the value's length against about how long it should be. The count appears from 70% of the budget and never blocks typing. It is the value's length as JavaScript and `maxLength` measure it, in UTF-16 code units, so an emoji, or an accented letter built from two code points, can count as two. The budget is a soft target and the count can pass it. `maxLength` is a hard stop that the counter does not read, so set `budget` at or below `maxLength`. [Field parts](/docs/components/field) shows it in use.
+Pass `budget` for about how long the value should be. The count appears from 70% of the budget and never blocks typing, so it can pass the budget. [Field parts](/docs/components/field) shows it in use.
 
-To word the count another way, such as in another language, pass `counter` with a `label` function. It receives the count, the budget and whether the count is past it, and returns the text. `counter.showFrom` moves the share of the budget the count first appears at.
+- Length is in UTF-16 code units, as JavaScript and `maxLength` measure it. An emoji, or an accented letter built from two code points, can count as two.
+- `maxLength` is a hard stop the count does not read. Set `budget` at or below it.
+
+To word the count another way, such as in another language, pass `counter` with a `label` function. It receives the count, the budget and whether the count is past it, and returns the text. `counter.showFrom` sets the share of the budget where the count appears.
 
 ```tsx
 <TextField
@@ -50,7 +58,7 @@ To word the count another way, such as in another language, pass `counter` with 
 />
 ```
 
-The count is announced each time it changes. If that is too often for your readers, build the field from its parts and pass FieldCounter a count that settles after a pause, as [Field parts](/docs/components/field) describes.
+The count is announced each time it changes. To announce it less often, build the field from its parts and pass FieldCounter a count that settles after a pause, as [Field parts](/docs/components/field) describes.
 
 </Section>
 
@@ -58,7 +66,7 @@ The count is announced each time it changes. If that is too often for your reade
 
 ## Usage
 
-Every value works controlled and uncontrolled, and a field with a `name` submits in a plain form. `onChange` receives the string.
+Every value works controlled and uncontrolled. A field with a `name` submits in a plain form. `onChange` receives the string.
 
 ```tsx
 import { useState } from 'react';
@@ -80,9 +88,9 @@ export function ShortDescription({ saved }: { saved: string }) {
 }
 ```
 
-A field needs a name, and the types require one: a `label`, an `aria-label` when no label is shown, or an `aria-labelledby` that points at a label shown elsewhere.
+The types require a name: a `label`, an `aria-label` when no label is shown, or an `aria-labelledby` that points at a label shown elsewhere.
 
-For a custom layout, use the parts inside React Aria's own field: Label, Input, Description and FieldError. Field parts has the example. For text that runs to several lines, use [Text area](/docs/components/text-area), which takes the same props.
+For a custom layout, use the parts inside React Aria's own field: Label, Input, Description and FieldError. Field parts has the example. For text of several lines, use [Text area](/docs/components/text-area), which takes the same props.
 
 </Section>
 
@@ -100,13 +108,13 @@ Every React Aria TextField prop is accepted. These are the ones Snapshot UI adds
 
 ## Accessibility
 
-A native input, labelled by the label and described by the hint and the error line, with React Aria handling the wiring. A screen reader reads the Changed chip with the field, after the hint, while the field is changed and valid. An invalid field reads its hint and then its error line, and the chip steps aside.
+A native input, labelled by the label and described by the hint and the error line. While the field is changed and valid, a screen reader reads the Changed chip after the hint. An invalid field reads its hint, then its error line.
 
 <Keys rows={[['Tab', 'Moves focus into the field. The edge firms to 1.5px ink and the 2px ring sits outside it.'], ['Enter', 'Submits the form the field is in.']]} />
 
-The placeholder is taupe, which is quiet by design, so it never carries anything the label does not. The count is a polite status region.
+The placeholder is taupe and quiet by design, so it never carries anything the label does not. The count is a polite status region.
 
-A field with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means the field has no accessible name.
+A field with no name does not compile. TypeScript's message names only `aria-labelledby` or says the props are not assignable. Either one means a missing accessible name.
 
 </Section>
 

@@ -52,7 +52,7 @@ export interface CalendarShared {
   maxValue?: string;
   /** Days that cannot be chosen, such as a closed day. Receives an ISO date. */
   isDateUnavailable?: (date: string) => boolean;
-  /** Today in the app's time zone, as an ISO date (ruling 3). Without it, the device's today after hydration. */
+  /** Today in the app's time zone, as an ISO date. Without it, the device's today after hydration. */
   today?: string;
   /** The first day of the week. @default from the locale */
   firstDayOfWeek?: 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';

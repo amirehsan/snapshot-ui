@@ -24,11 +24,11 @@ export interface MenuItemProps<T extends object = object> extends Omit<
   /** A second line under the label, in slate. It becomes the item's accessible description. */
   description?: ReactNode;
   /**
-   * A preformatted value at the end, such as an amount, before the key hint: small ink tabular figures. It is
-   * shown as given and never formatted here. It describes the item and is not part of its name.
+   * A preformatted value at the end, such as an amount, before the key hint. Shown as given. It describes the
+   * item and is not part of its name.
    */
   end?: ReactNode;
-  /** A key hint at the end, such as "Q" or "Mod ,", drawn as a key. Keys are separated by spaces; "Mod" is the platform's modifier after mount. */
+  /** A key hint at the end, such as "Q" or "Mod ,", drawn as keys. Separate keys with spaces. "Mod" shows as Cmd or Ctrl once mounted. */
   shortcut?: string;
   /** The ids of elements that also describe the item, read after its end value. */
   'aria-describedby'?: string;

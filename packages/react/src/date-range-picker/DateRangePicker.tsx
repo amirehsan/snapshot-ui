@@ -85,8 +85,8 @@ export interface DateRangePickerBaseProps extends Omit<
    */
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
-   * Whether the value differs from the saved one. Shows the clay Changed chip in the label row and the light
-   * signal orange edge, and has a screen reader read the chip with the group.
+   * Whether the value differs from the saved one. Shows the clay Changed chip and the light signal orange edge.
+   * A screen reader reads the chip with the group.
    */
   isChanged?: boolean;
   /** @default 'Changed' */
@@ -98,10 +98,8 @@ export interface DateRangePickerBaseProps extends Omit<
   /** Called with the range's two Gregorian ISO dates once both are complete, and with null while one is not. */
   onChange?: (value: DateRange | null) => void;
   /**
-   * Checks the range, in the terms `onChange` uses: two Gregorian ISO dates, or null for a range with a date
-   * missing. React Aria runs it once both dates are complete, so an empty field is `isRequired`'s to check, and
-   * its own checks of the bounds, unavailable days and an end before the start run as well. Returns an error
-   * message, or true or null when the range is valid.
+   * Checks the range as `onChange` sends it. Runs once both dates are complete, alongside React Aria's own
+   * checks, so use `isRequired` for an empty field. Returns an error message, or true or null when valid.
    */
   validate?: (
     value: DateRange | null,
@@ -113,8 +111,8 @@ export interface DateRangePickerBaseProps extends Omit<
   /** Days that cannot be chosen, such as a closed day. Receives an ISO date. */
   isDateUnavailable?: (date: string) => boolean;
   /**
-   * Today in the app's time zone, as an ISO date (ruling 3): the calendar's mark, and its opening month when
-   * there is no value. Without it, the device's today.
+   * Today in the app's time zone, as an ISO date. Marks today and sets the opening month when there
+   * is no value. Defaults to the device's today.
    */
   today?: string;
   /** A row of the app's ranges above the calendar; a press sets the range and closes the calendar. */

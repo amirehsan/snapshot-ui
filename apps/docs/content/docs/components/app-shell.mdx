@@ -1,6 +1,6 @@
 ---
 title: App shell
-description: "The frame an app runs in: a floating rail that collapses to icons and opens as a drawer on a phone, a sticky header, the page, and room for a bottom tab bar."
+description: "The frame an app runs in: a collapsible floating rail, a sticky header, the page and a bottom tab bar."
 icon: PanelsTopLeft
 ---
 
@@ -8,9 +8,14 @@ icon: PanelsTopLeft
 
 ## Layout
 
-`AppShell` takes three slots and the page. `sidebar` is the rail, a [Sidebar](/docs/components/sidebar), fixed and floating 16px inside the top, the start and the bottom of the screen; from 1024px up the workspace is offset by its full width. `header` is the page header, sticky to the top of the workspace; its look is the header's own, and the shell only keeps it above the page as the page scrolls. `bottomBar` is a bottom tab bar for a phone. The page goes in `children`, which the shell renders inside its one `<main>`.
+`AppShell` takes three slots and the page.
 
-The examples on this page sit in a frame, so the rail floats inside it rather than over the docs. In an app it floats over the window.
+- `sidebar`: the rail, a [Sidebar](/docs/components/sidebar). It floats 16px inside the top, start and bottom of the screen. From 1024px up, the workspace is offset by its width.
+- `header`: the page header, sticky to the top of the workspace. The shell only makes it sticky; its look is the header's own.
+- `bottomBar`: a bottom tab bar for phones.
+- `children`: the page, rendered inside the shell's one `<main>`.
+
+The examples on this page sit in a frame, so the rail floats inside it. In an app it floats over the window.
 
 <Preview name="app-shell-basic" />
 
@@ -20,7 +25,9 @@ The examples on this page sit in a frame, so the rail floats inside it rather th
 
 ## Collapsed
 
-`defaultSidebarCollapsed` starts the rail as a 72px column of icons, the page 104px in. The collapse button on the rail's edge folds and unfolds it, and the shell remembers the choice for as long as the page is open. Control it with `isSidebarCollapsed` and `onSidebarCollapsedChange`. While collapsed the root carries `data-sidebar="collapsed"`, and CSS does the rest: the attribute on any ancestor of the rail narrows it.
+`defaultSidebarCollapsed` starts the rail as a 72px column of icons, with the page 104px in. The collapse button on the rail's edge toggles it, and the shell keeps the choice until the page reloads. Control it with `isSidebarCollapsed` and `onSidebarCollapsedChange`.
+
+While collapsed, the root carries `data-sidebar="collapsed"`, and CSS does the rest. The attribute narrows the rail from any ancestor.
 
 <Preview name="app-shell-collapsed" />
 
@@ -30,7 +37,7 @@ The examples on this page sit in a frame, so the rail floats inside it rather th
 
 ## The collapsed state and the cookie
 
-The first paint must be the right width, and nothing may be measured to find it. A Next.js App Router layout reads the choice from a cookie on the server and passes it as the default; a thin client wrapper writes the cookie when the reader changes it:
+The first paint must be the right width without measuring anything. In the Next.js App Router, read the choice from a cookie in a server layout and pass it as the default. A thin client wrapper writes the cookie when it changes:
 
 ```tsx
 // app/(app)/layout.tsx, a server component
@@ -68,7 +75,9 @@ export function Shell(props: Omit<AppShellProps, 'onSidebarCollapsedChange'>) {
 }
 ```
 
-The shell is uncontrolled with the cookie as its default: a full page load reads the cookie again, and in between the shell's own state is right. A static site has no cookie to read: a script that runs before the first paint sets `data-sidebar="collapsed"` on `<html>` from local storage, and the app feeds `isSidebarCollapsed` from `useSyncExternalStore` over that attribute. One CSS rule serves both, because the attribute works on any ancestor. The shell writes `data-sidebar="collapsed"` while collapsed and nothing otherwise, never `expanded`, so it never resets an attribute set higher up.
+The shell stays uncontrolled. A full page load reads the cookie again, and in between the shell's own state is right.
+
+A static site has no cookie. Instead, a script that runs before the first paint sets `data-sidebar="collapsed"` on `<html>` from local storage, and the app feeds `isSidebarCollapsed` from `useSyncExternalStore` over that attribute. The same CSS rule serves both, because the attribute works on any ancestor. The shell writes `collapsed` or nothing, never `expanded`, so it never resets an attribute set higher up.
 
 </Section>
 
@@ -76,7 +85,11 @@ The shell is uncontrolled with the cookie as its default: a full page load reads
 
 ## The skip link and main
 
-The first Tab on the page lands on a skip link, out of sight until it is focused, then an ink pill over the rail's corner. Enter moves focus to `<main>`, past the rail and the header. `skipLinkLabel` replaces its text, "Skip to content". `<main>` takes an id from `useId`, or the one `mainId` gives, and `useAppShell().mainId` hands it to anything else that links to it.
+The first Tab lands on a skip link, hidden until focused and then shown as an ink pill over the rail's corner. Enter moves focus to `<main>`, past the rail and header.
+
+- `skipLinkLabel` replaces its text, "Skip to content".
+- `mainId` sets the id of `<main>`. Without it, the id comes from `useId`.
+- `useAppShell().mainId` gives the id to anything else that links to it.
 
 </Section>
 
@@ -84,7 +97,9 @@ The first Tab on the page lands on a skip link, out of sight until it is focused
 
 ## The drawer
 
-Below 1024px the rail is hidden, and a [SidebarTrigger](/docs/components/sidebar#the-drawer) in the header opens it as a drawer from the start edge. Escape, a press on the scrim, the close button and a press on any item in it close the drawer, as does the window widening to 1024px and Back or Forward. The shell cannot see the router, so anything else that navigates from inside the drawer, such as a command palette opened from it, calls `closeDrawer()` from `useAppShell()`. An app may instead close it from an effect on `usePathname()`. Control the drawer with `isDrawerOpen` and `onDrawerOpenChange`.
+Below 1024px the rail is hidden. A [SidebarTrigger](/docs/components/sidebar#the-drawer) in the header opens it as a drawer from the start edge. Control the drawer with `isDrawerOpen` and `onDrawerOpenChange`.
+
+The drawer closes on Escape, a press on the scrim, the close button or any item, the window widening to 1024px, and Back or Forward. The shell cannot see the router, so anything else that navigates from inside the drawer, such as a command palette, calls `closeDrawer()` from `useAppShell()`. An app may instead close it from an effect on `usePathname()`.
 
 </Section>
 
@@ -92,9 +107,9 @@ Below 1024px the rail is hidden, and a [SidebarTrigger](/docs/components/sidebar
 
 ## The bottom reserve
 
-Below 1024px, with a `bottomBar`, the workspace pads its bottom by the tab bar's height and the safe area under it, so the end of the page is never under the bar. The padding is one property, `--app-shell-inset-block-end`; anything else docked to the bottom edge, such as a save bar, adds to it rather than declaring its own.
+Below 1024px, with a `bottomBar`, the workspace pads its bottom by the tab bar's height plus the safe area, so the page never ends under the bar. The padding is one property, `--app-shell-inset-block-end`. Anything else docked to the bottom edge, such as a save bar, adds to it rather than declaring its own.
 
-The example sits in a phone's frame with a [Bottom tab bar](/docs/components/bottom-tab-bar) as `bottomBar`, so it shows the phone's layout at any width.
+The example sits in a phone frame with a [Bottom tab bar](/docs/components/bottom-tab-bar) as `bottomBar`, so it shows the phone layout at any width.
 
 <Preview name="app-shell-phone" />
 
@@ -104,7 +119,10 @@ The example sits in a phone's frame with a [Bottom tab bar](/docs/components/bot
 
 ## Usage
 
-AppShell is a client component, and a server layout can render it. Every prop is serializable except the callbacks, so a server layout passes the slots as elements and reads the cookie, and a client wrapper supplies the callbacks, as above. `useAppShell()` gives the state to the parts and to an app's own header or palette; it throws outside a shell. Links in the rail navigate through React Aria's `RouterProvider`, which [Routing](/docs/routing) sets up once for the app.
+AppShell is a client component that a server layout can render. Every prop except the callbacks is serializable. The server layout passes the slots and reads the cookie, and a client wrapper adds the callbacks, as above.
+
+- `useAppShell()` gives the shell's state to its parts and to your own header or palette. It throws outside a shell.
+- Links in the rail navigate through React Aria's `RouterProvider`, which [Routing](/docs/routing) sets up once for the app.
 
 </Section>
 
@@ -124,7 +142,7 @@ AppShell is a client component, and a server layout can render it. Every prop is
 
 ## Accessibility
 
-The shell renders one `<main>`, and the skip link to it is the first tab stop. The rail's nav and a tab bar's nav are each named, and the two are never in the tree at once: below 1024px the rail is hidden, and from 1024px up the tab bar is. The rail root and the header wrapper carry no landmark role. While the drawer is open the page behind it is hidden from assistive technology and does not scroll.
+The shell renders one `<main>`, and the skip link to it is the first tab stop. The rail and the tab bar each have a named nav, and only one is ever in the accessibility tree: the rail from 1024px up, the tab bar below. The rail root and header wrapper carry no landmark role. While the drawer is open, the page behind it is hidden from assistive technology and does not scroll.
 
 <Keys rows={[['Tab', 'The skip link first, then the rail, the header and the page.'], ['Enter', 'On the skip link, moves focus to the main content.']]} />
 

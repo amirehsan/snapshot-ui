@@ -14,18 +14,18 @@ export interface ToastAction {
 
 export interface ToastOptions {
   /**
-   * The message. Say the outcome in words: the tone only repeats it. Preformatted text: a status region reads
-   * it out, so it holds no control, and a button goes in `action`.
+   * The message. Say the outcome in words, since the tone only repeats it. Text only: a status region reads it
+   * out, so put a button in `action`.
    */
   title: ReactNode;
-  /** A second line, in slate. Preformatted text, as `title` is. */
+  /** A second line, in slate. Text only, as `title` is. */
   description?: ReactNode;
   tone: ToastTone;
   /** A button such as "Undo". A toast with an action stays until it is used or dismissed. */
   action?: ToastAction;
   /**
-   * Milliseconds before it leaves, or `null` to stay until dismissed; zero or less stays too. Unless given:
-   * 6000, 12000 for `error`, and `null` with an `action`.
+   * Milliseconds before it leaves, or `null` (or zero or less) to stay until dismissed. Defaults to 6000, 12000
+   * for `error`, and `null` with an `action`.
    */
   timeout?: number | null;
   /** Called when it leaves, however it leaves. */

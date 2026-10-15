@@ -1,6 +1,6 @@
 ---
 title: Field parts
-description: The label, hint, error line, length count and Changed chip that every field is made of, and the two attributes that carry a field's state.
+description: The label, hint, error line, length count and Changed chip that make up every field.
 icon: TextCursorInput
 ---
 
@@ -8,7 +8,7 @@ icon: TextCursorInput
 
 ## Parts
 
-A field is a grid of parts with 8px between them. Label names the control, Description is the hint under it, and the clay chip marks an unsaved value. Type in the box to change it.
+A field is a grid of parts, 8px apart. Label names the control, Description is the hint under it, and the clay chip marks an unsaved value. Type in the box to change it.
 
 <Preview name="field-parts" />
 
@@ -18,7 +18,12 @@ A field is a grid of parts with 8px between them. Label names the control, Descr
 
 ## States
 
-A field's root carries two attributes. `data-changed` shows the Changed chip. `data-invalid` hides it, because invalid outranks changed: the error line and the control's error border show instead. The first field is changed. The second is changed and invalid.
+Two attributes on the field's root carry its state.
+
+- `data-changed`: shows the Changed chip.
+- `data-invalid`: shows the error line and the control's error border, and hides the chip. Invalid outranks changed.
+
+The first field below is changed. The second is changed and invalid.
 
 <Preview name="field-states" />
 
@@ -28,7 +33,7 @@ A field's root carries two attributes. `data-changed` shows the Changed chip. `d
 
 ## Length count
 
-A count advises and never blocks. It stays empty until the value reaches 70% of the budget, reads "34 of about 40", and past the budget turns to ink at 700. Nothing stops the value from growing, and it still saves.
+A count advises and never blocks. It stays empty until the value reaches 70% of the budget, then reads "34 of about 40". Past the budget it turns to ink at 700, and the value still grows and saves.
 
 <Preview name="field-counter" />
 
@@ -38,7 +43,13 @@ A count advises and never blocks. It stays empty until the value reaches 70% of 
 
 ## Usage
 
-[Text field](/docs/components/text-field) renders all of this in one element. For a custom layout, put the parts inside a React Aria field: Label names the control, Description and FieldError become its description, and FieldError appears only while the field is invalid. Put the `field` class and `data-changed` on the field's root, and keep the chip in the label row, where the stylesheet shows or hides it. Give the chip an `id` and pass it in `aria-describedby` while the field is changed, so a screen reader reads it with the field.
+[Text field](/docs/components/text-field) renders all of this in one element. For a custom layout, put the parts inside a React Aria field:
+
+- Put the `field` class and `data-changed` on the field's root.
+- Keep the chip in the label row, where the stylesheet shows or hides it.
+- While the field is changed, pass the chip's `id` in the field's `aria-describedby`.
+
+FieldError appears only while the field is invalid.
 
 ```tsx
 import { useId } from 'react';
@@ -76,7 +87,7 @@ export function ShortDescription({
 }
 ```
 
-The classes are `field`, `field-head`, `field-label`, `field-description`, `field-error`, `field-counter` and `field-changed`, so the same parts work in plain HTML.
+In plain HTML, use the classes `field`, `field-head`, `field-label`, `field-description`, `field-error`, `field-counter` and `field-changed`.
 
 </Section>
 
@@ -96,9 +107,9 @@ The count takes the numbers and the text. The chip takes its text as children. L
 
 ## Accessibility
 
-Label is a real label, so a click on it focuses the control. Description and FieldError join the control's accessible description. The chip sits beside the label, not inside it, so the control keeps its name. To have a screen reader read it with the field, give the chip an `id` and pass that id to the field as `aria-describedby` while the chip shows. A hidden element named in `aria-describedby` is still read, so Text field also leaves the chip out of the page while the field is invalid.
+Label is a real label, so a click on it focuses the control. Description and FieldError join the control's accessible description. The chip sits beside the label, not inside it, so the control keeps its name. Naming the chip in `aria-describedby` has a screen reader read it with the field. A hidden element named there is still read, so Text field also removes the chip while the field is invalid.
 
-The count is a polite status region that is in the page from the start and empty until it has something to say, so a screen reader announces it as it changes. To announce less often, pass it a count that settles after a pause.
+The count is a polite status region, in the page and empty from the start, so a screen reader announces it as it changes. To announce less often, pass a count that settles after a pause.
 
 </Section>
 
@@ -108,6 +119,6 @@ The count is a polite status region that is in the page from the start and empty
 
 What keeps fields in the system.
 
-<Rules dos={['Say what the field is in the label, in sentence case, and keep the hint for what the label cannot say.', 'Show a count only where length helps the reader. It advises; a budget is not a limit.', 'Let the control draw the changed border whenever the chip shows. They always appear together.']} donts={['Never use clay for anything but the Changed chip. It means unsaved.', 'Never block typing at the budget. Past it the count turns to ink and the value still saves.', 'Never leave the chip beside an error. Invalid outranks changed.']} />
+<Rules dos={['Name the field in the label, in sentence case. Keep the hint for what the label cannot say.', 'Show a count only where length helps the reader. It advises; a budget is not a limit.', 'Let the control draw the changed border whenever the chip shows. They always appear together.']} donts={['Never use clay for anything but the Changed chip. It means unsaved.', 'Never block typing at the budget. Past it the count turns to ink and the value still saves.', 'Never leave the chip beside an error. Invalid outranks changed.']} />
 
 </Section>

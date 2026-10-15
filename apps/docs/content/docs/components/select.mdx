@@ -1,6 +1,6 @@
 ---
 title: Select
-description: "Choose one value from a list: the chosen option's icon and label in a field, a filter from nine options, hints and amounts on the rows."
+description: "A field for choosing one value from a list, with a filter on longer lists."
 icon: ChevronsUpDown
 ---
 
@@ -8,7 +8,7 @@ icon: ChevronsUpDown
 
 ## Basic
 
-Pass a label, a hint if the label cannot say it all, and the options as `PickerOption`s. The field shows "Choose an option" until one is chosen, or the `placeholder` you pass. A select is for one value from a list known in advance; when there are only a few short options and they fit side by side, a segmented control shows them all at once and takes one press.
+Pass a `label`, an optional hint, and the options as `PickerOption`s. Until one is chosen, the field shows "Choose an option" or your `placeholder`. Use a select for one value from a list known in advance. For a few short options that fit side by side, use a segmented control instead.
 
 <Preview name="select-basic" />
 
@@ -18,7 +18,13 @@ Pass a label, a hint if the label cannot say it all, and the options as `PickerO
 
 ## Rows
 
-An option takes the menu's row: an `icon` at the start, a `description` under the label for options that need telling apart, and a preformatted `end` value, such as this month's total, at the end. Group options with `PickerSection`, whose title is an overline heading. The trigger shows the chosen option's icon and label only, never its hint or its amount. A string label is also the option's text value, which typing, the filter and the trigger read; a label that is not a string needs a `textValue`.
+Options use the menu's row:
+
+- `icon`: shown at the start.
+- `description`: a hint under the label, for options that need telling apart.
+- `end`: a preformatted value at the end, such as this month's total.
+
+Group options with `PickerSection`, whose title is an overline heading. The trigger shows only the chosen option's icon and label. A string label is also the option's text value, used by typeahead, the filter and the trigger. A label that is not a string needs a `textValue`.
 
 <Preview name="select-details" />
 
@@ -28,7 +34,12 @@ An option takes the menu's row: an `icon` at the start, a `description` under th
 
 ## Filtering
 
-From nine options the list opens with a filter field at its top. An option stays when every word typed appears in it, in any order, with case and accents aside, so "cafe" finds "Café" and "rent home" finds "Home rent"; a section with nothing left hides, and "No matches" shows when nothing stays. Pass `isFilterable` to show the field on a shorter list, or `isFilterable={false}` to keep it off a longer one. The field is empty each time the list opens. On a phone the filter does not take focus as the list opens, so the keyboard does not cover a list that is often short enough to scroll; the field is one tap away.
+With nine or more options, the list opens with a filter field at its top. Pass `isFilterable` to show it on a shorter list, or `isFilterable={false}` to hide it on a longer one.
+
+- An option matches when every word typed appears in it, in any order, ignoring case and accents. "cafe" finds "Café" and "rent home" finds "Home rent".
+- A section with no matches hides, and "No matches" shows when nothing matches.
+- The field is empty each time the list opens.
+- On a phone the filter does not take focus on open, so the keyboard does not cover the list. Tap the field to filter.
 
 <Preview name="select-filter" />
 
@@ -38,7 +49,7 @@ From nine options the list opens with a filter field at its top. An option stays
 
 ## States
 
-A changed select shows the Changed chip and the light signal orange edge until the value is saved. An invalid one draws the error edge and its error line. A disabled one is recessed, with its text and its chevron in taupe.
+A changed select shows the Changed chip and the light signal orange edge until the value is saved. An invalid one shows the error edge and its error line. A disabled one is recessed, with its text and chevron in taupe.
 
 <Preview name="select-states" />
 
@@ -48,7 +59,7 @@ A changed select shows the Changed chip and the light signal orange edge until t
 
 ## Usage
 
-Keep the choice in the URL, so a filtered view can be shared, reloaded and gone back to. Pass the search parameter as `value` and write the URL in `onChange`. With the Next App Router:
+Keep the choice in the URL so a filtered view can be shared, reloaded and reached with Back. Pass the search parameter as `value` and write the URL in `onChange`. With the Next App Router:
 
 ```tsx
 'use client';
@@ -82,9 +93,11 @@ export function CategoryFilter() {
 }
 ```
 
-The select takes `value`, `defaultValue` and `onChange`; React Aria's older `selectedKey`, `defaultSelectedKey` and `onSelectionChange` are deprecated and not accepted. A select has no clear action of its own: when "any" is a real answer, add it as an option, as above. In a plain form, give it a `name` and the chosen key is submitted with the form.
+- Use `value`, `defaultValue` and `onChange`. React Aria's deprecated `selectedKey`, `defaultSelectedKey` and `onSelectionChange` are not accepted.
+- A select has no clear action. When "any" is a real answer, add it as an option, as above.
+- In a plain form, give it a `name` to submit the chosen key.
 
-When the options come from data, pass them as `items` and render each with a function child. Each item needs an `id`, or a `key`, which becomes the option's key:
+When the options come from data, pass them as `items` and render each with a function child. Each item needs an `id` or a `key`, which becomes the option's key:
 
 ```tsx
 <Select label="Account" items={accounts}>
@@ -98,7 +111,7 @@ When the options come from data, pass them as `items` and render each with a fun
 
 ## Props
 
-Every React Aria Select prop is accepted, except the deprecated selection names. These are the ones Snapshot UI adds or shapes.
+Every React Aria Select prop is accepted except the deprecated selection props. These are the ones Snapshot UI adds or changes.
 
 <PropsTable label="Select props" path="../../packages/react/src/select/Select.tsx" type="Pick<SelectBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'items' | 'isFilterable' | 'labels' | 'placement' | 'name' | 'isRequired' | 'isDisabled' | 'isInvalid' | 'disabledKeys' | 'className' | 'popoverClassName'>" />
 
@@ -112,7 +125,12 @@ Every React Aria Select prop is accepted, except the deprecated selection names.
 
 ## Accessibility
 
-The trigger is a button with `aria-haspopup="listbox"`, named by its value and its label, so a screen reader hears "Groceries, Category, button". It opens a `listbox` of `option`s. An option is named by its label and described by its end value and its hint. The chosen option has a check as well as the filled row, so the choice never rests on color alone. With a filter, focus stays in the field and the arrows move the active option. On a touch screen focus is in the list instead, and the filter does not take focus until it is tapped. React Aria's own announcements, such as the list's name while it is filtered, come from its own strings, which have no Persian.
+The trigger is a button with `aria-haspopup="listbox"`, named by its value and label: a screen reader hears "Groceries, Category, button". It opens a `listbox` of `option`s.
+
+- An option is named by its label and described by its end value and hint.
+- The chosen option has a check as well as the filled row, so the choice never relies on color alone.
+- With a filter, focus stays in the field and the arrows move the active option. On a touch screen focus starts in the list.
+- React Aria's own announcements, such as the list's name while filtered, use its own strings, which have no Persian.
 
 <Keys rows={[['Enter Space Down Up', 'Open the list.'], ['A-Z', 'Chooses the next option starting with the letter, without opening.'], ['Left Right', 'Choose the previous or the next option, without opening.'], ['Down Up Home End PageUp PageDown', 'Move through the open list, stopping at the ends.'], ['Enter Space', 'Choose the option and close.'], ['Escape', 'Clears the filter, then closes and returns focus.'], ['Tab', 'Does not close the list; Escape closes it.']]} />
 

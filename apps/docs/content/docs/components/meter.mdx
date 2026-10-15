@@ -1,6 +1,6 @@
 ---
 title: Meter
-description: "Spending against a budget: spent and held in one bar, a marker for today's pace, and the words that say when it is over."
+description: "Spending against a budget, with spent and held in one bar and a marker for today's pace."
 icon: Gauge
 ---
 
@@ -8,7 +8,7 @@ icon: Gauge
 
 ## Segments
 
-Each segment is a share of `max`, stacked from the start of the bar: a solid fill for what is spent and ink stripes for what is held, committed but not gone. The rest of the track is the frame color. What passes `max` is clipped at the end, and a segment left with no room is not drawn.
+Each segment is a share of `max`, stacked from the start of the bar. A solid fill shows what is spent, and ink stripes show what is held, committed but not gone. The rest of the track is the frame color. Anything past `max` is clipped, and a segment with no room left is not drawn.
 
 <Preview name="meter-basic" />
 
@@ -18,7 +18,7 @@ Each segment is a share of `max`, stacked from the start of the bar: a solid fil
 
 ## Pace and legend
 
-`pace` places a marker where spending would be today if it kept pace, and its label is read with the meter as its description. `hasLegend` draws a row under the bar that names each segment with its value, then the marker.
+`pace` places a marker where spending would be today if it kept pace. `hasLegend` adds a row under the bar naming each segment with its value, then the marker.
 
 <Preview name="meter-pace" />
 
@@ -28,7 +28,7 @@ Each segment is a share of `max`, stacked from the start of the bar: a solid fil
 
 ## Over the limit
 
-When the segments add up to more than `max`, both looks turn the warning color and the bar fills to its end. `valueLabel` must say "over" in words, such as "$340 of $300, $40 over", because color is never the only signal.
+When the segments add up to more than `max`, both looks turn the warning color and the bar fills to its end. `valueLabel` must say "over" in words, such as "$340 of $300, $40 over", since color is never the only signal.
 
 <Preview name="meter-over" />
 
@@ -38,7 +38,7 @@ When the segments add up to more than `max`, both looks turn the warning color a
 
 ## On another surface
 
-The cut between two segments and the ring around the pace marker are drawn in `--meter-surface`, which is Lifted by default, the card a meter sits on most. On the page itself, set `--meter-surface: var(--color-canvas)` on the meter or on any ancestor, and every meter inside follows.
+The cut between segments and the ring around the pace marker use `--meter-surface`, which defaults to Lifted, the card a meter usually sits on. On the page itself, set `--meter-surface: var(--color-canvas)` on the meter or any ancestor, and every meter inside follows.
 
 ```css
 .budget-section {
@@ -52,7 +52,7 @@ The cut between two segments and the ring around the pace marker are drawn in `-
 
 ## Usage
 
-Every figure is the app's formatted string: the library formats no number, so the server's HTML is final in any locale. The meter is static, so a server component renders it with no client JavaScript.
+Pass every figure as a formatted string. The library formats no numbers, so the server's HTML is final in any locale. The meter is static, so a server component renders it with no client JavaScript.
 
 ```tsx
 import { Meter } from '@snapshot-ui/react';
@@ -76,7 +76,7 @@ import { Meter } from '@snapshot-ui/react';
 
 ## Props
 
-A Meter accepts every attribute of an HTML element, on its root. The name, `aria-label` or `aria-labelledby`, goes on the bar.
+Meter accepts every HTML element attribute, on its root. The name (`aria-label` or `aria-labelledby`) goes on the bar.
 
 <PropsTable label="Meter props" path="../../packages/react/src/meter/Meter.tsx" type="Pick<MeterProps, 'label' | 'aria-label' | 'aria-labelledby' | 'max' | 'segments' | 'valueLabel' | 'pace' | 'hasLegend' | 'className'>" />
 
@@ -88,7 +88,12 @@ A Meter accepts every attribute of an HTML element, on its root. The name, `aria
 
 ## Accessibility
 
-The bar is a `role="meter"` from 0 to `max`, named by the label or by `aria-label`, its value read as the app's `valueLabel` and never as a percentage, and its pace read as its description. The value text above the bar is hidden, since the meter reads it. The legend is a plain list outside the meter, because a meter's children are presentational. It takes no focus and has no keys.
+The bar is a `role="meter"` from 0 to `max`, named by the label or `aria-label`.
+
+- Its value is read as `valueLabel`, never as a percentage. The visible value text is hidden, since the meter reads it.
+- The pace label is read as its description.
+- The legend is a plain list outside the meter, since a meter's children are presentational.
+- It takes no focus and has no keys.
 
 </Section>
 

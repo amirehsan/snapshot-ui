@@ -1,6 +1,6 @@
 ---
 title: Avatar
-description: A person, a merchant or a bank as an image, with their initials while it loads or when it fails, at 24, 32 and 40px.
+description: A person, merchant or bank as an image, with initials while it loads or if it fails.
 icon: CircleUser
 ---
 
@@ -8,7 +8,12 @@ icon: CircleUser
 
 ## Sizes and shapes
 
-`sm`, `md` and `lg` are 24, 32 and 40px, with initials at 12, 14 and 16px; the small one is bolder, because 12px is the floor for short uppercase text. A circle is a person. A square is a merchant's or a bank's logo, so it reads as a tile and not a face. Both follow the shape axis: the circle takes the pill radius and the square the micro radius. A 1px ring edges the box, so a white logo on a white card keeps its edge.
+`sm`, `md` and `lg` are 24, 32 and 40px, with initials at 12, 14 and 16px. The small one is bolder, because 12px is the floor for short uppercase text.
+
+- `circle`: a person. It takes the pill radius.
+- `square`: a merchant's or a bank's logo, so it reads as a tile and not a face. It takes the micro radius.
+
+Both follow the shape axis. A 1px ring edges the box, so a white logo on a white card keeps its edge.
 
 <Preview name="avatar-sizes" />
 
@@ -18,7 +23,9 @@ icon: CircleUser
 
 ## Initials
 
-With no image, or while it loads, or when it fails, the avatar shows the first character of the first two words of `name`: Grace Hopper is GH and Northwind is N. Pass `initials` for a stricter rule, such as WF for a bank. An image that fails is removed and the initials it covered stay, so the box never moves and a broken image never shows its icon. The fallback is one neutral look for everyone, bone with ink initials, never a color per name: a color that stands for a person carries a meaning the name already carries, and a palette for it would need colors the system does not have.
+With no image, or while it loads, or if it fails, the avatar shows the first character of the first two words of `name`: Grace Hopper is GH and Northwind is N. Pass `initials` to set them yourself, such as WF for a bank. A failed image is removed, leaving the initials under it, so the box never moves and no broken-image icon shows.
+
+The fallback is one neutral look for everyone: bone with ink initials. There is no color per name, because the name already identifies the person, and such a palette would need colors the system does not have.
 
 <Preview name="avatar-fallback" />
 
@@ -38,7 +45,7 @@ When the name is in the text beside the avatar, pass `isDecorative`. The avatar 
 
 ## Usage
 
-`name` is required, and it is the name: the accessible name unless the avatar is decorative, and the source of the initials. Serve the image from your own origin. Avatar is a client component for one piece of state, whether the image failed; the image stays hidden until it is known to have loaded, so a page shows the initials until it hydrates.
+`name` is required. It gives the initials and, unless the avatar is decorative, the accessible name. Serve the image from your own origin. Avatar is a client component for one piece of state: whether the image failed. The image stays hidden until it is known to have loaded, so a page shows the initials until it hydrates.
 
 ```tsx
 import { Avatar } from '@snapshot-ui/react';
@@ -63,7 +70,7 @@ An Avatar accepts every attribute of an HTML element.
 
 ## Accessibility
 
-An avatar is an image named by `name`. The initials and the image inside it are hidden, so it is read once, by its name, and never as letters. With `isDecorative` the whole avatar is hidden, for a name that is already in the text beside it. It takes no focus and has no keys.
+An avatar is an image named by `name`. The initials and the image inside it are hidden, so it is read once by its name, never as letters. With `isDecorative`, the whole avatar is hidden. It takes no focus and has no keys.
 
 </Section>
 

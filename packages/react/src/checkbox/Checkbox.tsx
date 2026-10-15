@@ -21,26 +21,23 @@ import { present } from '../utils/present';
 
 export interface CheckboxBaseProps extends Omit<RACCheckboxFieldProps, 'children' | 'className'> {
   /**
-   * The label, shown beside the box. The whole row is the label, so a press
-   * anywhere on it toggles the box. Required unless the checkbox has an `aria-label` or an
-   * `aria-labelledby`.
+   * The label, shown beside the box. A press anywhere on the row toggles the box.
+   * Required unless the checkbox has an `aria-label` or `aria-labelledby`.
    */
   children?: ReactNode;
   /** A hint under the label. It becomes the checkbox's accessible description. */
   description?: ReactNode;
   /**
-   * The error line, shown only while the checkbox is invalid. A function receives
-   * the validation result. Without it the checkbox shows its own validation messages.
-   * Inside a `CheckboxGroup` it is not shown: a group has one error line, its own.
+   * The error line, shown only while invalid. A function receives the validation
+   * result. Without it, the checkbox shows its own validation messages. Not shown
+   * inside a `CheckboxGroup`, which has one error line of its own.
    */
   errorMessage?: ReactNode | ((validation: ValidationResult) => ReactNode);
   /**
    * Whether the choice differs from the saved one. Shows the clay Changed chip
-   * beside the label and has a screen reader read the chip with the checkbox.
-   * The box keeps its edge: the chip is the whole cue. An invalid checkbox shows
-   * its error instead, and one without a visible label draws no chip. Inside a
-   * `CheckboxGroup` it is ignored, because the group's own chip covers it: set
-   * `isChanged` on the group.
+   * beside the label, read with the checkbox; the box keeps its edge. An invalid
+   * checkbox shows its error instead, and one without a visible label shows no
+   * chip. Ignored inside a `CheckboxGroup`: set `isChanged` on the group.
    */
   isChanged?: boolean;
   /**

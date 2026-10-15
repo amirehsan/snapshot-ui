@@ -1,6 +1,6 @@
 ---
 title: Routing
-description: Every link in the library is React Aria's Link, so one RouterProvider at the app's root routes all of them through the app's router.
+description: One RouterProvider at the app's root routes every link in the library through your router.
 icon: Route
 ---
 
@@ -8,9 +8,15 @@ icon: Route
 
 ## One provider
 
-With no provider, a press on a link follows its `href` as the browser would, so the server's HTML is a real link and works with scripts off. With one `RouterProvider` at the app's root, a plain press calls the app's router instead. A modified press, such as one with a modifier key, on a link with `target` or `download`, or to another origin, still falls through to the browser.
+Every link in the library is React Aria's Link. Put one `RouterProvider` at the app's root, and a plain press on any of them calls your router. These still fall through to the browser:
 
-Import `RouterProvider` from `@snapshot-ui/react`: it is the library's own copy of React Aria's, so the provider and every link share one router, whatever else the app installs. With the Next.js App Router, that is a small client component around the app, with the `RouterConfig` augmentation so `routerOptions` is typed:
+- A press with a modifier key.
+- A link with `target` or `download`.
+- A link to another origin.
+
+With no provider, a link follows its `href` as the browser would. The server's HTML is a real link either way, so it works with scripts off.
+
+Import `RouterProvider` from `@snapshot-ui/react`. It is the library's own copy of React Aria's, so the provider and every link share one router, whatever else the app installs. With the Next.js App Router, wrap the app in a small client component, and augment `RouterConfig` so `routerOptions` is typed:
 
 ```tsx
 'use client';
@@ -39,7 +45,7 @@ export function ClientRouter({ children }: { children: ReactNode }) {
 }
 ```
 
-Render `<ClientRouter>` around `{children}` in `app/layout.tsx`. `routerOptions` on a link are the options the router receives with that one press, such as `{ scroll: false }`, typed through `RouterConfig`.
+Render `<ClientRouter>` around `{children}` in `app/layout.tsx`. `routerOptions` on a link are passed to the router for that press, such as `{ scroll: false }`.
 
 </Section>
 
@@ -47,7 +53,15 @@ Render `<ClientRouter>` around `{children}` in `app/layout.tsx`. `routerOptions`
 
 ## What goes through it
 
-Every part that draws a link: [Link](/docs/components/link), [IconButton](/docs/components/icon-button) with `href`, [StatTile](/docs/components/stat-tile) with `href`, a [Menu](/docs/components/menu) item with `href`, [Tabs](/docs/components/tabs) with `href`, which follow their link on Enter or Space under manual activation, [Pagination](/docs/components/pagination)'s page links, and the shell's links, [SidebarItem and SidebarBrand](/docs/components/sidebar) and [BottomTabBarItem](/docs/components/bottom-tab-bar). Breadcrumbs will too, when they ship.
+Every part that draws a link:
+
+- [Link](/docs/components/link).
+- [IconButton](/docs/components/icon-button), [StatTile](/docs/components/stat-tile) and [Menu](/docs/components/menu) items with `href`.
+- [Tabs](/docs/components/tabs) with `href`. Under manual activation, they follow their link on Enter or Space.
+- [Pagination](/docs/components/pagination)'s page links.
+- The shell: [SidebarItem and SidebarBrand](/docs/components/sidebar) and [BottomTabBarItem](/docs/components/bottom-tab-bar).
+
+Breadcrumbs will too, when they ship.
 
 </Section>
 
@@ -55,7 +69,7 @@ Every part that draws a link: [Link](/docs/components/link), [IconButton](/docs/
 
 ## Prefetch
 
-React Aria renders a plain `<a>`, so Next does not prefetch these pages as the links come into view. Most links are fine without it. An always-visible navigation, such as a rail or a tab bar, is where prefetch pays, and there are two ways back.
+React Aria renders a plain `<a>`, so Next does not prefetch these pages as links come into view. Most links are fine without it. Prefetch pays in always-visible navigation, such as a rail or a tab bar, and there are two ways to get it back.
 
 Prefetch on intent, as the reader moves toward the link:
 
@@ -79,7 +93,7 @@ export function TransactionsItem({ isCurrent }: { isCurrent: boolean }) {
 }
 ```
 
-Or draw Next's own `Link` with the `render` prop every link part inherits, for its viewport prefetch. A linked StatTile is the exception: it takes no `render` or `routerOptions`, so Next's `Link` never prefetches it. It is a function, so it is passed from a client component, which the app has anyway for `usePathname()`:
+Or render Next's own `Link` through the `render` prop, for its viewport prefetch. Every link part has `render` except a linked StatTile, which also takes no `routerOptions`. `render` is a function, so pass it from a client component, which the app already has for `usePathname()`:
 
 ```tsx
 'use client';
@@ -108,6 +122,12 @@ export function TransactionsItem({ isCurrent }: { isCurrent: boolean }) {
 
 ## No linkComponent
 
-The library takes no `linkComponent` prop. It would be a second spelling of `render`, it could not be serialized from a server component either, and it would have to be threaded through every group, item, brand and bar. One provider covers the common case, and `render` covers the one link that needs more.
+The library takes no `linkComponent` prop:
+
+- It would be a second spelling of `render`.
+- Like `render`, it could not be passed from a server component.
+- It would have to be threaded through every group, item, brand and bar.
+
+One provider covers the common case, and `render` covers the one link that needs more.
 
 </Section>

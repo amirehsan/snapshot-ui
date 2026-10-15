@@ -1,6 +1,6 @@
 ---
 title: Pagination
-description: "Pages of rows: Previous, numbered pages with gaps and Next beside the range you write, as links a server page builds or as buttons."
+description: 'Previous, numbered pages and Next beside your range, as server-rendered links or as buttons.'
 icon: ChevronsLeftRight
 ---
 
@@ -8,7 +8,9 @@ icon: ChevronsLeftRight
 
 ## Links from a server page
 
-The range you format at the start, and at the end Previous, the first page, the current one with a page each side, the last, gaps for what is left out, and Next. Every control is a link built by `getPageHref`, which runs where Pagination renders: Pagination has no client directive, so a server page renders it and passes the function, and only the links and the status region are client components. In an app the server page reads `searchParams.page` and passes the range it formats; this example reads the page from the URL in the browser, since the docs are static.
+The row shows your formatted range, then Previous, the first page, the current page with one page each side, the last page, gaps for the rest, and Next.
+
+Pass `getPageHref` and every control is a link it builds. Pagination has no client directive, so a server page can render it and pass the function. Only the links and the status region are client components. In an app, the server page reads `searchParams.page` and formats the range. The docs are static, so this example reads the page from the URL in the browser.
 
 <Preview name="pagination-links" />
 
@@ -18,7 +20,7 @@ The range you format at the start, and at the end Previous, the first page, the 
 
 ## Buttons
 
-Pass `onPageChange` instead of `getPageHref` and every control is a button that calls it with its page. A press on the current page calls nothing. Button mode belongs in a client component, since a function cannot cross from a server page to the client.
+Pass `onPageChange` instead of `getPageHref` and every control is a button that calls it with its page. Pressing the current page calls nothing. Use button mode from a client component, since a function cannot pass from a server page to the client.
 
 <Preview name="pagination-buttons" />
 
@@ -28,7 +30,12 @@ Pass `onPageChange` instead of `getPageHref` and every control is a button that 
 
 ## Narrow
 
-Under 36rem of its own width the step words hide, and under 30rem the numbers and gaps leave too and the row is Previous, the range and Next: two 40px targets and the range between them. It is a container query, not a viewport one, so a narrow column on a wide page narrows too. The step words stay as the steps' names. `hasPageNumbers={false}` gives the same row at every width.
+The row responds to its own width, not the viewport's, so a narrow column on a wide page narrows too.
+
+- Under 36rem: the step words hide but remain the steps' names.
+- Under 30rem: the numbers and gaps hide too, leaving Previous, the range and Next, with two 40px targets.
+
+`hasPageNumbers={false}` gives the short row at every width.
 
 <Preview name="pagination-narrow" />
 
@@ -38,7 +45,7 @@ Under 36rem of its own width the step words hide, and under 30rem the numbers an
 
 ## More siblings
 
-`siblingCount` sets the pages each side of the current one, 1 by default. Under 36rem the step words hide and stay the steps' names, so the numbers keep their room just above 30rem; here two siblings each side in a 30.5rem column. When even the row without words is wider than the nav, as many siblings on a phone's larger controls can be, the list wraps to the end of the row rather than push the page sideways.
+`siblingCount` sets how many pages show each side of the current one, 1 by default. Since the step words hide under 36rem, the numbers still fit just above 30rem. Here two siblings each side fit in a 30.5rem column. If the row is still wider than the nav, as with many siblings on a phone's larger controls, the list wraps to the end of the row instead of scrolling the page sideways.
 
 <Preview name="pagination-siblings" />
 
@@ -48,7 +55,7 @@ Under 36rem of its own width the step words hide, and under 30rem the numbers an
 
 ## Without numbers
 
-For a cursor-paged list, where the API says only whether another page follows, pass `hasPageNumbers={false}` and `pageCount={hasMore ? page + 1 : page}`: one page past this one while there is more, which enables Next, and this page on the last, which disables it. The range is what you know, here "1 to 25" with no total.
+For a cursor-paged list, where the API says only whether another page follows, pass `hasPageNumbers={false}` and `pageCount={hasMore ? page + 1 : page}`. While there is more, the count is one past this page, which enables Next. On the last page it equals this page, which disables Next. Write the range from what you know, here "1 to 25" with no total.
 
 <Preview name="pagination-cursor" />
 
@@ -58,7 +65,7 @@ For a cursor-paged list, where the API says only whether another page follows, p
 
 ## Other digits
 
-`pageLabel` writes a page number your way, here in Persian digits with a string replacement and no `Intl`, so the server and the browser write the same thing. A page's name is `labels.page` given that text, and the other labels translate the rest. In right to left the list runs from the right and the chevrons point the way they go; a number's digits stay in their order.
+`pageLabel` writes a page number your way. Here it gives Persian digits with a string replacement and no `Intl`, so the server and the browser agree. Each page's name is `labels.page` called with that text, and the other labels translate the rest. In right to left, the list runs from the right and the chevrons point the way they go. A number's digits keep their order.
 
 <Preview name="pagination-persian" />
 
@@ -68,7 +75,7 @@ For a cursor-paged list, where the API says only whether another page follows, p
 
 ## Usage
 
-Keep the page in the URL, so it can be shared, reloaded and gone back to. With the Next App Router the server page reads the search parameter, formats the range and renders Pagination itself, with no client component of its own:
+Keep the page in the URL so it can be shared, reloaded and returned to. With the Next App Router, the server page reads the search parameter, formats the range and renders Pagination, with no client component of its own:
 
 ```tsx
 // app/transactions/page.tsx, a server component
@@ -94,9 +101,14 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
 }
 ```
 
-`formatCount` is yours: the range arrives formatted, and Pagination never formats a number, so with no rows you word the range yourself. The links go through the `RouterProvider` at the app's root, as [Routing](/docs/routing) sets up, so a page change is a soft navigation and the status region stays mounted to speak the new range. If it does not speak after a navigation, render Pagination in the layout segment that persists. Start each `href` from the parameters already in the URL when the page has others, such as a search or a view, so changing the page keeps them.
+`formatCount` is yours. Pagination never formats a number, so you also word the range when there are no rows.
 
-The row always has 2 times `siblingCount` plus 5 slots, seven by default, wherever the current page is, so the controls never move under the pointer. Choose a page size that keeps the page count steady while a person pages. For an endless or cursor-paged list, where the count is unknown, use `hasPageNumbers={false}` with `pageCount={hasMore ? page + 1 : page}`: Previous, the range and Next, as [Without numbers](#without-numbers) shows. `pageCount` and `siblingCount` count whole pages, and a count that is not a finite number is no pages. A `page` that is not a whole number from 1 to `pageCount` is shown as the nearest page, with a console warning.
+The links go through the `RouterProvider` at the app's root, as [Routing](/docs/routing) sets up. A page change is then a soft navigation, and the status region stays mounted to announce the new range. If it is silent after a navigation, render Pagination in a layout segment that persists. When the URL has other parameters, such as a search or a view, build each `href` from them so changing the page keeps them.
+
+- The row always has 2 times `siblingCount` plus 5 slots, seven by default, so the controls never move under the pointer. Choose a page size that keeps the page count steady while a person pages.
+- For an endless or cursor-paged list, use `hasPageNumbers={false}`, as [Without numbers](#without-numbers) shows.
+- `pageCount` and `siblingCount` count whole pages. A `pageCount` that is not a finite number means no pages.
+- A `page` that is not a whole number from 1 to `pageCount` shows as the nearest page, with a console warning.
 
 </Section>
 
@@ -104,7 +116,7 @@ The row always has 2 times `siblingCount` plus 5 slots, seven by default, wherev
 
 ## Props
 
-Every `nav` attribute is accepted but `aria-label`, which `labels.navigation` gives. Pass `getPageHref` or `onPageChange`, never both.
+Every `nav` attribute is accepted except `aria-label`, which comes from `labels.navigation`. Pass `getPageHref` or `onPageChange`, never both.
 
 <PropsTable label="Pagination props" path="../../packages/react/src/pagination/Pagination.tsx" type="Pick<PaginationProps, 'page' | 'pageCount' | 'rangeLabel' | 'getPageHref' | 'onPageChange' | 'pageLabel' | 'siblingCount' | 'hasPageNumbers' | 'labels' | 'className'>" />
 
@@ -116,7 +128,11 @@ Every `nav` attribute is accepted but `aria-label`, which `labels.navigation` gi
 
 ## Accessibility
 
-A `nav` named "Pagination", or `labels.navigation`, holding a list of links or buttons, the current page `aria-current`: "page" on a link and "true" on a button. With two on one page, give each its own name, as the examples here do. Each page is named "Page" and its number, which contains the number you see, and the steps are named by their words, also when the narrow row hides them. The range is spoken once, 600ms after it last changed, so three quick presses of Next say one range, and nothing is said when the page loads; the visible range is not live, so it is never read twice. A disabled step is out of the tab order. When a step disables while it has focus, as Next does on reaching the last page, focus moves to the current page, or to the other step when the numbers are hidden or the row is narrow.
+A `nav` named "Pagination" (or `labels.navigation`) holds a list of links or buttons. The current page has `aria-current`: "page" on a link, "true" on a button. With two on one page, give each its own name, as the examples here do.
+
+- Names: each page is named "Page" and its number, and the steps by their words, even when the narrow row hides them.
+- Announcements: the range is announced once, 600ms after it last changed, so three quick presses of Next announce one range. Nothing is announced on page load, and the visible range is not live, so it is never read twice.
+- Disabled steps: they leave the tab order. If a focused step disables, as Next does on the last page, focus moves to the current page, or to the other step when the numbers are hidden.
 
 <Keys rows={[['Tab', 'Moves between the controls.'], ['Enter', 'Goes to the page; a button also takes Space.']]} />
 

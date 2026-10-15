@@ -1,6 +1,6 @@
 ---
 title: Switch
-description: A setting that is on or off and takes effect as soon as it is flipped. One element draws the track, the label, the hint and the Changed chip, and submits its value in a form only while it is on.
+description: An on or off setting that takes effect as soon as it is flipped, with a label, hint and Changed chip.
 icon: ToggleLeft
 ---
 
@@ -8,7 +8,7 @@ icon: ToggleLeft
 
 ## Basic
 
-Pass a label, and a hint if the label cannot say it all. The whole row is the target, so a press on the label flips the switch as well as a press on the track.
+Pass a label, and a hint if the label cannot say it all. A press anywhere on the row, label included, flips the switch.
 
 <Preview name="switch-basic" />
 
@@ -18,7 +18,10 @@ Pass a label, and a hint if the label cannot say it all. The whole row is the ta
 
 ## States
 
-On is an ink track with a canvas thumb. Off is the control boundary color with a raised thumb. A disabled switch is recessed, and one that is on is filled where one that is off is hollow, so the two never look alike. A disabled switch draws its label in taupe, as a disabled checkbox and radio do. A read-only switch looks like an enabled one and cannot be changed.
+- On: an ink track with a canvas thumb.
+- Off: the control boundary color with a raised thumb.
+- Disabled: recessed, filled when on and hollow when off, so the two never look alike. The label is taupe, as on a disabled checkbox or radio.
+- Read-only: looks enabled but cannot be changed.
 
 <Preview name="switch-states" />
 
@@ -28,7 +31,7 @@ On is an ink track with a canvas thumb. Off is the control boundary color with a
 
 ## Unsaved changes
 
-Pass `isChanged` while the setting differs from the saved one. A clay chip shows beside the label and a light signal orange ring goes around the track, and a screen reader reads the chip with the switch. Flip a switch below to see them.
+Pass `isChanged` while the setting differs from the saved one. A clay chip shows beside the label, a light signal orange ring goes around the track, and a screen reader reads the chip with the switch. Flip a switch below to see them.
 
 <Preview name="switch-settings" />
 
@@ -38,7 +41,7 @@ Pass `isChanged` while the setting differs from the saved one. A clay chip shows
 
 ## Usage
 
-Every value works controlled and uncontrolled, and a switch with a `name` submits in a plain form. It sends its `value`, or `on` when it has none, only while it is on, as a checkbox does. `onChange` receives a boolean. The types require a name: the switch's text, an `aria-label` or an `aria-labelledby`.
+A switch works controlled or uncontrolled, and `onChange` receives a boolean. With a `name`, it submits in a plain form. Like a checkbox, it sends its `value`, or `on` by default, only while it is on. The types require an accessible name: the switch's text, an `aria-label` or an `aria-labelledby`.
 
 ```tsx
 import { useState } from 'react';
@@ -61,7 +64,7 @@ export function DigestSetting({ saved }: { saved: boolean }) {
 }
 ```
 
-A switch is for a setting that takes effect as soon as it is flipped. It has no required or invalid state, so for a choice that a form confirms later, such as agreeing to terms, use a checkbox.
+A switch has no required or invalid state. For a choice that a form confirms later, such as agreeing to terms, use a checkbox.
 
 </Section>
 
@@ -79,13 +82,13 @@ Every React Aria SwitchField prop is accepted except `isRequired`, `isInvalid` a
 
 ## Accessibility
 
-A native checkbox with the `switch` role, so a screen reader says the label and then on or off. The track and the thumb are decoration. The label names the switch, the hint and the Changed chip describe it, and a press anywhere on the row flips it. The row is 40px tall to hit, though the track is drawn 30px.
+A native checkbox with the `switch` role, so a screen reader says the label, then on or off. The label names it, and the hint and the Changed chip describe it. The track and thumb are decoration. The row is a 40px target, though the track is drawn 30px tall.
 
 <Keys rows={[['Space', 'Turns the switch on or off.'], ['Tab', 'Moves focus to the switch. The 2px ring sits outside the track.']]} />
 
-Motion is a 160ms slide of the thumb and a fade of the track, and both stop under reduced motion.
+The thumb slides and the track fades over 160ms. Both stop under reduced motion.
 
-A switch with no name does not compile, and TypeScript's message either names only `aria-labelledby` or says the props are not assignable; either one means the switch has no accessible name.
+A switch with no name does not compile. TypeScript's error either names only `aria-labelledby` or says the props are not assignable. Both mean the switch has no accessible name.
 
 </Section>
 
