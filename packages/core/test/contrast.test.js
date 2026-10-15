@@ -1194,6 +1194,31 @@ describe('the filter chip', () => {
   });
 });
 
+describe('the filter bar', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A section's title is ink on whatever holds it: the float panel of More, the sheet's float, or the canvas
+  // behind a row. The Filters button and Clear all are Buttons and More is a chip, each with its own record.
+  it('cites ink on float, on raised and on canvas, which the gate holds', () => {
+    for (const ground of ['float', 'raised', 'canvas']) {
+      expect(CONTRAST_PAIRS).toContainEqual(expect.objectContaining({ text: 'ink', ground, minimum: TEXT }));
+    }
+  });
+
+  // The divider between the panel's sections is a separator, a mix of ink, measured and recorded, not gated.
+  it('measures the pairs Appendix B records, in both modes', () => {
+    expect(measured('light', 'ink', 'float'), 'a section title, light').toBeCloseTo(18.43, 2);
+    expect(measured('dark', 'ink', 'float'), 'a section title, dark').toBeCloseTo(17.42, 2);
+    expect(measured('light', 'divider', 'float'), 'the panel divider, light').toBeCloseTo(1.23, 2);
+    expect(measured('dark', 'divider', 'float'), 'the panel divider, dark').toBeCloseTo(1.34, 2);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

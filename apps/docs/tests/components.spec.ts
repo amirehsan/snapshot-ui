@@ -702,6 +702,7 @@ const NO_LONG_TEXT: Record<string, string> = {
     "its text is in a portal that opens on a press; its stories' 375px baselines pin its wrapping",
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   drawer: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
+  'filter-bar': 'its words are the chips and the app search, which the filter chip page tests long',
   'icon-button': 'a glyph and no text: its name is an aria-label that nothing draws',
   menu: "its text is in a portal that opens on a press; the EndValues story's 375px baseline pins its wrapping",
   popover: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
@@ -820,6 +821,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],
   field: ['.stage .field-counter', '.stage .field-changed'],
+  // The row with its chips, and the Filters button a phone shows; More's panel and the sheet wait for a press.
+  'filter-bar': ['.stage .filter-bar-row', '.stage .filter-bar-sheet-button'],
   // The pill and an active chip's summary, from React Aria's hidden pass; the list renders nothing until it opens.
   'filter-chip': ['.stage .filter-chip-trigger', '.stage .filter-chip-value'],
   'icon-button': ['.stage .icon-button'],

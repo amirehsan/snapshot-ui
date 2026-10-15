@@ -48,6 +48,9 @@ import EyebrowHeading from './eyebrow-heading';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
 import FieldStates from './field-states';
+import FilterBarBasic from './filter-bar-basic';
+import FilterBarUrl from './filter-bar-url';
+import FilterBarWrapped from './filter-bar-wrapped';
 import FilterChipCustom from './filter-chip-custom';
 import FilterChipMultiple from './filter-chip-multiple';
 import FilterChipSingle from './filter-chip-single';
@@ -186,6 +189,9 @@ export const examples = {
   'field-counter': LengthCounter,
   'field-parts': FieldParts,
   'field-states': FieldStates,
+  'filter-bar-basic': FilterBarBasic,
+  'filter-bar-url': FilterBarUrl,
+  'filter-bar-wrapped': FilterBarWrapped,
   'filter-chip-custom': FilterChipCustom,
   'filter-chip-multiple': FilterChipMultiple,
   'filter-chip-single': FilterChipSingle,

@@ -16,6 +16,7 @@ import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
 import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
 import { Drawer } from '../src/drawer';
+import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { IconButton } from '../src/icon-button';
 import { Link } from '../src/link';
@@ -148,6 +149,35 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'aria-label="Clear Category"',
     ],
     ['role="listbox"', 'select-filter', 'search-field'],
+  ],
+  [
+    // The row with each primary and each active chip, More, Clear all and the Filters button with its count; the
+    // More panel and the sheet render nothing until they open.
+    'FilterBar',
+    <FilterBar search={<SearchField aria-label="Search transactions" />} onClearAll={() => undefined}>
+      <FilterChip label="Category" selectionMode="single" value="food" onChange={() => undefined}>
+        <PickerOption id="food">Food</PickerOption>
+        <PickerOption id="rent">Rent</PickerOption>
+      </FilterChip>
+      <FilterChip label="Tags" selectionMode="multiple" isSecondary value={[]} onChange={() => undefined}>
+        <PickerOption id="food">Food</PickerOption>
+      </FilterChip>
+      <FilterChip label="Amount" valueLabel="Over $100" onClear={() => undefined}>
+        <p>Two amounts</p>
+      </FilterChip>
+    </FilterBar>,
+    [
+      'class="filter-bar"',
+      'role="group"',
+      'aria-label="Filters"',
+      'class="filter-chip"',
+      'filter-bar-more',
+      'filter-bar-clear-all',
+      'filter-bar-sheet-button',
+      'class="badge"',
+      '>2<',
+    ],
+    ['filter-section', 'role="dialog"'],
   ],
   [
     // React Aria writes data-empty as "true" in the HTML. A labelled field is not data-unlabelled.
