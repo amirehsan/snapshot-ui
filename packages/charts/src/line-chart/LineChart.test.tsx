@@ -827,18 +827,22 @@ describe('LineChart', () => {
     expect(library).toHaveProperty('LineChart');
   });
 
-  it('has no axe violations with the chart shown, active, and with the table shown', async () => {
-    const { container } = render(
-      <div>
-        <Chart yTicks={TICKS} hasArea />
-      </div>,
-    );
-    await expectNoA11yViolations(container);
-    focus(plotOf(container));
-    await expectNoA11yViolations(container);
-    fireEvent.click(within(container).getByRole('button', { name: 'Show as table' }));
-    await expectNoA11yViolations(container);
-  });
+  // One test per state, so each axe pass has its own time budget on a busy runner.
+  it.each(['shown', 'active', 'as a table'] as const)(
+    'has no axe violations with the chart %s',
+    async (state) => {
+      const { container } = render(
+        <div>
+          <Chart yTicks={TICKS} hasArea />
+        </div>,
+      );
+      if (state === 'active') focus(plotOf(container));
+      if (state === 'as a table') {
+        fireEvent.click(within(container).getByRole('button', { name: 'Show as table' }));
+      }
+      await expectNoA11yViolations(container);
+    },
+  );
 
   it('requires a name, one or two series and all four labels in its types', () => {
     // @ts-expect-error a chart needs a name: aria-label or aria-labelledby
