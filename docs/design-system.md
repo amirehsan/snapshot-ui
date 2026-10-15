@@ -7739,8 +7739,9 @@ come from "Dense data" above.
 holds `div.data-table-grid` with React Aria's `table.data-table-table`
 (`thead`, `tbody` and, with totals, `tfoot`), then `span.data-table-status`,
 the polite status. The table is `table-layout: fixed` at full width, so a
-column's `width` on its header cell is its width (spec correction 1) and
-the rest share what is left. It draws no surface of its own; the sticky
+column's `width`, written on its header cell as
+`--data-table-column-width` and read as the cell's `inline-size`, is its
+width (spec correction 1), and the rest share what is left. It draws no surface of its own; the sticky
 header's fill is `--data-table-surface`, the canvas by default, which an
 app sets to `--color-lifted` for a table in a card.
 
@@ -7840,11 +7841,23 @@ right on a right-to-left page; the row header is 700.
 
 **Columns that leave** (ruling 6, spec correction 15). `hideBelow: 'md'`
 leaves under 48rem of the table's box and `'sm'` under 40rem, by
-container query: their header and cells are `display: none`. The row
-header never leaves. React Aria's keyboard delegate walks its
-collection, not the DOM, so an arrow could land on a hidden cell (spec
-correction 8): DataTable's capture handler reads the computed display at
-key time and, where React Aria would reach a hidden cell with Arrow
+container query. Their header and body cells stay in their rows, zero
+wide with no inline padding or border, and `visibility: hidden`, which
+takes them from sight, the pointer and assistive technology as
+`display: none` would (spec correction 26). They are not `display: none`:
+React Aria's empty cell spans every column of its collection, so with
+the header's cells gone it made a column with no header at the table's
+end, and the header and its rule stopped short of the box while the
+skeleton rows ran to its edge; and an engine that counts a fixed table's
+columns from more than its first row drew the same strip after a column
+left. With every row holding every column, the table is the full width
+of its box in all three engines (the `FullWidth` play), and a skeleton
+row, a flex row inside that one cell whose cells take the columns' widths
+and drop a column that left, lines up under the header. The row header
+never leaves. React Aria's keyboard delegate walks its collection, not
+the DOM, so an arrow could land on a hidden cell (spec correction 8):
+DataTable's capture handler reads the computed visibility at key time
+and, where React Aria would reach a hidden cell with Arrow
 Right, Arrow Left, Home or End, focuses the nearest shown one instead,
 whose focus sets React Aria's focused key. Arrow Right is the next cell
 on a left-to-right row and the previous on a right-to-left one.

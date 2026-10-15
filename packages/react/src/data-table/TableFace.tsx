@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
-import type { ReactElement, ReactNode } from 'react';
+import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import {
   Cell,
   Column,
@@ -185,8 +185,13 @@ export function TableFace<T>({
             className="data-table-column"
             data-align={column.align === 'end' ? 'end' : undefined}
             data-hide-below={hideBelowOf(column, rowHeader)}
-            // React Aria's width acts only in a resizable container (spec correction 1).
-            style={column.width === undefined ? undefined : { width: column.width }}
+            // React Aria's width acts only in a resizable container (spec correction 1), so the header cell
+            // carries it, as a property the stylesheet can set to zero when the column leaves.
+            style={
+              column.width === undefined
+                ? undefined
+                : ({ '--data-table-column-width': column.width } as CSSProperties)
+            }
           >
             {({ sortDirection }) => (
               <span className="data-table-column-inner">
