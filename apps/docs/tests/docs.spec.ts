@@ -414,6 +414,23 @@ test('the installation page names Pagination among the parts a server component 
   await expect(section).toContainText('getPageHref');
 });
 
+test('the installation page explains the server face and the date library', async ({ page }) => {
+  await visit(page, '/docs/installation');
+  const section = guideSection(page, 'Next.js server components');
+  await expect(section).toHaveCount(1);
+  await expect(section).toContainText('valueLabel');
+  await expect(section).toContainText('today');
+  await expect(page.locator('main')).toContainText('@internationalized/date');
+  await expect(page.locator('main')).toContainText('^3.12.4');
+});
+
+test('the chart pages name the core version charts needs', async ({ page }) => {
+  for (const slug of ['line-chart', 'sparkline']) {
+    await visit(page, `/docs/charts/${slug}`);
+    await expect(page.locator('main'), slug).toContainText('0.5 for charts 0.1.2');
+  }
+});
+
 test('the routing page names the tabs and the page links among the parts that navigate', async ({ page }) => {
   await visit(page, '/docs/routing');
   const section = guideSection(page, 'What goes through it');
@@ -2833,7 +2850,7 @@ test('the installation page installs the charts package and names the core versi
   const section = page
     .locator('.docs-section')
     .filter({ has: page.getByRole('heading', { name: 'Charts', exact: true }) });
-  await expect(section).toContainText('0.4 for charts 0.1.1');
+  await expect(section).toContainText('0.5 for charts 0.1.2');
   await expect(section.getByRole('link', { name: 'Line chart', exact: true })).toHaveAttribute(
     'href',
     '/docs/charts/line-chart',
