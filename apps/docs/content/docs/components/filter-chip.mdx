@@ -48,24 +48,37 @@ At rest a chip is the boundary edge on nothing, its label at 500 and a slate che
 
 ## Usage
 
-A chip is always controlled: its value belongs in the URL, a key or a list of keys, and a FilterBar draws each chip twice. Read the value from the search parameters and write it back with the router, starting from the parameters already there so the other filters stay, deleting the parameter for no value, never writing a bare `?`, and passing `{ scroll: false }` so the page does not jump:
+A chip is always controlled: its value belongs in the URL, a key or a list of keys, and a FilterBar draws each chip twice. Read the value from the search parameters and write it back with the router, starting from the parameters already there so the other filters stay, deleting the parameter for no value, never writing a bare `?`, and passing `{ scroll: false }` so the page does not jump. Show a mirror of the value in your own state: a write goes through the router before the new parameters arrive, and until then the chip would show its old value. The `seen` key, the value it last read or wrote, takes the URL again only when it changes under the chip, by Back, Forward or a link:
 
 ```tsx
 'use client';
 
 import { FilterChip, PickerOption, type Key } from '@snapshot-ui/react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 
 export function CategoryFilter() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const category = searchParams.get('category');
+  const [value, setValue] = useState<Key | null>(category);
+  const [seen, setSeen] = useState(category);
+
+  // The URL changed under the chip, by Back, Forward or a link: show its category.
+  if (category !== seen) {
+    setSeen(category);
+    setValue(category);
+  }
+
   return (
     <FilterChip
       label="Category"
       selectionMode="single"
-      value={searchParams.get('category')}
+      value={value}
       onChange={(next: Key | null) => {
+        setValue(next);
+        setSeen(next === null ? null : String(next));
         const params = new URLSearchParams(searchParams);
         if (next === null) params.delete('category');
         else params.set('category', String(next));
@@ -80,7 +93,7 @@ export function CategoryFilter() {
 }
 ```
 
-A multiple chip writes one parameter per key: `params.delete('tags')`, then `append` each key, and reads them back with `searchParams.getAll`. On a statically rendered route, read the parameters inside `<Suspense>` with the same chip, empty, as the fallback.
+A multiple chip writes one parameter per key: `params.delete('tag')`, then `append` each key, and reads them back with `searchParams.getAll('tag')`, keeping the whole query as its `seen` key. Several chips share one mirror and one key, as the [FilterBar recipe](/docs/components/filter-bar#the-transactions-recipe) shows. On a statically rendered route, read the parameters inside `<Suspense>` with the same chip, empty, as the fallback.
 
 A closed chip ignores letters and Left and Right, which a Select turns into a choice nobody sees: on a filter that would be a query and a URL write behind the reader's back. The popover is modal, so the page behind it is inert while it is open, and a press on the next chip first closes this one. Inside a FilterBar a chip is also a section of More and of the Filters sheet, where it draws as a titled field.
 

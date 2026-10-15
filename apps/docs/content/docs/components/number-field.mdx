@@ -60,7 +60,7 @@ A changed field shows the Changed chip and the light signal orange edge, an inva
 
 ## Usage
 
-Keep an amount filter in the URL as minor units, `?min=2000`. A client component reads the parameter with `Number()`, reading an absent or malformed one as `null`, passes it as `value`, and writes the URL in `onChange`, which fires when the value commits, on blur or Enter, never on a keystroke. With the Next App Router:
+Keep an amount filter in the URL as minor units, `?min=2000`. A client component reads the parameter with `Number()`, reading an absent or malformed one as `null`, passes it as `value`, and writes the URL in `onChange`, which fires when the value commits, on blur, Enter, a step or the sign button, never on a keystroke. With the Next App Router:
 
 ```tsx
 'use client';
@@ -117,9 +117,9 @@ Before the page hydrates, the field shows the plain figure, "1234.50", in ASCII 
 
 ## Props
 
-Every React Aria NumberField prop is accepted except the steppers' names, which come from `labels`. These are the ones Snapshot UI adds or shapes.
+Every React Aria NumberField prop is accepted except the steppers' names, which come from `labels`. These are the ones Snapshot UI adds or shapes. `validate` receives the value as `onChange` does: minor units in money mode, the number otherwise, and `null` for an empty field.
 
-<PropsTable label="NumberField props" path="../../packages/react/src/number-field/NumberField.tsx" type="Pick<NumberFieldBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'money' | 'formatOptions' | 'step' | 'hasStepper' | 'allowsNegative' | 'minValue' | 'maxValue' | 'labels' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'className'>" />
+<PropsTable label="NumberField props" path="../../packages/react/src/number-field/NumberField.tsx" type="Pick<NumberFieldBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'placeholder' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'validate' | 'money' | 'formatOptions' | 'step' | 'hasStepper' | 'allowsNegative' | 'minValue' | 'maxValue' | 'labels' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'className'>" />
 
 <PropsTable label="MoneyFormat" path="../../packages/react/src/number-field/NumberField.tsx" type="MoneyFormat" />
 

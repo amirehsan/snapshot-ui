@@ -42,6 +42,10 @@ With the Next App Router the URL is the only state. The server page awaits `sear
 // app/transactions/page.tsx, a server component
 import { TransactionFilters } from './transaction-filters';
 
+// An absent or malformed amount reads as none, as on the number field page.
+const minorOf = (raw: string | string[] | undefined): number | null =>
+  typeof raw !== 'string' || raw === '' || !Number.isSafeInteger(Number(raw)) ? null : Number(raw);
+
 export default async function TransactionsPage({
   searchParams,
 }: {
@@ -52,8 +56,8 @@ export default async function TransactionsPage({
   const filters = {
     category: typeof params.category === 'string' ? params.category : null,
     accounts: list(params.account),
-    min: typeof params.min === 'string' ? Number(params.min) : null,
-    max: typeof params.max === 'string' ? Number(params.max) : null,
+    min: minorOf(params.min),
+    max: minorOf(params.max),
     from: typeof params.from === 'string' ? params.from : null,
     to: typeof params.to === 'string' ? params.to : null,
   };

@@ -30,7 +30,11 @@ import { present } from '../utils/present';
 import { useWarnOnce } from '../utils/useWarnOnce';
 
 export interface FilterChipLabels {
-  /** The clear button's name, given the chip's label. @default (label) => `Clear ${label}` */
+  /**
+   * The clear button's name, given the chip's label. In More and the Filters sheet the button shows FilterBar's
+   * `labels.clear` as its visible word: a localized one must start what `labels.clear(label)` returns here, so the
+   * visible word stays in the button's name. @default (label) => `Clear ${label}`
+   */
   clear: (label: string) => string;
   /**
    * A list chip's value, given the chosen options' text values in list order (ruling 7).

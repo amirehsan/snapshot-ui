@@ -342,7 +342,7 @@ describe('NumberField', () => {
         maxValue={1000}
         defaultValue={-5000}
         onChange={onChange}
-        validate={(next) => (next < 0 ? null : 'Enter a refund')}
+        validate={(next) => (next !== null && next < 0 ? null : 'Enter a refund')}
       />,
     );
     await user.click(sign());
@@ -351,6 +351,33 @@ describe('NumberField', () => {
     // React Aria's own steppers commit validation; the sign button does too, so the error shows at once.
     expect(screen.getByText('Enter a refund')).toBeInTheDocument();
     expect(amount()).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('hands validate minor units in money mode, the number in a plain field, and null for an empty one', async () => {
+    const user = userEvent.setup();
+    const validate = vi.fn((next: number | null) => (next === null || next <= 5000 ? true : 'At most $50'));
+    const { unmount } = render(
+      <NumberField label="Amount" money={{ symbol: '$' }} defaultValue={1999} validate={validate} />,
+    );
+    expect(validate).toHaveBeenLastCalledWith(1999);
+    await user.clear(amount());
+    await user.type(amount(), '50.01');
+    await user.tab();
+    expect(validate).toHaveBeenLastCalledWith(5001);
+    expect(screen.getByText('At most $50')).toBeInTheDocument();
+    await user.clear(amount());
+    await user.tab();
+    expect(validate).toHaveBeenLastCalledWith(null);
+    expect(validate.mock.calls.every(([each]) => each === null || Number.isInteger(each))).toBe(true);
+    unmount();
+
+    validate.mockClear();
+    render(<NumberField label="Count" defaultValue={3} validate={validate} />);
+    expect(validate).toHaveBeenLastCalledWith(3);
+    await user.clear(amount('Count'));
+    await user.tab();
+    expect(validate).toHaveBeenLastCalledWith(null);
+    expect(validate.mock.calls.some(([each]) => Number.isNaN(each))).toBe(false);
   });
 
   it('follows a minus typed on the keyboard once the value commits', async () => {

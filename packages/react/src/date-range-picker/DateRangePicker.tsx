@@ -64,6 +64,7 @@ export interface DateRangePickerBaseProps extends Omit<
   | 'value'
   | 'defaultValue'
   | 'onChange'
+  | 'validate'
   | 'minValue'
   | 'maxValue'
   | 'placeholderValue'
@@ -96,6 +97,15 @@ export interface DateRangePickerBaseProps extends Omit<
   defaultValue?: DateRange | null;
   /** Called with the range's two Gregorian ISO dates once both are complete, and with null while one is not. */
   onChange?: (value: DateRange | null) => void;
+  /**
+   * Checks the range, in the terms `onChange` uses: two Gregorian ISO dates, or null for a range with a date
+   * missing. React Aria runs it once both dates are complete, so an empty field is `isRequired`'s to check, and
+   * its own checks of the bounds, unavailable days and an end before the start run as well. Returns an error
+   * message, or true or null when the range is valid.
+   */
+  validate?: (
+    value: DateRange | null,
+  ) => ReturnType<NonNullable<RACDateRangePickerProps<CalendarDate>['validate']>>;
   /** The earliest day that can be chosen, as an ISO date. */
   minValue?: string;
   /** The latest day that can be chosen, as an ISO date. */
@@ -235,6 +245,7 @@ export function DateRangePicker({
   value,
   defaultValue,
   onChange,
+  validate,
   minValue,
   maxValue,
   isDateUnavailable,
@@ -298,6 +309,16 @@ export function DateRangePicker({
         setHeld(isComplete && !isOrdered ? { range: { start, end }, key: '' } : null);
         onChange?.(isOrdered ? { start: toIso(start), end: toIso(end) } : null);
       }}
+      // React Aria checks its own range of CalendarDates, which can hold a null end; the app's check gets ISO dates.
+      validate={
+        validate === undefined
+          ? undefined
+          : (range) => {
+              const start = range.start as CalendarDate | null;
+              const end = range.end as CalendarDate | null;
+              return validate(start && end ? { start: toIso(start), end: toIso(end) } : null);
+            }
+      }
       onFocusChange={(isFocused) => {
         props.onFocusChange?.(isFocused);
         if (!isFocused) setHeld(null);

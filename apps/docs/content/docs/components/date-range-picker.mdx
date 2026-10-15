@@ -123,9 +123,9 @@ The field takes no `createCalendar`: React Aria's date fields bring every calend
 
 ## Props
 
-Every date is an ISO string. `startName`, `endName`, `isRequired`, `isDisabled`, `isReadOnly`, `isInvalid`, `validate`, `firstDayOfWeek`, `isOpen`, `onOpenChange` and `shouldCloseOnSelect` are React Aria's.
+Every date is an ISO string. `startName`, `endName`, `isRequired`, `isDisabled`, `isReadOnly`, `isInvalid`, `firstDayOfWeek`, `isOpen`, `onOpenChange` and `shouldCloseOnSelect` are React Aria's. `validate` receives the range as `onChange` does, two ISO dates, and React Aria runs it once both dates are complete, so an empty field is `isRequired`'s to check.
 
-<PropsTable label="DateRangePicker props" path="../../packages/react/src/date-range-picker/DateRangePicker.tsx" type="Pick<DateRangePickerBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'valueLabel' | 'today' | 'presets' | 'minValue' | 'maxValue' | 'isDateUnavailable' | 'labels' | 'placement' | 'startName' | 'endName' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'className' | 'popoverClassName'>" />
+<PropsTable label="DateRangePicker props" path="../../packages/react/src/date-range-picker/DateRangePicker.tsx" type="Pick<DateRangePickerBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'valueLabel' | 'today' | 'presets' | 'minValue' | 'maxValue' | 'isDateUnavailable' | 'labels' | 'placement' | 'startName' | 'endName' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate' | 'className' | 'popoverClassName'>" />
 
 <PropsTable label="DateRangePickerLabels" path="../../packages/react/src/date-range-picker/DateRangePicker.tsx" type="DateRangePickerLabels" />
 
