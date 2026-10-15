@@ -3646,22 +3646,23 @@ outside and a swipe do nothing, React Aria draws no hidden Dismiss button, and
 the close button, on by default, is the way out. A press in the toast region
 never closes a sheet, as for every library modal.
 
-**No pointer while it rises.** React Aria moves focus in, and hides the
-page with `ariaHideOutside`, only once the enter scroll has ended. A list or
-popover opened from the content during the slide portals outside the sheet,
-so on entry it was made inert with focus in it, and focus fell to the page
-with the list left open. While the overlay is `[data-entering]`,
-`.sheet-content` takes `pointer-events: none`: a press then lands on the
-sheet itself, inside React Aria's `[data-sheet-scroll]` scroller, so a swipe
-still scrolls it, and nothing in the content opens. The Chromium story
-`PressWhileEntering` presses where a Select's trigger is mid-slide, through
-the browser's hit test, and finds focus in the sheet once it has entered
-and the list opening normally at rest. The keyboard is unchanged: focus
-stays on the trigger behind until the sheet takes it, but a Tab during the
-slide does reach the content, so a reader quick enough to Tab twice and open
-a list before the slide ends still meets the old fault. It was not closed,
-since the window is the slide's length and the fix would mean `inert` on the
-content from script.
+**Nothing to reach while it rises.** React Aria moves focus in, and hides
+the page with `ariaHideOutside`, only once the enter scroll has ended. A list
+or popover opened from the content during the slide portals outside the
+sheet, so on entry it was made inert with focus in it, and focus fell to the
+page with the list left open. While the overlay's render props say
+`isEntering`, the React Sheet sets `inert` on `.sheet-content`, so neither a
+Tab from the trigger behind nor a press reaches the content until the sheet
+has entered. A press then lands on the sheet itself, inside React Aria's
+`[data-sheet-scroll]` scroller, so a swipe still scrolls it. The CSS keeps
+`pointer-events: none` on `.sheet-content` while the overlay is
+`[data-entering]`, as a backup for markup without the attribute. The
+Chromium story `PressWhileEntering` presses where a Select's trigger is
+mid-slide, through the browser's hit test, and finds focus in the sheet once
+it has entered and the list opening normally at rest. `TabWhileEntering`
+opens the sheet with Enter, finds the content inert during the slide, Tabs
+twice and finds focus still outside the sheet and no list open, then finds
+the attribute gone and focus in the sheet at rest.
 
 **Stacking and scope.** A sheet is not built on the modal frame, so it renders
 the frame's `FrameEffects` first in its content: it records what held focus
@@ -7516,7 +7517,7 @@ to the list, in Chromium headless on the implementer's machine, five
 runs: the row's list in 460 to 515ms, the sheet's sections in 140 to
 156ms, and the sheet's list, from a sheet at rest, in 380 to 420ms.
 The play waits for the sheet to come to rest before it opens the list:
-the sheet's content takes no pointer while it slides in (see "Sheet").
+the sheet's content is inert while it slides in (see "Sheet").
 Each includes the test driver's press and the list's filter taking
 focus; the sheet's open time is over 100ms.
 

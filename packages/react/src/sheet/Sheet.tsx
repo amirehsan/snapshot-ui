@@ -110,63 +110,72 @@ export function Sheet({
       onOpenChange={onOpenChange}
       shouldCloseOnInteractOutside={isOutsideToastRegion}
     >
-      <SheetBackdrop
-        ref={scrimRef}
-        className={cx('overlay-scrim', 'sheet-scrim', overlayClassName)}
-        swipeAnimation="sheet-scrim-fade"
-      />
-      <RACSheet
-        ref={scopeRef}
-        className={composeRenderProps(className, (userClassName) => cx('overlay', 'sheet', userClassName))}
-      >
-        <SheetContent
-          ref={ref}
-          // React Aria wires the description slot only for an alert dialog, so the dialog points at it here.
-          aria-describedby={isDescribed ? descriptionId : undefined}
-          className="sheet-content"
-        >
-          {({ close }) => (
-            <>
-              <FrameEffects id={id} scrimRef={scrimRef} originRef={originRef} onUnmount={undefined} />
-              {hasGrabber ? (
-                <div className="sheet-grabber-band">
-                  <div className="sheet-grabber" aria-hidden="true" />
-                </div>
-              ) : null}
-              {isTitleHidden && !hasCloseButton && !isDescribed ? (
-                // Nothing in a header would show, so there is none: the hidden title, out of the flow, still
-                // names the sheet.
-                shownTitle
-              ) : (
-                <div className="sheet-header">
-                  <div className="sheet-header-text">
-                    {shownTitle}
-                    {isDescribed ? (
-                      <Text
-                        slot="description"
-                        elementType="p"
-                        id={descriptionId}
-                        className="sheet-description"
-                      >
-                        {description}
-                      </Text>
-                    ) : null}
-                  </div>
-                  {hasCloseButton ? (
-                    <IconButton slot="close" aria-label={closeLabel} className="sheet-close">
-                      <X />
-                    </IconButton>
+      {({ isEntering }) => (
+        <>
+          <SheetBackdrop
+            ref={scrimRef}
+            className={cx('overlay-scrim', 'sheet-scrim', overlayClassName)}
+            swipeAnimation="sheet-scrim-fade"
+          />
+          <RACSheet
+            ref={scopeRef}
+            className={composeRenderProps(className, (userClassName) =>
+              cx('overlay', 'sheet', userClassName),
+            )}
+          >
+            <SheetContent
+              ref={ref}
+              // React Aria wires the description slot only for an alert dialog, so the dialog points at it here.
+              aria-describedby={isDescribed ? descriptionId : undefined}
+              className="sheet-content"
+              // React Aria moves focus in and hides the page only once the sheet has entered. Until then the content
+              // is inert, so neither a Tab nor a press reaches a list in it that would open outside the sheet.
+              inert={isEntering || undefined}
+            >
+              {({ close }) => (
+                <>
+                  <FrameEffects id={id} scrimRef={scrimRef} originRef={originRef} onUnmount={undefined} />
+                  {hasGrabber ? (
+                    <div className="sheet-grabber-band">
+                      <div className="sheet-grabber" aria-hidden="true" />
+                    </div>
                   ) : null}
-                </div>
+                  {isTitleHidden && !hasCloseButton && !isDescribed ? (
+                    // Nothing in a header would show, so there is none: the hidden title, out of the flow, still
+                    // names the sheet.
+                    shownTitle
+                  ) : (
+                    <div className="sheet-header">
+                      <div className="sheet-header-text">
+                        {shownTitle}
+                        {isDescribed ? (
+                          <Text
+                            slot="description"
+                            elementType="p"
+                            id={descriptionId}
+                            className="sheet-description"
+                          >
+                            {description}
+                          </Text>
+                        ) : null}
+                      </div>
+                      {hasCloseButton ? (
+                        <IconButton slot="close" aria-label={closeLabel} className="sheet-close">
+                          <X />
+                        </IconButton>
+                      ) : null}
+                    </div>
+                  )}
+                  <div className="sheet-body" ref={keyboardScroll}>
+                    {typeof children === 'function' ? children({ close }) : children}
+                  </div>
+                  {present(footer) ? <div className="sheet-footer">{footer}</div> : null}
+                </>
               )}
-              <div className="sheet-body" ref={keyboardScroll}>
-                {typeof children === 'function' ? children({ close }) : children}
-              </div>
-              {present(footer) ? <div className="sheet-footer">{footer}</div> : null}
-            </>
-          )}
-        </SheetContent>
-      </RACSheet>
+            </SheetContent>
+          </RACSheet>
+        </>
+      )}
     </SheetOverlay>
   );
 }
