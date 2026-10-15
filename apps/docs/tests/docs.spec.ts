@@ -3006,6 +3006,10 @@ test('a data table drops its md column under 48rem of its box and its sm column 
   });
   expect(ends.table).toBe(ends.box);
   expect(ends.header).toBe(ends.box);
+  // The narrower box is drawn and named, so its width reads as chosen; its edge takes no room.
+  await expect(box).toHaveCSS('outline-style', 'dashed');
+  await expect(box).toHaveCSS('outline-width', '1px');
+  await expect(page.getByText("The table's box: 38rem")).toBeVisible();
   expect(await sideways(page)).toBe(0);
 });
 
