@@ -28,9 +28,21 @@ A column with `align: 'end'` sets figures: tabular digits, never broken, at the 
 
 ## Columns that leave
 
-The table never scrolls sideways. A column with `hideBelow: 'md'` leaves when the table's own box is narrower than 48rem, and one with `hideBelow: 'sm'` when it is narrower than 40rem. They are widths of the table's box, not of the screen, so a table beside an open panel drops its columns too. Cells keep to one line and end in an ellipsis; the full text is still the row's name. The row header never leaves. The example draws the table at the width you choose, in a frame of its own that scrolls sideways where this page is narrower, so the page itself never does.
+The table never scrolls sideways. A column with `hideBelow: 'md'` leaves when the table's own box is narrower than 48rem. They are widths of the table's box, not of the screen, so a table beside an open panel drops its columns too. Under 40rem the table gives way to its list, below, so a column with `hideBelow: 'sm'`, which would leave at 40rem, is in the table whenever the table is drawn; in the list each column goes where its `listSlot` says. Cells keep to one line and end in an ellipsis; the full text is still the row's name. The row header never leaves. The example draws the table at the width you choose, in a frame of its own that scrolls sideways where this page is narrower, so the page itself never does.
 
 <Preview name="data-table-columns" />
+
+</Section>
+
+<Section>
+
+## On a phone
+
+Where the table's own box is narrower than 40rem, on a phone or beside an open panel on a small laptop, the same rows are a list. Both faces are in the page's HTML and the box shows one, so nothing is measured and the server's page is right at every width. A column's `listSlot` puts its cell on an item's first line (`'title'`, the row header's place by default), on its second line in slate (`'meta'`), at its end (`'end'`, figures as in the table) or nowhere (`'hidden'`, the default for every other column); cells on one line sit a little apart, and any separator is yours. `getGroup` groups the rows under a heading per day: only rows next to each other group, so pass it only while the rows are sorted by date, and the day's label is your string. A row opens and is marked current as in the table, and the totals are a line under the list.
+
+With selection on, the list draws no checkboxes until the reader presses Select above it: then every item has its box, Select all leads that row and the button reads Done. Done hides the boxes and keeps the selection, and an item that is selected keeps a check mark beside its shade, as it does when it was selected in the table before the box narrowed. Space and X select an item whether the boxes show or not, and the bar is the table's.
+
+<Preview name="data-table-phone" />
 
 </Section>
 
@@ -88,8 +100,8 @@ import { DataTable, EmptyState, type DataTableColumn } from '@snapshot-ui/react'
 const columns: DataTableColumn<Transaction>[] = [
   { id: 'date', header: 'Date', cell: (row) => row.dateLabel, allowsSorting: true, width: '7rem' },
   { id: 'payee', header: 'Payee', cell: (row) => row.payee, isRowHeader: true },
-  { id: 'category', header: 'Category', cell: (row) => row.category, hideBelow: 'md' },
-  { id: 'amount', header: 'Amount', cell: (row) => row.amountLabel, align: 'end', total: '−$1,284.50' },
+  { id: 'category', header: 'Category', cell: (row) => row.category, hideBelow: 'md', listSlot: 'meta' },
+  { id: 'amount', header: 'Amount', cell: (row) => row.amountLabel, align: 'end', total: '−$1,284.50', listSlot: 'end' },
 ];
 
 export function Transactions({ rows, sort, openId }: TransactionsProps) {
@@ -101,6 +113,8 @@ export function Transactions({ rows, sort, openId }: TransactionsProps) {
       getKey={(row) => row.id}
       getRowHref={(row) => `?open=${row.id}`}
       currentKey={openId}
+      // Sorted by date, so each day's rows are adjacent: the list groups them under the day.
+      getGroup={sort.column === 'date' ? (row) => ({ id: row.date, label: row.dayLabel }) : undefined}
       sortDescriptor={sort}
       onSortChange={(next) => writeSortToUrl(next)}
       emptyState={<EmptyState title="No transactions this month" />}
@@ -117,7 +131,7 @@ export function Transactions({ rows, sort, openId }: TransactionsProps) {
 
 The root also takes `ref`, and `className` is merged after its own class. A name is required: `aria-label`, or `aria-labelledby` with the id of a visible heading.
 
-<PropsTable label="DataTable props" path="../../packages/react/src/data-table/DataTable.tsx" type="Pick<DataTableBaseProps<object>, 'items' | 'columns' | 'getKey' | 'getRowHref' | 'currentKey' | 'sortDescriptor' | 'onSortChange' | 'selectedKeys' | 'onSelectionChange' | 'bulkActions' | 'formatCount' | 'disabledKeys' | 'disabledBehavior' | 'isLoading' | 'loadingRowCount' | 'emptyState' | 'error' | 'labels' | 'className'>" />
+<PropsTable label="DataTable props" path="../../packages/react/src/data-table/DataTable.tsx" type="Pick<DataTableBaseProps<object>, 'items' | 'columns' | 'getKey' | 'getRowHref' | 'currentKey' | 'sortDescriptor' | 'onSortChange' | 'selectedKeys' | 'onSelectionChange' | 'bulkActions' | 'formatCount' | 'disabledKeys' | 'disabledBehavior' | 'isLoading' | 'loadingRowCount' | 'emptyState' | 'error' | 'getGroup' | 'labels' | 'className'>" />
 
 <PropsTable label="DataTableColumn" path="../../packages/react/src/data-table/DataTable.tsx" type="DataTableColumn<object>" />
 
@@ -131,9 +145,11 @@ The root also takes `ref`, and `className` is merged after its own class. A name
 
 The table is a `grid` named by your `aria-label` or heading. Each header is a `columnheader`, with `aria-sort` on the sortable ones; the row header's cell is a `rowheader`, so a screen reader names each row by it. The current row's link is `aria-current`, and the row draws a bar and a bolder name, so the state is never color alone. React Aria announces a sort in its own words. While loading, the table is busy and a polite status outside it says "Loading" once; the skeletons are hidden from assistive technology. An error under the rows is a polite status too. A column whose header is hidden keeps its name. A row that focus reaches is scrolled clear of the sticky header and the bulk-action bar, so it is never hidden behind them. The table is one tab stop: no row link or checkbox is in the tab order, and the arrows reach them.
 
+The list is a second `grid` of the same name, shown where the table is not, so a screen reader meets one; each day is a `rowgroup` named by its heading, and each item is named by its row's name. With selection on, the list's Select button is a plain button whose name says what it does next, Select or Done, and focus stays on it when it is pressed; its items say whether they are selected whether their boxes show or not. The list has no typeahead at all, so every letter reaches the page.
+
 With selection on, the grid is multiselectable and each row says whether it is selected. The header checkbox is named "Select all" and a row's "Select" followed by the row's name, such as "Select Corner Mart". The bar is a toolbar named "Bulk actions". React Aria announces each selection change in its own English words, and the bar's polite status says the count in yours, once the selection has held for a moment, so a run of X presses is said once. Letters never move focus: J and K move as the arrows, X toggles, and every other letter does nothing, on any keyboard layout.
 
-<Keys rows={[['Down Up J K', 'Move to the next or previous row; from the first row, Up reaches the headers. J and K act as the arrows on any keyboard layout.'], ['Right Left', 'Into and between the cells of a row, skipping a column that has left, and back to the row; in the header row, between the headers, stopping at its ends.'], ['Home End', "The first or last row; in a cell or a header, the row's first or last one that has not left. With Ctrl, from a cell, the table's first or last cell."], ['PageUp PageDown', 'Move by the rows that fit in the view, never past the first or the last row; with Shift, extend the selection.'], ['Enter', "Opens the focused row, from the row, one of its cells or its checkbox, and never selects it. On a sortable header, sorts."], ['Ctrl+Enter Shift+Enter', "Opens the focused row in a new tab or window, as a modifier click on its link does. A browser that ignores a modifier on a click a script sends, as Safari may, opens it in place: press Right to reach the row's link and the modifier Enter there."], ['Space X', "Toggle the focused row's selection. Space on a header sorts."], ['Shift+Down Shift+Up', 'Extend the selection, past a column that has left too.'], ['Mod+A', 'Selects every row on the page.'], ['Escape', 'Clears the selection; in the bar too, with focus back in the table.'], ['A-Z', 'Nothing: a letter never moves focus. A key no row or header starts with, such as a page shortcut, reaches the page.'], ['Tab', 'Into and out of the table, one stop, then the bar, where Left and Right move between its buttons.']]} />
+<Keys rows={[['Down Up J K', 'Move to the next or previous row; from the first row, Up reaches the headers. J and K act as the arrows on any keyboard layout.'], ['Right Left', 'Into and between the cells of a row, skipping a column that has left, and back to the row; in the header row, between the headers, stopping at its ends.'], ['Home End', "The first or last row; in a cell or a header, the row's first or last one that has not left. With Ctrl, from a cell, the table's first or last cell."], ['PageUp PageDown', 'Move by the rows that fit in the view, never past the first or the last row; with Shift, extend the selection.'], ['Enter', "Opens the focused row, from the row, one of its cells or its checkbox, and never selects it. On a sortable header, sorts."], ['Ctrl+Enter Shift+Enter', "Opens the focused row in a new tab or window, as a modifier click on its link does. A browser that ignores a modifier on a click a script sends, as Safari may, opens it in place: press Right to reach the row's link and the modifier Enter there."], ['Space X', "Toggle the focused row's selection, and in the list the focused item's, whether its box shows or not. Space on a header sorts."], ['Shift+Down Shift+Up', 'Extend the selection, past a column that has left too.'], ['Mod+A', 'Selects every row on the page.'], ['Escape', 'Clears the selection; in the bar too, with focus back in the table.'], ['A-Z', 'Nothing: a letter never moves focus. A key no row or header starts with, such as a page shortcut, reaches the page; in the list every letter does.'], ['Tab', 'Into and out of the table, one stop, then the bar, where Left and Right move between its buttons. Above the list, the Select button, and Select all while the boxes show, come first.']]} />
 
 </Section>
 
@@ -143,6 +159,6 @@ With selection on, the grid is multiselectable and each row says whether it is s
 
 What keeps data tables in the system.
 
-<Rules dos={['Make the payee or the name the row header, the column a reader looks a row up by.', 'Put figures at the end, with their sign and currency in the string.', 'Add a totals row only for figures that add up.', 'Give the empty body an EmptyState that says what is missing and what to do.', "Write the bar's count in your reader's words and digits.", 'Clear the selection when the page, the sort or a filter changes.', 'Name a total of one page "Page total".', 'Write a negative amount with a real minus sign.', 'Offer Clear filters when filters hide every row.', 'Give a failed load an error with a way to retry.']} donts={['Never let the table scroll sideways. Let columns leave instead.', 'Never stripe the rows. A hairline between them is enough.', 'Never mark a row by color alone.', 'Never draw a spinner in place of the rows. Skeleton rows keep the shape.', 'Never keep the selection in the URL.', 'Never make a press on a row select it. A press opens; the checkbox selects.']} />
+<Rules dos={['Make the payee or the name the row header, the column a reader looks a row up by.', 'Put figures at the end, with their sign and currency in the string.', 'Add a totals row only for figures that add up.', 'Give the empty body an EmptyState that says what is missing and what to do.', "Write the bar's count in your reader's words and digits.", 'Clear the selection when the page, the sort or a filter changes.', 'Name a total of one page "Page total".', 'Pass getGroup only while the rows are sorted by date.', 'Give each column a listSlot, so a phone reads the item as a line and its detail.', 'Write a negative amount with a real minus sign.', 'Offer Clear filters when filters hide every row.', 'Give a failed load an error with a way to retry.']} donts={['Never let the table scroll sideways. Let columns leave instead.', 'Never stripe the rows. A hairline between them is enough.', 'Never mark a row by color alone.', 'Never draw a spinner in place of the rows. Skeleton rows keep the shape.', 'Never keep the selection in the URL.', 'Never make a press on a row select it. A press opens; the checkbox selects.']} />
 
 </Section>

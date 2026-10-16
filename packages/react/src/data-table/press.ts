@@ -16,14 +16,18 @@ export const CONTROL =
 
 const BODY_CELL = '[role="gridcell"], [role="rowheader"]';
 
+/** A list face item, whose padding is the item's own and in no cell: a press there reaches React Aria's item. */
+const LIST_ITEM = '.data-table-item';
+
 /**
  * Whether a press on `target` would reach React Aria's cell and select its row: it is inside `root`'s DOM (a
- * portal opened from a cell is not), inside a row's cell, and on no control inside that cell. The cell itself
- * may be in the tab order while it holds React Aria's focus, so it is never its own control.
+ * portal opened from a cell is not), inside a row's cell or on a list item's own padding, and on no control
+ * inside that cell. The cell, or the item, may be in the tab order while it holds React Aria's focus, so it is
+ * never its own control.
  */
 export function selectsOnPress(target: Element, root: Element): boolean {
   if (!root.contains(target)) return false;
-  const cell = target.closest(BODY_CELL);
+  const cell = target.closest(BODY_CELL) ?? target.closest(LIST_ITEM);
   if (cell === null || !root.contains(cell)) return false;
   const control = target.closest(CONTROL);
   return control === null || control === cell || !cell.contains(control);

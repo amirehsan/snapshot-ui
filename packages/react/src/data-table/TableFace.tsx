@@ -59,7 +59,7 @@ export interface FaceSelection {
  * pointer, a middle click and the context menu are the link's as before. React Aria's Link takes it through its
  * props, though its type does not name it, so it is spread.
  */
-const UNTABBED = { excludeFromTabOrder: true } as const;
+export const UNTABBED = { excludeFromTabOrder: true } as const;
 
 export interface TableFaceProps<T> {
   'aria-label'?: string;
@@ -81,7 +81,7 @@ export interface TableFaceProps<T> {
 }
 
 /** The figure span for an end-aligned column, so its digits are tabular, unbroken and an isolated run. */
-const figure = (column: DataTableColumn<unknown>, content: ReactNode): ReactNode =>
+export const figure = (column: DataTableColumn<unknown>, content: ReactNode): ReactNode =>
   column.align === 'end' ? <span className="data-table-figure">{content}</span> : content;
 
 /** A cell's content clamped to two lines, for a column that wraps; figures never wrap. */

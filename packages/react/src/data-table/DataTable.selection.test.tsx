@@ -2,8 +2,9 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import type { Key, Selection } from 'react-aria-components';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { showFace } from '../../test/dom';
 import { Button } from '../button';
 import { Dialog } from '../dialog';
 import { RouterProvider } from '../link';
@@ -89,6 +90,11 @@ const focusRow = (index: number): void => {
     rowAt(index).focus();
   });
 };
+
+// The table face's tests: the list face is hidden, as it is at 40rem of the box and wider.
+beforeEach(() => {
+  showFace('table');
+});
 
 afterEach(() => {
   navigate.mockClear();
@@ -298,10 +304,13 @@ describe('DataTable selection', () => {
     );
     const bar = screen.getByRole('toolbar', { name: 'Bulk actions' });
     expect(bar).toHaveClass('data-table-bar');
-    // The bar follows the face, inside the root.
+    // The bar follows both faces, inside the root.
     expect(bar.parentElement).toBe(container.querySelector('.data-table'));
     expect(bar.previousElementSibling).toHaveClass('data-table-error');
-    expect(bar.previousElementSibling?.previousElementSibling).toHaveClass('data-table-grid');
+    expect(bar.previousElementSibling?.previousElementSibling).toHaveClass('data-table-list');
+    expect(bar.previousElementSibling?.previousElementSibling?.previousElementSibling).toHaveClass(
+      'data-table-grid',
+    );
     expect(bar.querySelector('.data-table-bar-count')).toHaveTextContent(/^2 selected$/);
     const actions = bar.querySelector('.data-table-bar-actions');
     expect(

@@ -7732,13 +7732,14 @@ words.
 
 Rows of data: `DataTable`'s table face, React Aria's Table with sorting,
 a row header that links to the row's detail, a sticky header, figures,
-columns that leave, totals, and an empty and a loading body. The values
-come from "Dense data" above.
+columns that leave, totals, and an empty and a loading body; and its
+list face, the same rows as React Aria's GridList grouped by day where
+the table's box is narrow. The values come from "Dense data" above.
 
 **The markup.** `div.data-table`, a size container named `data-table`,
 holds `div.data-table-grid` with React Aria's `table.data-table-table`
-(`thead`, `tbody` and, with totals, `tfoot`), then
-`div.data-table-error`, the error line, empty until a next page fails,
+(`thead`, `tbody` and, with totals, `tfoot`), then `div.data-table-list`
+with the list face, then `div.data-table-error`, the error line, empty until a next page fails,
 then, while a row is selected, the bulk-action bar, then
 `span.data-table-status`, the polite status, and with selection on
 `span.data-table-count`, the count's. The table is `table-layout: fixed`
@@ -7991,7 +7992,9 @@ the pair's own contrast, the ring along the row's top edge is
 sits at the left with its figures a left-to-right run, the sort arrows
 keep up for ascending, the current bar is at the right, the checkbox
 column is the rightmost, and the bar's count sits at its right
-(`DataTableMirrored`).
+(`DataTableMirrored`). In the list an item's box is at its right, its
+amount at its left and its current border at its right
+(`DataTableListMirrored`).
 
 **Selection** (section 7, rulings 2 and 4, spec corrections 5, 30, 35,
 36 and 44). With `selectedKeys` and `onSelectionChange`, the table is
@@ -8155,6 +8158,125 @@ once per mount, names the others: "DataTable: selectedKeys holds keys
 that are not in items: t41, t42. Clear the selection when the rows
 change." The docs clear the selection on every change of the rows.
 
+**The list face** (ruling 8, spec 8). Both faces are in the server's
+HTML, and a container query on DataTable's own box shows one: under
+40rem the grid is `display: none` and `div.data-table-list` is drawn,
+and the other way round. The box, not the viewport, so a table beside an
+open panel on a small laptop is a list too, and nothing is measured, so
+the server's page is right at every width. The list is a second `grid`
+of the table's name; only one is ever drawn, so a reader and a screen
+reader meet one. With selection on and rows to show, a head row comes
+first (Select mode, below), then React Aria's `GridList` with
+`disallowTypeAhead` (spec correction 10), then, with totals, the totals
+line.
+
+**Days.** `getGroup` gives each row a group id and the app's label;
+`groupsOf` walks the rows in order and starts a section whenever the id
+changes, so only adjacent rows group and a day that comes back after
+another is a second section with a key of its own. The app sorts; the
+docs say to pass `getGroup` only while sorted by date. Each section is a
+`GridListSection`, a `rowgroup` named by its `GridListHeader`, the day's
+heading: the overline step in slate on the surface's fill, a peer step
+above it and a part step under it, sticky at `--page-sticky-top` one
+layer under the header token, so the day stays in view while its items
+scroll and the next day's heading pushes it out. Without `getGroup` the
+items are the list's own, with no section and no heading: a section with
+no header would name its `rowgroup` by an id that names nothing (spec
+correction 51).
+
+**An item.** Each row is a `GridListItem`, named by the row's text as
+the table's row is, at least `max(--size-target, 3.5rem)` tall for two
+lines, 10px by 16px of padding, its parts 12px apart, at the small step
+at 450, and a divider rule under it but the last of its day. A column's
+`listSlot` places its cell: `'title'`, the first line at 500, which the
+row header takes by default and where its link is, stretched over the
+item as in a row (the item is `position: relative`); `'meta'`, the
+second line in slate; `'end'`, a column of cells at the item's end,
+figures by the numeral rule; `'hidden'`, every other column's default.
+Cells on one line are parts a part step apart; the library writes no
+separator. Both lines end in an ellipsis on one line, and a line holding
+a column with `overflow: 'wrap'` runs to two and clamps there (amendment
+4). Hover, selected, current, focus and disabled are the rows': the 5%
+wash on hover where hover exists, the 8% wash selected, a 3px ink
+inline-start border and a title at 700 for the current item, the inset
+focus ring, and taupe for a disabled item. Slate on either wash over
+canvas falls under 4.5 (4.38 and 4.11), so the meta line turns ink on a
+hovered or selected item: 14.70 and 17.41 on the 5% wash over canvas,
+light and dark. At rest the meta line is slate on canvas, 4.84 and 7.26,
+or on lifted, 5.31 and 6.94, all gated.
+
+**Select mode** (amendment 3, spec corrections 49 and 50). With
+selection on, the list draws no checkboxes at first. Above it,
+`div.data-table-list-head`, a target tall and ruled by the divider,
+holds a tertiary button at its inline end named "Select"
+(`labels.selectItems`). Pressed, every item draws its selection
+checkbox, out of the tab order as the table's are; Select all
+(`labels.selectAll`, the library's own Checkbox, since GridList has
+none, spec 10.2 item 9) leads the head, checked or indeterminate from
+the selection; and the button reads "Done" (`labels.doneSelecting`).
+Done hides the boxes and keeps the selection. This is iOS Mail's order,
+Select All leading and Done trailing. The button is a plain button whose
+name says what it does next, not a toggle with `aria-pressed`, whose
+name must not change, and focus stays on it after Select and after Done:
+it is one element that keeps its place, so a second press undoes the
+first. The GridList is multiselectable in both modes, so every item says
+whether it is selected, and X and Space select the focused item whether
+its box shows or not, as in the table. Out of Select mode a selected
+item keeps a mark beside its wash, the checked box's look drawn, a 20px
+ink box at the micro radius with a canvas check, 16.25 and 19.31,
+`aria-hidden`: so after Done, after X, and when the list is drawn with a
+selection made in the table face before the box narrowed, the selection
+is never color alone, and the bar shows its count. Nothing measures when
+the list starts to show. A press on an item in Select mode still opens
+it, ruling 2; only its box selects (open question 8).
+
+**The list's keys** (spec correction 52). The table's capture handler
+serves the list: J and K dispatch the arrows on the focused item, X
+toggles it through React Aria's selection manager for the list, read
+from an item's render values, so Shift extends from it, Enter opens its
+link from the item or its box, and Page Up and Page Down move by the
+items in view, read under the item's own sticky day heading. The list
+takes no typeahead, so the handler stops no letter there and every one
+reaches the page. Keys in the head are its controls' own. A press on an
+item's padding, which is in no cell, is stopped as a press on a cell is,
+so it never selects. Focus on an item is scrolled clear of its day
+heading and the bar, as a row's is of the header row.
+
+**The list's totals, empty and loading bodies.** With totals and rows,
+`div.data-table-list-total` follows the list: the frame's rule above it,
+a target tall, `labels.total` at its start and the end slot's totals at
+its end, at 700, figures by the numeral rule. React Aria's empty row
+holds the empty state, the error, or while loading `loadingRowCount`
+skeleton items, an item tall and ruled, each a 60% and a 40% line and an
+end line at 24%, with `labels.loading` hidden from sight in the cell.
+`div.data-table-list` is busy while loading as the grid is, and while
+rows reload it draws the header's quiet line at the foot of each day
+heading, or at the top of an ungrouped list.
+
+**The list in forced colors** (spec correction 57). The head's, the
+items', the totals' and the skeleton items' rules are `CanvasText`, the
+current border `CanvasText`, the focus ring `Highlight` and a disabled
+item `GrayText`. A selected item is drawn as a selected row is, out of
+the forced repaint with `forced-color-adjust: none`, `Highlight` with
+`HighlightText`, every part in the pair, its checked box or its mark
+inverted, a `HighlightText` box with a `Highlight` check, and a focused
+selected item ringed `HighlightText`; the docs check the pixels Chromium
+drew.
+
+**Two faces, measured** (risk R3, spec correction 54). Every row is
+drawn twice in the server's HTML. With the story's five columns, links
+and day groups, 50 rows write 127,484 bytes, the list face 48,408 of
+them, and 200 rows 479,582, the list 171,615; with selection on, 195,052
+and 747,075; gzipped, 200 rows are 18,315 and 26,476 bytes. The 200-row
+page is over the plan's 400 kB mark (open question 6); the list is about
+a third of it.
+
+**`hideBelow: 'sm'`** (spec correction 53). It names 40rem, the width at
+which the table gives way to its list, so it no longer changes what is
+drawn: the table is drawn only at 40rem and wider, where an `'sm'`
+column stays, and the list places every column by its `listSlot` (open
+question 9).
+
 **The size.** The entry `{ DataTable }` measured 2.62 kB without React
 Aria, Lucide and `@internationalized/date`, Link and Skeleton included;
 the rule rounds up to 3 kB and adds 0.5 kB: 3.5 kB, under the spec's 4
@@ -8164,10 +8286,13 @@ field parts, Button, the bar, the key handler's shortcut matching and
 the modal stack, each of which has an entry of its own. After Task 3's
 fix round, with the press guard, the portal watch, the typeahead test,
 the page keys, the error state and the reloading cue, it measured 6.99
-kB, which the rule sets at 7.5 kB. Task 4 measures it again.
+kB, which the rule sets at 7.5 kB. With the list face and its Select
+mode, Task 4 measured 8.02 kB, which the rule sets at 9 kB.
 
 **Screen readers.** Not yet verified with VoiceOver and NVDA (owner
 action 4): a row read by its row header and cells, the current row's
 link read as current, the sort change, a row checkbox read as "Select
 Corner Mart", the bar read as a toolbar named "Bulk actions", and how
-often the selection count is announced.
+often the selection count is announced; in the list, a day's rowgroup
+read by its heading, the Select button's new name heard as Done when it
+is pressed, and an item's selected state read with its box hidden.

@@ -212,7 +212,7 @@
   /* What a cell holds that takes its own press: above the stretched link and under the sticky header. Every
      native control and control role, anything in the tab order, a field, and the opt-in data-table-control for
      anything else an app draws; never the row's own link, whose ::after a position would hold to its own box. */
-  .data-table-cell
+  :is(.data-table-cell, .data-table-item)
     :is(
       a,
       button,
@@ -230,7 +230,7 @@
       [role='switch'],
       [tabindex]:not([tabindex='-1'])
     ):not(.data-table-link),
-  .data-table-cell :is(.checkbox-field, .field, .data-table-control) {
+  :is(.data-table-cell, .data-table-item) :is(.checkbox-field, .field, .data-table-control) {
     position: relative;
     z-index: calc(var(--z-header) - 2);
   }
@@ -255,6 +255,24 @@
         [aria-selected='true']
       ) {
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
+    }
+
+    /* A list item as a body row, its meta line turned ink: slate on the 5% wash over canvas measures 4.38. */
+    .data-table-item:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not(
+        [data-disabled],
+        [data-selected],
+        [aria-selected='true']
+      ) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
+    }
+
+    .data-table-item:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not(
+        [data-disabled],
+        [data-selected],
+        [aria-selected='true']
+      )
+      .data-table-item-meta {
+      color: var(--color-ink);
     }
   }
 
@@ -467,6 +485,272 @@
     }
   }
 
+  /* ---- The list face, under 40rem of the table's own box (ruling 8) ------------------------------- */
+  /* The same rows as a list grouped by day: both faces are in the server's HTML and the box shows one, so
+     nothing is measured and a table beside an open panel on a small laptop is a list too. */
+  .data-table-list {
+    display: none;
+  }
+
+  @container data-table (width < 40rem) {
+    .data-table-grid {
+      display: none;
+    }
+
+    .data-table-list {
+      display: block;
+    }
+  }
+
+  .data-table-grid-list {
+    outline: none;
+  }
+
+  /* Above the list while selection is on: Select, or Select all and Done while the boxes show (amendment 3). */
+  .data-table-list-head {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-block-size: var(--size-target);
+    padding-inline: var(--spacing-inset) var(--spacing-part);
+    border-block-end: 1px solid var(--color-divider);
+  }
+
+  /* The button keeps the inline end in both states, so it never moves under the reader's finger or focus. */
+  .data-table-list-mode {
+    margin-inline-start: auto;
+  }
+
+  /* A day's heading sticks at the page's offset on the fill, so the day stays in view while its items scroll. */
+  .data-table-section-header {
+    position: sticky;
+    inset-block-start: var(--page-sticky-top, 0px);
+    z-index: calc(var(--z-header) - 1);
+    padding: var(--spacing-peer) var(--spacing-inset) var(--spacing-part);
+    background-color: var(--data-table-fill);
+    color: var(--color-slate);
+    font-size: var(--text-overline);
+    line-height: var(--text-overline--line-height);
+    letter-spacing: var(--text-overline--letter-spacing);
+    font-weight: var(--text-overline--font-weight);
+    text-transform: uppercase;
+  }
+
+  /* Two lines at least, 10px by 16px, its parts 12px apart; positioned, so it holds its link's ::after. */
+  .data-table-item {
+    --data-table-pad: var(--spacing-inset);
+
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-block-size: max(var(--size-target), 3.5rem);
+    padding-block: 0.625rem;
+    padding-inline: var(--data-table-pad);
+    border-block-end: 1px solid var(--color-divider);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    outline: none;
+    scroll-margin-block: var(--data-table-scroll-start) var(--data-table-scroll-end);
+  }
+
+  /* A rule between items in a group, none at its end. */
+  .data-table-item:last-child {
+    border-block-end: 0;
+  }
+
+  .data-table-item[data-link] {
+    cursor: pointer;
+  }
+
+  .data-table-item-select {
+    display: flex;
+    flex: none;
+  }
+
+  /* Out of Select mode a selected item keeps the checked box's look, drawn, so its state is never the wash
+     alone; an item that is not selected draws nothing there. */
+  .data-table-item-mark {
+    box-sizing: border-box;
+    display: none;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    inline-size: 20px;
+    block-size: 20px;
+    border-radius: var(--radius-micro);
+    background-color: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .data-table-item:is([data-selected], [aria-selected='true']) .data-table-item-mark {
+    display: inline-flex;
+  }
+
+  .data-table-item-mark svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 3;
+  }
+
+  .data-table-item-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-inline-size: 0;
+  }
+
+  .data-table-item-title,
+  .data-table-item-meta {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* A line holding a column that wraps: two lines, then an ellipsis, as the table's wrapping cell. */
+  :is(.data-table-item-title, .data-table-item-meta)[data-overflow='wrap'] {
+    display: -webkit-box;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* The cells of one line sit a part step apart; the library writes no separator between them. */
+  :is(.data-table-item-title, .data-table-item-meta) > .data-table-item-part + .data-table-item-part {
+    margin-inline-start: var(--spacing-part);
+  }
+
+  .data-table-item-title {
+    font-weight: 500;
+  }
+
+  .data-table-item-meta {
+    color: var(--color-slate);
+  }
+
+  .data-table-item-end {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.125rem;
+    text-align: end;
+  }
+
+  .data-table-item:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
+  /* One step over hover, held under the pointer, beside its checked box or its mark. */
+  .data-table-item:is([data-selected], [aria-selected='true']),
+  .data-table-item:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
+    background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
+  }
+
+  /* Slate falls under 4.5 on either wash over canvas, so the meta line turns ink on a hovered or selected item. */
+  .data-table-item:is([data-selected], [aria-selected='true']) .data-table-item-meta {
+    color: var(--color-ink);
+  }
+
+  .data-table-item[data-current] {
+    padding-inline-start: calc(var(--data-table-pad) - 3px);
+    border-inline-start: 3px solid var(--color-ink);
+  }
+
+  .data-table-item[data-current] .data-table-item-title {
+    font-weight: 700;
+  }
+
+  .data-table-item:is([data-disabled], [aria-disabled='true']) {
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  .data-table-item:is([data-disabled], [aria-disabled='true']) .data-table-item-meta {
+    color: inherit;
+  }
+
+  /* The totals under the list: the frame's rule, the label at the start and the figures at the end, at 700. */
+  .data-table-list-total {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-part);
+    min-block-size: var(--size-target);
+    padding-inline: var(--spacing-inset);
+    border-block-start: 1px solid var(--color-frame);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 700;
+  }
+
+  .data-table-list-total-figures {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: end;
+  }
+
+  /* Loading with no items: two lines and an end line per item, an item tall and ruled as items are. */
+  .data-table-skeleton-item {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-block-size: max(var(--size-target), 3.5rem);
+    padding-inline: var(--spacing-inset);
+    border-block-end: 1px solid var(--color-divider);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    text-align: end;
+  }
+
+  .data-table-skeleton-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    text-align: start;
+  }
+
+  /* Items already shown that load again: the quiet line at the foot of each day heading, as at the header
+     row's, or along the top of an ungrouped list. */
+  .data-table-list[data-reloading] .data-table-section-header::after,
+  .data-table-list[data-reloading] .data-table-grid-list::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    block-size: 2px;
+    background-color: var(--color-ink);
+    animation: data-table-reloading 1.6s ease-in-out infinite;
+  }
+
+  .data-table-list[data-reloading] .data-table-grid-list::before {
+    position: sticky;
+    inset-block-start: var(--page-sticky-top, 0px);
+    z-index: calc(var(--z-header) - 1);
+    display: block;
+  }
+
+  .data-table-list[data-reloading] .data-table-grid-list:has(> .data-table-section)::before {
+    content: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .data-table-list[data-reloading] .data-table-section-header::after,
+    .data-table-list[data-reloading] .data-table-grid-list::before {
+      animation: none;
+    }
+  }
+
   @media (forced-colors: active) {
     .data-table-column,
     .data-table-cell,
@@ -524,6 +808,59 @@
     }
 
     .data-table-grid[data-reloading] .data-table-column::after {
+      background-color: CanvasText;
+    }
+
+    /* The list face as the table's rows: rules CanvasText, the current bar CanvasText, the ring Highlight. */
+    .data-table-list-head,
+    .data-table-item,
+    .data-table-list-total,
+    .data-table-skeleton-item {
+      border-color: CanvasText;
+    }
+
+    .data-table-item:is(:focus-visible, [data-focus-visible]) {
+      outline-color: Highlight;
+    }
+
+    .data-table-item:is([data-disabled], [aria-disabled='true']) {
+      color: GrayText;
+    }
+
+    /* A selected item is the reader's selection pair, out of the forced repaint as a selected row is: its text,
+       rules and ring HighlightText, no fill of its own on any part, and its box or its mark drawn inverted. */
+    .data-table-item:is([data-selected], [aria-selected='true']),
+    .data-table-item:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
+      forced-color-adjust: none;
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .data-table-item:is([data-selected], [aria-selected='true'])
+      :where(:not(.checkbox-box, .data-table-item-mark)) {
+      border-color: HighlightText;
+      outline-color: HighlightText;
+      background-color: transparent;
+      color: inherit;
+    }
+
+    .data-table-item:is([data-selected], [aria-selected='true']) .checkbox {
+      --checkbox-fill: HighlightText;
+      --checkbox-edge: HighlightText;
+      --checkbox-mark: Highlight;
+    }
+
+    .data-table-item:is([data-selected], [aria-selected='true']) .data-table-item-mark {
+      background-color: HighlightText;
+      color: Highlight;
+    }
+
+    .data-table-item:is([data-selected], [aria-selected='true']):is(:focus-visible, [data-focus-visible]) {
+      outline-color: HighlightText;
+    }
+
+    .data-table-list[data-reloading] .data-table-section-header::after,
+    .data-table-list[data-reloading] .data-table-grid-list::before {
       background-color: CanvasText;
     }
   }

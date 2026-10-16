@@ -2,8 +2,9 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, type ReactElement } from 'react';
 import { I18nProvider } from 'react-aria-components';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
+import { showFace } from '../../test/dom';
 import { EmptyState } from '../empty-state';
 import { RouterProvider } from '../link';
 import { QUIET_MS } from '../utils/quiet';
@@ -64,6 +65,11 @@ const ACTIONS: DataTableColumn<Transaction> = {
   cell: (row) => <button type="button">{`More for ${row.payee}`}</button>,
   width: '4rem',
 };
+
+// The table face's tests: the list face is hidden, as it is at 40rem of the box and wider.
+beforeEach(() => {
+  showFace('table');
+});
 
 afterEach(() => {
   vi.useRealTimers();
@@ -473,8 +479,9 @@ describe('DataTable', () => {
     expect(root).toHaveClass('data-table', 'extra');
     expect(ref.current).toBe(root);
     expect(root?.children[0]).toHaveClass('data-table-grid');
-    expect(root?.children[1]).toHaveClass('data-table-error');
-    expect(root?.children[2]).toHaveClass('data-table-status');
+    expect(root?.children[1]).toHaveClass('data-table-list');
+    expect(root?.children[2]).toHaveClass('data-table-error');
+    expect(root?.children[3]).toHaveClass('data-table-status');
   });
 
   it('draws error in place of the empty body, over isLoading and emptyState, with nothing busy', () => {

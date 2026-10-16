@@ -21,8 +21,8 @@ export function scrollPortOf(element: Element): Element | null {
 }
 
 /**
- * Scrolls `element`, a focused row or cell, by the least that brings it out from under the grid's sticky header
- * row and the bar in `root`, within the view it scrolls in. Nothing moves when it is clear already, or when focus
+ * Scrolls `element`, a focused row, cell or list item, by the least that brings it out from under the grid's
+ * sticky header row, or the list item's day heading, and the bar in `root`, within the view it scrolls in. Nothing moves when it is clear already, or when focus
  * has moved on by the time the frame comes.
  */
 export function uncover(element: HTMLElement, root: Element): void {
@@ -31,7 +31,11 @@ export function uncover(element: HTMLElement, root: Element): void {
   if (grid === null) return;
   const port = scrollPortOf(grid);
   const view = port === null ? { top: 0, bottom: window.innerHeight } : port.getBoundingClientRect();
-  const header = grid.querySelector('[role="columnheader"]')?.getBoundingClientRect();
+  // The table's sticky header row, or in the list face the item's own day heading, which sticks over its items.
+  const header = (
+    grid.querySelector('[role="columnheader"]') ??
+    element.closest('.data-table-section')?.querySelector('.data-table-section-header')
+  )?.getBoundingClientRect();
   const bar = root.querySelector('.data-table-bar')?.getBoundingClientRect();
   const top = Math.max(view.top, header?.bottom ?? view.top);
   const bottom = Math.min(view.bottom, bar?.top ?? view.bottom);

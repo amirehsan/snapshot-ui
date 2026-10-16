@@ -12,7 +12,7 @@ import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { SearchField } from '../src/search-field';
-import { columnsWithTotal, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
+import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 
 /**
  * Each part's server HTML, hydrated in the browser on a mocked iPhone (plan, spec corrections 1 and 2). The HTML
@@ -157,11 +157,21 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
       columns={columnsWithTotal(TRANSACTIONS.slice(0, 5))}
       getKey={keyOf}
       getRowHref={hrefOf}
+      getGroup={groupOf}
       currentKey="t2"
       sortDescriptor={{ column: 'date', direction: 'descending' }}
       onSortChange={noop}
     />,
     (container) => {
+      // Both faces: the table's grid and the list's, its days under their headings.
+      expect(container.querySelectorAll('[role="grid"]')).toHaveLength(2);
+      expect(
+        [...container.querySelectorAll('.data-table-section-header')].map((heading) => heading.textContent),
+      ).toEqual(['Wednesday 14 October', 'Tuesday 13 October', 'Monday 12 October']);
+      expect(container.querySelector('.data-table-item[data-current] .data-table-link')).toHaveAttribute(
+        'aria-current',
+        'true',
+      );
       expect(container.querySelector('[data-current] .data-table-link')).toHaveAttribute(
         'aria-current',
         'true',
@@ -180,6 +190,7 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
       columns={columnsWithTotal(TRANSACTIONS.slice(0, 5))}
       getKey={keyOf}
       getRowHref={hrefOf}
+      getGroup={groupOf}
       sortDescriptor={{ column: 'date', direction: 'descending' }}
       onSortChange={noop}
       selectedKeys={['t1', 't3']}
@@ -193,6 +204,10 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
       expect(all?.indeterminate).toBe(true);
       expect(container.querySelectorAll('tbody [aria-selected="true"]')).toHaveLength(2);
       expect(container.querySelector('.data-table-count')).toBeEmptyDOMElement();
+      // The list face: the same two items selected, the Select button and no box until it is pressed.
+      expect(container.querySelectorAll('.data-table-item[aria-selected="true"]')).toHaveLength(2);
+      expect(container.querySelector('.data-table-list-mode')).toHaveTextContent(/^Select$/);
+      expect(container.querySelector('.data-table-list input[type="checkbox"]')).toBeNull();
     },
   ],
 ];
