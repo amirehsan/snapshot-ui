@@ -42,6 +42,7 @@ import DataTableFiltered from './data-table-filtered';
 import DataTablePhone from './data-table-phone';
 import DataTableSelection from './data-table-selection';
 import DataTableStates from './data-table-states';
+import DataTableTransactions from './data-table-transactions';
 import DateRangePickerBasic from './date-range-picker-basic';
 import DateRangePickerPresets from './date-range-picker-presets';
 import DateRangePickerStates from './date-range-picker-states';
@@ -197,6 +198,7 @@ export const examples = {
   'data-table-phone': DataTablePhone,
   'data-table-selection': DataTableSelection,
   'data-table-states': DataTableStates,
+  'data-table-transactions': DataTableTransactions,
   'date-range-picker-basic': DateRangePickerBasic,
   'date-range-picker-presets': DateRangePickerPresets,
   'date-range-picker-states': DateRangePickerStates,

@@ -668,7 +668,11 @@ test.describe('forced colors', () => {
       await systemColor(page, 'Highlight'),
       await systemColor(page, 'HighlightText'),
     ];
-    const stage = page.locator('.stage').filter({ has: page.getByRole('checkbox', { name: 'Select all' }) });
+    const stage = page
+      .locator('.stage')
+      .filter({ has: page.getByRole('checkbox', { name: 'Select all' }) })
+      // The selection example, before the recipe's, which selects too.
+      .first();
     const row = stage.locator('tbody [role="row"]').first();
     await expectTableFace(row);
     await row.focus();
