@@ -3,9 +3,9 @@
 import type { Root } from 'fumadocs-core/page-tree';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
-import { useRailCollapsed } from '@/lib/document-state';
+import { useRailCollapsed, useRailUnfolded, useStagePanelOpen } from '@/lib/document-state';
 import { wrapTab } from '@/lib/focus-trap';
-import { writeRailCollapsed } from '@/lib/prepaint';
+import { writeRailCollapsed, writeRailUnfolded } from '@/lib/prepaint';
 import { ShellContext, type ShellActions } from './context';
 import { Rail } from './rail';
 import { SearchDialog } from './search';
@@ -27,7 +27,17 @@ export function DocsShell({
 }): ReactElement {
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
-  const collapsed = useRailCollapsed();
+  const chosen = useRailCollapsed();
+  // An example's side panel open beside the page folds the rail to its icons from 1024px, as AppShell folds an
+  // app's rail: the stage is narrower than an app's content, and the rows beside the panel need the room. The
+  // stylesheet folds it from the server's HTML; this keeps the collapse button's name and the names beside the
+  // icons in step. Expanding the rail over the panel keeps it expanded until the panel closes.
+  const isPanelOpen = useStagePanelOpen();
+  const isUnfolded = useRailUnfolded();
+  const collapsed = chosen || (isPanelOpen && !isUnfolded);
+  useEffect(() => {
+    if (!isPanelOpen && isUnfolded) writeRailUnfolded(false);
+  }, [isPanelOpen, isUnfolded]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // The drawer belongs to the page it was opened on, so any navigation closes it: a link, or the
   // browser's Back and Forward. Comparing paths while rendering would reopen it on a return to
@@ -107,6 +117,7 @@ export function DocsShell({
   };
 
   const toggleCollapsed = (): void => {
+    if (collapsed && isPanelOpen) writeRailUnfolded(true);
     writeRailCollapsed(!collapsed);
   };
 

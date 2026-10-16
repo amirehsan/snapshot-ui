@@ -3601,3 +3601,54 @@ test('an open side panel that moves across 1024px while the reader is elsewhere 
   // Back beside the page, the panel does not take focus or scroll the reader to it.
   await expect.poll(() => page.evaluate(() => document.activeElement === document.body)).toBe(true);
 });
+
+test('an example side panel folds the rail to its icons beside the page, and the reader can expand it over the panel', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 800 });
+  await visit(page, '/docs/components/side-panel');
+  const rail = page.locator('#rail');
+  const { stage, items } = sidePanelExample(page);
+  await expect(stage.locator('.side-panel')).toBeVisible();
+  // Folded, the rows beside the panel have room: a title reads whole.
+  await expect.poll(async () => Math.round((await rail.boundingBox())?.width ?? 0)).toBe(72);
+  expect((await stage.locator('.side-panel-layout-content').boundingBox())?.width).toBeGreaterThan(300);
+  const toggle = page.getByRole('button', { name: 'Expand the menu' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  // Expanded over the panel, it stays expanded until the panel closes, and the reader's setting is unchanged.
+  await toggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-rail-unfolded', '');
+  await expect.poll(async () => Math.round((await rail.boundingBox())?.width ?? 0)).toBe(288);
+  await expect(page.locator('html')).not.toHaveAttribute('data-rail', 'collapsed');
+  await stage.getByRole('button', { name: 'Close' }).click();
+  await expect(stage.locator('.side-panel')).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveAttribute('data-rail-unfolded');
+  await expect.poll(async () => Math.round((await rail.boundingBox())?.width ?? 0)).toBe(288);
+  // A row opened again folds it again.
+  await items.first().focus();
+  await page.keyboard.press('Enter');
+  await expect(stage.locator('.side-panel')).toBeVisible();
+  await expect.poll(async () => Math.round((await rail.boundingBox())?.width ?? 0)).toBe(72);
+  await expect(page.getByRole('button', { name: 'Expand the menu' })).toBeVisible();
+});
+
+test.describe('the side panel page without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('arrives with the rail folded beside the open example panel, at 1024px and 1440px', async ({
+    page,
+  }) => {
+    for (const width of [1024, 1440]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('/docs/components/side-panel');
+      const stage = page.locator('.stage').first();
+      await expect(stage.locator('.side-panel')).toBeVisible();
+      expect(Math.round((await page.locator('#rail').boundingBox())?.width ?? 0), String(width)).toBe(72);
+      // The rows beside the panel read: the list has room for its titles.
+      expect(
+        (await stage.locator('.side-panel-layout-content').boundingBox())?.width,
+        String(width),
+      ).toBeGreaterThan(300);
+    }
+  });
+});

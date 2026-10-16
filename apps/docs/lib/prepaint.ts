@@ -27,6 +27,30 @@ export function readRailCollapsed(): boolean {
   return document.documentElement.dataset.rail === 'collapsed';
 }
 
+/**
+ * Whether an example's side panel stands open beside the page: a SidePanel's aside in a preview stage. The docs'
+ * stage is narrower than an app's content, so while one is open the rail folds to its icons, from the server's HTML
+ * on (shell.css), as AppShell folds an app's rail beside an open panel.
+ */
+export function readStagePanelOpen(): boolean {
+  return document.querySelector('.stage .side-panel') !== null;
+}
+
+/** Whether the reader expanded the rail over an open example panel, which stands the fold down until it closes. */
+export function readRailUnfolded(): boolean {
+  return document.documentElement.dataset.railUnfolded !== undefined;
+}
+
+export function writeRailUnfolded(unfolded: boolean): void {
+  if (unfolded) document.documentElement.dataset.railUnfolded = '';
+  else delete document.documentElement.dataset.railUnfolded;
+}
+
+/** Whether the rail is drawn as icons: the reader's choice, or folded beside an open example panel. */
+export function readRailDrawnCollapsed(): boolean {
+  return readRailCollapsed() || (readStagePanelOpen() && !readRailUnfolded());
+}
+
 export function writeRailCollapsed(collapsed: boolean): void {
   if (collapsed) document.documentElement.dataset.rail = 'collapsed';
   else delete document.documentElement.dataset.rail;
