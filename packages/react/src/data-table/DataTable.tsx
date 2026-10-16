@@ -1,15 +1,29 @@
 'use client';
 
-import { useMemo, type KeyboardEvent, type ReactElement, type ReactNode, type Ref } from 'react';
-import { useLocale, type Key } from 'react-aria-components';
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from 'react';
+import { useLocale, type Key, type Selection } from 'react-aria-components';
 import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
+import { mergeRefs } from '../utils/merge-refs';
 import { present } from '../utils/present';
 import { useWarnOnce } from '../utils/useWarnOnce';
+import { BulkBar } from './BulkBar';
 import { DataTableStatus } from './DataTableStatus';
-import { handleTableKey } from './keys';
+import { handleTableKey, type TableKeyActions } from './keys';
 import { rowHeaderOf, textOf } from './rows';
-import { TableFace, type FaceRow } from './TableFace';
+import { keysOf, presentKeys, staleKeys, toggled } from './selection';
+import { TableFace, type FaceRow, type FaceSelection, type FaceSelectionManager } from './TableFace';
 
 export interface DataTableColumn<T> {
   /** Unique; the sort descriptor's `column`. `__selection` is reserved. */
@@ -38,13 +52,39 @@ export interface DataTableColumn<T> {
 }
 
 export interface DataTableLabels {
+  /** The header checkbox's name. @default 'Select all' */
+  selectAll: string;
+  /**
+   * The first word of a row checkbox's name; React Aria adds the row's name after it, as "Select Corner Mart"
+   * (spec correction 5). @default 'Select'
+   */
+  select: string;
+  /** The bar's button that clears the selection. @default 'Clear selection' */
+  clearSelection: string;
+  /** The bar's count, given the count as `formatCount` writes it. @default (count) => `${count} selected` */
+  selected: (count: string) => string;
   /** The status while loading. @default 'Loading' */
   loading: string;
   /** The totals row's header cell. @default 'Total' */
   total: string;
+  /** The bulk-action bar's name. @default 'Bulk actions' */
+  toolbar: string;
 }
 
-export interface DataTableBaseProps<T> {
+/** Selection: both props or neither. */
+export type DataTableSelectable =
+  | { selectedKeys?: undefined; onSelectionChange?: undefined }
+  | {
+      /**
+       * Turns selection on: a first column of checkboxes and the bulk-action bar. Always controlled, from the
+       * page's state and never the URL. Clear it when the rows change.
+       */
+      selectedKeys: readonly Key[];
+      /** Called with the selected keys: always the given rows' keys, never React Aria's 'all' (ruling 4). */
+      onSelectionChange: (keys: Key[]) => void;
+    };
+
+export interface DataTableShared<T> {
   /** The rows, in the order to draw them. */
   items: readonly T[];
   /** The columns, in the order to draw them. */
@@ -73,6 +113,10 @@ export interface DataTableBaseProps<T> {
   loadingRowCount?: number;
   /** The empty body: an EmptyState, or any node. */
   emptyState?: ReactNode;
+  /** The bulk-action bar's buttons, shown while any row is selected, before Clear selection. */
+  bulkActions?: ReactNode;
+  /** How the bar writes its count, such as in Persian digits. @default String */
+  formatCount?: (count: number) => string;
   /** The words the table writes itself, each with an English default. */
   labels?: Partial<DataTableLabels>;
   /** Merged after the library's class on the root. */
@@ -80,10 +124,39 @@ export interface DataTableBaseProps<T> {
   ref?: Ref<HTMLDivElement>;
 }
 
+/** DataTable's props without its name: the shared ones, and selection's two together or neither. */
+export type DataTableBaseProps<T> = DataTableShared<T> & DataTableSelectable;
+
 /** DataTable's props: a name is required, from `aria-label` or `aria-labelledby` (spec correction 21). */
 export type DataTableProps<T> = DataTableBaseProps<T> & AriaName;
 
-const DEFAULT_LABELS: DataTableLabels = { loading: 'Loading', total: 'Total' };
+const DEFAULT_LABELS: DataTableLabels = {
+  selectAll: 'Select all',
+  select: 'Select',
+  clearSelection: 'Clear selection',
+  selected: (count) => `${count} selected`,
+  loading: 'Loading',
+  total: 'Total',
+  toolbar: 'Bulk actions',
+};
+
+/** Whether React Aria's selection holds exactly `keys`, so it can go back to React Aria with its anchor. */
+const holds = (selection: Selection | null, keys: readonly Key[]): selection is Set<Key> =>
+  selection !== null &&
+  selection !== 'all' &&
+  selection.size === new Set(keys).size &&
+  keys.every((key) => selection.has(key));
+
+/** The grid of the face that is shown, read at event or effect time (Task 4 adds the list face's). */
+function shownGrid(root: HTMLElement | null): HTMLElement | null {
+  if (root === null) return null;
+  for (const face of root.querySelectorAll<HTMLElement>(':scope > .data-table-grid')) {
+    if (getComputedStyle(face).display === 'none') continue;
+    const grid = face.querySelector<HTMLElement>('[role="grid"]');
+    if (grid !== null) return grid;
+  }
+  return null;
+}
 
 /**
  * The rows of the face, one per key: a row whose key an earlier row has is left out, since React Aria throws for
@@ -112,9 +185,11 @@ function faceRows<T>(
 
 /**
  * Rows of data: a grid with sortable columns, a row header that links to the row's detail, a sticky header,
- * columns of figures at the line's end, columns that leave where the table's box is narrow, a totals row, and
- * an empty and a loading body. Every cell and string is the app's; the sort and the open row are controlled.
- * Built on React Aria's Table. Render it from a client component: its props are functions.
+ * columns of figures at the line's end, columns that leave where the table's box is narrow, a totals row, an
+ * empty and a loading body, and with `selectedKeys` a checkbox column and a bulk-action bar. A press on a row
+ * opens it; the checkbox, Space and X select. Every cell and string is the app's; the sort, the open row and the
+ * selection are controlled. Built on React Aria's Table. Render it from a client component: its props are
+ * functions.
  */
 export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   const {
@@ -126,6 +201,10 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     sortDescriptor,
     onSortChange,
     disabledKeys,
+    selectedKeys,
+    onSelectionChange,
+    bulkActions,
+    formatCount = String,
     isLoading = false,
     loadingRowCount = 8,
     emptyState,
@@ -138,6 +217,76 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   const { rows, repeated } = faceRows(items, getKey, rowHeader, getRowHref);
   const { direction } = useLocale();
   const disabled = useMemo(() => new Set<Key>(disabledKeys ?? []), [disabledKeys]);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRefs = useMemo(() => mergeRefs(ref, rootRef), [ref]);
+
+  // Selection (section 7). The keys in items, by the string React Aria writes as each row's data-key.
+  const selectable = selectedKeys !== undefined;
+  const byDataKey = new Map<string, Key>(rows.map((row) => [String(row.key), row.key]));
+  const shown = new Set<Key>(rows.map((row) => row.key));
+  const counted = selectable ? presentKeys(selectedKeys, shown) : [];
+  const stale = selectable ? staleKeys(selectedKeys, shown) : [];
+  // React Aria's last selection, handed back while it holds the app's keys, so Shift keeps its anchor.
+  const [last, setLast] = useState<Selection | null>(null);
+  const manager = useRef<FaceSelectionManager | null>(null);
+  const onManager = useCallback((next: FaceSelectionManager | null) => {
+    manager.current = next;
+  }, []);
+  // Whether the last focus inside the root's DOM was in the bar, which the root's focus capture keeps.
+  const focusInBar = useRef(false);
+
+  const focusTable = (): void => {
+    shownGrid(rootRef.current)?.focus();
+  };
+  const clear = (): void => {
+    // Focus first, while the bar is still here, so it never falls to the page.
+    focusTable();
+    onSelectionChange?.([]);
+  };
+  const hasBar = counted.length > 0;
+  // The bar leaves with focus in it when the selection empties some other way, such as a bulk action that
+  // clears it: focus goes to the table rather than to the page (spec 7.1). Only when focus has fallen to the
+  // page: focus the reader has since moved elsewhere stays where it is.
+  useLayoutEffect(() => {
+    if (hasBar || !focusInBar.current) return;
+    focusInBar.current = false;
+    const active = rootRef.current?.ownerDocument.activeElement;
+    if (active === null || active === undefined || active === active.ownerDocument.body) {
+      shownGrid(rootRef.current)?.focus();
+    }
+  }, [hasBar]);
+
+  const faceSelection: FaceSelection | undefined = selectable
+    ? {
+        selectedKeys: holds(last, selectedKeys) ? last : selectedKeys,
+        onChange: (selection) => {
+          setLast(selection === 'all' ? null : selection);
+          onSelectionChange(keysOf(selection, rows, (row) => row.key, disabled));
+        },
+        selectAllLabel: words.selectAll,
+        selectLabel: words.select,
+        onManager,
+      }
+    : undefined;
+
+  const actions: TableKeyActions = {
+    direction,
+    keyOf: (row) => {
+      const key = byDataKey.get(row.getAttribute('data-key') ?? '');
+      return selectable && key !== undefined && !disabled.has(key) ? key : null;
+    },
+    toggle: (key) => {
+      // As Space does, so the toggled row becomes the anchor Shift extends from.
+      if (manager.current !== null) manager.current.toggleSelection(key);
+      else if (selectedKeys !== undefined) onSelectionChange(toggled(selectedKeys, key));
+    },
+    extend: (row) => {
+      const key = row.getAttribute('data-key');
+      const reached =
+        key === null ? undefined : (byDataKey.get(key) ?? (key === '__total' ? key : undefined));
+      if (reached !== undefined) manager.current?.extendSelection(reached);
+    },
+  };
 
   const marked = columns.filter((column) => column.isRowHeader === true);
   useWarnOnce(
@@ -168,6 +317,11 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
       : `DataTable: getKey gives "${String(repeated)}" to more than one row; every row needs a key of its own. Only the first row with it is drawn.`,
   );
   useWarnOnce(
+    stale.length === 0
+      ? null
+      : `DataTable: selectedKeys holds keys that are not in items: ${stale.map(String).join(', ')}. Clear the selection when the rows change.`,
+  );
+  useWarnOnce(
     items.length === 0 && !isLoading && !present(emptyState)
       ? 'DataTable: the table has no rows and no emptyState. Pass an EmptyState that says what is missing.'
       : null,
@@ -177,11 +331,29 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     // The capture handler takes keys before React Aria's grid does (spec 7.2): a capture listener, which
     // jsx-a11y does not read, so the root needs no role of its own.
     <div
-      ref={ref}
+      ref={rootRefs}
       className={cx('data-table', className)}
       onKeyDownCapture={(event: KeyboardEvent<HTMLDivElement>) => {
-        // The locale's direction, which React Aria's keyboard delegate reads, not the CSS's.
-        handleTableKey(event, { direction });
+        const target = event.target as Element;
+        if (
+          event.key === 'Escape' &&
+          event.currentTarget.contains(target) &&
+          target.closest('.data-table-bar') !== null
+        ) {
+          // Escape in the bar clears and puts focus on the table (spec correction 18). A Menu opened from an
+          // action is a portal, outside the root's DOM, and its Escape is its own.
+          event.preventDefault();
+          event.stopPropagation();
+          clear();
+          return;
+        }
+        handleTableKey(event, actions);
+      }}
+      onFocusCapture={(event: FocusEvent<HTMLDivElement>) => {
+        const target = event.target as Element;
+        // Focus in a portal opened from the bar (a Menu) keeps what the bar had.
+        if (event.currentTarget.contains(target))
+          focusInBar.current = target.closest('.data-table-bar') !== null;
       }}
     >
       {/* Busy while loading. The status sits outside the busy part and stays mounted, so it is heard. */}
@@ -196,6 +368,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           sortDescriptor={sortDescriptor}
           onSortChange={onSortChange}
           disabledKeys={disabled}
+          selection={faceSelection}
           isLoading={isLoading && items.length === 0}
           loadingRowCount={loadingRowCount}
           emptyState={emptyState}
@@ -203,7 +376,24 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           loadingLabel={words.loading}
         />
       </div>
+      {hasBar ? (
+        <BulkBar
+          label={words.toolbar}
+          count={words.selected(formatCount(counted.length))}
+          actions={bulkActions}
+          clearLabel={words.clearSelection}
+          onClear={clear}
+        />
+      ) : null}
       <DataTableStatus message={isLoading ? words.loading : ''} />
+      {/* The count, said once it has held for QUIET_MS, so a run of X presses says the total once (spec 7.1);
+          mounted while selection is on, so it is there before the first count. */}
+      {selectable ? (
+        <DataTableStatus
+          className="data-table-count"
+          message={hasBar ? words.selected(formatCount(counted.length)) : ''}
+        />
+      ) : null}
     </div>
   );
 }

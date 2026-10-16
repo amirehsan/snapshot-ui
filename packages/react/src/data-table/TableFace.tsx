@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
-import type { CSSProperties, ReactElement, ReactNode } from 'react';
+import { useContext, useEffect, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import {
   Cell,
   Column,
@@ -10,8 +10,12 @@ import {
   TableBody,
   TableFooter,
   TableHeader,
+  TableStateContext,
   type Key,
+  type Selection,
+  type TableState,
 } from 'react-aria-components';
+import { Checkbox } from '../checkbox/Checkbox';
 import { Link } from '../link/Link';
 import { Skeleton } from '../skeleton/Skeleton';
 import { present } from '../utils/present';
@@ -28,6 +32,28 @@ export interface FaceRow<T> {
 
 type Sort = NonNullable<DataTableBaseProps<unknown>['sortDescriptor']>;
 
+/** React Aria's selection manager for the table, which DataTable's keys reach for X and Shift. */
+export type FaceSelectionManager = TableState<unknown>['selectionManager'];
+
+/** Selection on the table face: React Aria's, with the library's checkbox column first. */
+export interface FaceSelection {
+  /** The selected keys, or React Aria's own selection when it holds the same keys, which keeps its anchor. */
+  selectedKeys: Iterable<Key>;
+  onChange: (selection: Selection) => void;
+  selectAllLabel: string;
+  selectLabel: string;
+  /** Receives React Aria's selection manager once the table has one, and null when it goes. */
+  onManager: (manager: FaceSelectionManager | null) => void;
+}
+
+/**
+ * Out of the tab order: the table is one tab stop, the row or cell React Aria last focused, and the arrows reach
+ * everything in it (spec 7.2). React Aria focuses a cell's link or checkbox with the arrows all the same, and a
+ * pointer, a middle click and the context menu are the link's as before. React Aria's Link takes it through its
+ * props, though its type does not name it, so it is spread.
+ */
+const UNTABBED = { excludeFromTabOrder: true } as const;
+
 export interface TableFaceProps<T> {
   'aria-label'?: string;
   'aria-labelledby'?: string;
@@ -38,6 +64,7 @@ export interface TableFaceProps<T> {
   sortDescriptor: Sort | undefined;
   onSortChange: ((sort: Sort) => void) | undefined;
   disabledKeys: ReadonlySet<Key>;
+  selection: FaceSelection | undefined;
   isLoading: boolean;
   loadingRowCount: number;
   emptyState: ReactNode;
@@ -62,16 +89,47 @@ function SortMark({ direction }: { direction: 'ascending' | 'descending' | undef
   );
 }
 
+/**
+ * The select-all checkbox in the checkbox column's header. It also hands DataTable React Aria's selection manager
+ * from the table's state, which it can read from here, so X toggles as Space does and Shift past a hidden cell
+ * extends as React Aria does.
+ */
+function SelectAll({
+  label,
+  onManager,
+}: {
+  label: string;
+  onManager: (manager: FaceSelectionManager | null) => void;
+}): ReactElement {
+  const manager = useContext(TableStateContext)?.selectionManager ?? null;
+  useEffect(() => {
+    onManager(manager);
+    return () => {
+      onManager(null);
+    };
+  }, [manager, onManager]);
+  return <Checkbox slot="selection" aria-label={label} {...UNTABBED} />;
+}
+
 interface TableRowProps<T> {
   row: FaceRow<T>;
   columns: readonly DataTableColumn<T>[];
   rowHeader: DataTableColumn<T> | undefined;
   isCurrent: boolean;
   isDisabled: boolean;
+  /** The row checkbox's name, before React Aria adds the row's; undefined while selection is off. */
+  selectLabel: string | undefined;
 }
 
 /** One row of the table face. Cells are static children, one per column, keyed by the column's id. */
-function TableRow<T>({ row, columns, rowHeader, isCurrent, isDisabled }: TableRowProps<T>): ReactElement {
+function TableRow<T>({
+  row,
+  columns,
+  rowHeader,
+  isCurrent,
+  isDisabled,
+  selectLabel,
+}: TableRowProps<T>): ReactElement {
   const hasLink = row.href !== undefined && !isDisabled;
   return (
     <Row
@@ -82,6 +140,12 @@ function TableRow<T>({ row, columns, rowHeader, isCurrent, isDisabled }: TableRo
       data-link={hasLink ? '' : undefined}
       data-current={isCurrent ? '' : undefined}
     >
+      {selectLabel === undefined ? null : (
+        <Cell className="data-table-cell" data-selection="">
+          {/* React Aria names it by its own label and the row header (spec correction 5): "Select Corner Mart". */}
+          <Checkbox slot="selection" aria-label={selectLabel} {...UNTABBED} />
+        </Cell>
+      )}
       {columns.map((column) => {
         const body = figure(column as DataTableColumn<unknown>, column.cell(row.value));
         return (
@@ -92,7 +156,12 @@ function TableRow<T>({ row, columns, rowHeader, isCurrent, isDisabled }: TableRo
             data-hide-below={hideBelowOf(column, rowHeader)}
           >
             {column === rowHeader && hasLink ? (
-              <Link href={row.href} className="data-table-link" aria-current={isCurrent ? 'true' : undefined}>
+              <Link
+                href={row.href}
+                className="data-table-link"
+                aria-current={isCurrent ? 'true' : undefined}
+                {...UNTABBED}
+              >
                 {body}
               </Link>
             ) : (
@@ -111,11 +180,14 @@ function SkeletonRows<T>({
   columns,
   rowHeader,
   label,
+  selectable,
 }: {
   count: number;
   columns: readonly DataTableColumn<T>[];
   rowHeader: DataTableColumn<T> | undefined;
   label: string;
+  /** Draws the checkbox column's 3.5rem blank first. */
+  selectable: boolean;
 }): ReactElement {
   return (
     <>
@@ -123,6 +195,7 @@ function SkeletonRows<T>({
       <span className="data-table-loading">{label}</span>
       {Array.from({ length: count }, (_, row) => (
         <div key={row} className="data-table-skeleton-row">
+          {selectable ? <span className="data-table-skeleton-cell" data-selection="" /> : null}
           {columns.map((column, index) => (
             <span
               key={column.id}
@@ -152,6 +225,7 @@ export function TableFace<T>({
   sortDescriptor,
   onSortChange,
   disabledKeys,
+  selection,
   isLoading,
   loadingRowCount,
   emptyState,
@@ -164,6 +238,10 @@ export function TableFace<T>({
     <Table
       {...name}
       className="data-table-table"
+      selectionMode={selection === undefined ? undefined : 'multiple'}
+      selectionBehavior="toggle"
+      selectedKeys={selection?.selectedKeys}
+      onSelectionChange={selection?.onChange}
       sortDescriptor={sortDescriptor}
       onSortChange={
         onSortChange === undefined
@@ -175,6 +253,16 @@ export function TableFace<T>({
       disabledKeys={disabledKeys}
     >
       <TableHeader className="data-table-header">
+        {selection === undefined ? null : (
+          <Column
+            id="__selection"
+            textValue={selection.selectAllLabel}
+            className="data-table-column"
+            data-selection=""
+          >
+            <SelectAll label={selection.selectAllLabel} onManager={selection.onManager} />
+          </Column>
+        )}
         {columns.map((column) => (
           <Column
             key={column.id}
@@ -211,6 +299,7 @@ export function TableFace<T>({
               columns={columns}
               rowHeader={rowHeader}
               label={loadingLabel}
+              selectable={selection !== undefined}
             />
           ) : present(emptyState) ? (
             emptyState
@@ -225,6 +314,7 @@ export function TableFace<T>({
             rowHeader={rowHeader}
             isCurrent={currentKey !== undefined && currentKey !== null && row.key === currentKey}
             isDisabled={disabledKeys.has(row.key)}
+            selectLabel={selection?.selectLabel}
           />
         ))}
       </TableBody>
@@ -238,6 +328,7 @@ export function TableFace<T>({
             textValue={totalLabel}
             className="data-table-row"
           >
+            {selection === undefined ? null : <Cell className="data-table-cell" data-selection="" />}
             {columns.map((column) => {
               const own = present(column.total) ? column.total : null;
               const content = own ?? (column === rowHeader ? totalLabel : null);

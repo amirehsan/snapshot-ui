@@ -4,6 +4,7 @@ import { hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
+import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
 import { FilterBar } from '../src/filter-bar';
@@ -169,6 +170,29 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
       expect(date).toHaveTextContent('Date');
       expect(date?.querySelector('.data-table-sort .lucide-arrow-down')).not.toBeNull();
       expect(container.querySelector('tfoot [role="rowheader"]')).toHaveTextContent('Total');
+    },
+  ],
+  [
+    'DataTable selected',
+    <DataTable
+      aria-label="Transactions"
+      items={TRANSACTIONS.slice(0, 5)}
+      columns={columnsWithTotal(TRANSACTIONS.slice(0, 5))}
+      getKey={keyOf}
+      getRowHref={hrefOf}
+      sortDescriptor={{ column: 'date', direction: 'descending' }}
+      onSortChange={noop}
+      selectedKeys={['t1', 't3']}
+      onSelectionChange={noop}
+      bulkActions={<Button variant="secondary">Categorize</Button>}
+      formatCount={(count) => String(count)}
+    />,
+    (container) => {
+      expect(container.querySelector('.data-table-bar-count')).toHaveTextContent(/^2 selected$/);
+      const all = container.querySelector<HTMLInputElement>('thead input[type="checkbox"]');
+      expect(all?.indeterminate).toBe(true);
+      expect(container.querySelectorAll('tbody [aria-selected="true"]')).toHaveLength(2);
+      expect(container.querySelector('.data-table-count')).toBeEmptyDOMElement();
     },
   ],
 ];

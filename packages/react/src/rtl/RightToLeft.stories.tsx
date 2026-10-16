@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { House, Settings, ShoppingCart, User } from 'lucide-react';
-import { useEffect, type ReactElement, type ReactNode } from 'react';
-import { I18nProvider } from 'react-aria-components';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { RangeCalendar } from '../calendar';
@@ -1409,10 +1409,46 @@ export const NumeralInASentence: Story = {
   },
 };
 
+/** The Persian rows the mirrored tables draw. */
+const PERSIAN_ROWS = [
+  { id: 'p1', payee: 'فروشگاه سر کوچه', category: 'خوراک', amount: '-۱۲۵٬۰۰۰ تومان' },
+  { id: 'p2', payee: 'مترو', category: 'رفت و آمد', amount: '-۸٬۰۰۰ تومان' },
+];
+
+/** A Persian table with one row selected, so the checkbox column and the bar show. */
+function MirroredSelection(): ReactElement {
+  const [keys, setKeys] = useState<Key[]>(['p1']);
+  return (
+    <div data-selecting="">
+      <DataTable
+        aria-label="تراکنش‌های انتخاب‌شده"
+        items={PERSIAN_ROWS}
+        columns={[
+          { id: 'payee', header: 'گیرنده', cell: (row) => row.payee },
+          { id: 'amount', header: 'مبلغ', cell: (row) => row.amount, align: 'end', width: '10rem' },
+        ]}
+        getKey={(row) => row.id}
+        selectedKeys={keys}
+        onSelectionChange={setKeys}
+        formatCount={(count) => String(count).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit)}
+        bulkActions={<Button variant="secondary">دسته‌بندی</Button>}
+        labels={{
+          selectAll: 'انتخاب همه',
+          select: 'انتخاب',
+          clearSelection: 'پاک کردن انتخاب',
+          selected: (count) => `${count} انتخاب شده`,
+          toolbar: 'کارهای گروهی',
+        }}
+      />
+    </div>
+  );
+}
+
 /**
  * A data table on a Persian page: the columns run from the right, so the row header, the first column, is the
  * rightmost cell; an amount sits at its cell's left edge and stays a left-to-right run inside; and the current
- * row's bar is the first cell's inline-start border, which is its right edge.
+ * row's bar is the first cell's inline-start border, which is its right edge. In a second table with a row
+ * selected, the checkbox column is the rightmost and the bar's count sits at the bar's right.
  */
 export const DataTableMirrored: Story = {
   render: () => (
@@ -1434,6 +1470,7 @@ export const DataTableMirrored: Story = {
             getRowHref={(row) => `/transactions/${row.id}`}
             currentKey="p2"
           />
+          <MirroredSelection />
         </div>
       </RouterProvider>
     </I18nProvider>
@@ -1459,5 +1496,22 @@ export const DataTableMirrored: Story = {
     await expect(style.borderRightWidth).toBe('3px');
     await expect(style.borderRightStyle).toBe('solid');
     await expect(style.borderLeftWidth).toBe('0px');
+
+    // The checkbox column is the rightmost, in the header and in each row.
+    const selecting = find(canvasElement, '[data-selecting]');
+    const headerRow = find(selecting, 'thead [role="row"]');
+    const box = find(headerRow, '[data-selection]');
+    await expect(Math.abs(rect(box).right - rect(headerRow).right)).toBeLessThan(1);
+    for (const row of selecting.querySelectorAll<HTMLElement>('.data-table-body > [role="row"]')) {
+      const cell = find(row, '[data-selection]');
+      await expect(Math.abs(rect(cell).right - rect(row).right)).toBeLessThan(1);
+    }
+    // The bar's count at its right, the actions to its left.
+    const bar = find(selecting, '.data-table-bar');
+    const count = find(bar, '.data-table-bar-count');
+    await expect(count).toHaveTextContent('۱ انتخاب شده');
+    const barPadding = parseFloat(getComputedStyle(bar).paddingRight);
+    await expect(Math.abs(rect(count).right - (rect(bar).right - barPadding - 1))).toBeLessThan(1.5);
+    await expect(rect(find(bar, '.data-table-bar-actions')).right).toBeLessThan(rect(count).left);
   },
 };

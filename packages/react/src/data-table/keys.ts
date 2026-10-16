@@ -1,23 +1,48 @@
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { matchesShortcut, parseShortcut } from '../command-palette/shortcut';
+import { isAnotherModalOpen } from '../overlay/useOverlayStack';
+import type { Key } from './selection';
 
 /*
  * DataTable's capture-phase key handler, on its root, so it runs before React Aria's handlers on the grid, its
- * rows and its cells (spec 7.2, ruling 3). This task's part is the hidden-cell keys: React Aria's keyboard
- * delegate walks the collection, not the DOM, so a key would land its focused key, and the grid's one tab stop,
- * on a cell or a column header the container query hid (spec correction 8). The handler works out the cell
- * React Aria would reach, as `TableKeyboardDelegate` does, and only when that cell has left does it take the key
- * and focus the nearest shown one, whose focus event sets React Aria's focused key. Every DOM read is here, at
- * key time, never at render.
+ * rows and its cells (spec 7.2, ruling 3). It gives Enter on a row its link, J and K the arrows' meaning and X the
+ * selection toggle, stops every other single printable key before React Aria's typeahead, and keeps the arrows
+ * off cells that have left. React Aria's keyboard delegate walks the collection, not the DOM, so a key would land
+ * its focused key, and the grid's one tab stop, on a cell or a column header the container query hid (spec
+ * correction 8). The handler works out the cell React Aria would reach, as `TableKeyboardDelegate` does, and only
+ * when that cell has left does it take the key and focus the nearest shown one, whose focus event sets React
+ * Aria's focused key. Every DOM read is here, at key time, never at render.
  */
 
 const CELL = '[role="gridcell"], [role="rowheader"], [role="columnheader"]';
 const ROW_CELLS = ':scope > [role="gridcell"], :scope > [role="rowheader"], :scope > [role="columnheader"]';
 const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
-/** What the handler needs from DataTable: the locale's direction, which React Aria's delegate reads too. */
-export interface TableKeyOptions {
+/** What the handler needs from DataTable. */
+export interface TableKeyActions {
+  /** The locale's direction, which React Aria's delegate reads too. */
   direction: 'ltr' | 'rtl';
+  /**
+   * The app's key for a body row that can be selected, or null: the totals row, the empty row, a disabled row, a
+   * header row, or any row while selection is off.
+   */
+  keyOf: (row: Element) => Key | null;
+  /** Toggles the row's selection, as Space does. */
+  toggle: (key: Key) => void;
+  /** Extends the selection to `row`, as React Aria does when Shift is held with a key that moves. */
+  extend: (row: Element) => void;
 }
+
+const J = parseShortcut('j');
+const K = parseShortcut('k');
+const X = parseShortcut('x');
+
+/** Where a key types text: a text input, a text area, a select or editable content. A checkbox types nothing. */
+const EDITABLE =
+  'input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="range"], [type="color"], [type="file"]), textarea, select, [contenteditable]:not([contenteditable="false"])';
+
+/** A row's own cells, where Enter opens the row; a column header's Enter sorts, and a control's is its own. */
+const BODY_CELL = '[role="gridcell"], [role="rowheader"]';
 
 /** A cell that has left stays in its row at zero width and hidden, so it is shown only while visible. */
 const isShown = (cell: Element): boolean => {
@@ -148,34 +173,123 @@ function upToHeader(from: Element, row: Element): HTMLElement | null {
 /**
  * Moves an arrow, Home or End past a cell or a column header the CSS hid: when the one React Aria would reach
  * has left, the key stops here and focus goes to the nearest shown one in that direction, whose focus event sets
- * React Aria's focused key. Every other key passes through. It takes the keys with the modifiers React Aria's
- * grid moves with (`useSelectableCollection.mjs`): none, Shift, and Ctrl off a Mac or Alt on one, with Ctrl
- * taking Home and End to the grid's corners off a Mac. Arrow Right is the next cell in DOM order in a
- * left-to-right locale and the previous in a right-to-left one, as React Aria reads it from the locale.
+ * React Aria's focused key; true when it took the key. Every other key passes through. It takes the keys with the
+ * modifiers React Aria's grid moves with (`useSelectableCollection.mjs`): none, Shift, and Ctrl off a Mac or Alt
+ * on one, with Ctrl taking Home and End to the grid's corners off a Mac. Arrow Right is the next cell in DOM order
+ * in a left-to-right locale and the previous in a right-to-left one, as React Aria reads it from the locale.
+ * With Shift, React Aria extends the selection to the row of the cell it reaches on an arrow and on Ctrl+Home or
+ * Ctrl+End, so where the handler takes such a key it extends the selection to the shown cell's row, the same row
+ * React Aria would have reached: a column that has left never stops Shift from extending.
  */
-export function handleTableKey(event: KeyboardEvent<HTMLElement>, { direction }: TableKeyOptions): void {
+function hiddenCellKey(
+  event: ReactKeyboardEvent<HTMLElement>,
+  { direction, extend }: TableKeyActions,
+): boolean {
   const { key } = event;
   if (key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'ArrowUp' && key !== 'Home' && key !== 'End')
-    return;
-  if (event.metaKey || event.nativeEvent.isComposing) return;
+    return false;
+  if (event.metaKey) return false;
   const mac = isMac();
-  if (mac ? event.ctrlKey : event.altKey) return;
+  if (mac ? event.ctrlKey : event.altKey) return false;
   const active = event.currentTarget.ownerDocument.activeElement;
-  if (active === null) return;
+  if (active === null) return false;
   const from = startOf(active, event.currentTarget);
-  if (from === null) return;
+  if (from === null) return false;
   const row = rowOf(from);
-  if (row === null) return;
+  if (row === null) return false;
   let target: HTMLElement | null;
+  let extending = false;
   if (key === 'Home' || key === 'End') {
-    target = toEnd(from, row, key === 'Home', !mac && event.ctrlKey);
+    const corner = !mac && event.ctrlKey;
+    target = toEnd(from, row, key === 'Home', corner);
+    // Home and End extend only with Ctrl, to the grid's corners.
+    extending = corner;
   } else if (key === 'ArrowUp') {
+    // A column header is never selected.
     target = upToHeader(from, row);
   } else {
     target = sideways(from, row, active, (key === 'ArrowRight') === (direction === 'ltr') ? 1 : -1);
+    extending = !isHeader(from);
   }
-  if (target === null) return;
+  if (target === null) return false;
   event.preventDefault();
   event.stopPropagation();
   target.focus();
+  const reached = rowOf(target);
+  if (event.shiftKey && extending && reached !== null) extend(reached);
+  return true;
+}
+
+/**
+ * The table's keys, in this order (spec 7.2, spec corrections 6 to 8). Nothing is taken from a key that reached
+ * the root only through React's tree (a Menu opened in a cell is a portal), a composing key, a key while another
+ * modal is open, a key typed into an editable element or a key inside the bulk-action bar. Then: Enter on a row
+ * or one of its own cells opens the row's link, with any modifiers, and never reaches React Aria, which would
+ * select the row; the arrows, Home and End past a column that has left; every other key with Ctrl, Alt or Meta is
+ * React Aria's (Mod+A, Shift with the arrows); J and K are dispatched as Arrow Down and Arrow Up on the focused
+ * element; X toggles the focused row; and every other single printable key but Space stops here, so React Aria's
+ * typeahead never runs. J, K and X match by `event.key` and then by `event.code`, so a Persian layout's J is J.
+ */
+export function handleTableKey(event: ReactKeyboardEvent<HTMLElement>, actions: TableKeyActions): void {
+  const native = event.nativeEvent;
+  const target = event.target as Element;
+  if (!event.currentTarget.contains(target)) return;
+  if (native.isComposing || isAnotherModalOpen()) return;
+  if (target.closest(EDITABLE) !== null || target.closest('.data-table-bar') !== null) return;
+  const row = target.closest('[role="row"]');
+  if (event.key === 'Enter' && row !== null && (target === row || target.matches(BODY_CELL))) {
+    // React Aria would select a row with no action on Enter (spec correction 6), so Enter never reaches it.
+    event.preventDefault();
+    event.stopPropagation();
+    openRow(row, native);
+    return;
+  }
+  if (hiddenCellKey(event, actions)) return;
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  const j = matchesShortcut(native, J);
+  if (j || matchesShortcut(native, K)) {
+    event.preventDefault();
+    event.stopPropagation();
+    const arrow = j ? 'ArrowDown' : 'ArrowUp';
+    // React Aria moves on the arrow's keydown, which the grid hears from the focused element.
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { key: arrow, code: arrow, bubbles: true, cancelable: true }),
+    );
+    return;
+  }
+  if (matchesShortcut(native, X)) {
+    event.preventDefault();
+    event.stopPropagation();
+    const key = row === null ? null : actions.keyOf(row);
+    if (key !== null) actions.toggle(key);
+    return;
+  }
+  // Typeahead: a letter never moves focus (ruling 3). Space is React Aria's toggle.
+  if (event.key.length === 1 && event.key !== ' ') event.stopPropagation();
+}
+
+/**
+ * Opens the row's link: a plain click, so the router opens it, or a click carrying the modifiers, so the browser
+ * opens a new tab or window as it would for a modifier click, as React Aria's `openLink` does. A row without a
+ * link (a disabled row, the totals row, the empty row) opens nothing.
+ */
+function openRow(row: Element, native: KeyboardEvent): void {
+  const link = row.querySelector<HTMLAnchorElement>('a.data-table-link');
+  if (link === null) return;
+  const { ctrlKey, metaKey, shiftKey, altKey } = native;
+  if (!ctrlKey && !metaKey && !shiftKey && !altKey) {
+    link.click();
+    return;
+  }
+  link.dispatchEvent(
+    new MouseEvent('click', {
+      ctrlKey,
+      metaKey,
+      shiftKey,
+      altKey,
+      bubbles: true,
+      cancelable: true,
+      detail: 1,
+    }),
+  );
 }

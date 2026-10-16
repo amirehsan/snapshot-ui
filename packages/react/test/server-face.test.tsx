@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, inject, it } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
+import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
 import { FilterBar } from '../src/filter-bar';
@@ -125,6 +126,24 @@ const FACES: [name: string, element: ReactElement][] = [
       currentKey="t2"
       sortDescriptor={{ column: 'date', direction: 'descending' }}
       onSortChange={noop}
+    />,
+  ],
+  [
+    // Two rows selected: the checked boxes, the header's indeterminate box, and the bar with its count, written
+    // by the app's formatCount; the count's status is empty.
+    'DataTable selected',
+    <DataTable
+      aria-label="Transactions"
+      items={FIVE}
+      columns={columnsWithTotal(FIVE)}
+      getKey={keyOf}
+      getRowHref={hrefOf}
+      sortDescriptor={{ column: 'date', direction: 'descending' }}
+      onSortChange={noop}
+      selectedKeys={['t1', 't3']}
+      onSelectionChange={noop}
+      bulkActions={<Button variant="secondary">Categorize</Button>}
+      formatCount={(count) => String(count)}
     />,
   ],
 ];

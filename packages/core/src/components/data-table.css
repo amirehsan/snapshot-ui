@@ -10,6 +10,8 @@
  * box, 48rem for md and 40rem for sm, widths and not breakpoint tokens. A column that leaves keeps its cells,
  * drawn zero wide and hidden, so every row and React Aria's spanning empty cell count the same columns in every
  * engine, and the table stays the full width of its box; a skeleton row's cell for it is not drawn at all.
+ * With selection on, a 3.5rem checkbox column comes first and a selected row takes the 8% ink wash with its
+ * checked box; the bulk-action bar is the float surface, stuck to the viewport's bottom inside the table's box.
  */
 @layer components {
   .data-table {
@@ -202,7 +204,11 @@
       color: var(--color-ink);
     }
 
-    .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled]) {
+    .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not(
+        [data-disabled],
+        [data-selected],
+        [aria-selected='true']
+      ) {
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
     }
   }
@@ -277,6 +283,61 @@
     white-space: nowrap;
   }
 
+  /* ---- Selection: the 3.5rem checkbox column and the 8% wash ------------------------------------ */
+  /* 3.5rem holds the 40px checkbox and its 8px of room either side; the column never leaves. */
+  .data-table-column[data-selection],
+  .data-table-cell[data-selection] {
+    --data-table-pad: var(--spacing-part);
+
+    inline-size: 3.5rem;
+  }
+
+  .data-table-skeleton-cell[data-selection] {
+    flex: 0 0 3.5rem;
+  }
+
+  /* One step over hover, and it holds under the pointer: a selected row is marked by its box, never color alone. */
+  .data-table-row:is([data-selected], [aria-selected='true']),
+  .data-table-row:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
+    background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
+  }
+
+  /* ---- The bulk-action bar: the float surface, stuck to the viewport's bottom inside the table's box -- */
+  /* It rides with the table and clears a bottom tab bar's reserve; once the table has scrolled past, it stays
+     with it and never covers what follows. One layer under the header token, as the header cells. */
+  .data-table-bar {
+    position: sticky;
+    inset-block-end: calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset));
+    z-index: calc(var(--z-header) - 1);
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-part);
+    margin-block-start: var(--spacing-inset);
+    padding-block: var(--spacing-part);
+    padding-inline: var(--spacing-inset) var(--spacing-part);
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+    color: var(--color-ink);
+  }
+
+  .data-table-bar-count {
+    margin-inline-end: auto;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .data-table-bar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-part);
+  }
+
   /* ---- Columns that leave, by the table's own box ----------------------------------------------- */
   /* A header or body cell that leaves stays in its row at zero width, hidden from sight, the pointer and
      assistive technology; display: none would drop it from the row while React Aria's spanning empty cell
@@ -339,6 +400,15 @@
 
     .data-table-row:is([data-disabled], [aria-disabled='true']) {
       color: GrayText;
+    }
+
+    .data-table-row:is([data-selected], [aria-selected='true']) {
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .data-table-bar {
+      border-color: CanvasText;
     }
   }
 }
