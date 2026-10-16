@@ -15,7 +15,6 @@ import { Checkbox } from '../checkbox/Checkbox';
 import { Link } from '../link/Link';
 import { Skeleton } from '../skeleton/Skeleton';
 import { present } from '../utils/present';
-import { usePressAcrossRedraw } from '../utils/press-across-redraw';
 import type { DataTableColumn } from './DataTable';
 import type { RowGroup } from './groups';
 import { figure, UNTABBED, type FaceRow } from './TableFace';
@@ -123,8 +122,6 @@ function ListItem<T>({
   probe,
 }: ListItemProps<T>): ReactElement {
   const hasLink = row.href !== undefined && !isDisabled;
-  // React Aria draws every item again after hydration, so a press on the link that began before is followed.
-  const press = usePressAcrossRedraw<HTMLAnchorElement>('[role="grid"]');
   const inSlot = (slot: Slot): DataTableColumn<T>[] =>
     columns.filter((column) => slotOf(column, rowHeader) === slot);
   const title = inSlot('title');
@@ -162,7 +159,6 @@ function ListItem<T>({
             className="data-table-link"
             aria-current={isCurrent ? 'true' : undefined}
             {...UNTABBED}
-            {...press}
           >
             {body}
           </Link>

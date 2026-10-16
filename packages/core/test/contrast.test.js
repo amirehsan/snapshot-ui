@@ -1287,7 +1287,7 @@ describe('the data table', () => {
     const ground = wash > 0 ? composite({ ...parseColor(palette.ink), a: wash }, base) : base;
     return contrastRatio(composite(parseColor(palette[name]), ground), ground);
   };
-  const HOVER = 0.03;
+  const HOVER = 0.05;
   const SELECTED = 0.08;
 
   // A cell is ink and a header slate, on the page or in a card. The gate holds each as text on both, so the
@@ -1302,19 +1302,21 @@ describe('the data table', () => {
     }
   });
 
-  // The hover wash is a mix and not a token, so its pairs are measured and recorded, not gated. It is 3%, the
-  // most that keeps slate text an app puts in a cell at 4.5 over canvas in light (5% measured 4.38). The rules
-  // are the divider and the frame, recorded as drawn.
+  // The hover wash is a mix and not a token, so its pairs are measured and recorded, not gated. Slate on it falls
+  // under 4.5 over canvas in light, so slate in a hovered row, an app's own cell text included, is granite there.
+  // The rules are the divider and the frame, recorded as drawn.
   it('measures the pairs Appendix B records, in both modes', () => {
     for (const { text, ground, wash, light, dark } of [
       { text: 'ink', ground: 'canvas', wash: 0, light: 16.25, dark: 19.31 },
       { text: 'ink', ground: 'lifted', wash: 0, light: 17.84, dark: 17.42 },
       { text: 'slate', ground: 'canvas', wash: 0, light: 4.84, dark: 7.26 },
       { text: 'slate', ground: 'lifted', wash: 0, light: 5.31, dark: 6.94 },
-      { text: 'ink', ground: 'canvas', wash: HOVER, light: 15.31, dark: 18.23 },
-      { text: 'ink', ground: 'lifted', wash: HOVER, light: 16.79, dark: 16.14 },
-      { text: 'slate', ground: 'canvas', wash: HOVER, light: 4.56, dark: 7.1 },
-      { text: 'slate', ground: 'lifted', wash: HOVER, light: 5.0, dark: 6.64 },
+      { text: 'ink', ground: 'canvas', wash: HOVER, light: 14.7, dark: 17.41 },
+      { text: 'ink', ground: 'lifted', wash: HOVER, light: 16.11, dark: 15.25 },
+      { text: 'slate', ground: 'canvas', wash: HOVER, light: 4.38, dark: 6.93 },
+      { text: 'slate', ground: 'lifted', wash: HOVER, light: 4.8, dark: 6.41 },
+      { text: 'granite', ground: 'canvas', wash: HOVER, light: 5.94, dark: 9.0 },
+      { text: 'granite', ground: 'lifted', wash: HOVER, light: 6.52, dark: 8.18 },
       { text: 'divider', ground: 'canvas', wash: 0, light: 1.23, dark: 1.28 },
       { text: 'frame', ground: 'canvas', wash: 0, light: 1.28, dark: 1.36 },
     ]) {
@@ -1351,16 +1353,15 @@ describe('the data table', () => {
 
   // Slate text in a cell, or in a list item, meets 4.5 in every state a row or an item takes, in both modes, on
   // the page and in a card: at rest, and so current, disabled (whose text is taupe, which is exempt) and the
-  // totals, which take no fill; hovered, on the 3% wash; selected, hovered or not, as granite on the 8% wash;
-  // and on the bulk bar's float surface.
+  // totals, which take no fill; hovered, as granite on the 5% wash; selected, hovered or not, as granite on the
+  // 8% wash; and on the bulk bar's float surface.
   it('keeps slate text at 4.5 in every row state, in both modes, on the page and in a card', () => {
     for (const mode of ['light', 'dark']) {
       for (const ground of ['canvas', 'lifted']) {
         const where = `${ground} ${mode}`;
         expect(measured(mode, 'slate', ground), `rest, ${where}`).toBeGreaterThanOrEqual(TEXT);
-        expect(measured(mode, 'slate', ground, { wash: HOVER }), `hovered, ${where}`).toBeGreaterThanOrEqual(
-          TEXT,
-        );
+        const hovered = measured(mode, 'granite', ground, { wash: HOVER });
+        expect(hovered, `hovered, ${where}`).toBeGreaterThanOrEqual(TEXT);
         const selected = measured(mode, 'granite', ground, { wash: SELECTED });
         expect(selected, `selected, ${where}`).toBeGreaterThanOrEqual(TEXT);
         const ink = measured(mode, 'ink', ground, { wash: SELECTED });
@@ -1368,19 +1369,20 @@ describe('the data table', () => {
       }
       expect(measured(mode, 'slate', 'float'), `the bar, ${mode}`).toBeGreaterThanOrEqual(TEXT);
     }
-    // Why selected slate turns granite: on the 8% wash over canvas in light, slate alone fails.
+    // Why slate turns granite on either wash: over canvas in light, slate alone fails.
+    expect(measured('light', 'slate', 'canvas', { wash: HOVER })).toBeLessThan(TEXT);
     expect(measured('light', 'slate', 'canvas', { wash: SELECTED })).toBeLessThan(TEXT);
   });
 
   // The list face's meta line is slate on the page or in a card, which the gate holds; on a hovered or selected
-  // item it turns ink, which the 3% and 8% washes keep over 13. Other slate in an item is slate on the 3% wash
-  // when hovered and granite on the 8% when selected, as in a row. A selected item's mark out of Select mode is
+  // item it turns ink, which the 5% and 8% washes keep over 13. Other slate in a hovered or selected item is
+  // granite, as in a row. A selected item's mark out of Select mode is
   // a canvas check on an ink box, the checked checkbox's own pair.
   it('measures the list face, in both modes', () => {
     for (const { text, ground, wash, light, dark } of [
       { text: 'slate', ground: 'canvas', wash: 0, light: 4.84, dark: 7.26 },
       { text: 'slate', ground: 'lifted', wash: 0, light: 5.31, dark: 6.94 },
-      { text: 'ink', ground: 'canvas', wash: HOVER, light: 15.31, dark: 18.23 },
+      { text: 'ink', ground: 'canvas', wash: HOVER, light: 14.7, dark: 17.41 },
       { text: 'ink', ground: 'canvas', wash: SELECTED, light: 13.81, dark: 16.06 },
       { text: 'canvas', ground: 'ink', wash: 0, light: 16.25, dark: 19.31 },
     ]) {

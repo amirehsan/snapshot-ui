@@ -1032,15 +1032,6 @@ const holdScripts = async (page: Page): Promise<() => Promise<void>> => {
   };
 };
 
-/** Puts the pointer down at the middle of `target`, a press the page's scripts have not seen. */
-const pressDown = async (page: Page, target: Locator): Promise<void> => {
-  await target.scrollIntoViewIfNeeded();
-  const box = await target.boundingBox();
-  if (box === null) throw new Error('Nothing drawn to press');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-};
-
 test('a tab row that does not fit passes axe at 390px, before hydration and after', async ({ page }) => {
   // axe asks that a scrolling region be reachable by key. The tab row is, by its tab stop, which React Aria
   // gave only in an effect: the server's HTML had none, and axe reported scrollable-region-focusable.
@@ -1069,40 +1060,112 @@ test('a tab row that does not fit passes axe at 390px, before hydration and afte
   expect(await scope()).toEqual([]);
 });
 
-test('a press on a tab that begins before hydration and ends after it selects the tab', async ({ page }) => {
-  // React Aria draws every tab again just after hydration, so the press ends on a new element and the browser,
-  // whose pressed element is gone, sends no click. The new tab follows the press that began on the one it replaced.
-  const release = await holdScripts(page);
-  await page.goto('/docs/components/tabs', { waitUntil: 'commit' });
-  const example = page
-    .locator('.stage .tabs')
-    .filter({ has: page.getByRole('tab', { name: 'Transfers' }) })
-    .filter({ hasNot: page.locator('a.tab') })
-    .first();
-  const income = example.getByRole('tab', { name: 'Income' });
-  await expect(income).toHaveAttribute('aria-selected', 'false');
-  await pressDown(page, income);
+/** Starts counting the page's navigations, in the document (a router's push, a hash) or away from it. */
+const countNavigations = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    const own = window as unknown as {
+      navigation: EventTarget;
+      navigations?: string[];
+    };
+    own.navigations = [];
+    own.navigation.addEventListener('navigate', (event) => {
+      own.navigations?.push((event as Event & { destination: { url: string } }).destination.url);
+    });
+  });
+
+/** The navigations counted since `countNavigations`. */
+const navigationsOf = (page: Page): Promise<string[]> =>
+  page.evaluate(() => (window as unknown as { navigations?: string[] }).navigations ?? []);
+
+/**
+ * A touch on `target` that begins before hydration and ends after it. React Aria draws tabs and table rows again
+ * as the page hydrates, so the touch ends on a new element: the test holds the server's element and waits until
+ * it has left the page before the finger lifts. The browser then sends the new element a click with no
+ * pointerdown before it, which React Aria would cancel.
+ */
+const touchAcrossHydration = async (
+  page: Page,
+  release: () => Promise<void>,
+  target: Locator,
+): Promise<void> => {
+  await target.scrollIntoViewIfNeeded();
+  const box = await target.boundingBox();
+  if (box === null) throw new Error('Nothing drawn to touch');
+  const server = await target.elementHandle();
+  const cdp = await page.context().newCDPSession(page);
+  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
   await release();
+  await page.waitForFunction((element) => !element.isConnected, server);
   await settled(page);
-  await page.mouse.up();
-  await expect(example.getByRole('tab', { name: 'Income' })).toHaveAttribute('aria-selected', 'true');
+  await countNavigations(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+};
+
+test.describe('a touch that spans hydration', () => {
+  test.use({ hasTouch: true });
+
+  test('selects a tab once', async ({ page }) => {
+    const release = await holdScripts(page);
+    await page.goto('/docs/components/tabs', { waitUntil: 'commit' });
+    const example = page
+      .locator('.stage .tabs')
+      .filter({ has: page.getByRole('tab', { name: 'Transfers' }) })
+      .filter({ hasNot: page.locator('a.tab') })
+      .first();
+    const income = example.getByRole('tab', { name: 'Income' });
+    await expect(income).toHaveAttribute('aria-selected', 'false');
+    await touchAcrossHydration(page, release, income);
+    await expect(example.getByRole('tab', { name: 'Income' })).toHaveAttribute('aria-selected', 'true');
+    expect(await navigationsOf(page)).toEqual([]);
+  });
+
+  test('follows a link tab through the router once', async ({ page }) => {
+    const release = await holdScripts(page);
+    await page.goto('/docs/components/tabs', { waitUntil: 'commit' });
+    const income = page.locator('.stage a.tab[href$="?view=income"]').first();
+    await expect(income).toBeAttached();
+    await touchAcrossHydration(page, release, income);
+    await expect(page).toHaveURL(/\/docs\/components\/tabs\?view=income$/);
+    await page.waitForTimeout(300);
+    expect(await navigationsOf(page)).toEqual([expect.stringMatching(/\?view=income$/)]);
+  });
+
+  test("opens a data table row's link once", async ({ page }) => {
+    const release = await holdScripts(page);
+    await page.goto('/docs/components/data-table', { waitUntil: 'commit' });
+    const link = page.locator('.stage .data-table-row .data-table-link').first();
+    await expect(link).toBeAttached();
+    const href = await link.getAttribute('href');
+    expect(href).toMatch(/^#/);
+    await touchAcrossHydration(page, release, link);
+    await expect(page).toHaveURL(new RegExp(`${href ?? ''}$`));
+    await page.waitForTimeout(300);
+    expect(await navigationsOf(page)).toHaveLength(1);
+  });
 });
 
-test("a press on a data table row's link that begins before hydration and ends after it opens the row", async ({
+test('a modified click on a link tab opens nothing in place, and a screen reader click follows it once', async ({
   page,
 }) => {
-  // The rows are drawn again just after hydration, as tabs are, so the row's link follows the press itself.
-  const release = await holdScripts(page);
-  await page.goto('/docs/components/data-table', { waitUntil: 'commit' });
-  const link = page.locator('.stage .data-table-row .data-table-link').first();
-  await expect(link).toBeAttached();
-  const href = await link.getAttribute('href');
-  expect(href).toMatch(/^#/);
-  await pressDown(page, link);
-  await release();
-  await settled(page);
-  await page.mouse.up();
-  await expect(page).toHaveURL(new RegExp(`${href ?? ''}$`));
+  await visit(page, '/docs/components/tabs');
+  const income = page.locator('.stage a.tab[href$="?view=income"]').first();
+  await scrolledTo(income);
+  await countNavigations(page);
+  // A new tab or window is the browser's: the page stays where it is.
+  const popup = page.context().waitForEvent('page');
+  await income.click({ modifiers: ['ControlOrMeta'] });
+  await (await popup).close();
+  await page.waitForTimeout(300);
+  await expect(page).toHaveURL(/\/docs\/components\/tabs$/);
+  expect(await navigationsOf(page)).toEqual([]);
+  // A screen reader's click has no click count and no pointer: one navigation, through the router.
+  await income.evaluate((element) => {
+    (element as HTMLElement).click();
+  });
+  await expect(page).toHaveURL(/\/docs\/components\/tabs\?view=income$/);
+  await page.waitForTimeout(300);
+  expect(await navigationsOf(page)).toHaveLength(1);
 });
 
 test.describe('the tabs page without JavaScript', () => {
