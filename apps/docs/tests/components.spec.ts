@@ -753,6 +753,31 @@ test.describe('forced colors', () => {
     await expect(disabled).toHaveCSS('border-top-color', grayText);
     await expect(disabled).toHaveCSS('color', grayText);
   });
+
+  test('a side panel draws its edge and its footer rule in CanvasText, and rings its heading in Highlight', async ({
+    page,
+  }) => {
+    // The float fill and the lift are repainted away, so the edge is what draws the panel beside the content.
+    await visit(page, '/docs/components/side-panel');
+    const canvasText = await systemColor(page, 'CanvasText');
+    const highlight = await systemColor(page, 'Highlight');
+    const panel = page.locator('.stage .side-panel').first();
+    await expect(panel).toBeVisible();
+    for (const side of ['top', 'right', 'bottom', 'left']) {
+      await expect(panel).toHaveCSS(`border-${side}-color`, canvasText);
+      await expect(panel).toHaveCSS(`border-${side}-style`, 'solid');
+    }
+    // The ring a keyboard lands on as the panel opens.
+    await page.keyboard.press('Tab');
+    const heading = panel.locator('.side-panel-title');
+    await heading.focus();
+    await expect(heading).toHaveCSS('outline-color', highlight);
+    // The footer's divider, in the example with actions, once a row there is opened.
+    const second = page.locator('.stage').nth(1);
+    await second.locator('.data-table-table .data-table-link').first().click();
+    const footer = second.locator('.side-panel-footer');
+    await expect(footer).toHaveCSS('border-top-color', canvasText);
+  });
 });
 
 // ---- Props tables -------------------------------------------------------------------------------
@@ -856,6 +881,8 @@ const NO_LONG_TEXT: Record<string, string> = {
   menu: "its text is in a portal that opens on a press; the EndValues story's 375px baseline pins its wrapping",
   popover: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   sheet: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
+  'side-panel':
+    'under 1024px the panel is a sheet that opens on a press; the 1280px baselines pin the aside wrapping',
   skeleton: 'a skeleton draws shapes and no text',
   sparkline: 'a drawing with no text; its name, when it has one, is an aria-label nothing draws',
   spinner: 'a progress mark with no text a person writes',
@@ -1007,6 +1034,9 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The trigger and the value it shows; the list renders nothing until it opens.
   select: ['.stage .select-trigger', '.stage .select-value'],
   sheet: ['.stage .button'],
+  // The layout and the open aside, its heading and its body: the basic example is open, and the aside is in the
+  // server's HTML; the sheet mounts only after hydration.
+  'side-panel': ['.stage .side-panel-layout', '.stage .side-panel', '.stage .side-panel-title'],
   sidebar: ['.stage .sidebar'],
   // A static part: the shapes are in the server's HTML, hidden from assistive technology.
   skeleton: ['.stage .skeleton'],

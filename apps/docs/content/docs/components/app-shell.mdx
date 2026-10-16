@@ -29,6 +29,8 @@ The examples on this page sit in a frame, so the rail floats inside it. In an ap
 
 While collapsed, the root carries `data-sidebar="collapsed"`, and CSS does the rest. The attribute narrows the rail from any ancestor.
 
+Under 1440px an open [SidePanel](/docs/components/side-panel) folds the rail to its icons and gives it back as it closes, so the content beside the panel keeps its room. The fold is not the reader's choice: `onSidebarCollapsedChange` is not called and a cookie that keeps the choice never holds it. `useAppShell().isSidebarCollapsed` reports the rail as drawn, folded or not. Expanding the rail over an open panel keeps it expanded until the panel closes.
+
 <Preview name="app-shell-collapsed" />
 
 </Section>

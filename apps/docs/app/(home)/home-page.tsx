@@ -831,6 +831,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/segmented-control">Segmented control</Link>
                 <Link href="/docs/components/select">Select</Link>
                 <Link href="/docs/components/sheet">Sheet</Link>
+                <Link href="/docs/components/side-panel">Side panel</Link>
                 <Link href="/docs/components/sidebar">Sidebar</Link>
                 <Link href="/docs/components/skeleton">Skeleton</Link>
                 <Link href="/docs/components/spinner">Spinner</Link>
