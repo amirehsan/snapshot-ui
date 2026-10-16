@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, type ReactElement } from 'react';
+import { createRef, useLayoutEffect, useRef, useState, type ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { root } from '../../test/dom';
@@ -721,4 +721,51 @@ describe('NumberField', () => {
     );
     expect([stepped, step, currency, nameless, named, compact, display, money, plain]).toHaveLength(9);
   });
+});
+
+/**
+ * A known React Aria issue, kept as a test that is expected to fail, so it reports when an update fixes it.
+ * React Aria's useNumberField commits the typed text on blur inside flushSync (useNumberField.mjs:60-66, in
+ * react-aria 3.53.1). A blur the browser sends while React commits, as when an app moves focus from a layout
+ * effect or disables or removes the focused field, makes React log "flushSync was called from inside a
+ * lifecycle method". It happens in every mode, at any value, with React Aria's own NumberField too, and only in
+ * development: the commit still lands, a render later. The library cannot reach the call without taking React
+ * Aria's blur from it, which would drop the announcement of the corrected value.
+ */
+function SavesOnEnter(): ReactElement {
+  const [saved, setSaved] = useState(false);
+  const done = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (saved) done.current?.focus();
+  }, [saved]);
+  return (
+    <>
+      <NumberField
+        label="Guests"
+        value={0}
+        minValue={0}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') setSaved(true);
+        }}
+      />
+      <button ref={done} type="button">
+        Done
+      </button>
+    </>
+  );
+}
+
+describe('NumberField and React Aria', () => {
+  it.fails(
+    'logs nothing when focus leaves the field during a commit (React Aria flushes on blur)',
+    async () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const user = userEvent.setup();
+      render(<SavesOnEnter />);
+      await user.click(amount('Guests'));
+      await user.keyboard('{Enter}');
+      expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus();
+      expect(error.mock.calls.map((call) => String(call[0]))).toEqual([]);
+    },
+  );
 });

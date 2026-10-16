@@ -21,6 +21,7 @@ import { Tooltip, TooltipTrigger } from '../tooltip/Tooltip';
 import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
+import { useHydrated } from '../utils/useHydrated';
 
 export type SidebarProps = Omit<
   HTMLAttributes<HTMLDivElement>,
@@ -115,6 +116,12 @@ function SidebarRail({
   const isCollapsed = !inDrawer && isSidebarCollapsed;
   const state = useMemo<SidebarState>(() => ({ isCollapsed, inDrawer }), [isCollapsed, inDrawer]);
   const toggleLabel = isCollapsed ? expandLabel : collapseLabel;
+  // Before hydration an open SidePanel's fold is the stylesheet's alone, since only the browser knows the width:
+  // a rail the reader has not collapsed may be drawn folded or not. So the server's button holds both names and
+  // the stylesheet shows the one that matches what it draws, and it claims no expanded state until the script
+  // knows it. A rail collapsed by the reader's choice is known on the server and says so.
+  const hydrated = useHydrated();
+  const isFoldUnknown = !hydrated && !isCollapsed;
   return (
     <SidebarContext value={state}>
       <div
@@ -139,14 +146,27 @@ function SidebarRail({
           <TooltipTrigger isDisabled={!isCollapsed}>
             <RACButton
               className="sidebar-collapse"
-              aria-expanded={!isCollapsed}
+              aria-expanded={isFoldUnknown ? undefined : !isCollapsed}
               aria-controls={railId}
               onPress={() => {
                 setSidebarCollapsed(!isSidebarCollapsed);
               }}
             >
               <ChevronLeft aria-hidden="true" />
-              <VisuallyHidden elementType="span">{toggleLabel}</VisuallyHidden>
+              <VisuallyHidden elementType="span">
+                {isFoldUnknown ? (
+                  <>
+                    <span className="sidebar-collapse-name" data-name="collapse">
+                      {collapseLabel}
+                    </span>
+                    <span className="sidebar-collapse-name" data-name="expand">
+                      {expandLabel}
+                    </span>
+                  </>
+                ) : (
+                  toggleLabel
+                )}
+              </VisuallyHidden>
             </RACButton>
             <Tooltip placement="end">{toggleLabel}</Tooltip>
           </TooltipTrigger>

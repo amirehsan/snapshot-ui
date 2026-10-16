@@ -26,6 +26,7 @@ import { Checkbox } from '../checkbox/Checkbox';
 import { Link } from '../link/Link';
 import { Skeleton } from '../skeleton/Skeleton';
 import { present } from '../utils/present';
+import { usePressAcrossRedraw } from '../utils/press-across-redraw';
 import type { DataTableBaseProps, DataTableColumn } from './DataTable';
 import { skeletonWidth } from './rows';
 
@@ -152,6 +153,8 @@ function TableRow<T>({
   selectLabel,
 }: TableRowProps<T>): ReactElement {
   const hasLink = row.href !== undefined && !isDisabled;
+  // React Aria draws every row again after hydration, so a press on the link that began before is followed.
+  const press = usePressAcrossRedraw<HTMLAnchorElement>('[role="grid"]');
   return (
     <Row
       id={row.key}
@@ -186,6 +189,7 @@ function TableRow<T>({
                   className="data-table-link"
                   aria-current={isCurrent ? 'true' : undefined}
                   {...UNTABBED}
+                  {...press}
                 >
                   {body}
                 </Link>
