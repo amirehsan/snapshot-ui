@@ -3679,6 +3679,31 @@ test('Back closes the panel the recipe opened', async ({ page }) => {
   await expect(stage.locator('.side-panel')).toHaveCount(0);
 });
 
+test('closing the recipe panel goes back to the list entry, and another row takes the open row entry', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const { stage, rows, pages } = transactionsRecipe(page);
+  await pages.getByRole('link', { name: 'Page 2', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]page=2(&|$)/);
+  await rows.first().locator('.data-table-link').click();
+  await expect(page).toHaveURL(/[?&]open=t6(&|$)/);
+  // Another row, from the list beside the panel: the open row's entry is replaced.
+  await stage.locator('.data-table-list [role="row"][data-key="t8"] .data-table-link').click();
+  await expect(page).toHaveURL(/[?&]open=t8(&|$)/);
+  await stage.getByRole('button', { name: 'Close' }).click();
+  await expect(stage.locator('.side-panel')).toHaveCount(0);
+  await expect(page).toHaveURL(/[?&]page=2$/);
+  // No copy of the list's entry was left behind: Back goes to page 1.
+  await page.goBack();
+  await expect(page).not.toHaveURL(/page=/);
+  await expect(pages.getByRole('link', { name: 'Page 1', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+});
+
 test('the recipe clears its selection when the page changes', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await visit(page, '/docs/components/data-table');
@@ -3763,3 +3788,55 @@ test.describe('the side panel page without JavaScript', () => {
     }
   });
 });
+
+/** The row that holds focus, if it is drawn: its `data-key`, or what holds focus instead. */
+const focusedDrawnKey = (page: Page): Promise<string> =>
+  page.evaluate(() => {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement) || active === document.body) return 'body';
+    for (let node: Element | null = active; node !== null; node = node.parentElement) {
+      if (getComputedStyle(node).display === 'none') return `hidden ${active.dataset.key ?? active.tagName}`;
+    }
+    // A row's link holds focus when a press opened the row: the row is what it belongs to.
+    return active.closest<HTMLElement>('[data-key]')?.dataset.key ?? active.tagName;
+  });
+
+for (const width of [1024, 1440]) {
+  test(`closing a side panel at ${String(width)}px gives focus back to the drawn row, by key and by pointer`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await visit(page, '/docs/components/side-panel');
+    const { stage, items } = sidePanelExample(page);
+    await items.nth(2).focus();
+    await page.keyboard.press('Enter');
+    await expect(stage.getByRole('heading', { level: 2, name: 'Northside Rent' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(stage.locator('.side-panel')).toHaveCount(0);
+    // The rail unfolds as the panel leaves; focus stays on the row as drawn once the page has settled.
+    await page.waitForTimeout(400);
+    expect(await focusedDrawnKey(page)).toBe('t3');
+    // By pointer: a row's link opens it, and the close button closes it.
+    await items.nth(1).locator('.data-table-link').click();
+    await stage.getByRole('button', { name: 'Close' }).click();
+    await expect(stage.locator('.side-panel')).toHaveCount(0);
+    await page.waitForTimeout(400);
+    expect(await focusedDrawnKey(page)).toBe('t2');
+  });
+
+  test(`closing the recipe's panel at ${String(width)}px gives focus back to the drawn row`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await visit(page, '/docs/components/data-table');
+    const { stage } = transactionsRecipe(page);
+    // Sorted by date, the list's day headings are rows too: the item is found by its key.
+    await stage.locator('.data-table-list [role="row"][data-key="t1"]').focus();
+    await page.keyboard.press('Enter');
+    await expect(stage.getByRole('heading', { level: 2, name: 'Corner Mart' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(stage.locator('.side-panel')).toHaveCount(0);
+    await page.waitForTimeout(400);
+    expect(await focusedDrawnKey(page)).toBe('t1');
+  });
+}

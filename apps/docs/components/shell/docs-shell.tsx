@@ -38,6 +38,23 @@ export function DocsShell({
   useEffect(() => {
     if (!isPanelOpen && isUnfolded) writeRailUnfolded(false);
   }, [isPanelOpen, isUnfolded]);
+  // The rail gives its room back at once as the panel closes, not over the workspace's 200ms: a table beside the
+  // panel draws its face by its box's width, so a box that moved through 40rem would switch faces twice. The
+  // attribute holds while a panel is open and a moment after it closes, so it is there as the panel leaves.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isPanelOpen) {
+      root.dataset.railFolding = '';
+      return undefined;
+    }
+    if (root.dataset.railFolding === undefined) return undefined;
+    const timer = window.setTimeout(() => {
+      delete root.dataset.railFolding;
+    }, 300);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isPanelOpen]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // The drawer belongs to the page it was opened on, so any navigation closes it: a link, or the
   // browser's Back and Forward. Comparing paths while rendering would reopen it on a return to

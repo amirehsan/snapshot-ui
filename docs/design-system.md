@@ -7605,7 +7605,7 @@ React Aria, Lucide and `@internationalized/date`; the rule rounds up to
 
 ## Skeleton
 
-A still shape where content will be: `Skeleton`, a line, a block or a
+A placeholder shape where content will be: `Skeleton`, a line, a block or a
 circle with no text, so a loading page keeps its layout. The document
 has no loading state ("Loading state is unspecified; derive it"), so this
 one is derived from the divider, the field and the target.
@@ -8338,6 +8338,13 @@ whether the Select button's new name, Done, is spoken when it is
 pressed, in the same three, an item's description, its category and
 amount, and an item's selected state read with its box hidden.
 
+**Devices.** Not yet verified on a real iPhone and an Android phone
+(owner action 4): outside Select mode a tap on an item opens it; Select
+shows the checkboxes, a tap on an item then toggles it and Enter still
+opens it; the Select all and Done head sticks under the page header
+while the list scrolls, its controls 44px on a touch screen; and the
+bulk-action bar sits above the tab bar.
+
 ## SidePanel
 
 The detail of one row beside the rows: `SidePanelLayout` holds the page's
@@ -8481,6 +8488,16 @@ panel writes `data-sidebar-unfolded` on the shell's root, which the
 copy stands down for, until the last panel closes. Until hydration the
 collapse button still reads as the expanded rail's, since only a script
 can change its name; it does nothing before then either.
+
+**Focus that follows the face** (spec correction 98). Focus given back
+to a row as the panel closes stays on a drawn row while the content
+settles: for a second after, while the layout's content resizes, focus
+that has lost its row, to a face the box has since hidden or to the
+body, moves to the same row in the face drawn now. A box whose width
+moves through 40rem as the panel leaves, beside a rail unfolding over a
+transition, would otherwise hide the row focus landed on. The fold asks
+for nothing under 1024px, where the panel is a sheet and the rail a
+drawer (spec correction 101).
 
 **Right to left.** The panel's column is at the inline end, on the left
 on a Persian page, and its close button at the header's left. Nothing
