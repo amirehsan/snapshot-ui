@@ -2988,6 +2988,27 @@ describe('src/components/app-shell.css', () => {
     );
   });
 
+  it("folds the rail from the server's HTML beside an open side panel, from 1024px to under 1440px", async () => {
+    // The layout writes data-collapses-rail and the aside is in the server's HTML, so the fold needs no script.
+    const css = rules();
+    const FOLD_MEDIA = '@media (1024px <= width < 1440px)';
+    const fold = blockAfter(css, FOLD_MEDIA);
+    const shell =
+      '.app-shell[data-has-sidebar]:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])';
+    // The collapsed width is the sidebar token's collapsed value, which only its attribute sets.
+    const source = JSON.parse(read('tokens/tokens.json'));
+    const collapsed = source.container.sidebar.$extensions['snapshot-ui'].sidebar.collapsed;
+    expect(blockAfter(fold, `${shell} {`)).toContain(
+      `--container-sidebar: ${String(collapsed.value)}${collapsed.unit};`,
+    );
+    expect(blockAfter(fold, `${shell} .app-shell-workspace {`)).toContain('transition: none;');
+    // A media query cannot read a custom property, so both widths are written out and must stay the tokens.
+    const { tokens } = await import('../dist/tokens.js');
+    expect(FOLD_MEDIA).toBe(
+      `@media (${tokens.breakpoint.md.value} <= width < ${tokens.breakpoint.lg.value})`,
+    );
+  });
+
   it('stops the margin moving under reduced motion, after the transition', () => {
     const css = rules();
     const reduced = '@media (prefers-reduced-motion: reduce)';
@@ -3058,6 +3079,41 @@ describe('src/components/sidebar.css', () => {
         '[data-sidebar-folded] .sidebar:not(.sidebar-drawer), [data-sidebar-folded] .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {',
       ),
     ).toContain('transition: none;');
+  });
+
+  it('copies every collapsed rule into the side panel fold, with the same declarations, under 1440px', async () => {
+    // A selector cannot carry a media condition, so the fold's rules are a copy: each collapsed rule's selector
+    // with the fold's element in the collapsed attribute's place, and the same declarations, in the same order.
+    const css = rules();
+    const FOLD =
+      '[data-has-sidebar]:where(.app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded]))';
+    /** The rules of a block with no nested block in it, as [selector, declarations] pairs. */
+    const pairs = (block) =>
+      [...block.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => [match[1].trim(), match[2].trim()]);
+    const collapsedOf = (block) => pairs(block).filter(([selector]) => selector.startsWith(COLLAPSED));
+    const foldOf = (block) =>
+      pairs(block)
+        .filter(([selector]) => selector.startsWith(FOLD))
+        .map(([selector, body]) => [selector.split(FOLD).join(COLLAPSED), body]);
+    const foldBlock = blockAfter(css, '@media (1024px <= width < 1440px)');
+    const copies = foldOf(foldBlock).filter(([, body]) => body !== 'transition: none;');
+    expect(collapsedOf(blockAfter(css, WIDE))).toHaveLength(11);
+    expect(copies).toEqual(collapsedOf(blockAfter(css, WIDE)));
+    // The forced-colors pair too, under 1440px only.
+    const forced = css.split('@media (forced-colors: active) {')[1] ?? '';
+    const forcedFold = blockAfter(css, '@media (forced-colors: active) and (width < 1440px)');
+    expect(foldOf(forcedFold)).toEqual(collapsedOf(blockAfter(`{${forced}`, '{')));
+    expect(foldOf(forcedFold)).toHaveLength(2);
+    // It moves at once, as the scripted fold does.
+    expect(
+      blockAfter(
+        foldBlock,
+        `${FOLD} .sidebar:not(.sidebar-drawer), ${FOLD} .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {`,
+      ),
+    ).toBe(' transition: none; ');
+    const { tokens } = await import('../dist/tokens.js');
+    expect(css).toContain(`@media (${tokens.breakpoint.md.value} <= width < ${tokens.breakpoint.lg.value})`);
+    expect(css).toContain(`@media (forced-colors: active) and (width < ${tokens.breakpoint.lg.value})`);
   });
 
   it('scopes every collapsed rule to the rail copy, so the drawer copy never collapses', () => {

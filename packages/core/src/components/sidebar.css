@@ -500,6 +500,151 @@
     }
   }
 
+  /* ---- Folded for an open SidePanel, from 1024px to under 1440px -------------------------------------------------
+     The collapsed rules again, for an AppShell whose SidePanelLayout holds an open panel (SidePanelLayout writes
+     data-collapses-rail, and the aside is in the server's HTML), so a page loaded with the panel open draws the
+     rail folded before any script runs. A selector cannot carry a media condition, so the copy sits in its own
+     block; test/css.test.js keeps each rule's declarations the collapsed rule's. The selector's specificity is the
+     collapsed one's: [data-has-sidebar] in place of [data-sidebar], the rest in :where(). It stands down while the
+     reader has expanded the rail over the panel (data-sidebar-unfolded), and moves at once, as the fold does. */
+  @media (1024px <= width < 1440px) {
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer),
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-collapse
+      svg {
+      transition: none;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      :is(
+        .sidebar-brand-name,
+        .sidebar-search-label,
+        .sidebar-group-text,
+        .sidebar-item-label,
+        .sidebar-item-count-number,
+        .sidebar-search-shortcut
+      ) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-head {
+      justify-content: center;
+      padding-inline: 0;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-collapse
+      svg {
+      rotate: 180deg;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-search {
+      justify-content: center;
+      width: var(--size-target);
+      margin-inline: auto;
+      padding: 0;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-nav {
+      padding-inline: calc(1rem - 1px);
+      scrollbar-width: none;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-group-label {
+      justify-content: center;
+      padding-inline: 0;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-group-label::before {
+      margin-inline-start: 0;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-item {
+      align-items: center;
+      justify-content: center;
+      width: var(--size-target);
+      margin-inline: auto;
+      padding: 0;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-item-count {
+      position: absolute;
+      inset-block-start: calc((var(--sidebar-row) - var(--sidebar-icon)) / 2 - 0.25rem);
+      inset-inline-end: calc(50% - var(--sidebar-icon) / 2 - 0.25rem);
+      width: 0.5rem;
+      height: 0.5rem;
+      margin: 0;
+      overflow: hidden;
+      border-radius: var(--radius-dot);
+      background-color: var(--color-ink);
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-item:is([aria-current='page'], [data-current])
+      .sidebar-item-count {
+      background-color: var(--color-canvas);
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-footer {
+      justify-content: center;
+      padding-inline: 0;
+    }
+  }
+
   /* ---- Below 1024px the rail is a drawer, and the fixed copy leaves the tree ------------------ */
   @media (width < 1024px) {
     .sidebar:not(.sidebar-drawer) {
@@ -531,6 +676,26 @@
     }
 
     [data-sidebar='collapsed' i]
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-item:is([aria-current='page'], [data-current])
+      .sidebar-item-count {
+      background-color: HighlightText;
+    }
+  }
+
+  /* The fold's copy of the two rules above, under 1440px only, where the fold applies. */
+  @media (forced-colors: active) and (width < 1440px) {
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-item-count {
+      background-color: CanvasText;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
       .sidebar:not(.sidebar-drawer)
       .sidebar-item:is([aria-current='page'], [data-current])
       .sidebar-item-count {

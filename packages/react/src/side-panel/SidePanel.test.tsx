@@ -1037,12 +1037,27 @@ describe('SidePanelLayout and the rail', () => {
     const onSidebarCollapsedChange = vi.fn();
     const { container } = render(<Shell onSidebarCollapsedChange={onSidebarCollapsedChange} />);
     await user.click(screen.getByRole('button', { name: 'Open' }));
+    expect(shell(container)).not.toHaveAttribute('data-sidebar-unfolded');
     await user.click(screen.getByRole('button', { name: 'Expand the menu' }));
     expect(shell(container)).not.toHaveAttribute('data-sidebar');
+    // The stylesheet's own fold, drawn from the server's HTML, stands down while the reader's waiver holds.
+    expect(shell(container)).toHaveAttribute('data-sidebar-unfolded', '');
     expect(onSidebarCollapsedChange).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Close' }));
+    await waitFor(() => {
+      expect(shell(container)).not.toHaveAttribute('data-sidebar-unfolded');
+    });
     // The next opening folds it again.
     await user.click(screen.getByRole('button', { name: 'Open' }));
     expect(shell(container)).toHaveAttribute('data-sidebar', 'collapsed');
+  });
+
+  it("writes data-collapses-rail on the layout unless collapsesRail is false, for the stylesheet's fold", () => {
+    viewport(1280);
+    const { container, unmount } = render(<Shell />);
+    expect(container.querySelector('.side-panel-layout')).toHaveAttribute('data-collapses-rail', '');
+    unmount();
+    const opted = render(<Shell collapsesRail={false} />);
+    expect(opted.container.querySelector('.side-panel-layout')).not.toHaveAttribute('data-collapses-rail');
   });
 });

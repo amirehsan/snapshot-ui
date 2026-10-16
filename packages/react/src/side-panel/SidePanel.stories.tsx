@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState, type ComponentType, type CSSProperties, type ReactElement, type ReactNode } from 'react';
+import { renderToString } from 'react-dom/server';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { AppShell } from '../app-shell';
@@ -490,6 +491,54 @@ export const RailFold: Story = {
     await waitFor(() => expect(canvasElement.querySelector('.side-panel')).toBeNull());
     await waitFor(() => expect(rail.getBoundingClientRect().width).toBeCloseTo(288, 0), { timeout: 2000 });
     await expect(calls.collapsed).toBe(0);
+  },
+};
+
+/** The server's HTML of a page in an AppShell, its panel open, drawn with no script: nothing hydrates it. */
+function ServerHtml(): ReactElement {
+  const html = renderToString(
+    <AppShell sidebar={<DemoNav />} header={<DemoHeader title="Transactions" />}>
+      <div style={{ padding: 'var(--spacing-inset)' }}>
+        <Page />
+      </div>
+    </AppShell>,
+  );
+  return <div data-testid="server-html" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+/**
+ * A page loaded with its panel open at 1280px draws the rail folded before any script runs (spec correction 94):
+ * the stylesheet folds it from the layout's data-collapses-rail and its open aside, so the page does not shift as
+ * scripts fold it. The reader's waiver and collapsesRail false stand the fold down.
+ */
+export const ServerFold: Story = {
+  tags: ['no-visual'],
+  globals: DESKTOP,
+  parameters: { layout: 'fullscreen' },
+  render: () => <ServerHtml />,
+  play: async ({ canvasElement }) => {
+    const shell = only(canvasElement, '.app-shell');
+    const rail = only(canvasElement, '.sidebar');
+    const workspace = only(canvasElement, '.app-shell-workspace');
+    const layout = only(canvasElement, '.side-panel-layout');
+    // Nothing ran: no attribute a script writes, and the aside is the server's.
+    await expect(shell).not.toHaveAttribute('data-sidebar');
+    await expect(only(canvasElement, 'aside.side-panel')).toBeVisible();
+    // Folded by the stylesheet alone: the collapsed width, its names clipped, and the workspace offset by it.
+    await expect(rail.getBoundingClientRect().width).toBeCloseTo(72, 0);
+    await expect(getComputedStyle(workspace).marginInlineStart).toBe('104px');
+    await expect(only(rail, '.sidebar-item-label').getBoundingClientRect().width).toBeLessThanOrEqual(1);
+    await expect(getComputedStyle(rail).transitionDuration).toBe('0s');
+    // The table beside the panel keeps its table face.
+    await expect(getComputedStyle(only(canvasElement, '.data-table-grid')).display).not.toBe('none');
+    // The reader expanded the rail over the panel: the fold stands down.
+    shell.setAttribute('data-sidebar-unfolded', '');
+    await waitFor(() => expect(rail.getBoundingClientRect().width).toBeCloseTo(288, 0), { timeout: 2000 });
+    shell.removeAttribute('data-sidebar-unfolded');
+    await waitFor(() => expect(rail.getBoundingClientRect().width).toBeCloseTo(72, 0));
+    // collapsesRail false: no fold.
+    layout.removeAttribute('data-collapses-rail');
+    await waitFor(() => expect(rail.getBoundingClientRect().width).toBeCloseTo(288, 0), { timeout: 2000 });
   },
 };
 

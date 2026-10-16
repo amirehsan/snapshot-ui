@@ -712,6 +712,8 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </SidePanelLayout>,
     [
       'class="side-panel-layout"',
+      // The stylesheet folds an AppShell's rail beside an open panel from this, before any script runs.
+      'class="side-panel-layout" data-collapses-rail=""',
       '<aside',
       'class="side-panel"',
       'aria-labelledby',
@@ -721,6 +723,29 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'class="side-panel-footer"',
     ],
     ['role="dialog"', 'sheet'],
+  ],
+  [
+    // Open in an AppShell with a rail: the server writes no fold, since scripts make it, but the layout's
+    // data-collapses-rail and its open aside are what app-shell.css and sidebar.css fold the rail from, under
+    // 1440px, before any script runs (spec correction 94).
+    'SidePanel in an AppShell',
+    <AppShell sidebar={<nav aria-label="Main">rail</nav>}>
+      <SidePanelLayout
+        panel={
+          <SidePanel title="Groceries" isOpen onClose={() => undefined}>
+            <p>Corner Mart</p>
+          </SidePanel>
+        }
+      >
+        <p>The transactions</p>
+      </SidePanelLayout>
+    </AppShell>,
+    [
+      'data-has-sidebar=""',
+      'class="side-panel-layout" data-collapses-rail=""',
+      '</div><aside class="side-panel"',
+    ],
+    ['data-sidebar="collapsed"', 'data-sidebar-folded', 'data-sidebar-unfolded'],
   ],
 ];
 
