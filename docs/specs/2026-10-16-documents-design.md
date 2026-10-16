@@ -1,6 +1,6 @@
 # Documents: FileDropZone, UploadTray, ProgressBar, DatePicker, SaveBar, PageHeader and Breadcrumbs: design
 
-Status: written for review on 2026-10-16. The twenty-five rulings in section 13.1 wait for the owner; everything else is decided here and listed in section 13.2, and what this document cannot settle is in section 18.
+Status: approved on 2026-10-16. The owner took the twenty-five rulings in section 13.1 as recommended and answered the seven open questions of section 18; section 13.3 records the answers. Everything else is decided here and listed in section 13.2.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document pulls forward the phase 3 rows "FileDropZone" and "DatePicker, DateTimePicker, Calendar" (its DatePicker only), the phase 4 row "ProgressBar, Meter" (its ProgressBar only) and the phase 5 rows "PageHeader, Breadcrumbs" and "SaveBar". It adds UploadList and UploadTray, which the parent spec does not list, and two follow-ups to DataTable from the consumer's use of 0.6.0. It answers batch 4 ("Documents") of the first consumer's roadmap. The design authority remains `docs/design-system.md`.
 Released before this: batch 3c, `@snapshot-ui/core` and `@snapshot-ui/react` 0.6.0 and `@snapshot-ui/charts` 0.1.3 (the data table). Section 2 lists what this document takes from batches 1 to 3c.
 
@@ -709,7 +709,7 @@ Five parts can want the bottom of the screen at once on a phone: the tab bar, a 
 
 ## 13. Decisions
 
-### 13.1 Rulings for the owner
+### 13.1 Rulings taken by the owner
 
 1. **One drop zone or two.** Recommended: two parts with one acceptance contract, `FileDropZone` (the inline box, a field with a label, a hint and a button) and `PageDropZone` (an overlay that exists only while files are dragged over the page), plus `FileButton` for a page whose drop target is the page, because the two have different lifecycles and different keyboard paths: Google Drive, Dropbox and Slack accept a drop anywhere on the view and show an overlay only during the drag, while a form's attachment field (GOV.UK's file upload, Carbon's `FileUploaderDropContainer`) is a visible field. Alternative: one `FileDropZone` with a `dropOnPage` prop, Shopify Polaris' `DropZone` shape, which keeps one component but draws an inline box a page-wide target does not want.
 2. **What a drop with some bad files does.** Recommended: accept the files that pass and refuse the rest with a reason each (`'type'`, `'size'`, `'count'`, `'empty'`), reported to the app in one call and summarized in the inline zone's error line, because a reader who drops ten receipts and one video should get ten uploads and one clear sentence, as Google Drive, Carbon's file uploader (`invalid` per item with its reason) and Polaris' `onDrop(files, acceptedFiles, rejectedFiles)` do. Alternative: refuse the whole drop when any file fails, simpler to explain and what some single-file forms do, but it punishes nine good files for one.
@@ -762,6 +762,20 @@ Five parts can want the bottom of the screen at once on a phone: the tab bar, a 
 21. The docs site has no `.file-drop-zone`, `.page-drop-zone`, `.upload-tray`, `.upload-list`, `.upload-row`, `.progress-bar`, `.date-picker`, `.save-bar`, `.page-header` or `.breadcrumbs` classes to collide with; its own `.header` is not `.page-header`. The plan checks again.
 22. One 0.7.0 minor release of core and react, with the size budgets in section 16.
 
+### 13.3 Owner rulings and answers (owner, 2026-10-16)
+
+The owner took all twenty-five rulings of section 13.1 as recommended, answered the seven open questions of section 18, and settled one point of section 5. Each item names the plan task that builds it (`docs/plans/2026-10-16-documents.md`).
+
+1. **The rulings** (Tasks 1 to 7). Rulings 1 to 25 stand as recommended: two drop zones and FileButton on one acceptance contract; partial drops; one tab stop in the inline zone; one drop look and a missed drop that does nothing; the app holds the uploads; the tray in AppShell's `floating` slot, in the bottom end corner, a docked bar and a sheet on a phone, a plain list, three polite announcements, a confirmed close; `beforeunload` warnings on by default; ProgressBar static with a sliding segment that never stops; DatePicker a popover on a phone; the changed dot for an unlabelled field; SaveBar at the bottom, always shown, one guarded Cancel; PageHeader sticky only in the shell's header slot; the current page as the trail's last crumb; one back link on a phone; header actions that wrap; `listBelow`; and the bulk-action bar's data form with a More menu.
+2. **Folders are refused in this batch** (open question 1; Task 2). A dropped folder is refused as `'type'`, as section 13.2 item 3 says; `acceptsDirectories` waits for a consumer that needs it.
+3. **FileButton takes a `capture` option for a phone's camera** (open question 2; Task 2). `capture?: 'user' | 'environment'` opens the camera instead of the file picker on a phone, for photographing receipts. The documents examples pair "Choose files" with a second FileButton, "Take a photo", on a phone. React Aria's FileTrigger calls the same thing `defaultCamera`; the library's prop takes the HTML attribute's name, and the plan records how the name reaches FileDropZone.
+4. **On a phone the tray's bar and the save bar stack** (open question 3; Tasks 3 and 5). Section 12's order holds: the save bar above the tab bar, the tray's bar above the save bar, the toasts above both. Revisit after the consumer has used its review page on a phone; the uploads badge inside the save bar stays the alternative.
+5. **The library does not guard client navigation** (open question 4; Tasks 3 and 5). UploadTray and SaveBar warn on unload only (ruling 12); a SidePanel holding a form refuses its close through `onCloseRequest`.
+6. **SaveBar takes no Mod+S** (open question 5; Task 5). An app that wants the shortcut adds its own key listener; the docs show one that calls the bar's action.
+7. **The docs header moves to PageHeader in the next batch** (open question 6; Task 6). This batch builds PageHeader to reproduce the docs header and leaves the docs header as it is.
+8. **`listBelow` keeps `'40rem' | '32rem'`** (open question 7; Task 7) unless the consumer reports that its columns do not fit beside the panel at 32rem.
+9. **ProgressBar's ends follow Meter's** (section 5.3, section 13.2 item 5; Task 1). The track and the fill take `--radius-pill`, so they are round in the Rounded and Soft shapes and square under Square, exactly as Meter's are.
+
 ## 14. Accessibility
 
 - **Roles and names.** ProgressBar: `progressbar` on the track, named by its label, valued while determinate. FileDropZone: a field named by its label, its one stop a `button` named "Choose files" and described by the zone's description; refusals in a polite `status`. PageDropZone: no role while idle; its overlay is a drop target for the pointer only, and its keyboard twin is the app's FileButton. UploadTray: a `region` named by its title on a wide screen; on a phone, a `region` holding one `button` that opens a `dialog` titled by the same title. UploadList: a `list` of `listitem`s, each with its link or name, its status in words, its `progressbar` while uploading or reading, and buttons named "Retry invoice.pdf", "Remove invoice.pdf", "Cancel invoice.pdf". DatePicker: React Aria's `group` named by its label, `spinbutton` segments, a button opening a `dialog` with the calendar's `application` and `grid`. SaveBar: a `group` named by its message, a polite `status`, and buttons; the discard question an `alertdialog`. PageHeader: a `header` holding the page's one `h1`. Breadcrumbs: a `navigation` landmark named "Breadcrumbs" holding a list with the current page `aria-current="page"`; on a phone, the same landmark holding one link named "Back to Documents".
@@ -813,6 +827,8 @@ Five parts can want the bottom of the screen at once on a phone: the tab bar, a 
 - **R10. Sticky inside an element that scrolls.** A SaveBar in a holder whose ancestor sets `overflow` sticks inside that ancestor, as 3c's correction 68 found for a table's header. Mitigation: the docs say so, and the SidePanel and Dialog examples hold a SaveBar in their scrolling bodies, which is where it should stick.
 
 ## 18. Open questions
+
+The owner answered all seven on 2026-10-16; section 13.3 records the answers (items 2 to 8).
 
 1. **Folders.** A folder dropped on a zone is refused as a wrong type (decided here, item 3). Google Drive and Dropbox take folders and keep their structure. Does the consumer need folders? If so, a later `acceptsDirectories` flattens a `DirectoryDropItem` into its files, with each file's path in the app's hands.
 2. **A camera button on a phone.** FileButton takes `defaultCamera`, which makes the picker the camera. Does the consumer want "Take a photo" beside "Choose files" on a phone for receipts, as a second FileButton in its examples, or one button whose picker offers both (the browser's default)?
