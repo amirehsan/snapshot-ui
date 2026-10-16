@@ -39,7 +39,8 @@ const COLUMNS: readonly DataTableColumn<Transaction>[] = [
     // Named for a screen reader, drawn as nothing.
     header: 'Actions',
     isHeaderHidden: true,
-    width: '4rem',
+    // The 40px button and the cell's 16px either side.
+    width: '4.5rem',
     cell: (row) => (
       <IconButton aria-label={`More for ${row.payee}`}>
         <Ellipsis />

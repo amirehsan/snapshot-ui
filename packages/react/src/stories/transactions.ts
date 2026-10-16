@@ -146,7 +146,7 @@ export const COLUMNS: readonly DataTableColumn<Transaction>[] = [
   { id: 'date', header: 'Date', cell: (row) => row.dateLabel, allowsSorting: true, width: '7rem' },
   { id: 'payee', header: 'Payee', cell: (row) => row.payee, isRowHeader: true },
   { id: 'category', header: 'Category', cell: (row) => row.category, hideBelow: 'md', listSlot: 'meta' },
-  { id: 'account', header: 'Account', cell: (row) => row.account, hideBelow: 'sm' },
+  { id: 'account', header: 'Account', cell: (row) => row.account },
   {
     id: 'amount',
     header: 'Amount',

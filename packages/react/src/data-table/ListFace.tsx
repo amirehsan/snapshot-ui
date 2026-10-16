@@ -1,7 +1,6 @@
 'use client';
 
-import { Check } from 'lucide-react';
-import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, type ReactElement, type ReactNode } from 'react';
 import {
   GridList,
   GridListHeader,
@@ -37,6 +36,12 @@ export interface ListSelection {
   /** The button that shows the boxes, and the same button while they show. */
   selectItemsLabel: string;
   doneLabel: string;
+  /**
+   * Whether the reader pressed Select: every item draws its box, and a press on an item toggles it. DataTable
+   * holds it, so its press guard and the list's own attribute read it too.
+   */
+  selecting: boolean;
+  onSelectingChange: (selecting: boolean) => void;
   /** Receives React Aria's selection manager for the list once it has one, and null when it goes. */
   onManager: (manager: ListSelectionManager | null) => void;
 }
@@ -98,6 +103,8 @@ interface ListItemProps<T> {
   selection: ListSelection | undefined;
   /** Whether the reader pressed Select: every item draws its box. */
   selecting: boolean;
+  /** Whether any item is selected: out of Select mode every item keeps the mark's slot, so none moves. */
+  marked: boolean;
   /** The first item hands DataTable the list's selection manager. */
   probe: boolean;
 }
@@ -111,15 +118,41 @@ function ListItem<T>({
   isDisabled,
   selection,
   selecting,
+  marked,
   probe,
 }: ListItemProps<T>): ReactElement {
   const hasLink = row.href !== undefined && !isDisabled;
   const inSlot = (slot: Slot): DataTableColumn<T>[] =>
     columns.filter((column) => slotOf(column, rowHeader) === slot);
-  const part = (column: DataTableColumn<T>): ReactNode => {
+  const title = inSlot('title');
+  const meta = inSlot('meta');
+  const end = inSlot('end');
+  // React Aria names the item by its text value only, and its one cell is display: contents, so the meta line and
+  // the end cells would never be heard. Each of their parts has an id, and the item is described by them, one
+  // part a word apart. React Aria's GridListItem drops aria-describedby (it filters its props with `global`
+  // only), so the item's own ref writes it once the row is drawn (spec correction 59).
+  const base = useId();
+  const partId = (slot: 'meta' | 'end', index: number): string => `${base}${slot}${String(index)}`;
+  const describedBy = [
+    ...meta.map((_, index) => partId('meta', index)),
+    ...end.map((_, index) => partId('end', index)),
+  ].join(' ');
+  const describe = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (element === null) return;
+      if (describedBy === '') element.removeAttribute('aria-describedby');
+      else element.setAttribute('aria-describedby', describedBy);
+    },
+    [describedBy],
+  );
+  const part = (column: DataTableColumn<T>, index: number, slot?: 'meta' | 'end'): ReactNode => {
     const body = figure(column as DataTableColumn<unknown>, column.cell(row.value));
     return (
-      <span key={column.id} className="data-table-item-part">
+      <span
+        key={column.id}
+        className="data-table-item-part"
+        id={slot === undefined ? undefined : partId(slot, index)}
+      >
         {column === rowHeader && hasLink ? (
           <Link
             href={row.href}
@@ -135,11 +168,9 @@ function ListItem<T>({
       </span>
     );
   };
-  const title = inSlot('title');
-  const meta = inSlot('meta');
-  const end = inSlot('end');
   return (
     <GridListItem
+      ref={describe}
       id={row.key}
       textValue={row.text}
       className="data-table-item"
@@ -156,23 +187,27 @@ function ListItem<T>({
               {/* React Aria names it by its own label and the item (spec correction 5): "Select Corner Mart". */}
               <Checkbox slot="selection" aria-label={selection.selectLabel} {...UNTABBED} />
             </span>
-          ) : (
+          ) : marked ? (
             // Out of Select mode a selected item keeps a mark beside its wash, so its state is never color alone.
-            <span className="data-table-item-mark" aria-hidden="true">
-              <Check />
-            </span>
-          )}
+            // While anything is selected every item holds the mark's slot, drawn only where it is selected, so
+            // selecting an item never moves its text; the check is the stylesheet's, so the HTML holds no icon.
+            <span className="data-table-item-mark" aria-hidden="true" />
+          ) : null}
           <span className="data-table-item-text">
             <span className="data-table-item-title" data-overflow={lineOverflow(title)}>
-              {title.map(part)}
+              {title.map((column, index) => part(column, index))}
             </span>
             {meta.length > 0 ? (
               <span className="data-table-item-meta" data-overflow={lineOverflow(meta)}>
-                {meta.map(part)}
+                {meta.map((column, index) => part(column, index, 'meta'))}
               </span>
             ) : null}
           </span>
-          {end.length > 0 ? <span className="data-table-item-end">{end.map(part)}</span> : null}
+          {end.length > 0 ? (
+            <span className="data-table-item-end">
+              {end.map((column, index) => part(column, index, 'end'))}
+            </span>
+          ) : null}
         </>
       )}
     </GridListItem>
@@ -221,8 +256,13 @@ export function ListFace<T>({
   loadingLabel,
   ...name
 }: ListFaceProps<T>): ReactElement {
-  const [selecting, setSelecting] = useState(false);
-  const totals = columns.filter((column) => slotOf(column, rowHeader) === 'end' && present(column.total));
+  const selecting = selection?.selecting ?? false;
+  const ends = columns.filter((column) => slotOf(column, rowHeader) === 'end');
+  const totals = ends.filter((column) => present(column.total));
+  // With more than one end column the items stack their figures unnamed, so the totals line names each of its
+  // figures by its column's header, for every reader (spec correction 62).
+  const nameTotals = ends.length > 1;
+  const marked = selection !== undefined && selection.all !== 'none';
   const first = rows[0]?.key;
   const item = (row: FaceRow<T>): ReactElement => (
     <ListItem
@@ -234,6 +274,7 @@ export function ListFace<T>({
       isDisabled={disabledBehavior === 'all' && disabledKeys.has(row.key)}
       selection={selection}
       selecting={selecting}
+      marked={marked}
       probe={row.key === first}
     />
   );
@@ -257,7 +298,7 @@ export function ListFace<T>({
             variant="tertiary"
             className="data-table-list-mode"
             onPress={() => {
-              setSelecting(!selecting);
+              selection.onSelectingChange(!selecting);
             }}
           >
             {selecting ? selection.doneLabel : selection.selectItemsLabel}
@@ -300,7 +341,10 @@ export function ListFace<T>({
           <span>{totalLabel}</span>
           <span className="data-table-list-total-figures">
             {totals.map((column) => (
-              <span key={column.id}>{figure(column as DataTableColumn<unknown>, column.total)}</span>
+              <span key={column.id} className="data-table-list-total-figure">
+                {nameTotals ? <span className="data-table-list-total-name">{column.header}</span> : null}
+                {figure(column as DataTableColumn<unknown>, column.total)}
+              </span>
             ))}
           </span>
         </div>

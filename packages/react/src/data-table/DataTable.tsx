@@ -49,10 +49,11 @@ export interface DataTableColumn<T> {
   /** A CSS width for the column, written on its header cell: '8rem', '20%'. @default shares what is left */
   width?: string;
   /**
-   * The column leaves the table face when DataTable's own box is narrower than 48rem ('md') or 40rem ('sm').
-   * Container widths, not breakpoints. The row header never leaves.
+   * The column leaves the table face when DataTable's own box is narrower than 48rem: a container width, not a
+   * breakpoint. Under 40rem the list face is drawn instead, where `listSlot` places every column. The row header
+   * never leaves.
    */
-  hideBelow?: 'sm' | 'md';
+  hideBelow?: 'md';
   /** The totals row's cell for this column. */
   total?: ReactNode;
   /**
@@ -398,6 +399,10 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   // enabled row, or none, as the table's select-all gives.
   const enabled = rows.filter((row) => !disabled.has(row.key)).map((row) => row.key);
   const chosen = new Set(counted);
+  // Select mode is the list's (amendment 3), off at first so the server draws no box; DataTable holds it, since
+  // its press guard reads it, and draws it on the list only while the list has rows and its head.
+  const [selecting, setSelecting] = useState(false);
+  const listSelecting = selectable && selecting && rows.length > 0;
   const listSelection: ListSelection | undefined = selectable
     ? {
         ...shared,
@@ -413,6 +418,8 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         },
         selectItemsLabel: words.selectItems,
         doneLabel: words.doneSelecting,
+        selecting,
+        onSelectingChange: setSelecting,
         onManager: onListManager,
       }
     : undefined;
@@ -432,16 +439,22 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
 
   // A press on a cell, outside its controls and the row's link, never selects (ruling 2): React Aria would select
   // a row without a link on it. A virtual click, a screen reader's, is a press too. Shift with a press on a row's
-  // box is the range's (below), so React Aria's own press on the box never starts.
+  // box is the range's (below), so React Aria's own press on the box never starts. In the list's Select mode a
+  // press on an item, off its controls, toggles it, as a phone's selection mode does (open question 8, spec
+  // correction 69): React Aria's press still never starts, and the click toggles through the list's manager, so
+  // the item becomes the anchor as with Space. The item's link takes no pointer there, so the title is the item's.
   const guardPress = (event: SyntheticEvent<HTMLDivElement>): void => {
     if (!selectable || !(event.target instanceof Element)) return;
-    if (event.type === 'click' && (event.nativeEvent as globalThis.MouseEvent).detail !== 0) return;
-    if (
-      selectsOnPress(event.target, event.currentTarget) ||
-      ((event.nativeEvent as globalThis.MouseEvent).shiftKey &&
-        rowOfBox(event.target, event.currentTarget) !== null)
-    )
+    const native = event.nativeEvent as globalThis.MouseEvent;
+    const pressed = selectsOnPress(event.target, event.currentTarget);
+    const item = listSelecting && pressed ? event.target.closest('.data-table-list .data-table-item') : null;
+    if (event.type === 'click' && native.detail !== 0 && item === null) return;
+    if (pressed || (native.shiftKey && rowOfBox(event.target, event.currentTarget) !== null))
       event.stopPropagation();
+    if (item === null || event.type !== 'click') return;
+    const actions = actionsFor(item);
+    const key = actions.keyOf(item);
+    if (key !== null) actions.toggle(key);
   };
 
   /** The handler's actions for a key from `target`, in the table face or the list face. */
@@ -604,6 +617,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         className="data-table-list"
         aria-busy={loading ? 'true' : undefined}
         data-reloading={reloading ? '' : undefined}
+        data-selecting={listSelecting ? '' : undefined}
       >
         <ListFace
           aria-label={props['aria-label']}

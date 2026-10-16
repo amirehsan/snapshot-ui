@@ -244,13 +244,13 @@ describe('DataTable', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { unmount } = render(<Spending />);
     expect(header('Category')).toHaveAttribute('data-hide-below', 'md');
-    expect(header('Account')).toHaveAttribute('data-hide-below', 'sm');
+    expect(header('Account')).not.toHaveAttribute('data-hide-below');
     const cells = within(rowAt(0)).getAllByRole('gridcell');
-    expect(cells.map((cell) => cell.getAttribute('data-hide-below'))).toEqual([null, 'md', 'sm', null]);
+    expect(cells.map((cell) => cell.getAttribute('data-hide-below'))).toEqual([null, 'md', null, null]);
     expect(warn).not.toHaveBeenCalled();
     unmount();
     const hidden: DataTableColumn<Transaction>[] = COLUMNS.map((column) =>
-      column.isRowHeader === true ? { ...column, hideBelow: 'sm' } : column,
+      column.isRowHeader === true ? { ...column, hideBelow: 'md' } : column,
     );
     render(<Spending columns={hidden} />);
     expect(header('Payee')).not.toHaveAttribute('data-hide-below');
@@ -322,7 +322,7 @@ describe('DataTable', () => {
     const first = document.querySelector('.data-table-skeleton-row');
     const cells = [...(first?.querySelectorAll('.data-table-skeleton-cell') ?? [])];
     expect(cells).toHaveLength(5);
-    expect(cells.map((cell) => cell.getAttribute('data-hide-below'))).toEqual([null, null, 'md', 'sm', null]);
+    expect(cells.map((cell) => cell.getAttribute('data-hide-below'))).toEqual([null, null, 'md', null, null]);
     expect(cells[4]).toHaveAttribute('data-align', 'end');
     expect((cells[0] as HTMLElement).style.flexBasis).toBe('7rem');
     expect((cells[1] as HTMLElement).getAttribute('style')).toBeNull();
@@ -650,13 +650,13 @@ describe('DataTable', () => {
     const nameless = <DataTable {...base} />;
     // @ts-expect-error a column sits at the start or the end, never centered
     const centered: DataTableColumn<Transaction> = { id: 'x', header: 'X', cell: () => '', align: 'center' };
-    // @ts-expect-error a column leaves at sm or md only
-    const large: DataTableColumn<Transaction> = { id: 'x', header: 'X', cell: () => '', hideBelow: 'lg' };
+    // @ts-expect-error a column leaves at md only: under 40rem the list is drawn (spec correction 70)
+    const small: DataTableColumn<Transaction> = { id: 'x', header: 'X', cell: () => '', hideBelow: 'sm' };
     // @ts-expect-error a direction is ascending or descending
     const up = <DataTable {...base} aria-label="T" sortDescriptor={{ column: 'date', direction: 'up' }} />;
     expect(nameless).toBeTruthy();
     expect(centered).toBeTruthy();
-    expect(large).toBeTruthy();
+    expect(small).toBeTruthy();
     expect(up).toBeTruthy();
   });
 });

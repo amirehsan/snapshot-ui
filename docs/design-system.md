@@ -7861,10 +7861,17 @@ the cue is a line. A load shorter than `QUIET_MS` draws nothing.
 **Column options** (amendments 4 and 5, spec correction 47). `overflow:
 'wrap'` lets a column's text run to two lines and clamps it there with
 an ellipsis, `-webkit-line-clamp` on a `span.data-table-wrap` in the
-cell, since a table cell cannot be the clamping box, with a quarter rem
-above and below; the row grows to hold it, and its full text is still
-the row's name; an end-aligned column never wraps, its figures stay
-unbroken. `firstSortDirection: 'descending'` makes the first press on a
+cell, since a table cell cannot be the clamping box, with a part step
+above and below, so its two lines sit off the row's rules as one line
+does in its 48px row (spec correction 67); the row grows to hold it,
+and its full text is still the row's name; an end-aligned column never
+wraps, its figures stay unbroken. Every cell of that row stays centered
+on it: the checkbox and a row menu have no text baseline to share with
+the memo's first line, and centering keeps them, and every single-line
+cell, on one line with each other as in a row that does not wrap. A
+cell that holds only a control, a row menu's button, is never clipped
+and draws no ellipsis: its focus ring and hit area reach past its box,
+and an ellipsis there stood for no text (spec correction 66). `firstSortDirection: 'descending'` makes the first press on a
 column, one that changes the sorted column, sort it descending, and each
 later press flips it, React Aria's two states (ruling 12).
 `isHeaderHidden` hides a header's label from sight only, as an actions
@@ -7888,9 +7895,9 @@ written in `:where()`, under a leaving cell's, so a first column that has
 left draws no bar, and each container width draws it on the first cell
 that has not left (the `CurrentBarPastHidden` play, in three engines).
 
-**Columns that leave** (ruling 6, spec correction 15). `hideBelow: 'md'`
-leaves under 48rem of the table's box and `'sm'` under 40rem, by
-container query. Their header and body cells stay in their rows, zero
+**Columns that leave** (ruling 6, spec corrections 15 and 70).
+`hideBelow: 'md'` leaves under 48rem of the table's box, by container
+query; under 40rem the list is drawn, so there is no second width. Their header and body cells stay in their rows, zero
 wide with no inline padding or border, and `visibility: hidden`, which
 takes them from sight, the pointer and assistive technology as
 `display: none` would (spec correction 26). They are not `display: none`:
@@ -7934,7 +7941,13 @@ and under the header or the bar where it is. So DataTable's root focus
 capture also scrolls a focused body row or cell clear of the header row
 and the bar by the least it needs, two frames after the focus, after
 React Aria's own scroll (the `ScrollClear` play, J and K under a 64px
-page header with the bar shown, in three engines).
+page header with the bar shown, in three engines). In the list the
+covers are the page's sticky offset, which an ungrouped list has as its
+only one, the item's day heading where it comes to rest, and the head
+while it sticks in Select mode; each grid resolves `--page-sticky-top`
+as its own `scroll-margin-block-start`, so the handler reads it in
+pixels whatever unit the app wrote (spec correction 58; the
+`ListScrollClear` plays).
 
 **Hover and disabled** (spec corrections 40 and 47). The 5% wash is
 drawn on a body row with a link (and, once selection is on, on every
@@ -7961,13 +7974,21 @@ sticky offset, the header row and, while it shows, the bar, over the
 focused row's height, from a cell to the same column's cell, never past
 the first or the last row; with Shift it extends the selection to the
 row it reaches, as React Aria does (the `PageKeys` play, in three
-engines). A header's keys stay React Aria's.
+engines). A header's keys stay React Aria's. In the list a page is the
+view less the page's sticky offset, a day heading and the head while it
+sticks (spec correction 58; the `ListPageKeys` plays).
 
 **The sticky offset** (risk R8, spec correction 48). A wrong
 `--page-sticky-top` puts the header under or below the page's header;
 the `StickyHeader` story pins it under a 64px bar. The docs site writes
 its own header's height to it, through a `ResizeObserver`, so the
-examples' header rows stop under the docs header.
+examples' header rows stop under the docs header. A sticky part sticks
+in its nearest scroll container, and an `overflow-x: auto` frame is one
+in both axes, so a table in such a frame stuck its header the page
+header's height down inside it, over its third row: an element that
+scrolls around a table sets the offset to `0px` (spec correction 68).
+DataTable cannot do it itself: an app's header may scroll inside the
+same element, and nothing in the table can tell.
 
 **Forced colors** (spec correction 39). Rules and the skeleton rows'
 rules are `CanvasText`; the current bar `CanvasText`; the focus ring
@@ -8185,7 +8206,8 @@ no header would name its `rowgroup` by an id that names nothing (spec
 correction 51).
 
 **An item.** Each row is a `GridListItem`, named by the row's text as
-the table's row is, at least `max(--size-target, 3.5rem)` tall for two
+the table's row is and described by its meta and end parts, each part
+by its own id so they are heard a word apart (spec correction 59), at least `max(--size-target, 3.5rem)` tall for two
 lines, 10px by 16px of padding, its parts 12px apart, at the small step
 at 450, and a divider rule under it but the last of its day. A column's
 `listSlot` places its cell: `'title'`, the first line at 500, which the
@@ -8226,9 +8248,20 @@ item keeps a mark beside its wash, the checked box's look drawn, a 20px
 ink box at the micro radius with a canvas check, 16.25 and 19.31,
 `aria-hidden`: so after Done, after X, and when the list is drawn with a
 selection made in the table face before the box narrowed, the selection
-is never color alone, and the bar shows its count. Nothing measures when
-the list starts to show. A press on an item in Select mode still opens
-it, ruling 2; only its box selects (open question 8).
+is never color alone, and the bar shows its count. While anything is
+selected every item holds the mark's 20px slot, so selecting one never
+moves its text, and the check is the checkbox's own mask, so the HTML
+holds no icon (spec correction 61). Nothing measures when the list
+starts to show. In Select mode the head sticks at the page's offset on
+the fill, one layer under the header token, and the day headings stick
+under it, so Select all and Done stay in reach, as a phone's selection
+bar does; on a coarse pointer its controls are 44px (spec correction
+64). In Select mode a press on an item, off its controls, toggles it, as
+a phone's mail and photos do: its link takes no pointer there, the press
+guard keeps React Aria's own press from starting, and the click toggles
+through the list's manager; Enter, and the link reached by Arrow Right,
+still open it. Out of Select mode a press opens and never selects,
+ruling 2 (open question 8, spec correction 69).
 
 **The list's keys** (spec correction 52). The table's capture handler
 serves the list: J and K dispatch the arrows on the focused item, X
@@ -8237,9 +8270,9 @@ from an item's render values, so Shift extends from it, Enter opens its
 link from the item or its box, and Page Up and Page Down move by the
 items in view, read under the item's own sticky day heading. The list
 takes no typeahead, so the handler stops no letter there and every one
-reaches the page. Keys in the head are its controls' own. A press on an
-item's padding, which is in no cell, is stopped as a press on a cell is,
-so it never selects. Focus on an item is scrolled clear of its day
+reaches the page. Keys in the head are its controls' own. Out of Select
+mode a press on an item's padding, which is in no cell, is stopped as a
+press on a cell is, so it never selects. Focus on an item is scrolled clear of its day
 heading and the bar, as a row's is of the header row.
 
 **The list's totals, empty and loading bodies.** With totals and rows,
@@ -8250,8 +8283,13 @@ holds the empty state, the error, or while loading `loadingRowCount`
 skeleton items, an item tall and ruled, each a 60% and a 40% line and an
 end line at 24%, with `labels.loading` hidden from sight in the cell.
 `div.data-table-list` is busy while loading as the grid is, and while
-rows reload it draws the header's quiet line at the foot of each day
-heading, or at the top of an ungrouped list.
+rows reload it draws one quiet line, at the foot of the first day's
+heading or, ungrouped, along the list's top, sticky and out of the flow
+so no item moves (spec correction 63). With more than one end column,
+each total is named by its column's header in slate (spec correction
+62). A grid with no rows is React Aria's tab stop itself, in either
+face, so it draws the inset ring, `Highlight` in forced colors (spec
+correction 60).
 
 **The list in forced colors** (spec correction 57). The head's, the
 items', the totals' and the skeleton items' rules are `CanvasText`, the
@@ -8263,19 +8301,18 @@ inverted, a `HighlightText` box with a `Highlight` check, and a focused
 selected item ringed `HighlightText`; the docs check the pixels Chromium
 drew.
 
-**Two faces, measured** (risk R3, spec correction 54). Every row is
-drawn twice in the server's HTML. With the story's five columns, links
-and day groups, 50 rows write 127,484 bytes, the list face 48,408 of
-them, and 200 rows 479,582, the list 171,615; with selection on, 195,052
-and 747,075; gzipped, 200 rows are 18,315 and 26,476 bytes. The 200-row
-page is over the plan's 400 kB mark (open question 6); the list is about
-a third of it.
+**Two faces, measured** (risk R3, spec corrections 54 and 65). Every
+row is drawn twice in the server's HTML. With the story's five columns,
+links and day groups, 50 rows write 128,207 bytes, the list face 50,311
+of them, 6,606 gzipped, and 200 rows 482,951, the list 179,314, 19,863
+gzipped; with selection on and two rows selected, 183,327 and 697,946.
+The 200-row page is over the plan's 400 kB mark; the owner kept both
+faces in the server's HTML and the docs advise pages of about 50 rows
+with Pagination (open question 6).
 
-**`hideBelow: 'sm'`** (spec correction 53). It names 40rem, the width at
-which the table gives way to its list, so it no longer changes what is
-drawn: the table is drawn only at 40rem and wider, where an `'sm'`
-column stays, and the list places every column by its `listSlot` (open
-question 9).
+**`hideBelow: 'sm'`** (spec corrections 53 and 70). Removed before
+0.6.0: it named 40rem, the width at which the table gives way to its
+list, so it changed nothing (open question 9).
 
 **The size.** The entry `{ DataTable }` measured 2.62 kB without React
 Aria, Lucide and `@internationalized/date`, Link and Skeleton included;
@@ -8287,12 +8324,16 @@ the modal stack, each of which has an entry of its own. After Task 3's
 fix round, with the press guard, the portal watch, the typeahead test,
 the page keys, the error state and the reloading cue, it measured 6.99
 kB, which the rule sets at 7.5 kB. With the list face and its Select
-mode, Task 4 measured 8.02 kB, which the rule sets at 9 kB.
+mode, Task 4 measured 8.02 kB, which the rule sets at 9 kB; its review
+round, with the item descriptions, the tap in Select mode and the named
+totals, and without the mark's icon, measured 8.32 kB, still 9 kB.
 
 **Screen readers.** Not yet verified with VoiceOver and NVDA (owner
 action 4): a row read by its row header and cells, the current row's
 link read as current, the sort change, a row checkbox read as "Select
 Corner Mart", the bar read as a toolbar named "Bulk actions", and how
-often the selection count is announced; in the list, a day's rowgroup
-read by its heading, the Select button's new name heard as Done when it
-is pressed, and an item's selected state read with its box hidden.
+often the selection count is announced; in the list, how a day's
+rowgroup is announced, by its heading, with NVDA, VoiceOver and JAWS,
+whether the Select button's new name, Done, is spoken when it is
+pressed, in the same three, an item's description, its category and
+amount, and an item's selected state read with its box hidden.

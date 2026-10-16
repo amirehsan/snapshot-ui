@@ -264,6 +264,45 @@ describe('keys', () => {
     expect(press(root, 'PageDown', { ctrlKey: true }, 'ltr', actions).stopPropagation).not.toHaveBeenCalled();
   });
 
+  it('moves Page Down in an ungrouped list by the items that fit under the page header, and under the head in Select mode', () => {
+    const root = document.createElement('div');
+    const items = Array.from(
+      { length: 20 },
+      (_, index) =>
+        `<div class="data-table-item" role="row" tabindex="-1" data-page="${String(index)}"></div>`,
+    ).join('');
+    root.innerHTML = `<div class="data-table"><div class="data-table-list"><div class="data-table-list-head"></div><div role="grid" class="data-table-grid-list">${items}</div></div></div>`;
+    document.body.append(root);
+    const grid = find(root, '[role="grid"]');
+    const head = find(root, '.data-table-list-head');
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(300);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const height = this === head ? 41 : this.getAttribute('role') === 'row' ? 48 : 0;
+      return { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: height, width: 0, height, toJSON: () => ({}) };
+    });
+    const computed = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element, pseudo) => {
+      const style = computed(element, pseudo);
+      if (element !== grid) return style;
+      // The page's 60px sticky header, which the grid resolves as its scroll margin.
+      return new Proxy(style, {
+        get: (object, property) =>
+          property === 'getPropertyValue'
+            ? (name: string) =>
+                name === 'scroll-margin-block-start' ? '60px' : object.getPropertyValue(name)
+            : (Reflect.get(object, property) as unknown),
+      });
+    });
+    // No heading: 300px less the page's 60px header holds five 48px items, not six.
+    pageRow(root, 0).focus();
+    press(root, 'PageDown');
+    expect(pageRow(root, 5)).toHaveFocus();
+    // In Select mode the head sticks under it too: 199px holds four.
+    head.setAttribute('data-selecting', '');
+    press(root, 'PageDown');
+    expect(pageRow(root, 9)).toHaveFocus();
+  });
+
   it('takes Home and End in the header row past a hidden first or last header', () => {
     const root = grid([0, 4]);
     headerAt(root, 2).focus();

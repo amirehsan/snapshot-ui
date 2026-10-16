@@ -3104,8 +3104,7 @@ test('a data table drops its md column under 48rem of its box, and under 40rem d
   });
   expect(ends.table).toBe(ends.box);
   expect(ends.header).toBe(ends.box);
-  // Under 40rem the list is the face drawn, an item per row, and the table is not; the sm column has not left
-  // the table, since the table is not drawn.
+  // Under 40rem the list is the face drawn, an item per row, and the table is not.
   await setWidth('39.5rem');
   await expect(box.getByRole('grid')).toHaveCount(1);
   await expect(box.locator('.data-table-list')).toBeVisible();
@@ -3174,7 +3173,9 @@ test.describe('the data table on a phone', () => {
     expect(await sideways(page)).toBe(0);
   });
 
-  test('opens an item on a tap and selects it on its checkbox', async ({ page }) => {
+  test('opens an item on a tap, and in Select mode selects it on its checkbox or a tap on the item', async ({
+    page,
+  }) => {
     await visit(page, '/docs/components/data-table');
     const root = page.locator('.stage .data-table').filter({ has: page.locator('.data-table-section') });
     const list = root.first().locator('.data-table-list');
@@ -3202,6 +3203,19 @@ test.describe('the data table on a phone', () => {
     await box.tap();
     await expect(item).toHaveAttribute('aria-selected', 'true');
     await expect(root.first().getByRole('toolbar', { name: 'Bulk actions' })).toContainText('1 selected');
+    // In Select mode a tap anywhere on an item toggles it and opens nothing (spec correction 69).
+    const third = list.first().locator('.data-table-item').nth(2);
+    await third.evaluate((element) => {
+      element.scrollIntoView({ block: 'center' });
+    });
+    const amount = await third.locator('.data-table-item-end').boundingBox();
+    if (amount === null) throw new Error('No amount');
+    await page.touchscreen.tap(amount.x + amount.width / 2, amount.y + amount.height / 2);
+    await expect(third).toHaveAttribute('aria-selected', 'true');
+    await expect(page).toHaveURL(/#t2$/);
+    await expect(root.first().getByRole('toolbar', { name: 'Bulk actions' })).toContainText('2 selected');
+    await page.touchscreen.tap(amount.x + amount.width / 2, amount.y + amount.height / 2);
+    await expect(third).toHaveAttribute('aria-selected', 'false');
     // Done hides the boxes and keeps the selection.
     await list.first().getByRole('button', { name: 'Done' }).tap();
     await expect(item.getByRole('checkbox')).toHaveCount(0);
@@ -3362,6 +3376,77 @@ test('a data table column wraps to two lines, sorts largest first on its first p
   expect((await actions.locator('.data-table-column-label').boundingBox())?.width ?? 0).toBeLessThanOrEqual(
     1,
   );
+  // The row menu's cell holds its 40px button whole, with no ellipsis after it (spec correction 66).
+  const room = await table
+    .locator('tbody [role="row"]')
+    .first()
+    .evaluate((row) => {
+      const cell = row.lastElementChild;
+      const button = cell?.querySelector('button');
+      if (!(cell instanceof HTMLElement) || button === null || button === undefined) return null;
+      const own = cell.getBoundingClientRect();
+      const drawn = button.getBoundingClientRect();
+      return {
+        clip: getComputedStyle(cell).textOverflow,
+        width: Math.round(drawn.width),
+        inside: drawn.left >= own.left && drawn.right <= own.right,
+      };
+    });
+  expect(room).toEqual({ clip: 'clip', width: 40, inside: true });
+  // A row with a wrapping memo keeps a part step of room above and below its two lines (spec correction 67).
+  const gaps = await table
+    .locator('tbody [role="row"]')
+    .first()
+    .evaluate((row) => {
+      const text = row.querySelector('.data-table-wrap')?.getBoundingClientRect();
+      const own = row.getBoundingClientRect();
+      return text === undefined
+        ? null
+        : [Math.round(text.top - own.top), Math.round(own.bottom - text.bottom)];
+    });
+  expect(gaps?.[0] ?? 0).toBeGreaterThanOrEqual(8);
+  expect(gaps?.[1] ?? 0).toBeGreaterThanOrEqual(8);
+});
+
+test('the columns example draws its header row at the top of its table at every width, before and after the page scrolls', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const box = page.getByTestId('data-table-box');
+  const widths = page.getByRole('radiogroup', { name: "Width of the table's box" });
+  // The first row of the face shown starts at the face's top: the header row in the table, the first item in the
+  // list. A header stuck inside the frame, at the docs header's height, would sit over the third row instead.
+  const offset = (): Promise<number> =>
+    box.evaluate((element) => {
+      const table = element.querySelector<HTMLElement>('.data-table-table');
+      const shown = table !== null && table.getBoundingClientRect().height > 0;
+      const face = shown ? table : element.querySelector('.data-table-grid-list');
+      const first = shown ? element.querySelector('thead th') : element.querySelector('.data-table-item');
+      return Math.round(
+        (first?.getBoundingClientRect().top ?? -1) - (face?.getBoundingClientRect().top ?? 0),
+      );
+    });
+  for (const name of ['56rem', '44rem', '38rem']) {
+    await widths.locator('.segmented-option', { hasText: name }).click();
+    await expect(widths.getByRole('radio', { name })).toBeChecked();
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
+    await box.scrollIntoViewIfNeeded();
+    await expect.poll(offset, `${name} at rest`).toBe(0);
+    // The page scrolled until the table's top is under the docs header: the header row stays at the table's top,
+    // since the frame is where it sticks and the frame sets the offset to 0.
+    await box.evaluate((element) => {
+      window.scrollBy(0, element.getBoundingClientRect().top - 20);
+    });
+    await expect.poll(offset, `${name} scrolled`).toBe(0);
+  }
+  // The frame says so: its own offset is 0, the page's the docs header's height.
+  const frame = page.getByRole('region', { name: 'The table at the width chosen' });
+  expect(
+    await frame.evaluate((element) => getComputedStyle(element).getPropertyValue('--page-sticky-top').trim()),
+  ).toBe('0px');
 });
 
 test('the docs header sets --page-sticky-top, so a data table header sticks under it, and amounts use a real minus sign', async ({

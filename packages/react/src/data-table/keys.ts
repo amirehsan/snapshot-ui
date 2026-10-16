@@ -1,7 +1,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { matchesShortcut, parseShortcut } from '../command-palette/shortcut';
 import { isUnderModal } from '../overlay/useOverlayStack';
-import { scrollPortOf } from './scroll';
+import { pageStickyTop, scrollPortOf, stickyHead } from './scroll';
 import type { Key } from './selection';
 
 /*
@@ -184,17 +184,19 @@ function upToHeader(from: Element, row: Element): HTMLElement | null {
 
 /**
  * The height the body's rows scroll in: the nearest ancestor that scrolls, or the window, less what covers its
- * top (the page's sticky offset and the sticky header row) and its bottom (the bulk-action bar where it shows).
+ * top (where the window scrolls the page's sticky offset, then the sticky header row or a day heading, and the
+ * list's head while it sticks in Select mode) and its bottom (the bulk-action bar where it shows).
  */
 function pageHeight(grid: Element): number {
   const port = scrollPortOf(grid);
   let height = port === null ? window.innerHeight : port.clientHeight;
+  // The page's own sticky header, which an ungrouped list, with no heading, has as its only cover.
+  if (port === null) height -= pageStickyTop(grid);
   // The table's header row, or in the list face a day heading, which sticks as the header row does.
   const header = grid.querySelector('[role="columnheader"], .data-table-section-header');
-  if (header !== null) {
-    height -= header.getBoundingClientRect().height;
-    if (port === null) height -= parseFloat(getComputedStyle(header).top) || 0;
-  }
+  if (header !== null) height -= header.getBoundingClientRect().height;
+  const head = stickyHead(grid);
+  if (head !== null) height -= head.getBoundingClientRect().height;
   const bar = grid.closest('.data-table')?.querySelector('.data-table-bar');
   if (bar !== null && bar !== undefined) {
     height -= bar.getBoundingClientRect().height + (parseFloat(getComputedStyle(bar).bottom) || 0);
