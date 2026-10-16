@@ -62,7 +62,8 @@ export default defineConfig({
         plugins: [storybookTest({ configDir, tags: { include: ['firefox'] } })],
         test: {
           name: 'storybook-firefox',
-          // Not one file at a time as in WebKit: run that way, Firefox stopped moving focus into a story.
+          // Files side by side, unlike WebKit: one at a time, Firefox still let a play's early focus go unheard,
+          // so the plays hold their own focus (packages/react/src/stories/focus.ts).
           setupFiles: ['./.storybook/vitest.setup.ts'],
           browser: {
             enabled: true,

@@ -10,6 +10,7 @@ import { Dialog } from '../dialog';
 import { EmptyState } from '../empty-state';
 import { IconButton } from '../icon-button';
 import { RouterProvider } from '../link';
+import { focusOn } from '../stories/focus';
 import { paint, tokenColor } from '../stories/paint';
 import {
   COLUMNS,
@@ -598,8 +599,7 @@ export const ArrowsSkipHidden: Story = {
     const edgeHeaders = [...edgeGrid.querySelectorAll<HTMLElement>('[role="columnheader"]')];
     await expect(edgeHeaders.map((cell) => isShown(cell))).toEqual([false, true, true, true, false]);
     // The play puts focus on the second table's first row directly.
-    rowAt(edgeTable, 0).focus();
-    await expect(rowAt(edgeTable, 0)).toHaveFocus();
+    await focusOn(rowAt(edgeTable, 0));
     await userEvent.keyboard('{ArrowUp}');
     await expectFocus(edgeGrid, edgeHeaders[1], 'Arrow Up');
     // Left and Right stop at the header row's shown ends, where React Aria would wrap.
@@ -1055,7 +1055,7 @@ export const TabStop: Story = {
     for (const element of grid.querySelectorAll('a, input')) {
       await expect(element).toHaveAttribute('tabindex', '-1');
     }
-    before.focus();
+    await focusOn(before);
     await userEvent.tab();
     await waitFor(() => expect(rowAt(canvasElement, 0)).toHaveFocus());
     // Nothing selected: the next stop is after the table.
@@ -1237,8 +1237,7 @@ export const InDialog: Story = {
     // A large dialog's body is narrower than 40rem, so the table there draws its list face.
     const grid = only(dialog, '.data-table-list [role="grid"]');
     const first = itemAt(dialog, 0);
-    first.focus();
-    await expect(first).toHaveFocus();
+    await focusOn(first);
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
     await expect(selectedItemsOf(dialog)).toEqual([]);
@@ -1273,8 +1272,7 @@ export const InDialogTable: Story = {
     await waitFor(() => expect(getComputedStyle(only(dialog, '.data-table-grid')).display).toBe('block'));
     const grid = only(dialog, '.data-table-grid [role="grid"]');
     const first = rowAt(dialog, 0);
-    first.focus();
-    await expect(first).toHaveFocus();
+    await focusOn(first);
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
     await expect(selectedKeysOf(dialog)).toEqual([]);
@@ -1596,7 +1594,7 @@ export const ScrollClear: Story = {
     // The first row the bar covers at rest, and the one above it, which nothing covers.
     const edge = rows.findIndex((row) => row.getBoundingClientRect().bottom > barTop());
     await expect(edge).toBeGreaterThan(0);
-    rowAt(canvasElement, edge - 1).focus();
+    await focusOn(rowAt(canvasElement, edge - 1));
     await clear(edge - 1, `row ${String(edge - 1)}`);
     for (let index = edge; index < edge + 3; index += 1) await press('j', index);
     // The focused row against the header row, so the rows above it sit under the header, still in the view.
@@ -1642,8 +1640,7 @@ export const PageKeys: Story = {
         return index;
       });
     try {
-      first.focus();
-      await waitFor(() => expect(first).toHaveFocus());
+      await focusOn(first);
       // The rows that fit under the 40px header row in the window, which scrolls the page.
       const header =
         within(canvasElement).getAllByRole('columnheader')[0]?.getBoundingClientRect().height ?? 0;
@@ -1900,7 +1897,7 @@ export const SelectMode: Story = {
     const button = only(canvasElement, '.data-table-list-mode');
     await expect(button).toHaveAccessibleName('Select');
     await expect(listItems(canvasElement)[0]?.querySelector('.checkbox')).toBeNull();
-    button.focus();
+    await focusOn(button);
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(button).toHaveAccessibleName('Done'));
     await expect(button).toHaveFocus();
@@ -2047,8 +2044,7 @@ async function scrollClearPlay(canvasElement: HTMLElement): Promise<void> {
   const index = 12;
   const above = itemAt(canvasElement, index - 1);
   const from = itemAt(canvasElement, index);
-  from.focus();
-  await waitFor(() => expect(from).toHaveFocus());
+  await focusOn(from);
   // The item above at 4px from the window's top, wholly in the view and under the 64px page header.
   window.scrollBy({ top: above.getBoundingClientRect().top - 4, behavior: 'instant' });
   await waitFor(() => expect(Math.round(above.getBoundingClientRect().top)).toBe(4));
@@ -2095,8 +2091,7 @@ export const ListScrollClearGrouped: Story = {
 async function pageKeysPlay(canvasElement: HTMLElement): Promise<void> {
   window.scrollTo(0, 0);
   const first = itemAt(canvasElement, 0);
-  first.focus();
-  await waitFor(() => expect(first).toHaveFocus());
+  await focusOn(first);
   const head = canvasElement.querySelector('.data-table-list-head[data-selecting]');
   const heading = canvasElement.querySelector('.data-table-section-header');
   const covered =
@@ -2289,7 +2284,7 @@ export const SelectModeTaps: Story = {
     await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual(['t3']));
     await expect(navigate).not.toHaveBeenCalled();
     // Enter on the focused item opens it, and never toggles it.
-    itemAt(canvasElement, 2).focus();
+    await focusOn(itemAt(canvasElement, 2));
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
     await expect(selectedItemsOf(canvasElement)).toEqual(['t3']);

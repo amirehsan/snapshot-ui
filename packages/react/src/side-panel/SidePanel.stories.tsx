@@ -10,6 +10,7 @@ import { RouterProvider } from '../link';
 import { NumberField } from '../number-field';
 import { PickerOption } from '../picker';
 import { Select } from '../select';
+import { focusOn } from '../stories/focus';
 import { DemoHeader, DemoNav } from '../stories/shell-fixture';
 import {
   COLUMNS,
@@ -512,7 +513,7 @@ export const FocusFollowsFace: Story = {
     const box = only(canvasElement, '[data-testid="box"]');
     const row = bodyRows(canvasElement)[0];
     if (row === undefined) throw new Error('No row');
-    row.focus();
+    await focusOn(row);
     await userEvent.keyboard('{Enter}');
     const heading = await within(canvasElement).findByRole('heading', { level: 2, name: 'Corner Mart' });
     await waitFor(() => expect(heading).toHaveFocus());

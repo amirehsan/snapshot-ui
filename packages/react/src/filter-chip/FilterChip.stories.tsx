@@ -6,6 +6,7 @@ import { Button } from '../button';
 import { NumberField } from '../number-field';
 import { PickerOption } from '../picker';
 import { MENU_ROW_A11Y } from '../stories/a11y';
+import { focusOn } from '../stories/focus';
 import { tokenColor, tokenPixels, washColor } from '../stories/paint';
 import { FilterChip, type FilterChipLabels } from './FilterChip';
 
@@ -372,8 +373,7 @@ export const ClosedKeys: Story = {
   play: async ({ canvasElement, userEvent: user }) => {
     change.mockClear();
     const trigger = triggerOf(canvasElement, 'Category');
-    trigger.focus();
-    await expect(trigger).toHaveFocus();
+    await focusOn(trigger);
     await user.keyboard('r');
     await user.keyboard('{ArrowRight}');
     await user.keyboard('{ArrowLeft}');
