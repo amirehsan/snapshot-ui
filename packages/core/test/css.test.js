@@ -6286,7 +6286,12 @@ describe('src/components/data-table.css', () => {
     expect(blockAfter(css, '.data-table-sort {')).toContain('color: var(--color-slate);');
     const hovered = '.data-table-column[data-allows-sorting]:is(:hover, [data-hovered])';
     expect(blockAfter(blockAfter(css, HOVER), `${hovered} {`)).toContain('color: var(--color-ink);');
-    expect(outsideForcedColors(css).replace(blockAfter(css, HOVER), '')).not.toContain(':hover');
+    // Outside the hover block, :hover appears only where a selected row holds its 8% wash under the pointer,
+    // which changes nothing on a device without hover.
+    const outside = outsideForcedColors(css).replace(blockAfter(css, HOVER), '');
+    expect(outside.match(/[^{}]*:hover[^{}]*\{/g)).toEqual([
+      " .data-table-row:is([data-selected], [aria-selected='true']), .data-table-row:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {",
+    ]);
   });
 
   it('makes a row max(--size-target, --size-field) tall with a divider under each cell and no zebra', () => {
@@ -6389,10 +6394,81 @@ describe('src/components/data-table.css', () => {
     expect(
       blockAfter(
         hover,
-        '.data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled]) {',
+        ".data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) {",
       ),
     ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));');
-    expect(outsideForcedColors(css).replace(hover, '')).not.toContain('color-mix');
+    // Outside hover, only a selected row's 8% wash mixes a color.
+    expect(
+      outsideForcedColors(css)
+        .replace(hover, '')
+        .match(/color-mix\([^;]*/g),
+    ).toEqual(['color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))']);
+  });
+
+  it('makes the checkbox column 3.5rem with a part step of padding', () => {
+    const css = rules();
+    const column = blockAfter(css, '.data-table-column[data-selection], .data-table-cell[data-selection] {');
+    expect(column).toContain('--data-table-pad: var(--spacing-part);');
+    expect(column).toContain('inline-size: 3.5rem;');
+    // A skeleton row draws the same blank first.
+    expect(blockAfter(css, '.data-table-skeleton-cell[data-selection] {')).toContain('flex: 0 0 3.5rem;');
+    // The column never leaves.
+    expect(css).not.toMatch(/\[data-selection\][^{]*\{[^}]*(?:display: none|visibility: hidden)/);
+  });
+
+  it('washes a selected row 8% ink over the fill, held under the pointer', () => {
+    const css = outsideForcedColors(rules());
+    const selected = blockAfter(
+      css,
+      ".data-table-row:is([data-selected], [aria-selected='true']), .data-table-row:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {",
+    );
+    expect(selected).toContain(
+      'background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));',
+    );
+  });
+
+  it('sticks the bar to the bottom above the tab bar reserve, one layer under the header token', () => {
+    const bar = blockAfter(outsideForcedColors(rules()), '.data-table-bar {');
+    for (const declaration of [
+      'position: sticky;',
+      'inset-block-end: calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset));',
+      'z-index: calc(var(--z-header) - 1);',
+      'margin-block-start: var(--spacing-inset);',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+    }
+  });
+
+  it('draws the bar on the float surface with the frame edge, the surface radius and the float shadow', () => {
+    const bar = blockAfter(outsideForcedColors(rules()), '.data-table-bar {');
+    for (const declaration of [
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+      'color: var(--color-ink);',
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'gap: var(--spacing-part);',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+    }
+  });
+
+  it('sets the count at the small step at 500, tabular, pushing the actions to the end', () => {
+    const css = rules();
+    const count = blockAfter(css, '.data-table-bar-count {');
+    for (const declaration of [
+      'margin-inline-end: auto;',
+      'font-size: var(--text-small);',
+      'font-weight: 500;',
+      'font-variant-numeric: tabular-nums;',
+    ]) {
+      expect(count, declaration).toContain(declaration);
+    }
+    const actions = blockAfter(css, '.data-table-bar-actions {');
+    expect(actions).toContain('display: flex;');
+    expect(actions).toContain('gap: var(--spacing-part);');
   });
 
   it('rings a focused row, cell or header inside, in the focus ring token', () => {
@@ -6435,7 +6511,8 @@ describe('src/components/data-table.css', () => {
     );
     // A border, not a ::before or a box-shadow (spec correction 13).
     expect(css).not.toContain('[data-current] > :first-child::before');
-    expect(css).not.toMatch(/box-shadow: (?!none)/);
+    // The one shadow is the bar's float surface.
+    expect(css.match(/box-shadow: [^;]*/g)).toEqual(['box-shadow: var(--shadow-float)']);
   });
 
   it('draws a disabled row taupe, not-allowed', () => {
@@ -6565,6 +6642,14 @@ describe('src/components/data-table.css', () => {
     expect(blockAfter(forced, ".data-table-row:is([data-disabled], [aria-disabled='true']) {")).toContain(
       'color: GrayText;',
     );
+  });
+
+  it('draws a selected row Highlight with HighlightText and the bar edge CanvasText in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    const selected = blockAfter(forced, ".data-table-row:is([data-selected], [aria-selected='true']) {");
+    expect(selected).toContain('background-color: Highlight;');
+    expect(selected).toContain('color: HighlightText;');
+    expect(blockAfter(forced, '.data-table-bar {')).toContain('border-color: CanvasText;');
   });
 });
 

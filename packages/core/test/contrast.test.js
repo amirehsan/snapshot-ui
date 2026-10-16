@@ -1330,6 +1330,30 @@ describe('the data table', () => {
       }
     }
   });
+
+  // A selected row is the 8% wash, one step over hover, measured and recorded as the 5% is. No slate text sits
+  // on a selected table row. The bar's count is ink on the float surface, which the gate holds.
+  it('measures a selected row and the bar, in both modes', () => {
+    const selectedOn = (mode, name, groundName) => {
+      const palette = paletteFor(tokens, mode);
+      const ground = composite({ ...parseColor(palette.ink), a: 0.08 }, parseColor(palette[groundName]));
+      return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+    };
+    for (const { text, ground, light, dark } of [
+      { text: 'ink', ground: 'canvas', light: 13.81, dark: 16.06 },
+      { text: 'ink', ground: 'lifted', light: 15.13, dark: 13.92 },
+      { text: 'slate', ground: 'canvas', light: 4.11, dark: 6.62 },
+      { text: 'slate', ground: 'lifted', light: 4.51, dark: 6.04 },
+    ]) {
+      expect(selectedOn('light', text, ground), `${text} on 8% over ${ground}, light`).toBeCloseTo(light, 2);
+      expect(selectedOn('dark', text, ground), `${text} on 8% over ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'ink', ground: 'float', minimum: TEXT }),
+    );
+    expect(measured('light', 'ink', 'float')).toBeCloseTo(18.43, 2);
+    expect(measured('dark', 'ink', 'float')).toBeCloseTo(17.42, 2);
+  });
 });
 
 describe('contrastFailures', () => {

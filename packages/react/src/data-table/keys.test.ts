@@ -1,6 +1,12 @@
-import type { KeyboardEvent } from 'react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { createElement, Fragment, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { handleTableKey, nextVisibleCell } from './keys';
+import { handleTableKey, nextVisibleCell, type TableKeyActions } from './keys';
+
+/** Whether another modal is open, which a test can set. */
+const modal = vi.hoisted(() => ({ open: false }));
+vi.mock('../overlay/useOverlayStack', () => ({ isAnotherModalOpen: () => modal.open }));
 
 /**
  * A grid as React Aria's Table draws it: a header row of five column headers and two body rows of five cells,
@@ -55,8 +61,22 @@ interface Modifiers {
   shiftKey?: boolean;
 }
 
-/** A keydown as React hands it to the root's capture handler, in the locale's `direction`. */
-function press(root: HTMLElement, key: string, modifiers: Modifiers = {}, direction: 'ltr' | 'rtl' = 'ltr') {
+/** The handler's actions with spies; nothing in these grids can be selected. */
+const actionsOf = (direction: 'ltr' | 'rtl' = 'ltr') => ({
+  direction,
+  keyOf: () => null,
+  toggle: vi.fn(),
+  extend: vi.fn(),
+});
+
+/** A keydown as React hands it to the root's capture handler, from the focused element, in `direction`. */
+function press(
+  root: HTMLElement,
+  key: string,
+  modifiers: Modifiers = {},
+  direction: 'ltr' | 'rtl' = 'ltr',
+  actions = actionsOf(direction),
+) {
   const event = {
     key,
     ctrlKey: false,
@@ -64,17 +84,20 @@ function press(root: HTMLElement, key: string, modifiers: Modifiers = {}, direct
     metaKey: false,
     shiftKey: false,
     ...modifiers,
-    nativeEvent: { isComposing: false },
+    nativeEvent: new globalThis.KeyboardEvent('keydown', { key, ...modifiers }),
+    target: root.ownerDocument.activeElement ?? root,
     currentTarget: root,
     preventDefault: vi.fn(),
     stopPropagation: vi.fn(),
   };
-  handleTableKey(event as unknown as KeyboardEvent<HTMLElement>, { direction });
+  handleTableKey(event as unknown as KeyboardEvent<HTMLElement>, actions);
   return event;
 }
 
 afterEach(() => {
+  cleanup();
   document.body.innerHTML = '';
+  modal.open = false;
   vi.restoreAllMocks();
 });
 
@@ -227,5 +250,285 @@ describe('keys', () => {
     expect(cellAt(root, 3)).toHaveFocus();
     expect(press(root, 'ArrowLeft', { ctrlKey: true }).stopPropagation).not.toHaveBeenCalled();
     expect(cellAt(root, 3)).toHaveFocus();
+  });
+  it('extends the selection to the shown cell row where it takes a Shift arrow or Ctrl+Shift+Home or End, and nowhere else', () => {
+    const root = grid([0, 2, 4]);
+    const actions = actionsOf();
+    // Shift+Arrow Right over the hidden cell: React Aria would have extended to this row, so the handler does.
+    cellAt(root, 1, 2).focus();
+    press(root, 'ArrowRight', { shiftKey: true }, 'ltr', actions);
+    expect(cellAt(root, 3, 2)).toHaveFocus();
+    expect(actions.extend).toHaveBeenCalledTimes(1);
+    expect(actions.extend).toHaveBeenLastCalledWith(rowOf(root, 2));
+    // From the row into its cells, past the hidden first cell.
+    rowOf(root, 1).focus();
+    press(root, 'ArrowRight', { shiftKey: true }, 'ltr', actions);
+    expect(cellAt(root, 1, 1)).toHaveFocus();
+    expect(actions.extend).toHaveBeenLastCalledWith(rowOf(root, 1));
+    // Ctrl+Shift+End to the last row's last shown cell extends to that row, as React Aria does.
+    press(root, 'End', { shiftKey: true, ctrlKey: true }, 'ltr', actions);
+    expect(cellAt(root, 3, 2)).toHaveFocus();
+    expect(actions.extend).toHaveBeenLastCalledWith(rowOf(root, 2));
+    expect(actions.extend).toHaveBeenCalledTimes(3);
+    // Shift+Home in a row moves without extending, as React Aria's Home does without Ctrl.
+    press(root, 'Home', { shiftKey: true }, 'ltr', actions);
+    expect(cellAt(root, 1, 2)).toHaveFocus();
+    // The header row is never selected; and an arrow without Shift extends nothing.
+    headerAt(root, 1).focus();
+    press(root, 'ArrowRight', { shiftKey: true }, 'ltr', actions);
+    expect(headerAt(root, 3)).toHaveFocus();
+    cellAt(root, 1, 1).focus();
+    press(root, 'ArrowRight', {}, 'ltr', actions);
+    expect(actions.extend).toHaveBeenCalledTimes(3);
+  });
+});
+
+/**
+ * A grid as DataTable draws it, rendered by React with the handler on its root's capture phase: two rows with a
+ * link, a disabled row without one, the totals row, a cell with an input, a button and a checkbox, then the bar,
+ * and a button portaled out of the root as a Menu opened in a cell is.
+ */
+const MARKUP = `
+<table role="grid">
+  <thead><tr role="row"><th role="columnheader" tabindex="-1">Payee</th><th role="columnheader" tabindex="-1">Note</th></tr></thead>
+  <tbody>
+    <tr role="row" tabindex="-1" data-key="t1"><td role="rowheader" tabindex="-1"><a class="data-table-link" href="/t1">Corner Mart</a></td><td role="gridcell" tabindex="-1"><input aria-label="Note" /><button type="button">More</button><input type="checkbox" aria-label="Flag" /></td></tr>
+    <tr role="row" tabindex="-1" data-key="t2"><td role="rowheader" tabindex="-1"><a class="data-table-link" href="/t2">City Transit</a></td><td role="gridcell" tabindex="-1">Bus</td></tr>
+    <tr role="row" tabindex="-1" data-key="t3" aria-disabled="true"><td role="rowheader" tabindex="-1">Northside Rent</td><td role="gridcell" tabindex="-1"></td></tr>
+  </tbody>
+  <tfoot><tr role="row" tabindex="-1" data-key="__total"><td role="rowheader" tabindex="-1">Total</td><td role="gridcell" tabindex="-1"></td></tr></tfoot>
+</table>
+<div class="data-table-bar" role="toolbar" aria-label="Bulk actions"><button type="button">Delete</button></div>
+`;
+
+/** The keys `keyOf` gives: t1 and t2; the disabled row, the totals and the header give none. */
+const SELECTABLE = new Set(['t1', 't2']);
+
+function mount(direction: 'ltr' | 'rtl' = 'ltr') {
+  const actions = {
+    direction,
+    keyOf: (row: Element) => {
+      const key = row.getAttribute('data-key');
+      return key !== null && SELECTABLE.has(key) ? key : null;
+    },
+    toggle: vi.fn<(key: string | number) => void>(),
+    extend: vi.fn<(row: Element) => void>(),
+  } satisfies TableKeyActions;
+  const view = render(
+    createElement(
+      Fragment,
+      null,
+      createElement(
+        'div',
+        {
+          'data-testid': 'root',
+          onKeyDownCapture: (event: KeyboardEvent<HTMLElement>) => {
+            handleTableKey(event, actions);
+          },
+        },
+        createElement('div', { dangerouslySetInnerHTML: { __html: MARKUP } }),
+        createPortal(createElement('button', { type: 'button', 'data-portal': '' }, 'Split'), document.body),
+      ),
+    ),
+  );
+  const root = view.getByTestId('root');
+  const q = (selector: string): HTMLElement => find(document.body, selector);
+  // What passes the root reaches the document; what the handler stops does not.
+  const reached = vi.fn();
+  document.addEventListener('keydown', reached);
+  const arrows: string[] = [];
+  q('[role="grid"]').addEventListener('keydown', (event) => {
+    if (event.key.startsWith('Arrow')) arrows.push(event.key);
+  });
+  const clicks: MouseEvent[] = [];
+  for (const link of document.querySelectorAll('a')) {
+    link.addEventListener('click', (event) => {
+      clicks.push(event);
+      // jsdom does not navigate; a browser would, so the test keeps the page.
+      event.preventDefault();
+    });
+  }
+  const cleanupListener = (): void => {
+    document.removeEventListener('keydown', reached);
+  };
+  return { root, actions, q, reached, arrows, clicks, cleanupListener };
+}
+
+/** Focuses `element` and presses `key` on it, returning the native event. */
+function key(element: HTMLElement, init: KeyboardEventInit): Event {
+  act(() => {
+    element.focus();
+  });
+  const event = new globalThis.KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+  fireEvent(element, event);
+  return event;
+}
+
+describe('the table keys', () => {
+  it('dispatches Arrow Down for J and Arrow Up for K on the focused element', () => {
+    const { q, reached, arrows, cleanupListener } = mount();
+    const row = q('[data-key="t1"]');
+    const j = key(row, { key: 'j', code: 'KeyJ' });
+    expect(j.defaultPrevented).toBe(true);
+    key(row, { key: 'k', code: 'KeyK' });
+    expect(arrows).toEqual(['ArrowDown', 'ArrowUp']);
+    // The letters themselves never pass the root; the arrows do, as React Aria hears them.
+    expect(reached.mock.calls.map(([event]) => (event as KeyboardEvent).key)).toEqual([
+      'ArrowDown',
+      'ArrowUp',
+    ]);
+    cleanupListener();
+  });
+
+  it('matches J, K and X on a Persian layout by event.code: key ت with code KeyJ', () => {
+    const { q, actions, arrows, cleanupListener } = mount();
+    const row = q('[data-key="t2"]');
+    key(row, { key: 'ت', code: 'KeyJ' });
+    key(row, { key: 'ن', code: 'KeyK' });
+    expect(arrows).toEqual(['ArrowDown', 'ArrowUp']);
+    key(row, { key: 'ط', code: 'KeyX' });
+    expect(actions.toggle).toHaveBeenCalledWith('t2');
+    cleanupListener();
+  });
+
+  it('toggles the focused row on X, and nothing for the totals, empty or a disabled row', () => {
+    const { q, actions, reached, cleanupListener } = mount();
+    key(q('[data-key="t1"]'), { key: 'x', code: 'KeyX' });
+    expect(actions.toggle).toHaveBeenLastCalledWith('t1');
+    // From a cell of the row too.
+    key(q('[data-key="t2"] [role="gridcell"]'), { key: 'X', code: 'KeyX', shiftKey: false });
+    expect(actions.toggle).toHaveBeenLastCalledWith('t2');
+    expect(actions.toggle).toHaveBeenCalledTimes(2);
+    key(q('[data-key="t3"]'), { key: 'x', code: 'KeyX' });
+    key(q('[data-key="__total"]'), { key: 'x', code: 'KeyX' });
+    expect(actions.toggle).toHaveBeenCalledTimes(2);
+    // X never reaches React Aria's typeahead.
+    expect(reached).not.toHaveBeenCalled();
+    cleanupListener();
+  });
+
+  it('clicks the row link on Enter from the row or a cell, and swallows Enter on a row without one', () => {
+    const { q, clicks, reached, cleanupListener } = mount();
+    const enter = key(q('[data-key="t1"]'), { key: 'Enter', code: 'Enter' });
+    expect(enter.defaultPrevented).toBe(true);
+    expect(clicks).toHaveLength(1);
+    expect((clicks[0]?.target as HTMLAnchorElement | null)?.getAttribute('href')).toBe('/t1');
+    key(q('[data-key="t2"] [role="gridcell"]'), { key: 'Enter', code: 'Enter' });
+    expect(clicks).toHaveLength(2);
+    expect(clicks[1]?.target).toBe(q('[data-key="t2"] a'));
+    // No link: the key stops all the same, so React Aria never selects the row.
+    key(q('[data-key="t3"]'), { key: 'Enter', code: 'Enter' });
+    key(q('[data-key="__total"] [role="gridcell"]'), { key: 'Enter', code: 'Enter' });
+    expect(clicks).toHaveLength(2);
+    expect(reached).not.toHaveBeenCalled();
+    cleanupListener();
+  });
+
+  it('dispatches a click with the modifiers on a modifier Enter', () => {
+    const { q, clicks, cleanupListener } = mount();
+    const plain = vi.spyOn(HTMLElement.prototype, 'click');
+    key(q('[data-key="t1"]'), { key: 'Enter', code: 'Enter', ctrlKey: true });
+    key(q('[data-key="t2"]'), { key: 'Enter', code: 'Enter', metaKey: true, shiftKey: true });
+    key(q('[data-key="t2"]'), { key: 'Enter', code: 'Enter', altKey: true });
+    expect(plain).not.toHaveBeenCalled();
+    expect(
+      clicks.map(({ ctrlKey, metaKey, shiftKey, altKey }) => [ctrlKey, metaKey, shiftKey, altKey]),
+    ).toEqual([
+      [true, false, false, false],
+      [false, true, true, false],
+      [false, false, false, true],
+    ]);
+    expect(clicks.every((click) => click.bubbles && click.cancelable && click.detail === 1)).toBe(true);
+    cleanupListener();
+  });
+
+  it('leaves Enter on a control inside a cell to the control', () => {
+    const { q, clicks, reached, cleanupListener } = mount();
+    const enter = key(q('[data-key="t1"] button'), { key: 'Enter', code: 'Enter' });
+    expect(enter.defaultPrevented).toBe(false);
+    expect(reached).toHaveBeenCalledTimes(1);
+    // The row's own link takes its Enter itself, as any link does.
+    key(q('[data-key="t1"] a'), { key: 'Enter', code: 'Enter' });
+    expect(reached).toHaveBeenCalledTimes(2);
+    expect(clicks).toHaveLength(0);
+    cleanupListener();
+  });
+
+  it('stops every other single printable key, and leaves Space, the arrows, Home, End and Escape', () => {
+    const { q, reached, arrows, cleanupListener } = mount();
+    const row = q('[data-key="t1"]');
+    for (const letter of ['c', 'C', 'z', '7', 'ش', '.']) key(row, { key: letter });
+    expect(reached).not.toHaveBeenCalled();
+    for (const through of [' ', 'ArrowDown', 'ArrowRight', 'Home', 'End', 'Escape', 'PageDown', 'Tab']) {
+      key(row, { key: through });
+    }
+    expect(reached.mock.calls.map(([event]) => (event as KeyboardEvent).key)).toEqual([
+      ' ',
+      'ArrowDown',
+      'ArrowRight',
+      'Home',
+      'End',
+      'Escape',
+      'PageDown',
+      'Tab',
+    ]);
+    expect(arrows).toEqual(['ArrowDown', 'ArrowRight']);
+    cleanupListener();
+  });
+
+  it('leaves keys with Ctrl, Alt or Meta held to React Aria, Enter apart', () => {
+    const { q, actions, reached, arrows, cleanupListener } = mount();
+    const row = q('[data-key="t1"]');
+    key(row, { key: 'a', code: 'KeyA', ctrlKey: true });
+    key(row, { key: 'a', code: 'KeyA', metaKey: true });
+    key(row, { key: 'j', code: 'KeyJ', ctrlKey: true });
+    key(row, { key: 'x', code: 'KeyX', altKey: true });
+    expect(reached).toHaveBeenCalledTimes(4);
+    expect(arrows).toEqual([]);
+    expect(actions.toggle).not.toHaveBeenCalled();
+    key(row, { key: 'Enter', code: 'Enter', ctrlKey: true });
+    expect(reached).toHaveBeenCalledTimes(4);
+    cleanupListener();
+  });
+
+  it('ignores a composing key, a key in an input in a cell, a key in the bar, and every key while another modal is open', () => {
+    const { q, actions, reached, arrows, clicks, cleanupListener } = mount();
+    const row = q('[data-key="t1"]');
+    key(row, { key: 'j', code: 'KeyJ', isComposing: true });
+    expect(reached).toHaveBeenCalledTimes(1);
+    const input = q('[data-key="t1"] input[aria-label="Note"]');
+    key(input, { key: 'j', code: 'KeyJ' });
+    key(input, { key: 'x', code: 'KeyX' });
+    key(input, { key: 'Enter', code: 'Enter' });
+    expect(input).toHaveFocus();
+    expect(reached).toHaveBeenCalledTimes(4);
+    key(q('.data-table-bar button'), { key: 'x', code: 'KeyX' });
+    key(q('.data-table-bar button'), { key: 'Enter', code: 'Enter' });
+    expect(reached).toHaveBeenCalledTimes(6);
+    modal.open = true;
+    key(row, { key: 'j', code: 'KeyJ' });
+    key(row, { key: 'x', code: 'KeyX' });
+    key(row, { key: 'Enter', code: 'Enter' });
+    key(row, { key: 'c', code: 'KeyC' });
+    expect(reached).toHaveBeenCalledTimes(10);
+    expect(arrows).toEqual([]);
+    expect(actions.toggle).not.toHaveBeenCalled();
+    expect(clicks).toHaveLength(0);
+    // A checkbox in a cell types nothing, so X on it is the row's.
+    modal.open = false;
+    key(q('[data-key="t1"] input[type="checkbox"]'), { key: 'x', code: 'KeyX' });
+    expect(actions.toggle).toHaveBeenCalledWith('t1');
+    cleanupListener();
+  });
+
+  it('lets a key from a portal opened in a cell through, though React bubbles it to the root', () => {
+    const { q, actions, reached, cleanupListener } = mount();
+    const portaled = q('[data-portal]');
+    key(portaled, { key: 'x', code: 'KeyX' });
+    key(portaled, { key: 'c', code: 'KeyC' });
+    key(portaled, { key: 'Enter', code: 'Enter' });
+    expect(reached).toHaveBeenCalledTimes(3);
+    expect(actions.toggle).not.toHaveBeenCalled();
+    cleanupListener();
   });
 });

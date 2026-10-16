@@ -208,4 +208,6 @@ export {
   type DataTableColumn,
   type DataTableLabels,
   type DataTableProps,
+  type DataTableSelectable,
+  type DataTableShared,
 } from './data-table';

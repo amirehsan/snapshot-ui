@@ -641,6 +641,33 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     ['aria-busy="true"', 'class="data-table-skeleton-row"', 'class="skeleton"', 'class="data-table-loading"'],
     ['<tfoot', 'aria-selected'],
   ],
+  [
+    // Two rows selected, from a client component: the checkbox column, the bar with its count and an empty
+    // count status; React Aria's 'all' never appears.
+    'DataTable selected',
+    <DataTable
+      aria-label="Transactions"
+      items={TRANSACTIONS.slice(0, 5)}
+      columns={COLUMNS}
+      getKey={keyOf}
+      getRowHref={hrefOf}
+      selectedKeys={['t1', 't3']}
+      onSelectionChange={() => undefined}
+      bulkActions={<Button variant="secondary">Categorize</Button>}
+    />,
+    [
+      'aria-multiselectable="true"',
+      'aria-label="Select all"',
+      'aria-label="Select"',
+      'aria-selected="true"',
+      'class="data-table-bar"',
+      'role="toolbar"',
+      'aria-label="Bulk actions"',
+      '>2 selected<',
+      'class="data-table-status data-table-count"',
+    ],
+    ["'all'"],
+  ],
 ];
 
 describe('the client components on the server', () => {

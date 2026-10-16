@@ -25,7 +25,7 @@ import { Select } from '../src/select';
 import { Sheet } from '../src/sheet';
 import { Sidebar, SidebarGroup, SidebarItem } from '../src/sidebar';
 import { StatTile } from '../src/stat-tile';
-import { COLUMNS, keyOf } from '../src/stories/transactions';
+import { COLUMNS, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Switch } from '../src/switch';
 import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
@@ -340,6 +340,25 @@ describe('an empty data part slot', () => {
       );
       const cell = container.querySelector('tbody td');
       expect(cell, String(emptyState)).toBeEmptyDOMElement();
+      unmount();
+    }
+  });
+
+  it('draws no actions in the bar for bulkActions of false, an empty string or null', () => {
+    for (const bulkActions of [false, '', null]) {
+      const { container, unmount } = render(
+        <DataTable
+          aria-label="Transactions"
+          items={TRANSACTIONS.slice(0, 3)}
+          columns={COLUMNS}
+          getKey={keyOf}
+          selectedKeys={['t1']}
+          onSelectionChange={() => undefined}
+          bulkActions={bulkActions}
+        />,
+      );
+      expect(container.querySelector('.data-table-bar'), String(bulkActions)).not.toBeNull();
+      expect(container.querySelector('.data-table-bar-actions'), String(bulkActions)).toBeNull();
       unmount();
     }
   });

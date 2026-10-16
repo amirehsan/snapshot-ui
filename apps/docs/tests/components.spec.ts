@@ -637,6 +637,29 @@ test.describe('forced colors', () => {
     await expect(current.locator('.data-table-link')).toHaveAttribute('aria-current', 'true');
   });
 
+  test('a selected data table row is Highlight with HighlightText', async ({ page }) => {
+    // A selected row's 8% wash would be repainted away; Highlight is the reader's own selection color, and the
+    // checked box still marks the row.
+    await visit(page, '/docs/components/data-table');
+    const [highlight, highlightText] = [
+      await systemColor(page, 'Highlight'),
+      await systemColor(page, 'HighlightText'),
+    ];
+    const stage = page.locator('.stage').filter({ has: page.getByRole('checkbox', { name: 'Select all' }) });
+    const row = stage.locator('tbody [role="row"]').first();
+    await expectTableFace(row);
+    await row.focus();
+    await page.keyboard.press('x');
+    await expect(row).toHaveAttribute('aria-selected', 'true');
+    await expect(row).toHaveCSS('background-color', highlight);
+    await expect(row).toHaveCSS('color', highlightText);
+    await expect(row.getByRole('checkbox')).toBeChecked();
+    await expect(stage.locator('.data-table-bar')).toHaveCSS(
+      'border-top-color',
+      await systemColor(page, 'CanvasText'),
+    );
+  });
+
   test('a tag keeps a CanvasText edge', async ({ page }) => {
     // The bone fill is repainted away, so the edge is what draws the pill; a disabled tag is GrayText.
     await visit(page, '/docs/components/multi-select');
