@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -21,6 +22,7 @@ import { useRailFold } from '../app-shell/AppShell';
 import { IconButton } from '../icon-button/IconButton';
 import { keyboardScroll } from '../overlay/keyboard-scroll';
 import { isUnderModal } from '../overlay/useOverlayStack';
+import { portalOf, watchPortal } from '../overlay/watch-portal';
 import { Sheet } from '../sheet/Sheet';
 import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
@@ -48,8 +50,9 @@ export interface SidePanelProps {
    */
   onCloseRequest?: () => boolean;
   /**
-   * Escape closes the panel, and on a phone a swipe or a press outside the sheet does too. `false` leaves only the
-   * close button and the app's own buttons; pass it while edits are unsaved, so a swipe cannot throw them away.
+   * On a phone, a swipe or a press outside the sheet closes it. `false` leaves them doing nothing; pass it while
+   * edits are unsaved, so a gesture cannot throw them away. The close button and Escape always ask
+   * `onCloseRequest`, on either face.
    * @default true
    */
   isDismissable?: boolean;
@@ -67,7 +70,14 @@ export interface SidePanelLayoutState {
   content: () => HTMLDivElement | null;
   /** What opened the panel, kept by the layout, so a panel keyed by its row hands it to the next. */
   opener: () => Element | null;
-  setOpener: (element: Element) => void;
+  setOpener: (element: Element | null) => void;
+  /**
+   * A panel opens, and whether it continues the layout's open stretch: a panel keyed by its row that replaces the
+   * one before in the same commit does, a panel that opens after one closed does not.
+   */
+  begin: () => boolean;
+  /** An open panel closes or leaves. */
+  end: () => void;
   /** Whether an open panel folds an AppShell's rail under 1440px. */
   collapsesRail: boolean;
 }
@@ -173,7 +183,7 @@ export function SidePanel({
     [layout],
   );
   const remember = useCallback(
-    (element: Element): void => {
+    (element: Element | null): void => {
       if (layout) layout.setOpener(element);
       else ownOpener.current = element;
     },
@@ -184,6 +194,17 @@ export function SidePanel({
   const [sheetKey, setSheetKey] = useState(0);
 
   useRailFold(isOpen && (layout?.collapsesRail ?? false));
+
+  // Whether this opening continues the layout's open stretch, as a panel keyed by the next row does. Asked in a
+  // layout effect, where the panel before gives up its stretch in the same commit.
+  const continues = useRef(false);
+  useLayoutEffect(() => {
+    if (!isOpen || layout === null) return;
+    continues.current = layout.begin();
+    return () => {
+      layout.end();
+    };
+  }, [isOpen, layout]);
 
   // An opening is isOpen turning true, or a mount after hydration with isOpen (spec correction 20). A panel in
   // the server's HTML, hydrated open, never moves focus.
@@ -200,6 +221,12 @@ export function SidePanel({
   // the element leaves, so only focus that left with the panel is given back, never focus the reader put elsewhere
   // or a page that loaded with focus nowhere.
   const leftWithFocus = useRef(false);
+  // Where focus was when the aside last left the page, and, while an open panel is a sheet because the window
+  // narrowed with focus on the page, that element: the sheet takes focus while it covers the page, and hands it
+  // back there as the aside returns, if the reader did not move into the sheet (spec correction 93).
+  const asideLeft = useRef<{ hadFocus: boolean; active: Element | null }>({ hadFocus: false, active: null });
+  const pageFocus = useRef<Element | null | undefined>(undefined);
+  const isSheetTouched = useRef(false);
 
   /** Back to what opened the panel, or the layout's content, but only when focus left with the panel. */
   const giveFocusBack = useCallback((): void => {
@@ -219,16 +246,18 @@ export function SidePanel({
     const isMoving = isOpen && wasOpen.current && isWide !== wasWide.current;
     wasOpen.current = isOpen;
     wasWide.current = isWide;
+    if (isOpening || isClosing) pageFocus.current = undefined;
     if (isOpening) {
       const active = document.activeElement;
-      // Opened from inside a panel, as a Next button in it does, or from nowhere, the layout keeps its opener.
-      if (
+      const isFromPage =
         active instanceof HTMLElement &&
         active !== document.body &&
-        active.closest('.side-panel, .side-panel-sheet') === null
-      ) {
-        remember(active);
-      }
+        active.closest('.side-panel, .side-panel-sheet') === null;
+      // What held focus opened it. Opened from inside a panel, as its Next button does, or from nowhere as the
+      // next row's panel, the opener of the stretch stays; a fresh opening from nowhere, as Back to a row's URL
+      // is, has none, so no row an earlier opening left behind takes focus or scrolls into view.
+      if (isFromPage) remember(active);
+      else if (!continues.current) remember(null);
       if (isWide) {
         focusPanel();
         keepInView(openerOf(), contentOf());
@@ -237,7 +266,21 @@ export function SidePanel({
     }
     // On the narrow face the sheet gives focus back as it leaves (trackSheet).
     if (isClosing && isWide) giveFocusBack();
-    if (!isMoving || !isWide) return;
+    if (!isMoving) return;
+    if (!isWide) {
+      // Wide to narrow: where focus was, if not in the aside.
+      pageFocus.current = asideLeft.current.hadFocus ? undefined : asideLeft.current.active;
+      return;
+    }
+    const away = pageFocus.current;
+    pageFocus.current = undefined;
+    if (away !== undefined && !isSheetTouched.current) {
+      // The sheet only held focus while it covered the page: it goes back where the reader had it, unscrolled.
+      if (away instanceof HTMLElement && away !== document.body && away.isConnected) {
+        away.focus({ preventScroll: true });
+      }
+      return;
+    }
     // Narrow to wide: the sheet has left, and its own hand-back ran first; the heading takes focus after it. A
     // hand-back that lands a frame later is undone in that frame.
     focusPanel();
@@ -270,16 +313,55 @@ export function SidePanel({
     onClose();
     return true;
   };
+  // The sheet's Escape while React Aria leaves it alone, read from the sheet's own listener.
+  const escapeWhileUndismissable = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    escapeWhileUndismissable.current = isDismissable
+      ? null
+      : () => {
+          requestClose();
+        };
+  });
 
-  const trackAside = useCallback((element: HTMLElement | null) => {
-    aside.current = element;
-    if (element === null) return undefined;
-    leftWithFocus.current = false;
-    return () => {
-      aside.current = null;
-      leftWithFocus.current = element.contains(document.activeElement);
-    };
-  }, []);
+  // The aside, and the portal focus went into from it, a dialog or a menu the panel opened, whether that portal is
+  // in the panel's React tree, as its Menu's is, or the app's, as a confirm dialog's is. Focus that is in that
+  // portal as the aside leaves is watched there, and goes back once the portal leaves with focus on the body
+  // (spec correction 84).
+  const trackAside = useCallback(
+    (element: HTMLElement | null) => {
+      aside.current = element;
+      if (element === null) return undefined;
+      leftWithFocus.current = false;
+      const home = portalOf(element);
+      let opened: Element | null = null;
+      const onFocusIn = (event: FocusEvent): void => {
+        const { target, relatedTarget: from } = event;
+        if (!(target instanceof Element) || element.contains(target)) {
+          opened = null;
+          return;
+        }
+        const portal = portalOf(target);
+        const isFromPanel =
+          from instanceof Element && (element.contains(from) || opened?.contains(from) === true);
+        if (isFromPanel && portal !== home) opened = portal;
+        else if (opened?.contains(target) !== true) opened = null;
+      };
+      document.addEventListener('focusin', onFocusIn);
+      return () => {
+        document.removeEventListener('focusin', onFocusIn);
+        aside.current = null;
+        const active = document.activeElement;
+        leftWithFocus.current = element.contains(active);
+        asideLeft.current = { hadFocus: leftWithFocus.current, active };
+        if (opened === null || active === null || !opened.contains(active)) return;
+        watchPortal(element, active, () => {
+          leftWithFocus.current = true;
+          giveFocusBack();
+        });
+      };
+    },
+    [giveFocusBack],
+  );
   // The sheet's dialog leaving the page: once its own hand-back has run, a frame later, focus that is still lost,
   // as when the sheet opened from no focused element or took over from the aside, goes back here.
   const trackSheet = useCallback(
@@ -287,9 +369,24 @@ export function SidePanel({
       sheetContent.current = element;
       if (element === null) return undefined;
       leftWithFocus.current = false;
+      // Escape asks to close on the sheet too while it is not dismissable, when React Aria leaves Escape alone:
+      // only a swipe and a press outside are turned off (spec correction 88).
+      const onKeyDown = (event: globalThis.KeyboardEvent): void => {
+        if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+        const close = escapeWhileUndismissable.current;
+        if (close === null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      };
+      element.addEventListener('keydown', onKeyDown);
       return () => {
+        element.removeEventListener('keydown', onKeyDown);
         sheetContent.current = null;
-        leftWithFocus.current = element.contains(document.activeElement);
+        const active = document.activeElement;
+        leftWithFocus.current = element.contains(active);
+        // Focus the reader moved into the sheet, past the dialog React Aria focuses as it opens.
+        isSheetTouched.current = active !== element && leftWithFocus.current;
         requestAnimationFrame(giveFocusBack);
       };
     },
@@ -304,8 +401,10 @@ export function SidePanel({
     const panel = event.currentTarget;
     // A key from a portal opened in the panel reaches it only through React's tree, and is not the panel's.
     if (!(event.target instanceof Node) || !panel.contains(event.target)) return;
-    // Under a modal, as a confirm dialog the panel's Delete opened, the key is the modal's.
-    if (isUnderModal(panel) || !isDismissable) return;
+    // Under a modal, as a confirm dialog the panel's Delete opened, the key is the modal's. Escape asks to close
+    // whether or not the panel is dismissable, so an app with unsaved edits can ask to discard them (spec
+    // correction 88).
+    if (isUnderModal(panel)) return;
     event.preventDefault();
     event.stopPropagation();
     requestClose();

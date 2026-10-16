@@ -1,11 +1,11 @@
 /*
  * SidePanel and SidePanelLayout: a detail beside the content on a wide screen, derived in docs/design-system.md
  * ("SidePanel"). The layout is one column, and from 1024px, while it holds an open panel, the content and a 24rem
- * column. The panel is the rail's surface (float, the hairline, the stadium corner, the level 1 lift), padded a
- * peer step and sticky an inset under --page-sticky-top, floating clear of the page's header as the rail floats
- * clear of the viewport's edge, as tall as the viewport allows, its body scrolling inside it and its footer pinned
- * under a divider. It does not move: it is a column of the layout. Under 1024px it is hidden
- * and the panel is a Sheet. The body and the sheet's body scroll, so a table in either sticks its header at
+ * column. The panel is the rail's surface (float, the hairline, the stadium corner, the level 1 lift), its header,
+ * body and footer each padded a peer step, sticky an inset under --page-sticky-top, floating clear of the page's
+ * header as the rail floats clear of the viewport's edge, as tall as the viewport allows, its body scrolling inside
+ * it and its footer pinned under a divider. It does not move: it is a column of the layout. Under 1024px it is
+ * hidden and the panel is a Sheet. The body and the sheet's body scroll, so a table in either sticks its header at
  * their own top: each sets --page-sticky-top to 0px for what it holds. 1024px is the --breakpoint-md token,
  * written out because a media query cannot read a custom property; test/css.test.js keeps them equal.
  */
@@ -32,7 +32,6 @@
     inline-size: 24rem;
     max-block-size: calc(100dvh - var(--page-sticky-top, 0px) - 2 * var(--spacing-inset));
     margin-block-start: var(--spacing-inset);
-    padding: var(--spacing-peer);
     border: 1px solid var(--color-hairline);
     border-radius: var(--radius-stadium);
     background-color: var(--color-float);
@@ -48,11 +47,14 @@
     outline-offset: var(--focus-ring-offset);
   }
 
+  /* The peer padding is the parts' own, not the panel's, as Sheet's is: the body scrolls and clips what it holds,
+     so its padding is the room a field's focus ring needs at its edges. */
   .side-panel-header {
     display: flex;
     flex: none;
     align-items: flex-start;
     gap: var(--spacing-part);
+    padding: var(--spacing-peer) var(--spacing-peer) 0;
   }
 
   .side-panel-header-text {
@@ -99,16 +101,29 @@
 
     flex: 1 1 auto;
     min-block-size: 0;
-    margin-block-start: var(--spacing-inset);
+    padding: 0 var(--spacing-peer) var(--spacing-inset);
     overflow: auto;
     overflow-wrap: anywhere;
     outline: none;
+  }
+
+  /* The inset above the body's first part is a block that scrolls with it, not padding: a scroller's block-start
+     padding would hold a sticky part, a table's header row, an inset below the body's top, with rows showing
+     above it. */
+  .side-panel-body::before {
+    content: '';
+    display: block;
+    block-size: var(--spacing-inset);
   }
 
   /* A body that scrolls with nothing to focus in it is a tab stop (keyboardScroll), ringed inside its edge. */
   .side-panel-body:focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
+  .side-panel-body:last-child {
+    padding-block-end: var(--spacing-peer);
   }
 
   .side-panel-sheet .sheet-body {
@@ -121,8 +136,8 @@
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--spacing-part);
-    margin-block-start: var(--spacing-inset);
-    padding-block-start: var(--spacing-inset);
+    margin-inline: var(--spacing-peer);
+    padding-block: var(--spacing-inset) var(--spacing-peer);
     border-block-start: 1px solid var(--color-divider);
   }
 

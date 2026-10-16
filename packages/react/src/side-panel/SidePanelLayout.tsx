@@ -34,12 +34,31 @@ export function SidePanelLayout({
 }: SidePanelLayoutProps): ReactElement {
   const content = useRef<HTMLDivElement>(null);
   const opener = useRef<Element | null>(null);
+  // The open panels, and whether the last one left in this task: a panel keyed by the next row ends its
+  // predecessor's stretch and begins its own in one commit's layout effects, with no microtask between them.
+  const open = useRef({ count: 0, isEnding: false });
   const state = useMemo<SidePanelLayoutState>(
     () => ({
       content: () => content.current,
       opener: () => opener.current,
       setOpener: (element) => {
         opener.current = element;
+      },
+      begin: () => {
+        const stretch = open.current;
+        const continues = stretch.count > 0 || stretch.isEnding;
+        stretch.count += 1;
+        stretch.isEnding = false;
+        return continues;
+      },
+      end: () => {
+        const stretch = open.current;
+        stretch.count -= 1;
+        if (stretch.count > 0) return;
+        stretch.isEnding = true;
+        queueMicrotask(() => {
+          stretch.isEnding = false;
+        });
       },
       collapsesRail,
     }),

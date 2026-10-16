@@ -1628,9 +1628,7 @@ export const SidePanelMirrored: Story = {
     const title = find(header, '.side-panel-title');
     await expect(rect(close).right).toBeLessThan(rect(title).left + 1);
     await expect(
-      Math.abs(
-        rect(title).right - (rect(panel).right - parseFloat(getComputedStyle(panel).paddingRight) - 1),
-      ),
+      Math.abs(rect(title).right - (rect(header).right - parseFloat(getComputedStyle(header).paddingRight))),
     ).toBeLessThan(1.5);
   },
 };

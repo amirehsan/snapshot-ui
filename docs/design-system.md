@@ -8357,7 +8357,7 @@ resort (`tabIndex={-1}`, no outline), never as a tab stop.
 
 **The surface.** The rail's, its third use after the rail and the drawer
 as one object: the float fill, the hairline, the stadium corner, the
-level 1 lift, padded a peer step. It sits an inset, 16px, below the
+level 1 lift. It sits an inset, 16px, below the
 layout's top, and it is sticky an inset under `--page-sticky-top`
 (spec correction 73), so as the page scrolls it floats clear of the
 page's header as the rail floats clear of the viewport's edge, as tall
@@ -8365,23 +8365,34 @@ as the viewport allows less that offset and two insets. The header, the
 body and the footer are a column: the body scrolls inside the panel and
 the footer stays pinned under it. Nothing moves: the panel is a column
 of the layout and the content reflows once as it comes (R8, 10.2 item
-11). In forced colors its edge is `CanvasText`.
+11). In forced colors its edge is `CanvasText`. Its height is the room
+under the header only when the layout starts right under it, so the
+layout holds the page's title, filters and table in its content and
+starts there; clamping the panel to the room under its own top would
+measure it on every scroll (spec correction 89).
 
 **The header.** The title, an `h2` at the h3 step, `--text-h3` with its
 line height and letter spacing, at 700 in ink, breaking anywhere; the
 description under it, 4px down, at the small step in slate; and the
 close button at the inline end, a ghost `IconButton` with Lucide `X`,
-hit at 40px, pulled a part step into the corner as Sheet's is. With
+hit at 40px, pulled a part step into the corner as Sheet's is. The
+header is padded a peer step at its top and sides. With
 `isTitleHidden` the title is visually hidden and still names the panel.
 
-**The body and the footer.** The body is an inset, 16px, under the
-header and scrolls; while it scrolls and holds nothing to focus it is a
-tab stop, ringed inside its edge, as Sheet's body is. It sets
+**The body and the footer** (spec correction 86). Each part holds its
+own padding, as Sheet's do, so the body, which scrolls and clips what
+it holds, has room for a field's focus ring: a peer step at its sides,
+an inset at its end, a peer step with no footer, and an inset, 16px,
+under the header that is a block scrolling with it, not padding, since
+a scroller's block-start padding would hold a sticky part that far
+below its top. While it scrolls and holds nothing to focus it is a tab
+stop, ringed inside its edge, as Sheet's body is. It sets
 `--page-sticky-top` to `0px` for what it holds, and so does the sheet's
 body, so a table there sticks at their top (spec corrections 68 and
 79). The footer is a wrapping row of actions at the inline end, a part
-step apart, an inset under the body and an inset under a divider rule,
-`CanvasText` in forced colors.
+step apart, a peer step in from the sides, under a divider rule with an
+inset above its actions and a peer step under them, `CanvasText` in
+forced colors.
 
 **Measured.** The title is ink on float, 18.43 in light and 17.42 in
 dark; the description slate on float, 5.49 and 6.94. Both are gated as
@@ -8403,34 +8414,46 @@ advise the detail's own route for such a link.
 landmark named by its heading through `aria-labelledby`, which keeps it
 a landmark inside `main`; on a phone it is a dialog titled by it.
 
-**Focus and openings** (ruling 11, spec corrections 20, 75, 76 and 77).
+**Focus and openings** (ruling 11, spec corrections 20, 75, 76, 77, 84
+and 85).
 An opening is `isOpen` turning true, or a panel mounted after hydration
 with `isOpen`, as the app's `key` with the open row's id mounts one for
 each row; a panel in the server's HTML, hydrated open, moves nothing.
 On an opening the element that held focus is remembered by the layout,
-so a Next button inside the panel keeps the first opener, and on the
+so a Next button inside the panel keeps the first opener while panels
+follow one another, and a panel opened from nowhere after the last one
+closed has none, and on the
 wide face focus moves to the heading, or to the aside, which can show a
 ring, while the heading is hidden. When the panel closes, focus that
 left with it, in the aside or the sheet's dialog, goes back to the
 opener, or to the same row in the face a DataTable draws now if the
-panel's going changed the face, or else to the content; focus the
-reader put elsewhere stays. The wide face traps nothing: Tab leaves it,
+panel's going changed the face, or else to the content; focus in a
+dialog or a menu the panel opened, as a confirm dialog's Discard, goes
+back once that portal has left the page; focus the reader put
+elsewhere stays. The wide face traps nothing: Tab leaves it,
 nothing is inert and nothing is dimmed.
 
-**Escape** (ruling 11, spec corrections 74 and 80). The aside listens
-in the bubble phase, so a list or menu open in the panel takes its own
-Escape first, and takes only an Escape nothing handled, from its own
-DOM, while no modal is open over it. Escape in the content is the
-content's: the table's clears its selection. `isDismissable={false}`
-leaves only the close button and the app's own buttons, and
-`onCloseRequest` is asked before every close the panel starts and may
-refuse it; a swipe the app refuses has already taken the sheet off the
-screen, so the sheet rises again.
+**Escape** (ruling 11, spec corrections 74, 80 and 88). The aside
+listens in the bubble phase, so a list or menu open in the panel takes
+its own Escape first, and takes only an Escape nothing handled, from
+its own DOM, while no modal is open over it. Escape in the content is
+the content's: the table's clears its selection. `onCloseRequest` is
+asked before every close the panel starts, the close button and Escape
+on either face and the sheet's swipe and press outside, and may refuse
+it, so an app with unsaved edits asks whether to discard them, as Gmail
+and Linear do. `isDismissable={false}` turns off only the sheet's swipe
+and press outside, which move the sheet before they could ask; a swipe
+the app refuses has already taken the sheet off the screen, so the
+sheet rises again.
 
-**Across 1024px.** An open panel moves between its faces as the window
-crosses 1024px: wide to narrow, the aside leaves and the sheet rises
-and takes focus into its dialog; narrow to wide, the sheet leaves and
-focus goes to the heading, after the sheet's own hand-back.
+**Across 1024px** (spec correction 93). An open panel moves between its
+faces as the window crosses 1024px: wide to narrow, the aside leaves
+and the sheet rises and takes focus into its dialog; narrow to wide,
+the sheet leaves and focus goes to the heading, after the sheet's own
+hand-back. Focus moves with the panel only when it was in it: if the
+reader was elsewhere on the page as the sheet came, the sheet holds
+focus while it covers the page, and as the aside returns focus goes
+back there, unscrolled, unless the reader moved into the sheet.
 
 **The rail folds** (spec 10.3 amendment 1, spec correction 72). Under
 1440px of viewport an open panel in a layout with `collapsesRail`, the
@@ -8448,12 +8471,14 @@ its table face at 1280px, about 45rem of box.
 on a Persian page, and its close button at the header's left. Nothing
 mirrors by attribute.
 
-**The size** (spec correction 83). The entry
+**The size** (spec corrections 83 and 91). The entry
 `{ SidePanel, SidePanelLayout }` measured 3.07 kB without React Aria,
 Lucide and `@internationalized/date`; the rule rounds up to 3.5 kB and
-adds 0.5 kB: 4 kB, over the spec's 2 kB budget because the entry
-carries Sheet with the overlay stack and its frame, IconButton and the
-shell's fold, each of which has an entry of its own.
+adds 0.5 kB: 4 kB. Its review round, with the portal watch, the open
+stretch, the sheet's Escape and the move, measured 3.8 kB, which the
+rule sets at 4.5 kB (spec correction 91), over the spec's 2 kB budget
+because the entry carries Sheet with the overlay stack and its frame,
+IconButton and the shell's fold, each of which has an entry of its own.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and
 NVDA (owner action 4): the panel read as a complementary landmark named

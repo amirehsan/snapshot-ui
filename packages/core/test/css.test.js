@@ -7053,14 +7053,29 @@ describe('src/components/side-panel.css', () => {
     expect(css).not.toMatch(/(?<![\w-])z-index\s*:/);
   });
 
-  it('draws the panel on the rail surface: float, hairline, stadium corner, the lift shadow, padded a peer step', () => {
-    const panel = blockAfter(rules(), '.side-panel {');
+  it('draws the panel on the rail surface: float, hairline, stadium corner, the lift shadow, its parts padded a peer step', () => {
+    const css = rules();
+    const panel = blockAfter(css, '.side-panel {');
+    // The parts take the peer padding, so the body that scrolls has room for a field's ring inside its clip.
+    expect(panel).not.toMatch(/(?<![\w-])padding:/);
+    expect(blockAfter(css, '.side-panel-header {')).toContain(
+      'padding: var(--spacing-peer) var(--spacing-peer) 0;',
+    );
+    expect(blockAfter(css, '.side-panel-body {')).toContain(
+      'padding: 0 var(--spacing-peer) var(--spacing-inset);',
+    );
+    // The inset at its top scrolls with it, so a sticky part in it sticks at the body's own top.
+    const spacer = blockAfter(css, '.side-panel-body::before {');
+    expect(spacer).toContain('display: block;');
+    expect(spacer).toContain('block-size: var(--spacing-inset);');
+    expect(blockAfter(css, '.side-panel-body:last-child {')).toContain(
+      'padding-block-end: var(--spacing-peer);',
+    );
     for (const declaration of [
       'box-sizing: border-box;',
       'flex-direction: column;',
       'inline-size: 24rem;',
       'margin-block-start: var(--spacing-inset);',
-      'padding: var(--spacing-peer);',
       'border: 1px solid var(--color-hairline);',
       'border-radius: var(--radius-stadium);',
       'background-color: var(--color-float);',
@@ -7095,7 +7110,6 @@ describe('src/components/side-panel.css', () => {
     for (const declaration of [
       'flex: 1 1 auto;',
       'min-block-size: 0;',
-      'margin-block-start: var(--spacing-inset);',
       'overflow: auto;',
       'overflow-wrap: anywhere;',
     ]) {
@@ -7184,8 +7198,8 @@ describe('src/components/side-panel.css', () => {
       'flex-wrap: wrap;',
       'justify-content: flex-end;',
       'gap: var(--spacing-part);',
-      'margin-block-start: var(--spacing-inset);',
-      'padding-block-start: var(--spacing-inset);',
+      'margin-inline: var(--spacing-peer);',
+      'padding-block: var(--spacing-inset) var(--spacing-peer);',
       'border-block-start: 1px solid var(--color-divider);',
     ]) {
       expect(footer, declaration).toContain(declaration);
