@@ -538,8 +538,8 @@
   /* ---- Collapsed rail: icons only, names as tooltips ----------------
      Only from 1024px up. Under it the rail is a drawer, and a drawer always
      shows its labels, whatever was chosen on a wide screen. Collapsed by the
-     reader, or folded while an example's side panel stands open beside the
-     page: the stage is narrower than an app's content, so the rail gives its
+     reader, or, under 1640px, folded while an example's side panel stands
+     open beside the page (the block after this one): the stage is narrower than an app's content, so the rail gives its
      room to the rows beside the panel, from the server's HTML on, as AppShell
      folds an app's rail. A reader who expands it over the panel
      (data-rail-unfolded) keeps it expanded until the panel closes. The fold
@@ -551,6 +551,74 @@
       transition: none;
     }
 
+    [data-rail='collapsed'] {
+      --rail-width: 104px;
+    }
+
+    [data-rail='collapsed'] .rail-collapse svg {
+      rotate: 180deg;
+    }
+
+    [data-rail='collapsed'] .rail-head {
+      justify-content: center;
+      padding: 24px 0 12px;
+    }
+
+    [data-rail='collapsed'] .rail-version,
+    [data-rail='collapsed'] .rail-key {
+      display: none;
+    }
+
+    /* Hidden from view, not from assistive technology. */
+    [data-rail='collapsed'] .rail-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    [data-rail='collapsed'] .rail-search {
+      justify-content: center;
+      width: 44px;
+      margin: 8px auto 4px;
+      padding: 0;
+    }
+
+    [data-rail='collapsed'] .rail-nav {
+      padding-inline: 16px;
+      scrollbar-width: none;
+    }
+
+    [data-rail='collapsed'] .rail-group {
+      justify-content: center;
+      margin-top: 16px;
+      padding: 8px 0;
+      font-size: 0;
+    }
+
+    [data-rail='collapsed'] .rail-group::before {
+      margin-left: 0;
+    }
+
+    [data-rail='collapsed'] .rail-link {
+      position: relative;
+      justify-content: center;
+      width: 40px;
+      margin-inline: auto;
+      padding: 0;
+    }
+
+    [data-rail='collapsed'] .rail-foot {
+      justify-content: center;
+      padding: 16px 0 20px;
+    }
+  }
+
+  /* The fold beside an open example panel, only while it gains the page room: from 1640px the workspace beside
+     the expanded 320px rail is 1320px or wider, the content column's cap, so the column is as wide either way and
+     the rail stays as the reader left it. The same rules as the collapsed rail's above, for the fold's element. */
+  @media (1024px <= width < 1640px) {
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded]))) {
       --rail-width: 104px;
     }
