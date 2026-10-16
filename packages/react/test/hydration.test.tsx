@@ -12,6 +12,7 @@ import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { SearchField } from '../src/search-field';
+import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 
 /**
@@ -25,7 +26,51 @@ import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/s
  */
 const noop = (): void => undefined;
 
-const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLElement) => void][] = [
+/** A viewport `width` px wide for the width queries a part reads after hydration; every other query is false. */
+const viewport = (width: number) => (): void => {
+  vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => {
+    const match = /^\(width (>=|<) (\d+)px\)$/.exec(query);
+    let matches = false;
+    if (match) matches = match[1] === '>=' ? width >= Number(match[2]) : width < Number(match[2]);
+    const list: MediaQueryList = {
+      matches,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    };
+    return list;
+  });
+};
+
+/** An open side panel in its layout, as the server writes it at every width. */
+const PANEL = (
+  <SidePanelLayout
+    panel={
+      <SidePanel
+        title="Groceries"
+        description="12 October"
+        isOpen
+        onClose={noop}
+        footer={<Button>Save</Button>}
+      >
+        <p>Corner Mart</p>
+      </SidePanel>
+    }
+  >
+    <button type="button">Corner Mart</button>
+  </SidePanelLayout>
+);
+
+const HYDRATED: [
+  name: string,
+  element: ReactElement,
+  after: (container: HTMLElement) => void,
+  before?: () => void,
+][] = [
   [
     'NumberField money',
     <NumberField label="Amount" money={{ symbol: '$' }} allowsNegative value={-123450} name="amount" />,
@@ -212,6 +257,27 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
       expect(container.querySelector('.data-table-list input[type="checkbox"]')).toBeNull();
     },
   ],
+  [
+    // At 1280px: the aside stays, no dialog mounts and the hydration moves no focus (spec correction 20).
+    'SidePanel',
+    PANEL,
+    (container) => {
+      expect(container.querySelector('aside.side-panel')).toHaveAccessibleName('Groceries');
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+      expect(document.activeElement).toBe(document.body);
+    },
+    viewport(1280),
+  ],
+  [
+    // At 800px: the server's aside hydrates with no mismatch, then gives way to the sheet (10.2 item 11).
+    'SidePanel narrow',
+    PANEL,
+    (container) => {
+      expect(container.querySelector('aside.side-panel')).toBeNull();
+      expect(document.querySelector('[role="dialog"]')).toHaveAccessibleName('Groceries');
+    },
+    viewport(800),
+  ],
 ];
 
 afterEach(() => {
@@ -221,8 +287,9 @@ afterEach(() => {
 describe('hydration', () => {
   it.each(HYDRATED)(
     'hydrates %s from its server HTML on a mocked iPhone with no mismatch, then draws React Aria text',
-    (_name, element, after) => {
+    (_name, element, after, before) => {
       const html = renderToString(element);
+      before?.();
       vi.spyOn(navigator, 'platform', 'get').mockReturnValue('iPhone');
       const container = document.createElement('div');
       container.innerHTML = html;

@@ -350,6 +350,13 @@
     "limit": "9 kB"
   },
   {
+    "name": "import { SidePanel, SidePanelLayout } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ SidePanel, SidePanelLayout }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "4 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

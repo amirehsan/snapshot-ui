@@ -28,6 +28,7 @@ import { SearchField } from '../search-field';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
 import { Select } from '../select';
 import { Sheet, SheetTrigger } from '../sheet';
+import { SidePanel, SidePanelLayout } from '../side-panel';
 import { MENU_ROW_A11Y } from '../stories/a11y';
 import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
@@ -1588,5 +1589,48 @@ export const DataTableListMirrored: Story = {
     // Select all at the head's right, the button at its left.
     const head = find(canvasElement, '.data-table-list-head');
     await expect(rect(find(head, '.checkbox-field')).left).toBeGreaterThan(rect(mode).right);
+  },
+};
+
+/**
+ * A side panel on a Persian page at a desktop width: its column at the layout's inline end, on the left of the
+ * content, and in its header the title at the right and the close button at the left.
+ */
+export const SidePanelMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa">
+        <SidePanelLayout
+          panel={
+            <SidePanel
+              title="فروشگاه سر کوچه"
+              description="سه‌شنبه ۲۲ مهر"
+              isOpen
+              onClose={() => undefined}
+              closeLabel="بستن"
+            >
+              <TextField label="گیرنده" defaultValue="فروشگاه سر کوچه" />
+            </SidePanel>
+          }
+        >
+          <p>تراکنش‌ها</p>
+        </SidePanelLayout>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(window.innerWidth).toBeGreaterThanOrEqual(1024);
+    const panel = find(canvasElement, '.side-panel');
+    const content = find(canvasElement, '.side-panel-layout-content');
+    await expect(rect(panel).right).toBeLessThanOrEqual(rect(content).left);
+    const header = find(panel, '.side-panel-header');
+    const close = find(header, '.side-panel-close');
+    const title = find(header, '.side-panel-title');
+    await expect(rect(close).right).toBeLessThan(rect(title).left + 1);
+    await expect(
+      Math.abs(
+        rect(title).right - (rect(panel).right - parseFloat(getComputedStyle(panel).paddingRight) - 1),
+      ),
+    ).toBeLessThan(1.5);
   },
 };

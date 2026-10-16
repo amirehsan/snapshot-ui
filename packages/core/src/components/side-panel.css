@@ -1,0 +1,154 @@
+/*
+ * SidePanel and SidePanelLayout: a detail beside the content on a wide screen, derived in docs/design-system.md
+ * ("SidePanel"). The layout is one column, and from 1024px, while it holds an open panel, the content and a 24rem
+ * column. The panel is the rail's surface (float, the hairline, the stadium corner, the level 1 lift), padded a
+ * peer step and sticky an inset under --page-sticky-top, floating clear of the page's header as the rail floats
+ * clear of the viewport's edge, as tall as the viewport allows, its body scrolling inside it and its footer pinned
+ * under a divider. It does not move: it is a column of the layout. Under 1024px it is hidden
+ * and the panel is a Sheet. The body and the sheet's body scroll, so a table in either sticks its header at
+ * their own top: each sets --page-sticky-top to 0px for what it holds. 1024px is the --breakpoint-md token,
+ * written out because a media query cannot read a custom property; test/css.test.js keeps them equal.
+ */
+@layer components {
+  .side-panel-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-peer);
+    align-items: start;
+  }
+
+  /* Focus's last resort when the row that opened the panel has left the page. */
+  .side-panel-layout-content {
+    min-inline-size: 0;
+    outline: none;
+  }
+
+  .side-panel {
+    position: sticky;
+    inset-block-start: calc(var(--page-sticky-top, 0px) + var(--spacing-inset));
+    box-sizing: border-box;
+    display: none;
+    flex-direction: column;
+    inline-size: 24rem;
+    max-block-size: calc(100dvh - var(--page-sticky-top, 0px) - 2 * var(--spacing-inset));
+    margin-block-start: var(--spacing-inset);
+    padding: var(--spacing-peer);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-stadium);
+    background-color: var(--color-float);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    box-shadow: var(--shadow-lift);
+    outline: none;
+  }
+
+  /* Focus lands on the panel itself while its title is hidden; the ring shows when the keyboard opened it. */
+  .side-panel:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .side-panel-header {
+    display: flex;
+    flex: none;
+    align-items: flex-start;
+    gap: var(--spacing-part);
+  }
+
+  .side-panel-header-text {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+
+  .side-panel-title {
+    margin: 0;
+    border-radius: var(--radius-micro);
+    color: var(--color-ink);
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+    outline: none;
+  }
+
+  /* Focus lands here on an opening; the ring shows when the keyboard opened it. */
+  .side-panel-title:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .side-panel-description {
+    margin: 0;
+    margin-block-start: 0.25rem;
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    overflow-wrap: anywhere;
+  }
+
+  .side-panel-close {
+    flex: none;
+    margin-block-start: calc(-1 * var(--spacing-part));
+    margin-inline-end: calc(-1 * var(--spacing-part));
+  }
+
+  .side-panel-body {
+    --page-sticky-top: 0px;
+
+    flex: 1 1 auto;
+    min-block-size: 0;
+    margin-block-start: var(--spacing-inset);
+    overflow: auto;
+    overflow-wrap: anywhere;
+    outline: none;
+  }
+
+  /* A body that scrolls with nothing to focus in it is a tab stop (keyboardScroll), ringed inside its edge. */
+  .side-panel-body:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+
+  .side-panel-sheet .sheet-body {
+    --page-sticky-top: 0px;
+  }
+
+  .side-panel-footer {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--spacing-part);
+    margin-block-start: var(--spacing-inset);
+    padding-block-start: var(--spacing-inset);
+    border-block-start: 1px solid var(--color-divider);
+  }
+
+  @media (width >= 1024px) {
+    .side-panel-layout:has(> .side-panel) {
+      grid-template-columns: minmax(0, 1fr) 24rem;
+    }
+
+    .side-panel {
+      display: flex;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .side-panel {
+      border-color: CanvasText;
+    }
+
+    .side-panel-footer {
+      border-block-start-color: CanvasText;
+    }
+
+    .side-panel:focus-visible,
+    .side-panel-title:focus-visible,
+    .side-panel-body:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+}

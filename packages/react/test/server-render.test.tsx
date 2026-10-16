@@ -33,6 +33,7 @@ import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Select } from '../src/select';
 import { Sheet, SheetTrigger } from '../src/sheet';
+import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import {
   Sidebar,
   SidebarBrand,
@@ -689,6 +690,37 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'class="data-table-status data-table-count"',
     ],
     ["'all'"],
+  ],
+  [
+    // Open, from a client component: the layout, the aside named by its heading, which takes focus, the close
+    // button and the footer; nothing of the sheet, which mounts only after hydration under 1024px.
+    'SidePanel',
+    <SidePanelLayout
+      panel={
+        <SidePanel
+          title="Groceries"
+          description="12 October"
+          isOpen
+          onClose={() => undefined}
+          footer={<Button>Save</Button>}
+        >
+          <p>Corner Mart</p>
+        </SidePanel>
+      }
+    >
+      <p>The transactions</p>
+    </SidePanelLayout>,
+    [
+      'class="side-panel-layout"',
+      '<aside',
+      'class="side-panel"',
+      'aria-labelledby',
+      'class="side-panel-title"',
+      'tabindex="-1"',
+      'aria-label="Close"',
+      'class="side-panel-footer"',
+    ],
+    ['role="dialog"', 'sheet'],
   ],
 ];
 
