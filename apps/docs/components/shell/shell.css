@@ -543,9 +543,11 @@
      room to the rows beside the panel, from the server's HTML on, as AppShell
      folds an app's rail. A reader who expands it over the panel
      (data-rail-unfolded) keeps it expanded until the panel closes. The fold
-     moves the workspace at once, in the frame the panel comes. */
+     moves the workspace at once, in the frame the panel comes, and so does
+     the unfold as the panel leaves (data-rail-folding, the shell's). */
   @media (width >= 1024px) {
-    :root:has(.stage .side-panel):not([data-rail-unfolded]) .workspace {
+    :root:has(.stage .side-panel):not([data-rail-unfolded]) .workspace,
+    [data-rail-folding] .workspace {
       transition: none;
     }
 

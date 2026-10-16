@@ -126,7 +126,7 @@ export default async function TransactionsPage({
 }
 ```
 
-The client component writes the URL with the router, starting from the parameters already there, so a sort keeps the filters and the open row. A sort and a filter are replaced in history and start again at page 1; a page and a row are pushed, so Back returns to the last page and closes the panel. Selection is the page's own state and never the URL's, and it clears whenever the rows change, on a new page, sort or filter: it was made on the rows before. The component clears it as it renders the new rows, so no frame shows the old selection, and the bar never counts a row that has left.
+The client component writes the URL with the router, starting from the parameters already there, so a sort keeps the filters and the open row. A sort and a filter are replaced in history and start again at page 1; a page is pushed, so Back returns to the last page. Selection is the page's own state and never the URL's, and it clears whenever the rows change, on a new page, sort or filter: it was made on the rows before. The component clears it as it renders the new rows, so no frame shows the old selection, and the bar never counts a row that has left.
 
 ```tsx
 'use client';
@@ -172,7 +172,7 @@ export function TransactionsList({ rows, pageCount, rangeLabel, sort, page, cate
           title={open?.payee ?? ''}
           description={open?.dayLabel}
           isOpen={open !== null}
-          onClose={() => replace({ open: null })}
+          onClose={() => closePanel(hrefWith({ open: null }))}
         >
           {open && <TransactionDetail transaction={open} />}
         </SidePanel>
@@ -211,6 +211,33 @@ export function TransactionsList({ rows, pageCount, rangeLabel, sort, page, cate
 ```
 
 - Wrap the app once in a `RouterProvider` whose `navigate` is `router.push(href, { scroll: false })`, so the row links and the page links go through the router and the page never jumps.
+- Opening a row from the list pushes an entry, so Back closes the panel. Close the panel the same way when your page pushed that entry: with `router.back()`, so no second entry with the list's URL is left for Back to land on. A row that arrived with the page, from a link or a reload, closes with `router.replace`. Opening another row while one is open replaces the open row's entry, so Back and Close still return to the list, as the example does:
+
+```tsx
+const opened = useRef<string | null>(null); // the entry this page pushed as it opened a row
+const here = () => `${window.location.pathname}${window.location.search}`;
+
+const navigate = (href: string) => {
+  const before = new URLSearchParams(window.location.search).get('open');
+  const after = new URL(href, window.location.href).searchParams.get('open');
+  if (before !== null && after !== null && after !== before) {
+    if (opened.current === here()) opened.current = href;
+    router.replace(href, { scroll: false });
+  } else {
+    if (before === null && after !== null) opened.current = href;
+    router.push(href, { scroll: false });
+  }
+};
+
+const closePanel = (closedHref: string) => {
+  if (opened.current === here()) {
+    opened.current = null;
+    router.back();
+  } else {
+    router.replace(closedHref, { scroll: false });
+  }
+};
+```
 - Set `--page-sticky-top` once to your header's height, on the AppShell or an ancestor, such as `style={{ '--page-sticky-top': '4rem' }}`. The table's header, the list's day headings and the panel stick under it.
 - Start the `SidePanelLayout` right under your header, with the title, the filters, the table and the pager in its content, so the panel's footer is in view from the start. In an AppShell under 1440px, the open panel folds the rail to its icons, so the table keeps its columns.
 - Pass `getGroup` only while the rows are sorted by date: only rows next to each other group.

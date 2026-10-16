@@ -17,7 +17,7 @@ import {
 } from '@snapshot-ui/react';
 import { SearchX } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useId, useState, type CSSProperties, type ReactElement } from 'react';
+import { Suspense, useId, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import {
   amountLabel,
   dateLabel,
@@ -109,7 +109,13 @@ function Detail({ row }: { row: Transaction }): ReactElement {
 }
 
 /** The list page, drawn from the URL's parameters: the server's page in an app, a client one here. */
-function Transactions({ params }: { params: URLSearchParams }): ReactElement {
+interface TransactionsProps {
+  params: URLSearchParams;
+  /** Closes the panel, given the URL without `open`. */
+  close: (closedHref: string) => void;
+}
+
+function Transactions({ params, close }: TransactionsProps): ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const titleId = useId();
@@ -158,7 +164,7 @@ function Transactions({ params }: { params: URLSearchParams }): ReactElement {
           description={open === null ? undefined : dayLabel(open.date)}
           isOpen={open !== null}
           onClose={() => {
-            replace({ open: null });
+            close(hrefWith({ open: null }));
           }}
         >
           {open === null ? null : <Detail row={open} />}
@@ -235,16 +241,30 @@ function Transactions({ params }: { params: URLSearchParams }): ReactElement {
   );
 }
 
-function TransactionsFromUrl(): ReactElement {
+function TransactionsFromUrl({ close }: Pick<TransactionsProps, 'close'>): ReactElement {
   const params = useSearchParams();
-  return <Transactions params={new URLSearchParams(params)} />;
+  return <Transactions params={new URLSearchParams(params)} close={close} />;
 }
 
 /** The first state: no parameters, as the static page's server renders it. */
 const FIRST = new URLSearchParams();
 
+/** The page's URL as the browser shows it, in the form `hrefWith` writes. */
+const here = (): string => `${window.location.pathname}${window.location.search}`;
+
 export default function DataTableTransactions(): ReactElement {
   const router = useRouter();
+  // The entry this page pushed as it opened a row, so closing goes back to the list's entry rather than leave a
+  // copy of it behind for Back. A row that arrived with the page, from a link or a reload, closes in place.
+  const opened = useRef<string | null>(null);
+  const close = (closedHref: string): void => {
+    if (opened.current === here()) {
+      opened.current = null;
+      router.back();
+    } else {
+      router.replace(closedHref, { scroll: false });
+    }
+  };
   return (
     // Your header's height on an ancestor, once, so the table's header, the list's day headings and the panel
     // stick under it. Here a 4rem header sits under this site's own, so the offset is both.
@@ -270,12 +290,21 @@ export default function DataTableTransactions(): ReactElement {
         {/* An app wraps its whole tree once; the example wraps only itself. */}
         <RouterProvider
           navigate={(href) => {
+            const before = new URLSearchParams(window.location.search).get('open');
+            const after = new URL(href, window.location.href).searchParams.get('open');
+            if (before !== null && after !== null && after !== before) {
+              // Another row while one is open takes the open row's entry, so Back and Close return to the list.
+              if (opened.current === here()) opened.current = href;
+              router.replace(href, { scroll: false });
+              return;
+            }
+            if (before === null && after !== null) opened.current = href;
             router.push(href, { scroll: false });
           }}
         >
           {/* The page is static, so the server renders the fallback: the same page in its first state. */}
-          <Suspense fallback={<Transactions params={FIRST} />}>
-            <TransactionsFromUrl />
+          <Suspense fallback={<Transactions params={FIRST} close={close} />}>
+            <TransactionsFromUrl close={close} />
           </Suspense>
         </RouterProvider>
       </div>
