@@ -1397,8 +1397,10 @@ export const Reloading: Story = {
 
 /**
  * Rows focused by J keep clear of what covers the page (WCAG 2.4.11): under a 64px page header and the sticky
- * header row, and with a row selected, over the bulk-action bar at the viewport's bottom. Walking down by J and
- * back by K, every focused row ends wholly between them. Three engines.
+ * header row, and with a row selected, over the bulk-action bar at the viewport's bottom. From the last row the
+ * bar leaves clear, J three times walks down under the bar, every focused row ending wholly above it; then, with
+ * the focused row scrolled up against the header row, K three times walks back up under the header, every row
+ * ending wholly below it. Three engines.
  */
 export const ScrollClear: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -1411,32 +1413,46 @@ export const ScrollClear: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
+    window.scrollTo(0, 0);
+    const rows = bodyRows(canvasElement);
     const bar = only(canvasElement, '.data-table-bar');
     const header = within(canvasElement).getAllByRole('columnheader')[1];
     if (header === undefined) throw new Error('No header');
-    const clear = async (row: HTMLElement, step: string): Promise<void> => {
-      // React Aria scrolls in the next frame and the table after it, in the frame after that.
-      for (let frame = 0; frame < 3; frame += 1)
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-      const box = row.getBoundingClientRect();
-      await expect(box.top, `${step}: under the header row`).toBeGreaterThanOrEqual(
-        Math.floor(header.getBoundingClientRect().bottom),
-      );
-      await expect(box.bottom, `${step}: over the bar`).toBeLessThanOrEqual(
-        Math.ceil(bar.getBoundingClientRect().top),
+    const headerBottom = (): number => Math.floor(header.getBoundingClientRect().bottom);
+    const barTop = (): number => Math.ceil(bar.getBoundingClientRect().top);
+    // The table clears a row frames after focus moves, after React Aria's own scroll, and a page out of sight
+    // gets its frames late, so the play polls for where the row ends rather than counting frames.
+    const clear = async (index: number, step: string): Promise<void> => {
+      const row = rowAt(canvasElement, index);
+      await waitFor(
+        async () => {
+          await expect(row, `${step}: focus`).toHaveFocus();
+          const box = row.getBoundingClientRect();
+          await expect(box.top, `${step}: under the header row`).toBeGreaterThanOrEqual(headerBottom());
+          await expect(box.bottom, `${step}: over the bar`).toBeLessThanOrEqual(barTop());
+        },
+        { timeout: 5000 },
       );
     };
-    rowAt(canvasElement, 0).focus();
-    for (let index = 1; index < 20; index += 1) {
-      await userEvent.keyboard('j');
-      await waitFor(() => expect(rowAt(canvasElement, index)).toHaveFocus());
-      await clear(rowAt(canvasElement, index), `J to row ${String(index)}`);
-    }
-    for (let index = 18; index >= 0; index -= 1) {
-      await userEvent.keyboard('k');
-      await waitFor(() => expect(rowAt(canvasElement, index)).toHaveFocus());
-      await clear(rowAt(canvasElement, index), `K to row ${String(index)}`);
-    }
+    const press = async (key: 'j' | 'k', index: number): Promise<void> => {
+      // A play that outlived its story, past a timeout, stops here rather than typing into the next story.
+      if (!bar.isConnected) throw new Error('The story has gone');
+      await userEvent.keyboard(key);
+      await clear(index, `${key.toUpperCase()} to row ${String(index)}`);
+    };
+    // The first row the bar covers at rest, and the one above it, which nothing covers.
+    const edge = rows.findIndex((row) => row.getBoundingClientRect().bottom > barTop());
+    await expect(edge).toBeGreaterThan(0);
+    rowAt(canvasElement, edge - 1).focus();
+    await clear(edge - 1, `row ${String(edge - 1)}`);
+    for (let index = edge; index < edge + 3; index += 1) await press('j', index);
+    // The focused row against the header row, so the rows above it sit under the header, still in the view.
+    const top = rowAt(canvasElement, edge + 2).getBoundingClientRect().top;
+    window.scrollBy({ top: top - headerBottom(), behavior: 'instant' });
+    await expect(rowAt(canvasElement, edge + 1).getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      headerBottom() + 1,
+    );
+    for (let index = edge + 1; index > edge - 2; index -= 1) await press('k', index);
     window.scrollTo(0, 0);
   },
 };
@@ -1444,7 +1460,8 @@ export const ScrollClear: Story = {
 /**
  * Page Down and Page Up move by the rows that fit in the view (risk R4), not to the first and last row: from the
  * first row of sixty, Page Down lands on a row still under the page's end, and Page Up comes back to the first.
- * Three engines.
+ * Focus is checked on a row before every key: a key that reaches the header's Select all box instead is not the
+ * table's, and user-event would apply a text field's Page Down to that input. Three engines.
  */
 export const PageKeys: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -1454,9 +1471,11 @@ export const PageKeys: Story = {
     </Box>
   ),
   play: async ({ canvasElement }) => {
+    window.scrollTo(0, 0);
     const rows = bodyRows(canvasElement);
     const first = rowAt(canvasElement, 0);
     first.focus();
+    await waitFor(() => expect(first).toHaveFocus());
     // The rows that fit under the 40px header row in the window, which scrolls the page.
     const header = within(canvasElement).getAllByRole('columnheader')[0]?.getBoundingClientRect().height ?? 0;
     const fit = Math.floor((window.innerHeight - header) / first.getBoundingClientRect().height);
@@ -1466,8 +1485,11 @@ export const PageKeys: Story = {
     await expect(reached).toBeLessThan(rows.length - 1);
     await userEvent.keyboard('{PageUp}');
     await waitFor(() => expect(first).toHaveFocus());
+    await userEvent.keyboard('x');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toHaveLength(1));
+    await expect(first).toHaveFocus();
     // Shift extends the selection over the page it moves by, which the bar, shown now, makes a row shorter.
-    await userEvent.keyboard('x{Shift>}{PageDown}{/Shift}');
+    await userEvent.keyboard('{Shift>}{PageDown}{/Shift}');
     const extended = rows.findIndex((row) => row === document.activeElement);
     await expect(extended).toBeGreaterThan(1);
     await waitFor(() => expect(selectedKeysOf(canvasElement)).toHaveLength(extended + 1));
