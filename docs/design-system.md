@@ -6569,7 +6569,11 @@ wrap` at 1440px. So the nav is no longer the container:
   link to a line of its own first.
 - `max-block-size: max-content` keeps that flex from making it taller
   than its row in a flex column with room to spare, where `flex` works on
-  the block axis.
+  the block axis. Chromium and WebKit honor it; Firefox treats an
+  intrinsic keyword in the block axis as the initial value (Mozilla bugs
+  567039 and 1597055), so there a nav that is the direct child of a flex
+  column with room to spare takes a share of that room below its row.
+  The play checks the cap where the engine honors it.
 
 A stand-in width, `contain-intrinsic-inline-size` on the nav as the
 container, was tried first: it sets the min-content and max-content
@@ -8310,7 +8314,9 @@ Pagination's range does, so it names a width: `contain-intrinsic-inline-size:
 still readable, and small enough never to push a phone's page sideways
 (18rem pushed the docs' 320px page 22px). `flex: 1 1 0; min-inline-size:
 0` takes the room its siblings leave in a flex row, and `max-block-size:
-max-content` keeps it no taller than its content in a flex column. The
+max-content` keeps it no taller than its content in a flex column, in
+Chromium and WebKit (Firefox grows it there, as Pagination's record
+says). The
 `InAFlexRow` story holds the table face beside a 12rem column.
 
 **The list face** (ruling 8, spec 8). Both faces are in the server's
