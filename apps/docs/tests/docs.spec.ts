@@ -3094,10 +3094,10 @@ test('a data table drops its md column under 48rem of its box and its sm column 
   await expect.poll(shown).toEqual(['Date', 'Payee', 'Account', 'Amount']);
   await setWidth('39.5rem');
   await expect.poll(shown).toEqual(['Date', 'Payee', 'Amount']);
-  // The example's own control narrows the box the same way, within the stage.
+  // The example's own control narrows the box the same way, within its frame.
   await setWidth('');
   const widths = page.getByRole('radiogroup', { name: "Width of the table's box" });
-  await widths.getByRole('radio', { name: 'Full' }).focus();
+  await widths.getByRole('radio', { name: '56rem' }).focus();
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
   await expect(widths.getByRole('radio', { name: '38rem' })).toBeChecked();
@@ -3121,25 +3121,22 @@ test('a data table drops its md column under 48rem of its box and its sm column 
   expect(await sideways(page)).toBe(0);
 });
 
-test('a data table example has a stage as wide as the content, so its columns leave at the box widths it names', async ({
+test('the data table page keeps its side column, and draws each box of its columns example at its width in a frame that scrolls on its own', async ({
   page,
 }) => {
   for (const width of [1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await visit(page, '/docs/components/data-table');
-    // Every data table example is drawn on a wide stage, its box 40rem or wider, so it draws its table face.
-    const stages = page.locator('.stage').filter({ has: page.locator('.data-table') });
-    expect(await stages.count()).toBe(5);
-    for (const stage of await stages.all()) {
-      await expect(stage).toHaveClass(/\bstage-wide\b/);
-      await expectTableFace(stage.locator('.data-table').first());
+    // The usual layout: no stage of its own, and from 1440px the side column beside the content with its outline.
+    await expect(page.locator('.stage-wide')).toHaveCount(0);
+    if (width >= 1440) {
+      const main = await page.locator('.panel-main').boundingBox();
+      const side = await page.locator('.panel-side').boundingBox();
+      expect((main?.x ?? 0) + (main?.width ?? 0)).toBeLessThan(side?.x ?? 0);
+      await expect(page.locator('.toc-card')).toBeVisible();
     }
-    // The page's content takes the grid's every column, the side column under it.
-    const main = await page.locator('.panel-main').boundingBox();
-    const panel = await page.locator('.panel').boundingBox();
-    expect(main?.width).toBe(panel?.width);
-    // Full, 44rem and 38rem each draw their own columns.
     const box = page.getByTestId('data-table-box');
+    const frame = page.getByRole('region', { name: 'The table at the width chosen' });
     const shown = (): Promise<string[]> =>
       box
         .locator('[role="columnheader"]')
@@ -3149,28 +3146,44 @@ test('a data table example has a stage as wide as the content, so its columns le
             .map((cell) => cell.textContent),
         );
     const widths = page.getByRole('radiogroup', { name: "Width of the table's box" });
-    await expect.poll(shown).toEqual(['Date', 'Payee', 'Category', 'Account', 'Amount']);
-    await widths.getByRole('radio', { name: 'Full' }).focus();
-    await page.keyboard.press('ArrowRight');
-    await expect(widths.getByRole('radio', { name: '44rem' })).toBeChecked();
-    await expect.poll(shown).toEqual(['Date', 'Payee', 'Account', 'Amount']);
-    await page.keyboard.press('ArrowRight');
-    await expect.poll(shown).toEqual(['Date', 'Payee', 'Amount']);
+    // Each box is the width it names, whatever the page's width, and its own columns leave.
+    for (const [name, pixels, columns] of [
+      ['56rem', 896, ['Date', 'Payee', 'Category', 'Account', 'Amount']],
+      ['44rem', 704, ['Date', 'Payee', 'Account', 'Amount']],
+      ['38rem', 608, ['Date', 'Payee', 'Amount']],
+    ] as const) {
+      await widths.locator('.segmented-option', { hasText: name }).click();
+      await expect(widths.getByRole('radio', { name })).toBeChecked();
+      await expect.poll(async () => Math.round((await box.boundingBox())?.width ?? 0)).toBe(pixels);
+      await expect.poll(shown).toEqual(columns);
+    }
+    // The frame scrolls where the page is narrower than the box; the page never scrolls sideways.
+    await widths.locator('.segmented-option', { hasText: '56rem' }).click();
+    const fit = await frame.evaluate((element) => {
+      const stage = element.closest('.stage')?.getBoundingClientRect();
+      const own = element.getBoundingClientRect();
+      return {
+        inside: stage !== undefined && own.left >= stage.left && own.right <= stage.right,
+        scrolls: element.scrollWidth > element.clientWidth,
+      };
+    });
+    // The frame stays inside the stage, and the 56rem table, wider than the stage here, scrolls in it.
+    expect(fit).toEqual({ inside: true, scrolls: true });
     expect(await sideways(page)).toBe(0);
   }
-  // A page without a wide example keeps its side column beside the content at 1440px.
+  // A keyboard scrolls the frame: it is a tab stop, and the arrows move it.
   await page.setViewportSize({ width: 1440, height: 900 });
-  await visit(page, '/docs/components/button');
-  const main = await page.locator('.panel-main').boundingBox();
-  const side = await page.locator('.panel-side').boundingBox();
-  expect((main?.x ?? 0) + (main?.width ?? 0)).toBeLessThan(side?.x ?? 0);
-  await expect(page.locator('.toc-card')).toBeVisible();
+  await visit(page, '/docs/components/data-table');
+  const frame = page.getByRole('region', { name: 'The table at the width chosen' });
+  await expect(frame).toHaveAttribute('tabindex', '0');
+  await frame.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => frame.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
 });
 
 test('a loading data table draws its skeleton cells under its header cells, at full width', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
   await visit(page, '/docs/components/data-table');
   const state = page.getByRole('radiogroup', { name: 'State' });
   await state.getByRole('radio', { name: 'Rows' }).focus();
@@ -3179,6 +3192,7 @@ test('a loading data table draws its skeleton cells under its header cells, at f
   await expect(state.getByRole('radio', { name: 'Loading' })).toBeChecked();
   const root = page.locator('.stage .data-table').filter({ has: page.locator('.data-table-skeleton-row') });
   await expect(root).toHaveCount(1);
+  await expectTableFace(root);
   const layout = await root.evaluate((element) => {
     const edges = (cell: Element): [number, number] => {
       const { left, right } = cell.getBoundingClientRect();
@@ -3198,4 +3212,86 @@ test('a loading data table draws its skeleton cells under its header cells, at f
   expect(layout.table).toEqual(layout.root);
   expect(layout.headers.at(-1)?.[1]).toBe(layout.root[1]);
   expect(layout.skeleton).toEqual(layout.headers);
+});
+
+test('a data table that did not load says so in its body, with a Retry that brings the rows back', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/data-table');
+  const state = page.getByRole('radiogroup', { name: 'State' });
+  await state.locator('.segmented-option', { hasText: 'Error' }).click();
+  await expect(state.getByRole('radio', { name: 'Error' })).toBeChecked();
+  const stage = page.locator('.stage').filter({ has: state });
+  const table = stage.getByRole('grid', { name: 'Transactions' });
+  await expectTableFace(table);
+  const body = table.locator('tbody');
+  await expect(body.getByRole('heading', { name: 'The transactions did not load' })).toBeVisible();
+  await expect(stage.locator('.data-table-skeleton-row')).toHaveCount(0);
+  await body.getByRole('button', { name: 'Retry' }).click();
+  await expect(table.locator('tbody [role="rowheader"]')).toHaveCount(4);
+});
+
+test('a data table filtered to nothing says so and clears its filters on Clear filters', async ({ page }) => {
+  await visit(page, '/docs/components/data-table');
+  const search = page.getByRole('searchbox', { name: 'Search transactions' });
+  const stage = page.locator('.stage').filter({ has: search });
+  const table = stage.getByRole('grid', { name: 'Transactions' });
+  await expectTableFace(table);
+  await expect(table.getByRole('heading', { name: 'No transactions match' })).toBeVisible();
+  await table.getByRole('button', { name: 'Clear filters' }).click();
+  await expect(search).toHaveValue('');
+  await expect(table.locator('tbody [role="rowheader"]')).toHaveCount(6);
+});
+
+test('a data table column wraps to two lines, sorts largest first on its first press, and hides an actions header but keeps its name', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/data-table');
+  const stage = page.locator('.stage').filter({ has: page.getByRole('columnheader', { name: 'Memo' }) });
+  const table = stage.getByRole('grid', { name: 'Transactions' });
+  await expectTableFace(table);
+  // The memo runs to two lines and stops there.
+  const memo = table.locator('tbody .data-table-wrap').first();
+  const lines = await memo.evaluate((element) => {
+    const { lineHeight } = getComputedStyle(element);
+    return Math.round(element.getBoundingClientRect().height / parseFloat(lineHeight));
+  });
+  expect(lines).toBe(2);
+  expect(await memo.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  // Amount sorts descending on its first press.
+  const amount = table.getByRole('columnheader', { name: 'Amount' });
+  await amount.click();
+  await expect(amount).toHaveAttribute('aria-sort', 'descending');
+  await expect(table.locator('tbody [role="rowheader"]').first()).toHaveText('Acme Payroll');
+  await amount.click();
+  await expect(amount).toHaveAttribute('aria-sort', 'ascending');
+  // The actions header is named and draws nothing.
+  const actions = table.getByRole('columnheader', { name: 'Actions' });
+  await expect(actions).toHaveAttribute('data-header-hidden', '');
+  expect((await actions.locator('.data-table-column-label').boundingBox())?.width ?? 0).toBeLessThanOrEqual(
+    1,
+  );
+});
+
+test('the docs header sets --page-sticky-top, so a data table header sticks under it, and amounts use a real minus sign', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/data-table');
+  const header = page.locator('.header');
+  const height = (await header.boundingBox())?.height ?? 0;
+  expect(height).toBeGreaterThan(0);
+  const sticky = await page.evaluate(() =>
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-sticky-top')),
+  );
+  expect(sticky).toBeCloseTo(height, 0);
+  // Scroll the basic example's table under the header: its header row stops at the header's foot.
+  const table = page.locator('.stage').first().getByRole('grid', { name: 'Transactions' });
+  await expectTableFace(table);
+  await table.evaluate((element, offset) => {
+    window.scrollBy(0, element.getBoundingClientRect().top - offset + 60);
+  }, height);
+  const column = table.getByRole('columnheader', { name: 'Payee' });
+  await expect.poll(async () => Math.round((await column.boundingBox())?.y ?? 0)).toBe(Math.round(height));
+  // A negative amount is written with U+2212, not a hyphen.
+  await expect(table.locator('tbody').getByText('\u2212$42.18')).toHaveCount(1);
 });

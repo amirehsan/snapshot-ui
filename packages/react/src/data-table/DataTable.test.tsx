@@ -48,6 +48,23 @@ function rowAt(index: number): HTMLElement {
 
 const header = (name: string): HTMLElement => screen.getByRole('columnheader', { name });
 
+/** The loading words' status: the table's polite regions are this, the error line and the count's. */
+function loadingStatus(): HTMLElement {
+  const status = document.querySelector<HTMLElement>('.data-table-status:not(.data-table-count)');
+  if (status === null) throw new Error('No loading status');
+  expect(status).toHaveAttribute('role', 'status');
+  return status;
+}
+
+/** An actions column: its header names it for a screen reader and draws nothing. */
+const ACTIONS: DataTableColumn<Transaction> = {
+  id: 'actions',
+  header: 'Actions',
+  isHeaderHidden: true,
+  cell: (row) => <button type="button">{`More for ${row.payee}`}</button>,
+  width: '4rem',
+};
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -317,19 +334,19 @@ describe('DataTable', () => {
     const busy = container.querySelector('.data-table-grid');
     expect(busy).toHaveAttribute('aria-busy', 'true');
     // The status is outside the busy part, so a screen reader is not asked to hold it back.
-    const status = screen.getByRole('status');
+    const status = loadingStatus();
     expect(busy?.contains(status)).toBe(false);
     rerender(<Spending items={[]} isLoading />);
     expect(container.querySelector('.data-table-grid')).toHaveAttribute('aria-busy', 'true');
     rerender(<Spending />);
     expect(container.querySelector('[aria-busy]')).toBeNull();
-    expect(screen.getByRole('status')).toBe(status);
+    expect(loadingStatus()).toBe(status);
   });
 
   it('says labels.loading in its status QUIET_MS after loading starts, and nothing for a shorter load', () => {
     vi.useFakeTimers();
     const { rerender } = render(<Spending labels={{ loading: 'Loading transactions' }} />);
-    const status = screen.getByRole('status');
+    const status = loadingStatus();
     expect(status).toHaveClass('data-table-status');
     expect(status).toBeEmptyDOMElement();
     rerender(<Spending labels={{ loading: 'Loading transactions' }} isLoading />);
@@ -456,7 +473,146 @@ describe('DataTable', () => {
     expect(root).toHaveClass('data-table', 'extra');
     expect(ref.current).toBe(root);
     expect(root?.children[0]).toHaveClass('data-table-grid');
-    expect(root?.children[1]).toHaveClass('data-table-status');
+    expect(root?.children[1]).toHaveClass('data-table-error');
+    expect(root?.children[2]).toHaveClass('data-table-status');
+  });
+
+  it('draws error in place of the empty body, over isLoading and emptyState, with nothing busy', () => {
+    const { container } = render(
+      <Spending
+        items={[]}
+        isLoading
+        emptyState={<EmptyState title="No transactions this month" />}
+        error={<EmptyState title="The transactions did not load" />}
+      />,
+    );
+    const body = container.querySelector('tbody');
+    expect(body).toHaveTextContent('The transactions did not load');
+    expect(body).not.toHaveTextContent('No transactions this month');
+    expect(container.querySelector('.data-table-skeleton-row')).toBeNull();
+    expect(container.querySelector('[aria-busy]')).toBeNull();
+    // The body says it; the line under the table is for a page that failed with rows shown.
+    expect(container.querySelector('.data-table-error')).toBeEmptyDOMElement();
+  });
+
+  it('keeps the rows and says the error in a polite line under the table, over isLoading', () => {
+    const { container, rerender } = render(<Spending isLoading />);
+    const line = container.querySelector('.data-table-error');
+    // Mounted empty, a polite region before the error arrives, so it is heard.
+    expect(line).toHaveAttribute('role', 'status');
+    expect(line).toBeEmptyDOMElement();
+    rerender(<Spending isLoading error="The next page did not load." />);
+    expect(line).toHaveTextContent(/^The next page did not load\.$/);
+    expect(bodyRows()).toHaveLength(5);
+    expect(container.querySelector('[aria-busy]')).toBeNull();
+    // The loading status says nothing while the error stands.
+    expect(loadingStatus()).toBeEmptyDOMElement();
+    rerender(<Spending />);
+    expect(line).toBeEmptyDOMElement();
+  });
+
+  it('wraps a column with overflow wrap to two lines, and truncates by default', () => {
+    render(
+      <Spending
+        columns={COLUMNS.map((column) =>
+          column.id === 'category' ? { ...column, overflow: 'wrap' as const } : column,
+        )}
+      />,
+    );
+    const cells = (id: number): HTMLElement[] => bodyRows().map((row) => row.children[id] as HTMLElement);
+    for (const cell of cells(2)) {
+      expect(cell).toHaveAttribute('data-overflow', 'wrap');
+      expect(cell.firstElementChild).toHaveClass('data-table-wrap');
+    }
+    for (const cell of cells(1)) expect(cell).not.toHaveAttribute('data-overflow');
+  });
+
+  it('sorts a column first in its firstSortDirection, then flips it, two states only', async () => {
+    const user = userEvent.setup();
+    const onSortChange = vi.fn();
+    const columns = COLUMNS.map((column) =>
+      column.id === 'amount' ? { ...column, firstSortDirection: 'descending' as const } : column,
+    );
+    const { rerender } = render(
+      <Spending
+        columns={columns}
+        sortDescriptor={{ column: 'date', direction: 'ascending' }}
+        onSortChange={onSortChange}
+      />,
+    );
+    await user.click(header('Amount'));
+    expect(onSortChange).toHaveBeenLastCalledWith({ column: 'amount', direction: 'descending' });
+    rerender(
+      <Spending
+        columns={columns}
+        sortDescriptor={{ column: 'amount', direction: 'descending' }}
+        onSortChange={onSortChange}
+      />,
+    );
+    await user.click(header('Amount'));
+    expect(onSortChange).toHaveBeenLastCalledWith({ column: 'amount', direction: 'ascending' });
+    // A column without one starts ascending, as React Aria does.
+    await user.click(header('Date'));
+    expect(onSortChange).toHaveBeenLastCalledWith({ column: 'date', direction: 'ascending' });
+  });
+
+  it('hides an isHeaderHidden header from sight and keeps its name', () => {
+    render(<Spending columns={[...COLUMNS, ACTIONS]} />);
+    const actions = header('Actions');
+    expect(actions).toHaveAttribute('data-header-hidden');
+    expect(actions.querySelector('.data-table-column-label')).toHaveTextContent('Actions');
+  });
+
+  it('keeps a disabled row opening with disabledBehavior selection, only its selection off', async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    const onSelectionChange = vi.fn();
+    render(
+      <RouterProvider navigate={navigate}>
+        <Spending
+          getRowHref={hrefOf}
+          disabledKeys={['t3']}
+          disabledBehavior="selection"
+          selectedKeys={[]}
+          onSelectionChange={onSelectionChange}
+        />
+      </RouterProvider>,
+    );
+    const row = rowAt(2);
+    expect(row).not.toHaveAttribute('data-disabled');
+    expect(within(row).getByRole('checkbox')).toBeDisabled();
+    await user.click(within(row).getByRole('link', { name: 'Northside Rent' }));
+    expect(navigate).toHaveBeenCalledTimes(1);
+    act(() => {
+      row.focus();
+    });
+    expect(row).toHaveFocus();
+    await user.keyboard('x');
+    expect(onSelectionChange).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('checkbox', { name: 'Select all' }));
+    expect(onSelectionChange).toHaveBeenLastCalledWith(['t1', 't2', 't4', 't5']);
+  });
+
+  it('marks the grid reloading QUIET_MS after rows already shown start to load again, and not with an error', () => {
+    vi.useFakeTimers();
+    const { rerender } = render(<Spending />);
+    const face = document.querySelector('.data-table-grid');
+    rerender(<Spending isLoading />);
+    expect(face).not.toHaveAttribute('data-reloading');
+    act(() => {
+      vi.advanceTimersByTime(QUIET_MS);
+    });
+    expect(face).toHaveAttribute('data-reloading');
+    rerender(<Spending isLoading error="The next page did not load." />);
+    expect(face).not.toHaveAttribute('data-reloading');
+    rerender(<Spending />);
+    expect(face).not.toHaveAttribute('data-reloading');
+    // With no rows the skeletons are the cue.
+    rerender(<Spending items={[]} isLoading />);
+    act(() => {
+      vi.advanceTimersByTime(QUIET_MS);
+    });
+    expect(face).not.toHaveAttribute('data-reloading');
   });
 
   const AXE_CASES: [state: string, props: Props][] = [
@@ -469,6 +625,10 @@ describe('DataTable', () => {
     ['empty', { items: [], emptyState: <EmptyState title="No transactions this month" /> }],
     ['loading', { items: [], isLoading: true }],
     ['a disabled row', { getRowHref: hrefOf, disabledKeys: ['t3'] }],
+    ['an error with no rows', { items: [], error: <EmptyState title="The transactions did not load" /> }],
+    ['an error under the rows', { error: 'The next page did not load.' }],
+    ['a wrapping column', { columns: COLUMNS.map((column) => ({ ...column, overflow: 'wrap' as const })) }],
+    ['a hidden header', { columns: [...COLUMNS, ACTIONS] }],
   ];
 
   it.each(AXE_CASES)('has no axe violations %s', async (_state, props) => {

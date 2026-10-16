@@ -1,6 +1,6 @@
 ---
 title: Data table
-description: 'Rows of data with sorting, links to a detail, a sticky header, columns of figures, totals, selection with a bulk-action bar, and loading and empty states.'
+description: 'Rows of data with sorting, links to a detail, a sticky header, columns of figures, totals, selection with a bulk-action bar, and loading, empty and error states.'
 icon: Table
 ---
 
@@ -10,7 +10,7 @@ icon: Table
 
 Pass the rows as `items`, the columns as definitions and a key for each row. Each column says how its cell reads: a string or any node. With `getRowHref`, a press anywhere on a row opens its detail through your router, as a real link in the row header's cell, so a middle click or a modifier click opens a new tab and the link's menu is the browser's. A sortable header is a button: `sortDescriptor` and `onSortChange` are controlled, ascending first and then descending, with no unsorted state. `currentKey` marks the row whose detail is open.
 
-<Preview name="data-table-basic" wide />
+<Preview name="data-table-basic" />
 
 </Section>
 
@@ -18,9 +18,9 @@ Pass the rows as `items`, the columns as definitions and a key for each row. Eac
 
 ## Figures and totals
 
-A column with `align: 'end'` sets figures: tabular digits, never broken, at the line's end in either direction, so a column of amounts lines up at its last digit. Your strings carry the sign, the currency and the unit. A column's `total` adds one totals row under the rows, its header cell saying "Total". In a card, set `--data-table-surface` to the card's fill so the sticky header matches it.
+A column with `align: 'end'` sets figures: tabular digits, never broken, at the line's end in either direction, so a column of amounts lines up at its last digit. Your strings carry the sign, the currency and the unit; write a negative amount with a real minus sign, U+2212, which is as wide as a digit, as these examples do, not a hyphen. A column's `total` adds one totals row under the rows, its header cell saying "Total". When the table shows one page of many, the sum is of this page only: name it with `labels={{ total: 'Page total' }}`, so a reader never takes it for the whole. In a card, set `--data-table-surface` to the card's fill so the sticky header matches it.
 
-<Preview name="data-table-figures" wide />
+<Preview name="data-table-figures" />
 
 </Section>
 
@@ -28,19 +28,39 @@ A column with `align: 'end'` sets figures: tabular digits, never broken, at the 
 
 ## Columns that leave
 
-The table never scrolls sideways. A column with `hideBelow: 'md'` leaves when the table's own box is narrower than 48rem, and one with `hideBelow: 'sm'` when it is narrower than 40rem. They are widths of the table's box, not of the screen, so a table beside an open panel drops its columns too. Cells keep to one line and end in an ellipsis; the full text is still the row's name. The row header never leaves.
+The table never scrolls sideways. A column with `hideBelow: 'md'` leaves when the table's own box is narrower than 48rem, and one with `hideBelow: 'sm'` when it is narrower than 40rem. They are widths of the table's box, not of the screen, so a table beside an open panel drops its columns too. Cells keep to one line and end in an ellipsis; the full text is still the row's name. The row header never leaves. The example draws the table at the width you choose, in a frame of its own that scrolls sideways where this page is narrower, so the page itself never does.
 
-<Preview name="data-table-columns" wide />
+<Preview name="data-table-columns" />
 
 </Section>
 
 <Section>
 
-## Empty and loading
+## Column options
 
-`emptyState` takes an `EmptyState`, drawn across every column when there are no rows. While `isLoading` and there are no rows yet, the table draws skeleton rows in its own shape and says "Loading" once, after a short pause, in a status of its own. While it loads with rows already shown, such as the next page, it keeps them and only marks itself busy.
+A column with `overflow: 'wrap'` reads to two lines and ends in an ellipsis there, for a memo a reader wants to read without opening the row; figures never wrap. `firstSortDirection: 'descending'` makes the first press on a column sort it largest or newest first, and each later press flips it, two states only. A column of row menus takes `isHeaderHidden`: its header draws nothing and is still named by `header` for a screen reader.
 
-<Preview name="data-table-states" wide />
+<Preview name="data-table-column-options" />
+
+</Section>
+
+<Section>
+
+## Empty, loading and errors
+
+`emptyState` takes an `EmptyState`, drawn across every column when there are no rows. While `isLoading` and there are no rows yet, the table draws skeleton rows in its own shape and says "Loading" once, after a short pause, in a status of its own. While it loads with rows already shown, such as the next page, it keeps them, marks itself busy and, after the same pause, draws a quiet line along its header's rule; no text dims. When the rows did not load, pass `error`: with no rows it is the body, in place of the empty state, as an `EmptyState` with a Retry action; with rows shown, a next page that failed, it is a line under the table that a polite status says. `error` wins over `isLoading` and `emptyState`.
+
+<Preview name="data-table-states" />
+
+</Section>
+
+<Section>
+
+## Filtered to nothing
+
+When filters or a search hide every row, the table is empty for a different reason than a month with no transactions: say what happened, and offer the way back with a Clear filters action.
+
+<Preview name="data-table-filtered" />
 
 </Section>
 
@@ -48,9 +68,9 @@ The table never scrolls sideways. A column with `hideBelow: 'md'` leaves when th
 
 ## Selection
 
-Pass `selectedKeys` and `onSelectionChange` together to turn selection on: a first column of checkboxes, and a bar of bulk actions that sticks to the bottom of the screen while any row is selected. Hold the selection in your page's state, never in the URL, and clear it whenever the rows change, on a new page, sort or filter, as this example clears it on a sort. A press on a row still opens it, and a press on a row without a link does nothing; only the checkbox, Space and X select. The header checkbox selects the rows on this page, and `onSelectionChange` always gets an array of their keys, never "all": to act on every result, offer that in the bar yourself. `bulkActions` are your buttons, shown before Clear selection, and `formatCount` writes the bar's count in your reader's digits. The bar counts only selected keys that are still in `items`, and the table draws only those as selected; a key that is not stays in what `onSelectionChange` gets until you drop it, and is warned about once in the console. Clear selection clears every key. When a bulk action asks first, in a dialog whose confirm clears the selection, the table takes focus back once the dialog has closed. A table inside a dialog keeps its keys.
+Pass `selectedKeys` and `onSelectionChange` together to turn selection on: a first column of checkboxes, and a bar of bulk actions that sticks to the bottom of the screen while any row is selected. Hold the selection in your page's state, never in the URL, and clear it whenever the rows change, on a new page, sort or filter, as this example clears it on a sort. A press on a row still opens it, and a press on a row without a link does nothing; only the checkbox, Space and X select, and Shift with a press on a checkbox selects every row from the last one chosen. `disabledKeys` turns a row's selection off, and with `disabledBehavior: 'selection'` only that: the row still opens and reads as any other. The header checkbox selects the rows on this page, and `onSelectionChange` always gets an array of their keys, never "all": to act on every result, offer that in the bar yourself. `bulkActions` are your buttons, shown before Clear selection, and `formatCount` writes the bar's count in your reader's digits. The bar counts only selected keys that are still in `items`, and the table draws only those as selected; a key that is not stays in what `onSelectionChange` gets until you drop it, and is warned about once in the console. Clear selection clears every key. When a bulk action asks first, in a dialog whose confirm clears the selection, the table takes focus back once the dialog has closed. A table inside a dialog keeps its keys.
 
-<Preview name="data-table-selection" wide />
+<Preview name="data-table-selection" />
 
 </Section>
 
@@ -58,7 +78,7 @@ Pass `selectedKeys` and `onSelectionChange` together to turn selection on: a fir
 
 ## Usage
 
-Render DataTable from a client component: its columns, keys and links are functions, which a server component cannot pass. Load the rows in a server page and pass them as data; a node a server rendered can reach a cell as a field of its row. Wrap the app in a `RouterProvider` once, so the row links go through your router. `currentKey` is compared with each row's key by strict equality, so a key read from the URL, which is a string, never matches a numeric key: convert it first, as `Number(params.get('open'))`. The row's link is stretched over the whole row, so text in a row cannot be selected by dragging across it; put text a reader copies in the detail the row opens. A control in a cell takes its own press above the row's link: a button, a link, an input, a label, a field, anything with a control role such as `checkbox`, `switch` or `menuitem`, and anything in the tab order. Give anything else that takes a press the class `data-table-control`. Set `--page-sticky-top` to your header's height on an ancestor, once for every sticky part of the page, so the table's header sticks under yours. The bulk-action bar sticks above `--app-shell-inset-block-end`, which AppShell sets for its bottom tab bar. Every string in the table is yours: the library formats no date, amount or count.
+Render DataTable from a client component: its columns, keys and links are functions, which a server component cannot pass. Load the rows in a server page and pass them as data; a node a server rendered can reach a cell as a field of its row. Wrap the app in a `RouterProvider` once, so the row links go through your router. `currentKey` is compared with each row's key by strict equality, so a key read from the URL, which is a string, never matches a numeric key: convert it first, as `Number(params.get('open'))`. The row's link is stretched over the whole row, so text in a row cannot be selected by dragging across it; put text a reader copies in the detail the row opens. A control in a cell takes its own press above the row's link: a button, a link, an input, a label, a field, anything with a control role such as `checkbox`, `switch` or `menuitem`, and anything in the tab order. Give anything else that takes a press the class `data-table-control`. Set `--page-sticky-top` to your header's height on an ancestor, once for every sticky part of the page, so the table's header sticks under yours; this site sets it from its own header, which is why the examples' headers stop under it. A row that focus reaches keeps clear of the sticky header and of the bulk-action bar. The bulk-action bar sticks above `--app-shell-inset-block-end`, which AppShell sets for its bottom tab bar. Every string in the table is yours: the library formats no date, amount or count.
 
 ```tsx
 'use client';
@@ -69,7 +89,7 @@ const columns: DataTableColumn<Transaction>[] = [
   { id: 'date', header: 'Date', cell: (row) => row.dateLabel, allowsSorting: true, width: '7rem' },
   { id: 'payee', header: 'Payee', cell: (row) => row.payee, isRowHeader: true },
   { id: 'category', header: 'Category', cell: (row) => row.category, hideBelow: 'md' },
-  { id: 'amount', header: 'Amount', cell: (row) => row.amountLabel, align: 'end', total: '-$1,284.50' },
+  { id: 'amount', header: 'Amount', cell: (row) => row.amountLabel, align: 'end', total: '−$1,284.50' },
 ];
 
 export function Transactions({ rows, sort, openId }: TransactionsProps) {
@@ -97,7 +117,7 @@ export function Transactions({ rows, sort, openId }: TransactionsProps) {
 
 The root also takes `ref`, and `className` is merged after its own class. A name is required: `aria-label`, or `aria-labelledby` with the id of a visible heading.
 
-<PropsTable label="DataTable props" path="../../packages/react/src/data-table/DataTable.tsx" type="Pick<DataTableBaseProps<object>, 'items' | 'columns' | 'getKey' | 'getRowHref' | 'currentKey' | 'sortDescriptor' | 'onSortChange' | 'selectedKeys' | 'onSelectionChange' | 'bulkActions' | 'formatCount' | 'disabledKeys' | 'isLoading' | 'loadingRowCount' | 'emptyState' | 'labels' | 'className'>" />
+<PropsTable label="DataTable props" path="../../packages/react/src/data-table/DataTable.tsx" type="Pick<DataTableBaseProps<object>, 'items' | 'columns' | 'getKey' | 'getRowHref' | 'currentKey' | 'sortDescriptor' | 'onSortChange' | 'selectedKeys' | 'onSelectionChange' | 'bulkActions' | 'formatCount' | 'disabledKeys' | 'disabledBehavior' | 'isLoading' | 'loadingRowCount' | 'emptyState' | 'error' | 'labels' | 'className'>" />
 
 <PropsTable label="DataTableColumn" path="../../packages/react/src/data-table/DataTable.tsx" type="DataTableColumn<object>" />
 
@@ -109,11 +129,11 @@ The root also takes `ref`, and `className` is merged after its own class. A name
 
 ## Accessibility
 
-The table is a `grid` named by your `aria-label` or heading. Each header is a `columnheader`, with `aria-sort` on the sortable ones; the row header's cell is a `rowheader`, so a screen reader names each row by it. The current row's link is `aria-current`, and the row draws a bar and a bolder name, so the state is never color alone. React Aria announces a sort in its own words. While loading, the table is busy and a polite status outside it says "Loading" once; the skeletons are hidden from assistive technology. The table is one tab stop: no row link or checkbox is in the tab order, and the arrows reach them.
+The table is a `grid` named by your `aria-label` or heading. Each header is a `columnheader`, with `aria-sort` on the sortable ones; the row header's cell is a `rowheader`, so a screen reader names each row by it. The current row's link is `aria-current`, and the row draws a bar and a bolder name, so the state is never color alone. React Aria announces a sort in its own words. While loading, the table is busy and a polite status outside it says "Loading" once; the skeletons are hidden from assistive technology. An error under the rows is a polite status too. A column whose header is hidden keeps its name. A row that focus reaches is scrolled clear of the sticky header and the bulk-action bar, so it is never hidden behind them. The table is one tab stop: no row link or checkbox is in the tab order, and the arrows reach them.
 
 With selection on, the grid is multiselectable and each row says whether it is selected. The header checkbox is named "Select all" and a row's "Select" followed by the row's name, such as "Select Corner Mart". The bar is a toolbar named "Bulk actions". React Aria announces each selection change in its own English words, and the bar's polite status says the count in yours, once the selection has held for a moment, so a run of X presses is said once. Letters never move focus: J and K move as the arrows, X toggles, and every other letter does nothing, on any keyboard layout.
 
-<Keys rows={[['Down Up J K', 'Move to the next or previous row; from the first row, Up reaches the headers. J and K act as the arrows on any keyboard layout.'], ['Right Left', 'Into and between the cells of a row, skipping a column that has left, and back to the row; in the header row, between the headers, wrapping around.'], ['Home End', "The first or last row; in a cell or a header, the row's first or last one that has not left. With Ctrl, from a cell, the table's first or last cell."], ['PageUp PageDown', 'The first or last row, since the page itself scrolls.'], ['Enter', "Opens the focused row, from the row, one of its cells or its checkbox, and never selects it. On a sortable header, sorts."], ['Ctrl+Enter Shift+Enter', "Opens the focused row in a new tab or window, as a modifier click on its link does. A browser that ignores a modifier on a click a script sends, as Safari may, opens it in place: press Right to reach the row's link and the modifier Enter there."], ['Space X', "Toggle the focused row's selection. Space on a header sorts."], ['Shift+Down Shift+Up', 'Extend the selection, past a column that has left too.'], ['Mod+A', 'Selects every row on the page.'], ['Escape', 'Clears the selection; in the bar too, with focus back in the table.'], ['A-Z', 'Nothing: a letter never moves focus. A key no row or header starts with, such as a page shortcut, reaches the page.'], ['Tab', 'Into and out of the table, one stop, then the bar, where Left and Right move between its buttons.']]} />
+<Keys rows={[['Down Up J K', 'Move to the next or previous row; from the first row, Up reaches the headers. J and K act as the arrows on any keyboard layout.'], ['Right Left', 'Into and between the cells of a row, skipping a column that has left, and back to the row; in the header row, between the headers, stopping at its ends.'], ['Home End', "The first or last row; in a cell or a header, the row's first or last one that has not left. With Ctrl, from a cell, the table's first or last cell."], ['PageUp PageDown', 'Move by the rows that fit in the view, never past the first or the last row; with Shift, extend the selection.'], ['Enter', "Opens the focused row, from the row, one of its cells or its checkbox, and never selects it. On a sortable header, sorts."], ['Ctrl+Enter Shift+Enter', "Opens the focused row in a new tab or window, as a modifier click on its link does. A browser that ignores a modifier on a click a script sends, as Safari may, opens it in place: press Right to reach the row's link and the modifier Enter there."], ['Space X', "Toggle the focused row's selection. Space on a header sorts."], ['Shift+Down Shift+Up', 'Extend the selection, past a column that has left too.'], ['Mod+A', 'Selects every row on the page.'], ['Escape', 'Clears the selection; in the bar too, with focus back in the table.'], ['A-Z', 'Nothing: a letter never moves focus. A key no row or header starts with, such as a page shortcut, reaches the page.'], ['Tab', 'Into and out of the table, one stop, then the bar, where Left and Right move between its buttons.']]} />
 
 </Section>
 
@@ -123,6 +143,6 @@ With selection on, the grid is multiselectable and each row says whether it is s
 
 What keeps data tables in the system.
 
-<Rules dos={['Make the payee or the name the row header, the column a reader looks a row up by.', 'Put figures at the end, with their sign and currency in the string.', 'Add a totals row only for figures that add up.', 'Give the empty body an EmptyState that says what is missing and what to do.', "Write the bar's count in your reader's words and digits.", 'Clear the selection when the page, the sort or a filter changes.']} donts={['Never let the table scroll sideways. Let columns leave instead.', 'Never stripe the rows. A hairline between them is enough.', 'Never mark a row by color alone.', 'Never draw a spinner in place of the rows. Skeleton rows keep the shape.', 'Never keep the selection in the URL.', 'Never make a press on a row select it. A press opens; the checkbox selects.']} />
+<Rules dos={['Make the payee or the name the row header, the column a reader looks a row up by.', 'Put figures at the end, with their sign and currency in the string.', 'Add a totals row only for figures that add up.', 'Give the empty body an EmptyState that says what is missing and what to do.', "Write the bar's count in your reader's words and digits.", 'Clear the selection when the page, the sort or a filter changes.', 'Name a total of one page "Page total".', 'Write a negative amount with a real minus sign.', 'Offer Clear filters when filters hide every row.', 'Give a failed load an error with a way to retry.']} donts={['Never let the table scroll sideways. Let columns leave instead.', 'Never stripe the rows. A hairline between them is enough.', 'Never mark a row by color alone.', 'Never draw a spinner in place of the rows. Skeleton rows keep the shape.', 'Never keep the selection in the URL.', 'Never make a press on a row select it. A press opens; the checkbox selects.']} />
 
 </Section>

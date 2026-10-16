@@ -300,7 +300,8 @@ describe('DataTable selection', () => {
     expect(bar).toHaveClass('data-table-bar');
     // The bar follows the face, inside the root.
     expect(bar.parentElement).toBe(container.querySelector('.data-table'));
-    expect(bar.previousElementSibling).toHaveClass('data-table-grid');
+    expect(bar.previousElementSibling).toHaveClass('data-table-error');
+    expect(bar.previousElementSibling?.previousElementSibling).toHaveClass('data-table-grid');
     expect(bar.querySelector('.data-table-bar-count')).toHaveTextContent(/^2 selected$/);
     const actions = bar.querySelector('.data-table-bar-actions');
     expect(
@@ -728,6 +729,27 @@ describe('DataTable selection', () => {
     expect(selected()).toEqual(['t1', 't2']);
     expect(status).toHaveTextContent(/^2 selected$/);
     expect(changes).toEqual([]);
+  });
+
+  it('selects the range from the anchor on a Shift press on a row checkbox', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Selecting onChange={onChange} />);
+    await user.click(within(rowAt(1)).getByRole('checkbox'));
+    expect(selected()).toEqual(['t2']);
+    await user.keyboard('{Shift>}');
+    await user.click(within(rowAt(3)).getByRole('checkbox'));
+    await user.keyboard('{/Shift}');
+    expect(selected()).toEqual(['t2', 't3', 't4']);
+    expect(onChange).toHaveBeenLastCalledWith(expect.arrayContaining(['t2', 't3', 't4']));
+    // Back up from the same anchor, the range follows, as Shift with the arrows does.
+    await user.keyboard('{Shift>}');
+    await user.click(within(rowAt(0)).getByRole('checkbox'));
+    await user.keyboard('{/Shift}');
+    expect(selected()).toEqual(['t1', 't2']);
+    // Without Shift the box toggles its row alone.
+    await user.click(within(rowAt(4)).getByRole('checkbox'));
+    expect(selected()).toEqual(['t1', 't2', 't5']);
   });
 
   const AXE_CASES: [state: string, props: SelectingProps, focusBar?: boolean][] = [

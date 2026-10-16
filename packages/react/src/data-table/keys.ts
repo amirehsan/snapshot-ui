@@ -1,6 +1,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { matchesShortcut, parseShortcut } from '../command-palette/shortcut';
 import { isUnderModal } from '../overlay/useOverlayStack';
+import { scrollPortOf } from './scroll';
 import type { Key } from './selection';
 
 /*
@@ -115,16 +116,20 @@ const headerRowOf = (grid: Element): Element | undefined =>
     row.querySelector(':scope > [role="columnheader"]'),
   );
 
-/** The first shown header from `cells[index]` on in `step`'s direction, wrapping around as React Aria does. */
-function wrapToShown(cells: readonly HTMLElement[], index: number, step: 1 | -1): HTMLElement | null {
-  for (let count = 0; count < cells.length; count += 1) {
-    const cell = cells[(((index + count * step) % cells.length) + cells.length) % cells.length];
+/** The first shown header after `cells[index]` in `step`'s direction, or null at the header row's end. */
+function nextShownHeader(cells: readonly HTMLElement[], index: number, step: 1 | -1): HTMLElement | null {
+  for (let next = index + step; next >= 0 && next < cells.length; next += step) {
+    const cell = cells[next];
     if (cell !== undefined && isShown(cell)) return cell;
   }
   return null;
 }
 
-/** Arrow Left or Right: React Aria's next cell or header in `step`'s DOM direction, and where to go instead. */
+/**
+ * Arrow Left or Right: React Aria's next cell or header in `step`'s DOM direction, and where to go instead. In
+ * the header row React Aria wraps from one end to the other; the handler stops at the ends instead, returning
+ * the header it is on, and steps over a header that has left.
+ */
 function sideways(from: Element, row: Element, active: Element, step: 1 | -1): HTMLElement | null {
   const cells = cellsOf(row);
   if (from === row) {
@@ -136,11 +141,10 @@ function sideways(from: Element, row: Element, active: Element, step: 1 | -1): H
   if (hasFocusableBeyond(from, active, step)) return null;
   const index = cells.indexOf(from as HTMLElement);
   if (isHeader(from)) {
-    // In the header row React Aria wraps from the last header to the first and back.
-    const next = (((index + step) % cells.length) + cells.length) % cells.length;
-    const reached = cells[next];
-    if (reached === undefined || isShown(reached)) return null;
-    return wrapToShown(cells, next, step);
+    const next = nextShownHeader(cells, index, step);
+    // At the end of the header row the key stops where it is.
+    if (next === null) return from as HTMLElement;
+    return next === cells[index + step] ? null : next;
   }
   const reached = cells[index + step];
   // Past the last cell React Aria returns to the row, which is shown.
@@ -179,9 +183,64 @@ function upToHeader(from: Element, row: Element): HTMLElement | null {
 }
 
 /**
+ * The height the body's rows scroll in: the nearest ancestor that scrolls, or the window, less what covers its
+ * top (the page's sticky offset and the sticky header row) and its bottom (the bulk-action bar where it shows).
+ */
+function pageHeight(grid: Element): number {
+  const port = scrollPortOf(grid);
+  let height = port === null ? window.innerHeight : port.clientHeight;
+  const header = grid.querySelector('[role="columnheader"]');
+  if (header !== null) {
+    height -= header.getBoundingClientRect().height;
+    if (port === null) height -= parseFloat(getComputedStyle(header).top) || 0;
+  }
+  const bar = grid.closest('.data-table')?.querySelector('.data-table-bar');
+  if (bar !== null && bar !== undefined) {
+    height -= bar.getBoundingClientRect().height + (parseFloat(getComputedStyle(bar).bottom) || 0);
+  }
+  return height;
+}
+
+/**
+ * Page Down and Page Up (risk R4, spec correction 41). React Aria measures a page against the whole table when
+ * the page itself scrolls, so it jumped to the first or the last row; the handler moves by the rows that fit in
+ * the view instead, from a row to a row and from a cell to the same column's cell, never past the first or the
+ * last row, and with Shift extends the selection to the row it reaches, as React Aria does. A header's keys, and
+ * a key with Ctrl, Alt or Meta, are React Aria's.
+ */
+function pageKey(event: ReactKeyboardEvent<HTMLElement>, { extend }: TableKeyActions): boolean {
+  if (event.key !== 'PageDown' && event.key !== 'PageUp') return false;
+  if (event.ctrlKey || event.altKey || event.metaKey) return false;
+  const active = event.currentTarget.ownerDocument.activeElement;
+  if (active === null) return false;
+  const from = startOf(active, event.currentTarget);
+  if (from === null || isHeader(from)) return false;
+  const row = rowOf(from);
+  const grid = row?.closest('[role="grid"]');
+  if (row === null || grid === null || grid === undefined) return false;
+  const rows = reachableRows(grid);
+  const index = rows.indexOf(row);
+  if (index === -1) return false;
+  const fit = Math.max(1, Math.floor(pageHeight(grid) / (row.getBoundingClientRect().height || 1)));
+  const next = Math.min(rows.length - 1, Math.max(0, index + (event.key === 'PageDown' ? fit : -fit)));
+  const reached = rows[next] ?? row;
+  event.preventDefault();
+  event.stopPropagation();
+  let target: HTMLElement = reached as HTMLElement;
+  if (from !== row) {
+    const cell = cellsOf(reached)[cellsOf(row).indexOf(from as HTMLElement)];
+    target = (cell === undefined || isShown(cell) ? cell : nextVisibleCell(cell, 'first')) ?? target;
+  }
+  target.focus();
+  if (event.shiftKey) extend(reached);
+  return true;
+}
+
+/**
  * Moves an arrow, Home or End past a cell or a column header the CSS hid: when the one React Aria would reach
  * has left, the key stops here and focus goes to the nearest shown one in that direction, whose focus event sets
- * React Aria's focused key; true when it took the key. Every other key passes through. It takes the keys with the
+ * React Aria's focused key; true when it took the key. In the header row Arrow Left and Right stop at its ends,
+ * where React Aria would wrap to the other end. Every other key passes through. It takes the keys with the
  * modifiers React Aria's grid moves with (`useSelectableCollection.mjs`): none, Shift, and Ctrl off a Mac or Alt
  * on one, with Ctrl taking Home and End to the grid's corners off a Mac. Arrow Right is the next cell in DOM order
  * in a left-to-right locale and the previous in a right-to-left one, as React Aria reads it from the locale.
@@ -233,8 +292,9 @@ function hiddenCellKey(
  * the root only through React's tree (a Menu opened in a cell is a portal), a composing key, a key while the
  * table sits under an open modal (one inside a modal keeps its keys), a key typed into an editable element or a
  * key inside the bulk-action bar. Then: Enter on a row, one of its own cells or the box in its checkbox cell
- * opens the row's link, with any modifiers, and never reaches React Aria, which would select the row; the arrows,
- * Home and End past a column that has left; every other key with Ctrl, Alt or Meta is React Aria's (Mod+A, Shift
+ * opens the row's link, with any modifiers, and never reaches React Aria, which would select the row; Page Down
+ * and Page Up by the rows in view; the arrows, Home and End past a column that has left, and Left and Right
+ * stopping at the header row's ends; every other key with Ctrl, Alt or Meta is React Aria's (Mod+A, Shift
  * with the arrows); J and K are dispatched as Arrow Down and Arrow Up on the focused element; X toggles the
  * focused row; and a single printable key that React Aria's typeahead would act on stops here, so typeahead never
  * moves focus. J, K and X match by `event.key` and then by `event.code`, so a Persian layout's J is J.
@@ -258,7 +318,7 @@ export function handleTableKey(event: ReactKeyboardEvent<HTMLElement>, actions: 
     openRow(row, native);
     return;
   }
-  if (hiddenCellKey(event, actions)) return;
+  if (pageKey(event, actions) || hiddenCellKey(event, actions)) return;
   if (event.ctrlKey || event.metaKey || event.altKey) return;
   const j = matchesShortcut(native, J);
   if (j || matchesShortcut(native, K)) {

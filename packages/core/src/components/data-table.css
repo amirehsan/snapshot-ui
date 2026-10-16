@@ -17,6 +17,11 @@
   .data-table {
     --data-table-row: max(var(--size-target), var(--size-field));
     --data-table-fill: var(--data-table-surface, var(--color-canvas));
+    /* What covers a row that focus scrolls to (WCAG 2.4.11): the page's sticky offset and the 40px header row
+       above it, and, while the bar shows, the bar and its inset from the viewport's bottom below it: its
+       buttons, a part step of padding either side and its 1px edges. Rows and list items keep clear of both. */
+    --data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--size-target));
+    --data-table-scroll-end: 0px;
 
     container: data-table / inline-size;
     min-inline-size: 0;
@@ -107,6 +112,14 @@
     position: relative;
     block-size: var(--data-table-row);
     outline: none;
+    scroll-margin-block: var(--data-table-scroll-start) var(--data-table-scroll-end);
+  }
+
+  .data-table:has(> .data-table-bar) {
+    --data-table-scroll-end: calc(
+      var(--app-shell-inset-block-end, 0px) + var(--spacing-inset) + var(--size-control) + 2 *
+        var(--spacing-part) + 2px
+    );
   }
 
   .data-table-row[data-link] {
@@ -133,6 +146,36 @@
 
   .data-table-cell[role='rowheader'] {
     font-weight: 500;
+  }
+
+  /* A focused cell keeps clear of the sticky header and the bar as its row does. */
+  .data-table-body > .data-table-row > .data-table-cell {
+    scroll-margin-block: var(--data-table-scroll-start) var(--data-table-scroll-end);
+  }
+
+  /* A column that wraps: two lines, then an ellipsis; its full text is still the row's name. Figures never wrap. */
+  .data-table-cell[data-overflow='wrap'] {
+    padding-block: 0.25rem;
+    white-space: normal;
+  }
+
+  .data-table-wrap {
+    display: -webkit-box;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* An actions column's header: its name is read, never seen. */
+  .data-table-column[data-header-hidden] .data-table-column-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .data-table-column[data-align='end'],
@@ -244,6 +287,47 @@
     > .data-table-row:last-child
     > .data-table-cell {
     border-block-end: 0;
+  }
+
+  /* ---- Rows already shown that load again: a quiet line along the header's rule ----------------------- */
+  /* QUIET_MS after the load starts, as the status speaks: 2px of ink at the foot of every header cell, one line
+     across the header, that pulses as a skeleton does and stands still under reduced motion. No text dims. */
+  .data-table-grid[data-reloading] .data-table-column::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    block-size: 2px;
+    background-color: var(--color-ink);
+    animation: data-table-reloading 1.6s ease-in-out infinite;
+  }
+
+  @keyframes data-table-reloading {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.3;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .data-table-grid[data-reloading] .data-table-column::after {
+      animation: none;
+    }
+  }
+
+  /* ---- A failed next page: the error line under the rows, in the status's place -------------------------- */
+  .data-table-error:not(:empty) {
+    margin-block-start: var(--spacing-part);
+    padding-inline: var(--spacing-inset);
+    color: var(--color-error);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    overflow-wrap: anywhere;
   }
 
   /* ---- The empty and loading bodies: React Aria's one row with one cell spanning every column ----- */
@@ -437,6 +521,10 @@
 
     .data-table-bar {
       border-color: CanvasText;
+    }
+
+    .data-table-grid[data-reloading] .data-table-column::after {
+      background-color: CanvasText;
     }
   }
 }

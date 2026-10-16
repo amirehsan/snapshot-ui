@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Receipt } from 'lucide-react';
+import { Ellipsis, Receipt, RotateCw } from 'lucide-react';
 import { useState, type ComponentType, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
@@ -7,6 +7,7 @@ import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
 import { Dialog } from '../dialog';
 import { EmptyState } from '../empty-state';
+import { IconButton } from '../icon-button';
 import { RouterProvider } from '../link';
 import { paint, tokenColor } from '../stories/paint';
 import {
@@ -493,7 +494,7 @@ async function expectFocus(grid: HTMLElement, element: HTMLElement | undefined, 
  * The arrows step over a column that has left: in a 44rem box Category is hidden, and Arrow Right from the
  * payee lands on Account, Arrow Left back on the payee (spec correction 8). In a second table the first and last
  * columns have left: Arrow Up from the first row lands on the first shown header, Arrow Left and Right in the
- * header row wrap past them as React Aria wraps, Home and End stop at the shown ends, and Ctrl+Home and Ctrl+End
+ * header row stop at the shown ends where React Aria would wrap, Home and End reach them, and Ctrl+Home and Ctrl+End
  * (off a Mac, where React Aria takes them) reach the first and last shown cells. Run in all three engines.
  */
 export const ArrowsSkipHidden: Story = {
@@ -541,10 +542,15 @@ export const ArrowsSkipHidden: Story = {
     await expect(rowAt(edgeTable, 0)).toHaveFocus();
     await userEvent.keyboard('{ArrowUp}');
     await expectFocus(edgeGrid, edgeHeaders[1], 'Arrow Up');
+    // Left and Right stop at the header row's shown ends, where React Aria would wrap.
     await userEvent.keyboard('{ArrowLeft}');
-    await expectFocus(edgeGrid, edgeHeaders[3], 'Arrow Left');
+    await expectFocus(edgeGrid, edgeHeaders[1], 'Arrow Left at the start');
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}');
+    await expectFocus(edgeGrid, edgeHeaders[3], 'Arrow Right to the end');
     await userEvent.keyboard('{ArrowRight}');
-    await expectFocus(edgeGrid, edgeHeaders[1], 'Arrow Right');
+    await expectFocus(edgeGrid, edgeHeaders[3], 'Arrow Right at the end');
+    await userEvent.keyboard('{Home}');
+    await expectFocus(edgeGrid, edgeHeaders[1], 'Home');
     await userEvent.keyboard('{End}');
     await expectFocus(edgeGrid, edgeHeaders[3], 'End');
     await userEvent.keyboard('{Home}');
@@ -1272,5 +1278,222 @@ export const PressNeverSelects: Story = {
     await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2']));
     await userEvent.click(cell(2, rowAt(canvasElement, 2)));
     await expect(selectedKeysOf(canvasElement)).toEqual(['t2']);
+  },
+};
+
+/** The rows did not load: the error in place of the empty body, an EmptyState with a Retry action. */
+export const ErrorEmpty: Story = {
+  render: () => (
+    <Box>
+      <Sorted
+        items={[]}
+        error={
+          <EmptyState
+            icon={<RotateCw />}
+            title="The transactions did not load"
+            description="Check your connection, then try again."
+            action={<Button variant="secondary">Retry</Button>}
+          />
+        }
+      />
+    </Box>
+  ),
+};
+
+/** The next page did not load: the rows stay, and the error is a line under them that a polite status says. */
+export const ErrorWithRows: Story = {
+  render: () => (
+    <Box>
+      <Sorted isLoading error="The next page did not load. Your connection may be down." />
+    </Box>
+  ),
+};
+
+/** Memo-like text that wraps: two lines, then an ellipsis, the row growing to hold them. */
+const WRAPPING_COLUMNS: DataTableColumn<Transaction>[] = [
+  ...columnsOf(['date', 'payee']),
+  {
+    id: 'memo',
+    header: 'Memo',
+    cell: (row) =>
+      `${row.category} for the ${row.account.toLowerCase()} account, paid to ${row.payee}, reconciled with the October statement and the receipt the bank sent`,
+    overflow: 'wrap',
+  },
+  ...columnsOf(['amount']),
+];
+
+/** A column with overflow wrap reads to two lines and clamps there; the other columns still end on one line. */
+export const WrappingColumn: Story = {
+  render: () => (
+    <Box>
+      <Sorted columns={WRAPPING_COLUMNS} items={EIGHT.slice(0, 4)} />
+    </Box>
+  ),
+};
+
+/** An actions column: its header draws nothing and is still named "Actions", each cell a row menu's button. */
+const ACTION_COLUMNS: DataTableColumn<Transaction>[] = [
+  ...COLUMNS,
+  {
+    id: 'actions',
+    header: 'Actions',
+    isHeaderHidden: true,
+    width: '4rem',
+    cell: (row) => (
+      <IconButton aria-label={`More for ${row.payee}`}>
+        <Ellipsis />
+      </IconButton>
+    ),
+  },
+];
+
+/** A header with nothing drawn: the actions column, its name kept for a screen reader. */
+export const HeaderHidden: Story = {
+  render: () => (
+    <Box>
+      <Sorted columns={ACTION_COLUMNS} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const header = within(canvasElement).getByRole('columnheader', { name: 'Actions' });
+    await expect(header).toHaveAttribute('data-header-hidden');
+    const label = only(header, '.data-table-column-label');
+    await expect(label.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+  },
+};
+
+/** A row that cannot be selected and still opens: disabledBehavior selection, its box disabled, its text ink. */
+export const DisabledSelection: Story = {
+  render: () => (
+    <Box>
+      <Selecting initial={['t2']} disabledKeys={['t4']} disabledBehavior="selection" />
+    </Box>
+  ),
+};
+
+/**
+ * Rows already shown that load again: after QUIET_MS a 2px line along the header's rule pulses, and the status
+ * says "Loading"; no text dims. With no rows the skeletons are the cue and the line never shows.
+ */
+export const Reloading: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box>
+      <Sorted isLoading />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const face = only(canvasElement, '.data-table-grid');
+    await expect(face).not.toHaveAttribute('data-reloading');
+    await waitFor(() => expect(face).toHaveAttribute('data-reloading'), { timeout: QUIET_MS + 2000 });
+    const header = within(canvasElement).getByRole('columnheader', { name: 'Payee' });
+    const line = getComputedStyle(header, '::after');
+    await expect(line.blockSize).toBe('2px');
+    await expect(line.backgroundColor).toBe(paint('var(--color-ink)', header));
+    // No row dims: its text keeps its own color, at full opacity.
+    await expect(getComputedStyle(only(canvasElement, '.data-table-body')).opacity).toBe('1');
+  },
+};
+
+/**
+ * Rows focused by J keep clear of what covers the page (WCAG 2.4.11): under a 64px page header and the sticky
+ * header row, and with a row selected, over the bulk-action bar at the viewport's bottom. Walking down by J and
+ * back by K, every focused row ends wholly between them. Three engines.
+ */
+export const ScrollClear: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <div style={{ '--page-sticky-top': '64px', paddingBlockStart: 80 } as CSSProperties}>
+      <PageHeader />
+      <Box>
+        <Selecting items={manyTransactions(40)} initial={['m1']} />
+      </Box>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = only(canvasElement, '.data-table-bar');
+    const header = within(canvasElement).getAllByRole('columnheader')[1];
+    if (header === undefined) throw new Error('No header');
+    const clear = async (row: HTMLElement, step: string): Promise<void> => {
+      // React Aria scrolls in the next frame and the table after it, in the frame after that.
+      for (let frame = 0; frame < 3; frame += 1)
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      const box = row.getBoundingClientRect();
+      await expect(box.top, `${step}: under the header row`).toBeGreaterThanOrEqual(
+        Math.floor(header.getBoundingClientRect().bottom),
+      );
+      await expect(box.bottom, `${step}: over the bar`).toBeLessThanOrEqual(
+        Math.ceil(bar.getBoundingClientRect().top),
+      );
+    };
+    rowAt(canvasElement, 0).focus();
+    for (let index = 1; index < 20; index += 1) {
+      await userEvent.keyboard('j');
+      await waitFor(() => expect(rowAt(canvasElement, index)).toHaveFocus());
+      await clear(rowAt(canvasElement, index), `J to row ${String(index)}`);
+    }
+    for (let index = 18; index >= 0; index -= 1) {
+      await userEvent.keyboard('k');
+      await waitFor(() => expect(rowAt(canvasElement, index)).toHaveFocus());
+      await clear(rowAt(canvasElement, index), `K to row ${String(index)}`);
+    }
+    window.scrollTo(0, 0);
+  },
+};
+
+/**
+ * Page Down and Page Up move by the rows that fit in the view (risk R4), not to the first and last row: from the
+ * first row of sixty, Page Down lands on a row still under the page's end, and Page Up comes back to the first.
+ * Three engines.
+ */
+export const PageKeys: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box>
+      <Selecting items={manyTransactions(60)} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const rows = bodyRows(canvasElement);
+    const first = rowAt(canvasElement, 0);
+    first.focus();
+    // The rows that fit under the 40px header row in the window, which scrolls the page.
+    const header = within(canvasElement).getAllByRole('columnheader')[0]?.getBoundingClientRect().height ?? 0;
+    const fit = Math.floor((window.innerHeight - header) / first.getBoundingClientRect().height);
+    await userEvent.keyboard('{PageDown}');
+    const reached = rows.findIndex((row) => row === document.activeElement);
+    await expect(reached).toBe(fit);
+    await expect(reached).toBeLessThan(rows.length - 1);
+    await userEvent.keyboard('{PageUp}');
+    await waitFor(() => expect(first).toHaveFocus());
+    // Shift extends the selection over the page it moves by, which the bar, shown now, makes a row shorter.
+    await userEvent.keyboard('x{Shift>}{PageDown}{/Shift}');
+    const extended = rows.findIndex((row) => row === document.activeElement);
+    await expect(extended).toBeGreaterThan(1);
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toHaveLength(extended + 1));
+    window.scrollTo(0, 0);
+  },
+};
+
+/** Shift with a press on a row's box selects the range from the anchor, as Shift with an arrow does. Three engines. */
+export const ShiftPressRange: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box>
+      <Selecting />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = (index: number): HTMLElement => only(rowAt(canvasElement, index), '.checkbox-box');
+    await userEvent.click(box(1));
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2']));
+    // One user, so the Shift it holds down is on its press.
+    const user = userEvent.setup();
+    await user.keyboard('{Shift>}');
+    await user.click(box(4));
+    await user.keyboard('{/Shift}');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2', 't3', 't4', 't5']));
+    await userEvent.click(box(6));
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2', 't3', 't4', 't5', 't7']));
   },
 };

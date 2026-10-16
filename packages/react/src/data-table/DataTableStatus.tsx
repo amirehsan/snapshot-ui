@@ -42,3 +42,26 @@ export function DataTableStatus({ message, className }: DataTableStatusProps): R
     </span>
   );
 }
+
+/**
+ * Whether `active` has held for `QUIET_MS`: false at once when it ends, so a short load never shows its cue. The
+ * reloading cue reads it, on the same pause as the status's words. Private to DataTable.
+ */
+export function useQuiet(active: boolean): boolean {
+  const [held, setHeld] = useState(false);
+  const [last, setLast] = useState(active);
+  if (active !== last) {
+    setLast(active);
+    if (!active) setHeld(false);
+  }
+  useEffect(() => {
+    if (!active) return;
+    const timer = setTimeout(() => {
+      setHeld(true);
+    }, QUIET_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [active]);
+  return active && held;
+}

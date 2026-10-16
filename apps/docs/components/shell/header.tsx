@@ -2,7 +2,7 @@
 
 import { Eyebrow, Heading, IconButton, SegmentedControl, SegmentedControlItem } from '@snapshot-ui/react';
 import { useTheme } from 'next-themes';
-import type { ReactElement } from 'react';
+import { useEffect, useRef, type ReactElement } from 'react';
 import { useMounted, useShape } from '@/lib/document-state';
 import { writeShape } from '@/lib/prepaint';
 import { useShell } from './context';
@@ -61,9 +61,27 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
   // Both switches show values only the browser knows, so they settle after hydration.
   const mounted = useMounted();
   const shape = useShape();
+  // The header sticks at the top with no fixed height, so its height is the page's sticky offset: every sticky
+  // part of a page, such as a data table's header row, sticks under it, never behind it.
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const header = headerRef.current;
+    if (header === null || typeof ResizeObserver !== 'function') return;
+    const root = document.documentElement;
+    const write = (): void => {
+      root.style.setProperty('--page-sticky-top', `${String(header.getBoundingClientRect().height)}px`);
+    };
+    write();
+    const observer = new ResizeObserver(write);
+    observer.observe(header);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty('--page-sticky-top');
+    };
+  }, []);
 
   return (
-    <header className="header">
+    <header className="header" ref={headerRef}>
       <div className="header-inner">
         <IconButton
           className="header-menu"

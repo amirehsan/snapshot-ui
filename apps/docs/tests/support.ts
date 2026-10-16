@@ -39,8 +39,8 @@ export const sideways = (page: Page): Promise<number> =>
 
 /**
  * Fails unless the data table holding `inside` draws its table face: its box is 40rem or wider, where its list
- * face never takes over, so a test of rows, headers and cells cannot pass by finding a face nobody sees. The
- * data table page's examples have a wide stage for this (plan, spec correction 23).
+ * face never takes over, so a test of rows, headers and cells cannot pass by finding a face nobody sees. At
+ * Playwright's 1280px window the data table page's examples are about 48.75rem wide (plan, spec correction 23).
  */
 export const expectTableFace = async (inside: Locator): Promise<void> => {
   const width = await inside.evaluate(

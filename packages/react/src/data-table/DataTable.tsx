@@ -8,6 +8,7 @@ import {
   useState,
   type FocusEvent,
   type KeyboardEvent,
+  type MouseEvent,
   type ReactElement,
   type ReactNode,
   type Ref,
@@ -20,9 +21,10 @@ import { mergeRefs } from '../utils/merge-refs';
 import { present } from '../utils/present';
 import { useWarnOnce } from '../utils/useWarnOnce';
 import { BulkBar } from './BulkBar';
-import { DataTableStatus } from './DataTableStatus';
+import { DataTableStatus, useQuiet } from './DataTableStatus';
 import { EDITABLE, handleTableKey, type TableKeyActions } from './keys';
 import { selectsOnPress } from './press';
+import { uncover } from './scroll';
 import { rowHeaderOf, textOf } from './rows';
 import { keysOf, presentKeys, staleKeys, toggled } from './selection';
 import { TableFace, type FaceRow, type FaceSelection, type FaceSelectionManager } from './TableFace';
@@ -51,6 +53,23 @@ export interface DataTableColumn<T> {
   hideBelow?: 'sm' | 'md';
   /** The totals row's cell for this column. */
   total?: ReactNode;
+  /**
+   * How a cell's text that is too long for its column reads: on one line ending in an ellipsis, or wrapped to two
+   * lines and clamped there, for a memo a reader wants to read without opening the row. Figures never wrap.
+   * @default 'truncate'
+   */
+  overflow?: 'truncate' | 'wrap';
+  /**
+   * The direction of the first press on this column's header, when another column is sorted: descending for a
+   * column read newest or largest first. Each later press flips it, two states only (ruling 12).
+   * @default 'ascending'
+   */
+  firstSortDirection?: 'ascending' | 'descending';
+  /**
+   * The header draws nothing and keeps `header` as its name for assistive technology, as an actions column of row
+   * menus needs.
+   */
+  isHeaderHidden?: boolean;
 }
 
 export interface DataTableLabels {
@@ -107,14 +126,28 @@ export interface DataTableShared<T> {
   sortDescriptor?: { column: string; direction: 'ascending' | 'descending' };
   /** Called with the next sort when a sortable header is pressed: ascending, or descending when it was ascending. */
   onSortChange?: (sort: { column: string; direction: 'ascending' | 'descending' }) => void;
-  /** Rows that can neither be selected nor opened; they draw in taupe. */
+  /**
+   * Rows that cannot be selected, and with `disabledBehavior` 'all' cannot be focused or opened either and draw
+   * in taupe.
+   */
   disabledKeys?: readonly Key[];
+  /**
+   * What `disabledKeys` turns off: everything, or only selection, so a row that cannot be selected still opens.
+   * @default 'all'
+   */
+  disabledBehavior?: 'selection' | 'all';
   /** Shows skeleton rows while there are no items, and marks the table busy (ruling 9). */
   isLoading?: boolean;
   /** @default 8 */
   loadingRowCount?: number;
   /** The empty body: an EmptyState, or any node. */
   emptyState?: ReactNode;
+  /**
+   * The rows did not load. With no rows it is the body, in place of the empty state, such as an EmptyState with a
+   * Retry action; with rows shown, a failed next page, it is a line under the table that a polite status says.
+   * It wins over `isLoading` and `emptyState`.
+   */
+  error?: ReactNode;
   /** The bulk-action bar's buttons, shown while any row is selected, before Clear selection. */
   bulkActions?: ReactNode;
   /** How the bar writes its count, such as in Persian digits. @default String */
@@ -166,6 +199,14 @@ function portalOf(element: Element): Element {
   const { body } = element.ownerDocument;
   while (top.parentElement !== null && top.parentElement !== body) top = top.parentElement;
   return top;
+}
+
+/** The row whose checkbox `target` is in, inside `root`; null for the select-all box and anything else. */
+function rowOfBox(target: Element, root: Element): Element | null {
+  const row = target.closest('[data-selection] .checkbox-field')?.closest('[role="row"]');
+  return row !== null && row !== undefined && root.contains(row) && row.closest('thead') === null
+    ? row
+    : null;
 }
 
 /**
@@ -239,6 +280,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     sortDescriptor,
     onSortChange,
     disabledKeys,
+    disabledBehavior = 'all',
     selectedKeys,
     onSelectionChange,
     bulkActions,
@@ -246,6 +288,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     isLoading = false,
     loadingRowCount = 8,
     emptyState,
+    error,
     labels,
     className,
     ref,
@@ -253,6 +296,11 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   const words = { ...DEFAULT_LABELS, ...labels };
   const rowHeader = rowHeaderOf(columns);
   const { rows, repeated } = faceRows(items, getKey, rowHeader, getRowHref);
+  // An error wins over loading and the empty state: with no rows it is the body, with rows the line under them.
+  const failed = present(error);
+  const loading = isLoading && !failed;
+  // Rows already shown that load again draw a quiet cue once the load has lasted QUIET_MS.
+  const reloading = useQuiet(loading && rows.length > 0);
   const { direction } = useLocale();
   const disabled = useMemo(() => new Set<Key>(disabledKeys ?? []), [disabledKeys]);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -332,11 +380,17 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   };
 
   // A press on a cell, outside its controls and the row's link, never selects (ruling 2): React Aria would select
-  // a row without a link on it. A virtual click, a screen reader's, is a press too.
+  // a row without a link on it. A virtual click, a screen reader's, is a press too. Shift with a press on a row's
+  // box is the range's (below), so React Aria's own press on the box never starts.
   const guardPress = (event: SyntheticEvent<HTMLDivElement>): void => {
     if (!selectable || !(event.target instanceof Element)) return;
-    if (event.type === 'click' && (event.nativeEvent as MouseEvent).detail !== 0) return;
-    if (selectsOnPress(event.target, event.currentTarget)) event.stopPropagation();
+    if (event.type === 'click' && (event.nativeEvent as globalThis.MouseEvent).detail !== 0) return;
+    if (
+      selectsOnPress(event.target, event.currentTarget) ||
+      ((event.nativeEvent as globalThis.MouseEvent).shiftKey &&
+        rowOfBox(event.target, event.currentTarget) !== null)
+    )
+      event.stopPropagation();
   };
 
   const actions: TableKeyActions = {
@@ -393,7 +447,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
       : `DataTable: selectedKeys holds keys that are not in items: ${stale.map(String).join(', ')}. Clear the selection when the rows change.`,
   );
   useWarnOnce(
-    items.length === 0 && !isLoading && !present(emptyState)
+    items.length === 0 && !isLoading && !failed && !present(emptyState)
       ? 'DataTable: the table has no rows and no emptyState. Pass an EmptyState that says what is missing.'
       : null,
   );
@@ -423,9 +477,19 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
       }}
       onFocusCapture={(event: FocusEvent<HTMLDivElement>) => {
         const target = event.target as Element;
+        const root = event.currentTarget;
         // Focus in a portal opened from the bar (a Menu) keeps what the bar had.
-        if (event.currentTarget.contains(target))
-          focusInBar.current = target.closest('.data-table-bar') !== null;
+        if (!root.contains(target)) return;
+        focusInBar.current = target.closest('.data-table-bar') !== null;
+        // A focused row or cell of the body is scrolled clear of the sticky header and the bar, after React
+        // Aria's own scroll, which runs in the next frame (WCAG 2.4.11).
+        if (target instanceof HTMLElement && target.closest('tbody, tfoot') !== null) {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              uncover(target, root);
+            });
+          });
+        }
       }}
       onBlurCapture={(event: FocusEvent<HTMLDivElement>) => {
         const next = event.relatedTarget;
@@ -437,10 +501,27 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
       }}
       onPointerDownCapture={guardPress}
       onMouseDownCapture={guardPress}
-      onClickCapture={guardPress}
+      onClickCapture={(event: MouseEvent<HTMLDivElement>) => {
+        guardPress(event);
+        if (event.isPropagationStopped()) return;
+        // Shift with a press on a row's box selects the range from the anchor, as Shift with an arrow does: the
+        // box's own toggle is cancelled and React Aria's manager extends the selection to the row.
+        if (!event.shiftKey || !(event.target instanceof Element)) return;
+        const row = rowOfBox(event.target, event.currentTarget);
+        if (row === null) return;
+        const key = actions.keyOf(row);
+        if (key === null || manager.current === null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        manager.current.extendSelection(key);
+      }}
     >
       {/* Busy while loading. The status sits outside the busy part and stays mounted, so it is heard. */}
-      <div className="data-table-grid" aria-busy={isLoading ? 'true' : undefined}>
+      <div
+        className="data-table-grid"
+        aria-busy={loading ? 'true' : undefined}
+        data-reloading={reloading ? '' : undefined}
+      >
         <TableFace
           aria-label={props['aria-label']}
           aria-labelledby={props['aria-labelledby']}
@@ -451,13 +532,18 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           sortDescriptor={sortDescriptor}
           onSortChange={onSortChange}
           disabledKeys={disabled}
+          disabledBehavior={disabledBehavior}
           selection={faceSelection}
-          isLoading={isLoading && items.length === 0}
+          isLoading={loading && rows.length === 0}
           loadingRowCount={loadingRowCount}
-          emptyState={emptyState}
+          emptyState={failed ? error : emptyState}
           totalLabel={words.total}
           loadingLabel={words.loading}
         />
+      </div>
+      {/* A failed next page under the rows: a polite region, mounted empty, so the error is heard as it comes. */}
+      <div className="data-table-error" role="status">
+        {failed && rows.length > 0 ? error : null}
       </div>
       {hasBar ? (
         <BulkBar
@@ -468,7 +554,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           onClear={clear}
         />
       ) : null}
-      <DataTableStatus message={isLoading ? words.loading : ''} />
+      <DataTableStatus message={loading ? words.loading : ''} />
       {/* The count, said once it has held for QUIET_MS, so a run of X presses says the total once (spec 7.1);
           mounted while selection is on, so it is there before the first count. */}
       {selectable ? (
