@@ -65,7 +65,7 @@ export interface DataTableColumn<T> {
   overflow?: 'truncate' | 'wrap';
   /**
    * The direction of the first press on this column's header, when another column is sorted: descending for a
-   * column read newest or largest first. Each later press flips it, two states only (ruling 12).
+   * column read newest or largest first. Each later press flips it, two states only.
    * @default 'ascending'
    */
   firstSortDirection?: 'ascending' | 'descending';
@@ -86,8 +86,8 @@ export interface DataTableLabels {
   /** The header checkbox's name. @default 'Select all' */
   selectAll: string;
   /**
-   * The first word of a row checkbox's name; React Aria adds the row's name after it, as "Select Corner Mart"
-   * (spec correction 5). @default 'Select'
+   * The first word of a row checkbox's name; React Aria adds the row's name after it, as "Select Corner Mart".
+   * @default 'Select'
    */
   select: string;
   /** The bar's button that clears the selection. @default 'Clear selection' */
@@ -100,7 +100,7 @@ export interface DataTableLabels {
   total: string;
   /** The bulk-action bar's name. @default 'Bulk actions' */
   toolbar: string;
-  /** The button above the list face that shows its checkboxes (amendment 3). @default 'Select' */
+  /** The button above the list face that shows its checkboxes. @default 'Select' */
   selectItems: string;
   /** The same button while the checkboxes show, which hides them and keeps the selection. @default 'Done' */
   doneSelecting: string;
@@ -115,7 +115,7 @@ export type DataTableSelectable =
        * page's state and never the URL. Clear it when the rows change.
        */
       selectedKeys: readonly Key[];
-      /** Called with the selected keys: always the given rows' keys, never React Aria's 'all' (ruling 4). */
+      /** Called with the selected keys: always the given rows' keys, never React Aria's 'all'. */
       onSelectionChange: (keys: Key[]) => void;
     };
 
@@ -129,7 +129,7 @@ export interface DataTableShared<T> {
    * `__total` is reserved.
    */
   getKey: (item: T) => Key;
-  /** The row's detail, a URL the router opens (ruling 2). Rows without one do not open. */
+  /** The row's detail, a URL the router opens. Rows without one do not open. */
   getRowHref?: (item: T) => string;
   /**
    * The row whose detail is open: its link is aria-current and the row draws the current bar. It is compared
@@ -150,7 +150,7 @@ export interface DataTableShared<T> {
    * @default 'all'
    */
   disabledBehavior?: 'selection' | 'all';
-  /** Shows skeleton rows while there are no items, and marks the table busy (ruling 9). */
+  /** Shows skeleton rows while there are no items, and marks the table busy. */
   isLoading?: boolean;
   /** @default 8 */
   loadingRowCount?: number;
@@ -182,7 +182,7 @@ export interface DataTableShared<T> {
 /** DataTable's props without its name: the shared ones, and selection's two together or neither. */
 export type DataTableBaseProps<T> = DataTableShared<T> & DataTableSelectable;
 
-/** DataTable's props: a name is required, from `aria-label` or `aria-labelledby` (spec correction 21). */
+/** DataTable's props: a name is required, from `aria-label` or `aria-labelledby`. */
 export type DataTableProps<T> = DataTableBaseProps<T> & AriaName;
 
 const DEFAULT_LABELS: DataTableLabels = {

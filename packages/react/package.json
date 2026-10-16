@@ -31,7 +31,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsdown && node scripts/check-use-client.js",
+    "build": "tsdown && node scripts/check-use-client.js && node scripts/check-dts.js",
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",

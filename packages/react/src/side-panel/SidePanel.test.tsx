@@ -1052,6 +1052,16 @@ describe('SidePanelLayout and the rail', () => {
     expect(shell(container)).toHaveAttribute('data-sidebar', 'collapsed');
   });
 
+  it('asks for no fold under 1024px, where the panel is a sheet and the rail a drawer', async () => {
+    viewport(800);
+    const user = userEvent.setup();
+    const { container } = render(<Shell />);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    expect(await screen.findByRole('dialog', { name: 'Corner Mart' })).toBeInTheDocument();
+    expect(shell(container)).not.toHaveAttribute('data-sidebar');
+    expect(shell(container)).not.toHaveAttribute('data-sidebar-folded');
+  });
+
   it("writes data-collapses-rail on the layout unless collapsesRail is false, for the stylesheet's fold", () => {
     viewport(1280);
     const { container, unmount } = render(<Shell />);

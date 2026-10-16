@@ -64,7 +64,7 @@ const RailFoldContext = createContext<(() => () => void) | null>(null);
 
 /**
  * Folds the shell's rail to its collapsed width while `isFolding` and the viewport is under 1440px, and gives it
- * back after (spec 10.3, amendment 1). The reader's own choice is untouched: nothing is told through
+ * back after. The reader's own choice is untouched: nothing is told through
  * `onSidebarCollapsedChange`, so a cookie that keeps the choice never holds a fold. A layout effect, so the fold
  * lands in the frame the panel comes in. Outside an AppShell it does nothing.
  *
