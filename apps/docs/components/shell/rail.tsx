@@ -5,6 +5,7 @@ import type { Item, Node, Root } from 'fumadocs-core/page-tree';
 import { X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
+import { readRailDrawnCollapsed } from '@/lib/prepaint';
 
 interface Group {
   name: ReactNode;
@@ -70,8 +71,7 @@ export function Rail({
       element.hidden = true;
     };
     const show = (target: HTMLElement, delay: number): void => {
-      if (document.documentElement.dataset.rail !== 'collapsed' || matchMedia('(width < 1024px)').matches)
-        return;
+      if (!readRailDrawnCollapsed() || matchMedia('(width < 1024px)').matches) return;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         const box = target.getBoundingClientRect();
