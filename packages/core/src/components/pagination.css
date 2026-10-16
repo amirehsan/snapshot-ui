@@ -2,19 +2,52 @@
  * Pagination: the range the app writes and a row of page controls, derived in docs/design-system.md
  * ("Pagination"). A control is a 40px pill (36px compact, hit at 40), transparent with ink text at the action
  * step and tabular figures; the current page is the ink pill with canvas text and its ring inside it; the
- * steps carry a 16px chevron and their word, and take taupe with no wash when disabled. The nav is a size
- * container: under 36rem of it the step words become visually hidden names, and under 30rem the numbers
- * and gaps leave too and the range sits between the two steps. The row is what the queries re-lay, since a
- * container query styles only what is inside the container. The short form, a row with no page numbers, is
+ * steps carry a 16px chevron and their word, and take taupe with no wash when disabled. The box inside the
+ * nav is a size container: under 36rem of it the step words become visually hidden names, and under 30rem the
+ * numbers and gaps leave too and the range sits between the two steps. The row is what the queries re-lay,
+ * since a container query styles only what is inside the container. The short form, a row with no page numbers, is
  * that narrow row at every width. The current page is `aria-current` ("page" on a link, "true" on a button) or React Aria's
  * `data-current`; a disabled step is a disabled button, or a link React Aria draws as a span with
  * `aria-disabled` and `data-disabled`.
  */
 @layer components {
+  /*
+   * The nav is not the size container, which has no content width to give a parent that sizes it from its
+   * content: as one, a flex row beside a link or an auto grid column gave it none, and its range broke a letter
+   * a line. Its width comes from the narrow row, drawn below from the range it carries; in a flex row it takes
+   * the room its siblings leave, from a zero basis so a sibling never shrinks for it, and never less than the
+   * narrow row's narrowest; in a flex column it is never taller than its row.
+   */
   .pagination {
-    container: pagination / inline-size;
+    flex: 1 1 0;
+    max-block-size: max-content;
     color: var(--color-ink);
     font-family: var(--font-sans);
+  }
+
+  /*
+   * The narrow row's widths, drawn and never seen: the range, from `data-range`, at its own step, with a
+   * control and half a rem of room each side, as the range keeps clear of the steps under 30rem. At least its
+   * longest word and the two steps, at most the range on one line or 18rem, the content of a 320px phone.
+   */
+  .pagination::before {
+    content: attr(data-range);
+    display: block;
+    box-sizing: border-box;
+    max-inline-size: 18rem;
+    block-size: 0;
+    padding-inline: calc(var(--size-control) + 0.5rem);
+    overflow: hidden;
+    visibility: hidden;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: break-word;
+  }
+
+  .pagination-box {
+    container: pagination / inline-size;
   }
 
   .pagination-row {
@@ -25,11 +58,13 @@
     gap: var(--spacing-part) var(--spacing-peer);
   }
 
-  /* The range is the app's sentence: a long one wraps, and breaks a long word anywhere, inside the row. */
+  /* The range is the app's sentence: a long one wraps between words inside the row, and breaks a word only when
+     that word alone is wider than the row. break-word, unlike anywhere, never lowers the range's min-content
+     width, so a parent that sizes it from its content never narrows it to a letter. */
   .pagination-range {
     min-width: 0;
     margin: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     color: var(--color-slate);
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);

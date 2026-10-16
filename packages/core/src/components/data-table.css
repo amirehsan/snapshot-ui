@@ -1,7 +1,8 @@
 /*
  * DataTable: rows of data, derived in docs/design-system.md ("Dense data", "DataTable"). It draws no surface:
  * rows take the holder's fill, and --data-table-surface names it for the sticky header (the canvas, or lifted
- * in a card). A row is max(--size-target, --size-field) tall, ruled by the divider and never striped. The row
+ * in a card). A row is max(--size-target, --size-field) tall at least, ruled by the divider and never striped, and
+ * its cells hold their text the same distance off the rules however many lines it runs to. The row
  * header's link is stretched over its row by ::after, the row being its containing block, so a press anywhere
  * on the row opens it; what a cell holds that takes its own press sits above the link and under the header.
  * Hover is the 5% ink wash where hover exists, focus the inset ring, the current row a 3px ink border at its
@@ -16,6 +17,12 @@
 @layer components {
   .data-table {
     --data-table-row: max(var(--size-target), var(--size-field));
+    /* A cell's block padding: what a one-line row leaves either side of its line and its 1px rule, 13.5px in a
+       48px row and 9.5px in a 40px one. Every text cell takes it, so two lines sit as far off the rules as one
+       line does: a 72px row, 64px in compact density. */
+    --data-table-pad-block: calc(
+      (var(--data-table-row) - var(--text-small) * var(--text-small--line-height) - 1px) / 2
+    );
     --data-table-fill: var(--data-table-surface, var(--color-canvas));
     /* What covers a row that focus scrolls to (WCAG 2.4.11): the page's sticky offset and the 40px header row
        above it, and, while the bar shows, the bar and its inset from the viewport's bottom below it: its
@@ -23,8 +30,16 @@
     --data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--size-target));
     --data-table-scroll-end: 0px;
 
+    /* A size container has no content width to give a parent that sizes it from its content, a flex row or an
+       auto grid column, which drew the list face at no width. It names 12rem as its width there, the list face
+       with an item's title, second line and amount still readable, and small enough never to push a phone's page
+       sideways; it takes the room its siblings leave in a flex row, from a zero basis so a sibling never shrinks
+       for it; and it never grows taller than its content in a flex column. */
     container: data-table / inline-size;
+    contain-intrinsic-inline-size: 12rem;
+    flex: 1 1 0;
     min-inline-size: 0;
+    max-block-size: max-content;
     color: var(--color-ink);
     font-family: var(--font-sans);
   }
@@ -140,7 +155,7 @@
     --data-table-pad: var(--spacing-inset);
 
     box-sizing: border-box;
-    padding-block: 0;
+    padding-block: var(--data-table-pad-block);
     padding-inline: var(--data-table-pad);
     border-block-end: 1px solid var(--color-divider);
     font-size: var(--text-small);
@@ -163,12 +178,23 @@
     scroll-margin-block: var(--data-table-scroll-start) var(--data-table-scroll-end);
   }
 
-  /* A column that wraps: two lines, then an ellipsis; its full text is still the row's name. Figures never wrap. */
-  /* A part step of padding above and below, so two lines sit off the rules as one line does in its 48px row;
-     every cell of the row stays centered on it, the checkbox and a row menu with the text (spec correction 67). */
+  /* A column that wraps: two lines, then an ellipsis; its full text is still the row's name. Figures never wrap.
+     Its two lines sit off the rules as every cell's do; every cell of the row stays centered on it, the checkbox
+     and a row menu with the text (spec correction 67). */
   .data-table-cell[data-overflow='wrap'] {
-    padding-block: var(--spacing-part);
     white-space: normal;
+  }
+
+  /* A second line an app writes under a cell's text, such as a payee's category: slate at the cell weight, a
+     quarter rem under the first line, ending in an ellipsis as the first does. A row of them is 72px, and the
+     cells of one line beside them stay centered on it. */
+  .data-table-cell-meta {
+    display: block;
+    margin-block-start: 0.25rem;
+    overflow: hidden;
+    color: var(--color-slate);
+    font-weight: var(--text-small--font-weight);
+    text-overflow: ellipsis;
   }
 
   .data-table-wrap {
@@ -196,6 +222,7 @@
         .data-table-control
       ):only-child
   ) {
+    padding-block: 0;
     overflow: visible;
     text-overflow: clip;
   }
@@ -435,6 +462,11 @@
     inline-size: 3.5rem;
   }
 
+  /* The box is a target tall: the row's own height centers it, and padding would only make a row taller. */
+  .data-table-cell[data-selection] {
+    padding-block: 0;
+  }
+
   .data-table-skeleton-cell[data-selection] {
     flex: 0 0 3.5rem;
   }
@@ -617,7 +649,9 @@
     text-transform: uppercase;
   }
 
-  /* Two lines at least, 10px by 16px, its parts 12px apart; positioned, so it holds its link's ::after. */
+  /* Two lines at least, a quarter rem apart and as far off the rules as a table row's cells, 13.5px, so an
+     item is the 72px of a two-line row; 16px at the inline ends, its parts 12px apart; positioned, so it holds its
+     link's ::after. */
   .data-table-item {
     --data-table-pad: var(--spacing-inset);
 
@@ -627,7 +661,7 @@
     align-items: center;
     gap: 0.75rem;
     min-block-size: max(var(--size-target), 3.5rem);
-    padding-block: 0.625rem;
+    padding-block: var(--data-table-pad-block);
     padding-inline: var(--data-table-pad);
     border-block-end: 1px solid var(--color-divider);
     font-size: var(--text-small);
@@ -682,7 +716,7 @@
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: 0.25rem;
     min-inline-size: 0;
   }
 
@@ -720,7 +754,7 @@
     flex: none;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.125rem;
+    gap: 0.25rem;
     text-align: end;
   }
 
@@ -803,6 +837,7 @@
     align-items: center;
     gap: 0.75rem;
     min-block-size: max(var(--size-target), 3.5rem);
+    padding-block: var(--data-table-pad-block);
     padding-inline: var(--spacing-inset);
     border-block-end: 1px solid var(--color-divider);
     font-size: var(--text-small);
@@ -814,7 +849,7 @@
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: 0.25rem;
     text-align: start;
   }
 

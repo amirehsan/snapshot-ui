@@ -3572,6 +3572,12 @@ describe('src/components/stat-tile.css', () => {
     expect(rules()).not.toContain('box-shadow');
   });
 
+  it('names a 16rem tile as its width in a parent that sizes it from its content', () => {
+    expect(blockAfter(rules(), '.stat-tile {')).toContain(
+      'contain-intrinsic-inline-size: calc(16rem - 2 * var(--spacing-card) - 2px);',
+    );
+  });
+
   it('steps a tile in a card down to the surface corner with the frame edge', () => {
     const nested = blockAfter(rules(), '.card > .stat-tile, .card-body .stat-tile {');
     expect(nested).toContain('border-color: var(--color-frame);');
@@ -4952,9 +4958,11 @@ describe('src/components/pagination.css', () => {
     'white-space: nowrap;',
   ];
 
-  it('makes the nav a size container and re-lays the row inside it', () => {
+  it('makes the box in the nav a size container and re-lays the row inside it', () => {
     const css = rules();
-    expect(blockAfter(css, '.pagination {')).toContain('container: pagination / inline-size;');
+    // The box inside the nav is the container; the nav takes its width from the narrow row (below).
+    expect(blockAfter(css, '.pagination-box {')).toContain('container: pagination / inline-size;');
+    expect(blockAfter(css, '.pagination {')).not.toContain('container');
     const row = blockAfter(css, '.pagination-row {');
     for (const declaration of [
       'display: flex;',
@@ -4976,9 +4984,37 @@ describe('src/components/pagination.css', () => {
     expect(range).toContain('color: var(--color-slate);');
     expect(range).toContain('font-size: var(--text-small);');
     expect(range).toContain('font-variant-numeric: tabular-nums;');
-    // The app's sentence wraps inside the row, and a long word breaks anywhere rather than push the page.
+    // The app's sentence wraps between words inside the row, and breaks a word only when it alone overflows:
+    // break-word, which never lowers the range's min-content width to a letter.
     expect(range).toContain('min-width: 0;');
-    expect(range).toContain('overflow-wrap: anywhere;');
+    expect(range).toContain('overflow-wrap: break-word;');
+    expect(range).not.toContain('anywhere');
+  });
+
+  it('gives the nav the narrow row as its width in a parent that sizes it from its content', () => {
+    const css = rules();
+    const nav = blockAfter(css, '.pagination {');
+    // In a flex row, the room the siblings leave, never under the narrow row's narrowest; in a flex column,
+    // never taller than its row.
+    expect(nav).toContain('flex: 1 1 0;');
+    expect(nav).toContain('max-block-size: max-content;');
+    expect(nav).not.toContain('min-inline-size');
+    // The narrow row's widths: the range it carries, at the range's step, a control and half a rem each side.
+    const sizer = blockAfter(css, '.pagination::before {');
+    for (const declaration of [
+      'content: attr(data-range);',
+      'display: block;',
+      'box-sizing: border-box;',
+      'max-inline-size: 18rem;',
+      'block-size: 0;',
+      'padding-inline: calc(var(--size-control) + 0.5rem);',
+      'overflow: hidden;',
+      'visibility: hidden;',
+      'font-size: var(--text-small);',
+      'overflow-wrap: break-word;',
+    ]) {
+      expect(sizer, declaration).toContain(declaration);
+    }
   });
 
   it('draws a control at the control height, on the pill radius, at the action step with tabular figures', () => {
@@ -6373,6 +6409,12 @@ describe('src/components/data-table.css', () => {
   it('makes a row max(--size-target, --size-field) tall with a divider under each cell and no zebra', () => {
     const css = rules();
     expect(blockAfter(css, '.data-table-row {')).toContain('block-size: var(--data-table-row);');
+    // A cell's block padding is what a one-line row leaves either side of its line and its rule, so a row of
+    // two lines holds them as far off the rules: 13.5px in a 48px row.
+    expect(blockAfter(css, '.data-table {')).toContain(
+      '--data-table-pad-block: calc((var(--data-table-row) - var(--text-small) * var(--text-small--line-height) - 1px) / 2);',
+    );
+    expect(blockAfter(css, '.data-table-cell {')).toContain('padding-block: var(--data-table-pad-block);');
     expect(blockAfter(css, '.data-table-cell {')).toContain(
       'border-block-end: 1px solid var(--color-divider);',
     );
@@ -6816,7 +6858,7 @@ describe('src/components/data-table.css', () => {
       'display: flex;',
       'gap: 0.75rem;',
       'min-block-size: max(var(--size-target), 3.5rem);',
-      'padding-block: 0.625rem;',
+      'padding-block: var(--data-table-pad-block);',
       'padding-inline: var(--data-table-pad);',
       'border-block-end: 1px solid var(--color-divider);',
       'scroll-margin-block: var(--data-table-scroll-start) var(--data-table-scroll-end);',
@@ -6824,9 +6866,13 @@ describe('src/components/data-table.css', () => {
       expect(item, declaration).toContain(declaration);
     }
     expect(blockAfter(css, '.data-table-item:last-child {')).toContain('border-block-end: 0;');
-    expect(blockAfter(css, '.data-table-skeleton-item {')).toContain(
-      'min-block-size: max(var(--size-target), 3.5rem);',
-    );
+    const skeleton = blockAfter(css, '.data-table-skeleton-item {');
+    expect(skeleton).toContain('min-block-size: max(var(--size-target), 3.5rem);');
+    expect(skeleton).toContain('padding-block: var(--data-table-pad-block);');
+    // Its two lines a quarter rem apart, as a two-line cell's.
+    expect(blockAfter(css, '.data-table-item-text {')).toContain('gap: 0.25rem;');
+    expect(blockAfter(css, '.data-table-item-end {')).toContain('gap: 0.25rem;');
+    expect(blockAfter(css, '.data-table-skeleton-text {')).toContain('gap: 0.25rem;');
   });
 
   it('sets the title at 500 and the meta slate, ellipsized, and turns the meta ink on a hovered or selected item', () => {
@@ -6983,13 +7029,44 @@ describe('src/components/data-table.css', () => {
     const block = blockAfter(css.slice(start), '{');
     expect(block).toContain('overflow: visible;');
     expect(block).toContain('text-overflow: clip;');
+    // A control is a target tall, and the row's height centers it: no padding to make its row taller.
+    expect(block).toContain('padding-block: 0;');
+    expect(blockAfter(css, '} .data-table-cell[data-selection] {')).toContain('padding-block: 0;');
   });
 
-  it('gives a wrapping cell a part step above and below its two lines, every cell of its row centered', () => {
+  it('holds the two lines of a wrapping cell as far off the rules as every cell, every cell of its row centered', () => {
     const css = rules();
     const wrap = blockAfter(css, ".data-table-cell[data-overflow='wrap'] {");
-    expect(wrap).toContain('padding-block: var(--spacing-part);');
+    expect(wrap).toContain('white-space: normal;');
+    expect(wrap).not.toContain('padding-block');
     expect(blockAfter(css, '.data-table-cell {')).toContain('vertical-align: middle;');
+  });
+
+  it('sets a second line in a cell slate at the cell weight, a quarter rem under the first', () => {
+    const meta = blockAfter(rules(), '.data-table-cell-meta {');
+    for (const declaration of [
+      'display: block;',
+      'margin-block-start: 0.25rem;',
+      'overflow: hidden;',
+      'color: var(--color-slate);',
+      'font-weight: var(--text-small--font-weight);',
+      'text-overflow: ellipsis;',
+    ]) {
+      expect(meta, declaration).toContain(declaration);
+    }
+  });
+
+  it('gives the table a width in a parent that sizes it from its content', () => {
+    const root = blockAfter(rules(), '.data-table {');
+    for (const declaration of [
+      'container: data-table / inline-size;',
+      'contain-intrinsic-inline-size: 12rem;',
+      'flex: 1 1 0;',
+      'min-inline-size: 0;',
+      'max-block-size: max-content;',
+    ]) {
+      expect(root, declaration).toContain(declaration);
+    }
   });
 
   it('draws the list reloading cue once, at the first day heading or along an ungrouped list top, out of the flow', () => {
