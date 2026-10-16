@@ -31,23 +31,22 @@ const CATEGORIES = ['Groceries', 'Transport', 'Rent', 'Salary', 'Utilities', 'Di
 
 const ROWS = TRANSACTIONS.slice(0, 5);
 
-/** Whether the panel stands beside the page, read after hydration; the server and hydration take wide. */
-const subscribe = (onChange: () => void): (() => void) => {
-  const wide = window.matchMedia('(width >= 1024px)');
-  wide.addEventListener('change', onChange);
-  return () => {
-    wide.removeEventListener('change', onChange);
-  };
-};
-const isWideNow = (): boolean => window.matchMedia('(width >= 1024px)').matches;
+/**
+ * Whether the panel stood beside the page when the example first ran in the browser, read once and kept: a later
+ * resize moves an open panel between its faces and never opens or closes one. The server and hydration take wide,
+ * so the first row's aside is in the server's HTML.
+ */
+let wideAtFirst: boolean | undefined;
+const isWideAtFirst = (): boolean => (wideAtFirst ??= window.matchMedia('(width >= 1024px)').matches);
 const isWideOnServer = (): boolean => true;
+const subscribeNothing = (): (() => void) => () => undefined;
 
 export default function SidePanelBasic(): ReactElement {
   // An app reads the open row from its URL, such as ?open=t1, and writes it from the row's link and onClose.
-  // The example keeps it in state. Until the reader picks a row it shows the first beside the page; under 1024px,
+  // The example keeps it in state. Until the reader picks a row it shows the first beside the page; on a phone,
   // where the panel is a sheet that covers the page, it waits for a press.
   const [chosen, setOpen] = useState<string | null | undefined>(undefined);
-  const isWide = useSyncExternalStore(subscribe, isWideNow, isWideOnServer);
+  const isWide = useSyncExternalStore(subscribeNothing, isWideAtFirst, isWideOnServer);
   const open = chosen === undefined ? (isWide ? 't1' : null) : chosen;
   const row = ROWS.find((each) => each.id === open);
   return (

@@ -20,7 +20,9 @@ icon: PanelRight
 
 ## With actions
 
-`footer` pins actions under the body, such as Save and Delete, under a divider. While the reader has unsaved edits, `isDismissable={false}` keeps Escape and a swipe from closing the panel, and `onCloseRequest` is asked before every close the panel starts: return `false` to keep it open and ask whether to discard, as this example does with `useConfirm`.
+`footer` pins actions under the body, such as Save and Delete, under a divider. `onCloseRequest` is asked before every close the panel starts, from its close button, Escape, or on a phone a swipe or a press outside the sheet: while the reader has unsaved edits, return `false` to keep the panel open and ask whether to discard them, as this example does with `useConfirm`. Pass `isDismissable={false}` at the same time, so a swipe or a press outside the sheet on a phone does nothing rather than ask; Escape and the close button still ask, as Gmail and Linear ask before a draft is thrown away.
+
+Keep Save enabled: a disabled button leaves the tab order and drops the focus it holds. With nothing changed, Save has nothing to keep.
 
 <Preview name="side-panel-footer" />
 
@@ -33,6 +35,7 @@ icon: PanelRight
 - Drive `isOpen` from a search parameter, such as `?open=t1`, and close by removing it, so Back closes the panel too. Back and the app's own links close it without `onCloseRequest`, so guard them in the app if they can lose edits.
 - Pass `key` with the open row's id, so another row is a new opening and focus moves to its heading.
 - Set `--page-sticky-top` to your header's height on an ancestor, as DataTable reads it. The panel sticks an inset, 16px, under it, as tall as the screen allows, and its body scrolls inside it.
+- Start the layout right under the page's header, with the page's title, filters and table inside its content. The panel is as tall as the screen less the header, so the footer's actions are in view from the start; a layout that starts lower holds the footer below the screen's edge until the page scrolls and the panel sticks.
 - Under 1440px the open panel folds an [AppShell](/docs/components/app-shell)'s rail to its icons and gives it back as it closes, so a table beside the panel keeps its columns. The reader's own setting is not changed, and a rail they folded stays folded. Pass `collapsesRail={false}` to the layout to leave the rail alone.
 - The panel's body and the sheet's body scroll, so each sets `--page-sticky-top` to `0px` for what it holds: a table there sticks its header at their top. Do the same on any element of your own that scrolls around a table.
 - The aside is in the server's HTML when open. The sheet mounts only after hydration, so on a phone a link to a row shows the list until scripts run. Give a phone link its own detail route if it must work without scripts.
@@ -63,10 +66,11 @@ On a wide screen the panel is a `complementary` landmark named by its title. On 
 
 - Focus moves to the panel's heading when it opens, and back to the row that opened it when it closes. If that row has left the page, focus goes to the content.
 - With `isTitleHidden`, the title still names the panel, and focus lands on the panel itself, so its ring shows.
-- On a wide screen the page stays usable around the panel: Tab leaves it, nothing is inert and nothing is dimmed. As the window crosses 1024px, an open panel moves between the aside and the sheet and keeps focus.
+- On a wide screen the page stays usable around the panel: Tab leaves it, nothing is inert and nothing is dimmed. As the window crosses 1024px, an open panel moves between the aside and the sheet and keeps focus in it. The sheet covers the page, so it holds focus while it does; if the reader was elsewhere on the page as it came, focus goes back there as the aside returns.
 - Escape in a table beside the panel is the table's: it clears a selection and never closes the panel.
+- When the panel closes from a dialog or a menu it opened, such as a confirm dialog's Discard, focus goes back to the row once that dialog has gone.
 
-<Keys rows={[['Enter', 'On a table row, opens its panel; focus moves to the panel heading.'], ['Tab Shift+Tab', 'Through the panel and out of it into the page on a wide screen; within the sheet on a phone.'], ['Escape', 'In the panel, closes it; focus returns to the row that opened it.']]} />
+<Keys rows={[['Enter', 'On a table row, opens its panel; focus moves to the panel heading.'], ['Tab Shift+Tab', 'Through the panel and out of it into the page on a wide screen; within the sheet on a phone.'], ['Escape', 'In the panel, closes it, asking onCloseRequest first; focus returns to the row that opened it.']]} />
 
 </Section>
 

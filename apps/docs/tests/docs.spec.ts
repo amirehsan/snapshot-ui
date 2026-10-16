@@ -3525,7 +3525,9 @@ test('Escape in a side panel closes it and puts focus back on what opened it', a
   await expect(stage.locator('.data-table-table [role="row"][data-key="t3"]')).toBeFocused();
 });
 
-test('a side panel with unsaved edits asks before it closes, and Escape leaves it open', async ({ page }) => {
+test('a side panel with unsaved edits asks before it closes, on Escape and on its close button, and gives focus back to the row', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await visit(page, '/docs/components/side-panel');
   const stage = page.locator('.stage').nth(1);
@@ -3536,24 +3538,66 @@ test('a side panel with unsaved edits asks before it closes, and Escape leaves i
   const panel = stage.getByRole('complementary', { name: 'Corner Mart' });
   await expect(panel).toBeVisible();
   await panel.getByLabel('Memo').fill('Split with Sam');
-  // Unsaved: Escape does nothing and the close button asks.
+  // Unsaved: Escape asks, and Cancel in the question keeps the panel and the memo.
   await page.keyboard.press('Escape');
-  await expect(panel).toBeVisible();
-  await panel.getByRole('button', { name: 'Close' }).click();
   const question = page.getByRole('alertdialog', { name: 'Discard your changes?' });
   await expect(question).toBeVisible();
   await question.getByRole('button', { name: 'Cancel' }).click();
   await expect(question).toHaveCount(0);
   await expect(panel).toBeVisible();
-  await panel.getByRole('button', { name: 'Close' }).click();
+  await expect(panel.getByLabel('Memo')).toHaveValue('Split with Sam');
+  // The close button asks too; Discard closes the panel, and focus goes back to the row that opened it.
+  await panel.getByRole('button', { name: 'Close' }).focus();
+  await page.keyboard.press('Enter');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Discard' }).click();
   await expect(stage.locator('.side-panel')).toHaveCount(0);
-  // Saved, it closes on Escape with no question.
+  await expect(firstRow).toBeFocused();
+  // Saved, Save keeps focus, and Escape closes with no question.
   await firstRow.focus();
   await page.keyboard.press('Enter');
   await panel.getByLabel('Memo').fill('Split with Sam');
-  await panel.getByRole('button', { name: 'Save' }).click();
-  await panel.getByLabel('Memo').focus();
+  const save = panel.getByRole('button', { name: 'Save' });
+  await save.focus();
+  await page.keyboard.press('Enter');
+  await expect(save).toBeFocused();
   await page.keyboard.press('Escape');
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(stage.locator('.side-panel')).toHaveCount(0);
+  await expect(firstRow).toBeFocused();
+});
+
+test('resizing across 1024px with the side panel example untouched opens and closes nothing, and moves no focus', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 800, height: 800 });
+  await visit(page, '/docs/components/side-panel');
+  const stage = page.locator('.stage').first();
+  // On a phone the example waits for a press; the page loaded with nothing open.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('heading', { name: 'Design rules' }).scrollIntoViewIfNeeded();
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(stage.locator('.side-panel-layout')).toBeVisible();
+  await expect(stage.locator('.side-panel')).toHaveCount(0);
+  // Nothing opened, so nothing took focus or scrolled the page to a row.
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+});
+
+test('an open side panel that moves across 1024px while the reader is elsewhere on the page leaves focus there', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/side-panel');
+  const stage = page.locator('.stage').first();
+  await expect(stage.locator('.side-panel')).toBeVisible();
+  // The reader is further down the page, with nothing focused.
+  await page.getByRole('heading', { name: 'Design rules' }).click();
+  await page.setViewportSize({ width: 800, height: 800 });
+  // The sheet covers the page, so it holds focus while it does.
+  const sheet = page.getByRole('dialog', { name: 'Corner Mart' });
+  await expect.poll(() => sheet.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(stage.locator('.side-panel')).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  // Back beside the page, the panel does not take focus or scroll the reader to it.
+  await expect.poll(() => page.evaluate(() => document.activeElement === document.body)).toBe(true);
 });

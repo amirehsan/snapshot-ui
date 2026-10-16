@@ -353,10 +353,42 @@ export const StickyPanel: Story = {
   play: async ({ canvasElement }) => {
     window.scrollTo(0, 0);
     const panel = only(canvasElement, '.side-panel');
-    window.scrollBy({ top: 1200, behavior: 'instant' });
-    await waitFor(() => expect(Math.round(panel.getBoundingClientRect().top)).toBe(64 + 16));
-    await expect(panel.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight - 16 + 0.5);
-    window.scrollTo(0, 0);
+    try {
+      window.scrollBy({ top: 1200, behavior: 'instant' });
+      await waitFor(() => expect(Math.round(panel.getBoundingClientRect().top)).toBe(64 + 16));
+      await expect(panel.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight - 16 + 0.5);
+    } finally {
+      // Back to the top whether or not it held, so the next story starts there.
+      window.scrollTo(0, 0);
+    }
+  },
+};
+
+/**
+ * A field's focus ring fits inside the body, which scrolls and so clips what it holds: the body is padded a peer
+ * step at its sides and an inset at its top, and the ring's width and offset are 4px. Each field in turn, the
+ * first at the body's top.
+ */
+export const FieldRingFits: Story = {
+  tags: ['no-visual'],
+  globals: DESKTOP,
+  render: () => <Page />,
+  play: async ({ canvasElement }) => {
+    const body = only(canvasElement, '.side-panel-body');
+    // From the keyboard, so the ring shows.
+    await userEvent.keyboard('{Shift}');
+    for (const input of body.querySelectorAll<HTMLElement>('.input, .select-trigger')) {
+      input.focus();
+      await waitFor(() => expect(getComputedStyle(input).outlineStyle).toBe('solid'));
+      const style = getComputedStyle(input);
+      const grow = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+      const ring = input.getBoundingClientRect();
+      const room = body.getBoundingClientRect();
+      const name = input.className;
+      await expect(ring.left - grow, name).toBeGreaterThanOrEqual(room.left);
+      await expect(ring.right + grow, name).toBeLessThanOrEqual(room.right);
+      await expect(ring.top - grow, name).toBeGreaterThanOrEqual(room.top);
+    }
   },
 };
 

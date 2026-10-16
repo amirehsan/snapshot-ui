@@ -26,6 +26,7 @@ import { groupsOf } from './groups';
 import { EDITABLE, handleTableKey, type TableKeyActions } from './keys';
 import { ListFace, type ListSelection, type ListSelectionManager } from './ListFace';
 import { selectsOnPress } from './press';
+import { portalOf, watchPortal } from '../overlay/watch-portal';
 import { uncover } from './scroll';
 import { rowHeaderOf, textOf } from './rows';
 import { keysOf, presentKeys, staleKeys, toggled } from './selection';
@@ -216,48 +217,12 @@ function shownGrid(root: HTMLElement | null): HTMLElement | null {
   return null;
 }
 
-/** The child of the body that holds `element`: the app's own tree, or a portal such as a dialog's. */
-function portalOf(element: Element): Element {
-  let top = element;
-  const { body } = element.ownerDocument;
-  while (top.parentElement !== null && top.parentElement !== body) top = top.parentElement;
-  return top;
-}
-
 /** The row whose checkbox `target` is in, inside `root`; null for the select-all box and anything else. */
 function rowOfBox(target: Element, root: Element): Element | null {
   const row = target.closest('[data-selection] .checkbox-field')?.closest('[role="row"]');
   return row !== null && row !== undefined && root.contains(row) && row.closest('thead') === null
     ? row
     : null;
-}
-
-/**
- * Watches a portal that holds focus, a dialog or a menu one of the bar's actions opened, after the bar has left:
- * once the portal leaves the page with focus fallen to the body, `give` puts focus on the table. Focus the reader
- * moves out of the portal ends the watch, and so does the returned function. Only a portal is watched, never the
- * app's own tree, so nothing waits on the page for good.
- */
-function watchPortal(root: Element, held: Element, give: () => void): () => void {
-  const document = root.ownerDocument;
-  const portal = portalOf(held);
-  if (portal === portalOf(root)) return () => undefined;
-  const onFocusIn = (event: globalThis.FocusEvent): void => {
-    if (!(event.target instanceof Element) || !portal.contains(event.target)) stop();
-  };
-  const observer = new MutationObserver(() => {
-    if (portal.isConnected) return;
-    stop();
-    const active = document.activeElement;
-    if (active === null || active === document.body) give();
-  });
-  function stop(): void {
-    observer.disconnect();
-    document.removeEventListener('focusin', onFocusIn);
-  }
-  observer.observe(document.body, { childList: true });
-  document.addEventListener('focusin', onFocusIn);
-  return stop;
 }
 
 /**

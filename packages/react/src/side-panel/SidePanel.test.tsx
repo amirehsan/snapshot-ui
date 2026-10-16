@@ -153,6 +153,15 @@ function Page({
 
 const panelOf = (): HTMLElement => screen.getByRole('complementary');
 
+/** The one element on the page that matches `selector`, wherever React Aria portaled it. */
+function only(selector: string): HTMLElement {
+  const found = document.querySelectorAll<HTMLElement>(selector);
+  const [first] = found;
+  if (found.length !== 1 || !first)
+    throw new Error(`Expected one ${selector}, found ${String(found.length)}`);
+  return first;
+}
+
 function partOf(scope: ParentNode, selector: string): HTMLElement {
   const found = scope.querySelector<HTMLElement>(selector);
   if (found === null) throw new Error(`Nothing matches ${selector}`);
@@ -354,6 +363,190 @@ describe('SidePanel', () => {
     expect(container.querySelector('.data-table-table [role="row"][data-key="t2"]')).toHaveFocus();
   });
 
+  it('gives focus back to the opener when a confirm dialog the panel asked from closes it', async () => {
+    viewport(1280);
+    const user = userEvent.setup();
+    // The app's confirm dialog, outside the panel's React tree, as useConfirm's is.
+    function Asking(): ReactElement {
+      const [open, setOpen] = useState<string | null>(null);
+      const [isAsking, setAsking] = useState(false);
+      return (
+        <>
+          <SidePanelLayout
+            panel={
+              <SidePanel
+                key={open ?? 'none'}
+                title="Corner Mart"
+                isOpen={open !== null}
+                onClose={() => {
+                  setOpen(null);
+                }}
+                onCloseRequest={() => {
+                  setAsking(true);
+                  return false;
+                }}
+              >
+                {DETAIL}
+              </SidePanel>
+            }
+          >
+            <Button
+              onPress={() => {
+                setOpen('t1');
+              }}
+            >
+              Open t1
+            </Button>
+          </SidePanelLayout>
+          <Dialog
+            title="Discard your changes?"
+            isOpen={isAsking}
+            onOpenChange={setAsking}
+            actions={
+              <Button
+                onPress={() => {
+                  setAsking(false);
+                  setOpen(null);
+                }}
+              >
+                Discard
+              </Button>
+            }
+          >
+            <p>The memo is not saved.</p>
+          </Dialog>
+        </>
+      );
+    }
+    render(<Asking />);
+    const opener = screen.getByRole('button', { name: 'Open t1' });
+    await user.click(opener);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    const discard = await screen.findByRole('button', { name: 'Discard' });
+    await user.click(discard);
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(screen.queryByRole('complementary')).toBeNull();
+    await waitFor(() => {
+      expect(opener).toHaveFocus();
+    });
+  });
+
+  it('gives focus back to the opener when a menu item in the panel closes it', async () => {
+    viewport(1280);
+    const user = userEvent.setup();
+    function WithMenu(): ReactElement {
+      const [isOpen, setOpen] = useState(false);
+      return (
+        <SidePanelLayout
+          panel={
+            <SidePanel
+              title="Corner Mart"
+              isOpen={isOpen}
+              onClose={() => {
+                setOpen(false);
+              }}
+            >
+              <MenuTrigger>
+                <Button>Actions</Button>
+                <Menu
+                  aria-label="Actions"
+                  onAction={() => {
+                    setOpen(false);
+                  }}
+                >
+                  <MenuItem id="delete">Delete</MenuItem>
+                </Menu>
+              </MenuTrigger>
+            </SidePanel>
+          }
+        >
+          <Button
+            onPress={() => {
+              setOpen(true);
+            }}
+          >
+            Open
+          </Button>
+        </SidePanelLayout>
+      );
+    }
+    render(<WithMenu />);
+    const opener = screen.getByRole('button', { name: 'Open' });
+    await user.click(opener);
+    await user.click(screen.getByRole('button', { name: 'Actions' }));
+    await user.keyboard('{ArrowDown}');
+    const item = await screen.findByRole('menuitem', { name: 'Delete' });
+    await waitFor(() => {
+      expect(item).toHaveFocus();
+    });
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+    expect(screen.queryByRole('complementary')).toBeNull();
+    await waitFor(() => {
+      expect(opener).toHaveFocus();
+    });
+  });
+
+  it('forgets an earlier opener once the panel has closed, so an opening from nowhere gives focus to the content', async () => {
+    viewport(1280);
+    const user = userEvent.setup();
+    function FromUrl(): ReactElement {
+      const [open, setOpen] = useState<string | null>(null);
+      return (
+        <SidePanelLayout
+          panel={
+            <SidePanel
+              key={open ?? 'none'}
+              title={`Row ${open ?? ''}`}
+              isOpen={open !== null}
+              onClose={() => {
+                setOpen(null);
+              }}
+            >
+              {DETAIL}
+            </SidePanel>
+          }
+        >
+          <Button
+            onPress={() => {
+              setOpen('t2');
+            }}
+          >
+            Open t2
+          </Button>
+          {/* Back and Forward, which change the URL with nothing in the page focused. */}
+          <button
+            type="button"
+            onClick={() => {
+              setOpen('t4');
+            }}
+          >
+            Back
+          </button>
+        </SidePanelLayout>
+      );
+    }
+    const { container } = render(<FromUrl />);
+    const first = screen.getByRole('button', { name: 'Open t2' });
+    await user.click(first);
+    await user.keyboard('{Escape}');
+    expect(first).toHaveFocus();
+    act(() => {
+      first.blur();
+      // A programmatic click moves no focus, as a URL that changes with nothing focused.
+      screen.getByRole('button', { name: 'Back' }).click();
+    });
+    // The panel opened from nowhere.
+    expect(screen.getByRole('heading', { name: 'Row t4' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(first).not.toHaveFocus();
+    expect(container.querySelector('.side-panel-layout-content')).toHaveFocus();
+  });
+
   it('leaves focus where the reader put it when the page closes the panel', async () => {
     viewport(1280);
     const user = userEvent.setup();
@@ -471,24 +664,25 @@ describe('SidePanel', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('ignores Escape with isDismissable false, and still closes on its button', async () => {
+  it('asks onCloseRequest on Escape and the close button with isDismissable false, as it does without', async () => {
     viewport(1280);
     const user = userEvent.setup();
     const onClose = vi.fn();
-    const outer = vi.fn();
-    render(
-      // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- a listener that records what bubbles
-      <div onKeyDown={outer}>
-        <Opened onClose={onClose} isDismissable={false} />
-      </div>,
+    const onCloseRequest = vi.fn(() => false);
+    const { rerender } = render(
+      <Opened onClose={onClose} onCloseRequest={onCloseRequest} isDismissable={false} />,
     );
+    // Unsaved edits: Escape asks, as Gmail and Linear ask before a draft is thrown away, and the app keeps it.
     await user.click(screen.getByLabelText('Payee'));
     await user.keyboard('{Escape}');
+    expect(onCloseRequest).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
-    // Not the panel's, so it is not stopped either.
-    expect(outer).toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Close' }));
+    rerender(<Opened onClose={onClose} isDismissable={false} />);
+    await user.click(screen.getByLabelText('Payee'));
+    await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(2);
   });
 
   it('is a Sheet titled by title under 1024px after hydration, calling onClose on every dismissal', async () => {
@@ -505,15 +699,31 @@ describe('SidePanel', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledTimes(2);
-    // Refused, it stays; with isDismissable false Escape is ignored.
-    rerender(<Opened onClose={onClose} onCloseRequest={() => false} />);
+    // A press outside the sheet closes it too.
+    await user.click(only('.sheet-scrim'));
+    expect(onClose).toHaveBeenCalledTimes(3);
+    // Refused, it stays, for the close button, Escape and a press outside.
+    const onCloseRequest = vi.fn(() => false);
+    rerender(<Opened onClose={onClose} onCloseRequest={onCloseRequest} />);
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }));
-    expect(onClose).toHaveBeenCalledTimes(2);
+    await user.keyboard('{Escape}');
+    await user.click(only('.sheet-scrim'));
+    expect(onCloseRequest).toHaveBeenCalledTimes(3);
+    expect(onClose).toHaveBeenCalledTimes(3);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // Not dismissable: a press outside does nothing and asks nothing; Escape still asks, and closes when allowed.
+    onCloseRequest.mockClear();
+    rerender(<Opened onClose={onClose} onCloseRequest={onCloseRequest} isDismissable={false} />);
+    await user.click(only('.sheet-scrim'));
+    expect(onCloseRequest).not.toHaveBeenCalled();
+    screen.getByRole('dialog').focus();
+    await user.keyboard('{Escape}');
+    expect(onCloseRequest).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(3);
     rerender(<Opened onClose={onClose} isDismissable={false} />);
     screen.getByRole('dialog').focus();
     await user.keyboard('{Escape}');
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(onClose).toHaveBeenCalledTimes(4);
   });
 
   it('gives focus back to the opener when the sheet closes', async () => {
@@ -553,6 +763,30 @@ describe('SidePanel', () => {
     // The opener the first opening remembered still takes focus back.
     await user.keyboard('{Escape}');
     expect(opener).toHaveFocus();
+  });
+
+  it('hands focus back to the page as the panel returns beside it, when focus was on the page as it moved', async () => {
+    const screenSize = viewport(1280);
+    const user = userEvent.setup();
+    render(<Page />);
+    await user.click(screen.getByRole('button', { name: 'Open t1' }));
+    // The reader moves on in the page with the panel open.
+    const elsewhere = screen.getByRole('button', { name: 'Close from the page' });
+    act(() => {
+      elsewhere.focus();
+    });
+    screenSize.resize(800);
+    const dialog = screen.getByRole('dialog', { name: 'Row t1' });
+    // The sheet covers the page, so it holds focus while it does.
+    await waitFor(() => {
+      expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+    screenSize.resize(1280);
+    expect(screen.getByRole('complementary', { name: 'Row t1' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(elsewhere).toHaveFocus();
+    });
+    expect(screen.getByRole('heading', { name: 'Row t1' })).not.toHaveFocus();
   });
 
   it('lays out the content first and the panel second', () => {
@@ -733,6 +967,68 @@ describe('SidePanelLayout and the rail', () => {
     const opted = render(<Shell collapsesRail={false} />);
     await user.click(screen.getByRole('button', { name: 'Open' }));
     expect(shell(opted.container)).not.toHaveAttribute('data-sidebar');
+  });
+
+  it('keeps the reader waiver across a change of row, the panel keyed by it, and ends it when the panel closes', async () => {
+    viewport(1280);
+    const user = userEvent.setup();
+    function Keyed(): ReactElement {
+      const [open, setOpen] = useState<string | null>(null);
+      return (
+        <AppShell
+          sidebar={
+            <Sidebar aria-label="Main">
+              <SidebarGroup label="Overview">
+                <SidebarItem href="#home" icon={<House />}>
+                  Home
+                </SidebarItem>
+              </SidebarGroup>
+            </Sidebar>
+          }
+        >
+          <SidePanelLayout
+            panel={
+              <SidePanel
+                key={open ?? 'none'}
+                title={`Row ${open ?? ''}`}
+                isOpen={open !== null}
+                onClose={() => {
+                  setOpen(null);
+                }}
+              >
+                {DETAIL}
+              </SidePanel>
+            }
+          >
+            {['t1', 't2'].map((row) => (
+              <Button
+                key={row}
+                onPress={() => {
+                  setOpen(row);
+                }}
+              >
+                {`Open ${row}`}
+              </Button>
+            ))}
+          </SidePanelLayout>
+        </AppShell>
+      );
+    }
+    const { container } = render(<Keyed />);
+    await user.click(screen.getByRole('button', { name: 'Open t1' }));
+    expect(shell(container)).toHaveAttribute('data-sidebar', 'collapsed');
+    await user.click(screen.getByRole('button', { name: 'Expand the menu' }));
+    expect(shell(container)).not.toHaveAttribute('data-sidebar');
+    // Another row: a new panel, keyed by it, and the rail stays as the reader set it.
+    await user.click(screen.getByRole('button', { name: 'Open t2' }));
+    expect(screen.getByRole('heading', { name: 'Row t2' })).toHaveFocus();
+    await waitFor(() => {
+      expect(shell(container)).not.toHaveAttribute('data-sidebar');
+    });
+    // Closed, the waiver ends: the next opening folds the rail again.
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Open t1' }));
+    expect(shell(container)).toHaveAttribute('data-sidebar', 'collapsed');
   });
 
   it('keeps the rail expanded once the reader expands it over an open panel, until the panel closes', async () => {

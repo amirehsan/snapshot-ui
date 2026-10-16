@@ -59,7 +59,8 @@ export default function SidePanelFooter(): ReactElement {
               onClose={() => {
                 openRow(null);
               }}
-              // With edits unsaved, Escape and a swipe do nothing, and the close button asks first.
+              // With edits unsaved, a swipe and a press outside the sheet do nothing, and Escape and the close
+              // button ask first.
               isDismissable={!isDirty}
               onCloseRequest={() => {
                 if (!isDirty) return true;
@@ -83,10 +84,11 @@ export default function SidePanelFooter(): ReactElement {
                   >
                     Cancel
                   </Button>
+                  {/* Never disabled: a disabled button leaves the tab order and drops the focus it holds, so
+                      after a save focus stays here, and with nothing changed Save has nothing to keep. */}
                   <Button
-                    isDisabled={!isDirty}
                     onPress={() => {
-                      if (open !== null) setNotes({ ...notes, [open]: draft });
+                      if (open !== null && isDirty) setNotes({ ...notes, [open]: draft });
                     }}
                   >
                     Save
