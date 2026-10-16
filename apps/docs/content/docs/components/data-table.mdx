@@ -52,6 +52,22 @@ With selection on, the list draws no checkboxes until the reader presses Select 
 
 A column with `overflow: 'wrap'` reads to two lines and ends in an ellipsis there, for a memo a reader wants to read without opening the row; figures never wrap. `firstSortDirection: 'descending'` makes the first press on a column sort it largest or newest first, and each later press flips it, two states only. A column of row menus takes `isHeaderHidden`: its header draws nothing and is still named by `header` for a screen reader.
 
+A cell can hold a second line under its text, such as a payee's category: write it in a `span` with the class `data-table-cell-meta`, which sets it slate at the cell weight, a quarter rem under the first line. Each line ends in an ellipsis when it runs out of room. A row of two lines is 72px, with its text as far off the rules as one line is in a 48px row, and the one-line cells beside it stay centered.
+
+```tsx
+const payee: DataTableColumn<Transaction> = {
+  id: 'payee',
+  header: 'Payee',
+  isRowHeader: true,
+  cell: (row) => (
+    <>
+      {row.payee}
+      <span className="data-table-cell-meta">{row.category}</span>
+    </>
+  ),
+};
+```
+
 <Preview name="data-table-column-options" />
 
 </Section>

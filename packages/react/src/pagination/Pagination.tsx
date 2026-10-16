@@ -190,19 +190,28 @@ export function Pagination(props: PaginationProps): ReactElement {
     : null;
 
   // createElement, as StatTile builds its root: the ref, which rides in `rest`, is an HTMLElement ref, which a
-  // JSX nav does not take.
+  // JSX nav does not take. The size container is the box inside the nav, not the nav: the nav takes its width
+  // from the narrow row, which pagination.css draws from `data-range` (the range again, hidden), so a parent
+  // that sizes the nav from its content gives it room for the range between the steps.
   return createElement(
     'nav',
-    { ...rest, 'aria-label': labels.navigation, className: cx('pagination', className) },
-    <div className="pagination-row" data-page-numbers={hasPageNumbers ? undefined : 'false'}>
-      <p className="pagination-range">{rangeLabel}</p>
-      {count > 1 ? (
-        <ol className="pagination-list">
-          {stepItem('previous')}
-          {items}
-          {stepItem('next')}
-        </ol>
-      ) : null}
+    {
+      ...rest,
+      'aria-label': labels.navigation,
+      className: cx('pagination', className),
+      'data-range': rangeLabel,
+    },
+    <div className="pagination-box">
+      <div className="pagination-row" data-page-numbers={hasPageNumbers ? undefined : 'false'}>
+        <p className="pagination-range">{rangeLabel}</p>
+        {count > 1 ? (
+          <ol className="pagination-list">
+            {stepItem('previous')}
+            {items}
+            {stepItem('next')}
+          </ol>
+        ) : null}
+      </div>
     </div>,
     <PaginationStatus rangeLabel={rangeLabel} warning={warning} />,
   );

@@ -248,8 +248,8 @@ describe('the pickers batch in a server component', () => {
   it('renders Pagination in link mode, calling the app functions on the server', () => {
     const html = renderToStaticMarkup(pagination);
     for (const text of [
-      '<nav aria-label="Pagination" class="pagination">',
-      '<div class="pagination-row">',
+      '<nav aria-label="Pagination" class="pagination" data-range="551 to 600 of 1,284">',
+      '<div class="pagination-box"><div class="pagination-row">',
       'class="pagination-range">551 to 600 of 1,284<',
       '<ol class="pagination-list">',
       'href="?page=11"',
