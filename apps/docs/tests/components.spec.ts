@@ -1,4 +1,7 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { icons } from 'lucide-react';
 import {
   axeViolations,
   CHART_PAGES,
@@ -35,6 +38,21 @@ test('the Components and Charts sections list the pages the loops below visit', 
   expect(CHART_PAGES.map(({ slug }) => slug)).toContain('sparkline');
   // A slug names one page, so the maps below, which are keyed by slug, cannot mix two up.
   expect(new Set(SLUGS).size).toBe(SLUGS.length);
+});
+
+test('every docs page names a rail icon the icon set has', () => {
+  // The rail draws a page's icon by its name in Lucide's `icons` record, which holds each icon under its
+  // current name only: an older alias such as CircleHelp is missing from it, and the rail draws no icon.
+  const root = join(process.cwd(), 'content', 'docs');
+  const pages = readdirSync(root, { recursive: true })
+    .map(String)
+    .filter((file) => file.endsWith('.mdx'));
+  expect(pages.length).toBeGreaterThan(20);
+  const missing = pages.flatMap((file) => {
+    const name = /^icon: (\w+)$/m.exec(readFileSync(join(root, file), 'utf8'))?.[1];
+    return name !== undefined && !(name in icons) ? [`${file}: ${name}`] : [];
+  });
+  expect(missing).toEqual([]);
 });
 
 // ---- Windows high contrast ----------------------------------------------------------------------
