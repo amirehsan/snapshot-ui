@@ -5,6 +5,7 @@ import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
+import { Dialog } from '../dialog';
 import { EmptyState } from '../empty-state';
 import { RouterProvider } from '../link';
 import { paint, tokenColor } from '../stories/paint';
@@ -1140,5 +1141,136 @@ export const StickyBar: Story = {
       table.getBoundingClientRect().bottom,
     );
     window.scrollTo(0, 0);
+  },
+};
+
+/**
+ * A table in an open Dialog keeps its keys (spec 7.2): the modal it sits in is the top-most, so the handler does
+ * not stand down. Enter opens the row without selecting it, J moves, X selects, and a letter that React Aria's
+ * typeahead would act on leaves focus where it is. Three engines.
+ */
+export const InDialog: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <RouterProvider navigate={navigate}>
+      <Dialog title="Pick transactions" isOpen size="lg">
+        <Selecting />
+      </Dialog>
+    </RouterProvider>
+  ),
+  play: async () => {
+    navigate.mockClear();
+    const dialog = await within(document.body).findByRole('dialog');
+    const grid = only(dialog, '[role="grid"]');
+    const first = rowAt(dialog, 0);
+    first.focus();
+    await expect(first).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+    await expect(selectedKeysOf(dialog)).toEqual([]);
+    await userEvent.keyboard('j');
+    await waitFor(() => expect(rowAt(dialog, 1)).toHaveFocus());
+    await userEvent.keyboard('x');
+    await waitFor(() => expect(selectedKeysOf(dialog)).toEqual(['t2']));
+    // React Aria's typeahead would move to Northside Rent.
+    await userEvent.keyboard('n');
+    await expect(rowAt(dialog, 1)).toHaveFocus();
+    await expect(grid.contains(document.activeElement)).toBe(true);
+  },
+};
+
+/** The bar's Delete, which asks first: a confirm dialog whose Delete clears the selection, as an app's does. */
+function ConfirmingDelete(): ReactElement {
+  const [keys, setKeys] = useState<Key[]>(['t2', 't3']);
+  const [open, setOpen] = useState(false);
+  return (
+    <Box>
+      <Sorted
+        selectedKeys={keys}
+        onSelectionChange={setKeys}
+        bulkActions={
+          <Button
+            variant="danger"
+            onPress={() => {
+              setOpen(true);
+            }}
+          >
+            Delete
+          </Button>
+        }
+      />
+      <Dialog
+        title="Delete two transactions?"
+        isOpen={open}
+        onOpenChange={setOpen}
+        actions={
+          <Button
+            variant="danger"
+            onPress={() => {
+              setKeys([]);
+              setOpen(false);
+            }}
+          >
+            Delete them
+          </Button>
+        }
+      />
+    </Box>
+  );
+}
+
+/**
+ * A bulk action that asks in a dialog: its confirm clears the selection, so the bar leaves while focus is in the
+ * dialog. Once the dialog has closed, focus is on the table, not the page (spec 7.1).
+ */
+export const ConfirmClears: Story = {
+  tags: ['no-visual'],
+  render: () => <ConfirmingDelete />,
+  play: async ({ canvasElement }) => {
+    const grid = only(canvasElement, '[role="grid"]');
+    within(canvasElement).getByRole('button', { name: 'Delete' }).focus();
+    await userEvent.keyboard('{Enter}');
+    const dialog = await within(document.body).findByRole('dialog');
+    const confirm = within(dialog).getByRole('button', { name: 'Delete them' });
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+    confirm.focus();
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(within(document.body).queryByRole('dialog')).toBeNull(), { timeout: 3000 });
+    await expect(within(canvasElement).queryByRole('toolbar')).toBeNull();
+    await waitFor(() => expect(grid.contains(document.activeElement)).toBe(true));
+  },
+};
+
+/**
+ * A press on a row without a link selects nothing (ruling 2, spec 7.1): on its date, its payee, its amount and
+ * the checkbox cell around the box, before and after a row is selected; only the box selects. Three engines.
+ */
+export const PressNeverSelects: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box>
+      <Selecting getRowHref={undefined} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const row = rowAt(canvasElement, 1);
+    const cell = (index: number, scope: HTMLElement = row): HTMLElement => {
+      const found = scope.querySelectorAll<HTMLElement>('[role="gridcell"], [role="rowheader"]')[index];
+      if (found === undefined) throw new Error(`No cell ${String(index)}`);
+      return found;
+    };
+    // The checkbox cell's corner, outside the box's 40px hit area, then the date, the payee and the amount.
+    const corner = cell(0).getBoundingClientRect();
+    await userEvent.pointer({
+      keys: '[MouseLeft]',
+      target: cell(0),
+      coords: { clientX: corner.left + 2, clientY: corner.top + 2 },
+    });
+    for (const index of [1, 2, 5]) await userEvent.click(cell(index));
+    await expect(selectedKeysOf(canvasElement)).toEqual([]);
+    await userEvent.click(only(row, '.checkbox-box'));
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2']));
+    await userEvent.click(cell(2, rowAt(canvasElement, 2)));
+    await expect(selectedKeysOf(canvasElement)).toEqual(['t2']);
   },
 };

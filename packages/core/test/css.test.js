@@ -6388,13 +6388,13 @@ describe('src/components/data-table.css', () => {
     expect(body).toContain('z-index: calc(var(--z-header) - 2);');
   });
 
-  it('washes a row with a link or selection 5% ink over the fill, only where hover exists', () => {
+  it('washes a body row with a link or selection 5% ink over the fill, only where hover exists, never the totals', () => {
     const css = rules();
     const hover = blockAfter(css, HOVER);
     expect(
       blockAfter(
         hover,
-        ".data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) {",
+        ".data-table-body > .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) {",
       ),
     ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));');
     // Outside hover, only a selected row's 8% wash mixes a color.
@@ -6644,11 +6644,36 @@ describe('src/components/data-table.css', () => {
     );
   });
 
-  it('draws a selected row Highlight with HighlightText and the bar edge CanvasText in forced colors', () => {
+  it('draws a selected row Highlight with HighlightText out of the forced repaint, every part in the pair, and the bar edge CanvasText in forced colors', () => {
     const forced = blockAfter(rules(), FORCED);
-    const selected = blockAfter(forced, ".data-table-row:is([data-selected], [aria-selected='true']) {");
+    const SELECTED_ROW = ".data-table-row:is([data-selected], [aria-selected='true'])";
+    // Hovered too, so the 8% wash held under the pointer never shows through.
+    const selected = blockAfter(forced, `${SELECTED_ROW}, ${SELECTED_ROW}:is(:hover, [data-hovered]) {`);
+    expect(selected).toContain('forced-color-adjust: none;');
     expect(selected).toContain('background-color: Highlight;');
     expect(selected).toContain('color: HighlightText;');
+    // Out of the repaint, every part takes the pair by name: rules, rings, no fills, the text.
+    const parts = blockAfter(forced, `${SELECTED_ROW} :where(:not(.checkbox-box)) {`);
+    for (const declaration of [
+      'border-color: HighlightText;',
+      'outline-color: HighlightText;',
+      'background-color: transparent;',
+      'color: inherit;',
+    ]) {
+      expect(parts).toContain(declaration);
+    }
+    // The checked box is drawn inverted, so it shows on the Highlight fill.
+    const box = blockAfter(forced, `${SELECTED_ROW} .checkbox {`);
+    expect(box).toContain('--checkbox-fill: HighlightText;');
+    expect(box).toContain('--checkbox-edge: HighlightText;');
+    expect(box).toContain('--checkbox-mark: Highlight;');
+    // A focused selected row or cell is ringed HighlightText: a Highlight ring on Highlight would not show.
+    expect(
+      blockAfter(
+        forced,
+        `${SELECTED_ROW}:is(:focus-visible, [data-focus-visible]), ${SELECTED_ROW} > .data-table-cell:is(:focus-visible, [data-focus-visible]) {`,
+      ),
+    ).toContain('outline-color: HighlightText;');
     expect(blockAfter(forced, '.data-table-bar {')).toContain('border-color: CanvasText;');
   });
 });

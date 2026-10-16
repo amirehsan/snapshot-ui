@@ -1,10 +1,11 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import type { Key, Selection } from 'react-aria-components';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { Button } from '../button';
+import { Dialog } from '../dialog';
 import { RouterProvider } from '../link';
 import {
   columnsWithTotal,
@@ -467,6 +468,266 @@ describe('DataTable selection', () => {
     for (const box of grid().querySelectorAll('input[type="checkbox"]')) {
       expect(box).toHaveAttribute('tabindex', '-1');
     }
+  });
+
+  it('keeps its keys inside an open Dialog: Enter opens, J moves, X selects and a letter stays', async () => {
+    const user = userEvent.setup();
+    render(
+      <Dialog title="Pick transactions" isOpen>
+        <Selecting />
+      </Dialog>,
+    );
+    focusRow(0);
+    await user.keyboard('{Enter}');
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(selected()).toEqual([]);
+    await user.keyboard('j');
+    expect(rowAt(1)).toHaveFocus();
+    await user.keyboard('x');
+    expect(selected()).toEqual(['t2']);
+    // React Aria's typeahead would move to Northside Rent.
+    await user.keyboard('n');
+    expect(rowAt(1)).toHaveFocus();
+  });
+
+  it('stands its keys down while a Dialog is open over the table', () => {
+    render(
+      <>
+        <Selecting />
+        <Dialog title="Something else" isOpen>
+          <p>Over the table</p>
+        </Dialog>
+      </>,
+    );
+    const row = rowAt(0);
+    // React Aria's Dialog keeps focus in itself; a key the table still hears is not the table's.
+    fireEvent.keyDown(row, { key: 'x', code: 'KeyX' });
+    fireEvent.keyDown(row, { key: 'j', code: 'KeyJ' });
+    expect(selected()).toEqual([]);
+    expect(document.activeElement).not.toBe(rowAt(1));
+  });
+
+  it('puts focus on the table once a dialog a bulk action opened closes, its confirm having cleared the selection', async () => {
+    const user = userEvent.setup();
+    function Page(): ReactElement {
+      const [keys, setKeys] = useState<Key[]>(['t1']);
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <DataTable
+            aria-label="Transactions"
+            items={FIVE}
+            columns={COLUMNS}
+            getKey={keyOf}
+            selectedKeys={keys}
+            onSelectionChange={setKeys}
+            bulkActions={
+              <Button
+                variant="danger"
+                onPress={() => {
+                  setOpen(true);
+                }}
+              >
+                Delete
+              </Button>
+            }
+          />
+          <Dialog
+            title="Delete one transaction?"
+            isOpen={open}
+            onOpenChange={setOpen}
+            actions={
+              <Button
+                variant="danger"
+                onPress={() => {
+                  setKeys([]);
+                  setOpen(false);
+                }}
+              >
+                Delete
+              </Button>
+            }
+          />
+        </>
+      );
+    }
+    render(<Page />);
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    expect(screen.queryByRole('toolbar')).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    await waitFor(() => {
+      expect(grid().contains(document.activeElement)).toBe(true);
+    });
+  });
+
+  it('forgets the bar once focus leaves it for the page', async () => {
+    const user = userEvent.setup();
+    function Page(): ReactElement {
+      const [keys, setKeys] = useState<Key[]>(['t1']);
+      return (
+        <>
+          <DataTable
+            aria-label="Transactions"
+            items={FIVE}
+            columns={COLUMNS}
+            getKey={keyOf}
+            selectedKeys={keys}
+            onSelectionChange={setKeys}
+            bulkActions={<Button variant="secondary">Categorize</Button>}
+          />
+          {keys.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => {
+                setKeys([]);
+              }}
+            >
+              Done
+            </button>
+          ) : null}
+        </>
+      );
+    }
+    render(<Page />);
+    act(() => {
+      screen.getByRole('button', { name: 'Categorize' }).focus();
+    });
+    // Focus leaves the bar for the page, and what holds it then empties the selection and leaves too.
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('toolbar')).toBeNull();
+    expect(grid().contains(document.activeElement)).toBe(false);
+  });
+
+  it('never selects on a press on a cell of a row without a link, nor around a row checkbox', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Selecting getRowHref={undefined} onChange={onChange} />);
+    const cells = [...rowAt(1).querySelectorAll<HTMLElement>('[role="gridcell"], [role="rowheader"]')];
+    // The checkbox cell around its box, the date, the payee and the amount.
+    for (const cell of [cells[0], cells[1], cells[2], cells.at(-1)]) {
+      if (cell === undefined) throw new Error('No cell');
+      await user.click(cell);
+    }
+    expect(onChange).not.toHaveBeenCalled();
+    expect(selected()).toEqual([]);
+    // The box itself still selects.
+    await user.click(within(rowAt(1)).getByRole('checkbox'));
+    expect(selected()).toEqual(['t2']);
+    // And once a row is selected a press on another row's cell still selects nothing.
+    await user.click(
+      cells[2] === undefined ? rowAt(2) : (rowAt(2).querySelectorAll('[role="gridcell"]')[1] as HTMLElement),
+    );
+    expect(selected()).toEqual(['t2']);
+  });
+
+  it('hands React Aria only the selected keys in items, keeping the others for the app', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Selecting initial={['gone']} onChange={onChange} />);
+    const all = screen.getByRole<HTMLInputElement>('checkbox', { name: 'Select all' });
+    // A stale key selects no row: the header box is empty, not indeterminate.
+    expect(all.indeterminate).toBe(false);
+    expect(all).not.toBeChecked();
+    // Escape has nothing of the table's to clear, so it reaches the page.
+    const page = vi.fn();
+    document.addEventListener('keydown', page);
+    focusRow(0);
+    await user.keyboard('{Escape}');
+    document.removeEventListener('keydown', page);
+    expect(page).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+    // A row selected through React Aria keeps the stale key for the app to drop.
+    await user.keyboard(' ');
+    expect(onChange).toHaveBeenLastCalledWith(['t1', 'gone']);
+    expect(all.indeterminate).toBe(true);
+  });
+
+  it('opens the row on Enter on its checkbox and never toggles it', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Selecting onChange={onChange} />);
+    focusRow(1);
+    await user.keyboard('{ArrowRight}');
+    expect(document.activeElement).toBe(within(rowAt(1)).getByRole('checkbox'));
+    await user.keyboard('{Enter}');
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate.mock.calls[0]?.[0]).toBe('/transactions/t2');
+    expect(onChange).not.toHaveBeenCalled();
+    // Space on the box still toggles it.
+    await user.keyboard(' ');
+    expect(selected()).toEqual(['t2']);
+  });
+
+  it('lets a key no row or header starts with reach the page, such as a "/" shortcut', async () => {
+    const user = userEvent.setup();
+    const page = vi.fn();
+    document.addEventListener('keydown', page);
+    render(<Selecting />);
+    focusRow(0);
+    await user.keyboard('/');
+    await user.keyboard('7');
+    // A letter typeahead would act on stops: React Aria would move to City Transit.
+    await user.keyboard('c');
+    document.removeEventListener('keydown', page);
+    expect(page.mock.calls.map(([event]) => (event as KeyboardEvent).key)).toEqual(['/', '7']);
+    expect(rowAt(0)).toHaveFocus();
+  });
+
+  it('gives the totals row no aria-selected, since it is never selected', () => {
+    render(<Selecting columns={columnsWithTotal(FIVE)} />);
+    const total = document.querySelector('tfoot [role="row"]');
+    expect(total).not.toHaveAttribute('aria-selected');
+    for (const row of bodyRows()) expect(row).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('lets Escape in a text field in the bar be the field, keeping the selection', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <Selecting
+        initial={['t1']}
+        onChange={onChange}
+        bulkActions={<input type="text" aria-label="Note for the selected rows" />}
+      />,
+    );
+    act(() => {
+      screen.getByRole('textbox', { name: 'Note for the selected rows' }).focus();
+    });
+    await user.keyboard('{Escape}');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('toolbar')).toBeInTheDocument();
+  });
+
+  it('does not say a count again that held before a quick run of changes', () => {
+    vi.useFakeTimers();
+    render(<Selecting initial={['t1', 't2']} />);
+    const status = document.querySelector('.data-table-count');
+    if (status === null) throw new Error('No count status');
+    act(() => {
+      vi.advanceTimersByTime(QUIET_MS);
+    });
+    expect(status).toHaveTextContent(/^2 selected$/);
+    const changes: MutationRecord[] = [];
+    const observer = new MutationObserver((records) => {
+      changes.push(...records);
+    });
+    observer.observe(status, { childList: true, characterData: true, subtree: true });
+    focusRow(2);
+    fireEvent.keyDown(rowAt(2), { key: 'x', code: 'KeyX' });
+    fireEvent.keyDown(rowAt(2), { key: 'x', code: 'KeyX' });
+    act(() => {
+      vi.advanceTimersByTime(QUIET_MS * 2);
+    });
+    changes.push(...observer.takeRecords());
+    observer.disconnect();
+    expect(selected()).toEqual(['t1', 't2']);
+    expect(status).toHaveTextContent(/^2 selected$/);
+    expect(changes).toEqual([]);
   });
 
   const AXE_CASES: [state: string, props: SelectingProps, focusBar?: boolean][] = [

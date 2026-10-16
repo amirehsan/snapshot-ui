@@ -101,6 +101,73 @@ export const systemColor = (page: Page, name: string): Promise<string> =>
     return color;
   }, name);
 
+/** `color` laid over `under`, as the browser composites a translucent fill: Chromium's forced Highlight is one. */
+export const over = (color: string, under: string): string => {
+  const parse = (value: string): number[] => (value.match(/[\d.]+/g) ?? []).map(Number);
+  const [r = 0, g = 0, b = 0, alpha = 1] = parse(color);
+  const [ur = 0, ug = 0, ub = 0] = parse(under);
+  const mix = (top: number, bottom: number): number => Math.round(top * alpha + bottom * (1 - alpha));
+  return `rgb(${String(mix(r, ur))}, ${String(mix(g, ug))}, ${String(mix(b, ub))})`;
+};
+
+/** What the browser drew in a box: its most common color, the color farthest from it, and their contrast. */
+export interface Drawn {
+  /** The most common color, the fill behind the text. */
+  fill: string;
+  /** The color with the highest contrast against the fill: the text, or a ring. */
+  ink: string;
+  /** The WCAG contrast ratio of the two, to two decimals. */
+  ratio: number;
+}
+
+/**
+ * The colors the browser drew, read from a screenshot of `locator`, or of `clip` on the page, decoded in the page:
+ * computed values say what a stylesheet asked for, and this says what a reader sees, a forced repaint and
+ * Chromium's text backplate included. Colors are written as `getComputedStyle` writes them, `rgb(r, g, b)`.
+ */
+export const drawn = async (
+  page: Page,
+  target: Locator | { x: number; y: number; width: number; height: number },
+): Promise<Drawn> => {
+  const shot =
+    'screenshot' in target
+      ? await target.screenshot({ animations: 'disabled' })
+      : await page.screenshot({ clip: target, animations: 'disabled' });
+  return page.evaluate(async (data) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${data}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('No 2D context');
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const counts = new Map<number, number>();
+    for (let index = 0; index < pixels.length; index += 4) {
+      const key = ((pixels[index] ?? 0) << 16) | ((pixels[index + 1] ?? 0) << 8) | (pixels[index + 2] ?? 0);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const channel = (value: number): number => {
+      const c = value / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = (key: number): number =>
+      0.2126 * channel((key >> 16) & 255) + 0.7152 * channel((key >> 8) & 255) + 0.0722 * channel(key & 255);
+    const contrast = (a: number, b: number): number => {
+      const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+      return (high + 0.05) / (low + 0.05);
+    };
+    const fill = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 0;
+    let ink = fill;
+    for (const key of counts.keys()) if (contrast(fill, key) > contrast(fill, ink)) ink = key;
+    const css = (key: number): string =>
+      `rgb(${String((key >> 16) & 255)}, ${String((key >> 8) & 255)}, ${String(key & 255)})`;
+    return { fill: css(fill), ink: css(ink), ratio: Math.round(contrast(fill, ink) * 100) / 100 };
+  }, shot.toString('base64'));
+};
+
 /** The size a pointer can hit: the element's box, or its ::before or ::after hit area when that is larger. */
 export const hitSize = (locator: Locator): Promise<{ width: number; height: number }> =>
   locator.evaluate((element) => {

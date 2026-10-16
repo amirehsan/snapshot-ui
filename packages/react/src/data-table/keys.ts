@@ -1,6 +1,6 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { matchesShortcut, parseShortcut } from '../command-palette/shortcut';
-import { isAnotherModalOpen } from '../overlay/useOverlayStack';
+import { isUnderModal } from '../overlay/useOverlayStack';
 import type { Key } from './selection';
 
 /*
@@ -31,6 +31,11 @@ export interface TableKeyActions {
   toggle: (key: Key) => void;
   /** Extends the selection to `row`, as React Aria does when Shift is held with a key that moves. */
   extend: (row: Element) => void;
+  /**
+   * Whether React Aria's typeahead would move focus for this character: some row's name, or a header's, starts
+   * with it as React Aria compares them. Only such a key is stopped, so every other one reaches the page.
+   */
+  typeahead: (character: string) => boolean;
 }
 
 const J = parseShortcut('j');
@@ -38,11 +43,14 @@ const K = parseShortcut('k');
 const X = parseShortcut('x');
 
 /** Where a key types text: a text input, a text area, a select or editable content. A checkbox types nothing. */
-const EDITABLE =
+export const EDITABLE =
   'input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="range"], [type="color"], [type="file"]), textarea, select, [contenteditable]:not([contenteditable="false"])';
 
 /** A row's own cells, where Enter opens the row; a column header's Enter sorts, and a control's is its own. */
 const BODY_CELL = '[role="gridcell"], [role="rowheader"]';
+
+/** The checkbox column's cell or header: Enter on its box opens the row, and never selects (ruling 2). */
+const SELECTION_CELL = '[data-selection]';
 
 /** A cell that has left stays in its row at zero width and hidden, so it is shown only while visible. */
 const isShown = (cell: Element): boolean => {
@@ -222,23 +230,29 @@ function hiddenCellKey(
 
 /**
  * The table's keys, in this order (spec 7.2, spec corrections 6 to 8). Nothing is taken from a key that reached
- * the root only through React's tree (a Menu opened in a cell is a portal), a composing key, a key while another
- * modal is open, a key typed into an editable element or a key inside the bulk-action bar. Then: Enter on a row
- * or one of its own cells opens the row's link, with any modifiers, and never reaches React Aria, which would
- * select the row; the arrows, Home and End past a column that has left; every other key with Ctrl, Alt or Meta is
- * React Aria's (Mod+A, Shift with the arrows); J and K are dispatched as Arrow Down and Arrow Up on the focused
- * element; X toggles the focused row; and every other single printable key but Space stops here, so React Aria's
- * typeahead never runs. J, K and X match by `event.key` and then by `event.code`, so a Persian layout's J is J.
+ * the root only through React's tree (a Menu opened in a cell is a portal), a composing key, a key while the
+ * table sits under an open modal (one inside a modal keeps its keys), a key typed into an editable element or a
+ * key inside the bulk-action bar. Then: Enter on a row, one of its own cells or the box in its checkbox cell
+ * opens the row's link, with any modifiers, and never reaches React Aria, which would select the row; the arrows,
+ * Home and End past a column that has left; every other key with Ctrl, Alt or Meta is React Aria's (Mod+A, Shift
+ * with the arrows); J and K are dispatched as Arrow Down and Arrow Up on the focused element; X toggles the
+ * focused row; and a single printable key that React Aria's typeahead would act on stops here, so typeahead never
+ * moves focus. J, K and X match by `event.key` and then by `event.code`, so a Persian layout's J is J.
  */
 export function handleTableKey(event: ReactKeyboardEvent<HTMLElement>, actions: TableKeyActions): void {
   const native = event.nativeEvent;
   const target = event.target as Element;
   if (!event.currentTarget.contains(target)) return;
-  if (native.isComposing || isAnotherModalOpen()) return;
+  if (native.isComposing || isUnderModal(event.currentTarget)) return;
   if (target.closest(EDITABLE) !== null || target.closest('.data-table-bar') !== null) return;
   const row = target.closest('[role="row"]');
-  if (event.key === 'Enter' && row !== null && (target === row || target.matches(BODY_CELL))) {
-    // React Aria would select a row with no action on Enter (spec correction 6), so Enter never reaches it.
+  if (
+    event.key === 'Enter' &&
+    row !== null &&
+    (target === row || target.matches(BODY_CELL) || target.closest(SELECTION_CELL) !== null)
+  ) {
+    // React Aria would select a row with no action on Enter (spec correction 6), and its checkbox toggles on
+    // Enter, so Enter never reaches it: it opens the row, or does nothing on a row without a link.
     event.preventDefault();
     event.stopPropagation();
     openRow(row, native);
@@ -264,8 +278,10 @@ export function handleTableKey(event: ReactKeyboardEvent<HTMLElement>, actions: 
     if (key !== null) actions.toggle(key);
     return;
   }
-  // Typeahead: a letter never moves focus (ruling 3). Space is React Aria's toggle.
-  if (event.key.length === 1 && event.key !== ' ') event.stopPropagation();
+  // Typeahead: a letter never moves focus (ruling 3). Only a key React Aria's typeahead would act on stops, and
+  // React Aria would stop that one itself once it moved focus, so every key it would let pass, such as a page's
+  // "/" shortcut, still reaches the page. Space is React Aria's toggle.
+  if (event.key.length === 1 && event.key !== ' ' && actions.typeahead(event.key)) event.stopPropagation();
 }
 
 /**
