@@ -116,9 +116,9 @@ export const TRANSACTIONS: readonly Transaction[] = [
 /** A count with a comma between thousands, written by hand. */
 const withCommas = (count: number): string => String(count).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-/** "-$125.00" from -12500, the sign before the currency. */
+/** "−$125.00" from -12500: a real minus sign (U+2212), as wide as a digit, before the currency. */
 export function amountLabel(minor: number): string {
-  const sign = minor < 0 ? '-' : '';
+  const sign = minor < 0 ? '\u2212' : '';
   const absolute = Math.abs(minor);
   return `${sign}$${withCommas(Math.floor(absolute / 100))}.${String(absolute % 100).padStart(2, '0')}`;
 }

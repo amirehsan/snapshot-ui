@@ -1354,6 +1354,23 @@ describe('the data table', () => {
     expect(measured('light', 'ink', 'float')).toBeCloseTo(18.43, 2);
     expect(measured('dark', 'ink', 'float')).toBeCloseTo(17.42, 2);
   });
+
+  // The error line under the rows is error text on the page or in a card, which the gate holds; the reloading
+  // cue is an ink line that dims no text, so no row's pair changes while rows reload.
+  it('cites the error line on canvas and lifted, which the gate holds, and measures it', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      expect(CONTRAST_PAIRS, `error on ${ground}`).toContainEqual(
+        expect.objectContaining({ text: 'error', ground, minimum: TEXT }),
+      );
+    }
+    for (const { ground, light, dark } of [
+      { ground: 'canvas', light: 6.58, dark: 6.36 },
+      { ground: 'lifted', light: 7.22, dark: 5.73 },
+    ]) {
+      expect(measured('light', 'error', ground), `error on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', 'error', ground), `error on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
 });
 
 describe('contrastFailures', () => {

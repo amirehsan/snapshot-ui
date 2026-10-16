@@ -12,35 +12,46 @@ const COLUMNS: readonly DataTableColumn<Transaction>[] = [
   { id: 'amount', header: 'Amount', cell: (row) => amountLabel(row.minor), align: 'end', width: '26%' },
 ];
 
-/** The widths of the table's box to try: the page's, then under 48rem, then under 40rem. */
-const WIDTHS: Record<string, string> = { full: '100%', medium: '44rem', narrow: '38rem' };
+/** The widths of the table's box to try: over 48rem, under 48rem, then under 40rem. */
+const WIDTHS: Record<string, string> = { wide: '56rem', medium: '44rem', narrow: '38rem' };
 
 export default function DataTableColumns(): ReactElement {
-  const [width, setWidth] = useState('full');
+  const [width, setWidth] = useState('wide');
+  const box = WIDTHS[width] ?? '56rem';
   return (
-    <div style={{ display: 'grid', gap: 'var(--spacing-peer)', width: '100%' }}>
+    <div style={{ display: 'grid', gap: 'var(--spacing-peer)', width: '100%', minWidth: 0 }}>
       <SegmentedControl label="Width of the table's box" value={width} onChange={setWidth}>
-        <SegmentedControlItem value="full">Full</SegmentedControlItem>
+        <SegmentedControlItem value="wide">56rem</SegmentedControlItem>
         <SegmentedControlItem value="medium">44rem</SegmentedControlItem>
         <SegmentedControlItem value="narrow">38rem</SegmentedControlItem>
       </SegmentedControl>
-      {/* A narrower box is drawn as a dashed outline, which takes no room, so its width reads as chosen. */}
+      {/* The table at the width chosen, in a frame that scrolls sideways on its own where the page is narrower,
+          so the page never does. The frame is a tab stop, so a keyboard scrolls it too. */}
       <div
-        data-testid="data-table-box"
-        style={{
-          width: `min(${WIDTHS[width] ?? '100%'}, 100%)`,
-          outline: width === 'full' ? undefined : '1px dashed var(--color-frame)',
-          outlineOffset: 0,
-        }}
+        role="region"
+        aria-label="The table at the width chosen"
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a frame that scrolls must take focus to scroll by keyboard
+        tabIndex={0}
+        style={{ overflowX: 'auto', maxWidth: '100%' }}
       >
-        <DataTable
-          aria-label="Transactions"
-          items={TRANSACTIONS.slice(0, 5)}
-          columns={COLUMNS}
-          getKey={(row) => row.id}
-        />
+        {/* A narrower box is drawn as a dashed outline inside its edge, so its width reads as chosen. */}
+        <div
+          data-testid="data-table-box"
+          style={{
+            width: box,
+            outline: width === 'wide' ? undefined : '1px dashed var(--color-frame)',
+            outlineOffset: -1,
+          }}
+        >
+          <DataTable
+            aria-label="Transactions"
+            items={TRANSACTIONS.slice(0, 5)}
+            columns={COLUMNS}
+            getKey={(row) => row.id}
+          />
+        </div>
       </div>
-      {width === 'full' ? null : (
+      {width === 'wide' ? null : (
         <p
           style={{
             margin: 0,
@@ -49,7 +60,7 @@ export default function DataTableColumns(): ReactElement {
             lineHeight: 'var(--text-small--line-height)',
           }}
         >
-          {`The table's box: ${WIDTHS[width] ?? ''}`}
+          {`The table's box: ${box}`}
         </p>
       )}
     </div>

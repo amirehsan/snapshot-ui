@@ -56,6 +56,34 @@ const cellAt = (root: HTMLElement, index: number, row = 1): HTMLElement =>
 const headerAt = (root: HTMLElement, index: number): HTMLElement =>
   find(root, `[data-header="${String(index)}"]`);
 
+/**
+ * A grid of `count` body rows of three cells under a header row, laid out as a browser would: rows 48px tall,
+ * header cells 40px, in a 300px window with nothing stuck above the header.
+ */
+function pages(count: number): HTMLElement {
+  const root = document.createElement('div');
+  const rows = Array.from(
+    { length: count },
+    (_, row) =>
+      `<tr role="row" tabindex="-1" data-page="${String(row)}">${[0, 1, 2]
+        .map(
+          (column) => `<td role="gridcell" tabindex="-1" data-column="${String(column)}">${String(row)}</td>`,
+        )
+        .join('')}</tr>`,
+  ).join('');
+  root.innerHTML = `<table role="grid"><thead><tr role="row"><th role="columnheader" tabindex="-1">A</th><th role="columnheader" tabindex="-1">B</th><th role="columnheader" tabindex="-1">C</th></tr></thead><tbody>${rows}</tbody></table>`;
+  document.body.append(root);
+  vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(300);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    const height = this.tagName === 'TR' ? 48 : this.tagName === 'TH' ? 40 : 0;
+    return { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: height, width: 0, height, toJSON: () => ({}) };
+  });
+  return root;
+}
+
+const pageRow = (root: HTMLElement, index: number): HTMLElement =>
+  find(root, `[data-page="${String(index)}"]`);
+
 interface Modifiers {
   ctrlKey?: boolean;
   altKey?: boolean;
@@ -168,7 +196,7 @@ describe('keys', () => {
     expect(cellAt(css, 3)).toHaveFocus();
   });
 
-  it('steps over a hidden column header on Arrow Right and Left, wrapping around the header row as React Aria does', () => {
+  it('steps over a hidden column header on Arrow Right and Left, and stops at the header row ends', () => {
     const root = grid();
     headerAt(root, 1).focus();
     const over = press(root, 'ArrowRight');
@@ -178,19 +206,62 @@ describe('keys', () => {
     expect(headerAt(root, 1)).toHaveFocus();
     // Shown to shown is React Aria's.
     expect(press(root, 'ArrowLeft').stopPropagation).not.toHaveBeenCalled();
+    // At an end the key stops, where React Aria would wrap to the other end.
+    headerAt(root, 4).focus();
+    const last = press(root, 'ArrowRight');
+    expect(last.stopPropagation).toHaveBeenCalled();
+    expect(last.preventDefault).toHaveBeenCalled();
+    expect(headerAt(root, 4)).toHaveFocus();
+    headerAt(root, 0).focus();
+    expect(press(root, 'ArrowLeft').stopPropagation).toHaveBeenCalled();
+    expect(headerAt(root, 0)).toHaveFocus();
 
-    // The first and last columns have left: React Aria wraps from one end of the header row to the other.
+    // The first and last columns have left: the shown ends are the ends.
     const ends = grid([0, 4]);
     headerAt(ends, 1).focus();
     press(ends, 'ArrowLeft');
-    expect(headerAt(ends, 3)).toHaveFocus();
+    expect(headerAt(ends, 1)).toHaveFocus();
+    headerAt(ends, 3).focus();
     press(ends, 'ArrowRight');
-    expect(headerAt(ends, 1)).toHaveFocus();
-    // Right to left, Arrow Right is the previous header, and wraps the same way.
-    press(ends, 'ArrowRight', {}, 'rtl');
     expect(headerAt(ends, 3)).toHaveFocus();
+    // Right to left, Arrow Right is the previous header, and stops the same way.
     press(ends, 'ArrowLeft', {}, 'rtl');
+    expect(headerAt(ends, 3)).toHaveFocus();
+    headerAt(ends, 1).focus();
+    press(ends, 'ArrowRight', {}, 'rtl');
     expect(headerAt(ends, 1)).toHaveFocus();
+  });
+
+  it('moves Page Down and Page Up by the rows that fit in view, from a row or a cell, extending with Shift', () => {
+    const root = pages(12);
+    const actions = actionsOf();
+    // A 300px window under a 40px header: five 48px rows fit.
+    pageRow(root, 0).focus();
+    expect(press(root, 'PageDown', {}, 'ltr', actions).preventDefault).toHaveBeenCalled();
+    expect(pageRow(root, 5)).toHaveFocus();
+    press(root, 'PageDown', {}, 'ltr', actions);
+    expect(pageRow(root, 10)).toHaveFocus();
+    // Never past the last row, and at it the key stops there.
+    press(root, 'PageDown', {}, 'ltr', actions);
+    expect(pageRow(root, 11)).toHaveFocus();
+    expect(press(root, 'PageDown', {}, 'ltr', actions).stopPropagation).toHaveBeenCalled();
+    expect(pageRow(root, 11)).toHaveFocus();
+    press(root, 'PageUp', {}, 'ltr', actions);
+    expect(pageRow(root, 6)).toHaveFocus();
+    // From a cell, the same column of the row reached.
+    find(root, '[data-page="6"] [data-column="2"]').focus();
+    press(root, 'PageUp', {}, 'ltr', actions);
+    expect(find(root, '[data-page="1"] [data-column="2"]')).toHaveFocus();
+    expect(actions.extend).not.toHaveBeenCalled();
+    // With Shift the selection extends to the row reached, as React Aria does.
+    press(root, 'PageDown', { shiftKey: true }, 'ltr', actions);
+    expect(find(root, '[data-page="6"] [data-column="2"]')).toHaveFocus();
+    expect(actions.extend).toHaveBeenLastCalledWith(pageRow(root, 6));
+    // A header's Page Down, and one with Ctrl or Alt, are React Aria's.
+    find(root, 'th').focus();
+    expect(press(root, 'PageDown', {}, 'ltr', actions).stopPropagation).not.toHaveBeenCalled();
+    pageRow(root, 0).focus();
+    expect(press(root, 'PageDown', { ctrlKey: true }, 'ltr', actions).stopPropagation).not.toHaveBeenCalled();
   });
 
   it('takes Home and End in the header row past a hidden first or last header', () => {
@@ -481,18 +552,7 @@ describe('the table keys', () => {
     expect(reached).not.toHaveBeenCalled();
     expect(actions.typeahead.mock.calls.map(([character]) => character)).toEqual(['c', 'C', 'z', '7', 'ش']);
     // A key no row or header starts with, such as a page's "/" shortcut, is not React Aria's to take.
-    for (const through of [
-      '/',
-      '.',
-      ' ',
-      'ArrowDown',
-      'ArrowRight',
-      'Home',
-      'End',
-      'Escape',
-      'PageDown',
-      'Tab',
-    ]) {
+    for (const through of ['/', '.', ' ', 'ArrowDown', 'ArrowRight', 'Home', 'End', 'Escape', 'Tab']) {
       key(row, { key: through });
     }
     expect(reached.mock.calls.map(([event]) => (event as KeyboardEvent).key)).toEqual([
@@ -504,7 +564,6 @@ describe('the table keys', () => {
       'Home',
       'End',
       'Escape',
-      'PageDown',
       'Tab',
     ]);
     expect(arrows).toEqual(['ArrowDown', 'ArrowRight']);

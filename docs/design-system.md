@@ -7737,15 +7737,17 @@ come from "Dense data" above.
 
 **The markup.** `div.data-table`, a size container named `data-table`,
 holds `div.data-table-grid` with React Aria's `table.data-table-table`
-(`thead`, `tbody` and, with totals, `tfoot`), then, while a row is
-selected, the bulk-action bar, then `span.data-table-status`, the polite
-status, and with selection on `span.data-table-count`, the count's. The
-table is `table-layout: fixed` at full width, so a column's `width`,
-written on its header cell as `--data-table-column-width` and read as
-the cell's `inline-size`, is its width (spec correction 1), and the rest
-share what is left. It draws no surface of its own; the sticky header's
-fill is `--data-table-surface`, the canvas by default, which an app sets
-to `--color-lifted` for a table in a card.
+(`thead`, `tbody` and, with totals, `tfoot`), then
+`div.data-table-error`, the error line, empty until a next page fails,
+then, while a row is selected, the bulk-action bar, then
+`span.data-table-status`, the polite status, and with selection on
+`span.data-table-count`, the count's. The table is `table-layout: fixed`
+at full width, so a column's `width`, written on its header cell as
+`--data-table-column-width` and read as the cell's `inline-size`, is its
+width (spec correction 1), and the rest share what is left. It draws no
+surface of its own; the sticky header's fill is `--data-table-surface`,
+the canvas by default, which an app sets to `--color-lifted` for a table
+in a card.
 
 **Measured.** A cell is ink, 16.25 on canvas in light and 19.31 in dark,
 17.84 and 17.42 on lifted; a header is slate, 4.84 and 7.26 on canvas,
@@ -7832,6 +7834,41 @@ focused, selected or typed to. That cell is a `rowheader`, which axe
 fails when it has no text, so it also holds `labels.loading`, visually
 hidden (spec correction 22). While loading with rows, the rows stay.
 
+**The error state** (amendment 2, spec correction 45). `error` is what
+the app says when the rows did not load. With no rows it is the body,
+React Aria's empty cell, in place of `emptyState`, as an EmptyState with
+a Retry action. With rows shown, a next page that failed, it is
+`div.data-table-error`, a polite status between the grid and the bar,
+mounted empty so the error is heard as it arrives and taking no room
+while empty, written at the small step in the error color a part step
+under the rows, inset as the cells: 6.58 on canvas in light and 6.36 in
+dark, 7.22 and 5.73 on lifted, all gated. It is the one use of the error
+color in the table, and it means exactly that. It wins over `isLoading`
+and `emptyState`: while it stands nothing is busy, no skeleton is drawn,
+the loading status is silent and the reloading cue is off.
+
+**Reloading** (amendment 5, spec correction 46). While rows already
+shown load again, the next page, `QUIET_MS` after the load starts, as
+the status speaks, `div.data-table-grid` takes `data-reloading` and each
+header cell draws a 2px ink line at its foot, one line across the header
+row, the cells being sticky and so positioned; it pulses as a skeleton
+does, over 1.6s, stands still under reduced motion and is `CanvasText`
+in forced colors. No text dims: the body at 60% opacity measured ink at
+4.62 on canvas in light and would put an app's slate text under 3, so
+the cue is a line. A load shorter than `QUIET_MS` draws nothing.
+
+**Column options** (amendments 4 and 5, spec correction 47). `overflow:
+'wrap'` lets a column's text run to two lines and clamps it there with
+an ellipsis, `-webkit-line-clamp` on a `span.data-table-wrap` in the
+cell, since a table cell cannot be the clamping box, with a quarter rem
+above and below; the row grows to hold it, and its full text is still
+the row's name; an end-aligned column never wraps, its figures stay
+unbroken. `firstSortDirection: 'descending'` makes the first press on a
+column, one that changes the sorted column, sort it descending, and each
+later press flips it, React Aria's two states (ruling 12).
+`isHeaderHidden` hides a header's label from sight only, as an actions
+column of row menus needs: the column keeps `header` as its name.
+
 **Busy and the status** (spec corrections 2 and 22). React Aria drops
 `aria-busy` and `aria-current` from its Table and Row, so `aria-busy`
 goes on `div.data-table-grid`, the face that loads. The status is that
@@ -7869,34 +7906,67 @@ never leaves. React Aria's keyboard delegate walks its collection, not
 the DOM, so an arrow could land on a hidden cell (spec correction 8):
 DataTable's capture handler reads the computed visibility at key time
 and, where React Aria would reach a hidden cell or column header with
-Arrow Right or Arrow Left (wrapping around the header row, as React Aria
-does), Home or End, Ctrl+Home or Ctrl+End, or Arrow Up from the first
+Arrow Right or Arrow Left, Home or End, Ctrl+Home or Ctrl+End, or Arrow Up from the first
 row into the first column's header, focuses the nearest shown one
 instead, whose focus sets React Aria's focused key and its one tab stop.
 It takes these keys with the modifiers React Aria's grid moves with:
 none, Shift, and Ctrl off a Mac or Alt on one. Arrow Right is the next
 cell in a left-to-right locale and the previous in a right-to-left one,
-read from the locale as React Aria reads it, not from the CSS.
+read from the locale as React Aria reads it, not from the CSS. In the
+header row React Aria wraps Arrow Left and Right from one end to the
+other; the handler stops them at the row's shown ends instead (spec
+correction 43).
 
-**Hover and disabled.** The 5% wash is drawn on a body row with a link
-(and, once selection is on, on every selectable body row) under `:hover`
-or React Aria's `data-hovered`, inside `@media (hover: hover)`; the
-totals row, which is never opened or selected, takes none. A row with no
-selection is not React Aria's hoverable item, since its press is the
-link's, so `:hover` is what draws it. A disabled row is taupe with
-`cursor: not-allowed`, takes no focus and draws no link. React Aria
-writes `aria-selected="false"` on every row while selection is on, the
-totals row's too; a ref takes it off that row once it is drawn, so after
-hydration the totals row claims no selection state (spec correction 40),
-while the server's HTML still carries it.
+**Keeping clear of the header and the bar** (amendment 5, WCAG 2.4.11,
+spec correction 42). A focused row must not end hidden behind the sticky
+header row or the bulk-action bar. Rows and body cells carry
+`scroll-margin-block` of `--data-table-scroll-start`,
+`--page-sticky-top` plus the 40px header row, and
+`--data-table-scroll-end`, while the bar shows (`.data-table:has(>
+.data-table-bar)`) the bar's inset and height,
+`--app-shell-inset-block-end` plus 16px plus `--size-control`, two part
+steps and its 1px edges; the list face's items read the same two
+properties. A browser honors a scroll margin only when it scrolls a row
+that is partly out of the view: Chromium's `scrollIntoView({ block:
+'nearest' })`, which React Aria calls, leaves a row wholly in the view
+and under the header or the bar where it is. So DataTable's root focus
+capture also scrolls a focused body row or cell clear of the header row
+and the bar by the least it needs, two frames after the focus, after
+React Aria's own scroll (the `ScrollClear` play, J and K under a 64px
+page header with the bar shown, in three engines).
 
-**Page Up and Page Down** (risk R4). React Aria measures a page against
-the whole table when the page itself scrolls, so they move to the first
-and last row; recorded in the Keys table.
+**Hover and disabled** (spec corrections 40 and 47). The 5% wash is
+drawn on a body row with a link (and, once selection is on, on every
+selectable body row) under `:hover` or React Aria's `data-hovered`,
+inside `@media (hover: hover)`; the totals row, which is never opened or
+selected, takes none. A row with no selection is not React Aria's
+hoverable item, since its press is the link's, so `:hover` is what draws
+it. A row in `disabledKeys` is, by default (`disabledBehavior: 'all'`),
+taupe with `cursor: not-allowed`, takes no focus and draws no link; with
+`disabledBehavior: 'selection'` it keeps its link, its focus and its ink
+and only its box is disabled, so a row that cannot be selected still
+opens. Select-all and X skip it either way. React Aria writes
+`aria-selected="false"` on every row while selection is on, the totals
+row's too; a ref takes it off that row once it is drawn, so after
+hydration the totals row claims no selection state, while the server's
+HTML still carries it.
 
-**The sticky offset** (risk R8). A wrong `--page-sticky-top` puts the
-header under or below the page's header; the `StickyHeader` story pins
-it under a 64px bar.
+**Page Up and Page Down** (risk R4, spec correction 41). React Aria
+measures a page against the whole table when the page itself scrolls, so
+they moved to the first and last row. The capture handler takes them
+from a body row or cell and moves by the rows that fit in the view: the
+height of the nearest ancestor that scrolls, or the window, less the
+sticky offset, the header row and, while it shows, the bar, over the
+focused row's height, from a cell to the same column's cell, never past
+the first or the last row; with Shift it extends the selection to the
+row it reaches, as React Aria does (the `PageKeys` play, in three
+engines). A header's keys stay React Aria's.
+
+**The sticky offset** (risk R8, spec correction 48). A wrong
+`--page-sticky-top` puts the header under or below the page's header;
+the `StickyHeader` story pins it under a 64px bar. The docs site writes
+its own header's height to it, through a `ResizeObserver`, so the
+examples' header rows stop under the docs header.
 
 **Forced colors** (spec correction 39). Rules and the skeleton rows'
 rules are `CanvasText`; the current bar `CanvasText`; the focus ring
@@ -7923,38 +7993,45 @@ keep up for ascending, the current bar is at the right, the checkbox
 column is the rightmost, and the bar's count sits at its right
 (`DataTableMirrored`).
 
-**Selection** (section 7, rulings 2 and 4, spec corrections 5, 30, 35
-and 36). With `selectedKeys` and `onSelectionChange`, the table is React
-Aria's `selectionMode="multiple"` with `selectionBehavior="toggle"`, and
-a first column, `__selection`, 3.5rem wide with the part step, 8px, of
-padding at its ends, holds React Aria's selection-slot checkboxes: the
-40px hit area and 8px of room beside a scroll edge, the checkbox rule's.
-The column never leaves. The header's box is named `labels.selectAll`; a
-row's is named by React Aria's `aria-labelledby`, its own label
-`labels.select` and then the row header, so it reads "Select Corner
-Mart" and never the row's name twice. The totals row's first cell is
-empty and a skeleton row's first cell a 3.5rem blank. Select-all and
-Mod+A give React Aria's `'all'`, which the app never sees:
-`onSelectionChange` receives the keys of `items` not in `disabledKeys`,
-the rows on this page, and a set becomes its keys in order (ruling 4).
-React Aria is given only the selected keys still in `items`, so a
-selection of keys that have left draws no indeterminate header and lets
-Escape through; every change React Aria makes reaches the app with those
-other keys after its own, kept until the app drops them (risk R6), and
-Clear selection clears them all (spec correction 36). React Aria's
-selection, with its anchor, goes back to React Aria while the app holds
-the same keys, so Shift with an arrow extends from the row Space or X
-last toggled and shrinks on the way back, as React Aria's own selection
-does; an array alone would lose the anchor on every change. A press on a
-row is its link's and never selects, before and after a row is selected.
-A row without a link selects nothing on a press either: React Aria's
-cell would select its row on a press anywhere in it, so DataTable's root
-stops, in its capture phase, a pointer down, a mouse down and a screen
-reader's virtual click that land in a cell on none of its controls, the
-list correction 14 raises, the checkbox's field among them (spec
-correction 35, the `PressNeverSelects` play, in three engines). React
-Aria's cell stops those events itself, so nothing outside the table
-hears less than it did.
+**Selection** (section 7, rulings 2 and 4, spec corrections 5, 30, 35,
+36 and 44). With `selectedKeys` and `onSelectionChange`, the table is
+React Aria's `selectionMode="multiple"` with
+`selectionBehavior="toggle"`, and a first column, `__selection`, 3.5rem
+wide with the part step, 8px, of padding at its ends, holds React Aria's
+selection-slot checkboxes: the 40px hit area and 8px of room beside a
+scroll edge, the checkbox rule's. The column never leaves. The header's
+box is named `labels.selectAll`; a row's is named by React Aria's
+`aria-labelledby`, its own label `labels.select` and then the row
+header, so it reads "Select Corner Mart" and never the row's name twice.
+The totals row's first cell is empty and a skeleton row's first cell a
+3.5rem blank. Select-all and Mod+A give React Aria's `'all'`, which the
+app never sees: `onSelectionChange` receives the keys of `items` not in
+`disabledKeys`, the rows on this page, and a set becomes its keys in
+order (ruling 4). React Aria is given only the selected keys still in
+`items`, so a selection of keys that have left draws no indeterminate
+header and lets Escape through; every change React Aria makes reaches
+the app with those other keys after its own, kept until the app drops
+them (risk R6), and Clear selection clears them all (spec correction
+36). React Aria's selection, with its anchor, goes back to React Aria
+while the app holds the same keys, so Shift with an arrow extends from
+the row Space or X last toggled and shrinks on the way back, as React
+Aria's own selection does; an array alone would lose the anchor on every
+change. A press on a row is its link's and never selects, before and
+after a row is selected. A row without a link selects nothing on a press
+either: React Aria's cell would select its row on a press anywhere in
+it, so DataTable's root stops, in its capture phase, a pointer down, a
+mouse down and a screen reader's virtual click that land in a cell on
+none of its controls, the list correction 14 raises, the checkbox's
+field among them (spec correction 35, the `PressNeverSelects` play, in
+three engines). React Aria's cell stops those events itself, so nothing
+outside the table hears less than it did. Shift with a press on a row's
+box selects the range from the anchor, as Shift with an arrow does:
+React Aria's box toggles through its label's press, and clicks the label
+itself 80ms later when the click of a press it started never reaches it,
+so the root stops that press before React Aria starts one, cancels the
+click and extends the selection through React Aria's manager (the
+`ShiftPressRange` play, in three engines); without Shift the box toggles
+its row.
 
 **The selected wash** (ruling 7). A selected row takes the ink wash at
 8% over the fill, one step over hover and held under the pointer, beside
@@ -8080,12 +8157,14 @@ change." The docs clear the selection on every change of the rows.
 
 **The size.** The entry `{ DataTable }` measured 2.62 kB without React
 Aria, Lucide and `@internationalized/date`, Link and Skeleton included;
-the rule rounds up to 3 kB and adds 0.5 kB: 3.5 kB, under the spec's
-4 kB budget. With selection it measured 5.56 kB, which the rule sets at
+the rule rounds up to 3 kB and adds 0.5 kB: 3.5 kB, under the spec's 4
+kB budget. With selection it measured 5.56 kB, which the rule sets at
 6.5 kB, over the budget because the entry now carries Checkbox with its
-field parts, Button, the bar, the key handler's shortcut matching and the
-modal stack, each of which has an entry of its own. Task 4 measures it
-again.
+field parts, Button, the bar, the key handler's shortcut matching and
+the modal stack, each of which has an entry of its own. After Task 3's
+fix round, with the press guard, the portal watch, the typeahead test,
+the page keys, the error state and the reloading cue, it measured 6.99
+kB, which the rule sets at 7.5 kB. Task 4 measures it again.
 
 **Screen readers.** Not yet verified with VoiceOver and NVDA (owner
 action 4): a row read by its row header and cells, the current row's

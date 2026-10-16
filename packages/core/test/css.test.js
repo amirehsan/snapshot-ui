@@ -6612,16 +6612,83 @@ describe('src/components/data-table.css', () => {
     expect(css.match(/\[data-hide-below/g)).toHaveLength(8);
   });
 
-  it('never uses signal orange, clay, error or success', () => {
+  it('never uses signal orange, clay or success, and error only for the error line', () => {
     const css = rules();
-    for (const token of [
-      '--color-signal',
-      '--color-clay',
-      '--color-error',
-      '--color-success',
-      '--color-gain',
-    ]) {
+    for (const token of ['--color-signal', '--color-clay', '--color-success', '--color-gain']) {
       expect(css, token).not.toContain(token);
+    }
+    // An error is exactly that: the line a failed next page writes under the rows, and nothing else.
+    expect(css.match(/var\(--color-error\)/g)).toHaveLength(1);
+    expect(blockAfter(css, '.data-table-error:not(:empty) {')).toContain('color: var(--color-error);');
+  });
+
+  it('keeps a focused row or cell clear of the sticky header and, while it shows, the bar (WCAG 2.4.11)', () => {
+    const css = rules();
+    const root = blockAfter(css, '.data-table {');
+    expect(root).toContain(
+      '--data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--size-target));',
+    );
+    expect(root).toContain('--data-table-scroll-end: 0px;');
+    expect(blockAfter(css, '.data-table:has(> .data-table-bar) {')).toContain(
+      '--data-table-scroll-end: calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset) + var(--size-control) + 2 * var(--spacing-part) + 2px);',
+    );
+    const margin = 'scroll-margin-block: var(--data-table-scroll-start) var(--data-table-scroll-end);';
+    expect(blockAfter(css, '.data-table-row {')).toContain(margin);
+    expect(blockAfter(css, '.data-table-body > .data-table-row > .data-table-cell {')).toContain(margin);
+  });
+
+  it('wraps a wrapping column to two lines and clamps it there', () => {
+    const css = rules();
+    const cell = blockAfter(css, ".data-table-cell[data-overflow='wrap'] {");
+    expect(cell).toContain('white-space: normal;');
+    const clamp = blockAfter(css, '.data-table-wrap {');
+    for (const declaration of [
+      'display: -webkit-box;',
+      'overflow: hidden;',
+      '-webkit-box-orient: vertical;',
+      '-webkit-line-clamp: 2;',
+    ]) {
+      expect(clamp).toContain(declaration);
+    }
+  });
+
+  it('hides a hidden header label from sight, never from a screen reader', () => {
+    const label = blockAfter(rules(), '.data-table-column[data-header-hidden] .data-table-column-label {');
+    expect(label).toContain('clip-path: inset(50%);');
+    expect(label).toContain('position: absolute;');
+    expect(label).not.toMatch(/display: none|visibility: hidden/);
+  });
+
+  it('draws the reloading cue as a 2px ink line at the foot of the header cells that pulses, still under reduced motion and CanvasText in forced colors', () => {
+    const css = rules();
+    const cue = '.data-table-grid[data-reloading] .data-table-column::after {';
+    const line = blockAfter(css, cue);
+    for (const declaration of [
+      'position: absolute;',
+      'inset-inline: 0;',
+      'inset-block-end: 0;',
+      'block-size: 2px;',
+      'background-color: var(--color-ink);',
+      'animation: data-table-reloading 1.6s ease-in-out infinite;',
+    ]) {
+      expect(line).toContain(declaration);
+    }
+    expect(blockAfter(blockAfter(css, '@media (prefers-reduced-motion: reduce)'), cue)).toContain(
+      'animation: none;',
+    );
+    expect(blockAfter(blockAfter(css, FORCED), cue)).toContain('background-color: CanvasText;');
+    // The header cells are sticky, so positioned: each holds its own part of the line.
+    expect(blockAfter(css, '.data-table-column {')).toContain('position: sticky;');
+  });
+
+  it('writes the error line at the small step, a part step under the rows and inset as the cells, only while it holds one', () => {
+    const line = blockAfter(rules(), '.data-table-error:not(:empty) {');
+    for (const declaration of [
+      'margin-block-start: var(--spacing-part);',
+      'padding-inline: var(--spacing-inset);',
+      'font-size: var(--text-small);',
+    ]) {
+      expect(line).toContain(declaration);
     }
   });
 

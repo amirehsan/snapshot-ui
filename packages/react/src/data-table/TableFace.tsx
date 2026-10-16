@@ -71,6 +71,7 @@ export interface TableFaceProps<T> {
   sortDescriptor: Sort | undefined;
   onSortChange: ((sort: Sort) => void) | undefined;
   disabledKeys: ReadonlySet<Key>;
+  disabledBehavior: 'selection' | 'all';
   selection: FaceSelection | undefined;
   isLoading: boolean;
   loadingRowCount: number;
@@ -82,6 +83,18 @@ export interface TableFaceProps<T> {
 /** The figure span for an end-aligned column, so its digits are tabular, unbroken and an isolated run. */
 const figure = (column: DataTableColumn<unknown>, content: ReactNode): ReactNode =>
   column.align === 'end' ? <span className="data-table-figure">{content}</span> : content;
+
+/** A cell's content clamped to two lines, for a column that wraps; figures never wrap. */
+const wrapped = (column: DataTableColumn<unknown>, content: ReactNode): ReactNode =>
+  column.overflow === 'wrap' && column.align !== 'end' ? (
+    <span className="data-table-wrap">{content}</span>
+  ) : (
+    content
+  );
+
+/** `data-overflow` for a column that wraps. */
+const overflowOf = (column: DataTableColumn<unknown>): 'wrap' | undefined =>
+  column.overflow === 'wrap' && column.align !== 'end' ? 'wrap' : undefined;
 
 /** `data-hide-below` for a column, never on the row header (ruling 6). */
 const hideBelowOf = <T,>(column: DataTableColumn<T>, rowHeader: DataTableColumn<T> | undefined) =>
@@ -123,6 +136,7 @@ interface TableRowProps<T> {
   columns: readonly DataTableColumn<T>[];
   rowHeader: DataTableColumn<T> | undefined;
   isCurrent: boolean;
+  /** Whether the row can neither be focused nor opened: disabled, with disabledBehavior 'all'. */
   isDisabled: boolean;
   /** The row checkbox's name, before React Aria adds the row's; undefined while selection is off. */
   selectLabel: string | undefined;
@@ -154,25 +168,30 @@ function TableRow<T>({
         </Cell>
       )}
       {columns.map((column) => {
-        const body = figure(column as DataTableColumn<unknown>, column.cell(row.value));
+        const unknown = column as DataTableColumn<unknown>;
+        const body = figure(unknown, column.cell(row.value));
         return (
           <Cell
             key={column.id}
             className="data-table-cell"
             data-align={column.align === 'end' ? 'end' : undefined}
+            data-overflow={overflowOf(unknown)}
             data-hide-below={hideBelowOf(column, rowHeader)}
           >
-            {column === rowHeader && hasLink ? (
-              <Link
-                href={row.href}
-                className="data-table-link"
-                aria-current={isCurrent ? 'true' : undefined}
-                {...UNTABBED}
-              >
-                {body}
-              </Link>
-            ) : (
-              body
+            {wrapped(
+              unknown,
+              column === rowHeader && hasLink ? (
+                <Link
+                  href={row.href}
+                  className="data-table-link"
+                  aria-current={isCurrent ? 'true' : undefined}
+                  {...UNTABBED}
+                >
+                  {body}
+                </Link>
+              ) : (
+                body
+              ),
             )}
           </Cell>
         );
@@ -232,6 +251,7 @@ export function TableFace<T>({
   sortDescriptor,
   onSortChange,
   disabledKeys,
+  disabledBehavior,
   selection,
   isLoading,
   loadingRowCount,
@@ -263,10 +283,16 @@ export function TableFace<T>({
         onSortChange === undefined
           ? undefined
           : (sort) => {
-              onSortChange({ column: String(sort.column), direction: sort.direction });
+              const column = String(sort.column);
+              // A column's first press takes its firstSortDirection; each later press flips it (ruling 12).
+              const first = columns.find((each) => each.id === column)?.firstSortDirection;
+              const direction =
+                sortDescriptor?.column !== column && first !== undefined ? first : sort.direction;
+              onSortChange({ column, direction });
             }
       }
       disabledKeys={disabledKeys}
+      disabledBehavior={disabledBehavior}
     >
       <TableHeader className="data-table-header">
         {selection === undefined ? null : (
@@ -289,6 +315,7 @@ export function TableFace<T>({
             className="data-table-column"
             data-align={column.align === 'end' ? 'end' : undefined}
             data-hide-below={hideBelowOf(column, rowHeader)}
+            data-header-hidden={column.isHeaderHidden === true ? '' : undefined}
             // React Aria's width acts only in a resizable container (spec correction 1), so the header cell
             // carries it, as a property the stylesheet can set to zero when the column leaves.
             style={
@@ -329,7 +356,7 @@ export function TableFace<T>({
             columns={columns}
             rowHeader={rowHeader}
             isCurrent={currentKey !== undefined && currentKey !== null && row.key === currentKey}
-            isDisabled={disabledKeys.has(row.key)}
+            isDisabled={disabledBehavior === 'all' && disabledKeys.has(row.key)}
             selectLabel={selection?.selectLabel}
           />
         ))}
