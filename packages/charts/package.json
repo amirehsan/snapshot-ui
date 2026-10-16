@@ -1,6 +1,6 @@
 {
   "name": "@snapshot-ui/charts",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Charts for Snapshot UI, drawn on the server in SVG: a sparkline and a line chart with a table view.",
   "license": "MIT",
   "repository": {
