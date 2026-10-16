@@ -180,6 +180,8 @@ const HYDRATED: [name: string, element: ReactElement, after: (container: HTMLEle
       expect(date).toHaveTextContent('Date');
       expect(date?.querySelector('.data-table-sort .lucide-arrow-down')).not.toBeNull();
       expect(container.querySelector('tfoot [role="rowheader"]')).toHaveTextContent('Total');
+      // Each item is described by its meta and end parts, by the ids the server wrote (spec correction 59).
+      expect(container.querySelector('.data-table-item')).toHaveAccessibleDescription('Groceries -$42.18');
     },
   ],
   [

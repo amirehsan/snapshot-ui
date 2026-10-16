@@ -165,6 +165,21 @@ async function focusItem(scope: ParentNode, index: number): Promise<HTMLElement>
   return item;
 }
 
+/**
+ * Presses at the centre of `element` as a pointer would: the browser's hit test finds what is drawn there (a
+ * stretched link's ::after, or the item itself), and the press goes to that element at that point, in every
+ * engine. Returns what was hit.
+ */
+async function pressAt(element: Element): Promise<HTMLElement> {
+  const box = element.getBoundingClientRect();
+  const clientX = box.left + box.width / 2;
+  const clientY = box.top + box.height / 2;
+  const hit = document.elementFromPoint(clientX, clientY);
+  if (!(hit instanceof HTMLElement)) throw new Error('Nothing drawn there');
+  await userEvent.pointer({ keys: '[MouseLeft]', target: hit, coords: { clientX, clientY } });
+  return hit;
+}
+
 /** Eight rows sorted by date, newest first; Date and Amount sort, Payee opens the row. */
 export const Default: Story = {
   tags: ['viewport-desktop', 'density'],
@@ -430,7 +445,7 @@ export const HoverWash: Story = {
 
 /**
  * The three widths of the table's box the full-width checks draw: all columns, md gone, and under 40rem, where
- * the list face takes over from the table at the width sm columns would leave it.
+ * the list face takes over from the table.
  */
 const BOX_WIDTHS = ['100%', '44rem', '38rem'] as const;
 
@@ -702,7 +717,7 @@ export const CellControlsRaised: Story = {
   },
 };
 
-/** The widths of the box for the current bar: all columns, md gone, md and sm gone. */
+/** The widths of the box for the current bar: all columns, md gone, and the list. */
 const BAR_COLUMNS = columnsOf(['category', 'account', 'date', 'payee', 'amount']);
 
 /**
@@ -1237,6 +1252,42 @@ export const InDialog: Story = {
   },
 };
 
+/**
+ * The table face in an open Dialog keeps its keys too: a dialog wide enough for the table (a large dialog's body
+ * is under 40rem, so the story widens its panel), Enter opens the row without selecting it, J moves, X selects,
+ * and a letter typeahead would act on leaves focus where it is. Three engines.
+ */
+export const InDialogTable: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <RouterProvider navigate={navigate}>
+      <style>{'.story-wide-dialog { width: min(56rem, 100%); }'}</style>
+      <Dialog title="Pick transactions" isOpen size="lg" className="story-wide-dialog">
+        <Selecting />
+      </Dialog>
+    </RouterProvider>
+  ),
+  play: async () => {
+    navigate.mockClear();
+    const dialog = await within(document.body).findByRole('dialog');
+    await waitFor(() => expect(getComputedStyle(only(dialog, '.data-table-grid')).display).toBe('block'));
+    const grid = only(dialog, '.data-table-grid [role="grid"]');
+    const first = rowAt(dialog, 0);
+    first.focus();
+    await expect(first).toHaveFocus();
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+    await expect(selectedKeysOf(dialog)).toEqual([]);
+    await userEvent.keyboard('j');
+    await waitFor(() => expect(rowAt(dialog, 1)).toHaveFocus());
+    await userEvent.keyboard('x');
+    await waitFor(() => expect(selectedKeysOf(dialog)).toEqual(['t2']));
+    await userEvent.keyboard('n');
+    await expect(rowAt(dialog, 1)).toHaveFocus();
+    await expect(grid.contains(document.activeElement)).toBe(true);
+  },
+};
+
 /** The bar's Delete, which asks first: a confirm dialog whose Delete clears the selection, as an app's does. */
 function ConfirmingDelete(): ReactElement {
   const [keys, setKeys] = useState<Key[]>(['t2', 't3']);
@@ -1390,7 +1441,8 @@ const ACTION_COLUMNS: DataTableColumn<Transaction>[] = [
     id: 'actions',
     header: 'Actions',
     isHeaderHidden: true,
-    width: '4rem',
+    // The 40px button and the cell's 16px either side.
+    width: '4.5rem',
     cell: (row) => (
       <IconButton aria-label={`More for ${row.payee}`}>
         <Ellipsis />
@@ -1398,6 +1450,55 @@ const ACTION_COLUMNS: DataTableColumn<Transaction>[] = [
     ),
   },
 ];
+
+/**
+ * Room in a cell: a row menu in a column too narrow for it is neither clipped nor followed by an ellipsis, and a
+ * wrapping cell's two lines sit a part step off the row's rules, every cell of the row centered on it.
+ */
+export const CellRoom: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box>
+      <Sorted
+        columns={[
+          ...WRAPPING_COLUMNS,
+          ...ACTION_COLUMNS.filter((column) => column.id === 'actions').map((column) => ({
+            ...column,
+            width: '3rem',
+          })),
+        ]}
+        items={EIGHT.slice(0, 2)}
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const row = rowAt(canvasElement, 0);
+    const cells = [...row.querySelectorAll<HTMLElement>('[role="gridcell"], [role="rowheader"]')];
+    const menu = cells.at(-1);
+    if (menu === undefined) throw new Error('No menu cell');
+    await expect(getComputedStyle(menu).overflow).toBe('visible');
+    await expect(getComputedStyle(menu).textOverflow).toBe('clip');
+    await expect(only(menu, 'button').getBoundingClientRect().width).toBe(40);
+    // A text cell still truncates.
+    await expect(getComputedStyle(cells[1] ?? menu).textOverflow).toBe('ellipsis');
+    const memo = only(row, '[data-overflow="wrap"]');
+    const text = only(memo, '.data-table-wrap').getBoundingClientRect();
+    const box = row.getBoundingClientRect();
+    await expect(text.top - box.top).toBeGreaterThanOrEqual(8);
+    await expect(box.bottom - text.bottom).toBeGreaterThanOrEqual(8);
+    // Every cell centered on the row: the date's line midway down it, as the button's.
+    const middle = (element: Element | Range): number => {
+      const { top, bottom } = element.getBoundingClientRect();
+      return (top + bottom) / 2;
+    };
+    const date = cells[0];
+    if (date === undefined) throw new Error('No date');
+    const range = document.createRange();
+    range.selectNodeContents(date);
+    await expect(Math.abs(middle(range) - middle(row))).toBeLessThanOrEqual(2);
+    await expect(Math.abs(middle(only(menu, 'button')) - middle(row))).toBeLessThanOrEqual(2);
+  },
+};
 
 /** A header with nothing drawn: the actions column, its name kept for a screen reader. */
 export const HeaderHidden: Story = {
@@ -1754,12 +1855,10 @@ export const ListPressOpens: Story = {
   play: async ({ canvasElement }) => {
     navigate.mockClear();
     const amount = only(itemAt(canvasElement, 2), '.data-table-item-end .data-table-figure');
-    const box = amount.getBoundingClientRect();
-    // The hit test finds the row's link over the amount, as in the table face.
-    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-    await expect(hit?.closest('.data-table-link')).toBe(only(itemAt(canvasElement, 2), '.data-table-link'));
-    if (!(hit instanceof HTMLElement)) throw new Error('Nothing under the amount');
-    await userEvent.click(hit);
+    // The hit test finds the row's link over the amount, as in the table face, and the press is made there, at
+    // the amount's own point: user-event does not hit-test, so the press goes to what the browser found.
+    const hit = await pressAt(amount);
+    await expect(hit.closest('.data-table-link')).toBe(only(itemAt(canvasElement, 2), '.data-table-link'));
     await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
     await expect(navigate.mock.calls[0]?.[0]).toBe('/transactions/t3');
     await expect(selectedItemsOf(canvasElement)).toEqual(['t1']);
@@ -1886,5 +1985,320 @@ export const R3Sizes: Story = {
     );
     await expect(bytes).toHaveLength(2);
     await expect(bytes[1]).toBeGreaterThan(bytes[0] ?? 0);
+  },
+};
+
+// ---- The list face's covers, keys and modes (Task 4's review round) ---------------------------------------------
+
+/** Forty rows under a 64px page header in a list-wide box, grouped by day or not, with selection on. */
+function CoveredList({ grouped }: { grouped: boolean }): ReactElement {
+  return (
+    <div style={{ '--page-sticky-top': '64px', paddingBlockStart: 80 } as CSSProperties}>
+      <PageHeader />
+      <Box width={NARROW}>
+        <Selecting items={manyTransactions(40)} getGroup={grouped ? groupOf : undefined} />
+      </Box>
+    </div>
+  );
+}
+
+/** Presses Select above the list, so the head sticks over it, and waits for the boxes. */
+async function enterSelectMode(scope: HTMLElement): Promise<void> {
+  only(scope, '.data-table-list-mode').click();
+  await waitFor(() => expect(scope.querySelector('.data-table-list[data-selecting]')).not.toBeNull());
+}
+
+/** The bottom of what covers the top of the list where `item` is: the page header, the sticky head, its heading. */
+function coverOf(scope: HTMLElement, item: HTMLElement): number {
+  const head =
+    scope.querySelector('.data-table-list-head[data-selecting]')?.getBoundingClientRect().bottom ?? 0;
+  const heading =
+    item.closest('.data-table-section')?.querySelector('.data-table-section-header')?.getBoundingClientRect()
+      .bottom ?? 0;
+  return Math.max(64, head, heading);
+}
+
+/**
+ * K from an item onto the one above it, which sits wholly in the view but under what covers the list's top: the
+ * item ends clear of it (WCAG 2.4.11), under the page header alone without groups, and under the stuck head and
+ * the item's day heading with them.
+ */
+async function scrollClearPlay(canvasElement: HTMLElement): Promise<void> {
+  window.scrollTo(0, 0);
+  const index = 12;
+  const above = itemAt(canvasElement, index - 1);
+  const from = itemAt(canvasElement, index);
+  from.focus();
+  await waitFor(() => expect(from).toHaveFocus());
+  // The item above at 4px from the window's top, wholly in the view and under the 64px page header.
+  window.scrollBy({ top: above.getBoundingClientRect().top - 4, behavior: 'instant' });
+  await waitFor(() => expect(Math.round(above.getBoundingClientRect().top)).toBe(4));
+  if (!above.isConnected) throw new Error('The story has gone');
+  await userEvent.keyboard('k');
+  await waitFor(
+    async () => {
+      await expect(above).toHaveFocus();
+      await expect(above.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        coverOf(canvasElement, above) - 1,
+      );
+    },
+    { timeout: 5000 },
+  );
+  window.scrollTo(0, 0);
+}
+
+/** An ungrouped list under a 64px page header: K onto an item under the header scrolls it clear. Three engines. */
+export const ListScrollClear: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <CoveredList grouped={false} />,
+  play: async ({ canvasElement }) => {
+    await scrollClearPlay(canvasElement);
+  },
+};
+
+/**
+ * A grouped list in Select mode: the head sticks under the page header and the day headings under the head, and
+ * K onto an item under them scrolls it clear of all three. Three engines.
+ */
+export const ListScrollClearGrouped: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <CoveredList grouped />,
+  play: async ({ canvasElement }) => {
+    await enterSelectMode(canvasElement);
+    await scrollClearPlay(canvasElement);
+  },
+};
+
+/**
+ * Page Down from the first item moves by the items that fit in the window under what covers it: the page header,
+ * and in Select mode the head, and a day heading where there are groups. Page Up comes back.
+ */
+async function pageKeysPlay(canvasElement: HTMLElement): Promise<void> {
+  window.scrollTo(0, 0);
+  const first = itemAt(canvasElement, 0);
+  first.focus();
+  await waitFor(() => expect(first).toHaveFocus());
+  const head = canvasElement.querySelector('.data-table-list-head[data-selecting]');
+  const heading = canvasElement.querySelector('.data-table-section-header');
+  const covered =
+    64 + (head?.getBoundingClientRect().height ?? 0) + (heading?.getBoundingClientRect().height ?? 0);
+  const fit = Math.floor((window.innerHeight - covered) / first.getBoundingClientRect().height);
+  await userEvent.keyboard('{PageDown}');
+  await waitFor(() =>
+    expect(listItems(canvasElement).indexOf(document.activeElement as HTMLElement)).toBe(fit),
+  );
+  await userEvent.keyboard('{PageUp}');
+  await waitFor(() => expect(first).toHaveFocus());
+  window.scrollTo(0, 0);
+}
+
+/** Page Down in an ungrouped list under a 64px page header moves by the items under it, not one more. */
+export const ListPageKeys: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <CoveredList grouped={false} />,
+  play: async ({ canvasElement }) => {
+    await pageKeysPlay(canvasElement);
+  },
+};
+
+/** Page Down in a grouped list in Select mode moves by the items under the page header, the head and a heading. */
+export const ListPageKeysGrouped: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <CoveredList grouped />,
+  play: async ({ canvasElement }) => {
+    await enterSelectMode(canvasElement);
+    await pageKeysPlay(canvasElement);
+  },
+};
+
+/**
+ * In Select mode the head sticks under the page header, Select all and Done in reach, and the day headings stick
+ * under it rather than under the page header.
+ */
+export const StickySelectHead: Story = {
+  tags: ['no-visual'],
+  render: () => <CoveredList grouped />,
+  play: async ({ canvasElement }) => {
+    window.scrollTo(0, 0);
+    await enterSelectMode(canvasElement);
+    const head = only(canvasElement, '.data-table-list-head');
+    const day = [...canvasElement.querySelectorAll<HTMLElement>('.data-table-section-header')][1];
+    if (day === undefined) throw new Error('No second day');
+    window.scrollBy({ top: day.getBoundingClientRect().top - 64 + 20, behavior: 'instant' });
+    await waitFor(() => expect(Math.round(head.getBoundingClientRect().top)).toBe(64));
+    await expect(Math.round(day.getBoundingClientRect().top)).toBe(
+      Math.round(head.getBoundingClientRect().bottom),
+    );
+    await expect(within(head).getByRole('button', { name: 'Done' })).toBeVisible();
+    // Out of Select mode the head scrolls away with the page, and the headings stick at the page header again.
+    within(head).getByRole('button', { name: 'Done' }).click();
+    await waitFor(() => expect(Math.round(day.getBoundingClientRect().top)).toBe(64));
+    window.scrollTo(0, 0);
+  },
+};
+
+/**
+ * Rows already shown that load again, as a list: after QUIET_MS one quiet line, at the foot of the first day's
+ * heading only, or along the top of an ungrouped list, out of the flow, so no item moves as it comes.
+ */
+export const ListReloading: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box width={NARROW}>
+      <div style={{ display: 'grid', gap: 32 }}>
+        <div data-list="grouped">
+          <Sorted getGroup={groupOf} isLoading />
+        </div>
+        <div data-list="ungrouped">
+          <Sorted isLoading />
+        </div>
+      </div>
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const grouped = only(canvasElement, '[data-list="grouped"]');
+    const ungrouped = only(canvasElement, '[data-list="ungrouped"]');
+    const top = itemAt(ungrouped, 0).getBoundingClientRect().top;
+    await waitFor(() => expect(only(grouped, '.data-table-list')).toHaveAttribute('data-reloading'), {
+      timeout: QUIET_MS + 2000,
+    });
+    const headings = [...grouped.querySelectorAll('.data-table-section-header')];
+    await expect(headings.length).toBeGreaterThan(1);
+    const [first, ...rest] = headings.map((heading) => getComputedStyle(heading, '::after'));
+    await expect(first?.blockSize).toBe('2px');
+    await expect(first?.backgroundColor).toBe(paint('var(--color-ink)', grouped));
+    for (const line of rest) await expect(line.content).toBe('none');
+    await waitFor(() => expect(only(ungrouped, '.data-table-list')).toHaveAttribute('data-reloading'));
+    const line = getComputedStyle(only(ungrouped, '.data-table-grid-list'), '::before');
+    await expect(line.blockSize).toBe('2px');
+    await expect(line.marginBlockEnd).toBe('-2px');
+    await expect(itemAt(ungrouped, 0).getBoundingClientRect().top).toBe(top);
+  },
+};
+
+/**
+ * A grid with no rows takes focus itself, React Aria's tab stop, and shows the inset ring there (WCAG 2.4.7): the
+ * table's and the list's.
+ */
+export const EmptyFocusRing: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box>
+      <div style={{ display: 'grid', gap: 32 }}>
+        {['min(60rem, 100%)', NARROW].map((width) => (
+          <div key={width} style={{ width }}>
+            <Sorted items={[]} emptyState={<EmptyState title="No transactions" />} />
+          </div>
+        ))}
+      </div>
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const grids = [
+      only(canvasElement, '.data-table-grid [role="grid"]'),
+      [...canvasElement.querySelectorAll<HTMLElement>('.data-table-list [role="grid"]')][1],
+    ];
+    for (const grid of grids) {
+      if (grid === undefined) throw new Error('No grid');
+      for (let step = 0; step < 6 && document.activeElement !== grid; step += 1) await userEvent.tab();
+      await expect(grid).toHaveFocus();
+      const style = getComputedStyle(grid);
+      await expect(style.outlineStyle).toBe('solid');
+      await expect(style.outlineWidth).not.toBe('0px');
+      await expect(style.outlineColor).toBe(paint('var(--focus-ring-color)', grid));
+    }
+  },
+};
+
+/**
+ * A selection made in the table face, seen after the box really narrows: the list draws the selected item with
+ * its mark and wash and the bar keeps the count; every item holds the mark's slot, so the titles stay in line.
+ */
+export const SelectionAcrossSwitch: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box width="60rem">
+      <Selecting getGroup={groupOf} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = only(canvasElement, '.data-table').parentElement;
+    if (box === null) throw new Error('No box');
+    await userEvent.click(only(rowAt(canvasElement, 1), '.checkbox-box'));
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2']));
+    box.style.width = NARROW;
+    await waitFor(() =>
+      expect(getComputedStyle(only(canvasElement, '.data-table-list')).display).toBe('block'),
+    );
+    await expect(selectedItemsOf(canvasElement)).toEqual(['t2']);
+    const selected = itemAt(canvasElement, 1);
+    const mark = only(selected, '.data-table-item-mark');
+    await expect(getComputedStyle(mark).backgroundColor).toBe(paint('var(--color-ink)', mark));
+    await expect(getComputedStyle(mark, '::after').content).not.toBe('none');
+    const titleStart = (item: HTMLElement): number =>
+      Math.round(only(item, '.data-table-item-title').getBoundingClientRect().left);
+    await expect(titleStart(selected)).toBe(titleStart(itemAt(canvasElement, 0)));
+    await expect(within(canvasElement).getByRole('toolbar', { name: 'Bulk actions' })).toHaveTextContent(
+      '1 selected',
+    );
+  },
+};
+
+/**
+ * In Select mode a press on an item, off its controls, toggles it, on its title and on its amount; Enter still
+ * opens it and selects nothing. After Done a press opens again and never selects (ruling 2; open question 8).
+ * Three engines.
+ */
+export const SelectModeTaps: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <RouterProvider navigate={navigate}>
+      <div style={{ width: NARROW }}>
+        <Selecting getGroup={groupOf} />
+      </div>
+    </RouterProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    navigate.mockClear();
+    await enterSelectMode(canvasElement);
+    const item = itemAt(canvasElement, 1);
+    await pressAt(only(item, '.data-table-item-title'));
+    await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual(['t2']));
+    await pressAt(only(item, '.data-table-item-end .data-table-figure'));
+    await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual([]));
+    await pressAt(only(itemAt(canvasElement, 2), '.data-table-item-meta'));
+    await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual(['t3']));
+    await expect(navigate).not.toHaveBeenCalled();
+    // Enter on the focused item opens it, and never toggles it.
+    itemAt(canvasElement, 2).focus();
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+    await expect(selectedItemsOf(canvasElement)).toEqual(['t3']);
+    // Done: a press opens again, and selects nothing.
+    only(canvasElement, '.data-table-list-mode').click();
+    await waitFor(() => expect(canvasElement.querySelector('.data-table-list[data-selecting]')).toBeNull());
+    await pressAt(only(itemAt(canvasElement, 0), '.data-table-item-title'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(2));
+    await expect(navigate.mock.calls[1]?.[0]).toBe('/transactions/t1');
+    await expect(selectedItemsOf(canvasElement)).toEqual(['t3']);
+  },
+};
+
+/** Items with no link: in Select mode a press toggles them, and out of it a press does nothing. Three engines. */
+export const SelectModeTapsNoLink: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box width={NARROW}>
+      <Selecting getGroup={groupOf} getRowHref={undefined} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await pressAt(only(itemAt(canvasElement, 0), '.data-table-item-title'));
+    await expect(selectedItemsOf(canvasElement)).toEqual([]);
+    await enterSelectMode(canvasElement);
+    await pressAt(only(itemAt(canvasElement, 0), '.data-table-item-title'));
+    await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual(['t1']));
+    await pressAt(only(itemAt(canvasElement, 3), '.data-table-item-end'));
+    await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual(['t1', 't4']));
   },
 };

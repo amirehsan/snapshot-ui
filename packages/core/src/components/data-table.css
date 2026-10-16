@@ -36,6 +36,16 @@
     border-collapse: separate;
     border-spacing: 0;
     outline: none;
+    /* The page's sticky offset, resolved: a grid that focus scrolls to keeps clear of the page's header, and the
+       key handler reads the offset here in pixels whatever unit the app wrote it in. */
+    scroll-margin-block-start: var(--page-sticky-top, 0px);
+  }
+
+  /* With no rows the grid itself is React Aria's tab stop, so it draws the ring, inset as a row's (WCAG 2.4.7). */
+  .data-table-table:has(> .data-table-body[data-empty]):is(:focus-visible, [data-focus-visible]),
+  .data-table-grid-list[data-empty]:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-width));
   }
 
   /* ---- The header ------------------------------------------------------------------------------ */
@@ -154,8 +164,10 @@
   }
 
   /* A column that wraps: two lines, then an ellipsis; its full text is still the row's name. Figures never wrap. */
+  /* A part step of padding above and below, so two lines sit off the rules as one line does in its 48px row;
+     every cell of the row stays centered on it, the checkbox and a row menu with the text (spec correction 67). */
   .data-table-cell[data-overflow='wrap'] {
-    padding-block: 0.25rem;
+    padding-block: var(--spacing-part);
     white-space: normal;
   }
 
@@ -165,6 +177,27 @@
     overflow-wrap: anywhere;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+  }
+
+  /* A cell that holds only a control, such as a row menu, never clips it or draws an ellipsis beside it: its
+     focus ring and its hit area reach past its box, and a stray ellipsis is no text (spec correction 66). */
+  .data-table-cell:has(
+    > :is(
+        button,
+        input,
+        select,
+        textarea,
+        [role='button'],
+        [role='checkbox'],
+        [role='combobox'],
+        [role='switch'],
+        .checkbox-field,
+        .field,
+        .data-table-control
+      ):only-child
+  ) {
+    overflow: visible;
+    text-overflow: clip;
   }
 
   /* An actions column's header: its name is read, never seen. */
@@ -466,30 +499,50 @@
     }
   }
 
-  @container data-table (width < 40rem) {
-    .data-table :is(th, td)[data-hide-below='sm'] {
-      inline-size: 0;
-      padding-inline: 0;
-      border-inline-width: 0;
-      visibility: hidden;
-    }
-
-    .data-table .data-table-skeleton-cell[data-hide-below='sm'] {
-      display: none;
-    }
-
-    /* The current bar on the first cell that leaves at neither width. */
-    .data-table-row[data-current] > :where(:not([data-hide-below]):not(:not([data-hide-below]) ~ *)) {
-      padding-inline-start: calc(var(--data-table-pad) - 3px);
-      border-inline-start: 3px solid var(--color-ink);
-    }
-  }
-
   /* ---- The list face, under 40rem of the table's own box (ruling 8) ------------------------------- */
   /* The same rows as a list grouped by day: both faces are in the server's HTML and the box shows one, so
      nothing is measured and a table beside an open panel on a small laptop is a list too. */
   .data-table-list {
+    /* The head's height: its tallest control, a target tall at least, and its rule. On a coarse pointer its
+       controls are 44px (spec correction 64). */
+    --data-table-list-head: calc(max(var(--size-target), var(--size-control)) + 1px);
+    /* What covers an item that focus scrolls to: the page's sticky offset and, in Select mode, the head. */
+    --data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));
+
     display: none;
+  }
+
+  @media (pointer: coarse) {
+    .data-table-list {
+      --data-table-list-head: calc(max(var(--size-target), var(--size-control), 2.75rem) + 1px);
+    }
+  }
+
+  /* In Select mode the head sticks over the list, so the day headings stick under it. */
+  .data-table-list[data-selecting] {
+    --data-table-list-offset: var(--data-table-list-head);
+  }
+
+  /* In Select mode a press on an item toggles it (spec correction 69): its link takes no pointer, so the title is
+     the item's too, and only Enter or the link reached by Arrow Right opens it. */
+  .data-table-list[data-selecting] .data-table-link {
+    pointer-events: none;
+  }
+
+  .data-table-list[data-selecting] .data-table-link::after {
+    content: none;
+  }
+
+  .data-table-list[data-selecting] .data-table-item:not([data-disabled], [aria-disabled='true']) {
+    cursor: pointer;
+  }
+
+  /* Grouped, an item also keeps clear of its day heading: a peer and a part step around one overline line. */
+  .data-table-list:has(.data-table-section) {
+    --data-table-scroll-start: calc(
+      var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px) + var(--spacing-peer) +
+        var(--spacing-part) + var(--text-overline) * var(--text-overline--line-height)
+    );
   }
 
   @container data-table (width < 40rem) {
@@ -504,6 +557,7 @@
 
   .data-table-grid-list {
     outline: none;
+    scroll-margin-block-start: var(--page-sticky-top, 0px);
   }
 
   /* Above the list while selection is on: Select, or Select all and Done while the boxes show (amendment 3). */
@@ -512,9 +566,25 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-part);
-    min-block-size: var(--size-target);
+    min-block-size: var(--data-table-list-head);
     padding-inline: var(--spacing-inset) var(--spacing-part);
     border-block-end: 1px solid var(--color-divider);
+  }
+
+  /* In Select mode the head sticks at the page's offset on the fill, so Select all and Done stay in reach while
+     the list scrolls, as a selection mode's bar does in a phone's mail and photos. */
+  .data-table-list-head[data-selecting] {
+    position: sticky;
+    inset-block-start: var(--page-sticky-top, 0px);
+    z-index: calc(var(--z-header) - 1);
+    background-color: var(--data-table-fill);
+  }
+
+  @media (pointer: coarse) {
+    .data-table-list-mode,
+    .data-table-list-all .checkbox {
+      min-block-size: max(var(--size-target), 2.75rem);
+    }
   }
 
   /* The button keeps the inline end in both states, so it never moves under the reader's finger or focus. */
@@ -525,7 +595,7 @@
   /* A day's heading sticks at the page's offset on the fill, so the day stays in view while its items scroll. */
   .data-table-section-header {
     position: sticky;
-    inset-block-start: var(--page-sticky-top, 0px);
+    inset-block-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));
     z-index: calc(var(--z-header) - 1);
     padding: var(--spacing-peer) var(--spacing-inset) var(--spacing-part);
     background-color: var(--data-table-fill);
@@ -571,29 +641,31 @@
     flex: none;
   }
 
-  /* Out of Select mode a selected item keeps the checked box's look, drawn, so its state is never the wash
-     alone; an item that is not selected draws nothing there. */
+  /* Out of Select mode, while anything is selected, every item holds the mark's 20px slot, so selecting one
+     never moves its text; a selected item draws the checked box's look there, so its state is never the wash
+     alone. The check is the checkbox's own mask, so the HTML holds no icon (spec correction 61). */
   .data-table-item-mark {
+    position: relative;
     box-sizing: border-box;
-    display: none;
     flex: none;
-    align-items: center;
-    justify-content: center;
     inline-size: 20px;
     block-size: 20px;
     border-radius: var(--radius-micro);
-    background-color: var(--color-ink);
-    color: var(--color-canvas);
   }
 
   .data-table-item:is([data-selected], [aria-selected='true']) .data-table-item-mark {
-    display: inline-flex;
+    background-color: var(--color-ink);
   }
 
-  .data-table-item-mark svg {
-    width: 14px;
-    height: 14px;
-    stroke-width: 3;
+  .data-table-item:is([data-selected], [aria-selected='true']) .data-table-item-mark::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--color-canvas);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 10.5 8 14.5 16 5.5'/%3E%3C/svg%3E");
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: 14px;
   }
 
   .data-table-item-text {
@@ -698,6 +770,19 @@
     text-align: end;
   }
 
+  /* With more than one end column each figure is named by its column, in slate at the cell weight, so a reader
+     knows which stack of figures it adds up (spec correction 62). */
+  .data-table-list-total-figure {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-part);
+  }
+
+  .data-table-list-total-name {
+    color: var(--color-slate);
+    font-weight: var(--text-small--font-weight);
+  }
+
   /* Loading with no items: two lines and an end line per item, an item tall and ruled as items are. */
   .data-table-skeleton-item {
     box-sizing: border-box;
@@ -720,28 +805,35 @@
     text-align: start;
   }
 
-  /* Items already shown that load again: the quiet line at the foot of each day heading, as at the header
-     row's, or along the top of an ungrouped list. */
-  .data-table-list[data-reloading] .data-table-section-header::after,
-  .data-table-list[data-reloading] .data-table-grid-list::before {
+  /* Items already shown that load again: one quiet line at the top of the list, at the foot of the first day's
+     heading or, ungrouped, along the list's top, sticky there and out of the flow, so nothing moves as it comes
+     and goes (spec correction 63). */
+  .data-table-list[data-reloading]
+    .data-table-grid-list
+    > .data-table-section:not(.data-table-section ~ .data-table-section)
+    .data-table-section-header::after,
+  .data-table-list[data-reloading] .data-table-grid-list:not(:has(> .data-table-section))::before {
     content: '';
-    position: absolute;
-    inset-inline: 0;
-    inset-block-end: 0;
     block-size: 2px;
     background-color: var(--color-ink);
     animation: data-table-reloading 1.6s ease-in-out infinite;
   }
 
-  .data-table-list[data-reloading] .data-table-grid-list::before {
-    position: sticky;
-    inset-block-start: var(--page-sticky-top, 0px);
-    z-index: calc(var(--z-header) - 1);
-    display: block;
+  .data-table-list[data-reloading]
+    .data-table-grid-list
+    > .data-table-section:not(.data-table-section ~ .data-table-section)
+    .data-table-section-header::after {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
   }
 
-  .data-table-list[data-reloading] .data-table-grid-list:has(> .data-table-section)::before {
-    content: none;
+  .data-table-list[data-reloading] .data-table-grid-list:not(:has(> .data-table-section))::before {
+    position: sticky;
+    inset-block-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));
+    z-index: calc(var(--z-header) - 1);
+    display: block;
+    margin-block-end: -2px;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -807,6 +899,11 @@
       border-color: CanvasText;
     }
 
+    .data-table-table:has(> .data-table-body[data-empty]):is(:focus-visible, [data-focus-visible]),
+    .data-table-grid-list[data-empty]:is(:focus-visible, [data-focus-visible]) {
+      outline-color: Highlight;
+    }
+
     .data-table-grid[data-reloading] .data-table-column::after {
       background-color: CanvasText;
     }
@@ -852,7 +949,10 @@
 
     .data-table-item:is([data-selected], [aria-selected='true']) .data-table-item-mark {
       background-color: HighlightText;
-      color: Highlight;
+    }
+
+    .data-table-item:is([data-selected], [aria-selected='true']) .data-table-item-mark::after {
+      background-color: Highlight;
     }
 
     .data-table-item:is([data-selected], [aria-selected='true']):is(:focus-visible, [data-focus-visible]) {

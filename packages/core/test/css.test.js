@@ -6503,10 +6503,6 @@ describe('src/components/data-table.css', () => {
         blockAfter(css, '@container data-table (width < 48rem)'),
         ".data-table-row[data-current] > :where(:not([data-hide-below='md']):not(:not([data-hide-below='md']) ~ *)) {",
       ],
-      [
-        blockAfter(css, '@container data-table (width < 40rem)'),
-        '.data-table-row[data-current] > :where(:not([data-hide-below]):not(:not([data-hide-below]) ~ *)) {',
-      ],
     ]) {
       const bar = blockAfter(scope, selector);
       for (const declaration of BAR) expect(bar, `${selector} ${declaration}`).toContain(declaration);
@@ -6585,12 +6581,9 @@ describe('src/components/data-table.css', () => {
     );
   });
 
-  it('hides md columns under 48rem and sm columns under 40rem of the table box, by container query only', () => {
+  it('hides md columns under 48rem of the table box, by container query only, and has no sm width', () => {
     const css = rules();
-    for (const [query, size] of [
-      ['@container data-table (width < 48rem)', 'md'],
-      ['@container data-table (width < 40rem)', 'sm'],
-    ]) {
+    for (const [query, size] of [['@container data-table (width < 48rem)', 'md']]) {
       const block = blockAfter(css, query);
       // A header or body cell stays in its row, zero wide and hidden, so every row and React Aria's spanning
       // empty cell count the same columns and the table stays the full width of its box (spec correction 26).
@@ -6615,8 +6608,10 @@ describe('src/components/data-table.css', () => {
     );
     // Never by the viewport.
     expect(css).not.toMatch(/@media \((?:min-|max-)?width/);
-    // The cells that leave, and the current bar that moves past them, each under both widths.
-    expect(css.match(/\[data-hide-below/g)).toHaveLength(8);
+    // The cells that leave, and the current bar that moves past them; under 40rem the list is drawn instead, so
+    // nothing leaves at sm (spec correction 70).
+    expect(css.match(/\[data-hide-below/g)).toHaveLength(4);
+    expect(css).not.toContain("[data-hide-below='sm']");
   });
 
   it('never uses signal orange, clay or success, and error only for the error line', () => {
@@ -6702,10 +6697,10 @@ describe('src/components/data-table.css', () => {
   it('shows the list and hides the grid under 40rem of the table box, by container query only', () => {
     const css = rules();
     expect(blockAfter(css, '.data-table-list {')).toContain('display: none;');
-    // The second 40rem block is the switch: the first drops the sm columns.
+    // The one 40rem block is the switch.
     const queries = [...css.matchAll(/@container data-table \(width < 40rem\)/g)].map((match) => match.index);
-    expect(queries).toHaveLength(2);
-    const swap = blockAfter(css.slice(queries[1]), '@container data-table (width < 40rem)');
+    expect(queries).toHaveLength(1);
+    const swap = blockAfter(css, '@container data-table (width < 40rem)');
     expect(blockAfter(swap, '.data-table-grid {')).toContain('display: none;');
     expect(blockAfter(swap, '.data-table-list {')).toContain('display: block;');
     // Never by the viewport, so a table beside an open panel is a list too (ruling 8).
@@ -6716,7 +6711,7 @@ describe('src/components/data-table.css', () => {
     const heading = blockAfter(rules(), '.data-table-section-header {');
     for (const declaration of [
       'position: sticky;',
-      'inset-block-start: var(--page-sticky-top, 0px);',
+      'inset-block-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));',
       'z-index: calc(var(--z-header) - 1);',
       'padding: var(--spacing-peer) var(--spacing-inset) var(--spacing-part);',
       'background-color: var(--data-table-fill);',
@@ -6782,12 +6777,21 @@ describe('src/components/data-table.css', () => {
     expect(blockAfter(css, `${SELECTED}, ${SELECTED}:is(:hover, [data-hovered]) {`)).toContain(
       'background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));',
     );
-    // Out of Select mode a selected item draws its mark, an ink box with a canvas check: never the wash alone.
+    // Out of Select mode a selected item draws its mark, an ink box with a canvas check: never the wash alone. The
+    // slot is every item's while anything is selected, so it draws nothing of its own (spec correction 61).
     const mark = blockAfter(css, '.data-table-item-mark {');
-    expect(mark).toContain('display: none;');
-    expect(mark).toContain('background-color: var(--color-ink);');
-    expect(mark).toContain('color: var(--color-canvas);');
-    expect(blockAfter(css, `${SELECTED} .data-table-item-mark {`)).toContain('display: inline-flex;');
+    expect(mark).not.toContain('display');
+    expect(mark).not.toContain('background-color');
+    expect(mark).toContain('inline-size: 20px;');
+    expect(blockAfter(css, `${SELECTED} .data-table-item-mark {`)).toContain(
+      'background-color: var(--color-ink);',
+    );
+    // The check is the checkbox's own mask, so the HTML holds no icon.
+    const check = blockAfter(css, `${SELECTED} .data-table-item-mark::after {`);
+    expect(check).toContain('background-color: var(--color-canvas);');
+    expect(check).toContain('mask-image: url("data:image/svg+xml,');
+    expect(check).toContain('mask-size: 14px;');
+    expect(css).not.toContain('.data-table-item-mark svg');
     const current = blockAfter(css, '.data-table-item[data-current] {');
     expect(current).toContain('padding-inline-start: calc(var(--data-table-pad) - 3px);');
     expect(current).toContain('border-inline-start: 3px solid var(--color-ink);');
@@ -6805,7 +6809,14 @@ describe('src/components/data-table.css', () => {
   it('keeps the Select button at the head row end, the row a target tall and ruled', () => {
     const css = rules();
     const head = blockAfter(css, '.data-table-list-head {');
-    expect(head).toContain('min-block-size: var(--size-target);');
+    expect(head).toContain('min-block-size: var(--data-table-list-head);');
+    // The head's height: its tallest control and its rule, 44px controls on a coarse pointer.
+    expect(blockAfter(css, '.data-table-list {')).toContain(
+      '--data-table-list-head: calc(max(var(--size-target), var(--size-control)) + 1px);',
+    );
+    expect(blockAfter(blockAfter(css, '@media (pointer: coarse)'), '.data-table-list {')).toContain(
+      '--data-table-list-head: calc(max(var(--size-target), var(--size-control), 2.75rem) + 1px);',
+    );
     expect(head).toContain('border-block-end: 1px solid var(--color-divider);');
     expect(blockAfter(css, '.data-table-list-mode {')).toContain('margin-inline-start: auto;');
   });
@@ -6815,6 +6826,109 @@ describe('src/components/data-table.css', () => {
     expect(total).toContain('border-block-start: 1px solid var(--color-frame);');
     expect(total).toContain('font-weight: 700;');
     expect(total).toContain('justify-content: space-between;');
+  });
+
+  it('sticks the head in Select mode at the page offset on the fill, the headings under it, its controls 44px on touch', () => {
+    const css = rules();
+    const head = blockAfter(css, '.data-table-list-head[data-selecting] {');
+    for (const declaration of [
+      'position: sticky;',
+      'inset-block-start: var(--page-sticky-top, 0px);',
+      'z-index: calc(var(--z-header) - 1);',
+      'background-color: var(--data-table-fill);',
+    ]) {
+      expect(head, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.data-table-list[data-selecting] {')).toContain(
+      '--data-table-list-offset: var(--data-table-list-head);',
+    );
+    const coarse = [...css.matchAll(/@media \(pointer: coarse\)/g)].map((match) =>
+      blockAfter(css.slice(match.index), '@media (pointer: coarse)'),
+    );
+    expect(
+      coarse.some((block) =>
+        block.includes(
+          '.data-table-list-mode, .data-table-list-all .checkbox { min-block-size: max(var(--size-target), 2.75rem); }',
+        ),
+      ),
+    ).toBe(true);
+    // An item keeps clear of the page offset and the head, and of its day heading where there are groups.
+    expect(blockAfter(css, '.data-table-list {')).toContain(
+      '--data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));',
+    );
+    expect(blockAfter(css, '.data-table-list:has(.data-table-section) {')).toContain(
+      'var(--spacing-peer) + var(--spacing-part) + var(--text-overline) * var(--text-overline--line-height)',
+    );
+  });
+
+  it('lets a press on an item in Select mode reach the item, its link taking no pointer and stretched over nothing', () => {
+    const css = rules();
+    expect(blockAfter(css, '.data-table-list[data-selecting] .data-table-link {')).toContain(
+      'pointer-events: none;',
+    );
+    expect(blockAfter(css, '.data-table-list[data-selecting] .data-table-link::after {')).toContain(
+      'content: none;',
+    );
+  });
+
+  it('rings an empty grid inset when it takes focus, in both faces, and Highlight in forced colors', () => {
+    const css = rules();
+    const EMPTY =
+      '.data-table-table:has(> .data-table-body[data-empty]):is(:focus-visible, [data-focus-visible]), .data-table-grid-list[data-empty]:is(:focus-visible, [data-focus-visible]) {';
+    const ring = blockAfter(outsideForcedColors(css), EMPTY);
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+    expect(blockAfter(blockAfter(css, FORCED), EMPTY)).toContain('outline-color: Highlight;');
+    // Both grids resolve the page offset as their own scroll margin, which the key handler reads in pixels.
+    for (const grid of ['.data-table-table {', '.data-table-grid-list {']) {
+      expect(blockAfter(css, grid), grid).toContain(
+        'scroll-margin-block-start: var(--page-sticky-top, 0px);',
+      );
+    }
+  });
+
+  it('never clips a cell that holds only a control or draws an ellipsis beside it', () => {
+    const css = rules();
+    const start = css.indexOf('.data-table-cell:has(> :is(button, input, select, textarea,');
+    expect(start).toBeGreaterThan(-1);
+    const selector = css.slice(start, css.indexOf('{', start));
+    expect(selector).toContain('.data-table-control):only-child)');
+    const block = blockAfter(css.slice(start), '{');
+    expect(block).toContain('overflow: visible;');
+    expect(block).toContain('text-overflow: clip;');
+  });
+
+  it('gives a wrapping cell a part step above and below its two lines, every cell of its row centered', () => {
+    const css = rules();
+    const wrap = blockAfter(css, ".data-table-cell[data-overflow='wrap'] {");
+    expect(wrap).toContain('padding-block: var(--spacing-part);');
+    expect(blockAfter(css, '.data-table-cell {')).toContain('vertical-align: middle;');
+  });
+
+  it('draws the list reloading cue once, at the first day heading or along an ungrouped list top, out of the flow', () => {
+    const css = rules();
+    const FIRST =
+      '.data-table-list[data-reloading] .data-table-grid-list > .data-table-section:not(.data-table-section ~ .data-table-section) .data-table-section-header::after';
+    const TOP =
+      '.data-table-list[data-reloading] .data-table-grid-list:not(:has(> .data-table-section))::before';
+    const line = blockAfter(css, `${FIRST}, ${TOP} {`);
+    expect(line).toContain('block-size: 2px;');
+    expect(line).toContain('background-color: var(--color-ink);');
+    expect(blockAfter(css, `${FIRST} {`)).toContain('position: absolute;');
+    // Its own rule, after the shared one, not the shared rule whose selector list ends in it.
+    const top = blockAfter(css, `} ${TOP} {`);
+    expect(top).toContain('position: sticky;');
+    expect(top).toContain('margin-block-end: -2px;');
+    // No rule draws the line under every heading.
+    expect(css).not.toContain('.data-table-list[data-reloading] .data-table-section-header::after {');
+  });
+
+  it('names each total by its column in slate, at the cell weight', () => {
+    const css = rules();
+    expect(blockAfter(css, '.data-table-list-total-figure {')).toContain('gap: var(--spacing-part);');
+    const name = blockAfter(css, '.data-table-list-total-name {');
+    expect(name).toContain('color: var(--color-slate);');
+    expect(name).toContain('font-weight: var(--text-small--font-weight);');
   });
 
   it('draws the list rules CanvasText and a selected item Highlight in forced colors', () => {

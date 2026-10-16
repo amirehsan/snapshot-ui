@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement } from 'react';
+import { renderToString } from 'react-dom/server';
 import type { Key } from 'react-aria-components';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
@@ -157,6 +158,37 @@ describe('DataTable list face', () => {
     expect(plain?.querySelector('.data-table-item-end')).toBeNull();
   });
 
+  it('describes each item by its meta line and end cells, a part a word apart, and an item with neither by nothing', () => {
+    render(<List />);
+    // The name stays the row's, so a row checkbox reads "Select Corner Mart"; the rest of the item is its
+    // description, which React Aria's name alone left unsaid (spec correction 59).
+    expect(itemAt(0)).toHaveAccessibleName('Corner Mart');
+    expect(itemAt(0)).toHaveAccessibleDescription('14 Oct Groceries -$42.18');
+    const ids = itemAt(0).getAttribute('aria-describedby')?.split(' ') ?? [];
+    expect(ids).toHaveLength(3);
+    for (const id of ids) expect(document.getElementById(id)).toHaveClass('data-table-item-part');
+    // Ids are the item's own: no two items share one.
+    const all = items().flatMap((item) => item.getAttribute('aria-describedby')?.split(' ') ?? []);
+    expect(new Set(all).size).toBe(all.length);
+    const titleOnly: DataTableColumn<Transaction>[] = [
+      { id: 'payee', header: 'Payee', cell: (row) => row.payee },
+      { id: 'category', header: 'Category', cell: (row) => row.category },
+    ];
+    render(<List columns={titleOnly} getGroup={undefined} />);
+    const plain = document.querySelectorAll('.data-table-list')[1]?.querySelector('.data-table-item');
+    expect(plain).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('writes the part ids in the server HTML, which the item reads once it is drawn', () => {
+    const html = renderToString(<List />);
+    const part = /class="data-table-item-part" id="([^"]+)"/.exec(html);
+    expect(part?.[1]).toBeTruthy();
+    // React Aria's GridListItem keeps no aria-describedby, so the server writes the ids and the client the link.
+    const item = /<div[^>]*class="data-table-item"[^>]*>/.exec(html)?.[0];
+    expect(item).toContain('role="row"');
+    expect(item).not.toContain('aria-describedby');
+  });
+
   it('opens an item through its link, marks the current item, and never selects on a press', async () => {
     const user = userEvent.setup();
     render(<List initial={[]} currentKey="t2" />);
@@ -204,6 +236,54 @@ describe('DataTable list face', () => {
     expect(within(list()).queryAllByRole('checkbox')).toHaveLength(0);
   });
 
+  it('toggles an item on a press in Select mode, off its controls, and still opens it on Enter', async () => {
+    const user = userEvent.setup();
+    render(<List initial={[]} />);
+    const face = document.querySelector('.data-table-list');
+    expect(face).not.toHaveAttribute('data-selecting');
+    await user.click(screen.getByRole('button', { name: 'Select' }));
+    // The list says it is in Select mode, so its links take no pointer and the head sticks (spec correction 69).
+    expect(face).toHaveAttribute('data-selecting');
+    const meta = (index: number): Element => {
+      const found = itemAt(index).querySelector('.data-table-item-meta');
+      if (found === null) throw new Error('No meta line');
+      return found;
+    };
+    await user.click(meta(1));
+    expect(selected()).toEqual(['t2']);
+    await user.click(meta(1));
+    expect(selected()).toEqual([]);
+    // A screen reader's virtual click on the item toggles it too.
+    fireEvent.click(itemAt(2), { detail: 0 });
+    expect(selected()).toEqual(['t3']);
+    // Enter opens the focused item and toggles nothing.
+    focusItem(2);
+    await user.keyboard('{Enter}');
+    expect(navigate).toHaveBeenCalledWith('/transactions/t3', undefined);
+    expect(selected()).toEqual(['t3']);
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(face).not.toHaveAttribute('data-selecting');
+    // Out of Select mode a press selects nothing, as ruling 2 says.
+    await user.click(meta(3));
+    expect(selected()).toEqual(['t3']);
+  });
+
+  it('toggles nothing on a press on a disabled item in Select mode, nor on an item without a link out of it', async () => {
+    const user = userEvent.setup();
+    render(<List initial={[]} disabledKeys={['t2']} disabledBehavior="selection" getRowHref={undefined} />);
+    const meta = itemAt(0).querySelector('.data-table-item-meta');
+    if (meta === null) throw new Error('No meta line');
+    await user.click(meta);
+    expect(selected()).toEqual([]);
+    await user.click(screen.getByRole('button', { name: 'Select' }));
+    await user.click(meta);
+    expect(selected()).toEqual(['t1']);
+    const disabledMeta = itemAt(1).querySelector('.data-table-item-meta');
+    if (disabledMeta === null) throw new Error('No meta line');
+    await user.click(disabledMeta);
+    expect(selected()).toEqual(['t1']);
+  });
+
   it('keeps the selection on Done, a selected item keeping its mark and the bar its count', async () => {
     const user = userEvent.setup();
     render(<List initial={[]} />);
@@ -219,6 +299,23 @@ describe('DataTable list face', () => {
     expect(mark).toHaveAttribute('aria-hidden', 'true');
     expect(itemAt(1)).toHaveAttribute('data-selected');
     expect(screen.getByRole('toolbar', { name: 'Bulk actions' })).toHaveTextContent('2 selected');
+  });
+
+  it('holds the mark slot on every item while anything is selected, and draws no icon in the HTML', async () => {
+    const user = userEvent.setup();
+    render(<List initial={[]} />);
+    // Nothing selected: no item holds a mark, so the text starts at the item's edge.
+    expect(document.querySelectorAll('.data-table-list .data-table-item-mark')).toHaveLength(0);
+    focusItem(1);
+    await user.keyboard('x');
+    // One selected: every item holds the slot, so the selected one's text does not move (spec correction 61).
+    const marks = document.querySelectorAll('.data-table-list .data-table-item-mark');
+    expect(marks).toHaveLength(5);
+    expect(document.querySelectorAll('.data-table-list .data-table-item-mark svg')).toHaveLength(0);
+    // In Select mode the boxes take the slot instead.
+    await user.click(screen.getByRole('button', { name: 'Select' }));
+    expect(document.querySelectorAll('.data-table-list .data-table-item-mark')).toHaveLength(0);
+    expect(within(list()).getAllByRole('checkbox')).toHaveLength(5);
   });
 
   it('shows a selection made in the table face by its marks and the bar, with no boxes', () => {
@@ -337,6 +434,71 @@ describe('DataTable list face', () => {
     // No totals line without rows, as the table has no totals row.
     render(<List columns={columns} items={[]} emptyState={<EmptyState title="Nothing" />} />);
     expect(document.querySelectorAll('.data-table-list-total')).toHaveLength(1);
+  });
+
+  it('names each total by its column when more than one column sits at the item end', () => {
+    const rows = FIVE;
+    const two: DataTableColumn<Transaction>[] = [
+      ...columnsWithTotal(rows).map((column) =>
+        column.id === 'amount' ? { ...column, listSlot: 'end' as const } : column,
+      ),
+      {
+        id: 'fee',
+        header: 'Fee',
+        cell: () => '$0.50',
+        align: 'end',
+        listSlot: 'end',
+        total: '$2.50',
+      },
+    ];
+    render(<List columns={two} />);
+    const figures = [...document.querySelectorAll('.data-table-list-total-figure')];
+    expect(figures.map((figure) => figure.textContent)).toEqual(['Amount$1,601.17', 'Fee$2.50']);
+    expect(figures[0]?.querySelector('.data-table-list-total-name')).toHaveTextContent('Amount');
+    // One end column: the line's "Total" says it, and no figure is named.
+    render(<List columns={columnsWithTotal(rows)} />);
+    expect(
+      document.querySelectorAll('.data-table-list-total')[1]?.querySelector('.data-table-list-total-name'),
+    ).toBeNull();
+  });
+
+  it('marks the list reloading after QUIET_MS while rows already shown load again', () => {
+    vi.useFakeTimers();
+    const { rerender } = render(<List />);
+    const face = document.querySelector('.data-table-list');
+    expect(face).not.toHaveAttribute('data-reloading');
+    rerender(<List isLoading />);
+    expect(face).toHaveAttribute('aria-busy', 'true');
+    expect(face).not.toHaveAttribute('data-reloading');
+    act(() => {
+      vi.advanceTimersByTime(QUIET_MS);
+    });
+    expect(face).toHaveAttribute('data-reloading');
+    // The items stay, and no skeleton is drawn.
+    expect(items()).toHaveLength(5);
+    expect(document.querySelector('.data-table-skeleton-item')).toBeNull();
+    rerender(<List />);
+    expect(face).not.toHaveAttribute('data-reloading');
+  });
+
+  it('draws the error in the list body when no rows loaded, over loading and the empty state', () => {
+    render(
+      <List
+        items={[]}
+        isLoading
+        initial={[]}
+        emptyState={<EmptyState title="No transactions" />}
+        error={<EmptyState title="Transactions did not load" />}
+      />,
+    );
+    expect(within(list()).getByRole('heading', { name: 'Transactions did not load' })).toBeInTheDocument();
+    expect(within(list()).queryByRole('heading', { name: 'No transactions' })).toBeNull();
+    const face = document.querySelector('.data-table-list');
+    expect(face).not.toHaveAttribute('aria-busy');
+    expect(document.querySelector('.data-table-skeleton-item')).toBeNull();
+    // No head and no totals while there is nothing to select or add up; the line under rows stays empty.
+    expect(document.querySelector('.data-table-list-head')).toBeNull();
+    expect(document.querySelector('.data-table-error')).toBeEmptyDOMElement();
   });
 
   it('draws the empty state, and two-line skeleton items while loading, busy and said once', () => {

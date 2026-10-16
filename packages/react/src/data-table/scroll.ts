@@ -21,9 +21,36 @@ export function scrollPortOf(element: Element): Element | null {
 }
 
 /**
- * Scrolls `element`, a focused row, cell or list item, by the least that brings it out from under the grid's
- * sticky header row, or the list item's day heading, and the bar in `root`, within the view it scrolls in. Nothing moves when it is clear already, or when focus
- * has moved on by the time the frame comes.
+ * The page's sticky offset, `--page-sticky-top`, resolved to pixels: the grid's own scroll margin holds it (the
+ * stylesheet sets it from the offset), so a length in rem or a calc() reads as the browser resolves it.
+ */
+export function pageStickyTop(grid: Element): number {
+  return parseFloat(getComputedStyle(grid).getPropertyValue('scroll-margin-block-start')) || 0;
+}
+
+/** The list face's head while it sticks over the list, in Select mode; null in the table face and out of it. */
+export function stickyHead(grid: Element): Element | null {
+  return (
+    grid.closest('.data-table-list')?.querySelector(':scope > .data-table-list-head[data-selecting]') ?? null
+  );
+}
+
+/**
+ * Where the bottom of a sticky `part` comes to rest once what it covers scrolls under it, in the view whose top is
+ * `top`: its sticky offset and its height, or its own bottom while it sits lower, in the flow. A day heading or the
+ * head that has not stuck yet sticks as soon as its item scrolls up to it, so its resting place is what covers.
+ */
+function stuckBottom(part: Element, top: number): number {
+  const box = part.getBoundingClientRect();
+  return Math.max(box.bottom, top + (parseFloat(getComputedStyle(part).top) || 0) + box.height);
+}
+
+/**
+ * Scrolls `element`, a focused row, cell or list item, by the least that brings it out from under what covers the
+ * top of its view and the bar in `root`, within the view it scrolls in: the page's sticky offset where the window
+ * scrolls, the grid's sticky header row, or in the list face the item's own day heading and the list's head while
+ * it sticks in Select mode. Nothing moves when it is clear already, or when focus has moved on by the time the
+ * frame comes.
  */
 export function uncover(element: HTMLElement, root: Element): void {
   if (!element.isConnected || element.ownerDocument.activeElement !== element) return;
@@ -32,12 +59,19 @@ export function uncover(element: HTMLElement, root: Element): void {
   const port = scrollPortOf(grid);
   const view = port === null ? { top: 0, bottom: window.innerHeight } : port.getBoundingClientRect();
   // The table's sticky header row, or in the list face the item's own day heading, which sticks over its items.
-  const header = (
+  const header =
     grid.querySelector('[role="columnheader"]') ??
-    element.closest('.data-table-section')?.querySelector('.data-table-section-header')
-  )?.getBoundingClientRect();
+    element.closest('.data-table-section')?.querySelector('.data-table-section-header');
+  const head = stickyHead(grid);
   const bar = root.querySelector('.data-table-bar')?.getBoundingClientRect();
-  const top = Math.max(view.top, header?.bottom ?? view.top);
+  // An ungrouped list has no heading, so the page's own sticky header is the cover there; it is under the
+  // header row and the headings wherever they stick, so the greatest of them is the edge.
+  const top = Math.max(
+    view.top,
+    port === null ? pageStickyTop(grid) : view.top,
+    header === null || header === undefined ? view.top : stuckBottom(header, view.top),
+    head === null ? view.top : stuckBottom(head, view.top),
+  );
   const bottom = Math.min(view.bottom, bar?.top ?? view.bottom);
   const box = element.getBoundingClientRect();
   const delta = box.top < top ? box.top - top : box.bottom > bottom ? box.bottom - bottom : 0;
