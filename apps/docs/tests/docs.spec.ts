@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
 import {
   axeViolations,
   expectTableFace,
@@ -1012,6 +1013,96 @@ test('a tab row that does not fit scrolls inside itself to its selected tab', as
   expect(last.x).toBeGreaterThanOrEqual(room.x);
   expect(last.x + last.width).toBeLessThanOrEqual(room.x + room.width);
   expect(await sideways(page)).toBe(0);
+});
+
+/**
+ * Holds the page's scripts until the returned function releases them, so a test can act on the server's HTML
+ * before hydration and then let the page hydrate.
+ */
+const holdScripts = async (page: Page): Promise<() => Promise<void>> => {
+  const held: Route[] = [];
+  let released = false;
+  await page.route(/\/_next\/static\/.+\.js$/, async (route) => {
+    if (released) await route.continue();
+    else held.push(route);
+  });
+  return async () => {
+    released = true;
+    await Promise.all(held.map((route) => route.continue()));
+  };
+};
+
+/** Puts the pointer down at the middle of `target`, a press the page's scripts have not seen. */
+const pressDown = async (page: Page, target: Locator): Promise<void> => {
+  await target.scrollIntoViewIfNeeded();
+  const box = await target.boundingBox();
+  if (box === null) throw new Error('Nothing drawn to press');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+};
+
+test('a tab row that does not fit passes axe at 390px, before hydration and after', async ({ page }) => {
+  // axe asks that a scrolling region be reachable by key. The tab row is, by its tab stop, which React Aria
+  // gave only in an effect: the server's HTML had none, and axe reported scrollable-region-focusable.
+  await page.setViewportSize({ width: 390, height: 800 });
+  const release = await holdScripts(page);
+  await page.goto('/docs/components/tabs', { waitUntil: 'commit' });
+  const lists = page.locator('.stage .tab-list');
+  await expect(lists.first()).toBeAttached();
+  const overflowing = await lists.evaluateAll((all) =>
+    all.filter((list) => list.scrollWidth > list.clientWidth).map((list) => list.id),
+  );
+  expect(overflowing.length).toBeGreaterThan(0);
+  const scope = async (): Promise<string[]> => {
+    const { violations } = await new AxeBuilder({ page }).include('.stage .tab-list').analyze();
+    return violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+  };
+  expect(await scope()).toEqual([]);
+  // One stop per row, the selected tab.
+  for (const id of overflowing) {
+    const stops = page.locator(`[id="${id}"] [role="tab"][tabindex="0"]`);
+    await expect(stops).toHaveCount(1);
+    await expect(stops).toHaveAttribute('aria-selected', 'true');
+  }
+  await release();
+  await settled(page);
+  expect(await scope()).toEqual([]);
+});
+
+test('a press on a tab that begins before hydration and ends after it selects the tab', async ({ page }) => {
+  // React Aria draws every tab again just after hydration, so the press ends on a new element and the browser,
+  // whose pressed element is gone, sends no click. The new tab follows the press that began on the one it replaced.
+  const release = await holdScripts(page);
+  await page.goto('/docs/components/tabs', { waitUntil: 'commit' });
+  const example = page
+    .locator('.stage .tabs')
+    .filter({ has: page.getByRole('tab', { name: 'Transfers' }) })
+    .filter({ hasNot: page.locator('a.tab') })
+    .first();
+  const income = example.getByRole('tab', { name: 'Income' });
+  await expect(income).toHaveAttribute('aria-selected', 'false');
+  await pressDown(page, income);
+  await release();
+  await settled(page);
+  await page.mouse.up();
+  await expect(example.getByRole('tab', { name: 'Income' })).toHaveAttribute('aria-selected', 'true');
+});
+
+test("a press on a data table row's link that begins before hydration and ends after it opens the row", async ({
+  page,
+}) => {
+  // The rows are drawn again just after hydration, as tabs are, so the row's link follows the press itself.
+  const release = await holdScripts(page);
+  await page.goto('/docs/components/data-table', { waitUntil: 'commit' });
+  const link = page.locator('.stage .data-table-row .data-table-link').first();
+  await expect(link).toBeAttached();
+  const href = await link.getAttribute('href');
+  expect(href).toMatch(/^#/);
+  await pressDown(page, link);
+  await release();
+  await settled(page);
+  await page.mouse.up();
+  await expect(page).toHaveURL(new RegExp(`${href ?? ''}$`));
 });
 
 test.describe('the tabs page without JavaScript', () => {
@@ -3787,6 +3878,36 @@ test.describe('the side panel page without JavaScript', () => {
       ).toBeGreaterThan(300);
     }
   });
+
+  test('keeps the rail expanded beside the open example panel from 1640px, where a fold gains nothing', async ({
+    page,
+  }) => {
+    // The workspace beside the expanded rail reaches the content column's 1320px cap at 1640px, so folding there
+    // would only move the column.
+    for (const width of [1640, 1920]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('/docs/components/side-panel');
+      await expect(page.locator('.stage').first().locator('.side-panel')).toBeVisible();
+      expect(Math.round((await page.locator('#rail').boundingBox())?.width ?? 0), String(width)).toBe(288);
+    }
+    await page.setViewportSize({ width: 1639, height: 800 });
+    await page.goto('/docs/components/side-panel');
+    expect(Math.round((await page.locator('#rail').boundingBox())?.width ?? 0)).toBe(72);
+  });
+});
+
+test('an example side panel leaves the rail expanded at 1920px, and its button says so', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 900 });
+  await visit(page, '/docs/components/side-panel');
+  const { stage } = sidePanelExample(page);
+  await expect(stage.locator('.side-panel')).toBeVisible();
+  await expect
+    .poll(async () => Math.round((await page.locator('#rail').boundingBox())?.width ?? 0))
+    .toBe(288);
+  await expect(page.getByRole('button', { name: 'Collapse the menu' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
 });
 
 /** The row that holds focus, if it is drawn: its `data-key`, or what holds focus instead. */

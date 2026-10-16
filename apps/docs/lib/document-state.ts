@@ -1,7 +1,15 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { readRailCollapsed, readRailUnfolded, readShape, readStagePanelOpen, type Shape } from './prepaint';
+import {
+  RAIL_FOLD_WIDTH,
+  readRailCollapsed,
+  readRailFoldWidth,
+  readRailUnfolded,
+  readShape,
+  readStagePanelOpen,
+  type Shape,
+} from './prepaint';
 
 /** Calls back whenever `attribute` changes on <html>, whoever changes it. */
 function subscribeTo(attribute: string): (onChange: () => void) => () => void {
@@ -38,6 +46,20 @@ const subscribeTree = (onChange: () => void): (() => void) => {
     observer.disconnect();
   };
 };
+
+/** Calls back as the window crosses the width where the rail folds beside an open example panel. */
+const subscribeFoldWidth = (onChange: () => void): (() => void) => {
+  const query = matchMedia(RAIL_FOLD_WIDTH);
+  query.addEventListener('change', onChange);
+  return () => {
+    query.removeEventListener('change', onChange);
+  };
+};
+
+/** Whether the window is narrow enough for the rail to fold beside an open panel. False on the server. */
+export function useRailFoldWidth(): boolean {
+  return useSyncExternalStore(subscribeFoldWidth, readRailFoldWidth, () => false);
+}
 
 /** Whether an example's side panel stands open beside the page. False on the server and while hydrating. */
 export function useStagePanelOpen(): boolean {

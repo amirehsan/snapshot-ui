@@ -3,7 +3,7 @@
 import type { Root } from 'fumadocs-core/page-tree';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
-import { useRailCollapsed, useRailUnfolded, useStagePanelOpen } from '@/lib/document-state';
+import { useRailCollapsed, useRailFoldWidth, useRailUnfolded, useStagePanelOpen } from '@/lib/document-state';
 import { wrapTab } from '@/lib/focus-trap';
 import { writeRailCollapsed, writeRailUnfolded } from '@/lib/prepaint';
 import { ShellContext, type ShellActions } from './context';
@@ -28,13 +28,16 @@ export function DocsShell({
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
   const chosen = useRailCollapsed();
-  // An example's side panel open beside the page folds the rail to its icons from 1024px, as AppShell folds an
-  // app's rail: the stage is narrower than an app's content, and the rows beside the panel need the room. The
-  // stylesheet folds it from the server's HTML; this keeps the collapse button's name and the names beside the
+  // An example's side panel open beside the page folds the rail to its icons from 1024px to under 1640px, as
+  // AppShell folds an app's rail: the stage is narrower than an app's content, and the rows beside the panel need
+  // the room. From 1640px the content column is at its cap beside the expanded rail, so a fold would gain nothing.
+  // The stylesheet folds it from the server's HTML; this keeps the collapse button's name and the names beside the
   // icons in step. Expanding the rail over the panel keeps it expanded until the panel closes.
   const isPanelOpen = useStagePanelOpen();
   const isUnfolded = useRailUnfolded();
-  const collapsed = chosen || (isPanelOpen && !isUnfolded);
+  const isFoldWidth = useRailFoldWidth();
+  const isFolded = isPanelOpen && !isUnfolded && isFoldWidth;
+  const collapsed = chosen || isFolded;
   useEffect(() => {
     if (!isPanelOpen && isUnfolded) writeRailUnfolded(false);
   }, [isPanelOpen, isUnfolded]);
@@ -134,7 +137,7 @@ export function DocsShell({
   };
 
   const toggleCollapsed = (): void => {
-    if (collapsed && isPanelOpen) writeRailUnfolded(true);
+    if (isFolded) writeRailUnfolded(true);
     writeRailCollapsed(!collapsed);
   };
 
