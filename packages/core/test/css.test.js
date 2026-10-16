@@ -3097,7 +3097,7 @@ describe('src/components/sidebar.css', () => {
         .map(([selector, body]) => [selector.split(FOLD).join(COLLAPSED), body]);
     const foldBlock = blockAfter(css, '@media (1024px <= width < 1440px)');
     const copies = foldOf(foldBlock).filter(([, body]) => body !== 'transition: none;');
-    expect(collapsedOf(blockAfter(css, WIDE))).toHaveLength(11);
+    expect(collapsedOf(blockAfter(css, WIDE))).toHaveLength(13);
     expect(copies).toEqual(collapsedOf(blockAfter(css, WIDE)));
     // The forced-colors pair too, under 1440px only.
     const forced = css.split('@media (forced-colors: active) {')[1] ?? '';
@@ -5509,8 +5509,11 @@ describe('src/components/calendar.css', () => {
     const forced = blockAfter(rules(), FORCED_COLORS);
     const chosen = blockAfter(
       forced,
-      `.calendar:not(.range-calendar) .calendar-day[data-selected] .calendar-day-number, ${ENDS} .calendar-day-number, .calendar-preset:is([data-selected], [aria-pressed='true']) {`,
+      `.calendar:not(.range-calendar) :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day) .calendar-day-number, ${ENDS} .calendar-day-number, .calendar-preset:is([data-selected], [aria-pressed='true']) {`,
     );
+    // Out of the forced repaint, whose backplate would blank the text, with its ring HighlightText inside the fill.
+    expect(chosen).toContain('forced-color-adjust: none;');
+    expect(chosen).toContain('outline-color: HighlightText;');
     expect(chosen).toContain('background-color: Highlight;');
     expect(chosen).toContain('color: HighlightText;');
     expect(chosen).toContain('border-color: Highlight;');
@@ -6463,7 +6466,7 @@ describe('src/components/data-table.css', () => {
     expect(body).toContain('z-index: calc(var(--z-header) - 2);');
   });
 
-  it('washes a body row with a link or selection 5% ink over the fill, only where hover exists, never the totals', () => {
+  it('washes a body row with a link or selection 3% ink over the fill, only where hover exists, never the totals', () => {
     const css = rules();
     const hover = blockAfter(css, HOVER);
     expect(
@@ -6471,7 +6474,7 @@ describe('src/components/data-table.css', () => {
         hover,
         ".data-table-body > .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) {",
       ),
-    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));');
+    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 3%, var(--data-table-fill));');
     // Outside hover, only a selected row's and a selected list item's 8% wash mixes a color.
     expect(
       outsideForcedColors(css)
@@ -6503,6 +6506,8 @@ describe('src/components/data-table.css', () => {
     expect(selected).toContain(
       'background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));',
     );
+    // Slate in the row, an app's own cell text included, is granite on the wash, which keeps it at 4.5:1.
+    expect(selected).toContain('--color-slate: var(--color-granite);');
   });
 
   it('sticks the bar to the bottom above the tab bar reserve, one layer under the header token', () => {
@@ -6848,6 +6853,9 @@ describe('src/components/data-table.css', () => {
     const SELECTED = ".data-table-item:is([data-selected], [aria-selected='true'])";
     expect(blockAfter(css, `${SELECTED}, ${SELECTED}:is(:hover, [data-hovered]) {`)).toContain(
       'background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));',
+    );
+    expect(blockAfter(css, `${SELECTED}, ${SELECTED}:is(:hover, [data-hovered]) {`)).toContain(
+      '--color-slate: var(--color-granite);',
     );
     // Out of Select mode a selected item draws its mark, an ink box with a canvas check: never the wash alone. The
     // slot is every item's while anything is selected, so it draws nothing of its own (spec correction 61).
@@ -7337,5 +7345,50 @@ describe('dist/base.css', () => {
     expect(built.slice(open, close)).toMatch(
       /:focus-visible\s*\{\s*outline:\s*var\(--focus-ring-width\) solid var\(--focus-ring-color\);\s*outline-offset:\s*var\(--focus-ring-offset\);\s*\}/,
     );
+  });
+});
+
+describe('text on Highlight in forced colors', () => {
+  // Inside the forced repaint Chromium draws a backplate in the system's background color behind each run of
+  // text, which blanks HighlightText on a Highlight fill. Every part that sets its text that way is drawn out of
+  // the repaint, as a selected DataTable row is, and its ring, which the repaint no longer picks, is named.
+  const forced = (file) =>
+    closeUp(stripComments(read(`src/components/${file}`)))
+      .split(`${FORCED_COLORS} {`)
+      .slice(1)
+      .join(' ');
+  const PARTS = [
+    ['menu.css', '.menu-item[data-selection-mode][data-selected]:not([data-disabled]) {'],
+    ['command-palette.css', '.command-palette-list .menu-item[data-focus-visible] {'],
+    ['filter-chip.css', '.filter-chip[data-active]:not([data-disabled]) {'],
+    ['date-range-picker.css', '.date-segment:is(:focus, [data-focused]) {'],
+    ['tabs.css', ".tab:is([aria-selected='true'], [data-selected]) {"],
+    ['segmented.css', '.segmented-option:is([data-selected], :where(:has(input:checked))) {'],
+    ['pagination.css', ".pagination-page:is([aria-current='page'], [aria-current='true'], [data-current]) {"],
+    ['sidebar.css', ".sidebar-item:is([aria-current='page'], [data-current]) {"],
+    ['tab-bar.css', ".tab-bar-item:is([aria-current='page'], [data-current], [data-current-action]) {"],
+  ];
+
+  for (const [file = '', header = ''] of PARTS) {
+    it(`draws ${header.slice(0, -2)} out of the repaint in ${file}`, () => {
+      const rule = blockAfter(forced(file), header);
+      expect(rule).toContain('forced-color-adjust: none;');
+      expect(rule).toContain('background-color: Highlight;');
+      expect(rule).toContain('color: HighlightText;');
+    });
+  }
+
+  it('names the rings the repaint no longer picks: HighlightText inside a fill, Highlight outside one', () => {
+    const menu = '.menu-item[data-selection-mode][data-selected]:not([data-disabled])[data-focus-visible] {';
+    expect(blockAfter(forced('menu.css'), menu)).toContain('outline-color: HighlightText;');
+    const palette = '.command-palette-list .menu-item[data-focus-visible] {';
+    expect(blockAfter(forced('command-palette.css'), palette)).toContain('outline-color: HighlightText;');
+    // The chip's ring and the current rail item's stand outside the pill, on the page.
+    const chip = '.filter-chip[data-active]:not([data-disabled]) {';
+    expect(blockAfter(forced('filter-chip.css'), chip)).toContain('outline-color: Highlight;');
+    const item = ".sidebar-item:is([aria-current='page'], [data-current]) {";
+    expect(blockAfter(forced('sidebar.css'), item)).toContain('outline-color: Highlight;');
+    const parts = '.filter-chip[data-active]:not([data-disabled]) :where(*) {';
+    expect(blockAfter(forced('filter-chip.css'), parts)).toContain('outline-color: HighlightText;');
   });
 });
