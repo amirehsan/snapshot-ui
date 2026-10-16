@@ -66,7 +66,13 @@ export function SidePanelLayout({
   );
   return (
     <SidePanelLayoutContext value={state}>
-      <div ref={ref} className={cx('side-panel-layout', className)}>
+      {/* data-collapses-rail is in the server's HTML, so AppShell's CSS folds the rail beside an open panel before
+          any script runs (app-shell.css, sidebar.css); useRailFold keeps the shell's state in step after. */}
+      <div
+        ref={ref}
+        className={cx('side-panel-layout', className)}
+        data-collapses-rail={collapsesRail ? '' : undefined}
+      >
         {/* Focus's last resort when what opened the panel has left the page; never a tab stop. */}
         <div ref={content} className="side-panel-layout-content" tabIndex={-1}>
           {children}

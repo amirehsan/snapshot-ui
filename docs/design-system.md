@@ -8467,6 +8467,21 @@ the rail and the workspace move at once, in the frame the panel comes,
 so the content's width changes once and a table beside the panel keeps
 its table face at 1280px, about 45rem of box.
 
+**The fold before scripts** (spec correction 94). A page loaded with
+the panel open at 1024px to 1439px draws the rail folded from its first
+paint: `SidePanelLayout` writes `data-collapses-rail` in the server's
+HTML beside its open aside, and `app-shell.css` and `sidebar.css` fold
+the rail from `:has()` on them, with no transition, before any script
+runs. The stylesheet's copy of the collapsed rules sits in a media
+block of its own, 1024px to under 1440px, since a selector cannot carry
+a media condition; a CSS test keeps each copy's declarations the
+collapsed rule's, and the collapsed width, 6.5rem, written out as the
+sidebar token's collapsed value. A reader who expands the rail over the
+panel writes `data-sidebar-unfolded` on the shell's root, which the
+copy stands down for, until the last panel closes. Until hydration the
+collapse button still reads as the expanded rail's, since only a script
+can change its name; it does nothing before then either.
+
 **Right to left.** The panel's column is at the inline end, on the left
 on a Persian page, and its close button at the header's left. Nothing
 mirrors by attribute.

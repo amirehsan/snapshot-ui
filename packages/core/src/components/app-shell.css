@@ -7,7 +7,8 @@
  * inverted ring an ink fill takes. 1024px is the --breakpoint-md token, written out because a media
  * query cannot read a custom property, and 4rem is the tab bar's height, written in tab-bar.css too;
  * test/css.test.js keeps both equal. Derived in docs/design-system.md ("Floating chrome and the shell").
- * A rail an open SidePanel folds (data-sidebar-folded) folds at once, with no transition ("SidePanel").
+ * A rail an open SidePanel folds (data-sidebar-folded) folds at once, with no transition ("SidePanel"), and the
+ * stylesheet folds it from the server's HTML too, by :has() on the open panel.
  */
 @layer components {
   .app-shell {
@@ -34,6 +35,27 @@
      back moves as the reader's own toggle does. */
   .app-shell[data-sidebar-folded] .app-shell-workspace {
     transition: none;
+  }
+
+  /* Folded for an open SidePanel from the server's HTML: an AppShell holding a SidePanelLayout whose open panel folds
+     the rail (data-collapses-rail) draws the rail's collapsed width, 6.5rem, the sidebar token's collapsed value
+     written out, since a mode value is only set under its attribute; test/css.test.js keeps them equal. So a page
+     loaded with the panel open at 1024px to 1439px never draws the rail expanded first; scripts then set
+     data-sidebar as well. Not while the reader has expanded the rail over the panel (data-sidebar-unfolded). 1440px
+     is the --breakpoint-lg token, written out. */
+  @media (1024px <= width < 1440px) {
+    .app-shell[data-has-sidebar]:has(.side-panel-layout[data-collapses-rail] > .side-panel):not(
+        [data-sidebar-unfolded]
+      ) {
+      --container-sidebar: 6.5rem;
+    }
+
+    .app-shell[data-has-sidebar]:has(.side-panel-layout[data-collapses-rail] > .side-panel):not(
+        [data-sidebar-unfolded]
+      )
+      .app-shell-workspace {
+      transition: none;
+    }
   }
 
   /* The look is the header's own. This only keeps it on top of the page as the page scrolls. */

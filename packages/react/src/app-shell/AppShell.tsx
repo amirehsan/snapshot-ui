@@ -92,7 +92,8 @@ export function useAppShell(): AppShellState {
  * while collapsed and nothing otherwise, so a server paints the right width from a prop, and CSS does the
  * rest. The drawer closes as the window widens past 1024px and on Back and Forward; nothing here needs a
  * browser at render. An open SidePanel in a SidePanelLayout folds the rail under 1440px and gives it back as it
- * closes, without touching the reader's choice (`useRailFold`).
+ * closes, without touching the reader's choice (`useRailFold`). The stylesheet draws the same fold from the server's
+ * HTML (`:has()` on the layout's open panel), so a page loaded with a panel open never draws the rail expanded first.
  */
 export function AppShell({
   sidebar,
@@ -210,6 +211,9 @@ export function AppShell({
           // Collapsed by a fold alone: the rail and the workspace move at once, not over 200ms, so the content
           // beside a panel changes width once and a table there keeps its face.
           data-sidebar-folded={isFolded && !isCollapsedChosen ? '' : undefined}
+          // The reader expanded the rail over an open panel: the stylesheet's own fold, which draws it folded
+          // before scripts run, stands down until the last panel closes.
+          data-sidebar-unfolded={fold.isAsked && fold.isWaived ? '' : undefined}
           data-has-sidebar={present(sidebar) ? '' : undefined}
           data-has-bottom-bar={present(bottomBar) ? '' : undefined}
         >
