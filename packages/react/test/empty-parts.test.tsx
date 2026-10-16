@@ -23,6 +23,7 @@ import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Select } from '../src/select';
 import { Sheet } from '../src/sheet';
+import { SidePanel } from '../src/side-panel';
 import { Sidebar, SidebarGroup, SidebarItem } from '../src/sidebar';
 import { StatTile } from '../src/stat-tile';
 import { COLUMNS, keyOf, TRANSACTIONS } from '../src/stories/transactions';
@@ -340,6 +341,46 @@ describe('an empty data part slot', () => {
       );
       const cell = container.querySelector('tbody td');
       expect(cell, String(emptyState)).toBeEmptyDOMElement();
+      unmount();
+    }
+  });
+
+  it('draws no description or footer in a SidePanel given false, an empty string or null', () => {
+    // The aside: jsdom's matchMedia answers false, so the wide face is drawn from the server's first value only
+    // in a server render; here a query that matches keeps it.
+    const media = vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query === '(width >= 1024px)',
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList,
+    );
+    for (const empty of [false, '', null]) {
+      const { container, unmount } = render(
+        <SidePanel title="Groceries" isOpen onClose={() => undefined} description={empty} footer={empty}>
+          <p>Corner Mart</p>
+        </SidePanel>,
+      );
+      expect(container.querySelector('.side-panel'), String(empty)).not.toBeNull();
+      expect(
+        container.querySelector('.side-panel-description, .side-panel-footer'),
+        String(empty),
+      ).toBeNull();
+      unmount();
+    }
+    media.mockRestore();
+    // The sheet, under 1024px.
+    for (const empty of [false, '', null]) {
+      const { unmount } = render(
+        <SidePanel title="Groceries" isOpen onClose={() => undefined} description={empty} footer={empty}>
+          <p>Corner Mart</p>
+        </SidePanel>,
+      );
+      expect(document.querySelector('.side-panel-sheet'), String(empty)).not.toBeNull();
+      expect(document.querySelector('.sheet-description, .sheet-footer'), String(empty)).toBeNull();
+      expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby');
       unmount();
     }
   });

@@ -1389,6 +1389,40 @@ describe('the data table', () => {
   });
 });
 
+describe('the side panel', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The title is ink and the description slate, on the rail's float surface. The gate holds both as text on
+  // float, so the panel adds no pair.
+  it('cites ink and slate on float, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      expect(CONTRAST_PAIRS, `${text} on float`).toContainEqual(
+        expect.objectContaining({ text, ground: 'float', minimum: TEXT }),
+      );
+    }
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { text, light, dark } of [
+      { text: 'ink', light: 18.43, dark: 17.42 },
+      { text: 'slate', light: 5.49, dark: 6.94 },
+    ]) {
+      expect(measured('light', text, 'float'), `${text} on float, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, 'float'), `${text} on float, dark`).toBeCloseTo(dark, 2);
+      for (const mode of ['light', 'dark'])
+        expect(measured(mode, text, 'float'), `${text} on float, ${mode}`).toBeGreaterThanOrEqual(TEXT);
+    }
+    // The footer's divider is a separator, as Sheet's is: measured and recorded, not gated.
+    expect(measured('light', 'divider', 'float')).toBeCloseTo(1.23, 2);
+    expect(measured('dark', 'divider', 'float')).toBeCloseTo(1.34, 2);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

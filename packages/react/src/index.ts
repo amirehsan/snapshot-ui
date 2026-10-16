@@ -143,6 +143,7 @@ export {
 } from './dialog';
 export { Drawer, type DrawerPlacement, type DrawerProps } from './drawer';
 export { Sheet, SheetTrigger, type SheetProps, type SheetTriggerProps } from './sheet';
+export { SidePanel, SidePanelLayout, type SidePanelLayoutProps, type SidePanelProps } from './side-panel';
 export { Popover, type Placement, type PopoverProps } from './popover';
 export {
   Menu,

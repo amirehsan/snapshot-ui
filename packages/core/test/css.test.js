@@ -2981,6 +2981,13 @@ describe('src/components/app-shell.css', () => {
     expect(written).toBe(tokens.breakpoint.md.value);
   });
 
+  it('moves the workspace at once while the rail is folded for a side panel', () => {
+    // The panel and the fold land in one frame, so the content's width changes once (spec 10.3 amendment 1).
+    expect(blockAfter(rules(), '.app-shell[data-sidebar-folded] .app-shell-workspace {')).toContain(
+      'transition: none;',
+    );
+  });
+
   it('stops the margin moving under reduced motion, after the transition', () => {
     const css = rules();
     const reduced = '@media (prefers-reduced-motion: reduce)';
@@ -3042,6 +3049,15 @@ describe('src/components/sidebar.css', () => {
     ]) {
       expect(rail, declaration).toContain(declaration);
     }
+  });
+
+  it('moves the rail copy and its chevron at once while it is folded for a side panel', () => {
+    expect(
+      blockAfter(
+        rules(),
+        '[data-sidebar-folded] .sidebar:not(.sidebar-drawer), [data-sidebar-folded] .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {',
+      ),
+    ).toContain('transition: none;');
   });
 
   it('scopes every collapsed rule to the rail copy, so the drawer copy never collapses', () => {
@@ -7006,6 +7022,206 @@ describe('src/components/data-table.css', () => {
       ),
     ).toContain('outline-color: HighlightText;');
     expect(blockAfter(forced, '.data-table-bar {')).toContain('border-color: CanvasText;');
+  });
+});
+
+describe('src/components/side-panel.css', () => {
+  // The rules without their comments, with their whitespace closed up. `.side-panel {` first matches the panel's
+  // base rule, before the wide block repeats it.
+  const rules = () => closeUp(stripComments(read('src/components/side-panel.css')));
+  const WIDE = '@media (width >= 1024px)';
+  const FORCED = '@media (forced-colors: active)';
+
+  it('lays the layout out as one column, and the content and a 24rem panel from 1024px while it holds a panel', () => {
+    const css = rules();
+    const layout = blockAfter(css, '.side-panel-layout {');
+    for (const declaration of [
+      'display: grid;',
+      'grid-template-columns: minmax(0, 1fr);',
+      'gap: var(--spacing-peer);',
+      'align-items: start;',
+    ]) {
+      expect(layout, declaration).toContain(declaration);
+    }
+    const content = blockAfter(css, '.side-panel-layout-content {');
+    expect(content).toContain('min-inline-size: 0;');
+    expect(content).toContain('outline: none;');
+    // The panel pushes the content: a grid column, never a layer over it.
+    expect(blockAfter(blockAfter(css, WIDE), '.side-panel-layout:has(> .side-panel) {')).toContain(
+      'grid-template-columns: minmax(0, 1fr) 24rem;',
+    );
+    expect(css).not.toMatch(/(?<![\w-])z-index\s*:/);
+  });
+
+  it('draws the panel on the rail surface: float, hairline, stadium corner, the lift shadow, padded a peer step', () => {
+    const panel = blockAfter(rules(), '.side-panel {');
+    for (const declaration of [
+      'box-sizing: border-box;',
+      'flex-direction: column;',
+      'inline-size: 24rem;',
+      'margin-block-start: var(--spacing-inset);',
+      'padding: var(--spacing-peer);',
+      'border: 1px solid var(--color-hairline);',
+      'border-radius: var(--radius-stadium);',
+      'background-color: var(--color-float);',
+      'color: var(--color-ink);',
+      'font-family: var(--font-sans);',
+      'box-shadow: var(--shadow-lift);',
+    ]) {
+      expect(panel, declaration).toContain(declaration);
+    }
+    // The rail's own surface, declaration for declaration.
+    const rail = blockAfter(closeUp(stripComments(read('src/components/sidebar.css'))), '.sidebar {');
+    for (const declaration of [
+      'border: 1px solid var(--color-hairline);',
+      'border-radius: var(--radius-stadium);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-lift);',
+    ]) {
+      expect(rail, declaration).toContain(declaration);
+    }
+  });
+
+  it('sticks the panel an inset under --page-sticky-top, as tall as the viewport allows, its body scrolling', () => {
+    const css = rules();
+    const panel = blockAfter(css, '.side-panel {');
+    expect(panel).toContain('position: sticky;');
+    // Floating chrome stays an inset clear of what it floats over: the page header above, the viewport's end below.
+    expect(panel).toContain('inset-block-start: calc(var(--page-sticky-top, 0px) + var(--spacing-inset));');
+    expect(panel).toContain(
+      'max-block-size: calc(100dvh - var(--page-sticky-top, 0px) - 2 * var(--spacing-inset));',
+    );
+    const body = blockAfter(css, '.side-panel-body {');
+    for (const declaration of [
+      'flex: 1 1 auto;',
+      'min-block-size: 0;',
+      'margin-block-start: var(--spacing-inset);',
+      'overflow: auto;',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(body, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.side-panel-header {')).toContain('flex: none;');
+    expect(blockAfter(css, '.side-panel-footer {')).toContain('flex: none;');
+  });
+
+  it('sets the sticky offset to 0px inside the body and the sheet body, which scroll (spec correction 68)', () => {
+    const css = rules();
+    expect(blockAfter(css, '.side-panel-body {')).toContain('--page-sticky-top: 0px;');
+    expect(blockAfter(css, '.side-panel-sheet .sheet-body {')).toContain('--page-sticky-top: 0px;');
+  });
+
+  it('sets the title at the h3 step at 700 in ink and the description at the small step in slate', () => {
+    const css = rules();
+    const title = blockAfter(css, '.side-panel-title {');
+    for (const declaration of [
+      'margin: 0;',
+      'color: var(--color-ink);',
+      'font-size: var(--text-h3);',
+      'line-height: var(--text-h3--line-height);',
+      'letter-spacing: var(--text-h3--letter-spacing);',
+      'font-weight: 700;',
+      'overflow-wrap: anywhere;',
+      'outline: none;',
+    ]) {
+      expect(title, declaration).toContain(declaration);
+    }
+    const description = blockAfter(css, '.side-panel-description {');
+    for (const declaration of [
+      'margin: 0;',
+      'margin-block-start: 0.25rem;',
+      'color: var(--color-slate);',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: var(--text-small--font-weight);',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(description, declaration).toContain(declaration);
+    }
+    for (const [, weight] of css.matchAll(/font-weight: (\d+);/g)) {
+      expect(['400', '450', '500', '700']).toContain(weight);
+    }
+    for (const token of [
+      '--color-taupe',
+      '--color-signal',
+      '--color-clay',
+      '--color-error',
+      '--color-success',
+    ]) {
+      expect(css, token).not.toContain(token);
+    }
+  });
+
+  it('rings the heading, the panel and a body that scrolls in the focus ring token when the keyboard lands there', () => {
+    const css = rules();
+    for (const selector of ['.side-panel-title:focus-visible {', '.side-panel:focus-visible {']) {
+      const ring = blockAfter(css, selector);
+      expect(ring, selector).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+      expect(ring, selector).toContain('outline-offset: var(--focus-ring-offset);');
+    }
+    const body = blockAfter(css, '.side-panel-body:focus-visible {');
+    expect(body).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(body).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+  });
+
+  it('puts the close button at the header end, pulled into the corner by a part step', () => {
+    const css = rules();
+    const header = blockAfter(css, '.side-panel-header {');
+    expect(header).toContain('display: flex;');
+    expect(header).toContain('align-items: flex-start;');
+    expect(header).toContain('gap: var(--spacing-part);');
+    expect(blockAfter(css, '.side-panel-header-text {')).toContain('min-inline-size: 0;');
+    const close = blockAfter(css, '.side-panel-close {');
+    expect(close).toContain('flex: none;');
+    expect(close).toContain('margin-block-start: calc(-1 * var(--spacing-part));');
+    expect(close).toContain('margin-inline-end: calc(-1 * var(--spacing-part));');
+  });
+
+  it('pins the footer under a divider', () => {
+    const footer = blockAfter(rules(), '.side-panel-footer {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'justify-content: flex-end;',
+      'gap: var(--spacing-part);',
+      'margin-block-start: var(--spacing-inset);',
+      'padding-block-start: var(--spacing-inset);',
+      'border-block-start: 1px solid var(--color-divider);',
+    ]) {
+      expect(footer, declaration).toContain(declaration);
+    }
+  });
+
+  it('hides the panel under 1024px, the medium breakpoint written out', async () => {
+    const css = rules();
+    expect(blockAfter(css, '.side-panel {')).toContain('display: none;');
+    expect(blockAfter(blockAfter(css, WIDE), '.side-panel {')).toContain('display: flex;');
+    // A media query cannot read a custom property, so the width is written out and must stay the token.
+    const { tokens } = await import('../dist/tokens.js');
+    const widths = [...css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)].map((match) => match[1]);
+    expect(widths.length).toBeGreaterThan(0);
+    for (const width of widths) expect(width).toBe(tokens.breakpoint.md.value);
+  });
+
+  it('never moves, and writes only logical sides', () => {
+    const css = rules();
+    expect(css).not.toMatch(/(?<![\w-])(?:transition|animation)\s*:/);
+    expect(css).not.toContain("[dir='rtl']");
+    expect(css).not.toMatch(
+      /(?:margin|padding|inset|border)-(?:left|right|top|bottom)\b|(?<![\w-])(?:left|right|top|bottom):/,
+    );
+  });
+
+  it('draws the edge CanvasText and the heading ring Highlight in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.side-panel {')).toContain('border-color: CanvasText;');
+    expect(blockAfter(forced, '.side-panel-footer {')).toContain('border-block-start-color: CanvasText;');
+    expect(
+      blockAfter(
+        forced,
+        '.side-panel:focus-visible, .side-panel-title:focus-visible, .side-panel-body:focus-visible {',
+      ),
+    ).toContain('outline-color: Highlight;');
   });
 });
 

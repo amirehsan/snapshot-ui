@@ -7,6 +7,7 @@
  * inverted ring an ink fill takes. 1024px is the --breakpoint-md token, written out because a media
  * query cannot read a custom property, and 4rem is the tab bar's height, written in tab-bar.css too;
  * test/css.test.js keeps both equal. Derived in docs/design-system.md ("Floating chrome and the shell").
+ * A rail an open SidePanel folds (data-sidebar-folded) folds at once, with no transition ("SidePanel").
  */
 @layer components {
   .app-shell {
@@ -26,6 +27,13 @@
     margin-inline-start: var(--app-shell-sidebar);
     padding-block-end: var(--app-shell-inset-block-end);
     transition: margin-inline-start 200ms ease;
+  }
+
+  /* A rail folded for an open SidePanel (data-sidebar-folded) moves at once, in the frame the panel comes, so the
+     content beside the panel changes width once and a table there switches face at most once. Giving the rail
+     back moves as the reader's own toggle does. */
+  .app-shell[data-sidebar-folded] .app-shell-workspace {
+    transition: none;
   }
 
   /* The look is the header's own. This only keeps it on top of the page as the page scrolls. */

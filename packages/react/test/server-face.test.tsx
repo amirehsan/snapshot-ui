@@ -12,6 +12,7 @@ import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { SearchField } from '../src/search-field';
+import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 
 /**
@@ -148,6 +149,26 @@ const FACES: [name: string, element: ReactElement][] = [
       bulkActions={<Button variant="secondary">Categorize</Button>}
       formatCount={(count) => String(count)}
     />,
+  ],
+  [
+    // Open: the layout, the aside with its heading, description, close button, body and footer, and nothing of
+    // the sheet, which mounts only after hydration under 1024px.
+    'SidePanel',
+    <SidePanelLayout
+      panel={
+        <SidePanel
+          title="Groceries"
+          description="12 October"
+          isOpen
+          onClose={noop}
+          footer={<Button>Save</Button>}
+        >
+          <p>Corner Mart</p>
+        </SidePanel>
+      }
+    >
+      <p>The transactions</p>
+    </SidePanelLayout>,
   ],
 ];
 

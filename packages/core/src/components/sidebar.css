@@ -128,6 +128,12 @@
     transition: rotate 200ms ease;
   }
 
+  /* Folded for an open SidePanel, the rail moves at once, in the frame the panel comes (app-shell.css). */
+  [data-sidebar-folded] .sidebar:not(.sidebar-drawer),
+  [data-sidebar-folded] .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {
+    transition: none;
+  }
+
   @media (hover: hover) {
     .sidebar-collapse:is(:hover, [data-hovered]) {
       color: var(--color-ink);

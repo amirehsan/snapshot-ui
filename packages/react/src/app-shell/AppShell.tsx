@@ -6,7 +6,10 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
+  useRef,
+  useState,
   type HTMLAttributes,
   type ReactElement,
   type ReactNode,
@@ -43,7 +46,9 @@ export interface AppShellProps extends Omit<HTMLAttributes<HTMLDivElement>, 'chi
 }
 
 export interface AppShellState {
+  /** Whether the rail is drawn collapsed: the reader's choice, or folded for an open SidePanel under 1440px. */
   isSidebarCollapsed: boolean;
+  /** The reader's choice. Expanding a rail a SidePanel folded keeps it expanded until that panel closes. */
   setSidebarCollapsed: (isCollapsed: boolean) => void;
   isDrawerOpen: boolean;
   openDrawer: () => void;
@@ -53,6 +58,25 @@ export interface AppShellState {
 }
 
 const AppShellContext = createContext<AppShellState | null>(null);
+
+/** Asks the shell to fold its rail, and returns what gives it back. Internal: SidePanel's, through `useRailFold`. */
+const RailFoldContext = createContext<(() => () => void) | null>(null);
+
+/**
+ * Folds the shell's rail to its collapsed width while `isFolding` and the viewport is under 1440px, and gives it
+ * back after (spec 10.3, amendment 1). The reader's own choice is untouched: nothing is told through
+ * `onSidebarCollapsedChange`, so a cookie that keeps the choice never holds a fold. A layout effect, so the fold
+ * lands in the frame the panel comes in. Outside an AppShell it does nothing.
+ *
+ * Internal: not exported from the package.
+ */
+export function useRailFold(isFolding: boolean): void {
+  const fold = use(RailFoldContext);
+  useLayoutEffect(() => {
+    if (!isFolding || fold === null) return;
+    return fold();
+  }, [fold, isFolding]);
+}
 
 /** The shell's state, for the parts and for an app's own header or palette. Throws outside an AppShell. */
 export function useAppShell(): AppShellState {
@@ -67,7 +91,8 @@ export function useAppShell(): AppShellState {
  * state, because the header's menu button and the rail share it. The root carries `data-sidebar="collapsed"`
  * while collapsed and nothing otherwise, so a server paints the right width from a prop, and CSS does the
  * rest. The drawer closes as the window widens past 1024px and on Back and Forward; nothing here needs a
- * browser at render.
+ * browser at render. An open SidePanel in a SidePanelLayout folds the rail under 1440px and gives it back as it
+ * closes, without touching the reader's choice (`useRailFold`).
  */
 export function AppShell({
   sidebar,
@@ -88,7 +113,7 @@ export function AppShell({
 }: AppShellProps): ReactElement {
   const generatedId = useId();
   const mainId = mainIdProp ?? generatedId;
-  const [isSidebarCollapsed, setSidebarCollapsed] = useControllableState(
+  const [isCollapsedChosen, setCollapsedChosen] = useControllableState(
     isSidebarCollapsedProp,
     defaultSidebarCollapsed ?? false,
     onSidebarCollapsedChange,
@@ -104,6 +129,48 @@ export function AppShell({
   const closeDrawer = useCallback(() => {
     setDrawerOpen(false);
   }, [setDrawerOpen]);
+
+  // Whether open SidePanels ask for a fold, and whether the reader expanded the rail over one; and whether the
+  // viewport is 1440px or wider, where the rail and a panel both fit and nothing folds. A panel keyed by its row
+  // gives its fold back and the next panel asks again in one commit, so the fold, and the reader's waiver of it,
+  // end only when no panel asks once that commit is done.
+  const folds = useRef(0);
+  const [fold, setFold] = useState({ isAsked: false, isWaived: false });
+  const [isRoomy, setRoomy] = useState(false);
+  const requestFold = useCallback(() => {
+    folds.current += 1;
+    setFold((each) => (each.isAsked ? each : { isAsked: true, isWaived: false }));
+    return () => {
+      folds.current -= 1;
+      queueMicrotask(() => {
+        if (folds.current === 0) setFold({ isAsked: false, isWaived: false });
+      });
+    };
+  }, []);
+  useLayoutEffect(() => {
+    // Read in a layout effect, so a fold asked for as a panel mounts already knows the width. Guarded, because a
+    // test environment may lack matchMedia. 1440px is the --breakpoint-lg token.
+    if (typeof window.matchMedia !== 'function') return;
+    const roomy = window.matchMedia('(width >= 1440px)');
+    const read = (): void => {
+      setRoomy(roomy.matches);
+    };
+    read();
+    roomy.addEventListener('change', read);
+    return () => {
+      roomy.removeEventListener('change', read);
+    };
+  }, []);
+  const isFolded = fold.isAsked && !fold.isWaived && !isRoomy;
+  const isSidebarCollapsed = isCollapsedChosen || isFolded;
+  const setSidebarCollapsed = useCallback(
+    (isCollapsed: boolean) => {
+      // Expanding a folded rail is the reader's call over the panel's: it stays expanded until the panel closes.
+      if (!isCollapsed && fold.isAsked) setFold({ isAsked: true, isWaived: true });
+      setCollapsedChosen(isCollapsed);
+    },
+    [fold.isAsked, setCollapsedChosen],
+  );
 
   // Back and Forward leave the page the drawer was opened on.
   useEffect(() => {
@@ -133,27 +200,32 @@ export function AppShell({
 
   return (
     <AppShellContext value={state}>
-      <div
-        {...props}
-        ref={ref}
-        className={cx('app-shell', className)}
-        // Never "expanded": an attribute set higher up, by a pre-paint script, must not be reset.
-        data-sidebar={isSidebarCollapsed ? 'collapsed' : undefined}
-        data-has-sidebar={present(sidebar) ? '' : undefined}
-        data-has-bottom-bar={present(bottomBar) ? '' : undefined}
-      >
-        <a className="app-shell-skip" href={`#${mainId}`}>
-          {skipLinkLabel}
-        </a>
-        {sidebar}
-        <div className="app-shell-workspace">
-          {present(header) && <div className="app-shell-header">{header}</div>}
-          <main className="app-shell-main" id={mainId} tabIndex={-1}>
-            {children}
-          </main>
+      <RailFoldContext value={requestFold}>
+        <div
+          {...props}
+          ref={ref}
+          className={cx('app-shell', className)}
+          // Never "expanded": an attribute set higher up, by a pre-paint script, must not be reset.
+          data-sidebar={isSidebarCollapsed ? 'collapsed' : undefined}
+          // Collapsed by a fold alone: the rail and the workspace move at once, not over 200ms, so the content
+          // beside a panel changes width once and a table there keeps its face.
+          data-sidebar-folded={isFolded && !isCollapsedChosen ? '' : undefined}
+          data-has-sidebar={present(sidebar) ? '' : undefined}
+          data-has-bottom-bar={present(bottomBar) ? '' : undefined}
+        >
+          <a className="app-shell-skip" href={`#${mainId}`}>
+            {skipLinkLabel}
+          </a>
+          {sidebar}
+          <div className="app-shell-workspace">
+            {present(header) && <div className="app-shell-header">{header}</div>}
+            <main className="app-shell-main" id={mainId} tabIndex={-1}>
+              {children}
+            </main>
+          </div>
+          {bottomBar}
         </div>
-        {bottomBar}
-      </div>
+      </RailFoldContext>
     </AppShellContext>
   );
 }
