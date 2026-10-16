@@ -494,6 +494,38 @@ export const RailFold: Story = {
   },
 };
 
+/**
+ * Focus given back follows the row while the content settles: the panel closes with the box 40rem or more, so
+ * focus lands on the table face's row, and the box then narrows, as it does while a rail beside the page unfolds
+ * over a transition, so the list face takes over and hides that row. Focus moves to the same row in the list
+ * rather than falling to the page (WCAG 2.4.3). Three engines.
+ */
+export const FocusFollowsFace: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: DESKTOP,
+  render: () => (
+    <div data-testid="box" style={{ width: '1100px' }}>
+      <Page initial={null} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = only(canvasElement, '[data-testid="box"]');
+    const row = bodyRows(canvasElement)[0];
+    if (row === undefined) throw new Error('No row');
+    row.focus();
+    await userEvent.keyboard('{Enter}');
+    const heading = await within(canvasElement).findByRole('heading', { level: 2, name: 'Corner Mart' });
+    await waitFor(() => expect(heading).toHaveFocus());
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(row).toHaveFocus());
+    // The box narrows under 40rem after focus came back: the list face is drawn and the table row hidden.
+    box.style.width = '600px';
+    const item = only(canvasElement, '.data-table-list [role="row"][data-key="t1"]');
+    await waitFor(() => expect(item).toHaveFocus());
+    await expect(getComputedStyle(only(canvasElement, '.data-table-grid')).display).toBe('none');
+  },
+};
+
 /** The server's HTML of a page in an AppShell, its panel open, drawn with no script: nothing hydrates it. */
 function ServerHtml(): ReactElement {
   const html = renderToString(

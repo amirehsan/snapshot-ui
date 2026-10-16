@@ -12,7 +12,7 @@ export interface SkeletonProps {
 }
 
 /**
- * A still shape where content will be, so a loading page keeps its layout. It holds no text and is hidden from
+ * A placeholder shape where content will be, so a loading page keeps its layout. It holds no text and is hidden from
  * assistive technology: the part that shows skeletons says "Loading" once, in its own status. Static, so a
  * server component renders it.
  */

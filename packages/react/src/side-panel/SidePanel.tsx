@@ -137,6 +137,42 @@ function drawnOpener(element: Element | null, content: HTMLElement | null): HTML
   return [...twins].find(isDrawn) ?? null;
 }
 
+/** How long focus given back follows the row's face: longer than a transition of the content's width. */
+const FOLLOW_MS = 1000;
+
+/**
+ * Keeps focus given back on a drawn row while the content settles. A DataTable beside the panel draws one face by
+ * its box's width, and that width can still be moving as the panel leaves, as when a rail beside the page unfolds
+ * over a transition: focus may land on the table face's row while the box is 40rem or more, and the box then
+ * narrows to its list face, which hides that row and drops focus to the body. While the content resizes, for a
+ * second, focus that has lost its row moves to the same row in the face drawn now. Focus the reader moves anywhere
+ * else ends the watch.
+ */
+function followFace(element: HTMLElement, content: HTMLElement | null): void {
+  if (content === null || typeof ResizeObserver !== 'function') return;
+  let current = element;
+  const observer = new ResizeObserver(() => {
+    const active = document.activeElement;
+    if (active !== current && !isFocusLost()) {
+      stop();
+      return;
+    }
+    if (current.isConnected && isDrawn(current) && active === current) return;
+    const twin = drawnOpener(current, content);
+    if (twin === null || twin === current) return;
+    twin.focus({ preventScroll: true });
+    if (document.activeElement === twin) current = twin;
+  });
+  const timer = setTimeout(() => {
+    stop();
+  }, FOLLOW_MS);
+  function stop(): void {
+    observer.disconnect();
+    clearTimeout(timer);
+  }
+  observer.observe(content);
+}
+
 /**
  * Brings the row that holds what opened the panel back into view if the panel's coming moved it out, so the reader
  * still sees what they opened beside its detail.
@@ -193,7 +229,9 @@ export function SidePanel({
   // A refused swipe has taken the sheet off the screen; a new key mounts it again, and it rises.
   const [sheetKey, setSheetKey] = useState(0);
 
-  useRailFold(isOpen && (layout?.collapsesRail ?? false));
+  // Only beside the content: under 1024px the panel is a sheet and the rail a drawer, so nothing folds, and
+  // useAppShell().isSidebarCollapsed keeps saying what the reader chose.
+  useRailFold(isOpen && isWide && (layout?.collapsesRail ?? false));
 
   // Whether this opening continues the layout's open stretch, as a panel keyed by the next row does. Asked in a
   // layout effect, where the panel before gives up its stretch in the same commit.
@@ -235,7 +273,10 @@ export function SidePanel({
     const back = drawnOpener(openerOf(), contentOf());
     if (back !== null) {
       back.focus();
-      if (document.activeElement === back) return;
+      if (document.activeElement === back) {
+        followFace(back, contentOf());
+        return;
+      }
     }
     contentOf()?.focus({ preventScroll: true });
   }, [contentOf, openerOf]);
