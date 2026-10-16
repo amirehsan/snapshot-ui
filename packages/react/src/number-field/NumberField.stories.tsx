@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { expect, fn, waitFor } from 'storybook/test';
 import { Button } from '../button';
+import { focusOn } from '../stories/focus';
 import { tokenColor, tokenPixels, washColor } from '../stories/paint';
 import { NumberField } from './NumberField';
 
@@ -247,8 +248,8 @@ export const HomeEnd: Story = {
   render: () => <NumberField label="Amount" money={{ symbol: '$' }} minValue={0} maxValue={999999} />,
   play: async ({ canvas, userEvent }) => {
     const input = canvas.getByRole<HTMLInputElement>('textbox', { name: 'Amount' });
-    await userEvent.click(input);
-    await waitFor(() => expect(input).toHaveFocus());
+    // Focused directly: the story is about Home and End, not the press that would focus the field.
+    await focusOn(input);
     await userEvent.keyboard('1234.50');
     await waitFor(() => expect(input).toHaveValue('1234.50'));
     await userEvent.keyboard('{Home}');

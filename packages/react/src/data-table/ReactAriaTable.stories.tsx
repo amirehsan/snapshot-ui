@@ -290,8 +290,10 @@ export const CellControls: Story = {
     const triggerHit = hitAt(trigger);
     await expect(trigger.contains(triggerHit)).toBe(true);
     await userEvent.click(triggerHit);
-    await within(document.body).findByRole('menu');
+    const menu = await within(document.body).findByRole('menu');
     await expect(navigate).not.toHaveBeenCalled();
+    // The menu takes focus as it opens, which runs late on a busy runner; Escape is the menu's once it has.
+    await waitFor(() => expect(menu.contains(document.activeElement)).toBe(true));
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(document.querySelector('[role="menu"]')).toBeNull(), { timeout: 3000 });
     await expect(navigate).not.toHaveBeenCalled();
