@@ -477,7 +477,7 @@ test('the installation page explains the server face and the date library', asyn
 test('the chart pages name the core version charts needs', async ({ page }) => {
   for (const slug of ['line-chart', 'sparkline']) {
     await visit(page, `/docs/charts/${slug}`);
-    await expect(page.locator('main'), slug).toContainText('0.5 for charts 0.1.2');
+    await expect(page.locator('main'), slug).toContainText('0.6 for charts 0.1.3');
   }
 });
 
@@ -487,6 +487,18 @@ test('the routing page names the tabs and the page links among the parts that na
   await expect(section).toHaveCount(1);
   await expect(section.locator('a[href="/docs/components/tabs"]')).toHaveCount(1);
   await expect(section.locator('a[href="/docs/components/pagination"]')).toHaveCount(1);
+  await expect(section.locator('a[href="/docs/components/data-table"]')).toHaveCount(1);
+});
+
+test('the installation page names EmptyState and Skeleton among the static parts and DataTable among the client ones', async ({
+  page,
+}) => {
+  await visit(page, '/docs/installation');
+  const section = guideSection(page, 'Next.js server components');
+  await expect(section).toHaveCount(1);
+  for (const text of ['EmptyState', 'Skeleton', 'DataTable', 'getRowHref', 'SidePanel']) {
+    await expect(section, text).toContainText(text);
+  }
 });
 
 test('a docs card pads 20px on a phone through --spacing-card', async ({ page }) => {
@@ -2901,7 +2913,7 @@ test('the installation page installs the charts package and names the core versi
   const section = page
     .locator('.docs-section')
     .filter({ has: page.getByRole('heading', { name: 'Charts', exact: true }) });
-  await expect(section).toContainText('0.5 for charts 0.1.2');
+  await expect(section).toContainText('0.6 for charts 0.1.3');
   await expect(section.getByRole('link', { name: 'Line chart', exact: true })).toHaveAttribute(
     'href',
     '/docs/charts/line-chart',
@@ -2971,7 +2983,11 @@ test('a press anywhere on a data table row opens its link, and a middle click op
 /** The data table page's selection example: its stage and its grid, drawn as a table. */
 const selectionTable = async (page: Page): Promise<{ stage: Locator; table: Locator }> => {
   await visit(page, '/docs/components/data-table');
-  const stage = page.locator('.stage').filter({ has: page.getByRole('checkbox', { name: 'Select all' }) });
+  const stage = page
+    .locator('.stage')
+    .filter({ has: page.getByRole('checkbox', { name: 'Select all' }) })
+    // The selection example, before the recipe's, which selects too.
+    .first();
   const table = stage.getByRole('grid', { name: 'Transactions' });
   await expectTableFace(table);
   return { stage, table };
@@ -3600,6 +3616,101 @@ test('an open side panel that moves across 1024px while the reader is elsewhere 
   await expect(page.getByRole('dialog')).toHaveCount(0);
   // Back beside the page, the panel does not take focus or scroll the reader to it.
   await expect.poll(() => page.evaluate(() => document.activeElement === document.body)).toBe(true);
+});
+
+/** The data table page's Transactions recipe: its stage, and its table face's header and body rows. */
+const transactionsRecipe = (
+  page: Page,
+): { stage: Locator; table: Locator; rows: Locator; pages: Locator } => {
+  const stage = page
+    .locator('.stage')
+    .filter({ has: page.getByRole('heading', { level: 3, name: 'Transactions', exact: true }) });
+  const table = stage.locator('.data-table-table');
+  return {
+    stage,
+    table,
+    rows: table.locator('.data-table-body [role="row"]'),
+    pages: stage.getByRole('navigation', { name: 'Transactions pages' }),
+  };
+};
+
+test('the transactions recipe writes the sort, the page and the open row to the URL and reads them back after a reload', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const { stage, table, rows, pages } = transactionsRecipe(page);
+  await expectTableFace(table);
+  await table.getByRole('columnheader', { name: 'Amount' }).click();
+  await expect(page).toHaveURL(/[?&]sort=amount(&|$)/);
+  await pages.getByRole('link', { name: 'Page 2', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]page=2(&|$)/);
+  // Sorted by amount, smallest first, page 2 starts with the 31.25 at Corner Mart.
+  await expect(rows.first()).toContainText('−$31.25');
+  await rows.first().locator('.data-table-link').click();
+  await expect(page).toHaveURL(/[?&]open=t10(&|$)/);
+  await expect(stage.getByRole('complementary', { name: 'Corner Mart' })).toBeVisible();
+  expect(new URL(page.url()).searchParams.get('sort')).toBe('amount');
+  expect(new URL(page.url()).searchParams.get('page')).toBe('2');
+  await page.reload();
+  await settled(page);
+  // Read back: the sort, the page and the open row, its heading drawn beside the rows.
+  // Beside the panel the box draws its list, so the table's sorted header is read hidden.
+  await expect(table.locator('[role="columnheader"][aria-sort="ascending"]')).toContainText('Amount');
+  await expect(pages.getByRole('link', { name: 'Page 2', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  const panel = stage.getByRole('complementary', { name: 'Corner Mart' });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole('heading', { level: 2, name: 'Corner Mart' })).toBeVisible();
+  await expect(panel).toContainText('−$31.25');
+});
+
+test('Back closes the panel the recipe opened', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const { stage, rows } = transactionsRecipe(page);
+  await rows.first().locator('.data-table-link').click();
+  await expect(page).toHaveURL(/[?&]open=t1(&|$)/);
+  await expect(stage.getByRole('complementary', { name: 'Corner Mart' })).toBeVisible();
+  await page.goBack();
+  await expect(page).not.toHaveURL(/open=/);
+  await expect(stage.locator('.side-panel')).toHaveCount(0);
+});
+
+test('the recipe clears its selection when the page changes', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const { stage, rows, pages } = transactionsRecipe(page);
+  await rows.first().focus();
+  await page.keyboard.press('x');
+  await expect(rows.first()).toHaveAttribute('aria-selected', 'true');
+  const bar = stage.getByRole('toolbar', { name: 'Bulk actions' });
+  await expect(bar).toContainText('1 selected');
+  await pages.getByRole('link', { name: 'Page 2', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]page=2(&|$)/);
+  await expect(bar).toHaveCount(0);
+  // Back on the first page, the rows are as they were and none is selected: the selection was cleared.
+  await pages.getByRole('link', { name: 'Page 1', exact: true }).click();
+  await expect(page).not.toHaveURL(/page=/);
+  await expect(rows.first()).toHaveAttribute('aria-selected', 'false');
+  await expect(bar).toHaveCount(0);
+});
+
+test('the recipe header sticks under its 4rem header, under the site header', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const { table } = transactionsRecipe(page);
+  await expectTableFace(table);
+  const site = Math.round((await page.locator('.header').boundingBox())?.height ?? 0);
+  expect(site).toBeGreaterThan(0);
+  // Scroll the recipe's table under both headers: its header row stops 64px under the site's header.
+  await table.evaluate((element, offset) => {
+    window.scrollBy(0, element.getBoundingClientRect().top - offset);
+  }, site);
+  const column = table.getByRole('columnheader', { name: 'Payee' });
+  await expect.poll(async () => Math.round((await column.boundingBox())?.y ?? 0)).toBe(site + 64);
 });
 
 test('an example side panel folds the rail to its icons beside the page, and the reader can expand it over the panel', async ({
