@@ -8007,7 +8007,16 @@ three engines, and a docs end-to-end test with the real Tab key).
 
 **The modifier Enter, per engine** (open question 7, spec correction
 32). The `ModifierEnter` play presses Ctrl+Enter on a row and records
-the click that reaches the row's link: PENDING.
+the click that reaches the row's link. In Chromium, WebKit and Firefox
+(CI at 6b36ad5) one click reached the link carrying Ctrl, the router
+was not called, so React Aria's link left it to the browser, and the
+row stayed unselected; Enter with no modifier then reached it with
+none, and the router opened the row. What each browser opens for the
+modifier click, a new tab or nothing, is not observable in a play, and
+WebKit may ignore a modifier on a click a script dispatched; the
+owner's device checks read it (owner action 4). Arrow Right onto the
+row's link and the browser's own modifier Enter there is the fallback
+the docs can name (open question 7).
 
 **Stale keys** (risk R6). A selection keeps keys of rows that have left
 `items` until the app drops them, so the bar counts only keys still
