@@ -118,6 +118,11 @@ export interface Drawn {
   ink: string;
   /** The WCAG contrast ratio of the two, to two decimals. */
   ratio: number;
+  /**
+   * The share of the box drawn in the ink, to two decimals. Glyphs cover a small part of the box around them; a
+   * run of text Chromium's backplate has blanked is a solid block in the ink's place.
+   */
+  inkShare: number;
 }
 
 /**
@@ -164,7 +169,13 @@ export const drawn = async (
     for (const key of counts.keys()) if (contrast(fill, key) > contrast(fill, ink)) ink = key;
     const css = (key: number): string =>
       `rgb(${String((key >> 16) & 255)}, ${String((key >> 8) & 255)}, ${String(key & 255)})`;
-    return { fill: css(fill), ink: css(ink), ratio: Math.round(contrast(fill, ink) * 100) / 100 };
+    const share = (counts.get(ink) ?? 0) / Math.max(1, pixels.length / 4);
+    return {
+      fill: css(fill),
+      ink: css(ink),
+      ratio: Math.round(contrast(fill, ink) * 100) / 100,
+      inkShare: Math.round(share * 100) / 100,
+    };
   }, shot.toString('base64'));
 };
 

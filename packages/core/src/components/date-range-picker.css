@@ -115,7 +115,10 @@
       color: CanvasText;
     }
 
+    /* Out of the repaint, as a selected DataTable row is: inside it Chromium draws a backplate in the system's
+       background color behind the figures, which blanks HighlightText. */
     .date-segment:is(:focus, [data-focused]) {
+      forced-color-adjust: none;
       background-color: Highlight;
       color: HighlightText;
     }

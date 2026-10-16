@@ -272,11 +272,25 @@
    * the browser's own ring color would sit on the Highlight fill. These are the
    * only colors in this file that are not tokens; the reader's own palette is
    * the point there.
+   *
+   * The chosen option is drawn out of the repaint, as a selected DataTable row
+   * is: inside it Chromium draws a backplate in the system's background color
+   * behind the label, which blanks HighlightText, and the canvas label of a
+   * disabled chosen option on its GrayText fill. Out of it nothing is forced,
+   * so every color on the option is a system color named here, and no part
+   * inside has a fill of its own.
    */
   @media (forced-colors: active) {
     .segmented-option:is([data-selected], :where(:has(input:checked))) {
+      forced-color-adjust: none;
       background-color: Highlight;
       color: HighlightText;
+    }
+
+    .segmented-option:is([data-selected], :where(:has(input:checked))) :where(*) {
+      border-color: currentColor;
+      background-color: transparent;
+      color: inherit;
     }
 
     .segmented-option:is([data-disabled], :where(:has(input:disabled))) {

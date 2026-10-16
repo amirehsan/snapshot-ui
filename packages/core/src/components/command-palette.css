@@ -183,7 +183,10 @@
       outline: auto;
     }
 
+    /* Out of the repaint, as menu.css draws a chosen row: the backplate would blank HighlightText. */
     .command-palette-list .menu-item[data-focus-visible] {
+      forced-color-adjust: none;
+      outline-color: HighlightText;
       background-color: Highlight;
       color: HighlightText;
     }
