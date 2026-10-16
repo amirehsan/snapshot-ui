@@ -1612,41 +1612,60 @@ export const ScrollClear: Story = {
 
 /**
  * Page Down and Page Up move by the rows that fit in the view (risk R4), not to the first and last row: from the
- * first row of sixty, Page Down lands on a row still under the page's end, and Page Up comes back to the first.
+ * first row of thirty, Page Down lands on a row still under the page's end, and Page Up comes back to the first.
  * Focus is checked on a row before every key: a key that reaches the header's Select all box instead is not the
  * table's, and user-event would apply a text field's Page Down to that input. Three engines.
  */
 export const PageKeys: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
+  // Thirty rows: more than a page of the 900px window, and half the drawing of sixty, which a busy runner's
+  // Firefox took past the time limit to lay out with both faces and the selection column.
   render: () => (
     <Box>
-      <Selecting items={manyTransactions(60)} />
+      <Selecting items={manyTransactions(30)} />
     </Box>
   ),
   play: async ({ canvasElement }) => {
     window.scrollTo(0, 0);
     const rows = bodyRows(canvasElement);
     const first = rowAt(canvasElement, 0);
-    first.focus();
-    await waitFor(() => expect(first).toHaveFocus());
-    // The rows that fit under the 40px header row in the window, which scrolls the page.
-    const header = within(canvasElement).getAllByRole('columnheader')[0]?.getBoundingClientRect().height ?? 0;
-    const fit = Math.floor((window.innerHeight - header) / first.getBoundingClientRect().height);
-    await userEvent.keyboard('{PageDown}');
-    const reached = rows.findIndex((row) => row === document.activeElement);
-    await expect(reached).toBe(fit);
-    await expect(reached).toBeLessThan(rows.length - 1);
-    await userEvent.keyboard('{PageUp}');
-    await waitFor(() => expect(first).toHaveFocus());
-    await userEvent.keyboard('x');
-    await waitFor(() => expect(selectedKeysOf(canvasElement)).toHaveLength(1));
-    await expect(first).toHaveFocus();
-    // Shift extends the selection over the page it moves by, which the bar, shown now, makes a row shorter.
-    await userEvent.keyboard('{Shift>}{PageDown}{/Shift}');
-    const extended = rows.findIndex((row) => row === document.activeElement);
-    await expect(extended).toBeGreaterThan(1);
-    await waitFor(() => expect(selectedKeysOf(canvasElement)).toHaveLength(extended + 1));
-    window.scrollTo(0, 0);
+    /** A key, unless the story has gone: a play that outlived its time limit stops rather than type into the next. */
+    const press = async (keys: string): Promise<void> => {
+      if (!first.isConnected) throw new Error('The story has gone');
+      await userEvent.keyboard(keys);
+    };
+    /** The body row that holds focus, once focus has left `from`, polled rather than read at once. */
+    const focusedFrom = (from: Element): Promise<number> =>
+      waitFor(() => {
+        const index = rows.findIndex((row) => row === document.activeElement);
+        if (index < 0 || document.activeElement === from) throw new Error('Focus has not moved to a row');
+        return index;
+      });
+    try {
+      first.focus();
+      await waitFor(() => expect(first).toHaveFocus());
+      // The rows that fit under the 40px header row in the window, which scrolls the page.
+      const header =
+        within(canvasElement).getAllByRole('columnheader')[0]?.getBoundingClientRect().height ?? 0;
+      const fit = Math.floor((window.innerHeight - header) / first.getBoundingClientRect().height);
+      await expect(fit).toBeLessThan(rows.length - 1);
+      await press('{PageDown}');
+      const reached = await focusedFrom(first);
+      await expect(reached).toBe(fit);
+      await expect(reached).toBeLessThan(rows.length - 1);
+      await press('{PageUp}');
+      await waitFor(() => expect(first).toHaveFocus());
+      await press('x');
+      await waitFor(() => expect(selectedKeysOf(canvasElement)).toHaveLength(1));
+      await expect(first).toHaveFocus();
+      // Shift extends the selection over the page it moves by, which the bar, shown now, makes a row shorter.
+      await press('{Shift>}{PageDown}{/Shift}');
+      const extended = await focusedFrom(first);
+      await expect(extended).toBeGreaterThan(1);
+      await waitFor(() => expect(selectedKeysOf(canvasElement)).toHaveLength(extended + 1));
+    } finally {
+      window.scrollTo(0, 0);
+    }
   },
 };
 
