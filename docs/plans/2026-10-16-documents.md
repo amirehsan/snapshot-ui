@@ -179,6 +179,7 @@ Mismatches found while reading the spec against the repository, the installed pa
 16. **A refused folder carries an empty File (Task 2).** `FileRejection` holds a `File`, and a dropped folder is a `DirectoryDropItem` with a `name` and no `File`. The refusal carries `new File([], item.name)` with reason `'type'`, and the item's entries are never read (spec 13.2 item 3); the docs say so.
 17. **React Aria clears the input at the press (Task 2).** Spec 6.2 clears FileButton's input after each choice. `FileTrigger` already clears it as the button is pressed, before the picker opens (`dist/private/FileTrigger.mjs`: `if (inputRef.current?.value) inputRef.current.value = ''`), so the same file chosen again fires again; the library adds nothing, and a unit test pins it.
 18. **Telling the data form of `bulkActions` from a node (Task 7).** `ReactNode` includes arrays, so `bulkActions?: ReactNode | readonly DataTableBulkAction[]` cannot be told apart by `Array.isArray`. The data form is an array whose every entry is a plain object, not a React element (`!isValidElement(entry)`), with a string `id`, a string `label` and a function `onAction`; anything else is a node, drawn as 0.6.0 drew it.
+19. **ProgressBar's limit, its props table and two guards (Task 1).** The size entry measured 653 B, so the rule sets 1.5 kB, above spec 16's 1 kB budget, as Meter's 795 B did; since the commit carries no body, the design record states it. The docs page's props table is `Pick<ProgressBarProps, ...>` of the bar's own props, as Meter's page picks, rather than `ProgressBarBaseProps`, which would list every inherited DOM attribute. Two guards the plan does not state: a bar that the types forbid but an empty label reaches (no label, no `aria-label`, no `aria-labelledby`) shows its value text even under `showValueLabel={false}`, so the fallback name points at an element that is drawn; and a `value` that is not a finite number is the start of the range.
 
 ## Owner actions
 
@@ -191,7 +192,7 @@ These need the owner's accounts, machine or devices, so the implementer reports 
 
 ## Open questions
 
-Settled in this plan as the recommendation, and worth the owner's eye:
+Settled in this plan as the recommendation, and worth the owner's eye. **Settled by the owner, 2026-10-16:** all seven as recommended. Breadcrumbs are written by hand (1); `capture` goes on FileDropZone too, handed to its button (2); `useDrop` over React Aria's `DropZone` unless Task 2's spike shows a reason (3); the changed dot is clay (4); the new Clear selection X icon shows also when `bulkActions` is a node, for consistency, accepting the about 21 changed pictures (5); toasts lift above a SaveBar on wide screens too (6); and the tray's "started" announcement counts the files in the batch that just started (7).
 
 1. **Breadcrumbs by hand** (spec correction 8). Recommended as written; the alternative keeps React Aria's `Breadcrumbs` and accepts a list named twice, a current crumb read as a dimmed link, and #24's press helper on every crumb.
 2. **`capture` on FileDropZone too** (spec correction 1). The owner named it for FileButton; the zone passes it to its own button under the same name. Recommended; the alternative is no camera option on the zone, where an app needing the camera puts a FileButton beside it.

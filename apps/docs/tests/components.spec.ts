@@ -541,6 +541,25 @@ test.describe('forced colors', () => {
     expect((await paint(meter.locator('.meter-pace'))).fill).toBe(await systemColor(page, 'Highlight'));
   });
 
+  test('a progress bar keeps its track outline and fill', async ({ page }) => {
+    // The fill is a background, which the repaint would drop: it is drawn in the reader's text color, and the
+    // track is outlined so its end shows, as Meter's are.
+    await visit(page, '/docs/components/progress-bar');
+    const text = await systemColor(page, 'CanvasText');
+    const bar = page
+      .locator('.stage .progress-bar')
+      .filter({ has: page.getByRole('progressbar', { name: 'Uploading invoice.pdf', exact: true }) });
+    await expect(bar).toHaveCount(1);
+    const track = bar.locator('.progress-bar-track');
+    expect(await track.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
+    expect(await track.evaluate((element) => getComputedStyle(element).outlineColor)).toBe(text);
+    expect((await paint(bar.locator('.progress-bar-fill'))).fill).toBe(text);
+    // The indeterminate segment too.
+    const segment = page.locator('.stage .progress-bar-track[data-indeterminate] .progress-bar-fill');
+    await expect(segment).toHaveCount(1);
+    expect((await paint(segment)).fill).toBe(text);
+  });
+
   test('a line chart draws its first line CanvasText, its second GrayText, and its crosshair Highlight', async ({
     page,
   }) => {
@@ -846,6 +865,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   'number-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // The range is the app's sentence; the page numbers and the step words are the library's and never long.
   pagination: ['.stage .pagination-range'],
+  // The label is the app's sentence, a file name among it, and wraps at any character, as the meter's does.
+  'progress-bar': ['.stage .progress-bar-label'],
   'radio-group': [
     '.stage .field-label',
     '.stage .field-description',
@@ -1032,6 +1053,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The row and the current page are in the server's HTML; the shell is a server component.
   pagination: ['.stage .pagination', '.stage .pagination-page[aria-current]'],
   popover: ['.stage .button'],
+  // A static part: the track with its role and values is in the server's HTML.
+  'progress-bar': ['.stage .progress-bar-track[role="progressbar"]'],
   'radio-group': ['.stage .radio-indicator'],
   'search-field': ['.stage .search-field-input', '.stage .search-field-icon'],
   'segmented-control': ['.stage .segmented-option'],

@@ -1423,6 +1423,49 @@ describe('the side panel', () => {
   });
 });
 
+describe('the progress bar', () => {
+  /** Ink over the track, the frame composited over `surface`, and measured against the track. */
+  const fillOnTrack = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const track = composite(parseColor(palette.frame), parseColor(palette[surface]));
+    return contrastRatio(composite(parseColor(palette.ink), track), track);
+  };
+  /** The track, the frame composited over `surface`, against that surface. */
+  const track = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[surface]);
+    return contrastRatio(composite(parseColor(palette.frame), ground), ground);
+  };
+
+  // The label is ink and the value text slate, on the page, on a card or in the tray's float surface. The gate
+  // already holds all six as text, so the progress bar adds no pair.
+  it('cites ink and slate on canvas, lifted and float, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // The track is the frame, a mix and not a token, so the fill against it is measured and recorded, not gated:
+  // Meter's track and fill, on the page and in the tray. The track against its surface is a cue, not a boundary.
+  it('measures ink against the frame track, recorded and not gated', () => {
+    for (const { surface, mode, ink, edge } of [
+      { surface: 'canvas', mode: 'light', ink: 12.69, edge: 1.28 },
+      { surface: 'canvas', mode: 'dark', ink: 14.19, edge: 1.36 },
+      { surface: 'float', mode: 'light', ink: 14.34, edge: 1.29 },
+      { surface: 'float', mode: 'dark', ink: 12.19, edge: 1.43 },
+    ]) {
+      expect(fillOnTrack(mode, surface), `ink on the track on ${surface}, ${mode}`).toBeCloseTo(ink, 2);
+      expect(fillOnTrack(mode, surface), `ink on ${surface}, ${mode}`).toBeGreaterThanOrEqual(NON_TEXT);
+      expect(track(mode, surface), `the track on ${surface}, ${mode}`).toBeCloseTo(edge, 2);
+    }
+    expect(CONTRAST_PAIRS.some((pair) => pair.text === 'frame' || pair.ground === 'frame')).toBe(false);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

@@ -826,6 +826,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/number-field">Number field</Link>
                 <Link href="/docs/components/pagination">Pagination</Link>
                 <Link href="/docs/components/popover">Popover</Link>
+                <Link href="/docs/components/progress-bar">Progress bar</Link>
                 <Link href="/docs/components/radio-group">Radio group</Link>
                 <Link href="/docs/components/search-field">Search field</Link>
                 <Link href="/docs/components/segmented-control">Segmented control</Link>

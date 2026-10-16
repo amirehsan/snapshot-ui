@@ -18,6 +18,7 @@ import { Meter } from '../src/meter';
 import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
+import { ProgressBar } from '../src/progress-bar';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
@@ -402,5 +403,17 @@ describe('an empty data part slot', () => {
       expect(container.querySelector('.data-table-bar-actions'), String(bulkActions)).toBeNull();
       unmount();
     }
+  });
+});
+
+describe('an empty documents part slot', () => {
+  it('draws no label span for a ProgressBar given an empty label and an aria-label', () => {
+    const { container } = render(<ProgressBar label="" aria-label="Uploading invoice.pdf" value={45} />);
+    expect(container.querySelector('.progress-bar')).not.toBeNull();
+    expect(container.querySelector('.progress-bar-label')).toBeNull();
+    const track = screen.getByRole('progressbar', { name: 'Uploading invoice.pdf' });
+    expect(track).not.toHaveAttribute('aria-labelledby');
+    // The value still shows in the head, alone.
+    expect(container.querySelector('.progress-bar-head')?.children).toHaveLength(1);
   });
 });

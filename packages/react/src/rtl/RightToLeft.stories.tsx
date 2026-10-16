@@ -23,6 +23,7 @@ import { NumberField } from '../number-field';
 import { Pagination } from '../pagination';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
+import { ProgressBar } from '../progress-bar';
 import { Radio, RadioGroup } from '../radio-group';
 import { SearchField } from '../search-field';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
@@ -1630,5 +1631,37 @@ export const SidePanelMirrored: Story = {
     await expect(
       Math.abs(rect(title).right - (rect(header).right - parseFloat(getComputedStyle(header).paddingRight))),
     ).toBeLessThan(1.5);
+  },
+};
+
+/**
+ * A progress bar on a Persian page at 45: the fill grows from the inline start, the right, so its right edge is
+ * the track's; the label starts at the right and the value sits at the head's left end. The indeterminate
+ * segment slides the other way, by its direction property.
+ */
+export const ProgressBarMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div
+        dir="rtl"
+        lang="fa"
+        style={{ width: 'min(28rem, calc(100vw - 2rem))', display: 'grid', gap: '1rem' }}
+      >
+        <ProgressBar label="در حال بارگذاری فاکتور" value={45} valueLabel="۴۵٪" />
+        <ProgressBar label="در حال خواندن رسید" isIndeterminate data-testid="reading" />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = find(canvasElement, '.progress-bar');
+    const track = rect(find(bar, '.progress-bar-track'));
+    const fill = rect(find(bar, '.progress-bar-fill'));
+    await expect(Math.abs(fill.right - track.right)).toBeLessThan(1);
+    await expect(Math.abs(fill.width - track.width * 0.45)).toBeLessThan(1);
+    const head = rect(find(bar, '.progress-bar-head'));
+    await expect(Math.abs(rect(find(bar, '.progress-bar-label')).right - head.right)).toBeLessThan(1);
+    await expect(Math.abs(rect(find(bar, '.progress-bar-value')).left - head.left)).toBeLessThan(1);
+    const reading = find(canvasElement, '[data-testid="reading"] .progress-bar-track');
+    await expect(getComputedStyle(reading).getPropertyValue('--progress-bar-slide').trim()).toBe('-1');
   },
 };

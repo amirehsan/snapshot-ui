@@ -210,6 +210,27 @@ describe('src/styles.css', () => {
       previous = at(file);
     }
   });
+
+  it('imports the documents files after the data files, in order', () => {
+    // The progress bar is required; the drop zones, the tray, the date picker, the save bar, the page header and
+    // the trail are checked once they exist, each after the one before.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('side-panel.css')).toBeGreaterThanOrEqual(0);
+    expect(at('progress-bar.css')).toBeGreaterThan(at('side-panel.css'));
+    let previous = at('progress-bar.css');
+    for (const file of [
+      'file-drop-zone.css',
+      'upload-tray.css',
+      'date-picker.css',
+      'save-bar.css',
+      'page-header.css',
+      'breadcrumbs.css',
+    ]) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -2754,7 +2775,7 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter and data files after it', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter, data and documents files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     const tooltip = imported.indexOf('tooltip.css');
@@ -2783,6 +2804,13 @@ describe('src/components/tooltip.css', () => {
         'skeleton.css',
         'data-table.css',
         'side-panel.css',
+        'progress-bar.css',
+        'file-drop-zone.css',
+        'upload-tray.css',
+        'date-picker.css',
+        'save-bar.css',
+        'page-header.css',
+        'breadcrumbs.css',
       ]).toContain(file);
     }
   });
@@ -7337,5 +7365,107 @@ describe('dist/base.css', () => {
     expect(built.slice(open, close)).toMatch(
       /:focus-visible\s*\{\s*outline:\s*var\(--focus-ring-width\) solid var\(--focus-ring-color\);\s*outline-offset:\s*var\(--focus-ring-offset\);\s*\}/,
     );
+  });
+});
+
+describe('src/components/progress-bar.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/progress-bar.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const REDUCED = '@media (prefers-reduced-motion: reduce)';
+  const INDETERMINATE = '.progress-bar-track[data-indeterminate] .progress-bar-fill {';
+
+  it('draws the head as Meter draws its own', () => {
+    const css = rules();
+    const meter = closeUp(stripComments(read('src/components/meter.css')));
+    // The head, the label and the value are Meter's rules under the progress bar's names, declaration for
+    // declaration, so the two read as one object.
+    for (const part of ['head', 'label', 'value']) {
+      expect(blockAfter(css, `.progress-bar-${part} {`), part).toBe(blockAfter(meter, `.meter-${part} {`));
+    }
+    const root = blockAfter(css, '.progress-bar {');
+    for (const declaration of [
+      'display: grid;',
+      'gap: var(--spacing-part);',
+      'min-width: 0;',
+      'font-family: var(--font-sans);',
+      'color: var(--color-ink);',
+      'print-color-adjust: exact;',
+    ]) {
+      expect(root, declaration).toContain(declaration);
+    }
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('draws an 8px frame track at the pill radius and an ink fill at the same radius', () => {
+    const css = rules();
+    const track = blockAfter(css, '.progress-bar-track {');
+    for (const declaration of [
+      'position: relative;',
+      'height: 0.5rem;',
+      'overflow: hidden;',
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-frame);',
+    ]) {
+      expect(track, declaration).toContain(declaration);
+    }
+    const fill = blockAfter(css, '.progress-bar-fill {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset-block: 0;',
+      'inset-inline-start: 0;',
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-ink);',
+    ]) {
+      expect(fill, declaration).toContain(declaration);
+    }
+    // Ink and the frame only: no reserved color means anything here.
+    for (const reserved of [
+      '--color-signal',
+      '--color-clay',
+      '--color-error',
+      '--color-success',
+      '--color-warning',
+      '--color-taupe',
+    ]) {
+      expect(css, reserved).not.toContain(reserved);
+    }
+    expect(css).not.toContain('box-shadow');
+  });
+
+  it('sizes the fill by --progress-bar-value and moves it over 200ms', () => {
+    const fill = blockAfter(rules(), '.progress-bar-fill {');
+    expect(fill).toContain('inline-size: var(--progress-bar-value, 0%);');
+    expect(fill).toContain('transition: inline-size 200ms ease;');
+  });
+
+  it('slides a 40% segment over 1.6s, mirrored by --progress-bar-slide under [dir=rtl]', () => {
+    const css = rules();
+    const segment = blockAfter(css, INDETERMINATE);
+    expect(segment).toContain('inline-size: 40%;');
+    expect(segment).toContain('transition: none;');
+    expect(segment).toContain('animation: progress-bar-slide 1.6s ease-in-out infinite;');
+    expect(blockAfter(css, '.progress-bar-track {')).toContain('--progress-bar-slide: 1;');
+    expect(blockAfter(css, "[dir='rtl'] .progress-bar-track {")).toContain('--progress-bar-slide: -1;');
+    // From wholly before the start to wholly past the end: the track is 250% of a 40% segment.
+    const frames = blockAfter(css, '@keyframes progress-bar-slide {');
+    expect(blockAfter(frames, 'from {')).toContain('translate: calc(-100% * var(--progress-bar-slide)) 0;');
+    expect(blockAfter(frames, 'to {')).toContain('translate: calc(250% * var(--progress-bar-slide)) 0;');
+    // :dir() is above the browser floor.
+    expect(css).not.toContain(':dir(');
+  });
+
+  it('stops the move and slows the slide to 8/3 of 1.6s under reduced motion, never to none', () => {
+    const reduced = blockAfter(rules(), REDUCED);
+    expect(blockAfter(reduced, '.progress-bar-fill {')).toContain('transition: none;');
+    expect(blockAfter(reduced, INDETERMINATE)).toContain('animation-duration: calc(1.6s * 8 / 3);');
+    expect(reduced).not.toMatch(/animation(?:-name)?:\s*none/);
+    expect(reduced).not.toContain('animation-play-state');
+  });
+
+  it('outlines the track and fills with canvastext in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.progress-bar-track {')).toMatch(/outline: 1px solid canvastext;/i);
+    expect(blockAfter(forced, '.progress-bar-fill {')).toMatch(/background-color: canvastext;/i);
   });
 });

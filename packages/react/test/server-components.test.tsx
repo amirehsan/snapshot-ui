@@ -82,6 +82,7 @@ import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
 import { Meter } from '../src/meter';
 import { Pagination } from '../src/pagination';
+import { ProgressBar } from '../src/progress-bar';
 import { Skeleton } from '../src/skeleton';
 import { StatTile } from '../src/stat-tile';
 import { Eyebrow, Heading, Text } from '../src/typography';
@@ -141,6 +142,20 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     'Skeleton circle',
     <Skeleton shape="circle" width="2rem" />,
     '<span class="skeleton" data-shape="circle" aria-hidden="true" style="inline-size:2rem;block-size:2rem"></span>',
+  ],
+  [
+    'ProgressBar',
+    <ProgressBar label="Uploading" value={45} />,
+    '<div class="progress-bar"><div class="progress-bar-head"><span class="progress-bar-label" id="_R_0_-label">Uploading</span>' +
+      '<span class="progress-bar-value" aria-hidden="true">45%</span></div>' +
+      '<div class="progress-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="45" aria-valuetext="45%"' +
+      ' style="--progress-bar-value:45%" aria-labelledby="_R_0_-label"><span class="progress-bar-fill"></span></div></div>',
+  ],
+  [
+    'ProgressBar indeterminate',
+    <ProgressBar aria-label="Reading" isIndeterminate />,
+    '<div class="progress-bar"><div class="progress-bar-track" role="progressbar" data-indeterminate="" aria-label="Reading">' +
+      '<span class="progress-bar-fill"></span></div></div>',
   ],
 ];
 
@@ -305,6 +320,7 @@ const STATIC_MODULES = [
   'pagination/Pagination.tsx',
   'empty-state/EmptyState.tsx',
   'skeleton/Skeleton.tsx',
+  'progress-bar/ProgressBar.tsx',
 ];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {

@@ -8517,3 +8517,114 @@ NVDA (owner action 4): the panel read as a complementary landmark named
 by its title with focus on its heading, and the sheet read as a dialog;
 on a real iPhone and an Android phone, the sheet opening from a row and
 closing on a swipe, and a refused swipe rising again.
+
+## ProgressBar
+
+Work getting done: `ProgressBar`, how far an upload has come, or that a
+reading is under way. The document has no progress bar of its own, so
+this one is derived from Meter, the spinner and the skeleton (documents
+spec, section 5).
+
+**One object with Meter** (spec 13.2 item 5, the owner's answer in
+13.3 item 9). The head is Meter's row, rule for rule: the label at
+`--text-small` weight 500 in ink at the start, the value at
+`--text-small` in slate with tabular figures at the end, 8px
+(`--spacing-part`) above the track; the row wraps and a long word breaks
+anywhere. The track is Meter's: 8px tall, the frame color, ink at 12%,
+on `--radius-pill`. The fill is ink on the same radius, so both ends are
+round in Rounded and Soft and square under Square, where
+`--radius-pill` is 0, exactly as Meter's are. A meter and a progress bar
+never differ by shape; the parent spec's "the ends of a progress stroke
+take `--radius-dot`" is read as the spinner's stroke caps, whose ends are
+dots. A meter measures against a limit and a progress bar measures work
+getting done, and the role says which.
+
+**The fill.** `span.progress-bar-fill`, absolute inside the track from
+the inline start, `inline-size: var(--progress-bar-value, 0%)`. The
+component writes `--progress-bar-value` on the track's inline `style`, the
+share of the range as a percentage with at most three decimals (Meter's
+rounding), so the stylesheet draws the width and a forced-colors block
+can redraw it. It moves to each new value over 200ms
+(`transition: inline-size 200ms ease`), so a run of small steps reads as
+one movement.
+
+**Indeterminate** (ruling 14). The fill becomes a segment 40% of the
+track wide that slides from wholly before the track's start to wholly
+past its end over 1.6s, ease in and out, forever: `translate` from
+`-100%` to `250%` of the segment, since the track is 250% of a 40%
+segment. 1.6s is the skeleton's pulse, so the library's two loading
+rhythms are one number. The track writes no `style` while
+indeterminate.
+
+**Reduced motion.** The determinate move stops (`transition: none`).
+The slide slows by the spinner's own ratio, 900ms to 2400ms, from 1.6s
+to `calc(1.6s * 8 / 3)`, about 4.3s, and never stops: the spinner's
+rule, "a still spinner reads as finished", holds for a bar, where a
+still segment at 40% reads as 40% done. Playwright's screenshots run
+with animations disabled, which holds the segment at its first frame,
+before the track's start, so the track reads empty in a baseline.
+
+**Right to left.** The fill is placed with logical properties, so it
+grows from the right on a Persian page. The slide's keyframes multiply
+by `--progress-bar-slide`, 1 on the track and -1 under `[dir='rtl']`,
+so the segment slides from right to left; `:dir()` is above the Chrome
+111 and Safari 16.4 floor, so the direction is a custom property set by
+an ancestor's attribute.
+
+**The role on the track** (ruling 13). The WAI-ARIA `progressbar`
+pattern by hand in a static module, not React Aria's `ProgressBar`, which
+builds its value text with `Intl`. `progressbar` has presentational
+children, so the role sits on `div.progress-bar-track`, as Meter's sits
+on its bar, and the head beside it is not lost to it. While determinate
+the track carries `aria-valuemin`, `aria-valuemax`, `aria-valuenow`
+clamped to the range, and `aria-valuetext`, which is `valueLabel` or the
+default; while indeterminate it carries none of the four, which is how
+the role says "unknown", and a `valueLabel` shown on purpose
+(`showValueLabel`) describes the track through `aria-describedby`
+instead. A range whose `maxValue` is not above `minValue` draws an empty
+track and reports `minValue` for all three numbers, with no warning,
+since a static part has no effect to warn from. The name is Meter's: a
+non-blank `aria-labelledby`, else a non-blank `aria-label`, else the
+label, else the value text, so the bar is never unnamed; the caller's
+`aria-describedby` moves to the track. The visible value is
+`aria-hidden`, since the bar reads it. With an `aria-label` and
+`showValueLabel={false}` there is no head at all: the upload row's use.
+
+**Never live** (spec 13.2 item 6). No `role="status"` and no
+`aria-live`: a value that changes every 100ms would be read out every
+100ms. The part that owns the work says what matters once, as the upload
+tray's three announcements do, and a screen reader user who moves to the
+bar hears its current value.
+
+**The ASCII default.** The default value text is the percentage written
+with integer arithmetic in ASCII digits,
+`Math.round(((value - min) * 100) / (max - min))` and a `%`, never `Intl`,
+so the server and the browser write the same under any locale. A Persian
+page passes `valueLabel` in its own digits, as it passes every other
+string. `useId` is the module's one hook, so a server component renders
+the bar with no client JavaScript.
+
+**Forced colors.** The fill is a background, which the repaint drops: it
+becomes `canvastext`, and the track takes a 1px `canvastext` outline so
+its end shows, as Meter's do. The indeterminate segment is the same fill.
+
+**Contrast.** The label is ink and the value slate on canvas, lifted and
+float, each gated already as text and cited by the contrast test, not
+added. The track is a mix, so the fill against it is measured and
+recorded, not gated: ink on the track is 12.69 in light and 14.19 in
+dark over canvas, and 14.34 and 12.19 over float (the tray's surface),
+each past the 3:1 a graphic needs; the track against its surface is 1.28
+and 1.36 on canvas and 1.29 and 1.43 on float, a cue and not a boundary,
+since the value text carries the extent. Signal orange, clay, error,
+success, warning and taupe appear nowhere.
+
+**Where the build departs from the plan.** The props table on the docs
+page picks the bar's own props from `ProgressBarProps`, as Meter's page
+does, rather than listing `ProgressBarBaseProps` with every inherited
+DOM attribute. The size limit is 1.5 kB, above the spec's 1 kB budget:
+the entry measured 653 B, and the rule rounds up to 1 kB and adds
+0.5 kB, as Meter's did.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and
+NVDA (owner action 4): the bar read by its name and value when reached,
+and nothing while it moves.

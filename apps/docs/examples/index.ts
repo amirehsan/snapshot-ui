@@ -100,6 +100,8 @@ import PaginationPersian from './pagination-persian';
 import PaginationSiblings from './pagination-siblings';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
+import ProgressBarBasic from './progress-bar-basic';
+import ProgressBarIndeterminate from './progress-bar-indeterminate';
 import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
@@ -256,6 +258,8 @@ export const examples = {
   'pagination-siblings': PaginationSiblings,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
+  'progress-bar-basic': ProgressBarBasic,
+  'progress-bar-indeterminate': ProgressBarIndeterminate,
   'radio-group-basic': RadioGroupBasic,
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,

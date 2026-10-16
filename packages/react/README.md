@@ -65,6 +65,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Number field](https://snapshotui.com/docs/components/number-field)
 - [Pagination](https://snapshotui.com/docs/components/pagination)
 - [Popover](https://snapshotui.com/docs/components/popover)
+- [Progress bar](https://snapshotui.com/docs/components/progress-bar)
 - [Radio group](https://snapshotui.com/docs/components/radio-group)
 - [Search field](https://snapshotui.com/docs/components/search-field)
 - [Segmented control](https://snapshotui.com/docs/components/segmented-control)
