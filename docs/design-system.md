@@ -6642,7 +6642,11 @@ content, zero: under 30rem of it the narrow row drew, the range in a
 column one letter wide, since `anywhere` let it break between any two
 letters, and the steps' list wrapped them one over the other. An `auto`
 grid column did the same, and so did the app's own row with `flex-wrap:
-wrap` at 1440px. So the nav is no longer the container:
+wrap` at 1440px. The library's own Pagination baselines had drawn it so
+from the start: the stories sat in Storybook's centered canvas, which sizes its
+content from the content's width, and their 48rem box resolved its 100%
+against that, so every picture held a range one letter wide; the stories
+now sit in the padded canvas. So the nav is no longer the container:
 
 - `div.pagination-box` inside it is, and the queries read its width,
   which is the nav's.

@@ -26,6 +26,9 @@ const meta = {
   title: 'Components/Pagination',
   component: Pages,
   args: { page: 1, pageCount: 26, rangeLabel: range(1), getPageHref: href },
+  // Padded, not centered: centered, the canvas shrinks to its content, so the 48rem box below resolved its 100%
+  // against nothing, and the nav drew its narrow row, or, before patch 0.6.1, no width at all.
+  parameters: { layout: 'padded' },
   decorators: [
     (Story) => (
       <div style={{ width: 'min(48rem, 100%)' }}>
