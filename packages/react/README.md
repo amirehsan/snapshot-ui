@@ -70,6 +70,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Segmented control](https://snapshotui.com/docs/components/segmented-control)
 - [Select](https://snapshotui.com/docs/components/select)
 - [Sheet](https://snapshotui.com/docs/components/sheet)
+- [Side panel](https://snapshotui.com/docs/components/side-panel)
 - [Sidebar](https://snapshotui.com/docs/components/sidebar)
 - [Skeleton](https://snapshotui.com/docs/components/skeleton)
 - [Spinner](https://snapshotui.com/docs/components/spinner)

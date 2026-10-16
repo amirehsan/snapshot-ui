@@ -116,6 +116,8 @@ import SelectStates from './select-states';
 import SheetBasic from './sheet-basic';
 import SheetMore from './sheet-more';
 import SheetSnapPoints from './sheet-snap-points';
+import SidePanelBasic from './side-panel-basic';
+import SidePanelFooter from './side-panel-footer';
 import SidebarCollapsed from './sidebar-collapsed';
 import SidebarDrawer from './sidebar-drawer';
 import SidebarGroups from './sidebar-groups';
@@ -269,6 +271,8 @@ export const examples = {
   'sheet-basic': SheetBasic,
   'sheet-more': SheetMore,
   'sheet-snap-points': SheetSnapPoints,
+  'side-panel-basic': SidePanelBasic,
+  'side-panel-footer': SidePanelFooter,
   'sidebar-collapsed': SidebarCollapsed,
   'sidebar-drawer': SidebarDrawer,
   'sidebar-groups': SidebarGroups,

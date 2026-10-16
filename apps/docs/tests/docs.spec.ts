@@ -3471,3 +3471,89 @@ test('the docs header sets --page-sticky-top, so a data table header sticks unde
   // A negative amount is written with U+2212, not a hyphen.
   await expect(table.locator('tbody').getByText('\u2212$42.18')).toHaveCount(1);
 });
+
+/** The side panel page's basic example: its stage, the open aside, and the list items beside it. */
+const sidePanelExample = (page: Page): { stage: Locator; items: Locator } => {
+  const stage = page.locator('.stage').first();
+  // Beside the 24rem panel the table's box is under 40rem, so its list is the face drawn.
+  return { stage, items: stage.locator('.data-table-list [role="row"]') };
+};
+
+test('a side panel sits beside the content from 1024px and becomes a sheet under it, keeping focus', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/side-panel');
+  const { stage, items } = sidePanelExample(page);
+  // In the server's HTML and hydrated open, beside the content, without taking focus.
+  const panel = stage.getByRole('complementary', { name: 'Corner Mart' });
+  await expect(panel).toBeVisible();
+  const content = stage.locator('.side-panel-layout-content');
+  expect((await content.boundingBox())?.x ?? 0).toBeLessThan((await panel.boundingBox())?.x ?? 0);
+  // Another row: a new opening, and focus on its heading.
+  await items.nth(1).focus();
+  await page.keyboard.press('Enter');
+  const heading = stage.getByRole('heading', { level: 2, name: 'City Transit' });
+  await expect(heading).toBeFocused();
+  // Narrower than 1024px: the same panel as a sheet, which takes focus once it has risen.
+  await page.setViewportSize({ width: 800, height: 800 });
+  await expect(stage.locator('.side-panel')).toHaveCount(0);
+  const sheet = page.getByRole('dialog', { name: 'City Transit' });
+  await expect(sheet).toBeVisible();
+  await expect.poll(() => sheet.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  // Wide again: the aside, with focus back on its heading.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(heading).toBeFocused();
+});
+
+test('Escape in a side panel closes it and puts focus back on what opened it', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/side-panel');
+  const { stage, items } = sidePanelExample(page);
+  const row = items.nth(2);
+  await row.focus();
+  await page.keyboard.press('Enter');
+  const heading = stage.getByRole('heading', { level: 2, name: 'Northside Rent' });
+  await expect(heading).toBeFocused();
+  // The wide face traps nothing: Tab moves on through the panel.
+  await page.keyboard.press('Tab');
+  await expect(stage.getByRole('button', { name: 'Close' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(stage.locator('.side-panel')).toHaveCount(0);
+  // Without the panel the box is wider and draws its table, so focus goes to the same row there.
+  await expect(stage.locator('.data-table-table [role="row"][data-key="t3"]')).toBeFocused();
+});
+
+test('a side panel with unsaved edits asks before it closes, and Escape leaves it open', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/side-panel');
+  const stage = page.locator('.stage').nth(1);
+  // Closed, the example's box is 40rem or more and draws its table face.
+  const firstRow = stage.locator('.data-table-table .data-table-body [role="row"]').first();
+  await firstRow.focus();
+  await page.keyboard.press('Enter');
+  const panel = stage.getByRole('complementary', { name: 'Corner Mart' });
+  await expect(panel).toBeVisible();
+  await panel.getByLabel('Memo').fill('Split with Sam');
+  // Unsaved: Escape does nothing and the close button asks.
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeVisible();
+  await panel.getByRole('button', { name: 'Close' }).click();
+  const question = page.getByRole('alertdialog', { name: 'Discard your changes?' });
+  await expect(question).toBeVisible();
+  await question.getByRole('button', { name: 'Cancel' }).click();
+  await expect(question).toHaveCount(0);
+  await expect(panel).toBeVisible();
+  await panel.getByRole('button', { name: 'Close' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Discard' }).click();
+  await expect(stage.locator('.side-panel')).toHaveCount(0);
+  // Saved, it closes on Escape with no question.
+  await firstRow.focus();
+  await page.keyboard.press('Enter');
+  await panel.getByLabel('Memo').fill('Split with Sam');
+  await panel.getByRole('button', { name: 'Save' }).click();
+  await panel.getByLabel('Memo').focus();
+  await page.keyboard.press('Escape');
+  await expect(stage.locator('.side-panel')).toHaveCount(0);
+});

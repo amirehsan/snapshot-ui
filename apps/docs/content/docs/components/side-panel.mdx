@@ -1,0 +1,81 @@
+---
+title: Side panel
+description: A detail beside the content on a wide screen and a sheet on a phone, opened and closed by your URL.
+icon: PanelRight
+---
+
+<Section>
+
+## Basic
+
+`SidePanelLayout` holds the page's content and one `SidePanel`. From 1024px of viewport the open panel stands beside the content in a 24rem column and pushes it narrower; it never covers it, and nothing behind it is dimmed. Under 1024px the same panel is a [Sheet](/docs/components/sheet) that rises over the page, since a phone has no room beside.
+
+`isOpen` and `onClose` are yours: read the open row from the URL and remove it there to close. Press a row to open its detail; Escape or the close button closes it.
+
+<Preview name="side-panel-basic" />
+
+</Section>
+
+<Section>
+
+## With actions
+
+`footer` pins actions under the body, such as Save and Delete, under a divider. While the reader has unsaved edits, `isDismissable={false}` keeps Escape and a swipe from closing the panel, and `onCloseRequest` is asked before every close the panel starts: return `false` to keep it open and ask whether to discard, as this example does with `useConfirm`.
+
+<Preview name="side-panel-footer" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+- Drive `isOpen` from a search parameter, such as `?open=t1`, and close by removing it, so Back closes the panel too. Back and the app's own links close it without `onCloseRequest`, so guard them in the app if they can lose edits.
+- Pass `key` with the open row's id, so another row is a new opening and focus moves to its heading.
+- Set `--page-sticky-top` to your header's height on an ancestor, as DataTable reads it. The panel sticks an inset, 16px, under it, as tall as the screen allows, and its body scrolls inside it.
+- Under 1440px the open panel folds an [AppShell](/docs/components/app-shell)'s rail to its icons and gives it back as it closes, so a table beside the panel keeps its columns. The reader's own setting is not changed, and a rail they folded stays folded. Pass `collapsesRail={false}` to the layout to leave the rail alone.
+- The panel's body and the sheet's body scroll, so each sets `--page-sticky-top` to `0px` for what it holds: a table there sticks its header at their top. Do the same on any element of your own that scrolls around a table.
+- The aside is in the server's HTML when open. The sheet mounts only after hydration, so on a phone a link to a row shows the list until scripts run. Give a phone link its own detail route if it must work without scripts.
+
+SidePanel and SidePanelLayout are client components. A server page can render them with a client component's state, as the examples do.
+
+</Section>
+
+<Section>
+
+## Props
+
+`ref` goes on the aside, or on the sheet's dialog on a phone, and `className` on the aside, or the sheet, merged after the library's class.
+
+<PropsTable label="SidePanel props" path="../../packages/react/src/side-panel/SidePanel.tsx" type="SidePanelProps" />
+
+`ref` and `className` go on the layout's root.
+
+<PropsTable label="SidePanelLayout props" path="../../packages/react/src/side-panel/SidePanelLayout.tsx" type="SidePanelLayoutProps" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+On a wide screen the panel is a `complementary` landmark named by its title. On a phone it is a dialog titled by it, as a sheet is.
+
+- Focus moves to the panel's heading when it opens, and back to the row that opened it when it closes. If that row has left the page, focus goes to the content.
+- With `isTitleHidden`, the title still names the panel, and focus lands on the panel itself, so its ring shows.
+- On a wide screen the page stays usable around the panel: Tab leaves it, nothing is inert and nothing is dimmed. As the window crosses 1024px, an open panel moves between the aside and the sheet and keeps focus.
+- Escape in a table beside the panel is the table's: it clears a selection and never closes the panel.
+
+<Keys rows={[['Enter', 'On a table row, opens its panel; focus moves to the panel heading.'], ['Tab Shift+Tab', 'Through the panel and out of it into the page on a wide screen; within the sheet on a phone.'], ['Escape', 'In the panel, closes it; focus returns to the row that opened it.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps side panels in the system.
+
+<Rules dos={['Show the detail of one row, beside the rows it came from.', 'Keep the open row in the URL, its only state.', 'Put Save and Delete in the footer.']} donts={['Never put a scrim behind the panel on a wide screen.', 'Never open two panels on one page.', 'Never open a panel the reader did not ask for.']} />
+
+</Section>

@@ -8337,3 +8337,126 @@ rowgroup is announced, by its heading, with NVDA, VoiceOver and JAWS,
 whether the Select button's new name, Done, is spoken when it is
 pressed, in the same three, an item's description, its category and
 amount, and an item's selected state read with its box hidden.
+
+## SidePanel
+
+The detail of one row beside the rows: `SidePanelLayout` holds the page's
+content and one `SidePanel`, which stands beside the content in a column
+of its own on a wide screen and is a sheet on a phone. The document has
+no panel of its own beside the content, so this one is derived from the
+rail and from Sheet.
+
+**The layout.** `div.side-panel-layout` is a grid of one column. From
+1024px of viewport, while it holds an open aside
+(`:has(> .side-panel)`), it is the content and a 24rem column,
+`minmax(0, 1fr) 24rem`, a peer step, 24px, apart, its items at the top.
+The panel pushes the content narrower and never covers it, so a
+DataTable there may draw its list face by its own box (ruling 8).
+`div.side-panel-layout-content` holds the page and takes focus as a last
+resort (`tabIndex={-1}`, no outline), never as a tab stop.
+
+**The surface.** The rail's, its third use after the rail and the drawer
+as one object: the float fill, the hairline, the stadium corner, the
+level 1 lift, padded a peer step. It sits an inset, 16px, below the
+layout's top, and it is sticky an inset under `--page-sticky-top`
+(spec correction 73), so as the page scrolls it floats clear of the
+page's header as the rail floats clear of the viewport's edge, as tall
+as the viewport allows less that offset and two insets. The header, the
+body and the footer are a column: the body scrolls inside the panel and
+the footer stays pinned under it. Nothing moves: the panel is a column
+of the layout and the content reflows once as it comes (R8, 10.2 item
+11). In forced colors its edge is `CanvasText`.
+
+**The header.** The title, an `h2` at the h3 step, `--text-h3` with its
+line height and letter spacing, at 700 in ink, breaking anywhere; the
+description under it, 4px down, at the small step in slate; and the
+close button at the inline end, a ghost `IconButton` with Lucide `X`,
+hit at 40px, pulled a part step into the corner as Sheet's is. With
+`isTitleHidden` the title is visually hidden and still names the panel.
+
+**The body and the footer.** The body is an inset, 16px, under the
+header and scrolls; while it scrolls and holds nothing to focus it is a
+tab stop, ringed inside its edge, as Sheet's body is. It sets
+`--page-sticky-top` to `0px` for what it holds, and so does the sheet's
+body, so a table there sticks at their top (spec corrections 68 and
+79). The footer is a wrapping row of actions at the inline end, a part
+step apart, an inset under the body and an inset under a divider rule,
+`CanvasText` in forced colors.
+
+**Measured.** The title is ink on float, 18.43 in light and 17.42 in
+dark; the description slate on float, 5.49 and 6.94. Both are gated as
+text on float, and the contrast test cites the gate and recomputes the
+values here. The footer's divider is 1.23 and 1.34 on float, a
+separator as Sheet's is, measured and recorded, not gated.
+
+**Which face, and when** (10.2 item 11, spec correction 17). The aside
+is in the server's HTML while open, so a link to a row shows its detail
+before any script. `useWide()` is true on the server and through
+hydration and reads `(width >= 1024px)` in an effect after, as AppShell
+does; under 1024px the aside is `display: none` from the first paint
+and, after hydration, the panel is 3b's Sheet, modal, titled by the
+title, with its footer, every dismissal asking to close. A phone that
+opens a link to a row sees the list until scripts run (R7); the docs
+advise the detail's own route for such a link.
+
+**The landmark** (spec correction 19). The aside is a `complementary`
+landmark named by its heading through `aria-labelledby`, which keeps it
+a landmark inside `main`; on a phone it is a dialog titled by it.
+
+**Focus and openings** (ruling 11, spec corrections 20, 75, 76 and 77).
+An opening is `isOpen` turning true, or a panel mounted after hydration
+with `isOpen`, as the app's `key` with the open row's id mounts one for
+each row; a panel in the server's HTML, hydrated open, moves nothing.
+On an opening the element that held focus is remembered by the layout,
+so a Next button inside the panel keeps the first opener, and on the
+wide face focus moves to the heading, or to the aside, which can show a
+ring, while the heading is hidden. When the panel closes, focus that
+left with it, in the aside or the sheet's dialog, goes back to the
+opener, or to the same row in the face a DataTable draws now if the
+panel's going changed the face, or else to the content; focus the
+reader put elsewhere stays. The wide face traps nothing: Tab leaves it,
+nothing is inert and nothing is dimmed.
+
+**Escape** (ruling 11, spec corrections 74 and 80). The aside listens
+in the bubble phase, so a list or menu open in the panel takes its own
+Escape first, and takes only an Escape nothing handled, from its own
+DOM, while no modal is open over it. Escape in the content is the
+content's: the table's clears its selection. `isDismissable={false}`
+leaves only the close button and the app's own buttons, and
+`onCloseRequest` is asked before every close the panel starts and may
+refuse it; a swipe the app refuses has already taken the sheet off the
+screen, so the sheet rises again.
+
+**Across 1024px.** An open panel moves between its faces as the window
+crosses 1024px: wide to narrow, the aside leaves and the sheet rises
+and takes focus into its dialog; narrow to wide, the sheet leaves and
+focus goes to the heading, after the sheet's own hand-back.
+
+**The rail folds** (spec 10.3 amendment 1, spec correction 72). Under
+1440px of viewport an open panel in a layout with `collapsesRail`, the
+default, folds AppShell's rail to its 72px column and gives it back as
+the panel closes. The fold is the shell's, not the reader's choice:
+nothing is told through `onSidebarCollapsedChange`, a rail the reader
+had folded stays folded, and a reader who expands the rail over a panel
+keeps it expanded until the panel closes. While the fold alone
+collapses the rail the shell's root carries `data-sidebar-folded`, and
+the rail and the workspace move at once, in the frame the panel comes,
+so the content's width changes once and a table beside the panel keeps
+its table face at 1280px, about 45rem of box.
+
+**Right to left.** The panel's column is at the inline end, on the left
+on a Persian page, and its close button at the header's left. Nothing
+mirrors by attribute.
+
+**The size** (spec correction 83). The entry
+`{ SidePanel, SidePanelLayout }` measured 3.07 kB without React Aria,
+Lucide and `@internationalized/date`; the rule rounds up to 3.5 kB and
+adds 0.5 kB: 4 kB, over the spec's 2 kB budget because the entry
+carries Sheet with the overlay stack and its frame, IconButton and the
+shell's fold, each of which has an entry of its own.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and
+NVDA (owner action 4): the panel read as a complementary landmark named
+by its title with focus on its heading, and the sheet read as a dialog;
+on a real iPhone and an Android phone, the sheet opening from a row and
+closing on a swipe, and a refused swipe rising again.
