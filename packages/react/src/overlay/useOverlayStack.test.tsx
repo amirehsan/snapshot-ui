@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { StrictMode, useRef, type ReactElement } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { isAnotherModalOpen, openModals, useOverlayStack } from './useOverlayStack';
+import { isAnotherModalOpen, isUnderModal, openModals, useOverlayStack } from './useOverlayStack';
 
 /**
  * A modal overlay as the stack sees one: a scrim, found by the member's id, that shows whether the hook
@@ -10,7 +10,11 @@ import { isAnotherModalOpen, openModals, useOverlayStack } from './useOverlaySta
 function Member({ id, isOpen = true }: { id: string; isOpen?: boolean }): ReactElement {
   const scrimRef = useRef<HTMLDivElement>(null);
   const isBottom = useOverlayStack(id, isOpen, scrimRef);
-  return <div ref={scrimRef} data-testid={id} data-bottom={isBottom} />;
+  return (
+    <div ref={scrimRef} data-testid={id} data-bottom={isBottom}>
+      <span data-testid={`${id}-content`} />
+    </div>
+  );
 }
 
 /** The members with these ids, opened in this order, each keyed by its id so it keeps its place. */
@@ -76,6 +80,25 @@ describe('useOverlayStack', () => {
     rerender(<Members ids={['a', 'b']} />);
     expect(isAnotherModalOpen('a')).toBe(true);
     expect(isAnotherModalOpen('b')).toBe(true);
+  });
+
+  it('tells whether an element sits under the top-most open modal, outside it', () => {
+    const page = document.createElement('div');
+    document.body.append(page);
+    // No modal: nothing is under one.
+    expect(isUnderModal(page)).toBe(false);
+    const { rerender } = render(<Members ids={['a']} />);
+    // The page is under the open modal; what the modal holds is not, as a table in a dialog.
+    expect(isUnderModal(page)).toBe(true);
+    expect(isUnderModal(screen.getByTestId('a-content'))).toBe(false);
+    // A modal opened over it: what the first holds is under the second now.
+    rerender(<Members ids={['a', 'b']} />);
+    expect(isUnderModal(screen.getByTestId('a-content'))).toBe(true);
+    expect(isUnderModal(screen.getByTestId('b-content'))).toBe(false);
+    // The second closes: the first is the top-most again.
+    rerender(<Members ids={['a']} />);
+    expect(isUnderModal(screen.getByTestId('a-content'))).toBe(false);
+    page.remove();
   });
 
   it('is empty once every overlay unmounts', () => {

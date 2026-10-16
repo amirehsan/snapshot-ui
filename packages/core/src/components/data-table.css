@@ -204,7 +204,9 @@
       color: var(--color-ink);
     }
 
-    .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not(
+    /* Body rows only: the totals row is never opened or selected, so it takes no wash. */
+    .data-table-body
+      > .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not(
         [data-disabled],
         [data-selected],
         [aria-selected='true']
@@ -402,9 +404,35 @@
       color: GrayText;
     }
 
-    .data-table-row:is([data-selected], [aria-selected='true']) {
+    /* A selected row is the reader's own selection pair, Highlight with HighlightText, drawn out of the forced
+       repaint: inside it, Chromium would draw a backplate in the system's background color behind each run of
+       HighlightText and blank it. Out of the repaint nothing is forced, so every part of the row takes the pair
+       by name: its text and rules, a ring HighlightText on the Highlight fill (a Highlight ring there would not
+       show, WCAG 2.4.7), a checked box drawn inverted, and no fill of its own on anything else, such as a badge. */
+    .data-table-row:is([data-selected], [aria-selected='true']),
+    .data-table-row:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
+      forced-color-adjust: none;
       background-color: Highlight;
       color: HighlightText;
+    }
+
+    .data-table-row:is([data-selected], [aria-selected='true']) :where(:not(.checkbox-box)) {
+      border-color: HighlightText;
+      outline-color: HighlightText;
+      background-color: transparent;
+      color: inherit;
+    }
+
+    .data-table-row:is([data-selected], [aria-selected='true']) .checkbox {
+      --checkbox-fill: HighlightText;
+      --checkbox-edge: HighlightText;
+      --checkbox-mark: Highlight;
+    }
+
+    .data-table-row:is([data-selected], [aria-selected='true']):is(:focus-visible, [data-focus-visible]),
+    .data-table-row:is([data-selected], [aria-selected='true'])
+      > .data-table-cell:is(:focus-visible, [data-focus-visible]) {
+      outline-color: HighlightText;
     }
 
     .data-table-bar {

@@ -4,9 +4,11 @@ import { createPortal } from 'react-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleTableKey, nextVisibleCell, type TableKeyActions } from './keys';
 
-/** Whether another modal is open, which a test can set. */
-const modal = vi.hoisted(() => ({ open: false }));
-vi.mock('../overlay/useOverlayStack', () => ({ isAnotherModalOpen: () => modal.open }));
+/** The element an open modal covers, which a test can set: the table sits under that modal when it is the root. */
+const modal = vi.hoisted(() => ({ covers: null as Element | null }));
+vi.mock('../overlay/useOverlayStack', () => ({
+  isUnderModal: (element: Element) => element === modal.covers,
+}));
 
 /**
  * A grid as React Aria's Table draws it: a header row of five column headers and two body rows of five cells,
@@ -67,6 +69,7 @@ const actionsOf = (direction: 'ltr' | 'rtl' = 'ltr') => ({
   keyOf: () => null,
   toggle: vi.fn(),
   extend: vi.fn(),
+  typeahead: () => true,
 });
 
 /** A keydown as React hands it to the root's capture handler, from the focused element, in `direction`. */
@@ -97,7 +100,7 @@ function press(
 afterEach(() => {
   cleanup();
   document.body.innerHTML = '';
-  modal.open = false;
+  modal.covers = null;
   vi.restoreAllMocks();
 });
 
@@ -285,15 +288,16 @@ describe('keys', () => {
 
 /**
  * A grid as DataTable draws it, rendered by React with the handler on its root's capture phase: two rows with a
- * link, a disabled row without one, the totals row, a cell with an input, a button and a checkbox, then the bar,
- * and a button portaled out of the root as a Menu opened in a cell is.
+ * link, a disabled row without one, the totals row, a cell with an input, a button and a checkbox, the second
+ * row's checkbox cell and the header's select-all box, then the bar, and a button portaled out of the root as a
+ * Menu opened in a cell is.
  */
 const MARKUP = `
 <table role="grid">
-  <thead><tr role="row"><th role="columnheader" tabindex="-1">Payee</th><th role="columnheader" tabindex="-1">Note</th></tr></thead>
+  <thead><tr role="row"><th role="columnheader" tabindex="-1" data-selection=""><input type="checkbox" aria-label="Select all" /></th><th role="columnheader" tabindex="-1">Payee</th><th role="columnheader" tabindex="-1">Note</th></tr></thead>
   <tbody>
     <tr role="row" tabindex="-1" data-key="t1"><td role="rowheader" tabindex="-1"><a class="data-table-link" href="/t1">Corner Mart</a></td><td role="gridcell" tabindex="-1"><input aria-label="Note" /><button type="button">More</button><input type="checkbox" aria-label="Flag" /></td></tr>
-    <tr role="row" tabindex="-1" data-key="t2"><td role="rowheader" tabindex="-1"><a class="data-table-link" href="/t2">City Transit</a></td><td role="gridcell" tabindex="-1">Bus</td></tr>
+    <tr role="row" tabindex="-1" data-key="t2"><td role="gridcell" tabindex="-1" data-selection=""><label class="checkbox-field"><input type="checkbox" aria-label="Select" /></label></td><td role="rowheader" tabindex="-1"><a class="data-table-link" href="/t2">City Transit</a></td><td role="gridcell" tabindex="-1">Bus</td></tr>
     <tr role="row" tabindex="-1" data-key="t3" aria-disabled="true"><td role="rowheader" tabindex="-1">Northside Rent</td><td role="gridcell" tabindex="-1"></td></tr>
   </tbody>
   <tfoot><tr role="row" tabindex="-1" data-key="__total"><td role="rowheader" tabindex="-1">Total</td><td role="gridcell" tabindex="-1"></td></tr></tfoot>
@@ -313,6 +317,8 @@ function mount(direction: 'ltr' | 'rtl' = 'ltr') {
     },
     toggle: vi.fn<(key: string | number) => void>(),
     extend: vi.fn<(row: Element) => void>(),
+    // React Aria's typeahead would move to a row or header starting with one of these.
+    typeahead: vi.fn((character: string) => /^[a-z7ش]$/i.test(character)),
   } satisfies TableKeyActions;
   const view = render(
     createElement(
@@ -442,6 +448,20 @@ describe('the table keys', () => {
     cleanupListener();
   });
 
+  it('opens the row on Enter on its checkbox, and swallows Enter on select-all, so Enter never selects', () => {
+    const { q, clicks, reached, cleanupListener } = mount();
+    const enter = key(q('[data-key="t2"] input[aria-label="Select"]'), { key: 'Enter', code: 'Enter' });
+    expect(enter.defaultPrevented).toBe(true);
+    expect(clicks).toHaveLength(1);
+    expect(clicks[0]?.target).toBe(q('[data-key="t2"] a'));
+    // The header's box has no row to open: the key stops all the same, so React Aria never selects every row.
+    const all = key(q('input[aria-label="Select all"]'), { key: 'Enter', code: 'Enter' });
+    expect(all.defaultPrevented).toBe(true);
+    expect(clicks).toHaveLength(1);
+    expect(reached).not.toHaveBeenCalled();
+    cleanupListener();
+  });
+
   it('leaves Enter on a control inside a cell to the control', () => {
     const { q, clicks, reached, cleanupListener } = mount();
     const enter = key(q('[data-key="t1"] button'), { key: 'Enter', code: 'Enter' });
@@ -454,15 +474,30 @@ describe('the table keys', () => {
     cleanupListener();
   });
 
-  it('stops every other single printable key, and leaves Space, the arrows, Home, End and Escape', () => {
-    const { q, reached, arrows, cleanupListener } = mount();
+  it('stops a printable key typeahead would act on, and lets every other key reach the page', () => {
+    const { q, actions, reached, arrows, cleanupListener } = mount();
     const row = q('[data-key="t1"]');
-    for (const letter of ['c', 'C', 'z', '7', 'ش', '.']) key(row, { key: letter });
+    for (const letter of ['c', 'C', 'z', '7', 'ش']) key(row, { key: letter });
     expect(reached).not.toHaveBeenCalled();
-    for (const through of [' ', 'ArrowDown', 'ArrowRight', 'Home', 'End', 'Escape', 'PageDown', 'Tab']) {
+    expect(actions.typeahead.mock.calls.map(([character]) => character)).toEqual(['c', 'C', 'z', '7', 'ش']);
+    // A key no row or header starts with, such as a page's "/" shortcut, is not React Aria's to take.
+    for (const through of [
+      '/',
+      '.',
+      ' ',
+      'ArrowDown',
+      'ArrowRight',
+      'Home',
+      'End',
+      'Escape',
+      'PageDown',
+      'Tab',
+    ]) {
       key(row, { key: through });
     }
     expect(reached.mock.calls.map(([event]) => (event as KeyboardEvent).key)).toEqual([
+      '/',
+      '.',
       ' ',
       'ArrowDown',
       'ArrowRight',
@@ -491,8 +526,8 @@ describe('the table keys', () => {
     cleanupListener();
   });
 
-  it('ignores a composing key, a key in an input in a cell, a key in the bar, and every key while another modal is open', () => {
-    const { q, actions, reached, arrows, clicks, cleanupListener } = mount();
+  it('ignores a composing key, a key in an input in a cell, a key in the bar, and every key while the table is under a modal', () => {
+    const { root, q, actions, reached, arrows, clicks, cleanupListener } = mount();
     const row = q('[data-key="t1"]');
     key(row, { key: 'j', code: 'KeyJ', isComposing: true });
     expect(reached).toHaveBeenCalledTimes(1);
@@ -505,7 +540,8 @@ describe('the table keys', () => {
     key(q('.data-table-bar button'), { key: 'x', code: 'KeyX' });
     key(q('.data-table-bar button'), { key: 'Enter', code: 'Enter' });
     expect(reached).toHaveBeenCalledTimes(6);
-    modal.open = true;
+    // A modal over the table: the handler asks about the table's own root, and stands down.
+    modal.covers = root;
     key(row, { key: 'j', code: 'KeyJ' });
     key(row, { key: 'x', code: 'KeyX' });
     key(row, { key: 'Enter', code: 'Enter' });
@@ -515,9 +551,25 @@ describe('the table keys', () => {
     expect(actions.toggle).not.toHaveBeenCalled();
     expect(clicks).toHaveLength(0);
     // A checkbox in a cell types nothing, so X on it is the row's.
-    modal.open = false;
+    modal.covers = null;
     key(q('[data-key="t1"] input[type="checkbox"]'), { key: 'x', code: 'KeyX' });
     expect(actions.toggle).toHaveBeenCalledWith('t1');
+    cleanupListener();
+  });
+
+  it('keeps every key while the table is inside the top-most modal, as a table in a dialog is', () => {
+    const { q, actions, reached, arrows, clicks, cleanupListener } = mount();
+    // Some modal is open, and the table is not under it: the stack says so for anything but the root.
+    modal.covers = document.body;
+    const row = q('[data-key="t1"]');
+    key(row, { key: 'j', code: 'KeyJ' });
+    expect(arrows).toEqual(['ArrowDown']);
+    key(row, { key: 'x', code: 'KeyX' });
+    expect(actions.toggle).toHaveBeenCalledWith('t1');
+    key(row, { key: 'Enter', code: 'Enter' });
+    expect(clicks).toHaveLength(1);
+    key(row, { key: 'c', code: 'KeyC' });
+    expect(reached.mock.calls.map(([event]) => (event as KeyboardEvent).key)).toEqual(['ArrowDown']);
     cleanupListener();
   });
 

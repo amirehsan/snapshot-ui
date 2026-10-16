@@ -1,7 +1,14 @@
 'use client';
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
-import { useContext, useEffect, type CSSProperties, type ReactElement, type ReactNode } from 'react';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import {
   Cell,
   Column,
@@ -234,6 +241,15 @@ export function TableFace<T>({
   ...name
 }: TableFaceProps<T>): ReactElement {
   const hasTotals = rows.length > 0 && columns.some((column) => present(column.total));
+  // React Aria writes aria-selected="false" on every row while selection is on, the totals row's too, which is
+  // never selected; the attribute leaves it once it is drawn, and again whenever selection turns on.
+  const selectable = selection !== undefined;
+  const unselectable = useCallback(
+    (row: HTMLTableRowElement | null) => {
+      if (selectable) row?.removeAttribute('aria-selected');
+    },
+    [selectable],
+  );
   return (
     <Table
       {...name}
@@ -322,6 +338,7 @@ export function TableFace<T>({
         <TableFooter className="data-table-footer">
           {/* A row of the grid, reached by the arrows, never selected and never opened (spec correction 3). */}
           <Row
+            ref={unselectable}
             id="__total"
             isDisabled
             disabledBehavior="selection"

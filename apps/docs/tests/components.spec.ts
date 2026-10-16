@@ -6,7 +6,9 @@ import {
   axeViolations,
   CHART_PAGES,
   COMPONENT_PAGES,
+  drawn,
   expectTableFace,
+  over,
   settled,
   sideways,
   systemColor,
@@ -655,9 +657,12 @@ test.describe('forced colors', () => {
     await expect(current.locator('.data-table-link')).toHaveAttribute('aria-current', 'true');
   });
 
-  test('a selected data table row is Highlight with HighlightText', async ({ page }) => {
+  test('a selected data table row is Highlight with HighlightText as drawn, its text and its ring legible', async ({
+    page,
+  }) => {
     // A selected row's 8% wash would be repainted away; Highlight is the reader's own selection color, and the
-    // checked box still marks the row.
+    // checked box still marks the row. The row is drawn out of the forced repaint, so Chromium's backplate never
+    // blanks its text, and a focused selected row is ringed HighlightText, which shows on Highlight.
     await visit(page, '/docs/components/data-table');
     const [highlight, highlightText] = [
       await systemColor(page, 'Highlight'),
@@ -672,6 +677,23 @@ test.describe('forced colors', () => {
     await expect(row).toHaveCSS('background-color', highlight);
     await expect(row).toHaveCSS('color', highlightText);
     await expect(row.getByRole('checkbox')).toBeChecked();
+    // What the reader sees: the payee drawn HighlightText on Highlight, at the system pair's own contrast.
+    // Chromium's forced Highlight is translucent, so it is drawn over the canvas behind the table.
+    const fill = over(highlight, await systemColor(page, 'canvas'));
+    const payee = await drawn(page, row.locator('[role="rowheader"]'));
+    expect(payee.fill).toBe(fill);
+    expect(payee.ink).toBe(over(highlightText, fill));
+    expect(payee.ratio).toBeGreaterThanOrEqual(4.5);
+    // The focused row's inset ring along its top edge is HighlightText, not Highlight on Highlight.
+    await expect(row).toBeFocused();
+    const box = await row.boundingBox();
+    if (box === null) throw new Error('No row box');
+    const ring = await drawn(page, { x: box.x + 24, y: box.y, width: box.width - 48, height: 2 });
+    expect(ring.fill).toBe(over(highlightText, fill));
+    // The checked box is drawn inverted, HighlightText with a Highlight mark, and shows on the Highlight fill.
+    const checkbox = await drawn(page, row.locator('.checkbox-box'));
+    expect(checkbox.fill).toBe(over(highlightText, fill));
+    expect(checkbox.ratio).toBeGreaterThanOrEqual(3);
     await expect(stage.locator('.data-table-bar')).toHaveCSS(
       'border-top-color',
       await systemColor(page, 'CanvasText'),

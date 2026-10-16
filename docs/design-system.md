@@ -7878,12 +7878,17 @@ none, Shift, and Ctrl off a Mac or Alt on one. Arrow Right is the next
 cell in a left-to-right locale and the previous in a right-to-left one,
 read from the locale as React Aria reads it, not from the CSS.
 
-**Hover and disabled.** The 5% wash is drawn on a row with a link (and,
-once selection is on, on every selectable row) under `:hover` or React
-Aria's `data-hovered`, inside `@media (hover: hover)`. A row with no
+**Hover and disabled.** The 5% wash is drawn on a body row with a link
+(and, once selection is on, on every selectable body row) under `:hover`
+or React Aria's `data-hovered`, inside `@media (hover: hover)`; the
+totals row, which is never opened or selected, takes none. A row with no
 selection is not React Aria's hoverable item, since its press is the
 link's, so `:hover` is what draws it. A disabled row is taupe with
-`cursor: not-allowed`, takes no focus and draws no link.
+`cursor: not-allowed`, takes no focus and draws no link. React Aria
+writes `aria-selected="false"` on every row while selection is on, the
+totals row's too; a ref takes it off that row once it is drawn, so after
+hydration the totals row claims no selection state (spec correction 40),
+while the server's HTML still carries it.
 
 **Page Up and Page Down** (risk R4). React Aria measures a page against
 the whole table when the page itself scrolls, so they move to the first
@@ -7893,10 +7898,24 @@ and last row; recorded in the Keys table.
 header under or below the page's header; the `StickyHeader` story pins
 it under a 64px bar.
 
-**Forced colors.** Rules and the skeleton rows' rules are `CanvasText`;
-the current bar `CanvasText`; the focus ring `Highlight`; a disabled
-row `GrayText`; a selected row `Highlight` with `HighlightText`; the
-bar's edge `CanvasText`.
+**Forced colors** (spec correction 39). Rules and the skeleton rows'
+rules are `CanvasText`; the current bar `CanvasText`; the focus ring
+`Highlight`; a disabled row `GrayText`; the bar's edge `CanvasText`. A
+selected row is the reader's own selection pair, `Highlight` with
+`HighlightText`, hovered too, and is drawn out of the forced repaint
+with `forced-color-adjust: none`: inside the repaint, Chromium draws a
+backplate in the system's background color behind each run of text, so
+`HighlightText` sat on that backplate and could vanish, and the focus
+ring, `Highlight` on the `Highlight` fill, did not show at all (WCAG
+2.4.7). Out of the repaint
+nothing is forced, so every part of the row takes the pair by name: its
+text, its rules and its rings `HighlightText`, no fill of its own on
+anything such as a badge, and a checked box drawn inverted, a
+`HighlightText` box with a `Highlight` mark. A focused selected row or
+cell is ringed `HighlightText`. The docs check what Chromium draws, not
+only the computed values: the payee is `HighlightText` on `Highlight` at
+the pair's own contrast, the ring along the row's top edge is
+`HighlightText`, and the box shows both colors.
 
 **Right to left.** Columns run from the right, an `align: 'end'` column
 sits at the left with its figures a left-to-right run, the sort arrows
@@ -7904,10 +7923,10 @@ keep up for ascending, the current bar is at the right, the checkbox
 column is the rightmost, and the bar's count sits at its right
 (`DataTableMirrored`).
 
-**Selection** (section 7, rulings 2 and 4, spec corrections 5 and 30).
-With `selectedKeys` and `onSelectionChange`, the table is React Aria's
-`selectionMode="multiple"` with `selectionBehavior="toggle"`, and a
-first column, `__selection`, 3.5rem wide with the part step, 8px, of
+**Selection** (section 7, rulings 2 and 4, spec corrections 5, 30, 35
+and 36). With `selectedKeys` and `onSelectionChange`, the table is React
+Aria's `selectionMode="multiple"` with `selectionBehavior="toggle"`, and
+a first column, `__selection`, 3.5rem wide with the part step, 8px, of
 padding at its ends, holds React Aria's selection-slot checkboxes: the
 40px hit area and 8px of room beside a scroll edge, the checkbox rule's.
 The column never leaves. The header's box is named `labels.selectAll`; a
@@ -7918,13 +7937,24 @@ empty and a skeleton row's first cell a 3.5rem blank. Select-all and
 Mod+A give React Aria's `'all'`, which the app never sees:
 `onSelectionChange` receives the keys of `items` not in `disabledKeys`,
 the rows on this page, and a set becomes its keys in order (ruling 4).
-React Aria's selection, with its anchor, goes back to React Aria while
-the app holds the same keys, so Shift with an arrow extends from the row
-Space or X last toggled and shrinks on the way back, as React Aria's own
-selection does; an array alone would lose the anchor on every change. A
-press on a row is its link's and never selects, before and after a row
-is selected; a row without a link selects on a press, as React Aria's
-row does.
+React Aria is given only the selected keys still in `items`, so a
+selection of keys that have left draws no indeterminate header and lets
+Escape through; every change React Aria makes reaches the app with those
+other keys after its own, kept until the app drops them (risk R6), and
+Clear selection clears them all (spec correction 36). React Aria's
+selection, with its anchor, goes back to React Aria while the app holds
+the same keys, so Shift with an arrow extends from the row Space or X
+last toggled and shrinks on the way back, as React Aria's own selection
+does; an array alone would lose the anchor on every change. A press on a
+row is its link's and never selects, before and after a row is selected.
+A row without a link selects nothing on a press either: React Aria's
+cell would select its row on a press anywhere in it, so DataTable's root
+stops, in its capture phase, a pointer down, a mouse down and a screen
+reader's virtual click that land in a cell on none of its controls, the
+list correction 14 raises, the checkbox's field among them (spec
+correction 35, the `PressNeverSelects` play, in three engines). React
+Aria's cell stops those events itself, so nothing outside the table
+hears less than it did.
 
 **The selected wash** (ruling 7). A selected row takes the ink wash at
 8% over the fill, one step over hover and held under the pointer, beside
@@ -7935,7 +7965,7 @@ over lifted, under 4.5 over canvas in light, so no slate text sits on a
 selected row. In forced colors a selected row is `Highlight` with
 `HighlightText`.
 
-**The bar** (ruling 5, spec corrections 9, 18 and 29). While any
+**The bar** (ruling 5, spec corrections 9, 18, 29 and 38). While any
 selected key is in `items`, `div.data-table-bar` follows the grid: React
 Aria's Toolbar named `labels.toolbar`, holding
 `labels.selected(formatCount(count))` at the small step at 500 with
@@ -7950,30 +7980,45 @@ scrolled past (the `StickyBar` play); its layer is the header cells',
 one under the header token. The count counts only keys still in `items`
 (risk R6). A second polite status, `span.data-table-count`, says the
 count `QUIET_MS` after it last changed, so a run of X presses is said
-once, and empties when the selection does. React Aria also announces
-each change assertively in its own English (spec correction 9), so a
-screen reader hears both, and only the bar's is in the reader's
-language. Clear selection and Escape in the bar clear the selection and
-put focus on the shown face's grid (spec correction 18); React Aria's
-Toolbar has no Escape and takes no key or focus handler, so DataTable's
-root hears the bar's Escape and where focus is. When the selection
-empties some other way while focus is in the bar, such as a bulk action
-that clears it, a layout effect puts focus on the grid, only when focus
-has fallen to the page. Left and Right move between the bar's buttons,
-React Aria's toolbar keys.
+once; a run that ends on the count it already says, 2, 3 and 2 again,
+changes nothing in it and is not said twice; it empties when the
+selection does. React Aria also announces each change assertively in its
+own English (spec correction 9), so a screen reader hears both, and only
+the bar's is in the reader's language. Clear selection and Escape in the
+bar clear the selection and put focus on the shown face's grid (spec
+correction 18); Escape in a text field in the bar is the field's. React
+Aria's Toolbar has no Escape and takes no key or focus handler, so
+DataTable's root hears the bar's Escape and where focus is. When the
+selection empties some other way while focus is in the bar, such as a
+bulk action that clears it, a layout effect puts focus on the grid, only
+when focus has fallen to the page. When the action opened a dialog or a
+menu, a portal that holds focus as the bar leaves, such as a confirm
+whose Delete clears the selection, the table watches that portal, the
+body's child that holds it, and once it has left the page with focus
+fallen to the body, puts focus on the grid; focus the reader moves out
+of the portal ends the watch (the `ConfirmClears` play). Focus that
+leaves the bar for the page, rather than for a portal, forgets the bar.
+Left and Right move between the bar's buttons, React Aria's toolbar
+keys.
 
-**The keys** (ruling 3, spec corrections 6 to 8, 30 and 31). One capture
-handler on DataTable's root takes keys before React Aria's grid, in this
-order. Nothing is taken from a key that reached the root only through
-React's tree (a Menu opened in a cell is a portal), a composing key, a
-key while another modal is open, a key in a text input, a text area, a
-select or editable content, or a key in the bar; a checkbox types
-nothing, so X on a row's box is the row's. Enter on a row or one of its
-own cells, with any modifiers, stops there and opens the row's link:
+**The keys** (ruling 3, spec corrections 6 to 8, 30, 31, 33, 34 and 37).
+One capture handler on DataTable's root takes keys before React Aria's
+grid, in this order. Nothing is taken from a key that reached the root
+only through React's tree (a Menu opened in a cell is a portal), a
+composing key, a key while the table sits under an open modal, a key in
+a text input, a text area, a select or editable content, or a key in the
+bar; a checkbox types nothing, so X on a row's box is the row's. The
+modal test asks the overlay stack whether the table's root is outside
+the top-most open modal: a table under a dialog stands down, and a table
+inside one keeps its keys (spec correction 33, the `InDialog` play, in
+three engines). Enter on a row, one of its own cells or the box in its
+checkbox cell, with any modifiers, stops there and opens the row's link:
 `click()` with none, so the router opens it, and a dispatched click
 carrying the modifiers with one, as React Aria's `openLink` does, so
 React Aria's link leaves it to the browser; a row without a link
-swallows it, so React Aria never selects the row (spec correction 6).
+swallows it, so React Aria never selects the row (spec correction 6),
+and Enter on a row's box opens the row where React Aria would toggle it,
+while Enter on the select-all box does nothing (spec correction 37).
 Enter on a header, or on a control in a cell, is theirs. Then the
 hidden-cell keys, above. Every other key with Ctrl, Alt or Meta is React
 Aria's (Mod+A, Shift with the arrows). J and K, matched by `event.key`
@@ -7982,13 +8027,21 @@ dispatch Arrow Down and Arrow Up on the focused element, the library's
 own technique (spec correction 7). X, matched the same way, toggles the
 focused row through React Aria's selection manager, as Space does, so it
 sets the anchor Shift extends from; it does nothing on the totals row,
-the empty row or a disabled row. Every other single printable key but
-Space stops, so React Aria's typeahead never runs. Where the handler
-itself takes a Shift arrow, or Ctrl+Shift+Home or End off a Mac, past a
-column that has left, it extends the selection to the shown cell's row,
-the row React Aria would have reached, so a hidden cell never stops
-Shift from extending (the `ShiftPastHidden` play, in three engines). Escape in the table is React Aria's: it clears a
-selection, and passes to the page when there is none.
+the empty row or a disabled row. A single printable key but Space that
+React Aria's typeahead would act on, one that some row's name, a row
+header cell's text, the totals row's or a header's name starts with
+under React Aria's own search collator (`useFilter` at base
+sensitivity), stops, so typeahead never moves focus; every other key
+goes on to the page, so a page's shortcut such as "/" still works while
+focus is in the table. React Aria stops a key itself once its typeahead
+moved focus, so the handler stops nothing React Aria would have let
+through (spec correction 34). Where the handler itself takes a Shift
+arrow, or Ctrl+Shift+Home or End off a Mac, past a column that has left,
+it extends the selection to the shown cell's row, the row React Aria
+would have reached, so a hidden cell never stops Shift from extending
+(the `ShiftPastHidden` play, in three engines). Escape in the table is
+React Aria's: it clears a selection, and passes to the page when there
+is none.
 
 **One tab stop** (spec 7.2, spec correction 28). React Aria's
 `useFocusable` gives its Link and its checkboxes `tabindex="0"` for
@@ -8015,15 +8068,15 @@ none, and the router opened the row. What each browser opens for the
 modifier click, a new tab or nothing, is not observable in a play, and
 WebKit may ignore a modifier on a click a script dispatched; the
 owner's device checks read it (owner action 4). Arrow Right onto the
-row's link and the browser's own modifier Enter there is the fallback
-the docs can name (open question 7).
+row's link and the browser's own modifier Enter there is the fallback,
+and the docs' Keys table names it (open question 7).
 
-**Stale keys** (risk R6). A selection keeps keys of rows that have left
-`items` until the app drops them, so the bar counts only keys still
-there, and a warning, once per mount, names the others: "DataTable:
-selectedKeys holds keys that are not in items: t41, t42. Clear the
-selection when the rows change." The docs clear the selection on every
-change of the rows.
+**Stale keys** (risk R6, spec correction 36). A selection keeps keys of
+rows that have left `items` until the app drops them, so the bar counts
+only keys still there, React Aria is given only those, and a warning,
+once per mount, names the others: "DataTable: selectedKeys holds keys
+that are not in items: t41, t42. Clear the selection when the rows
+change." The docs clear the selection on every change of the rows.
 
 **The size.** The entry `{ DataTable }` measured 2.62 kB without React
 Aria, Lucide and `@internationalized/date`, Link and Skeleton included;

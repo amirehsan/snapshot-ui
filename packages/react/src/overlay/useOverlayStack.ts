@@ -4,6 +4,8 @@ import { useLayoutEffect, useState, type RefObject } from 'react';
 
 /** The open modal overlays, bottom-most first. A singleton that creates no DOM, so it imports on the server. */
 const open: string[] = [];
+/** Each open overlay's scrim, which holds everything the overlay draws. */
+const scrims = new Map<string, RefObject<HTMLElement | null>>();
 const listeners = new Set<() => void>();
 
 function tell(): void {
@@ -13,6 +15,17 @@ function tell(): void {
 /** Whether a modal overlay other than `id` is open. CommandPalette's shortcut asks this. */
 export function isAnotherModalOpen(id?: string): boolean {
   return open.some((each) => each !== id);
+}
+
+/**
+ * Whether `element` sits under the top-most open modal overlay, outside it: true for the page under a dialog,
+ * false with no modal open and for anything the top-most modal holds, such as a table in a dialog. DataTable's
+ * keys ask this, so they stand down under a modal and still work inside one.
+ */
+export function isUnderModal(element: Element): boolean {
+  const top = open.at(-1);
+  if (top === undefined) return false;
+  return scrims.get(top)?.current?.contains(element) !== true;
 }
 
 /** The ids of the open modal overlays, bottom-most first. For tests. */
@@ -39,13 +52,15 @@ export function useOverlayStack(
   useLayoutEffect(() => {
     if (!isOpen) return;
     open.push(id);
+    scrims.set(id, scrimRef);
     tell();
     return () => {
       const index = open.indexOf(id);
       if (index >= 0) open.splice(index, 1);
+      if (!open.includes(id)) scrims.delete(id);
       tell();
     };
-  }, [id, isOpen]);
+  }, [id, isOpen, scrimRef]);
   useLayoutEffect(() => {
     const update = (): void => {
       setBottom(open[0] === id || !open.includes(id));

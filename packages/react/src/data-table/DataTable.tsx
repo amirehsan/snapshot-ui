@@ -11,8 +11,9 @@ import {
   type ReactElement,
   type ReactNode,
   type Ref,
+  type SyntheticEvent,
 } from 'react';
-import { useLocale, type Key, type Selection } from 'react-aria-components';
+import { useFilter, useLocale, type Key, type Selection } from 'react-aria-components';
 import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
@@ -20,7 +21,8 @@ import { present } from '../utils/present';
 import { useWarnOnce } from '../utils/useWarnOnce';
 import { BulkBar } from './BulkBar';
 import { DataTableStatus } from './DataTableStatus';
-import { handleTableKey, type TableKeyActions } from './keys';
+import { EDITABLE, handleTableKey, type TableKeyActions } from './keys';
+import { selectsOnPress } from './press';
 import { rowHeaderOf, textOf } from './rows';
 import { keysOf, presentKeys, staleKeys, toggled } from './selection';
 import { TableFace, type FaceRow, type FaceSelection, type FaceSelectionManager } from './TableFace';
@@ -158,6 +160,42 @@ function shownGrid(root: HTMLElement | null): HTMLElement | null {
   return null;
 }
 
+/** The child of the body that holds `element`: the app's own tree, or a portal such as a dialog's. */
+function portalOf(element: Element): Element {
+  let top = element;
+  const { body } = element.ownerDocument;
+  while (top.parentElement !== null && top.parentElement !== body) top = top.parentElement;
+  return top;
+}
+
+/**
+ * Watches a portal that holds focus, a dialog or a menu one of the bar's actions opened, after the bar has left:
+ * once the portal leaves the page with focus fallen to the body, `give` puts focus on the table. Focus the reader
+ * moves out of the portal ends the watch, and so does the returned function. Only a portal is watched, never the
+ * app's own tree, so nothing waits on the page for good.
+ */
+function watchPortal(root: Element, held: Element, give: () => void): () => void {
+  const document = root.ownerDocument;
+  const portal = portalOf(held);
+  if (portal === portalOf(root)) return () => undefined;
+  const onFocusIn = (event: globalThis.FocusEvent): void => {
+    if (!(event.target instanceof Element) || !portal.contains(event.target)) stop();
+  };
+  const observer = new MutationObserver(() => {
+    if (portal.isConnected) return;
+    stop();
+    const active = document.activeElement;
+    if (active === null || active === document.body) give();
+  });
+  function stop(): void {
+    observer.disconnect();
+    document.removeEventListener('focusin', onFocusIn);
+  }
+  observer.observe(document.body, { childList: true });
+  document.addEventListener('focusin', onFocusIn);
+  return stop;
+}
+
 /**
  * The rows of the face, one per key: a row whose key an earlier row has is left out, since React Aria throws for
  * a repeated key outside production and can loop forever in it. `repeated` is the first such key, or null.
@@ -246,28 +284,60 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   const hasBar = counted.length > 0;
   // The bar leaves with focus in it when the selection empties some other way, such as a bulk action that
   // clears it: focus goes to the table rather than to the page (spec 7.1). Only when focus has fallen to the
-  // page: focus the reader has since moved elsewhere stays where it is.
+  // page: focus the reader has since moved elsewhere stays where it is. When an action opened a dialog or a menu
+  // that holds focus as the bar leaves, such as a confirm whose Delete cleared the selection, the table waits
+  // for that portal to close and takes focus then, if it fell to the page.
   useLayoutEffect(() => {
     if (hasBar || !focusInBar.current) return;
     focusInBar.current = false;
-    const active = rootRef.current?.ownerDocument.activeElement;
-    if (active === null || active === undefined || active === active.ownerDocument.body) {
-      shownGrid(rootRef.current)?.focus();
+    const root = rootRef.current;
+    if (root === null) return;
+    const active = root.ownerDocument.activeElement;
+    if (active === null || active === root.ownerDocument.body) {
+      shownGrid(root)?.focus();
+      return;
     }
+    if (root.contains(active)) return;
+    return watchPortal(root, active, () => {
+      shownGrid(root)?.focus();
+    });
   }, [hasBar]);
 
   const faceSelection: FaceSelection | undefined = selectable
     ? {
-        selectedKeys: holds(last, selectedKeys) ? last : selectedKeys,
+        // React Aria sees only the selected rows it draws, so a selection of stale keys shows no indeterminate
+        // header and lets Escape through; the app keeps the stale keys until it drops them (risk R6).
+        selectedKeys: holds(last, counted) ? last : counted,
         onChange: (selection) => {
           setLast(selection === 'all' ? null : selection);
-          onSelectionChange(keysOf(selection, rows, (row) => row.key, disabled));
+          onSelectionChange([...keysOf(selection, rows, (row) => row.key, disabled), ...stale]);
         },
         selectAllLabel: words.selectAll,
         selectLabel: words.select,
         onManager,
       }
     : undefined;
+
+  // What React Aria's typeahead compares a letter with: each row's name, a row header cell's own text, the
+  // totals row's and every header's name, as `TableKeyboardDelegate.getKeyForSearch` does, with its collator.
+  const { startsWith } = useFilter({ sensitivity: 'base' });
+  const typeahead = (character: string): boolean => {
+    const names: string[] = [words.total, words.selectAll, ...columns.map((column) => column.header)];
+    for (const row of rows) {
+      names.push(row.text);
+      const cell = rowHeader?.cell(row.value);
+      if (typeof cell === 'string') names.push(cell);
+    }
+    return names.some((name) => name !== '' && startsWith(name, character));
+  };
+
+  // A press on a cell, outside its controls and the row's link, never selects (ruling 2): React Aria would select
+  // a row without a link on it. A virtual click, a screen reader's, is a press too.
+  const guardPress = (event: SyntheticEvent<HTMLDivElement>): void => {
+    if (!selectable || !(event.target instanceof Element)) return;
+    if (event.type === 'click' && (event.nativeEvent as MouseEvent).detail !== 0) return;
+    if (selectsOnPress(event.target, event.currentTarget)) event.stopPropagation();
+  };
 
   const actions: TableKeyActions = {
     direction,
@@ -286,6 +356,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         key === null ? undefined : (byDataKey.get(key) ?? (key === '__total' ? key : undefined));
       if (reached !== undefined) manager.current?.extendSelection(reached);
     },
+    typeahead,
   };
 
   const marked = columns.filter((column) => column.isRowHeader === true);
@@ -338,10 +409,11 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         if (
           event.key === 'Escape' &&
           event.currentTarget.contains(target) &&
-          target.closest('.data-table-bar') !== null
+          target.closest('.data-table-bar') !== null &&
+          target.closest(EDITABLE) === null
         ) {
           // Escape in the bar clears and puts focus on the table (spec correction 18). A Menu opened from an
-          // action is a portal, outside the root's DOM, and its Escape is its own.
+          // action is a portal, outside the root's DOM, and its Escape is its own; a text field's is the field's.
           event.preventDefault();
           event.stopPropagation();
           clear();
@@ -355,6 +427,17 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         if (event.currentTarget.contains(target))
           focusInBar.current = target.closest('.data-table-bar') !== null;
       }}
+      onBlurCapture={(event: FocusEvent<HTMLDivElement>) => {
+        const next = event.relatedTarget;
+        // Focus that leaves the table for the page forgets the bar; focus that goes into a portal, a dialog or a
+        // menu one of its actions opened, keeps it.
+        if (next instanceof Element && !event.currentTarget.contains(next)) {
+          if (portalOf(next) === portalOf(event.currentTarget)) focusInBar.current = false;
+        }
+      }}
+      onPointerDownCapture={guardPress}
+      onMouseDownCapture={guardPress}
+      onClickCapture={guardPress}
     >
       {/* Busy while loading. The status sits outside the busy part and stays mounted, so it is heard. */}
       <div className="data-table-grid" aria-busy={isLoading ? 'true' : undefined}>
