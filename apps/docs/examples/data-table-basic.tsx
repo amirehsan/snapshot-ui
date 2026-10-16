@@ -13,12 +13,13 @@ interface Sort {
 const COLUMNS: readonly DataTableColumn<Transaction>[] = [
   { id: 'date', header: 'Date', cell: (row) => dateLabel(row.date), allowsSorting: true, width: '18%' },
   { id: 'payee', header: 'Payee', cell: (row) => row.payee, isRowHeader: true },
-  { id: 'category', header: 'Category', cell: (row) => row.category },
+  { id: 'category', header: 'Category', cell: (row) => row.category, listSlot: 'meta' },
   {
     id: 'amount',
     header: 'Amount',
     cell: (row) => amountLabel(row.minor),
     align: 'end',
+    listSlot: 'end',
     allowsSorting: true,
     width: '26%',
   },

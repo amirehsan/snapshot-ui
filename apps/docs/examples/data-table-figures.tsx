@@ -14,6 +14,7 @@ const COLUMNS: readonly DataTableColumn<Transaction>[] = [
     header: 'Amount',
     cell: (row) => amountLabel(row.minor),
     align: 'end',
+    listSlot: 'end',
     width: '30%',
     total: totalLabel(ROWS),
   },

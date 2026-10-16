@@ -3067,7 +3067,7 @@ test('select all selects the rows on the page and Clear selection puts focus bac
   expect(await table.evaluate((grid) => grid.contains(document.activeElement))).toBe(true);
 });
 
-test('a data table drops its md column under 48rem of its box and its sm column under 40rem', async ({
+test('a data table drops its md column under 48rem of its box, and under 40rem draws its list', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -3092,16 +3092,6 @@ test('a data table drops its md column under 48rem of its box and its sm column 
   await expect.poll(shown).toEqual(['Date', 'Payee', 'Account', 'Amount']);
   await setWidth('40rem');
   await expect.poll(shown).toEqual(['Date', 'Payee', 'Account', 'Amount']);
-  await setWidth('39.5rem');
-  await expect.poll(shown).toEqual(['Date', 'Payee', 'Amount']);
-  // The example's own control narrows the box the same way, within its frame.
-  await setWidth('');
-  const widths = page.getByRole('radiogroup', { name: "Width of the table's box" });
-  await widths.getByRole('radio', { name: '56rem' }).focus();
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowRight');
-  await expect(widths.getByRole('radio', { name: '38rem' })).toBeChecked();
-  await expect.poll(shown).toEqual(['Date', 'Payee', 'Amount']);
   // The table is the full width of its box, its last header cell ending at the box's end (spec correction 26).
   const ends = await box.evaluate((element) => {
     const right = (selector: string): number =>
@@ -3114,11 +3104,110 @@ test('a data table drops its md column under 48rem of its box and its sm column 
   });
   expect(ends.table).toBe(ends.box);
   expect(ends.header).toBe(ends.box);
+  // Under 40rem the list is the face drawn, an item per row, and the table is not; the sm column has not left
+  // the table, since the table is not drawn.
+  await setWidth('39.5rem');
+  await expect(box.getByRole('grid')).toHaveCount(1);
+  await expect(box.locator('.data-table-list')).toBeVisible();
+  await expect(box.locator('.data-table-grid')).toBeHidden();
+  await expect(box.locator('.data-table-item')).toHaveCount(5);
+  // The example's own control narrows the box the same way, within its frame.
+  await setWidth('');
+  const widths = page.getByRole('radiogroup', { name: "Width of the table's box" });
+  await widths.getByRole('radio', { name: '56rem' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(widths.getByRole('radio', { name: '38rem' })).toBeChecked();
+  await expect(box.locator('.data-table-list')).toBeVisible();
   // The narrower box is drawn and named, so its width reads as chosen; its edge takes no room.
   await expect(box).toHaveCSS('outline-style', 'dashed');
   await expect(box).toHaveCSS('outline-width', '1px');
   await expect(page.getByText("The table's box: 38rem")).toBeVisible();
   expect(await sideways(page)).toBe(0);
+});
+
+test('a data table switches to the list under 40rem of its box and back at 40rem', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const box = page.getByTestId('data-table-box');
+  const setWidth = (width: string): Promise<void> =>
+    box.evaluate((element, value) => {
+      (element as HTMLElement).style.width = value;
+    }, width);
+  // One face at a time, so a reader and a screen reader meet one grid.
+  for (const [width, face] of [
+    ['40rem', 'table'],
+    ['39.9rem', 'list'],
+    ['40rem', 'table'],
+  ] as const) {
+    await setWidth(width);
+    await expect(box.getByRole('grid')).toHaveCount(1);
+    await expect(box.locator(face === 'table' ? '.data-table-grid' : '.data-table-list')).toBeVisible();
+    await expect(box.locator(face === 'table' ? '.data-table-list' : '.data-table-grid')).toBeHidden();
+  }
+});
+
+test.describe('the data table on a phone', () => {
+  test.use({ viewport: { width: 320, height: 720 }, hasTouch: true });
+
+  test('shows the list grouped by day and never scrolls the page sideways', async ({ page }) => {
+    await visit(page, '/docs/components/data-table');
+    const list = page.locator('.stage .data-table-list').filter({ has: page.locator('.data-table-section') });
+    await list.first().scrollIntoViewIfNeeded();
+    await expect(list.first()).toBeVisible();
+    const grid = list.first().getByRole('grid', { name: 'Transactions' });
+    await expect(grid.getByRole('rowgroup')).toHaveCount(4);
+    await expect(grid.getByRole('rowgroup').first()).toHaveAccessibleName('Wednesday 14 October');
+    // Each item's title, its meta line and its amount, inside the item.
+    const item = grid.locator('.data-table-item').first();
+    await expect(item.locator('.data-table-item-title')).toHaveText('Corner Mart');
+    await expect(item.locator('.data-table-item-meta')).toHaveText('Groceries');
+    await expect(item.locator('.data-table-item-end')).toHaveText('\u2212$42.18');
+    const edges = await item.evaluate((element) => {
+      const own = element.getBoundingClientRect();
+      const end = element.querySelector('.data-table-item-end')?.getBoundingClientRect();
+      return { right: own.right, end: end?.right ?? 0 };
+    });
+    expect(edges.end).toBeLessThanOrEqual(edges.right);
+    // The table face is in the page, hidden; no example scrolls the page sideways.
+    await expect(page.locator('.stage .data-table-grid').first()).toBeHidden();
+    expect(await sideways(page)).toBe(0);
+  });
+
+  test('opens an item on a tap and selects it on its checkbox', async ({ page }) => {
+    await visit(page, '/docs/components/data-table');
+    const root = page.locator('.stage .data-table').filter({ has: page.locator('.data-table-section') });
+    const list = root.first().locator('.data-table-list');
+    const item = list.first().locator('.data-table-item').nth(1);
+    await item.evaluate((element) => {
+      element.scrollIntoView({ block: 'center' });
+    });
+    // A tap on the item's amount lands on its link, stretched over the item: it opens, and selects nothing. The
+    // tap goes to the point, since the link covers the amount and Playwright would wait for the amount itself.
+    const end = await item.locator('.data-table-item-end').boundingBox();
+    if (end === null) throw new Error('No amount');
+    await page.touchscreen.tap(end.x + end.width / 2, end.y + end.height / 2);
+    await expect(page).toHaveURL(/#t2$/);
+    await expect(item).toHaveAttribute('data-current');
+    await expect(item).toHaveAttribute('aria-selected', 'false');
+    // No box until Select; then a tap on the box selects the item and the bar shows.
+    await expect(item.getByRole('checkbox')).toHaveCount(0);
+    await list.first().getByRole('button', { name: 'Select', exact: true }).tap();
+    await expect(list.first().getByRole('button', { name: 'Done' })).toBeVisible();
+    // The box drawn, centered in the view so the docs header does not cover it; its 40px area takes the tap.
+    const box = item.locator('.checkbox-box');
+    await box.evaluate((element) => {
+      element.scrollIntoView({ block: 'center' });
+    });
+    await box.tap();
+    await expect(item).toHaveAttribute('aria-selected', 'true');
+    await expect(root.first().getByRole('toolbar', { name: 'Bulk actions' })).toContainText('1 selected');
+    // Done hides the boxes and keeps the selection.
+    await list.first().getByRole('button', { name: 'Done' }).tap();
+    await expect(item.getByRole('checkbox')).toHaveCount(0);
+    await expect(item).toHaveAttribute('aria-selected', 'true');
+    await expect(item.locator('.data-table-item-mark')).toBeVisible();
+  });
 });
 
 test('the data table page keeps its side column, and draws each box of its columns example at its width in a frame that scrolls on its own', async ({
@@ -3150,12 +3239,14 @@ test('the data table page keeps its side column, and draws each box of its colum
     for (const [name, pixels, columns] of [
       ['56rem', 896, ['Date', 'Payee', 'Category', 'Account', 'Amount']],
       ['44rem', 704, ['Date', 'Payee', 'Account', 'Amount']],
-      ['38rem', 608, ['Date', 'Payee', 'Amount']],
+      ['38rem', 608, null],
     ] as const) {
       await widths.locator('.segmented-option', { hasText: name }).click();
       await expect(widths.getByRole('radio', { name })).toBeChecked();
       await expect.poll(async () => Math.round((await box.boundingBox())?.width ?? 0)).toBe(pixels);
-      await expect.poll(shown).toEqual(columns);
+      // Under 40rem the box draws the list instead of the table.
+      if (columns === null) await expect(box.locator('.data-table-list')).toBeVisible();
+      else await expect.poll(shown).toEqual(columns);
     }
     // The frame scrolls where the page is narrower than the box; the page never scrolls sideways.
     await widths.locator('.segmented-option', { hasText: '56rem' }).click();

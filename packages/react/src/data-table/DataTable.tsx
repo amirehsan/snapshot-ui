@@ -22,7 +22,9 @@ import { present } from '../utils/present';
 import { useWarnOnce } from '../utils/useWarnOnce';
 import { BulkBar } from './BulkBar';
 import { DataTableStatus, useQuiet } from './DataTableStatus';
+import { groupsOf } from './groups';
 import { EDITABLE, handleTableKey, type TableKeyActions } from './keys';
+import { ListFace, type ListSelection, type ListSelectionManager } from './ListFace';
 import { selectsOnPress } from './press';
 import { uncover } from './scroll';
 import { rowHeaderOf, textOf } from './rows';
@@ -70,6 +72,12 @@ export interface DataTableColumn<T> {
    * menus needs.
    */
   isHeaderHidden?: boolean;
+  /**
+   * Where the cell goes in an item of the list face, the face drawn under 40rem of the table's own box: on its
+   * first line, on its second line in slate, at its end, or nowhere.
+   * @default 'title' for the row header, 'hidden' for every other column
+   */
+  listSlot?: 'title' | 'meta' | 'end' | 'hidden';
 }
 
 export interface DataTableLabels {
@@ -90,6 +98,10 @@ export interface DataTableLabels {
   total: string;
   /** The bulk-action bar's name. @default 'Bulk actions' */
   toolbar: string;
+  /** The button above the list face that shows its checkboxes (amendment 3). @default 'Select' */
+  selectItems: string;
+  /** The same button while the checkboxes show, which hides them and keeps the selection. @default 'Done' */
+  doneSelecting: string;
 }
 
 /** Selection: both props or neither. */
@@ -143,6 +155,12 @@ export interface DataTableShared<T> {
   /** The empty body: an EmptyState, or any node. */
   emptyState?: ReactNode;
   /**
+   * The list face's day groups: adjacent rows with the same `id` form one section headed by `label`, your string.
+   * Only adjacent rows group, so pass it only while the rows are sorted by date. Without it the list is one
+   * ungrouped list.
+   */
+  getGroup?: (item: T) => { id: Key; label: string };
+  /**
    * The rows did not load. With no rows it is the body, in place of the empty state, such as an EmptyState with a
    * Retry action; with rows shown, a failed next page, it is a line under the table that a polite status says.
    * It wins over `isLoading` and `emptyState`.
@@ -173,6 +191,8 @@ const DEFAULT_LABELS: DataTableLabels = {
   loading: 'Loading',
   total: 'Total',
   toolbar: 'Bulk actions',
+  selectItems: 'Select',
+  doneSelecting: 'Done',
 };
 
 /** Whether React Aria's selection holds exactly `keys`, so it can go back to React Aria with its anchor. */
@@ -182,10 +202,12 @@ const holds = (selection: Selection | null, keys: readonly Key[]): selection is 
   selection.size === new Set(keys).size &&
   keys.every((key) => selection.has(key));
 
-/** The grid of the face that is shown, read at event or effect time (Task 4 adds the list face's). */
+/** The grid of the face that is shown, the table's or the list's, read at event or effect time. */
 function shownGrid(root: HTMLElement | null): HTMLElement | null {
   if (root === null) return null;
-  for (const face of root.querySelectorAll<HTMLElement>(':scope > .data-table-grid')) {
+  for (const face of root.querySelectorAll<HTMLElement>(
+    ':scope > .data-table-grid, :scope > .data-table-list',
+  )) {
     if (getComputedStyle(face).display === 'none') continue;
     const grid = face.querySelector<HTMLElement>('[role="grid"]');
     if (grid !== null) return grid;
@@ -288,6 +310,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     isLoading = false,
     loadingRowCount = 8,
     emptyState,
+    getGroup,
     error,
     labels,
     className,
@@ -318,6 +341,14 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   const onManager = useCallback((next: FaceSelectionManager | null) => {
     manager.current = next;
   }, []);
+  // The list face's own manager, so X and Shift there move its anchor, not the table's.
+  const listManager = useRef<ListSelectionManager | null>(null);
+  const onListManager = useCallback((next: ListSelectionManager | null) => {
+    listManager.current = next;
+  }, []);
+  /** The manager of the face `element` is in. */
+  const managerOf = (element: Element): FaceSelectionManager | null =>
+    element.closest('.data-table-list') === null ? manager.current : listManager.current;
   // Whether the last focus inside the root's DOM was in the bar, which the root's focus capture keeps.
   const focusInBar = useRef(false);
 
@@ -351,18 +382,38 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     });
   }, [hasBar]);
 
-  const faceSelection: FaceSelection | undefined = selectable
+  // React Aria sees only the selected rows it draws, so a selection of stale keys shows no indeterminate header
+  // and lets Escape through; the app keeps the stale keys until it drops them (risk R6). Both faces take it.
+  const shared = {
+    selectedKeys: holds(last, counted) ? last : counted,
+    onChange: (selection: Selection) => {
+      setLast(selection === 'all' ? null : selection);
+      onSelectionChange?.([...keysOf(selection, rows, (row) => row.key, disabled), ...stale]);
+    },
+    selectAllLabel: words.selectAll,
+    selectLabel: words.select,
+  };
+  const faceSelection: FaceSelection | undefined = selectable ? { ...shared, onManager } : undefined;
+  // The list's select-all is the library's own box above it, since GridList has none (spec 10.2 item 9): every
+  // enabled row, or none, as the table's select-all gives.
+  const enabled = rows.filter((row) => !disabled.has(row.key)).map((row) => row.key);
+  const chosen = new Set(counted);
+  const listSelection: ListSelection | undefined = selectable
     ? {
-        // React Aria sees only the selected rows it draws, so a selection of stale keys shows no indeterminate
-        // header and lets Escape through; the app keeps the stale keys until it drops them (risk R6).
-        selectedKeys: holds(last, counted) ? last : counted,
-        onChange: (selection) => {
-          setLast(selection === 'all' ? null : selection);
-          onSelectionChange([...keysOf(selection, rows, (row) => row.key, disabled), ...stale]);
+        ...shared,
+        all:
+          enabled.length > 0 && enabled.every((key) => chosen.has(key))
+            ? 'all'
+            : counted.length > 0
+              ? 'some'
+              : 'none',
+        onSelectAll: (select) => {
+          setLast(null);
+          onSelectionChange([...(select ? enabled : []), ...stale]);
         },
-        selectAllLabel: words.selectAll,
-        selectLabel: words.select,
-        onManager,
+        selectItemsLabel: words.selectItems,
+        doneLabel: words.doneSelecting,
+        onManager: onListManager,
       }
     : undefined;
 
@@ -393,24 +444,30 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
       event.stopPropagation();
   };
 
-  const actions: TableKeyActions = {
-    direction,
-    keyOf: (row) => {
-      const key = byDataKey.get(row.getAttribute('data-key') ?? '');
-      return selectable && key !== undefined && !disabled.has(key) ? key : null;
-    },
-    toggle: (key) => {
-      // As Space does, so the toggled row becomes the anchor Shift extends from.
-      if (manager.current !== null) manager.current.toggleSelection(key);
-      else if (selectedKeys !== undefined) onSelectionChange(toggled(selectedKeys, key));
-    },
-    extend: (row) => {
-      const key = row.getAttribute('data-key');
-      const reached =
-        key === null ? undefined : (byDataKey.get(key) ?? (key === '__total' ? key : undefined));
-      if (reached !== undefined) manager.current?.extendSelection(reached);
-    },
-    typeahead,
+  /** The handler's actions for a key from `target`, in the table face or the list face. */
+  const actionsFor = (target: Element): TableKeyActions => {
+    const inList = target.closest('.data-table-list') !== null;
+    return {
+      direction,
+      keyOf: (row) => {
+        const key = byDataKey.get(row.getAttribute('data-key') ?? '');
+        return selectable && key !== undefined && !disabled.has(key) ? key : null;
+      },
+      toggle: (key) => {
+        // As Space does, so the toggled row becomes the anchor Shift extends from, in the face it is in.
+        const own = managerOf(target);
+        if (own !== null) own.toggleSelection(key);
+        else if (selectedKeys !== undefined) onSelectionChange(toggled(selectedKeys, key));
+      },
+      extend: (row) => {
+        const key = row.getAttribute('data-key');
+        const reached =
+          key === null ? undefined : (byDataKey.get(key) ?? (key === '__total' ? key : undefined));
+        if (reached !== undefined) managerOf(row)?.extendSelection(reached);
+      },
+      // The list takes disallowTypeAhead, so no letter would move focus there and every one reaches the page.
+      typeahead: inList ? () => false : typeahead,
+    };
   };
 
   const marked = columns.filter((column) => column.isRowHeader === true);
@@ -473,7 +530,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           clear();
           return;
         }
-        handleTableKey(event, actions);
+        handleTableKey(event, actionsFor(target));
       }}
       onFocusCapture={(event: FocusEvent<HTMLDivElement>) => {
         const target = event.target as Element;
@@ -481,9 +538,9 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         // Focus in a portal opened from the bar (a Menu) keeps what the bar had.
         if (!root.contains(target)) return;
         focusInBar.current = target.closest('.data-table-bar') !== null;
-        // A focused row or cell of the body is scrolled clear of the sticky header and the bar, after React
-        // Aria's own scroll, which runs in the next frame (WCAG 2.4.11).
-        if (target instanceof HTMLElement && target.closest('tbody, tfoot') !== null) {
+        // A focused row or cell of the body, or a list item, is scrolled clear of the sticky header or day
+        // heading and the bar, after React Aria's own scroll, which runs in the next frame (WCAG 2.4.11).
+        if (target instanceof HTMLElement && target.closest('tbody, tfoot, .data-table-item') !== null) {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               uncover(target, root);
@@ -509,11 +566,12 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         if (!event.shiftKey || !(event.target instanceof Element)) return;
         const row = rowOfBox(event.target, event.currentTarget);
         if (row === null) return;
-        const key = actions.keyOf(row);
-        if (key === null || manager.current === null) return;
+        const key = actionsFor(row).keyOf(row);
+        const own = managerOf(row);
+        if (key === null || own === null) return;
         event.preventDefault();
         event.stopPropagation();
-        manager.current.extendSelection(key);
+        own.extendSelection(key);
       }}
     >
       {/* Busy while loading. The status sits outside the busy part and stays mounted, so it is heard. */}
@@ -534,6 +592,30 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           disabledKeys={disabled}
           disabledBehavior={disabledBehavior}
           selection={faceSelection}
+          isLoading={loading && rows.length === 0}
+          loadingRowCount={loadingRowCount}
+          emptyState={failed ? error : emptyState}
+          totalLabel={words.total}
+          loadingLabel={words.loading}
+        />
+      </div>
+      {/* The list face, shown instead of the grid under 40rem of the root's box (ruling 8); busy as the grid is. */}
+      <div
+        className="data-table-list"
+        aria-busy={loading ? 'true' : undefined}
+        data-reloading={reloading ? '' : undefined}
+      >
+        <ListFace
+          aria-label={props['aria-label']}
+          aria-labelledby={props['aria-labelledby']}
+          rows={rows}
+          groups={groupsOf(rows, getGroup === undefined ? undefined : (row) => getGroup(row.value))}
+          columns={columns}
+          rowHeader={rowHeader}
+          currentKey={currentKey}
+          disabledKeys={disabled}
+          disabledBehavior={disabledBehavior}
+          selection={listSelection}
           isLoading={loading && rows.length === 0}
           loadingRowCount={loadingRowCount}
           emptyState={failed ? error : emptyState}

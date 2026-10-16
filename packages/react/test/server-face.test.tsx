@@ -12,7 +12,7 @@ import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { SearchField } from '../src/search-field';
-import { columnsWithTotal, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
+import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 
 /**
  * The server face (ruling 1): every date and number part writes one HTML, byte for byte, under en-US, de-DE and
@@ -115,7 +115,8 @@ const FACES: [name: string, element: ReactElement][] = [
     </FilterBar>,
   ],
   [
-    // The rows, the row header's links, the current row, the sort marks and the totals; the status is empty.
+    // The rows, the row header's links, the current row, the sort marks and the totals; the status is empty. The
+    // list face follows the table's, its items grouped by day under their headings.
     'DataTable',
     <DataTable
       aria-label="Transactions"
@@ -123,6 +124,7 @@ const FACES: [name: string, element: ReactElement][] = [
       columns={columnsWithTotal(FIVE)}
       getKey={keyOf}
       getRowHref={hrefOf}
+      getGroup={groupOf}
       currentKey="t2"
       sortDescriptor={{ column: 'date', direction: 'descending' }}
       onSortChange={noop}
@@ -130,7 +132,7 @@ const FACES: [name: string, element: ReactElement][] = [
   ],
   [
     // Two rows selected: the checked boxes, the header's indeterminate box, and the bar with its count, written
-    // by the app's formatCount; the count's status is empty.
+    // by the app's formatCount; the count's status is empty. The list face draws its Select button and no boxes.
     'DataTable selected',
     <DataTable
       aria-label="Transactions"
@@ -138,6 +140,7 @@ const FACES: [name: string, element: ReactElement][] = [
       columns={columnsWithTotal(FIVE)}
       getKey={keyOf}
       getRowHref={hrefOf}
+      getGroup={groupOf}
       sortDescriptor={{ column: 'date', direction: 'descending' }}
       onSortChange={noop}
       selectedKeys={['t1', 't3']}

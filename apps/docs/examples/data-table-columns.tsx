@@ -7,12 +7,19 @@ import { amountLabel, dateLabel, TRANSACTIONS, type Transaction } from './transa
 const COLUMNS: readonly DataTableColumn<Transaction>[] = [
   { id: 'date', header: 'Date', cell: (row) => dateLabel(row.date), width: '18%' },
   { id: 'payee', header: 'Payee', cell: (row) => row.payee, isRowHeader: true },
-  { id: 'category', header: 'Category', cell: (row) => row.category, hideBelow: 'md' },
+  { id: 'category', header: 'Category', cell: (row) => row.category, hideBelow: 'md', listSlot: 'meta' },
   { id: 'account', header: 'Account', cell: (row) => row.account, hideBelow: 'sm' },
-  { id: 'amount', header: 'Amount', cell: (row) => amountLabel(row.minor), align: 'end', width: '26%' },
+  {
+    id: 'amount',
+    header: 'Amount',
+    cell: (row) => amountLabel(row.minor),
+    align: 'end',
+    width: '26%',
+    listSlot: 'end',
+  },
 ];
 
-/** The widths of the table's box to try: over 48rem, under 48rem, then under 40rem. */
+/** The widths of the table's box to try: over 48rem, under 48rem, then under 40rem, where it becomes its list. */
 const WIDTHS: Record<string, string> = { wide: '56rem', medium: '44rem', narrow: '38rem' };
 
 export default function DataTableColumns(): ReactElement {

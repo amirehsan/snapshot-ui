@@ -137,11 +137,15 @@ export const groupOf = (row: Transaction): { id: string; label: string } => ({
   label: row.dayLabel,
 });
 
-/** Date, Payee as the row header, Category leaving under 48rem, Account under 40rem, and Amount at the end. */
+/**
+ * Date, Payee as the row header, Category leaving under 48rem, Account under 40rem, and Amount at the end. In the
+ * list face the payee is an item's title, the category its second line and the amount its end; the date is the
+ * day's heading.
+ */
 export const COLUMNS: readonly DataTableColumn<Transaction>[] = [
   { id: 'date', header: 'Date', cell: (row) => row.dateLabel, allowsSorting: true, width: '7rem' },
   { id: 'payee', header: 'Payee', cell: (row) => row.payee, isRowHeader: true },
-  { id: 'category', header: 'Category', cell: (row) => row.category, hideBelow: 'md' },
+  { id: 'category', header: 'Category', cell: (row) => row.category, hideBelow: 'md', listSlot: 'meta' },
   { id: 'account', header: 'Account', cell: (row) => row.account, hideBelow: 'sm' },
   {
     id: 'amount',
@@ -150,6 +154,7 @@ export const COLUMNS: readonly DataTableColumn<Transaction>[] = [
     align: 'end',
     allowsSorting: true,
     width: '8rem',
+    listSlot: 'end',
   },
 ];
 

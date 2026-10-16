@@ -700,6 +700,43 @@ test.describe('forced colors', () => {
     );
   });
 
+  test('a selected data table list item is Highlight with HighlightText as drawn, its mark and its box legible', async ({
+    page,
+  }) => {
+    // The list face's selected item is drawn as a selected row is (spec correction 39): out of the forced repaint,
+    // the reader's selection pair, its title HighlightText on Highlight. Out of Select mode its mark, and in it
+    // its checked box, is drawn inverted, HighlightText with a Highlight check.
+    await page.setViewportSize({ width: 375, height: 800 });
+    await visit(page, '/docs/components/data-table');
+    const [highlight, highlightText] = [
+      await systemColor(page, 'Highlight'),
+      await systemColor(page, 'HighlightText'),
+    ];
+    const list = page
+      .locator('.stage .data-table-list')
+      .filter({ has: page.locator('.data-table-list-mode') });
+    const item = list.first().locator('.data-table-item').first();
+    await item.scrollIntoViewIfNeeded();
+    await item.focus();
+    await page.keyboard.press('x');
+    await expect(item).toHaveAttribute('aria-selected', 'true');
+    await expect(item).toHaveCSS('background-color', highlight);
+    await expect(item).toHaveCSS('color', highlightText);
+    const fill = over(highlight, await systemColor(page, 'canvas'));
+    const title = await drawn(page, item.locator('.data-table-item-title'));
+    expect(title.fill).toBe(fill);
+    expect(title.ink).toBe(over(highlightText, fill));
+    expect(title.ratio).toBeGreaterThanOrEqual(4.5);
+    const mark = await drawn(page, item.locator('.data-table-item-mark'));
+    expect(mark.fill).toBe(over(highlightText, fill));
+    expect(mark.ratio).toBeGreaterThanOrEqual(3);
+    // In Select mode the checked box is drawn the same way.
+    await list.first().locator('.data-table-list-mode').click();
+    const box = await drawn(page, item.locator('.checkbox-box'));
+    expect(box.fill).toBe(over(highlightText, fill));
+    expect(box.ratio).toBeGreaterThanOrEqual(3);
+  });
+
   test('a tag keeps a CanvasText edge', async ({ page }) => {
     // The bone fill is repainted away, so the edge is what draws the pill; a disabled tag is GrayText.
     await visit(page, '/docs/components/multi-select');
@@ -762,8 +799,9 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .card-collapsible .card-body p',
   ],
   'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
-  // A cell keeps to one line and ellipsizes, so a long payee leaves the table inside 320px.
-  'data-table': ['.stage .data-table-cell'],
+  // At 320px and 375px the examples draw the list face, whose title and meta line ellipsize on one line; a table
+  // cell, in the columns example's frame, does too, so a long payee leaves either face inside 320px.
+  'data-table': ['.stage .data-table-cell', '.stage .data-table-item-title', '.stage .data-table-item-meta'],
   'date-range-picker': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // The title and the line are the app's sentences, and both wrap at any character inside the column.
   'empty-state': ['.stage .empty-state-title', '.stage .empty-state-description'],
@@ -929,7 +967,12 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'command-palette': ['.stage .button'],
   'confirm-dialog': ['.stage .button'],
   // The header and the row links: every row is in the server's HTML; the loading status waits for a pause.
-  'data-table': ['.stage .data-table-table thead', '.stage .data-table-link'],
+  // The list face's items are in it too: both faces are, and the box shows one.
+  'data-table': [
+    '.stage .data-table-table thead',
+    '.stage .data-table-link',
+    '.stage .data-table-list [role="row"]',
+  ],
   // The frame and its button, with the app's valueLabel where the segments go; the calendar waits for a press.
   'date-range-picker': ['.stage .date-range-control', '.stage .date-range-button'],
   dialog: ['.stage .button'],

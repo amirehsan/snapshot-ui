@@ -1515,3 +1515,78 @@ export const DataTableMirrored: Story = {
     await expect(rect(find(bar, '.data-table-bar-actions')).right).toBeLessThan(rect(count).left);
   },
 };
+
+/** A Persian list with one item selected, so its Select mode can show the boxes. */
+function MirroredList(): ReactElement {
+  const [keys, setKeys] = useState<Key[]>(['p1']);
+  return (
+    <DataTable
+      aria-label="تراکنش‌ها"
+      items={PERSIAN_ROWS}
+      columns={[
+        { id: 'payee', header: 'گیرنده', cell: (row) => row.payee },
+        { id: 'category', header: 'دسته', cell: (row) => row.category, listSlot: 'meta' },
+        { id: 'amount', header: 'مبلغ', cell: (row) => row.amount, align: 'end', listSlot: 'end' },
+      ]}
+      getKey={(row) => row.id}
+      getRowHref={(row) => `/transactions/${row.id}`}
+      getGroup={() => ({ id: 'day', label: 'سه‌شنبه ۲۲ مهر' })}
+      currentKey="p2"
+      selectedKeys={keys}
+      onSelectionChange={setKeys}
+      labels={{
+        selectAll: 'انتخاب همه',
+        select: 'انتخاب',
+        selectItems: 'انتخاب',
+        doneSelecting: 'تمام',
+        clearSelection: 'پاک کردن انتخاب',
+        selected: (count) => `${count} انتخاب شده`,
+        toolbar: 'کارهای گروهی',
+      }}
+    />
+  );
+}
+
+/**
+ * The list face on a Persian page, in a box under 40rem: with Select pressed, an item's box is at its right; its
+ * amount sits at its left, a left-to-right run; and the current item's bar is its inline-start border, at its
+ * right. Select all leads the head at the right and the button ends it at the left.
+ */
+export const DataTableListMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <RouterProvider navigate={() => undefined}>
+        <div dir="rtl" lang="fa" style={{ width: '22rem' }}>
+          <MirroredList />
+        </div>
+      </RouterProvider>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const mode = find(canvasElement, '.data-table-list-mode');
+    mode.click();
+    await waitFor(() => expect(mode).toHaveTextContent('تمام'));
+    const items = canvasElement.querySelectorAll<HTMLElement>('.data-table-item');
+    const [first, current] = items;
+    if (first === undefined || current === undefined) throw new Error('No items');
+    const padding = parseFloat(getComputedStyle(first).paddingRight);
+    // The box at the item's right, inside its padding.
+    const box = find(first, '.data-table-item-select');
+    await expect(Math.abs(rect(box).right - (rect(first).right - padding))).toBeLessThan(1);
+    // The amount at the item's left, its run left to right.
+    const end = find(first, '.data-table-item-end');
+    await expect(
+      Math.abs(rect(end).left - (rect(first).left + parseFloat(getComputedStyle(first).paddingLeft))),
+    ).toBeLessThan(1);
+    await expect(getComputedStyle(find(end, '.data-table-figure')).direction).toBe('ltr');
+    await expect(rect(find(first, '.data-table-item-text')).left).toBeGreaterThan(rect(end).right);
+    // The current bar: a 3px border at the item's right, none at its left.
+    const style = getComputedStyle(current);
+    await expect(style.borderRightWidth).toBe('3px');
+    await expect(style.borderRightStyle).toBe('solid');
+    await expect(style.borderLeftWidth).toBe('0px');
+    // Select all at the head's right, the button at its left.
+    const head = find(canvasElement, '.data-table-list-head');
+    await expect(rect(find(head, '.checkbox-field')).left).toBeGreaterThan(rect(mode).right);
+  },
+};

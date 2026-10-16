@@ -1355,6 +1355,22 @@ describe('the data table', () => {
     expect(measured('dark', 'ink', 'float')).toBeCloseTo(17.42, 2);
   });
 
+  // The list face's meta line is slate on the page or in a card, which the gate holds; on a hovered or selected
+  // item it turns ink, which the 5% and 8% washes keep over 13. A selected item's mark out of Select mode is a
+  // canvas check on an ink box, the checked checkbox's own pair.
+  it('measures the list face, in both modes', () => {
+    for (const { text, ground, washed, light, dark } of [
+      { text: 'slate', ground: 'canvas', washed: false, light: 4.84, dark: 7.26 },
+      { text: 'slate', ground: 'lifted', washed: false, light: 5.31, dark: 6.94 },
+      { text: 'ink', ground: 'canvas', washed: true, light: 14.7, dark: 17.41 },
+      { text: 'canvas', ground: 'ink', washed: false, light: 16.25, dark: 19.31 },
+    ]) {
+      const what = `${text} on ${washed ? 'the wash over ' : ''}${ground}`;
+      expect(measured('light', text, ground, { washed }), `${what}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground, { washed }), `${what}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+
   // The error line under the rows is error text on the page or in a card, which the gate holds; the reloading
   // cue is an ink line that dims no text, so no row's pair changes while rows reload.
   it('cites the error line on canvas and lifted, which the gate holds, and measures it', () => {

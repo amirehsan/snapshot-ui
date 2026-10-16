@@ -37,3 +37,19 @@ export function holdFrames(): void {
     cancel.mockRestore();
   });
 }
+
+/**
+ * Shows one of DataTable's two faces, as the container query on its box does in a browser: jsdom lays nothing out
+ * and runs no container query, so both faces would otherwise be in the accessibility tree at once. A style
+ * element hides the other face with `display: none`, which jsdom's computed style and Testing Library's role
+ * queries read, until the test ends.
+ */
+export function showFace(face: 'table' | 'list'): void {
+  const style = document.createElement('style');
+  style.textContent =
+    face === 'table' ? '.data-table-list { display: none; }' : '.data-table-grid { display: none; }';
+  document.head.append(style);
+  onTestFinished(() => {
+    style.remove();
+  });
+}

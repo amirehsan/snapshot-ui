@@ -189,7 +189,8 @@ function upToHeader(from: Element, row: Element): HTMLElement | null {
 function pageHeight(grid: Element): number {
   const port = scrollPortOf(grid);
   let height = port === null ? window.innerHeight : port.clientHeight;
-  const header = grid.querySelector('[role="columnheader"]');
+  // The table's header row, or in the list face a day heading, which sticks as the header row does.
+  const header = grid.querySelector('[role="columnheader"], .data-table-section-header');
   if (header !== null) {
     height -= header.getBoundingClientRect().height;
     if (port === null) height -= parseFloat(getComputedStyle(header).top) || 0;
@@ -227,7 +228,8 @@ function pageKey(event: ReactKeyboardEvent<HTMLElement>, { extend }: TableKeyAct
   event.preventDefault();
   event.stopPropagation();
   let target: HTMLElement = reached as HTMLElement;
-  if (from !== row) {
+  // A list item's one cell draws nothing of its own (display: contents) and takes no focus, so the item does.
+  if (from !== row && !row.classList.contains('data-table-item')) {
     const cell = cellsOf(reached)[cellsOf(row).indexOf(from as HTMLElement)];
     target = (cell === undefined || isShown(cell) ? cell : nextVisibleCell(cell, 'first')) ?? target;
   }
@@ -290,8 +292,8 @@ function hiddenCellKey(
 /**
  * The table's keys, in this order (spec 7.2, spec corrections 6 to 8). Nothing is taken from a key that reached
  * the root only through React's tree (a Menu opened in a cell is a portal), a composing key, a key while the
- * table sits under an open modal (one inside a modal keeps its keys), a key typed into an editable element or a
- * key inside the bulk-action bar. Then: Enter on a row, one of its own cells or the box in its checkbox cell
+ * table sits under an open modal (one inside a modal keeps its keys), a key typed into an editable element, or a
+ * key inside the bulk-action bar or the list face's head, whose controls' keys are their own. Then: Enter on a row, one of its own cells or the box in its checkbox cell
  * opens the row's link, with any modifiers, and never reaches React Aria, which would select the row; Page Down
  * and Page Up by the rows in view; the arrows, Home and End past a column that has left, and Left and Right
  * stopping at the header row's ends; every other key with Ctrl, Alt or Meta is React Aria's (Mod+A, Shift
@@ -304,7 +306,7 @@ export function handleTableKey(event: ReactKeyboardEvent<HTMLElement>, actions: 
   const target = event.target as Element;
   if (!event.currentTarget.contains(target)) return;
   if (native.isComposing || isUnderModal(event.currentTarget)) return;
-  if (target.closest(EDITABLE) !== null || target.closest('.data-table-bar') !== null) return;
+  if (target.closest(`${EDITABLE}, .data-table-bar, .data-table-list-head`) !== null) return;
   const row = target.closest('[role="row"]');
   if (
     event.key === 'Enter' &&

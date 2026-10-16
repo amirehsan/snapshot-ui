@@ -6286,11 +6286,12 @@ describe('src/components/data-table.css', () => {
     expect(blockAfter(css, '.data-table-sort {')).toContain('color: var(--color-slate);');
     const hovered = '.data-table-column[data-allows-sorting]:is(:hover, [data-hovered])';
     expect(blockAfter(blockAfter(css, HOVER), `${hovered} {`)).toContain('color: var(--color-ink);');
-    // Outside the hover block, :hover appears only where a selected row holds its 8% wash under the pointer,
-    // which changes nothing on a device without hover.
+    // Outside the hover block, :hover appears only where a selected row or list item holds its 8% wash under
+    // the pointer, which changes nothing on a device without hover.
     const outside = outsideForcedColors(css).replace(blockAfter(css, HOVER), '');
     expect(outside.match(/[^{}]*:hover[^{}]*\{/g)).toEqual([
       " .data-table-row:is([data-selected], [aria-selected='true']), .data-table-row:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {",
+      " .data-table-item:is([data-selected], [aria-selected='true']), .data-table-item:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {",
     ]);
   });
 
@@ -6356,8 +6357,10 @@ describe('src/components/data-table.css', () => {
     expect(blockAfter(css, ".data-table-cell[role='rowheader'] {")).not.toContain('position');
   });
 
-  it('raises every control a cell can hold above the link through the header token, and an opt-in class', () => {
-    const raised = blocks().filter(([selector]) => selector.includes('.data-table-cell :is('));
+  it('raises every control a cell or a list item can hold above the link through the header token, and an opt-in class', () => {
+    const raised = blocks().filter(([selector]) =>
+      selector.includes(':is(.data-table-cell, .data-table-item) :is('),
+    );
     expect(raised).toHaveLength(1);
     const [selector = '', body = ''] = raised[0] ?? [];
     for (const control of [
@@ -6397,12 +6400,15 @@ describe('src/components/data-table.css', () => {
         ".data-table-body > .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) {",
       ),
     ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));');
-    // Outside hover, only a selected row's 8% wash mixes a color.
+    // Outside hover, only a selected row's and a selected list item's 8% wash mixes a color.
     expect(
       outsideForcedColors(css)
         .replace(hover, '')
         .match(/color-mix\([^;]*/g),
-    ).toEqual(['color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))']);
+    ).toEqual([
+      'color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))',
+      'color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))',
+    ]);
   });
 
   it('makes the checkbox column 3.5rem with a part step of padding', () => {
@@ -6526,6 +6532,7 @@ describe('src/components/data-table.css', () => {
     const taupe = blocks().filter(([, body]) => body.includes('--color-taupe'));
     expect(taupe.map(([selector]) => selector)).toEqual([
       ".data-table-row:is([data-disabled], [aria-disabled='true'])",
+      ".data-table-item:is([data-disabled], [aria-disabled='true'])",
     ]);
   });
 
@@ -6690,6 +6697,149 @@ describe('src/components/data-table.css', () => {
     ]) {
       expect(line).toContain(declaration);
     }
+  });
+
+  it('shows the list and hides the grid under 40rem of the table box, by container query only', () => {
+    const css = rules();
+    expect(blockAfter(css, '.data-table-list {')).toContain('display: none;');
+    // The second 40rem block is the switch: the first drops the sm columns.
+    const queries = [...css.matchAll(/@container data-table \(width < 40rem\)/g)].map((match) => match.index);
+    expect(queries).toHaveLength(2);
+    const swap = blockAfter(css.slice(queries[1]), '@container data-table (width < 40rem)');
+    expect(blockAfter(swap, '.data-table-grid {')).toContain('display: none;');
+    expect(blockAfter(swap, '.data-table-list {')).toContain('display: block;');
+    // Never by the viewport, so a table beside an open panel is a list too (ruling 8).
+    expect(css).not.toMatch(/@media \((?:min-|max-)?width/);
+  });
+
+  it('sticks the day heading at --page-sticky-top on the fill, at the overline step in slate', () => {
+    const heading = blockAfter(rules(), '.data-table-section-header {');
+    for (const declaration of [
+      'position: sticky;',
+      'inset-block-start: var(--page-sticky-top, 0px);',
+      'z-index: calc(var(--z-header) - 1);',
+      'padding: var(--spacing-peer) var(--spacing-inset) var(--spacing-part);',
+      'background-color: var(--data-table-fill);',
+      'color: var(--color-slate);',
+      'font-size: var(--text-overline);',
+      'font-weight: var(--text-overline--font-weight);',
+      'text-transform: uppercase;',
+    ]) {
+      expect(heading, declaration).toContain(declaration);
+    }
+  });
+
+  it('makes an item two lines tall at least, ruled between items and not at a group end', () => {
+    const css = rules();
+    const item = blockAfter(css, '.data-table-item {');
+    for (const declaration of [
+      'position: relative;',
+      'display: flex;',
+      'gap: 0.75rem;',
+      'min-block-size: max(var(--size-target), 3.5rem);',
+      'padding-block: 0.625rem;',
+      'padding-inline: var(--data-table-pad);',
+      'border-block-end: 1px solid var(--color-divider);',
+      'scroll-margin-block: var(--data-table-scroll-start) var(--data-table-scroll-end);',
+    ]) {
+      expect(item, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.data-table-item:last-child {')).toContain('border-block-end: 0;');
+    expect(blockAfter(css, '.data-table-skeleton-item {')).toContain(
+      'min-block-size: max(var(--size-target), 3.5rem);',
+    );
+  });
+
+  it('sets the title at 500 and the meta slate, ellipsized, and turns the meta ink on a hovered or selected item', () => {
+    const css = rules();
+    expect(blockAfter(css, '.data-table-item-title {')).toContain('font-weight: 500;');
+    // A rule of its own, not the hovered item's that turns it ink.
+    expect(blockAfter(css, '} .data-table-item-meta {')).toContain('color: var(--color-slate);');
+    const lines = blockAfter(css, '.data-table-item-title, .data-table-item-meta {');
+    for (const declaration of ['white-space: nowrap;', 'overflow: hidden;', 'text-overflow: ellipsis;']) {
+      expect(lines, declaration).toContain(declaration);
+    }
+    // A line with a wrapping column clamps at two, as the table's wrapping cell.
+    const wrap = blockAfter(
+      css,
+      ":is(.data-table-item-title, .data-table-item-meta)[data-overflow='wrap'] {",
+    );
+    expect(wrap).toContain('-webkit-line-clamp: 2;');
+    expect(wrap).toContain('white-space: normal;');
+    expect(
+      blockAfter(css, ".data-table-item:is([data-selected], [aria-selected='true']) .data-table-item-meta {"),
+    ).toContain('color: var(--color-ink);');
+    const hovered = blockAfter(
+      blockAfter(css, HOVER),
+      ".data-table-item:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) .data-table-item-meta {",
+    );
+    expect(hovered).toContain('color: var(--color-ink);');
+  });
+
+  it('marks a selected, current, focused and disabled item as the rows are', () => {
+    const css = outsideForcedColors(rules());
+    const SELECTED = ".data-table-item:is([data-selected], [aria-selected='true'])";
+    expect(blockAfter(css, `${SELECTED}, ${SELECTED}:is(:hover, [data-hovered]) {`)).toContain(
+      'background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));',
+    );
+    // Out of Select mode a selected item draws its mark, an ink box with a canvas check: never the wash alone.
+    const mark = blockAfter(css, '.data-table-item-mark {');
+    expect(mark).toContain('display: none;');
+    expect(mark).toContain('background-color: var(--color-ink);');
+    expect(mark).toContain('color: var(--color-canvas);');
+    expect(blockAfter(css, `${SELECTED} .data-table-item-mark {`)).toContain('display: inline-flex;');
+    const current = blockAfter(css, '.data-table-item[data-current] {');
+    expect(current).toContain('padding-inline-start: calc(var(--data-table-pad) - 3px);');
+    expect(current).toContain('border-inline-start: 3px solid var(--color-ink);');
+    expect(blockAfter(css, '.data-table-item[data-current] .data-table-item-title {')).toContain(
+      'font-weight: 700;',
+    );
+    const focused = blockAfter(css, '.data-table-item:is(:focus-visible, [data-focus-visible]) {');
+    expect(focused).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(focused).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+    const disabled = blockAfter(css, ".data-table-item:is([data-disabled], [aria-disabled='true']) {");
+    expect(disabled).toContain('color: var(--color-taupe);');
+    expect(disabled).toContain('cursor: not-allowed;');
+  });
+
+  it('keeps the Select button at the head row end, the row a target tall and ruled', () => {
+    const css = rules();
+    const head = blockAfter(css, '.data-table-list-head {');
+    expect(head).toContain('min-block-size: var(--size-target);');
+    expect(head).toContain('border-block-end: 1px solid var(--color-divider);');
+    expect(blockAfter(css, '.data-table-list-mode {')).toContain('margin-inline-start: auto;');
+  });
+
+  it('rules the totals line with the frame color at 700', () => {
+    const total = blockAfter(rules(), '.data-table-list-total {');
+    expect(total).toContain('border-block-start: 1px solid var(--color-frame);');
+    expect(total).toContain('font-weight: 700;');
+    expect(total).toContain('justify-content: space-between;');
+  });
+
+  it('draws the list rules CanvasText and a selected item Highlight in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(
+      blockAfter(
+        forced,
+        '.data-table-list-head, .data-table-item, .data-table-list-total, .data-table-skeleton-item {',
+      ),
+    ).toContain('border-color: CanvasText;');
+    const SELECTED = ".data-table-item:is([data-selected], [aria-selected='true'])";
+    const selected = blockAfter(forced, `${SELECTED}, ${SELECTED}:is(:hover, [data-hovered]) {`);
+    expect(selected).toContain('forced-color-adjust: none;');
+    expect(selected).toContain('background-color: Highlight;');
+    expect(selected).toContain('color: HighlightText;');
+    expect(blockAfter(forced, `${SELECTED} .data-table-item-mark {`)).toContain(
+      'background-color: HighlightText;',
+    );
+    expect(blockAfter(forced, `${SELECTED} .checkbox {`)).toContain('--checkbox-mark: Highlight;');
+    expect(blockAfter(forced, `${SELECTED}:is(:focus-visible, [data-focus-visible]) {`)).toContain(
+      'outline-color: HighlightText;',
+    );
+    expect(blockAfter(forced, '.data-table-item:is(:focus-visible, [data-focus-visible]) {')).toContain(
+      'outline-color: Highlight;',
+    );
   });
 
   it('draws rules CanvasText, the current bar CanvasText, the ring Highlight and a disabled row GrayText in forced colors', () => {

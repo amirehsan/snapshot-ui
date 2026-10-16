@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Ellipsis, Receipt, RotateCw } from 'lucide-react';
 import { useState, type ComponentType, type CSSProperties, type ReactElement, type ReactNode } from 'react';
+import { renderToString } from 'react-dom/server';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
@@ -13,6 +14,7 @@ import { paint, tokenColor } from '../stories/paint';
 import {
   COLUMNS,
   columnsWithTotal,
+  groupOf,
   hrefOf,
   keyOf,
   manyTransactions,
@@ -26,9 +28,10 @@ import { DataTable, type DataTableColumn, type DataTableProps } from './DataTabl
 type StoryArgs = Record<string, never>;
 
 /**
- * The household's transactions in DataTable's table face. Every story sits in a box 60rem wide at most, the
- * width of a list page's content, inside a router whose navigate does nothing, and is tagged viewport-desktop,
- * so the list face (Task 4) changes none of their pictures.
+ * The household's transactions in DataTable's two faces. The table's stories sit in a box 60rem wide at most, the
+ * width of a list page's content, inside a router whose navigate does nothing, and are tagged viewport-desktop,
+ * so the list face changes none of their pictures. The list face's stories, the Phone ones, take the meta's tag
+ * off and are tagged viewport-phone: at 375px the box is under 40rem and the list is the face drawn.
  */
 const meta = {
   title: 'Components/DataTable',
@@ -127,6 +130,39 @@ async function focusRow(scope: ParentNode, index: number): Promise<HTMLElement> 
   }
   await expect(row).toHaveFocus();
   return row;
+}
+
+/** A box under 40rem for a play run at the 1200px the story tests default to, so the list is the face shown. */
+const NARROW = '24rem';
+
+/** The list face's items, in the order drawn. */
+const listItems = (scope: ParentNode): HTMLElement[] => [
+  ...scope.querySelectorAll<HTMLElement>('.data-table-list .data-table-item'),
+];
+
+function itemAt(scope: ParentNode, index: number): HTMLElement {
+  const item = listItems(scope)[index];
+  if (item === undefined) throw new Error(`No item ${String(index)}`);
+  return item;
+}
+
+/** The selected items' keys, in the order drawn. */
+const selectedItemsOf = (scope: ParentNode): string[] =>
+  listItems(scope)
+    .filter((item) => item.getAttribute('aria-selected') === 'true')
+    .map((item) => item.getAttribute('data-key') ?? '');
+
+/** Tabs into the list's grid, past its head, and arrows down to item `index`, as a keyboard reader arrives. */
+async function focusItem(scope: ParentNode, index: number): Promise<HTMLElement> {
+  const item = itemAt(scope, index);
+  const grid = only(scope, '.data-table-list [role="grid"]');
+  for (let step = 0; step < 8 && !grid.contains(document.activeElement); step += 1) await userEvent.tab();
+  await expect(grid.contains(document.activeElement)).toBe(true);
+  for (let step = 0; step < 12 && document.activeElement !== item; step += 1) {
+    await userEvent.keyboard('{ArrowDown}');
+  }
+  await expect(item).toHaveFocus();
+  return item;
 }
 
 /** Eight rows sorted by date, newest first; Date and Amount sort, Payee opens the row. */
@@ -253,7 +289,7 @@ type PersianRow = (typeof PERSIAN)[number];
 const PERSIAN_COLUMNS: readonly DataTableColumn<PersianRow>[] = [
   { id: 'date', header: 'تاریخ', cell: (row) => row.date, allowsSorting: true, width: '7rem' },
   { id: 'payee', header: 'گیرنده', cell: (row) => row.payee, isRowHeader: true },
-  { id: 'category', header: 'دسته', cell: (row) => row.category, hideBelow: 'md' },
+  { id: 'category', header: 'دسته', cell: (row) => row.category, hideBelow: 'md', listSlot: 'meta' },
   {
     id: 'amount',
     header: 'مبلغ',
@@ -261,6 +297,7 @@ const PERSIAN_COLUMNS: readonly DataTableColumn<PersianRow>[] = [
     align: 'end',
     width: '10rem',
     total: '۳۲٬۸۶۷٬۰۰۰ تومان',
+    listSlot: 'end',
   },
 ];
 
@@ -391,7 +428,10 @@ export const HoverWash: Story = {
   },
 };
 
-/** The three widths of the table's box the full-width check draws: all columns, md gone, md and sm gone. */
+/**
+ * The three widths of the table's box the full-width checks draw: all columns, md gone, and under 40rem, where
+ * the list face takes over from the table at the width sm columns would leave it.
+ */
 const BOX_WIDTHS = ['100%', '44rem', '38rem'] as const;
 
 /** The left and right edges of a box, rounded to a tenth of a pixel. */
@@ -436,11 +476,16 @@ export const FullWidth: Story = {
     const expected = {
       '100%': ['Date', 'Payee', 'Category', 'Account', 'Amount'],
       '44rem': ['Date', 'Payee', 'Account', 'Amount'],
-      '38rem': ['Date', 'Payee', 'Amount'],
     };
     for (const width of BOX_WIDTHS) {
       const holder = only(canvasElement, `[data-width="${width}"]`);
       for (const root of holder.querySelectorAll<HTMLElement>('.data-table')) {
+        if (width === '38rem') {
+          // Under 40rem the list is the face drawn, the full width of the box.
+          await expect(getComputedStyle(only(root, '.data-table-grid')).display).toBe('none');
+          await expect(edges(only(root, '.data-table-list'))).toEqual(edges(root));
+          continue;
+        }
         const table = only(root, '.data-table-table');
         const [start, end] = edges(root);
         await expect(edges(table), `table in ${width}`).toEqual([start, end]);
@@ -661,9 +706,10 @@ export const CellControlsRaised: Story = {
 const BAR_COLUMNS = columnsOf(['category', 'account', 'date', 'payee', 'amount']);
 
 /**
- * The current row's bar is drawn on its first shown cell: Category at full width, Account once Category has
- * left under 48rem, and Date once both have left under 40rem; a cell that has left draws no bar, and every shown
- * cell keeps its header's edges, so nothing moves. Run in all three engines.
+ * The current row's bar is drawn on its first shown cell: Category at full width and Account once Category has
+ * left under 48rem; a cell that has left draws no bar, and every shown cell keeps its header's edges, so nothing
+ * moves. Under 40rem the list is drawn, and the current item draws the bar at its own start. Run in all three
+ * engines.
  */
 export const CurrentBarPastHidden: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -679,9 +725,15 @@ export const CurrentBarPastHidden: Story = {
     </Box>
   ),
   play: async ({ canvasElement }) => {
-    const barred = { '100%': 'Category', '44rem': 'Account', '38rem': 'Date' };
+    const barred = { '100%': 'Category', '44rem': 'Account' };
     for (const width of BOX_WIDTHS) {
       const holder = only(canvasElement, `[data-width="${width}"]`);
+      if (width === '38rem') {
+        const item = only(holder, '.data-table-item[data-current]');
+        await expect(getComputedStyle(item).borderLeftWidth).toBe('3px');
+        await expect(getComputedStyle(item).borderLeftColor).toBe(tokenColor('--color-ink', item));
+        continue;
+      }
       const current = only(holder, '.data-table-row[data-current]');
       const headers = [...only(holder, 'thead [role="row"]').children];
       const cells = [...current.children] as HTMLElement[];
@@ -1167,20 +1219,20 @@ export const InDialog: Story = {
   play: async () => {
     navigate.mockClear();
     const dialog = await within(document.body).findByRole('dialog');
-    const grid = only(dialog, '[role="grid"]');
-    const first = rowAt(dialog, 0);
+    // A large dialog's body is narrower than 40rem, so the table there draws its list face.
+    const grid = only(dialog, '.data-table-list [role="grid"]');
+    const first = itemAt(dialog, 0);
     first.focus();
     await expect(first).toHaveFocus();
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
-    await expect(selectedKeysOf(dialog)).toEqual([]);
+    await expect(selectedItemsOf(dialog)).toEqual([]);
     await userEvent.keyboard('j');
-    await waitFor(() => expect(rowAt(dialog, 1)).toHaveFocus());
+    await waitFor(() => expect(itemAt(dialog, 1)).toHaveFocus());
     await userEvent.keyboard('x');
-    await waitFor(() => expect(selectedKeysOf(dialog)).toEqual(['t2']));
-    // React Aria's typeahead would move to Northside Rent.
+    await waitFor(() => expect(selectedItemsOf(dialog)).toEqual(['t2']));
     await userEvent.keyboard('n');
-    await expect(rowAt(dialog, 1)).toHaveFocus();
+    await expect(itemAt(dialog, 1)).toHaveFocus();
     await expect(grid.contains(document.activeElement)).toBe(true);
   },
 };
@@ -1517,5 +1569,322 @@ export const ShiftPressRange: Story = {
     await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2', 't3', 't4', 't5']));
     await userEvent.click(box(6));
     await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t2', 't3', 't4', 't5', 't7']));
+  },
+};
+
+// ---- The list face, under 40rem of the table's box ------------------------------------------------------------
+
+/** Twelve rows in nine days: the payee over its category, the amount at the end, each day under its heading. */
+export const Phone: Story = {
+  tags: ['!viewport-desktop', 'viewport-phone', 'density'],
+  render: () => (
+    <Box>
+      <Sorted items={TRANSACTIONS} getGroup={groupOf} currentKey="t3" />
+    </Box>
+  ),
+};
+
+/**
+ * Two items selected in the table face before the box narrowed: out of Select mode the list draws no boxes, so
+ * each selected item keeps the checked box's mark beside its wash, and the bar shows the count.
+ */
+export const PhoneSelected: Story = {
+  tags: ['!viewport-desktop', 'viewport-phone'],
+  render: () => (
+    <Box>
+      <Selecting initial={['t2', 't4']} getGroup={groupOf} />
+    </Box>
+  ),
+};
+
+/** Select pressed: every item's box, Select all leading the head with its dash, Done at its end, and the bar. */
+export const PhoneSelecting: Story = {
+  tags: ['!viewport-desktop', 'viewport-phone'],
+  render: () => (
+    <Box>
+      <Selecting initial={['t2', 't4']} getGroup={groupOf} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    only(canvasElement, '.data-table-list-mode').click();
+    await waitFor(() => expect(listItems(canvasElement)[0]?.querySelector('.checkbox')).not.toBeNull());
+    await expect(within(canvasElement).getByRole('checkbox', { name: 'Select all' })).toBePartiallyChecked();
+  },
+};
+
+/** No rows: the app's EmptyState in the list. */
+export const PhoneEmpty: Story = {
+  tags: ['!viewport-desktop', 'viewport-phone'],
+  render: () => (
+    <Box>
+      <Sorted
+        items={[]}
+        getGroup={groupOf}
+        emptyState={
+          <EmptyState
+            icon={<Receipt />}
+            title="No transactions this month"
+            description="Transactions you add or import show here."
+          />
+        }
+      />
+    </Box>
+  ),
+};
+
+/** Loading with no rows yet: eight skeleton items, two lines and an end line each. */
+export const PhoneLoading: Story = {
+  tags: ['!viewport-desktop', 'viewport-phone'],
+  render: () => (
+    <Box>
+      <Sorted items={[]} getGroup={groupOf} isLoading />
+    </Box>
+  ),
+};
+
+/** The Persian days, written by the app. */
+const PERSIAN_DAYS: Record<string, string> = { '۲۲ مهر': 'سه‌شنبه ۲۲ مهر', '۲۱ مهر': 'دوشنبه ۲۱ مهر' };
+
+/** Right to left: the days and payees at the right, the amounts at the left, the current bar at the right. */
+export const PhoneRightToLeft: Story = {
+  tags: ['!viewport-desktop', 'viewport-phone'],
+  render: () => (
+    <Box>
+      <I18nProvider locale="fa-IR">
+        <div dir="rtl" lang="fa">
+          <DataTable
+            aria-label="تراکنش‌ها"
+            items={PERSIAN}
+            columns={PERSIAN_COLUMNS}
+            getKey={(row) => row.id}
+            getRowHref={(row) => `/transactions/${row.id}`}
+            getGroup={(row) => ({ id: row.date, label: PERSIAN_DAYS[row.date] ?? row.date })}
+            currentKey="p2"
+            labels={{ total: 'جمع', loading: 'در حال بارگذاری' }}
+          />
+        </div>
+      </I18nProvider>
+    </Box>
+  ),
+};
+
+/** Sorted by amount, so no getGroup: one list with no headings, and the totals line under it. */
+export const Ungrouped: Story = {
+  tags: ['!viewport-desktop', 'viewport-phone'],
+  render: () => {
+    const rows = [...EIGHT].sort((a, b) => a.minor - b.minor);
+    return (
+      <Box>
+        <DataTable
+          aria-label="Transactions"
+          items={rows}
+          columns={columnsWithTotal(EIGHT).map((column) =>
+            column.id === 'date' ? { ...column, listSlot: 'meta' } : column,
+          )}
+          getKey={keyOf}
+          getRowHref={hrefOf}
+          labels={{ total: 'Page total' }}
+        />
+      </Box>
+    );
+  },
+};
+
+/** Beside an open panel on a small laptop the table's box is 36rem, so it is the list there too (ruling 8). */
+export const BesidePanel: Story = {
+  render: () => (
+    <Box>
+      <div style={{ display: 'grid', gridTemplateColumns: '36rem 1fr', gap: '1.5rem' }}>
+        <Sorted items={TRANSACTIONS} getGroup={groupOf} currentKey="t3" />
+        <div aria-hidden="true" style={{ border: '1px dashed var(--color-frame)', borderRadius: 24 }} />
+      </div>
+    </Box>
+  ),
+};
+
+/**
+ * The list's keys, as the table's: J and J move down two items, K back up one, X selects that item out of Select
+ * mode, Enter opens it through the router without selecting it, and a letter a payee starts with moves nothing.
+ * Three engines, since the handler dispatches the arrows itself.
+ */
+export const ListKeys: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <RouterProvider navigate={navigate}>
+      <div style={{ width: NARROW }}>
+        <Selecting getGroup={groupOf} />
+      </div>
+    </RouterProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    navigate.mockClear();
+    await focusItem(canvasElement, 0);
+    await userEvent.keyboard('j');
+    await waitFor(() => expect(itemAt(canvasElement, 1)).toHaveFocus());
+    await userEvent.keyboard('j');
+    await waitFor(() => expect(itemAt(canvasElement, 2)).toHaveFocus());
+    await userEvent.keyboard('k');
+    await waitFor(() => expect(itemAt(canvasElement, 1)).toHaveFocus());
+    await userEvent.keyboard('x');
+    await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual(['t2']));
+    // Out of Select mode the selected item draws its mark, not a box.
+    await expect(itemAt(canvasElement, 1).querySelector('.checkbox')).toBeNull();
+    await expect(getComputedStyle(only(itemAt(canvasElement, 1), '.data-table-item-mark')).display).not.toBe(
+      'none',
+    );
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+    await expect(navigate.mock.calls[0]?.[0]).toBe('/transactions/t2');
+    await userEvent.keyboard('n');
+    await expect(itemAt(canvasElement, 1)).toHaveFocus();
+    await expect(selectedItemsOf(canvasElement)).toEqual(['t2']);
+  },
+};
+
+/** A press on an item's amount lands on its stretched link: it opens and never selects. Three engines. */
+export const ListPressOpens: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <RouterProvider navigate={navigate}>
+      <div style={{ width: NARROW }}>
+        <Selecting getGroup={groupOf} initial={['t1']} />
+      </div>
+    </RouterProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    navigate.mockClear();
+    const amount = only(itemAt(canvasElement, 2), '.data-table-item-end .data-table-figure');
+    const box = amount.getBoundingClientRect();
+    // The hit test finds the row's link over the amount, as in the table face.
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    await expect(hit?.closest('.data-table-link')).toBe(only(itemAt(canvasElement, 2), '.data-table-link'));
+    if (!(hit instanceof HTMLElement)) throw new Error('Nothing under the amount');
+    await userEvent.click(hit);
+    await waitFor(() => expect(navigate).toHaveBeenCalledTimes(1));
+    await expect(navigate.mock.calls[0]?.[0]).toBe('/transactions/t3');
+    await expect(selectedItemsOf(canvasElement)).toEqual(['t1']);
+  },
+};
+
+/**
+ * Select mode (amendment 3), by keys: Enter on Select shows every box and Select all, focus staying on the button
+ * now named Done; Shift+Tab reaches Select all; Done hides the boxes, keeps the selection and keeps focus on the
+ * button, named Select again. Three engines.
+ */
+export const SelectMode: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Box width={NARROW}>
+      <Selecting getGroup={groupOf} initial={['t2']} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const button = only(canvasElement, '.data-table-list-mode');
+    await expect(button).toHaveAccessibleName('Select');
+    await expect(listItems(canvasElement)[0]?.querySelector('.checkbox')).toBeNull();
+    button.focus();
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(button).toHaveAccessibleName('Done'));
+    await expect(button).toHaveFocus();
+    await expect(canvasElement.querySelectorAll('.data-table-list .data-table-item .checkbox')).toHaveLength(
+      8,
+    );
+    const all = within(canvasElement).getByRole('checkbox', { name: 'Select all' });
+    await expect(all).toBePartiallyChecked();
+    await userEvent.tab({ shift: true });
+    await waitFor(() => expect(all).toHaveFocus());
+    await userEvent.tab();
+    await waitFor(() => expect(button).toHaveFocus());
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(button).toHaveAccessibleName('Select'));
+    await expect(button).toHaveFocus();
+    await expect(canvasElement.querySelector('.data-table-list .data-table-item .checkbox')).toBeNull();
+    await expect(selectedItemsOf(canvasElement)).toEqual(['t2']);
+  },
+};
+
+/** The faces switch on the table's own box: the table at 40rem, the list at 39.9rem, and back. */
+export const FaceSwitch: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box width="40rem">
+      <Sorted getGroup={groupOf} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = only(canvasElement, '.data-table').parentElement;
+    if (box === null) throw new Error('No box');
+    const grid = only(canvasElement, '.data-table-grid');
+    const list = only(canvasElement, '.data-table-list');
+    await expect(getComputedStyle(grid).display).toBe('block');
+    await expect(getComputedStyle(list).display).toBe('none');
+    box.style.width = '39.9rem';
+    await waitFor(() => expect(getComputedStyle(list).display).toBe('block'));
+    await expect(getComputedStyle(grid).display).toBe('none');
+    box.style.width = '40rem';
+    await waitFor(() => expect(getComputedStyle(grid).display).toBe('block'));
+    await expect(getComputedStyle(list).display).toBe('none');
+  },
+};
+
+/** A day's heading sticks under a 64px page header while its items scroll, and the next day's takes its place. */
+export const StickyDay: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <div style={{ '--page-sticky-top': '64px', paddingBlockStart: 80 } as CSSProperties}>
+      <PageHeader />
+      <Box width={NARROW}>
+        <Sorted items={manyTransactions(40)} getGroup={groupOf} />
+      </Box>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    window.scrollTo(0, 0);
+    const headings = [...canvasElement.querySelectorAll<HTMLElement>('.data-table-section-header')];
+    const day = headings[1];
+    if (day === undefined) throw new Error('No second day');
+    // Scroll the second day's heading past the page header: it stops under it, at 64px.
+    window.scrollBy({ top: day.getBoundingClientRect().top - 64 + 20, behavior: 'instant' });
+    await waitFor(() => expect(Math.round(day.getBoundingClientRect().top)).toBe(64));
+    await expect(getComputedStyle(day).position).toBe('sticky');
+    window.scrollTo(0, 0);
+  },
+};
+
+/** R3's sizes: both faces' server HTML for 50 and 200 rows, written in the story; recorded, with no threshold. */
+function Sizes(): ReactElement {
+  const sizes = [50, 200].map((count) => {
+    const html = renderToString(
+      <DataTable
+        aria-label="Transactions"
+        items={manyTransactions(count)}
+        columns={COLUMNS}
+        getKey={keyOf}
+        getRowHref={hrefOf}
+        getGroup={groupOf}
+      />,
+    );
+    return { count, bytes: new TextEncoder().encode(html).length };
+  });
+  return (
+    <ul>
+      {sizes.map(({ count, bytes }) => (
+        <li key={count} data-rows={count} data-bytes={bytes}>
+          {`${String(count)} rows: ${String(bytes)} bytes`}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export const R3Sizes: Story = {
+  tags: ['no-visual'],
+  render: () => <Sizes />,
+  play: async ({ canvasElement }) => {
+    const bytes = [...canvasElement.querySelectorAll('[data-bytes]')].map((item) =>
+      Number(item.getAttribute('data-bytes')),
+    );
+    await expect(bytes).toHaveLength(2);
+    await expect(bytes[1]).toBeGreaterThan(bytes[0] ?? 0);
   },
 };

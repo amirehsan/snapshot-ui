@@ -42,7 +42,7 @@ import {
   SidebarTrigger,
 } from '../src/sidebar';
 import { Spinner } from '../src/spinner';
-import { COLUMNS, columnsWithTotal, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
+import { COLUMNS, columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Switch } from '../src/switch';
 import { Tab, TabList, TabPanel, Tabs } from '../src/tabs';
 import { TextArea } from '../src/text-area';
@@ -633,6 +633,28 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '>Total<',
     ],
     ['aria-busy'],
+  ],
+  [
+    // The list face after the table's, from a client component: a section per day under its heading, each item
+    // with its title, the row's link in it; with selection off, no head above it.
+    'DataTable list',
+    <DataTable
+      aria-label="Transactions"
+      items={TRANSACTIONS.slice(0, 5)}
+      columns={COLUMNS}
+      getKey={keyOf}
+      getRowHref={hrefOf}
+      getGroup={groupOf}
+    />,
+    [
+      'class="data-table-list"',
+      'class="data-table-section"',
+      'role="rowgroup"',
+      'class="data-table-item"',
+      'class="data-table-item-title"',
+      '>Monday 12 October<',
+    ],
+    ['data-table-list-head'],
   ],
   [
     // Loading with no rows: skeleton rows in React Aria's one empty cell, the grid busy, no totals.

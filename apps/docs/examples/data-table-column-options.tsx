@@ -20,12 +20,15 @@ const COLUMNS: readonly DataTableColumn<Transaction>[] = [
     cell: (row) =>
       `${row.category} from ${row.account.toLowerCase()}, matched to the October statement and the receipt the bank sent`,
     overflow: 'wrap',
+    // On a phone, the item's second line, wrapped to two lines there too.
+    listSlot: 'meta',
   },
   {
     id: 'amount',
     header: 'Amount',
     cell: (row) => amountLabel(row.minor),
     align: 'end',
+    listSlot: 'end',
     width: '20%',
     allowsSorting: true,
     // Largest first on the first press.
