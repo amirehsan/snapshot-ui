@@ -158,6 +158,23 @@ function only(scope: ParentNode, selector: string): HTMLElement {
 
 const rect = (element: Element): DOMRect => element.getBoundingClientRect();
 
+/**
+ * Whether the engine caps a flex item's block size at `max-content`. Firefox treats an intrinsic keyword in the
+ * block axis as the initial value, so there a nav in a flex column with room to spare grows past its row.
+ */
+function capsAtMaxContent(): boolean {
+  const column = document.createElement('div');
+  column.style.cssText = 'display: flex; flex-direction: column; block-size: 100px; position: absolute;';
+  const item = document.createElement('div');
+  item.style.cssText = 'flex: 1 1 0; max-block-size: max-content; block-size: auto;';
+  item.textContent = 'x';
+  column.append(item);
+  document.body.append(column);
+  const capped = rect(item).height < 50;
+  column.remove();
+  return capped;
+}
+
 /** The range's line height in pixels. */
 const lineOf = (range: HTMLElement): number => parseFloat(getComputedStyle(range).lineHeight);
 
@@ -202,6 +219,7 @@ export const InARow: Story = {
     const all = cases(canvasElement);
     await expect(all).toHaveLength(8);
     const middle = (element: Element): number => (rect(element).top + rect(element).bottom) / 2;
+    const capped = capsAtMaxContent();
     for (const each of all) {
       await holds(each);
       const nav = only(each, '.pagination');
@@ -209,13 +227,18 @@ export const InARow: Story = {
       const range = only(each, '.pagination-range');
       if (each.dataset.case !== 'grid-auto')
         await expect(rect(range).height).toBeLessThan(lineOf(range) * 1.5);
-      // The controls shown sit in one row, centered on one line, and the nav is that row tall, in a column too.
+      // The controls shown sit in one row, centered on one line, and the nav is that row tall, in a column too
+      // where the engine caps it.
       const shown = [...each.querySelectorAll('.pagination-control')].filter(
         (control) => rect(control).width > 0,
       );
       await expect(shown.length).toBeGreaterThanOrEqual(2);
-      for (const control of shown) await expect(Math.abs(middle(control) - middle(nav))).toBeLessThan(1);
-      await expect(rect(nav).height).toBeLessThan(rect(shown[0] ?? nav).height + 1);
+      const top = shown[0] ?? nav;
+      for (const control of shown) await expect(Math.abs(middle(control) - middle(top))).toBeLessThan(1);
+      if (capped || each.dataset.case !== 'column') {
+        await expect(rect(nav).height).toBeLessThan(rect(top).height + 1);
+        await expect(Math.abs(middle(top) - middle(nav))).toBeLessThan(1);
+      }
       // An auto grid column sizes the nav from its content, the narrow row: the range between two steps. Every
       // other parent gives it room for the worded row, which the nav draws from 36rem of its own width.
       const least = each.dataset.case === 'grid-auto' ? 12 : each.dataset.case === 'flex-short' ? 0 : 36;
