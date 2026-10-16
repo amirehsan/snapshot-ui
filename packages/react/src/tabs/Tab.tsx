@@ -21,7 +21,7 @@ import {
 } from 'react-aria-components';
 import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
-import { usePressAcrossRedraw } from '../utils/press-across-redraw';
+import { useUnstartedClick } from '../utils/unstarted-click';
 
 export interface TabProps extends Omit<RACTabProps, 'className' | 'style' | 'children'> {
   /** The tab's key: the panel with the same `id` is its panel, and `selectedKey` names it. */
@@ -84,24 +84,17 @@ interface TabElementProps {
 
 /**
  * The element React Aria draws for a tab, with what its own lacks: a place in the tab order from the first
- * render (`stopOf`), and a press that began before hydration followed (`usePressAcrossRedraw`): React Aria
- * draws every tab again after hydration, and a hydrated tab cancels a click it saw no pointerdown for.
+ * render (`stopOf`), and a click that reaches it with no pointerdown before it followed once, where React Aria
+ * would cancel it (`useUnstartedClick`).
  */
 function TabElement({ tabKey, elementProps, values, render }: TabElementProps): ReactElement {
   const stop = stopOf(useContext(TabListStateContext));
-  const press = usePressAcrossRedraw<HTMLElement>('[role="tablist"]', {
-    isDisabled: values.isDisabled,
-    followUnstartedClick: true,
-  });
-  const { ref: ownRef } = elementProps;
-  const ref = useMemo(() => mergeRefs<HTMLElement>(ownRef, press.ref), [ownRef, press.ref]);
+  const click = useUnstartedClick<HTMLElement>(values.isDisabled);
   const props: ElementProps = {
     ...elementProps,
-    ref,
     tabIndex: stop === null || values.isDisabled ? elementProps.tabIndex : stop === tabKey ? 0 : -1,
-    onPointerDown: chain(press.onPointerDown, elementProps.onPointerDown),
-    onPointerUp: chain(elementProps.onPointerUp, press.onPointerUp),
-    onClickCapture: chain(press.onClickCapture, elementProps.onClickCapture),
+    onPointerDown: chain(click.onPointerDown, elementProps.onPointerDown),
+    onClickCapture: chain(click.onClickCapture, elementProps.onClickCapture),
   };
   if (render) return render(props as Parameters<Render>[0], values);
   // The anchor's or the div's content is React Aria's, in the props.

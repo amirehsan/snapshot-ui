@@ -6487,7 +6487,7 @@ NVDA: not yet verified (risk R3).
 
 **The size.** The size limit is 2.5 kB for `Tabs, TabList, Tab,
 TabPanel`: the entry measured 919 B under the spec's 1.5 kB budget, and
-1.7 kB once the tab stop and the press that spans hydration came in patch
+1.38 kB once the tab stop and the click with no pointerdown came in patch
 0.6.1, which the rule rounds up to 2 kB and adds 0.5 kB.
 
 **The tab stop before hydration** (patch 0.6.1). React Aria gives the row
@@ -6506,21 +6506,26 @@ That is the tabs pattern's one stop, so no second stop is added for the
 scrolling region, and axe finds it: the region holds a focusable element.
 Once React Aria has its key, its own `tabIndex` stands.
 
-**A press that spans hydration** (patch 0.6.1). React Aria draws every tab
-again just after hydration: its collection is rebuilt on the client and
-the server's tab elements are removed and new ones put in their place. A
-press that began on a server's tab before the scripts ran ends on the new
-one, and the browser, whose pressed element is gone, sends no click, so a
-link tab opened nothing, not even by the anchor's own navigation. Chromium
-leaves the press active on the removed tab's parent, the row, which holds
-the new tab: a tab drawn while the row is the deepest active element
-follows the release as a click with no pointer, the click React Aria
-follows as a screen reader's, which selects the tab or opens its link
-through the `RouterProvider`. And a click that reaches a hydrated tab with
-no pointerdown before it, whose pointerdown came before React listened, is
-followed the same way where React Aria would cancel it; a modified click
-on a link tab is the browser's. The docs check both by holding the page's
-scripts while the pointer goes down.
+**A click with no pointerdown** (patch 0.6.1). React Aria starts a press
+on pointerdown and cancels a click on a link tab it saw no press for, the
+anchor's own navigation with it, so such a click opened nothing. A real
+click reaches a tab that way when its pointerdown came before React
+listened, as a touch that begins before hydration and ends after it
+does, and React Aria draws every tab again just after hydration, so the
+touch ends on a new element that saw none of it. Such a click is sent
+again as a click with no pointer, the click React Aria follows as a
+screen reader's: it selects the tab or opens its link once, through the
+`RouterProvider` or natively. React Aria's own clicks pass: a keyboard's
+or a screen reader's has no click count, and the click it sends to open
+a link natively has no view, so it is never cancelled in turn. A
+modified click on a link tab stays the browser's, a new tab or window. A
+mouse press held across hydration still opens nothing: the browser sends
+no click when the pressed element is replaced, and guessing the target
+from what stays active could open the wrong tab or open a link in place
+of a new window. A DataTable row's link is React Aria's Link, which
+already follows a click with no pointerdown. The docs check a touch
+across hydration, holding the server's element until it leaves the page,
+and count the navigations: exactly one.
 
 ## Pagination
 
@@ -7820,17 +7825,18 @@ tabular digits, never broken, an isolated left-to-right run at the
 line's end in either direction, so a column of amounts lines up at its
 last digit on an English and a Persian page alike.
 
-**The washes.** A row under the pointer takes a 3% ink wash over the
-holder's fill, only where hover exists; a selected row takes 8%, one
-step over, with its checked box, never color alone. Slate is the
-secondary text an app puts in a cell, so it meets 4.5 in every row
-state: on the 3% wash it measures 4.56 over canvas in light, where
-Menu's 5% wash measured 4.38 (patch 0.6.1, after an app's axe check
-flagged a hovered row); on the 8% wash it would measure 4.11, so a
-selected row sets `--color-slate` to granite, 5.59, for everything
-inside it, the app's own cell text included. A sorted or hovered header
-is ink, and the list face's slate meta line turns ink on a hovered or
-selected row.
+**The washes.** A row under the pointer takes the 5% ink wash over the
+holder's fill, Menu's hover, only where hover exists; a selected row
+takes 8%, one step over, with its checked box, never color alone. Slate
+is the secondary text an app puts in a cell, so it meets 4.5 in every
+row state: on the 5% wash it would measure 4.38 over canvas in light and
+on the 8% wash 4.11, so a hovered or a selected row sets `--color-slate`
+to granite for everything inside it, the app's own cell text included:
+5.94 on the 5% wash and 5.59 on the 8% (patch 0.6.1, after an app's axe
+check flagged a hovered row). A lighter 3% wash would have kept slate at
+4.56, but the hover would then measure 1.06 against the canvas, where
+the library's hover is 1.11. A sorted or hovered header is ink, and the
+list face's slate meta line turns ink on a hovered or selected row.
 
 **Focus.** The inset 2px ring in the focus ring token on the row, the
 cell or the header, never under the pointer: a table can sit in a
@@ -7886,11 +7892,13 @@ in a card.
 **Measured.** A cell is ink, 16.25 on canvas in light and 19.31 in dark,
 17.84 and 17.42 on lifted; a header is slate, 4.84 and 7.26 on canvas,
 5.31 and 6.94 on lifted; all four are gated already. A hovered row is the
-3% wash, a mix and not a token, so its pairs are measured and recorded:
-ink 15.31 and 18.23 over canvas, 16.79 and 16.14 over lifted; slate 4.56
-and 7.10 over canvas, 5.00 and 6.64 over lifted, all over 4.5. Slate on
-the bulk bar's float surface is 5.49 and 6.94. A current, a disabled
-and the totals row take no fill, so their slate is the rest pair. The rules are drawn, not read: the divider 1.23 and 1.28 over
+5% wash, a mix and not a token, so its pairs are measured and recorded:
+ink 14.70 and 17.41 over canvas, 16.11 and 15.25 over lifted; slate 4.38
+and 6.93 over canvas, 4.80 and 6.41 over lifted, which is why slate in
+a hovered row is granite: 5.94 and 9.00 over canvas, 6.52 and 8.18 over
+lifted. Slate on the bulk bar's float surface is 5.49 and 6.94. A
+current, a disabled and the totals row take no fill, so their slate is
+the rest pair. The rules are drawn, not read: the divider 1.23 and 1.28 over
 canvas, the frame 1.28 and 1.36. The contrast test recomputes each.
 
 **The stretched link** (ruling 2, risk R1). With `getRowHref`, the row
@@ -8353,14 +8361,14 @@ figures by the numeral rule; `'hidden'`, every other column's default.
 Cells on one line are parts a part step apart; the library writes no
 separator. Both lines end in an ellipsis on one line, and a line holding
 a column with `overflow: 'wrap'` runs to two and clamps there (amendment
-4). Hover, selected, current, focus and disabled are the rows': the 3%
-wash on hover where hover exists, the 8% wash selected with slate turned
-granite, a 3px ink inline-start border and a title at 700 for the
-current item, the inset focus ring, and taupe for a disabled item. The
-meta line turns ink on a hovered or selected item: 15.31 and 18.23 on
-the 3% wash over canvas, 13.81 and 16.06 on the 8%, light and dark; any
-other slate in an item is slate on the 3% wash, 4.56 and 7.10, and
-granite on the 8%, 5.59 and 8.50. At rest the meta line is slate on canvas, 4.84 and 7.26,
+4). Hover, selected, current, focus and disabled are the rows': the 5%
+wash on hover where hover exists and the 8% wash selected, slate turned
+granite on both, a 3px ink inline-start border and a title at 700 for
+the current item, the inset focus ring, and taupe for a disabled item.
+The meta line turns ink on a hovered or selected item: 14.70 and 17.41
+on the 5% wash over canvas, 13.81 and 16.06 on the 8%, light and dark;
+any other slate in an item is granite, 5.94 and 9.00 on the 5% wash,
+5.59 and 8.50 on the 8%. At rest the meta line is slate on canvas, 4.84 and 7.26,
 or on lifted, 5.31 and 6.94, all gated.
 
 **Select mode** (amendment 3, spec corrections 49 and 50). With
@@ -8480,13 +8488,6 @@ shows the checkboxes, a tap on an item then toggles it and Enter still
 opens it; the Select all and Done head sticks under the page header
 while the list scrolls, its controls 44px on a touch screen; and the
 bulk-action bar sits above the tab bar.
-
-**A press that spans hydration** (patch 0.6.1). React Aria draws every row
-and every list item again just after hydration, as it does a tab, so a
-press on a row's link that began before the scripts ran ended on a new
-link and the browser sent no click. The row's link follows the release
-itself, as a tab does (Tabs, "A press that spans hydration"), when the
-grid is the deepest active element and holds it.
 
 ## SidePanel
 

@@ -676,7 +676,7 @@ describe('Tabs and a click with no pointerdown before it', () => {
   };
 
   it('follows a link tab through the router, as a press would, where React Aria cancelled the click', async () => {
-    // A press that began before hydration reaches the hydrated tab as a click alone. React Aria, which saw no
+    // A touch that began before hydration reaches the hydrated tab as a click alone. React Aria, which saw no
     // pointerdown, cancelled it, the anchor's own navigation with it, and opened nothing.
     const navigate = vi.fn<(path: string) => void>();
     render(
@@ -690,6 +690,40 @@ describe('Tabs and a click with no pointerdown before it', () => {
       expect(navigate).toHaveBeenCalledOnce();
     });
     expect(navigate.mock.calls[0]?.[0]).toBe('?view=income');
+  });
+
+  it("follows a native link tab once: React Aria's own click that opens it is not cancelled", async () => {
+    // With no RouterProvider React Aria opens the link with a click of its own, which has no view; it must reach
+    // the anchor, and the page navigates exactly once.
+    window.history.replaceState(null, '', '/');
+    const hashes: string[] = [];
+    const record = (): void => {
+      hashes.push(window.location.hash);
+    };
+    window.addEventListener('hashchange', record);
+    try {
+      render(
+        <Tabs selectedKey="all" keyboardActivation="manual">
+          <TabList aria-label="Views">
+            <Tab id="all" href="#all">
+              All
+            </Tab>
+            <Tab id="income" href="#income">
+              Income
+            </Tab>
+          </TabList>
+        </Tabs>,
+      );
+      pageClick(tab('Income'));
+      await waitFor(() => {
+        expect(hashes).toEqual(['#income']);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(hashes).toEqual(['#income']);
+    } finally {
+      window.removeEventListener('hashchange', record);
+      window.history.replaceState(null, '', '/');
+    }
   });
 
   it('selects a tab without href', async () => {

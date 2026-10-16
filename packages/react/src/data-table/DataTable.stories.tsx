@@ -413,7 +413,7 @@ export const SortCycle: Story = {
 };
 
 /**
- * The hover look: a row with a link takes the 3% ink wash over the table's fill; a disabled row and the totals
+ * The hover look: a row with a link takes the 5% ink wash over the table's fill; a disabled row and the totals
  * row take none. The row is not React Aria's hoverable item (its press is the link's), so the play sets the
  * hover attribute the stylesheet pairs with :hover rather than moving a pointer the test cannot move for real.
  */
@@ -433,7 +433,7 @@ export const HoverWash: Story = {
     };
     const first = rowAt(canvasElement, 0);
     await expect(hovered(first)).toBe(
-      paint('color-mix(in srgb, var(--color-ink) 3%, var(--color-canvas))', first),
+      paint('color-mix(in srgb, var(--color-ink) 5%, var(--color-canvas))', first),
     );
     const disabled = canvasElement.querySelector<HTMLElement>('.data-table-body [data-disabled]');
     if (disabled === null) throw new Error('No disabled row');
@@ -1209,7 +1209,7 @@ export const ClearFocus: Story = {
   },
 };
 
-/** A selected row is the 8% wash, held under the pointer; an unselected one hovered is 3%. */
+/** A selected row is the 8% wash, held under the pointer; an unselected one hovered is 5%. */
 export const HoverSelected: Story = {
   tags: ['no-visual'],
   render: () => (
@@ -1230,7 +1230,7 @@ export const HoverSelected: Story = {
     await expect(getComputedStyle(first).backgroundColor).toBe(eight);
     await expect(hovered(first)).toBe(eight);
     await expect(hovered(second)).toBe(
-      paint('color-mix(in srgb, var(--color-ink) 3%, var(--color-canvas))', second),
+      paint('color-mix(in srgb, var(--color-ink) 5%, var(--color-canvas))', second),
     );
     // The checked box marks it too: never color alone.
     await expect(within(first).getByRole('checkbox')).toBeChecked();

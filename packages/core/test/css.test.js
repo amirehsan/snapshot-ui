@@ -6466,7 +6466,7 @@ describe('src/components/data-table.css', () => {
     expect(body).toContain('z-index: calc(var(--z-header) - 2);');
   });
 
-  it('washes a body row with a link or selection 3% ink over the fill, only where hover exists, never the totals', () => {
+  it('washes a body row with a link or selection 5% ink over the fill, only where hover exists, never the totals', () => {
     const css = rules();
     const hover = blockAfter(css, HOVER);
     expect(
@@ -6474,7 +6474,14 @@ describe('src/components/data-table.css', () => {
         hover,
         ".data-table-body > .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) {",
       ),
-    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 3%, var(--data-table-fill));');
+    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));');
+    // Slate in a hovered row, an app's own cell text included, is granite on the wash, which keeps it at 4.5:1.
+    expect(
+      blockAfter(
+        hover,
+        ".data-table-body > .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) {",
+      ),
+    ).toContain('--color-slate: var(--color-granite);');
     // Outside hover, only a selected row's and a selected list item's 8% wash mixes a color.
     expect(
       outsideForcedColors(css)

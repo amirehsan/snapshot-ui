@@ -756,16 +756,25 @@ function SavesOnEnter(): ReactElement {
 }
 
 describe('NumberField and React Aria', () => {
+  /** Saves the field from the keyboard, as the app above does, and returns what React logged as errors. */
+  const saveFromTheField = async (): Promise<string[]> => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    render(<SavesOnEnter />);
+    await user.click(amount('Guests'));
+    await user.keyboard('{Enter}');
+    return error.mock.calls.map((call) => String(call[0]));
+  };
+
+  it('moves focus off the field during a commit, the case the next test pins', async () => {
+    await saveFromTheField();
+    expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus();
+  });
+
   it.fails(
     'logs nothing when focus leaves the field during a commit (React Aria flushes on blur)',
     async () => {
-      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      const user = userEvent.setup();
-      render(<SavesOnEnter />);
-      await user.click(amount('Guests'));
-      await user.keyboard('{Enter}');
-      expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus();
-      expect(error.mock.calls.map((call) => String(call[0]))).toEqual([]);
+      expect(await saveFromTheField()).toEqual([]);
     },
   );
 });
