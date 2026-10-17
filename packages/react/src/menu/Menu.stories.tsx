@@ -7,6 +7,7 @@ import { Card, CardBody } from '../card';
 import { Dialog, DialogTrigger } from '../dialog';
 import { IconButton } from '../icon-button';
 import { MENU_ROW_A11Y } from '../stories/a11y';
+import { BOTTOM_START, frameAround } from '../stories/corner';
 import { tokenColor, washColor } from '../stories/paint';
 import { Menu, MenuTrigger, type MenuProps } from './Menu';
 import { MenuItem } from './MenuItem';
@@ -203,7 +204,7 @@ export const InDarkScope: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+      style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
     >
       <Card>
         <CardBody>
@@ -475,7 +476,9 @@ export const FromADialog: Story = {
       <Button variant="secondary">Edit the project</Button>
       <Dialog title="Edit the project" description="Rename it or make a copy.">
         <MenuTrigger>
-          <Button variant="secondary">Actions</Button>
+          <Button variant="secondary" style={BOTTOM_START}>
+            Actions
+          </Button>
           <Menu {...args}>
             <MenuItem id="rename" icon={<Pencil />}>
               Rename

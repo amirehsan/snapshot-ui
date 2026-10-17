@@ -6,14 +6,21 @@
  * underline on the text. Derived in docs/design-system.md ("Card").
  */
 @layer components {
+  /* The card is a holder: it names its corner, its edge and its padding, and
+     a rounded part inside reads them to take a concentric corner (Nested
+     radii in docs/design-system.md). */
   .card {
+    --holder-radius: var(--radius-stadium);
+    --holder-border: 1px;
+    --holder-pad: var(--spacing-card);
+
     box-sizing: border-box;
     min-width: 0;
-    padding: var(--spacing-card);
+    padding: var(--holder-pad);
     /* Transparent in light and white 12% in dark, so the box never reflows
        when the color mode changes. */
-    border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-stadium);
+    border: var(--holder-border) solid var(--color-hairline);
+    border-radius: var(--holder-radius);
     background-color: var(--color-lifted);
     /* A long unbroken word, address or identifier breaks anywhere instead of
        widening the card or pushing the page sideways. It is set once, here, and
@@ -24,15 +31,25 @@
     overflow-wrap: anywhere;
   }
 
-  /* Rounded inside rounded takes the next step down the scale. In light, a
-     card on a card has no tone step to separate it, and the hairline is
-     transparent there, so it takes the outline a list takes. Nested means
-     placed in a card or in its body. A card that only sits somewhere deeper,
-     on a well of its own, is not on this surface and keeps its corner. */
+  /* A card in a card is concentric with it: the outer card's radius less its
+     edge and padding, 7px in Rounded and 19px compact. Where that is under
+     the micro step (Soft, where the gap passes the outer curve) it takes the
+     micro step rather than a sharp corner. The value is written on the
+     tokens, not on the holder's properties, because the inner card is a
+     holder too and names its own. It is the inner card's holder radius as
+     well, so what it holds steps down from it. In light, a card on a card has
+     no tone step to separate it, and the hairline is transparent there, so it
+     takes the outline a list takes. Nested means placed in a card or in its
+     body. A card that only sits somewhere deeper, on a well of its own, is
+     not on this surface and keeps its corner. */
   .card > .card,
   .card-body .card {
+    --holder-radius: max(
+      var(--radius-micro),
+      calc(var(--radius-stadium) - 1px - var(--spacing-card))
+    );
+
     border-color: var(--color-frame);
-    border-radius: var(--radius-surface);
   }
 
   /* The bleed and the space under the band are the card's own padding. Under

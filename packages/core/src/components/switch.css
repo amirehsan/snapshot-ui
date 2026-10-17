@@ -80,15 +80,16 @@
     transition: background-color 160ms ease;
   }
 
-  /* The thumb follows the pill, so it is a circle in Rounded and Soft and a
-     square in Square, with the track. It casts no shadow: the lift shadow is
-     invisible on a light track and smears a gray halo across a white one. */
+  /* The thumb is concentric with the track: the track's pill less the inset
+     between them, so it is a circle in Rounded and Soft and a square in
+     Square, with the track. It casts no shadow: the lift shadow is invisible
+     on a light track and smears a gray halo across a white one. */
   .switch-thumb {
     flex: none;
     width: var(--switch-thumb-size);
     height: var(--switch-thumb-size);
     margin-inline-start: var(--switch-travel);
-    border-radius: var(--radius-pill);
+    border-radius: max(0px, calc(var(--radius-pill) - var(--switch-inset)));
     background-color: var(--switch-thumb-fill);
     transition:
       margin-inline-start 160ms ease,

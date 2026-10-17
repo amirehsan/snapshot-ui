@@ -157,12 +157,14 @@
     inset-inline: 0;
   }
 
+  /* The circle sits 4px in from the chip's end and its 1px edge, so it is concentric with the chip: the
+     chip's radius less 5px, a circle in Rounded and 7px in Soft. */
   .filter-chip-clear-icon {
     display: inline-grid;
     place-items: center;
     width: 1.5rem;
     height: 1.5rem;
-    border-radius: var(--radius-pill);
+    border-radius: max(0px, calc(var(--radius-pill) - 1px - 0.25rem));
   }
 
   .filter-chip-clear-icon svg {
@@ -205,8 +207,10 @@
 
   /* Two classes, after popover.css's one: the panel pads 16px and stays inside a phone's margins. */
   .filter-chip-panel.popover-padded {
+    --holder-pad: var(--spacing-inset);
+
     max-width: min(22rem, 100vw - 2rem);
-    padding: var(--spacing-inset);
+    padding: var(--holder-pad);
   }
 
   /* The tabIndex="-1" dialog React Aria focuses as the panel opens: no ring on the whole panel, as dialog.css. */

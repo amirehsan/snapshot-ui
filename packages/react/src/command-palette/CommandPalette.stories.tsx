@@ -11,12 +11,13 @@ import {
   Settings,
   Wallet,
 } from 'lucide-react';
-import { useRef, useState, type ReactElement } from 'react';
+import { useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody } from '../card';
 import { Dialog } from '../dialog';
 import { MENU_ROW_A11Y } from '../stories/a11y';
+import { BOTTOM, frameAround } from '../stories/corner';
 import { tokenColor, washColor } from '../stories/paint';
 import { TextField } from '../text-field';
 import { CommandPalette, type CommandPaletteItem, type CommandPaletteProps } from './CommandPalette';
@@ -130,13 +131,15 @@ const labelOf = (row: Element | null): string | undefined =>
 /** The search button and its palette, opened through the button's state, open on the first render by default. */
 function Opened({
   defaultOpen = true,
+  triggerStyle,
   ...args
-}: CommandPaletteProps & { defaultOpen?: boolean }): ReactElement {
+}: CommandPaletteProps & { defaultOpen?: boolean; triggerStyle?: CSSProperties }): ReactElement {
   const [isOpen, setOpen] = useState(defaultOpen);
   return (
     <>
       <Button
         variant="secondary"
+        style={triggerStyle}
         onPress={() => {
           setOpen(true);
         }}
@@ -365,12 +368,12 @@ export const InDarkScope: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+      style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
     >
       <Card>
         <CardBody>
           <p>A card in a dark block.</p>
-          <Opened {...args} defaultOpen={false} />
+          <Opened {...args} defaultOpen={false} triggerStyle={BOTTOM} />
         </CardBody>
       </Card>
     </div>

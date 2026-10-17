@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { expect, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody } from '../card';
+import { BOTTOM, BOTTOM_START } from '../stories/corner';
 import { tokenColor } from '../stories/paint';
 import { TextField } from '../text-field';
 import { Dialog, DialogTrigger, type DialogProps } from './Dialog';
@@ -202,13 +203,15 @@ export const InDarkScope: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+      style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
     >
       <Card>
         <CardBody>
           <p>A card in a dark block.</p>
           <DialogTrigger>
-            <Button variant="secondary">Rename the workspace</Button>
+            <Button variant="secondary" style={BOTTOM}>
+              Rename the workspace
+            </Button>
             <Dialog {...args} />
           </DialogTrigger>
         </CardBody>
@@ -286,7 +289,7 @@ export const AutoFocusChild: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+      style={{ padding: 24, borderRadius: 'calc(var(--radius-control) + 24px)', background: 'var(--color-canvas)' }}
     >
       <DialogTrigger>
         <Button variant="secondary">Rename the workspace</Button>
@@ -320,7 +323,9 @@ export const Stacked: Story = {
   args: {
     children: (
       <DialogTrigger>
-        <Button variant="secondary">Discard the new name</Button>
+        <Button variant="secondary" style={BOTTOM_START}>
+          Discard the new name
+        </Button>
         <Dialog
           title="Discard the new name?"
           tone="danger"

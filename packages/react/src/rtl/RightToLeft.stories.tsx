@@ -30,6 +30,7 @@ import { Select } from '../select';
 import { Sheet, SheetTrigger } from '../sheet';
 import { SidePanel, SidePanelLayout } from '../side-panel';
 import { MENU_ROW_A11Y } from '../stories/a11y';
+import { FIELD_AT_BOTTOM } from '../stories/corner';
 import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
 import { Tab, TabList, TabPanel, Tabs } from '../tabs';
@@ -1609,7 +1610,9 @@ export const SidePanelMirrored: Story = {
               onClose={() => undefined}
               closeLabel="بستن"
             >
-              <TextField label="گیرنده" defaultValue="فروشگاه سر کوچه" />
+              <div style={FIELD_AT_BOTTOM}>
+                <TextField label="گیرنده" defaultValue="فروشگاه سر کوچه" />
+              </div>
             </SidePanel>
           }
         >
