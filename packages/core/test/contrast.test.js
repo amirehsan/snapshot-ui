@@ -1374,6 +1374,26 @@ describe('the data table', () => {
     expect(measured('light', 'slate', 'canvas', { wash: SELECTED })).toBeLessThan(TEXT);
   });
 
+  // A cell's second line, data-table-cell-meta, is the slate token: slate at rest, current or in the totals,
+  // granite on a hovered row's or item's 5% wash and a selected one's 8%, hovered or not, so it keeps 4.5 in
+  // every state, light and dark, on the page and in a card. A disabled row's is taupe, which is exempt.
+  it('keeps a second line in a cell at 4.5 in every row state, in both modes, on the page and in a card', () => {
+    for (const { state, text, wash, ground, light, dark } of [
+      { state: 'rest', text: 'slate', wash: 0, ground: 'canvas', light: 4.84, dark: 7.26 },
+      { state: 'rest', text: 'slate', wash: 0, ground: 'lifted', light: 5.31, dark: 6.94 },
+      { state: 'hovered', text: 'granite', wash: HOVER, ground: 'canvas', light: 5.94, dark: 9.0 },
+      { state: 'hovered', text: 'granite', wash: HOVER, ground: 'lifted', light: 6.52, dark: 8.18 },
+      { state: 'selected', text: 'granite', wash: SELECTED, ground: 'canvas', light: 5.59, dark: 8.5 },
+      { state: 'selected', text: 'granite', wash: SELECTED, ground: 'lifted', light: 6.12, dark: 7.63 },
+    ]) {
+      const where = `${state} on ${ground}`;
+      expect(measured('light', text, ground, { wash }), `${where}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground, { wash }), `${where}, dark`).toBeCloseTo(dark, 2);
+      expect(measured('light', text, ground, { wash }), `${where}, light`).toBeGreaterThanOrEqual(TEXT);
+      expect(measured('dark', text, ground, { wash }), `${where}, dark`).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+
   // The list face's meta line is slate on the page or in a card, which the gate holds; on a hovered or selected
   // item it turns ink, which the 5% and 8% washes keep over 13. Other slate in a hovered or selected item is
   // granite, as in a row. A selected item's mark out of Select mode is

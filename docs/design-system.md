@@ -8441,9 +8441,18 @@ follow the row's box and need nothing.
 **A second line in a cell.** `span.data-table-cell-meta`, written by the
 app inside its cell: a block, a quarter rem, 4px, under the first line,
 slate at the cell weight, 450 even under the row header's 500 or the
-current row's 700, ending in an ellipsis. Slate on the canvas is 4.84
-and 7.26, gated. The `TwoLine` story measures a 72px row, the cell's
-13.5px padding and the one-line account centered on the row. The list
+current row's 700, ending in an ellipsis. It reads the slate token, so
+a hovered or a selected row or item, which sets `--color-slate` to
+granite (patch 0.6.1), draws it granite on its wash, and a disabled
+row's is taupe with the rest of its text. Its pairs: slate at rest, 4.84
+and 7.26 on canvas and 5.31 and 6.94 on lifted, gated; granite on the 5%
+hover wash, 5.94 and 9.00 over canvas and 6.52 and 8.18 over lifted;
+granite on the 8% selected wash, 5.59 and 8.50 over canvas and 6.12 and
+7.63 over lifted, all over 4.5, which the contrast test holds. The
+`TwoLine` story measures a 72px row, the cell's 13.5px padding and the
+one-line account centered on the row; `TwoLineStates` reads the line
+granite in a hovered and a selected row, slate in the current one and
+taupe in a disabled one, and the a11y check measures each. The list
 item's two lines are 4px apart too, its block padding the same 13.5px,
 so an item of two lines is the 72px a two-line row is, and a skeleton
 item matches it.

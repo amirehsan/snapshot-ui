@@ -187,7 +187,8 @@
 
   /* A second line an app writes under a cell's text, such as a payee's category: slate at the cell weight, a
      quarter rem under the first line, ending in an ellipsis as the first does. A row of them is 72px, and the
-     cells of one line beside them stay centered on it. */
+     cells of one line beside them stay centered on it. It reads the slate token, so a hovered or selected row or
+     item, which sets the token to granite, draws it granite on its wash. */
   .data-table-cell-meta {
     display: block;
     margin-block-start: 0.25rem;
@@ -357,6 +358,11 @@
   .data-table-row:is([data-disabled], [aria-disabled='true']) {
     color: var(--color-taupe);
     cursor: not-allowed;
+  }
+
+  /* A disabled row's second line is taupe with the rest of its text, as a disabled item's meta line is. */
+  .data-table-row:is([data-disabled], [aria-disabled='true']) .data-table-cell-meta {
+    color: inherit;
   }
 
   /* ---- Totals ---------------------------------------------------------------------------------- */

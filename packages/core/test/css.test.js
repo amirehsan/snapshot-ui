@@ -7054,6 +7054,19 @@ describe('src/components/data-table.css', () => {
     ]) {
       expect(meta, declaration).toContain(declaration);
     }
+    // The slate token, never a literal, so the granite a hovered or selected row or item sets reaches it.
+    expect(meta).not.toMatch(/color: (?!var\(--color-slate\))/);
+    const css = rules();
+    for (const host of [
+      ".data-table-row:is([data-selected], [aria-selected='true']), .data-table-row:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {",
+      ".data-table-item:is([data-selected], [aria-selected='true']), .data-table-item:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {",
+    ]) {
+      expect(blockAfter(css, host), host).toContain('--color-slate: var(--color-granite);');
+    }
+    // A disabled row's second line is taupe with the rest of its text.
+    expect(
+      blockAfter(css, ".data-table-row:is([data-disabled], [aria-disabled='true']) .data-table-cell-meta {"),
+    ).toContain('color: inherit;');
   });
 
   it('gives the table a width in a parent that sizes it from its content', () => {
