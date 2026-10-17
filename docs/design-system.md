@@ -849,6 +849,17 @@ content clear of a rounded corner. A control is never given one corner smaller
 than its others: a button with three 20px corners and one 7px corner reads as
 damaged, not concentric.
 
+**A control moves down, not in, where a column stands above it.** A control
+clears the corner by clearing it on one axis, and the axis is chosen so the
+control keeps its alignment. Where the holder has a content column the control
+lines up with, as a dialog's or a side panel's fields above their actions, the
+holder's block-end padding becomes the corner inset and its inline padding
+stays the padding, so the trailing action's end stays on the column's end
+edge. Material, Apple's guidelines and Fluent all keep a trailing action on
+that edge; one that stops short of the fields above it reads as a layout bug.
+Only a holder that is a single row, too short to clear its curve vertically,
+moves its controls inward: the bulk bar and a toast.
+
 | holder | its corner | edge and padding | part | Rounded | Soft | Square |
 | --- | --- | --- | --- | --- | --- | --- |
 | Card, StatTile | stadium | 1 + 32px (20px compact) | a card or tile in it | 7px (19px compact) | 6px, the micro floor | 0 |
@@ -861,15 +872,15 @@ damaged, not concentric.
 
 And the controls that move, by the corner inset (below):
 
-| holder | control | where it stops | Rounded | Soft | Square |
-| --- | --- | --- | --- | --- | --- |
-| Dialog | the last action | the action row ends at the corner inset | 7px further in | as before | as before |
-| SidePanel | the footer's last action | the footer ends at the corner inset | 15px further in | as before | as before |
-| SidePanel | a field or button at the body's foot | the body ends at the corner inset | 39px under it, not 24px | as before | as before |
-| Drawer | the footer's content | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
-| DataTable's bulk bar | its buttons | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
-| Toast | the dismiss | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
-| a card a LineChart ends | the table toggle | the toolbar starts at the corner inset | 7px further in | as before | as before |
+| holder | control | which way | where it stops | Rounded | Soft | Square |
+| --- | --- | --- | --- | --- | --- | --- |
+| Dialog | the last action | down | the panel's foot pads to the corner inset | 39px under it, not 32px | as before | as before |
+| SidePanel | the footer's last action | down | the footer's foot pads to the corner inset | 39px under it, not 24px | as before | as before |
+| SidePanel | a field or button at the body's foot | down | the body ends at the corner inset | 39px under it, not 24px | as before | as before |
+| Drawer | the footer's content | down | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
+| a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
+| DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
+| Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
 
 **It is a calc on the tokens.** No part writes the number. Each value is the
 holder's token less a length, so Soft and Square follow by construction: in
@@ -903,9 +914,9 @@ filter row in a popup does, and the field button inside reads it.
 and insets of the parts it places, but it cannot know where an app puts a
 button or a field in a card's body. A surface an app places in a holder's
 corner takes the formula from the holder's properties; a control stops at the
-holder's corner inset: a button at the foot of a card takes
-`margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad))`, and
-a row of actions at its end takes the same as `padding-inline-end`. The
+holder's corner inset, below it rather than beside it, so it stays on the
+column's edge: a button or a row of actions at the foot of a card takes
+`margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad))`. The
 stories do exactly this, from `packages/react/src/stories/corner.ts`, and so
 do the docs examples.
 
@@ -3028,9 +3039,9 @@ corner and shadow. Modal surfaces take elevation level 3 and floats level 2;
 the sheet casts none, since its only edge is at the bottom of the viewport,
 where a shadow shows nothing. Parts are concentric with their surface
 (Nested radii): a 24px popup holds 15px rows, its radius less its edge and
-the list's padding, and a dialog's last action keeps its own corner and stops
-at the dialog's corner inset, clear of its curve. Soft and Square follow by
-construction.
+the list's padding, and a dialog's last action keeps its own corner and sits
+above the dialog's corner inset, clear of its curve and still on the fields'
+end edge. Soft and Square follow by construction.
 
 **Spacing.** A list popup pads 8px (`--spacing-part`), a free-content popover
 24px (`--spacing-peer`), a dialog 32px (`--spacing-separate`), and a drawer
@@ -3221,9 +3232,10 @@ its buttons 8px apart.
 **Padding and corners.** The panel pads 32px, `--spacing-separate`, the
 app's number and the step for a section's header to its body. It takes
 `--radius-stadium`, and its parts are concentric with it where they meet its
-corners: the well is a circle, and the action row ends at the panel's corner
-inset, 7px further in in Rounded, so the last action keeps its own corner and
-sits clear of the panel's curve. Soft and Square follow by construction.
+corners: the well is a circle, and the panel's foot pads to its corner inset,
+39px in Rounded, so the last action keeps its own corner, sits clear of the
+panel's curve and keeps its end on the fields' edge. Soft and Square follow by
+construction.
 
 **What React Aria gives.** Its `Dialog` focuses the dialog element on open,
 unless a control inside already holds focus, and its `FocusScope` holds Tab

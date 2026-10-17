@@ -761,11 +761,9 @@ export const DialogMirrored: Story = {
     const body = within(document.body);
     const cancel = rect(body.getByRole('button', { name: 'إلغاء' }));
     const save = rect(body.getByRole('button', { name: 'حفظ' }));
-    const rowElement = find(panel, '.dialog-actions');
-    const row = rect(rowElement);
+    const row = rect(find(panel, '.dialog-actions'));
     await expect(save.right).toBeLessThanOrEqual(cancel.left + 0.5);
-    // The row ends at the panel's corner inset, which is its padding at the inline end, the left here.
-    await expectSameEdge(save.left, row.left + parseFloat(getComputedStyle(rowElement).paddingLeft));
+    await expectSameEdge(save.left, row.left);
     await expect(row.right - cancel.right).toBeGreaterThan(0);
   },
 };

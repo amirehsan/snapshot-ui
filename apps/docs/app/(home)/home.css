@@ -525,10 +525,10 @@
     margin-top: 64px;
   }
 
-  /* Save ends the card's body inside its bottom end curve, so the row stops at the card's corner inset and the
-     button keeps its own shape. */
+  /* Save ends the card's body inside its bottom end curve, so the row keeps the card's corner inset under it,
+     and the button keeps its own shape and its place on the column's end edge. */
   .frame-card .push-end {
-    padding-inline-end: calc(var(--holder-corner-inset) - var(--holder-pad));
+    margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
   .push-end {

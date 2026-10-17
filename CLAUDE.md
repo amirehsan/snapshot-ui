@@ -26,8 +26,9 @@ visual reference is `docs/mockups/`.
   corner takes radius = outer radius minus the gap (padding plus edge), as
   `max(0px, calc(...))` on the tokens or the holder's `--holder-radius`,
   `--holder-border` and `--holder-pad`; a control keeps its own shape and moves
-  out to `--holder-corner-inset`, never one smaller corner. Never copy the
-  parent's radius onto a child.
+  out to `--holder-corner-inset` (down, so it stays on the content column's
+  edge, unless the holder is a single row), never one smaller corner. Never
+  copy the parent's radius onto a child.
 - Weights 400, 450, 500, 700 only. No 600.
 - Signal orange is consent only; clay is unsaved; error and success mean
   exactly that. Taupe is only for placeholders and disabled text.

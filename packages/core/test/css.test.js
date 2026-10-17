@@ -1780,7 +1780,8 @@ describe('src/components/dialog.css', () => {
       'border-radius: var(--holder-radius);',
       'box-shadow: var(--shadow-dramatic);',
       '--holder-pad: var(--spacing-separate);',
-      'padding: var(--holder-pad);',
+      // The foot pads to the corner inset, so the last action clears the bottom curve on the column's edge.
+      'padding: var(--holder-pad) var(--holder-pad) var(--holder-corner-inset);',
     ]) {
       expect(panel, declaration).toContain(declaration);
     }
@@ -7522,7 +7523,7 @@ describe('src/components/side-panel.css', () => {
       'justify-content: flex-end;',
       'gap: var(--spacing-part);',
       'margin-inline: var(--spacing-peer);',
-      'padding-block: var(--spacing-inset) var(--spacing-peer);',
+      'padding-block: var(--spacing-inset) var(--holder-corner-inset);',
       'border-block-start: 1px solid var(--color-divider);',
     ]) {
       expect(footer, declaration).toContain(declaration);
@@ -7698,11 +7699,16 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     });
   }
 
-  // A control keeps its own shape and moves out of the corner: the end part it sits in stops at the corner
-  // inset, the holder's padding or its radius less its edge, whichever is more.
+  // A control keeps its own shape and moves out of the corner, to the corner inset: the holder's padding or its
+  // radius less its edge, whichever is more. Under a content column it moves down, so its end stays on the
+  // column's edge; only a single-row holder (the bulk bar, a toast) moves it inward.
   const CLEAR = [
-    ['dialog.css', '.dialog-actions {', `padding-inline-end: ${EXTRA};`],
-    ['side-panel.css', '.side-panel-footer {', `padding-inline-end: ${EXTRA};`],
+    ['dialog.css', '.dialog {', 'padding: var(--holder-pad) var(--holder-pad) var(--holder-corner-inset);'],
+    [
+      'side-panel.css',
+      '.side-panel-footer {',
+      'padding-block: var(--spacing-inset) var(--holder-corner-inset);',
+    ],
     ['side-panel.css', '.side-panel-body:last-child {', 'padding-block-end: var(--holder-corner-inset);'],
     ['drawer.css', '.drawer-footer {', 'calc(var(--holder-corner-inset) + env(safe-area-inset-bottom, 0px))'],
     [
@@ -7713,9 +7719,26 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     [
       'charts.css',
       ':is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toolbar {',
-      `padding-inline-start: ${EXTRA};`,
+      `margin-block-end: ${EXTRA};`,
     ],
   ];
+
+  it('moves no control inward where a content column stands above it, so a trailing action keeps its edge', () => {
+    for (const [file, header] of [
+      ['dialog.css', '.dialog-actions {'],
+      ['side-panel.css', '.side-panel-footer {'],
+      [
+        'charts.css',
+        ':is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toolbar {',
+      ],
+    ]) {
+      expect(blockAfter(css(file), header), header).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);
+    }
+    // The side panel's footer lines up with the body's fields: the same inline margin, the peer step.
+    expect(blockAfter(css('side-panel.css'), '.side-panel-footer {')).toContain(
+      'margin-inline: var(--spacing-peer);',
+    );
+  });
 
   for (const [file = '', header = '', declaration = ''] of CLEAR) {
     it(`keeps the controls in ${header.slice(0, -2)} clear of the corner in ${file}`, () => {
