@@ -59,6 +59,10 @@ import EyebrowHeading from './eyebrow-heading';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
 import FieldStates from './field-states';
+import FileButtonBasic from './file-button-basic';
+import FileDropZoneErrors from './file-drop-zone-errors';
+import FileDropZonePage from './file-drop-zone-page';
+import FileDropZoneReceipt from './file-drop-zone-receipt';
 import FilterBarBasic from './filter-bar-basic';
 import FilterBarUrl from './filter-bar-url';
 import FilterBarWrapped from './filter-bar-wrapped';
@@ -217,6 +221,10 @@ export const examples = {
   'field-counter': LengthCounter,
   'field-parts': FieldParts,
   'field-states': FieldStates,
+  'file-button-basic': FileButtonBasic,
+  'file-drop-zone-errors': FileDropZoneErrors,
+  'file-drop-zone-page': FileDropZonePage,
+  'file-drop-zone-receipt': FileDropZoneReceipt,
   'filter-bar-basic': FilterBarBasic,
   'filter-bar-url': FilterBarUrl,
   'filter-bar-wrapped': FilterBarWrapped,

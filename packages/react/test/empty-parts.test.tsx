@@ -11,6 +11,7 @@ import { DateRangePicker } from '../src/date-range-picker';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { EmptyState } from '../src/empty-state';
+import { FileDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
@@ -415,5 +416,18 @@ describe('an empty documents part slot', () => {
     expect(track).not.toHaveAttribute('aria-labelledby');
     // The value still shows in the head, alone.
     expect(container.querySelector('.progress-bar-head')?.children).toHaveLength(1);
+  });
+
+  it('draws no label row or description for a FileDropZone given an empty label and description', () => {
+    const { container } = render(
+      <FileDropZone label="" description="" aria-label="Receipt" onFiles={() => undefined} />,
+    );
+    const zone = screen.getByRole('group', { name: 'Receipt' });
+    expect(zone.querySelector('.field-head')).toBeNull();
+    expect(zone.querySelector('.field-description')).toBeNull();
+    expect(zone).not.toHaveAttribute('aria-labelledby');
+    // The button describes itself by nothing that is not drawn.
+    expect(screen.getByRole('button', { name: 'Choose a file' })).not.toHaveAttribute('aria-describedby');
+    expect(container.querySelector('.file-drop-zone-box')).not.toBeNull();
   });
 });

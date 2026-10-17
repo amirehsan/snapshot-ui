@@ -17,6 +17,7 @@ import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
 import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
 import { Drawer } from '../src/drawer';
+import { FileButton, FileDropZone, PageDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { IconButton } from '../src/icon-button';
@@ -746,6 +747,46 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '</div><aside class="side-panel"',
     ],
     ['data-sidebar="collapsed"', 'data-sidebar-folded', 'data-sidebar-unfolded'],
+  ],
+  [
+    // The label, the box with both lines, the button and FileTrigger's hidden input, the description and the
+    // empty status, so the page is laid out before scripts run; no name, so nothing submits natively.
+    'FileDropZone',
+    <FileDropZone
+      label="Receipts"
+      description="PDF, JPG or PNG, up to 10 MB"
+      acceptedFileTypes={['application/pdf']}
+      allowsMultiple
+      onFiles={() => undefined}
+    />,
+    [
+      'class="file-drop-zone field"',
+      'role="group"',
+      'class="file-drop-zone-box"',
+      'class="file-drop-zone-hint"',
+      'class="file-drop-zone-drop"',
+      'Choose files',
+      'type="file"',
+      'class="field-description"',
+      'role="status"',
+    ],
+    ['name=', 'data-drop-target'],
+  ],
+  [
+    'FileButton',
+    <FileButton capture="environment" onFiles={() => undefined}>
+      Take a photo
+    </FileButton>,
+    ['class="button button-primary', 'type="file"', 'capture="environment"'],
+  ],
+  [
+    // Nothing on the server: the overlay exists only while files are dragged over the page.
+    'PageDropZone',
+    <div className="host">
+      <PageDropZone title="Drop files to upload" onFiles={() => undefined} />
+    </div>,
+    ['<div class="host"></div>'],
+    ['page-drop-zone'],
   ],
 ];
 

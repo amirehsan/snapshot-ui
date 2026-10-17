@@ -8628,3 +8628,159 @@ the entry measured 653 B, and the rule rounds up to 1 kB and adds
 **Screen readers and devices.** Not yet verified with VoiceOver and
 NVDA (owner action 4): the bar read by its name and value when reached,
 and nothing while it moves.
+
+## FileDropZone
+
+Files dropped on a field or on the whole page: `FileDropZone`, the inline
+field; `PageDropZone`, the overlay that exists only while files are dragged
+over the page; and `FileButton`, the button both rely on for the keyboard
+and for touch. The document has no drop zone of its own, so this one is
+derived from the field parts, the nested-radii table and the float surface
+(documents spec, section 6).
+
+**One check, three ways in** (rulings 1 and 2). A drop, a paste and a
+choice run one function against `acceptedFileTypes`, `maxFileSize`,
+`allowsMultiple` and `maxFiles`, and reach `onFiles(accepted, rejected)`
+once, never with both lists empty. Each file is refused for the first
+reason that holds, in this order: type, empty, size, count, where count
+counts only the files accepted so far, so nine good files are never
+refused for one bad one. A file whose type the browser does not know (an
+empty MIME type, as some systems give a HEIC photo) matches no MIME entry
+and is decided by the extension entries. A dropped folder is refused as
+`'type'`, carried as `new File([], name)`, and never read (spec correction
+16). The check is a courtesy: the docs say the server checks again, since
+a renamed file passes any check by name.
+
+**The box.** `--radius-surface`, 24px: the nested-radii table's "drop
+zone" inside a 40px holder, and a field frame's step. A 2px dashed
+`--color-boundary` edge, the control boundary, measured at 3.38 on canvas
+and 3.45 on lifted in light, 5.34 and 5.21 in dark, each past the 3:1 a
+control's edge needs (gated as the boundary on canvas and lifted; spec
+correction 6 corrects the spec's 3.06 and 3.36). No fill of its own, so it
+takes its holder's. `padding: var(--spacing-peer)`, `min-block-size: 8rem`,
+the content centered: a 24px Lucide `Upload` in slate, `--spacing-part`
+over a line holding the hint at `--text-body` weight 450 in ink and the
+zone's secondary button. The box is a size container
+(`container: file-drop-zone / inline-size`): under 20rem of its own width
+the icon moves beside the line, for a zone in a narrow form column, and
+the line wraps its hint over its button if it must.
+
+**The drop look** (ruling 4). Any drag whose types include `'Files'` is a
+copy and any other is cancelled, whatever the files' types, since Safari
+shows no types during a drag: the zone never claims a refusal it cannot
+see, and the check runs on the drop. While files are over the box its edge
+turns solid ink and it takes the 5% ink wash, the float surface's hover
+wash, inside the same radius, and "Drop to upload" at weight 500 in ink
+replaces the hint. Ink on that wash measures 14.70 in light and 17.41 in
+dark over canvas, 16.11 and 15.25 over lifted, recorded and not gated,
+since the wash is a mix. Never signal orange, which is consent, and never
+link blue.
+
+**Invalid, disabled and touch.** Invalid turns the edge `--color-error`,
+dashed, declared after the drop look so it wins its color, as invalid
+outranks changed on a field; the error line is the field's. Disabled is
+taupe, the edge, the text and the icon, with `cursor: not-allowed`; the
+zone writes `aria-disabled` on its group, so its taupe text reads as an
+inactive control's. A phone cannot drag a file into a page, so under
+`(hover: none) and (pointer: coarse)` the hint is not drawn and the button
+stays; both strings are in the server's HTML and the media query picks.
+
+**One tab stop** (ruling 3). The zone is a `group` named by its label,
+which is the library's `Label` as a `span`, not `FieldHead`, since the zone
+is no React Aria field and holds no value (spec correction 15). Its one
+stop is the button, described by the description and, while invalid, by
+the status. A paste on the focused button bubbles to the box, whose
+listener runs the same check, so the keyboard adds files where a pointer
+drops them. React Aria's `DropZone` would add a second, hidden stop named
+"DropZone" in English, a tab stop in the server's HTML until hydration;
+the box uses React Aria's `useDrop` with no drop button instead (spec
+correction 5).
+
+**Refusals.** A polite `role="status"` line, mounted empty with the zone
+and clipped while empty, says `labels.rejected(formatCount(n))` after a
+drop, paste or choice with refusals, and the zone is invalid until the
+next. Each round remounts the line, so a second refusal of the same count
+is said again. `errorMessage` replaces the line; `isInvalid` is the app's
+and a clean drop never clears it.
+
+**A missed drop** (ruling 4). While any zone is mounted, one pair of
+document listeners prevents the default of a files `dragover` and `drop`
+that no part took, so a file dropped beside the zone never opens in the
+tab and loses the page. A drop already taken, a drop into a text field, a
+native file input or editable content, and a drag without files are left
+alone. A disabled zone still holds; the last zone to unmount releases.
+
+**The page overlay.** Fixed, inset `--spacing-inset` from the viewport's
+edges and from the rail's width
+(`calc(var(--app-shell-sidebar, 0px) + var(--spacing-inset))`), so it
+covers the workspace and leaves the rail in view, on the right on a
+Persian page. A 2px dashed ink edge at `--radius-stadium`, the panel step,
+since it is a page-sized object, over the canvas at 92% (`color-mix` on
+the token), so the page shows faintly through. No text sits on that fill:
+over solid ink, slate on it would be 4.11 in light. At its center a float
+card (`--color-float`, the frame edge, `--radius-surface`,
+`--shadow-float`, `padding: var(--spacing-peer) var(--spacing-separate)`)
+holds a 40px `Upload` in ink, the title at `--text-h3` weight 500 and the
+description in slate, 5.49 in light and 6.94 in dark on float (spec
+correction 7). Its layer is `calc(var(--z-chrome) + 1)`: over the tab bar,
+the tray and a save bar, under every modal and the toasts. It fades in
+over 120ms through `@starting-style`, which is above the browser floor and
+simply does not run there, and not at all under reduced motion. It is
+rendered in place, not portaled, so it keeps the shell's custom
+properties.
+
+**The overlay's lifetime.** It draws nothing on the server or while idle.
+A counter on the document, one up for each `dragenter` holding files and
+one down for each `dragleave`, shows it at one and hides it at zero, which
+survives Firefox's leave on every child boundary and Safari's null
+`relatedTarget`; a drop and `dragend` reset it. The listeners are in the
+capture phase, since a drop target on the page, the overlay among them,
+stops the drag events it takes, and the count must see every one. It
+stands down for a drag that holds no files (a row, a tag), while a modal
+is open (`isAnotherModalOpen()` at each enter, spec correction 9), while
+disabled, and for a second page zone, which warns once and stays idle
+until the first unmounts. It is for the pointer and `aria-hidden`; its
+keyboard twin is a `FileButton` beside the page's title.
+
+**FileButton.** React Aria's `FileTrigger` around the library's `Button`,
+any variant. `capture` takes the HTML attribute's name and is handed to
+`FileTrigger`'s `defaultCamera` (spec correction 1); FileDropZone passes
+its own to its button. React Aria clears the input as the button is
+pressed, so the same file chosen again fires again (spec correction 17).
+
+**Forced colors.** The dashed edges are `canvastext`; a drop target's edge
+is `highlight`, since the wash is gone; the overlay's fill is `canvas`
+with no transparency, and its card's edge `canvastext`.
+
+**The spike** (plan Task 2, "Spike results (Task 2)"). Before the parts,
+`DropSpike.stories.tsx` proved in Chromium, WebKit and Firefox that a drop
+holding files reaches `useDrop` with no drop button, and `DropZone` with
+its hidden button out of the tab order; that a paste on a focused button
+reaches the box around it with its file; that the document counter comes
+back to zero across child boundaries; that a missed drop's default is
+prevented and a drop into a text field or a file input is not; and that a
+target drawn mid-drag takes the drop. It found one difference in what
+reaches `onDrop`: React Aria reads a dropped file only through
+`webkitGetAsEntry()`, and Chromium gives a file a script made no entry, so
+React Aria's items hold no file for a synthetic drop there. The library
+reads the native transfer itself, during the drop, so a play's drop and a
+real one take one path, and keeps `useDrop` for the drop look and the
+event plumbing. The plays build their events as each engine takes them: a
+script's transfer allows no operation, and Chromium and WebKit ignore the
+setter, so the plays define `effectAllowed`; Firefox's `ClipboardEvent`
+constructor drops `clipboardData`, so the paste plays define it.
+
+**Where the build departs from the plan.** The size limits are above the
+spec's budgets: `{ FileDropZone, FileButton }` measured 2.23 kB and is set
+at 3 kB, and `{ PageDropZone }` 1.56 kB, set at 2.5 kB, by the repo's
+rule; each carries the check, the transfer reader, the missed-drop hold
+and React Aria's drop hook glue. The docs' "Take a photo" button shows
+only on a coarse pointer without hover, through the site's own
+`touch-only` class.
+
+**Screen readers and devices.** Not yet verified (owner action 4): the zone
+read as a group with one button described by its rules, a refusal spoken
+once, the overlay never announced; on a phone, no drag hint, "Take a
+photo" opening the camera, a HEIC photo with an empty type passing by
+`.heic`; on iPadOS, a file dragged from the Files app onto the zone and
+the overlay.

@@ -364,6 +364,20 @@
     "limit": "1.5 kB"
   },
   {
+    "name": "import { FileDropZone, FileButton } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ FileDropZone, FileButton }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "3 kB"
+  },
+  {
+    "name": "import { PageDropZone } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ PageDropZone }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "2.5 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

@@ -3,6 +3,7 @@ import { House, Settings, ShoppingCart, User } from 'lucide-react';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { AppShell } from '../app-shell';
 import { Button } from '../button';
 import { RangeCalendar } from '../calendar';
 import { Checkbox, CheckboxGroup } from '../checkbox';
@@ -14,6 +15,7 @@ import { DateRangePicker } from '../date-range-picker';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { EmptyState } from '../empty-state';
+import { FileDropZone, PageDropZone } from '../file-drop-zone';
 import { FilterBar } from '../filter-bar';
 import { FilterChip } from '../filter-chip';
 import { Link, RouterProvider } from '../link';
@@ -31,6 +33,9 @@ import { Select } from '../select';
 import { Sheet, SheetTrigger } from '../sheet';
 import { SidePanel, SidePanelLayout } from '../side-panel';
 import { MENU_ROW_A11Y } from '../stories/a11y';
+import { filesTransfer, fireDrag, pdf } from '../stories/drag';
+import { DemoHeader, DemoNav } from '../stories/shell-fixture';
+import { DESKTOP, VIEWPORT_OPTIONS } from '../stories/viewports';
 import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
 import { Tab, TabList, TabPanel, Tabs } from '../tabs';
@@ -1663,5 +1668,67 @@ export const ProgressBarMirrored: Story = {
     await expect(Math.abs(rect(find(bar, '.progress-bar-value')).left - head.left)).toBeLessThan(1);
     const reading = find(canvasElement, '[data-testid="reading"] .progress-bar-track');
     await expect(getComputedStyle(reading).getPropertyValue('--progress-bar-slide').trim()).toBe('-1');
+  },
+};
+
+/**
+ * A drop zone on a Persian page in a narrow column: the icon at the right, the start of the line, and the hint
+ * before the button from the right; the label at the right of the head.
+ */
+export const FileDropZoneMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(18rem, calc(100vw - 2rem))' }}>
+        <FileDropZone
+          label="رسید"
+          labels={{ dragHint: 'فایل را بکشید یا', choose: 'انتخاب', drop: 'رها کنید' }}
+          onFiles={() => undefined}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = rect(find(canvasElement, '.file-drop-zone-box'));
+    const icon = rect(find(canvasElement, '.file-drop-zone-icon'));
+    const line = rect(find(canvasElement, '.file-drop-zone-line'));
+    // One row: the icon beside the line, at its right.
+    await expect(icon.left).toBeGreaterThanOrEqual(line.right - 0.5);
+    await expect(box.right - icon.right).toBeLessThan(icon.left - box.left);
+    const hint = rect(find(canvasElement, '.file-drop-zone-hint'));
+    const button = rect(find(canvasElement, '.file-drop-zone-line .button'));
+    // The hint first, from the right: at the button's right, or above it where the line wraps.
+    await expect(hint.right > button.right - 0.5 || hint.bottom <= button.top + 0.5).toBe(true);
+    const head = rect(find(canvasElement, '.field-head'));
+    await expectSameEdge(rect(find(canvasElement, '.field-label')).right, head.right);
+  },
+};
+
+/**
+ * The page overlay on a Persian page in the shell: the rail is on the right, so the overlay's right edge clears
+ * it by the inset, and its left edge is the inset from the viewport's.
+ */
+export const PageDropZoneMirrored: Story = {
+  globals: DESKTOP,
+  parameters: { layout: 'fullscreen', viewport: { options: VIEWPORT_OPTIONS } },
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa">
+        <AppShell sidebar={<DemoNav />} header={<DemoHeader title="اسناد" />}>
+          <p data-testid="page">فاکتورها و رسیدها</p>
+          <PageDropZone title="برای بارگذاری رها کنید" onFiles={() => undefined} />
+        </AppShell>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    fireDrag(find(canvasElement, '[data-testid="page"]'), 'dragenter', filesTransfer([pdf()]));
+    const overlay = await waitFor(() => find(document, '.page-drop-zone'));
+    const rail = rect(find(canvasElement, '.sidebar'));
+    const box = rect(overlay);
+    await expect(rail.left).toBeGreaterThan(window.innerWidth / 2);
+    await expect(box.right).toBeLessThanOrEqual(rail.left);
+    await expect(box.left).toBeCloseTo(16, 0);
+    fireDrag(overlay, 'dragend', filesTransfer([pdf()]));
+    await waitFor(() => expect(document.querySelector('.page-drop-zone')).toBeNull());
   },
 };

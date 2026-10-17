@@ -1466,6 +1466,77 @@ describe('the progress bar', () => {
   });
 });
 
+describe('the file drop zone', () => {
+  /** The boundary painted on `surface`, against that surface: the zone's dashed edge. */
+  const edge = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[surface]);
+    return contrastRatio(composite(parseColor(palette.boundary), ground), ground);
+  };
+  /** `text` on the float card, the overlay's. */
+  const onFloat = (text, mode) => {
+    const palette = paletteFor(tokens, mode);
+    const float = parseColor(palette.float);
+    return contrastRatio(composite(parseColor(palette[text]), float), float);
+  };
+  /** Ink on the 5% ink wash over `surface`, the drop target's line. */
+  const onWash = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ink = parseColor(palette.ink);
+    const wash = composite({ ...ink, a: 0.05 }, parseColor(palette[surface]));
+    return contrastRatio(ink, wash);
+  };
+
+  // The edge is the boundary on the zone's holder (spec correction 6), gated as the switch's off track is; the
+  // overlay's title is ink and its description slate on the float card (spec correction 7), gated as text.
+  it('cites the boundary on canvas and lifted, and ink and slate on float, which the gate holds', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      expect(CONTRAST_PAIRS, `the boundary on ${ground}`).toContainEqual(
+        expect.objectContaining({ text: 'boundary', ground, minimum: NON_TEXT }),
+      );
+    }
+    for (const text of ['ink', 'slate']) {
+      expect(CONTRAST_PAIRS, `${text} on float`).toContainEqual(
+        expect.objectContaining({ text, ground: 'float', minimum: TEXT }),
+      );
+    }
+  });
+
+  it('measures the dashed edge at 3.38 and 3.45 in light and 5.34 and 5.21 in dark', () => {
+    for (const { mode, surface, ratio } of [
+      { mode: 'light', surface: 'canvas', ratio: 3.38 },
+      { mode: 'light', surface: 'lifted', ratio: 3.45 },
+      { mode: 'dark', surface: 'canvas', ratio: 5.34 },
+      { mode: 'dark', surface: 'lifted', ratio: 5.21 },
+    ]) {
+      expect(edge(mode, surface), `the edge on ${surface}, ${mode}`).toBeCloseTo(ratio, 2);
+      expect(edge(mode, surface)).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+
+  it('measures slate on float, the overlay description, at 5.49 and 6.94', () => {
+    for (const { mode, ratio } of [
+      { mode: 'light', ratio: 5.49 },
+      { mode: 'dark', ratio: 6.94 },
+    ]) {
+      expect(onFloat('slate', mode), mode).toBeCloseTo(ratio, 2);
+    }
+  });
+
+  // The wash is a mix, not a token, so ink on it is measured and recorded, not gated.
+  it('measures ink on the 5% wash over canvas and lifted, recorded and not gated', () => {
+    for (const { mode, surface, ratio } of [
+      { mode: 'light', surface: 'canvas', ratio: 14.7 },
+      { mode: 'dark', surface: 'canvas', ratio: 17.41 },
+      { mode: 'light', surface: 'lifted', ratio: 16.11 },
+      { mode: 'dark', surface: 'lifted', ratio: 15.25 },
+    ]) {
+      expect(onWash(mode, surface), `ink on the wash over ${surface}, ${mode}`).toBeCloseTo(ratio, 2);
+      expect(onWash(mode, surface)).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

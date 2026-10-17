@@ -1,0 +1,232 @@
+/*
+ * FileDropZone and PageDropZone: files dropped on a field or on the whole page, derived in docs/design-system.md
+ * ("FileDropZone"). The inline box is the field's control: the surface radius, the nested-radii table's drop
+ * zone step; a 2px dashed boundary edge, above the 3:1 a control's edge needs on canvas and on lifted; no fill
+ * of its own, so it takes its holder's; a slate upload icon over the hint in ink and the zone's button. Under
+ * 20rem of its own box the icon sits beside the line, for a narrow form column. A drag holding files turns the
+ * edge solid ink over the 5% ink wash and puts the drop line in place of the hint; invalid outranks it with the
+ * error edge, dashed; disabled is taupe. A phone cannot drag a file into a page, so a coarse pointer without
+ * hover draws no hint, and the button stays.
+ *
+ * The page overlay covers the workspace and not the rail: fixed, inset from the viewport's edges and from the
+ * rail's width, a 2px dashed ink edge at the stadium radius over the canvas at 92%, with a float card at its
+ * center. Its layer is one over the fixed chrome, under every modal and the toasts. It fades in over 120ms.
+ * FileButton is a Button and draws nothing here.
+ */
+@layer components {
+  .file-drop-zone-box {
+    container: file-drop-zone / inline-size;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-part);
+    box-sizing: border-box;
+    min-block-size: 8rem;
+    min-width: 0;
+    padding: var(--spacing-peer);
+    border: 2px dashed var(--color-boundary);
+    border-radius: var(--radius-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    text-align: center;
+  }
+
+  /* Each on a line of its own, centered: the icon over the hint and the button. */
+  .file-drop-zone-icon {
+    display: flex;
+    flex: 0 0 100%;
+    justify-content: center;
+    color: var(--color-slate);
+  }
+
+  .file-drop-zone-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .file-drop-zone-line {
+    display: flex;
+    flex: 0 0 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  .file-drop-zone-hint {
+    min-width: 0;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    overflow-wrap: anywhere;
+  }
+
+  /* The drop line, in the hint's place while files are over the box. */
+  .file-drop-zone-drop {
+    display: none;
+    min-width: 0;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: 500;
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+
+  /* A narrow zone: one row, the icon beside the line, which wraps its hint over its button if it must. */
+  @container file-drop-zone (width < 20rem) {
+    .file-drop-zone-icon {
+      flex: none;
+    }
+
+    .file-drop-zone-line {
+      flex: 1 1 0;
+      justify-content: flex-start;
+      text-align: start;
+    }
+  }
+
+  /* A drag holding files: whatever the files, since Safari shows no types during a drag (ruling 4). */
+  .file-drop-zone-box[data-drop-target] {
+    border-style: solid;
+    border-color: var(--color-ink);
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  .file-drop-zone-box[data-drop-target] .file-drop-zone-hint {
+    display: none;
+  }
+
+  .file-drop-zone-box[data-drop-target] .file-drop-zone-drop {
+    display: inline;
+  }
+
+  /* Invalid outranks the drop look's edge, as it outranks changed: declared after it, and dashed. */
+  .file-drop-zone[data-invalid] .file-drop-zone-box {
+    border-style: dashed;
+    border-color: var(--color-error);
+  }
+
+  .file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-box {
+    border-color: var(--color-taupe);
+    color: var(--color-taupe);
+    cursor: not-allowed;
+  }
+
+  .file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-icon {
+    color: var(--color-taupe);
+  }
+
+  /* The status is the field's error line; while it says nothing it takes no row and no gap, and stays in the
+     accessibility tree, mounted before its text. */
+  .file-drop-zone-status:empty {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* A phone cannot drag a file into a page: no hint, and the button stays. Both strings are in the HTML. */
+  @media (hover: none) and (pointer: coarse) {
+    .file-drop-zone-hint {
+      display: none;
+    }
+  }
+
+  .page-drop-zone {
+    position: fixed;
+    inset: var(--spacing-inset);
+    inset-inline-start: calc(var(--app-shell-sidebar, 0px) + var(--spacing-inset));
+    z-index: calc(var(--z-chrome) + 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: var(--spacing-inset);
+    border: 2px dashed var(--color-ink);
+    border-radius: var(--radius-stadium);
+    background-color: color-mix(in srgb, var(--color-canvas) 92%, transparent);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    transition: opacity 120ms ease;
+  }
+
+  @starting-style {
+    .page-drop-zone {
+      opacity: 0;
+    }
+  }
+
+  .page-drop-zone-card {
+    display: grid;
+    justify-items: center;
+    gap: var(--spacing-part);
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    padding: var(--spacing-peer) var(--spacing-separate);
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .page-drop-zone-icon {
+    display: flex;
+    color: var(--color-ink);
+  }
+
+  .page-drop-zone-icon svg {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .page-drop-zone-title {
+    margin: 0;
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+
+  .page-drop-zone-description {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: var(--text-body--font-weight);
+    color: var(--color-slate);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-drop-zone {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .file-drop-zone-box {
+      border-color: canvastext;
+    }
+
+    .file-drop-zone-box[data-drop-target] {
+      border-color: highlight;
+    }
+
+    /* No transparency: the page under it would show through in the reader's colors. */
+    .page-drop-zone {
+      border-color: canvastext;
+      background-color: canvas;
+    }
+
+    .page-drop-zone-card {
+      border-color: canvastext;
+    }
+  }
+}

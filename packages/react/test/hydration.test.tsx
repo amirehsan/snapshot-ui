@@ -7,6 +7,7 @@ import { Calendar, RangeCalendar } from '../src/calendar';
 import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
+import { FileButton, FileDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
@@ -277,6 +278,38 @@ const HYDRATED: [
       expect(document.querySelector('[role="dialog"]')).toHaveAccessibleName('Groceries');
     },
     viewport(800),
+  ],
+  [
+    // The zone's face is the server's: the group, both lines and the one button, now able to open the picker.
+    'FileDropZone',
+    <FileDropZone
+      label="Receipts"
+      description="PDF, JPG or PNG, up to 10 MB"
+      acceptedFileTypes={['application/pdf', 'image/*']}
+      allowsMultiple
+      onFiles={noop}
+    />,
+    (container) => {
+      const zone = container.querySelector('.file-drop-zone');
+      expect(zone).toHaveAttribute('role', 'group');
+      expect(zone).toHaveAccessibleName('Receipts');
+      expect(container.querySelector('.file-drop-zone-hint')).toHaveTextContent('Drag files here or');
+      expect(container.querySelectorAll('button')).toHaveLength(1);
+      expect(container.querySelector('input[type="file"]')).toHaveAttribute(
+        'accept',
+        'application/pdf,image/*',
+      );
+    },
+  ],
+  [
+    'FileButton',
+    <FileButton acceptedFileTypes={['image/*']} capture="environment" onFiles={noop}>
+      Take a photo
+    </FileButton>,
+    (container) => {
+      expect(container.querySelector('button')).toHaveTextContent('Take a photo');
+      expect(container.querySelector('input[type="file"]')).toHaveAttribute('capture', 'environment');
+    },
   ],
 ];
 

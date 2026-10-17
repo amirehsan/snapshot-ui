@@ -7,6 +7,7 @@ import { Calendar, RangeCalendar } from '../src/calendar';
 import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
+import { FileButton, FileDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
@@ -169,6 +170,24 @@ const FACES: [name: string, element: ReactElement][] = [
     >
       <p>The transactions</p>
     </SidePanelLayout>,
+  ],
+  [
+    // The label, both lines, the button and FileTrigger's hidden input, the description and the empty status:
+    // no count, size or date of the library's own, so every locale writes the same.
+    'FileDropZone',
+    <FileDropZone
+      label="Receipts"
+      description="PDF, JPG or PNG, up to 10 MB"
+      acceptedFileTypes={['application/pdf', 'image/*']}
+      allowsMultiple
+      onFiles={noop}
+    />,
+  ],
+  [
+    'FileButton',
+    <FileButton acceptedFileTypes={['image/*']} capture="environment" onFiles={noop}>
+      Take a photo
+    </FileButton>,
   ],
 ];
 

@@ -7469,3 +7469,134 @@ describe('src/components/progress-bar.css', () => {
     expect(blockAfter(forced, '.progress-bar-fill {')).toMatch(/background-color: canvastext;/i);
   });
 });
+
+describe('src/components/file-drop-zone.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/file-drop-zone.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const REDUCED = '@media (prefers-reduced-motion: reduce)';
+  const TARGET = '.file-drop-zone-box[data-drop-target] {';
+  const INVALID = '.file-drop-zone[data-invalid] .file-drop-zone-box {';
+
+  it('draws the box at the surface radius with a 2px dashed boundary edge, the peer padding and 8rem tall', () => {
+    const box = blockAfter(rules(), '.file-drop-zone-box {');
+    for (const declaration of [
+      'container: file-drop-zone / inline-size;',
+      'gap: var(--spacing-part);',
+      'min-block-size: 8rem;',
+      'padding: var(--spacing-peer);',
+      'border: 2px dashed var(--color-boundary);',
+      'border-radius: var(--radius-surface);',
+    ]) {
+      expect(box, declaration).toContain(declaration);
+    }
+    // No fill of its own: it takes its holder's.
+    expect(box).not.toContain('background');
+    const css = rules();
+    expect(blockAfter(css, '.file-drop-zone-icon {')).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, '.file-drop-zone-icon svg {')).toContain('width: 1.5rem;');
+    expect(blockAfter(css, '.file-drop-zone-hint {')).toContain(
+      'font-weight: var(--text-body--font-weight);',
+    );
+    expect(blockAfter(css, '.file-drop-zone-drop {')).toContain('font-weight: 500;');
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('lays the content out as one row under 20rem of its own box', () => {
+    const narrow = blockAfter(rules(), '@container file-drop-zone (width < 20rem) {');
+    expect(blockAfter(narrow, '.file-drop-zone-icon {')).toContain('flex: none;');
+    expect(blockAfter(narrow, '.file-drop-zone-line {')).toContain('flex: 1 1 0;');
+  });
+
+  it('turns the edge solid ink over the 5% ink wash as a drop target, and swaps the hint for the drop line', () => {
+    const css = rules();
+    const target = blockAfter(css, TARGET);
+    expect(target).toContain('border-style: solid;');
+    expect(target).toContain('border-color: var(--color-ink);');
+    expect(target).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
+    expect(blockAfter(css, '.file-drop-zone-box[data-drop-target] .file-drop-zone-hint {')).toContain(
+      'display: none;',
+    );
+    expect(blockAfter(css, '.file-drop-zone-box[data-drop-target] .file-drop-zone-drop {')).toContain(
+      'display: inline;',
+    );
+    // Never signal orange, which is consent, and never link blue.
+    expect(css).not.toContain('--color-signal');
+    expect(css).not.toContain('--color-link');
+  });
+
+  it('draws invalid after the drop target, dashed in the error color, so it wins', () => {
+    const css = rules();
+    expect(css.indexOf(INVALID)).toBeGreaterThan(css.indexOf(TARGET));
+    const invalid = blockAfter(css, INVALID);
+    expect(invalid).toContain('border-style: dashed;');
+    expect(invalid).toContain('border-color: var(--color-error);');
+  });
+
+  it('draws a disabled zone in taupe, edge, text and icon, with the not-allowed cursor', () => {
+    const css = rules();
+    const box = blockAfter(
+      css,
+      ".file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-box {",
+    );
+    expect(box).toContain('border-color: var(--color-taupe);');
+    expect(box).toContain('color: var(--color-taupe);');
+    expect(box).toContain('cursor: not-allowed;');
+    expect(
+      blockAfter(css, ".file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-icon {"),
+    ).toContain('color: var(--color-taupe);');
+  });
+
+  it('draws no hint on a coarse pointer without hover', () => {
+    const touch = blockAfter(rules(), '@media (hover: none) and (pointer: coarse) {');
+    expect(blockAfter(touch, '.file-drop-zone-hint {')).toContain('display: none;');
+    // Only the hint: the button stays.
+    expect(touch).not.toContain('button');
+  });
+
+  it('insets the overlay past the rail, one layer over the chrome, at the stadium radius over the canvas at 92%', () => {
+    const css = rules();
+    const overlay = blockAfter(css, '.page-drop-zone {');
+    for (const declaration of [
+      'position: fixed;',
+      'inset: var(--spacing-inset);',
+      'inset-inline-start: calc(var(--app-shell-sidebar, 0px) + var(--spacing-inset));',
+      'z-index: calc(var(--z-chrome) + 1);',
+      'border: 2px dashed var(--color-ink);',
+      'border-radius: var(--radius-stadium);',
+      'background-color: color-mix(in srgb, var(--color-canvas) 92%, transparent);',
+    ]) {
+      expect(overlay, declaration).toContain(declaration);
+    }
+    const card = blockAfter(css, '.page-drop-zone-card {');
+    for (const declaration of [
+      'padding: var(--spacing-peer) var(--spacing-separate);',
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+    ]) {
+      expect(card, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.page-drop-zone-icon svg {')).toContain('width: 2.5rem;');
+    expect(blockAfter(css, '.page-drop-zone-title {')).toContain('font-size: var(--text-h3);');
+    expect(blockAfter(css, '.page-drop-zone-description {')).toContain('color: var(--color-slate);');
+  });
+
+  it('fades the overlay in over 120ms through @starting-style, and not under reduced motion', () => {
+    const css = rules();
+    expect(blockAfter(css, '.page-drop-zone {')).toContain('transition: opacity 120ms ease;');
+    expect(blockAfter(blockAfter(css, '@starting-style {'), '.page-drop-zone {')).toContain('opacity: 0;');
+    expect(blockAfter(blockAfter(css, REDUCED), '.page-drop-zone {')).toContain('transition: none;');
+  });
+
+  it('draws the dashed edges canvastext, the drop target highlight and the overlay canvas in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.file-drop-zone-box {')).toMatch(/border-color: canvastext;/i);
+    expect(blockAfter(forced, TARGET)).toMatch(/border-color: highlight;/i);
+    const overlay = blockAfter(forced, '.page-drop-zone {');
+    expect(overlay).toMatch(/border-color: canvastext;/i);
+    expect(overlay).toMatch(/background-color: canvas;/i);
+    expect(blockAfter(forced, '.page-drop-zone-card {')).toMatch(/border-color: canvastext;/i);
+  });
+});

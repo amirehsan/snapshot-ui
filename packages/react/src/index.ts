@@ -202,6 +202,19 @@ export { Avatar, type AvatarProps } from './avatar';
 export { StatTile, type StatTileChange, type StatTileProps } from './stat-tile';
 export { Meter, type MeterBaseProps, type MeterProps, type MeterSegment } from './meter';
 export { ProgressBar, type ProgressBarBaseProps, type ProgressBarProps } from './progress-bar';
+export {
+  FileButton,
+  FileDropZone,
+  PageDropZone,
+  type FileAcceptance,
+  type FileButtonProps,
+  type FileDropZoneBaseProps,
+  type FileDropZoneLabels,
+  type FileDropZoneProps,
+  type FileRejection,
+  type FileRejectionReason,
+  type PageDropZoneProps,
+} from './file-drop-zone';
 export { EmptyState, type EmptyStateProps } from './empty-state';
 export { Skeleton, type SkeletonProps } from './skeleton';
 export {
