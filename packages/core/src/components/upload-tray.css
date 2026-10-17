@@ -13,12 +13,19 @@
  * panel rises 8px and fades in over 200ms through @starting-style, which is above the floor and simply does not
  * run there.
  *
- * Corners are concentric: a rounded part inside a rounded holder takes the holder's radius less the gap between
- * them, the holder's edge and the smaller side of its padding, never a copy, and square once the gap reaches the
- * radius. A holder names its own corner in three properties, --holder-radius, --holder-border and --holder-pad:
- * the panel, the phone's bar and the sheet set theirs, and an app that puts the list in its own rounded holder,
- * such as a Card, sets them there. The list subtracts the holder's gap, and each row subtracts its own padding
- * again, for its buttons and its bar. With no holder named they keep their own radius.
+ * Corners are concentric: a rounded part in a rounded holder's corner region takes the holder's radius less the
+ * gap between them, the holder's edge and the smaller real gap, never a copy, and square once the gap reaches the
+ * radius. Only parts in a corner region take it: the header's trailing button, the list's first and last rows'
+ * trailing buttons and the bar's buttons. Every other part, the rows' bars included, is far from any corner and
+ * keeps its own pill. A holder names its own corner in three properties, --holder-radius, --holder-border and
+ * --holder-pad: the panel and the phone's bar set theirs (the sheet rounds only its top corners, which no row
+ * reaches, so it names none), and an app that puts the list in its own rounded holder, such as a Card, sets them
+ * there. With no holder named the rows' buttons keep their own radius.
+ *
+ * Under 768px the bar covers the bottom of the page, so while it shows the shell's workspace reserves room under
+ * its content and the root's scroll padding keeps a focused control clear of it (WCAG 2.4.11), from tokens only:
+ * the bar's height, max(--size-field, --size-target), and the inset, over the tab bar's reserve and a sticky
+ * bar's offset, in the bottom edge's order (tab bar, sticky bar, tray, toasts).
  */
 @layer components {
   /* The polite live region, present before its text, hidden from sight and kept out of aria-hidden, as the
@@ -54,8 +61,9 @@
 
   .upload-row {
     --upload-row-tone: var(--color-slate);
-    /* A row is flush with the list; its smaller padding, the block's, is the next gap in. */
-    --upload-row-radius: max(0px, calc(var(--upload-list-radius) - 0.625rem));
+    /* A row is flush with the list. Its trailing button's real gap to the holder's edge is the row's inline
+       padding less the actions' 0.5rem pull-in, 8px, smaller than its block gap. */
+    --upload-row-radius: max(0px, calc(var(--upload-list-radius) - (var(--spacing-inset) - 0.5rem)));
 
     display: grid;
     grid-template-columns: 24px minmax(0, 1fr) auto;
@@ -64,6 +72,17 @@
     box-sizing: border-box;
     min-block-size: max(var(--size-target), 3.5rem);
     padding: 0.625rem var(--spacing-inset);
+  }
+
+  /* A row takes focus itself when the button that held it leaves and the row stays; the ring is inset, since the
+     row runs to its holder's sides. */
+  .upload-row:focus {
+    outline: none;
+  }
+
+  .upload-row:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-1 * var(--focus-ring-width));
   }
 
   .upload-row + .upload-row {
@@ -173,9 +192,14 @@
     margin-inline-end: 0;
   }
 
-  /* Concentric with the holder, through the row: the buttons and the bar's track and fill. Their own radius while
-     no holder names its corner. */
-  .upload-row :is(.icon-button, .progress-bar-track, .progress-bar-fill) {
+  /* Concentric with the holder only in its corner regions: the trailing button of the last row and, unless the
+     list sits under the panel's header, of the first. Their own radius while no holder names its corner. */
+  .upload-row:last-child .upload-row-actions > .icon-button:last-child,
+  :not(.upload-tray-body)
+    > .upload-list
+    > .upload-row:first-child
+    .upload-row-actions
+    > .icon-button:last-child {
     border-radius: var(--upload-row-radius, var(--radius-pill));
   }
 
@@ -212,7 +236,7 @@
   }
 
   .upload-tray-header {
-    /* The header's buttons sit the header's smaller padding, the part step, in from the panel's edge. */
+    /* The header's trailing button sits the header's padding, the part step, in from the panel's edge. */
     --upload-tray-header-radius: max(
       0px,
       calc(var(--holder-radius) - var(--holder-border) - var(--spacing-part))
@@ -258,8 +282,27 @@
     overflow-wrap: anywhere;
   }
 
-  .upload-tray-header .icon-button {
+  /* Only the trailing button is in the panel's corner region; the fold button beside Close is 57px in and keeps
+     its pill. */
+  .upload-tray-header > .icon-button:last-child {
     border-radius: var(--upload-tray-header-radius);
+  }
+
+  /* While any row has failed, the error icon leads the title on both faces, beside the words that say it. */
+  .upload-tray-alert {
+    display: flex;
+    flex: none;
+    color: var(--color-error);
+  }
+
+  .upload-tray-alert svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .upload-tray-bar-button .upload-tray-alert svg {
+    width: 1rem;
+    height: 1rem;
   }
 
   .upload-tray[data-collapsed] .upload-tray-fold svg {
@@ -275,9 +318,10 @@
   }
 
   /* The phone's bar: a pill across the bottom, the field's height, never under the 40px target, which compact
-     density's 36px field would be, and never under 44px on a coarse pointer. */
+     density's 36px field would be, and never under 44px on a coarse pointer. Border-box, so its height is the
+     one the page reserves for it. */
   .upload-tray-bar {
-    /* The bar's corner, for its one button, which fills it inside the edge. */
+    /* The bar's corner, for its buttons, which fill it inside the edge. */
     --holder-radius: var(--radius-pill);
     --holder-border: 1px;
     --holder-pad: 0px;
@@ -288,6 +332,7 @@
       var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) + var(--save-bar-offset, 0px)
     );
     z-index: var(--z-chrome);
+    box-sizing: border-box;
     display: flex;
     block-size: var(--size-field);
     min-block-size: var(--size-target);
@@ -323,18 +368,47 @@
     cursor: pointer;
   }
 
-  .upload-tray-bar-button:is(:focus-visible, [data-focus-visible]) {
+  /* Settled with onClear: an X at the bar's end, as tall as the bar inside its edge and as wide as it is tall, so
+     it is never under the target and never overflows the bar. Slate, turning ink, as a ghost IconButton. */
+  .upload-tray-bar-clear {
+    display: grid;
+    flex: none;
+    place-items: center;
+    inline-size: max(var(--size-field), var(--size-target));
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));
+    background-color: transparent;
+    color: var(--color-slate);
+    cursor: pointer;
+  }
+
+  .upload-tray-bar-clear svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  :is(.upload-tray-bar-button, .upload-tray-bar-clear):is(:focus-visible, [data-focus-visible]) {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
 
-  .upload-tray-bar-button[data-pressed] {
+  :is(.upload-tray-bar-button, .upload-tray-bar-clear):is(:active, [data-pressed]) {
     background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
   }
 
+  .upload-tray-bar-clear:is(:active, [data-pressed]) {
+    color: var(--color-ink);
+  }
+
   @media (hover: hover) {
-    .upload-tray-bar-button:is(:hover, [data-hovered]) {
+    :is(.upload-tray-bar-button, .upload-tray-bar-clear):is(:hover, [data-hovered]) {
       background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+
+    .upload-tray-bar-clear:is(:hover, [data-hovered]) {
+      color: var(--color-ink);
     }
   }
 
@@ -357,14 +431,8 @@
     height: 1rem;
   }
 
-  /* In the sheet the list runs to the panel's sides, its rows padded as the sheet's header is: the sheet's corner,
-     its edge and no padding are the holder. */
-  .upload-tray-sheet {
-    --holder-radius: var(--radius-stadium);
-    --holder-border: 1px;
-    --holder-pad: 0px;
-  }
-
+  /* In the sheet the list runs to the panel's sides, its rows padded as the sheet's header is. The sheet rounds
+     only its top corners, which the header holds, so the rows' buttons keep their own pill. */
   .upload-tray-sheet .upload-list {
     margin-inline: calc(-1 * var(--spacing-peer));
   }
@@ -373,10 +441,34 @@
     padding-inline: var(--spacing-peer);
   }
 
+  /* The sheet's Clear or Cancel uploads, the width of its footer. */
+  .upload-tray-sheet-action {
+    inline-size: 100%;
+  }
+
   /* One face at a time, by the viewport, so nothing is measured to choose. */
   @media (width < 768px) {
     .upload-tray {
       display: none;
+    }
+
+    /* While the bar shows, the page keeps room for it under its content, over the tab bar's reserve and a
+       sticky bar's offset, and the root's scroll padding keeps a focused control clear of it: the bar's height,
+       never under the target, and the inset. The root reads the tab bar from --toast-offset-block (spec
+       correction 12), and a save bar's own scroll padding adds --upload-tray-reserve. */
+    :root:has(.upload-tray-bar) {
+      --upload-tray-reserve: calc(max(var(--size-field), var(--size-target)) + var(--spacing-inset));
+
+      scroll-padding-block-end: calc(
+        var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) + var(--upload-tray-reserve)
+      );
+    }
+
+    .app-shell:has(> .upload-tray-bar) .app-shell-workspace {
+      padding-block-end: calc(
+        var(--app-shell-inset-block-end) + var(--save-bar-offset, 0px) +
+          max(var(--size-field), var(--size-target)) + var(--spacing-inset)
+      );
     }
   }
 
@@ -399,7 +491,9 @@
       border-color: canvastext;
     }
 
-    .upload-row-icon {
+    .upload-row-icon,
+    .upload-tray-alert,
+    .upload-tray-bar-clear {
       color: canvastext;
     }
   }

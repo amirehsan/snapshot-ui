@@ -181,14 +181,22 @@ export const Open: Story = {
     await expect(within(panel).getAllByRole('listitem')).toHaveLength(5);
     // The phone's bar is not drawn at this width.
     await expect(getComputedStyle(only('.upload-tray-bar')).display).toBe('none');
-    // Concentric corners in Rounded: the panel's 24px less its 1px edge and the header's 8px for the header's
-    // buttons, 15px; less its edge for the flush rows, then a row's 10px for its buttons and bar, 13px.
+    // Concentric corners in Rounded, only in the panel's corner regions: Close, the header's trailing button, 8px
+    // in from the inner edge, takes the panel's 24px less its 1px edge and that 8px, 15px; so does the last row's
+    // trailing Remove, whose real gap is the row's 16px padding less the actions' 8px pull-in.
     const radius = (element: Element): string => getComputedStyle(element).borderTopLeftRadius;
-    await expect(radius(within(panel).getByRole('button', { name: 'Upload details' }))).toBe('15px');
-    await expect(radius(within(panel).getByRole('button', { name: 'Cancel invoice-0142.pdf' }))).toBe('13px');
+    await expect(radius(within(panel).getByRole('button', { name: 'Close' }))).toBe('15px');
+    await expect(radius(within(panel).getByRole('button', { name: 'Remove receipt-april.pdf' }))).toBe(
+      '15px',
+    );
+    // Far from every corner, the rest keep their own pill: the fold button beside Close, a middle row's Cancel
+    // and the bar's track.
+    const pill = radius(within(panel).getByRole('button', { name: 'Upload details' }));
+    await expect(Number.parseFloat(pill)).toBeGreaterThan(100);
+    await expect(radius(within(panel).getByRole('button', { name: 'Cancel invoice-0142.pdf' }))).toBe(pill);
     const track = panel.querySelector('.upload-row .progress-bar-track');
     if (!track) throw new Error('No track');
-    await expect(radius(track)).toBe('13px');
+    await expect(radius(track)).toBe(pill);
   },
 };
 
@@ -208,15 +216,26 @@ export const Collapsed: Story = {
   },
 };
 
-/** Three saved, one needing review and one failed: "5 uploads complete", with Close, Retry and Remove. */
+/**
+ * Three saved, one needing review and one failed: "3 uploads complete, 1 failed, 1 needs review" after the error
+ * icon, with Close, Retry and Remove.
+ */
 export const Settled: Story = {
   tags: ['viewport-desktop'],
   globals: DESKTOP,
   args: { items: SETTLED, onClear: fn(), onRetry: fn(), onRemove: fn() },
   play: async () => {
     const panel = await panelAtRest();
-    await expect(within(panel).getByRole('heading', { level: 2 })).toHaveTextContent('5 uploads complete');
+    await expect(within(panel).getByRole('heading', { level: 2 })).toHaveTextContent(
+      '3 uploads complete, 1 failed, 1 needs review',
+    );
     await expect(within(panel).getByRole('button', { name: 'Close' })).toBeVisible();
+    const alert = panel.querySelector('.upload-tray-header > .upload-tray-alert');
+    if (!alert) throw new Error('No error icon');
+    await expect(alert).toBeVisible();
+    await expect(getComputedStyle(alert).color).toBe(
+      getComputedStyle(only('.upload-row[data-status="failed"] .upload-row-icon')).color,
+    );
   },
 };
 
@@ -240,11 +259,11 @@ export const PhoneBar: Story = {
   },
 };
 
-/** The bar pressed: the sheet with the title, the line and the list, at rest. */
+/** The bar pressed: the sheet with the title, the line, the list and Cancel uploads in its footer, at rest. */
 export const PhoneSheet: Story = {
   tags: ['viewport-phone'],
   globals: PHONE,
-  args: { description: 'About a minute left' },
+  args: { description: 'About a minute left', onCancelAll: fn() },
   render: (args) => <Shell {...args} tabs />,
   play: async () => {
     const button = within(await waitFor(() => only('.upload-tray-bar'))).getByRole('button');
@@ -264,6 +283,112 @@ export const PhoneSheet: Story = {
     const dialog = within(document.body).getByRole('dialog', { name: 'Uploading 2 of 5' });
     await expect(within(dialog).getAllByRole('listitem')).toHaveLength(5);
     await expect(button).toHaveAttribute('aria-expanded', 'true');
+    // The wide panel's close rule in the footer, as wide as it, and the sheet's own close named for itself.
+    const action = within(dialog).getByRole('button', { name: 'Cancel uploads' });
+    const footer = action.closest('.sheet-footer');
+    if (!footer) throw new Error('No footer');
+    const padding = Number.parseFloat(getComputedStyle(footer).paddingInlineStart) * 2;
+    await expect(action.getBoundingClientRect().width).toBeCloseTo(footer.clientWidth - padding, 0);
+    await expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveClass('sheet-close');
+  },
+};
+
+/** A page longer than the phone, whose last control is a button: what the bar must never cover. */
+function LongPage(): ReactElement {
+  return (
+    <div style={{ display: 'grid', gap: 24, padding: 'var(--spacing-inset)' }}>
+      {['January', 'February', 'March', 'April', 'May', 'June'].map((month) => (
+        <Card key={month}>
+          <CardHeader>
+            <CardTitle>{month}</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <p style={{ margin: 0 }}>Receipts, invoices and statements, newest first.</p>
+          </CardBody>
+        </Card>
+      ))}
+      <div>
+        <button type="button">Load earlier months</button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * At 375 by 812 the page keeps room for the bar under its content, and the root's scroll padding keeps a focused
+ * control clear of it, with the tab bar (WCAG 2.4.11).
+ */
+export const PhoneKeepsClear: Story = {
+  tags: ['no-visual', 'viewport-phone'],
+  globals: PHONE,
+  render: (args) => (
+    <AppShell
+      sidebar={<DemoNav />}
+      header={<DemoHeader title="Documents" />}
+      bottomBar={TABS}
+      floating={<UploadTray {...args} />}
+    >
+      <LongPage />
+    </AppShell>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = await waitFor(() => only('.upload-tray-bar'));
+    const last = within(canvasElement).getByRole('button', { name: 'Load earlier months' });
+    const scroller = document.scrollingElement ?? document.documentElement;
+    try {
+      await expect(scroller.scrollHeight).toBeGreaterThan(window.innerHeight);
+      // Focus reaches the last control from the top of the page: it scrolls clear of the bar.
+      scroller.scrollTop = 0;
+      await focusOn(last);
+      await waitFor(() =>
+        expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(bar.getBoundingClientRect().top),
+      );
+      // Scrolled to the very end, the last control still sits above the bar.
+      scroller.scrollTop = scroller.scrollHeight;
+      await waitFor(() =>
+        expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(bar.getBoundingClientRect().top),
+      );
+      await expect(bar.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+        only('.tab-bar').getBoundingClientRect().top,
+      );
+    } finally {
+      scroller.scrollTop = 0;
+    }
+  },
+};
+
+/**
+ * Settled with onClear: the bar ends in a clear X as tall as the bar inside its edge, and the sheet's footer
+ * says Clear, each calling onClear.
+ */
+export const PhoneClear: Story = {
+  tags: ['no-visual', 'viewport-phone'],
+  globals: PHONE,
+  args: { items: SETTLED, onClear: fn() },
+  render: (args) => <Shell {...args} tabs />,
+  play: async ({ args }) => {
+    const bar = await waitFor(() => only('.upload-tray-bar'));
+    const [open, clear] = within(bar).getAllByRole('button');
+    if (!open || !clear) throw new Error('Two buttons');
+    await expect(clear).toHaveAccessibleName('Clear');
+    const box = clear.getBoundingClientRect();
+    await expect(box.height).toBeCloseTo(bar.getBoundingClientRect().height - 2, 0);
+    await expect(box.width).toBeGreaterThanOrEqual(40);
+    // The X fills the pill's end inside its edge: the pill's radius less 1px.
+    await expect(getComputedStyle(clear).borderTopRightRadius).toBe('998px');
+    await expect(open.querySelector('.upload-tray-alert')).not.toBeNull();
+    clear.click();
+    await expect(args.onClear).toHaveBeenCalledTimes(1);
+    open.click();
+    const sheet = await waitFor(async () => {
+      const found = only('.upload-tray-sheet');
+      await expect(found).not.toHaveAttribute('data-entering');
+      return found;
+    });
+    within(sheet).getByRole('button', { name: 'Clear' }).click();
+    await expect(args.onClear).toHaveBeenCalledTimes(2);
+    within(sheet).getByRole('button', { name: 'Close' }).click();
+    await waitFor(() => expect(document.querySelector('.upload-tray-sheet')).toBeNull());
   },
 };
 
@@ -398,6 +523,51 @@ export const FocusAfterLeave: Story = {
     await guardedKeys(panel)('{Enter}');
     await waitFor(() => expect(document.querySelector('.upload-tray')).toBeNull());
     await waitFor(() => expect(within(canvasElement).getByRole('main')).toHaveFocus());
+  },
+};
+
+/** A tray whose uploading row ticks every 100ms, as an app's progress does. */
+function Ticking(): ReactElement {
+  const [progress, setProgress] = useState(0.1);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setProgress((each) => (each >= 0.9 ? 0.1 : each + 0.05));
+    }, 100);
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
+  return (
+    <Shell
+      items={[
+        { id: 1, name: 'lease-agreement.pdf', status: 'saved' },
+        { id: 2, name: 'invoice-0142.pdf', status: 'uploading', progress },
+      ]}
+      onRemove={() => undefined}
+      onCancel={() => undefined}
+    />
+  );
+}
+
+/**
+ * Focus the reader moves to the page's empty space stays there while the rows tick: the list mends focus only
+ * when the element that held it has left.
+ */
+export const FocusStaysOut: Story = {
+  tags: ['no-visual', 'viewport-desktop'],
+  globals: DESKTOP,
+  render: () => <Ticking />,
+  play: async () => {
+    const panel = await panelAtRest();
+    const remove = within(panel).getByRole('button', { name: 'Remove lease-agreement.pdf' });
+    await focusOn(remove);
+    // A press on the header's empty space, outside main and every control: focus goes to the body.
+    await userEvent.click(only('.app-shell-header'));
+    await waitFor(() => expect(document.body).toHaveFocus());
+    // Several ticks later, focus is still where the reader left it.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await expect(document.body).toHaveFocus();
+    await expect(remove).toBeInTheDocument();
   },
 };
 
