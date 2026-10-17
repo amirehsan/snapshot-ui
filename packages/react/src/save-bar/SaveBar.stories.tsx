@@ -9,6 +9,7 @@ import { Button } from '../button';
 import { focusOn } from '../stories/focus';
 import { DemoHeader, DemoNav } from '../stories/shell-fixture';
 import { DESKTOP, PHONE, VIEWPORT_OPTIONS } from '../stories/viewports';
+import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
 import { toast, ToastRegion } from '../toast';
 import { UploadTray, type UploadItem } from '../upload-tray';
@@ -130,6 +131,12 @@ const LONG = { timeout: 5000 };
  */
 const ROUNDING = 1;
 
+/** The gap a focused field keeps above the bars, `--spacing-inset`, so its ring and its last line show whole. */
+const GAP = 16;
+
+/** The field a control belongs to, its label, description and error line included, or the control alone. */
+const fieldOf = (control: Element): Element => control.closest('.field') ?? control;
+
 /** Presses `keys` unless the story has gone: a play that outlived its time limit stops rather than type on. */
 function guardedKeys(anchor: Element): (keys: string) => Promise<void> {
   return async (keys) => {
@@ -222,7 +229,11 @@ export const ErrorStatus: Story = {
   args: { isDirty: true, status: "Couldn't save. Try again.", statusTone: 'error' },
 };
 
-/** Two narrow holders: under 36rem the actions take their own line, under 24rem each button the full width. */
+/**
+ * Two narrow holders, under 36rem: the actions on a line of their own, side by side in DOM order and growing along
+ * it; at 22rem the long action is wider than the line with the others, so it wraps to a line of its own. Never a
+ * column of stacked buttons.
+ */
 export const Narrow: Story = {
   args: {
     message: 'Corner Mart, 14 Oct: 1 of 3 to review',
@@ -241,29 +252,43 @@ export const Narrow: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const [wide, narrow] = ['.at-30', '.at-22'].map((selector) => find(canvasElement, selector));
-    if (!wide || !narrow) throw new Error('Two bars');
-    // Under 36rem: the sentence above, the buttons on a line of their own at the end, the action last.
-    const text = rect(find(wide, '.save-bar-text'));
-    const buttons = within(wide).getAllByRole('button');
-    for (const button of buttons) await expect(rect(button).top).toBeGreaterThanOrEqual(text.bottom - 0.5);
-    const action = buttons.at(-1);
-    if (!action) throw new Error('No action');
-    await expect(action).toHaveTextContent('Confirm and review next (2 left)');
-    // Under 24rem: each button the actions' full width, stacked in DOM order, the action at the bottom.
-    const actions = find(narrow, '.save-bar-actions');
-    const stacked = within(narrow).getAllByRole('button');
-    for (const [index, button] of stacked.entries()) {
-      await expect(rect(button).width).toBeCloseTo(rect(actions).width, 0);
-      const next = stacked[index + 1];
-      if (next) await expect(rect(next).top).toBeGreaterThan(rect(button).bottom - 0.5);
+    for (const bar of ['.at-30', '.at-22'].map((selector) => find(canvasElement, selector))) {
+      const text = rect(find(bar, '.save-bar-text'));
+      const actions = rect(find(bar, '.save-bar-actions'));
+      const buttons = within(bar).getAllByRole('button');
+      await expect(buttons.at(-1)).toHaveTextContent('Confirm and review next (2 left)');
+      // The sentence above, the buttons on lines of their own under it.
+      for (const button of buttons) await expect(rect(button).top).toBeGreaterThanOrEqual(text.bottom - 0.5);
+      // DOM order, the reading order: each next button beside the last on its line, or on a later line.
+      for (const [index, button] of buttons.entries()) {
+        const next = buttons[index + 1];
+        if (!next) continue;
+        if (Math.abs(rect(next).top - rect(button).top) < 1)
+          await expect(rect(next).left).toBeGreaterThan(rect(button).right);
+        else await expect(rect(next).top).toBeGreaterThan(rect(button).bottom - 0.5);
+      }
+      // Each line's buttons grow to fill it, so the last button of every line ends at the actions' end.
+      const lines = new Map<number, HTMLElement[]>();
+      for (const button of buttons) {
+        const top = Math.round(rect(button).top);
+        lines.set(top, [...(lines.get(top) ?? []), button]);
+      }
+      for (const line of lines.values()) {
+        const [first, last] = [line[0], line.at(-1)];
+        if (!first || !last) continue;
+        await expect(rect(first).left).toBeCloseTo(actions.left, 0);
+        await expect(rect(last).right).toBeCloseTo(actions.right, 0);
+      }
+      // Both bottom corners' curves stay clear: the actions sit the surface radius in from either edge.
+      const radius = Math.min(parseFloat(getComputedStyle(bar).borderBottomLeftRadius), 9999);
+      await expect(actions.left - rect(bar).left).toBeGreaterThanOrEqual(radius - 0.5);
+      await expect(rect(bar).right - actions.right).toBeGreaterThanOrEqual(radius - 0.5);
     }
-    // The last button is clear of both bottom corners' curves.
-    const radius = parseFloat(getComputedStyle(narrow).borderBottomLeftRadius);
-    const last = stacked.at(-1);
-    if (!last) throw new Error('No last button');
-    await expect(rect(last).left - rect(narrow).left).toBeGreaterThanOrEqual(Math.min(radius, 9999) - 0.5);
-    await expect(rect(narrow).right - rect(last).right).toBeGreaterThanOrEqual(Math.min(radius, 9999) - 0.5);
+    // At 22rem the long action wraps to a line of its own, below Cancel and Skip, which share theirs.
+    const [cancel, skip, action] = within(find(canvasElement, '.at-22')).getAllByRole('button');
+    if (!cancel || !skip || !action) throw new Error('Three buttons');
+    await expect(Math.abs(rect(skip).top - rect(cancel).top)).toBeLessThan(1);
+    await expect(rect(action).top).toBeGreaterThan(rect(cancel).bottom - 0.5);
   },
 };
 
@@ -304,7 +329,7 @@ export const InForm: Story = {
   ),
   play: async ({ canvasElement }) => {
     const bar = find(canvasElement, '.save-bar');
-    await waitFor(() => expect(window.innerHeight - rect(bar).bottom).toBeCloseTo(16, 0));
+    await waitFor(() => expect(window.innerHeight - rect(bar).bottom).toBeCloseTo(16, 0), LONG);
     // Some field lies under it, scrolled past by nothing yet.
     const under = [...canvasElement.querySelectorAll('.field')].some(
       (field) => rect(field).bottom > rect(bar).top,
@@ -313,7 +338,10 @@ export const InForm: Story = {
   },
 };
 
-/** On a phone, in the shell: the bar stuck 16px above the tab bar. */
+/**
+ * On a phone, in the shell: the bar stuck 16px above the tab bar, the sentence over one line of buttons, Cancel and
+ * Save side by side and sharing it, never stacked.
+ */
 export const Phone: Story = {
   tags: ['viewport-phone'],
   globals: PHONE,
@@ -321,9 +349,17 @@ export const Phone: Story = {
   parameters: { layout: 'fullscreen' },
   render: (args) => <ShellForm {...args} />,
   play: async () => {
-    const bar = await waitFor(() => only('.save-bar'));
-    await waitFor(() => expect(rect(only('.tab-bar')).top - rect(bar).bottom).toBeCloseTo(16, 0));
+    const bar = await waitFor(() => only('.save-bar'), LONG);
+    await waitFor(() => expect(rect(only('.tab-bar')).top - rect(bar).bottom).toBeCloseTo(16, 0), LONG);
     await expect(rect(bar).left).toBeCloseTo(16, 0);
+    const [cancel, save] = within(bar).getAllByRole('button');
+    if (!cancel || !save) throw new Error('Two buttons');
+    await expect(Math.abs(rect(save).top - rect(cancel).top)).toBeLessThan(1);
+    await expect(rect(save).left).toBeGreaterThan(rect(cancel).right);
+    await expect(rect(save).right - rect(cancel).left).toBeCloseTo(
+      rect(find(bar, '.save-bar-actions')).width,
+      0,
+    );
   },
 };
 
@@ -343,15 +379,15 @@ export const BottomEdge: Story = {
     </>
   ),
   play: async () => {
-    const bar = await waitFor(() => only('.save-bar'));
+    const bar = await waitFor(() => only('.save-bar'), LONG);
     const tray = await atRest('.upload-tray-bar');
-    const region = await waitFor(() => only('.toast-region'));
-    await waitFor(() => expect(region.querySelectorAll('.toast')).toHaveLength(2));
+    const region = await waitFor(() => only('.toast-region'), LONG);
+    await waitFor(() => expect(region.querySelectorAll('.toast')).toHaveLength(2), LONG);
     await waitFor(async () => {
       await expect(rect(only('.tab-bar')).top - rect(bar).bottom).toBeCloseTo(16, 0);
       await expect(rect(bar).top - rect(tray).bottom).toBeCloseTo(16, 0);
       await expect(rect(tray).top - rect(region).bottom).toBeCloseTo(16, 0);
-    });
+    }, LONG);
   },
 };
 
@@ -368,15 +404,15 @@ export const BottomEdgeWide: Story = {
     </>
   ),
   play: async () => {
-    const bar = await waitFor(() => only('.save-bar'));
+    const bar = await waitFor(() => only('.save-bar'), LONG);
     const tray = await atRest('.upload-tray');
-    const region = await waitFor(() => only('.toast-region'));
-    await waitFor(() => expect(region.querySelectorAll('.toast')).toHaveLength(2));
+    const region = await waitFor(() => only('.toast-region'), LONG);
+    await waitFor(() => expect(region.querySelectorAll('.toast')).toHaveLength(2), LONG);
     await waitFor(async () => {
       await expect(window.innerHeight - rect(bar).bottom).toBeCloseTo(16, 0);
       await expect(rect(bar).top - rect(tray).bottom).toBeCloseTo(16, 0);
       await expect(rect(tray).top - rect(region).bottom).toBeCloseTo(16, 0);
-    });
+    }, LONG);
   },
 };
 
@@ -418,7 +454,7 @@ export const CancelGuard: Story = {
 
 /**
  * WCAG 2.4.11 at 375 by 812, with the tab bar, the save bar and the tray's bar on the page: a field that sits under
- * them, reached by Tab and by focus(), ends clear of the topmost (risk R6).
+ * them, reached by Tab and by focus(), ends a gap clear of the topmost (risk R6).
  */
 export const FocusClear: Story = {
   tags: ['no-visual', 'viewport-phone', 'webkit', 'firefox'],
@@ -427,7 +463,7 @@ export const FocusClear: Story = {
   parameters: { layout: 'fullscreen' },
   render: (args) => <ShellForm {...args} tray />,
   play: async () => {
-    const bar = await waitFor(() => only('.save-bar'));
+    const bar = await waitFor(() => only('.save-bar'), LONG);
     const tray = await atRest('.upload-tray-bar');
     const scroller = document.scrollingElement ?? document.documentElement;
     const inputs = [...document.querySelectorAll<HTMLInputElement>('.app-shell-workspace input')];
@@ -435,7 +471,7 @@ export const FocusClear: Story = {
     const cover = (): number => Math.min(rect(bar).top, rect(tray).top);
     try {
       scroller.scrollTop = 0;
-      await waitFor(() => expect(rect(bar).bottom).toBeLessThan(window.innerHeight));
+      await waitFor(() => expect(rect(bar).bottom).toBeLessThan(window.innerHeight), LONG);
       // The first field under the covers, and the one before it, which is clear.
       const index = inputs.findIndex(
         (input) => rect(input).bottom > cover() && rect(input).top < window.innerHeight,
@@ -443,17 +479,23 @@ export const FocusClear: Story = {
       const [before, under] = [inputs[index - 1], inputs[index]];
       if (!before || !under) throw new Error('No field under the bars');
       await expect(rect(before).bottom).toBeLessThanOrEqual(cover());
-      // By Tab.
+      // By Tab: the field ends the gap above the covers, its ring and its last line whole.
       await focusOn(before);
       await guardedKeys(bar)('{Tab}');
       await waitFor(() => expect(under).toHaveFocus(), LONG);
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + ROUNDING), LONG);
+      await waitFor(
+        () => expect(rect(fieldOf(under)).bottom).toBeLessThanOrEqual(cover() - GAP + ROUNDING),
+        LONG,
+      );
       // By focus(), from the top again.
       under.blur();
       scroller.scrollTop = 0;
-      await waitFor(() => expect(rect(under).bottom).toBeGreaterThan(cover()));
+      await waitFor(() => expect(rect(under).bottom).toBeGreaterThan(cover()), LONG);
       under.focus();
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + ROUNDING), LONG);
+      await waitFor(
+        () => expect(rect(fieldOf(under)).bottom).toBeLessThanOrEqual(cover() - GAP + ROUNDING),
+        LONG,
+      );
     } finally {
       scroller.scrollTop = 0;
     }
@@ -478,25 +520,26 @@ export const FocusClearInScroller: Story = {
     const scroller = find(canvasElement, '.scroller');
     const bar = find(scroller, '.save-bar');
     const inputs = [...scroller.querySelectorAll<HTMLInputElement>('input')];
+    const gapAbove = (): number => rect(bar).top - GAP + ROUNDING;
     try {
       scroller.scrollTop = 0;
-      await waitFor(() => expect(rect(bar).bottom).toBeLessThan(rect(scroller).bottom));
+      await waitFor(() => expect(rect(bar).bottom).toBeLessThan(rect(scroller).bottom), LONG);
       const index = inputs.findIndex(
         (input) => rect(input).bottom > rect(bar).top && rect(input).top < rect(scroller).bottom,
       );
       const [before, under] = [inputs[index - 1], inputs[index]];
       if (!before || !under) throw new Error('No field under the bar');
-      // By Tab.
+      // By Tab: the field ends the gap above the bar.
       await focusOn(before);
       await guardedKeys(bar)('{Tab}');
       await waitFor(() => expect(under).toHaveFocus(), LONG);
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + ROUNDING), LONG);
+      await waitFor(() => expect(rect(fieldOf(under)).bottom).toBeLessThanOrEqual(gapAbove()), LONG);
       // By focus(), from the top again.
       under.blur();
       scroller.scrollTop = 0;
-      await waitFor(() => expect(rect(under).bottom).toBeGreaterThan(rect(bar).top));
+      await waitFor(() => expect(rect(under).bottom).toBeGreaterThan(rect(bar).top), LONG);
       under.focus();
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + ROUNDING), LONG);
+      await waitFor(() => expect(rect(fieldOf(under)).bottom).toBeLessThanOrEqual(gapAbove()), LONG);
     } finally {
       scroller.scrollTop = 0;
     }
@@ -504,10 +547,46 @@ export const FocusClearInScroller: Story = {
 };
 
 /**
- * A save that takes longer than the pause: "Saving" in the status, then nothing. The unit tests keep focus on the
- * action; here focus leaves it once the save is pending, since React Aria's Button says its pending start and end
- * while focused, by the ids of its label and spinner, which leave with the spinner, and its live region keeps each
- * sentence 7 seconds, which axe, run after this play and the next story's, reads as a name pointing at nothing.
+ * A text area taller than the room above the bar: the bar scrolls it up only until its top meets the view's top,
+ * never past it, so the reader sees where it starts. Focused without the browser's own scroll, so the bar's alone
+ * is measured.
+ */
+export const FocusClearTall: Story = {
+  tags: ['no-visual'],
+  args: { isDirty: true },
+  render: (args) => (
+    <Form count={1}>
+      <TextArea label="Notes" defaultValue="Kept the paper copy" rows={60} />
+      <SaveBar {...args} />
+    </Form>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = find(canvasElement, '.save-bar');
+    const notes = find(canvasElement, 'textarea');
+    const scroller = document.scrollingElement ?? document.documentElement;
+    try {
+      scroller.scrollTop = 0;
+      await waitFor(() => expect(window.innerHeight - rect(bar).bottom).toBeCloseTo(16, 0), LONG);
+      const start = rect(notes).top;
+      await expect(start).toBeGreaterThan(8);
+      await expect(rect(notes).bottom).toBeGreaterThan(rect(bar).top);
+      notes.focus({ preventScroll: true });
+      await waitFor(() => expect(rect(notes).top).toBeLessThan(start - 1), LONG);
+      // Its top at the view's top, never above it, though its end is still under the bar.
+      await expect(rect(notes).top).toBeGreaterThanOrEqual(-ROUNDING / 2);
+      await expect(rect(notes).top).toBeLessThanOrEqual(ROUNDING);
+    } finally {
+      scroller.scrollTop = 0;
+    }
+  },
+};
+
+/**
+ * A save that takes longer than the pause, pressed by keyboard, focus kept on the action. React Aria's Button says
+ * the pending's start and end itself, assertively, while it holds focus, so the status says nothing of it; the
+ * `Pending` story, with focus elsewhere, shows "Saving" there. React Aria's live region keeps each sentence 7
+ * seconds, and axe, run after this play and after the next story's, would read their names once the story has
+ * gone, so the play removes them once the end has been said.
  */
 export const PendingStatus: Story = {
   tags: ['no-visual'],
@@ -522,18 +601,31 @@ export const PendingStatus: Story = {
   play: async ({ canvas, canvasElement }) => {
     const save = canvas.getByRole('button', { name: 'Save' });
     const status = find(canvasElement, '.save-bar-status');
+    // Whether the status ever said anything while the save ran.
+    let spoke = false;
+    const watch = new MutationObserver(() => {
+      if (status.textContent !== '') spoke = true;
+    });
+    watch.observe(status, { childList: true, subtree: true, characterData: true });
     await focusOn(save);
     await guardedKeys(save)('{Enter}');
     try {
-      await waitFor(() => expect(save).toHaveAttribute('data-pending', 'true'));
-      save.blur();
-      await expect(status).toBeEmptyDOMElement();
-      await waitFor(() => expect(status).toHaveTextContent('Saving'), { timeout: 3000 });
+      await waitFor(() => expect(save).toHaveAttribute('data-pending', 'true'), LONG);
       await expect(canvas.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-      await waitFor(() => expect(save).not.toHaveAttribute('data-pending'), { timeout: 5000 });
+      await waitFor(() => expect(save).not.toHaveAttribute('data-pending'), LONG);
+      await expect(save).toHaveFocus();
+      await expect(spoke).toBe(false);
       await expect(status).toBeEmptyDOMElement();
+      // The end is said by the action's own id, once it has settled with focus on it.
+      await waitFor(
+        () =>
+          expect(
+            document.querySelector(`[data-live-announcer] [aria-labelledby="${CSS.escape(save.id)}"]`),
+          ).not.toBeNull(),
+        LONG,
+      );
     } finally {
-      // The start's sentence has been said; nothing more comes once focus has left.
+      watch.disconnect();
       for (const said of document.querySelectorAll('[data-live-announcer] [role="img"]')) said.remove();
     }
   },
@@ -561,7 +653,7 @@ export const OffsetMeasured: Story = {
         root.style.getPropertyValue('--save-bar-offset'),
       );
       await expect(Number(written?.[1])).toBeCloseTo(rect(bar).height, 1);
-    });
+    }, LONG);
     await expect(rect(bar).height).toBeGreaterThan(one);
   },
 };

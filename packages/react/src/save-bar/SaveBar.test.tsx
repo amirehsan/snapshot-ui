@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
@@ -305,6 +305,107 @@ describe('SaveBar', () => {
     expect(host).toBeEmptyDOMElement();
   });
 
+  it('says a status again when a press is answered with the same one, by drawing its text anew', async () => {
+    const user = userEvent.setup();
+    render(<SaveBar {...BASE} status="Enter a memo." statusTone="error" />);
+    const save = screen.getByRole('button', { name: 'Save' });
+    const host = status();
+    const first = status().querySelector('.save-bar-status-text');
+    expect(first).toHaveTextContent('Enter a memo.');
+    await user.click(save);
+    const second = status().querySelector('.save-bar-status-text');
+    expect(second).toHaveTextContent('Enter a memo.');
+    expect(second).not.toBe(first);
+    await user.click(save);
+    const third = status().querySelector('.save-bar-status-text');
+    expect(third).not.toBe(second);
+    // The live region itself stays, so a screen reader hears the new text in it.
+    expect(status()).toBe(host);
+  });
+
+  it("leaves the pending to React Aria's Button while the action holds focus as it begins", () => {
+    vi.useFakeTimers();
+    const { rerender } = render(<SaveBar {...BASE} />);
+    const save = screen.getByRole('button', { name: 'Save' });
+    act(() => {
+      save.focus();
+    });
+    // The app starts a save of its own with focus on the action: React Aria says "Save Saving" itself.
+    rerender(<SaveBar {...BASE} isPending />);
+    act(() => {
+      vi.advanceTimersByTime(QUIET_MS * 3);
+    });
+    expect(save).toHaveAttribute('data-pending', 'true');
+    expect(status()).toBeEmptyDOMElement();
+    rerender(<SaveBar {...BASE} />);
+    expect(status()).toBeEmptyDOMElement();
+  });
+
+  it('leaves the pending of a pressed action to React Aria too, the press holding focus', async () => {
+    vi.useFakeTimers();
+    const work = deferred();
+    render(<SaveBar {...BASE} onAction={() => work.promise} />);
+    const save = screen.getByRole('button', { name: 'Save' });
+    act(() => {
+      save.focus();
+    });
+    act(() => {
+      fireEvent.keyDown(save, { key: 'Enter' });
+      fireEvent.keyUp(save, { key: 'Enter' });
+    });
+    expect(save).toHaveAttribute('data-pending', 'true');
+    act(() => {
+      vi.advanceTimersByTime(QUIET_MS * 3);
+    });
+    expect(status()).toBeEmptyDOMElement();
+    await act(async () => {
+      work.resolve();
+      await work.promise;
+    });
+    expect(save).toHaveFocus();
+  });
+
+  it('says labels.pending in the status when focus is elsewhere as the pending begins', () => {
+    vi.useFakeTimers();
+    function Page({ isPending }: { isPending: boolean }): ReactElement {
+      return (
+        <>
+          <input aria-label="Memo" />
+          <SaveBar {...BASE} isPending={isPending} />
+        </>
+      );
+    }
+    const { rerender } = render(<Page isPending={false} />);
+    act(() => {
+      screen.getByRole('textbox', { name: 'Memo' }).focus();
+    });
+    rerender(<Page isPending />);
+    act(() => {
+      vi.advanceTimersByTime(QUIET_MS);
+    });
+    expect(status()).toHaveTextContent('Saving');
+  });
+
+  it('draws the pending over an error status in the neutral tone, and gives the error back after', () => {
+    vi.useFakeTimers();
+    const error = { status: "Couldn't save. Try again.", statusTone: 'error' as const };
+    const { rerender } = render(<SaveBar {...BASE} {...error} />);
+    expect(status()).toHaveAttribute('data-tone', 'error');
+    rerender(<SaveBar {...BASE} {...error} isPending />);
+    // Before the pause the error stands.
+    expect(status()).toHaveTextContent("Couldn't save. Try again.");
+    act(() => {
+      vi.advanceTimersByTime(QUIET_MS);
+    });
+    expect(status()).toHaveAttribute('data-tone', 'neutral');
+    expect(status()).toHaveTextContent('Saving');
+    expect(status().querySelector('svg')).toBeNull();
+    rerender(<SaveBar {...BASE} {...error} />);
+    expect(status()).toHaveAttribute('data-tone', 'error');
+    expect(status()).toHaveTextContent("Couldn't save. Try again.");
+    expect(status().querySelector('svg.lucide-circle-alert')).not.toBeNull();
+  });
+
   it('draws the error tone with its icon', () => {
     const { rerender } = render(<SaveBar {...BASE} status="3 fields need attention" />);
     expect(status()).toHaveAttribute('data-tone', 'neutral');
@@ -373,6 +474,55 @@ describe('SaveBar', () => {
     });
     rerender(<Bar hasCancel={false} />);
     expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus();
+  });
+
+  it('gives focus to the action after a yes when the app drops Cancel once nothing is dirty', async () => {
+    const user = userEvent.setup();
+    function Form(): ReactElement {
+      const [isDirty, setDirty] = useState(true);
+      return (
+        <SaveBar
+          {...BASE}
+          isDirty={isDirty}
+          onCancel={
+            isDirty
+              ? () => {
+                  setDirty(false);
+                }
+              : undefined
+          }
+        />
+      );
+    }
+    render(<Form />);
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    const question = await screen.findByRole('alertdialog');
+    await user.click(within(question).getByRole('button', { name: 'Discard changes' }));
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    await vi.waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus();
+    });
+  });
+
+  it('gives focus to the action after Keep editing when a save began while the question was open', async () => {
+    const user = userEvent.setup();
+    const props = { ...BASE, isDirty: true, onCancel: () => undefined };
+    const { rerender } = render(<SaveBar {...props} />);
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    const question = await screen.findByRole('alertdialog');
+    // The app starts a save of its own while the reader reads the question: Cancel is disabled under it.
+    rerender(<SaveBar {...props} isPending />);
+    await user.click(within(question).getByRole('button', { name: 'Keep editing' }));
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    await vi.waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Save/ })).toHaveFocus();
+    });
   });
 
   it('leaves focus the reader moved elsewhere alone', () => {

@@ -9738,29 +9738,40 @@ nearest ancestor that scrolls, which in a SidePanel or a Dialog is the body,
 where it belongs (risk R10). It is always drawn (ruling 18): dirty adds the
 chip and the guard, so the page never moves under the reader as they type.
 
-**Corners** (owner rule, 2026-10-17; spec correction 70). The buttons keep
-their own uniform round; the bar holds them clear of its corners instead
-of bending them. The end padding is `max(var(--spacing-part),
-calc(var(--radius-surface) - 1px))`, so the action's gap to the outer
-edge, the edge included, is at least the surface radius: 23px of padding
-in Rounded, 11px in Soft, 8px in Square. Stacked, the last button runs to
-the start side too, so the actions take the start side's shortfall,
-`max(0px, calc(var(--radius-surface) - 1px - var(--spacing-inset)))`,
-7px in Rounded and nothing in Soft and Square. The bulk bar keeps its 8px
-until its own task reaches it.
+**Corners** (owner rule, 2026-10-17; spec corrections 70 and 84). The
+buttons keep their own uniform round; the bar holds them clear of its
+corners instead of bending them. Both inline paddings are at least the
+surface radius less the edge: the start
+`max(var(--spacing-inset), calc(var(--radius-surface) - 1px))`, the end
+`max(var(--spacing-part), calc(var(--radius-surface) - 1px))`, so the
+action's gap to the end edge and the first button's gap to the start edge
+of a line of actions, the edge included, are at least the surface radius:
+24px each side in Rounded, 17px and 12px in Soft, 17px and 9px in Square.
+Both are logical, so a Persian bar mirrors them. No margin of the actions
+makes up a shortfall. The bulk bar keeps its 8px until its own task
+reaches it.
 
-**Layout** (spec correction 71). The bar is a wrapping flex row and its own
-size container, `save-bar`. The text column, `flex: 1 1 12rem`, holds the
-chip over the sentence, so a dirty one-line bar is no taller than a clean
-one: the chip's 14px and the sentence's 20px fit the 40px control. The
-status follows, then the actions, pushed to the end on whatever line they
-fall. Under 36rem of its own box the actions take a line of their own,
-ended, the action last, so a long label never squeezes the sentence; under
-24rem a column, each button the full width in DOM order with the action at
-the bottom, nearest a phone's thumb, so the visual order never differs
-from the focus order. A label longer than the bar wraps inside its button,
-which grows from 40px (spec correction 72). The widths are the bar's own,
-like the bulk bar's and StatTile's, not tokens.
+**Layout** (spec corrections 71 and 80). The bar is a wrapping flex row and
+its own size container, `save-bar`. The text column, `flex: 1 1 12rem`,
+holds the chip over the sentence, so a dirty one-line bar is no taller
+than a clean one: the chip's 14px and the sentence's 20px fit the 40px
+control. The status follows, then the actions, pushed to the end on
+whatever line they fall. Under 36rem of its own box the actions take a
+line of their own, so a long label never squeezes the sentence, and each
+button takes `flex: 1 1 auto`: they sit side by side in DOM order, the
+action last, and grow to share the line, as Polaris's and Material's
+narrow bars do, so a phone's dirty bar is the sentence over one row of
+buttons, 100px tall at 375 in Rounded where the stacked column of the
+first build was 148px. A button wraps to a line of its own only when its
+label is too long to fit beside the others, and the visual order never
+differs from the focus order. A label longer than the bar wraps inside its
+button, which grows from 40px (spec correction 72). The width is the
+bar's own, like the bulk bar's and StatTile's, not a token. It is the
+content box's, which a container query reads, so the switch comes up to
+22px of the bar's width later in Rounded, whose paddings are the widest,
+than in Soft and Square; a query cannot read the radius, and moving the
+corner insets into the children's margins for every wrap would cost more
+than the band is worth.
 
 **Text.** The sentence at `--text-small` weight 450 in ink, two lines at
 most and then an ellipsis, its whole text the group's name. The chip is the
@@ -9775,9 +9786,20 @@ consent only; Cancel is tertiary.
 need attention", "Couldn't save. Try again."; a save that worked is the
 app's success toast, as the Toast record splits events from states. The
 host is a polite `status`, in the server's HTML and clipped while empty,
-so it takes no room. It says each new status, and "Saving" in the status's
-place once the action has been pending for `QUIET_MS`, so a fast save says
-nothing.
+so it takes no room. It says each new status, and the same status again
+after another press, since each press of the action draws the status's
+text anew (spec correction 77, as the drop zone keys its line). While the
+action holds focus as a pending begins, React Aria's Button says the
+pending itself, assertively, through its live announcer: "Save Saving" as
+it starts, by the ids of the action's label and its spinner, and "Save" as
+it ends, by the action's own id (`dist/private/Button.mjs`); the status
+then stays quiet, so the reader hears it once. When the action does not
+hold focus as the pending begins, as after a pointer press in Safari,
+which focuses no button, or when the app sets `isPending` with focus
+elsewhere, the status says "Saving" in the status's place, neutral, once
+the pending has held for `QUIET_MS`, so a fast save says nothing there,
+and the app's status, an error's tone with it, returns when the pending
+ends (spec correction 79).
 
 **The action and Cancel** (ruling 19). A press calls `onAction`; a returned
 promise holds the action's spinner, `pendingLabel` read with its name, and
@@ -9788,40 +9810,64 @@ on is answered with a status. Clean, Cancel calls `onCancel`; dirty, it
 asks "Discard changes?" through the bar's own `useConfirm`, danger-toned,
 "Discard changes" and "Keep editing", which starts on the safe answer and
 gives focus back to Cancel. Focus on Cancel when it is disabled or leaves
-goes to the action, never the body (spec correction 74). Mod+S is not
+goes to the action, never the body (spec correction 74), and after either
+answer, when Cancel has left or a save begun while the question was open
+has disabled it, focus that the question's exit drops goes to the action
+too (spec correction 83). Mod+S is not
 taken (section 13.3 item 6). While dirty, `beforeunload` asks the browser
 to warn (ruling 12); a client navigation is not guarded.
 
-**The offset and the scroll padding** (spec corrections 12, 13 and 55).
-While a bar is on the page, `:root:has(.save-bar)` and
+**The offset and the scroll padding** (spec corrections 12, 13, 55, 78 and
+81). While a bar is on the page, `:root:has(.save-bar)` and
 `.app-shell:has(.save-bar)` declare `--save-bar-offset: calc(var(--size-control)
 + 2 * var(--spacing-part) + 2px + var(--spacing-inset))`, the one-line
 bar's height and the inset, which lifts the upload tray and the toasts from
 the server's HTML on; after hydration a `ResizeObserver` writes the bar's
 measured height and the inset inline on the root and on the closest shell,
-so a bar on two lines lifts them by its real height, and both are removed
-when it unmounts. The root's `scroll-padding-block-end` is
+so a bar on two lines lifts them by its real height. Each holder keeps a
+record of every mounted bar's height, so a save bar and DataTable's bulk
+bar on one page never overwrite each other: the holder takes the taller,
+and loses the property only with its last bar. A bar that measures
+nothing, a hidden one, writes `0px` rather than nothing, so the
+stylesheet's one-line value does not lift the tray and the toasts over a
+bar that is not drawn. The root's `scroll-padding-block-end` is
 `calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) +
-var(--upload-tray-reserve, 0px))`: the tab bar's height from the toasts'
-copy, since the root cannot read the shell's reserve, the bar, and a
-phone's upload bar above it, in the bottom edge's order. `save-bar.css`
-loads after `upload-tray.css`, so this sum replaces the tray's own.
+var(--upload-tray-reserve, 0px) + var(--spacing-inset))`: the tab bar's
+height from the toasts' copy, since the root cannot read the shell's
+reserve, the bar, and a phone's upload bar above it, in the bottom edge's
+order, and a 16px gap above the topmost, so a focused field's ring and the
+line under it are never flush against a bar. `save-bar.css` loads after
+`upload-tray.css`, so this sum replaces the tray's own.
 
-**Focus not obscured** (WCAG 2.4.11, risk R6, spec correction 73). With
-the bar's own clear removed, Chromium scrolled a field wholly in view under
-the tab bar, the save bar and the phone's upload bar clear of them at 375 by
-812, on Tab and on `focus()`, through the root's padding alone. A bar in a
-box that scrolls is beyond the root's padding, and there Chromium left the
-field 58px under the bar. So in every engine the bar listens for `focusin`
-on its holder and, two frames after the focus, scrolls a control outside
-itself by the least whole pixels that bring it above the bar, and where the
-window scrolls above the phone's upload bar too, in the control's own
-scroll port, as DataTable clears its rows of its bulk bar; nothing moves
-when the control is clear already or under it by half a pixel or less.
-Whole pixels, because WebKit and Firefox round a scroll position and the
-fields sit on fractional lines, so a browser's own scroll can stop short by
-under a pixel. The `FocusClear` and `FocusClearInScroller` plays run in
-Chromium, WebKit and Firefox.
+**Focus not obscured** (WCAG 2.4.11, risk R6, spec corrections 73, 78 and
+82). Which engine needed the bar's own clear, and where: only Chromium was
+probed without it. Where the window scrolls, Chromium did not need it: with
+the clear removed it scrolled a field wholly in view under the tab bar, the
+save bar and the phone's upload bar clear of them at 375 by 812, on Tab and
+on `focus()`, through the root's padding alone. In a box that scrolls,
+which the root's padding does not reach, Chromium did need it: it left the
+field 58px under the bar. WebKit and Firefox have run only with the clear
+in place, where both plays pass in CI, so whether either needs it in
+either case is unknown. So in every engine the bar listens for `focusin`
+on its holder and, two frames after the focus, scrolls the control's field
+(its label, control, description and error line; the control alone
+outside a field) by the least whole pixels that bring it 16px above the
+bar, and where the window scrolls above the phone's upload bar too, the
+gap the bar's `scroll-margin-block-end` holds resolved; since the root's
+padding brings only the control into view, this clear acts in the window
+too wherever a field's description or error line is left under the bar.
+It scrolls the control's own scroll port first and then the bar's by what
+is still covered, for a control in a box that scrolls inside the bar's
+holder, and never past the control's top: a control taller than the room
+keeps its top at the view's top, below the page's `--page-sticky-top`
+where the window scrolls (read from the bar's `scroll-margin-block-start`),
+as DataTable's clear does. Nothing moves when the field is clear already
+or under the gap by half a pixel or less. Whole pixels, because WebKit and
+Firefox round a scroll position and the fields sit on fractional lines, so
+a browser's own scroll can stop short by under a pixel. The `FocusClear`
+and `FocusClearInScroller` plays, which require the gap within a pixel,
+run in Chromium, WebKit and Firefox; `FocusClearTall` and the docs' Tab
+test run in Chromium.
 
 **Measured pairs**, all on float, light then dark, each gated already as
 text: ink, the sentence, 18.43 and 17.42; slate, the status, 5.49 and 6.94;
@@ -9834,7 +9880,9 @@ their words, and the error icon its shape.
 **Size.** `{ SaveBar }` measures 4.63 kB without React Aria and Lucide,
 above spec 16's 3 kB budget, so the rule sets 5.5 kB (spec correction 75):
 it carries ConfirmDialog through `useConfirm`, 2.99 kB alone, Button,
-FieldChanged and the scroll helpers.
+FieldChanged and the scroll helpers. After the review fix round, with the
+whole field's clear, the clamp, the nested scroll, the per-bar record and
+the focus checks, it measures 4.94 kB, still within the limit.
 
 **Screen readers and devices.** Not yet verified (owner action 4): the bar
 read as a group named by its message, its status politely, the discard
@@ -9887,7 +9935,7 @@ the 4.5 a text needs only over solid ink, which the 20px blur averages into
 the canvas before the text is read. Slate and ink on the canvas and on
 lifted, the header at rest, are gated already.
 
-**The page column** (spec correction 77). `--container-page` is 82.5rem,
+**The page column** (spec correction 85). `--container-page` is 82.5rem,
 1320px, the docs content column's cap, its inline padding included. The
 column is `box-sizing: border-box`, `inline-size: 100%`,
 `max-inline-size: var(--container-page)`, `margin-inline: auto` and
@@ -9907,7 +9955,7 @@ AppShell's `header` slot it sticks with the shell's wrapper at
 condenses. The shell measures its header wrapper after hydration and
 writes the height as `--page-sticky-top` on itself, so a DataTable's header
 row and a SidePanel stick under the header and not behind it, and an
-offset the app declares itself is left alone (spec correction 78). The
+offset the app declares itself is left alone (spec correction 86). The
 docs advise a sticky header without a sentence, since a phone's screen is
 short.
 
@@ -9945,7 +9993,7 @@ to its `href` and the last a `span.breadcrumbs-current[aria-current=page]`,
 the WAI-ARIA breadcrumb pattern. Breadcrumbs reads its children's props; a
 Breadcrumb renders nothing by itself. A Breadcrumb a server component
 renders reaches the client module as a reference React resolves lazily, so
-a crumb is told by its type or by its shape (spec correction 79). Both
+a crumb is told by its type or by its shape (spec correction 87). Both
 faces are real `<a href>` links in the server's HTML, so the trail works
 before hydration and with scripts off; once hydrated, Link takes a press
 through the app's RouterProvider.
@@ -9986,10 +10034,10 @@ With one crumb there is no parent, and on a phone the landmark is not drawn
 Focus never falls to the page as the faces switch: as the viewport crosses
 768px with focus in the face being hidden, the trail gives it from a
 crumb's link to the back link, or from the back link to the parent's link,
-before the new face is drawn (spec correction 81). The
+before the new face is drawn (spec correction 89). The
 trail is a one-column grid, `minmax(0, 1fr)`, so in a centering grid or a
 flex row a long crumb ellipsizes rather than widen its holder (spec
-correction 80).
+correction 88).
 
 **Forced colors.** The links `linktext`, the current page, a crumb with no
 link and the separators `canvastext`.

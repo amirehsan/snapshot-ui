@@ -13,23 +13,26 @@ import {
   type Ref,
 } from 'react';
 import { Button } from '../button/Button';
-import { scrollPortOf } from '../data-table/scroll';
-import { isThenable, report } from '../dialog/ConfirmDialog';
 import { useConfirm } from '../dialog/useConfirm';
 import { FieldChanged } from '../field/FieldChanged';
 import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
 import { present } from '../utils/present';
 import { QUIET_MS } from '../utils/quiet';
+import { isThenable, report } from '../utils/report';
 import { useBeforeUnload } from '../utils/useBeforeUnload';
 import { useBottomBarOffset } from '../utils/useBottomBarOffset';
+import { uncover } from './uncover';
 
 export interface SaveBarLabels {
   /** The clay chip while there are unsaved changes. @default 'Unsaved changes' */
   unsaved: string;
   /** @default 'Cancel' */
   cancel: string;
-  /** Said while the action is pending, after QUIET_MS. @default 'Saving' */
+  /**
+   * Said in the status once the action has been pending for QUIET_MS, when the action did not hold focus as the
+   * pending began; while it does, React Aria's Button says its pending itself. @default 'Saving'
+   */
   pending: string;
   /**
    * The discard question. @default 'Discard changes?', 'The changes you made here will be lost.',
@@ -91,26 +94,6 @@ function isGone(element: Element): boolean {
 }
 
 /**
- * Scrolls `element`, a focused control in the bar's holder, by the least that brings it out from under the bar
- * (WCAG 2.4.11, risk R6), and, where the window scrolls, from under a phone's upload bar, which sits above the
- * bar. The root's scroll padding already keeps a control that focus scrolls into view clear of both, but a browser
- * leaves a control that is wholly in the view where it is, under them. Nothing moves when it is clear already, or
- * when focus has moved on by the time the frame comes. Every read is of the layout at that moment.
- */
-function uncover(element: HTMLElement, bar: HTMLElement): void {
-  if (!element.isConnected || element.ownerDocument.activeElement !== element) return;
-  const port = scrollPortOf(element);
-  const covers = [bar, ...(port === null ? document.querySelectorAll('.upload-tray-bar') : [])]
-    .map((cover) => cover.getBoundingClientRect())
-    .filter((box) => box.height > 0);
-  const top = Math.min(...covers.map((box) => box.top));
-  const delta = element.getBoundingClientRect().bottom - top;
-  if (delta <= 0.5) return;
-  // In whole pixels: WebKit and Firefox round a scroll position, so a fractional step could stop short.
-  (port ?? window).scrollBy({ top: Math.ceil(delta), behavior: 'instant' });
-}
-
-/**
  * A sticky footer for a form or a review: a sentence about what will be saved, the clay
  * Unsaved chip while dirty, a status line said politely, Cancel guarded by a discard question while dirty, the
  * app's secondary actions, and a primary action whose label the app writes and whose promise keeps the bar
@@ -155,11 +138,24 @@ export function SaveBar({
   }, [run]);
   const isPending = isPendingOutside || run !== null;
 
-  // "Saving" is said only once the pending state has held for the pause, so a fast save says nothing.
+  // Each press of the action, so a press answered with the same status as the last is said again: the status's
+  // text is drawn anew for each, as the upload tray and the drop zone key theirs (spec correction 28).
+  const [round, setRound] = useState(0);
+
+  // While the action holds focus as the pending begins, React Aria's Button says the pending's start and end
+  // itself, assertively, by the action's name and its spinner's. Otherwise (a pointer press in Safari, which
+  // focuses no button, or the app's own `isPending` with focus elsewhere) the status says `labels.pending` once the
+  // pending has held for the pause, so a fast save says nothing there. Read before focus is mended below, which may
+  // move focus from a disabled Cancel to the action after React Aria has looked.
+  const startedOnAction = useRef(false);
+  useLayoutEffect(() => {
+    const action = actionRef.current;
+    startedOnAction.current = isPending && action !== null && document.activeElement === action;
+  }, [isPending]);
   const [hasHeld, setHeld] = useState(false);
   if (!isPending && hasHeld) setHeld(false);
   useEffect(() => {
-    if (!isPending) return;
+    if (!isPending || startedOnAction.current) return;
     const timer = setTimeout(() => {
       setHeld(true);
     }, QUIET_MS);
@@ -174,8 +170,8 @@ export function SaveBar({
   useBeforeUnload(warnsOnUnload && isDirty);
   useBottomBarOffset(barRef);
 
-  // A control in the holder that focus lands on under the bar is scrolled clear of it, two frames after the focus,
-  // after the browser's own scroll, as DataTable clears its rows of its bulk-action bar.
+  // A control in the holder that focus lands on with its field under the bar is scrolled clear of it by a gap, two
+  // frames after the focus, after the browser's own scroll, as DataTable clears its rows of its bulk-action bar.
   useEffect(() => {
     const bar = barRef.current;
     const holder = bar?.parentElement;
@@ -235,6 +231,7 @@ export function SaveBar({
   });
 
   const act = (): void => {
+    setRound((count) => count + 1);
     const result = onAction();
     if (!isThenable(result)) return;
     const token = {};
@@ -262,13 +259,14 @@ export function SaveBar({
       cancelLabel: labels.discardKeep,
       tone: 'danger',
     });
-    if (!yes) return;
-    onCancel?.();
-    // An app that drops Cancel once nothing is dirty takes away what the question gives focus back to: once the
-    // question has played its exit, focus goes to the action rather than the body.
+    if (yes) onCancel?.();
+    // The question gives focus back to Cancel, which may be gone by then: an app that drops Cancel once nothing is
+    // dirty takes it away after a yes, and a save the app starts while the question is open disables it, either
+    // answer. Once the question has played its exit, focus that fell to the body goes to the action.
     let frames = 0;
     const check = (): void => {
-      if (cancelRef.current?.isConnected) return;
+      const back = cancelRef.current;
+      if (back !== null && !isGone(back)) return;
       if (isFocusLost()) {
         actionRef.current?.focus({ preventScroll: true });
         return;
@@ -294,7 +292,9 @@ export function SaveBar({
           {said === null ? null : (
             <>
               {tone === 'error' ? <CircleAlert aria-hidden="true" /> : null}
-              <span className="save-bar-status-text">{said}</span>
+              <span className="save-bar-status-text" key={round}>
+                {said}
+              </span>
             </>
           )}
         </div>

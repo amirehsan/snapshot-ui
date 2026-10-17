@@ -1093,6 +1093,10 @@ test('a crumb navigates through the router, and at 375 the trail is one back lin
 
 // ---- Save bar -------------------------------------------------------------------------------------
 
+/** The field a control belongs to, its label, description and error line included. */
+const fieldOf = (control: Locator): Locator =>
+  control.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " field ")][1]');
+
 test('Cancel on a dirty save bar asks, and Keep editing returns focus to Cancel', async ({ page }) => {
   await visit(page, '/docs/components/save-bar');
   const stage = page.locator('.stage').first();
@@ -1123,12 +1127,45 @@ test('a focused last field scrolls clear of the save bar', async ({ page }) => {
   const [field, cover] = await Promise.all([last.boundingBox(), bar.boundingBox()]);
   expect((field?.y ?? 0) + (field?.height ?? 0)).toBeGreaterThan(cover?.y ?? 0);
   await last.focus();
+  // Its whole field ends 16px, the inset, above the bar; a pixel is allowed for an engine's rounding.
   await expect
     .poll(async () => {
-      const [field, cover] = await Promise.all([last.boundingBox(), bar.boundingBox()]);
+      const [field, cover] = await Promise.all([fieldOf(last).boundingBox(), bar.boundingBox()]);
       return (field?.y ?? 0) + (field?.height ?? 0) - (cover?.y ?? 0);
     })
-    .toBeLessThanOrEqual(0.5);
+    .toBeLessThanOrEqual(-16 + 1);
+});
+
+test('Tab onto a field under the save bar brings it clear of the bar with a gap', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 640 });
+  await visit(page, '/docs/components/save-bar');
+  const stage = page.locator('.stage').first();
+  const bar = stage.locator('.save-bar');
+  await stage.evaluate((element) => {
+    element.scrollIntoView({ block: 'start' });
+  });
+  // The first field the stuck bar covers, and the field before it, which is clear of it.
+  const fields = stage.locator('input, textarea');
+  const barTop = (await bar.boundingBox())?.y ?? 0;
+  let under = -1;
+  for (let index = 0; index < (await fields.count()); index += 1) {
+    const box = await fields.nth(index).boundingBox();
+    if (box && box.y + box.height > barTop) {
+      under = index;
+      break;
+    }
+  }
+  expect(under).toBeGreaterThan(0);
+  await fields.nth(under - 1).focus();
+  await page.keyboard.press('Tab');
+  const target = fields.nth(under);
+  await expect(target).toBeFocused();
+  await expect
+    .poll(async () => {
+      const [field, cover] = await Promise.all([fieldOf(target).boundingBox(), bar.boundingBox()]);
+      return (field?.y ?? 0) + (field?.height ?? 0) - (cover?.y ?? 0);
+    })
+    .toBeLessThanOrEqual(-16 + 1);
 });
 
 test('a choice through the receipt field reaches the example and a refusal is said', async ({ page }) => {
