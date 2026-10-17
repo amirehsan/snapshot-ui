@@ -840,19 +840,36 @@ version of this section stepped down one step of the scale instead, 40px to
 24px to 20px, which matches the gap only by chance: a 24px popup with 9px of
 edge and padding holds 15px rows, not 20px ones.
 
+**Surfaces take the formula; controls move out of the corner.** The formula
+is for what fills to the holder's edge: a row, a tab, an option, a frame, a
+nested card, a list, a code block, a field's own button. A button, a field, a
+switch or a chip that would sit inside a holder's corner curve keeps its own
+uniform shape and moves out of the corner instead, as Apple and Material keep
+content clear of a rounded corner. A control is never given one corner smaller
+than its others: a button with three 20px corners and one 7px corner reads as
+damaged, not concentric.
+
 | holder | its corner | edge and padding | part | Rounded | Soft | Square |
 | --- | --- | --- | --- | --- | --- | --- |
 | Card, StatTile | stadium | 1 + 32px (20px compact) | a card or tile in it | 7px (19px compact) | 6px, the micro floor | 0 |
-| Dialog | stadium | 1 + 32px | the last action's bottom end corner | 7px | 6px, the micro floor | 0 |
-| SidePanel | stadium | 1 + 24px | the footer's last action's corner | 15px | 6px, the micro floor | 0 |
 | Popover, CommandPalette | surface | 1 + the list's 8px | a row, the filter field | 15px | 3px | 0 |
 | a menu row | 15px, 3px | 12px | its key chip | 3px | 0 | 0 |
-| Toast | surface | 1 + 16px, less the row's 8px | its buttons | 15px | 3px | 0 |
-| DataTable's bulk bar | surface | 1 + 8px | its buttons | 15px | 3px | 0 |
 | TabList | surface | 4px | a tab | 20px | 8px | 0 |
 | SegmentedControl's track | pill | 1 + 3px | an option | 20px | 8px | 0 |
 | a field | pill | 6px | its field button | a circle | 6px | 0 |
 | MultiSelect's frame | half a field | 6px | a tag | 18px | 6px | 0 |
+
+And the controls that move, by the corner inset (below):
+
+| holder | control | where it stops | Rounded | Soft | Square |
+| --- | --- | --- | --- | --- | --- |
+| Dialog | the last action | the action row ends at the corner inset | 7px further in | as before | as before |
+| SidePanel | the footer's last action | the footer ends at the corner inset | 15px further in | as before | as before |
+| SidePanel | a field or button at the body's foot | the body ends at the corner inset | 39px under it, not 24px | as before | as before |
+| Drawer | the footer's content | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
+| DataTable's bulk bar | its buttons | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
+| Toast | the dismiss | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
+| a card a LineChart ends | the table toggle | the toolbar starts at the corner inset | 7px further in | as before | as before |
 
 **It is a calc on the tokens.** No part writes the number. Each value is the
 holder's token less a length, so Soft and Square follow by construction: in
@@ -867,7 +884,14 @@ centered with an even gap.
 `--holder-border` and `--holder-pad` and draws its own corner, edge and
 padding from them, and a part in it reads the three. The holders are Card,
 StatTile through Card, Dialog, Drawer, Sheet, SidePanel, Popover and its
-padded variant, CommandPalette, Toast, the bulk bar and TabList. A custom
+padded variant, CommandPalette, Toast, the bulk bar and TabList. Each also
+names its corner inset, `--holder-corner-inset`, the padding or the radius
+less the edge, whichever is more:
+`max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)))`.
+A control that far from the holder's edge on either axis is clear of the
+corner curve. It is a calc on the tokens too: in Square it is the padding, so
+nothing moves, and in Soft it is the padding wherever the padding already
+clears the smaller curve. A custom
 property cannot read the value it overrides, so a part that holds parts in
 turn names its own radius, as a menu row's `--menu-item-radius` does, and a
 card in a card writes its value on the
@@ -876,25 +900,24 @@ field's corner is `--input-radius`, the pill unless a holder sets it, as the
 filter row in a popup does, and the field button inside reads it.
 
 **An app's own content follows the same rule.** The library sets the corners
-of the parts it places, but it cannot know where an app puts a button or a
-field in a card's body. A part an app places in a holder's corner takes the
-formula on that corner from the holder's properties: a full-width button at
-the bottom of a card sets `border-end-start-radius` and
-`border-end-end-radius` to it, and a field at the bottom of a side panel sets
-`--input-radius`. The stories do exactly this, from
-`packages/react/src/stories/corner.ts`.
+and insets of the parts it places, but it cannot know where an app puts a
+button or a field in a card's body. A surface an app places in a holder's
+corner takes the formula from the holder's properties; a control stops at the
+holder's corner inset: a button at the foot of a card takes
+`margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad))`, and
+a row of actions at its end takes the same as `padding-inline-end`. The
+stories do exactly this, from `packages/react/src/stories/corner.ts`, and so
+do the docs examples.
 
 **Sharing a corner, or sitting further in.** The rule binds a corner when the
 part's corner lies within the holder's curve: both gaps at that corner, inline
-and block, are smaller than the holder's radius. There the part takes the
-formula, whatever it is: a row, a field, a button. A part further in, with a
-gap at least the holder's radius on either side, is clear of the curve and
-keeps its own shape: a button in the middle of a card stays a button, and a
-nested card in Soft, 33px inside a 16px curve, keeps a small corner of its own.
-A part can share one corner and not the others: a dialog's last action shares
-the bottom end corner only, and only that corner changes. A part that fills a
-row of the holder (menu rows, tabs, a bar's or a toast's buttons) takes the
-value on every corner, so no row differs from the next by where it falls.
+and block, are smaller than the holder's radius. There a surface, a row or a
+frame takes the formula, on every corner, so no row differs from the next by
+where it falls; a control is not left there at all, it is moved out. A part
+further in, with a gap at least the holder's radius on either side, is clear
+of the curve and keeps its own shape: a button in the middle of a card stays a
+button, and a nested card in Soft, 33px inside a 16px curve, keeps a small
+corner of its own.
 
 **Text-sized parts keep the micro step, never rounder.** A key chip, a badge,
 a checkbox and a title's focus ring keep `--radius-micro`, which is under the
@@ -945,9 +968,12 @@ only the corner that meets a holder's curve changes.
 **The audit.** `apps/storybook/tests/concentric` renders every story in
 Rounded, Soft and Square and measures every rounded element whose corner lies
 within its nearest rounded ancestor's curve (or the frame it is drawn over, as
-a field button is over its input), against the formula, within 1px. It skips
-dots, circles, fixed surfaces and text-sized parts that are sharper than the
-formula, and it runs in CI.
+a field button is over its input), against the formula, within 1px. A part
+there whose corners differ fails outright, since a control is moved out rather
+than given one smaller corner, and a control outside every curve passes. It
+skips dots, circles, fixed surfaces and text-sized parts that are sharper than
+the formula, and it runs in CI, as does the same check over the docs site's
+pages.
 
 ## Where each text color may go, derived
 
@@ -3002,8 +3028,9 @@ corner and shadow. Modal surfaces take elevation level 3 and floats level 2;
 the sheet casts none, since its only edge is at the bottom of the viewport,
 where a shadow shows nothing. Parts are concentric with their surface
 (Nested radii): a 24px popup holds 15px rows, its radius less its edge and
-the list's padding, and a dialog's last action takes the dialog's radius less
-its padding on the corner it shares. Soft and Square follow by construction.
+the list's padding, and a dialog's last action keeps its own corner and stops
+at the dialog's corner inset, clear of its curve. Soft and Square follow by
+construction.
 
 **Spacing.** A list popup pads 8px (`--spacing-part`), a free-content popover
 24px (`--spacing-peer`), a dialog 32px (`--spacing-separate`), and a drawer
@@ -3194,10 +3221,9 @@ its buttons 8px apart.
 **Padding and corners.** The panel pads 32px, `--spacing-separate`, the
 app's number and the step for a section's header to its body. It takes
 `--radius-stadium`, and its parts are concentric with it where they meet its
-corners: the well is a circle, the last action's bottom end corner is the
-panel's radius less its edge and padding, 7px in Rounded, and a field in the
-body keeps its own corner unless it sits in one. Soft and Square follow by
-construction.
+corners: the well is a circle, and the action row ends at the panel's corner
+inset, 7px further in in Rounded, so the last action keeps its own corner and
+sits clear of the panel's curve. Soft and Square follow by construction.
 
 **What React Aria gives.** Its `Dialog` focuses the dialog element on open,
 unless a control inside already holds focus, and its `FocusScope` holds Tab

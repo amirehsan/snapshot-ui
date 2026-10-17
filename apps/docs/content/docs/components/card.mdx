@@ -18,7 +18,7 @@ The header holds a title and a note, ruled off from the body. The title is the c
 
 ## Nesting
 
-A card inside another card, directly or in its body, takes a corner concentric with the outer card's, its radius less the outer card's edge and padding (7px in Rounded), and takes an outline. A card on a card has no tone step to set it apart. Your own content in a card's corner, such as a button that ends its body, takes the same corner from the card's `--holder-radius`, `--holder-border` and `--holder-pad`, as the Save button under Header and body does.
+A card inside another card, directly or in its body, takes a corner concentric with the outer card's, its radius less the outer card's edge and padding (7px in Rounded), and takes an outline. A card on a card has no tone step to set it apart. A control of your own in a card's corner, such as a button that ends its body, keeps its own shape and moves out of the corner instead: stop it at the card's `--holder-corner-inset`, as the row under Header and body does with `padding-inline-end: calc(var(--holder-corner-inset) - var(--holder-pad))`.
 
 <Preview name="card-nested" />
 

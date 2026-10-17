@@ -17,7 +17,7 @@ import { Button } from '../button';
 import { Card, CardBody } from '../card';
 import { Dialog } from '../dialog';
 import { MENU_ROW_A11Y } from '../stories/a11y';
-import { BOTTOM, frameAround } from '../stories/corner';
+import { CLEAR_OF_FOOT, frameAround } from '../stories/corner';
 import { tokenColor, washColor } from '../stories/paint';
 import { TextField } from '../text-field';
 import { CommandPalette, type CommandPaletteItem, type CommandPaletteProps } from './CommandPalette';
@@ -373,7 +373,7 @@ export const InDarkScope: Story = {
       <Card>
         <CardBody>
           <p>A card in a dark block.</p>
-          <Opened {...args} defaultOpen={false} triggerStyle={BOTTOM} />
+          <Opened {...args} defaultOpen={false} triggerStyle={CLEAR_OF_FOOT} />
         </CardBody>
       </Card>
     </div>

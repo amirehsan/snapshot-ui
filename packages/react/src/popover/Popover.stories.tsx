@@ -5,7 +5,7 @@ import { Button } from '../button';
 import { Card, CardBody } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { DialogTrigger } from '../dialog';
-import { BOTTOM, frameAround } from '../stories/corner';
+import { CLEAR_OF_FOOT, frameAround } from '../stories/corner';
 import { tokenColor, tokenPixels } from '../stories/paint';
 import { Popover, type PopoverProps } from './Popover';
 
@@ -191,7 +191,7 @@ export const InDarkScope: Story = {
         <CardBody>
           <p>A card in a dark block.</p>
           <div data-shape="soft">
-            <Opened {...args} triggerStyle={BOTTOM} />
+            <Opened {...args} triggerStyle={CLEAR_OF_FOOT} />
           </div>
         </CardBody>
       </Card>

@@ -7,7 +7,7 @@ import { Card, CardBody } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { DialogTrigger } from '../dialog';
 import { Link } from '../link';
-import { BOTTOM, frameAround } from '../stories/corner';
+import { CLEAR_OF_FOOT, frameAround } from '../stories/corner';
 import { firstLineOffset, tokenColor } from '../stories/paint';
 import { Switch } from '../switch';
 import { Text } from '../typography';
@@ -154,7 +154,7 @@ export const End: Story = {
       </div>
     ),
     footer: (
-      <Button slot="close" style={{ width: '100%', ...BOTTOM }}>
+      <Button slot="close" style={{ width: '100%' }}>
         Show 12 projects
       </Button>
     ),
@@ -228,7 +228,7 @@ export const InDarkScope: Story = {
         <CardBody>
           <p>A card in a dark block.</p>
           <DialogTrigger>
-            <Button variant="secondary" style={BOTTOM}>
+            <Button variant="secondary" style={CLEAR_OF_FOOT}>
               Open the menu
             </Button>
             <Drawer {...args} />

@@ -7,7 +7,7 @@ import { Card, CardBody } from '../card';
 import { Dialog, DialogTrigger } from '../dialog';
 import { IconButton } from '../icon-button';
 import { MENU_ROW_A11Y } from '../stories/a11y';
-import { BOTTOM_START, frameAround } from '../stories/corner';
+import { CLEAR_OF_FOOT, frameAround } from '../stories/corner';
 import { tokenColor, washColor } from '../stories/paint';
 import { Menu, MenuTrigger, type MenuProps } from './Menu';
 import { MenuItem } from './MenuItem';
@@ -476,7 +476,7 @@ export const FromADialog: Story = {
       <Button variant="secondary">Edit the project</Button>
       <Dialog title="Edit the project" description="Rename it or make a copy.">
         <MenuTrigger>
-          <Button variant="secondary" style={BOTTOM_START}>
+          <Button variant="secondary" style={CLEAR_OF_FOOT}>
             Actions
           </Button>
           <Menu {...args}>

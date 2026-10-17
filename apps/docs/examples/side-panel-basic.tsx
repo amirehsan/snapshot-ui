@@ -11,7 +11,7 @@ import {
   TextField,
   type DataTableColumn,
 } from '@snapshot-ui/react';
-import { useState, useSyncExternalStore, type CSSProperties, type ReactElement } from 'react';
+import { useState, useSyncExternalStore, type ReactElement } from 'react';
 import { amountLabel, dayLabel, TRANSACTIONS, type Transaction } from './transactions-data';
 
 const COLUMNS: readonly DataTableColumn<Transaction>[] = [
@@ -26,15 +26,6 @@ const COLUMNS: readonly DataTableColumn<Transaction>[] = [
     listSlot: 'end',
   },
 ];
-
-/**
- * The last field sits in the panel's bottom corners, so its corner is concentric with the panel's: the panel's
- * radius less its edge and padding, set as the field's --input-radius, which its sign button reads too.
- */
-const AT_THE_FOOT = {
-  '--input-radius':
-    'max(var(--radius-micro), calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)))',
-} as CSSProperties;
 
 const CATEGORIES = ['Groceries', 'Transport', 'Rent', 'Salary', 'Utilities', 'Dining'];
 
@@ -88,14 +79,12 @@ export default function SidePanelBasic(): ReactElement {
                       </PickerOption>
                     ))}
                   </Select>
-                  <div style={AT_THE_FOOT}>
-                    <NumberField
-                      label="Amount"
-                      money={{ symbol: '$' }}
-                      allowsNegative
-                      defaultValue={row.minor}
-                    />
-                  </div>
+                  <NumberField
+                    label="Amount"
+                    money={{ symbol: '$' }}
+                    allowsNegative
+                    defaultValue={row.minor}
+                  />
                 </div>
               )}
             </SidePanel>

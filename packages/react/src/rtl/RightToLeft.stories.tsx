@@ -30,7 +30,6 @@ import { Select } from '../select';
 import { Sheet, SheetTrigger } from '../sheet';
 import { SidePanel, SidePanelLayout } from '../side-panel';
 import { MENU_ROW_A11Y } from '../stories/a11y';
-import { FIELD_AT_BOTTOM } from '../stories/corner';
 import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
 import { Tab, TabList, TabPanel, Tabs } from '../tabs';
@@ -762,9 +761,11 @@ export const DialogMirrored: Story = {
     const body = within(document.body);
     const cancel = rect(body.getByRole('button', { name: 'إلغاء' }));
     const save = rect(body.getByRole('button', { name: 'حفظ' }));
-    const row = rect(find(panel, '.dialog-actions'));
+    const rowElement = find(panel, '.dialog-actions');
+    const row = rect(rowElement);
     await expect(save.right).toBeLessThanOrEqual(cancel.left + 0.5);
-    await expectSameEdge(save.left, row.left);
+    // The row ends at the panel's corner inset, which is its padding at the inline end, the left here.
+    await expectSameEdge(save.left, row.left + parseFloat(getComputedStyle(rowElement).paddingLeft));
     await expect(row.right - cancel.right).toBeGreaterThan(0);
   },
 };
@@ -1610,9 +1611,7 @@ export const SidePanelMirrored: Story = {
               onClose={() => undefined}
               closeLabel="بستن"
             >
-              <div style={FIELD_AT_BOTTOM}>
-                <TextField label="گیرنده" defaultValue="فروشگاه سر کوچه" />
-              </div>
+              <TextField label="گیرنده" defaultValue="فروشگاه سر کوچه" />
             </SidePanel>
           }
         >

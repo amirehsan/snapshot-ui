@@ -525,12 +525,10 @@
     margin-top: 64px;
   }
 
-  /* Save ends the card's body in its bottom end corner, so that corner is concentric with the card's. */
-  .frame-card .push-end > .button:last-child {
-    border-end-end-radius: max(
-      var(--radius-micro),
-      calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad))
-    );
+  /* Save ends the card's body inside its bottom end curve, so the row stops at the card's corner inset and the
+     button keeps its own shape. */
+  .frame-card .push-end {
+    padding-inline-end: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
   .push-end {

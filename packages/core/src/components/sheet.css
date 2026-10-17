@@ -23,6 +23,7 @@
     --holder-radius: var(--radius-stadium);
     --holder-border: 1px;
     --holder-pad: var(--spacing-peer);
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
 
     display: flex;
     flex-direction: column;

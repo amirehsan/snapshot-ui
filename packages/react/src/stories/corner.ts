@@ -1,8 +1,10 @@
 /*
  * Concentric corners for what a story places in a holder's corner, as an app would (docs/design-system.md,
  * "Nested radii, derived"). A card, a dialog, a drawer, a side panel and a padded popover name their corner,
- * edge and padding as --holder-radius, --holder-border and --holder-pad, and a part an app puts in one of
- * their corners takes the holder's radius less the gap on that corner. Story code only; it never ships.
+ * edge and padding as --holder-radius, --holder-border and --holder-pad, and the inset that keeps a control
+ * clear of their corner curve as --holder-corner-inset. A surface that fills to the holder's edge takes the
+ * holder's radius less the gap; a control keeps its own shape and moves out of the corner. Story code only; it
+ * never ships.
  */
 import type { CSSProperties } from 'react';
 import { tokenPixels } from './paint';
@@ -11,14 +13,14 @@ import { tokenPixels } from './paint';
 export const HOLDER_CORNER =
   'max(var(--radius-micro), calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)))';
 
-/** A part on the holder's bottom edge at its start, such as a lone button under a card's text. */
-export const BOTTOM_START: CSSProperties = { borderEndStartRadius: HOLDER_CORNER };
-
-/** A part as wide as the holder's content on its bottom edge, such as a full-width footer button. */
-export const BOTTOM: CSSProperties = { ...BOTTOM_START, borderEndEndRadius: HOLDER_CORNER };
-
-/** A field at the bottom of a holder: its whole corner, which its own field button reads too. */
-export const FIELD_AT_BOTTOM = { '--input-radius': HOLDER_CORNER } as CSSProperties;
+/**
+ * A control at the foot of a holder, such as a button under a card's text: it keeps its own shape and stops
+ * at the holder's corner inset, so its corners sit clear of the holder's bottom curve. 7px more in a Rounded
+ * card, nothing more in Soft and Square.
+ */
+export const CLEAR_OF_FOOT: CSSProperties = {
+  marginBlockEnd: 'calc(var(--holder-corner-inset) - var(--holder-pad))',
+};
 
 /**
  * A frame drawn around a card: outer = inner + gap, so the frame's corner is the card's stadium plus the

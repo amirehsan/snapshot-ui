@@ -15,6 +15,7 @@
     --holder-radius: var(--radius-stadium);
     --holder-border: 1px;
     --holder-pad: var(--spacing-peer);
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
 
     display: flex;
     flex-direction: column;
@@ -112,7 +113,8 @@
 
   .drawer-footer {
     flex: none;
-    padding: 0 var(--spacing-peer) calc(var(--spacing-peer) + env(safe-area-inset-bottom, 0px));
+    /* It ends at the corner inset, so a control at its foot sits clear of the panel's bottom corners. */
+    padding: 0 var(--holder-pad) calc(var(--holder-corner-inset) + env(safe-area-inset-bottom, 0px));
     overflow-wrap: anywhere;
   }
 

@@ -89,3 +89,38 @@ for (const [title, ids] of groups) {
     expect(found).toEqual([]);
   });
 }
+
+/**
+ * A 24px holder padded 8px inside a 1px edge, holding a 40px button 20px round. Where the button sits, and
+ * its corners, are the only things that change between the cases.
+ */
+const holderWith = (button: string): string => `
+  <div style="position: relative; width: 320px; height: 58px; box-sizing: border-box; border: 1px solid; border-radius: 24px; padding: 8px">
+    <button style="position: absolute; top: 8px; height: 40px; width: 96px; border: 0; background: #ccc; border-radius: 20px; ${button}"></button>
+  </div>`;
+
+test.describe('the audit itself', () => {
+  test('fails a control given one smaller corner inside a corner curve', async ({ page }) => {
+    await page.setContent(
+      holderWith('right: 8px; border-top-right-radius: 15px; border-bottom-right-radius: 15px;'),
+    );
+    const findings = await page.evaluate(auditConcentric);
+    expect(findings.map(({ rule }) => rule)).toContain('one corner');
+  });
+
+  test('fails a control that keeps its shape but stays inside a corner curve', async ({ page }) => {
+    await page.setContent(holderWith('right: 8px;'));
+    const findings = await page.evaluate(auditConcentric);
+    expect(findings.map(({ rule, expected }) => [rule, expected])).toContainEqual(['concentric', 15]);
+  });
+
+  test('accepts a control moved out of the corner, to the radius less the edge', async ({ page }) => {
+    await page.setContent(holderWith('right: 23px;'));
+    expect(await page.evaluate(auditConcentric)).toEqual([]);
+  });
+
+  test('accepts a row that fills the holder concentric with it', async ({ page }) => {
+    await page.setContent(holderWith('left: 8px; right: 8px; width: auto; border-radius: 15px;'));
+    expect(await page.evaluate(auditConcentric)).toEqual([]);
+  });
+});
