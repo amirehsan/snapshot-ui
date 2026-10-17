@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { createRef, type ReactElement } from 'react';
 import { RouterProvider } from 'react-aria-components';
+import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import * as library from '../index';
@@ -707,5 +708,46 @@ describe('the collapsed rail tooltips', () => {
     mouseOnto(within(rail(container)).getByRole('link', { name: 'Account' }));
     wait(400);
     expect(tip()).toHaveAttribute('data-density', 'compact');
+  });
+});
+
+describe("the collapse button in the server's HTML", () => {
+  /** The server's collapse button: its expanded state and the names it holds. */
+  const serverToggle = (element: ReactElement): { expanded: string | null; names: string[] } => {
+    const host = document.createElement('div');
+    host.innerHTML = renderToString(element);
+    const toggle = host.querySelector('.sidebar-collapse');
+    if (!toggle) throw new Error('No collapse button');
+    return {
+      expanded: toggle.getAttribute('aria-expanded'),
+      names: [...toggle.querySelectorAll('.sidebar-collapse-name')].map(
+        (name) => `${name.getAttribute('data-name') ?? ''} ${name.textContent}`,
+      ),
+    };
+  };
+
+  it('holds both names and claims no state while only the stylesheet knows whether a SidePanel folds the rail', () => {
+    // From 1024px to under 1440px the stylesheet draws the rail folded beside an open SidePanel, from the
+    // server's HTML on; the server cannot see the width, so the stylesheet shows the name that matches.
+    expect(serverToggle(<Shell />)).toEqual({
+      expanded: null,
+      names: ['collapse Collapse the menu', 'expand Expand the menu'],
+    });
+  });
+
+  it("says Expand and not expanded when the reader's collapse is known on the server", () => {
+    const host = document.createElement('div');
+    host.innerHTML = renderToString(<Shell defaultSidebarCollapsed />);
+    const toggle = host.querySelector('.sidebar-collapse');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveTextContent('Expand the menu');
+    expect(toggle?.querySelector('.sidebar-collapse-name')).toBeNull();
+  });
+
+  it('takes one name and its state once hydrated', () => {
+    render(<Shell />);
+    const toggle = screen.getByRole('button', { name: 'Collapse the menu' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle.querySelector('.sidebar-collapse-name')).toBeNull();
   });
 });

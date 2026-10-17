@@ -291,10 +291,18 @@
       border-color: CanvasText;
     }
 
-    .calendar:not(.range-calendar) .calendar-day[data-selected] .calendar-day-number,
+    /* A chosen day and a chosen preset are drawn out of the repaint, as a selected DataTable row is: inside it
+       Chromium draws a backplate in the system's background color behind the figure or the words, which blanks
+       HighlightText, and a ring drawn inside the Highlight fill would not show. Out of it nothing is forced, so
+       each color is named: the ring inside and a chosen today's inner ring are HighlightText. */
+    .calendar:not(.range-calendar)
+      :is(.calendar-day[data-selected], [aria-selected='true'] > .calendar-day)
+      .calendar-day-number,
     .range-calendar .calendar-day:is([data-selection-start], [data-selection-end]) .calendar-day-number,
     .calendar-preset:is([data-selected], [aria-pressed='true']) {
+      forced-color-adjust: none;
       border-color: Highlight;
+      outline-color: HighlightText;
       background-color: Highlight;
       color: HighlightText;
     }

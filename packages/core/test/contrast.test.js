@@ -1280,13 +1280,15 @@ describe('the skeleton', () => {
 });
 
 describe('the data table', () => {
-  /** A token color over `ground`, or over the 5% ink wash on it, measured against what it sits on. */
-  const measured = (mode, name, groundName, { washed = false } = {}) => {
+  /** A token color over `ground`, or over an ink wash of `wash` on it, measured against what it sits on. */
+  const measured = (mode, name, groundName, { wash = 0 } = {}) => {
     const palette = paletteFor(tokens, mode);
     const base = parseColor(palette[groundName]);
-    const ground = washed ? composite({ ...parseColor(palette.ink), a: 0.05 }, base) : base;
+    const ground = wash > 0 ? composite({ ...parseColor(palette.ink), a: wash }, base) : base;
     return contrastRatio(composite(parseColor(palette[name]), ground), ground);
   };
+  const HOVER = 0.05;
+  const SELECTED = 0.08;
 
   // A cell is ink and a header slate, on the page or in a card. The gate holds each as text on both, so the
   // table adds no pair.
@@ -1300,74 +1302,93 @@ describe('the data table', () => {
     }
   });
 
-  // The hover wash is a mix and not a token, so its pairs are measured and recorded, not gated. Slate falls
-  // under 4.5 on it over canvas in light, so a sorted or hovered header is ink, and no slate text sits on a
-  // washed row. The rules are the divider and the frame, recorded as drawn.
+  // The hover wash is a mix and not a token, so its pairs are measured and recorded, not gated. Slate on it falls
+  // under 4.5 over canvas in light, so slate in a hovered row, an app's own cell text included, is granite there.
+  // The rules are the divider and the frame, recorded as drawn.
   it('measures the pairs Appendix B records, in both modes', () => {
-    for (const { text, ground, washed, light, dark } of [
-      { text: 'ink', ground: 'canvas', washed: false, light: 16.25, dark: 19.31 },
-      { text: 'ink', ground: 'lifted', washed: false, light: 17.84, dark: 17.42 },
-      { text: 'slate', ground: 'canvas', washed: false, light: 4.84, dark: 7.26 },
-      { text: 'slate', ground: 'lifted', washed: false, light: 5.31, dark: 6.94 },
-      { text: 'ink', ground: 'canvas', washed: true, light: 14.7, dark: 17.41 },
-      { text: 'ink', ground: 'lifted', washed: true, light: 16.11, dark: 15.25 },
-      { text: 'slate', ground: 'canvas', washed: true, light: 4.38, dark: 6.93 },
-      { text: 'slate', ground: 'lifted', washed: true, light: 4.8, dark: 6.41 },
-      { text: 'divider', ground: 'canvas', washed: false, light: 1.23, dark: 1.28 },
-      { text: 'frame', ground: 'canvas', washed: false, light: 1.28, dark: 1.36 },
+    for (const { text, ground, wash, light, dark } of [
+      { text: 'ink', ground: 'canvas', wash: 0, light: 16.25, dark: 19.31 },
+      { text: 'ink', ground: 'lifted', wash: 0, light: 17.84, dark: 17.42 },
+      { text: 'slate', ground: 'canvas', wash: 0, light: 4.84, dark: 7.26 },
+      { text: 'slate', ground: 'lifted', wash: 0, light: 5.31, dark: 6.94 },
+      { text: 'ink', ground: 'canvas', wash: HOVER, light: 14.7, dark: 17.41 },
+      { text: 'ink', ground: 'lifted', wash: HOVER, light: 16.11, dark: 15.25 },
+      { text: 'slate', ground: 'canvas', wash: HOVER, light: 4.38, dark: 6.93 },
+      { text: 'slate', ground: 'lifted', wash: HOVER, light: 4.8, dark: 6.41 },
+      { text: 'granite', ground: 'canvas', wash: HOVER, light: 5.94, dark: 9.0 },
+      { text: 'granite', ground: 'lifted', wash: HOVER, light: 6.52, dark: 8.18 },
+      { text: 'divider', ground: 'canvas', wash: 0, light: 1.23, dark: 1.28 },
+      { text: 'frame', ground: 'canvas', wash: 0, light: 1.28, dark: 1.36 },
     ]) {
-      const what = `${text} on ${washed ? 'the wash over ' : ''}${ground}`;
-      expect(measured('light', text, ground, { washed }), `${what}, light`).toBeCloseTo(light, 2);
-      expect(measured('dark', text, ground, { washed }), `${what}, dark`).toBeCloseTo(dark, 2);
-    }
-    expect(measured('light', 'slate', 'canvas', { washed: true })).toBeLessThan(TEXT);
-    for (const mode of ['light', 'dark']) {
-      for (const ground of ['canvas', 'lifted']) {
-        expect(
-          measured(mode, 'ink', ground, { washed: true }),
-          `ink washed ${ground} ${mode}`,
-        ).toBeGreaterThanOrEqual(TEXT);
-      }
+      const what = `${text} on ${wash > 0 ? 'the wash over ' : ''}${ground}`;
+      expect(measured('light', text, ground, { wash }), `${what}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground, { wash }), `${what}, dark`).toBeCloseTo(dark, 2);
     }
   });
 
-  // A selected row is the 8% wash, one step over hover, measured and recorded as the 5% is. No slate text sits
-  // on a selected table row. The bar's count is ink on the float surface, which the gate holds.
+  // A selected row is the 8% wash, one step over hover, and it holds under the pointer. Slate on it falls under
+  // 4.5 over canvas in light, so slate in a selected row, an app's own cell text included, is granite there.
+  // The bar's count is ink on the float surface, which the gate holds.
   it('measures a selected row and the bar, in both modes', () => {
-    const selectedOn = (mode, name, groundName) => {
-      const palette = paletteFor(tokens, mode);
-      const ground = composite({ ...parseColor(palette.ink), a: 0.08 }, parseColor(palette[groundName]));
-      return contrastRatio(composite(parseColor(palette[name]), ground), ground);
-    };
     for (const { text, ground, light, dark } of [
       { text: 'ink', ground: 'canvas', light: 13.81, dark: 16.06 },
       { text: 'ink', ground: 'lifted', light: 15.13, dark: 13.92 },
       { text: 'slate', ground: 'canvas', light: 4.11, dark: 6.62 },
       { text: 'slate', ground: 'lifted', light: 4.51, dark: 6.04 },
+      { text: 'granite', ground: 'canvas', light: 5.59, dark: 8.5 },
+      { text: 'granite', ground: 'lifted', light: 6.12, dark: 7.63 },
     ]) {
-      expect(selectedOn('light', text, ground), `${text} on 8% over ${ground}, light`).toBeCloseTo(light, 2);
-      expect(selectedOn('dark', text, ground), `${text} on 8% over ${ground}, dark`).toBeCloseTo(dark, 2);
+      const what = `${text} on 8% over ${ground}`;
+      expect(measured('light', text, ground, { wash: SELECTED }), `${what}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground, { wash: SELECTED }), `${what}, dark`).toBeCloseTo(dark, 2);
     }
     expect(CONTRAST_PAIRS).toContainEqual(
       expect.objectContaining({ text: 'ink', ground: 'float', minimum: TEXT }),
     );
     expect(measured('light', 'ink', 'float')).toBeCloseTo(18.43, 2);
     expect(measured('dark', 'ink', 'float')).toBeCloseTo(17.42, 2);
+    expect(measured('light', 'slate', 'float')).toBeCloseTo(5.49, 2);
+    expect(measured('dark', 'slate', 'float')).toBeCloseTo(6.94, 2);
+  });
+
+  // Slate text in a cell, or in a list item, meets 4.5 in every state a row or an item takes, in both modes, on
+  // the page and in a card: at rest, and so current, disabled (whose text is taupe, which is exempt) and the
+  // totals, which take no fill; hovered, as granite on the 5% wash; selected, hovered or not, as granite on the
+  // 8% wash; and on the bulk bar's float surface.
+  it('keeps slate text at 4.5 in every row state, in both modes, on the page and in a card', () => {
+    for (const mode of ['light', 'dark']) {
+      for (const ground of ['canvas', 'lifted']) {
+        const where = `${ground} ${mode}`;
+        expect(measured(mode, 'slate', ground), `rest, ${where}`).toBeGreaterThanOrEqual(TEXT);
+        const hovered = measured(mode, 'granite', ground, { wash: HOVER });
+        expect(hovered, `hovered, ${where}`).toBeGreaterThanOrEqual(TEXT);
+        const selected = measured(mode, 'granite', ground, { wash: SELECTED });
+        expect(selected, `selected, ${where}`).toBeGreaterThanOrEqual(TEXT);
+        const ink = measured(mode, 'ink', ground, { wash: SELECTED });
+        expect(ink, `ink selected, ${where}`).toBeGreaterThanOrEqual(TEXT);
+      }
+      expect(measured(mode, 'slate', 'float'), `the bar, ${mode}`).toBeGreaterThanOrEqual(TEXT);
+    }
+    // Why slate turns granite on either wash: over canvas in light, slate alone fails.
+    expect(measured('light', 'slate', 'canvas', { wash: HOVER })).toBeLessThan(TEXT);
+    expect(measured('light', 'slate', 'canvas', { wash: SELECTED })).toBeLessThan(TEXT);
   });
 
   // The list face's meta line is slate on the page or in a card, which the gate holds; on a hovered or selected
-  // item it turns ink, which the 5% and 8% washes keep over 13. A selected item's mark out of Select mode is a
-  // canvas check on an ink box, the checked checkbox's own pair.
+  // item it turns ink, which the 5% and 8% washes keep over 13. Other slate in a hovered or selected item is
+  // granite, as in a row. A selected item's mark out of Select mode is
+  // a canvas check on an ink box, the checked checkbox's own pair.
   it('measures the list face, in both modes', () => {
-    for (const { text, ground, washed, light, dark } of [
-      { text: 'slate', ground: 'canvas', washed: false, light: 4.84, dark: 7.26 },
-      { text: 'slate', ground: 'lifted', washed: false, light: 5.31, dark: 6.94 },
-      { text: 'ink', ground: 'canvas', washed: true, light: 14.7, dark: 17.41 },
-      { text: 'canvas', ground: 'ink', washed: false, light: 16.25, dark: 19.31 },
+    for (const { text, ground, wash, light, dark } of [
+      { text: 'slate', ground: 'canvas', wash: 0, light: 4.84, dark: 7.26 },
+      { text: 'slate', ground: 'lifted', wash: 0, light: 5.31, dark: 6.94 },
+      { text: 'ink', ground: 'canvas', wash: HOVER, light: 14.7, dark: 17.41 },
+      { text: 'ink', ground: 'canvas', wash: SELECTED, light: 13.81, dark: 16.06 },
+      { text: 'canvas', ground: 'ink', wash: 0, light: 16.25, dark: 19.31 },
     ]) {
-      const what = `${text} on ${washed ? 'the wash over ' : ''}${ground}`;
-      expect(measured('light', text, ground, { washed }), `${what}, light`).toBeCloseTo(light, 2);
-      expect(measured('dark', text, ground, { washed }), `${what}, dark`).toBeCloseTo(dark, 2);
+      const what = `${text} on ${wash > 0 ? 'the wash over ' : ''}${ground}`;
+      expect(measured('light', text, ground, { wash }), `${what}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', text, ground, { wash }), `${what}, dark`).toBeCloseTo(dark, 2);
     }
   });
 

@@ -286,7 +286,10 @@
   }
 
   @media (forced-colors: active) {
+    /* Out of the repaint, as a selected DataTable row is: inside it Chromium draws a backplate in the system's
+       background color behind the figure, which blanks HighlightText. */
     .pagination-page:is([aria-current='page'], [aria-current='true'], [data-current]) {
+      forced-color-adjust: none;
       background-color: Highlight;
       color: HighlightText;
     }

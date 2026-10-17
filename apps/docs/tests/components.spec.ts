@@ -791,6 +791,153 @@ test.describe('forced colors', () => {
     expect(box.ratio).toBeGreaterThanOrEqual(3);
   });
 
+  /**
+   * The parts that draw their text HighlightText on a Highlight fill, each opened to that state: the text as it is
+   * drawn. Inside the forced repaint Chromium draws a backplate in the system's background color behind each run of
+   * text, which blanked these, so each is drawn out of the repaint, as a selected data table row is.
+   */
+  const ON_HIGHLIGHT: { name: string; url: string; open: (page: Page) => Promise<Locator> }[] = [
+    {
+      name: 'the chosen menu row',
+      url: '/docs/components/menu',
+      open: async (page) => {
+        await page.getByRole('button', { name: 'View options' }).click();
+        return page.getByRole('menuitemradio', { name: 'System' }).locator('.menu-item-label');
+      },
+    },
+    {
+      name: 'the active palette row',
+      url: '/docs/components/command-palette',
+      open: async (page) => {
+        await page.getByRole('button', { name: 'Search the app' }).click();
+        await page.getByRole('textbox', { name: 'Search the app' }).pressSequentially('checking');
+        return page.getByRole('menuitem', { name: 'Checking' }).locator('.menu-item-label');
+      },
+    },
+    {
+      name: 'an active filter chip',
+      url: '/docs/components/filter-chip',
+      open: (page) =>
+        Promise.resolve(
+          page.locator('.stage .filter-chip[data-active]:not([data-disabled]) .filter-chip-label').first(),
+        ),
+    },
+    {
+      name: "the calendar's chosen day",
+      url: '/docs/components/calendar',
+      open: (page) =>
+        Promise.resolve(
+          page
+            .locator(
+              '.stage .calendar:not(.range-calendar) .calendar-day[data-selected] .calendar-day-number',
+            )
+            .first(),
+        ),
+    },
+    {
+      name: "a range's end",
+      url: '/docs/components/calendar',
+      open: (page) =>
+        Promise.resolve(
+          page
+            .locator('.stage .range-calendar .calendar-day[data-selection-start] .calendar-day-number')
+            .first(),
+        ),
+    },
+    {
+      name: 'the chosen preset',
+      url: '/docs/components/calendar',
+      open: (page) => Promise.resolve(page.locator('.stage .calendar-preset[aria-pressed="true"]').first()),
+    },
+    {
+      name: 'a focused date segment',
+      url: '/docs/components/date-range-picker',
+      open: async (page) => {
+        const segment = page
+          .locator('.stage .date-range-picker .date-segment:not([data-type="literal"])')
+          .first();
+        await segment.focus();
+        return segment;
+      },
+    },
+    {
+      name: 'the selected tab',
+      url: '/docs/components/tabs',
+      open: (page) => Promise.resolve(page.locator('.stage .tab[aria-selected="true"] .tab-label').first()),
+    },
+    {
+      name: 'the chosen segmented option',
+      url: '/docs/components/segmented-control',
+      open: (page) => Promise.resolve(page.locator('.stage .segmented-option[data-selected]').first()),
+    },
+    {
+      name: 'the current page',
+      url: '/docs/components/pagination',
+      open: (page) => Promise.resolve(page.locator('.stage .pagination-page[aria-current]').first()),
+    },
+    {
+      name: 'the current rail item',
+      url: '/docs/components/sidebar',
+      open: (page) =>
+        Promise.resolve(page.locator('.stage .sidebar-item[aria-current] .sidebar-item-label').first()),
+    },
+    {
+      name: 'the current bottom tab',
+      url: '/docs/components/bottom-tab-bar',
+      open: (page) =>
+        Promise.resolve(page.locator('.stage .tab-bar-item[aria-current] .tab-bar-item-label').first()),
+    },
+  ];
+
+  for (const { name, url, open } of ON_HIGHLIGHT) {
+    test(`${name} draws its text HighlightText on Highlight, with no backplate`, async ({ page }) => {
+      await visit(page, url);
+      const text = await open(page);
+      // Out of the repaint, where no backplate is drawn: forced-color-adjust is inherited by the text.
+      await expect(text).toHaveCSS('forced-color-adjust', 'none');
+      const fill = over(await systemColor(page, 'Highlight'), await systemColor(page, 'canvas'));
+      const drawnText = await drawn(page, text);
+      // The fill, not a backplate, is what the text's box mostly shows, and the glyphs are the pair's own color.
+      expect(drawnText.fill).toBe(fill);
+      expect(drawnText.ink).toBe(over(await systemColor(page, 'HighlightText'), fill));
+      expect(drawnText.ratio).toBeGreaterThanOrEqual(4.5);
+      expect(drawnText.inkShare).toBeLessThan(0.3);
+    });
+  }
+
+  test('the rings of a chosen menu row and an active chip show beside the Highlight fill', async ({
+    page,
+  }) => {
+    // Out of the repaint the rings are named: inside the fill HighlightText, outside it on the page Highlight.
+    await visit(page, '/docs/components/menu');
+    const [highlight, highlightText, canvas] = [
+      await systemColor(page, 'Highlight'),
+      await systemColor(page, 'HighlightText'),
+      await systemColor(page, 'canvas'),
+    ];
+    const fill = over(highlight, canvas);
+    const trigger = page.getByRole('button', { name: 'View options' });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const chosen = page.getByRole('menuitemradio', { name: 'System' });
+    // The keyboard opened it, so focus moved onto the chosen row from the keyboard shows the ring.
+    await chosen.focus();
+    await expect(chosen).toHaveAttribute('data-focus-visible', 'true');
+    const row = await chosen.boundingBox();
+    if (row === null) throw new Error('No row box');
+    const top = await drawn(page, { x: row.x + 12, y: row.y, width: row.width - 24, height: 2 });
+    expect(top.fill).toBe(over(highlightText, fill));
+    await page.keyboard.press('Escape');
+    await visit(page, '/docs/components/filter-chip');
+    const chip = page.locator('.stage .filter-chip[data-active]:not([data-disabled])').first();
+    await chip.locator('.filter-chip-trigger').focus();
+    const box = await chip.boundingBox();
+    if (box === null) throw new Error('No chip box');
+    // The ring stands 2px out from the pill, 2px wide, over the page.
+    const ring = await drawn(page, { x: box.x + 12, y: box.y - 4, width: box.width - 24, height: 2 });
+    expect(ring.fill).toBe(fill);
+  });
+
   test('a tag keeps a CanvasText edge', async ({ page }) => {
     // The bone fill is repainted away, so the edge is what draws the pill; a disabled tag is GrayText.
     await visit(page, '/docs/components/multi-select');

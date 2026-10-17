@@ -833,6 +833,56 @@ export const AllSelected: Story = {
   ),
 };
 
+/** The columns with a slate line an app writes under the account, the secondary text a cell often holds. */
+const NOTED = columnsOf(['date', 'payee', 'category', 'account', 'amount'], {
+  account: {
+    cell: (row) => (
+      <>
+        {row.account}
+        <span style={{ display: 'block', color: 'var(--color-slate)', fontSize: 'var(--text-small)' }}>
+          Ends 4821
+        </span>
+      </>
+    ),
+  },
+});
+
+/**
+ * Slate text an app puts in a cell, in each state a row takes at once: at rest, the current row, a selected row
+ * and a hovered one. The a11y check measures each after the play, in both themes, and fails the story under
+ * 4.5:1: slate on the hover wash over the light canvas was 4.37.
+ */
+export const SlateInRowStates: Story = {
+  tags: ['viewport-desktop', 'no-visual'],
+  render: () => (
+    <Box>
+      <Selecting initial={['t2']} columns={NOTED} currentKey="t3" />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const row = rowAt(canvasElement, 0);
+    await userEvent.hover(row);
+    await waitFor(() => expect(row).toHaveAttribute('data-hovered', 'true'));
+    await expect(selectedKeysOf(canvasElement)).toEqual(['t2']);
+  },
+};
+
+/** The same in the list face: a hovered item, a selected one and the current one, the note in each. */
+export const SlateInItemStates: Story = {
+  tags: ['viewport-desktop', 'no-visual'],
+  render: () => (
+    <Box width="22rem">
+      <Selecting initial={['t2']} columns={NOTED} currentKey="t3" />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => expect(listItems(canvasElement).length).toBeGreaterThan(2));
+    const item = itemAt(canvasElement, 0);
+    await userEvent.hover(item);
+    await waitFor(() => expect(item).toHaveAttribute('data-hovered', 'true'));
+  },
+};
+
 /** Persian digits, written by the app, as formatCount gives them. */
 const persianDigits = (count: number): string =>
   String(count).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit);

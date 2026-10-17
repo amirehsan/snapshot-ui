@@ -36,6 +36,18 @@ export function readStagePanelOpen(): boolean {
   return document.querySelector('.stage .side-panel') !== null;
 }
 
+/**
+ * The widths where the rail folds beside an open example panel, where the fold gains the page room: under 1640px,
+ * the content column's 1320px cap and the expanded rail's 320px. From there the column is capped either way, so the
+ * rail stays as the reader left it. Under 1024px the rail is a drawer, which never folds.
+ */
+export const RAIL_FOLD_WIDTH = '(width < 1640px)';
+
+/** Whether the window is narrow enough for the rail to fold beside an open example panel. */
+export function readRailFoldWidth(): boolean {
+  return typeof matchMedia === 'function' && matchMedia(RAIL_FOLD_WIDTH).matches;
+}
+
 /** Whether the reader expanded the rail over an open example panel, which stands the fold down until it closes. */
 export function readRailUnfolded(): boolean {
   return document.documentElement.dataset.railUnfolded !== undefined;
@@ -48,7 +60,7 @@ export function writeRailUnfolded(unfolded: boolean): void {
 
 /** Whether the rail is drawn as icons: the reader's choice, or folded beside an open example panel. */
 export function readRailDrawnCollapsed(): boolean {
-  return readRailCollapsed() || (readStagePanelOpen() && !readRailUnfolded());
+  return readRailCollapsed() || (readStagePanelOpen() && !readRailUnfolded() && readRailFoldWidth());
 }
 
 export function writeRailCollapsed(collapsed: boolean): void {

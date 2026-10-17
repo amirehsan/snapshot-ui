@@ -223,6 +223,10 @@
       color: CanvasText;
     }
 
+    /* An active chip is drawn out of the repaint, as a selected DataTable row is: inside it Chromium draws a
+       backplate in the system's background color behind the label and the value, which blanks HighlightText.
+       Out of it nothing is forced, so every color is named: no part has a fill of its own, the clear button's
+       ring is HighlightText inside the pill, and the chip's own ring, outside it on the page, is Highlight. */
     .filter-chip[data-active] {
       border-color: Highlight;
       background-color: Highlight;
@@ -231,6 +235,20 @@
 
     .filter-chip[data-active] :is(.filter-chip-chevron, .filter-chip-clear) {
       color: HighlightText;
+    }
+
+    .filter-chip[data-active]:not([data-disabled]) {
+      forced-color-adjust: none;
+      outline-color: Highlight;
+      background-color: Highlight;
+      color: HighlightText;
+    }
+
+    .filter-chip[data-active]:not([data-disabled]) :where(*) {
+      border-color: HighlightText;
+      outline-color: HighlightText;
+      background-color: transparent;
+      color: inherit;
     }
 
     .filter-chip[data-disabled],

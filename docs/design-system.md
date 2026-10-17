@@ -2421,6 +2421,14 @@ Highlight fill. The track's edge and the other options' text are the browser's
 own, and they hold. Like the checkbox's, the radio group's and the switch's,
 the block is one of the only places in the library that writes a color that is
 not a token.
+Drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium
+draws a backplate in the system's background color behind each run of
+text, which blanked the `HighlightText` words on `Highlight`. Out of it
+nothing is forced, so each color on the part is a system color named in
+the rule, no part inside has a fill of its own, and a disabled chosen
+option, canvas on `GrayText`, is drawn the same way. The docs check what
+Chromium draws.
 
 ## Card
 
@@ -3905,6 +3913,13 @@ A row under the pointer shows nothing in forced colors, since the wash is a
 mix the repaint drops; the keyboard ring still shows. Native menus in Windows
 high contrast draw the hovered row in `Highlight`, which here means the
 choice, so a pointer cue there is left as an open question.
+Drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium
+draws a backplate in the system's background color behind each run of
+text, which blanked the `HighlightText` words on `Highlight`. Out of it
+nothing is forced, so each color on the part is a system color named in
+the rule; a chosen row's ring is `HighlightText`. The docs check what
+Chromium draws.
 
 **One state for the pointer and the keyboard.** In a React Aria menu, hover
 moves focus to the item under the pointer, so `[data-focused]` is set under the
@@ -4254,6 +4269,13 @@ and the end value in `HighlightText`, and the key chip as its island of the
 system `canvas` with `CanvasText`. Each rule is as specific as the ink rule it
 overrides and comes after it. The surface's frame is redrawn in `CanvasText`.
 A docs test reads every part on the active row.
+Drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium
+draws a backplate in the system's background color behind each run of
+text, which blanked the `HighlightText` words on `Highlight`. Out of it
+nothing is forced, so each color on the part is a system color named in
+the rule; the active row's ring is `HighlightText`. The docs check what
+Chromium draws.
 
 **The quiet period.** The status line, `role="status"` and in the page from
 the palette's first render, says the count 600ms after typing pauses; each
@@ -4844,6 +4866,28 @@ bottom, sets `scrollTop` to the item's `offsetTop` less 40px. `.sidebar-nav` is
 never `scrollIntoView`, which scrolls every ancestor; once per mount, since
 after that the reader chose the item.
 
+**Forced colors.** The current item is `Highlight` with `HighlightText`,
+drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium draws
+a backplate in the system's background color behind each run of text,
+which blanked the label. Its ring stands outside the pill, on the rail, so
+it is named `Highlight`. The group's current bar is `Highlight`, and the
+collapsed count dot `CanvasText`, `HighlightText` on the current item.
+
+**The collapse button before hydration** (patch 0.6.1). From 1024px to
+under 1440px the stylesheet draws the rail folded beside an open SidePanel
+from the server's HTML on, and the server cannot see the width, so its
+button cannot know whether it collapses or expands the rail. Unless the
+reader's collapse is known on the server, the button holds both names,
+`span.sidebar-collapse-name` with `data-name="collapse"` and
+`data-name="expand"`, and the stylesheet keeps the one for the rail as
+drawn in the tree and the other `display: none`, with the collapsed rules
+and the fold's copy of them; it claims no `aria-expanded` until the script
+knows the state, since a state it cannot know would be wrong at some
+width. Once hydrated the button takes one name and its state. A collapse
+the reader chose is known on the server, which says "Expand the menu" and
+`aria-expanded="false"`.
+
 ## BottomTabBar
 
 The phone's destinations become `BottomTabBar` and `BottomTabBarItem`: three
@@ -4936,6 +4980,12 @@ it.
 its inset ring `HighlightText`; the chip is `CanvasText` on a `canvas` border
 with `canvas` numerals, and on the current item `HighlightText` with
 `Highlight` numerals and border. Fills alone would be dropped by the repaint.
+Drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium
+draws a backplate in the system's background color behind each run of
+text, which blanked the `HighlightText` words on `Highlight`. Out of it
+nothing is forced, so each color on the part is a system color named in
+the rule. The docs check what Chromium draws.
 
 **Wide screens.** From 1024px up the bar is `display: none`, with no script,
 so it leaves the accessibility tree too, and a rail's nav and the bar's are
@@ -6410,6 +6460,14 @@ and its inverted ring `HighlightText`; a disabled tab is `GrayText`, and
 a disabled selected one a `GrayText` pill with `canvas` text,
 SegmentedControl's rule; the dot is `CanvasText`, and `HighlightText`
 ringed in `Highlight` on the selected tab.
+Drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium
+draws a backplate in the system's background color behind each run of
+text, which blanked the `HighlightText` words on `Highlight`. Out of it
+nothing is forced, so each color on the part is a system color named in
+the rule, no part, such as a badge, has a fill of its own, and a
+disabled selected tab, canvas on `GrayText`, is drawn the same way. The
+docs check what Chromium draws.
 
 **The server.** The row renders in Node with every tab, `aria-selected`
 on the selected one, the dot and its words, and the selected panel; the
@@ -6427,9 +6485,47 @@ tab stop of its own after the row, React Aria's panel rule.
 **Screen readers.** Tabs with a changed dot in VoiceOver on macOS and
 NVDA: not yet verified (risk R3).
 
-**The size.** The size limit is 1.5 kB for `Tabs, TabList, Tab,
-TabPanel`, the spec's budget: the entry measured 919 B, and the rule
-rounds up to 1 kB and adds 0.5 kB.
+**The size.** The size limit is 2.5 kB for `Tabs, TabList, Tab,
+TabPanel`: the entry measured 919 B under the spec's 1.5 kB budget, and
+1.38 kB once the tab stop and the click with no pointerdown came in patch
+0.6.1, which the rule rounds up to 2 kB and adds 0.5 kB.
+
+**The tab stop before hydration** (patch 0.6.1). React Aria gives the row
+its tab stop in an effect, by setting its focused key to the selected tab,
+so the server's HTML, and every render before that effect, had every tab
+at `tabindex="-1"`: the row could not be reached by Tab, and axe reported
+a row that overflows as a scrollable region no key reaches
+(`scrollable-region-focusable`). React Spectrum collapses an overflowing
+row into a picker, Radix leaves the row as it is, MUI scrolls a wrapper
+around a tablist whose selected tab holds `tabIndex` 0 from its first
+render, and GOV.UK stacks its tabs as links on a phone. The library keeps
+the row as its own scroller and gives it MUI's stop: while React Aria has
+no focused key that names an enabled tab, the selected tab is the stop,
+or the first enabled tab when the selected key names none, as a URL's can.
+That is the tabs pattern's one stop, so no second stop is added for the
+scrolling region, and axe finds it: the region holds a focusable element.
+Once React Aria has its key, its own `tabIndex` stands.
+
+**A click with no pointerdown** (patch 0.6.1). React Aria starts a press
+on pointerdown and cancels a click on a link tab it saw no press for, the
+anchor's own navigation with it, so such a click opened nothing. A real
+click reaches a tab that way when its pointerdown came before React
+listened, as a touch that begins before hydration and ends after it
+does, and React Aria draws every tab again just after hydration, so the
+touch ends on a new element that saw none of it. Such a click is sent
+again as a click with no pointer, the click React Aria follows as a
+screen reader's: it selects the tab or opens its link once, through the
+`RouterProvider` or natively. React Aria's own clicks pass: a keyboard's
+or a screen reader's has no click count, and the click it sends to open
+a link natively has no view, so it is never cancelled in turn. A
+modified click on a link tab stays the browser's, a new tab or window. A
+mouse press held across hydration still opens nothing: the browser sends
+no click when the pressed element is replaced, and guessing the target
+from what stays active could open the wrong tab or open a link in place
+of a new window. A DataTable row's link is React Aria's Link, which
+already follows a click with no pointerdown. The docs check a touch
+across hydration, holding the server's element until it leaves the page,
+and count the navigations: exactly one.
 
 ## Pagination
 
@@ -6607,6 +6703,12 @@ lifted, 16.11 and 15.25. No pair is added to the gate.
 **Forced colors.** The current page is `Highlight` with
 `HighlightText`, and its inverted ring `HighlightText`; a disabled step
 is `GrayText`.
+Drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium
+draws a backplate in the system's background color behind each run of
+text, which blanked the `HighlightText` words on `Highlight`. Out of it
+nothing is forced, so each color on the part is a system color named in
+the rule. The docs check what Chromium draws.
 
 **The server.** The shell renders under React's server build with
 `getPageHref`, and its HTML holds every link's `href`, the current
@@ -6865,6 +6967,17 @@ rule rounds up to 2.5 kB and adds 0.5 kB. The guards calling the app's
 handlers, the sign's clamp and validation and the precision warning
 bring it to 2.66 kB, still under the limit, which is unchanged.
 
+**A known React Aria warning** (patch 0.6.1). React Aria's `useNumberField`
+commits the typed text on blur inside `flushSync`. A blur the browser sends
+while React commits, as when an app moves focus from a layout effect, or
+disables or removes the focused field, makes React log "flushSync was
+called from inside a lifecycle method", in every mode and at any value,
+with React Aria's own NumberField too, in development only: the commit
+still lands a render later. The library cannot reach the call without
+taking React Aria's blur from it, which would drop the announcement of the
+corrected value, so it is left to React Aria and kept as a test expected
+to fail, which reports when an update fixes it.
+
 ## Calendar
 
 One month of days that chooses a day or a range: `Calendar` and
@@ -7042,6 +7155,13 @@ gate.
 `box-sizing: border-box` so the edge never grows it; today's ring and
 the weekdays are `CanvasText`; unavailable and disabled days and a
 disabled preset are `GrayText`.
+Drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium
+draws a backplate in the system's background color behind each run of
+text, which blanked the `HighlightText` words on `Highlight`. Out of it
+nothing is forced, so each color on the part is a system color named in
+the rule: the ring inside the fill and a chosen today's inner ring are
+`HighlightText`. The docs check what Chromium draws.
 
 **Screen readers.** The month change and a chosen range announced, and
 a preset read as a pressed toggle, with VoiceOver on macOS and NVDA: not
@@ -7214,6 +7334,12 @@ and 19.31. No pair is added to the gate.
 **Forced colors.** As the text input; the arrow `CanvasText`; the
 focused segment `Highlight` with `HighlightText`; disabled segments, the
 arrow and the face `GrayText`.
+Drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium
+draws a backplate in the system's background color behind each run of
+text, which blanked the `HighlightText` words on `Highlight`. Out of it
+nothing is forced, so each color on the part is a system color named in
+the rule (the focused segment). The docs check what Chromium draws.
 
 **Devices.** The segments reached and typed with VoiceOver on iOS, as
 text boxes: not yet verified.
@@ -7368,6 +7494,14 @@ hidden pass at zero.
 `HighlightText`; disabled, `GrayText`, and a disabled active chip
 `GrayText` on canvas, never on `Highlight`, which would say "on" for a
 control that is off.
+Drawn out of the forced repaint with `forced-color-adjust: none` (patch
+0.6.1), as a selected DataTable row is: inside the repaint Chromium
+draws a backplate in the system's background color behind each run of
+text, which blanked the `HighlightText` words on `Highlight`. Out of it
+nothing is forced, so each color on the part is a system color named in
+the rule: no part of an active chip has a fill of its own, the clear
+button's ring is `HighlightText` inside the pill, and the chip's ring
+outside it is `Highlight`. The docs check what Chromium draws.
 
 **Right to left.** The pill runs from the right: the label at the right
 and the clear button at the left end. Neither the chevron nor the X has
@@ -7694,10 +7828,15 @@ last digit on an English and a Persian page alike.
 **The washes.** A row under the pointer takes the 5% ink wash over the
 holder's fill, Menu's hover, only where hover exists; a selected row
 takes 8%, one step over, with its checked box, never color alone. Slate
-on the 5% wash measures 4.38 over canvas in light, under 4.5, as the tabs
-found, so no slate text sits on a washed row: a sorted or hovered header
-is ink, and the list face's slate meta line turns ink on a hovered or
-selected row.
+is the secondary text an app puts in a cell, so it meets 4.5 in every
+row state: on the 5% wash it would measure 4.38 over canvas in light and
+on the 8% wash 4.11, so a hovered or a selected row sets `--color-slate`
+to granite for everything inside it, the app's own cell text included:
+5.94 on the 5% wash and 5.59 on the 8% (patch 0.6.1, after an app's axe
+check flagged a hovered row). A lighter 3% wash would have kept slate at
+4.56, but the hover would then measure 1.06 against the canvas, where
+the library's hover is 1.11. A sorted or hovered header is ink, and the
+list face's slate meta line turns ink on a hovered or selected row.
 
 **Focus.** The inset 2px ring in the focus ring token on the row, the
 cell or the header, never under the pointer: a table can sit in a
@@ -7755,8 +7894,11 @@ in a card.
 5.31 and 6.94 on lifted; all four are gated already. A hovered row is the
 5% wash, a mix and not a token, so its pairs are measured and recorded:
 ink 14.70 and 17.41 over canvas, 16.11 and 15.25 over lifted; slate 4.38
-and 6.93 over canvas, 4.80 and 6.41 over lifted, which is why no slate
-sits on it. The rules are drawn, not read: the divider 1.23 and 1.28 over
+and 6.93 over canvas, 4.80 and 6.41 over lifted, which is why slate in
+a hovered row is granite: 5.94 and 9.00 over canvas, 6.52 and 8.18 over
+lifted. Slate on the bulk bar's float surface is 5.49 and 6.94. A
+current, a disabled and the totals row take no fill, so their slate is
+the rest pair. The rules are drawn, not read: the divider 1.23 and 1.28 over
 canvas, the frame 1.28 and 1.36. The contrast test recomputes each.
 
 **The stretched link** (ruling 2, risk R1). With `getRowHref`, the row
@@ -8062,8 +8204,9 @@ its row.
 its checked box, never color alone. It is a mix, so its pairs are
 measured and recorded, not gated: ink 13.81 and 16.06 over canvas, 15.13
 and 13.92 over lifted; slate 4.11 and 6.62 over canvas, 4.51 and 6.04
-over lifted, under 4.5 over canvas in light, so no slate text sits on a
-selected row. In forced colors a selected row is `Highlight` with
+over lifted, under 4.5 over canvas in light, so the row sets
+`--color-slate` to `--color-granite` for everything inside it: granite
+5.59 and 8.50 over canvas, 6.12 and 7.63 over lifted. In forced colors a selected row is `Highlight` with
 `HighlightText`.
 
 **The bar** (ruling 5, spec corrections 9, 18, 29 and 38). While any
@@ -8219,12 +8362,13 @@ Cells on one line are parts a part step apart; the library writes no
 separator. Both lines end in an ellipsis on one line, and a line holding
 a column with `overflow: 'wrap'` runs to two and clamps there (amendment
 4). Hover, selected, current, focus and disabled are the rows': the 5%
-wash on hover where hover exists, the 8% wash selected, a 3px ink
-inline-start border and a title at 700 for the current item, the inset
-focus ring, and taupe for a disabled item. Slate on either wash over
-canvas falls under 4.5 (4.38 and 4.11), so the meta line turns ink on a
-hovered or selected item: 14.70 and 17.41 on the 5% wash over canvas,
-light and dark. At rest the meta line is slate on canvas, 4.84 and 7.26,
+wash on hover where hover exists and the 8% wash selected, slate turned
+granite on both, a 3px ink inline-start border and a title at 700 for
+the current item, the inset focus ring, and taupe for a disabled item.
+The meta line turns ink on a hovered or selected item: 14.70 and 17.41
+on the 5% wash over canvas, 13.81 and 16.06 on the 8%, light and dark;
+any other slate in an item is granite, 5.94 and 9.00 on the 5% wash,
+5.59 and 8.50 on the 8%. At rest the meta line is slate on canvas, 4.84 and 7.26,
 or on lifted, 5.31 and 6.94, all gated.
 
 **Select mode** (amendment 3, spec corrections 49 and 50). With

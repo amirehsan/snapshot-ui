@@ -223,15 +223,26 @@
      row here: HighlightText on a chosen row, which is Highlight, GrayText on a disabled one, CanvasText
      otherwise. The key chip is an island with its own canvas and CanvasText, so it reads on any row. Each
      rule is as specific as the rule it overrides and comes after it: the chosen row names its mode, so it
-     outranks the single row's ink fill, which the repaint would turn into the page's own background. */
+     outranks the single row's ink fill, which the repaint would turn into the page's own background.
+
+     The chosen row is the reader's selection pair, drawn out of the repaint, as a selected DataTable row is:
+     inside it Chromium draws a backplate in the system's background color behind each run of text, which
+     blanks HighlightText, and a Highlight ring on the Highlight fill would not show. Out of the repaint
+     nothing is forced, so every color on the row is a system color named here: its parts HighlightText, the
+     key chip the canvas island, and its ring HighlightText. */
   @media (forced-colors: active) {
     .menu-item :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end) {
       color: CanvasText;
     }
 
     .menu-item[data-selection-mode][data-selected]:not([data-disabled]) {
+      forced-color-adjust: none;
       background-color: Highlight;
       color: HighlightText;
+    }
+
+    .menu-item[data-selection-mode][data-selected]:not([data-disabled])[data-focus-visible] {
+      outline-color: HighlightText;
     }
 
     .menu-item[data-selection-mode][data-selected]:not([data-disabled])
