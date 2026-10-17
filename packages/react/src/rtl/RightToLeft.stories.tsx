@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { AppShell } from '../app-shell';
+import { Breadcrumb, Breadcrumbs } from '../breadcrumbs';
 import { Button } from '../button';
 import { RangeCalendar } from '../calendar';
 import { Checkbox, CheckboxGroup } from '../checkbox';
@@ -23,6 +24,7 @@ import { Link, RouterProvider } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { MultiSelect } from '../multi-select';
 import { NumberField } from '../number-field';
+import { PageColumn, PageHeader } from '../page-header';
 import { Pagination } from '../pagination';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
@@ -1942,5 +1944,79 @@ export const SaveBarMirrored: Story = {
     if (!first || !last) throw new Error('Two stacked buttons');
     await expect(rect(last).top).toBeGreaterThan(rect(first).bottom - 0.5);
     await expect(rect(last).width).toBeCloseTo(rect(find(narrow, '.save-bar-actions')).width, 0);
+  },
+};
+
+/**
+ * A Persian page header: the trail, the eyebrow, the title and the sentence at the right, the actions at the left,
+ * and the page column under it with the same two edges.
+ */
+export const PageHeaderMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <RouterProvider navigate={() => undefined}>
+        <div dir="rtl" lang="fa" style={{ width: 'min(48rem, calc(100vw - 2rem))' }}>
+          <PageHeader
+            breadcrumbs={
+              <Breadcrumbs aria-label="مسیر">
+                <Breadcrumb href="#home">خانه</Breadcrumb>
+                <Breadcrumb>اسناد</Breadcrumb>
+              </Breadcrumbs>
+            }
+            eyebrow="بایگانی"
+            title="اسناد"
+            description="همه رسیدهایی که امسال بارگذاری کرده‌اید."
+            actions={<Button>بارگذاری</Button>}
+          />
+          <PageColumn className="content">
+            <Text>فروشگاه محله، ۲۲ مهر.</Text>
+          </PageColumn>
+        </div>
+      </RouterProvider>
+    </I18nProvider>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const content = find(canvasElement, '.content');
+    const style = getComputedStyle(content);
+    const start = rect(content).right - parseFloat(style.paddingRight);
+    const end = rect(content).left + parseFloat(style.paddingLeft);
+    const title = canvas.getByRole('heading', { level: 1, name: 'اسناد' });
+    await expectSameEdge(rect(title).right, start);
+    await expectSameEdge(rect(find(canvasElement, '.breadcrumbs-list')).right, start);
+    await expectSameEdge(rect(find(canvasElement, '.page-header-description')).right, start);
+    const action = canvas.getByRole('button', { name: 'بارگذاری' });
+    if (window.innerWidth >= 768) await expectSameEdge(rect(action).left, end);
+    else await expectSameEdge(rect(action).right, start);
+  },
+};
+
+/** A Persian trail: it reads from the right, the chevrons point left, and the narrow face's chevron points right. */
+export const BreadcrumbsMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <RouterProvider navigate={() => undefined}>
+        <div dir="rtl" lang="fa">
+          <Breadcrumbs aria-label="مسیر" backLabel={(parent) => `بازگشت به ${parent}`}>
+            <Breadcrumb href="#home">خانه</Breadcrumb>
+            <Breadcrumb href="#documents">اسناد</Breadcrumb>
+            <Breadcrumb>رسیدها</Breadcrumb>
+          </Breadcrumbs>
+        </div>
+      </RouterProvider>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const items = [...canvasElement.querySelectorAll<HTMLElement>('.breadcrumbs-item')];
+    const [home, documents, current] = items;
+    if (!home || !documents || !current) throw new Error('Three crumbs');
+    // From the right: Home, then Documents to its left, then the current page.
+    await expect(rect(home).left).toBeGreaterThan(rect(documents).right - 0.5);
+    await expect(rect(documents).left).toBeGreaterThan(rect(current).right - 0.5);
+    // The separator follows its crumb, to its left, and points left: its drawn path is mirrored.
+    const separator = find(home, '.breadcrumbs-separator');
+    await expect(rect(separator).right).toBeLessThanOrEqual(rect(find(home, '.breadcrumbs-link')).left + 0.5);
+    for (const icon of canvasElement.querySelectorAll('.breadcrumbs-separator svg, .breadcrumbs-back svg')) {
+      await expect(getComputedStyle(icon).scale).toBe('-1 1');
+    }
   },
 };

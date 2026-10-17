@@ -234,6 +234,8 @@ export {
   type UploadTrayProps,
 } from './upload-tray';
 export { SaveBar, type SaveBarLabels, type SaveBarProps } from './save-bar';
+export { PageColumn, PageHeader, type PageColumnProps, type PageHeaderProps } from './page-header';
+export { Breadcrumb, Breadcrumbs, type BreadcrumbProps, type BreadcrumbsProps } from './breadcrumbs';
 export { EmptyState, type EmptyStateProps } from './empty-state';
 export { Skeleton, type SkeletonProps } from './skeleton';
 export {

@@ -5,6 +5,7 @@ import { I18nProvider } from 'react-aria-components';
 import { describe, expect, it } from 'vitest';
 import { AppShell } from '../src/app-shell';
 import { Avatar } from '../src/avatar';
+import { Breadcrumb, Breadcrumbs } from '../src/breadcrumbs';
 import { StatTile } from '../src/stat-tile';
 import { BottomTabBar, BottomTabBarItem } from '../src/bottom-tab-bar';
 import { Button } from '../src/button';
@@ -892,6 +893,25 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '>Save<',
     ],
     ['--save-bar-offset', 'alertdialog', 'style='],
+  ],
+  [
+    // Both faces, as real links: the list with the current page last, and the back link to the parent.
+    'Breadcrumbs',
+    <Breadcrumbs>
+      <Breadcrumb href="/">Home</Breadcrumb>
+      <Breadcrumb href="/documents">Documents</Breadcrumb>
+      <Breadcrumb>Receipts, 2026</Breadcrumb>
+    </Breadcrumbs>,
+    [
+      '<nav aria-label="Breadcrumbs" class="breadcrumbs">',
+      '<ol class="breadcrumbs-list">',
+      '<a class="link breadcrumbs-link"',
+      'href="/documents"',
+      '<span class="breadcrumbs-current" aria-current="page">',
+      '<a class="link breadcrumbs-back"',
+      '>Back to Documents<',
+    ],
+    ['role="link"', 'aria-disabled', 'data-collection'],
   ],
 ];
 

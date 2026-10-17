@@ -1,6 +1,6 @@
 'use client';
 
-import { FileButton, Heading, PageDropZone, Switch, Text, type FileRejection } from '@snapshot-ui/react';
+import { FileButton, PageDropZone, PageHeader, Switch, Text, type FileRejection } from '@snapshot-ui/react';
 import { useState, type ReactElement } from 'react';
 
 const TYPES = ['application/pdf', '.pdf', 'image/*', '.heic'];
@@ -15,13 +15,15 @@ export default function FileDropZonePage(): ReactElement {
   };
   return (
     <div className="stack" style={{ width: '100%', maxWidth: '32rem' }}>
-      {/* The page zone's keyboard twin: every page zone has a button beside the page's title. */}
-      <div className="row spread">
-        <Heading level={3}>Documents</Heading>
-        <FileButton acceptedFileTypes={TYPES} allowsMultiple onFiles={take}>
-          Upload
-        </FileButton>
-      </div>
+      {/* The page zone's keyboard twin: every page zone has a button in the page header's actions. */}
+      <PageHeader
+        title="Documents"
+        actions={
+          <FileButton acceptedFileTypes={TYPES} allowsMultiple onFiles={take}>
+            Upload
+          </FileButton>
+        }
+      />
       <Switch isSelected={isOn} onChange={setOn}>
         Drop anywhere on this page
       </Switch>

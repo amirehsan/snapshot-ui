@@ -1017,6 +1017,26 @@ test.describe('forced colors', () => {
     const footer = second.locator('.side-panel-footer');
     await expect(footer).toHaveCSS('border-top-color', canvasText);
   });
+
+  test('the current crumb is canvastext and the links linktext', async ({ page }) => {
+    await visit(page, '/docs/components/breadcrumbs');
+    const trail = page.locator('.stage .breadcrumbs').first();
+    const [linkText, canvasText] = [
+      await systemColor(page, 'LinkText'),
+      await systemColor(page, 'CanvasText'),
+    ];
+    for (const link of await trail.locator('.breadcrumbs-link').all())
+      expect((await paint(link)).text).toBe(linkText);
+    expect((await paint(trail.locator('.breadcrumbs-current'))).text).toBe(canvasText);
+    expect((await paint(trail.locator('.breadcrumbs-separator').first())).text).toBe(canvasText);
+  });
+
+  test("a page header draws the system's background color with no blur", async ({ page }) => {
+    await visit(page, '/docs/components/page-header');
+    const header = page.locator('.stage .page-header').first();
+    expect((await paint(header)).fill).toBe(await systemColor(page, 'canvas'));
+    expect(await header.evaluate((element) => getComputedStyle(element).backdropFilter)).toBe('none');
+  });
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------
@@ -1037,6 +1057,38 @@ test('the date picker example opens on today and closes with focus on its button
   await expect(dialog).toBeHidden();
   await expect(button).toBeFocused();
   await expect(field.locator('.date-segment:not([data-type="literal"])')).toHaveText(['10', '15', '2026']);
+});
+
+// ---- Page header and breadcrumbs ---------------------------------------------------------------------
+
+test('a crumb navigates through the router, and at 375 the trail is one back link', async ({ page }) => {
+  await visit(page, '/docs/components/page-header');
+  const trail = page.locator('.stage').nth(1).getByRole('navigation', { name: 'Breadcrumbs' });
+  // The current page is text, the links are the two above it, and the back link is not drawn.
+  await expect(trail.getByRole('link')).toHaveText(['Home', 'Documents']);
+  await expect(trail.locator('.breadcrumbs-current')).toHaveAttribute('aria-current', 'page');
+  // A client navigation keeps the page's window: a full load would lose this mark.
+  const mark = (): Promise<void> =>
+    page.evaluate(() => {
+      (window as unknown as { kept: boolean }).kept = true;
+    });
+  const kept = (): Promise<boolean | undefined> =>
+    page.evaluate(() => (window as unknown as { kept?: boolean }).kept);
+  await mark();
+  await trail.getByRole('link', { name: 'Documents' }).click();
+  await expect(page).toHaveURL(/[/]docs[/]components[/]upload-tray$/);
+  expect(await kept()).toBe(true);
+
+  await page.setViewportSize({ width: 375, height: 800 });
+  await visit(page, '/docs/components/page-header');
+  const narrow = page.locator('.stage').nth(1).getByRole('navigation', { name: 'Breadcrumbs' });
+  await expect(narrow.getByRole('link')).toHaveCount(1);
+  const back = narrow.getByRole('link', { name: 'Back to Documents' });
+  await expect(back).toHaveAttribute('href', '/docs/components/upload-tray');
+  await mark();
+  await back.click();
+  await expect(page).toHaveURL(/[/]docs[/]components[/]upload-tray$/);
+  expect(await kept()).toBe(true);
 });
 
 // ---- Save bar -------------------------------------------------------------------------------------
@@ -1307,6 +1359,8 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
 const LONG_TARGETS: Record<string, string[]> = {
   'app-shell': ['.stage .app-shell-main p'],
   badge: ['.stage .badge'],
+  // A crumb's text is the app's and ellipsizes past 16rem on one line, so a long one never pushes the page.
+  breadcrumbs: ['.stage .breadcrumbs-text'],
   card: ['.stage .card-title', '.stage .card-note'],
   checkbox: [
     '.stage .field-label',
@@ -1339,6 +1393,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   meter: ['.stage .meter-label', '.stage .meter-value', '.stage .meter-legend-label'],
   'multi-select': ['.stage .field-label', '.stage .field-description', '.stage .multi-select-tag-text'],
   'number-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
+  // The title wraps at any character and is never cut; the sentence wraps inside its measure.
+  'page-header': ['.stage .page-header-title', '.stage .page-header-description'],
   // The range is the app's sentence; the page numbers and the step words are the library's and never long.
   pagination: ['.stage .pagination-range'],
   // The label is the app's sentence, a file name among it, and wraps at any character, as the meter's does.
@@ -1488,6 +1544,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   avatar: ['.stage .avatar', '.stage .avatar-initials'],
   badge: ['.stage .badge'],
   'bottom-tab-bar': ['.stage .tab-bar'],
+  // Real links in the server's HTML, both faces: the trail works before hydration and with scripts off.
+  breadcrumbs: ['.stage .breadcrumbs a[href]'],
   button: ['.stage .button'],
   // With scripts off an inline calendar is its face: an empty frame of its final size.
   calendar: ['.stage .calendar[data-face]'],
@@ -1533,6 +1591,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'multi-select': ['.stage .multi-select-control', '.stage .multi-select-tag'],
   // The figure is the server face's plain text, and the symbol is drawn beside it.
   'number-field': ['.stage .number-field-input', '.stage .number-field-symbol'],
+  // A static part: the header and its h1 are in the server's HTML.
+  'page-header': ['.stage .page-header h1'],
   // The row and the current page are in the server's HTML; the shell is a server component.
   pagination: ['.stage .pagination', '.stage .pagination-page[aria-current]'],
   popover: ['.stage .button'],

@@ -1,0 +1,99 @@
+/*
+ * PageHeader: a page's header, derived in docs/design-system.md ("PageHeader"): the docs site's header on tokens.
+ * The header is the fill and spans its holder; its row is a page column, so the trail, the eyebrow, the title and
+ * the sentence start where the page's content does, and the actions end where it ends. The row wraps: the actions
+ * sit at the titles' end while they fit and fall under them when they do not, and under 768px they take a line of
+ * their own at the inline start. No rule beneath it. It sticks only in AppShell's header slot, whose wrapper sticks,
+ * so it has no position of its own.
+ *
+ * The fill is the canvas at 80% with a blur, the docs header's, so what scrolls under a stuck header stays behind
+ * it and the page keeps its paper; where the blur is not supported, the canvas whole. 768px is the --breakpoint-sm
+ * token, written out because a media query cannot read a custom property; test/css.test.js keeps them equal.
+ *
+ * The page column (.page-column, PageColumn) is the page's content column: --container-page wide, its inline
+ * padding inside, and centered in its holder past that width, as the docs content column is. A column inside a
+ * column, such as a PageHeader put in a PageColumn, takes no second cap and no second padding.
+ */
+@layer components {
+  .page-column {
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: var(--container-page);
+    margin-inline: auto;
+    padding-inline: var(--spacing-separate);
+  }
+
+  .page-column .page-column {
+    max-inline-size: none;
+    padding-inline: 0;
+  }
+
+  .page-header {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    .page-header {
+      background-color: color-mix(in srgb, var(--color-canvas) 80%, transparent);
+      backdrop-filter: blur(20px) saturate(140%);
+    }
+  }
+
+  .page-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--spacing-peer);
+    padding-block: var(--spacing-separate) var(--spacing-peer);
+  }
+
+  /* The titles take the room the actions leave, so the actions sit at the row's end; a title too long to share its
+     line with them wraps onto lines of its own, and the actions fall under it. The column may narrow past what its
+     parts hold, so a trail's long crumb ellipsizes rather than widen the page. */
+  .page-header-titles {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  /* A reading measure: the sentence never runs the page's width. */
+  .page-header-description {
+    max-inline-size: var(--container-field);
+  }
+
+  .page-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-part);
+  }
+
+  @media (width < 768px) {
+    .page-column {
+      padding-inline: var(--spacing-inset);
+    }
+
+    .page-header-row {
+      gap: var(--spacing-inset);
+      padding-block: var(--spacing-inset);
+    }
+
+    .page-header-actions {
+      flex-basis: 100%;
+    }
+  }
+
+  /* Forced colors keep an author color's alpha, so the 80% fill would show the page through it; the system's
+     background color is drawn whole, and no blur. */
+  @media (forced-colors: active) {
+    .page-header {
+      background-color: canvas;
+      backdrop-filter: none;
+    }
+  }
+}

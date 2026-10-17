@@ -81,6 +81,7 @@ import { EmptyState } from '../src/empty-state';
 import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
 import { Meter } from '../src/meter';
+import { PageColumn, PageHeader } from '../src/page-header';
 import { Pagination } from '../src/pagination';
 import { ProgressBar } from '../src/progress-bar';
 import { Skeleton } from '../src/skeleton';
@@ -157,6 +158,29 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     '<div class="progress-bar"><div class="progress-bar-track" role="progressbar" data-indeterminate="" aria-label="Reading">' +
       '<span class="progress-bar-fill"></span></div></div>',
   ],
+  [
+    'PageHeader',
+    <PageHeader title="Documents" />,
+    '<header class="page-header"><div class="page-column page-header-row"><div class="page-header-titles">' +
+      '<h1 class="heading heading-2 page-header-title">Documents</h1></div></div></header>',
+  ],
+  [
+    // A Breadcrumbs is a client module, so a server page hands it in as a reference; a nav stands in for it here.
+    'PageHeader with every static slot',
+    <PageHeader
+      breadcrumbs={<nav aria-label="Breadcrumbs" />}
+      eyebrow="Documents"
+      title="Receipts, 2026"
+      description="Every receipt you uploaded this year."
+      actions={<a href="/upload">Upload</a>}
+    />,
+    '<header class="page-header"><div class="page-column page-header-row"><div class="page-header-titles">' +
+      '<nav aria-label="Breadcrumbs"></nav><p class="eyebrow">Documents</p>' +
+      '<h1 class="heading heading-2 page-header-title">Receipts, 2026</h1>' +
+      '<p class="copy copy-muted page-header-description">Every receipt you uploaded this year.</p></div>' +
+      '<div class="page-header-actions"><a href="/upload">Upload</a></div></div></header>',
+  ],
+  ['PageColumn', <PageColumn>The receipts.</PageColumn>, '<div class="page-column">The receipts.</div>'],
 ];
 
 describe('the static components in a server component', () => {
@@ -321,6 +345,8 @@ const STATIC_MODULES = [
   'empty-state/EmptyState.tsx',
   'skeleton/Skeleton.tsx',
   'progress-bar/ProgressBar.tsx',
+  'page-header/PageHeader.tsx',
+  'page-header/PageColumn.tsx',
 ];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {

@@ -7,7 +7,7 @@ const dir = path.join(import.meta.dirname, '.tailwind');
 const cli = path.join(import.meta.dirname, '..', 'node_modules', '.bin', 'tailwindcss');
 
 const USED =
-  'bg-canvas text-ink rounded-control text-body p-part max-w-field md:flex shadow-float text-gain bg-warning text-numeral p-card gap-inset max-w-sidebar';
+  'bg-canvas text-ink rounded-control text-body p-part max-w-field md:flex shadow-float text-gain bg-warning text-numeral p-card gap-inset max-w-sidebar max-w-(--container-page)';
 const CLEARED = 'rounded-lg text-sm bg-red-500 shadow-md font-serif xl:flex';
 
 /** Compiles a Tailwind entry that imports the tokens and the theme in `order`. */
@@ -46,6 +46,9 @@ describe.each([
     expect(out).toMatch(/\.p-card \{\s*padding: var\(--spacing-card\);/);
     expect(out).toMatch(/\.gap-inset \{\s*gap: var\(--spacing-inset\);/);
     expect(out).toMatch(/\.max-w-sidebar \{\s*max-width: var\(--container-sidebar\);/);
+    // The page column's width shares its name with the spacing token --spacing-page, which Tailwind reads first
+    // for max-w-page, so a Tailwind user names the container token outright.
+    expect(out).toMatch(/\.max-w-\\\(--container-page\\\) \{\s*max-width: var\(--container-page\);/);
     expect(out).toContain('@media (width >= 1024px)');
   });
 
@@ -66,6 +69,7 @@ describe('dist/tailwind.css', () => {
     const theme = readFileSync(path.join(import.meta.dirname, '..', 'dist', 'tailwind.css'), 'utf8');
     expect(theme).toContain('--spacing-inset: var(--spacing-inset);');
     expect(theme).toContain('--container-sidebar: var(--container-sidebar);');
+    expect(theme).toContain('--container-page: var(--container-page);');
     // A Tailwind user reads a size as an arbitrary value: h-(--size-control).
     expect(theme).not.toContain('--size-');
     expect(theme).not.toContain('--z-');

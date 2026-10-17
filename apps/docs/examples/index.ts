@@ -9,6 +9,7 @@ import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
 import BottomTabBarBasic from './bottom-tab-bar-basic';
 import BottomTabBarMore from './bottom-tab-bar-more';
+import BreadcrumbsBasic from './breadcrumbs-basic';
 import ButtonStates from './button-states';
 import ButtonVariants from './button-variants';
 import CalendarBasic from './calendar-basic';
@@ -100,6 +101,8 @@ import NumberFieldNegative from './number-field-negative';
 import NumberFieldPersian from './number-field-persian';
 import NumberFieldStates from './number-field-states';
 import NumberFieldUrl from './number-field-url';
+import PageHeaderBasic from './page-header-basic';
+import PageHeaderDocuments from './page-header-documents';
 import PaginationButtons from './pagination-buttons';
 import PaginationCursor from './pagination-cursor';
 import PaginationInARow from './pagination-in-a-row';
@@ -179,6 +182,7 @@ export const examples = {
   'badge-tones': BadgeTones,
   'bottom-tab-bar-basic': BottomTabBarBasic,
   'bottom-tab-bar-more': BottomTabBarMore,
+  'breadcrumbs-basic': BreadcrumbsBasic,
   'button-states': ButtonStates,
   'button-variants': ButtonVariants,
   'calendar-basic': CalendarBasic,
@@ -270,6 +274,8 @@ export const examples = {
   'number-field-persian': NumberFieldPersian,
   'number-field-states': NumberFieldStates,
   'number-field-url': NumberFieldUrl,
+  'page-header-basic': PageHeaderBasic,
+  'page-header-documents': PageHeaderDocuments,
   'pagination-buttons': PaginationButtons,
   'pagination-cursor': PaginationCursor,
   'pagination-in-a-row': PaginationInARow,

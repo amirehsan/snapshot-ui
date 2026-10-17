@@ -406,6 +406,20 @@
     "limit": "5.5 kB"
   },
   {
+    "name": "import { PageHeader, PageColumn } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ PageHeader, PageColumn }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "1 kB"
+  },
+  {
+    "name": "import { Breadcrumbs, Breadcrumb } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Breadcrumbs, Breadcrumb }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "1.5 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

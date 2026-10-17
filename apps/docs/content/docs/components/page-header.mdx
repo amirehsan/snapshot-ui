@@ -1,0 +1,89 @@
+---
+title: Page header
+description: "A page's title, with its trail, category, a sentence and actions."
+icon: PanelTop
+---
+
+<Section>
+
+## Basic
+
+`PageHeader` draws a page's header as this site draws its own: a [Breadcrumbs](/docs/components/breadcrumbs) trail, an eyebrow that names the category, the page's one `h1`, a sentence in slate and your actions at the title's end. `PageColumn` holds the page under it, so the content starts where the title does and ends where the actions end.
+
+<Preview name="page-header-basic" />
+
+</Section>
+
+<Section>
+
+## A documents page
+
+A page that takes files anywhere pairs a [Page drop zone](/docs/components/file-drop-zone) with its keyboard twin, an Upload `FileButton` in the header's actions. The trail goes through your `RouterProvider`. Turn the switch on and drag a file over the page, or press Upload.
+
+<Preview name="page-header-documents" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+- PageHeader is static. It renders in a server component and ships no client JavaScript; a Breadcrumbs or a FileButton you put in it is a client part of its own.
+- The title is always an `h1`, drawn at the 36px section step (28px under 768px). A page has one, so render one PageHeader per page.
+- It never sticks by itself. Put it in [App shell](/docs/components/app-shell)'s `header` slot and it sticks with the shell's header, and the shell writes its height as `--page-sticky-top` once the page has loaded, so a [Data table](/docs/components/data-table)'s header row and a [Side panel](/docs/components/side-panel) stick under it. At the top of the page's content it scrolls away. A stuck header with a description takes a phone's screen, so give the sticky one a title and actions only.
+- Actions sit at the end of the title's line while they fit and wrap under the title when they do not; under 768px they take a line of their own. Nothing is measured and nothing moves into a menu, so a page with many actions passes a [Menu](/docs/components/menu) as the last one.
+- The header's fill spans its holder and its row is a page column: `--container-page` wide, 82.5rem with its padding, and centered past it, as this site's content column is. Put your page in a `PageColumn` beside the header, not around it; a column inside a column takes no second padding. Set `--container-page` on the root, or on the shell, to change both at once.
+- A Tailwind user writes the page width as `max-w-(--container-page)`: `max-w-page` reads the spacing token of the same name first.
+
+```tsx
+import { AppShell, Breadcrumb, Breadcrumbs, PageColumn, PageHeader } from '@snapshot-ui/react';
+
+<AppShell
+  sidebar={<Nav />}
+  header={
+    <PageHeader
+      breadcrumbs={
+        <Breadcrumbs>
+          <Breadcrumb href="/">Home</Breadcrumb>
+          <Breadcrumb href="/documents">Documents</Breadcrumb>
+          <Breadcrumb>Receipts, 2026</Breadcrumb>
+        </Breadcrumbs>
+      }
+      title="Receipts, 2026"
+      actions={<UploadButton />}
+    />
+  }
+>
+  <PageColumn>{/* The page. */}</PageColumn>
+</AppShell>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+PageHeader accepts every HTML attribute on its `header`, and PageColumn on its `div`.
+
+<PropsTable label="PageHeader props" path="../../packages/react/src/page-header/PageHeader.tsx" type="Pick<PageHeaderProps, 'title' | 'breadcrumbs' | 'eyebrow' | 'description' | 'actions' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The header is a `header` element holding the page's one `h1`. In the shell's `header` slot, outside `<main>`, it is the page's banner landmark; at the top of `<main>` it is a plain header, and the `h1` is still the first heading a screen reader lands on. The trail is a navigation landmark of its own, and the eyebrow is a label, never a heading. The header takes no focus and has no keys; its actions are in the page's tab order after the trail, in the order they are drawn. In forced colors the header draws the system's background color with no blur.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps page headers in the system.
+
+<Rules dos={['Name the page in the title, and the place it sits in the trail and the eyebrow.', 'Keep the sentence to one line of what the page is for.', 'End many actions with a Menu.']} donts={['Never render two titles: a page has one h1.', 'Never draw a rule beneath the header.', 'Never put a description in a header that sticks on a phone.']} />
+
+</Section>

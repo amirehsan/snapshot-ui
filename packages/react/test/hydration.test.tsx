@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Breadcrumb, Breadcrumbs } from '../src/breadcrumbs';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
@@ -12,6 +13,7 @@ import { FileButton, FileDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
+import { PageHeader } from '../src/page-header';
 import { PickerOption } from '../src/picker';
 import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
@@ -385,6 +387,29 @@ const HYDRATED: [
         'Cancel',
         'Save',
       ]);
+    },
+  ],
+  [
+    // Nothing is a collection, so nothing is drawn again: both faces are the server's real links, kept as they were.
+    'Breadcrumbs in a PageHeader',
+    <PageHeader
+      title="Receipts, 2026"
+      breadcrumbs={
+        <Breadcrumbs>
+          <Breadcrumb href="/">Home</Breadcrumb>
+          <Breadcrumb href="/documents">Documents</Breadcrumb>
+          <Breadcrumb>Receipts, 2026</Breadcrumb>
+        </Breadcrumbs>
+      }
+    />,
+    (container) => {
+      expect([...container.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual([
+        '/',
+        '/documents',
+        '/documents',
+      ]);
+      expect(container.querySelector('.breadcrumbs-current')).toHaveAttribute('aria-current', 'page');
+      expect(container.querySelector('h1')).toHaveTextContent('Receipts, 2026');
     },
   ],
 ];

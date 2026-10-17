@@ -805,6 +805,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/avatar">Avatar</Link>
                 <Link href="/docs/components/badge">Badge</Link>
                 <Link href="/docs/components/bottom-tab-bar">Bottom tab bar</Link>
+                <Link href="/docs/components/breadcrumbs">Breadcrumbs</Link>
                 <Link href="/docs/components/button">Button</Link>
                 <Link href="/docs/components/calendar">Calendar</Link>
                 <Link href="/docs/components/card">Card</Link>
@@ -830,6 +831,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/meter">Meter</Link>
                 <Link href="/docs/components/multi-select">Multi-select</Link>
                 <Link href="/docs/components/number-field">Number field</Link>
+                <Link href="/docs/components/page-header">Page header</Link>
                 <Link href="/docs/components/pagination">Pagination</Link>
                 <Link href="/docs/components/popover">Popover</Link>
                 <Link href="/docs/components/progress-bar">Progress bar</Link>

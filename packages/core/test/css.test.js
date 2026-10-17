@@ -8574,3 +8574,215 @@ describe('src/components/save-bar.css', () => {
     expect(blockAfter(blockAfter(rules(), FORCED), '.save-bar {')).toContain('border-color: canvastext;');
   });
 });
+
+describe('src/components/page-header.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/page-header.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const SUPPORTS = '@supports (backdrop-filter: blur(1px))';
+
+  it('draws the page column the page width wide, its padding inside, centered past it', () => {
+    const column = blockAfter(rules(), '.page-column {');
+    for (const declaration of [
+      'box-sizing: border-box;',
+      'inline-size: 100%;',
+      'max-inline-size: var(--container-page);',
+      'margin-inline: auto;',
+      'padding-inline: var(--spacing-separate);',
+    ]) {
+      expect(column, declaration).toContain(declaration);
+    }
+  });
+
+  it('gives a column inside a column no second cap and no second padding', () => {
+    const nested = blockAfter(rules(), '.page-column .page-column {');
+    expect(nested).toContain('max-inline-size: none;');
+    expect(nested).toContain('padding-inline: 0;');
+  });
+
+  it("lays the header's row out as the docs header: a wrapping row, the titles and the actions at the end", () => {
+    const css = rules();
+    const row = blockAfter(css, '.page-header-row {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'align-items: flex-end;',
+      'justify-content: space-between;',
+      'gap: var(--spacing-peer);',
+      // The docs header's 32px top and, where the docs wrote 20px, the peer step beneath.
+      'padding-block: var(--spacing-separate) var(--spacing-peer);',
+    ]) {
+      expect(row, declaration).toContain(declaration);
+    }
+    const titles = blockAfter(css, '.page-header-titles {');
+    expect(titles).toContain('display: grid;');
+    expect(titles).toContain('gap: var(--spacing-part);');
+    expect(titles).toContain('min-width: 0;');
+    // A long crumb ellipsizes rather than hold the column open past the page.
+    expect(titles).toContain('grid-template-columns: minmax(0, 1fr);');
+    const actions = blockAfter(css, '.page-header-actions {');
+    expect(actions).toContain('flex-wrap: wrap;');
+    expect(actions).toContain('gap: var(--spacing-part);');
+  });
+
+  it("pads a phone's header and column by the inset, and puts the actions on their own line, at the small breakpoint", async () => {
+    const { tokens } = await import('../dist/tokens.js');
+    const css = rules();
+    const phone = blockAfter(css, `@media (width < ${tokens.breakpoint.sm.value})`);
+    expect(blockAfter(phone, '.page-column {')).toContain('padding-inline: var(--spacing-inset);');
+    const row = blockAfter(phone, '.page-header-row {');
+    expect(row).toContain('padding-block: var(--spacing-inset);');
+    expect(row).toContain('gap: var(--spacing-inset);');
+    expect(blockAfter(phone, '.page-header-actions {')).toContain('flex-basis: 100%;');
+    // Every width query is the token.
+    for (const [, width] of css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)) {
+      expect(width).toBe(tokens.breakpoint.sm.value);
+    }
+  });
+
+  it('keeps the title at the section step and wrapping, and the description at the field measure', () => {
+    const css = rules();
+    // The step, its weight and its -2% tracking are heading-2's; the header only lets it wrap.
+    expect(css).not.toMatch(/\.page-header-title \{[^}]*(?:font-size|font-weight|letter-spacing)/);
+    expect(css).not.toMatch(/text-overflow|line-clamp/);
+    expect(blockAfter(css, '.page-header-description {')).toContain(
+      'max-inline-size: var(--container-field);',
+    );
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('draws no rule beneath it', () => {
+    expect(rules()).not.toMatch(/border(?:-block-end|-bottom)?\s*:/);
+  });
+
+  it('fills the canvas, and the canvas at 80% under a blur where the blur is supported', () => {
+    const css = rules();
+    const header = blockAfter(outsideForcedColors(css), '.page-header {');
+    expect(header).toContain('background-color: var(--color-canvas);');
+    const blurred = blockAfter(blockAfter(css, SUPPORTS), '.page-header {');
+    expect(blurred).toContain('background-color: color-mix(in srgb, var(--color-canvas) 80%, transparent);');
+    expect(blurred).toContain('backdrop-filter: blur(20px) saturate(140%);');
+    // The header sticks only in the shell's header slot, whose wrapper sticks: it has no position of its own.
+    expect(css).not.toMatch(/position\s*:/);
+    expect(css).not.toMatch(/z-index\s*:/);
+  });
+
+  it("draws the system's background color with no blur in forced colors", () => {
+    const header = blockAfter(blockAfter(rules(), FORCED), '.page-header {');
+    expect(header).toContain('background-color: canvas;');
+    expect(header).toContain('backdrop-filter: none;');
+  });
+});
+
+describe('src/components/breadcrumbs.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/breadcrumbs.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const LINKS = '.breadcrumbs-link, .breadcrumbs-back {';
+
+  it('sets the trail at the small step, 450, in slate, with the links slate and underlined', () => {
+    const css = rules();
+    const trail = blockAfter(css, '.breadcrumbs {');
+    for (const declaration of [
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: var(--text-small--font-weight);',
+      'color: var(--color-slate);',
+    ]) {
+      expect(trail, declaration).toContain(declaration);
+    }
+    // Slate, not link blue: a trail is navigation. Link's own underline stays, carried onto the text's box.
+    expect(blockAfter(outsideForcedColors(css), LINKS)).toContain('color: var(--color-slate);');
+    expect(
+      blockAfter(css, '.breadcrumbs-link .breadcrumbs-text, .breadcrumbs-back .breadcrumbs-text {'),
+    ).toContain('text-decoration: inherit;');
+    expect(css).not.toMatch(/text-decoration(?:-line)?:\s*none/);
+    expect(css).not.toContain('--color-link');
+  });
+
+  it('narrows past what it holds, so a long crumb ellipsizes rather than hold its holder open', () => {
+    const trail = blockAfter(rules(), '.breadcrumbs {');
+    expect(trail).toContain('display: grid;');
+    expect(trail).toContain('grid-template-columns: minmax(0, 1fr);');
+    // The back link keeps its own width, so its hit area is no wider than it.
+    expect(rules()).toContain('} .breadcrumbs-back { justify-self: start;');
+  });
+
+  it('turns a link ink on hover, only where hover exists', () => {
+    const css = rules();
+    expect(blockAfter(css, '@media (hover: hover)')).toContain('color: var(--color-ink);');
+    const outside = css.replace(/@media \(hover: hover\) \{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
+    expect(outside).not.toMatch(/:hover/);
+  });
+
+  it('draws the current page in ink at 500, not underlined', () => {
+    const current = blockAfter(outsideForcedColors(rules()), '.breadcrumbs-current {');
+    expect(current).toContain('color: var(--color-ink);');
+    expect(current).toContain('font-weight: 500;');
+    expect(rules()).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('draws 16px slate separators a part step either side, mirrored in right to left with the back chevron', () => {
+    const css = rules();
+    expect(blockAfter(css, '.breadcrumbs-separator {')).toContain('margin-inline: var(--spacing-part);');
+    const icon = blockAfter(css, '.breadcrumbs-separator svg, .breadcrumbs-back svg {');
+    expect(icon).toContain('width: 1rem;');
+    expect(icon).toContain('height: 1rem;');
+    expect(
+      blockAfter(css, "[dir='rtl'] .breadcrumbs-separator svg, [dir='rtl'] .breadcrumbs-back svg {"),
+    ).toContain('scale: -1 1;');
+  });
+
+  it("ellipsizes each crumb's text past 16rem, on one line", () => {
+    const text = blockAfter(rules(), '.breadcrumbs-text {');
+    for (const declaration of [
+      'max-inline-size: 16rem;',
+      'overflow: hidden;',
+      'text-overflow: ellipsis;',
+      'white-space: nowrap;',
+    ]) {
+      expect(text, declaration).toContain(declaration);
+    }
+  });
+
+  it('hits each link and the back link at 40px tall through ::after, the shared formula', () => {
+    const css = rules();
+    expect(blockAfter(outsideForcedColors(css), LINKS)).toContain('position: relative;');
+    const hit = blockAfter(css, '.breadcrumbs-link::after, .breadcrumbs-back::after {');
+    for (const declaration of [
+      "content: '';",
+      'position: absolute;',
+      'inset-block: min(0px, calc((100% - var(--size-target)) / 2));',
+      'inset-inline: 0;',
+    ]) {
+      expect(hit, declaration).toContain(declaration);
+    }
+    // Wrapped lines sit a target apart, so the hit areas of two lines meet and never overlap.
+    expect(blockAfter(css, '.breadcrumbs-list {')).toContain('row-gap: calc(var(--size-target) - 1lh);');
+  });
+
+  it('switches to the back link at the small breakpoint, written out', async () => {
+    const { tokens } = await import('../dist/tokens.js');
+    const css = rules();
+    const narrow = blockAfter(css, `@media (width < ${tokens.breakpoint.sm.value})`);
+    expect(blockAfter(narrow, '.breadcrumbs-list {')).toContain('display: none;');
+    // With one crumb there is no parent, and the landmark would hold nothing on a phone.
+    expect(blockAfter(narrow, '.breadcrumbs:not(:has(> .breadcrumbs-back)) {')).toContain('display: none;');
+    const wide = blockAfter(css, `@media (width >= ${tokens.breakpoint.sm.value})`);
+    expect(blockAfter(wide, '.breadcrumbs-back {')).toContain('display: none;');
+    for (const [, width] of css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)) {
+      expect(width).toBe(tokens.breakpoint.sm.value);
+    }
+  });
+
+  it("draws the links in the reader's link color and the rest in their text color in forced colors", () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, LINKS)).toContain('color: linktext;');
+    expect(
+      blockAfter(
+        forced,
+        '.breadcrumbs-current, .breadcrumbs-separator, .breadcrumbs-item > .breadcrumbs-text {',
+      ),
+    ).toContain('color: canvastext;');
+  });
+});

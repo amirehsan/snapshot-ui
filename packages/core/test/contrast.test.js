@@ -1687,6 +1687,48 @@ describe('the save bar', () => {
   });
 });
 
+describe('the page header', () => {
+  /** `text` on the header's fill, the canvas at 80%, laid over `under`: what scrolls beneath a stuck header. */
+  const onFill = (text, mode, under) => {
+    const palette = paletteFor(tokens, mode);
+    const fill = composite({ ...parseColor(palette.canvas), a: 0.8 }, parseColor(palette[under]));
+    return contrastRatio(composite(parseColor(palette[text]), fill), fill);
+  };
+
+  // The trail's links, the eyebrow and the description are slate, the title and the current crumb ink, on the
+  // canvas a header at the page's top shows, or on lifted, a Card's, where the app draws one. The gate holds the
+  // four as text.
+  it('cites slate and ink on canvas and lifted, which the gate holds', () => {
+    for (const text of ['slate', 'ink']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // Measured and recorded, not gated: the fill is the canvas at 80%, so what shows through it moves the ground.
+  // Over the canvas and over lifted, slate passes as text; over solid ink, the worst a page can scroll under it,
+  // light slate measures 3.16, which the 20px blur averages away into the canvas before the text is read, and
+  // forced colors draw the system's background color with no blur.
+  const FILL = [
+    { text: 'slate', under: 'canvas', light: 4.84, dark: 7.26 },
+    { text: 'slate', under: 'lifted', light: 4.93, dark: 7.22 },
+    { text: 'slate', under: 'ink', light: 3.16, dark: 5.03 },
+    { text: 'ink', under: 'canvas', light: 16.25, dark: 19.31 },
+    { text: 'ink', under: 'ink', light: 10.61, dark: 10.67 },
+  ];
+
+  it.each(FILL)(
+    'measures $text on the fill over $under at $light in light and $dark in dark',
+    ({ text, under, light, dark }) => {
+      expect(onFill(text, 'light', under)).toBeCloseTo(light, 2);
+      expect(onFill(text, 'dark', under)).toBeCloseTo(dark, 2);
+    },
+  );
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

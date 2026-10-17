@@ -19,6 +19,7 @@ import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
 import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
+import { PageHeader } from '../src/page-header';
 import { PickerOption } from '../src/picker';
 import { ProgressBar } from '../src/progress-bar';
 import { Radio, RadioGroup } from '../src/radio-group';
@@ -485,6 +486,25 @@ describe('an empty documents part slot', () => {
       expect(actions?.childNodes).toHaveLength(2);
       // The host stays, empty and polite, with no icon for a status that is not there.
       expect(container.querySelector('.save-bar-status')).toBeEmptyDOMElement();
+      unmount();
+    }
+  });
+
+  it('draws no trail, eyebrow, description or actions in a PageHeader given false, an empty string or null', () => {
+    for (const empty of [false, '', null]) {
+      const { container, unmount } = render(
+        <PageHeader
+          title="Documents"
+          breadcrumbs={empty}
+          eyebrow={empty}
+          description={empty}
+          actions={empty}
+        />,
+      );
+      // The title alone in the titles, and no actions wrapper beside them.
+      const titles = container.querySelector('.page-header-titles');
+      expect(titles?.childNodes).toHaveLength(1);
+      expect(container.querySelector('.page-header-row')?.children).toHaveLength(1);
       unmount();
     }
   });

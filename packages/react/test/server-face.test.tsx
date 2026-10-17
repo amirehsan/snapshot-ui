@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, inject, it } from 'vitest';
+import { Breadcrumb, Breadcrumbs } from '../src/breadcrumbs';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
@@ -230,6 +231,15 @@ const FACES: [name: string, element: ReactElement][] = [
       status="3 fields need attention"
       statusTone="error"
     />,
+  ],
+  [
+    // Every word is the app's or the default back label, so every locale writes the same trail.
+    'Breadcrumbs',
+    <Breadcrumbs>
+      <Breadcrumb href="/">Home</Breadcrumb>
+      <Breadcrumb href="/documents">Documents</Breadcrumb>
+      <Breadcrumb>Receipts, 2026</Breadcrumb>
+    </Breadcrumbs>,
   ],
 ];
 

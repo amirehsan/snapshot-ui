@@ -931,7 +931,7 @@ document. Four were renamed because they described a marketing page:
 | `--text-footer-link` | `--text-small` | It is the hint and helper text step. |
 | `--text-footer-header` | `--text-overline` | Uppercase column headers in tables and stat tiles. |
 
-Twelve values have no name in the document, so the library gives them one:
+Thirteen values have no name in the document, so the library gives them one:
 
 - `--font-mono` is `ui-monospace`, `SFMono-Regular`, `Menlo`, then the generic
   `monospace`. It is for code only, and Sofia Sans stays the one family for
@@ -945,6 +945,10 @@ Twelve values have no name in the document, so the library gives them one:
 - `--container-sidebar` is 20rem, the navigation rail's full width, and 6.5rem
   under `data-sidebar="collapsed"`. "Floating chrome and the shell" derives
   both.
+- `--container-page` is 82.5rem (1320px), the page column's width with its
+  inline padding: the docs site's content column, whose cap it was before it
+  had a name. Its content is 1256px between 32px of padding, inside the
+  document's 1200 to 1280px content cap. "PageHeader" derives it.
 - `--focus-ring-color` is ink, kept as one reference to `--color-ink` so every
   ring follows the theme and a theme can recolor them all from this one token.
   Each theme scope declares it again, since a variable that holds `var()`
@@ -9836,3 +9840,163 @@ FieldChanged and the scroll helpers.
 read as a group named by its message, its status politely, the discard
 question as an alert dialog, a focused field scrolled clear of the bar on a
 real phone, and `beforeunload`, which iOS Safari does not show.
+
+## PageHeader
+
+A page's header: `PageHeader`, the trail, an eyebrow, the page's one `h1`,
+a sentence and the actions; and `PageColumn`, the column the page under it
+sits in (documents spec 10, rulings 20 and 23, the owner's page width). The
+document's own header is the docs site's, so this one is that header on
+tokens (parent spec risk R8).
+
+**The docs header on tokens** (section 13.2 item 18). The row is the docs
+header's: a wrapping flex row, `align-items: flex-end`, `justify-content:
+space-between`, `gap: var(--spacing-peer)`. Its padding is
+`var(--spacing-separate)` at the top, the docs' 32px, and
+`var(--spacing-peer)` beneath, where the docs wrote 20px, which no token
+holds; under 768px the inset, 16px, all round, with a 16px gap, the docs'
+phone numbers. The titles are a grid with `gap: var(--spacing-part)`, 8px
+where the docs wrote 6px: the trail, the Eyebrow, the title and the
+sentence. The titles take the room the actions leave (`flex: 1 1 auto`), so
+the actions sit at the row's end while they fit and fall under the title,
+at the inline start, when a long title needs the line (ruling 23); under
+768px they always take a line of their own. Nothing is measured and nothing
+moves into a menu. The titles' one column is `minmax(0, 1fr)`, so a trail's
+long crumb ellipsizes rather than hold the column open past a phone's width.
+
+**The title** is `Heading level={1} size={2}`, the section step: 36px,
+28px under 768px by the type tokens' own rule, weight 500 and -2%
+tracking, wrapping at any character and never cut. A page has one. The
+sentence is Text muted, slate at 450, held to `--container-field`, a
+reading measure.
+
+**No rule beneath it** (Appendix A). The header parts from the page by its
+fill and its bottom padding, as the docs header does.
+
+**The fill.** The canvas at 80%, `color-mix(in srgb, var(--color-canvas)
+80%, transparent)`, under `backdrop-filter: blur(20px) saturate(140%)`
+inside `@supports (backdrop-filter: blur(1px))`, else the canvas whole;
+Lightning CSS writes the WebKit prefix into both, so Safari 16.4 blurs too.
+What scrolls under a stuck header shows through it blurred, and the page
+keeps its paper. Measured, light then dark, and recorded, not gated: slate,
+the trail, the eyebrow and the sentence, on the fill over the canvas 4.84
+and 7.26, over lifted 4.93 and 7.22, and over solid ink, the worst a page
+can scroll under it, 3.16 and 5.03; ink, the title and the current crumb,
+16.25 and 19.31 over the canvas and 10.61 and 10.67 over solid ink. Under
+the 4.5 a text needs only over solid ink, which the 20px blur averages into
+the canvas before the text is read. Slate and ink on the canvas and on
+lifted, the header at rest, are gated already.
+
+**The page column** (spec correction 77). `--container-page` is 82.5rem,
+1320px, the docs content column's cap, its inline padding included. The
+column is `box-sizing: border-box`, `inline-size: 100%`,
+`max-inline-size: var(--container-page)`, `margin-inline: auto` and
+`padding-inline: var(--spacing-separate)`, the inset under 768px: the docs
+content column's 32px and 16px, so a page built on it lines up with this
+site's. The header's fill spans its holder and its row is a page column, so
+the titles start where a PageColumn's content starts and the actions end
+where it ends, at any width; past 1320px both are centered in the
+workspace, the room beside the rail shared on both sides. A column inside a
+column takes no second cap and no second padding. In Tailwind,
+`max-w-page` reads `--spacing-page` first, so the width is
+`max-w-(--container-page)`.
+
+**Sticky** (ruling 20). PageHeader has no position of its own. In
+AppShell's `header` slot it sticks with the shell's wrapper at
+`--z-header`; at the top of the content it scrolls away; it never
+condenses. The shell measures its header wrapper after hydration and
+writes the height as `--page-sticky-top` on itself, so a DataTable's header
+row and a SidePanel stick under the header and not behind it, and an
+offset the app declares itself is left alone (spec correction 78). The
+docs advise a sticky header without a sentence, since a phone's screen is
+short.
+
+**Landmarks.** A `header` element: the banner landmark in the shell's
+slot, outside `<main>`, and a plain header at the top of `<main>`. It takes
+no focus and has no keys.
+
+**Forced colors.** The system's background color whole, with no blur,
+since forced colors keep an author color's alpha.
+
+**Size.** `{ PageHeader, PageColumn }` measures 445 B, so the rule sets
+1 kB, spec 16's budget.
+
+**The docs site's own header** moves to PageHeader in the next batch
+(section 13.3 item 7). Its CSS is left as it is here; its 1320px cap and
+32px padding equal the page column's. The next batch also has to place the
+shell's menu button, which the docs header draws before its titles and
+PageHeader has no slot for.
+
+**Screen readers.** Not yet verified (owner action 4): the banner and its
+`h1` in the shell's slot, a plain header inside `<main>`.
+
+## Breadcrumbs
+
+Where a page sits: `Breadcrumbs` and `Breadcrumb`, a trail of links to the
+pages above the current one, the current page last, and one back link on a
+phone (documents spec 10, rulings 21 and 22). The document has no trail.
+
+**Written by hand** (spec correction 8). React Aria's Breadcrumbs names
+its own list as well as the landmark, draws the current page as a disabled
+link and is a collection React Aria draws again after hydration, so the
+library writes `nav.breadcrumbs[aria-label]` holding
+`ol.breadcrumbs-list` of `li.breadcrumbs-item`, each the library's Link
+to its `href` and the last a `span.breadcrumbs-current[aria-current=page]`,
+the WAI-ARIA breadcrumb pattern. Breadcrumbs reads its children's props; a
+Breadcrumb renders nothing by itself. A Breadcrumb a server component
+renders reaches the client module as a reference React resolves lazily, so
+a crumb is told by its type or by its shape (spec correction 79). Both
+faces are real `<a href>` links in the server's HTML, so the trail works
+before hydration and with scripts off; once hydrated, Link takes a press
+through the app's RouterProvider.
+
+**Slate, not link blue** (section 13.2 item 17). Link blue is for a link
+inside text; a trail is navigation, as the rail's items are ink and slate.
+The trail is `--text-small` at 450, its links slate and underlined as Link
+draws them, ink on hover where hover exists; the current page is ink at
+500, not underlined, so it is told by weight and `aria-current` as well as
+color. Each crumb's text ellipsizes past 16rem with its whole text in a
+`title` and the link's name. A link is a flex box, which not every engine
+carries its underline into, so the text draws the underline itself
+(`text-decoration: inherit`), thickening with Link's on hover and press.
+
+**Separators** are Lucide's `ChevronRight` at 16px in slate, a part step
+either side, hidden from assistive technology, after every crumb but the
+last. They point along the trail, so `[dir='rtl']` turns them with
+`scale: -1 1`, the back link's `ChevronLeft` with them, as Pagination's
+and Calendar's chevrons turn; a trail with its own `dir="ltr"` inside a
+right-to-left page turns with the page, as theirs do.
+
+**The 40px hit.** Each link is drawn at its text's 20px and hit at 40px by
+an `::after` with `inset-block: min(0px, calc((100% - var(--size-target)) /
+2))`, the formula every control shares ("Compact density"), so the line
+does not move. A long trail wraps, its lines `calc(var(--size-target) -
+1lh)` apart, a target from line to line, so two lines' hit areas meet and
+never overlap.
+
+**The back link** (ruling 22). Under 768px of viewport the list is
+`display: none` and `a.breadcrumbs-back` is drawn: the parent's link, its
+chevron first, named "Back to Documents" by `backLabel`. Over 768px it is
+`display: none`. Both are in the server's HTML and the media query picks,
+so nothing is measured and the hidden face is out of the accessibility
+tree. Its text runs to the line's end, as the one link there; it keeps its
+own width (`justify-self: start`), so its hit area is no wider than it.
+With one crumb there is no parent, and on a phone the landmark is not drawn
+(`:not(:has(> .breadcrumbs-back))`), so it is never an empty landmark.
+Focus never falls to the page as the faces switch: as the viewport crosses
+768px with focus in the face being hidden, the trail gives it from a
+crumb's link to the back link, or from the back link to the parent's link,
+before the new face is drawn (spec correction 81). The
+trail is a one-column grid, `minmax(0, 1fr)`, so in a centering grid or a
+flex row a long crumb ellipsizes rather than widen its holder (spec
+correction 80).
+
+**Forced colors.** The links `linktext`, the current page, a crumb with no
+link and the separators `canvastext`.
+
+**Size.** `{ Breadcrumbs, Breadcrumb }` measures 985 B without React Aria
+and Lucide, so the rule sets 1.5 kB, spec 16's budget; it carries Link.
+
+**Screen readers.** Not yet verified (owner action 4): the trail read as a
+navigation landmark with the current page, and on a phone its one back
+link.

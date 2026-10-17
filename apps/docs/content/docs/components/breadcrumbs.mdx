@@ -1,0 +1,73 @@
+---
+title: Breadcrumbs
+description: 'Where a page sits, as links to the pages above it, and one back link on a phone.'
+icon: ChevronsRight
+---
+
+<Section>
+
+## Basic
+
+`Breadcrumbs` takes `Breadcrumb` elements from the top of the trail down to the current page, which comes last and has no `href`. The links are slate and underlined, with a chevron between them, and the current page is ink. Narrow the window under 768px and the trail becomes one link, "Back to Documents".
+
+<Preview name="breadcrumbs-basic" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+- The current page is the last crumb, without `href`: it is drawn as text and marked as the current page. Every crumb above it has its `href`; one without is drawn as text and warns in the console.
+- The links go through your `RouterProvider`, as every library link does. They are real links in the server's HTML, so the trail works before the page has loaded and with scripts off.
+- A long trail wraps onto a second line. Each crumb's text ends in an ellipsis past 16rem, with its whole text in a tooltip and in the link's name. Nothing collapses into a menu.
+- Under 768px the trail is one link to the parent, named "Back to" the parent's text: a phone gets the one step it can use. With one crumb there is no parent, and the trail is not drawn on a phone at all. `backLabel` writes the link in your words, for another language.
+- Put it in a [Page header](/docs/components/page-header)'s `breadcrumbs`, above the title.
+
+```tsx
+import { Breadcrumb, Breadcrumbs } from '@snapshot-ui/react';
+
+<Breadcrumbs>
+  <Breadcrumb href="/">Home</Breadcrumb>
+  <Breadcrumb href="/documents">Documents</Breadcrumb>
+  <Breadcrumb>Receipts, 2026</Breadcrumb>
+</Breadcrumbs>;
+
+// A Persian trail names its landmark and its back link in Persian.
+<Breadcrumbs aria-label="مسیر" backLabel={(parent) => `بازگشت به ${parent}`}>
+  <Breadcrumb href="/">خانه</Breadcrumb>
+  <Breadcrumb>اسناد</Breadcrumb>
+</Breadcrumbs>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+<PropsTable label="Breadcrumbs props" path="../../packages/react/src/breadcrumbs/Breadcrumbs.tsx" type="BreadcrumbsProps" />
+
+<PropsTable label="Breadcrumb props" path="../../packages/react/src/breadcrumbs/Breadcrumbs.tsx" type="BreadcrumbProps" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The trail is a navigation landmark named "Breadcrumbs" holding an ordered list, as the WAI-ARIA breadcrumb pattern describes. The current page is the last item, marked `aria-current="page"` and drawn at a heavier weight, so it is never told by color alone; it is text, not a link, and not a tab stop. The chevrons are hidden from assistive technology. On a phone the same landmark holds one link, "Back to Documents". When the window crosses 768px with focus in the trail, focus moves to the face now drawn: from a crumb to the back link, or from the back link to the parent's crumb, never to the page. Each link is hit at 40px tall. In forced colors the links take the reader's link color and the current page their text color.
+
+<Keys rows={[['Tab', 'Through each crumb\'s link, then on; the current page is not a stop.'], ['Enter', 'On a crumb, follows its link through your router.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps a trail in the system.
+
+<Rules dos={['End the trail with the current page.', 'Use the pages\' own titles as the crumbs.', 'Keep the trail to the levels above the page.']} donts={['Never draw the trail in link blue: it is navigation, not a link in text.', 'Never give the current page a link.', 'Never fold the middle of a trail into a menu.']} />
+
+</Section>
