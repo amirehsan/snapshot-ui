@@ -30,7 +30,7 @@ const meta = {
   title: 'Components/StatTile',
   component: StatTile,
   // Padded, not centered: a tile is a size container and takes no width from its content, so it needs a block
-  // to fill. Centered, the canvas shrinks to its content and every tile to its padding.
+  // to fill. Centered, the canvas shrinks to its content and every tile to its 16rem stand-in width.
   parameters: { layout: 'padded' },
   args: {
     label: 'Spending',
@@ -178,6 +178,31 @@ export const LinkedHover: Story = {
     await userEvent.hover(link);
     await expect(getComputedStyle(link).backgroundColor).toBe(
       paint('color-mix(in srgb, var(--color-ink) 5%, var(--color-lifted))', link),
+    );
+  },
+};
+
+/**
+ * Three tiles in a flex row, each sized from its content as a flex item is: every tile is the 16rem it names in
+ * place of the content a size container does not give, with its narrow layout, where it was its padding wide.
+ */
+export const InAFlexRow: Story = {
+  tags: ['no-visual'],
+  render: (args) => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-inset)' }}>
+      <StatTile {...args} style={undefined} />
+      <StatTile {...args} label="Income" style={undefined} />
+      <StatTile {...args} label="Saved" style={undefined} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const tiles = [...canvasElement.querySelectorAll('.stat-tile')];
+    await expect(tiles).toHaveLength(3);
+    for (const tile of tiles) await expect(tile.getBoundingClientRect().width).toBe(16 * 16);
+    // The figure is never broken: one line.
+    const value = part(canvasElement, 'stat-tile-value');
+    await expect(value.getBoundingClientRect().height).toBeLessThan(
+      parseFloat(getComputedStyle(value).lineHeight) * 1.5,
     );
   },
 };

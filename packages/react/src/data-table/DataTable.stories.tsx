@@ -19,6 +19,7 @@ import {
   hrefOf,
   keyOf,
   manyTransactions,
+  money,
   TRANSACTIONS,
   type Transaction,
 } from '../stories/transactions';
@@ -1480,6 +1481,103 @@ export const WrappingColumn: Story = {
       <Sorted columns={WRAPPING_COLUMNS} items={EIGHT.slice(0, 4)} />
     </Box>
   ),
+};
+
+/** The payee over its category, and the amount over its account: a title and a slate line in each. */
+const TWO_LINE_COLUMNS: DataTableColumn<Transaction>[] = columnsOf(['date', 'payee', 'account', 'amount'], {
+  payee: {
+    cell: (row) => (
+      <>
+        {row.payee}
+        <span className="data-table-cell-meta">{row.category}</span>
+      </>
+    ),
+  },
+  amount: {
+    cell: (row) => (
+      <>
+        {money(row.minor)}
+        <span className="data-table-cell-meta">{row.account}</span>
+      </>
+    ),
+  },
+});
+
+/**
+ * Rows of two lines, a title over a slate line, as a list page often draws them: each 72px, its lines a quarter
+ * rem apart and 13.5px off the rules, as one line is in its 48px row, and the one-line cells centered beside them.
+ */
+export const TwoLine: Story = {
+  render: () => (
+    <Box>
+      <Sorted columns={TWO_LINE_COLUMNS} currentKey="t3" />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const row = rowAt(canvasElement, 0);
+    const box = row.getBoundingClientRect();
+    await expect(Math.abs(box.height - 72)).toBeLessThan(0.5);
+    const payee = only(row, '[role="rowheader"]');
+    await expect(Math.abs(parseFloat(getComputedStyle(payee).paddingTop) - 13.5)).toBeLessThan(0.1);
+    const meta = only(payee, '.data-table-cell-meta');
+    await expect(getComputedStyle(meta).color).toBe(tokenColor('--color-slate'));
+    await expect(getComputedStyle(meta).fontWeight).toBe('450');
+    await expect(getComputedStyle(meta).marginTop).toBe('4px');
+    // The account, one line, centered on the row.
+    const account = row.querySelectorAll('[role="gridcell"]')[1];
+    if (account === undefined) throw new Error('No account cell');
+    const range = document.createRange();
+    range.selectNodeContents(account);
+    const line = range.getBoundingClientRect();
+    await expect(Math.abs((line.top + line.bottom) / 2 - (box.top + box.bottom) / 2)).toBeLessThanOrEqual(2);
+  },
+};
+
+/**
+ * The second line in each state a row takes: granite on a hovered row's wash and a selected row's, slate on the
+ * current row, which takes no wash, and taupe on a disabled row. The a11y check measures each after the play, in
+ * both themes.
+ */
+export const TwoLineStates: Story = {
+  tags: ['viewport-desktop', 'no-visual'],
+  render: () => (
+    <Box>
+      <Selecting initial={['t2']} columns={TWO_LINE_COLUMNS} currentKey="t3" disabledKeys={['t4']} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const metaOf = (index: number): HTMLElement => only(rowAt(canvasElement, index), '.data-table-cell-meta');
+    const row = rowAt(canvasElement, 0);
+    await userEvent.hover(row);
+    await waitFor(() => expect(row).toHaveAttribute('data-hovered', 'true'));
+    await expect(getComputedStyle(metaOf(0)).color).toBe(tokenColor('--color-granite'));
+    await expect(selectedKeysOf(canvasElement)).toEqual(['t2']);
+    await expect(getComputedStyle(metaOf(1)).color).toBe(tokenColor('--color-granite'));
+    await expect(getComputedStyle(metaOf(2)).color).toBe(tokenColor('--color-slate'));
+    await expect(getComputedStyle(metaOf(3)).color).toBe(tokenColor('--color-taupe'));
+  },
+};
+
+/**
+ * In a flex row beside a fixed column, as a page with a filter rail lays it out: the table takes the room left
+ * and draws its table face, where a size container with no width of its own drew the list at none.
+ */
+export const InAFlexRow: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <RouterProvider navigate={noop}>
+      <div style={{ display: 'flex', gap: 'var(--spacing-peer)', width: 'min(72rem, 100%)' }}>
+        <div style={{ flex: 'none', inlineSize: '12rem' }}>Filters</div>
+        <Sorted />
+      </div>
+    </RouterProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const table = only(canvasElement, '.data-table');
+    await expect(table.getBoundingClientRect().width).toBeGreaterThan(40 * 16);
+    await expect(only(table, '.data-table-grid')).toBeVisible();
+    await expect(getComputedStyle(only(table, '.data-table-list')).display).toBe('none');
+  },
 };
 
 /** An actions column: its header draws nothing and is still named "Actions", each cell a row menu's button. */

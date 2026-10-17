@@ -98,6 +98,7 @@ import NumberFieldStates from './number-field-states';
 import NumberFieldUrl from './number-field-url';
 import PaginationButtons from './pagination-buttons';
 import PaginationCursor from './pagination-cursor';
+import PaginationInARow from './pagination-in-a-row';
 import PaginationLinks from './pagination-links';
 import PaginationNarrow from './pagination-narrow';
 import PaginationPersian from './pagination-persian';
@@ -260,6 +261,7 @@ export const examples = {
   'number-field-url': NumberFieldUrl,
   'pagination-buttons': PaginationButtons,
   'pagination-cursor': PaginationCursor,
+  'pagination-in-a-row': PaginationInARow,
   'pagination-links': PaginationLinks,
   'pagination-narrow': PaginationNarrow,
   'pagination-persian': PaginationPersian,

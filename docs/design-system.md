@@ -5104,6 +5104,16 @@ a caption and a small trend, on the Card's surface. The document's token
 table names the overline step for "Uppercase column headers in tables and
 stat tiles", and has no tile of its own, so this one is derived.
 
+**A width of its own** (patch 0.6.1). The tile is a size container, so a
+flex row or an `auto` grid column gave it no content width and drew it
+its padding wide. It names `contain-intrinsic-inline-size: calc(16rem -
+2 * var(--spacing-card) - 2px)`, a whole tile of 16rem, at which its
+narrow layout draws a figure of nine characters whole and which never
+pushes a 320px phone's page sideways; in a block or a sized grid column
+it fills as before. It takes no `flex`: tiles in a grid row stretch to
+one height, which a height cap would break. The `InAFlexRow` story holds
+three tiles 16rem wide in a wrapping flex row.
+
 **Surface.** The Card's: Lifted, the 1px hairline, `--radius-stadium` and
 `--spacing-card`, so a tile follows density with no token of its own: 32px
 of padding, 20px in compact. A tile directly in a `.card`, or anywhere in a
@@ -6550,15 +6560,20 @@ and joins, `currentColor`, since a Lucide icon is a client module and
 would make the shell one (spec correction 20).
 
 **Markup.** `nav.pagination`, named by `labels.navigation`, which is why
-`aria-label` is not in the props, holds `div.pagination-row` and then
-the status. The row holds `p.pagination-range`, the visible range, and,
+`aria-label` is not in the props, and carrying the range as
+`data-range`, holds `div.pagination-box`, the size container, around
+`div.pagination-row`, and then the status (patch 0.6.1, "A width of its
+own"). The row holds `p.pagination-range`, the visible range, and,
 while there is more than one page, `ol.pagination-list` of
 `li.pagination-item` with `data-kind` `step`, `page` or `gap`: Previous,
 the pages and gaps, Next. With one page or none the range shows alone.
 The range is slate at the `--text-small` step with tabular figures, and
-it is the app's sentence, so it wraps inside the row and breaks a long
-word anywhere, `min-width: 0; overflow-wrap: anywhere`, rather than push
-the page sideways.
+it is the app's sentence, so it wraps between words inside the row,
+`min-width: 0; overflow-wrap: break-word`, and breaks a word only when
+that word alone is wider than the row. It was `anywhere` until patch
+0.6.1, which also lowers the range's min-content width to one letter, so
+a parent that sized the nav from its content drew the range a letter a
+line (below).
 
 **Seven slots.** `pageItems` gives the first page, the last, the current
 one with `siblingCount` each side (1 by default), and a gap where pages
@@ -6606,8 +6621,9 @@ not-allowed` and no wash. The chevrons point the way they go:
 so Previous, at the right in right to left, points right. Nothing else
 is mirrored.
 
-**Narrow.** The nav is a size container, `container: pagination /
-inline-size`, and under 30rem of it the numbers and gaps leave, the step
+**Narrow.** The box inside the nav is a size container, `container:
+pagination / inline-size` (the nav itself until patch 0.6.1), and under
+30rem of it the numbers and gaps leave, the step
 words become visually hidden and stay the steps' names, and the range
 sits centered between the two steps: the list is laid over the range in
 one grid cell and spreads the steps to the ends, and the range is kept
@@ -6616,6 +6632,66 @@ only what is inside the container, never the container, so the row
 inside the nav is what the query re-lays (spec correction 24). A phone
 keeps two 40px targets and the range; a narrow column on a wide page
 narrows too.
+
+**A width of its own** (patch 0.6.1). A size container takes no width
+from its content: under inline-size containment its min-content and
+max-content widths are zero. An app put Pagination in a flex row with
+`justify-content: space-between` beside a "Show 100 a page" link, at a
+desktop width of about 1870px, and the row sized the nav from its
+content, zero: under 30rem of it the narrow row drew, the range in a
+column one letter wide, since `anywhere` let it break between any two
+letters, and the steps' list wrapped them one over the other. An `auto`
+grid column did the same, and so did the app's own row with `flex-wrap:
+wrap` at 1440px. The library's own Pagination baselines had drawn it so
+from the start: the stories sat in Storybook's centered canvas, which sizes its
+content from the content's width, and their 48rem box resolved its 100%
+against that, so every picture held a range one letter wide; the stories
+now sit in the padded canvas. So the nav is no longer the container:
+
+- `div.pagination-box` inside it is, and the queries read its width,
+  which is the nav's.
+- The nav takes its intrinsic widths from the narrow row, drawn and never
+  seen: `.pagination::before` writes the range again from `data-range`,
+  at the range's step, with a control and half a rem each side, the room
+  the range keeps clear of the steps under 30rem, in a block 0 tall,
+  hidden, and so out of the accessibility tree. Its min-content width is
+  the range's longest word and the two steps, about 172px for "1 to 50 of
+  1,284 transactions", and its max-content width the range on one line
+  and the two steps, 277px, capped at 18rem, the content of a 320px
+  phone. A parent that sizes the nav from its content, an `auto` grid
+  column or a `fit-content` box, draws the narrow row whole, and never a
+  word broken.
+- `flex: 1 1 0` takes the room its siblings leave in a flex row, from a
+  zero basis, so a sibling such as the link keeps its own width and never
+  shrinks for the nav, at a desktop width and on a phone alike; the
+  automatic minimum, the narrow row's min-content width, keeps the nav
+  from narrowing past its longest word, and in a wrapping row moves the
+  link to a line of its own first.
+- `max-block-size: max-content` keeps that flex from making it taller
+  than its row in a flex column with room to spare, where `flex` works on
+  the block axis. Chromium and WebKit honor it; Firefox treats an
+  intrinsic keyword in the block axis as the initial value (Mozilla bugs
+  567039 and 1597055), so there a nav that is the direct child of a flex
+  column with room to spare takes a share of that room below its row.
+  The play checks the cap where the engine honors it.
+
+A stand-in width, `contain-intrinsic-inline-size` on the nav as the
+container, was tried first: it sets the min-content and max-content
+widths alike, so 18rem, wide enough for the narrow row, pushed the docs'
+320px pages 22 to 50px sideways inside the centered stage, which sizes
+its column from min-content. In a block, or a grid column sized with
+`fr`, the nav fills the width as before. The `Checks/Pagination layout`
+stories hold it in eight parents at 1280px and 375px, in link and button
+mode and the short form, in three engines, a wrapping flex row among
+them: the range one line at 1280px except in the `auto` column,
+the controls on one line, the nav its row tall, the link at the row's
+end, no control outside the nav, the range never narrower than its
+widest word, and nothing scrolling sideways. The docs' "In a row" section
+and its example say which parent gives which width. DataTable and
+StatTile, the only other parts that set a container on their own root,
+had the same trap (their records). FilterBar, SegmentedControl and Tabs
+set none: FilterBar reads the viewport, and the
+DataTable bulk bar is a plain wrapping flex row.
 
 **Just above narrow.** Under 36rem of the nav the step words become
 visually hidden names and the steps chevron circles, `padding-inline:
@@ -7805,7 +7881,12 @@ recorded rule.
 compact density and 44px compact on a coarse pointer, the field's height
 and never under the 40px target, so a row holds a 40px checkbox in every
 density and a finger always has a row to press. Cells are padded the
-inset step, 16px, at their inline ends and centered on the line.
+inset step, 16px, at their inline ends, so columns stand 32px apart, and
+centered on the line. Above and below, a text cell is padded what a
+one-line row leaves either side of its line and its rule, `(row - line -
+1px) / 2`: 13.5px in a 48px row, 9.5px in compact. A cell of two lines
+holds them as far off the rules as one line is, so a two-line row is
+72px, 64px in compact (patch 0.6.1, "Row spacing" in DataTable).
 
 **Rules, not stripes.** One 1px `--color-divider` rule under each row and
 under the header, none above the first row, and a 1px `--color-frame`
@@ -8003,9 +8084,10 @@ the cue is a line. A load shorter than `QUIET_MS` draws nothing.
 **Column options** (amendments 4 and 5, spec correction 47). `overflow:
 'wrap'` lets a column's text run to two lines and clamps it there with
 an ellipsis, `-webkit-line-clamp` on a `span.data-table-wrap` in the
-cell, since a table cell cannot be the clamping box, with a part step
-above and below, so its two lines sit off the row's rules as one line
-does in its 48px row (spec correction 67); the row grows to hold it,
+cell, since a table cell cannot be the clamping box, its two lines as
+far off the row's rules as one line is in its 48px row, a part step
+until patch 0.6.1 and every text cell's block padding since (spec
+correction 67, "Row spacing"); the row grows to hold it,
 and its full text is still the row's name; an end-aligned column never
 wraps, its figures stay unbroken. Every cell of that row stays centered
 on it: the checkbox and a row menu have no text baseline to share with
@@ -8322,6 +8404,77 @@ once per mount, names the others: "DataTable: selectedKeys holds keys
 that are not in items: t41, t42. Clear the selection when the rows
 change." The docs clear the selection on every change of the rows.
 
+**Row spacing** (patch 0.6.1). An app that draws every row as a name
+over a slate second line found its rows too close: two 20px lines filled
+a 48px row, 4px above and below. Measured before: a row 48px with
+`padding-block: 0` and 16px inline, columns 32px apart, the header 40px,
+a wrapping cell 56px with a part step above and below, and a list item
+10px by 16px with its two lines 2px apart, 62px tall. Against other
+systems, from their published sources:
+
+| System | One-line row | Cell padding | Several lines |
+| --- | --- | --- | --- |
+| Material data table (`@material/data-table` 14) | 52px, dense down to 36px; header 56px | 16px inline, 0 block | its lists (`@material/list` 14): 48px for one line, 64px for two, 72px with a leading graphic, 88px for three |
+| IBM Carbon (`@carbon/styles` 1.117) | xs 24, sm 32, md 40, lg 48 (the React default), xl 64; header matches | 16px inline | xl, 64px, is for two lines: 16px above and below, top aligned, the second line at label-01 |
+| GitHub Primer DataTable (`@primer/react` 38) | condensed 28, normal 36, spacious 44 (12px text on a 20px line) | 4 by 8, 8 by 12, 12 by 16; 16px at the row's ends | none; a cell grows |
+| Shopify Polaris IndexTable (13.9) | about 32px | 6px, 12px at the first cell | none; a cell grows |
+| Atlassian dynamic table (19.3) | about 28px | 4px block, 8px inline | none; a cell grows |
+| Apple (UIKit) | 44pt, the touch target | | a subtitle cell grows |
+
+Linear and Stripe publish no numbers, so none are quoted here. The
+systems agree on 16px at a cell's inline ends, on about 48px for a
+comfortable one-line row and on 64 to 72px for two lines, with 12 to
+16px above and below them. So a text cell's block padding is what a
+one-line row leaves either side of its line and its 1px rule, `calc((var(--data-table-row) - var(--text-small) * var(--text-small--line-height) - 1px) / 2)`,
+`--data-table-pad-block` on the root: 13.5px. A one-line row stays 48px
+and a two-line row is 72px, its text as far off the rules as one line;
+compact density gives 9.5px, 40px and 64px. The value comes from the row
+and type tokens, so no spacing token is added. A cell that holds only a
+control, and the checkbox column, take no block padding, since the
+control is a target tall and the row's height centers it; a cell with
+something taller than a line, a badge, grows its row by the difference.
+Columns stay 32px apart and the header 40px, the target. A wrapping cell
+is 68px. Skeleton rows stay a one-line row tall, and the totals row is a
+row; the sticky header, the bar, the current bar and the focus rings
+follow the row's box and need nothing.
+
+**A second line in a cell.** `span.data-table-cell-meta`, written by the
+app inside its cell: a block, a quarter rem, 4px, under the first line,
+slate at the cell weight, 450 even under the row header's 500 or the
+current row's 700, ending in an ellipsis. It reads the slate token, so
+a hovered or a selected row or item, which sets `--color-slate` to
+granite (patch 0.6.1), draws it granite on its wash, and a disabled
+row's is taupe with the rest of its text. Its pairs: slate at rest, 4.84
+and 7.26 on canvas and 5.31 and 6.94 on lifted, gated; granite on the 5%
+hover wash, 5.94 and 9.00 over canvas and 6.52 and 8.18 over lifted;
+granite on the 8% selected wash, 5.59 and 8.50 over canvas and 6.12 and
+7.63 over lifted, all over 4.5, which the contrast test holds. The
+`TwoLine` story measures a 72px row, the cell's 13.5px padding and the
+one-line account centered on the row; `TwoLineStates` reads the line
+granite in a hovered and a selected row, slate in the current one and
+taupe in a disabled one, and the a11y check measures each. The list
+item's two lines are 4px apart too, its block padding the same 13.5px,
+so an item of two lines is the 72px a two-line row is, and a skeleton
+item matches it.
+
+**Density.** No `density` prop: the system already has one density axis,
+`data-density="compact"`, which DataTable follows through
+`--size-field`, as Primer's `cellPadding` would; a third, roomier step
+would be a token change for every part, not a table option.
+
+**A width of its own** (patch 0.6.1). The root is a size container, so
+in a flex row, or an `auto` grid column, it had no content width and drew
+the list face at none. It has no text to size itself by, as
+Pagination's range does, so it names a width: `contain-intrinsic-inline-size:
+12rem`, the list face with an item's title, second line and amount
+still readable, and small enough never to push a phone's page sideways
+(18rem pushed the docs' 320px page 22px). `flex: 1 1 0; min-inline-size:
+0` takes the room its siblings leave in a flex row, and `max-block-size:
+max-content` keeps it no taller than its content in a flex column, in
+Chromium and WebKit (Firefox grows it there, as Pagination's record
+says). The
+`InAFlexRow` story holds the table face beside a 12rem column.
+
 **The list face** (ruling 8, spec 8). Both faces are in the server's
 HTML, and a container query on DataTable's own box shows one: under
 40rem the grid is `display: none` and `div.data-table-list` is drawn,
@@ -8351,7 +8504,9 @@ correction 51).
 **An item.** Each row is a `GridListItem`, named by the row's text as
 the table's row is and described by its meta and end parts, each part
 by its own id so they are heard a word apart (spec correction 59), at least `max(--size-target, 3.5rem)` tall for two
-lines, 10px by 16px of padding, its parts 12px apart, at the small step
+lines, its lines 4px apart, padded `--data-table-pad-block` by 16px,
+13.5px as a row's cells (patch 0.6.1; it was 10px with the lines 2px
+apart), so two lines make 72px, its parts 12px apart, at the small step
 at 450, and a divider rule under it but the last of its day. A column's
 `listSlot` places its cell: `'title'`, the first line at 500, which the
 row header takes by default and where its link is, stretched over the

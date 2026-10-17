@@ -43,6 +43,22 @@ The row responds to its own width, not the viewport's, so a narrow column on a w
 
 <Section>
 
+## In a row
+
+Pagination works as a plain item in any parent, with no wrapper:
+
+- In a block, or a grid column sized with `fr`, it fills the width.
+- In a flex row, wrapping or not, it takes the room its siblings leave, so a link such as "Show 100 a page" keeps its own width at the end.
+- In a column sized by its content, such as a grid column of `auto` or a parent of `width: fit-content`, it is as wide as the narrow row: the range between the two steps. Give that column `minmax(0, 1fr)` for the full row.
+
+On a phone it narrows with the row it is in, never below the range's longest word between the steps, and the range wraps between words.
+
+<Preview name="pagination-in-a-row" />
+
+</Section>
+
+<Section>
+
 ## More siblings
 
 `siblingCount` sets how many pages show each side of the current one, 1 by default. Since the step words hide under 36rem, the numbers still fit just above 30rem. Here two siblings each side fit in a 30.5rem column. If the row is still wider than the nav, as with many siblings on a phone's larger controls, the list wraps to the end of the row instead of scrolling the page sideways.
