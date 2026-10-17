@@ -475,7 +475,7 @@ export function UploadTray({
                 aria-label={labels.clear}
                 data-closer="bar"
                 onPress={() => {
-                  onClear?.();
+                  onClear();
                 }}
               >
                 <X aria-hidden="true" />

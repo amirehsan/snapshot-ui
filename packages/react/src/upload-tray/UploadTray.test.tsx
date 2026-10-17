@@ -35,6 +35,13 @@ const wide = (name: string | RegExp = /Uploading|complete/): HTMLElement =>
 /** The phone's bar: the region named "Uploads". */
 const bar = (): HTMLElement => screen.getByRole('region', { name: 'Uploads' });
 
+/** The bar's first button, the one that opens the sheet. */
+function barButton(): HTMLElement {
+  const [button] = within(bar()).getAllByRole('button');
+  if (!button) throw new Error('No bar button');
+  return button;
+}
+
 /** A ResizeObserver whose callback the test calls, standing in for the browser's. */
 function stubResizeObserver(): {
   observed: Element[];
@@ -171,9 +178,11 @@ describe('UploadTray', () => {
   });
 
   it('counts the running batch in the title, not the rows settled before it', () => {
+    const lease: UploadItem = { id: 1, name: 'lease.pdf', status: 'saved' };
+    const invoice: UploadItem = { id: 2, name: 'invoice.pdf', status: 'saved' };
     const earlier: UploadItem[] = [
-      { id: 1, name: 'lease.pdf', status: 'saved' },
-      { id: 2, name: 'invoice.pdf', status: 'saved' },
+      lease,
+      invoice,
       { id: 3, name: 'video.mov', status: 'failed', reason: 'Over 10 MB' },
     ];
     const { rerender } = render(<UploadTray items={earlier} />);
@@ -187,8 +196,8 @@ describe('UploadTray', () => {
     rerender(
       <UploadTray
         items={[
-          earlier[0] as UploadItem,
-          earlier[1] as UploadItem,
+          lease,
+          invoice,
           { id: 3, name: 'video.mov', status: 'waiting' },
           { id: 4, name: 'march.pdf', status: 'saved' },
           { id: 5, name: 'april.pdf', status: 'uploading', progress: 0.5 },
@@ -200,8 +209,8 @@ describe('UploadTray', () => {
     rerender(
       <UploadTray
         items={[
-          earlier[0] as UploadItem,
-          earlier[1] as UploadItem,
+          lease,
+          invoice,
           { id: 3, name: 'video.mov', status: 'saved' },
           { id: 4, name: 'march.pdf', status: 'saved' },
           { id: 5, name: 'april.pdf', status: 'saved' },
@@ -319,7 +328,7 @@ describe('UploadTray', () => {
     const onClear = vi.fn();
     const onCancelAll = vi.fn();
     const open = async (): Promise<HTMLElement> => {
-      await user.click(within(bar()).getAllByRole('button')[0] as HTMLElement);
+      await user.click(barButton());
       return screen.findByRole('dialog');
     };
     const { rerender, unmount } = render(
@@ -354,9 +363,10 @@ describe('UploadTray', () => {
     expect(within(bar()).getAllByRole('button')).toHaveLength(1);
     rerender(<UploadTray items={SETTLED} onClear={onClear} />);
     const [open, clear] = within(bar()).getAllByRole('button');
+    if (!open || !clear) throw new Error('Two buttons');
     expect(open).toHaveAccessibleName('3 uploads complete, 1 failed, 1 needs review');
     expect(clear).toHaveAccessibleName('Clear');
-    await user.click(clear as HTMLElement);
+    await user.click(clear);
     expect(onClear).toHaveBeenCalledTimes(1);
     rerender(<UploadTray items={SETTLED} />);
     expect(within(bar()).getAllByRole('button')).toHaveLength(1);
@@ -555,7 +565,7 @@ describe('UploadTray', () => {
     const user = userEvent.setup();
     render(<UploadTray items={SETTLED} onRemove={vi.fn()} onClear={vi.fn()} />);
     await expectNoA11yViolations(bar());
-    await user.click(within(bar()).getAllByRole('button')[0] as HTMLElement);
+    await user.click(barButton());
     const sheet = await screen.findByRole('dialog');
     await expectNoA11yViolations(sheet);
   });
