@@ -69,5 +69,8 @@ describe('dist/tailwind.css', () => {
     // A Tailwind user reads a size as an arbitrary value: h-(--size-control).
     expect(theme).not.toContain('--size-');
     expect(theme).not.toContain('--z-');
+    // Nor the motion tokens: a component reads them by name, as a transition's duration and curve.
+    expect(theme).not.toContain('--ease-');
+    expect(theme).not.toContain('--duration-');
   });
 });
