@@ -19,6 +19,7 @@ export default function SkeletonCard(): ReactElement {
               </div>
             </div>
             <Skeleton shape="block" height="6rem" />
+            <Skeleton width="30%" />
           </CardBody>
         </Card>
       </div>

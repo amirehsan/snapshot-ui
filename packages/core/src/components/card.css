@@ -44,10 +44,7 @@
      not on this surface and keeps its corner. */
   .card > .card,
   .card-body .card {
-    --holder-radius: max(
-      var(--radius-micro),
-      calc(var(--radius-stadium) - 1px - var(--spacing-card))
-    );
+    --holder-radius: max(var(--radius-micro), calc(var(--radius-stadium) - 1px - var(--spacing-card)));
 
     border-color: var(--color-frame);
   }

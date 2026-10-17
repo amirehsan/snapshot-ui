@@ -59,7 +59,9 @@ for (const [title, ids] of groups) {
     for (const shape of SHAPES) {
       for (const [position, id] of ids.entries()) {
         if (position === 0) {
-          await page.goto(`/iframe.html?id=${id}&viewMode=story&globals=theme:light;shape:${shape};a11y.manual:!true`);
+          await page.goto(
+            `/iframe.html?id=${id}&viewMode=story&globals=theme:light;shape:${shape};a11y.manual:!true`,
+          );
         } else {
           await page.evaluate((storyId) => {
             (window as PreviewWindow).__STORYBOOK_ADDONS_CHANNEL__?.emit('setCurrentStory', {

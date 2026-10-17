@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { expect } from 'storybook/test';
 import { Card, CardBody } from '../card';
 import { nestedCardPixels } from '../stories/corner';
-import { paint, tokenColor, tokenPixels } from '../stories/paint';
+import { paint, tokenColor } from '../stories/paint';
 import { StatTile } from './StatTile';
 
 /** Each tile fills its column up to 24rem: 318px of content at 1280, over the 18rem the trend moves at. */

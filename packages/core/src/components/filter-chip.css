@@ -157,14 +157,12 @@
     inset-inline: 0;
   }
 
-  /* The circle sits 4px in from the chip's end and its 1px edge, so it is concentric with the chip: the
-     chip's radius less 5px, a circle in Rounded and 7px in Soft. */
   .filter-chip-clear-icon {
     display: inline-grid;
     place-items: center;
     width: 1.5rem;
     height: 1.5rem;
-    border-radius: max(0px, calc(var(--radius-pill) - 1px - 0.25rem));
+    border-radius: var(--radius-pill);
   }
 
   .filter-chip-clear-icon svg {

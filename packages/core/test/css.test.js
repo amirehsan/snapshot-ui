@@ -663,14 +663,14 @@ describe('src/components/input.css, the field button', () => {
   const WASH = 'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);';
   const ENABLED = ':not(:disabled, [data-disabled])';
 
-  it('sizes the field button a field step smaller than the field, on the pill radius', () => {
+  it('sizes the field button a field step smaller than the field, concentric with the field', () => {
     const button = blockAfter(rules(), '.input-button {');
     for (const declaration of [
       'position: absolute;',
       'inset-inline-end: 0.375rem;',
       'width: calc(var(--size-field) - 0.75rem);',
       'height: calc(var(--size-field) - 0.75rem);',
-      'border-radius: var(--radius-pill);',
+      'border-radius: max(0px, calc(var(--input-radius, var(--radius-pill)) - 0.375rem));',
       'background-color: transparent;',
       'color: var(--color-slate);',
     ]) {
@@ -1156,11 +1156,14 @@ describe('src/components/card.css', () => {
     expect(blockAfter(source, '.card-note {')).not.toContain('overflow-wrap');
   });
 
-  it('steps a card down only when it sits in a card or in its body, never for any descendant', () => {
+  it('makes a card concentric only when it sits in a card or in its body, never for any descendant', () => {
     const source = rules();
     const nested = blockAfter(source, '.card > .card,');
     expect(source).toMatch(/\.card > \.card,\s*\.card-body \.card \{/);
-    expect(nested).toContain('border-radius: var(--radius-surface);');
+    // The outer card's radius less its edge and padding, on the tokens, since the inner card names its own.
+    expect(closeUp(nested)).toContain(
+      '--holder-radius: max(var(--radius-micro), calc(var(--radius-stadium) - 1px - var(--spacing-card)));',
+    );
     expect(nested).toContain('border-color: var(--color-frame);');
     // A card on a well of its own, such as the docs preview stage, keeps its stadium corner.
     expect(source).not.toMatch(/\.card \.card/);
@@ -1620,7 +1623,8 @@ describe('the density tokens in the controls and the card', () => {
 
   it('pads the card from --spacing-card and keeps 20px under the title in compact', () => {
     const card = rules('card.css');
-    expect(blockAfter(card, '.card {')).toContain('padding: var(--spacing-card);');
+    expect(blockAfter(card, '.card {')).toContain('--holder-pad: var(--spacing-card);');
+    expect(blockAfter(card, '.card {')).toContain('padding: var(--holder-pad);');
     const header = blockAfter(card, '.card-header {');
     expect(header).toContain('margin: 0 calc(var(--spacing-card) * -1) var(--spacing-card);');
     expect(header).toContain('padding: 0 var(--spacing-card) min(var(--spacing-peer), var(--spacing-card));');
@@ -1770,10 +1774,13 @@ describe('src/components/dialog.css', () => {
     const panel = blockAfter(rules(), '.dialog {');
     for (const declaration of [
       'background-color: var(--color-float);',
-      'border: 1px solid var(--color-hairline);',
-      'border-radius: var(--radius-stadium);',
+      '--holder-border: 1px;',
+      'border: var(--holder-border) solid var(--color-hairline);',
+      '--holder-radius: var(--radius-stadium);',
+      'border-radius: var(--holder-radius);',
       'box-shadow: var(--shadow-dramatic);',
-      'padding: var(--spacing-separate);',
+      '--holder-pad: var(--spacing-separate);',
+      'padding: var(--holder-pad);',
     ]) {
       expect(panel, declaration).toContain(declaration);
     }
@@ -1857,8 +1864,10 @@ describe('src/components/drawer.css', () => {
       // Without it, the scrim's row grows to a long list and 100% is the list's height, not the viewport's.
       'min-height: 0;',
       'background-color: var(--color-float);',
-      'border: 1px solid var(--color-hairline);',
-      'border-radius: var(--radius-stadium);',
+      '--holder-border: 1px;',
+      'border: var(--holder-border) solid var(--color-hairline);',
+      '--holder-radius: var(--radius-stadium);',
+      'border-radius: var(--holder-radius);',
       'box-shadow: var(--shadow-dramatic);',
       'transition: translate 180ms ease;',
     ]) {
@@ -1981,7 +1990,8 @@ describe('src/components/sheet.css', () => {
       'width: min(100%, 36rem);',
       'margin-inline: auto;',
       'background-color: var(--color-float);',
-      'border: 1px solid var(--color-hairline);',
+      '--holder-border: 1px;',
+      'border: var(--holder-border) solid var(--color-hairline);',
     ]) {
       expect(panel, declaration).toContain(declaration);
     }
@@ -1995,8 +2005,9 @@ describe('src/components/sheet.css', () => {
 
   it('rounds the top two corners in the stadium radius and leaves the bottom square', () => {
     const panel = blockAfter(rules(), '} .sheet {');
-    expect(panel).toContain('border-start-start-radius: var(--radius-stadium);');
-    expect(panel).toContain('border-start-end-radius: var(--radius-stadium);');
+    expect(panel).toContain('--holder-radius: var(--radius-stadium);');
+    expect(panel).toContain('border-start-start-radius: var(--holder-radius);');
+    expect(panel).toContain('border-start-end-radius: var(--holder-radius);');
     expect(panel).not.toMatch(/border-end-(start|end)-radius|border-radius\s*:/);
   });
 
@@ -2159,8 +2170,10 @@ describe('src/components/popover.css', () => {
   it('draws the float surface, the frame in both themes, and rings no focus on the container React Aria focuses', () => {
     const popover = blockAfter(rules(), '.popover {');
     for (const declaration of [
-      'border: 1px solid var(--color-frame);',
-      'border-radius: var(--radius-surface);',
+      '--holder-border: 1px;',
+      'border: var(--holder-border) solid var(--color-frame);',
+      '--holder-radius: var(--radius-surface);',
+      'border-radius: var(--holder-radius);',
       'background-color: var(--color-float);',
       'box-shadow: var(--shadow-float);',
       'outline: none;',
@@ -2175,7 +2188,8 @@ describe('src/components/popover.css', () => {
 
   it('pads free content 24px, and only with popover-padded', () => {
     const css = rules();
-    expect(blockAfter(css, '.popover-padded {')).toContain('padding: var(--spacing-peer);');
+    expect(blockAfter(css, '.popover-padded {')).toContain('--holder-pad: var(--spacing-peer);');
+    expect(blockAfter(css, '.popover-padded {')).toContain('padding: var(--holder-pad);');
     expect(blockAfter(css, '.popover {')).not.toMatch(/(?<![\w-])padding/);
   });
 
@@ -2265,12 +2279,13 @@ describe('src/components/menu.css', () => {
     expect(list).not.toContain('max-height');
   });
 
-  it('draws a row 40px tall, padded 8px by 12px, at the control radius, with the pointer cursor', () => {
+  it('draws a row 40px tall, padded 8px by 12px, concentric with the popup, with the pointer cursor', () => {
     const row = blockAfter(rules(), '.menu-item {');
     for (const declaration of [
       'min-height: 40px;',
       'padding: 0.5rem 0.75rem;',
-      'border-radius: var(--radius-control);',
+      '--menu-item-radius: max(0px, calc(var(--radius-surface) - 1px - var(--spacing-part)));',
+      'border-radius: var(--menu-item-radius);',
       'cursor: pointer;',
       'gap: 0.75rem;',
     ]) {
@@ -2517,11 +2532,14 @@ describe('src/components/toast.css', () => {
     for (const declaration of [
       'pointer-events: auto;',
       'width: 100%;',
-      'border: 1px solid var(--color-frame);',
-      'border-radius: var(--radius-surface);',
+      '--holder-border: 1px;',
+      'border: var(--holder-border) solid var(--color-frame);',
+      '--holder-radius: var(--radius-surface);',
+      'border-radius: var(--holder-radius);',
       'background-color: var(--color-float);',
       'box-shadow: var(--shadow-float);',
-      'padding: 1rem var(--spacing-peer);',
+      '--holder-pad: 1rem;',
+      'padding: var(--holder-pad) var(--spacing-peer);',
     ]) {
       expect(toast, declaration).toContain(declaration);
     }
@@ -2654,8 +2672,10 @@ describe('src/components/command-palette.css', () => {
   it('draws the surface in the float tokens: the frame edge, the surface corner, the float fill and shadow', () => {
     const surface = blockAfter(rules(), '.command-palette {');
     for (const declaration of [
-      'border: 1px solid var(--color-frame);',
-      'border-radius: var(--radius-surface);',
+      '--holder-border: 1px;',
+      'border: var(--holder-border) solid var(--color-frame);',
+      '--holder-radius: var(--radius-surface);',
+      'border-radius: var(--holder-radius);',
       'background-color: var(--color-float);',
       'box-shadow: var(--shadow-float);',
     ]) {
@@ -3711,10 +3731,12 @@ describe('src/components/stat-tile.css', () => {
     );
   });
 
-  it('steps a tile in a card down to the surface corner with the frame edge', () => {
+  it('makes a tile in a card concentric with it, with the frame edge', () => {
     const nested = blockAfter(rules(), '.card > .stat-tile, .card-body .stat-tile {');
     expect(nested).toContain('border-color: var(--color-frame);');
-    expect(nested).toContain('border-radius: var(--radius-surface);');
+    expect(nested).toContain(
+      'border-radius: max(var(--radius-micro), calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));',
+    );
   });
 
   it('lays the body out as a grid with the trend at the end of the value row', () => {
@@ -4739,9 +4761,9 @@ describe('src/components/multi-select.css', () => {
   });
 
   it('cuts the frame at the pill while one row and the surface step once it wraps', () => {
-    expect(blockAfter(rules(), '.multi-select-control {')).toContain(
-      'border-radius: min(var(--radius-pill), calc(var(--size-field) / 2));',
-    );
+    const frame = blockAfter(rules(), '.multi-select-control {');
+    expect(frame).toContain('--input-radius: min(var(--radius-pill), calc(var(--size-field) / 2));');
+    expect(frame).toContain('border-radius: var(--input-radius);');
   });
 
   it('rings the frame only while its input has focus, at two classes with the test in :where()', () => {
@@ -4791,11 +4813,11 @@ describe('src/components/multi-select.css', () => {
     expect(list).not.toContain('contents');
   });
 
-  it('draws a tag as a bone pill with its text at 500 in ink, ellipsized past 12rem', () => {
+  it('draws a tag concentric with the frame, on bone, with its text at 500 in ink, ellipsized past 12rem', () => {
     const css = rules();
     const tag = blockAfter(css, '.multi-select-tag {');
     for (const declaration of [
-      'border-radius: var(--radius-pill);',
+      'border-radius: max(0px, calc(var(--input-radius) - 0.375rem));',
       'background-color: var(--color-bone);',
       'color: var(--color-ink);',
       'font-size: var(--text-small);',
@@ -4887,8 +4909,11 @@ describe('src/components/tabs.css', () => {
       'display: inline-flex;',
       'gap: 0.25rem;',
       'max-width: 100%;',
-      'padding: 0.25rem;',
-      'border-radius: var(--radius-surface);',
+      '--holder-radius: var(--radius-surface);',
+      '--holder-border: 0px;',
+      '--holder-pad: 0.25rem;',
+      'padding: var(--holder-pad);',
+      'border-radius: var(--holder-radius);',
       'background-color: var(--color-canvas);',
     ]) {
       expect(list, declaration).toContain(declaration);
@@ -4918,12 +4943,12 @@ describe('src/components/tabs.css', () => {
     expect(tabs).toContain('min-width: 0;');
   });
 
-  it('draws a tab at the control height, on the pill radius, at the action step', () => {
+  it('draws a tab at the control height, concentric with the track, at the action step', () => {
     const tab = blockAfter(rules(), '.tab {');
     for (const declaration of [
       'min-height: var(--size-control);',
       'padding-inline: 1rem;',
-      'border-radius: var(--radius-pill);',
+      'border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));',
       'color: var(--color-slate);',
       'font-size: var(--text-action);',
       'line-height: var(--text-action--line-height);',
@@ -6124,7 +6149,8 @@ describe('src/components/filter-chip.css', () => {
   it('pads the panel 16px with two classes and caps it inside the viewport', () => {
     const panel = blockAfter(rules(), '.filter-chip-panel.popover-padded {');
     expect(panel).toContain('max-width: min(22rem, 100vw - 2rem);');
-    expect(panel).toContain('padding: var(--spacing-inset);');
+    expect(panel).toContain('--holder-pad: var(--spacing-inset);');
+    expect(panel).toContain('padding: var(--holder-pad);');
     // The dialog React Aria focuses as the panel opens draws no ring of its own.
     expect(blockAfter(rules(), '.filter-chip-dialog {')).toContain('outline: none;');
   });
@@ -6707,8 +6733,10 @@ describe('src/components/data-table.css', () => {
   it('draws the bar on the float surface with the frame edge, the surface radius and the float shadow', () => {
     const bar = blockAfter(outsideForcedColors(rules()), '.data-table-bar {');
     for (const declaration of [
-      'border: 1px solid var(--color-frame);',
-      'border-radius: var(--radius-surface);',
+      '--holder-border: 1px;',
+      'border: var(--holder-border) solid var(--color-frame);',
+      '--holder-radius: var(--radius-surface);',
+      'border-radius: var(--holder-radius);',
       'background-color: var(--color-float);',
       'box-shadow: var(--shadow-float);',
       'color: var(--color-ink);',
@@ -7620,5 +7648,80 @@ describe('text on Highlight in forced colors', () => {
     expect(blockAfter(forced('sidebar.css'), item)).toContain('outline-color: Highlight;');
     const parts = '.filter-chip[data-active]:not([data-disabled]) :where(*) {';
     expect(blockAfter(forced('filter-chip.css'), parts)).toContain('outline-color: HighlightText;');
+  });
+});
+
+describe('concentric corners (docs/design-system.md, "Nested radii, derived")', () => {
+  const css = (file) => closeUp(stripComments(read(`src/components/${file}`)));
+  // The start of the formula: a part may take a further gap of its own after it, as a toast's row does.
+  const FORMULA = 'calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)';
+
+  // Each holder names its corner, its edge and its padding.
+  const HOLDERS = [
+    ['card.css', '.card {', 'var(--radius-stadium)'],
+    ['dialog.css', '.dialog {', 'var(--radius-stadium)'],
+    ['drawer.css', '.drawer {', 'var(--radius-stadium)'],
+    ['sheet.css', '.sheet {', 'var(--radius-stadium)'],
+    ['side-panel.css', '.side-panel {', 'var(--radius-stadium)'],
+    ['popover.css', '.popover {', 'var(--radius-surface)'],
+    ['command-palette.css', '.command-palette {', 'var(--radius-surface)'],
+    ['toast.css', '.toast {', 'var(--radius-surface)'],
+    ['data-table.css', '.data-table-bar {', 'var(--radius-surface)'],
+    ['tabs.css', '.tab-list {', 'var(--radius-surface)'],
+  ];
+
+  for (const [file = '', header = '', radius = ''] of HOLDERS) {
+    it(`names the holder's corner, edge and padding on ${header.slice(0, -2)}`, () => {
+      const rule = blockAfter(css(file), header);
+      expect(rule).toContain(`--holder-radius: ${radius};`);
+      expect(rule).toMatch(/--holder-border: [\d.]+px;/);
+      expect(rule).toMatch(/--holder-pad: [^;]+;/);
+    });
+  }
+
+  // The parts that sit in a holder's corners take its radius less the gap, read from the holder's properties.
+  const PARTS = [
+    ['dialog.css', '.dialog-actions > :last-child {'],
+    ['side-panel.css', '.side-panel-footer > :last-child {'],
+    ['toast.css', '.toast-controls > :is(.button, .icon-button) {'],
+    ['data-table.css', '.data-table-bar :is(.button, .icon-button) {'],
+    ['tabs.css', '.tab {'],
+    ['stat-tile.css', '.card > .stat-tile, .card-body .stat-tile {'],
+    ['charts.css', ':is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toggle {'],
+    ['select.css', '.select-filter {'],
+  ];
+
+  for (const [file = '', header = ''] of PARTS) {
+    it(`makes ${header.slice(0, -2)} concentric with its holder in ${file}`, () => {
+      expect(blockAfter(css(file), header)).toContain(FORMULA);
+    });
+  }
+
+  it('never copies a holder radius onto a part: every read of it subtracts the edge and the padding', () => {
+    for (const file of components) {
+      const source = css(file);
+      // A calc that starts from the holder's radius subtracts both, never one or neither.
+      for (const match of source.matchAll(/calc\(var\(--holder-radius\)[^;]*/g)) {
+        expect(match[0], file).toContain(FORMULA);
+      }
+      // The holder's radius is drawn as it is only by the holder that names it.
+      for (const match of source.matchAll(
+        /([^{}]+)\{([^{}]*border(?:-[\w-]+)?-radius: var\(--holder-radius\)[^{}]*)\}/g,
+      )) {
+        expect(match[2], `${file} ${match[1].trim()}`).toContain('--holder-radius:');
+      }
+    }
+  });
+
+  it('writes the parts that hold parts on the tokens: a menu row, its key chip and a field button', () => {
+    expect(blockAfter(css('menu.css'), '.menu-item {')).toContain(
+      '--menu-item-radius: max(0px, calc(var(--radius-surface) - 1px - var(--spacing-part)));',
+    );
+    expect(blockAfter(css('menu.css'), '.menu-item-shortcut {')).toContain(
+      'border-radius: min(var(--radius-micro), max(0px, calc(var(--menu-item-radius) - 0.75rem)));',
+    );
+    expect(blockAfter(css('input.css'), '.input-button {')).toContain(
+      'border-radius: max(0px, calc(var(--input-radius, var(--radius-pill)) - 0.375rem));',
+    );
   });
 });

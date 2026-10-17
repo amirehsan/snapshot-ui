@@ -32,7 +32,8 @@ export interface Finding {
  *   a badge, a title's focus ring: text-sized parts keep their small corner), or its holder clips what it
  *   holds, which then draws the part's corner itself.
  * - Not checked: a dot or circle (round by shape: a percentage radius, or a square box whose every corner
- *   is half its side), a fixed surface (it floats, so it starts a ladder of its own) and anything not drawn.
+ *   is half its side), what a dot or circle holds (it has no corner to share), a fixed surface (it floats, so
+ *   it starts a ladder of its own) and anything not drawn.
  */
 export function auditConcentric(): Finding[] {
   const TOLERANCE = 1;
@@ -87,10 +88,7 @@ export function auditConcentric(): Finding[] {
       percent,
       rounded: CORNERS.some((corner) => radii[corner] > 0.5),
       drawn:
-        rect.width >= 1 &&
-        rect.height >= 1 &&
-        style.visibility !== 'hidden' &&
-        style.display !== 'contents',
+        rect.width >= 1 && rect.height >= 1 && style.visibility !== 'hidden' && style.display !== 'contents',
     };
     boxes.set(element, box);
     return box;
@@ -140,12 +138,16 @@ export function auditConcentric(): Finding[] {
     const classes = [...element.classList].slice(0, 3).map((name) => `.${name}`);
     const role = element.getAttribute('role');
     const slot = element.getAttribute('slot');
-    return [element.tagName.toLowerCase(), ...classes, role ? `[role=${role}]` : '', slot ? `[slot=${slot}]` : ''].join(
-      '',
-    );
+    return [
+      element.tagName.toLowerCase(),
+      ...classes,
+      role ? `[role=${role}]` : '',
+      slot ? `[slot=${slot}]` : '',
+    ].join('');
   };
 
-  const micro = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--radius-micro')) || 0;
+  const micro =
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--radius-micro')) || 0;
 
   /** A circle: a square box rounded by half its side at every corner. */
   const isCircle = ({ rect, radii }: Box): boolean =>
@@ -162,7 +164,7 @@ export function auditConcentric(): Finding[] {
     const ancestor = holderOf(element);
     const frame = frameUnder(element, part);
     const holder = frame && (!ancestor || area(frame) < area(ancestor)) ? frame : ancestor;
-    if (!holder) continue;
+    if (!holder || holder.percent || isCircle(holder)) continue;
     // Only an ancestor clips the part; a frame it is drawn over does not.
     const clips =
       holder === ancestor && (holder.style.overflowX !== 'visible' || holder.style.overflowY !== 'visible');

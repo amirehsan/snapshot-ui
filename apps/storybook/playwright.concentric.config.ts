@@ -10,6 +10,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
+  // The runner has four cores, and the audit waits on the page more than it computes.
+  workers: isCI ? 4 : undefined,
   reporter: isCI ? [['github'], ['list']] : 'list',
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,

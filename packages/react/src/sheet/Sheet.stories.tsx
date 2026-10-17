@@ -251,7 +251,9 @@ export const InDarkScope: Story = {
         <CardBody>
           <p>A card in a dark block.</p>
           <SheetTrigger>
-            <Button variant="secondary" style={BOTTOM}>Filter transactions</Button>
+            <Button variant="secondary" style={BOTTOM}>
+              Filter transactions
+            </Button>
             <Sheet {...args} />
           </SheetTrigger>
         </CardBody>
