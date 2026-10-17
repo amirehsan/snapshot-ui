@@ -8,7 +8,8 @@
  * query cannot read a custom property, and 4rem is the tab bar's height, written in tab-bar.css too;
  * test/css.test.js keeps both equal. Derived in docs/design-system.md ("Floating chrome and the shell").
  * A rail an open SidePanel folds (data-sidebar-folded) folds at once, with no transition ("SidePanel"), and the
- * stylesheet folds it from the server's HTML too, by :has() on the open panel.
+ * stylesheet folds it from the server's HTML too, by :has() on the open panel. The reader's own toggle moves the
+ * workspace on the rail's motion tokens, so its edge and the rail's travel together ("The rail's motion").
  */
 @layer components {
   .app-shell {
@@ -27,7 +28,13 @@
     min-height: 100dvh;
     margin-inline-start: var(--app-shell-sidebar);
     padding-block-end: var(--app-shell-inset-block-end);
-    transition: margin-inline-start 200ms ease;
+    transition: margin-inline-start var(--duration-expand) var(--ease-emphasized);
+  }
+
+  /* The workspace keeps step with the rail's edge: the rail's curve, and the duration of the state it moves to, so the
+     16px between them holds through the motion (sidebar.css). */
+  [data-sidebar='collapsed' i] .app-shell-workspace {
+    transition-duration: var(--duration-collapse);
   }
 
   /* A rail folded for an open SidePanel (data-sidebar-folded) moves at once, in the frame the panel comes, so the

@@ -1050,7 +1050,7 @@ document. Four were renamed because they described a marketing page:
 | `--text-footer-link` | `--text-small` | It is the hint and helper text step. |
 | `--text-footer-header` | `--text-overline` | Uppercase column headers in tables and stat tiles. |
 
-Nine values have no name in the document, so the library gives them one:
+Twelve values have no name in the document, so the library gives them one:
 
 - `--font-mono` is `ui-monospace`, `SFMono-Regular`, `Menlo`, then the generic
   `monospace`. It is for code only, and Sofia Sans stays the one family for
@@ -1087,6 +1087,15 @@ Nine values have no name in the document, so the library gives them one:
   z-index namespace. An app whose chrome already uses larger numbers overrides
   `--z-modal` and `--z-toast`. The overlays do not use the browser's top layer,
   so a third-party overlay at a very large z-index can cover a library dialog.
+- `--ease-emphasized` is `cubic-bezier(0.2, 0, 0, 1)`, `--duration-expand` is
+  300ms and `--duration-collapse` 250ms: the motion of a container that changes
+  size in place, the rail first. The document draws a still page and names no
+  motion, so these come from Material 3's emphasized curve and its medium
+  durations, derived in "The rail's motion". They are in `tokens.js` and
+  `tokens.css` and not in the Tailwind theme, since a component reads them by
+  name as a transition's curve and duration. A duration is written in
+  `tokens.json` as `{ "value": 300, "unit": "ms" }`, and the build writes it as
+  `300ms`.
 
 ## Six colors added
 
@@ -4919,9 +4928,115 @@ to canvas on the current item as the segmented control's is.
 
 **The 3px travel.** Collapsed, the nav pads 15px instead of 12px so a 40px item
 centers in the 70px inside the 72px rail's 1px border, and the icon moves 3px
-inward as the rail narrows,
-hidden by the 200ms width transition; under reduced motion it is an instant
-step.
+inward as the rail narrows, on the rail's own curve; under reduced motion it is
+an instant step.
+
+**Concentric corners** (patch 0.6.2). A rounded part inside the rail takes
+the rail's corner less the gap between them, never its own token copied: the
+gap is the rail's 1px edge plus the part's inset, the smaller side where the
+insets differ, and the part is never rounder than its own shape and square at
+0 or less. `.sidebar` holds the rail's corner less its edge,
+`--sidebar-corner`, and the two insets, `--sidebar-nav-inset` (12px, 15px
+collapsed) and `--sidebar-search-inset` (12px, and collapsed the inset that
+centers the 40px pill); the nav pads by the first and the search pill sits in
+by the second, so the corner follows the inset in both states. A nav item and
+the search pill draw `min(pill, max(0px, corner - inset))`: 27px in Rounded,
+so a 40px row still draws as a pill, 3px in Soft, and 0 collapsed, where the 15px inset meets the rail's 15px corner
+less its edge, and 0 in Square. One level further in, the search's key chip takes
+the search pill's corner less its 1px edge and its padding, at most
+`--radius-micro`. The drawer copy sits in the Drawer's panel, which has the
+same stadium corner and 1px edge, so the same formula holds there. Shapes that
+keep theirs: the rail itself, the collapse button, which stands outside the
+rail's edge, the count and group dots, and an avatar the app puts in the
+footer. The brand row and the footer draw no surface of their own. The
+CollapseMotion story checks every part against the rule in Rounded, Soft and
+Square, expanded and collapsed, and the docs test does the same for the docs
+rail, whose links, search, key chip and version badge follow the same rule
+from `--rail-corner`, `--rail-nav-inset` and `--rail-search-inset`.
+
+**The rail's motion** (patch 0.6.2). Recorded frame by frame in Chromium at
+1280px, the old collapse and expand were what a reader called flashy, for five
+reasons. Collapsing, every label vanished in the first frame and every icon,
+the brand mark, the search and the group dots jumped to the middle of the rail,
+still 288px wide, 111px to the right, then slid back left with the edge.
+Expanding, the labels came back at full opacity in the first frame into a 72px
+rail, so "Transactions" wrapped a letter to a line, its row grew from 40px to
+260px, the brand, the search label and the account name stood in vertical
+columns and the nav scrolled sideways for three frames. A group label lost its
+text line when collapsed, 22px to 14px, so every link below it jumped 8px a
+group in the first frame both ways. The workspace's margin, the rail's width
+and the chevron each ran 200ms of `ease`, a curve with no character. And the
+docs rail did the same, with its group names wrapping and its labels' ellipsis
+changing every frame.
+
+What polished rails do, and what the library now does. Material 3 moves a
+container that changes size in place on its emphasized curve,
+`cubic-bezier(0.2, 0, 0, 1)`, over its medium durations, 250ms to 400ms, with
+what arrives a little slower than what leaves. Linear, Notion and the new
+GitHub navigation let the content beside the rail keep step with its edge.
+Apple's sidebars and VS Code's never re-center an icon as the pane changes
+width. So:
+
+- One curve for every property that moves, `--ease-emphasized`, and the
+  duration of the state the rail moves to: `--duration-expand`, 300ms,
+  opening, and `--duration-collapse`, 250ms, closing. A transition reads the
+  new state's values, so `.sidebar` sets `--sidebar-duration` to the first and
+  the collapsed rule to the second, and every part reads it: the rail's width,
+  the chevron's turn, the head's, the search pill's, the nav's and the group
+  label's insets, the group dot's margin and the labels' fades. The workspace's
+  margin takes the same pair, so the 16px between the rail and the page holds
+  through the motion.
+- Nothing re-centers. A collapsed item fills the nav, so its pill narrows with
+  the rail and its icon stays at the start, settling 3px inward with the nav's
+  padding; the brand mark settles 1px through the head's padding, the search
+  icon 2px through the pill's margin and padding, and the group dot slides onto
+  the rail's axis through the label's padding. The count's dot is placed from
+  the icon's start, not the item's middle. The footer centers the app's
+  collapsed content in the collapsed rail's inside width from the first frame,
+  at the start, so it rests while the rail closes around it.
+- One vertical rhythm for both states: collapsing changes the rail's width and
+  nothing else, as in Linear, Notion, VS Code, GitHub's navigation and Material
+  3's navigation rail. The head keeps its row, the search keeps the expanded
+  field's 40px row and place, collapsed a 40px pill around its icon on that
+  row, a group heading keeps its row with its dot on it, and every link and the
+  footer keep their top; the stories and the docs test hold every icon's top
+  within 0.5px in both states and in every frame between.
+- The labels stay in the flow, one line high, and are hidden by opacity, so no
+  name changes: they fade out over the first 40% of the closing while the edge
+  carries them off, and fade in from a quarter of the opening over half of it,
+  once the edge has mostly passed. A group keeps its row, so the list never
+  moves up or down, and the collapsed list is 8px taller per group than it was.
+- No text wraps on the way. The rail copy is a size container, and below its
+  expanded width, which it is only while moving and while collapsed, the head,
+  the search, the nav and the footer do not wrap and each label is cut at its
+  own box. The width is the token's 20rem less the two 16px insets and the two
+  1px edges, since a container query measures inside the border; a test keeps
+  it equal. A long label wraps again in the frame the rail reaches its width.
+  The list is one `minmax(0, 1fr)` column, so an unwrapped label never holds an
+  item wider than the nav.
+- The page beside the rail reflows as the margin moves, as Notion's and
+  Linear's do, rather than sliding a settled layout: a slide either opens a gap
+  at the page's far edge or pushes the page past the viewport for the length of
+  the motion. A DataTable crossing its 48rem or 40rem threshold changes once per
+  motion and never back; at 1100px the category column comes in 32ms into the
+  closing and leaves 176ms into the opening.
+- Reduced motion sets `--sidebar-duration` to 0s, so every part, the fades
+  included, steps in one frame, and the rail and the chevron keep
+  `transition: none`. The fold for an open SidePanel still moves the rail and
+  every part at once, by one rule that names them all, from the script's
+  `data-sidebar-folded` and from the server's HTML.
+
+The docs rail follows the same rules with the same tokens, on its own
+`--rail-duration`, and the site's reduced-motion rule stops it as before. Its
+links never wrapped, so it needs no size container: from 1024px up its group
+names do not wrap either and its labels clip with no ellipsis, at rest too,
+since every name fits the expanded rail. Its version badge and its key chip
+keep their one line and their size, faded and cut by the edge: free to shrink,
+the badge wrapped a letter to a line in the 72px rail and pushed every icon
+below it 81px down. A
+container query there, matched by the drawer's elements with no container
+around them on a phone, left a tab row on the page at its start in Chromium
+after the row had scrolled to its selected tab, so the docs rail has none.
 
 **Two copies of the rail.** The rail renders at every width, and below 1024px
 it is `display: none`, out of the tab order and the accessibility tree. While
