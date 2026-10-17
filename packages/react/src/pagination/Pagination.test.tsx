@@ -67,12 +67,17 @@ describe('Pagination', () => {
     const nav = screen.getByRole('navigation', { name: 'Pagination' });
     expect(nav.tagName).toBe('NAV');
     expect(nav).toHaveClass('pagination');
-    // The nav holds the row, which the narrow query re-lays, and then the status region.
+    // The nav holds the box, the size container, around the row the narrow query re-lays, and then the status
+    // region; it carries the range for the width it offers a parent that sizes it from its content.
     expect([...nav.children].map((child) => child.className)).toEqual([
-      'pagination-row',
+      'pagination-box',
       'pagination-status',
     ]);
-    const rowElement = nav.firstElementChild;
+    expect(nav).toHaveAttribute('data-range', '1 to 50 of 1,284');
+    const box = nav.firstElementChild;
+    if (!box) throw new Error('No box');
+    expect([...box.children].map((child) => child.className)).toEqual(['pagination-row']);
+    const rowElement = box.firstElementChild;
     if (!rowElement) throw new Error('No row');
     expect([...rowElement.children].map((child) => `${child.tagName} ${child.className}`)).toEqual([
       'P pagination-range',
