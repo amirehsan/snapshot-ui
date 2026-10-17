@@ -213,7 +213,7 @@ export function DatePicker({
   const controlled = value !== undefined;
   const [own, setOwn] = useState(initial);
   const committed = controlled ? chosen : own;
-  // A day React Aria holds whose year is still being typed or erased: shown, never sent (spec correction 58).
+  // A day React Aria holds whose year is still being typed or erased: shown, never sent (spec correction 68).
   // React Aria is controlled here, so a held day stays on screen; a new value from the app drops it.
   const [held, setHeld] = useState<CalendarDate | null>(null);
   const [lastValue, setLastValue] = useState(value);

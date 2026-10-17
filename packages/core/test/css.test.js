@@ -8023,48 +8023,63 @@ describe('src/components/upload-tray.css', () => {
   it("redraws the edges and the icons in the reader's text color in forced colors", () => {
     const forced = blockAfter(rules(), FORCED);
     expect(blockAfter(forced, '.upload-tray, .upload-tray-bar {')).toContain('border-color: canvastext;');
-    expect(blockAfter(forced, '.upload-row-icon {')).toContain('color: canvastext;');
+    expect(blockAfter(forced, '.upload-row-icon, .upload-tray-alert, .upload-tray-bar-clear {')).toContain(
+      'color: canvastext;',
+    );
   });
 
-  it('names each holder corner in the three holder properties, from the radius tokens', () => {
+  it('names the panel and the bar as holders, from the radius tokens, and not the sheet, whose bottom is square', () => {
     const css = rules();
     for (const [holder, radius] of [
       ['.upload-tray {', 'var(--radius-surface)'],
       ['.upload-tray-bar {', 'var(--radius-pill)'],
-      ['.upload-tray-sheet {', 'var(--radius-stadium)'],
     ]) {
       const rule = blockAfter(css, holder);
       expect(rule, holder).toContain(`--holder-radius: ${radius};`);
       expect(rule, holder).toContain('--holder-border: 1px;');
       expect(rule, holder).toContain('--holder-pad: 0px;');
     }
+    expect(css).not.toContain('.upload-tray-sheet {');
+    expect(css).not.toContain('--radius-stadium');
   });
 
-  it('draws every nested corner concentric: the holder less its gap, never a copy, never under 0', () => {
+  it('draws the parts in a corner region concentric, the holder less the real gap, and leaves the rest their pill', () => {
     const css = rules();
-    // The list subtracts the holder's edge and padding, and a row its own smaller padding, the block's.
+    // The list subtracts the holder's edge and padding, and the trailing button its real gap: the row's inline
+    // padding less the actions' 0.5rem pull-in.
     expect(blockAfter(css, '.upload-list {')).toContain(
       '--upload-list-radius: max(0px, calc(var(--holder-radius) - var(--holder-border, 0px) - var(--holder-pad, 0px)));',
     );
     expect(blockAfter(css, '.upload-row {')).toContain(
-      '--upload-row-radius: max(0px, calc(var(--upload-list-radius) - 0.625rem));',
+      '--upload-row-radius: max(0px, calc(var(--upload-list-radius) - (var(--spacing-inset) - 0.5rem)));',
     );
     expect(blockAfter(css, '.upload-row {')).toContain('padding: 0.625rem var(--spacing-inset);');
+    expect(blockAfter(css, '.upload-row-actions {')).toContain('margin-inline-end: -0.5rem;');
+    // Only the trailing button of the last row, and of the first unless the list sits under the panel's header.
     expect(
-      blockAfter(css, '.upload-row :is(.icon-button, .progress-bar-track, .progress-bar-fill) {'),
+      blockAfter(
+        css,
+        '.upload-row:last-child .upload-row-actions > .icon-button:last-child, :not(.upload-tray-body) > .upload-list > .upload-row:first-child .upload-row-actions > .icon-button:last-child {',
+      ),
     ).toContain('border-radius: var(--upload-row-radius, var(--radius-pill));');
-    // The header's buttons sit its part step in from the panel's edge.
+    expect(css).not.toContain('.upload-row :is(.icon-button');
+    // The rows' bars are far from every corner and keep the bar's own pill.
+    expect(css).not.toMatch(/progress-bar-(?:track|fill)/);
+    // The header's trailing button sits its part step in from the panel's edge; the fold beside Close keeps its pill.
     expect(blockAfter(css, '.upload-tray-header {')).toContain(
       '--upload-tray-header-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--spacing-part)));',
     );
     expect(blockAfter(css, '.upload-tray-header {')).toContain('padding-block: var(--spacing-part);');
-    expect(blockAfter(css, '.upload-tray-header .icon-button {')).toContain(
+    expect(blockAfter(css, '.upload-tray-header > .icon-button:last-child {')).toContain(
       'border-radius: var(--upload-tray-header-radius);',
     );
-    // The bar's button fills it inside its edge.
-    expect(blockAfter(css, '.upload-tray-bar-button {')).toContain(
-      'border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));',
-    );
+    expect(css).not.toContain('.upload-tray-header .icon-button {');
+    // The bar's buttons fill it inside its edge.
+    for (const button of ['.upload-tray-bar-button {', '.upload-tray-bar-clear {']) {
+      expect(blockAfter(css, button), button).toContain(
+        'border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));',
+      );
+    }
     // No corner copies its holder's.
     expect(css).not.toMatch(/border-radius:\s*inherit/);
     const radii = [...css.matchAll(/(?<![\w-])border-radius:\s*([^;]+);/g)].map((match) => match[1]);
@@ -8073,6 +8088,57 @@ describe('src/components/upload-tray.css', () => {
     )) {
       expect(value).toMatch(/^(?:max\(0px, calc\(var\(--holder-radius\)|var\(--upload-)/);
     }
+  });
+
+  it("reserves the phone bar's room under the page and in the root's scroll padding, from tokens, while it shows", async () => {
+    const { tokens } = await import('../dist/tokens.js');
+    const narrow = blockAfter(rules(), `@media (width < ${tokens.breakpoint.sm.value})`);
+    const root = blockAfter(narrow, ':root:has(.upload-tray-bar) {');
+    expect(root).toContain(
+      '--upload-tray-reserve: calc(max(var(--size-field), var(--size-target)) + var(--spacing-inset));',
+    );
+    // In the bottom edge's order: the tab bar's reserve, a sticky bar's offset, then the tray.
+    expect(root).toContain(
+      'scroll-padding-block-end: calc(var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) + var(--upload-tray-reserve));',
+    );
+    expect(blockAfter(narrow, '.app-shell:has(> .upload-tray-bar) .app-shell-workspace {')).toContain(
+      'padding-block-end: calc(var(--app-shell-inset-block-end) + var(--save-bar-offset, 0px) + max(var(--size-field), var(--size-target)) + var(--spacing-inset));',
+    );
+    // Border-box, so the reserve is the bar's whole height.
+    expect(blockAfter(rules(), '.upload-tray-bar {')).toContain('box-sizing: border-box;');
+    // Nothing reserves room on a wide screen, where the panel sits in the corner.
+    expect(blockAfter(rules(), `@media (width >= ${tokens.breakpoint.sm.value})`)).not.toContain('reserve');
+  });
+
+  it("draws the bar's clear X and the sheet's action, and presses as the native :active does too", () => {
+    const css = rules();
+    const clear = blockAfter(css, '.upload-tray-bar-clear {');
+    expect(clear).toContain('inline-size: max(var(--size-field), var(--size-target));');
+    expect(clear).toContain('color: var(--color-slate);');
+    expect(
+      blockAfter(css, ':is(.upload-tray-bar-button, .upload-tray-bar-clear):is(:active, [data-pressed]) {'),
+    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
+    expect(css).not.toMatch(/(?<!:is\(:active, )\[data-pressed\]/);
+    expect(
+      blockAfter(
+        css,
+        ':is(.upload-tray-bar-button, .upload-tray-bar-clear):is(:focus-visible, [data-focus-visible]) {',
+      ),
+    ).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(blockAfter(css, '.upload-tray-sheet-action {')).toContain('inline-size: 100%;');
+  });
+
+  it('leads the title with the error icon while a row has failed, and rings a row that takes focus inside it', () => {
+    const css = rules();
+    expect(blockAfter(css, '.upload-tray-alert {')).toContain('color: var(--color-error);');
+    expect(blockAfter(css, '.upload-row:focus {')).toContain('outline: none;');
+    const ring = blockAfter(css, '.upload-row:is(:focus-visible, [data-focus-visible]) {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+    const forced = blockAfter(css, FORCED);
+    expect(blockAfter(forced, '.upload-row-icon, .upload-tray-alert, .upload-tray-bar-clear {')).toContain(
+      'color: canvastext;',
+    );
   });
 
   it('keeps the status host in the page and out of sight', () => {

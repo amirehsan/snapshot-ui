@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { countUploads, isInFlight, type UploadItem, type UploadStatus } from './counts';
+import {
+  cancellableOf,
+  countUploads,
+  inFlightOf,
+  isInFlight,
+  type UploadItem,
+  type UploadStatus,
+} from './counts';
 
 const item = (id: number, status: UploadStatus): UploadItem => ({
   id,
@@ -54,5 +61,21 @@ describe('isInFlight', () => {
     ['failed', false],
   ])('says %s is in flight: %s', (status, expected) => {
     expect(isInFlight(status)).toBe(expected);
+  });
+});
+
+describe('cancellableOf', () => {
+  it('counts waiting and uploading files, and not a file being read, which the server holds already', () => {
+    const counts = countUploads([
+      item(1, 'waiting'),
+      item(2, 'uploading'),
+      item(3, 'reading'),
+      item(4, 'reading'),
+      item(5, 'saved'),
+      item(6, 'failed'),
+    ]);
+    expect(cancellableOf(counts)).toBe(2);
+    expect(inFlightOf(counts)).toBe(4);
+    expect(cancellableOf(countUploads([item(1, 'reading')]))).toBe(0);
   });
 });

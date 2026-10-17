@@ -389,7 +389,7 @@
     "path": "dist/index.js",
     "import": "{ UploadTray }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "8 kB"
+    "limit": "9 kB"
   },
   {
     "name": "import { DatePicker } from \"@snapshot-ui/react\"",

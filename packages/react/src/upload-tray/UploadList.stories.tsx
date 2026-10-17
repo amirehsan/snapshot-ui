@@ -50,7 +50,7 @@ function InCard({
           width,
           paddingInline: 0,
           paddingBlock: 'var(--spacing-part)',
-          // The card names its corner, so the rows' buttons and bars are concentric with it.
+          // The card names its corner, so the buttons in its corners are concentric with it.
           '--holder-radius': 'var(--radius-stadium)',
           '--holder-border': '1px',
           '--holder-pad': '0px',
@@ -83,13 +83,20 @@ export const Statuses: Story = {
       await expect(row.getBoundingClientRect().height).toBeGreaterThanOrEqual(56 - 0.5);
       await expect(part(row, 'upload-row-icon').getBoundingClientRect().width).toBeCloseTo(24, 0);
     }
-    for (const button of canvasElement.querySelectorAll('.upload-row-actions .icon-button')) {
+    const buttons = [...canvasElement.querySelectorAll('.upload-row-actions .icon-button')];
+    for (const button of buttons) {
       const { width, height } = button.getBoundingClientRect();
       await expect(width).toBeGreaterThanOrEqual(40);
       await expect(height).toBeGreaterThanOrEqual(40);
-      // Concentric with the card the story names as holder, in Rounded: its 40px less its 1px edge, then the
-      // row's 10px.
-      await expect(getComputedStyle(button).borderTopLeftRadius).toBe('29px');
+    }
+    // Concentric with the card the story names as holder, in Rounded, only in its corner regions: the first and
+    // last rows' trailing buttons take its 40px less its 1px edge and their real 8px gap, 31px. Every other
+    // button is far from a corner and keeps its pill.
+    const corners = [rows[0], rows[5]].map((row) => row?.querySelector('.upload-row-actions > :last-child'));
+    for (const button of buttons) {
+      const radius = getComputedStyle(button).borderTopLeftRadius;
+      if (corners.includes(button)) await expect(radius).toBe('31px');
+      else await expect(Number.parseFloat(radius)).toBeGreaterThan(100);
     }
     // The progress at the status line's end, the bar a part step under it, spanning the text column.
     const uploading = rows[1];

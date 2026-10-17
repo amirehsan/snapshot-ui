@@ -18,7 +18,7 @@ icon: Upload
 
 ## The tray
 
-`UploadTray` holds the list where the reader can always find it. From 768px it is a panel in the bottom end corner, 28rem wide, the same column the toasts use, with a title that counts ("Uploading 2 of 5", then "5 uploads complete"), a line of your own under it, a button that folds it to its header and a close button. Under 768px it is a pill bar above the tab bar that says the title, and pressing it opens a sheet with the list. It is not a dialog: the reader goes on working while files upload. The toasts rise above it, so the corner holds every report on background work in one column.
+`UploadTray` holds the list where the reader can always find it. From 768px it is a panel in the bottom end corner, 28rem wide, the same column the toasts use, with a title that counts the running batch ("Uploading 2 of 5"), then names what settled, failures included ("3 uploads complete, 1 failed, 1 needs review"), an error icon before it while any file has failed, a line of your own under it, a button that folds it to its header and a close button. Under 768px it is a pill bar above the tab bar that says the title, with a Clear at its end once everything has settled, and pressing it opens a sheet with the list and Clear or Cancel uploads at its foot; while the bar shows, the page keeps room for it under its content, so it never covers the page's last control. It is not a dialog: the reader goes on working while files upload. The toasts rise above it, so the corner holds every report on background work in one column.
 
 With no items the tray draws only its status host, which is in the page from the first render, so a screen reader is listening before anything is said. Mount it once and give it items as your app adds files.
 
@@ -30,14 +30,14 @@ With no items the tray draws only its status host, which is in the page from the
 
 The library never uploads. Your app holds the files in a provider in its root layout, sends each one, and gives the tray each file's status, progress and words; the tray draws and announces. Mount `<UploadTray>` in [AppShell](/docs/components/app-shell#floating)'s `floating` slot from that layout, so a client navigation keeps it, with its scroll and its folded state, while the reader opens the documents it links to.
 
-- `waiting`, `uploading` and `reading` are in flight: the file is queued, being sent, or being read by your server. `saved`, `review` and `failed` have settled.
+- `waiting`, `uploading` and `reading` are in flight: the file is queued, being sent, or being read by your server. `saved`, `review` and `failed` have settled. A file being read is on your server already, so it has no Cancel, Cancel all does not count it and it does not hold the page open.
 - `progress` runs from 0 to 1 while a file uploads, and `progressLabel` says it in your words, such as "1.8 of 4 MB". Without `progress` an uploading row draws a bar that slides, rather than one that looks stuck. A reading row always slides.
 - `reason` is required for `failed`: say why, in the reader's words, such as "Over 10 MB". A review row's reason says what to check.
 - `href` links the name to the document the file became, through your [RouterProvider](/docs/routing).
-- `onRetry` shows Retry on failed rows, `onRemove` shows Remove on waiting and settled rows, and `onCancel` shows Cancel on uploading rows. Each gets the row's `id`. When a row leaves, focus moves to the same button on the next row.
-- The close button calls `onClear` once nothing is in flight, and your app drops its settled items. While files are in flight it asks "Cancel 3 uploads?" first and calls `onCancelAll` on yes; without `onCancelAll` it shows only once everything has settled. When the tray leaves with focus inside, focus goes to `<main>`.
-- `warnsOnUnload`, on by default, asks the browser to warn before the tab closes or reloads while anything is in flight. The browser shows its own words, and iOS Safari shows none, so the tray is the reader's real warning. A client navigation keeps the shell and needs none.
-- Corners are concentric: a row's buttons and bar take the radius of what holds the list, less the gap to it. The tray and its sheet name their own corners; when you put `UploadList` in a rounded box of your own, such as a Card, name its corner with `--holder-radius`, `--holder-border` and `--holder-pad` (its smaller padding) on that box, as the example above does. Without them the rows keep their own round ends.
+- `onRetry` shows Retry on failed rows, `onRemove` shows Remove on waiting and settled rows, and `onCancel` shows Cancel on uploading rows. Each gets the row's `id`. When a row leaves, focus moves to the same button on the next row; when only its button leaves, as after Retry or when an upload finishes on its own, focus stays on the row itself, never on a button the reader did not choose. Focus the reader has moved elsewhere, the page's empty space included, is never pulled back.
+- The close button, and on a phone Clear and Cancel uploads, call `onClear` once nothing is in flight, and your app drops its settled items. While files are waiting or uploading they ask "Cancel 3 uploads?" first ("Cancel 1 upload?" for one) and call `onCancelAll` on yes; without `onCancelAll` they show only once everything has settled, and with neither handler there are none. When the tray leaves with focus inside, focus goes to `<main>`; when only the close button leaves, focus goes to the fold button.
+- `warnsOnUnload`, on by default, asks the browser to warn before the tab closes or reloads while any file is waiting or uploading. The browser shows its own words, and iOS Safari shows none, so the tray is the reader's real warning. A client navigation keeps the shell and needs none.
+- Corners are concentric where a part sits in a holder's corner: the header's trailing button and the trailing button of the list's first and last rows take the radius of what holds them, less the gap to it, and every other button and bar keeps its own round ends. The panel and the bar name their own corners; the sheet rounds only its top, which no row reaches. When you put `UploadList` in a rounded box of your own, such as a Card, name its corner with `--holder-radius`, `--holder-border` and `--holder-pad` (its padding beside the rows) on that box, as the example above does. Without them the rows keep their own round ends.
 - `formatCount` writes the counts in the title and the announcements, such as in Persian digits, and `labels` replaces every word the tray writes.
 
 ```tsx
@@ -83,7 +83,7 @@ import { AppShell, UploadTray } from '@snapshot-ui/react';
 
 ## Accessibility
 
-The panel is a region named by its title, which a screen reader reaches with its landmark keys; on a phone the bar is a region named "Uploads" holding one button, which opens a dialog titled by the same title. The list is a plain list in the page's tab order: each row reads its name or its link, its status in words with the reason, its bar while it moves, and its buttons, named for their file, such as "Retry invoice.pdf".
+The panel is a region named by its title, which a screen reader reaches with its landmark keys; on a phone the bar is a region named "Uploads" holding the button that opens a dialog titled by the same title, and once everything has settled a Clear; the dialog's own close button is named for closing it, apart from Clear and Cancel uploads at its foot. The list is a plain list in the page's tab order: each row reads its name or its link, its status in words with the reason, its bar while it moves, and its buttons, named for their file, such as "Retry invoice.pdf".
 
 The tray says three things politely, and nothing else:
 
@@ -93,7 +93,7 @@ The tray says three things politely, and nothing else:
 
 It never says a percentage, or a file turning saved on its own: the summary says it. A retry that starts at once hears no summary first.
 
-<Keys rows={[['Tab Shift+Tab', 'Through the header\'s buttons, then each row\'s link and buttons, in order.'], ['Enter Space', 'On the fold button, folds or unfolds the list; on a link, opens the document; on Retry, Remove or Cancel, does it.'], ['Escape', 'In the phone\'s sheet, closes it, and focus returns to the bar. The panel is not a dialog and takes no Escape.']]} />
+<Keys rows={[['Tab Shift+Tab', 'Through the header\'s buttons, then each row\'s link and buttons, in order; on a phone, the bar\'s button and its Clear.'], ['Enter Space', 'On the fold button, folds or unfolds the list; on a link, opens the document; on Retry, Remove or Cancel, does it.'], ['Escape', 'In the phone\'s sheet, closes it, and focus returns to the bar. The panel is not a dialog and takes no Escape.']]} />
 
 </Section>
 

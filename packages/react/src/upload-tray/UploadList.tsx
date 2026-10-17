@@ -165,8 +165,9 @@ export function BaseUploadList({
   useItemWarnings(items);
   const listRef = useRef<HTMLUListElement>(null);
   const listRefs = useMemo(() => mergeRefs(listRef, ref), [ref]);
-  // The row and the button that last held focus, and the ids as last drawn, so focus can follow a row that leaves.
-  const focused = useRef<{ id: UploadItem['id']; action: string | null } | null>(null);
+  // The element that holds focus in the list, with its row and its button, and the ids as last drawn, so focus can
+  // follow a row, or a row's button, that leaves. Cleared once focus goes to anything still in the page.
+  const focused = useRef<{ id: UploadItem['id']; action: string | null; element: Element } | null>(null);
   const drawn = useRef<readonly UploadItem['id'][]>([]);
 
   // Listened for on the list itself, so the rows' own controls keep their handlers and the list stays a plain one.
@@ -181,14 +182,31 @@ export function BaseUploadList({
       const target = event.target instanceof Element ? event.target : null;
       const row = target?.closest('.upload-row');
       const item = row ? itemsNow.current[[...list.children].indexOf(row)] : undefined;
-      focused.current = item
-        ? { id: item.id, action: target?.closest('[data-action]')?.getAttribute('data-action') ?? null }
-        : null;
+      focused.current =
+        item && target
+          ? {
+              id: item.id,
+              action: target.closest('[data-action]')?.getAttribute('data-action') ?? null,
+              element: target,
+            }
+          : null;
     };
     const onFocusOut = (event: FocusEvent): void => {
       const next = event.relatedTarget;
-      // Focus the reader moves elsewhere is theirs; focus lost with a removed row has no target.
-      if (next instanceof Node && !list.contains(next)) focused.current = null;
+      const left = event.target;
+      // Focus the reader moves elsewhere in the page is theirs.
+      if (next instanceof Node && !list.contains(next)) {
+        focused.current = null;
+        return;
+      }
+      if (next !== null) return;
+      // Focus moved to nothing: to the body, by a press on the page's empty space, or as its element left the
+      // page. Only the second is the list's to mend, and only then is the element gone by the next microtask.
+      queueMicrotask(() => {
+        if (focused.current?.element === left && left instanceof Node && left.isConnected) {
+          focused.current = null;
+        }
+      });
     };
     list.addEventListener('focusin', onFocusIn);
     list.addEventListener('focusout', onFocusOut);
@@ -198,19 +216,25 @@ export function BaseUploadList({
     };
   }, []);
 
-  // Before paint, so focus never rests on the body for a frame: a row that left takes focus to the same button of
-  // the next row, else the previous one, else the fallback; a row that stays, as through Retry, keeps it.
+  // Before paint, so focus never rests on the body for a frame, and only once the element that held focus has
+  // left the page. A row that left takes focus to the same button of the next row, else the previous one, else
+  // the fallback; a row that stays but lost its button, through Retry or a status the reader did not change, takes
+  // focus itself, never a button the reader did not choose.
   useLayoutEffect(() => {
     const before = drawn.current;
     const ids = items.map((item) => item.id);
     drawn.current = ids;
     const lost = focused.current;
     const list = listRef.current;
-    if (lost === null || list === null) return;
+    if (lost === null || list === null || lost.element.isConnected) return;
     const active = document.activeElement;
-    if (active !== null && active !== document.body && active.isConnected) return;
-    let index = ids.indexOf(lost.id);
-    if (index === -1) {
+    if (active !== null && active !== document.body && active.isConnected) {
+      focused.current = null;
+      return;
+    }
+    const stays = ids.indexOf(lost.id);
+    let index = stays;
+    if (stays === -1) {
       const at = before.indexOf(lost.id);
       const next = before.slice(at + 1).find((id) => ids.includes(id));
       const previous = before
@@ -221,15 +245,15 @@ export function BaseUploadList({
       index = target === undefined ? -1 : ids.indexOf(target);
     }
     const row = index === -1 ? undefined : list.children[index];
-    const control =
-      (lost.action === null ? null : row?.querySelector<HTMLElement>(`[data-action="${lost.action}"]`)) ??
-      row?.querySelector<HTMLElement>('a[href], button');
-    if (control) {
-      control.focus();
+    if (!(row instanceof HTMLElement)) {
+      focused.current = null;
+      (focusFallback?.() ?? list).focus();
       return;
     }
-    focused.current = null;
-    (focusFallback?.() ?? list).focus();
+    const same =
+      lost.action === null ? null : row.querySelector<HTMLElement>(`[data-action="${lost.action}"]`);
+    const first = stays === -1 ? row.querySelector<HTMLElement>('a[href], button') : null;
+    (same ?? first ?? row).focus();
   }, [items, focusFallback]);
 
   return (
@@ -255,7 +279,8 @@ export function BaseUploadList({
                 : `${String(Math.round(share * 100))}%`;
         const isWorking = status === 'uploading' || status === 'reading';
         return (
-          <li key={id} className="upload-row" data-status={status}>
+          // tabIndex -1: the row takes focus itself when the button that held it leaves and the row stays.
+          <li key={id} className="upload-row" data-status={status} tabIndex={-1}>
             <span className="upload-row-icon" aria-hidden="true">
               {ICONS[status]}
             </span>

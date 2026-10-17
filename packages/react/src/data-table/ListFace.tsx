@@ -71,7 +71,7 @@ export interface ListFaceProps<T> {
   selection: ListSelection | undefined;
   /**
    * Whether an editable element in an item has focus. React Aria's item takes every arrow from its children in its
-   * key capture, so the list then moves by Tab instead and the editor keeps its arrows (spec correction 57).
+   * key capture, so the list then moves by Tab instead and the editor keeps its arrows (spec correction 67).
    */
   isEditing: boolean;
   isLoading: boolean;
@@ -155,7 +155,7 @@ function ListItem<T>({
     const body = figure(column as DataTableColumn<unknown>, column.cell(row.value));
     return (
       // An editor's unused Escape gives focus back to the item here, before the item stops its children's keys.
-      // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the item is the row; the part only hears an editor's unused Escape on its way up (spec correction 57)
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the item is the row; the part only hears an editor's unused Escape on its way up (spec correction 67)
       <span
         key={column.id}
         className="data-table-item-part"

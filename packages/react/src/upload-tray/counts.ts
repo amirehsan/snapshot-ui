@@ -53,3 +53,11 @@ export function countUploads(items: readonly UploadItem[]): UploadCounts {
 export function inFlightOf(counts: UploadCounts): number {
   return counts.waiting + counts.uploading + counts.reading;
 }
+
+/**
+ * How many of the counted files the app can still stop: waiting or uploading. A file being read has reached the
+ * server already and has no Cancel, so it neither holds the page open nor counts in Cancel all.
+ */
+export function cancellableOf(counts: UploadCounts): number {
+  return counts.waiting + counts.uploading;
+}

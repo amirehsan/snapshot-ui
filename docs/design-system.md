@@ -8444,7 +8444,7 @@ when it shows and past the table when it does not, and Shift+Tab from
 the bar returns to the row or cell last focused (the `TabStop` play, in
 three engines, and a docs end-to-end test with the real Tab key).
 
-**Editors in cells** (documents spec corrections 48, 54, 57 and 59,
+**Editors in cells** (documents spec corrections 48, 64, 67 and 69,
 risk R8). React Aria's cell takes every arrow from its children in its
 key capture, re-dispatching Up and Down to the row and walking the
 cell's focusable children on Left and Right, and the list's item does
@@ -9282,14 +9282,21 @@ animation, and nothing moves under reduced motion.
 `padding-inline: var(--spacing-inset) var(--spacing-part)`, so the title
 lines up with the rows' icons and the two 40px ghost buttons sit a part step
 from the edge. The title is an `h2` at `--text-body` weight 500 in ink with
-tabular figures, "Uploading 2 of 5", counting the settled files and the one
-in hand, then "5 uploads complete" (spec correction 43); the app's line under
-it is `--text-small` in slate. The fold button's name stays "Upload details"
-and `aria-expanded` says the state, the disclosure pattern; its chevron turns
-180 degrees while folded. A `--color-divider` rule sits under the header
-while the body shows. The close button shows by ruling 11: `onClear` once
-nothing is in flight, the Cancel all question while files are, and none in
-flight without `onCancelAll`.
+tabular figures, "Uploading 2 of 5", counting the running batch's settled
+files and the one in hand, so rows settled before the batch began do not
+swell it, then naming what settled, failures and reviews included, "3
+uploads complete, 1 failed, 1 needs review" (spec corrections 43 and 60).
+While any row has failed, a 20px `CircleX` in error leads the title, hidden
+from assistive technology, since the rows and the announcements say it. The
+app's line under the title is `--text-small` in slate. The fold button's
+name stays "Upload details" and `aria-expanded` says the state, the
+disclosure pattern; its chevron turns 180 degrees while folded. A
+`--color-divider` rule sits under the header while the body shows. The close
+button shows by ruling 11: `onClear` once nothing is in flight, the Cancel
+all question ("Cancel 1 upload?", "Cancel 3 uploads?") while files are
+waiting or uploading, and none without `onCancelAll`, nor while only files
+being read remain, which have reached the server and have no Cancel (spec
+corrections 59 and 61).
 
 **The body.** `max-block-size: min(24rem, 50dvh)`, about five rows, or half
 a short window, scrolling with the library's thin scrollbar colors and
@@ -9329,26 +9336,64 @@ direction (`dir="auto"`), so the extension is at the name's end in either
 direction: at the left of a Persian name, and at the right of a Latin one on
 a Persian page. The full name is the link's or the row's text.
 
-**Focus.** When Remove or Cancel takes a row away with focus in it, focus
-moves before paint to the same button on the next row, else the previous
-one, else the tray's heading or, in a page, the list; never the body. Retry
-keeps focus on the row's first control as its status changes. When the tray
-leaves with focus in it, or after a yes to Cancel all, focus goes to the
-shell's `<main>`, or outside a shell to the first `main` that takes focus
-(spec correction 11).
+**Focus.** The list and the tray remember the element that holds focus and
+mend focus only once that element has left the page; focus the reader moves
+anywhere else, the body by a press on empty space included, is theirs and is
+never pulled back (spec correction 54). When Remove or Cancel takes a row
+away with focus in it, focus moves before paint to the same button on the
+next row, else the previous one, else the tray's heading or, in a page, the
+list; never the body. When the row stays and only its button leaves, through
+Retry or a status the reader did not change, the row itself takes focus
+(`tabindex="-1"`, an inset ring when the keyboard brought it), never a
+button the reader did not choose (spec correction 57). When the tray leaves
+with focus in it, or after a yes to Cancel all, focus goes to the shell's
+`<main>`, or outside a shell to the first `main` that takes focus (spec
+correction 11); when only a close or clear button leaves with focus on it,
+or after a yes to Cancel all that leaves settled rows, focus goes to what
+stays in that face: the fold button, the sheet's own close or the bar's
+button (spec correction 62).
 
 **The phone's bar** (ruling 8). Under 768px a pill fixed across the bottom,
 `inset-inline: var(--overlay-inset)`, on the float surface at
 `--radius-pill`, `--size-field` tall, 48px, never under the 40px target in
 compact density and never under 44px on a coarse pointer (spec correction
-42). Its one button says the title at `--text-small` weight 500 with a 16px
-`ChevronUp` at the end, and opens a Sheet titled by the title, holding the
-app's line and the list, whose rows run to the sheet's sides on the sheet's
-own padding. A link pressed in the sheet closes it as the router navigates.
-The bar is a region named "Uploads" (`labels.region`), since a region named
-by its only button's words would be read twice (spec correction 41). A sheet
-left open while the window widens stays open; when it closes there, focus
-goes to the wide face's fold button, the one `matchMedia` read.
+42), border-box, so its height is the one the page reserves. Its button says
+the title at `--text-small` weight 500, after a 16px error `CircleX` while
+any row has failed, with a 16px `ChevronUp` at the end, and opens a Sheet
+titled by the title, holding the app's line and the list, whose rows run to
+the sheet's sides on the sheet's own padding. A link pressed in the sheet
+closes it as the router navigates. The bar is a region named "Uploads"
+(`labels.region`), since a region named by its button's words would be read
+twice (spec correction 41). A sheet left open while the window widens stays
+open; when it closes there, focus goes to the wide face's fold button, the
+one `matchMedia` read.
+
+**The phone's Clear and Cancel uploads** (spec correction 56; Drive, Dropbox
+and Gmail clear and cancel from their phone faces). The wide close button's
+rule is the sheet's footer: a full-width secondary "Clear" (`labels.clear`)
+calling `onClear` once nothing is in flight, or "Cancel uploads"
+(`labels.cancelAll`) through the same Cancel all question while files are,
+and no footer with neither handler. Once everything has settled and
+`onClear` is given, the bar ends in an X named "Clear", as tall as the bar
+inside its edge and `max(var(--size-field), var(--size-target))` wide, slate
+turning ink, at the pill's end radius less its edge. The sheet's own close
+button is named by `labels.closeSheet` ("Close"), apart from the panel's
+`labels.close`, so an app that names the panel's button for clearing does
+not rename the button that only closes the sheet.
+
+**Room for the bar** (spec correction 55, WCAG 2.4.11). Under 768px, while
+the bar shows, `.app-shell:has(> .upload-tray-bar) .app-shell-workspace`
+pads its end by the shell's reserve, a sticky bar's offset, the bar's
+`max(var(--size-field), var(--size-target))` and the inset, so the page's
+last control scrolls clear of it; and `:root:has(.upload-tray-bar)` declares
+`--upload-tray-reserve` (the bar and the inset) and sets
+`scroll-padding-block-end` to `--toast-offset-block` plus `--save-bar-offset`
+plus that reserve, so a control focused from the keyboard scrolls clear of
+the tab bar, a sticky bar and the tray, in that order. Tokens only, nothing
+measured. A row's own scroll margin under DataTable's bulk bar adds to the
+root's padding. `PhoneKeepsClear` focuses the last control of a long page at
+375 by 812 and checks it above the bar, then scrolls to the end and checks
+again.
 
 **The three announcements** (ruling 10). A polite status host, mounted in
 the server's HTML, clipped as the toasts' host is and kept out of a modal's
@@ -9362,9 +9407,10 @@ on, with no new start. Statuses on the first render are the baseline. Never a
 percentage, never a row turning saved on its own. Each message is keyed, so
 the same words twice are said twice.
 
-**Leaving the page** (ruling 12). While anything is in flight and
-`warnsOnUnload` holds, a `beforeunload` listener asks the browser to warn,
-in its own words. iOS Safari shows nothing, so the tray on the page is the
+**Leaving the page** (ruling 12). While any file is waiting or uploading
+and `warnsOnUnload` holds, a `beforeunload` listener asks the browser to
+warn, in its own words; a file being read is on the server already and holds
+nothing open (spec correction 61). iOS Safari shows nothing, so the tray on the page is the
 real warning; a client navigation keeps the shell and needs none.
 
 **The bottom edge, the tray's part** (spec 12). Both faces sit at
@@ -9378,32 +9424,42 @@ never in the server's HTML, so no first paint waits on it. `toast.css` adds
 it, with `--save-bar-offset`, to the toast region's bottom, so the toasts
 sit 16px above the tray in the same column.
 
-**Concentric corners** (spec correction 47). A rounded part inside a
-rounded holder takes the holder's radius less the gap between them, the
-holder's edge and the smaller side of its padding, never a copy, and is
-square once the gap reaches the radius: `max(0px, calc(var(--holder-radius)
-- var(--holder-border) - var(--holder-pad)))`. The panel (`--radius-surface`,
-1px, no padding), the phone's bar (`--radius-pill`, 1px, none) and the sheet
-(`--radius-stadium`, 1px, none) name their corners in those three
-properties. The list subtracts its holder's gap and each row its block
-padding, 0.625rem, for its buttons and its bar; the header's buttons
-subtract the panel's edge and the part step; the bar's button the pill's
-edge. In Rounded: 15px for the header's buttons, 13px for a row's buttons
-and bar (the 8px bar still reads as a pill), 998px for the bar's button,
-29px for a row's buttons in the sheet; in Soft 3px, 1px, 11px and 5px; in
-Square 0. A list in no named holder keeps its parts' own pill radius, and an
-app's rounded holder, such as a Card, names its own corner.
+**Concentric corners** (spec corrections 47 and 58). A rounded part in a
+rounded holder's corner region takes the holder's radius less the gap
+between them, the holder's edge and the smaller real gap, never a copy, and
+is square once the gap reaches the radius: `max(0px, calc(var(--holder-radius)
+- var(--holder-border) - var(--holder-pad)))`. Only parts in a corner region
+take it. The panel (`--radius-surface`, 1px, no padding) and the phone's bar
+(`--radius-pill`, 1px, none) name their corners in those three properties;
+the sheet names none, since it rounds only its top corners, which its header
+holds. The header's trailing button, a part step in from the panel's edge,
+takes the panel's radius less its edge and that step; the fold button beside
+Close is 57px in and keeps its pill. The trailing button of the list's last
+row, and of its first unless the list sits under the panel's header, takes
+the list's radius less its real gap, the row's inline padding less the
+actions' 0.5rem pull-in, 8px, which is smaller than its block gap. The bar's
+button and its clear X take the pill less its edge. The rows' other buttons
+and their bars, 53px and more from every corner, keep their own pill. In
+Rounded: 15px for the header's trailing button and the last row's trailing
+button, 998px for the bar's buttons, 31px for a Card's corner rows (its 40px
+stadium less its edge and the 8px gap); in Soft 3px, 11px and 7px; in Square
+0. A list in no named holder keeps its parts' own pill radius, and an app's
+rounded holder, such as a Card, names its own corner.
 
 **Forced colors.** The panel's and the bar's edges are `canvastext`; the
-icons keep their shapes in `canvastext`; the words carry the status, as the
-toasts' titles carry their tones.
+icons, the header's and the bar's error icon and the bar's clear X keep their
+shapes in `canvastext`; the words carry the status, as the toasts' titles
+carry their tones. The bar's buttons press as the native `:active` does too,
+`:is(:active, [data-pressed])` (spec correction 63).
 
-**Where the build departs from the plan** (spec corrections 40 to 47). The
+**Where the build departs from the plan** (spec corrections 40 to 63). The
 size limits are above the spec's budgets: `{ UploadList }` measured 2.43 kB
 and is set at 3 kB, and `{ UploadTray }` 7.48 kB, set at 8 kB, by the repo's
-rule; the tray carries Sheet, ConfirmDialog through `useConfirm`, IconButton
-and the list with its ProgressBar. AppShell measured 934 B with its
-`floating` slot and keeps 1.5 kB.
+rule; after the review round the list measures 2.5 kB under its 3 kB, and the
+tray, which now also carries Button for the sheet's footer, 8.01 kB, so the
+rule sets 9 kB (spec correction 56). The tray carries Sheet, ConfirmDialog
+through `useConfirm`, IconButton, Button and the list with its ProgressBar.
+AppShell measured 934 B with its `floating` slot and keeps 1.5 kB.
 
 **Screen readers and devices.** Not yet verified (owner action 4): the panel
 read as a region named by its title, the fold button's state, each row's
@@ -9460,7 +9516,7 @@ submits. The server's HTML is one string under `en-US`, `de-DE` and
 `null` once every segment is cleared; `validate` gets the ISO date. React
 Aria takes each digit of a year as it is typed, so years 2, 20 and 202
 reach the picker as whole dates first. The picker holds them back (spec
-correction 58): it controls React Aria itself, with the app's value or
+correction 68): it controls React Aria itself, with the app's value or
 its own, and a day whose Gregorian year has fewer than four digits stays
 in React Aria's field, shown and never sent, nor given to `validate`.
 Every calendar's year passes through such days as it is typed or erased
@@ -9492,7 +9548,7 @@ the view to the day. A preset whose date is not an ISO date warns once and
 is left out. Closing on a day, a preset or Escape gives focus back to what
 opened the calendar, React Aria's.
 
-**Corners** (spec corrections 52, 55 and 56). `date-picker.css` draws no
+**Corners** (spec corrections 52, 65 and 66). `date-picker.css` draws no
 corner of its own. The calendar keeps Calendar's shapes, the days'
 circles and the presets' pills, so DatePicker, Calendar and
 DateRangePicker draw one calendar: the days and presets are controls in
@@ -9514,7 +9570,7 @@ moves no row, in three engines. Escape gives focus back to the row, the
 grid pattern's way out of editing, and the first Escape with the
 calendar open closes only the calendar; Tab moves field to field, row by
 row, and out of the table after the last. The list face, at a phone's
-width, keeps the segments' keys too (spec corrections 54, 57 and 59;
+width, keeps the segments' keys too (spec corrections 64, 67 and 69;
 "DataTable", "Editors in cells"). The `InTableCell` and `InListItem`
 plays press them in three engines.
 

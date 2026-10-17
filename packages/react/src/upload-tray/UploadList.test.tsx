@@ -231,7 +231,7 @@ describe('UploadList', () => {
     expect(screen.getByRole('list', { name: 'Uploads' })).toHaveFocus();
   });
 
-  it('keeps focus on the row through Retry', async () => {
+  it('keeps focus on the row through Retry, on the row itself once Retry has gone', async () => {
     const user = userEvent.setup();
     function Retryable(): ReactElement {
       const [item, setItem] = useState<UploadItem>({
@@ -253,8 +253,40 @@ describe('UploadList', () => {
     }
     render(<Retryable />);
     await user.click(screen.getByRole('button', { name: 'Retry video.mov' }));
-    // Retry is gone with the failure; the row's first control has focus.
-    expect(screen.getByRole('button', { name: 'Cancel video.mov' })).toHaveFocus();
+    // Retry is gone with the failure, and the row stays: the row itself, never a button the reader did not choose.
+    expect(rowOf('video.mov')).toHaveFocus();
+    expect(rowOf('video.mov')).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('gives focus to the row itself when its button leaves with a status the reader did not change', () => {
+    const uploading: UploadItem = { id: 1, name: 'invoice.pdf', status: 'uploading', progress: 0.9 };
+    const other: UploadItem = { id: 2, name: 'lease.pdf', status: 'saved' };
+    const props = { 'aria-label': 'Uploads', onCancel: vi.fn(), onRemove: vi.fn(), onRetry: vi.fn() };
+    const { rerender } = render(<UploadList {...props} items={[uploading, other]} />);
+    screen.getByRole('button', { name: 'Cancel invoice.pdf' }).focus();
+    // The server has the file and reads it: no buttons, and focus stays in the row rather than jumping away.
+    rerender(<UploadList {...props} items={[{ ...uploading, status: 'reading' }, other]} />);
+    expect(rowOf('invoice.pdf')).toHaveFocus();
+    // Saved: Remove appears, and focus stays on the row, so a second Enter removes nothing.
+    rerender(<UploadList {...props} items={[{ ...uploading, status: 'saved' }, other]} />);
+    expect(rowOf('invoice.pdf')).toHaveFocus();
+  });
+
+  it('never pulls focus back once the reader has moved it out of the list, to the body included', async () => {
+    const item: UploadItem = { id: 1, name: 'invoice.pdf', status: 'uploading', progress: 0.2 };
+    const props = { 'aria-label': 'Uploads', onCancel: vi.fn() };
+    const { rerender } = render(<UploadList {...props} items={[item]} />);
+    const cancel = screen.getByRole('button', { name: 'Cancel invoice.pdf' });
+    cancel.focus();
+    // A press on the page's empty space: focus goes to the body, and the button is still there.
+    cancel.blur();
+    await Promise.resolve();
+    expect(document.body).toHaveFocus();
+    rerender(<UploadList {...props} items={[{ ...item, progress: 0.4 }]} />);
+    expect(document.body).toHaveFocus();
+    // Even when that row later leaves.
+    rerender(<UploadList {...props} items={[]} />);
+    expect(document.body).toHaveFocus();
   });
 
   it('warns once for a failed item without reason, a repeated id and progress outside 0 to 1', () => {

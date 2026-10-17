@@ -35,6 +35,13 @@ const wide = (name: string | RegExp = /Uploading|complete/): HTMLElement =>
 /** The phone's bar: the region named "Uploads". */
 const bar = (): HTMLElement => screen.getByRole('region', { name: 'Uploads' });
 
+/** The bar's first button, the one that opens the sheet. */
+function barButton(): HTMLElement {
+  const [button] = within(bar()).getAllByRole('button');
+  if (!button) throw new Error('No bar button');
+  return button;
+}
+
 /** A ResizeObserver whose callback the test calls, standing in for the browser's. */
 function stubResizeObserver(): {
   observed: Element[];
@@ -131,6 +138,85 @@ describe('UploadTray', () => {
     expect(button).toHaveAttribute('aria-expanded', 'false');
     // Settled, the title says so.
     render(<UploadTray items={SETTLED} />);
+    expect(wide('3 uploads complete, 1 failed, 1 needs review')).toBeInTheDocument();
+  });
+
+  it.each<[string, UploadItem['status'][], string]>([
+    ['all saved', ['saved', 'saved'], '2 uploads complete'],
+    ['one saved', ['saved'], '1 upload complete'],
+    [
+      'saved, failed and needing review',
+      ['saved', 'review', 'review', 'failed'],
+      '1 upload complete, 1 failed, 2 need review',
+    ],
+    ['only failed', ['failed', 'failed'], '2 uploads failed'],
+    ['only needing review', ['review'], '1 upload needs review'],
+    ['failed and needing review', ['failed', 'review'], '1 upload failed, 1 needs review'],
+  ])('names failures and reviews in the settled title: %s', (_, statuses, title) => {
+    render(
+      <UploadTray
+        items={statuses.map((status, index) => ({
+          id: index,
+          name: `${String(index)}.pdf`,
+          status,
+          reason: 'Why',
+        }))}
+      />,
+    );
+    expect(wide(title)).toBeInTheDocument();
+  });
+
+  it('shows the error icon in the header and the bar while any row has failed', () => {
+    const { rerender } = render(<UploadTray items={MIXED} />);
+    expect(document.querySelectorAll('.upload-tray-alert')).toHaveLength(0);
+    const failed: UploadItem = { id: 9, name: 'video.mov', status: 'failed', reason: 'Over 10 MB' };
+    rerender(<UploadTray items={[...MIXED, failed]} />);
+    const header = wide().querySelector('.upload-tray-header');
+    expect(header?.querySelector('.upload-tray-alert svg.lucide-circle-x')).not.toBeNull();
+    expect(header?.querySelector('.upload-tray-alert')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(bar()).getAllByRole('button')[0]?.querySelector('.upload-tray-alert')).not.toBeNull();
+  });
+
+  it('counts the running batch in the title, not the rows settled before it', () => {
+    const lease: UploadItem = { id: 1, name: 'lease.pdf', status: 'saved' };
+    const invoice: UploadItem = { id: 2, name: 'invoice.pdf', status: 'saved' };
+    const earlier: UploadItem[] = [
+      lease,
+      invoice,
+      { id: 3, name: 'video.mov', status: 'failed', reason: 'Over 10 MB' },
+    ];
+    const { rerender } = render(<UploadTray items={earlier} />);
+    const added: UploadItem[] = [
+      { id: 4, name: 'march.pdf', status: 'uploading', progress: 0.1 },
+      { id: 5, name: 'april.pdf', status: 'waiting' },
+    ];
+    rerender(<UploadTray items={[...earlier, ...added]} />);
+    expect(wide('Uploading 1 of 2')).toBeInTheDocument();
+    // A failed row retried during the batch joins it, and a row that settles in it counts as done.
+    rerender(
+      <UploadTray
+        items={[
+          lease,
+          invoice,
+          { id: 3, name: 'video.mov', status: 'waiting' },
+          { id: 4, name: 'march.pdf', status: 'saved' },
+          { id: 5, name: 'april.pdf', status: 'uploading', progress: 0.5 },
+        ]}
+      />,
+    );
+    expect(wide('Uploading 2 of 3')).toBeInTheDocument();
+    // Settled, every row again.
+    rerender(
+      <UploadTray
+        items={[
+          lease,
+          invoice,
+          { id: 3, name: 'video.mov', status: 'saved' },
+          { id: 4, name: 'march.pdf', status: 'saved' },
+          { id: 5, name: 'april.pdf', status: 'saved' },
+        ]}
+      />,
+    );
     expect(wide('5 uploads complete')).toBeInTheDocument();
   });
 
@@ -188,7 +274,8 @@ describe('UploadTray', () => {
       <UploadTray items={MIXED} onCancelAll={onCancelAll} formatCount={(count) => `#${String(count)}`} />,
     );
     await user.click(screen.getByRole('button', { name: 'Close' }));
-    const question = await screen.findByRole('alertdialog', { name: 'Cancel #4 uploads?' });
+    // The waiting and uploading files: the one being read is on the server already and has no Cancel.
+    const question = await screen.findByRole('alertdialog', { name: 'Cancel #3 uploads?' });
     expect(question).toHaveAccessibleDescription('Files still uploading will not be saved.');
     await user.click(within(question).getByRole('button', { name: 'Keep uploading' }));
     expect(onCancelAll).not.toHaveBeenCalled();
@@ -197,6 +284,144 @@ describe('UploadTray', () => {
       within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancel uploads' }),
     );
     expect(onCancelAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks in the singular for one upload, and hands a custom question the count and its words', async () => {
+    const user = userEvent.setup();
+    const one: UploadItem[] = [
+      { id: 1, name: 'invoice.pdf', status: 'uploading', progress: 0.3 },
+      { id: 2, name: 'statement.pdf', status: 'reading' },
+    ];
+    const { unmount } = render(<UploadTray items={one} onCancelAll={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(await screen.findByRole('alertdialog', { name: 'Cancel 1 upload?' })).toBeInTheDocument();
+    unmount();
+    const cancelAllTitle = vi.fn((count: number, formatted: string) => `${String(count)}/${formatted}`);
+    render(
+      <UploadTray
+        items={MIXED}
+        onCancelAll={vi.fn()}
+        formatCount={(count) => `#${String(count)}`}
+        labels={{ cancelAllTitle }}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(await screen.findByRole('alertdialog', { name: '3/#3' })).toBeInTheDocument();
+    expect(cancelAllTitle).toHaveBeenCalledWith(3, '#3');
+  });
+
+  it('counts a file being read as neither cancellable nor holding the page open', () => {
+    const add = vi.spyOn(window, 'addEventListener');
+    const reading: UploadItem[] = [
+      { id: 1, name: 'lease.pdf', status: 'saved' },
+      { id: 2, name: 'statement.pdf', status: 'reading' },
+    ];
+    render(<UploadTray items={reading} onCancelAll={vi.fn()} onClear={vi.fn()} />);
+    expect(add.mock.calls.filter(([type]) => type === 'beforeunload')).toHaveLength(0);
+    // Nothing to cancel and not yet settled: no close button.
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    expect(wide('Uploading 2 of 2')).toBeInTheDocument();
+  });
+
+  it('gives the phone sheet Clear once settled, Cancel uploads while in flight, and neither without handlers', async () => {
+    const user = userEvent.setup();
+    const onClear = vi.fn();
+    const onCancelAll = vi.fn();
+    const open = async (): Promise<HTMLElement> => {
+      await user.click(barButton());
+      return screen.findByRole('dialog');
+    };
+    const { rerender, unmount } = render(
+      <UploadTray items={SETTLED} onClear={onClear} labels={{ close: 'Clear all uploads' }} />,
+    );
+    let sheet = await open();
+    // The sheet's own close only closes it, and is named for that, not for the panel's close button.
+    expect(within(sheet).getByRole('button', { name: 'Close' })).toHaveClass('sheet-close');
+    expect(within(sheet).queryByRole('button', { name: 'Clear all uploads' })).toBeNull();
+    await user.click(within(sheet).getByRole('button', { name: 'Clear' }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+    rerender(<UploadTray items={MIXED} onCancelAll={onCancelAll} />);
+    sheet = screen.getByRole('dialog');
+    await user.click(within(sheet).getByRole('button', { name: 'Cancel uploads' }));
+    const question = await screen.findByRole('alertdialog', { name: 'Cancel 3 uploads?' });
+    await user.click(within(question).getByRole('button', { name: 'Cancel uploads' }));
+    expect(onCancelAll).toHaveBeenCalledTimes(1);
+    unmount();
+    render(<UploadTray items={SETTLED} labels={{ closeSheet: 'Done' }} />);
+    sheet = await open();
+    expect(
+      within(sheet)
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-label') ?? button.textContent),
+    ).toEqual(['Done']);
+  });
+
+  it('gives the settled bar a clear X when onClear is given', async () => {
+    const user = userEvent.setup();
+    const onClear = vi.fn();
+    const { rerender } = render(<UploadTray items={MIXED} onClear={onClear} />);
+    expect(within(bar()).getAllByRole('button')).toHaveLength(1);
+    rerender(<UploadTray items={SETTLED} onClear={onClear} />);
+    const [open, clear] = within(bar()).getAllByRole('button');
+    if (!open || !clear) throw new Error('Two buttons');
+    expect(open).toHaveAccessibleName('3 uploads complete, 1 failed, 1 needs review');
+    expect(clear).toHaveAccessibleName('Clear');
+    await user.click(clear);
+    expect(onClear).toHaveBeenCalledTimes(1);
+    rerender(<UploadTray items={SETTLED} />);
+    expect(within(bar()).getAllByRole('button')).toHaveLength(1);
+  });
+
+  it('gives focus to the fold button when Close leaves with focus on it as the last upload settles', () => {
+    const uploading: UploadItem = { id: 1, name: 'invoice.pdf', status: 'uploading', progress: 0.9 };
+    const { rerender } = render(<UploadTray items={[uploading]} onCancelAll={vi.fn()} />);
+    screen.getByRole('button', { name: 'Close' }).focus();
+    rerender(<UploadTray items={[{ ...uploading, status: 'saved' }]} onCancelAll={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Upload details' })).toHaveFocus();
+  });
+
+  it('gives focus to the fold button after a yes to Cancel all leaves settled rows and no Close', async () => {
+    const user = userEvent.setup();
+    function Cancelling(): ReactElement {
+      const [items, setItems] = useState<UploadItem[]>([
+        { id: 1, name: 'lease.pdf', status: 'saved' },
+        { id: 2, name: 'invoice.pdf', status: 'uploading', progress: 0.4 },
+      ]);
+      return (
+        <UploadTray
+          items={items}
+          onCancelAll={() => {
+            setItems((each) => each.filter((item) => item.status === 'saved'));
+          }}
+        />
+      );
+    }
+    render(<Cancelling />);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    const question = await screen.findByRole('alertdialog');
+    await user.click(within(question).getByRole('button', { name: 'Cancel uploads' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upload details' })).toHaveFocus();
+    });
+  });
+
+  it('never pulls focus to main once the reader has moved it out of the tray, to the body included', async () => {
+    const uploads: UploadItem[] = [{ id: 1, name: 'lease.pdf', status: 'saved' }];
+    const { rerender } = render(
+      <AppShell floating={<UploadTray items={uploads} onRemove={vi.fn()} />}>page</AppShell>,
+    );
+    const remove = screen.getByRole('button', { name: 'Remove lease.pdf' });
+    remove.focus();
+    // A press on the page's empty space.
+    remove.blur();
+    await Promise.resolve();
+    rerender(<AppShell floating={<UploadTray items={[]} onRemove={vi.fn()} />}>page</AppShell>);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(document.body).toHaveFocus();
   });
 
   it('opens the sheet from the bar and closes it on a row link', async () => {
@@ -209,7 +434,7 @@ describe('UploadTray', () => {
     );
     const button = within(bar()).getByRole('button');
     await user.click(button);
-    const sheet = await screen.findByRole('dialog', { name: '5 uploads complete' });
+    const sheet = await screen.findByRole('dialog', { name: '3 uploads complete, 1 failed, 1 needs review' });
     expect(sheet).toHaveAccessibleDescription('Tap a saved file to open it');
     expect(button).toHaveAttribute('aria-expanded', 'true');
     await user.click(within(sheet).getByRole('link', { name: 'lease.pdf' }));
@@ -336,11 +561,11 @@ describe('UploadTray', () => {
     await expectNoA11yViolations(container);
   });
 
-  it('has no axe violations: the bar, and the open sheet', async () => {
+  it('has no axe violations: the bar with its clear X, and the open sheet with Clear', async () => {
     const user = userEvent.setup();
-    render(<UploadTray items={SETTLED} onRemove={vi.fn()} />);
+    render(<UploadTray items={SETTLED} onRemove={vi.fn()} onClear={vi.fn()} />);
     await expectNoA11yViolations(bar());
-    await user.click(within(bar()).getByRole('button'));
+    await user.click(barButton());
     const sheet = await screen.findByRole('dialog');
     await expectNoA11yViolations(sheet);
   });

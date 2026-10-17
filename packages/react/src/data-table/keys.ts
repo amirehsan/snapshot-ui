@@ -65,7 +65,7 @@ export function editorRow(target: Element | null): HTMLElement | null {
 
 /**
  * Escape on an editor in a cell gives focus back to its row, the grid pattern's way out of editing, and the row's
- * focus turns the grid's arrows back on (spec correction 54). Only an Escape the editor left alone: one that an
+ * focus turns the grid's arrows back on (spec correction 64). Only an Escape the editor left alone: one that an
  * open popover or a field used is prevented or stopped before it gets here, and one from a portal, such as a date
  * picker's calendar, is not in `event.currentTarget`'s DOM. Called from a bubble handler between the editor and
  * the row: the root's for the table face, an item part's for the list face, whose item stops its children's keys.

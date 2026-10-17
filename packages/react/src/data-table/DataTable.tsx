@@ -322,7 +322,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     tableState.current = next;
   }, []);
   // Whether an editable element in a list item has focus: the list's items then leave their children's arrows
-  // alone, as the table's cells do while its navigation is off (spec correction 57).
+  // alone, as the table's cells do while its navigation is off (spec correction 67).
   const [listEditing, setListEditing] = useState(false);
   /**
    * Lets an editable element in a cell or a list item keep its arrows while it has focus, and gives them back to
@@ -339,7 +339,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   }, []);
   // The switch turns back on from focus events: an engine that fires no blur when a focused editor is removed or
   // hidden would leave the arrows off, so focus is checked again whenever the rows change and whenever anything
-  // on the page takes focus (spec correction 59).
+  // on the page takes focus (spec correction 69).
   const recheckEditing = useCallback((): void => {
     const root = rootRef.current;
     if (root === null) return;
@@ -538,7 +538,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     // The capture handler takes keys before React Aria's grid does (spec 7.2): a capture listener, which
     // jsx-a11y does not read, so the root needs no role of its own. Its one bubble handler is Escape out of an
     // editor in a cell, after the editor has had it.
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the grid and the list inside are the roles; the root only hears an editor's unused Escape on its way up (spec correction 54)
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the grid and the list inside are the roles; the root only hears an editor's unused Escape on its way up (spec correction 64)
     <div
       ref={rootRefs}
       className={cx('data-table', className)}
