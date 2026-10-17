@@ -9016,7 +9016,11 @@ dashed, declared after the drop look so it wins its color, as invalid
 outranks changed on a field; the error line is the field's. Disabled is
 taupe, the edge, the text and the icon, with `cursor: not-allowed`; the
 zone writes `aria-disabled` on its group, so its taupe text reads as an
-inactive control's (spec correction 26). A phone cannot drag a file into a page, so under
+inactive control's (spec correction 26). A click anywhere on the box
+opens the picker, as Carbon's drop container and react-dropzone do: the
+click is forwarded to the button's input, so the box adds no tab stop and
+no role, and it takes the pointer cursor of a control, `not-allowed` while
+disabled (spec correction 38). A phone cannot drag a file into a page, so under
 `(hover: none) and (pointer: coarse)` the hint is not drawn and the button
 stays; both strings are in the server's HTML and the media query picks.
 
@@ -9032,18 +9036,26 @@ the box uses React Aria's `useDrop` with no drop button instead (spec
 correction 5).
 
 **Refusals.** A polite `role="status"` line, mounted empty with the zone
-and clipped while empty, says `labels.rejected(formatCount(n))` after a
-drop, paste or choice with refusals, and the zone is invalid until the
-next. Each round remounts the line, so a second refusal of the same count
+and clipped while empty, says `labels.rejected(n, formatCount(n),
+rejected)` after a drop, paste or choice with refusals, and the zone is
+invalid until the next. The default is singular for one file and names the
+reason where every refusal shares one, as GOV.UK and Carbon state it: "1
+file was not added: it is too large", "3 files were not added" where the
+reasons differ (spec correction 33). Each round remounts the line, so a second refusal of the same count
 is said again. `errorMessage` replaces the line; `isInvalid` is the app's
 and a clean drop never clears it.
 
 **A missed drop** (ruling 4). While any zone is mounted, one pair of
 document listeners prevents the default of a files `dragover` and `drop`
 that no part took, so a file dropped beside the zone never opens in the
-tab and loses the page. A drop already taken, a drop into a text field, a
-native file input or editable content, and a drag without files are left
-alone. A disabled zone still holds; the last zone to unmount releases.
+tab and loses the page, and a held `dragover` sets `dropEffect` to
+`'none'`, so the pointer says nothing drops there. A drop already taken,
+a native file input, and a drag without files are left alone; a text
+field, a text area or editable content is left alone only while the drag
+also holds text or a link for it to insert, since a file alone dropped on
+a form's text field would open in the tab and lose the form, and a
+checkbox, a radio or a range is always held (spec correction 32). A
+disabled zone still holds; the last zone to unmount releases.
 
 **The page overlay.** Fixed, inset `--spacing-inset` from the viewport's
 edges and from the rail's width
@@ -9061,31 +9073,57 @@ correction 7). Its layer is `calc(var(--z-chrome) + 1)`: over the tab bar,
 the tray and a save bar, under every modal and the toasts. It fades in
 over 120ms through `@starting-style`, which is above the browser floor and
 simply does not run there, and not at all under reduced motion. It is
-rendered in place, not portaled, so it keeps the shell's custom
-properties.
+drawn in the closest AppShell, or the body outside one, from a hidden mark
+the zone renders in place while it shows: a fixed element inside an
+ancestor with a `transform`, a `filter`, a `backdrop-filter` (a page
+header's blur) or `contain` is confined to that ancestor's box. The shell
+declares `--app-shell-sidebar`, so the overlay still clears the rail, and
+the overlay copies the mark's theme, shape and density scope and its
+direction (spec correction 34). The docs mount the zone at the page's
+root.
 
 **The overlay's lifetime.** It draws nothing on the server or while idle.
-A counter on the document, one up for each `dragenter` holding files and
-one down for each `dragleave`, shows it at one and hides it at zero, which
-survives Firefox's leave on every child boundary and Safari's null
-`relatedTarget`; a drop and `dragend` reset it. The listeners are in the
-capture phase, since a drop target on the page, the overlay among them,
-stops the drag events it takes, and the count must see every one (spec
-correction 25). It
+A set on the document of the elements the drag has entered, as React
+Aria's `useDrop` keeps, shows it on the first `dragenter` holding files
+and hides it when the last `dragleave` empties the set, which survives
+Firefox's leave on every child boundary and Safari's null
+`relatedTarget`. Each enter and leave first forgets the elements no longer
+in the document, since an element removed under the pointer, a toast that
+leaves, never gets its leave and would keep the overlay up after the drag
+had gone (spec correction 31). The listeners are in the capture phase,
+since a drop target on the page, the overlay among them, stops the drag
+events it takes, and the set must see every one (spec correction 25).
+`dragend` hides it at once. A drop hides it only once the drop has been
+dispatched, in a `setTimeout` of 0: a browser runs the microtasks between
+one listener and the next of a real drop, where React commits a state set
+outside its handlers, so a hide in the capture listener took the overlay
+away before its own drop handler ran and the files were lost, which no
+dispatched event could show (spec correction 30). A `pointermove` or
+`pointerdown` that is not a touch, which no engine sends during a native
+drag, hides an overlay whose leave never came. It
 stands down for a drag that holds no files (a row, a tag), while a modal
 is open (`isAnotherModalOpen()` at each enter, spec correction 9), while
 disabled, and for a second page zone, which warns once and stays idle
 until the first unmounts. It is for the pointer and `aria-hidden`; its
-keyboard twin is a `FileButton` beside the page's title.
+keyboard twin is a `FileButton` beside the page's title. A page with a
+page zone also takes a paste of files anywhere while focus is outside a
+text field, as GitHub and Slack do, through the same check (spec
+correction 39).
 
 **FileButton.** React Aria's `FileTrigger` around the library's `Button`,
 any variant. `capture` takes the HTML attribute's name and is handed to
 `FileTrigger`'s `defaultCamera` (spec correction 1); FileDropZone passes
-its own to its button. React Aria clears the input as the button is
+its own to its button. On iOS and Android it makes the input the camera's
+only, so a zone given `capture` could no longer choose a PDF on a phone:
+the docs prefer a second FileButton with `capture`, listing an image type,
+beside the zone, and an extension beside each MIME type, since systems
+disagree on types (spec correction 36). React Aria clears the input as the button is
 pressed, so the same file chosen again fires again (spec correction 17).
 
-**Forced colors.** The dashed edges are `canvastext`; a drop target's edge
-is `highlight`, since the wash is gone; the overlay's fill is `canvas`
+**Forced colors.** The dashed edges are `canvastext`; a disabled zone's
+edge, text and icon are `graytext`, as its button is; a drop target's
+edge is `highlight` and solid, since the wash is gone, and it wins over
+invalid here, whose error color is gone too (spec correction 35); the overlay's fill is `canvas`
 with no transparency, and its card's edge `canvastext`.
 
 **The spike** (spec correction 24). Before the parts,
@@ -9095,7 +9133,13 @@ its hidden button out of the tab order; that a paste on a focused button
 reaches the box around it with its file; that the document counter comes
 back to zero across child boundaries; that a missed drop's default is
 prevented and a drop into a text field or a file input is not; and that a
-target drawn mid-drag takes the drop. It found one difference in what
+target drawn mid-drag takes the drop that follows, for events a script
+dispatches. A script's `dispatchEvent` runs every listener before any
+microtask, where a real drop runs them between listeners, so the spike
+could not see the page zone hiding its overlay before the overlay's own
+handler ran; a real drop through the DevTools protocol did, and the docs'
+end-to-end run now drops real files on both zones (spec correction 30).
+It found one difference in what
 reaches `onDrop`: React Aria reads a dropped file only through
 `webkitGetAsEntry()`, and Chromium gives a file a script made no entry, so
 React Aria's items hold no file for a synthetic drop there. The library
@@ -9110,15 +9154,19 @@ constructor drops `clipboardData`, so the paste plays define it.
 The size limits are above the spec's budgets: `{ FileDropZone, FileButton }` measured 2.23 kB and is set
 at 3 kB, and `{ PageDropZone }` 1.56 kB, set at 2.5 kB, by the repo's
 rule; each carries the check, the transfer reader, the missed-drop hold
-and React Aria's drop hook glue. The docs' "Take a photo" button shows
+and React Aria's drop hook glue; after the review round they measure 2.61
+kB and 2.17 kB, within those limits. The docs' "Take a photo" button shows
 only on a coarse pointer without hover, through the site's own
-`touch-only` class.
+`touch-only` class. The review round's changes, each cited above, are
+spec corrections 30 to 39.
 
 **Screen readers and devices.** Not yet verified (owner action 4): the zone
 read as a group with one button described by its rules, a refusal spoken
 once, the overlay never announced; on a phone, no drag hint, "Take a
 photo" opening the camera, a HEIC photo with an empty type passing by
-`.heic`; on iPadOS, a file dragged from the Files app onto the zone and
+`.heic`, and whether iOS hands a HEIC photo over as HEIC or converts it to
+a JPEG; in Safari on macOS, Cmd+V on the zone's button and on a page with
+a page zone; on iPadOS, a file dragged from the Files app onto the zone and
 the overlay.
 
 ## UploadTray
@@ -9146,7 +9194,7 @@ var(--overlay-inset)` and `width: min(28rem, calc(100vw - 2rem))`, the toast
 region's own two expressions, so the corner is one column whether it holds
 toasts, the tray or both, and stays one if either changes. Both faces carry
 the `overlay` class, as the toast region does, since the overlay inset is
-declared there alone (spec correction 30). The float surface:
+declared there alone (spec correction 40). The float surface:
 `--color-float`, a 1px `--color-frame` edge, `--radius-surface` (a floating
 surface takes 24px wherever it opens) and `--shadow-float`, at
 `--z-chrome`, with the toasts and every modal above it. It rises 8px and
@@ -9159,7 +9207,7 @@ animation, and nothing moves under reduced motion.
 lines up with the rows' icons and the two 40px ghost buttons sit a part step
 from the edge. The title is an `h2` at `--text-body` weight 500 in ink with
 tabular figures, "Uploading 2 of 5", counting the settled files and the one
-in hand, then "5 uploads complete" (spec correction 33); the app's line under
+in hand, then "5 uploads complete" (spec correction 43); the app's line under
 it is `--text-small` in slate. The fold button's name stays "Upload details"
 and `aria-expanded` says the state, the disclosure pattern; its chevron turns
 180 degrees while folded. A `--color-divider` rule sits under the header
@@ -9217,12 +9265,12 @@ shell's `<main>`, or outside a shell to the first `main` that takes focus
 `inset-inline: var(--overlay-inset)`, on the float surface at
 `--radius-pill`, `--size-field` tall, 48px, never under the 40px target in
 compact density and never under 44px on a coarse pointer (spec correction
-32). Its one button says the title at `--text-small` weight 500 with a 16px
+42). Its one button says the title at `--text-small` weight 500 with a 16px
 `ChevronUp` at the end, and opens a Sheet titled by the title, holding the
 app's line and the list, whose rows run to the sheet's sides on the sheet's
 own padding. A link pressed in the sheet closes it as the router navigates.
 The bar is a region named "Uploads" (`labels.region`), since a region named
-by its only button's words would be read twice (spec correction 31). A sheet
+by its only button's words would be read twice (spec correction 41). A sheet
 left open while the window widens stays open; when it closes there, focus
 goes to the wide face's fold button, the one `matchMedia` read.
 
@@ -9258,7 +9306,7 @@ sit 16px above the tray in the same column.
 icons keep their shapes in `canvastext`; the words carry the status, as the
 toasts' titles carry their tones.
 
-**Where the build departs from the plan** (spec corrections 30 to 36). The
+**Where the build departs from the plan** (spec corrections 40 to 46). The
 size limits are above the spec's budgets: `{ UploadList }` measured 2.43 kB
 and is set at 3 kB, and `{ UploadTray }` 7.48 kB, set at 8 kB, by the repo's
 rule; the tray carries Sheet, ConfirmDialog through `useConfirm`, IconButton

@@ -103,7 +103,9 @@ describe('FileDropZone', () => {
     const button = screen.getByRole('button', { name: 'Choose files' });
     expect(button).toHaveAccessibleDescription('PDF, JPG or PNG, up to 10 MB');
     await user().upload(inputOf(container), [exe()]);
-    expect(button).toHaveAccessibleDescription('PDF, JPG or PNG, up to 10 MB 1 files were not added');
+    expect(button).toHaveAccessibleDescription(
+      'PDF, JPG or PNG, up to 10 MB 1 file was not added: its type is not accepted',
+    );
   });
 
   it('reaches onFiles through a choice', async () => {
@@ -129,11 +131,14 @@ describe('FileDropZone', () => {
 
   it('says the refusals in the status after a choice, as labels.rejected writes them with formatCount', async () => {
     const onFiles = vi.fn();
+    const rejected = vi.fn(
+      (count: number, formatted: string) => `${formatted} of ${String(count)} not added`,
+    );
     const { container } = render(
       <FileDropZone
         {...RECEIPTS}
         formatCount={(count) => `#${String(count)}`}
-        labels={{ rejected: (count) => `${count} not added` }}
+        labels={{ rejected }}
         onFiles={onFiles}
       />,
     );
@@ -149,8 +154,63 @@ describe('FileDropZone', () => {
         { file: empty, reason: 'empty' },
       ],
     );
-    expect(status).toHaveTextContent(/^#2 not added$/);
+    expect(status).toHaveTextContent(/^#2 of 2 not added$/);
+    expect(rejected).toHaveBeenLastCalledWith(2, '#2', [
+      { file: bad, reason: 'type' },
+      { file: empty, reason: 'empty' },
+    ]);
     expect(root(container)).toHaveAttribute('data-invalid');
+  });
+
+  const LINES: [files: () => File[], line: string][] = [
+    [() => [exe()], '1 file was not added: its type is not accepted'],
+    [() => [blank()], '1 file was not added: it is empty'],
+    [
+      () => [new File(['x'.repeat(11)], 'big.pdf', { type: 'application/pdf' })],
+      '1 file was not added: it is too large',
+    ],
+    [() => [exe(), exe()], '2 files were not added: their type is not accepted'],
+    [() => [blank(), blank()], '2 files were not added: they are empty'],
+    [() => [exe(), blank()], '2 files were not added'],
+  ];
+
+  it.each(LINES)('says the default line for the refusals of a choice: %#', async (files, line) => {
+    const { container } = render(<FileDropZone {...RECEIPTS} maxFileSize={10} onFiles={() => undefined} />);
+    await user().upload(inputOf(container), files());
+    expect(statusOf(container)).toHaveTextContent(new RegExp(`^${line}$`));
+  });
+
+  it('names the reason for files past maxFiles', async () => {
+    const { container } = render(
+      <FileDropZone label="Receipts" allowsMultiple maxFiles={1} onFiles={() => undefined} />,
+    );
+    await user().upload(inputOf(container), [pdf(), pdf(), pdf()]);
+    expect(statusOf(container)).toHaveTextContent(/^2 files were not added: too many files at once$/);
+  });
+
+  it('opens the picker on a click on the box beside the button, once on the button, never while disabled', async () => {
+    const { container, rerender } = render(<FileDropZone {...RECEIPTS} onFiles={() => undefined} />);
+    const input = inputOf(container);
+    const opened = vi.fn();
+    input.addEventListener('click', (event) => {
+      // No picker in the test: the click is counted and its default prevented.
+      event.preventDefault();
+      opened();
+    });
+    const events = user();
+    input.value = '';
+    await events.click(container.querySelector('.file-drop-zone-hint') ?? input);
+    expect(opened).toHaveBeenCalledTimes(1);
+    await events.click(container.querySelector('.file-drop-zone-box') ?? input);
+    expect(opened).toHaveBeenCalledTimes(2);
+    await events.click(screen.getByRole('button', { name: 'Choose files' }));
+    expect(opened).toHaveBeenCalledTimes(3);
+    // The box adds no tab stop and no role.
+    expect(container.querySelector('.file-drop-zone-box')).not.toHaveAttribute('tabindex');
+    expect(container.querySelector('.file-drop-zone-box')).not.toHaveAttribute('role');
+    rerender(<FileDropZone {...RECEIPTS} isDisabled onFiles={() => undefined} />);
+    await events.click(container.querySelector('.file-drop-zone-hint') ?? input);
+    expect(opened).toHaveBeenCalledTimes(3);
   });
 
   it('puts errorMessage in place of the library line', async () => {

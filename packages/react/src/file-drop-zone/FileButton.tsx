@@ -11,7 +11,8 @@ export type FileButtonProps = FileAcceptance &
     children: ReactNode;
     /**
      * On a phone, opens the camera instead of the file picker: `environment` the back camera, `user` the front.
-     * A desktop browser ignores it.
+     * A desktop browser ignores it. A phone's button then takes photos only, so list an image type in
+     * `acceptedFileTypes` and keep a button without it for other files, as "Take a photo" beside "Choose a file".
      */
     capture?: 'user' | 'environment';
   };
