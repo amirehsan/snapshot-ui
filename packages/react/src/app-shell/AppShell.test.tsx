@@ -194,6 +194,78 @@ describe('AppShell', () => {
     expect(wrapper?.parentElement).toHaveClass('app-shell-workspace');
   });
 
+  describe("the header's height as the page's sticky offset", () => {
+    /** A ResizeObserver whose callback the test calls with a height, standing in for the browser's. */
+    function stubResizeObserver(): { observed: Element[]; report: (blockSize: number) => void } {
+      const observed: Element[] = [];
+      let callback: ResizeObserverCallback | undefined;
+      class Stub {
+        constructor(each: ResizeObserverCallback) {
+          callback = each;
+        }
+        observe = (target: Element): void => {
+          observed.push(target);
+        };
+        unobserve = (): void => undefined;
+        disconnect = (): void => {
+          observed.length = 0;
+        };
+      }
+      vi.stubGlobal('ResizeObserver', Stub);
+      return {
+        observed,
+        report: (blockSize) => {
+          const entry = {
+            borderBoxSize: [{ blockSize, inlineSize: 800 }],
+            contentRect: { height: blockSize },
+          };
+          act(() => {
+            callback?.([entry] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+          });
+        },
+      };
+    }
+
+    const stickyTop = (element: HTMLElement): string => element.style.getPropertyValue('--page-sticky-top');
+
+    it("writes the sticky header wrapper's height as --page-sticky-top on the shell, and removes it with the header", () => {
+      const { observed, report } = stubResizeObserver();
+      const { container, rerender } = render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      const wrapper = container.querySelector('.app-shell-header');
+      expect(observed).toEqual([wrapper]);
+      // Nothing is written before the first measurement, as the server's HTML has nothing.
+      expect(stickyTop(root(container))).toBe('');
+      report(120.5);
+      expect(stickyTop(root(container))).toBe('120.5px');
+      report(88);
+      expect(stickyTop(root(container))).toBe('88px');
+      rerender(<AppShell>page</AppShell>);
+      expect(observed).toEqual([]);
+      expect(stickyTop(root(container))).toBe('');
+      vi.unstubAllGlobals();
+    });
+
+    it('writes nothing without a header, and leaves an offset the app declares itself', () => {
+      const { observed } = stubResizeObserver();
+      const { container, unmount } = render(<AppShell>page</AppShell>);
+      expect(observed).toEqual([]);
+      expect(stickyTop(root(container))).toBe('');
+      unmount();
+      document.documentElement.style.setProperty('--page-sticky-top', '64px');
+      render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      expect(observed).toEqual([]);
+      document.documentElement.style.removeProperty('--page-sticky-top');
+      vi.unstubAllGlobals();
+    });
+
+    it('renders with no ResizeObserver, which a test environment may lack', () => {
+      vi.stubGlobal('ResizeObserver', undefined);
+      const { container } = render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      expect(stickyTop(root(container))).toBe('');
+      vi.unstubAllGlobals();
+    });
+  });
+
   it('draws the skip link, the rail, the workspace and the bar in that order, the header before main', () => {
     const { container } = render(
       <AppShell sidebar={RAIL} header={<header>Budgets</header>} bottomBar={BAR}>

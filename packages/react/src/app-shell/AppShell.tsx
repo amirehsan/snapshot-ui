@@ -22,7 +22,10 @@ import { useControllableState } from '../utils/useControllableState';
 export interface AppShellProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** The rail: a Sidebar. Fixed and floating; the workspace is offset by its width from 1024px up. */
   sidebar?: ReactNode;
-  /** The page header, above the main content and outside it. Sticky to the top. */
+  /**
+   * The page header, above the main content and outside it, such as a PageHeader. Sticky to the top: once hydrated,
+   * its height is the page's `--page-sticky-top`, under which a DataTable's header row and a SidePanel stick.
+   */
   header?: ReactNode;
   /** The bottom tab bar. Below 1024px the workspace reserves room under its content for it. */
   bottomBar?: ReactNode;
@@ -63,6 +66,9 @@ export interface AppShellState {
 }
 
 const AppShellContext = createContext<AppShellState | null>(null);
+
+/** The page's sticky offset, which every sticky part of a page reads. */
+const STICKY_TOP = '--page-sticky-top';
 
 /** Asks the shell to fold its rail, and returns what gives it back. Internal: SidePanel's, through `useRailFold`. */
 const RailFoldContext = createContext<(() => () => void) | null>(null);
@@ -210,6 +216,29 @@ export function AppShell({
     };
   }, [closeDrawer]);
 
+  // The header sticks, so its height is the page's sticky offset: a DataTable's header row and a SidePanel stick
+  // under it, never behind it. Measured after hydration, so no first paint waits on it, and written on the shell,
+  // whose page reads it; an offset the app declares itself, on the root or above the shell, is left alone.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const hasHeader = present(header);
+  useEffect(() => {
+    const wrapper = headerRef.current;
+    const shell = wrapper?.closest<HTMLElement>('.app-shell');
+    if (!wrapper || !shell || typeof ResizeObserver !== 'function') return;
+    if (getComputedStyle(shell).getPropertyValue(STICKY_TOP).trim() !== '') return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries.at(-1);
+      if (entry === undefined) return;
+      const height = entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height;
+      shell.style.setProperty(STICKY_TOP, `${String(height)}px`);
+    });
+    observer.observe(wrapper);
+    return () => {
+      observer.disconnect();
+      shell.style.removeProperty(STICKY_TOP);
+    };
+  }, [hasHeader]);
+
   const state = useMemo<AppShellState>(
     () => ({ isSidebarCollapsed, setSidebarCollapsed, isDrawerOpen, openDrawer, closeDrawer, mainId }),
     [isSidebarCollapsed, setSidebarCollapsed, isDrawerOpen, openDrawer, closeDrawer, mainId],
@@ -238,7 +267,11 @@ export function AppShell({
           </a>
           {sidebar}
           <div className="app-shell-workspace">
-            {present(header) && <div className="app-shell-header">{header}</div>}
+            {hasHeader && (
+              <div className="app-shell-header" ref={headerRef}>
+                {header}
+              </div>
+            )}
             <main className="app-shell-main" id={mainId} tabIndex={-1}>
               {children}
             </main>
