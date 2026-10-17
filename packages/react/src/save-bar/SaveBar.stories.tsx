@@ -124,6 +124,12 @@ const rect = (element: Element): DOMRect => element.getBoundingClientRect();
 /** How long a play waits for what follows a key or an animation: a busy runner, WebKit's above all, is slow. */
 const LONG = { timeout: 5000 };
 
+/**
+ * How far a field may still reach under a bar once it counts as clear: WebKit and Firefox round a scroll position to
+ * a whole pixel, and the fields sit on fractional lines, so a browser's own scroll can stop up to a pixel short.
+ */
+const ROUNDING = 1;
+
 /** Presses `keys` unless the story has gone: a play that outlived its time limit stops rather than type on. */
 function guardedKeys(anchor: Element): (keys: string) => Promise<void> {
   return async (keys) => {
@@ -441,13 +447,13 @@ export const FocusClear: Story = {
       await focusOn(before);
       await guardedKeys(bar)('{Tab}');
       await waitFor(() => expect(under).toHaveFocus(), LONG);
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + 0.5), LONG);
+      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + ROUNDING), LONG);
       // By focus(), from the top again.
       under.blur();
       scroller.scrollTop = 0;
       await waitFor(() => expect(rect(under).bottom).toBeGreaterThan(cover()));
       under.focus();
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + 0.5), LONG);
+      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + ROUNDING), LONG);
     } finally {
       scroller.scrollTop = 0;
     }
@@ -484,13 +490,13 @@ export const FocusClearInScroller: Story = {
       await focusOn(before);
       await guardedKeys(bar)('{Tab}');
       await waitFor(() => expect(under).toHaveFocus(), LONG);
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + 0.5), LONG);
+      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + ROUNDING), LONG);
       // By focus(), from the top again.
       under.blur();
       scroller.scrollTop = 0;
       await waitFor(() => expect(rect(under).bottom).toBeGreaterThan(rect(bar).top));
       under.focus();
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + 0.5), LONG);
+      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + ROUNDING), LONG);
     } finally {
       scroller.scrollTop = 0;
     }

@@ -9810,11 +9810,14 @@ the tab bar, the save bar and the phone's upload bar clear of them at 375 by
 box that scrolls is beyond the root's padding, and there Chromium left the
 field 58px under the bar. So in every engine the bar listens for `focusin`
 on its holder and, two frames after the focus, scrolls a control outside
-itself by the least that brings it above the bar, and where the window
-scrolls above the phone's upload bar too, in the control's own scroll port,
-as DataTable clears its rows of its bulk bar; nothing moves when the
-control is clear already. The `FocusClear` and `FocusClearInScroller` plays
-run in Chromium, WebKit and Firefox.
+itself by the least whole pixels that bring it above the bar, and where the
+window scrolls above the phone's upload bar too, in the control's own
+scroll port, as DataTable clears its rows of its bulk bar; nothing moves
+when the control is clear already or under it by half a pixel or less.
+Whole pixels, because WebKit and Firefox round a scroll position and the
+fields sit on fractional lines, so a browser's own scroll can stop short by
+under a pixel. The `FocusClear` and `FocusClearInScroller` plays run in
+Chromium, WebKit and Firefox.
 
 **Measured pairs**, all on float, light then dark, each gated already as
 text: ink, the sentence, 18.43 and 17.42; slate, the status, 5.49 and 6.94;

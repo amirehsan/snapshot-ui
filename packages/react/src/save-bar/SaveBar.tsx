@@ -105,8 +105,9 @@ function uncover(element: HTMLElement, bar: HTMLElement): void {
     .filter((box) => box.height > 0);
   const top = Math.min(...covers.map((box) => box.top));
   const delta = element.getBoundingClientRect().bottom - top;
-  if (delta < 1) return;
-  (port ?? window).scrollBy({ top: delta, behavior: 'instant' });
+  if (delta <= 0.5) return;
+  // In whole pixels: WebKit and Firefox round a scroll position, so a fractional step could stop short.
+  (port ?? window).scrollBy({ top: Math.ceil(delta), behavior: 'instant' });
 }
 
 /**
