@@ -37,6 +37,7 @@ The library never uploads. Your app holds the files in a provider in its root la
 - `onRetry` shows Retry on failed rows, `onRemove` shows Remove on waiting and settled rows, and `onCancel` shows Cancel on uploading rows. Each gets the row's `id`. When a row leaves, focus moves to the same button on the next row.
 - The close button calls `onClear` once nothing is in flight, and your app drops its settled items. While files are in flight it asks "Cancel 3 uploads?" first and calls `onCancelAll` on yes; without `onCancelAll` it shows only once everything has settled. When the tray leaves with focus inside, focus goes to `<main>`.
 - `warnsOnUnload`, on by default, asks the browser to warn before the tab closes or reloads while anything is in flight. The browser shows its own words, and iOS Safari shows none, so the tray is the reader's real warning. A client navigation keeps the shell and needs none.
+- Corners are concentric: a row's buttons and bar take the radius of what holds the list, less the gap to it. The tray and its sheet name their own corners; when you put `UploadList` in a rounded box of your own, such as a Card, name its corner with `--holder-radius`, `--holder-border` and `--holder-pad` (its smaller padding) on that box, as the example above does. Without them the rows keep their own round ends.
 - `formatCount` writes the counts in the title and the announcements, such as in Persian digits, and `labels` replaces every word the tray writes.
 
 ```tsx

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import type { ReactElement } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
 import { expect, fn } from 'storybook/test';
 import { Card } from '../card';
 import type { UploadItem } from './counts';
@@ -44,7 +44,19 @@ function InCard({
   ...props
 }: UploadListProps & { width?: string }): ReactElement {
   return (
-    <Card style={{ width, paddingInline: 0, paddingBlock: 'var(--spacing-part)' }}>
+    <Card
+      style={
+        {
+          width,
+          paddingInline: 0,
+          paddingBlock: 'var(--spacing-part)',
+          // The card names its corner, so the rows' buttons and bars are concentric with it.
+          '--holder-radius': 'var(--radius-stadium)',
+          '--holder-border': '1px',
+          '--holder-pad': '0px',
+        } as CSSProperties
+      }
+    >
       <UploadList {...props} />
     </Card>
   );
@@ -75,6 +87,9 @@ export const Statuses: Story = {
       const { width, height } = button.getBoundingClientRect();
       await expect(width).toBeGreaterThanOrEqual(40);
       await expect(height).toBeGreaterThanOrEqual(40);
+      // Concentric with the card the story names as holder, in Rounded: its 40px less its 1px edge, then the
+      // row's 10px.
+      await expect(getComputedStyle(button).borderTopLeftRadius).toBe('29px');
     }
     // The progress at the status line's end, the bar a part step under it, spanning the text column.
     const uploading = rows[1];

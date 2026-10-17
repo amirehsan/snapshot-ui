@@ -9302,11 +9302,27 @@ never in the server's HTML, so no first paint waits on it. `toast.css` adds
 it, with `--save-bar-offset`, to the toast region's bottom, so the toasts
 sit 16px above the tray in the same column.
 
+**Concentric corners** (spec correction 47). A rounded part inside a
+rounded holder takes the holder's radius less the gap between them, the
+holder's edge and the smaller side of its padding, never a copy, and is
+square once the gap reaches the radius: `max(0px, calc(var(--holder-radius)
+- var(--holder-border) - var(--holder-pad)))`. The panel (`--radius-surface`,
+1px, no padding), the phone's bar (`--radius-pill`, 1px, none) and the sheet
+(`--radius-stadium`, 1px, none) name their corners in those three
+properties. The list subtracts its holder's gap and each row its block
+padding, 0.625rem, for its buttons and its bar; the header's buttons
+subtract the panel's edge and the part step; the bar's button the pill's
+edge. In Rounded: 15px for the header's buttons, 13px for a row's buttons
+and bar (the 8px bar still reads as a pill), 998px for the bar's button,
+29px for a row's buttons in the sheet; in Soft 3px, 1px, 11px and 5px; in
+Square 0. A list in no named holder keeps its parts' own pill radius, and an
+app's rounded holder, such as a Card, names its own corner.
+
 **Forced colors.** The panel's and the bar's edges are `canvastext`; the
 icons keep their shapes in `canvastext`; the words carry the status, as the
 toasts' titles carry their tones.
 
-**Where the build departs from the plan** (spec corrections 40 to 46). The
+**Where the build departs from the plan** (spec corrections 40 to 47). The
 size limits are above the spec's budgets: `{ UploadList }` measured 2.43 kB
 and is set at 3 kB, and `{ UploadTray }` 7.48 kB, set at 8 kB, by the repo's
 rule; the tray carries Sheet, ConfirmDialog through `useConfirm`, IconButton

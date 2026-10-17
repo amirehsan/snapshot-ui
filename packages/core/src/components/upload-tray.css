@@ -12,6 +12,13 @@
  * token, written out because a media query cannot read a custom property; test/css.test.js keeps them equal. The
  * panel rises 8px and fades in over 200ms through @starting-style, which is above the floor and simply does not
  * run there.
+ *
+ * Corners are concentric: a rounded part inside a rounded holder takes the holder's radius less the gap between
+ * them, the holder's edge and the smaller side of its padding, never a copy, and square once the gap reaches the
+ * radius. A holder names its own corner in three properties, --holder-radius, --holder-border and --holder-pad:
+ * the panel, the phone's bar and the sheet set theirs, and an app that puts the list in its own rounded holder,
+ * such as a Card, sets them there. The list subtracts the holder's gap, and each row subtracts its own padding
+ * again, for its buttons and its bar. With no holder named they keep their own radius.
  */
 @layer components {
   /* The polite live region, present before its text, hidden from sight and kept out of aria-hidden, as the
@@ -28,6 +35,12 @@
   }
 
   .upload-list {
+    /* Unset, and so ignored by the rows, unless a holder names its corner. */
+    --upload-list-radius: max(
+      0px,
+      calc(var(--holder-radius) - var(--holder-border, 0px) - var(--holder-pad, 0px))
+    );
+
     margin: 0;
     padding: 0;
     list-style: none;
@@ -41,6 +54,8 @@
 
   .upload-row {
     --upload-row-tone: var(--color-slate);
+    /* A row is flush with the list; its smaller padding, the block's, is the next gap in. */
+    --upload-row-radius: max(0px, calc(var(--upload-list-radius) - 0.625rem));
 
     display: grid;
     grid-template-columns: 24px minmax(0, 1fr) auto;
@@ -158,7 +173,18 @@
     margin-inline-end: 0;
   }
 
+  /* Concentric with the holder, through the row: the buttons and the bar's track and fill. Their own radius while
+     no holder names its corner. */
+  .upload-row :is(.icon-button, .progress-bar-track, .progress-bar-fill) {
+    border-radius: var(--upload-row-radius, var(--radius-pill));
+  }
+
   .upload-tray {
+    /* The panel's corner, for what it holds: the body has no padding, so the rows are flush with its edge. */
+    --holder-radius: var(--radius-surface);
+    --holder-border: 1px;
+    --holder-pad: 0px;
+
     position: fixed;
     inset-block-end: calc(
       var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) + var(--save-bar-offset, 0px)
@@ -186,6 +212,12 @@
   }
 
   .upload-tray-header {
+    /* The header's buttons sit the header's smaller padding, the part step, in from the panel's edge. */
+    --upload-tray-header-radius: max(
+      0px,
+      calc(var(--holder-radius) - var(--holder-border) - var(--spacing-part))
+    );
+
     display: flex;
     align-items: center;
     gap: var(--spacing-part);
@@ -226,6 +258,10 @@
     overflow-wrap: anywhere;
   }
 
+  .upload-tray-header .icon-button {
+    border-radius: var(--upload-tray-header-radius);
+  }
+
   .upload-tray[data-collapsed] .upload-tray-fold svg {
     rotate: 180deg;
   }
@@ -241,6 +277,11 @@
   /* The phone's bar: a pill across the bottom, the field's height, never under the 40px target, which compact
      density's 36px field would be, and never under 44px on a coarse pointer. */
   .upload-tray-bar {
+    /* The bar's corner, for its one button, which fills it inside the edge. */
+    --holder-radius: var(--radius-pill);
+    --holder-border: 1px;
+    --holder-pad: 0px;
+
     position: fixed;
     inset-inline: var(--overlay-inset);
     inset-block-end: calc(
@@ -271,7 +312,7 @@
     margin: 0;
     padding-inline: var(--spacing-inset);
     border: 0;
-    border-radius: inherit;
+    border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));
     background-color: transparent;
     color: var(--color-ink);
     font-family: var(--font-sans);
@@ -316,7 +357,14 @@
     height: 1rem;
   }
 
-  /* In the sheet the list runs to the panel's sides, its rows padded as the sheet's header is. */
+  /* In the sheet the list runs to the panel's sides, its rows padded as the sheet's header is: the sheet's corner,
+     its edge and no padding are the holder. */
+  .upload-tray-sheet {
+    --holder-radius: var(--radius-stadium);
+    --holder-border: 1px;
+    --holder-pad: 0px;
+  }
+
   .upload-tray-sheet .upload-list {
     margin-inline: calc(-1 * var(--spacing-peer));
   }

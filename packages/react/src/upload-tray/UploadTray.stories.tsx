@@ -181,6 +181,14 @@ export const Open: Story = {
     await expect(within(panel).getAllByRole('listitem')).toHaveLength(5);
     // The phone's bar is not drawn at this width.
     await expect(getComputedStyle(only('.upload-tray-bar')).display).toBe('none');
+    // Concentric corners in Rounded: the panel's 24px less its 1px edge and the header's 8px for the header's
+    // buttons, 15px; less its edge for the flush rows, then a row's 10px for its buttons and bar, 13px.
+    const radius = (element: Element): string => getComputedStyle(element).borderTopLeftRadius;
+    await expect(radius(within(panel).getByRole('button', { name: 'Upload details' }))).toBe('15px');
+    await expect(radius(within(panel).getByRole('button', { name: 'Cancel invoice-0142.pdf' }))).toBe('13px');
+    const track = panel.querySelector('.upload-row .progress-bar-track');
+    if (!track) throw new Error('No track');
+    await expect(radius(track)).toBe('13px');
   },
 };
 
@@ -226,6 +234,8 @@ export const PhoneBar: Story = {
     await expect(box.left).toBeCloseTo(16, 0);
     await expect(window.innerWidth - box.right).toBeCloseTo(16, 0);
     await expect(box.height).toBeGreaterThanOrEqual(48 - 0.5);
+    // The button fills the pill inside its 1px edge: the pill's radius less 1px, never a copy of it.
+    await expect(getComputedStyle(within(bar).getByRole('button')).borderTopLeftRadius).toBe('998px');
     await expect(within(bar).getByRole('button')).toHaveTextContent('Uploading 2 of 5');
   },
 };

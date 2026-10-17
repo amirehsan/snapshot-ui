@@ -1,8 +1,22 @@
 'use client';
 
 import { Card, UploadList, type UploadItem } from '@snapshot-ui/react';
-import { useState, type ReactElement } from 'react';
+import { useState, type CSSProperties, type ReactElement } from 'react';
 import { UPLOADS } from './uploads-data';
+
+/**
+ * The card is the list's rounded holder, and names its corner so the rows' buttons and bars are concentric with
+ * it: its radius, its 1px edge, and its smaller padding, none at the sides, where the rows run to its edge.
+ */
+const HOLDER = {
+  width: '100%',
+  maxWidth: '28rem',
+  paddingInline: 0,
+  paddingBlock: 'var(--spacing-part)',
+  '--holder-radius': 'var(--radius-stadium)',
+  '--holder-border': '1px',
+  '--holder-pad': '0px',
+} as CSSProperties;
 
 export default function UploadListStatuses(): ReactElement {
   const [items, setItems] = useState<UploadItem[]>(UPLOADS);
@@ -10,7 +24,7 @@ export default function UploadListStatuses(): ReactElement {
     setItems((each) => each.filter((item) => item.id !== id));
   };
   return (
-    <Card style={{ width: '100%', maxWidth: '28rem', paddingInline: 0, paddingBlock: 'var(--spacing-part)' }}>
+    <Card style={HOLDER}>
       <UploadList
         aria-label="Uploads"
         items={items}

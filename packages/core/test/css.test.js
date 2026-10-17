@@ -7968,6 +7968,55 @@ describe('src/components/upload-tray.css', () => {
     expect(blockAfter(forced, '.upload-row-icon {')).toContain('color: canvastext;');
   });
 
+  it('names each holder corner in the three holder properties, from the radius tokens', () => {
+    const css = rules();
+    for (const [holder, radius] of [
+      ['.upload-tray {', 'var(--radius-surface)'],
+      ['.upload-tray-bar {', 'var(--radius-pill)'],
+      ['.upload-tray-sheet {', 'var(--radius-stadium)'],
+    ]) {
+      const rule = blockAfter(css, holder);
+      expect(rule, holder).toContain(`--holder-radius: ${radius};`);
+      expect(rule, holder).toContain('--holder-border: 1px;');
+      expect(rule, holder).toContain('--holder-pad: 0px;');
+    }
+  });
+
+  it('draws every nested corner concentric: the holder less its gap, never a copy, never under 0', () => {
+    const css = rules();
+    // The list subtracts the holder's edge and padding, and a row its own smaller padding, the block's.
+    expect(blockAfter(css, '.upload-list {')).toContain(
+      '--upload-list-radius: max(0px, calc(var(--holder-radius) - var(--holder-border, 0px) - var(--holder-pad, 0px)));',
+    );
+    expect(blockAfter(css, '.upload-row {')).toContain(
+      '--upload-row-radius: max(0px, calc(var(--upload-list-radius) - 0.625rem));',
+    );
+    expect(blockAfter(css, '.upload-row {')).toContain('padding: 0.625rem var(--spacing-inset);');
+    expect(
+      blockAfter(css, '.upload-row :is(.icon-button, .progress-bar-track, .progress-bar-fill) {'),
+    ).toContain('border-radius: var(--upload-row-radius, var(--radius-pill));');
+    // The header's buttons sit its part step in from the panel's edge.
+    expect(blockAfter(css, '.upload-tray-header {')).toContain(
+      '--upload-tray-header-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--spacing-part)));',
+    );
+    expect(blockAfter(css, '.upload-tray-header {')).toContain('padding-block: var(--spacing-part);');
+    expect(blockAfter(css, '.upload-tray-header .icon-button {')).toContain(
+      'border-radius: var(--upload-tray-header-radius);',
+    );
+    // The bar's button fills it inside its edge.
+    expect(blockAfter(css, '.upload-tray-bar-button {')).toContain(
+      'border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));',
+    );
+    // No corner copies its holder's.
+    expect(css).not.toMatch(/border-radius:\s*inherit/);
+    const radii = [...css.matchAll(/(?<![\w-])border-radius:\s*([^;]+);/g)].map((match) => match[1]);
+    for (const value of radii.filter(
+      (each) => each !== 'var(--radius-surface)' && each !== 'var(--radius-pill)',
+    )) {
+      expect(value).toMatch(/^(?:max\(0px, calc\(var\(--holder-radius\)|var\(--upload-)/);
+    }
+  });
+
   it('keeps the status host in the page and out of sight', () => {
     const host = blockAfter(rules(), '.upload-tray-status {');
     for (const declaration of ['position: absolute;', 'overflow: hidden;', 'clip-path: inset(50%);']) {
