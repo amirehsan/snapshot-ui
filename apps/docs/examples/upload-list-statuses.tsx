@@ -5,8 +5,9 @@ import { useState, type CSSProperties, type ReactElement } from 'react';
 import { UPLOADS } from './uploads-data';
 
 /**
- * The card is the list's rounded holder, and names its corner so the rows' buttons and bars are concentric with
- * it: its radius, its 1px edge, and its smaller padding, none at the sides, where the rows run to its edge.
+ * The card is the list's rounded holder, and names its corner so the buttons in its corners, the first and last
+ * rows' trailing buttons, are concentric with it: its radius, its 1px edge, and its padding beside the rows,
+ * none, since the rows run to its sides.
  */
 const HOLDER = {
   width: '100%',

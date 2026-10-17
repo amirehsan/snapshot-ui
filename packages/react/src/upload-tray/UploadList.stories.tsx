@@ -50,7 +50,7 @@ function InCard({
           width,
           paddingInline: 0,
           paddingBlock: 'var(--spacing-part)',
-          // The card names its corner, so the rows' buttons and bars are concentric with it.
+          // The card names its corner, so the buttons in its corners are concentric with it.
           '--holder-radius': 'var(--radius-stadium)',
           '--holder-border': '1px',
           '--holder-pad': '0px',
