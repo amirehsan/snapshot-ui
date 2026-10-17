@@ -23,6 +23,14 @@
     --sidebar-inner: calc(var(--container-sidebar) - 2 * var(--spacing-inset) - 2px);
     /* How long the rail takes to reach the state it is moving to: opening, unless the collapsed rule says closing. */
     --sidebar-duration: var(--duration-expand);
+    /* How far the nav's items and the search pill sit in from the rail's inside edge: the gutter, and collapsed the
+       inset that centers a 40px part in the 70px inside. */
+    --sidebar-nav-inset: var(--sidebar-gutter);
+    --sidebar-search-inset: var(--sidebar-gutter);
+    /* Concentric corners: a rounded part inside the rail takes the rail's corner less the gap between them, its 1px
+       edge and the part's inset, and never more than its own shape; at 0 or less it is square. The drawer copy sits
+       in the Drawer's panel, which has the same corner and the same edge, so one formula serves both copies. */
+    --sidebar-corner: calc(var(--radius-stadium) - 1px);
 
     position: fixed;
     inset-block: var(--spacing-inset);
@@ -186,12 +194,18 @@
     flex: none;
     align-items: center;
     gap: var(--sidebar-gutter);
-    margin: var(--spacing-part) var(--sidebar-gutter) 0;
+    /* Its corner, which the key chip inside it measures its own from. */
+    --sidebar-search-corner: min(
+      var(--radius-pill),
+      max(0px, calc(var(--sidebar-corner) - var(--sidebar-search-inset)))
+    );
+
+    margin: var(--spacing-part) var(--sidebar-search-inset) 0;
     min-height: var(--sidebar-row);
     padding-block: 0;
     padding-inline: var(--sidebar-pill-inset);
     border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-pill);
+    border-radius: var(--sidebar-search-corner);
     background-color: var(--color-canvas);
     color: var(--color-slate);
     font-family: var(--font-sans);
@@ -231,6 +245,15 @@
     margin-inline-start: auto;
   }
 
+  /* One level further in: the search pill's corner less its 1px edge and its padding, never more than a chip's. Two
+     classes, so it outranks the chip's own corner whatever order the files load in. */
+  .kbd.sidebar-search-shortcut {
+    border-radius: min(
+      var(--radius-micro),
+      max(0px, calc(var(--sidebar-search-corner) - 1px - var(--sidebar-pill-inset)))
+    );
+  }
+
   @media (hover: hover) {
     .sidebar-search:is(:hover, [data-hovered]) {
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--color-canvas));
@@ -254,7 +277,7 @@
     position: relative;
     flex: 1 1 auto;
     min-height: 0;
-    padding: var(--spacing-peer) var(--sidebar-gutter);
+    padding: var(--spacing-peer) var(--sidebar-nav-inset);
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -330,7 +353,7 @@
     min-height: var(--sidebar-row);
     padding-block: calc((var(--sidebar-row) - var(--sidebar-icon)) / 2);
     padding-inline: var(--sidebar-pill-inset);
-    border-radius: var(--radius-pill);
+    border-radius: min(var(--radius-pill), max(0px, calc(var(--sidebar-corner) - var(--sidebar-nav-inset))));
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: var(--text-action);
@@ -472,8 +495,12 @@
         calc(var(--sidebar-duration) / 4);
     }
 
+    /* Closing takes the collapse duration. The nav pads 15px, so a 40px item centers in the 70px inside the rail's
+       1px border, and the search pill sits on the same axis. */
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) {
       --sidebar-duration: var(--duration-collapse);
+      --sidebar-nav-inset: calc(1rem - 1px);
+      --sidebar-search-inset: calc((var(--sidebar-inner) - var(--size-target)) / 2);
     }
 
     /* Hidden from view and not removed, so no name changes: they fade out in the first 40% of the closing, as the
@@ -509,17 +536,15 @@
       display: inline;
     }
 
-    /* A 40px pill on the rail's axis, its icon centered inside its 1px border, reached by the margin and the padding
+    /* A 40px pill on the rail's axis, its icon centered inside its 1px border, reached by the inset and the padding
        as the rail narrows: the icon moves 2px. */
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-search {
-      margin-inline: calc((var(--sidebar-inner) - var(--size-target)) / 2);
       padding-inline: calc(var(--sidebar-pill-inset) - 1px);
     }
 
-    /* 15px, so a 40px item centers in the 70px inside the rail's 1px border. The item fills the nav, so its pill
-       narrows with the rail, and its icon keeps its place at the start and moves 3px inward with the padding. */
+    /* The item fills the nav, so its pill narrows with the rail, and its icon keeps its place at the start and moves
+       3px inward with the nav's inset. */
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-nav {
-      padding-inline: calc(1rem - 1px);
       scrollbar-width: none;
     }
 
@@ -598,6 +623,8 @@
       )
       .sidebar:not(.sidebar-drawer) {
       --sidebar-duration: var(--duration-collapse);
+      --sidebar-nav-inset: calc(1rem - 1px);
+      --sidebar-search-inset: calc((var(--sidebar-inner) - var(--size-target)) / 2);
     }
 
     [data-has-sidebar]:where(
@@ -654,7 +681,6 @@
       )
       .sidebar:not(.sidebar-drawer)
       .sidebar-search {
-      margin-inline: calc((var(--sidebar-inner) - var(--size-target)) / 2);
       padding-inline: calc(var(--sidebar-pill-inset) - 1px);
     }
 
@@ -663,7 +689,6 @@
       )
       .sidebar:not(.sidebar-drawer)
       .sidebar-nav {
-      padding-inline: calc(1rem - 1px);
       scrollbar-width: none;
     }
 

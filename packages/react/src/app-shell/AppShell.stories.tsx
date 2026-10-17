@@ -337,6 +337,47 @@ export const RevealsCurrent: Story = {
 };
 
 /**
+ * The largest miss, in px, of the concentric rule in the rail as drawn: each nav item and the search pill takes the
+ * rail's corner less the gap between them (the rail's edge and the part's inset), never more than a pill and never
+ * under 0, and the search's key chip takes the search's drawn corner less its edge and its smaller inset, never more
+ * than a chip.
+ */
+function concentricMiss(railElement: HTMLElement): number {
+  const px = (value: string): number => Number.parseFloat(value) || 0;
+  const style = getComputedStyle(railElement);
+  const outer = px(style.borderTopLeftRadius);
+  const edge = px(style.borderLeftWidth);
+  const pill = px(style.getPropertyValue('--radius-pill'));
+  const micro = px(style.getPropertyValue('--radius-micro'));
+  const box = railElement.getBoundingClientRect();
+  const misses = [...railElement.querySelectorAll<HTMLElement>('.sidebar-item, .sidebar-search')].map(
+    (part) => {
+      const gap = part.getBoundingClientRect().left - box.left - edge;
+      return Math.abs(
+        px(getComputedStyle(part).borderTopLeftRadius) - Math.min(pill, Math.max(0, outer - edge - gap)),
+      );
+    },
+  );
+  const search = railElement.querySelector<HTMLElement>('.sidebar-search');
+  const chip = railElement.querySelector<HTMLElement>('.sidebar-search-shortcut');
+  if (search && chip && getComputedStyle(chip).opacity === '1') {
+    const holder = search.getBoundingClientRect();
+    const own = chip.getBoundingClientRect();
+    const searchEdge = px(getComputedStyle(search).borderTopWidth);
+    // The search as drawn: a corner larger than half its height draws as half its height.
+    const drawn = Math.min(px(getComputedStyle(search).borderTopLeftRadius), holder.height / 2);
+    const inset = Math.min(own.top - holder.top, holder.right - own.right) - searchEdge;
+    misses.push(
+      Math.abs(
+        px(getComputedStyle(chip).borderTopLeftRadius) -
+          Math.min(micro, Math.max(0, drawn - searchEdge - inset)),
+      ),
+    );
+  }
+  return Math.max(...misses);
+}
+
+/**
  * The collapse and the expand over a working page: stat tiles and a long DataTable. The icons hold their place
  * while the rail's edge moves, and no label wraps on the way.
  */
@@ -374,8 +415,10 @@ export const CollapseMotion: Story = {
       ['Expand the menu', 72],
       ['Collapse the menu', 288],
     ] as const) {
-      await userEvent.click(button);
-      // Hold every transition the press started and step it, as a frame strip would, through its end.
+      // Press, and a frame later hold every transition the press started, so none has run out on a busy runner; then
+      // step them, as a frame strip would, from their start through their end.
+      button.click();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
       const moving = document.getAnimations();
       await expect(moving.length).toBeGreaterThan(0);
       const end = Math.max(...moving.map((each) => Number(each.effect?.getComputedTiming().endTime ?? 0)));
@@ -398,6 +441,25 @@ export const CollapseMotion: Story = {
       // The rail and the page beside it travel on one curve.
       await expect(getComputedStyle(rail()).transitionTimingFunction).toBe('cubic-bezier(0.2, 0, 0, 1)');
       await expect(getComputedStyle(workspace()).transitionTimingFunction).toBe('cubic-bezier(0.2, 0, 0, 1)');
+    }
+    // Concentric in every shape, expanded and collapsed: the search and the nav items keep the rail's corner less the
+    // gap between them, and the chip keeps the search's less its own gap.
+    const root = document.documentElement;
+    const shape = root.dataset.shape;
+    try {
+      for (const each of ['rounded', 'soft', 'square']) {
+        root.dataset.shape = each;
+        for (const state of ['expanded', 'collapsed', 'expanded']) {
+          if ((state === 'collapsed') !== (only('.app-shell').dataset.sidebar === 'collapsed')) {
+            await userEvent.click(button);
+            for (const running of document.getAnimations()) running.finish();
+          }
+          await expect(concentricMiss(rail()), `${each}, ${state}`).toBeLessThanOrEqual(0.5);
+        }
+      }
+    } finally {
+      if (shape === undefined) delete root.dataset.shape;
+      else root.dataset.shape = shape;
     }
   },
 };
