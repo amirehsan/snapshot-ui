@@ -144,7 +144,26 @@ StyleDictionary.registerTransform({
   },
 });
 
-// The stock css group, minus two transforms:
+/**
+ * A DTCG duration, { "value": 300, "unit": "ms" }, as CSS: 300ms. Style Dictionary has no transform for the
+ * object form yet, and would write it as [object Object].
+ */
+StyleDictionary.registerTransform({
+  name: 'snapshot-ui/duration',
+  type: 'value',
+  filter: (token) => token.$type === 'duration',
+  transform: (token) => {
+    const { value, unit } = token.$value;
+    if (typeof value !== 'number' || (unit !== 'ms' && unit !== 's')) {
+      throw new Error(
+        `Token ${token.path.join('.')} must be a duration written as { value, unit: "ms" | "s" }.`,
+      );
+    }
+    return `${String(value)}${unit}`;
+  },
+});
+
+// The stock css group, minus two transforms, plus the duration above:
 // - name/kebab, replaced by snapshot-ui/name above.
 // - color/css, which rewrites colors through tinycolor and silently drops the
 //   alpha of modern rgb(r g b / a) syntax: rgb(255 255 255 / 0.6) came out as
@@ -155,6 +174,7 @@ StyleDictionary.registerTransformGroup({
     .../** @type {string[]} */ (StyleDictionary.hooks.transformGroups.css).filter(
       (name) => name !== 'name/kebab' && name !== 'color/css',
     ),
+    'snapshot-ui/duration',
     'snapshot-ui/name',
   ],
 });

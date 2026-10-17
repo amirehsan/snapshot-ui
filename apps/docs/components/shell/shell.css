@@ -2,6 +2,16 @@
 @layer components {
   :root {
     --rail-width: 320px;
+    /* How long the rail takes to reach the state it is moving to: opening, unless the collapsed rule says closing. The
+       library's motion tokens, as the Sidebar's (docs/design-system.md, "The rail's motion"). */
+    --rail-duration: var(--duration-expand);
+    /* How far the links and the search sit in from the rail's inside edge: 12px, and collapsed the insets that center
+       them in the 70px inside. */
+    --rail-nav-inset: 12px;
+    --rail-search-inset: 12px;
+    /* Concentric corners: a rounded part inside the rail takes the rail's corner less the gap between them, its 1px
+       edge and the part's inset, never more than its own shape, and square at 0 or less. */
+    --rail-corner: calc(var(--radius-stadium) - 1px);
   }
 
   /* ---- Floating rail ------------------------------------------- */
@@ -35,11 +45,17 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 8px 12px 4px;
+    /* Its corner, which the key chip inside it measures its own from. */
+    --rail-search-corner: min(
+      var(--radius-pill),
+      max(0px, calc(var(--rail-corner) - var(--rail-search-inset)))
+    );
+
+    margin: 8px var(--rail-search-inset) 4px;
     min-height: 42px;
     padding: 0 12px;
     border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-pill);
+    border-radius: var(--rail-search-corner);
     background-color: var(--color-canvas);
     color: var(--color-slate);
     font-size: 0.9375rem;
@@ -49,6 +65,7 @@
   }
 
   .rail-search svg {
+    flex: none;
     width: 18px;
     height: 18px;
   }
@@ -61,7 +78,7 @@
   .rail-nav {
     flex: 1;
     overflow-y: auto;
-    padding: 8px 12px 24px;
+    padding: 8px var(--rail-nav-inset) 24px;
   }
 
   .rail-group {
@@ -98,8 +115,10 @@
     background-color: var(--color-signal-light);
   }
 
+  /* One column no wider than the nav, so a link narrows with the rail however long its label. */
   .rail-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
     margin: 0;
     padding: 0;
@@ -112,7 +131,7 @@
     justify-content: space-between;
     min-height: 40px;
     padding: 0 12px;
-    border-radius: var(--radius-pill);
+    border-radius: min(var(--radius-pill), max(0px, calc(var(--rail-corner) - var(--rail-nav-inset))));
     color: var(--color-charcoal);
     font-size: 0.9375rem;
     font-weight: 500;
@@ -462,6 +481,17 @@
     display: none;
   }
 
+  /* One level further in, by the same rule: the key chip in the search less the search's edge and padding, and the
+     version badge in the head less the head's 24px, the smaller of the two insets at the rail's corner. Two classes,
+     so each outranks the chip's or the badge's own corner. */
+  .kbd.rail-key {
+    border-radius: min(var(--radius-micro), max(0px, calc(var(--rail-search-corner) - 1px - 12px)));
+  }
+
+  .badge.rail-version {
+    border-radius: min(var(--radius-micro), max(0px, calc(var(--rail-corner) - 24px)));
+  }
+
   /* The header's menu button floats: an outline IconButton at 48px with a float fill, a hairline edge and a lift shadow. */
   .header-menu {
     --icon-button-bg: var(--color-float);
@@ -493,7 +523,7 @@
     box-shadow: var(--shadow-lift);
     cursor: pointer;
     transition:
-      left 200ms ease,
+      left var(--rail-duration) var(--ease-emphasized),
       border-radius 200ms ease;
   }
 
@@ -515,7 +545,7 @@
   .rail-collapse svg {
     width: 16px;
     height: 16px;
-    transition: rotate 200ms ease;
+    transition: rotate var(--rail-duration) var(--ease-emphasized);
   }
 
   .rail-collapse-label {
@@ -526,11 +556,12 @@
     clip-path: inset(50%);
   }
 
+  /* The rail's edge and the workspace move together, on one curve: the 16px between them holds through the motion. */
   .rail,
   .workspace {
     transition:
-      width 200ms ease,
-      margin-left 200ms ease,
+      width var(--rail-duration) var(--ease-emphasized),
+      margin-left var(--rail-duration) var(--ease-emphasized),
       translate 200ms ease,
       border-radius 200ms ease;
   }
@@ -551,67 +582,128 @@
       transition: none;
     }
 
+    /* ---- The rail's motion -------------------------------------------------------------------------------------
+       Every part that moves moves for --rail-duration on the emphasized curve; the labels come back once the edge
+       has mostly passed. */
+    .rail-head,
+    .rail-nav,
+    .rail-foot {
+      transition: padding var(--rail-duration) var(--ease-emphasized);
+    }
+
+    .rail .brand {
+      transition: gap var(--rail-duration) var(--ease-emphasized);
+    }
+
+    .rail-search {
+      transition:
+        margin var(--rail-duration) var(--ease-emphasized),
+        border-radius 200ms ease;
+    }
+
+    .rail-link {
+      transition:
+        padding var(--rail-duration) var(--ease-emphasized),
+        border-radius 200ms ease;
+    }
+
+    :is(.rail-label, .rail-version, .rail-key) {
+      transition: opacity calc(var(--rail-duration) / 2) var(--ease-emphasized) calc(var(--rail-duration) / 4);
+    }
+
+    .rail-group {
+      transition:
+        padding-left var(--rail-duration) var(--ease-emphasized),
+        color calc(var(--rail-duration) / 2) var(--ease-emphasized) calc(var(--rail-duration) / 4);
+    }
+
+    .rail-group::before {
+      transition: margin-left var(--rail-duration) var(--ease-emphasized);
+    }
+
+    /* Nothing scrolls sideways while a label is wider than the narrowing rail, no group name wraps onto a second
+       line for a frame, and a label is cut at its edge, with no ellipsis that changes as the edge moves. Every name
+       fits the expanded rail, so these hold at rest too. */
+    .rail-nav {
+      overflow-x: hidden;
+    }
+
+    .rail-group {
+      white-space: nowrap;
+    }
+
+    .rail-label {
+      text-overflow: clip;
+    }
+
+    .rail-search {
+      overflow: hidden;
+    }
+
+    /* The version and the key keep their one line and their size, faded and cut by the edge, so the head and the
+       search keep the height of their expanded rows and nothing below them moves down. */
+    .rail-version,
+    .rail-key {
+      flex: none;
+      white-space: nowrap;
+    }
+
     [data-rail='collapsed'] {
       --rail-width: 104px;
+      --rail-duration: var(--duration-collapse);
+      --rail-nav-inset: 15px;
+      --rail-search-inset: 13px;
     }
 
     [data-rail='collapsed'] .rail-collapse svg {
       rotate: 180deg;
     }
 
+    /* The mark keeps its place at the start and settles on the collapsed rail's axis. */
     [data-rail='collapsed'] .rail-head {
-      justify-content: center;
-      padding: 24px 0 12px;
+      padding-right: 0;
+      padding-left: 22px;
     }
 
-    [data-rail='collapsed'] .rail-version,
-    [data-rail='collapsed'] .rail-key {
-      display: none;
+    [data-rail='collapsed'] .rail .brand {
+      gap: 0;
     }
 
-    /* Hidden from view, not from assistive technology. */
-    [data-rail='collapsed'] .rail-label {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-    }
-
-    [data-rail='collapsed'] .rail-search {
-      justify-content: center;
-      width: 44px;
-      margin: 8px auto 4px;
-      padding: 0;
+    /* Hidden from view, not from assistive technology, and still in the flow, so nothing below them moves: the
+       labels, the version and the key fade out in the first 40% of the closing as the edge carries them off. */
+    [data-rail='collapsed'] :is(.rail-label, .rail-version, .rail-key) {
+      opacity: 0;
+      transition: opacity calc(var(--rail-duration) * 0.4) var(--ease-emphasized);
     }
 
     [data-rail='collapsed'] .rail-nav {
-      padding-inline: 16px;
       scrollbar-width: none;
     }
 
+    /* A group keeps its row, so the links below it never move up or down; its name fades out and its dot slides onto
+       the rail's axis. */
     [data-rail='collapsed'] .rail-group {
-      justify-content: center;
-      margin-top: 16px;
-      padding: 8px 0;
-      font-size: 0;
+      padding-left: 17px;
+      color: transparent;
+      transition:
+        padding-left var(--rail-duration) var(--ease-emphasized),
+        color calc(var(--rail-duration) * 0.4) var(--ease-emphasized);
     }
 
     [data-rail='collapsed'] .rail-group::before {
       margin-left: 0;
     }
 
+    /* The link fills the nav, so its pill narrows with the rail, and its icon keeps its place at the start. */
     [data-rail='collapsed'] .rail-link {
       position: relative;
-      justify-content: center;
-      width: 40px;
-      margin-inline: auto;
-      padding: 0;
+      padding-inline: 10px;
     }
 
+    /* The GitHub button rides the closing edge and lands on the rail's axis. */
     [data-rail='collapsed'] .rail-foot {
-      justify-content: center;
-      padding: 16px 0 20px;
+      padding-right: 15px;
+      padding-left: 15px;
     }
   }
 
@@ -621,6 +713,9 @@
   @media (1024px <= width < 1640px) {
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded]))) {
       --rail-width: 104px;
+      --rail-duration: var(--duration-collapse);
+      --rail-nav-inset: 15px;
+      --rail-search-inset: 13px;
     }
 
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded])))
@@ -629,46 +724,39 @@
       rotate: 180deg;
     }
 
+    /* The mark keeps its place at the start and settles on the collapsed rail's axis. */
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded]))) .rail-head {
-      justify-content: center;
-      padding: 24px 0 12px;
+      padding-right: 0;
+      padding-left: 22px;
     }
 
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded])))
-      .rail-version,
-    :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded]))) .rail-key {
-      display: none;
+      .rail
+      .brand {
+      gap: 0;
     }
 
-    /* Hidden from view, not from assistive technology. */
+    /* Hidden from view, not from assistive technology, and still in the flow, so nothing below them moves: the
+       labels, the version and the key fade out in the first 40% of the closing as the edge carries them off. */
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded])))
-      .rail-label {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-    }
-
-    :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded])))
-      .rail-search {
-      justify-content: center;
-      width: 44px;
-      margin: 8px auto 4px;
-      padding: 0;
+      :is(.rail-label, .rail-version, .rail-key) {
+      opacity: 0;
+      transition: opacity calc(var(--rail-duration) * 0.4) var(--ease-emphasized);
     }
 
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded]))) .rail-nav {
-      padding-inline: 16px;
       scrollbar-width: none;
     }
 
+    /* A group keeps its row, so the links below it never move up or down; its name fades out and its dot slides onto
+       the rail's axis. */
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded])))
       .rail-group {
-      justify-content: center;
-      margin-top: 16px;
-      padding: 8px 0;
-      font-size: 0;
+      padding-left: 17px;
+      color: transparent;
+      transition:
+        padding-left var(--rail-duration) var(--ease-emphasized),
+        color calc(var(--rail-duration) * 0.4) var(--ease-emphasized);
     }
 
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded])))
@@ -676,17 +764,16 @@
       margin-left: 0;
     }
 
+    /* The link fills the nav, so its pill narrows with the rail, and its icon keeps its place at the start. */
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded]))) .rail-link {
       position: relative;
-      justify-content: center;
-      width: 40px;
-      margin-inline: auto;
-      padding: 0;
+      padding-inline: 10px;
     }
 
+    /* The GitHub button rides the closing edge and lands on the rail's axis. */
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded]))) .rail-foot {
-      justify-content: center;
-      padding: 16px 0 20px;
+      padding-right: 15px;
+      padding-left: 15px;
     }
   }
 
