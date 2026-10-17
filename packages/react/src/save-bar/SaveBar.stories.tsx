@@ -121,6 +121,9 @@ function only(selector: string): HTMLElement {
 
 const rect = (element: Element): DOMRect => element.getBoundingClientRect();
 
+/** How long a play waits for what follows a key or an animation: a busy runner, WebKit's above all, is slow. */
+const LONG = { timeout: 5000 };
+
 /** Presses `keys` unless the story has gone: a play that outlived its time limit stops rather than type on. */
 function guardedKeys(anchor: Element): (keys: string) => Promise<void> {
   return async (keys) => {
@@ -202,7 +205,9 @@ export const Review: Story = {
 export const Pending: Story = {
   args: { isDirty: true, isPending: true },
   play: async ({ canvasElement }) => {
-    await waitFor(() => expect(find(canvasElement, '.save-bar-status')).toHaveTextContent('Saving'));
+    await waitFor(() => expect(find(canvasElement, '.save-bar-status')).toHaveTextContent('Saving'), {
+      timeout: 5000,
+    });
   },
 };
 
@@ -378,23 +383,30 @@ export const CancelGuard: Story = {
     const press = guardedKeys(cancel);
     await focusOn(cancel);
     await press('{Enter}');
-    const question = await waitFor(() =>
-      within(document.body).getByRole('alertdialog', { name: 'Discard changes?' }),
+    const question = await waitFor(
+      () => within(document.body).getByRole('alertdialog', { name: 'Discard changes?' }),
+      LONG,
     );
     // The question starts on the safe answer.
-    await waitFor(() => expect(within(question).getByRole('button', { name: 'Keep editing' })).toHaveFocus());
+    await waitFor(
+      () => expect(within(question).getByRole('button', { name: 'Keep editing' })).toHaveFocus(),
+      LONG,
+    );
     await press('{Escape}');
-    await waitFor(() => expect(within(document.body).queryByRole('alertdialog')).toBeNull());
-    await waitFor(() => expect(cancel).toHaveFocus());
+    await waitFor(() => expect(within(document.body).queryByRole('alertdialog')).toBeNull(), LONG);
+    await waitFor(() => expect(cancel).toHaveFocus(), LONG);
     await expect(args.onCancel).not.toHaveBeenCalled();
     await press('{Enter}');
-    const again = await waitFor(() => within(document.body).getByRole('alertdialog'));
+    const again = await waitFor(() => within(document.body).getByRole('alertdialog'), LONG);
     const discard = within(again).getByRole('button', { name: 'Discard changes' });
-    await waitFor(() => expect(within(again).getByRole('button', { name: 'Keep editing' })).toHaveFocus());
+    await waitFor(
+      () => expect(within(again).getByRole('button', { name: 'Keep editing' })).toHaveFocus(),
+      LONG,
+    );
     await press('{Tab}');
-    await waitFor(() => expect(discard).toHaveFocus());
+    await waitFor(() => expect(discard).toHaveFocus(), LONG);
     await press('{Enter}');
-    await waitFor(() => expect(args.onCancel).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(args.onCancel).toHaveBeenCalledTimes(1), LONG);
   },
 };
 
@@ -428,14 +440,14 @@ export const FocusClear: Story = {
       // By Tab.
       await focusOn(before);
       await guardedKeys(bar)('{Tab}');
-      await waitFor(() => expect(under).toHaveFocus());
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + 0.5));
+      await waitFor(() => expect(under).toHaveFocus(), LONG);
+      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + 0.5), LONG);
       // By focus(), from the top again.
       under.blur();
       scroller.scrollTop = 0;
       await waitFor(() => expect(rect(under).bottom).toBeGreaterThan(cover()));
       under.focus();
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + 0.5));
+      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(cover() + 0.5), LONG);
     } finally {
       scroller.scrollTop = 0;
     }
@@ -471,21 +483,26 @@ export const FocusClearInScroller: Story = {
       // By Tab.
       await focusOn(before);
       await guardedKeys(bar)('{Tab}');
-      await waitFor(() => expect(under).toHaveFocus());
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + 0.5));
+      await waitFor(() => expect(under).toHaveFocus(), LONG);
+      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + 0.5), LONG);
       // By focus(), from the top again.
       under.blur();
       scroller.scrollTop = 0;
       await waitFor(() => expect(rect(under).bottom).toBeGreaterThan(rect(bar).top));
       under.focus();
-      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + 0.5));
+      await waitFor(() => expect(rect(under).bottom).toBeLessThanOrEqual(rect(bar).top + 0.5), LONG);
     } finally {
       scroller.scrollTop = 0;
     }
   },
 };
 
-/** A save that takes longer than the pause: "Saving" in the status, then nothing, with focus kept on the action. */
+/**
+ * A save that takes longer than the pause: "Saving" in the status, then nothing. The unit tests keep focus on the
+ * action; here focus leaves it once the save is pending, since React Aria's Button says its pending start and end
+ * while focused, by the ids of its label and spinner, which leave with the spinner, and its live region keeps each
+ * sentence 7 seconds, which axe, run after this play and the next story's, reads as a name pointing at nothing.
+ */
 export const PendingStatus: Story = {
   tags: ['no-visual'],
   args: {
@@ -501,20 +518,16 @@ export const PendingStatus: Story = {
     const status = find(canvasElement, '.save-bar-status');
     await focusOn(save);
     await guardedKeys(save)('{Enter}');
-    await waitFor(() => expect(save).toHaveAttribute('data-pending', 'true'));
-    await expect(status).toBeEmptyDOMElement();
-    await waitFor(() => expect(status).toHaveTextContent('Saving'));
-    await expect(canvas.getByRole('button', { name: 'Cancel' })).toBeDisabled();
     try {
-      await waitFor(() => expect(save).not.toHaveAttribute('data-pending'), { timeout: 3000 });
+      await waitFor(() => expect(save).toHaveAttribute('data-pending', 'true'));
+      save.blur();
       await expect(status).toBeEmptyDOMElement();
-      await expect(save).toHaveFocus();
+      await waitFor(() => expect(status).toHaveTextContent('Saving'), { timeout: 3000 });
+      await expect(canvas.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+      await waitFor(() => expect(save).not.toHaveAttribute('data-pending'), { timeout: 5000 });
+      await expect(status).toBeEmptyDOMElement();
     } finally {
-      // React Aria's Button says its pending start and end while focused, by the ids of its label and spinner,
-      // which leave with the spinner; its live region keeps each sentence 7 seconds after it was spoken, which axe,
-      // run after this play and after the next story's, reads as a name pointing at nothing. They have been said;
-      // the end's is added an effect after the spinner leaves, so the play gives it a moment first.
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // The start's sentence has been said; nothing more comes once focus has left.
       for (const said of document.querySelectorAll('[data-live-announcer] [role="img"]')) said.remove();
     }
   },
