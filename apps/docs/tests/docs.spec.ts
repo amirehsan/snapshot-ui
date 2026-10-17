@@ -135,21 +135,30 @@ test('the rail collapses to icons and remembers it', async ({ page }) => {
   await expect(page.locator('html')).not.toHaveAttribute('data-rail', 'collapsed');
 });
 
-test('the rail opens and closes on one curve, its icons hold their place and no row grows a line', async ({
+test('the rail opens and closes on one curve, its icons hold their place and height and no row grows a line', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await visit(page);
-  const sample = (): Promise<{ icons: number[]; rows: number[] }> =>
+  const sample = (): Promise<{ icons: number[]; rows: number[]; tops: number[] }> =>
     page.evaluate(() => ({
       icons: [...document.querySelectorAll('#rail .rail-icon, #rail .rail-search svg, #rail .brand svg')].map(
         (icon) => icon.getBoundingClientRect().left,
       ),
+      // The top of every icon, group heading and footer button: collapsing changes the width and nothing else.
+      tops: [
+        ...document.querySelectorAll(
+          '#rail .brand svg, #rail .rail-search svg, #rail .rail-group, #rail .rail-icon, #rail .rail-foot .icon-button',
+        ),
+      ].map((part) => part.getBoundingClientRect().top),
       rows: [...document.querySelectorAll('#rail .rail-link, #rail .rail-search, #rail .rail-group')].map(
         (row) => Math.round(row.getBoundingClientRect().height),
       ),
     }));
   const atRest = await sample();
+  /** The largest move of any part's top from where it rests expanded. */
+  const climb = (now: { tops: number[] }): number =>
+    Math.max(...now.tops.map((top, index) => Math.abs(top - (atRest.tops[index] ?? Number.NaN))));
   for (const name of ['Collapse the menu', 'Expand the menu']) {
     await page.getByRole('button', { name }).click();
     // Hold every transition the press started and step it through its end, frame by frame.
@@ -170,10 +179,13 @@ test('the rail opens and closes on one curve, its icons hold their place and no 
       const drift = now.icons.map((left, index) => Math.abs(left - (atRest.icons[index] ?? 0)));
       expect(Math.max(...drift)).toBeLessThanOrEqual(6.5);
       expect(now.rows).toEqual(atRest.rows);
+      expect(climb(now)).toBeLessThanOrEqual(0.5);
     }
     await page.evaluate(() => {
       for (const each of (window as unknown as { moving: Animation[] }).moving) each.finish();
     });
+    // Settled, collapsed or expanded, every part sits at the same height.
+    expect(climb(await sample())).toBeLessThanOrEqual(0.5);
   }
   for (const selector of ['.rail', '.workspace', '.rail-collapse']) {
     await expect(page.locator(selector)).toHaveCSS(

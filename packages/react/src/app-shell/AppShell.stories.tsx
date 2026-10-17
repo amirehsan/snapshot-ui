@@ -354,12 +354,22 @@ export const CollapseMotion: Story = {
       [...rail().querySelectorAll('.sidebar-item-icon, .sidebar-search-icon, .sidebar-brand-mark')].map(
         (icon) => icon.getBoundingClientRect().left,
       );
+    /** The top of every icon, group label and footer part: collapsing changes the rail's width and nothing else. */
+    const tops = (): number[] =>
+      [
+        ...rail().querySelectorAll(
+          '.sidebar-brand-mark, .sidebar-search-icon, .sidebar-group-label, .sidebar-item-icon, .sidebar-footer > *',
+        ),
+      ].map((part) => part.getBoundingClientRect().top);
+    /** The largest move of any part's top from where it rests expanded. */
+    const climb = (): number =>
+      Math.max(...tops().map((top, index) => Math.abs(top - (atRest.tops[index] ?? Number.NaN))));
     /** Every row of the rail one line high: no label wraps onto a second line for a frame. */
     const rows = (): number[] =>
       [
         ...rail().querySelectorAll('.sidebar-item, .sidebar-search, .sidebar-group-label, .sidebar-brand'),
       ].map((row) => Math.round(row.getBoundingClientRect().height));
-    const atRest = { icons: icons(), rows: rows() };
+    const atRest = { icons: icons(), rows: rows(), tops: tops() };
     for (const [name, width] of [
       ['Expand the menu', 72],
       ['Collapse the menu', 288],
@@ -377,9 +387,13 @@ export const CollapseMotion: Story = {
         const drift = icons().map((left, index) => Math.abs(left - (atRest.icons[index] ?? 0)));
         await expect(Math.max(...drift)).toBeLessThanOrEqual(3.5);
         await expect(rows()).toEqual(atRest.rows);
+        // And it stays at its height: every icon's top is where it rests, in each frame.
+        await expect(climb()).toBeLessThanOrEqual(0.5);
       }
       for (const each of moving) each.finish();
       await waitFor(() => expect(rail().getBoundingClientRect().width).toBeCloseTo(width, 0));
+      // Settled, collapsed or expanded, every part sits at the same height.
+      await expect(climb()).toBeLessThanOrEqual(0.5);
       await expect(button).toHaveAccessibleName(name);
       // The rail and the page beside it travel on one curve.
       await expect(getComputedStyle(rail()).transitionTimingFunction).toBe('cubic-bezier(0.2, 0, 0, 1)');
