@@ -96,7 +96,7 @@ export type FileTransfer = Pick<DataTransfer, 'items' | 'files'>;
  * `webkitGetAsEntry()` names as a directory, becomes `new File([], name)` in `folders` and its entries are never
  * read. React Aria's own reading keeps only the items that have an entry, and a file a script puts in a
  * transfer has none in Chromium and WebKit, so the library reads the transfer itself and a play's drop takes
- * the path a real one does (spec correction 5, "Spike results (Task 2)").
+ * the path a real one does (spec corrections 5 and 24).
  */
 export function filesOf(transfer: FileTransfer | null | undefined): TransferFiles {
   const files: File[] = [];

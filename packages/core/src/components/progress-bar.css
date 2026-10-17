@@ -5,7 +5,9 @@
  * ink at the same radius, moving to a new value over 200ms. Indeterminate, a 40% segment slides from the inline
  * start to the end over 1.6s, the skeleton's rhythm; under reduced motion the determinate move stops and the
  * slide slows by the spinner's ratio, 900ms to 2400ms, and never stops, since a still segment reads as an amount.
- * The slide's direction is a custom property, -1 under [dir='rtl'], since :dir() is above the browser floor.
+ * The slide animates the logical inset, so it runs from the track's own inline start whatever set its direction
+ * (an rtl ancestor, a nested dir, dir="auto"), and the segment rests wholly before the start when animations are
+ * off, so a stopped bar reads empty, never 40% done.
  */
 @layer components {
   .progress-bar {
@@ -43,17 +45,11 @@
   }
 
   .progress-bar-track {
-    --progress-bar-slide: 1;
-
     position: relative;
     height: 0.5rem;
     overflow: hidden;
     border-radius: var(--radius-pill);
     background-color: var(--color-frame);
-  }
-
-  [dir='rtl'] .progress-bar-track {
-    --progress-bar-slide: -1;
   }
 
   .progress-bar-fill {
@@ -66,21 +62,24 @@
     transition: inline-size 200ms ease;
   }
 
+  /* At rest the segment sits where the slide starts, wholly before the track's start, so with animations off the
+     track reads empty. */
   .progress-bar-track[data-indeterminate] .progress-bar-fill {
+    inset-inline-start: -40%;
     inline-size: 40%;
     transition: none;
     animation: progress-bar-slide 1.6s ease-in-out infinite;
   }
 
-  /* From wholly before the track's start to wholly past its end: the segment is 40% of the track, so the track
-     is 250% of the segment. */
+  /* From wholly before the track's start to wholly past its end, by the logical inset, which follows the track's
+     own direction: the segment is 40% of the track. */
   @keyframes progress-bar-slide {
     from {
-      translate: calc(-100% * var(--progress-bar-slide)) 0;
+      inset-inline-start: -40%;
     }
 
     to {
-      translate: calc(250% * var(--progress-bar-slide)) 0;
+      inset-inline-start: 100%;
     }
   }
 

@@ -8550,26 +8550,34 @@ one movement.
 
 **Indeterminate** (ruling 14). The fill becomes a segment 40% of the
 track wide that slides from wholly before the track's start to wholly
-past its end over 1.6s, ease in and out, forever: `translate` from
-`-100%` to `250%` of the segment, since the track is 250% of a 40%
-segment. 1.6s is the skeleton's pulse, so the library's two loading
-rhythms are one number. The track writes no `style` while
-indeterminate.
+past its end over 1.6s, ease in and out, forever: `inset-inline-start`
+from `-40%` to `100%` of the track (spec correction 20). 1.6s is the
+skeleton's pulse, so the library's two loading rhythms are one number.
+The track writes no `style` while indeterminate. At rest, with no
+animation running, the segment sits where the slide starts,
+`inset-inline-start: -40%` in its own rule, wholly before the track's
+start (spec correction 21).
 
 **Reduced motion.** The determinate move stops (`transition: none`).
 The slide slows by the spinner's own ratio, 900ms to 2400ms, from 1.6s
 to `calc(1.6s * 8 / 3)`, about 4.3s, and never stops: the spinner's
 rule, "a still spinner reads as finished", holds for a bar, where a
 still segment at 40% reads as 40% done. Playwright's screenshots run
-with animations disabled, which holds the segment at its first frame,
-before the track's start, so the track reads empty in a baseline.
+with animations disabled, which cancels an infinite animation, and a
+reader's stylesheet may set `animation: none`; either way the segment's
+own rule draws it, at the first frame's place before the track's start,
+so the track reads empty, in a baseline and on the reader's screen.
 
 **Right to left.** The fill is placed with logical properties, so it
-grows from the right on a Persian page. The slide's keyframes multiply
-by `--progress-bar-slide`, 1 on the track and -1 under `[dir='rtl']`,
-so the segment slides from right to left; `:dir()` is above the Chrome
-111 and Safari 16.4 floor, so the direction is a custom property set by
-an ancestor's attribute.
+grows from the right on a Persian page, and the slide animates the same
+logical inset, so the segment slides from the inline start of the
+direction the track itself resolves to, right to left on a Persian
+page. Whatever set that direction, an rtl ancestor, a nested `dir` of
+the other way or `dir="auto"` reading Persian or Latin, the slide
+follows it; a sign read from an `[dir='rtl']` ancestor would not, and
+`:dir()` is above the Chrome 111 and Safari 16.4 floor (spec correction
+20). An animated inset is laid out on each frame rather than
+composited; for one 8px segment that cost is small.
 
 **The role on the track** (ruling 13). The WAI-ARIA `progressbar`
 pattern by hand in a static module, not React Aria's `ProgressBar`, which
@@ -8584,11 +8592,18 @@ the role says "unknown", and a `valueLabel` shown on purpose
 instead. A range whose `maxValue` is not above `minValue` draws an empty
 track and reports `minValue` for all three numbers, with no warning,
 since a static part has no effect to warn from. The name is Meter's: a
-non-blank `aria-labelledby`, else a non-blank `aria-label`, else the
-label, else the value text, so the bar is never unnamed; the caller's
-`aria-describedby` moves to the track. The visible value is
-`aria-hidden`, since the bar reads it. With an `aria-label` and
-`showValueLabel={false}` there is no head at all: the upload row's use.
+non-blank `aria-labelledby`, else a non-blank `aria-label`, else a
+non-blank label, else the value text; while indeterminate there is no
+value text unless one is given, so a bar with nothing else to name it
+takes `aria-label="Loading"`, Spinner's own default (spec correction
+22). A blank `valueLabel` is no value text: the percentage stands while
+determinate. The types ask for a name, and these fallbacks cover the
+blank strings they admit; a label node that renders nothing or an
+`aria-labelledby` that points at nothing is beyond what the bar can
+see. The caller's `aria-describedby` moves to the track. The visible
+value is `aria-hidden`, since the bar reads it. With an `aria-label`
+and `showValueLabel={false}` there is no head at all: the upload row's
+use.
 
 **Never live** (spec 13.2 item 6). No `role="status"` and no
 `aria-live`: a value that changes every 100ms would be read out every
@@ -8612,22 +8627,32 @@ its end shows, as Meter's do. The indeterminate segment is the same fill.
 float, each gated already as text and cited by the contrast test, not
 added. The track is a mix, so the fill against it is measured and
 recorded, not gated: ink on the track is 12.69 in light and 14.19 in
-dark over canvas, and 14.34 and 12.19 over float (the tray's surface),
-each past the 3:1 a graphic needs; the track against its surface is 1.28
-and 1.36 on canvas and 1.29 and 1.43 on float, a cue and not a boundary,
-since the value text carries the extent. Signal orange, clay, error,
-success, warning and taupe appear nowhere.
+dark over canvas, 13.88 and 12.19 over lifted (a Card holding the
+upload list), and 14.34 and 12.19 over float (the tray's surface), each
+past the 3:1 a graphic needs; the track against its surface is 1.28 and
+1.36 on canvas, 1.28 and 1.43 on lifted and 1.29 and 1.43 on float, a
+cue and not a boundary, since the value text carries the extent. So a
+bar with no head needs its value shown in text beside it, as the upload
+row's status line shows "45%" or "1.2 of 4 MB" (spec correction 23).
+Signal orange, clay, error, success, warning and taupe appear nowhere.
 
 **Where the build departs from the plan.** The props table on the docs
 page picks the bar's own props from `ProgressBarProps`, as Meter's page
 does, rather than listing `ProgressBarBaseProps` with every inherited
 DOM attribute. The size limit is 1.5 kB, above the spec's 1 kB budget:
 the entry measured 653 B, and the rule rounds up to 1 kB and adds
-0.5 kB, as Meter's did.
+0.5 kB, as Meter's did. The review's fix round (spec corrections 20 to
+23) slides the segment by its logical inset rather than a direction
+property, rests it before the track's start, names an indeterminate bar
+"Loading" when nothing else does, and adds the lifted surface and the
+headless bar's value text; the entry then measures 661 B, inside the
+same limit.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and
 NVDA (owner action 4): the bar read by its name and value when reached,
-and nothing while it moves.
+and the bar speaking nothing as it moves. A screen reader's own
+progress tones, such as NVDA's beeps for a progress bar that changes,
+are the reader's setting and not a failure.
 
 ## FileDropZone
 
@@ -8681,7 +8706,7 @@ dashed, declared after the drop look so it wins its color, as invalid
 outranks changed on a field; the error line is the field's. Disabled is
 taupe, the edge, the text and the icon, with `cursor: not-allowed`; the
 zone writes `aria-disabled` on its group, so its taupe text reads as an
-inactive control's. A phone cannot drag a file into a page, so under
+inactive control's (spec correction 26). A phone cannot drag a file into a page, so under
 `(hover: none) and (pointer: coarse)` the hint is not drawn and the button
 stays; both strings are in the server's HTML and the media query picks.
 
@@ -8735,7 +8760,8 @@ one down for each `dragleave`, shows it at one and hides it at zero, which
 survives Firefox's leave on every child boundary and Safari's null
 `relatedTarget`; a drop and `dragend` reset it. The listeners are in the
 capture phase, since a drop target on the page, the overlay among them,
-stops the drag events it takes, and the count must see every one. It
+stops the drag events it takes, and the count must see every one (spec
+correction 25). It
 stands down for a drag that holds no files (a row, a tag), while a modal
 is open (`isAnotherModalOpen()` at each enter, spec correction 9), while
 disabled, and for a second page zone, which warns once and stays idle
@@ -8752,7 +8778,7 @@ pressed, so the same file chosen again fires again (spec correction 17).
 is `highlight`, since the wash is gone; the overlay's fill is `canvas`
 with no transparency, and its card's edge `canvastext`.
 
-**The spike** (plan Task 2, "Spike results (Task 2)"). Before the parts,
+**The spike** (spec correction 24). Before the parts,
 `DropSpike.stories.tsx` proved in Chromium, WebKit and Firefox that a drop
 holding files reaches `useDrop` with no drop button, and `DropZone` with
 its hidden button out of the tab order; that a paste on a focused button
@@ -8770,8 +8796,8 @@ script's transfer allows no operation, and Chromium and WebKit ignore the
 setter, so the plays define `effectAllowed`; Firefox's `ClipboardEvent`
 constructor drops `clipboardData`, so the paste plays define it.
 
-**Where the build departs from the plan.** The size limits are above the
-spec's budgets: `{ FileDropZone, FileButton }` measured 2.23 kB and is set
+**Where the build departs from the plan** (spec corrections 27 to 29).
+The size limits are above the spec's budgets: `{ FileDropZone, FileButton }` measured 2.23 kB and is set
 at 3 kB, and `{ PageDropZone }` 1.56 kB, set at 2.5 kB, by the repo's
 rule; each carries the check, the transfer reader, the missed-drop hold
 and React Aria's drop hook glue. The docs' "Take a photo" button shows

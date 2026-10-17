@@ -26,6 +26,7 @@ export type ProgressBarBaseProps = Omit<
   isIndeterminate?: boolean;
   /**
    * The value in the app's words, shown at the head's end and given as the bar's value text: "45%", "1.2 of 4 MB".
+   * A blank one counts as absent.
    * @default the percentage in ASCII digits, rounded to a whole number: "45%"
    */
   valueLabel?: string;
@@ -34,8 +35,17 @@ export type ProgressBarBaseProps = Omit<
   ref?: Ref<HTMLDivElement>;
 };
 
-/** A name is required: a visible `label`, an `aria-label` or an `aria-labelledby`. */
+/**
+ * A name is required: a visible `label`, an `aria-label` or an `aria-labelledby`. A blank one passes the types
+ * and names nothing, so the bar falls back to its value text, or while indeterminate to Spinner's "Loading".
+ */
 export type ProgressBarProps = ProgressBarBaseProps & AccessibleName<'label'>;
+
+/**
+ * The name of an indeterminate bar that nothing else names, Spinner's own default, so the library's two
+ * indicators of work of unknown length fall back to the same word. Your own label says more.
+ */
+const FALLBACK_NAME = 'Loading';
 
 /** A percentage with at most three decimals, as Meter writes its own. */
 const percent = (share: number): string => `${String(Math.round(share * 100_000) / 1000)}%`;
@@ -83,10 +93,12 @@ export function ProgressBar(props: ProgressBarProps): ReactElement {
   const percentage = isRange
     ? `${String(Math.round(((clamped - minValue) * 100) / (maxValue - minValue)))}%`
     : '0%';
-  const valueText = valueLabel ?? (isIndeterminate ? undefined : percentage);
+  // A blank valueLabel is no value text: the percentage stands while determinate, and nothing while indeterminate.
+  const valueText = named(valueLabel) ? valueLabel : isIndeterminate ? undefined : percentage;
 
-  // The first name that names something: a blank aria-labelledby or aria-label falls through to the next, and
-  // with nothing else the value text names the bar, so it is never unnamed.
+  // The first name that names something: a blank aria-labelledby or aria-label falls through to the next; with
+  // nothing else the value text names the bar, and an indeterminate bar with no value text takes Spinner's
+  // "Loading", so a blank string never leaves it unnamed.
   const unnamed = !named(ariaLabelledBy) && !named(ariaLabel) && !hasLabel;
   const showValue = valueText !== undefined && ((showValueLabel ?? !isIndeterminate) || unnamed);
   const name = named(ariaLabelledBy)
@@ -97,7 +109,7 @@ export function ProgressBar(props: ProgressBarProps): ReactElement {
         ? { 'aria-labelledby': labelId }
         : showValue
           ? { 'aria-labelledby': valueId }
-          : {};
+          : { 'aria-label': FALLBACK_NAME };
   // Indeterminate, a value shown on purpose cannot be the value text, which the role withholds, so it describes
   // the track instead, unless it already names it.
   const describesTrack = isIndeterminate && showValue && !unnamed;

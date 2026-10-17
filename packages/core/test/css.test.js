@@ -7439,20 +7439,33 @@ describe('src/components/progress-bar.css', () => {
     expect(fill).toContain('transition: inline-size 200ms ease;');
   });
 
-  it('slides a 40% segment over 1.6s, mirrored by --progress-bar-slide under [dir=rtl]', () => {
+  it("slides a 40% segment over 1.6s by its logical inset, which follows the track's own direction", () => {
     const css = rules();
     const segment = blockAfter(css, INDETERMINATE);
     expect(segment).toContain('inline-size: 40%;');
     expect(segment).toContain('transition: none;');
     expect(segment).toContain('animation: progress-bar-slide 1.6s ease-in-out infinite;');
-    expect(blockAfter(css, '.progress-bar-track {')).toContain('--progress-bar-slide: 1;');
-    expect(blockAfter(css, "[dir='rtl'] .progress-bar-track {")).toContain('--progress-bar-slide: -1;');
-    // From wholly before the start to wholly past the end: the track is 250% of a 40% segment.
+    // From wholly before the start to wholly past the end, by the logical inset, so the slide follows the
+    // direction the track resolves to, whatever set it (an rtl ancestor, a nested dir, dir="auto"). No sign
+    // from an ancestor's attribute, and no physical move.
     const frames = blockAfter(css, '@keyframes progress-bar-slide {');
-    expect(blockAfter(frames, 'from {')).toContain('translate: calc(-100% * var(--progress-bar-slide)) 0;');
-    expect(blockAfter(frames, 'to {')).toContain('translate: calc(250% * var(--progress-bar-slide)) 0;');
+    expect(blockAfter(frames, 'from {').trim()).toBe('inset-inline-start: -40%;');
+    expect(blockAfter(frames, 'to {').trim()).toBe('inset-inline-start: 100%;');
+    expect(css).not.toContain('--progress-bar-slide');
+    expect(css).not.toContain("[dir='rtl']");
+    expect(css).not.toMatch(/\btranslate\b|\bleft:|\bright:/);
     // :dir() is above the browser floor.
     expect(css).not.toContain(':dir(');
+  });
+
+  it('rests the segment at the first frame, wholly before the start, so a stopped bar reads empty', () => {
+    // With animations off (Playwright's screenshots, a reader's own animation: none) the base rule is what
+    // draws, so it is the first keyframe's position, never the determinate fill's inline start.
+    const css = rules();
+    const segment = blockAfter(css, INDETERMINATE);
+    const frames = blockAfter(css, '@keyframes progress-bar-slide {');
+    expect(segment).toContain('inset-inline-start: -40%;');
+    expect(segment).toContain(blockAfter(frames, 'from {').trim());
   });
 
   it('stops the move and slows the slide to 8/3 of 1.6s under reduced motion, never to none', () => {

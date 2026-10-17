@@ -1640,20 +1640,52 @@ export const SidePanelMirrored: Story = {
 };
 
 /**
+ * The indeterminate bars of `ProgressBarMirrored`, by test id, with the direction each track resolves to: on the
+ * Persian page, in an ltr box nested in it, and under `dir="auto"` reading Latin; then on an English page, in an
+ * rtl box nested in it, and under `dir="auto"` reading Persian. Only the track's own direction may steer the
+ * slide, never an ancestor's attribute.
+ */
+const SLIDES: readonly (readonly [testId: string, direction: 'ltr' | 'rtl'])[] = [
+  ['reading', 'rtl'],
+  ['nested-ltr', 'ltr'],
+  ['auto-latin', 'ltr'],
+  ['ltr', 'ltr'],
+  ['nested-rtl', 'rtl'],
+  ['auto-persian', 'rtl'],
+];
+
+/**
  * A progress bar on a Persian page at 45: the fill grows from the inline start, the right, so its right edge is
  * the track's; the label starts at the right and the value sits at the head's left end. The indeterminate
- * segment slides the other way, by its direction property.
+ * segment slides from the inline start of the direction its own track resolves to, however that was set: the
+ * play pauses each slide and places it at its first frame, wholly before the start, and at half its run, 30% of
+ * the track in from the start (the inset runs from -40% to 100%, and ease-in-out is half done at half time).
+ * Geometry only, no timing; in three engines, since each animates the logical inset itself.
  */
 export const ProgressBarMirrored: Story = {
+  tags: ['webkit', 'firefox'],
   render: () => (
     <I18nProvider locale="fa-IR">
-      <div
-        dir="rtl"
-        lang="fa"
-        style={{ width: 'min(28rem, calc(100vw - 2rem))', display: 'grid', gap: '1rem' }}
-      >
-        <ProgressBar label="در حال بارگذاری فاکتور" value={45} valueLabel="۴۵٪" />
-        <ProgressBar label="در حال خواندن رسید" isIndeterminate data-testid="reading" />
+      <div style={{ width: 'min(28rem, calc(100vw - 2rem))', display: 'grid', gap: '1rem' }}>
+        <div dir="rtl" lang="fa" style={{ display: 'grid', gap: '1rem' }}>
+          <ProgressBar label="در حال بارگذاری فاکتور" value={45} valueLabel="۴۵٪" />
+          <ProgressBar label="در حال خواندن رسید" isIndeterminate data-testid="reading" />
+          <div dir="ltr" lang="en">
+            <ProgressBar label="Reading receipt.jpg" isIndeterminate data-testid="nested-ltr" />
+          </div>
+          <div dir="auto" lang="en">
+            <ProgressBar label="Reading invoice.pdf" isIndeterminate data-testid="auto-latin" />
+          </div>
+        </div>
+        <div dir="ltr" lang="en" style={{ display: 'grid', gap: '1rem' }}>
+          <ProgressBar label="Reading statement.pdf" isIndeterminate data-testid="ltr" />
+          <div dir="rtl" lang="fa">
+            <ProgressBar label="در حال خواندن قرارداد" isIndeterminate data-testid="nested-rtl" />
+          </div>
+          <div dir="auto" lang="fa">
+            <ProgressBar label="در حال خواندن صورت‌حساب" isIndeterminate data-testid="auto-persian" />
+          </div>
+        </div>
       </div>
     </I18nProvider>
   ),
@@ -1666,8 +1698,34 @@ export const ProgressBarMirrored: Story = {
     const head = rect(find(bar, '.progress-bar-head'));
     await expect(Math.abs(rect(find(bar, '.progress-bar-label')).right - head.right)).toBeLessThan(1);
     await expect(Math.abs(rect(find(bar, '.progress-bar-value')).left - head.left)).toBeLessThan(1);
-    const reading = find(canvasElement, '[data-testid="reading"] .progress-bar-track');
-    await expect(getComputedStyle(reading).getPropertyValue('--progress-bar-slide').trim()).toBe('-1');
+
+    for (const [testId, direction] of SLIDES) {
+      const slideTrack = find(canvasElement, `[data-testid="${testId}"] .progress-bar-track`);
+      await expect(getComputedStyle(slideTrack).direction, testId).toBe(direction);
+      const segment = find(slideTrack, '.progress-bar-fill');
+      const [slide] = segment.getAnimations();
+      if (!slide) throw new Error(`${testId} has no slide`);
+      const duration = Number(slide.effect?.getComputedTiming().duration);
+      await expect(duration, testId).toBeGreaterThan(0);
+      slide.pause();
+      try {
+        for (const [time, start] of [
+          [0, -0.4],
+          [duration / 2, 0.3],
+        ] as const) {
+          slide.currentTime = time;
+          const lane = rect(slideTrack);
+          const box = rect(segment);
+          // How far the segment's inline start is from the track's, in the track's own direction.
+          const inset = direction === 'ltr' ? box.left - lane.left : lane.right - box.right;
+          const moment = `${testId} at ${String(time)}ms`;
+          await expect(Math.abs(inset - lane.width * start), moment).toBeLessThan(1);
+          await expect(Math.abs(box.width - lane.width * 0.4), `${testId} width`).toBeLessThan(1);
+        }
+      } finally {
+        slide.play();
+      }
+    }
   },
 };
 
