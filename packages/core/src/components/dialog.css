@@ -26,7 +26,10 @@
        leave 100% nothing to cap. With no minimum the row is the scrim's, and a long body scrolls. */
     min-height: 0;
     max-height: 100%;
-    padding: var(--holder-pad);
+    /* The foot pads to the corner inset, so the last action, or whatever ends the body, sits clear of the
+       bottom corners' curve while its end stays on the content column's edge: 39px in Rounded, the padding in
+       Soft and Square. */
+    padding: var(--holder-pad) var(--holder-pad) var(--holder-corner-inset);
     border: var(--holder-border) solid var(--color-hairline);
     border-radius: var(--holder-radius);
     background-color: var(--color-float);
@@ -129,16 +132,12 @@
     outline-offset: var(--focus-ring-offset);
   }
 
-  /* The last action would sit inside the panel's bottom end curve. A control keeps its own shape and moves
-     out of the corner instead: the row ends at the corner inset, 7px further in in Rounded and nothing more
-     in Soft and Square. */
   .dialog-actions {
     display: flex;
     flex: none;
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--spacing-part);
-    padding-inline-end: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
   /* The hairline is transparent in light; forced colors redraws it, so the panel keeps its shape. */

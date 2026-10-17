@@ -92,6 +92,42 @@ const holderWith = (button: string): string => `
     <button style="position: absolute; top: 8px; height: 40px; width: 96px; border: 0; background: #ccc; border-radius: 20px; ${button}"></button>
   </div>`;
 
+/*
+ * A control leaves a holder's corner downward where a content column stands above it, so the trailing action
+ * keeps its end on the column's end edge in every shape: the last action ends where the fields above it end.
+ */
+for (const [id, holder, actions] of [
+  ['components-dialog--default', '.dialog', '.dialog-actions'],
+  ['components-sidepanel--with-footer', '.side-panel', '.side-panel-footer'],
+] as const) {
+  test(`${id}: the last action ends on the fields' end edge`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const shape of SHAPES) {
+      await page.goto(
+        `/iframe.html?id=${id}&viewMode=story&globals=theme:light;shape:${shape};a11y.manual:!true`,
+      );
+      await rendered(page, id);
+      const edges = await page.evaluate(
+        ([holderSelector, actionsSelector]) => {
+          const panel = document.querySelector(holderSelector);
+          const last = panel?.querySelector(actionsSelector)?.lastElementChild;
+          const fields = [...(panel?.querySelectorAll('.input') ?? [])];
+          if (!last || fields.length === 0) throw new Error(`No action or field in ${holderSelector}`);
+          return {
+            action: last.getBoundingClientRect().right,
+            fields: Math.max(...fields.map((field) => field.getBoundingClientRect().right)),
+          };
+        },
+        [holder, actions] as const,
+      );
+      expect(Math.abs(edges.action - edges.fields), `${shape}: ${JSON.stringify(edges)}`).toBeLessThanOrEqual(
+        1,
+      );
+    }
+  });
+}
+
 test.describe('the audit itself', () => {
   test('fails a control given one smaller corner inside a corner curve', async ({ page }) => {
     await page.setContent(
