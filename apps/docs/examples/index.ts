@@ -115,6 +115,8 @@ import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
 import RadioGroupValidation from './radio-group-validation';
+import SaveBarForm from './save-bar-form';
+import SaveBarInSidePanel from './save-bar-in-side-panel';
 import SearchFieldBasic from './search-field-basic';
 import SearchFieldStates from './search-field-states';
 import SearchFieldToolbar from './search-field-toolbar';
@@ -283,6 +285,8 @@ export const examples = {
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,
   'radio-group-validation': RadioGroupValidation,
+  'save-bar-form': SaveBarForm,
+  'save-bar-in-side-panel': SaveBarInSidePanel,
   'search-field-basic': SearchFieldBasic,
   'search-field-states': SearchFieldStates,
   'search-field-toolbar': SearchFieldToolbar,

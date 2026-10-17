@@ -399,6 +399,13 @@
     "limit": "4 kB"
   },
   {
+    "name": "import { SaveBar } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ SaveBar }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "5.5 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

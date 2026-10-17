@@ -756,7 +756,9 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/sidebar">
                   Sidebar
                 </Link>
-                <span className="chip">Save bar</span>
+                <Link className="chip" href="/docs/components/save-bar">
+                  Save bar
+                </Link>
               </div>
             </Card>
           </div>
@@ -832,6 +834,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/popover">Popover</Link>
                 <Link href="/docs/components/progress-bar">Progress bar</Link>
                 <Link href="/docs/components/radio-group">Radio group</Link>
+                <Link href="/docs/components/save-bar">Save bar</Link>
                 <Link href="/docs/components/search-field">Search field</Link>
                 <Link href="/docs/components/segmented-control">Segmented control</Link>
                 <Link href="/docs/components/select">Select</Link>

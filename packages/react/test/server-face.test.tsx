@@ -13,6 +13,7 @@ import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
+import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
@@ -217,6 +218,19 @@ const FACES: [name: string, element: ReactElement][] = [
     <UploadList aria-label="Uploads" items={UPLOADS} onRetry={noop} onRemove={noop} onCancel={noop} />,
   ],
   ['UploadTray empty', <UploadTray items={[]} />],
+  [
+    // Every word is the app's or a label, so every locale writes the same bar.
+    'SaveBar',
+    <SaveBar
+      message="2 changes to Corner Mart, 14 Oct"
+      isDirty
+      actionLabel="Save"
+      onAction={noop}
+      onCancel={noop}
+      status="3 fields need attention"
+      statusTone="error"
+    />,
+  ],
 ];
 
 describe('the server face', () => {

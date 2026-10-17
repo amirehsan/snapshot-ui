@@ -9591,3 +9591,130 @@ keeps as the limit.
 segments, the button "Choose date" and the calendar with VoiceOver and
 NVDA, an unlabelled changed field in a grid reading "Changed" after its
 name, and the segments typed with VoiceOver on iOS.
+
+## SaveBar
+
+A sticky footer for a form or a review: `SaveBar`, a sentence about what
+will be saved, the clay Unsaved chip while dirty, a status line said
+politely, a guarded Cancel, the app's secondary actions and a primary
+action whose label the app writes (documents spec 9, rulings 12 and 17 to
+19). The document has no save bar, so this one is derived from DataTable's
+bulk-action bar, the field's Changed chip and the toasts' status host.
+
+**One object with the bulk bar.** The float surface Popover draws:
+`--color-float`, a 1px `--color-frame` edge, `--radius-surface` and
+`--shadow-float`, `padding-block: var(--spacing-part)`, and
+`margin-block-start: var(--spacing-peer)` from what it follows. The source
+app's save bar sat at the lifted level; the library's bars sit at the float
+level because they cross rows and fields as the page scrolls under them,
+where the lift's 4% halo does not part them from what is under.
+
+**The sticky rule** (ruling 17). `position: sticky; inset-block-end:
+calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset));
+z-index: calc(var(--z-header) - 1)`, the bulk bar's three values: the app
+puts it last in the form's holder, so it rides at the viewport's bottom,
+16px above a tab bar's reserve, while the holder is in view, and rests at
+the holder's end, covering nothing that follows. It sticks inside the
+nearest ancestor that scrolls, which in a SidePanel or a Dialog is the body,
+where it belongs (risk R10). It is always drawn (ruling 18): dirty adds the
+chip and the guard, so the page never moves under the reader as they type.
+
+**Corners** (owner rule, 2026-10-17; spec correction 70). The buttons keep
+their own uniform round; the bar holds them clear of its corners instead
+of bending them. The end padding is `max(var(--spacing-part),
+calc(var(--radius-surface) - 1px))`, so the action's gap to the outer
+edge, the edge included, is at least the surface radius: 23px of padding
+in Rounded, 11px in Soft, 8px in Square. Stacked, the last button runs to
+the start side too, so the actions take the start side's shortfall,
+`max(0px, calc(var(--radius-surface) - 1px - var(--spacing-inset)))`,
+7px in Rounded and nothing in Soft and Square. The bulk bar keeps its 8px
+until its own task reaches it.
+
+**Layout** (spec correction 71). The bar is a wrapping flex row and its own
+size container, `save-bar`. The text column, `flex: 1 1 12rem`, holds the
+chip over the sentence, so a dirty one-line bar is no taller than a clean
+one: the chip's 14px and the sentence's 20px fit the 40px control. The
+status follows, then the actions, pushed to the end on whatever line they
+fall. Under 36rem of its own box the actions take a line of their own,
+ended, the action last, so a long label never squeezes the sentence; under
+24rem a column, each button the full width in DOM order with the action at
+the bottom, nearest a phone's thumb, so the visual order never differs
+from the focus order. A label longer than the bar wraps inside its button,
+which grows from 40px (spec correction 72). The widths are the bar's own,
+like the bulk bar's and StatTile's, not tokens.
+
+**Text.** The sentence at `--text-small` weight 450 in ink, two lines at
+most and then an ellipsis, its whole text the group's name. The chip is the
+field's Changed chip unchanged, clay with its clay dot (spec correction 2),
+the one place the bar uses clay, which means exactly unsaved. The status
+at `--text-small`, slate when neutral, `--color-error` with a 16px Lucide
+`CircleAlert` on its first line when `statusTone="error"`, the tone written
+as `data-tone`. The action is primary ink, never signal orange, which is
+consent only; Cancel is tertiary.
+
+**The status** (section 13.2 item 14). A state, not an event: "3 fields
+need attention", "Couldn't save. Try again."; a save that worked is the
+app's success toast, as the Toast record splits events from states. The
+host is a polite `status`, in the server's HTML and clipped while empty,
+so it takes no room. It says each new status, and "Saving" in the status's
+place once the action has been pending for `QUIET_MS`, so a fast save says
+nothing.
+
+**The action and Cancel** (ruling 19). A press calls `onAction`; a returned
+promise holds the action's spinner, `pendingLabel` read with its name, and
+disables Cancel until it settles, and a rejection keeps the bar and reaches
+the page's handlers through `reportError`, as ConfirmDialog's confirm. The
+action is never disabled (section 13.2 item 15): a press the app cannot act
+on is answered with a status. Clean, Cancel calls `onCancel`; dirty, it
+asks "Discard changes?" through the bar's own `useConfirm`, danger-toned,
+"Discard changes" and "Keep editing", which starts on the safe answer and
+gives focus back to Cancel. Focus on Cancel when it is disabled or leaves
+goes to the action, never the body (spec correction 74). Mod+S is not
+taken (section 13.3 item 6). While dirty, `beforeunload` asks the browser
+to warn (ruling 12); a client navigation is not guarded.
+
+**The offset and the scroll padding** (spec corrections 12, 13 and 55).
+While a bar is on the page, `:root:has(.save-bar)` and
+`.app-shell:has(.save-bar)` declare `--save-bar-offset: calc(var(--size-control)
++ 2 * var(--spacing-part) + 2px + var(--spacing-inset))`, the one-line
+bar's height and the inset, which lifts the upload tray and the toasts from
+the server's HTML on; after hydration a `ResizeObserver` writes the bar's
+measured height and the inset inline on the root and on the closest shell,
+so a bar on two lines lifts them by its real height, and both are removed
+when it unmounts. The root's `scroll-padding-block-end` is
+`calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) +
+var(--upload-tray-reserve, 0px))`: the tab bar's height from the toasts'
+copy, since the root cannot read the shell's reserve, the bar, and a
+phone's upload bar above it, in the bottom edge's order. `save-bar.css`
+loads after `upload-tray.css`, so this sum replaces the tray's own.
+
+**Focus not obscured** (WCAG 2.4.11, risk R6, spec correction 73). With
+the bar's own clear removed, Chromium scrolled a field wholly in view under
+the tab bar, the save bar and the phone's upload bar clear of them at 375 by
+812, on Tab and on `focus()`, through the root's padding alone. A bar in a
+box that scrolls is beyond the root's padding, and there Chromium left the
+field 58px under the bar. So in every engine the bar listens for `focusin`
+on its holder and, two frames after the focus, scrolls a control outside
+itself by the least that brings it above the bar, and where the window
+scrolls above the phone's upload bar too, in the control's own scroll port,
+as DataTable clears its rows of its bulk bar; nothing moves when the
+control is clear already. The `FocusClear` and `FocusClearInScroller` plays
+run in Chromium, WebKit and Firefox.
+
+**Measured pairs**, all on float, light then dark, each gated already as
+text: ink, the sentence, 18.43 and 17.42; slate, the status, 5.49 and 6.94;
+clay, the chip and its dot, 7.04 and 6.82; error, the error status and its
+icon, 7.46 and 5.73. No pair is added to the gate.
+
+**Forced colors.** The edge is `canvastext`; the chip and the status keep
+their words, and the error icon its shape.
+
+**Size.** `{ SaveBar }` measures 4.63 kB without React Aria and Lucide,
+above spec 16's 3 kB budget, so the rule sets 5.5 kB (spec correction 75):
+it carries ConfirmDialog through `useConfirm`, 2.99 kB alone, Button,
+FieldChanged and the scroll helpers.
+
+**Screen readers and devices.** Not yet verified (owner action 4): the bar
+read as a group named by its message, its status politely, the discard
+question as an alert dialog, a focused field scrolled clear of the bar on a
+real phone, and `beforeunload`, which iOS Safari does not show.

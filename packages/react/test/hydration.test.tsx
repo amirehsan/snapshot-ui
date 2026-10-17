@@ -13,6 +13,7 @@ import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
+import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
@@ -364,6 +365,27 @@ const HYDRATED: [
       expect(container.querySelector('.upload-tray-bar-button')).toHaveTextContent('Uploading 4 of 6');
     },
     viewport(1280),
+  ],
+  [
+    // The bar, its sentence, its chip and its buttons are the server's; the status host stays empty, and the offset
+    // waits for a measurement after hydration.
+    'SaveBar',
+    <SaveBar
+      message="2 changes to Corner Mart, 14 Oct"
+      isDirty
+      actionLabel="Save"
+      onAction={noop}
+      onCancel={noop}
+    />,
+    (container) => {
+      expect(container.querySelector('.save-bar')).toHaveAttribute('role', 'group');
+      expect(container.querySelector('.save-bar-chip')).toHaveTextContent('Unsaved changes');
+      expect(container.querySelector('.save-bar-status')).toBeEmptyDOMElement();
+      expect([...container.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+        'Cancel',
+        'Save',
+      ]);
+    },
   ],
 ];
 

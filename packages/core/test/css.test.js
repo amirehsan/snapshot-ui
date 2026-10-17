@@ -8296,3 +8296,148 @@ describe('the changed dot, in each framed field', () => {
     );
   });
 });
+
+describe('src/components/save-bar.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/save-bar.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const OFFSET =
+    '--save-bar-offset: calc(var(--size-control) + 2 * var(--spacing-part) + 2px + var(--spacing-inset));';
+
+  it('draws the bar on the float surface with the frame edge, the surface radius and the float shadow', () => {
+    const bar = blockAfter(outsideForcedColors(rules()), '.save-bar {');
+    for (const declaration of [
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+      'color: var(--color-ink);',
+      'padding-block: var(--spacing-part);',
+      'margin-block-start: var(--spacing-peer);',
+      'box-sizing: border-box;',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+    }
+  });
+
+  it("sticks to the bottom above the tab bar reserve, one layer under the header token, as the bulk bar's", () => {
+    const bar = blockAfter(outsideForcedColors(rules()), '.save-bar {');
+    const table = closeUp(stripComments(read('src/components/data-table.css')));
+    const bulk = blockAfter(outsideForcedColors(table), '.data-table-bar {');
+    for (const declaration of [
+      'position: sticky;',
+      'inset-block-end: calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset));',
+      'z-index: calc(var(--z-header) - 1);',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+      expect(bulk, declaration).toContain(declaration);
+    }
+  });
+
+  it("insets the buttons clear of the corner's curve, so a pill keeps its own round (owner rule)", () => {
+    const css = rules();
+    // The end side: at least the surface radius from the outer edge, its 1px edge included, and never under a
+    // part step, so the action at the inline end sits outside the curve in every shape.
+    expect(blockAfter(css, '.save-bar {')).toContain(
+      'padding-inline: var(--spacing-inset) max(var(--spacing-part), calc(var(--radius-surface) - 1px));',
+    );
+    // Stacked, the last button runs to the start side too, which the start padding alone leaves inside the curve.
+    const narrow = blockAfter(css, '@container save-bar (width < 24rem)');
+    expect(blockAfter(narrow, '.save-bar-actions {')).toContain(
+      'margin-inline-start: max(0px, calc(var(--radius-surface) - 1px - var(--spacing-inset)));',
+    );
+    // No button's corner is made to follow the bar's: no radius but the bar's own is written.
+    const radii = [...css.matchAll(/(?<![\w-])border-radius:\s*([^;]+);/g)].map((match) => match[1]);
+    expect(radii).toEqual(['var(--radius-surface)']);
+  });
+
+  it('lays the text, the status and the actions out in one row, the message clamped to two lines', () => {
+    const css = rules();
+    const bar = blockAfter(css, '.save-bar {');
+    for (const declaration of [
+      'container: save-bar / inline-size;',
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'align-items: center;',
+      'gap: var(--spacing-part);',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+    }
+    const text = blockAfter(css, '.save-bar-text {');
+    expect(text).toContain('flex: 1 1 12rem;');
+    expect(text).toContain('min-width: 0;');
+    const message = blockAfter(css, '.save-bar-message {');
+    for (const declaration of [
+      'display: -webkit-box;',
+      'overflow: hidden;',
+      '-webkit-box-orient: vertical;',
+      '-webkit-line-clamp: 2;',
+      'overflow-wrap: anywhere;',
+      'font-size: var(--text-small);',
+      'font-weight: var(--text-small--font-weight);',
+      'color: var(--color-ink);',
+    ]) {
+      expect(message, declaration).toContain(declaration);
+    }
+    const actions = blockAfter(css, '.save-bar-actions {');
+    expect(actions).toContain('margin-inline-start: auto;');
+    expect(actions).toContain('justify-content: flex-end;');
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('puts the actions on a line of their own under 36rem and stacks them full width under 24rem', () => {
+    const css = rules();
+    expect(
+      blockAfter(blockAfter(css, '@container save-bar (width < 36rem)'), '.save-bar-actions {'),
+    ).toContain('flex: 1 1 100%;');
+    const narrow = blockAfter(blockAfter(css, '@container save-bar (width < 24rem)'), '.save-bar-actions {');
+    expect(narrow).toContain('flex-direction: column;');
+    expect(narrow).toContain('align-items: stretch;');
+    // A label longer than the bar wraps inside its button rather than push the page sideways.
+    const button = blockAfter(css, '.save-bar-actions > .button {');
+    expect(button).toContain('white-space: normal;');
+    expect(button).toContain('max-width: 100%;');
+    // Only the two container widths, no viewport query: the bar answers to its own box.
+    expect(
+      [...css.matchAll(/@container save-bar \(width < ([\d.]+rem)\)/g)].map((match) => match[1]),
+    ).toEqual(['36rem', '24rem']);
+    expect(css).not.toMatch(/@media \(width/);
+  });
+
+  it('draws the status slate at the small step, error with its 16px icon, and clips the host while empty', () => {
+    const css = rules();
+    const status = blockAfter(css, '.save-bar-status {');
+    expect(status).toContain('font-size: var(--text-small);');
+    expect(status).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, ".save-bar-status[data-tone='error'] {")).toContain('color: var(--color-error);');
+    const icon = blockAfter(css, '.save-bar-status svg {');
+    expect(icon).toContain('width: 1rem;');
+    expect(icon).toContain('height: 1rem;');
+    const empty = blockAfter(css, '.save-bar-status:empty {');
+    for (const declaration of ['position: absolute;', 'overflow: hidden;', 'clip-path: inset(50%);']) {
+      expect(empty, declaration).toContain(declaration);
+    }
+    expect(empty).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
+  });
+
+  it('declares --save-bar-offset from tokens on the root and the shell while a bar is on the page', () => {
+    expect(blockAfter(rules(), ':root:has(.save-bar), .app-shell:has(.save-bar) {')).toContain(OFFSET);
+  });
+
+  it("pads the root's scroll by the tab bar, the bar and the phone tray's reserve, in the bottom edge's order", () => {
+    expect(blockAfter(rules(), ':root:has(.save-bar) {')).toContain(
+      'scroll-padding-block-end: calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) + var(--upload-tray-reserve, 0px));',
+    );
+  });
+
+  it("loads after upload-tray.css, so the root's scroll padding is the save bar's sum", () => {
+    const entry = read('src/styles.css');
+    expect(entry.indexOf("'./components/save-bar.css'")).toBeGreaterThan(
+      entry.indexOf("'./components/upload-tray.css'"),
+    );
+  });
+
+  it("redraws the edge in the reader's text color in forced colors", () => {
+    expect(blockAfter(blockAfter(rules(), FORCED), '.save-bar {')).toContain('border-color: canvastext;');
+  });
+});

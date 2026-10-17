@@ -28,6 +28,7 @@ import { PickerOption } from '../picker';
 import { Popover } from '../popover';
 import { ProgressBar } from '../progress-bar';
 import { Radio, RadioGroup } from '../radio-group';
+import { SaveBar } from '../save-bar';
 import { SearchField } from '../search-field';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
 import { Select } from '../select';
@@ -1887,5 +1888,59 @@ export const UploadTrayMirrored: Story = {
     await expect(rect(find(latin, '.upload-row-ext')).left).toBeGreaterThanOrEqual(
       rect(find(latin, '.upload-row-stem')).right - 0.5,
     );
+  },
+};
+
+/**
+ * A save bar in Persian: the sentence and the chip at the right, the actions at the bar's left with the action
+ * last, so leftmost; under 24rem the stacked buttons keep the start side's inset from the right.
+ */
+export const SaveBarMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ display: 'grid', gap: 24, width: 'min(40rem, calc(100vw - 2rem))' }}>
+        <SaveBar
+          className="wide"
+          message="۲ تغییر در فروشگاه محله، ۲۲ مهر"
+          isDirty
+          actionLabel="ذخیره"
+          onAction={() => undefined}
+          onCancel={() => undefined}
+          labels={{ unsaved: 'تغییرات ذخیره نشده', cancel: 'انصراف' }}
+        />
+        <div style={{ width: 'min(22rem, 100%)' }}>
+          <SaveBar
+            className="narrow"
+            message="۲ تغییر در فروشگاه محله، ۲۲ مهر"
+            actionLabel="ذخیره"
+            onAction={() => undefined}
+            onCancel={() => undefined}
+            labels={{ cancel: 'انصراف' }}
+          />
+        </div>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const wide = find(canvasElement, '.save-bar.wide');
+    const [cancel, save] = within(wide).getAllByRole('button');
+    if (!cancel || !save) throw new Error('Two buttons');
+    // The actions at the left, the action leftmost, the sentence and the chip at the right.
+    await expect(rect(save).right).toBeLessThanOrEqual(rect(cancel).left + 0.5);
+    await expect(rect(save).left - rect(wide).left).toBeLessThan(rect(wide).right - rect(save).right);
+    await expectSameEdge(
+      rect(find(wide, '.save-bar-chip')).right,
+      rect(find(wide, '.save-bar-message')).right,
+    );
+    await expect(rect(find(wide, '.save-bar-text')).right).toBeGreaterThan(rect(cancel).right);
+    // The action sits clear of the corner's curve on its own side, the left.
+    const radius = parseFloat(getComputedStyle(wide).borderBottomLeftRadius);
+    await expect(rect(save).left - rect(wide).left).toBeGreaterThanOrEqual(radius - 0.5);
+    // Stacked: the buttons the actions' full width, the action at the bottom.
+    const narrow = find(canvasElement, '.save-bar.narrow');
+    const [first, last] = within(narrow).getAllByRole('button');
+    if (!first || !last) throw new Error('Two stacked buttons');
+    await expect(rect(last).top).toBeGreaterThan(rect(first).bottom - 0.5);
+    await expect(rect(last).width).toBeCloseTo(rect(find(narrow, '.save-bar-actions')).width, 0);
   },
 };

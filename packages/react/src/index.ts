@@ -233,6 +233,7 @@ export {
   type UploadTrayLabels,
   type UploadTrayProps,
 } from './upload-tray';
+export { SaveBar, type SaveBarLabels, type SaveBarProps } from './save-bar';
 export { EmptyState, type EmptyStateProps } from './empty-state';
 export { Skeleton, type SkeletonProps } from './skeleton';
 export {

@@ -1655,6 +1655,38 @@ describe('the changed dot', () => {
   });
 });
 
+describe('the save bar', () => {
+  /** `text` on the float surface, the bar's. */
+  const onFloat = (text, mode) => {
+    const palette = paletteFor(tokens, mode);
+    const float = parseColor(palette.float);
+    return contrastRatio(composite(parseColor(palette[text]), float), float);
+  };
+
+  // The message is ink, the neutral status slate, the Unsaved chip and its dot clay, and the error status and its
+  // icon error, all on the float surface. The gate already holds the four as text on float, so the bar adds no pair.
+  const PAIRS = [
+    { text: 'ink', light: 18.43, dark: 17.42 },
+    { text: 'slate', light: 5.49, dark: 6.94 },
+    { text: 'clay', light: 7.04, dark: 6.82 },
+    { text: 'error', light: 7.46, dark: 5.73 },
+  ];
+
+  it('cites ink, slate, clay and error on float, which the gate holds', () => {
+    for (const { text } of PAIRS) {
+      expect(CONTRAST_PAIRS, `${text} on float`).toContainEqual(
+        expect.objectContaining({ text, ground: 'float', minimum: TEXT }),
+      );
+    }
+  });
+
+  it.each(PAIRS)('measures $text on float at $light in light and $dark in dark', ({ text, light, dark }) => {
+    expect(onFloat(text, 'light')).toBeCloseTo(light, 2);
+    expect(onFloat(text, 'dark')).toBeCloseTo(dark, 2);
+    expect(Math.min(onFloat(text, 'light'), onFloat(text, 'dark'))).toBeGreaterThanOrEqual(TEXT);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

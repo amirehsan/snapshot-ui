@@ -31,6 +31,7 @@ import { Pagination } from '../src/pagination';
 import { PickerOption } from '../src/picker';
 import { Popover } from '../src/popover';
 import { Radio, RadioGroup } from '../src/radio-group';
+import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Select } from '../src/select';
@@ -869,6 +870,28 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'role="region"',
     ],
     ['--upload-tray-offset', 'role="dialog"'],
+  ],
+  [
+    // The bar, the sentence that names it, the chip, the empty polite host and the buttons; no question and no offset.
+    'SaveBar',
+    <SaveBar
+      message="2 changes to Corner Mart, 14 Oct"
+      isDirty
+      actionLabel="Save"
+      onAction={() => undefined}
+      onCancel={() => undefined}
+    />,
+    [
+      '<div role="group" aria-labelledby="',
+      'class="save-bar">',
+      'class="save-bar-message"',
+      '>2 changes to Corner Mart, 14 Oct<',
+      'class="field-changed save-bar-chip">Unsaved changes<',
+      '<div class="save-bar-status" role="status" aria-live="polite" aria-atomic="true" data-tone="neutral"></div>',
+      '>Cancel<',
+      '>Save<',
+    ],
+    ['--save-bar-offset', 'alertdialog', 'style='],
   ],
 ];
 

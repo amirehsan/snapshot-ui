@@ -1039,6 +1039,46 @@ test('the date picker example opens on today and closes with focus on its button
   await expect(field.locator('.date-segment:not([data-type="literal"])')).toHaveText(['10', '15', '2026']);
 });
 
+// ---- Save bar -------------------------------------------------------------------------------------
+
+test('Cancel on a dirty save bar asks, and Keep editing returns focus to Cancel', async ({ page }) => {
+  await visit(page, '/docs/components/save-bar');
+  const stage = page.locator('.stage').first();
+  const bar = stage.locator('.save-bar');
+  await stage.getByRole('textbox', { name: 'Merchant' }).fill('Corner Mart and Co');
+  await expect(bar.locator('.save-bar-chip')).toHaveText('Unsaved changes');
+  const cancel = bar.getByRole('button', { name: 'Cancel' });
+  await cancel.click();
+  const question = page.getByRole('alertdialog', { name: 'Discard changes?' });
+  await expect(question).toBeVisible();
+  await question.getByRole('button', { name: 'Keep editing' }).click();
+  await expect(question).toBeHidden();
+  await expect(cancel).toBeFocused();
+  await expect(bar.locator('.save-bar-chip')).toHaveText('Unsaved changes');
+});
+
+test('a focused last field scrolls clear of the save bar', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 640 });
+  await visit(page, '/docs/components/save-bar');
+  const stage = page.locator('.stage').first();
+  const bar = stage.locator('.save-bar');
+  const last = stage.locator('input, textarea').last();
+  // The example's top in view, so its bar sticks over the fields under it.
+  await stage.evaluate((element) => {
+    element.scrollIntoView({ block: 'start' });
+  });
+  // The bar is stuck over the last field before it takes focus.
+  const [field, cover] = await Promise.all([last.boundingBox(), bar.boundingBox()]);
+  expect((field?.y ?? 0) + (field?.height ?? 0)).toBeGreaterThan(cover?.y ?? 0);
+  await last.focus();
+  await expect
+    .poll(async () => {
+      const [field, cover] = await Promise.all([last.boundingBox(), bar.boundingBox()]);
+      return (field?.y ?? 0) + (field?.height ?? 0) - (cover?.y ?? 0);
+    })
+    .toBeLessThanOrEqual(0.5);
+});
+
 test('a choice through the receipt field reaches the example and a refusal is said', async ({ page }) => {
   await visit(page, '/docs/components/file-drop-zone');
   const zone = page.getByRole('group', { name: 'Receipt', exact: true });
@@ -1309,6 +1349,8 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .field-error',
     '.stage .radio-text',
   ],
+  // The sentence is the app's, clamped to two lines, and wraps at any character inside them.
+  'save-bar': ['.stage .save-bar-message'],
   'search-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'segmented-control': ['.stage .field-label', '.stage .segmented-label'],
   // The chosen option's label stays on one line in the trigger and ellipsizes, so it never pushes the page.
@@ -1497,6 +1539,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // A static part: the track with its role and values is in the server's HTML.
   'progress-bar': ['.stage .progress-bar-track[role="progressbar"]'],
   'radio-group': ['.stage .radio-indicator'],
+  // The bar, its sentence and its buttons, and the polite status host, mounted empty before any status.
+  'save-bar': ['.stage .save-bar', '.stage .save-bar-status[role="status"]'],
   'search-field': ['.stage .search-field-input', '.stage .search-field-icon'],
   'segmented-control': ['.stage .segmented-option'],
   // The trigger and the value it shows; the list renders nothing until it opens.

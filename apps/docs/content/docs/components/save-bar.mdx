@@ -1,0 +1,99 @@
+---
+title: Save bar
+description: 'A sticky footer for a form or a review: what will be saved, a guarded Cancel and your action.'
+icon: Save
+---
+
+<Section>
+
+## A form
+
+`SaveBar` sits under a form as its last child: a sentence that says what will be saved, a status line, Cancel and your action. It sticks to the bottom of the screen while the form is in view, over the fields still to come, and comes to rest at the form's end. Change a field below: the clay "Unsaved changes" chip comes, and Cancel asks before it throws the changes away. Clear the merchant and press Save: the bar answers in its status. A save that works is a toast.
+
+<Preview name="save-bar-form" />
+
+</Section>
+
+<Section>
+
+## A review
+
+In a review the action means something even with no edit: "Confirm and review next (2 left)". The bar shows whether or not anything changed, so the page never moves under the reader as they type. Here the grid holds an invalid amount, so a press says so in the status rather than the action being disabled.
+
+<Preview name="date-picker-review-grid" />
+
+</Section>
+
+<Section>
+
+## In a side panel
+
+In a [Side panel](/docs/components/side-panel) the bar is the last child of the form in the panel's body, which scrolls, so the bar sticks to the body's bottom. The bar guards its own Cancel; the panel's close button and Escape go through `onCloseRequest`, which refuses a close while edits are unsaved and asks the same question. Open a row and change its memo.
+
+<Preview name="save-bar-in-side-panel" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+- Put the bar last in the holder of the fields it saves: a form, a review's section, a panel's body. It is `position: sticky`, so it rides with its holder and never covers what follows it.
+- It is always drawn. `isDirty` adds the chip, makes Cancel ask first and warns before the page unloads.
+- `message` says what will be saved, in your words: "2 changes to Corner Mart, 14 Oct". It wraps to two lines and then ends in an ellipsis; the whole sentence names the bar.
+- `status` is for a state the reader must act on, such as invalid fields or a save that failed, and `statusTone="error"` draws it in red with an icon. A save that worked is an event: raise `toast({ tone: 'success' })`.
+- The action is never disabled. A press your app cannot act on is answered with a `status`, which says why; a disabled button says nothing and leaves the tab order.
+- Return a promise from `onAction` and the action shows its spinner and Cancel waits until it settles; after a pause the status says "Saving". A rejected promise keeps the bar as it was and reaches the page's error handlers through `reportError`. `isPending` does the same for work your app tracks itself.
+- `warnsOnUnload`, on by default, asks the browser to warn before the tab closes or reloads while dirty. The browser shows its own words and iOS Safari shows none. A client-side link is not guarded: a side panel refuses its own close through `onCloseRequest`.
+- A focused field never ends under the bar. The page's scroll padding keeps a field that focus scrolls to clear of it, with a tab bar and a phone's upload bar, and the bar scrolls a field that is already in view under it.
+- Use one sticky bar per page. The bar lifts the [Upload tray](/docs/components/upload-tray) and the toasts above itself, and a second bar would cover the first.
+- A bar sticks inside the nearest ancestor that scrolls. In a side panel or a dialog that is the body, which is where it belongs; in a page, give no ancestor of the form an `overflow` of its own.
+- A review that moves to the next document is your navigation; move focus to the next document's heading, as a side panel does for a new row.
+- The bar takes no keyboard shortcut. A Mod+S for save is your own listener that calls your action:
+
+```tsx
+useEffect(() => {
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+      event.preventDefault();
+      void save();
+    }
+  };
+  window.addEventListener('keydown', onKeyDown);
+  return () => {
+    window.removeEventListener('keydown', onKeyDown);
+  };
+}, [save]);
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+<PropsTable label="SaveBar props" path="../../packages/react/src/save-bar/SaveBar.tsx" type="SaveBarProps" />
+
+<PropsTable label="SaveBarLabels" path="../../packages/react/src/save-bar/SaveBar.tsx" type="SaveBarLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The bar is a group named by its message. Its status is a polite live region, in the page from the first render: it says each new status, and "Saving" once a save has run past a short pause, never a fast one. The discard question is an alert dialog that starts on "Keep editing"; either answer returns focus to Cancel, or to the action when Cancel has gone. Focus that Cancel held while it is disabled or removed goes to the action, never to the page. The reading and tab order is the sentence, the status, then Cancel, your buttons and the action, so a keyboard reaches the actions after the fields they act on.
+
+<Keys rows={[['Tab', 'From the last field to Cancel, your buttons, then the action.'], ['Enter Space', 'On a button, presses it.'], ['Escape', 'In the discard question, keeps editing; focus returns to Cancel.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps a save bar in the system.
+
+<Rules dos={['Say what will be saved, in the reader\'s words.', 'Name the action by its outcome: "Confirm and review next".', 'Answer a press that cannot save with a status.']} donts={['Never draw the action in signal orange: it asks for no consent.', 'Never name a button "OK".', 'Never disable the action.']} />
+
+</Section>

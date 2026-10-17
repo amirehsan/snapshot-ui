@@ -22,6 +22,7 @@ import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { ProgressBar } from '../src/progress-bar';
 import { Radio, RadioGroup } from '../src/radio-group';
+import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Select } from '../src/select';
@@ -463,5 +464,28 @@ describe('an empty documents part slot', () => {
     );
     expect(container.querySelector('.upload-tray-description')).toBeNull();
     expect(container.querySelector('.upload-tray-title')).toHaveTextContent('1 upload complete');
+  });
+
+  it('draws no secondary actions and no status text in a SaveBar given false, an empty string or null', () => {
+    for (const empty of [false, '', null]) {
+      const { container, unmount } = render(
+        <SaveBar
+          message="2 changes to Corner Mart"
+          actionLabel="Save"
+          onAction={() => undefined}
+          onCancel={() => undefined}
+          secondaryActions={empty}
+          status={empty}
+          statusTone="error"
+        />,
+      );
+      // Cancel and the action, with nothing between them.
+      const actions = container.querySelector('.save-bar-actions');
+      expect(actions?.children).toHaveLength(2);
+      expect(actions?.childNodes).toHaveLength(2);
+      // The host stays, empty and polite, with no icon for a status that is not there.
+      expect(container.querySelector('.save-bar-status')).toBeEmptyDOMElement();
+      unmount();
+    }
   });
 });
