@@ -44,6 +44,7 @@ import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
 import { toast, ToastRegion } from '../toast';
 import { Eyebrow, Text } from '../typography';
+import { UploadTray } from '../upload-tray';
 
 /**
  * Right-to-left text, checked for every field in a real browser: layout needs a
@@ -1841,5 +1842,50 @@ export const PageDropZoneMirrored: Story = {
     await expect(overlay).toHaveAttribute('dir', 'rtl');
     fireDrag(overlay, 'dragend', filesTransfer([pdf()]));
     await waitFor(() => expect(document.querySelector('.page-drop-zone')).toBeNull());
+  },
+};
+
+/**
+ * The upload tray on a Persian page in the shell: the panel in the bottom left corner, 16px from the window's
+ * left, and a Persian file name with its extension at its left end, the end of a name read from the right.
+ */
+export const UploadTrayMirrored: Story = {
+  globals: DESKTOP,
+  parameters: { layout: 'fullscreen', viewport: { options: VIEWPORT_OPTIONS } },
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa">
+        <AppShell
+          sidebar={<DemoNav />}
+          header={<DemoHeader title="اسناد" />}
+          floating={
+            <UploadTray
+              items={[
+                { id: 1, name: 'صورت‌حساب-شهریور-فروشگاه-محله-و-تعطیلات-آخر-هفته.pdf', status: 'saved' },
+                { id: 2, name: 'invoice-0142.pdf', status: 'saved' },
+              ]}
+            />
+          }
+        >
+          <p>فاکتورها و رسیدها</p>
+        </AppShell>
+      </div>
+    </I18nProvider>
+  ),
+  play: async () => {
+    const panel = await waitFor(() => find(document, '.upload-tray'));
+    await Promise.all(panel.getAnimations().map((animation) => animation.finished.catch(() => null)));
+    await expect(rect(panel).left).toBeCloseTo(16, 0);
+    const [persian, latin] = [...panel.querySelectorAll<HTMLElement>('.upload-row-name')];
+    if (!persian || !latin) throw new Error('Two names');
+    // The Persian name reads from the right: its extension at the left end, after the cut stem.
+    const stem = rect(find(persian, '.upload-row-stem'));
+    const ext = rect(find(persian, '.upload-row-ext'));
+    await expect(ext.right).toBeLessThanOrEqual(stem.left + 0.5);
+    await expectSameEdge(ext.left, rect(persian).left);
+    // A Latin name keeps its own direction: its extension at its right end.
+    await expect(rect(find(latin, '.upload-row-ext')).left).toBeGreaterThanOrEqual(
+      rect(find(latin, '.upload-row-stem')).right - 0.5,
+    );
   },
 };

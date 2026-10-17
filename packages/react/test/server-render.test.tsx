@@ -52,6 +52,7 @@ import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
 import { ToastRegion } from '../src/toast';
 import { Tooltip, TooltipTrigger } from '../src/tooltip';
+import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 
 /**
  * The client components, rendered on the server. A Next.js server page imports them as client references and
@@ -62,6 +63,16 @@ import { Tooltip, TooltipTrigger } from '../src/tooltip';
  * An overlay renders nothing until it opens, so its row also names what must stay out of the HTML: closed, a
  * dialog draws its trigger and none of its own parts.
  */
+/** Six files, one in each status, as an app's uploads provider holds them. */
+const UPLOADS: UploadItem[] = [
+  { id: 1, name: 'receipt-march.pdf', status: 'waiting' },
+  { id: 2, name: 'invoice.pdf', status: 'uploading', progress: 0.45, progressLabel: '1.8 of 4 MB' },
+  { id: 3, name: 'statement.pdf', status: 'reading' },
+  { id: 4, name: 'lease.pdf', status: 'saved', href: '/documents/lease' },
+  { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
+  { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
+];
+
 const CLIENT: [name: string, element: ReactElement, contains: string[], excludes?: string[]][] = [
   ['Button', <Button>Save</Button>, ['<button', 'class="button button-primary', '>Save<']],
   ['Spinner', <Spinner aria-label="Loading" />, ['role="progressbar"', 'class="spinner']],
@@ -813,6 +824,51 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </div>,
     ['<div class="host"></div>'],
     ['page-drop-zone'],
+  ],
+  [
+    // A plain list, every row with its icon, its name, its words and its buttons; the bars are ProgressBar's.
+    'UploadList',
+    <UploadList
+      aria-label="Uploads"
+      items={UPLOADS}
+      onRetry={() => undefined}
+      onRemove={() => undefined}
+      onCancel={() => undefined}
+    />,
+    [
+      'class="upload-list"',
+      'data-status="waiting"',
+      'data-status="failed"',
+      'class="upload-row-stem">invoice</span><span class="upload-row-ext">.pdf</span>',
+      'href="/documents/lease"',
+      'role="progressbar"',
+      '1.8 of 4 MB',
+      'aria-label="Retry video.mov"',
+    ],
+  ],
+  [
+    // With no items, the empty polite host alone: the faces wait for the app's first item.
+    'UploadTray empty',
+    <div className="host">
+      <UploadTray items={[]} />
+    </div>,
+    [
+      '<div class="host"><div class="upload-tray-status" role="status" aria-live="polite" aria-atomic="true" data-react-aria-top-layer="true"></div></div>',
+    ],
+    ['upload-tray"', 'upload-tray-bar'],
+  ],
+  [
+    // Items the server already knows: both faces, which a media query picks between, and no offset of its own.
+    'UploadTray',
+    <UploadTray items={UPLOADS} description="About a minute left" />,
+    [
+      'class="upload-tray-status"',
+      'class="overlay upload-tray"',
+      'class="overlay upload-tray-bar"',
+      'Uploading 4 of 6',
+      'role="region"',
+    ],
+    ['--upload-tray-offset', 'role="dialog"'],
   ],
 ];
 

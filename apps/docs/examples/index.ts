@@ -163,6 +163,7 @@ import ToastAction from './toast-action';
 import ToastBasic from './toast-basic';
 import TooltipBasic from './tooltip-basic';
 import TooltipShortcut from './tooltip-shortcut';
+import UploadListStatuses from './upload-list-statuses';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
@@ -330,6 +331,7 @@ export const examples = {
   'toast-basic': ToastBasic,
   'tooltip-basic': TooltipBasic,
   'tooltip-shortcut': TooltipShortcut,
+  'upload-list-statuses': UploadListStatuses,
 } satisfies Record<string, ComponentType>;
 
 export type ExampleName = keyof typeof examples;

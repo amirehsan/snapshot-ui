@@ -119,6 +119,20 @@ The example sits in a phone frame with a [Bottom tab bar](/docs/components/botto
 
 <Section>
 
+## Floating
+
+`floating` holds chrome that outlives every page, such as an [Upload tray](/docs/components/upload-tray). It renders after the workspace and the tab bar, with no wrapper of its own, so it reads the shell's offsets: a fixed part there sits above the tab bar's reserve by `--app-shell-inset-block-end`, and clears the rail by `--app-shell-sidebar`. It is outside `<main>`, so it is never a landmark inside the page's main content, and since the shell lives in your root layout, a client navigation keeps it and whatever it holds, such as uploads in flight.
+
+```tsx
+<AppShell sidebar={<Nav />} bottomBar={<Tabs />} floating={<UploadTray items={uploads.items} />}>
+  {children}
+</AppShell>
+```
+
+</Section>
+
+<Section>
+
 ## Usage
 
 AppShell is a client component that a server layout can render. Every prop except the callbacks is serializable. The server layout passes the slots and reads the cookie, and a client wrapper adds the callbacks, as above.
@@ -134,7 +148,7 @@ AppShell is a client component that a server layout can render. Every prop excep
 
 `className` and `ref` go on the root, and `className` is merged after the library's class.
 
-<PropsTable label="AppShell props" path="../../packages/react/src/app-shell/AppShell.tsx" type="Pick<AppShellProps, 'sidebar' | 'header' | 'bottomBar' | 'children' | 'isSidebarCollapsed' | 'defaultSidebarCollapsed' | 'onSidebarCollapsedChange' | 'isDrawerOpen' | 'defaultDrawerOpen' | 'onDrawerOpenChange' | 'skipLinkLabel' | 'mainId' | 'className'>" />
+<PropsTable label="AppShell props" path="../../packages/react/src/app-shell/AppShell.tsx" type="Pick<AppShellProps, 'sidebar' | 'header' | 'bottomBar' | 'floating' | 'children' | 'isSidebarCollapsed' | 'defaultSidebarCollapsed' | 'onSidebarCollapsedChange' | 'isDrawerOpen' | 'defaultDrawerOpen' | 'onDrawerOpenChange' | 'skipLinkLabel' | 'mainId' | 'className'>" />
 
 <PropsTable label="useAppShell state" path="../../packages/react/src/app-shell/AppShell.tsx" type="AppShellState" />
 

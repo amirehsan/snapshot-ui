@@ -378,6 +378,20 @@
     "limit": "2.5 kB"
   },
   {
+    "name": "import { UploadList } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ UploadList }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "3 kB"
+  },
+  {
+    "name": "import { UploadTray } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ UploadTray }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "8 kB"
+  },
+  {
     "name": "import { DatePicker } from \"@snapshot-ui/react\"",
     "path": "dist/index.js",
     "import": "{ DatePicker }",

@@ -85,6 +85,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Toast](https://snapshotui.com/docs/components/toast)
 - [Tooltip](https://snapshotui.com/docs/components/tooltip)
 - [Typography](https://snapshotui.com/docs/components/typography)
+- [Upload tray](https://snapshotui.com/docs/components/upload-tray)
 
 ## Links
 

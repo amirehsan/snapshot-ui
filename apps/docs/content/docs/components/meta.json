@@ -49,6 +49,7 @@
     "text-field",
     "toast",
     "tooltip",
-    "typography"
+    "typography",
+    "upload-tray"
   ]
 }

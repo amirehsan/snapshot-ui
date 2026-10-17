@@ -4736,7 +4736,8 @@ both. The root never writes `expanded`, so it never resets an attribute set
 higher up. Nothing is measured, and `matchMedia` and `popstate` are effects.
 
 **The frame.** In DOM order: the skip link, the rail as given, the workspace
-holding the header wrapper and `<main>`, and the tab bar as given. The header
+holding the header wrapper and `<main>`, the tab bar as given, and the
+`floating` slot as given. The header
 wrapper is sticky at `--z-header` and draws nothing; the look is the header's.
 `<main>` has `tabIndex={-1}` so it takes the focus the skip link sends, and no
 outline, so the landing never rings the whole page.
@@ -4754,6 +4755,16 @@ itself is never overridden by a media query; the shell's property is.
 adds to it rather than declaring its own. 1024px is `--breakpoint-md` written
 out, and 4rem is written in the tab bar's stylesheet too; a test keeps both
 equal.
+
+**The floating slot.** `floating` holds chrome that outlives every page, the
+upload tray first. It renders after the workspace and the tab bar, outside
+`<main>`, with no wrapper of its own, so a fixed part in it reads the shell's
+`--app-shell-inset-block-end` and `--app-shell-sidebar` and takes the shell's
+theme, shape and density; it is never a landmark inside main, and a client
+navigation, which keeps the root layout, keeps it. A part that may be mounted
+with or without a shell reads the shell's state through an internal
+`useOptionalAppShell()`, which returns null outside one; `useAppShell()` still
+throws there.
 
 **When the drawer closes.** As the window widens to 1024px, where the rail is
 no longer a drawer, and on Back and Forward. Escape, the scrim and a press on
@@ -9206,6 +9217,173 @@ a JPEG; in Safari on macOS, Cmd+V on the zone's button and on a page with
 a page zone; on iPadOS, a file dragged from the Files app onto the zone and
 the overlay.
 
+## UploadTray
+
+Each file from waiting to saved, needs review or failed: `UploadList`, the
+rows, and `UploadTray`, which holds them in a panel that stays across pages.
+The document has no upload part, so this one is derived from the list face's
+item, the float surface and the toasts' column (documents spec, section 7).
+
+**Who holds what** (ruling 5). The app holds the files as controlled `items`,
+sends them, and says each one's status, progress and words; the tray draws
+and announces. The library never reads, sends or sizes a file, and every
+name, reason and progress label is the app's string. The counts reach the
+title and the announcements through `formatCount`.
+
+**Where it lives** (ruling 6). AppShell's `floating` slot, from the app's
+root layout, which a client navigation keeps, so the tray, its scroll and its
+folded state stay while the reader opens the documents it links to. With no
+items it draws only its status host; with the first it draws both faces, and
+a media query shows one.
+
+**One column with the toasts** (ruling 7, spec correction 10). From 768px
+the wide face is fixed in the bottom end corner, `inset-inline-end:
+var(--overlay-inset)` and `width: min(28rem, calc(100vw - 2rem))`, the toast
+region's own two expressions, so the corner is one column whether it holds
+toasts, the tray or both, and stays one if either changes. Both faces carry
+the `overlay` class, as the toast region does, since the overlay inset is
+declared there alone (spec correction 40). The float surface:
+`--color-float`, a 1px `--color-frame` edge, `--radius-surface` (a floating
+surface takes 24px wherever it opens) and `--shadow-float`, at
+`--z-chrome`, with the toasts and every modal above it. It rises 8px and
+fades in over 200ms through `@starting-style`, the toast's rise, which is
+above the browser floor and simply does not run there; it folds with no
+animation, and nothing moves under reduced motion.
+
+**The header.** `padding-block: var(--spacing-part)` and
+`padding-inline: var(--spacing-inset) var(--spacing-part)`, so the title
+lines up with the rows' icons and the two 40px ghost buttons sit a part step
+from the edge. The title is an `h2` at `--text-body` weight 500 in ink with
+tabular figures, "Uploading 2 of 5", counting the settled files and the one
+in hand, then "5 uploads complete" (spec correction 43); the app's line under
+it is `--text-small` in slate. The fold button's name stays "Upload details"
+and `aria-expanded` says the state, the disclosure pattern; its chevron turns
+180 degrees while folded. A `--color-divider` rule sits under the header
+while the body shows. The close button shows by ruling 11: `onClear` once
+nothing is in flight, the Cancel all question while files are, and none in
+flight without `onCancelAll`.
+
+**The body.** `max-block-size: min(24rem, 50dvh)`, about five rows, or half
+a short window, scrolling with the library's thin scrollbar colors and
+`overscroll-behavior: contain`, so the page under it does not scroll on.
+
+**The row.** The list face's item: `min-block-size: max(var(--size-target),
+3.5rem)`, `padding: 0.625rem var(--spacing-inset)`, a grid of the 24px
+icon, the text and the buttons (`24px minmax(0, 1fr) auto`) with
+`column-gap: 0.75rem`, and a `--color-divider` rule between rows. The 40px
+ghost buttons pull in 8px at the end, so the row's end padding is the
+icon's. The name is `--text-small` weight 500 in ink, or Link Blue and
+underlined once it links; the status line is `--text-small` weight 450; the
+bar sits `--spacing-part` under it across the text column, with no head, the
+progress label at the status line's end in tabular figures.
+
+| Status | Icon (Lucide) | Word and its color | Bar | Buttons |
+| --- | --- | --- | --- | --- |
+| waiting | `Clock` | "Waiting", slate | none | Remove |
+| uploading | `ArrowUp` | "Uploading", slate, and the progress | determinate, or sliding without `progress` | Cancel |
+| reading | `ScanText` | "Reading", slate | sliding | none |
+| saved | `CircleCheck` | "Saved", success | none | Remove |
+| review | `CircleAlert` | "Needs review", warning, and the reason | none | Remove |
+| failed | `CircleX` | "Failed", error, and the reason | none | Retry, Remove |
+
+The icon takes the word's color. On float, measured with `contrast.js`
+(light, then dark), each gated as text on float: success 7.44 and 6.34,
+warning 6.33 and 8.92, error 7.46 and 5.73, slate 5.49 and 6.94, ink 18.43
+and 17.42, link 5.86 and 5.46. The reason is slate and not the tone: it is a
+sentence the reader has to read. Signal orange and clay never appear in a
+row. A button shows only when its handler is given.
+
+**The name keeps its extension.** Two spans, split at the last dot unless it
+is the first character: the stem ellipsizes (`min-width: 0`) and the
+extension does not (`flex: none`), so a long receipt still says it is a JPG.
+Both are isolated (`unicode-bidi: isolate`), and the name takes its own
+direction (`dir="auto"`), so the extension is at the name's end in either
+direction: at the left of a Persian name, and at the right of a Latin one on
+a Persian page. The full name is the link's or the row's text.
+
+**Focus.** When Remove or Cancel takes a row away with focus in it, focus
+moves before paint to the same button on the next row, else the previous
+one, else the tray's heading or, in a page, the list; never the body. Retry
+keeps focus on the row's first control as its status changes. When the tray
+leaves with focus in it, or after a yes to Cancel all, focus goes to the
+shell's `<main>`, or outside a shell to the first `main` that takes focus
+(spec correction 11).
+
+**The phone's bar** (ruling 8). Under 768px a pill fixed across the bottom,
+`inset-inline: var(--overlay-inset)`, on the float surface at
+`--radius-pill`, `--size-field` tall, 48px, never under the 40px target in
+compact density and never under 44px on a coarse pointer (spec correction
+42). Its one button says the title at `--text-small` weight 500 with a 16px
+`ChevronUp` at the end, and opens a Sheet titled by the title, holding the
+app's line and the list, whose rows run to the sheet's sides on the sheet's
+own padding. A link pressed in the sheet closes it as the router navigates.
+The bar is a region named "Uploads" (`labels.region`), since a region named
+by its only button's words would be read twice (spec correction 41). A sheet
+left open while the window widens stays open; when it closes there, focus
+goes to the wide face's fold button, the one `matchMedia` read.
+
+**The three announcements** (ruling 10). A polite status host, mounted in
+the server's HTML, clipped as the toasts' host is and kept out of a modal's
+hiding, says: once, `QUIET_MS` after a batch starts, how many files the batch
+holds; rows that turned failed or needs review, gathered by a timer that
+waits `QUIET_MS` after the last such change and counting only those still so
+when it speaks; and once nothing is in flight, `QUIET_MS` after the last row
+settles, a summary of the batch, which drops a pending failure sentence,
+since it says it. A retry before the summary cancels it and the batch runs
+on, with no new start. Statuses on the first render are the baseline. Never a
+percentage, never a row turning saved on its own. Each message is keyed, so
+the same words twice are said twice.
+
+**Leaving the page** (ruling 12). While anything is in flight and
+`warnsOnUnload` holds, a `beforeunload` listener asks the browser to warn,
+in its own words. iOS Safari shows nothing, so the tray on the page is the
+real warning; a client navigation keeps the shell and needs none.
+
+**The bottom edge, the tray's part** (spec 12). Both faces sit at
+`calc(var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) +
+var(--save-bar-offset, 0px))`: above the tab bar's reserve, which the shell
+declares, and above a sticky save bar once one declares its offset. While a
+face draws, a `ResizeObserver` writes the shown face's border-box height
+plus `var(--spacing-inset)` as `--upload-tray-offset` on the root, and
+removes it when the tray draws nothing; the hidden face measures 0. It is
+never in the server's HTML, so no first paint waits on it. `toast.css` adds
+it, with `--save-bar-offset`, to the toast region's bottom, so the toasts
+sit 16px above the tray in the same column.
+
+**Concentric corners** (spec correction 47). A rounded part inside a
+rounded holder takes the holder's radius less the gap between them, the
+holder's edge and the smaller side of its padding, never a copy, and is
+square once the gap reaches the radius: `max(0px, calc(var(--holder-radius)
+- var(--holder-border) - var(--holder-pad)))`. The panel (`--radius-surface`,
+1px, no padding), the phone's bar (`--radius-pill`, 1px, none) and the sheet
+(`--radius-stadium`, 1px, none) name their corners in those three
+properties. The list subtracts its holder's gap and each row its block
+padding, 0.625rem, for its buttons and its bar; the header's buttons
+subtract the panel's edge and the part step; the bar's button the pill's
+edge. In Rounded: 15px for the header's buttons, 13px for a row's buttons
+and bar (the 8px bar still reads as a pill), 998px for the bar's button,
+29px for a row's buttons in the sheet; in Soft 3px, 1px, 11px and 5px; in
+Square 0. A list in no named holder keeps its parts' own pill radius, and an
+app's rounded holder, such as a Card, names its own corner.
+
+**Forced colors.** The panel's and the bar's edges are `canvastext`; the
+icons keep their shapes in `canvastext`; the words carry the status, as the
+toasts' titles carry their tones.
+
+**Where the build departs from the plan** (spec corrections 40 to 47). The
+size limits are above the spec's budgets: `{ UploadList }` measured 2.43 kB
+and is set at 3 kB, and `{ UploadTray }` 7.48 kB, set at 8 kB, by the repo's
+rule; the tray carries Sheet, ConfirmDialog through `useConfirm`, IconButton
+and the list with its ProgressBar. AppShell measured 934 B with its
+`floating` slot and keeps 1.5 kB.
+
+**Screen readers and devices.** Not yet verified (owner action 4): the panel
+read as a region named by its title, the fold button's state, each row's
+link, word, reason and buttons, the three announcements and how often; on a
+phone, the bar above the tab bar and above a save bar, its sheet, and the
+sheet closing on a link and on a swipe; `beforeunload`, which iOS Safari does
+not show.
+
 ## DatePicker
 
 One day in the text input's pill: `DatePicker`, on React Aria's date
@@ -9288,8 +9466,9 @@ the edge included: a pill in Rounded, 6px in Soft, square in Square. The
 popover holds the calendar inside its 1px frame and 16px inset: 7px in
 Rounded, square in Soft and Square; the preset row, its presets and the
 days meet the calendar's edge with no gap of their own and take its
-radius whole. Applied to DatePicker only in this batch; Calendar and
-DateRangePicker keep their pills until the rule reaches them.
+radius whole, in the holder properties UploadTray names its corners in.
+Calendar and DateRangePicker keep their pills until the rule reaches
+them.
 
 **In a review grid.** A field per cell, named by `aria-label` or by
 `aria-labelledby` of its column's header and its row's name; compact

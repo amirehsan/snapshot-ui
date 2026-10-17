@@ -2531,11 +2531,24 @@ describe('src/components/toast.css', () => {
     const region = blockAfter(rules(), '.toast-region {');
     for (const declaration of [
       'position: fixed;',
-      'inset-block-end: calc(var(--overlay-inset) + var(--toast-offset-block, 0px));',
+      'inset-block-end: calc(var(--overlay-inset) + var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) + var(--upload-tray-offset, 0px));',
       'inset-inline-end: var(--overlay-inset);',
       'z-index: var(--z-toast);',
     ]) {
       expect(region, declaration).toContain(declaration);
+    }
+  });
+
+  it('lifts the region above a sticky bar and the upload tray, the top of the bottom edge', () => {
+    // The stack runs from the bottom up: the tab bar, a save bar or bulk-action bar, the tray, the toasts. Each
+    // offset falls back to 0, so a page with none of them keeps the toasts 16px from the bottom.
+    const end = blockAfter(rules(), '.toast-region {').match(/inset-block-end:\s*([^;]+);/)?.[1] ?? '';
+    for (const offset of [
+      'var(--toast-offset-block, 0px)',
+      'var(--save-bar-offset, 0px)',
+      'var(--upload-tray-offset, 0px)',
+    ]) {
+      expect(end, offset).toContain(offset);
     }
   });
 
@@ -7836,6 +7849,238 @@ describe('text on Highlight in forced colors', () => {
     expect(blockAfter(forced('sidebar.css'), item)).toContain('outline-color: Highlight;');
     const parts = '.filter-chip[data-active]:not([data-disabled]) :where(*) {';
     expect(blockAfter(forced('filter-chip.css'), parts)).toContain('outline-color: HighlightText;');
+  });
+});
+
+describe('src/components/upload-tray.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/upload-tray.css')));
+  const toast = () => closeUp(stripComments(read('src/components/toast.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const REDUCED = '@media (prefers-reduced-motion: reduce)';
+  const BOTTOM =
+    'inset-block-end: calc(var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) + var(--save-bar-offset, 0px));';
+
+  it('lays a row out as the list face item: a 24px icon, the text and the buttons, on a divider', () => {
+    const css = rules();
+    const row = blockAfter(css, '.upload-row {');
+    for (const declaration of [
+      'display: grid;',
+      'grid-template-columns: 24px minmax(0, 1fr) auto;',
+      'column-gap: 0.75rem;',
+      'min-block-size: max(var(--size-target), 3.5rem);',
+      'padding: 0.625rem var(--spacing-inset);',
+    ]) {
+      expect(row, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.upload-row + .upload-row {')).toContain(
+      'border-block-start: 1px solid var(--color-divider);',
+    );
+    expect(blockAfter(css, '.upload-list {')).toContain('list-style: none;');
+    expect(blockAfter(css, '.upload-row-icon svg {')).toContain('width: 1.5rem;');
+  });
+
+  it('sets the name at the small step 500 and the status line at the small step 450, and the bar a part step under it', () => {
+    const css = rules();
+    const name = blockAfter(css, '.upload-row-name {');
+    expect(name).toContain('font-size: var(--text-small);');
+    expect(name).toContain('font-weight: 500;');
+    expect(blockAfter(css, 'span.upload-row-name {')).toContain('color: var(--color-ink);');
+    const status = blockAfter(css, '.upload-row-status {');
+    expect(status).toContain('font-size: var(--text-small);');
+    expect(status).toContain('font-weight: var(--text-small--font-weight);');
+    expect(blockAfter(css, '.upload-row-bar {')).toContain('margin-block-start: var(--spacing-part);');
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('keeps the extension in view: the stem ellipsizes, the extension does not, both isolated', () => {
+    const css = rules();
+    const stem = blockAfter(css, '.upload-row-stem {');
+    expect(stem).toContain('text-overflow: ellipsis;');
+    expect(stem).toContain('min-width: 0;');
+    expect(stem).toContain('unicode-bidi: isolate;');
+    const ext = blockAfter(css, '.upload-row-ext {');
+    expect(ext).toContain('flex: none;');
+    expect(ext).toContain('unicode-bidi: isolate;');
+  });
+
+  it('colors the word and the icon by status, slate in flight, and the reason slate', () => {
+    const css = rules();
+    expect(blockAfter(css, '.upload-row {')).toContain('--upload-row-tone: var(--color-slate);');
+    for (const [status, color] of [
+      ['saved', 'success'],
+      ['review', 'warning'],
+      ['failed', 'error'],
+    ]) {
+      expect(blockAfter(css, `.upload-row[data-status='${status}'] {`), status).toContain(
+        `--upload-row-tone: var(--color-${color});`,
+      );
+    }
+    expect(blockAfter(css, '.upload-row-word {')).toContain('color: var(--upload-row-tone);');
+    expect(blockAfter(css, '.upload-row-icon {')).toContain('color: var(--upload-row-tone);');
+    expect(blockAfter(css, '.upload-row-reason {')).toContain('color: var(--color-slate);');
+    // Reserved colors: no consent and no unsaved work in a row.
+    expect(css).not.toContain('--color-signal');
+    expect(css).not.toContain('--color-clay');
+  });
+
+  it('draws the wide face on the float surface in the toast column, above the bottom reserve, at the chrome layer', () => {
+    const css = rules();
+    const panel = blockAfter(css, '.upload-tray {');
+    for (const declaration of [
+      'position: fixed;',
+      BOTTOM,
+      'z-index: var(--z-chrome);',
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+    ]) {
+      expect(panel, declaration).toContain(declaration);
+    }
+    // The toast region's own width and inline end (spec correction 10), so the corner is one column.
+    const region = blockAfter(toast(), '.toast-region {');
+    for (const declaration of [
+      'width: min(28rem, calc(100vw - 2rem));',
+      'inset-inline-end: var(--overlay-inset);',
+    ]) {
+      expect(panel, declaration).toContain(declaration);
+      expect(region, declaration).toContain(declaration);
+    }
+  });
+
+  it('rules the header off while the body shows, and scrolls the body under a 24rem cap', () => {
+    const css = rules();
+    expect(blockAfter(css, '.upload-tray:not([data-collapsed]) .upload-tray-header {')).toContain(
+      'border-block-end: 1px solid var(--color-divider);',
+    );
+    const title = blockAfter(css, '.upload-tray-title {');
+    expect(title).toContain('font-size: var(--text-body);');
+    expect(title).toContain('font-weight: 500;');
+    expect(title).toContain('font-variant-numeric: tabular-nums;');
+    expect(blockAfter(css, '.upload-tray-description {')).toContain('color: var(--color-slate);');
+    const body = blockAfter(css, '.upload-tray-body {');
+    expect(body).toContain('max-block-size: min(24rem, 50dvh);');
+    expect(body).toContain('overflow-y: auto;');
+    expect(body).toContain('scrollbar-color: var(--color-scrollbar) transparent;');
+    expect(blockAfter(css, '.upload-tray[data-collapsed] .upload-tray-fold svg {')).toContain(
+      'rotate: 180deg;',
+    );
+  });
+
+  it('draws the phone bar as a float pill the field tall, never under the target, nor 44px on a coarse pointer', () => {
+    const css = rules();
+    const bar = blockAfter(css, '.upload-tray-bar {');
+    for (const declaration of [
+      'position: fixed;',
+      'inset-inline: var(--overlay-inset);',
+      BOTTOM,
+      'z-index: var(--z-chrome);',
+      'block-size: var(--size-field);',
+      'min-block-size: var(--size-target);',
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+    }
+    expect(blockAfter(blockAfter(css, '@media (pointer: coarse)'), '.upload-tray-bar {')).toContain(
+      'min-block-size: 44px;',
+    );
+    const button = blockAfter(css, '.upload-tray-bar-button {');
+    expect(button).toContain('font-size: var(--text-small);');
+    expect(button).toContain('font-weight: 500;');
+    expect(blockAfter(css, '.upload-tray-bar-icon svg {')).toContain('width: 1rem;');
+    // Hover only where hover exists.
+    const outside = css.replace(/@media \(hover: hover\) \{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
+    expect(outside).not.toMatch(/:hover/);
+  });
+
+  it('switches faces at the small breakpoint, written out', async () => {
+    const { tokens } = await import('../dist/tokens.js');
+    const css = rules();
+    const narrow = blockAfter(css, `@media (width < ${tokens.breakpoint.sm.value})`);
+    expect(blockAfter(narrow, '.upload-tray {')).toContain('display: none;');
+    const wide = blockAfter(css, `@media (width >= ${tokens.breakpoint.sm.value})`);
+    expect(blockAfter(wide, '.upload-tray-bar {')).toContain('display: none;');
+    // Every width query is the token.
+    for (const [, width] of css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)) {
+      expect(width).toBe(tokens.breakpoint.sm.value);
+    }
+  });
+
+  it('rises 8px and fades in through @starting-style, and not at all under reduced motion', () => {
+    const css = rules();
+    const start = blockAfter(blockAfter(css, '@starting-style'), '.upload-tray {');
+    expect(start).toContain('opacity: 0;');
+    expect(start).toContain('translate: 0 8px;');
+    expect(blockAfter(css, '.upload-tray {')).toContain(
+      'transition: opacity 200ms ease, translate 200ms ease;',
+    );
+    expect(blockAfter(blockAfter(css, REDUCED), '.upload-tray {')).toContain('transition: none;');
+  });
+
+  it("redraws the edges and the icons in the reader's text color in forced colors", () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.upload-tray, .upload-tray-bar {')).toContain('border-color: canvastext;');
+    expect(blockAfter(forced, '.upload-row-icon {')).toContain('color: canvastext;');
+  });
+
+  it('names each holder corner in the three holder properties, from the radius tokens', () => {
+    const css = rules();
+    for (const [holder, radius] of [
+      ['.upload-tray {', 'var(--radius-surface)'],
+      ['.upload-tray-bar {', 'var(--radius-pill)'],
+      ['.upload-tray-sheet {', 'var(--radius-stadium)'],
+    ]) {
+      const rule = blockAfter(css, holder);
+      expect(rule, holder).toContain(`--holder-radius: ${radius};`);
+      expect(rule, holder).toContain('--holder-border: 1px;');
+      expect(rule, holder).toContain('--holder-pad: 0px;');
+    }
+  });
+
+  it('draws every nested corner concentric: the holder less its gap, never a copy, never under 0', () => {
+    const css = rules();
+    // The list subtracts the holder's edge and padding, and a row its own smaller padding, the block's.
+    expect(blockAfter(css, '.upload-list {')).toContain(
+      '--upload-list-radius: max(0px, calc(var(--holder-radius) - var(--holder-border, 0px) - var(--holder-pad, 0px)));',
+    );
+    expect(blockAfter(css, '.upload-row {')).toContain(
+      '--upload-row-radius: max(0px, calc(var(--upload-list-radius) - 0.625rem));',
+    );
+    expect(blockAfter(css, '.upload-row {')).toContain('padding: 0.625rem var(--spacing-inset);');
+    expect(
+      blockAfter(css, '.upload-row :is(.icon-button, .progress-bar-track, .progress-bar-fill) {'),
+    ).toContain('border-radius: var(--upload-row-radius, var(--radius-pill));');
+    // The header's buttons sit its part step in from the panel's edge.
+    expect(blockAfter(css, '.upload-tray-header {')).toContain(
+      '--upload-tray-header-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--spacing-part)));',
+    );
+    expect(blockAfter(css, '.upload-tray-header {')).toContain('padding-block: var(--spacing-part);');
+    expect(blockAfter(css, '.upload-tray-header .icon-button {')).toContain(
+      'border-radius: var(--upload-tray-header-radius);',
+    );
+    // The bar's button fills it inside its edge.
+    expect(blockAfter(css, '.upload-tray-bar-button {')).toContain(
+      'border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));',
+    );
+    // No corner copies its holder's.
+    expect(css).not.toMatch(/border-radius:\s*inherit/);
+    const radii = [...css.matchAll(/(?<![\w-])border-radius:\s*([^;]+);/g)].map((match) => match[1]);
+    for (const value of radii.filter(
+      (each) => each !== 'var(--radius-surface)' && each !== 'var(--radius-pill)',
+    )) {
+      expect(value).toMatch(/^(?:max\(0px, calc\(var\(--holder-radius\)|var\(--upload-)/);
+    }
+  });
+
+  it('keeps the status host in the page and out of sight', () => {
+    const host = blockAfter(rules(), '.upload-tray-status {');
+    for (const declaration of ['position: absolute;', 'overflow: hidden;', 'clip-path: inset(50%);']) {
+      expect(host, declaration).toContain(declaration);
+    }
+    expect(host).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
   });
 });
 

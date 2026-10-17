@@ -15,6 +15,7 @@ import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
+import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 
 /**
@@ -66,6 +67,16 @@ const PANEL = (
     <button type="button">Corner Mart</button>
   </SidePanelLayout>
 );
+
+/** Six files, one in each status. */
+const UPLOADS: UploadItem[] = [
+  { id: 1, name: 'receipt-march.pdf', status: 'waiting' },
+  { id: 2, name: 'invoice.pdf', status: 'uploading', progress: 0.45, progressLabel: '1.8 of 4 MB' },
+  { id: 3, name: 'statement.pdf', status: 'reading' },
+  { id: 4, name: 'lease.pdf', status: 'saved', href: '/documents/lease' },
+  { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
+  { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
+];
 
 const HYDRATED: [
   name: string,
@@ -332,6 +343,27 @@ const HYDRATED: [
       expect(container.querySelector('button')).toHaveTextContent('Take a photo');
       expect(container.querySelector('input[type="file"]')).toHaveAttribute('capture', 'environment');
     },
+  ],
+  [
+    // The rows are the server's, links and buttons included.
+    'UploadList',
+    <UploadList aria-label="Uploads" items={UPLOADS} onRetry={noop} onRemove={noop} onCancel={noop} />,
+    (container) => {
+      expect(container.querySelectorAll('.upload-row')).toHaveLength(6);
+      expect(container.querySelector('a.upload-row-name')).toHaveAttribute('href', '/documents/lease');
+      expect(container.querySelectorAll('[role="progressbar"]')).toHaveLength(2);
+    },
+  ],
+  [
+    // The host the server wrote, and the faces for items the server already knew; the offset waits for a face.
+    'UploadTray',
+    <UploadTray items={UPLOADS} />,
+    (container) => {
+      expect(container.querySelector('.upload-tray-status')).toHaveAttribute('role', 'status');
+      expect(container.querySelector('.upload-tray-title')).toHaveTextContent('Uploading 4 of 6');
+      expect(container.querySelector('.upload-tray-bar-button')).toHaveTextContent('Uploading 4 of 6');
+    },
+    viewport(1280),
   ],
 ];
 

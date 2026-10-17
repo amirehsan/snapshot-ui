@@ -1,0 +1,108 @@
+---
+title: Upload tray
+description: "Each file from waiting to saved, needs review or failed, in a panel that stays across pages."
+icon: Upload
+---
+
+<Section>
+
+## The six statuses
+
+`UploadList` draws each file your app is uploading as a row: an icon, the name, the status in words and, while it moves, a bar. A file is waiting, uploading, being read, saved, needing review or failed. The word carries the status, so its color never carries it alone: slate while the file is on its way, success once it is saved, warning when it needs review and error when it failed, each with the reason in your words after it. A name keeps its extension in view, so a long receipt still says it is a JPG, and once a file has become a document its name links there. Retry, Remove and Cancel show where your app handles them; press them below.
+
+<Preview name="upload-list-statuses" />
+
+</Section>
+
+<Section>
+
+## The tray
+
+`UploadTray` holds the list where the reader can always find it. From 768px it is a panel in the bottom end corner, 28rem wide, the same column the toasts use, with a title that counts ("Uploading 2 of 5", then "5 uploads complete"), a line of your own under it, a button that folds it to its header and a close button. Under 768px it is a pill bar above the tab bar that says the title, and pressing it opens a sheet with the list. It is not a dialog: the reader goes on working while files upload. The toasts rise above it, so the corner holds every report on background work in one column.
+
+With no items the tray draws only its status host, which is in the page from the first render, so a screen reader is listening before anything is said. Mount it once and give it items as your app adds files.
+
+</Section>
+
+<Section>
+
+## Usage
+
+The library never uploads. Your app holds the files in a provider in its root layout, sends each one, and gives the tray each file's status, progress and words; the tray draws and announces. Mount `<UploadTray>` in [AppShell](/docs/components/app-shell#floating)'s `floating` slot from that layout, so a client navigation keeps it, with its scroll and its folded state, while the reader opens the documents it links to.
+
+- `waiting`, `uploading` and `reading` are in flight: the file is queued, being sent, or being read by your server. `saved`, `review` and `failed` have settled.
+- `progress` runs from 0 to 1 while a file uploads, and `progressLabel` says it in your words, such as "1.8 of 4 MB". Without `progress` an uploading row draws a bar that slides, rather than one that looks stuck. A reading row always slides.
+- `reason` is required for `failed`: say why, in the reader's words, such as "Over 10 MB". A review row's reason says what to check.
+- `href` links the name to the document the file became, through your [RouterProvider](/docs/routing).
+- `onRetry` shows Retry on failed rows, `onRemove` shows Remove on waiting and settled rows, and `onCancel` shows Cancel on uploading rows. Each gets the row's `id`. When a row leaves, focus moves to the same button on the next row.
+- The close button calls `onClear` once nothing is in flight, and your app drops its settled items. While files are in flight it asks "Cancel 3 uploads?" first and calls `onCancelAll` on yes; without `onCancelAll` it shows only once everything has settled. When the tray leaves with focus inside, focus goes to `<main>`.
+- `warnsOnUnload`, on by default, asks the browser to warn before the tab closes or reloads while anything is in flight. The browser shows its own words, and iOS Safari shows none, so the tray is the reader's real warning. A client navigation keeps the shell and needs none.
+- Corners are concentric: a row's buttons and bar take the radius of what holds the list, less the gap to it. The tray and its sheet name their own corners; when you put `UploadList` in a rounded box of your own, such as a Card, name its corner with `--holder-radius`, `--holder-border` and `--holder-pad` (its smaller padding) on that box, as the example above does. Without them the rows keep their own round ends.
+- `formatCount` writes the counts in the title and the announcements, such as in Persian digits, and `labels` replaces every word the tray writes.
+
+```tsx
+import { AppShell, UploadTray } from '@snapshot-ui/react';
+
+// app/layout.tsx, inside your uploads provider.
+<AppShell
+  sidebar={<Nav />}
+  floating={
+    <UploadTray
+      items={uploads.items}
+      onRetry={uploads.retry}
+      onRemove={uploads.remove}
+      onCancel={uploads.cancel}
+      onClear={uploads.clear}
+      onCancelAll={uploads.cancelAll}
+    />
+  }
+>
+  {children}
+</AppShell>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+`UploadTray` takes the list's `items` and handlers. `className` goes on both of its faces; on `UploadList`, `className` and `ref` go on the list.
+
+<PropsTable label="UploadTray props" path="../../packages/react/src/upload-tray/UploadTray.tsx" type="Pick<UploadTrayProps, 'items' | 'onRetry' | 'onRemove' | 'onCancel' | 'description' | 'isCollapsed' | 'defaultCollapsed' | 'onCollapsedChange' | 'onClear' | 'onCancelAll' | 'warnsOnUnload' | 'formatCount' | 'labels' | 'className'>" />
+
+<PropsTable label="UploadList props" path="../../packages/react/src/upload-tray/UploadList.tsx" type="Pick<UploadListProps, 'items' | 'onRetry' | 'onRemove' | 'onCancel' | 'labels' | 'aria-label' | 'aria-labelledby' | 'className'>" />
+
+<PropsTable label="UploadItem" path="../../packages/react/src/upload-tray/counts.ts" type="UploadItem" />
+
+<PropsTable label="UploadTrayLabels" path="../../packages/react/src/upload-tray/UploadTray.tsx" type="UploadTrayLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The panel is a region named by its title, which a screen reader reaches with its landmark keys; on a phone the bar is a region named "Uploads" holding one button, which opens a dialog titled by the same title. The list is a plain list in the page's tab order: each row reads its name or its link, its status in words with the reason, its bar while it moves, and its buttons, named for their file, such as "Retry invoice.pdf".
+
+The tray says three things politely, and nothing else:
+
+- once, as a batch starts, how many files it holds ("Uploading 5 files");
+- rows that failed or need review, gathered over a short pause, so five failures in a burst are one sentence ("2 uploads failed");
+- a summary once every file has settled ("5 uploads finished: 3 saved, 1 needs review, 1 failed").
+
+It never says a percentage, or a file turning saved on its own: the summary says it. A retry that starts at once hears no summary first.
+
+<Keys rows={[['Tab Shift+Tab', 'Through the header\'s buttons, then each row\'s link and buttons, in order.'], ['Enter Space', 'On the fold button, folds or unfolds the list; on a link, opens the document; on Retry, Remove or Cancel, does it.'], ['Escape', 'In the phone\'s sheet, closes it, and focus returns to the bar. The panel is not a dialog and takes no Escape.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps uploads in the system.
+
+<Rules dos={["Say why a file failed, in the reader's words.", 'Link a saved file to its document.', 'Mount one tray, in the shell, from the root layout.']} donts={['Never say a percentage in words.', 'Never put uploads in a modal.', 'Never draw a row in signal orange or clay.']} />
+
+</Section>

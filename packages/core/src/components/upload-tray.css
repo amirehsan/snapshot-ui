@@ -1,0 +1,406 @@
+/*
+ * UploadList and UploadTray: each file from waiting to saved, needs review or failed, derived in
+ * docs/design-system.md ("UploadTray"). A row is the list face's item: a 24px status icon, the name over the
+ * status line, and 40px ghost buttons, on a divider between rows. The word and the icon take the status's
+ * reserved color (slate in flight, success saved, warning needs review, error failed) and the reason is slate.
+ * The name keeps its extension in view: the stem ellipsizes and the extension does not.
+ *
+ * The tray is the toasts' column: from 768px a float panel in the bottom end corner, 28rem or the viewport less
+ * 2rem, the overlay inset in, at the chrome layer; under 768px a docked pill bar across the bottom, whose button
+ * opens a Sheet. Both sit above the shell's bottom reserve (the tab bar) and a sticky save bar's offset, and the
+ * tray writes its own height for the toasts (--upload-tray-offset, in toast.css). 768px is the --breakpoint-sm
+ * token, written out because a media query cannot read a custom property; test/css.test.js keeps them equal. The
+ * panel rises 8px and fades in over 200ms through @starting-style, which is above the floor and simply does not
+ * run there.
+ *
+ * Corners are concentric: a rounded part inside a rounded holder takes the holder's radius less the gap between
+ * them, the holder's edge and the smaller side of its padding, never a copy, and square once the gap reaches the
+ * radius. A holder names its own corner in three properties, --holder-radius, --holder-border and --holder-pad:
+ * the panel, the phone's bar and the sheet set theirs, and an app that puts the list in its own rounded holder,
+ * such as a Card, sets them there. The list subtracts the holder's gap, and each row subtracts its own padding
+ * again, for its buttons and its bar. With no holder named they keep their own radius.
+ */
+@layer components {
+  /* The polite live region, present before its text, hidden from sight and kept out of aria-hidden, as the
+     toasts' host is. Pinned to the start corner, so it never lengthens a page that fills the viewport. */
+  .upload-tray-status {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .upload-list {
+    /* Unset, and so ignored by the rows, unless a holder names its corner. */
+    --upload-list-radius: max(
+      0px,
+      calc(var(--holder-radius) - var(--holder-border, 0px) - var(--holder-pad, 0px))
+    );
+
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-sans);
+  }
+
+  /* Focus lands on the list only when its last row leaves in a page, and never rings it. */
+  .upload-list:focus {
+    outline: none;
+  }
+
+  .upload-row {
+    --upload-row-tone: var(--color-slate);
+    /* A row is flush with the list; its smaller padding, the block's, is the next gap in. */
+    --upload-row-radius: max(0px, calc(var(--upload-list-radius) - 0.625rem));
+
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    column-gap: 0.75rem;
+    align-items: center;
+    box-sizing: border-box;
+    min-block-size: max(var(--size-target), 3.5rem);
+    padding: 0.625rem var(--spacing-inset);
+  }
+
+  .upload-row + .upload-row {
+    border-block-start: 1px solid var(--color-divider);
+  }
+
+  .upload-row[data-status='saved'] {
+    --upload-row-tone: var(--color-success);
+  }
+
+  .upload-row[data-status='review'] {
+    --upload-row-tone: var(--color-warning);
+  }
+
+  .upload-row[data-status='failed'] {
+    --upload-row-tone: var(--color-error);
+  }
+
+  .upload-row-icon {
+    display: flex;
+    color: var(--upload-row-tone);
+  }
+
+  .upload-row-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .upload-row-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* The stem and the extension side by side, each isolated, so the extension stays at the name's end in either
+     direction; the name takes its own direction (dir="auto"), and only its own width, so a link is only its words. */
+  .upload-row-name {
+    display: flex;
+    align-self: flex-start;
+    min-width: 0;
+    max-width: 100%;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+  }
+
+  /* Text until the file has a document; then the Link look, Link Blue and underlined, which is the link's own. */
+  span.upload-row-name {
+    color: var(--color-ink);
+  }
+
+  .upload-row-stem {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    unicode-bidi: isolate;
+  }
+
+  .upload-row-ext {
+    flex: none;
+    white-space: nowrap;
+    unicode-bidi: isolate;
+  }
+
+  .upload-row-status {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--spacing-part);
+    min-width: 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+  }
+
+  .upload-row-word {
+    color: var(--upload-row-tone);
+  }
+
+  /* A sentence the reader has to read: slate, not the tone. */
+  .upload-row-reason {
+    min-width: 0;
+    color: var(--color-slate);
+    overflow-wrap: anywhere;
+  }
+
+  .upload-row-progress {
+    margin-inline-start: auto;
+    color: var(--color-slate);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .upload-row-bar {
+    margin-block-start: var(--spacing-part);
+  }
+
+  /* The 40px buttons pull in by 8px at the end, so the row's padding is the icon's and not the button's. */
+  .upload-row-actions {
+    display: flex;
+    align-items: center;
+    margin-inline-end: -0.5rem;
+  }
+
+  .upload-row-actions:empty {
+    margin-inline-end: 0;
+  }
+
+  /* Concentric with the holder, through the row: the buttons and the bar's track and fill. Their own radius while
+     no holder names its corner. */
+  .upload-row :is(.icon-button, .progress-bar-track, .progress-bar-fill) {
+    border-radius: var(--upload-row-radius, var(--radius-pill));
+  }
+
+  .upload-tray {
+    /* The panel's corner, for what it holds: the body has no padding, so the rows are flush with its edge. */
+    --holder-radius: var(--radius-surface);
+    --holder-border: 1px;
+    --holder-pad: 0px;
+
+    position: fixed;
+    inset-block-end: calc(
+      var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) + var(--save-bar-offset, 0px)
+    );
+    inset-inline-end: var(--overlay-inset);
+    z-index: var(--z-chrome);
+    display: flex;
+    flex-direction: column;
+    width: min(28rem, calc(100vw - 2rem));
+    overflow: hidden;
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+    transition:
+      opacity 200ms ease,
+      translate 200ms ease;
+  }
+
+  @starting-style {
+    .upload-tray {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
+
+  .upload-tray-header {
+    /* The header's buttons sit the header's smaller padding, the part step, in from the panel's edge. */
+    --upload-tray-header-radius: max(
+      0px,
+      calc(var(--holder-radius) - var(--holder-border) - var(--spacing-part))
+    );
+
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    padding-block: var(--spacing-part);
+    padding-inline: var(--spacing-inset) var(--spacing-part);
+  }
+
+  .upload-tray:not([data-collapsed]) .upload-tray-header {
+    border-block-end: 1px solid var(--color-divider);
+  }
+
+  .upload-tray-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .upload-tray-title {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: 500;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  /* Focus lands on the title only when the last row it was in leaves, and never rings it, as main's landing. */
+  .upload-tray-title:focus {
+    outline: none;
+  }
+
+  .upload-tray-description {
+    margin: 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+    overflow-wrap: anywhere;
+  }
+
+  .upload-tray-header .icon-button {
+    border-radius: var(--upload-tray-header-radius);
+  }
+
+  .upload-tray[data-collapsed] .upload-tray-fold svg {
+    rotate: 180deg;
+  }
+
+  .upload-tray-body {
+    max-block-size: min(24rem, 50dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar) transparent;
+  }
+
+  /* The phone's bar: a pill across the bottom, the field's height, never under the 40px target, which compact
+     density's 36px field would be, and never under 44px on a coarse pointer. */
+  .upload-tray-bar {
+    /* The bar's corner, for its one button, which fills it inside the edge. */
+    --holder-radius: var(--radius-pill);
+    --holder-border: 1px;
+    --holder-pad: 0px;
+
+    position: fixed;
+    inset-inline: var(--overlay-inset);
+    inset-block-end: calc(
+      var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) + var(--save-bar-offset, 0px)
+    );
+    z-index: var(--z-chrome);
+    display: flex;
+    block-size: var(--size-field);
+    min-block-size: var(--size-target);
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+  }
+
+  @media (pointer: coarse) {
+    .upload-tray-bar {
+      min-block-size: 44px;
+    }
+  }
+
+  .upload-tray-bar-button {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+    margin: 0;
+    padding-inline: var(--spacing-inset);
+    border: 0;
+    border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));
+    background-color: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .upload-tray-bar-button:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .upload-tray-bar-button[data-pressed] {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  @media (hover: hover) {
+    .upload-tray-bar-button:is(:hover, [data-hovered]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+  }
+
+  .upload-tray-bar-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .upload-tray-bar-icon {
+    display: flex;
+    flex: none;
+  }
+
+  .upload-tray-bar-icon svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  /* In the sheet the list runs to the panel's sides, its rows padded as the sheet's header is: the sheet's corner,
+     its edge and no padding are the holder. */
+  .upload-tray-sheet {
+    --holder-radius: var(--radius-stadium);
+    --holder-border: 1px;
+    --holder-pad: 0px;
+  }
+
+  .upload-tray-sheet .upload-list {
+    margin-inline: calc(-1 * var(--spacing-peer));
+  }
+
+  .upload-tray-sheet .upload-row {
+    padding-inline: var(--spacing-peer);
+  }
+
+  /* One face at a time, by the viewport, so nothing is measured to choose. */
+  @media (width < 768px) {
+    .upload-tray {
+      display: none;
+    }
+  }
+
+  @media (width >= 768px) {
+    .upload-tray-bar {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .upload-tray {
+      transition: none;
+    }
+  }
+
+  /* The edges are redrawn in the reader's color, and the icons keep their shapes; the words carry the status. */
+  @media (forced-colors: active) {
+    .upload-tray,
+    .upload-tray-bar {
+      border-color: canvastext;
+    }
+
+    .upload-row-icon {
+      color: canvastext;
+    }
+  }
+}

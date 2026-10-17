@@ -606,6 +606,20 @@ test.describe('forced colors', () => {
     ).toEqual({ style: 'solid', color: await systemColor(page, 'Highlight') });
   });
 
+  test('a failed row keeps its icon and word', async ({ page }) => {
+    // The tone is a color the repaint drops: the icon keeps its shape in the reader's text color, and the word,
+    // which carries the status, stays.
+    await visit(page, '/docs/components/upload-tray');
+    const text = await systemColor(page, 'CanvasText');
+    const row = page.locator('.stage .upload-row[data-status="failed"]');
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('.upload-row-word')).toHaveText('Failed');
+    await expect(row.locator('.upload-row-word')).toBeVisible();
+    const icon = row.locator('.upload-row-icon svg');
+    await expect(icon).toBeVisible();
+    expect(await icon.evaluate((element) => getComputedStyle(element).color)).toBe(text);
+  });
+
   test('a line chart draws its first line CanvasText, its second GrayText, and its crosshair Highlight', async ({
     page,
   }) => {
@@ -1308,6 +1322,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   'text-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // A numeral is a figure and never wraps (white-space: nowrap), so a web address is not put into one.
   typography: ['.stage .heading', '.stage .copy:not(.copy-numeral, .copy-numeral-sm)', '.stage .eyebrow'],
+  // A file name is the reader's; its stem ellipsizes and its extension stays.
+  'upload-tray': ['.stage .upload-row-stem'],
 };
 
 /** The pages with no text a person writes, each with its reason. A page is in one list or the other. */
@@ -1506,6 +1522,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The triggers; a tip opens on hover or focus, so none is in the page before a script runs.
   tooltip: ['.stage .icon-button'],
   typography: ['.stage .heading', '.stage .copy', '.stage .copy-numeral', '.stage .eyebrow'],
+  // The list and its rows, links and buttons; the tray itself draws only once an app gives it items.
+  'upload-tray': ['.stage .upload-list', '.stage .upload-row'],
 };
 
 test('every component and chart page is listed as server rendered', () => {

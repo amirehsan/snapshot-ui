@@ -848,6 +848,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/toast">Toast</Link>
                 <Link href="/docs/components/tooltip">Tooltip</Link>
                 <Link href="/docs/components/typography">Typography</Link>
+                <Link href="/docs/components/upload-tray">Upload tray</Link>
                 <Link href="/docs/charts/line-chart">Line chart</Link>
                 <Link href="/docs/charts/sparkline">Sparkline</Link>
               </div>
