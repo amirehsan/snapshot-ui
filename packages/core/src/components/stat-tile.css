@@ -8,8 +8,13 @@
  * tile takes the 5% ink wash on hover and press, and the token ring outside it; no lift, it is a surface.
  */
 @layer components {
+  /* A size container has no content width to give a parent that sizes it from its content, so a tile in a flex
+     row or an auto grid column was its padding wide. It names a stand-in width instead, the whole tile 16rem, at
+     which its narrow layout draws a figure of nine characters whole and a 320px phone is never pushed sideways.
+     A block or a sized grid column still sets its width. */
   .stat-tile {
     container: stat-tile / inline-size;
+    contain-intrinsic-inline-size: calc(16rem - 2 * var(--spacing-card) - 2px);
     box-sizing: border-box;
     display: block;
     min-width: 0;
