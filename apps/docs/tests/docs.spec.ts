@@ -135,6 +135,54 @@ test('the rail collapses to icons and remembers it', async ({ page }) => {
   await expect(page.locator('html')).not.toHaveAttribute('data-rail', 'collapsed');
 });
 
+test('the rail opens and closes on one curve, its icons hold their place and no row grows a line', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page);
+  const sample = (): Promise<{ icons: number[]; rows: number[] }> =>
+    page.evaluate(() => ({
+      icons: [...document.querySelectorAll('#rail .rail-icon, #rail .rail-search svg, #rail .brand svg')].map(
+        (icon) => icon.getBoundingClientRect().left,
+      ),
+      rows: [...document.querySelectorAll('#rail .rail-link, #rail .rail-search, #rail .rail-group')].map(
+        (row) => Math.round(row.getBoundingClientRect().height),
+      ),
+    }));
+  const atRest = await sample();
+  for (const name of ['Collapse the menu', 'Expand the menu']) {
+    await page.getByRole('button', { name }).click();
+    // Hold every transition the press started and step it through its end, frame by frame.
+    const end = await page.evaluate(() => {
+      const moving = document.getAnimations();
+      for (const each of moving) each.pause();
+      (window as unknown as { moving: Animation[] }).moving = moving;
+      return Math.max(0, ...moving.map((each) => Number(each.effect?.getComputedTiming().endTime ?? 0)));
+    });
+    expect(end).toBeGreaterThan(200);
+    for (let time = 0; time <= end; time += 16) {
+      await page.evaluate((at) => {
+        for (const each of (window as unknown as { moving: Animation[] }).moving) each.currentTime = at;
+      }, time);
+      const now = await sample();
+      // An icon settles a few pixels onto the collapsed rail's axis, the brand mark 6px, and never jumps to the
+      // middle of the rail.
+      const drift = now.icons.map((left, index) => Math.abs(left - (atRest.icons[index] ?? 0)));
+      expect(Math.max(...drift)).toBeLessThanOrEqual(6.5);
+      expect(now.rows).toEqual(atRest.rows);
+    }
+    await page.evaluate(() => {
+      for (const each of (window as unknown as { moving: Animation[] }).moving) each.finish();
+    });
+  }
+  for (const selector of ['.rail', '.workspace', '.rail-collapse']) {
+    await expect(page.locator(selector)).toHaveCSS(
+      'transition-timing-function',
+      /cubic-bezier\(0\.2, 0, 0, 1\)/,
+    );
+  }
+});
+
 test('under 1024px the closed rail is out of the tab order and the accessibility tree', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
   await visit(page);

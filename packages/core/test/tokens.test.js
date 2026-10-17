@@ -144,6 +144,9 @@ describe('tokens.css', () => {
       '--z-toast',
       '--z-header',
       '--z-chrome',
+      '--ease-emphasized',
+      '--duration-expand',
+      '--duration-collapse',
     ];
     const declared = declaredIn(block(':root'));
     // Equality, not inclusion: a variable that leaks into :root fails too. The
@@ -173,6 +176,9 @@ describe('tokens.css', () => {
     expect(root).toContain('--color-gain: #2a5f46;');
     expect(root).toContain('--text-numeral: 3.5rem;');
     expect(root).toContain('--text-numeral--letter-spacing: -0.03em;');
+    expect(root).toContain('--ease-emphasized: cubic-bezier(0.2, 0, 0, 1);');
+    expect(root).toContain('--duration-expand: 300ms;');
+    expect(root).toContain('--duration-collapse: 250ms;');
     expect(root).toContain('--text-numeral-sm--line-height: 1.1;');
     expect(root).toContain('--z-modal: 1000;');
     expect(root).toContain('--z-toast: 1100;');

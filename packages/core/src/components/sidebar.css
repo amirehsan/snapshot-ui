@@ -9,7 +9,9 @@
  * 10px pill inset that puts a group label's first letter, an expanded item's icon and a collapsed
  * item's icon on one axis, and the row height, the 40px floor that grows to 44px in compact on touch.
  * 1024px is the --breakpoint-md token, written out because a media query cannot read a custom
- * property; test/css.test.js keeps them equal.
+ * property; test/css.test.js keeps them equal. The rail moves on the motion tokens, one curve for every
+ * property that moves and the duration of the state it moves to (docs/design-system.md, "The rail's
+ * motion"): the edge carries the labels off under it while they fade, and nothing re-centers on the way.
  */
 @layer components {
   .sidebar {
@@ -17,6 +19,10 @@
     --sidebar-gutter: 0.75rem;
     --sidebar-pill-inset: calc((var(--size-target) - var(--sidebar-icon)) / 2);
     --sidebar-row: max(var(--size-target), var(--size-control));
+    /* The rail's inside width, its border taken off: 286px expanded, 70px collapsed. */
+    --sidebar-inner: calc(var(--container-sidebar) - 2 * var(--spacing-inset) - 2px);
+    /* How long the rail takes to reach the state it is moving to: opening, unless the collapsed rule says closing. */
+    --sidebar-duration: var(--duration-expand);
 
     position: fixed;
     inset-block: var(--spacing-inset);
@@ -32,7 +38,7 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     box-shadow: var(--shadow-lift);
-    transition: width 200ms ease;
+    transition: width var(--sidebar-duration) var(--ease-emphasized);
   }
 
   /* ---- Head: the brand, and in the drawer the close button --------------------------------- */
@@ -42,6 +48,7 @@
     align-items: center;
     gap: var(--spacing-part);
     padding: var(--spacing-peer) calc(var(--sidebar-gutter) * 2) var(--sidebar-gutter);
+    transition: padding-inline var(--sidebar-duration) var(--ease-emphasized);
   }
 
   .sidebar-brand {
@@ -125,7 +132,7 @@
   .sidebar-collapse svg {
     width: 1rem;
     height: 1rem;
-    transition: rotate 200ms ease;
+    transition: rotate var(--sidebar-duration) var(--ease-emphasized);
   }
 
   /* Before hydration the server's toggle holds both names, since only the browser knows whether an open
@@ -135,9 +142,25 @@
     display: none;
   }
 
-  /* Folded for an open SidePanel, the rail moves at once, in the frame the panel comes (app-shell.css). */
+  /* Folded for an open SidePanel, the rail and every part that moves with it move at once, in the frame the panel
+     comes (app-shell.css). */
   [data-sidebar-folded] .sidebar:not(.sidebar-drawer),
-  [data-sidebar-folded] .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {
+  [data-sidebar-folded] .sidebar:not(.sidebar-drawer) .sidebar-group-label::before,
+  [data-sidebar-folded]
+    .sidebar:not(.sidebar-drawer)
+    :is(
+      .sidebar-collapse svg,
+      .sidebar-head,
+      .sidebar-search,
+      .sidebar-nav,
+      .sidebar-group-label,
+      .sidebar-brand-name,
+      .sidebar-search-label,
+      .sidebar-group-text,
+      .sidebar-item-label,
+      .sidebar-item-count-number,
+      .sidebar-search-shortcut
+    ) {
     transition: none;
   }
 
@@ -179,6 +202,9 @@
     text-align: start;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    transition:
+      margin-inline var(--sidebar-duration) var(--ease-emphasized),
+      padding-inline var(--sidebar-duration) var(--ease-emphasized);
   }
 
   .sidebar-search-icon {
@@ -229,8 +255,10 @@
     flex: 1 1 auto;
     min-height: 0;
     padding: var(--spacing-peer) var(--sidebar-gutter);
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
+    transition: padding-inline var(--sidebar-duration) var(--ease-emphasized);
   }
 
   .sidebar-group + .sidebar-group {
@@ -252,6 +280,7 @@
     letter-spacing: var(--text-overline--letter-spacing);
     font-weight: var(--text-overline--font-weight);
     text-transform: uppercase;
+    transition: padding-inline var(--sidebar-duration) var(--ease-emphasized);
   }
 
   /* The dot hangs into the gutter so the label text and the items share one axis. */
@@ -263,6 +292,7 @@
     margin-inline-start: calc(-1 * (6px + var(--spacing-part)));
     border-radius: var(--radius-dot);
     background-color: color-mix(in srgb, var(--color-ink) 25%, transparent);
+    transition: margin-inline-start var(--sidebar-duration) var(--ease-emphasized);
   }
 
   .sidebar-group-text {
@@ -278,9 +308,11 @@
     background-color: var(--color-signal-light);
   }
 
-  /* 8px: the document's "one nav item to the next". */
+  /* 8px: the document's "one nav item to the next". One column no wider than the nav, so an item narrows with the
+     rail however long its unwrapped label. */
   .sidebar-list {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--spacing-part);
     margin: 0;
     padding: 0;
@@ -419,7 +451,33 @@
       display: none;
     }
 
-    /* Hidden from view and not removed, so no name changes. */
+    /* The rail is the container its labels are laid out in: below its expanded width, which it is only on the way
+       to or from collapsed, nothing in it wraps (the @container block after this one). */
+    .sidebar:not(.sidebar-drawer) {
+      container: sidebar / inline-size;
+    }
+
+    /* The labels come back once the edge has mostly passed: from a quarter of the opening, over half of it, so they
+       are in by three quarters, while the edge settles. */
+    .sidebar:not(.sidebar-drawer)
+      :is(
+        .sidebar-brand-name,
+        .sidebar-search-label,
+        .sidebar-group-text,
+        .sidebar-item-label,
+        .sidebar-item-count-number,
+        .sidebar-search-shortcut
+      ) {
+      transition: opacity calc(var(--sidebar-duration) / 2) var(--ease-emphasized)
+        calc(var(--sidebar-duration) / 4);
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) {
+      --sidebar-duration: var(--duration-collapse);
+    }
+
+    /* Hidden from view and not removed, so no name changes: they fade out in the first 40% of the closing, as the
+       edge carries them off, and stay in the flow, one line high, so nothing below them moves. */
     [data-sidebar='collapsed' i]
       .sidebar:not(.sidebar-drawer)
       :is(
@@ -430,19 +488,13 @@
         .sidebar-item-count-number,
         .sidebar-search-shortcut
       ) {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      margin: -1px;
-      padding: 0;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
+      opacity: 0;
+      transition: opacity calc(var(--sidebar-duration) * 0.4) var(--ease-emphasized);
     }
 
+    /* The mark stays where it is drawn and the padding settles it on the collapsed rail's axis, 1px in. */
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-head {
-      justify-content: center;
-      padding-inline: 0;
+      padding-inline: calc((var(--sidebar-inner) - 1.5rem) / 2);
     }
 
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {
@@ -457,35 +509,27 @@
       display: inline;
     }
 
+    /* A 40px pill on the rail's axis, its icon centered inside its 1px border, reached by the margin and the padding
+       as the rail narrows: the icon moves 2px. */
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-search {
-      justify-content: center;
-      width: var(--size-target);
-      margin-inline: auto;
-      padding: 0;
+      margin-inline: calc((var(--sidebar-inner) - var(--size-target)) / 2);
+      padding-inline: calc(var(--sidebar-pill-inset) - 1px);
     }
 
-    /* 15px, so a 40px item centers in the 70px inside the rail's 1px border. The icon moves 3px inward as the
-       rail collapses, hidden by the width transition. */
+    /* 15px, so a 40px item centers in the 70px inside the rail's 1px border. The item fills the nav, so its pill
+       narrows with the rail, and its icon keeps its place at the start and moves 3px inward with the padding. */
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-nav {
       padding-inline: calc(1rem - 1px);
       scrollbar-width: none;
     }
 
+    /* The dot slides onto the rail's axis, centered over the 40px items. */
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-group-label {
-      justify-content: center;
-      padding-inline: 0;
+      padding-inline: calc((var(--size-target) - 6px) / 2) 0;
     }
 
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-group-label::before {
       margin-inline-start: 0;
-    }
-
-    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-item {
-      align-items: center;
-      justify-content: center;
-      width: var(--size-target);
-      margin-inline: auto;
-      padding: 0;
     }
 
     /* An 8px dot at the icon's top-end corner, its number clipped inside it: ink, and canvas on the
@@ -493,7 +537,7 @@
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-item-count {
       position: absolute;
       inset-block-start: calc((var(--sidebar-row) - var(--sidebar-icon)) / 2 - 0.25rem);
-      inset-inline-end: calc(50% - var(--sidebar-icon) / 2 - 0.25rem);
+      inset-inline-start: calc(var(--sidebar-pill-inset) + var(--sidebar-icon) - 0.25rem);
       width: 0.5rem;
       height: 0.5rem;
       margin: 0;
@@ -509,9 +553,35 @@
       background-color: var(--color-canvas);
     }
 
+    /* Centered in the collapsed rail's inside width from the first frame, at the start, so what the app draws there
+       collapsed is where it rests while the rail closes around it. */
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-footer {
       justify-content: center;
-      padding-inline: 0;
+      padding-inline: 0 calc(100% - var(--sidebar-inner));
+    }
+  }
+
+  /* ---- On the way: narrower than expanded, nothing in the rail wraps -----------------------------------------
+     The rail is narrower than its expanded width only while it collapses or expands, and collapsed. Below it, every
+     label stays on one line and is cut at its own box by the moving edge, so no row grows a line for a frame; the
+     search pill and the footer clip what passes their edge. A query measures the rail inside its border, so the width
+     is the sidebar token's expanded value less the two insets and the two 1px edges, written out because a query
+     cannot read a custom property; test/css.test.js keeps them equal. */
+  @container sidebar (width < calc(20rem - 34px)) {
+    .sidebar:not(.sidebar-drawer) :is(.sidebar-head, .sidebar-search, .sidebar-nav, .sidebar-footer) {
+      white-space: nowrap;
+    }
+
+    .sidebar:not(.sidebar-drawer)
+      :is(
+        .sidebar-brand-name,
+        .sidebar-search-label,
+        .sidebar-group-text,
+        .sidebar-item-label,
+        .sidebar-search,
+        .sidebar-footer
+      ) {
+      overflow: clip;
     }
   }
 
@@ -526,14 +596,8 @@
     [data-has-sidebar]:where(
         .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
       )
-      .sidebar:not(.sidebar-drawer),
-    [data-has-sidebar]:where(
-        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
-      )
-      .sidebar:not(.sidebar-drawer)
-      .sidebar-collapse
-      svg {
-      transition: none;
+      .sidebar:not(.sidebar-drawer) {
+      --sidebar-duration: var(--duration-collapse);
     }
 
     [data-has-sidebar]:where(
@@ -548,14 +612,8 @@
         .sidebar-item-count-number,
         .sidebar-search-shortcut
       ) {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      margin: -1px;
-      padding: 0;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
+      opacity: 0;
+      transition: opacity calc(var(--sidebar-duration) * 0.4) var(--ease-emphasized);
     }
 
     [data-has-sidebar]:where(
@@ -563,8 +621,7 @@
       )
       .sidebar:not(.sidebar-drawer)
       .sidebar-head {
-      justify-content: center;
-      padding-inline: 0;
+      padding-inline: calc((var(--sidebar-inner) - 1.5rem) / 2);
     }
 
     [data-has-sidebar]:where(
@@ -597,10 +654,8 @@
       )
       .sidebar:not(.sidebar-drawer)
       .sidebar-search {
-      justify-content: center;
-      width: var(--size-target);
-      margin-inline: auto;
-      padding: 0;
+      margin-inline: calc((var(--sidebar-inner) - var(--size-target)) / 2);
+      padding-inline: calc(var(--sidebar-pill-inset) - 1px);
     }
 
     [data-has-sidebar]:where(
@@ -617,8 +672,7 @@
       )
       .sidebar:not(.sidebar-drawer)
       .sidebar-group-label {
-      justify-content: center;
-      padding-inline: 0;
+      padding-inline: calc((var(--size-target) - 6px) / 2) 0;
     }
 
     [data-has-sidebar]:where(
@@ -633,22 +687,10 @@
         .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
       )
       .sidebar:not(.sidebar-drawer)
-      .sidebar-item {
-      align-items: center;
-      justify-content: center;
-      width: var(--size-target);
-      margin-inline: auto;
-      padding: 0;
-    }
-
-    [data-has-sidebar]:where(
-        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
-      )
-      .sidebar:not(.sidebar-drawer)
       .sidebar-item-count {
       position: absolute;
       inset-block-start: calc((var(--sidebar-row) - var(--sidebar-icon)) / 2 - 0.25rem);
-      inset-inline-end: calc(50% - var(--sidebar-icon) / 2 - 0.25rem);
+      inset-inline-start: calc(var(--sidebar-pill-inset) + var(--sidebar-icon) - 0.25rem);
       width: 0.5rem;
       height: 0.5rem;
       margin: 0;
@@ -672,7 +714,36 @@
       .sidebar:not(.sidebar-drawer)
       .sidebar-footer {
       justify-content: center;
-      padding-inline: 0;
+      padding-inline: 0 calc(100% - var(--sidebar-inner));
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer),
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-group-label::before,
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      :is(
+        .sidebar-collapse svg,
+        .sidebar-head,
+        .sidebar-search,
+        .sidebar-nav,
+        .sidebar-group-label,
+        .sidebar-brand-name,
+        .sidebar-search-label,
+        .sidebar-group-text,
+        .sidebar-item-label,
+        .sidebar-item-count-number,
+        .sidebar-search-shortcut
+      ) {
+      transition: none;
     }
   }
 
@@ -739,7 +810,14 @@
     }
   }
 
+  /* Every part of the rail moves for --sidebar-duration, its label fades included, so at 0s nothing moves: the rail
+     steps to the other state in one frame. */
   @media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) {
+      --sidebar-duration: 0s;
+    }
+
     .sidebar,
     .sidebar-collapse svg {
       transition: none;

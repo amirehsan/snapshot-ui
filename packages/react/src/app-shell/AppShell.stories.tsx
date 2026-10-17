@@ -5,8 +5,11 @@ import { I18nProvider, RouterProvider } from 'react-aria-components';
 import { expect, fn, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
+import { DataTable } from '../data-table';
 import { SidebarGroup, SidebarItem } from '../sidebar';
+import { StatTile } from '../stat-tile';
 import { DemoHeader, DemoNav } from '../stories/shell-fixture';
+import { COLUMNS, groupOf, keyOf, manyTransactions } from '../stories/transactions';
 import { DESKTOP, PHONE, VIEWPORT_OPTIONS } from '../stories/viewports';
 import { AppShell, type AppShellProps } from './AppShell';
 
@@ -53,6 +56,41 @@ function Page(): ReactElement {
       <div>
         <Button>Review transactions</Button>
       </div>
+    </div>
+  );
+}
+
+/** A long working page: a row of stat tiles over a 36-row DataTable, the content the rail's motion moves. */
+function LongPage(): ReactElement {
+  return (
+    <div style={{ display: 'grid', gap: 24, padding: 'var(--spacing-inset)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))', gap: 24 }}>
+        <StatTile
+          label="Spending"
+          value="$1,284.50"
+          change={{ direction: 'up', label: 'Up 12% from last month' }}
+          caption="Across all accounts"
+        />
+        <StatTile
+          label="Income"
+          value="$5,420.00"
+          change={{ direction: 'up', label: 'Up $420 from last month', tone: 'gain' }}
+          caption="Paid into checking"
+        />
+        <StatTile
+          label="Savings"
+          value="$12,000.00"
+          change={{ direction: 'flat', label: 'No change in 3 weeks' }}
+          caption="Emergency fund"
+        />
+      </div>
+      <DataTable
+        aria-label="Transactions"
+        items={manyTransactions(36)}
+        columns={COLUMNS}
+        getKey={keyOf}
+        getGroup={groupOf}
+      />
     </div>
   );
 }
@@ -295,5 +333,57 @@ export const RevealsCurrent: Story = {
     const box = nav.getBoundingClientRect();
     await expect(item.top).toBeGreaterThanOrEqual(box.top);
     await expect(item.bottom).toBeLessThanOrEqual(box.bottom);
+  },
+};
+
+/**
+ * The collapse and the expand over a working page: stat tiles and a long DataTable. The icons hold their place
+ * while the rail's edge moves, and no label wraps on the way.
+ */
+export const CollapseMotion: Story = {
+  tags: ['no-visual', 'viewport-desktop'],
+  globals: DESKTOP,
+  render: () => (
+    <AppShell sidebar={<DemoNav />} header={<DemoHeader title="Transactions" />}>
+      <LongPage />
+    </AppShell>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const button = canvas.getByRole('button', { name: 'Collapse the menu' });
+    const icons = (): number[] =>
+      [...rail().querySelectorAll('.sidebar-item-icon, .sidebar-search-icon, .sidebar-brand-mark')].map(
+        (icon) => icon.getBoundingClientRect().left,
+      );
+    /** Every row of the rail one line high: no label wraps onto a second line for a frame. */
+    const rows = (): number[] =>
+      [
+        ...rail().querySelectorAll('.sidebar-item, .sidebar-search, .sidebar-group-label, .sidebar-brand'),
+      ].map((row) => Math.round(row.getBoundingClientRect().height));
+    const atRest = { icons: icons(), rows: rows() };
+    for (const [name, width] of [
+      ['Expand the menu', 72],
+      ['Collapse the menu', 288],
+    ] as const) {
+      await userEvent.click(button);
+      // Hold every transition the press started and step it, as a frame strip would, through its end.
+      const moving = document.getAnimations();
+      await expect(moving.length).toBeGreaterThan(0);
+      const end = Math.max(...moving.map((each) => Number(each.effect?.getComputedTiming().endTime ?? 0)));
+      for (const each of moving) each.pause();
+      for (let time = 0; time <= end; time += 16) {
+        for (const each of moving) each.currentTime = time;
+        // Each icon keeps its place: it moves no more than the 3px the padding settles it by, and never toward the
+        // middle of the rail.
+        const drift = icons().map((left, index) => Math.abs(left - (atRest.icons[index] ?? 0)));
+        await expect(Math.max(...drift)).toBeLessThanOrEqual(3.5);
+        await expect(rows()).toEqual(atRest.rows);
+      }
+      for (const each of moving) each.finish();
+      await waitFor(() => expect(rail().getBoundingClientRect().width).toBeCloseTo(width, 0));
+      await expect(button).toHaveAccessibleName(name);
+      // The rail and the page beside it travel on one curve.
+      await expect(getComputedStyle(rail()).transitionTimingFunction).toBe('cubic-bezier(0.2, 0, 0, 1)');
+      await expect(getComputedStyle(workspace()).transitionTimingFunction).toBe('cubic-bezier(0.2, 0, 0, 1)');
+    }
   },
 };
