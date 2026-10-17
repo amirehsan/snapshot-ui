@@ -45,17 +45,21 @@
     display: contents;
   }
 
+  /* A holder: its corner and edge are named for the controls in its end corners. */
   .toast {
     --toast-stripe: var(--color-slate);
+    --holder-radius: var(--radius-surface);
+    --holder-border: 1px;
+    --holder-pad: 1rem;
 
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
     width: 100%;
-    padding: 1rem var(--spacing-peer);
-    border: 1px solid var(--color-frame);
+    padding: var(--holder-pad) var(--spacing-peer);
+    border: var(--holder-border) solid var(--color-frame);
     border-inline-start: 4px solid var(--toast-stripe);
-    border-radius: var(--radius-surface);
+    border-radius: var(--holder-radius);
     background-color: var(--color-float);
     box-shadow: var(--shadow-float);
     pointer-events: auto;
@@ -123,6 +127,13 @@
     gap: var(--spacing-part);
     margin-block: -0.5rem;
     margin-inline-end: -0.5rem;
+  }
+
+  /* The row reaches 8px past the padding, so its controls sit 9px from the toast's top and bottom edges,
+     inside its curve: every control in the row is concentric with the toast, 15px in Rounded and 3px in Soft,
+     the dismiss included, so the row keeps one corner. */
+  .toast-controls > :is(.button, .icon-button) {
+    border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad) + 0.5rem));
   }
 
   /* The frame and the stripe are redrawn in the reader's color, so the words carry the tone. */

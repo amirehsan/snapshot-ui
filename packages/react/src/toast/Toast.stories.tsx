@@ -4,6 +4,7 @@ import { expect, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody } from '../card';
 import { Dialog } from '../dialog';
+import { BOTTOM, frameAround } from '../stories/corner';
 import { tokenColor } from '../stories/paint';
 import { toast, type ToastOptions } from './toast';
 import { ToastRegion, type ToastRegionProps } from './ToastRegion';
@@ -324,12 +325,13 @@ export const InDarkScope: Story = {
     <>
       <div
         data-theme="dark"
-        style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+        style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
       >
         <Card>
           <CardBody>
             <p>A card in a dark block.</p>
             <Button
+              style={BOTTOM}
               onPress={() => {
                 toast({ title: 'Saved', tone: 'success', timeout: null });
               }}

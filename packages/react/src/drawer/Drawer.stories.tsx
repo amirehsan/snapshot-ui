@@ -7,6 +7,7 @@ import { Card, CardBody } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { DialogTrigger } from '../dialog';
 import { Link } from '../link';
+import { BOTTOM, frameAround } from '../stories/corner';
 import { firstLineOffset, tokenColor } from '../stories/paint';
 import { Switch } from '../switch';
 import { Text } from '../typography';
@@ -153,7 +154,7 @@ export const End: Story = {
       </div>
     ),
     footer: (
-      <Button slot="close" style={{ width: '100%' }}>
+      <Button slot="close" style={{ width: '100%', ...BOTTOM }}>
         Show 12 projects
       </Button>
     ),
@@ -221,13 +222,13 @@ export const InDarkScope: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+      style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
     >
       <Card>
         <CardBody>
           <p>A card in a dark block.</p>
           <DialogTrigger>
-            <Button variant="secondary">Open the menu</Button>
+            <Button variant="secondary" style={BOTTOM}>Open the menu</Button>
             <Drawer {...args} />
           </DialogTrigger>
         </CardBody>

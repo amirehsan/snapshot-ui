@@ -89,7 +89,11 @@ export const TextLines: Story = {
   },
 };
 
-/** A card that is loading: a circle and two lines for its header, and a block for its body. */
+/**
+ * A card that is loading: a circle and two lines for its header, a block for its body and a line under it. The
+ * line keeps the block clear of the card's bottom corners, where a field-sized block would have to take the
+ * card's concentric corner.
+ */
 export const OnCard: Story = {
   render: () => (
     <Card>
@@ -102,6 +106,7 @@ export const OnCard: Story = {
           </div>
         </div>
         <Skeleton shape="block" height="6rem" />
+        <Skeleton width="30%" />
       </CardBody>
     </Card>
   ),

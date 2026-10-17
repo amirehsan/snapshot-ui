@@ -6,6 +6,7 @@ import { Button } from '../button';
 import { Card, CardBody } from '../card';
 import { Dialog, DialogTrigger } from '../dialog';
 import { IconButton } from '../icon-button';
+import { frameAround } from '../stories/corner';
 import { tokenColor } from '../stories/paint';
 import { Tooltip, TooltipTrigger } from './Tooltip';
 
@@ -190,7 +191,7 @@ export const InDarkScope: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+      style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
     >
       <Card>
         <CardBody>

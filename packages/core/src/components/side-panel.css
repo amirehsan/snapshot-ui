@@ -23,7 +23,12 @@
     outline: none;
   }
 
+  /* A holder: its corner and edge are named for the parts in its corners. The padding is its parts' own. */
   .side-panel {
+    --holder-radius: var(--radius-stadium);
+    --holder-border: 1px;
+    --holder-pad: var(--spacing-peer);
+
     position: sticky;
     inset-block-start: calc(var(--page-sticky-top, 0px) + var(--spacing-inset));
     box-sizing: border-box;
@@ -32,8 +37,8 @@
     inline-size: 24rem;
     max-block-size: calc(100dvh - var(--page-sticky-top, 0px) - 2 * var(--spacing-inset));
     margin-block-start: var(--spacing-inset);
-    border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-stadium);
+    border: var(--holder-border) solid var(--color-hairline);
+    border-radius: var(--holder-radius);
     background-color: var(--color-float);
     color: var(--color-ink);
     font-family: var(--font-sans);
@@ -136,9 +141,17 @@
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--spacing-part);
-    margin-inline: var(--spacing-peer);
-    padding-block: var(--spacing-inset) var(--spacing-peer);
+    margin-inline: var(--holder-pad);
+    padding-block: var(--spacing-inset) var(--holder-pad);
     border-block-start: 1px solid var(--color-divider);
+  }
+
+  /* The last action sits in the panel's bottom end corner, inside its curve: 15px in Rounded. */
+  .side-panel-footer > :last-child {
+    border-end-end-radius: max(
+      var(--radius-micro),
+      calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad))
+    );
   }
 
   @media (width >= 1024px) {

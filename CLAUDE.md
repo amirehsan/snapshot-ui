@@ -22,6 +22,10 @@ visual reference is `docs/mockups/`.
 - Every file importing `react-aria-components` starts with `'use client';`.
 - Component CSS: `@layer components`, tokens only, unprefixed kebab-case
   classes, states as data attributes that also match the native pseudo-class.
+- Rounded inside rounded is concentric: inner radius = outer radius minus the
+  gap (padding plus edge), as `max(0px, calc(...))` on the tokens or the
+  holder's `--holder-radius`, `--holder-border` and `--holder-pad`. Never copy
+  the parent's radius onto a child.
 - Weights 400, 450, 500, 700 only. No 600.
 - Signal orange is consent only; clay is unsaved; error and success mean
   exactly that. Taupe is only for placeholders and disabled text.
