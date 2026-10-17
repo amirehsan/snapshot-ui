@@ -6,13 +6,17 @@ import { describe, expect, inject, it } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
+import { DatePicker } from '../src/date-picker';
 import { DateRangePicker } from '../src/date-range-picker';
+import { FileButton, FileDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
+import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
+import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 
 /**
@@ -41,6 +45,16 @@ const CATEGORIES = ['Food', 'Rent', 'Salary', 'Transport', 'Utilities', 'Health'
     {name}
   </PickerOption>
 ));
+
+/** Six files, one in each status. */
+const UPLOADS: UploadItem[] = [
+  { id: 1, name: 'receipt-march.pdf', status: 'waiting' },
+  { id: 2, name: 'invoice.pdf', status: 'uploading', progress: 0.45, progressLabel: '1.8 of 4 MB' },
+  { id: 3, name: 'statement.pdf', status: 'reading' },
+  { id: 4, name: 'lease.pdf', status: 'saved', href: '/documents/lease' },
+  { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
+  { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
+];
 
 const FACES: [name: string, element: ReactElement][] = [
   [
@@ -76,6 +90,16 @@ const FACES: [name: string, element: ReactElement][] = [
       endName="to"
       today="2026-09-18"
     />,
+  ],
+  [
+    // The frame, the app's valueLabel, the button and the hidden ISO date; no segment, which Intl would write.
+    'DatePicker',
+    <DatePicker label="Date" value="2026-10-14" valueLabel="14 Oct 2026" name="day" today="2026-10-16" />,
+  ],
+  [
+    // A changed field in a review grid: its changed mark is the server's, no Intl in it.
+    'DatePicker unlabelled and changed',
+    <DatePicker aria-label="Date, Corner Mart" value="2026-10-14" valueLabel="14 Oct 2026" isChanged />,
   ],
   [
     'FilterChip single',
@@ -169,6 +193,43 @@ const FACES: [name: string, element: ReactElement][] = [
     >
       <p>The transactions</p>
     </SidePanelLayout>,
+  ],
+  [
+    // The label, both lines, the button and FileTrigger's hidden input, the description and the empty status:
+    // no count, size or date of the library's own, so every locale writes the same.
+    'FileDropZone',
+    <FileDropZone
+      label="Receipts"
+      description="PDF, JPG or PNG, up to 10 MB"
+      acceptedFileTypes={['application/pdf', 'image/*']}
+      allowsMultiple
+      onFiles={noop}
+    />,
+  ],
+  [
+    'FileButton',
+    <FileButton acceptedFileTypes={['image/*']} capture="environment" onFiles={noop}>
+      Take a photo
+    </FileButton>,
+  ],
+  [
+    // Every word, size and percentage is the app's or ASCII, so every locale writes the same rows.
+    'UploadList',
+    <UploadList aria-label="Uploads" items={UPLOADS} onRetry={noop} onRemove={noop} onCancel={noop} />,
+  ],
+  ['UploadTray empty', <UploadTray items={[]} />],
+  [
+    // Every word is the app's or a label, so every locale writes the same bar.
+    'SaveBar',
+    <SaveBar
+      message="2 changes to Corner Mart, 14 Oct"
+      isDirty
+      actionLabel="Save"
+      onAction={noop}
+      onCancel={noop}
+      status="3 fields need attention"
+      statusTone="error"
+    />,
   ],
 ];
 

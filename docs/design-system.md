@@ -1609,6 +1609,54 @@ The five surfaces are canvas, lifted, bone, float and raised. Clay on float and
 error on bone were not in the contrast gate, so they are now: every text color
 a field part uses is gated on every surface.
 
+**The changed dot** (documents spec, ruling 16; spec corrections 2, 3 and 48
+to 51). A field named only by `aria-label` or `aria-labelledby`, as a cell of
+a review grid is, has no label row for the chip, and the changed edge alone is
+a change of hue, which WCAG 1.4.1 forbids as the only cue. So every framed
+field with `isChanged` (TextField, TextArea, NumberField, Select, ComboBox,
+MultiSelect, DateRangePicker and DatePicker) writes `data-unlabelled` while it
+has no label and, while changed, unlabelled and valid, renders
+`span.field-changed-mark`: the chip's 6px dot, holding the word "Changed"
+(`changedLabel`) for a screen reader, named in the control's
+`aria-describedby` through `useChangedDescription`, so the field reads
+"Changed" after its name.
+
+- **Clay, not light signal orange** (spec correction 2). The spec named the
+  chip's dot light signal orange; the chip's dot is `currentcolor`, which is
+  clay, and light signal orange measures 2.87 on the raised fill in light,
+  under the 3:1 a graphic needs. Clay means exactly unsaved and measures 7.04
+  and 6.02 on raised and 7.04 and 6.82 on float, gated as text, which is
+  stricter. The changed edge stays light signal orange.
+- **Its place.** On the frame's first line,
+  `calc((var(--size-field) - 0.375rem) / 2)` down, 1.5px less inside a frame
+  drawn with `.input`, whose box starts inside the changed edge; a text area's
+  on its first line, past its padding, edge and half a line.
+  `--field-changed-mark-end` in from the frame's inline end, which each field's
+  file sets: a part step before the 36px field button 6px in (ComboBox,
+  MultiSelect, DateRangePicker, DatePicker), before the Spinner while options
+  load, before a select's chevron, past a number field's steppers and end
+  symbol, and 1.5rem, the text's own padding, in a text input and a text area.
+  The frame's inline-end padding grows by the dot and a part step while it
+  shows (a select's chevron takes the step as its margin), so typed text never
+  runs under it. Inside the frame where the frame can hold an element (the
+  date frames, the multi-select's, the number field's and the combo box's
+  controls); as the field's next child where the control is the frame (the
+  text input, the text area) and where the frame is a button (Select), whose
+  text would otherwise join its visible name.
+- **The hidden word.** The dot clips its own text: `overflow: hidden`,
+  `color: transparent`, `white-space: nowrap` and `font-size: 0`, so axe
+  measures no text of it, and it takes no pointer. The word is read through
+  `aria-describedby`, which reads an element's text whatever its size.
+- **It leaves while invalid**, by any cause, as the chip does: it reads
+  `FieldErrorContext`, since validation React Aria runs is not something the
+  field's props can see, and an element named in `aria-describedby` is read
+  even when hidden. The error edge, line and description stand alone.
+- **Forced colors.** Out of the repaint, `forced-color-adjust: none`, drawn
+  `canvastext`, so the dot keeps a fill and its word stays unseen.
+- **Its corners.** The dot is a dot: `--radius-dot`, round in every shape, as
+  the chip's own dot is, never a nested surface's concentric radius (spec
+  correction 52).
+
 ## TextField
 
 The document specifies one input, the nav search field, and Appendix A derived
@@ -4697,7 +4745,8 @@ both. The root never writes `expanded`, so it never resets an attribute set
 higher up. Nothing is measured, and `matchMedia` and `popstate` are effects.
 
 **The frame.** In DOM order: the skip link, the rail as given, the workspace
-holding the header wrapper and `<main>`, and the tab bar as given. The header
+holding the header wrapper and `<main>`, the tab bar as given, and the
+`floating` slot as given. The header
 wrapper is sticky at `--z-header` and draws nothing; the look is the header's.
 `<main>` has `tabIndex={-1}` so it takes the focus the skip link sends, and no
 outline, so the landing never rings the whole page.
@@ -4715,6 +4764,16 @@ itself is never overridden by a media query; the shell's property is.
 adds to it rather than declaring its own. 1024px is `--breakpoint-md` written
 out, and 4rem is written in the tab bar's stylesheet too; a test keeps both
 equal.
+
+**The floating slot.** `floating` holds chrome that outlives every page, the
+upload tray first. It renders after the workspace and the tab bar, outside
+`<main>`, with no wrapper of its own, so a fixed part in it reads the shell's
+`--app-shell-inset-block-end` and `--app-shell-sidebar` and takes the shell's
+theme, shape and density; it is never a landmark inside main, and a client
+navigation, which keeps the root layout, keeps it. A part that may be mounted
+with or without a shell reads the shell's state through an internal
+`useOptionalAppShell()`, which returns null outside one; `useAppShell()` still
+throws there.
 
 **When the drawer closes.** As the window widens to 1024px, where the rail is
 no longer a drawer, and on Back and Forward. Escape, the scrim and a press on
@@ -8482,7 +8541,8 @@ it extends the selection to the shown cell's row, the row React Aria
 would have reached, so a hidden cell never stops Shift from extending
 (the `ShiftPastHidden` play, in three engines). Escape in the table is
 React Aria's: it clears a selection, and passes to the page when there
-is none.
+is none; from an editor in a cell it leaves the editor ("Editors in
+cells").
 
 **One tab stop** (spec 7.2, spec correction 28). React Aria's
 `useFocusable` gives its Link and its checkboxes `tabindex="0"` for
@@ -8498,6 +8558,33 @@ Tab from before it lands on its focused row, the next Tab on the bar
 when it shows and past the table when it does not, and Shift+Tab from
 the bar returns to the row or cell last focused (the `TabStop` play, in
 three engines, and a docs end-to-end test with the real Tab key).
+
+**Editors in cells** (documents spec corrections 48, 64, 67 and 69,
+risk R8). React Aria's cell takes every arrow from its children in its
+key capture, re-dispatching Up and Down to the row and walking the
+cell's focusable children on Left and Right, and the list's item does
+the same. While an editable element in a cell has focus (a text input,
+a text area, a select, editable content such as a date segment, never a
+checkbox), DataTable turns the table's keyboard navigation off through
+React Aria's table state, and draws the list with
+`keyboardNavigationBehavior="tab"`, in which an item leaves its
+children's arrows alone and stops their other keys short of the list:
+the editor's arrows move its caret or step its segments. Escape the
+editor leaves alone, not prevented and not stopped (a search field's
+clearing, an open calendar's closing and a combo box's are theirs, and
+a portal's Escape is not in the root's DOM), gives focus to the row or
+the item, the WAI-ARIA grid pattern's way out of editing mode, and the
+row's focus turns the navigation back on; the table hears it on the
+root's bubble handler, the list on each item part's, before the item
+stops it. Tab and Shift+Tab move from editor to editor in the DOM's
+order, row by row like a form or a spreadsheet, and out of the table
+after the last, in both faces (Chromium, `InTableCell` and
+`InListItem`). The switch turns back on from focus: the root's focus
+capture, its blur when focus leaves, a document `focusin` listener, and
+a layout effect when `items` change, again after a frame since React
+Aria draws a changed collection in a render of its own, so an engine
+that fires no blur when a focused editor is removed or hidden never
+leaves the arrows off.
 
 **The modifier Enter, per engine** (open question 7, spec correction
 32). The `ModifierEnter` play presses Ctrl+Enter on a row and records
@@ -8931,3 +9018,818 @@ NVDA (owner action 4): the panel read as a complementary landmark named
 by its title with focus on its heading, and the sheet read as a dialog;
 on a real iPhone and an Android phone, the sheet opening from a row and
 closing on a swipe, and a refused swipe rising again.
+
+## ProgressBar
+
+Work getting done: `ProgressBar`, how far an upload has come, or that a
+reading is under way. The document has no progress bar of its own, so
+this one is derived from Meter, the spinner and the skeleton (documents
+spec, section 5).
+
+**One object with Meter** (spec 13.2 item 5, the owner's answer in
+13.3 item 9). The head is Meter's row, rule for rule: the label at
+`--text-small` weight 500 in ink at the start, the value at
+`--text-small` in slate with tabular figures at the end, 8px
+(`--spacing-part`) above the track; the row wraps and a long word breaks
+anywhere. The track is Meter's: 8px tall, the frame color, ink at 12%,
+on `--radius-pill`. The fill is ink on the same radius, so both ends are
+round in Rounded and Soft and square under Square, where
+`--radius-pill` is 0, exactly as Meter's are. A meter and a progress bar
+never differ by shape; the parent spec's "the ends of a progress stroke
+take `--radius-dot`" is read as the spinner's stroke caps, whose ends are
+dots. A meter measures against a limit and a progress bar measures work
+getting done, and the role says which.
+
+**The fill.** `span.progress-bar-fill`, absolute inside the track from
+the inline start, `inline-size: var(--progress-bar-value, 0%)`. The
+component writes `--progress-bar-value` on the track's inline `style`, the
+share of the range as a percentage with at most three decimals (Meter's
+rounding), so the stylesheet draws the width and a forced-colors block
+can redraw it. It moves to each new value over 200ms
+(`transition: inline-size 200ms ease`), so a run of small steps reads as
+one movement.
+
+**Indeterminate** (ruling 14). The fill becomes a segment 40% of the
+track wide that slides from wholly before the track's start to wholly
+past its end over 1.6s, ease in and out, forever: `inset-inline-start`
+from `-40%` to `100%` of the track (spec correction 20). 1.6s is the
+skeleton's pulse, so the library's two loading rhythms are one number.
+The track writes no `style` while indeterminate. At rest, with no
+animation running, the segment sits where the slide starts,
+`inset-inline-start: -40%` in its own rule, wholly before the track's
+start (spec correction 21).
+
+**Reduced motion.** The determinate move stops (`transition: none`).
+The slide slows by the spinner's own ratio, 900ms to 2400ms, from 1.6s
+to `calc(1.6s * 8 / 3)`, about 4.3s, and never stops: the spinner's
+rule, "a still spinner reads as finished", holds for a bar, where a
+still segment at 40% reads as 40% done. Playwright's screenshots run
+with animations disabled, which cancels an infinite animation, and a
+reader's stylesheet may set `animation: none`; either way the segment's
+own rule draws it, at the first frame's place before the track's start,
+so the track reads empty, in a baseline and on the reader's screen.
+
+**Right to left.** The fill is placed with logical properties, so it
+grows from the right on a Persian page, and the slide animates the same
+logical inset, so the segment slides from the inline start of the
+direction the track itself resolves to, right to left on a Persian
+page. Whatever set that direction, an rtl ancestor, a nested `dir` of
+the other way or `dir="auto"` reading Persian or Latin, the slide
+follows it; a sign read from an `[dir='rtl']` ancestor would not, and
+`:dir()` is above the Chrome 111 and Safari 16.4 floor (spec correction
+20). An animated inset is laid out on each frame rather than
+composited; for one 8px segment that cost is small.
+
+**The role on the track** (ruling 13). The WAI-ARIA `progressbar`
+pattern by hand in a static module, not React Aria's `ProgressBar`, which
+builds its value text with `Intl`. `progressbar` has presentational
+children, so the role sits on `div.progress-bar-track`, as Meter's sits
+on its bar, and the head beside it is not lost to it. While determinate
+the track carries `aria-valuemin`, `aria-valuemax`, `aria-valuenow`
+clamped to the range, and `aria-valuetext`, which is `valueLabel` or the
+default; while indeterminate it carries none of the four, which is how
+the role says "unknown", and a `valueLabel` shown on purpose
+(`showValueLabel`) describes the track through `aria-describedby`
+instead. A range whose `maxValue` is not above `minValue` draws an empty
+track and reports `minValue` for all three numbers, with no warning,
+since a static part has no effect to warn from. The name is Meter's: a
+non-blank `aria-labelledby`, else a non-blank `aria-label`, else a
+non-blank label, else the value text; while indeterminate there is no
+value text unless one is given, so a bar with nothing else to name it
+takes `aria-label="Loading"`, Spinner's own default (spec correction
+22). A blank `valueLabel` is no value text: the percentage stands while
+determinate. The types ask for a name, and these fallbacks cover the
+blank strings they admit; a label node that renders nothing or an
+`aria-labelledby` that points at nothing is beyond what the bar can
+see. The caller's `aria-describedby` moves to the track. The visible
+value is `aria-hidden`, since the bar reads it. With an `aria-label`
+and `showValueLabel={false}` there is no head at all: the upload row's
+use.
+
+**Never live** (spec 13.2 item 6). No `role="status"` and no
+`aria-live`: a value that changes every 100ms would be read out every
+100ms. The part that owns the work says what matters once, as the upload
+tray's three announcements do, and a screen reader user who moves to the
+bar hears its current value.
+
+**The ASCII default.** The default value text is the percentage written
+with integer arithmetic in ASCII digits,
+`Math.round(((value - min) * 100) / (max - min))` and a `%`, never `Intl`,
+so the server and the browser write the same under any locale. A Persian
+page passes `valueLabel` in its own digits, as it passes every other
+string. `useId` is the module's one hook, so a server component renders
+the bar with no client JavaScript.
+
+**Forced colors.** The fill is a background, which the repaint drops: it
+becomes `canvastext`, and the track takes a 1px `canvastext` outline so
+its end shows, as Meter's do. The indeterminate segment is the same fill.
+
+**Contrast.** The label is ink and the value slate on canvas, lifted and
+float, each gated already as text and cited by the contrast test, not
+added. The track is a mix, so the fill against it is measured and
+recorded, not gated: ink on the track is 12.69 in light and 14.19 in
+dark over canvas, 13.88 and 12.19 over lifted (a Card holding the
+upload list), and 14.34 and 12.19 over float (the tray's surface), each
+past the 3:1 a graphic needs; the track against its surface is 1.28 and
+1.36 on canvas, 1.28 and 1.43 on lifted and 1.29 and 1.43 on float, a
+cue and not a boundary, since the value text carries the extent. So a
+bar with no head needs its value shown in text beside it, as the upload
+row's status line shows "45%" or "1.2 of 4 MB" (spec correction 23).
+Signal orange, clay, error, success, warning and taupe appear nowhere.
+
+**Where the build departs from the plan.** The props table on the docs
+page picks the bar's own props from `ProgressBarProps`, as Meter's page
+does, rather than listing `ProgressBarBaseProps` with every inherited
+DOM attribute. The size limit is 1.5 kB, above the spec's 1 kB budget:
+the entry measured 653 B, and the rule rounds up to 1 kB and adds
+0.5 kB, as Meter's did. The review's fix round (spec corrections 20 to
+23) slides the segment by its logical inset rather than a direction
+property, rests it before the track's start, names an indeterminate bar
+"Loading" when nothing else does, and adds the lifted surface and the
+headless bar's value text; the entry then measures 661 B, inside the
+same limit.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and
+NVDA (owner action 4): the bar read by its name and value when reached,
+and the bar speaking nothing as it moves. A screen reader's own
+progress tones, such as NVDA's beeps for a progress bar that changes,
+are the reader's setting and not a failure.
+
+## FileDropZone
+
+Files dropped on a field or on the whole page: `FileDropZone`, the inline
+field; `PageDropZone`, the overlay that exists only while files are dragged
+over the page; and `FileButton`, the button both rely on for the keyboard
+and for touch. The document has no drop zone of its own, so this one is
+derived from the field parts, the nested-radii table and the float surface
+(documents spec, section 6).
+
+**One check, three ways in** (rulings 1 and 2). A drop, a paste and a
+choice run one function against `acceptedFileTypes`, `maxFileSize`,
+`allowsMultiple` and `maxFiles`, and reach `onFiles(accepted, rejected)`
+once, never with both lists empty. Each file is refused for the first
+reason that holds, in this order: type, empty, size, count, where count
+counts only the files accepted so far, so nine good files are never
+refused for one bad one. A file whose type the browser does not know (an
+empty MIME type, as some systems give a HEIC photo) matches no MIME entry
+and is decided by the extension entries. A dropped folder is refused as
+`'type'`, carried as `new File([], name)`, and never read (spec correction
+16). The check is a courtesy: the docs say the server checks again, since
+a renamed file passes any check by name.
+
+**The box.** `--radius-surface`, 24px: the nested-radii table's "drop
+zone" inside a 40px holder, and a field frame's step. A 2px dashed
+`--color-boundary` edge, the control boundary, measured at 3.38 on canvas
+and 3.45 on lifted in light, 5.34 and 5.21 in dark, each past the 3:1 a
+control's edge needs (gated as the boundary on canvas and lifted; spec
+correction 6 corrects the spec's 3.06 and 3.36). No fill of its own, so it
+takes its holder's. `padding: var(--spacing-peer)`, `min-block-size: 8rem`,
+the content centered: a 24px Lucide `Upload` in slate, `--spacing-part`
+over a line holding the hint at `--text-body` weight 450 in ink and the
+zone's secondary button. The box is a size container
+(`container: file-drop-zone / inline-size`): under 20rem of its own width
+the icon moves beside the line, for a zone in a narrow form column, and
+the line wraps its hint over its button if it must.
+
+**The drop look** (ruling 4). Any drag whose types include `'Files'` is a
+copy and any other is cancelled, whatever the files' types, since Safari
+shows no types during a drag: the zone never claims a refusal it cannot
+see, and the check runs on the drop. While files are over the box its edge
+turns solid ink and it takes the 5% ink wash, the float surface's hover
+wash, inside the same radius, and "Drop to upload" at weight 500 in ink
+replaces the hint. Ink on that wash measures 14.70 in light and 17.41 in
+dark over canvas, 16.11 and 15.25 over lifted, recorded and not gated,
+since the wash is a mix. Never signal orange, which is consent, and never
+link blue.
+
+**Invalid, disabled and touch.** Invalid turns the edge `--color-error`,
+dashed, declared after the drop look so it wins its color, as invalid
+outranks changed on a field; the error line is the field's. Disabled is
+taupe, the edge, the text and the icon, with `cursor: not-allowed`; the
+zone writes `aria-disabled` on its group, so its taupe text reads as an
+inactive control's (spec correction 26). A click anywhere on the box
+opens the picker, as Carbon's drop container and react-dropzone do: the
+click is forwarded to the button's input, so the box adds no tab stop and
+no role, and it takes the pointer cursor of a control, `not-allowed` while
+disabled (spec correction 38). A phone cannot drag a file into a page, so under
+`(hover: none) and (pointer: coarse)` the hint is not drawn and the button
+stays; both strings are in the server's HTML and the media query picks.
+
+**One tab stop** (ruling 3). The zone is a `group` named by its label,
+which is the library's `Label` as a `span`, not `FieldHead`, since the zone
+is no React Aria field and holds no value (spec correction 15). Its one
+stop is the button, described by the description and, while invalid, by
+the status. A paste on the focused button bubbles to the box, whose
+listener runs the same check, so the keyboard adds files where a pointer
+drops them. React Aria's `DropZone` would add a second, hidden stop named
+"DropZone" in English, a tab stop in the server's HTML until hydration;
+the box uses React Aria's `useDrop` with no drop button instead (spec
+correction 5).
+
+**Refusals.** A polite `role="status"` line, mounted empty with the zone
+and clipped while empty, says `labels.rejected(n, formatCount(n),
+rejected)` after a drop, paste or choice with refusals, and the zone is
+invalid until the next. The default is singular for one file and names the
+reason where every refusal shares one, as GOV.UK and Carbon state it: "1
+file was not added: it is too large", "3 files were not added" where the
+reasons differ (spec correction 33). Each round remounts the line, so a second refusal of the same count
+is said again. `errorMessage` replaces the line; `isInvalid` is the app's
+and a clean drop never clears it.
+
+**A missed drop** (ruling 4). While any zone is mounted, one pair of
+document listeners prevents the default of a files `dragover` and `drop`
+that no part took, so a file dropped beside the zone never opens in the
+tab and loses the page, and a held `dragover` sets `dropEffect` to
+`'none'`, so the pointer says nothing drops there. A drop already taken,
+a native file input, and a drag without files are left alone; a text
+field, a text area or editable content is left alone only while the drag
+also holds text or a link for it to insert, since a file alone dropped on
+a form's text field would open in the tab and lose the form, and a
+checkbox, a radio or a range is always held (spec correction 32). A
+disabled zone still holds; the last zone to unmount releases.
+
+**The page overlay.** Fixed, inset `--spacing-inset` from the viewport's
+edges and from the rail's width
+(`calc(var(--app-shell-sidebar, 0px) + var(--spacing-inset))`), so it
+covers the workspace and leaves the rail in view, on the right on a
+Persian page. A 2px dashed ink edge at `--radius-stadium`, the panel step,
+since it is a page-sized object, over the canvas at 92% (`color-mix` on
+the token), so the page shows faintly through. No text sits on that fill:
+over solid ink, slate on it would be 4.11 in light. At its center a float
+card (`--color-float`, the frame edge, `--radius-surface`,
+`--shadow-float`, `padding: var(--spacing-peer) var(--spacing-separate)`)
+holds a 40px `Upload` in ink, the title at `--text-h3` weight 500 and the
+description in slate, 5.49 in light and 6.94 in dark on float (spec
+correction 7). Its layer is `calc(var(--z-chrome) + 1)`: over the tab bar,
+the tray and a save bar, under every modal and the toasts. It fades in
+over 120ms through `@starting-style`, which is above the browser floor and
+simply does not run there, and not at all under reduced motion. It is
+drawn in the closest AppShell, or the body outside one, from a hidden mark
+the zone renders in place while it shows: a fixed element inside an
+ancestor with a `transform`, a `filter`, a `backdrop-filter` (a page
+header's blur) or `contain` is confined to that ancestor's box. The shell
+declares `--app-shell-sidebar`, so the overlay still clears the rail, and
+the overlay copies the mark's theme, shape and density scope and its
+direction (spec correction 34). The docs mount the zone at the page's
+root.
+
+**The overlay's lifetime.** It draws nothing on the server or while idle.
+A set on the document of the elements the drag has entered, as React
+Aria's `useDrop` keeps, shows it on the first `dragenter` holding files
+and hides it when the last `dragleave` empties the set, which survives
+Firefox's leave on every child boundary and Safari's null
+`relatedTarget`. Each enter and leave first forgets the elements no longer
+in the document, since an element removed under the pointer, a toast that
+leaves, never gets its leave and would keep the overlay up after the drag
+had gone (spec correction 31). The listeners are in the capture phase,
+since a drop target on the page, the overlay among them, stops the drag
+events it takes, and the set must see every one (spec correction 25).
+`dragend` hides it at once. A drop hides it only once the drop has been
+dispatched, in a `setTimeout` of 0: a browser runs the microtasks between
+one listener and the next of a real drop, where React commits a state set
+outside its handlers, so a hide in the capture listener took the overlay
+away before its own drop handler ran and the files were lost, which no
+dispatched event could show (spec correction 30). A `pointermove` or
+`pointerdown` that is not a touch, which no engine sends during a native
+drag, hides an overlay whose leave never came. It
+stands down for a drag that holds no files (a row, a tag), while a modal
+is open (`isAnotherModalOpen()` at each enter, spec correction 9), while
+disabled, and for a second page zone, which warns once and stays idle
+until the first unmounts. It is for the pointer and `aria-hidden`; its
+keyboard twin is a `FileButton` beside the page's title. A page with a
+page zone also takes a paste of files anywhere while focus is outside a
+text field, as GitHub and Slack do, through the same check (spec
+correction 39).
+
+**FileButton.** React Aria's `FileTrigger` around the library's `Button`,
+any variant. `capture` takes the HTML attribute's name and is handed to
+`FileTrigger`'s `defaultCamera` (spec correction 1); FileDropZone passes
+its own to its button. On iOS and Android it makes the input the camera's
+only, so a zone given `capture` could no longer choose a PDF on a phone:
+the docs prefer a second FileButton with `capture`, listing an image type,
+beside the zone, and an extension beside each MIME type, since systems
+disagree on types (spec correction 36). React Aria clears the input as the button is
+pressed, so the same file chosen again fires again (spec correction 17).
+
+**Forced colors.** The dashed edges are `canvastext`; a disabled zone's
+edge, text and icon are `graytext`, as its button is; a drop target's
+edge is `highlight` and solid, since the wash is gone, and it wins over
+invalid here, whose error color is gone too (spec correction 35); the overlay's fill is `canvas`
+with no transparency, and its card's edge `canvastext`.
+
+**The spike** (spec correction 24). Before the parts,
+`DropSpike.stories.tsx` proved in Chromium, WebKit and Firefox that a drop
+holding files reaches `useDrop` with no drop button, and `DropZone` with
+its hidden button out of the tab order; that a paste on a focused button
+reaches the box around it with its file; that the document counter comes
+back to zero across child boundaries; that a missed drop's default is
+prevented and a drop into a text field or a file input is not; and that a
+target drawn mid-drag takes the drop that follows, for events a script
+dispatches. A script's `dispatchEvent` runs every listener before any
+microtask, where a real drop runs them between listeners, so the spike
+could not see the page zone hiding its overlay before the overlay's own
+handler ran; a real drop through the DevTools protocol did, and the docs'
+end-to-end run now drops real files on both zones (spec correction 30).
+It found one difference in what
+reaches `onDrop`: React Aria reads a dropped file only through
+`webkitGetAsEntry()`, and Chromium gives a file a script made no entry, so
+React Aria's items hold no file for a synthetic drop there. The library
+reads the native transfer itself, during the drop, so a play's drop and a
+real one take one path, and keeps `useDrop` for the drop look and the
+event plumbing. The plays build their events as each engine takes them: a
+script's transfer allows no operation, and Chromium and WebKit ignore the
+setter, so the plays define `effectAllowed`; Firefox's `ClipboardEvent`
+constructor drops `clipboardData`, so the paste plays define it.
+
+**Where the build departs from the plan** (spec corrections 27 to 29).
+The size limits are above the spec's budgets: `{ FileDropZone, FileButton }` measured 2.23 kB and is set
+at 3 kB, and `{ PageDropZone }` 1.56 kB, set at 2.5 kB, by the repo's
+rule; each carries the check, the transfer reader, the missed-drop hold
+and React Aria's drop hook glue; after the review round they measure 2.61
+kB and 2.17 kB, within those limits. The docs' "Take a photo" button shows
+only on a coarse pointer without hover, through the site's own
+`touch-only` class. The review round's changes, each cited above, are
+spec corrections 30 to 39.
+
+**Screen readers and devices.** Not yet verified (owner action 4): the zone
+read as a group with one button described by its rules, a refusal spoken
+once, the overlay never announced; on a phone, no drag hint, "Take a
+photo" opening the camera, a HEIC photo with an empty type passing by
+`.heic`, and whether iOS hands a HEIC photo over as HEIC or converts it to
+a JPEG; in Safari on macOS, Cmd+V on the zone's button and on a page with
+a page zone; on iPadOS, a file dragged from the Files app onto the zone and
+the overlay.
+
+## UploadTray
+
+Each file from waiting to saved, needs review or failed: `UploadList`, the
+rows, and `UploadTray`, which holds them in a panel that stays across pages.
+The document has no upload part, so this one is derived from the list face's
+item, the float surface and the toasts' column (documents spec, section 7).
+
+**Who holds what** (ruling 5). The app holds the files as controlled `items`,
+sends them, and says each one's status, progress and words; the tray draws
+and announces. The library never reads, sends or sizes a file, and every
+name, reason and progress label is the app's string. The counts reach the
+title and the announcements through `formatCount`.
+
+**Where it lives** (ruling 6). AppShell's `floating` slot, from the app's
+root layout, which a client navigation keeps, so the tray, its scroll and its
+folded state stay while the reader opens the documents it links to. With no
+items it draws only its status host; with the first it draws both faces, and
+a media query shows one.
+
+**One column with the toasts** (ruling 7, spec correction 10). From 768px
+the wide face is fixed in the bottom end corner, `inset-inline-end:
+var(--overlay-inset)` and `width: min(28rem, calc(100vw - 2rem))`, the toast
+region's own two expressions, so the corner is one column whether it holds
+toasts, the tray or both, and stays one if either changes. Both faces carry
+the `overlay` class, as the toast region does, since the overlay inset is
+declared there alone (spec correction 40). The float surface:
+`--color-float`, a 1px `--color-frame` edge, `--radius-surface` (a floating
+surface takes 24px wherever it opens) and `--shadow-float`, at
+`--z-chrome`, with the toasts and every modal above it. It rises 8px and
+fades in over 200ms through `@starting-style`, the toast's rise, which is
+above the browser floor and simply does not run there; it folds with no
+animation, and nothing moves under reduced motion.
+
+**The header.** `padding-block: var(--spacing-part)` and
+`padding-inline: var(--spacing-inset) var(--spacing-part)`, so the title
+lines up with the rows' icons and the two 40px ghost buttons sit a part step
+from the edge. The title is an `h2` at `--text-body` weight 500 in ink with
+tabular figures, "Uploading 2 of 5", counting the running batch's settled
+files and the one in hand, so rows settled before the batch began do not
+swell it, then naming what settled, failures and reviews included, "3
+uploads complete, 1 failed, 1 needs review" (spec corrections 43 and 60).
+While any row has failed, a 20px `CircleX` in error leads the title, hidden
+from assistive technology, since the rows and the announcements say it. The
+app's line under the title is `--text-small` in slate. The fold button's
+name stays "Upload details" and `aria-expanded` says the state, the
+disclosure pattern; its chevron turns 180 degrees while folded. A
+`--color-divider` rule sits under the header while the body shows. The close
+button shows by ruling 11: `onClear` once nothing is in flight, the Cancel
+all question ("Cancel 1 upload?", "Cancel 3 uploads?") while files are
+waiting or uploading, and none without `onCancelAll`, nor while only files
+being read remain, which have reached the server and have no Cancel (spec
+corrections 59 and 61).
+
+**The body.** `max-block-size: min(24rem, 50dvh)`, about five rows, or half
+a short window, scrolling with the library's thin scrollbar colors and
+`overscroll-behavior: contain`, so the page under it does not scroll on.
+
+**The row.** The list face's item: `min-block-size: max(var(--size-target),
+3.5rem)`, `padding: 0.625rem var(--spacing-inset)`, a grid of the 24px
+icon, the text and the buttons (`24px minmax(0, 1fr) auto`) with
+`column-gap: 0.75rem`, and a `--color-divider` rule between rows. The 40px
+ghost buttons pull in 8px at the end, so the row's end padding is the
+icon's. The name is `--text-small` weight 500 in ink, or Link Blue and
+underlined once it links; the status line is `--text-small` weight 450; the
+bar sits `--spacing-part` under it across the text column, with no head, the
+progress label at the status line's end in tabular figures.
+
+| Status | Icon (Lucide) | Word and its color | Bar | Buttons |
+| --- | --- | --- | --- | --- |
+| waiting | `Clock` | "Waiting", slate | none | Remove |
+| uploading | `ArrowUp` | "Uploading", slate, and the progress | determinate, or sliding without `progress` | Cancel |
+| reading | `ScanText` | "Reading", slate | sliding | none |
+| saved | `CircleCheck` | "Saved", success | none | Remove |
+| review | `CircleAlert` | "Needs review", warning, and the reason | none | Remove |
+| failed | `CircleX` | "Failed", error, and the reason | none | Retry, Remove |
+
+The icon takes the word's color. On float, measured with `contrast.js`
+(light, then dark), each gated as text on float: success 7.44 and 6.34,
+warning 6.33 and 8.92, error 7.46 and 5.73, slate 5.49 and 6.94, ink 18.43
+and 17.42, link 5.86 and 5.46. The reason is slate and not the tone: it is a
+sentence the reader has to read. Signal orange and clay never appear in a
+row. A button shows only when its handler is given.
+
+**The name keeps its extension.** Two spans, split at the last dot unless it
+is the first character: the stem ellipsizes (`min-width: 0`) and the
+extension does not (`flex: none`), so a long receipt still says it is a JPG.
+Both are isolated (`unicode-bidi: isolate`), and the name takes its own
+direction (`dir="auto"`), so the extension is at the name's end in either
+direction: at the left of a Persian name, and at the right of a Latin one on
+a Persian page. The full name is the link's or the row's text.
+
+**Focus.** The list and the tray remember the element that holds focus and
+mend focus only once that element has left the page; focus the reader moves
+anywhere else, the body by a press on empty space included, is theirs and is
+never pulled back (spec correction 54). When Remove or Cancel takes a row
+away with focus in it, focus moves before paint to the same button on the
+next row, else the previous one, else the tray's heading or, in a page, the
+list; never the body. When the row stays and only its button leaves, through
+Retry or a status the reader did not change, the row itself takes focus
+(`tabindex="-1"`, an inset ring when the keyboard brought it), never a
+button the reader did not choose (spec correction 57). When the tray leaves
+with focus in it, or after a yes to Cancel all, focus goes to the shell's
+`<main>`, or outside a shell to the first `main` that takes focus (spec
+correction 11); when only a close or clear button leaves with focus on it,
+or after a yes to Cancel all that leaves settled rows, focus goes to what
+stays in that face: the fold button, the sheet's own close or the bar's
+button (spec correction 62).
+
+**The phone's bar** (ruling 8). Under 768px a pill fixed across the bottom,
+`inset-inline: var(--overlay-inset)`, on the float surface at
+`--radius-pill`, `--size-field` tall, 48px, never under the 40px target in
+compact density and never under 44px on a coarse pointer (spec correction
+42), border-box, so its height is the one the page reserves. Its button says
+the title at `--text-small` weight 500, after a 16px error `CircleX` while
+any row has failed, with a 16px `ChevronUp` at the end, and opens a Sheet
+titled by the title, holding the app's line and the list, whose rows run to
+the sheet's sides on the sheet's own padding. A link pressed in the sheet
+closes it as the router navigates. The bar is a region named "Uploads"
+(`labels.region`), since a region named by its button's words would be read
+twice (spec correction 41). A sheet left open while the window widens stays
+open; when it closes there, focus goes to the wide face's fold button, the
+one `matchMedia` read.
+
+**The phone's Clear and Cancel uploads** (spec correction 56; Drive, Dropbox
+and Gmail clear and cancel from their phone faces). The wide close button's
+rule is the sheet's footer: a full-width secondary "Clear" (`labels.clear`)
+calling `onClear` once nothing is in flight, or "Cancel uploads"
+(`labels.cancelAll`) through the same Cancel all question while files are,
+and no footer with neither handler. Once everything has settled and
+`onClear` is given, the bar ends in an X named "Clear", as tall as the bar
+inside its edge and `max(var(--size-field), var(--size-target))` wide, slate
+turning ink, at the pill's end radius less its edge. The sheet's own close
+button is named by `labels.closeSheet` ("Close"), apart from the panel's
+`labels.close`, so an app that names the panel's button for clearing does
+not rename the button that only closes the sheet.
+
+**Room for the bar** (spec correction 55, WCAG 2.4.11). Under 768px, while
+the bar shows, `.app-shell:has(> .upload-tray-bar) .app-shell-workspace`
+pads its end by the shell's reserve, a sticky bar's offset, the bar's
+`max(var(--size-field), var(--size-target))` and the inset, so the page's
+last control scrolls clear of it; and `:root:has(.upload-tray-bar)` declares
+`--upload-tray-reserve` (the bar and the inset) and sets
+`scroll-padding-block-end` to `--toast-offset-block` plus `--save-bar-offset`
+plus that reserve, so a control focused from the keyboard scrolls clear of
+the tab bar, a sticky bar and the tray, in that order. Tokens only, nothing
+measured. A row's own scroll margin under DataTable's bulk bar adds to the
+root's padding. `PhoneKeepsClear` focuses the last control of a long page at
+375 by 812 and checks it above the bar, then scrolls to the end and checks
+again.
+
+**The three announcements** (ruling 10). A polite status host, mounted in
+the server's HTML, clipped as the toasts' host is and kept out of a modal's
+hiding, says: once, `QUIET_MS` after a batch starts, how many files the batch
+holds; rows that turned failed or needs review, gathered by a timer that
+waits `QUIET_MS` after the last such change and counting only those still so
+when it speaks; and once nothing is in flight, `QUIET_MS` after the last row
+settles, a summary of the batch, which drops a pending failure sentence,
+since it says it. A retry before the summary cancels it and the batch runs
+on, with no new start. Statuses on the first render are the baseline. Never a
+percentage, never a row turning saved on its own. Each message is keyed, so
+the same words twice are said twice.
+
+**Leaving the page** (ruling 12). While any file is waiting or uploading
+and `warnsOnUnload` holds, a `beforeunload` listener asks the browser to
+warn, in its own words; a file being read is on the server already and holds
+nothing open (spec correction 61). iOS Safari shows nothing, so the tray on the page is the
+real warning; a client navigation keeps the shell and needs none.
+
+**The bottom edge, the tray's part** (spec 12). Both faces sit at
+`calc(var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) +
+var(--save-bar-offset, 0px))`: above the tab bar's reserve, which the shell
+declares, and above a sticky save bar once one declares its offset. While a
+face draws, a `ResizeObserver` writes the shown face's border-box height
+plus `var(--spacing-inset)` as `--upload-tray-offset` on the root, and
+removes it when the tray draws nothing; the hidden face measures 0. It is
+never in the server's HTML, so no first paint waits on it. `toast.css` adds
+it, with `--save-bar-offset`, to the toast region's bottom, so the toasts
+sit 16px above the tray in the same column.
+
+**Concentric corners** (spec corrections 47 and 58). A rounded part in a
+rounded holder's corner region takes the holder's radius less the gap
+between them, the holder's edge and the smaller real gap, never a copy, and
+is square once the gap reaches the radius: `max(0px, calc(var(--holder-radius)
+- var(--holder-border) - var(--holder-pad)))`. Only parts in a corner region
+take it. The panel (`--radius-surface`, 1px, no padding) and the phone's bar
+(`--radius-pill`, 1px, none) name their corners in those three properties;
+the sheet names none, since it rounds only its top corners, which its header
+holds. The header's trailing button, a part step in from the panel's edge,
+takes the panel's radius less its edge and that step; the fold button beside
+Close is 57px in and keeps its pill. The trailing button of the list's last
+row, and of its first unless the list sits under the panel's header, takes
+the list's radius less its real gap, the row's inline padding less the
+actions' 0.5rem pull-in, 8px, which is smaller than its block gap. The bar's
+button and its clear X take the pill less its edge. The rows' other buttons
+and their bars, 53px and more from every corner, keep their own pill. In
+Rounded: 15px for the header's trailing button and the last row's trailing
+button, 998px for the bar's buttons, 31px for a Card's corner rows (its 40px
+stadium less its edge and the 8px gap); in Soft 3px, 11px and 7px; in Square
+0. A list in no named holder keeps its parts' own pill radius, and an app's
+rounded holder, such as a Card, names its own corner.
+
+**Forced colors.** The panel's and the bar's edges are `canvastext`; the
+icons, the header's and the bar's error icon and the bar's clear X keep their
+shapes in `canvastext`; the words carry the status, as the toasts' titles
+carry their tones. The bar's buttons press as the native `:active` does too,
+`:is(:active, [data-pressed])` (spec correction 63).
+
+**Where the build departs from the plan** (spec corrections 40 to 63). The
+size limits are above the spec's budgets: `{ UploadList }` measured 2.43 kB
+and is set at 3 kB, and `{ UploadTray }` 7.48 kB, set at 8 kB, by the repo's
+rule; after the review round the list measures 2.5 kB under its 3 kB, and the
+tray, which now also carries Button for the sheet's footer, 8.01 kB, so the
+rule sets 9 kB (spec correction 56). The tray carries Sheet, ConfirmDialog
+through `useConfirm`, IconButton, Button and the list with its ProgressBar.
+AppShell measured 934 B with its `floating` slot and keeps 1.5 kB.
+
+**Screen readers and devices.** Not yet verified (owner action 4): the panel
+read as a region named by its title, the fold button's state, each row's
+link, word, reason and buttons, the three announcements and how often; on a
+phone, the bar above the tab bar and above a save bar, its sheet, and the
+sheet closing on a link and on a swipe; `beforeunload`, which iOS Safari does
+not show.
+
+## DatePicker
+
+One day in the text input's pill: `DatePicker`, on React Aria's date
+picker, its one date field typed in the locale's order and its calendar in
+a popover, with the app's single-day presets (documents spec 8, rulings 15
+and 16, section 13.2 item 19). It is DateRangePicker's field with one date,
+so most of this record is that one's, cited rather than repeated.
+
+**The shared frame.** `DateFrame` (`calendar/DateFrame.tsx`) is the frame
+DateRangePicker drew for itself, moved out and given a class: the picker's
+whole group value from React Aria's group context, less its ref and the
+states a plain element does not take, on a plain
+`div.input.<class>` that takes the ref, which React Aria positions the
+popover against. DateRangePicker passes `date-range-control` and DatePicker
+`date-picker-control`; `drawSegment` and `noSegment` moved with it, and
+DateRangePicker's tests pass unchanged. Being `.input`, the frame takes the
+hover, disabled, changed and invalid edges through the field's root; it
+rings only while a segment has keyboard focus, never for the button.
+
+**The frame's size.** `padding-inline: 1.5rem 3rem`, clear of the button,
+and `min-inline-size: 12rem`, so a whole date and the button fit at the
+compact size; the field caps it at `--container-field`. It clips nothing,
+so the button's 40px hit area reaches past it at either density.
+
+**Segments.** `DateInput.date-picker-input`, an `inline-flex` row in
+tabular figures that React Aria isolates. The segment rules are
+`date-range-picker.css`'s `.date-segment`, shared and not repeated: ink,
+an empty one slate labelled or not (spec correction 4, since axe measures
+it as text), taupe while disabled, the focused one the ink fill with
+canvas text on `--radius-micro`.
+
+**The face.** On the server and through hydration the `DateInput`
+renders no segments and `span.date-picker-face`, padded as a segment is,
+shows the app's `valueLabel`, ellipsized on one line, in a frame at its
+final size; React Aria's segments replace it in the next render, and a
+story compares the face's field, frame, button and changed dot with the
+hydrated ones at both densities. The hidden input holds the ISO date in
+both passes, React Aria's: the date field's own, which submits under
+`name`, and an autofill `input[type="date"]` with `form=""`, which never
+submits. The server's HTML is one string under `en-US`, `de-DE` and
+`fa-IR` and in UTC and Asia/Tehran.
+
+**Values.** ISO strings in and out: `value` and `defaultValue` read with
+`parseIso`, one that is not `YYYY-MM-DD` read as none with one warning;
+`onChange` gets the Gregorian ISO date once every segment is typed and
+`null` once every segment is cleared; `validate` gets the ISO date. React
+Aria takes each digit of a year as it is typed, so years 2, 20 and 202
+reach the picker as whole dates first. The picker holds them back (spec
+correction 68): it controls React Aria itself, with the app's value or
+its own, and a day whose Gregorian year has fewer than four digits stays
+in React Aria's field, shown and never sent, nor given to `validate`.
+Every calendar's year passes through such days as it is typed or erased
+(Persian 1, 14 and 140 are 622, 635 and 761), and a Japanese era's year
+of one or two digits is whole at once; a day before the year 1000 cannot
+be entered. Erasing the year to its placeholder, which React Aria tells
+nobody (it keeps the day it held), commits `null`, seen by a watcher
+drawn beside the year segment, so the face empties and the app and the
+hidden input agree; leaving the field with a year cut short commits
+`null` too, and a required field then shows itself invalid, React Aria's
+own check on blur. A new value from the app drops a held day. `today` is the picker's
+`placeholderValue`, which React Aria gives the calendar only while there
+is no value, so the calendar opens on the value's month, else `today`'s.
+
+**The popover** is the range picker's: `isPadded` stepping down to
+`--spacing-inset`, the month's width,
+`calc(7 * var(--size-control) + 2 * var(--spacing-inset) + 2px)`, capped
+at the viewport less 2rem, so one month fits 320px and the calendar stays
+a popover on a phone (ruling 15). It holds React Aria's `Dialog` around a
+bare `Calendar.calendar` that the picker's context fills, with the shared
+`CalendarHeader` and `CalendarDays`.
+
+**Presets.** `CalendarDatePresets`, beside `CalendarPresets`, reads React
+Aria's calendar state: `ToggleButton.calendar-preset`s in a `group` named
+`labels.presets`, pressed for the chosen day, disabled for a day outside
+the props' bounds or one `isDateUnavailable` refuses; a press sets the
+value, which closes the popover through `shouldCloseOnSelect`, and moves
+the view to the day. A preset whose date is not an ISO date warns once and
+is left out. Closing on a day, a preset or Escape gives focus back to what
+opened the calendar, React Aria's.
+
+**Corners** (spec corrections 52, 65 and 66). `date-picker.css` draws no
+corner of its own. The calendar keeps Calendar's shapes, the days'
+circles and the presets' pills, so DatePicker, Calendar and
+DateRangePicker draw one calendar: the days and presets are controls in
+a grid, not surfaces nested in the popover, and a square 7px day in
+Rounded (correction 52's first reading) broke that. The button is the
+shared field button, `.input-button`, as in DateRangePicker and every
+other framed field; the concentric rule reaches it in all of them at
+once, in its own change to `input.css`, never in one field alone.
+
+**In a review grid.** A field per cell, named by `aria-label` or by
+`aria-labelledby` of its column's header and its row's name; compact
+density draws the 36px field; a changed field with no label draws the
+changed dot ("Field parts"). Inside a DataTable cell React Aria's own cell
+took every arrow from its children in its key capture, so DataTable now
+turns the grid's keyboard navigation off while an editable element in a
+cell has focus and back on when focus leaves it (spec correction 48, risk
+R8): the segments' arrows step and move, digits type, J types nothing and
+moves no row, in three engines. Escape gives focus back to the row, the
+grid pattern's way out of editing, and the first Escape with the
+calendar open closes only the calendar; Tab moves field to field, row by
+row, and out of the table after the last. The list face, at a phone's
+width, keeps the segments' keys too (spec corrections 64, 67 and 69;
+"DataTable", "Editors in cells"). The `InTableCell` and `InListItem`
+plays press them in three engines.
+
+**Measured pairs.** Gated: ink on raised, the segments, 18.43 and 15.36;
+slate on raised, the empty segments, 5.49 and 6.44; canvas on ink, the
+focused segment, 16.25 and 19.31; clay on raised, the changed dot, 7.04
+and 6.02. No pair is added to the gate.
+
+**Forced colors.** As DateRangePicker: the focused segment `Highlight`
+with `HighlightText` out of the repaint (shared); disabled segments and
+the face `graytext`; the changed dot `canvastext`.
+
+**Size.** `{ DatePicker }` measures 3.12 kB without React Aria, Lucide and
+`@internationalized/date`, within spec 16's 4 kB budget, which the rule
+keeps as the limit.
+
+**Screen readers and devices.** Not yet verified (owner action 4): the
+segments, the button "Choose date" and the calendar with VoiceOver and
+NVDA, an unlabelled changed field in a grid reading "Changed" after its
+name, and the segments typed with VoiceOver on iOS.
+
+## SaveBar
+
+A sticky footer for a form or a review: `SaveBar`, a sentence about what
+will be saved, the clay Unsaved chip while dirty, a status line said
+politely, a guarded Cancel, the app's secondary actions and a primary
+action whose label the app writes (documents spec 9, rulings 12 and 17 to
+19). The document has no save bar, so this one is derived from DataTable's
+bulk-action bar, the field's Changed chip and the toasts' status host.
+
+**One object with the bulk bar.** The float surface Popover draws:
+`--color-float`, a 1px `--color-frame` edge, `--radius-surface` and
+`--shadow-float`, `padding-block: var(--spacing-part)`, and
+`margin-block-start: var(--spacing-peer)` from what it follows. The source
+app's save bar sat at the lifted level; the library's bars sit at the float
+level because they cross rows and fields as the page scrolls under them,
+where the lift's 4% halo does not part them from what is under.
+
+**The sticky rule** (ruling 17). `position: sticky; inset-block-end:
+calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset));
+z-index: calc(var(--z-header) - 1)`, the bulk bar's three values: the app
+puts it last in the form's holder, so it rides at the viewport's bottom,
+16px above a tab bar's reserve, while the holder is in view, and rests at
+the holder's end, covering nothing that follows. It sticks inside the
+nearest ancestor that scrolls, which in a SidePanel or a Dialog is the body,
+where it belongs (risk R10). It is always drawn (ruling 18): dirty adds the
+chip and the guard, so the page never moves under the reader as they type.
+
+**Corners** (owner rule, 2026-10-17; spec correction 70). The buttons keep
+their own uniform round; the bar holds them clear of its corners instead
+of bending them. The end padding is `max(var(--spacing-part),
+calc(var(--radius-surface) - 1px))`, so the action's gap to the outer
+edge, the edge included, is at least the surface radius: 23px of padding
+in Rounded, 11px in Soft, 8px in Square. Stacked, the last button runs to
+the start side too, so the actions take the start side's shortfall,
+`max(0px, calc(var(--radius-surface) - 1px - var(--spacing-inset)))`,
+7px in Rounded and nothing in Soft and Square. The bulk bar keeps its 8px
+until its own task reaches it.
+
+**Layout** (spec correction 71). The bar is a wrapping flex row and its own
+size container, `save-bar`. The text column, `flex: 1 1 12rem`, holds the
+chip over the sentence, so a dirty one-line bar is no taller than a clean
+one: the chip's 14px and the sentence's 20px fit the 40px control. The
+status follows, then the actions, pushed to the end on whatever line they
+fall. Under 36rem of its own box the actions take a line of their own,
+ended, the action last, so a long label never squeezes the sentence; under
+24rem a column, each button the full width in DOM order with the action at
+the bottom, nearest a phone's thumb, so the visual order never differs
+from the focus order. A label longer than the bar wraps inside its button,
+which grows from 40px (spec correction 72). The widths are the bar's own,
+like the bulk bar's and StatTile's, not tokens.
+
+**Text.** The sentence at `--text-small` weight 450 in ink, two lines at
+most and then an ellipsis, its whole text the group's name. The chip is the
+field's Changed chip unchanged, clay with its clay dot (spec correction 2),
+the one place the bar uses clay, which means exactly unsaved. The status
+at `--text-small`, slate when neutral, `--color-error` with a 16px Lucide
+`CircleAlert` on its first line when `statusTone="error"`, the tone written
+as `data-tone`. The action is primary ink, never signal orange, which is
+consent only; Cancel is tertiary.
+
+**The status** (section 13.2 item 14). A state, not an event: "3 fields
+need attention", "Couldn't save. Try again."; a save that worked is the
+app's success toast, as the Toast record splits events from states. The
+host is a polite `status`, in the server's HTML and clipped while empty,
+so it takes no room. It says each new status, and "Saving" in the status's
+place once the action has been pending for `QUIET_MS`, so a fast save says
+nothing.
+
+**The action and Cancel** (ruling 19). A press calls `onAction`; a returned
+promise holds the action's spinner, `pendingLabel` read with its name, and
+disables Cancel until it settles, and a rejection keeps the bar and reaches
+the page's handlers through `reportError`, as ConfirmDialog's confirm. The
+action is never disabled (section 13.2 item 15): a press the app cannot act
+on is answered with a status. Clean, Cancel calls `onCancel`; dirty, it
+asks "Discard changes?" through the bar's own `useConfirm`, danger-toned,
+"Discard changes" and "Keep editing", which starts on the safe answer and
+gives focus back to Cancel. Focus on Cancel when it is disabled or leaves
+goes to the action, never the body (spec correction 74). Mod+S is not
+taken (section 13.3 item 6). While dirty, `beforeunload` asks the browser
+to warn (ruling 12); a client navigation is not guarded.
+
+**The offset and the scroll padding** (spec corrections 12, 13 and 55).
+While a bar is on the page, `:root:has(.save-bar)` and
+`.app-shell:has(.save-bar)` declare `--save-bar-offset: calc(var(--size-control)
++ 2 * var(--spacing-part) + 2px + var(--spacing-inset))`, the one-line
+bar's height and the inset, which lifts the upload tray and the toasts from
+the server's HTML on; after hydration a `ResizeObserver` writes the bar's
+measured height and the inset inline on the root and on the closest shell,
+so a bar on two lines lifts them by its real height, and both are removed
+when it unmounts. The root's `scroll-padding-block-end` is
+`calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) +
+var(--upload-tray-reserve, 0px))`: the tab bar's height from the toasts'
+copy, since the root cannot read the shell's reserve, the bar, and a
+phone's upload bar above it, in the bottom edge's order. `save-bar.css`
+loads after `upload-tray.css`, so this sum replaces the tray's own.
+
+**Focus not obscured** (WCAG 2.4.11, risk R6, spec correction 73). With
+the bar's own clear removed, Chromium scrolled a field wholly in view under
+the tab bar, the save bar and the phone's upload bar clear of them at 375 by
+812, on Tab and on `focus()`, through the root's padding alone. A bar in a
+box that scrolls is beyond the root's padding, and there Chromium left the
+field 58px under the bar. So in every engine the bar listens for `focusin`
+on its holder and, two frames after the focus, scrolls a control outside
+itself by the least that brings it above the bar, and where the window
+scrolls above the phone's upload bar too, in the control's own scroll port,
+as DataTable clears its rows of its bulk bar; nothing moves when the
+control is clear already. The `FocusClear` and `FocusClearInScroller` plays
+run in Chromium, WebKit and Firefox.
+
+**Measured pairs**, all on float, light then dark, each gated already as
+text: ink, the sentence, 18.43 and 17.42; slate, the status, 5.49 and 6.94;
+clay, the chip and its dot, 7.04 and 6.82; error, the error status and its
+icon, 7.46 and 5.73. No pair is added to the gate.
+
+**Forced colors.** The edge is `canvastext`; the chip and the status keep
+their words, and the error icon its shape.
+
+**Size.** `{ SaveBar }` measures 4.63 kB without React Aria and Lucide,
+above spec 16's 3 kB budget, so the rule sets 5.5 kB (spec correction 75):
+it carries ConfirmDialog through `useConfirm`, 2.99 kB alone, Button,
+FieldChanged and the scroll helpers.
+
+**Screen readers and devices.** Not yet verified (owner action 4): the bar
+read as a group named by its message, its status politely, the discard
+question as an alert dialog, a focused field scrolled clear of the bar on a
+real phone, and `beforeunload`, which iOS Safari does not show.

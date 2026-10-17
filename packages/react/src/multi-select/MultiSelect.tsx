@@ -36,6 +36,7 @@ import {
 import type { PickerLabels } from '../combo-box/ComboBox';
 import { Description } from '../field/Description';
 import { FieldError } from '../field/FieldError';
+import { FieldChangedMark } from '../field/FieldChangedMark';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { Popover, type Placement } from '../popover/Popover';
@@ -155,6 +156,8 @@ interface ControlProps {
   isLabelled: boolean;
   name: TagsName;
   labels: MultiSelectLabels;
+  /** The changed mark of a field with no label, after the field button. */
+  children: ReactNode;
 }
 
 interface DisabledTagsProps {
@@ -221,6 +224,7 @@ function MultiSelectControl({
   isLabelled,
   name,
   labels,
+  children,
 }: ControlProps): ReactElement {
   const group = useSlottedContext(GroupContext);
   // The field label's id, so the tags' grid is named "Selected" and the label. React Aria gives the label
@@ -380,6 +384,7 @@ function MultiSelectControl({
       <Button className="input-button combo-box-button" aria-label={labels.open}>
         <ChevronDown aria-hidden="true" />
       </Button>
+      {children}
     </div>
   );
 }
@@ -450,11 +455,11 @@ export function MultiSelect<T extends object = object>({
 }: MultiSelectProps<T>): ReactElement {
   const isLabelled = present(label);
   const words = { ...DEFAULT_LABELS, ...labels };
-  const { chipId, describedBy } = useChangedDescription({
-    // Only a label row has a chip, so only a labelled field has one to read.
-    isChanged: isChanged && isLabelled,
+  const { chipId, markId, describedBy } = useChangedDescription({
+    isChanged,
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
+    isLabelled,
   });
   return (
     <RACComboBox<T, 'multiple'>
@@ -478,7 +483,9 @@ export function MultiSelect<T extends object = object>({
         isLabelled={isLabelled}
         name={{ labelledBy: props['aria-labelledby'], label: props['aria-label'] }}
         labels={words}
-      />
+      >
+        {isChanged && !isLabelled ? <FieldChangedMark id={markId} label={changedLabel} /> : null}
+      </MultiSelectControl>
       {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
       <MultiSelectPopover<T>

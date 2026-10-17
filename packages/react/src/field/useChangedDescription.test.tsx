@@ -45,6 +45,33 @@ describe('useChangedDescription', () => {
     expect(result.current.chipId).toBe(chipId);
   });
 
+  it.each([
+    { isLabelled: true, isChanged: false, names: 'nothing' },
+    { isLabelled: true, isChanged: true, names: 'the chip' },
+    { isLabelled: false, isChanged: false, names: 'nothing' },
+    { isLabelled: false, isChanged: true, names: 'the mark' },
+  ])(
+    'names $names when labelled is $isLabelled and changed is $isChanged',
+    ({ isLabelled, isChanged, names }) => {
+      const { result } = renderHook(() =>
+        useChangedDescription({ isChanged, isLabelled, describedBy: 'note' }),
+      );
+      const { chipId, markId, describedBy } = result.current;
+      expect(markId).not.toBe(chipId);
+      const expected = { nothing: 'note', 'the chip': `note ${chipId}`, 'the mark': `note ${markId}` }[names];
+      expect(describedBy).toBe(expected);
+    },
+  );
+
+  it('names neither the chip nor the mark while the field is invalid', () => {
+    for (const isLabelled of [true, false]) {
+      const { result } = renderHook(() =>
+        useChangedDescription({ isChanged: true, isInvalid: true, isLabelled, describedBy: 'note' }),
+      );
+      expect(result.current.describedBy, String(isLabelled)).toBe('note');
+    }
+  });
+
   it('gives each field its own chip id', () => {
     const first = renderHook(() => useChangedDescription({ isChanged: true }));
     const second = renderHook(() => useChangedDescription({ isChanged: true }));

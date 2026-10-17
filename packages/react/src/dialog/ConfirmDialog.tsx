@@ -70,8 +70,12 @@ export interface ConfirmDialogInternalProps extends ConfirmDialogProps {
   onUnmount?: () => void;
 }
 
-/** Whether a value is a promise, or anything else with a `then`, such as a promise from another frame. */
-function isThenable(value: unknown): value is PromiseLike<unknown> {
+/**
+ * Whether a value is a promise, or anything else with a `then`, such as a promise from another frame.
+ *
+ * Internal: SaveBar's action reads its result the same way. Not exported from the package.
+ */
+export function isThenable(value: unknown): value is PromiseLike<unknown> {
   return typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function';
 }
 
@@ -79,8 +83,10 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
  * Hands an error to the page as if nothing had caught it, so it reaches the console and the page's `error`
  * listeners. `reportError` does that in every browser the library supports; where it is missing, the error is
  * thrown again from a microtask, where no handler can catch it.
+ *
+ * Internal: SaveBar reports a rejected action the same way. Not exported from the package.
  */
-function report(error: unknown): void {
+export function report(error: unknown): void {
   if (typeof reportError === 'function') reportError(error);
   else
     queueMicrotask(() => {

@@ -778,3 +778,43 @@ describe('NumberField and React Aria', () => {
     },
   );
 });
+
+describe('NumberField, changed with no label', () => {
+  it('marks a changed field with no label, and reads the mark after its name', async () => {
+    const { container, rerender } = render(
+      <NumberField aria-label="Amount, Corner Mart" defaultValue={12} isChanged />,
+    );
+    const field = root(container);
+    expect(field).toHaveAttribute('data-changed');
+    expect(field).toHaveAttribute('data-unlabelled', '');
+    const mark = container.querySelector('.field-changed-mark');
+    expect(mark).toHaveTextContent('Changed');
+    const control = screen.getByRole('textbox', { name: 'Amount, Corner Mart' });
+    // In the control, after the input.
+    expect(mark?.parentElement).toHaveClass('number-field-control');
+    expect(mark?.previousElementSibling).toHaveClass('number-field-input');
+    // React Aria's own descriptions come first, the chosen value or range; the mark's word ends it.
+    expect(control).toHaveAccessibleDescription(/(^| )Changed$/);
+    expect(control.getAttribute('aria-describedby')?.split(' ')).toContain(mark?.id);
+    expect(container.querySelector('.field-changed')).toBeNull();
+    await expectNoA11yViolations(container);
+    // With a label the chip says it, and no mark is drawn.
+    rerender(<NumberField label="Amount" defaultValue={12} isChanged />);
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    expect(container.querySelector('.field-changed')).not.toBeNull();
+    expect(root(container)).not.toHaveAttribute('data-unlabelled');
+  });
+
+  it('drops the mark while invalid', () => {
+    const { container } = render(
+      <NumberField aria-label="Amount, Corner Mart" isChanged isInvalid errorMessage="Enter an amount." />,
+    );
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    // Nothing names a mark that is gone.
+    for (const described of container.querySelectorAll('[aria-describedby]')) {
+      for (const id of described.getAttribute('aria-describedby')?.split(' ') ?? []) {
+        expect(document.getElementById(id), id).not.toBeNull();
+      }
+    }
+  });
+});

@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { icons } from 'lucide-react';
@@ -68,6 +68,21 @@ const paint = (
     const style = getComputedStyle(element, which);
     return { fill: style.backgroundColor, edge: style.borderTopColor, text: style.color };
   }, pseudo ?? null);
+
+/**
+ * A drag holding a PDF entering and moving over `target`, as the pointer brings a file from the desktop. The
+ * transfer is made in the page; a transfer a script makes allows no operation, so it is made to allow every one,
+ * as a drag from another app does (the drop spike's finding).
+ */
+const dragFilesOver = (target: Locator): Promise<void> =>
+  target.evaluate((element) => {
+    const data = new DataTransfer();
+    data.items.add(new File(['%PDF'], 'invoice.pdf', { type: 'application/pdf' }));
+    Object.defineProperty(data, 'effectAllowed', { value: 'all' });
+    for (const type of ['dragenter', 'dragover']) {
+      element.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }));
+    }
+  });
 
 /** The colors the reader's palette gives the system color keywords, read from probes on the open page. */
 const systemColors = (
@@ -541,6 +556,70 @@ test.describe('forced colors', () => {
     expect((await paint(meter.locator('.meter-pace'))).fill).toBe(await systemColor(page, 'Highlight'));
   });
 
+  test('a progress bar keeps its track outline and fill', async ({ page }) => {
+    // The fill is a background, which the repaint would drop: it is drawn in the reader's text color, and the
+    // track is outlined so its end shows, as Meter's are.
+    await visit(page, '/docs/components/progress-bar');
+    const text = await systemColor(page, 'CanvasText');
+    const bar = page
+      .locator('.stage .progress-bar')
+      .filter({ has: page.getByRole('progressbar', { name: 'Uploading invoice.pdf', exact: true }) });
+    await expect(bar).toHaveCount(1);
+    const track = bar.locator('.progress-bar-track');
+    expect(await track.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe('solid');
+    expect(await track.evaluate((element) => getComputedStyle(element).outlineColor)).toBe(text);
+    expect((await paint(bar.locator('.progress-bar-fill'))).fill).toBe(text);
+    // The indeterminate segment too.
+    const segment = page.locator('.stage .progress-bar-track[data-indeterminate] .progress-bar-fill');
+    await expect(segment).toHaveCount(1);
+    expect((await paint(segment)).fill).toBe(text);
+  });
+
+  test('a drop zone keeps its dashed edge and its drop target edge', async ({ page }) => {
+    // The edges are borders, which the repaint keeps in a system color: the dashed edge in the text color, and a
+    // drag holding files over the box in the highlight color, since the 5% wash is gone.
+    await visit(page, '/docs/components/file-drop-zone');
+    const box = page.locator('.stage .file-drop-zone-box').first();
+    const edge = (): Promise<{ style: string; color: string }> =>
+      box.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { style: style.borderTopStyle, color: style.borderTopColor };
+      });
+    expect(await edge()).toEqual({ style: 'dashed', color: await systemColor(page, 'CanvasText') });
+    await dragFilesOver(box);
+    await expect(box).toHaveAttribute('data-drop-target', '');
+    expect(await edge()).toEqual({ style: 'solid', color: await systemColor(page, 'Highlight') });
+    // On an invalid zone too: the error color is gone, so the solid highlight edge is the only sign of the drag.
+    const zone = page.getByRole('group', { name: 'Receipt', exact: true });
+    await zone
+      .locator('input[type="file"]')
+      .setInputFiles({ name: 'blank.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(0) });
+    await expect(zone).toHaveAttribute('data-invalid', '');
+    const invalidBox = zone.locator('.file-drop-zone-box');
+    await dragFilesOver(invalidBox);
+    await expect(invalidBox).toHaveAttribute('data-drop-target', '');
+    expect(
+      await invalidBox.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { style: style.borderTopStyle, color: style.borderTopColor };
+      }),
+    ).toEqual({ style: 'solid', color: await systemColor(page, 'Highlight') });
+  });
+
+  test('a failed row keeps its icon and word', async ({ page }) => {
+    // The tone is a color the repaint drops: the icon keeps its shape in the reader's text color, and the word,
+    // which carries the status, stays.
+    await visit(page, '/docs/components/upload-tray');
+    const text = await systemColor(page, 'CanvasText');
+    const row = page.locator('.stage .upload-row[data-status="failed"]');
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('.upload-row-word')).toHaveText('Failed');
+    await expect(row.locator('.upload-row-word')).toBeVisible();
+    const icon = row.locator('.upload-row-icon svg');
+    await expect(icon).toBeVisible();
+    expect(await icon.evaluate((element) => getComputedStyle(element).color)).toBe(text);
+  });
+
   test('a line chart draws its first line CanvasText, its second GrayText, and its crosshair Highlight', async ({
     page,
   }) => {
@@ -589,6 +668,15 @@ test.describe('forced colors', () => {
       'color',
       grayText,
     );
+  });
+
+  test('the changed dot of a field with no label is CanvasText', async ({ page }) => {
+    // Out of the repaint, so the dot keeps a fill, the reader's text color, and its word stays unseen.
+    await visit(page, '/docs/components/field');
+    const canvasText = await systemColor(page, 'CanvasText');
+    const marks = page.locator('.stage .field-changed-mark');
+    expect(await marks.count()).toBeGreaterThan(0);
+    for (const mark of await marks.all()) await expect(mark).toHaveCSS('background-color', canvasText);
   });
 
   test('the selected tab is Highlight and its changed dot HighlightText', async ({ page }) => {
@@ -931,6 +1019,263 @@ test.describe('forced colors', () => {
   });
 });
 
+// ---- File drop zone -----------------------------------------------------------------------------
+
+test('the date picker example opens on today and closes with focus on its button', async ({ page }) => {
+  await visit(page, '/docs/components/date-picker');
+  const field = page.locator('.stage .date-picker').filter({ hasText: 'Paid on' });
+  const button = field.getByRole('button', { name: /^Choose date/ });
+  await button.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.locator('.calendar-heading')).toHaveText('October 2026');
+  await expect(dialog.locator('.calendar-day-number[data-today]')).toHaveText('16');
+  await expect(dialog.getByRole('button', { name: 'Today', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await dialog.getByRole('button', { name: 'Yesterday', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(button).toBeFocused();
+  await expect(field.locator('.date-segment:not([data-type="literal"])')).toHaveText(['10', '15', '2026']);
+});
+
+// ---- Save bar -------------------------------------------------------------------------------------
+
+test('Cancel on a dirty save bar asks, and Keep editing returns focus to Cancel', async ({ page }) => {
+  await visit(page, '/docs/components/save-bar');
+  const stage = page.locator('.stage').first();
+  const bar = stage.locator('.save-bar');
+  await stage.getByRole('textbox', { name: 'Merchant' }).fill('Corner Mart and Co');
+  await expect(bar.locator('.save-bar-chip')).toHaveText('Unsaved changes');
+  const cancel = bar.getByRole('button', { name: 'Cancel' });
+  await cancel.click();
+  const question = page.getByRole('alertdialog', { name: 'Discard changes?' });
+  await expect(question).toBeVisible();
+  await question.getByRole('button', { name: 'Keep editing' }).click();
+  await expect(question).toBeHidden();
+  await expect(cancel).toBeFocused();
+  await expect(bar.locator('.save-bar-chip')).toHaveText('Unsaved changes');
+});
+
+test('a focused last field scrolls clear of the save bar', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 640 });
+  await visit(page, '/docs/components/save-bar');
+  const stage = page.locator('.stage').first();
+  const bar = stage.locator('.save-bar');
+  const last = stage.locator('input, textarea').last();
+  // The example's top in view, so its bar sticks over the fields under it.
+  await stage.evaluate((element) => {
+    element.scrollIntoView({ block: 'start' });
+  });
+  // The bar is stuck over the last field before it takes focus.
+  const [field, cover] = await Promise.all([last.boundingBox(), bar.boundingBox()]);
+  expect((field?.y ?? 0) + (field?.height ?? 0)).toBeGreaterThan(cover?.y ?? 0);
+  await last.focus();
+  await expect
+    .poll(async () => {
+      const [field, cover] = await Promise.all([last.boundingBox(), bar.boundingBox()]);
+      return (field?.y ?? 0) + (field?.height ?? 0) - (cover?.y ?? 0);
+    })
+    .toBeLessThanOrEqual(0.5);
+});
+
+test('a choice through the receipt field reaches the example and a refusal is said', async ({ page }) => {
+  await visit(page, '/docs/components/file-drop-zone');
+  const zone = page.getByRole('group', { name: 'Receipt', exact: true });
+  const input = zone.locator('input[type="file"]');
+  // The field takes one file: a PDF, then an empty one, which the check refuses.
+  await input.setInputFiles({
+    name: 'invoice.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.7'),
+  });
+  await expect(page.locator('.stage .receipt-added')).toHaveText('Added invoice.pdf');
+  await expect(zone).not.toHaveAttribute('data-invalid');
+  await input.setInputFiles({ name: 'blank.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(0) });
+  await expect(zone.getByRole('status')).toHaveText('1 file was not added: it is empty');
+  await expect(zone).toHaveAttribute('data-invalid', '');
+  await expect(page.locator('.stage .receipt-added')).toHaveText('Added invoice.pdf');
+});
+
+test('the page zone example shows its overlay only while its switch is on', async ({ page }) => {
+  await visit(page, '/docs/components/file-drop-zone');
+  const enter = (): Promise<void> =>
+    page.evaluate(() => {
+      const data = new DataTransfer();
+      data.items.add(new File(['%PDF'], 'invoice.pdf', { type: 'application/pdf' }));
+      document.body.dispatchEvent(
+        new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: data }),
+      );
+    });
+  const leave = (): Promise<void> =>
+    page.evaluate(() => {
+      document.body.dispatchEvent(new DragEvent('dragend', { bubbles: true }));
+    });
+  await enter();
+  await expect(page.locator('.page-drop-zone')).toHaveCount(0);
+  const toggle = page.getByRole('switch', { name: 'Drop anywhere on this page' });
+  await page.locator('.stage .switch-text', { hasText: 'Drop anywhere on this page' }).click();
+  await expect(toggle).toBeChecked();
+  await enter();
+  const overlay = page.locator('.page-drop-zone');
+  await expect(overlay).toHaveCount(1);
+  await expect(overlay).toHaveAttribute('aria-hidden', 'true');
+  await expect(overlay.locator('.page-drop-zone-title')).toHaveText('Drop files to upload');
+  await leave();
+  await expect(overlay).toHaveCount(0);
+  await page.locator('.stage .switch-text', { hasText: 'Drop anywhere on this page' }).click();
+  await expect(toggle).not.toBeChecked();
+  await enter();
+  await expect(page.locator('.page-drop-zone')).toHaveCount(0);
+});
+
+/**
+ * Real files on disk for a real drop, in the test's own output folder: a PDF, an empty PDF, a program and a
+ * folder holding a PDF.
+ */
+const filesOnDisk = (): { pdf: string; blank: string; program: string; folder: string } => {
+  const root = test.info().outputPath('drop');
+  const folder = join(root, 'scans');
+  mkdirSync(folder, { recursive: true });
+  const write = (path: string, text: string): string => {
+    writeFileSync(path, text);
+    return path;
+  };
+  write(join(folder, 'statement.pdf'), '%PDF-1.7\n');
+  return {
+    pdf: write(join(root, 'invoice.pdf'), '%PDF-1.7\n'),
+    blank: write(join(root, 'blank.pdf'), ''),
+    program: write(join(root, 'setup.exe'), 'MZ'),
+    folder,
+  };
+};
+
+/**
+ * A real drag of `files` from outside the window, through Chromium's own drag and drop processing by the
+ * DevTools protocol: it enters at `at`, moves a few pixels and ends with `end`. This is the only harness that
+ * runs the browser's dispatch, which runs the microtasks between one listener and the next as a user's drop
+ * does; an event a script dispatches does not, so a play cannot see a part that hides its drop target in a
+ * listener before the target's own handler (spec correction 30).
+ */
+const realDrag = async (
+  page: Page,
+  at: { x: number; y: number },
+  files: string[],
+  end: 'drop' | 'dragCancel' | null = 'drop',
+): Promise<void> => {
+  const cdp = await page.context().newCDPSession(page);
+  const data = { items: [], files, dragOperationsMask: 1 };
+  const send = (type: string, x: number, y: number): Promise<unknown> =>
+    cdp.send('Input.dispatchDragEvent', { type: type as 'dragEnter', x, y, data });
+  await send('dragEnter', at.x, at.y);
+  for (const step of [1, 2, 3]) await send('dragOver', at.x + step, at.y + step);
+  if (end !== null) await send(end, at.x + 3, at.y + 3);
+  await cdp.detach();
+};
+
+/** The middle of `target` in the viewport, scrolled into view. */
+const middleOf = async (target: Locator): Promise<{ x: number; y: number }> => {
+  await target.scrollIntoViewIfNeeded();
+  const box = await target.boundingBox();
+  if (box === null) throw new Error('Not drawn');
+  return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
+};
+
+test.describe('a real drop', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'The DevTools protocol drives Chromium only.');
+
+  test('on the receipt field adds a PDF, and says why an empty file and a folder were not added', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/file-drop-zone');
+    const url = page.url();
+    const files = filesOnDisk();
+    const zone = page.getByRole('group', { name: 'Receipt', exact: true });
+    const box = zone.locator('.file-drop-zone-box');
+    await realDrag(page, await middleOf(box), [files.pdf], null);
+    await expect(box).toHaveAttribute('data-drop-target', '');
+    await realDrag(page, await middleOf(box), [files.pdf]);
+    await expect(page.locator('.stage .receipt-added')).toHaveText('Added invoice.pdf');
+    await expect(box).not.toHaveAttribute('data-drop-target');
+    await realDrag(page, await middleOf(box), [files.blank]);
+    await expect(zone.getByRole('status')).toHaveText('1 file was not added: it is empty');
+    await realDrag(page, await middleOf(box), [files.folder]);
+    await expect(zone.getByRole('status')).toHaveText('1 file was not added: its type is not accepted');
+    await expect(page.locator('.stage .receipt-added')).toHaveText('Added invoice.pdf');
+    expect(page.url()).toBe(url);
+  });
+
+  test('on the page overlay reaches the example with the accepted and refused files, and the overlay leaves', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/file-drop-zone');
+    const url = page.url();
+    const files = filesOnDisk();
+    await page.locator('.stage .switch-text', { hasText: 'Drop anywhere on this page' }).click();
+    await expect(page.getByRole('switch', { name: 'Drop anywhere on this page' })).toBeChecked();
+    const added = page.locator('.stage .page-zone-added');
+    const at = await middleOf(added);
+    // Over the page: the overlay is drawn under the pointer and takes the drag.
+    await realDrag(page, at, [files.pdf], null);
+    const overlay = page.locator('.page-drop-zone');
+    await expect(overlay).toHaveAttribute('data-drop-target', '');
+    await realDrag(page, at, [files.pdf, files.program, files.folder]);
+    await expect(added).toHaveText('Added invoice.pdf');
+    await expect(page.locator('.stage .page-zone-refused')).toHaveText('Not added: setup.exe, scans');
+    await expect(overlay).toHaveCount(0);
+    expect(page.url()).toBe(url);
+  });
+
+  test('cancelled, as with Escape, leaves no overlay once the pointer moves', async ({ page }) => {
+    await visit(page, '/docs/components/file-drop-zone');
+    const files = filesOnDisk();
+    await page.locator('.stage .switch-text', { hasText: 'Drop anywhere on this page' }).click();
+    const at = await middleOf(page.locator('.stage .page-zone-added'));
+    await realDrag(page, at, [files.pdf], 'dragCancel');
+    await page.mouse.move(at.x + 40, at.y + 40);
+    await expect(page.locator('.page-drop-zone')).toHaveCount(0);
+    // The next drag still shows it, and a drop still lands.
+    await realDrag(page, at, [files.pdf]);
+    await expect(page.locator('.stage .page-zone-added')).toHaveText('Added invoice.pdf');
+    await expect(page.locator('.page-drop-zone')).toHaveCount(0);
+  });
+
+  test('over an element that leaves mid-drag, as a toast does, leaves no overlay stuck', async ({ page }) => {
+    await visit(page, '/docs/components/file-drop-zone');
+    const files = filesOnDisk();
+    await page.locator('.stage .switch-text', { hasText: 'Drop anywhere on this page' }).click();
+    // A toast above the overlay's layer, in the corner, that goes away while the drag is over it.
+    await page.evaluate(() => {
+      const toast = document.createElement('div');
+      toast.id = 'leaving';
+      Object.assign(toast.style, {
+        position: 'fixed',
+        insetBlockEnd: '0',
+        insetInlineEnd: '0',
+        width: '200px',
+        height: '80px',
+        zIndex: '2147483647',
+      });
+      document.body.append(toast);
+    });
+    const corner = await middleOf(page.locator('#leaving'));
+    const cdp = await page.context().newCDPSession(page);
+    const data = { items: [], files: [files.pdf], dragOperationsMask: 1 };
+    const send = (type: string, x: number, y: number): Promise<unknown> =>
+      cdp.send('Input.dispatchDragEvent', { type: type as 'dragEnter', x, y, data });
+    await send('dragEnter', corner.x, corner.y);
+    await send('dragOver', corner.x, corner.y);
+    await expect(page.locator('.page-drop-zone')).toHaveCount(1);
+    await page.evaluate(() => document.getElementById('leaving')?.remove());
+    await send('dragOver', corner.x - 300, corner.y - 200);
+    await send('dragOver', corner.x - 310, corner.y - 210);
+    // Out of the window: the drag's last leave.
+    await send('dragOver', -20, -20);
+    await expect(page.locator('.page-drop-zone')).toHaveCount(0);
+    await cdp.detach();
+  });
+});
+
 // ---- Props tables -------------------------------------------------------------------------------
 
 test('every props table on a component or chart page has a name of its own', async ({ page }) => {
@@ -978,10 +1323,13 @@ const LONG_TARGETS: Record<string, string[]> = {
   // At 320px and 375px the examples draw the list face, whose title and meta line ellipsize on one line; a table
   // cell, in the columns example's frame, does too, so a long payee leaves either face inside 320px.
   'data-table': ['.stage .data-table-cell', '.stage .data-table-item-title', '.stage .data-table-item-meta'],
+  'date-picker': ['.stage .date-picker .field-label'],
   'date-range-picker': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // The title and the line are the app's sentences, and both wrap at any character inside the column.
   'empty-state': ['.stage .empty-state-title', '.stage .empty-state-description'],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
+  // The label and the rules are the app's; the hint and the button are the library's short words.
+  'file-drop-zone': ['.stage .file-drop-zone .field-label', '.stage .file-drop-zone .field-description'],
   // A chip's value stays on one line and ellipsizes past 16rem, so the pill stays inside 320px.
   'filter-chip': ['.stage .filter-chip-value'],
   kbd: ['.stage .kbd'],
@@ -993,12 +1341,16 @@ const LONG_TARGETS: Record<string, string[]> = {
   'number-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // The range is the app's sentence; the page numbers and the step words are the library's and never long.
   pagination: ['.stage .pagination-range'],
+  // The label is the app's sentence, a file name among it, and wraps at any character, as the meter's does.
+  'progress-bar': ['.stage .progress-bar-label'],
   'radio-group': [
     '.stage .field-label',
     '.stage .field-description',
     '.stage .field-error',
     '.stage .radio-text',
   ],
+  // The sentence is the app's, clamped to two lines, and wraps at any character inside them.
+  'save-bar': ['.stage .save-bar-message'],
   'search-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   'segmented-control': ['.stage .field-label', '.stage .segmented-label'],
   // The chosen option's label stays on one line in the trigger and ellipsizes, so it never pushes the page.
@@ -1012,6 +1364,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   'text-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // A numeral is a figure and never wraps (white-space: nowrap), so a web address is not put into one.
   typography: ['.stage .heading', '.stage .copy:not(.copy-numeral, .copy-numeral-sm)', '.stage .eyebrow'],
+  // A file name is the reader's; its stem ellipsizes and its extension stays.
+  'upload-tray': ['.stage .upload-row-stem'],
 };
 
 /** The pages with no text a person writes, each with its reason. A page is in one list or the other. */
@@ -1152,12 +1506,15 @@ const SERVER_RENDERED: Record<string, string[]> = {
     '.stage .data-table-list [role="row"]',
   ],
   // The frame and its button, with the app's valueLabel where the segments go; the calendar waits for a press.
+  'date-picker': ['.stage .date-picker-control', '.stage .date-picker-button'],
   'date-range-picker': ['.stage .date-range-control', '.stage .date-range-button'],
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],
   // A static part: the whole column is in the server's HTML.
   'empty-state': ['.stage .empty-state', '.stage .empty-state-title'],
   field: ['.stage .field-counter', '.stage .field-changed'],
+  // The box with both lines and the zone's button; drag and drop and paste wait for hydration.
+  'file-drop-zone': ['.stage .file-drop-zone-box', '.stage .file-drop-zone button'],
   // The row with its chips, and the Filters button a phone shows; More's panel and the sheet wait for a press.
   'filter-bar': ['.stage .filter-bar-row', '.stage .filter-bar-sheet-button'],
   // The pill and an active chip's summary, from React Aria's hidden pass; the list renders nothing until it opens.
@@ -1179,7 +1536,11 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The row and the current page are in the server's HTML; the shell is a server component.
   pagination: ['.stage .pagination', '.stage .pagination-page[aria-current]'],
   popover: ['.stage .button'],
+  // A static part: the track with its role and values is in the server's HTML.
+  'progress-bar': ['.stage .progress-bar-track[role="progressbar"]'],
   'radio-group': ['.stage .radio-indicator'],
+  // The bar, its sentence and its buttons, and the polite status host, mounted empty before any status.
+  'save-bar': ['.stage .save-bar', '.stage .save-bar-status[role="status"]'],
   'search-field': ['.stage .search-field-input', '.stage .search-field-icon'],
   'segmented-control': ['.stage .segmented-option'],
   // The trigger and the value it shows; the list renders nothing until it opens.
@@ -1205,6 +1566,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The triggers; a tip opens on hover or focus, so none is in the page before a script runs.
   tooltip: ['.stage .icon-button'],
   typography: ['.stage .heading', '.stage .copy', '.stage .copy-numeral', '.stage .eyebrow'],
+  // The list and its rows, links and buttons; the tray itself draws only once an app gives it items.
+  'upload-tray': ['.stage .upload-list', '.stage .upload-row'],
 };
 
 test('every component and chart page is listed as server rendered', () => {

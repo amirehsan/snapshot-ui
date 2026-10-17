@@ -1,0 +1,132 @@
+---
+title: File drop zone
+description: "Files dropped on a field or on the whole page, with a button for the keyboard and for touch, checked against your types and sizes."
+icon: FileUp
+---
+
+<Section>
+
+## A field
+
+`FileDropZone` is a field that takes files: a dashed box to drop them on, a button that opens the file picker, your rules under it, and a line for the files it refused. Drag a file over it and the edge turns solid ink with "Drop to upload"; drop it, choose it, click anywhere on the box, or focus the button and paste it. On a phone, which cannot drag a file into a page, the hint is not drawn and the button stays. For the camera, put a second `FileButton` with `capture` beside the zone, as the "Take a photo" button below does on a touch screen: `capture` on the zone itself makes its only button the camera's on iOS and Android, so a phone could no longer choose a PDF.
+
+<Preview name="file-drop-zone-receipt" />
+
+</Section>
+
+<Section>
+
+## Errors in your words
+
+Every drop, paste and choice runs one check, and `onFiles` gets the files that passed and the ones that did not, each with its reason: `'type'`, `'size'`, `'empty'` or `'count'`. A drop of five with one too large adds four. By default the zone says how many were not added and, when they share one, why: "1 file was not added: it is too large". `labels.rejected` gets the count, the count as `formatCount` writes it and the refusals, to say it in your words; `errorMessage` replaces that line with your own, such as one that names each file in the GOV.UK Design System's words: "The selected file must be smaller than 10 MB".
+
+<Preview name="file-drop-zone-errors" />
+
+</Section>
+
+<Section>
+
+## The whole page
+
+`PageDropZone` takes a drop anywhere on the page. It draws nothing until files are dragged over the window; then an overlay covers the workspace, clear of the rail, and says what a drop does. It also takes a paste of files anywhere on the page while focus is outside a text field, as GitHub and Slack do. The overlay is for the pointer and hidden from assistive technology, so every page zone has a button: put a `FileButton` beside the page's title. Mount the zone at the page's root: it draws its overlay in the AppShell, or the body, so a header's blur or a transform never confines it. Turn the switch on and drag a file from your desktop onto this page, or paste one.
+
+<Preview name="file-drop-zone-page" />
+
+</Section>
+
+<Section>
+
+## A button alone
+
+`FileButton` is React Aria's FileTrigger around the library's Button, with the same check and the same `onFiles`. React Aria clears its input as it is pressed, so choosing the same file again after a failure fires again.
+
+<Preview name="file-button-basic" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+The library never reads or sends a file: `onFiles` gives you `File` objects and the refusals with their reasons, and your app uploads them and tells the upload tray how each is going. The check is a courtesy to the reader. Check every file again on your server, since a renamed file passes any check by its name (OWASP's File Upload Cheat Sheet).
+
+- `acceptedFileTypes` takes what an `<input accept>` takes: MIME types (`'application/pdf'`), wildcards (`'image/*'`) and extensions (`'.heic'`). List an extension beside each MIME type, since systems disagree on types: Windows gives a `.csv` file `application/vnd.ms-excel` where a Mac gives `text/csv`. A browser that does not know a file's type gives it none, as some do for a phone's HEIC photos, and such a file is checked by its extension alone, so list `.heic` where you take photos.
+- `allowsMultiple` takes several files at once, and `maxFiles` caps how many one drop, paste or choice may add; without `allowsMultiple` it is one. Files past the cap are refused as `'count'`.
+- A dropped folder is refused as `'type'`, carried as an empty `File` with the folder's name; its contents are never read.
+- A page has a page zone or inline zones, never both, and one page zone at a time: a second warns in development and stays idle.
+- While a zone is mounted, a file dropped beside it does nothing, rather than open in the tab and leave the page, and the pointer shows that it cannot drop there. That holds on a form's text field too, unless the drag also holds text or a link for the field to insert; an editor that takes files itself is left alone.
+- `capture` is `'environment'` for the back camera and `'user'` for the front. A desktop browser ignores it and opens the file picker. On iOS and Android it makes the button the camera's only, so give it its own `FileButton` beside the one that chooses files, and list an image type, such as `'image/*'` and `'.heic'`.
+- The zone has no `name` and does not submit with a form: the files reach your app through `onFiles` only.
+
+```tsx
+import { FileButton, FileDropZone, PageDropZone } from '@snapshot-ui/react';
+
+<FileDropZone
+  label="Receipts"
+  description="PDF, JPG, PNG or HEIC, up to 10 MB"
+  acceptedFileTypes={['application/pdf', '.pdf', 'image/jpeg', '.jpg', '.jpeg', 'image/png', '.png', '.heic']}
+  maxFileSize={10 * 1024 * 1024}
+  allowsMultiple
+  onFiles={(accepted, rejected) => upload(accepted)}
+/>;
+
+// A whole page: the zone at the page's root, its keyboard twin beside the title.
+function DocumentsPage() {
+  return (
+    <>
+      <header>
+        <h1>Documents</h1>
+        <FileButton allowsMultiple onFiles={(accepted) => upload(accepted)}>
+          Upload
+        </FileButton>
+      </header>
+      <DocumentList />
+      <PageDropZone title="Drop files to upload" allowsMultiple onFiles={(accepted) => upload(accepted)} />
+    </>
+  );
+}
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+FileButton accepts every Button prop but `onPress`.
+
+<PropsTable label="FileDropZone props" path="../../packages/react/src/file-drop-zone/FileDropZone.tsx" type="Pick<FileDropZoneProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isInvalid' | 'isDisabled' | 'acceptedFileTypes' | 'maxFileSize' | 'allowsMultiple' | 'maxFiles' | 'onFiles' | 'capture' | 'formatCount' | 'labels' | 'className'>" />
+
+<PropsTable label="FileButton props" path="../../packages/react/src/file-drop-zone/FileButton.tsx" type="Pick<FileButtonProps, 'children' | 'variant' | 'isDisabled' | 'acceptedFileTypes' | 'maxFileSize' | 'allowsMultiple' | 'maxFiles' | 'onFiles' | 'capture'>" />
+
+<PropsTable label="PageDropZone props" path="../../packages/react/src/file-drop-zone/PageDropZone.tsx" type="PageDropZoneProps" />
+
+<PropsTable label="FileDropZoneLabels" path="../../packages/react/src/file-drop-zone/FileDropZone.tsx" type="FileDropZoneLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The zone is a `group` named by its label, with one tab stop: its button, "Choose files", described by your rules. The button also takes a paste, so a keyboard reader adds files from the clipboard where a pointer drops them. A click anywhere on the box opens the picker too, a larger target for the pointer that adds no tab stop.
+
+- Every drag has a single-pointer twin (WCAG 2.5.7): the zone's button, and a `FileButton` beside every page zone.
+- Refusals are said once, politely, by a status mounted with the zone, and the button is described by them while they show.
+- The page overlay is for the pointer and hidden from assistive technology.
+- A disabled zone says so to assistive technology, and its button opens nothing.
+- In forced colors the dashed edges keep the reader's text color, a disabled zone takes the reader's disabled color, and a drop target's edge turns the highlight color, solid, even on an invalid zone.
+
+<Keys rows={[['Tab', 'To the zone\'s button: one stop.'], ['Enter Space', 'On the button, opens the file picker.'], ['Ctrl+V Cmd+V', 'With focus on the button, adds the clipboard\'s files, as a drop would (the library\'s handler). On a page with a page zone, the same anywhere outside a text field.'], ['Escape', 'During a drag, the browser cancels it and the overlay leaves with the drag, or at the latest when the pointer next moves (the library\'s handler).']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps drop zones in the system.
+
+<Rules dos={['Say the rules in the description: types, size and count.', 'Pair every page zone with a button beside the title.', 'Name each refused file and its reason in your error line.']} donts={['Never hide the button on a desktop.', 'Never draw the drop look in signal orange or link blue.', 'Never put an inline zone under a page zone.']} />
+
+</Section>

@@ -49,11 +49,13 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Command palette](https://snapshotui.com/docs/components/command-palette)
 - [Confirm dialog](https://snapshotui.com/docs/components/confirm-dialog)
 - [Data table](https://snapshotui.com/docs/components/data-table)
+- [Date picker](https://snapshotui.com/docs/components/date-picker)
 - [Date range picker](https://snapshotui.com/docs/components/date-range-picker)
 - [Dialog](https://snapshotui.com/docs/components/dialog)
 - [Drawer](https://snapshotui.com/docs/components/drawer)
 - [Empty state](https://snapshotui.com/docs/components/empty-state)
 - [Field parts](https://snapshotui.com/docs/components/field)
+- [File drop zone](https://snapshotui.com/docs/components/file-drop-zone)
 - [Filter bar](https://snapshotui.com/docs/components/filter-bar)
 - [Filter chip](https://snapshotui.com/docs/components/filter-chip)
 - [Icon button](https://snapshotui.com/docs/components/icon-button)
@@ -65,7 +67,9 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Number field](https://snapshotui.com/docs/components/number-field)
 - [Pagination](https://snapshotui.com/docs/components/pagination)
 - [Popover](https://snapshotui.com/docs/components/popover)
+- [Progress bar](https://snapshotui.com/docs/components/progress-bar)
 - [Radio group](https://snapshotui.com/docs/components/radio-group)
+- [Save bar](https://snapshotui.com/docs/components/save-bar)
 - [Search field](https://snapshotui.com/docs/components/search-field)
 - [Segmented control](https://snapshotui.com/docs/components/segmented-control)
 - [Select](https://snapshotui.com/docs/components/select)
@@ -82,6 +86,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Toast](https://snapshotui.com/docs/components/toast)
 - [Tooltip](https://snapshotui.com/docs/components/tooltip)
 - [Typography](https://snapshotui.com/docs/components/typography)
+- [Upload tray](https://snapshotui.com/docs/components/upload-tray)
 
 ## Links
 

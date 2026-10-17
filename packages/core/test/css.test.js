@@ -225,6 +225,27 @@ describe('src/styles.css', () => {
       previous = at(file);
     }
   });
+
+  it('imports the documents files after the data files, in order', () => {
+    // The progress bar is required; the drop zones, the tray, the date picker, the save bar, the page header and
+    // the trail are checked once they exist, each after the one before.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('side-panel.css')).toBeGreaterThanOrEqual(0);
+    expect(at('progress-bar.css')).toBeGreaterThan(at('side-panel.css'));
+    let previous = at('progress-bar.css');
+    for (const file of [
+      'file-drop-zone.css',
+      'upload-tray.css',
+      'date-picker.css',
+      'save-bar.css',
+      'page-header.css',
+      'breadcrumbs.css',
+    ]) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -612,6 +633,44 @@ describe('src/components/field.css', () => {
     // A chip that cannot wrap is as wide as its text, which one long word can push past the screen.
     expect(chip).not.toContain('nowrap');
   });
+
+  it("draws the changed mark as a 6px clay dot on the frame's first line, its text clipped", () => {
+    const css = closeUp(source());
+    const mark = blockAfter(css, '.field-changed-mark {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset-block-start: calc((var(--size-field) - 0.375rem) / 2);',
+      'inset-inline-end: var(--field-changed-mark-end, 1.5rem);',
+      'inline-size: 0.375rem;',
+      'block-size: 0.375rem;',
+      'border-radius: var(--radius-dot);',
+      // Clay, which means exactly unsaved, never light signal orange, 2.87 on raised in light (spec correction 2).
+      'background-color: var(--color-clay);',
+      'overflow: hidden;',
+      'color: transparent;',
+      'font-size: 0;',
+      'white-space: nowrap;',
+      'pointer-events: none;',
+    ]) {
+      expect(mark, declaration).toContain(declaration);
+    }
+    expect(css).not.toMatch(/--color-signal/);
+    // The box it is placed in: the field's root beside a control that is its own frame, or the frame itself.
+    expect(
+      blockAfter(css, '.field:has(> .field-changed-mark), .input:has(> .field-changed-mark) {'),
+    ).toContain('position: relative;');
+    // Inside a frame drawn with .input the box starts inside the changed edge, 1.5px.
+    expect(blockAfter(css, '.input > .field-changed-mark {')).toContain(
+      'inset-block-start: calc((var(--size-field) - 0.375rem) / 2 - 1.5px);',
+    );
+  });
+
+  it('draws the mark canvastext in forced colors, out of the repaint', () => {
+    const forced = blockAfter(closeUp(source()), '@media (forced-colors: active)');
+    const mark = blockAfter(forced, '.field-changed-mark {');
+    expect(mark).toContain('forced-color-adjust: none;');
+    expect(mark).toContain('background-color: canvastext;');
+  });
 });
 
 describe('src/components/badge.css', () => {
@@ -739,10 +798,19 @@ describe('src/components/textarea.css', () => {
         .map((declaration) => declaration.split(':')[0]?.trim() ?? '')
         .filter(Boolean),
     }));
-  const textarea = () => blocks('src/components/textarea.css');
+  // The box's own rules, without the changed mark's place, which draws another element.
+  const textarea = () =>
+    blocks('src/components/textarea.css').filter(({ selector }) => !selector.includes('field-changed-mark'));
 
   it('is one rule on the input, so it outranks the input without depending on import order', () => {
     expect(textarea().map(({ selector }) => selector)).toEqual(['.input.textarea']);
+  });
+
+  it("places the changed mark on the box's first line, past its padding and its changed edge", () => {
+    const rules = closeUp(stripComments(read('src/components/textarea.css')));
+    expect(blockAfter(rules, '.textarea + .field-changed-mark {')).toContain(
+      'inset-block-start: calc(0.75rem + 1.5px + (var(--text-body) * var(--text-body--line-height) - 0.375rem) / 2);',
+    );
   });
 
   it('overrides only the seven things a multi-line box changes', () => {
@@ -2478,11 +2546,24 @@ describe('src/components/toast.css', () => {
     const region = blockAfter(rules(), '.toast-region {');
     for (const declaration of [
       'position: fixed;',
-      'inset-block-end: calc(var(--overlay-inset) + var(--toast-offset-block, 0px));',
+      'inset-block-end: calc(var(--overlay-inset) + var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) + var(--upload-tray-offset, 0px));',
       'inset-inline-end: var(--overlay-inset);',
       'z-index: var(--z-toast);',
     ]) {
       expect(region, declaration).toContain(declaration);
+    }
+  });
+
+  it('lifts the region above a sticky bar and the upload tray, the top of the bottom edge', () => {
+    // The stack runs from the bottom up: the tab bar, a save bar or bulk-action bar, the tray, the toasts. Each
+    // offset falls back to 0, so a page with none of them keeps the toasts 16px from the bottom.
+    const end = blockAfter(rules(), '.toast-region {').match(/inset-block-end:\s*([^;]+);/)?.[1] ?? '';
+    for (const offset of [
+      'var(--toast-offset-block, 0px)',
+      'var(--save-bar-offset, 0px)',
+      'var(--upload-tray-offset, 0px)',
+    ]) {
+      expect(end, offset).toContain(offset);
     }
   });
 
@@ -2769,7 +2850,7 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter and data files after it', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter, data and documents files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     const tooltip = imported.indexOf('tooltip.css');
@@ -2798,6 +2879,13 @@ describe('src/components/tooltip.css', () => {
         'skeleton.css',
         'data-table.css',
         'side-panel.css',
+        'progress-bar.css',
+        'file-drop-zone.css',
+        'upload-tray.css',
+        'date-picker.css',
+        'save-bar.css',
+        'page-header.css',
+        'breadcrumbs.css',
       ]).toContain(file);
     }
   });
@@ -4540,7 +4628,10 @@ describe('src/components/select.css', () => {
     expect(blockAfter(css, '.select-value-label {')).toContain('text-overflow: ellipsis;');
     // The placeholder is the trigger's visible text, so it is slate, which meets text contrast (open question 3).
     expect(blockAfter(css, '.select-value[data-placeholder] {')).toContain('color: var(--color-slate);');
-    expect(css).not.toContain('data-unlabelled');
+    // Nothing but the changed dot keys on the missing label: the placeholder is slate either way.
+    expect(css.replace(/\.select\[data-changed\]\[data-unlabelled\][^{]*\{[^}]*\}/g, '')).not.toContain(
+      'data-unlabelled',
+    );
   });
 
   it('draws the value and the placeholder of a disabled trigger taupe, the disabled text', () => {
@@ -4657,6 +4748,11 @@ describe('src/components/combo-box.css', () => {
         '.combo-box[data-loading] .combo-box-input',
         '.combo-box-spinner',
         '.combo-box[data-unlabelled]:not([data-disabled]) .combo-box-input::placeholder',
+        // The changed dot of a field with no label: its place, and the text's padding clear of it.
+        '.combo-box[data-changed][data-unlabelled]',
+        '.combo-box[data-changed][data-unlabelled] .combo-box-input',
+        '.combo-box[data-changed][data-unlabelled][data-loading]',
+        '.combo-box[data-changed][data-unlabelled][data-loading] .combo-box-input',
       ].sort(),
     );
     // Only the unlabelled placeholder's color; everything else is input.css's and menu.css's.
@@ -5324,7 +5420,7 @@ describe('src/components/number-field.css', () => {
   const rules = () => closeUp(stripComments(read('src/components/number-field.css')));
   const PRESSED = ".number-field-sign.input-button:is([data-selected], [aria-pressed='true'])";
   const LEAD = 'calc(var(--number-field-lead) + var(--number-field-symbol-start))';
-  const TRAIL = 'calc(var(--number-field-trail) + var(--number-field-symbol-end))';
+  const TRAIL = 'calc(var(--number-field-trail) + var(--number-field-symbol-end) + var(--number-field-mark))';
 
   it('draws the input as a figure: left to right, isolated, tabular', () => {
     const input = blockAfter(rules(), '.number-field-input {');
@@ -5805,7 +5901,10 @@ describe('src/components/date-range-picker.css', () => {
     expect(selectors().filter((selector) => selector.includes('data-placeholder'))).toEqual([
       '.date-segment[data-placeholder]',
     ]);
-    expect(css).not.toContain('data-unlabelled');
+    // Nothing but the changed dot keys on the missing label.
+    expect(
+      css.replace(/\.date-range-picker\[data-changed\]\[data-unlabelled\][^{]*\{[^}]*\}/g, ''),
+    ).not.toContain('data-unlabelled');
   });
 
   it('lets no placeholder rule outrank the focused segment, so a focused empty segment takes the focus colors', () => {
@@ -7578,6 +7677,269 @@ describe('dist/base.css', () => {
   });
 });
 
+describe('src/components/progress-bar.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/progress-bar.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const REDUCED = '@media (prefers-reduced-motion: reduce)';
+  const INDETERMINATE = '.progress-bar-track[data-indeterminate] .progress-bar-fill {';
+
+  it('draws the head as Meter draws its own', () => {
+    const css = rules();
+    const meter = closeUp(stripComments(read('src/components/meter.css')));
+    // The head, the label and the value are Meter's rules under the progress bar's names, declaration for
+    // declaration, so the two read as one object.
+    for (const part of ['head', 'label', 'value']) {
+      expect(blockAfter(css, `.progress-bar-${part} {`), part).toBe(blockAfter(meter, `.meter-${part} {`));
+    }
+    const root = blockAfter(css, '.progress-bar {');
+    for (const declaration of [
+      'display: grid;',
+      'gap: var(--spacing-part);',
+      'min-width: 0;',
+      'font-family: var(--font-sans);',
+      'color: var(--color-ink);',
+      'print-color-adjust: exact;',
+    ]) {
+      expect(root, declaration).toContain(declaration);
+    }
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('draws an 8px frame track at the pill radius and an ink fill at the same radius', () => {
+    const css = rules();
+    const track = blockAfter(css, '.progress-bar-track {');
+    for (const declaration of [
+      'position: relative;',
+      'height: 0.5rem;',
+      'overflow: hidden;',
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-frame);',
+    ]) {
+      expect(track, declaration).toContain(declaration);
+    }
+    const fill = blockAfter(css, '.progress-bar-fill {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset-block: 0;',
+      'inset-inline-start: 0;',
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-ink);',
+    ]) {
+      expect(fill, declaration).toContain(declaration);
+    }
+    // Ink and the frame only: no reserved color means anything here.
+    for (const reserved of [
+      '--color-signal',
+      '--color-clay',
+      '--color-error',
+      '--color-success',
+      '--color-warning',
+      '--color-taupe',
+    ]) {
+      expect(css, reserved).not.toContain(reserved);
+    }
+    expect(css).not.toContain('box-shadow');
+  });
+
+  it('sizes the fill by --progress-bar-value and moves it over 200ms', () => {
+    const fill = blockAfter(rules(), '.progress-bar-fill {');
+    expect(fill).toContain('inline-size: var(--progress-bar-value, 0%);');
+    expect(fill).toContain('transition: inline-size 200ms ease;');
+  });
+
+  it("slides a 40% segment over 1.6s by its logical inset, which follows the track's own direction", () => {
+    const css = rules();
+    const segment = blockAfter(css, INDETERMINATE);
+    expect(segment).toContain('inline-size: 40%;');
+    expect(segment).toContain('transition: none;');
+    expect(segment).toContain('animation: progress-bar-slide 1.6s ease-in-out infinite;');
+    // From wholly before the start to wholly past the end, by the logical inset, so the slide follows the
+    // direction the track resolves to, whatever set it (an rtl ancestor, a nested dir, dir="auto"). No sign
+    // from an ancestor's attribute, and no physical move.
+    const frames = blockAfter(css, '@keyframes progress-bar-slide {');
+    expect(blockAfter(frames, 'from {').trim()).toBe('inset-inline-start: -40%;');
+    expect(blockAfter(frames, 'to {').trim()).toBe('inset-inline-start: 100%;');
+    expect(css).not.toContain('--progress-bar-slide');
+    expect(css).not.toContain("[dir='rtl']");
+    expect(css).not.toMatch(/\btranslate\b|\bleft:|\bright:/);
+    // :dir() is above the browser floor.
+    expect(css).not.toContain(':dir(');
+  });
+
+  it('rests the segment at the first frame, wholly before the start, so a stopped bar reads empty', () => {
+    // With animations off (Playwright's screenshots, a reader's own animation: none) the base rule is what
+    // draws, so it is the first keyframe's position, never the determinate fill's inline start.
+    const css = rules();
+    const segment = blockAfter(css, INDETERMINATE);
+    const frames = blockAfter(css, '@keyframes progress-bar-slide {');
+    expect(segment).toContain('inset-inline-start: -40%;');
+    expect(segment).toContain(blockAfter(frames, 'from {').trim());
+  });
+
+  it('stops the move and slows the slide to 8/3 of 1.6s under reduced motion, never to none', () => {
+    const reduced = blockAfter(rules(), REDUCED);
+    expect(blockAfter(reduced, '.progress-bar-fill {')).toContain('transition: none;');
+    expect(blockAfter(reduced, INDETERMINATE)).toContain('animation-duration: calc(1.6s * 8 / 3);');
+    expect(reduced).not.toMatch(/animation(?:-name)?:\s*none/);
+    expect(reduced).not.toContain('animation-play-state');
+  });
+
+  it('outlines the track and fills with canvastext in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.progress-bar-track {')).toMatch(/outline: 1px solid canvastext;/i);
+    expect(blockAfter(forced, '.progress-bar-fill {')).toMatch(/background-color: canvastext;/i);
+  });
+});
+
+describe('src/components/file-drop-zone.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/file-drop-zone.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const REDUCED = '@media (prefers-reduced-motion: reduce)';
+  const TARGET = '.file-drop-zone-box[data-drop-target] {';
+  const INVALID = '.file-drop-zone[data-invalid] .file-drop-zone-box {';
+
+  it('draws the box at the surface radius with a 2px dashed boundary edge, the peer padding and 8rem tall', () => {
+    const box = blockAfter(rules(), '.file-drop-zone-box {');
+    for (const declaration of [
+      'container: file-drop-zone / inline-size;',
+      'gap: var(--spacing-part);',
+      'min-block-size: 8rem;',
+      'padding: var(--spacing-peer);',
+      'border: 2px dashed var(--color-boundary);',
+      'border-radius: var(--radius-surface);',
+      // A click anywhere on the box opens the picker: the pointer cursor of a control.
+      'cursor: pointer;',
+    ]) {
+      expect(box, declaration).toContain(declaration);
+    }
+    // No fill of its own: it takes its holder's.
+    expect(box).not.toContain('background');
+    const css = rules();
+    expect(blockAfter(css, '.file-drop-zone-icon {')).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, '.file-drop-zone-icon svg {')).toContain('width: 1.5rem;');
+    expect(blockAfter(css, '.file-drop-zone-hint {')).toContain(
+      'font-weight: var(--text-body--font-weight);',
+    );
+    expect(blockAfter(css, '.file-drop-zone-drop {')).toContain('font-weight: 500;');
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('lays the content out as one row under 20rem of its own box', () => {
+    const narrow = blockAfter(rules(), '@container file-drop-zone (width < 20rem) {');
+    expect(blockAfter(narrow, '.file-drop-zone-icon {')).toContain('flex: none;');
+    expect(blockAfter(narrow, '.file-drop-zone-line {')).toContain('flex: 1 1 0;');
+  });
+
+  it('turns the edge solid ink over the 5% ink wash as a drop target, and swaps the hint for the drop line', () => {
+    const css = rules();
+    const target = blockAfter(css, TARGET);
+    expect(target).toContain('border-style: solid;');
+    expect(target).toContain('border-color: var(--color-ink);');
+    expect(target).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
+    expect(blockAfter(css, '.file-drop-zone-box[data-drop-target] .file-drop-zone-hint {')).toContain(
+      'display: none;',
+    );
+    expect(blockAfter(css, '.file-drop-zone-box[data-drop-target] .file-drop-zone-drop {')).toContain(
+      'display: inline;',
+    );
+    // Never signal orange, which is consent, and never link blue.
+    expect(css).not.toContain('--color-signal');
+    expect(css).not.toContain('--color-link');
+  });
+
+  it('draws invalid after the drop target, dashed in the error color, so it wins', () => {
+    const css = rules();
+    expect(css.indexOf(INVALID)).toBeGreaterThan(css.indexOf(TARGET));
+    const invalid = blockAfter(css, INVALID);
+    expect(invalid).toContain('border-style: dashed;');
+    expect(invalid).toContain('border-color: var(--color-error);');
+  });
+
+  it('draws a disabled zone in taupe, edge, text and icon, with the not-allowed cursor', () => {
+    const css = rules();
+    const box = blockAfter(
+      css,
+      ".file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-box {",
+    );
+    expect(box).toContain('border-color: var(--color-taupe);');
+    expect(box).toContain('color: var(--color-taupe);');
+    expect(box).toContain('cursor: not-allowed;');
+    expect(
+      blockAfter(css, ".file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-icon {"),
+    ).toContain('color: var(--color-taupe);');
+  });
+
+  it('draws no hint on a coarse pointer without hover', () => {
+    const touch = blockAfter(rules(), '@media (hover: none) and (pointer: coarse) {');
+    expect(blockAfter(touch, '.file-drop-zone-hint {')).toContain('display: none;');
+    // Only the hint: the button stays.
+    expect(touch).not.toContain('button');
+  });
+
+  it('insets the overlay past the rail, one layer over the chrome, at the stadium radius over the canvas at 92%', () => {
+    const css = rules();
+    const overlay = blockAfter(css, '.page-drop-zone {');
+    for (const declaration of [
+      'position: fixed;',
+      'inset: var(--spacing-inset);',
+      'inset-inline-start: calc(var(--app-shell-sidebar, 0px) + var(--spacing-inset));',
+      'z-index: calc(var(--z-chrome) + 1);',
+      'border: 2px dashed var(--color-ink);',
+      'border-radius: var(--radius-stadium);',
+      'background-color: color-mix(in srgb, var(--color-canvas) 92%, transparent);',
+    ]) {
+      expect(overlay, declaration).toContain(declaration);
+    }
+    const card = blockAfter(css, '.page-drop-zone-card {');
+    for (const declaration of [
+      'padding: var(--spacing-peer) var(--spacing-separate);',
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+    ]) {
+      expect(card, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.page-drop-zone-icon svg {')).toContain('width: 2.5rem;');
+    expect(blockAfter(css, '.page-drop-zone-title {')).toContain('font-size: var(--text-h3);');
+    expect(blockAfter(css, '.page-drop-zone-description {')).toContain('color: var(--color-slate);');
+  });
+
+  it('fades the overlay in over 120ms through @starting-style, and not under reduced motion', () => {
+    const css = rules();
+    expect(blockAfter(css, '.page-drop-zone {')).toContain('transition: opacity 120ms ease;');
+    expect(blockAfter(blockAfter(css, '@starting-style {'), '.page-drop-zone {')).toContain('opacity: 0;');
+    expect(blockAfter(blockAfter(css, REDUCED), '.page-drop-zone {')).toContain('transition: none;');
+  });
+
+  it('draws the dashed edges canvastext, the drop target highlight and the overlay canvas in forced colors', () => {
+    const css = rules();
+    const forced = blockAfter(css, FORCED);
+    expect(blockAfter(forced, '.file-drop-zone-box {')).toMatch(/border-color: canvastext;/i);
+    // The drop target's edge, solid, wins over invalid: as specific as the invalid rule, and after it.
+    const target = '.file-drop-zone .file-drop-zone-box[data-drop-target] {';
+    expect(blockAfter(forced, target)).toMatch(/border-style: solid;/i);
+    expect(blockAfter(forced, target)).toMatch(/border-color: highlight;/i);
+    expect(css.indexOf(target, css.indexOf(FORCED))).toBeGreaterThan(css.indexOf(INVALID));
+    // A disabled zone in the reader's disabled color: the edge, the text and the icon.
+    const disabled = blockAfter(
+      forced,
+      ".file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-box,",
+    );
+    expect(disabled).toMatch(/border-color: graytext;/i);
+    expect(disabled).toMatch(/(^|[^-])color: graytext;/i);
+    expect(forced).toContain(
+      ".file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-icon {",
+    );
+    const overlay = blockAfter(forced, '.page-drop-zone {');
+    expect(overlay).toMatch(/border-color: canvastext;/i);
+    expect(overlay).toMatch(/background-color: canvas;/i);
+    expect(blockAfter(forced, '.page-drop-zone-card {')).toMatch(/border-color: canvastext;/i);
+  });
+});
+
 describe('text on Highlight in forced colors', () => {
   // Inside the forced repaint Chromium draws a backplate in the system's background color behind each run of
   // text, which blanks HighlightText on a Highlight fill. Every part that sets its text that way is drawn out of
@@ -7620,5 +7982,595 @@ describe('text on Highlight in forced colors', () => {
     expect(blockAfter(forced('sidebar.css'), item)).toContain('outline-color: Highlight;');
     const parts = '.filter-chip[data-active]:not([data-disabled]) :where(*) {';
     expect(blockAfter(forced('filter-chip.css'), parts)).toContain('outline-color: HighlightText;');
+  });
+});
+
+describe('src/components/upload-tray.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/upload-tray.css')));
+  const toast = () => closeUp(stripComments(read('src/components/toast.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const REDUCED = '@media (prefers-reduced-motion: reduce)';
+  const BOTTOM =
+    'inset-block-end: calc(var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) + var(--save-bar-offset, 0px));';
+
+  it('lays a row out as the list face item: a 24px icon, the text and the buttons, on a divider', () => {
+    const css = rules();
+    const row = blockAfter(css, '.upload-row {');
+    for (const declaration of [
+      'display: grid;',
+      'grid-template-columns: 24px minmax(0, 1fr) auto;',
+      'column-gap: 0.75rem;',
+      'min-block-size: max(var(--size-target), 3.5rem);',
+      'padding: 0.625rem var(--spacing-inset);',
+    ]) {
+      expect(row, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.upload-row + .upload-row {')).toContain(
+      'border-block-start: 1px solid var(--color-divider);',
+    );
+    expect(blockAfter(css, '.upload-list {')).toContain('list-style: none;');
+    expect(blockAfter(css, '.upload-row-icon svg {')).toContain('width: 1.5rem;');
+  });
+
+  it('sets the name at the small step 500 and the status line at the small step 450, and the bar a part step under it', () => {
+    const css = rules();
+    const name = blockAfter(css, '.upload-row-name {');
+    expect(name).toContain('font-size: var(--text-small);');
+    expect(name).toContain('font-weight: 500;');
+    expect(blockAfter(css, 'span.upload-row-name {')).toContain('color: var(--color-ink);');
+    const status = blockAfter(css, '.upload-row-status {');
+    expect(status).toContain('font-size: var(--text-small);');
+    expect(status).toContain('font-weight: var(--text-small--font-weight);');
+    expect(blockAfter(css, '.upload-row-bar {')).toContain('margin-block-start: var(--spacing-part);');
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('keeps the extension in view: the stem ellipsizes, the extension does not, both isolated', () => {
+    const css = rules();
+    const stem = blockAfter(css, '.upload-row-stem {');
+    expect(stem).toContain('text-overflow: ellipsis;');
+    expect(stem).toContain('min-width: 0;');
+    expect(stem).toContain('unicode-bidi: isolate;');
+    const ext = blockAfter(css, '.upload-row-ext {');
+    expect(ext).toContain('flex: none;');
+    expect(ext).toContain('unicode-bidi: isolate;');
+  });
+
+  it('colors the word and the icon by status, slate in flight, and the reason slate', () => {
+    const css = rules();
+    expect(blockAfter(css, '.upload-row {')).toContain('--upload-row-tone: var(--color-slate);');
+    for (const [status, color] of [
+      ['saved', 'success'],
+      ['review', 'warning'],
+      ['failed', 'error'],
+    ]) {
+      expect(blockAfter(css, `.upload-row[data-status='${status}'] {`), status).toContain(
+        `--upload-row-tone: var(--color-${color});`,
+      );
+    }
+    expect(blockAfter(css, '.upload-row-word {')).toContain('color: var(--upload-row-tone);');
+    expect(blockAfter(css, '.upload-row-icon {')).toContain('color: var(--upload-row-tone);');
+    expect(blockAfter(css, '.upload-row-reason {')).toContain('color: var(--color-slate);');
+    // Reserved colors: no consent and no unsaved work in a row.
+    expect(css).not.toContain('--color-signal');
+    expect(css).not.toContain('--color-clay');
+  });
+
+  it('draws the wide face on the float surface in the toast column, above the bottom reserve, at the chrome layer', () => {
+    const css = rules();
+    const panel = blockAfter(css, '.upload-tray {');
+    for (const declaration of [
+      'position: fixed;',
+      BOTTOM,
+      'z-index: var(--z-chrome);',
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+    ]) {
+      expect(panel, declaration).toContain(declaration);
+    }
+    // The toast region's own width and inline end (spec correction 10), so the corner is one column.
+    const region = blockAfter(toast(), '.toast-region {');
+    for (const declaration of [
+      'width: min(28rem, calc(100vw - 2rem));',
+      'inset-inline-end: var(--overlay-inset);',
+    ]) {
+      expect(panel, declaration).toContain(declaration);
+      expect(region, declaration).toContain(declaration);
+    }
+  });
+
+  it('rules the header off while the body shows, and scrolls the body under a 24rem cap', () => {
+    const css = rules();
+    expect(blockAfter(css, '.upload-tray:not([data-collapsed]) .upload-tray-header {')).toContain(
+      'border-block-end: 1px solid var(--color-divider);',
+    );
+    const title = blockAfter(css, '.upload-tray-title {');
+    expect(title).toContain('font-size: var(--text-body);');
+    expect(title).toContain('font-weight: 500;');
+    expect(title).toContain('font-variant-numeric: tabular-nums;');
+    expect(blockAfter(css, '.upload-tray-description {')).toContain('color: var(--color-slate);');
+    const body = blockAfter(css, '.upload-tray-body {');
+    expect(body).toContain('max-block-size: min(24rem, 50dvh);');
+    expect(body).toContain('overflow-y: auto;');
+    expect(body).toContain('scrollbar-color: var(--color-scrollbar) transparent;');
+    expect(blockAfter(css, '.upload-tray[data-collapsed] .upload-tray-fold svg {')).toContain(
+      'rotate: 180deg;',
+    );
+  });
+
+  it('draws the phone bar as a float pill the field tall, never under the target, nor 44px on a coarse pointer', () => {
+    const css = rules();
+    const bar = blockAfter(css, '.upload-tray-bar {');
+    for (const declaration of [
+      'position: fixed;',
+      'inset-inline: var(--overlay-inset);',
+      BOTTOM,
+      'z-index: var(--z-chrome);',
+      'block-size: var(--size-field);',
+      'min-block-size: var(--size-target);',
+      'border-radius: var(--radius-pill);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+    }
+    expect(blockAfter(blockAfter(css, '@media (pointer: coarse)'), '.upload-tray-bar {')).toContain(
+      'min-block-size: 44px;',
+    );
+    const button = blockAfter(css, '.upload-tray-bar-button {');
+    expect(button).toContain('font-size: var(--text-small);');
+    expect(button).toContain('font-weight: 500;');
+    expect(blockAfter(css, '.upload-tray-bar-icon svg {')).toContain('width: 1rem;');
+    // Hover only where hover exists.
+    const outside = css.replace(/@media \(hover: hover\) \{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '');
+    expect(outside).not.toMatch(/:hover/);
+  });
+
+  it('switches faces at the small breakpoint, written out', async () => {
+    const { tokens } = await import('../dist/tokens.js');
+    const css = rules();
+    const narrow = blockAfter(css, `@media (width < ${tokens.breakpoint.sm.value})`);
+    expect(blockAfter(narrow, '.upload-tray {')).toContain('display: none;');
+    const wide = blockAfter(css, `@media (width >= ${tokens.breakpoint.sm.value})`);
+    expect(blockAfter(wide, '.upload-tray-bar {')).toContain('display: none;');
+    // Every width query is the token.
+    for (const [, width] of css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)) {
+      expect(width).toBe(tokens.breakpoint.sm.value);
+    }
+  });
+
+  it('rises 8px and fades in through @starting-style, and not at all under reduced motion', () => {
+    const css = rules();
+    const start = blockAfter(blockAfter(css, '@starting-style'), '.upload-tray {');
+    expect(start).toContain('opacity: 0;');
+    expect(start).toContain('translate: 0 8px;');
+    expect(blockAfter(css, '.upload-tray {')).toContain(
+      'transition: opacity 200ms ease, translate 200ms ease;',
+    );
+    expect(blockAfter(blockAfter(css, REDUCED), '.upload-tray {')).toContain('transition: none;');
+  });
+
+  it("redraws the edges and the icons in the reader's text color in forced colors", () => {
+    const forced = blockAfter(rules(), FORCED);
+    expect(blockAfter(forced, '.upload-tray, .upload-tray-bar {')).toContain('border-color: canvastext;');
+    expect(blockAfter(forced, '.upload-row-icon, .upload-tray-alert, .upload-tray-bar-clear {')).toContain(
+      'color: canvastext;',
+    );
+  });
+
+  it('names the panel and the bar as holders, from the radius tokens, and not the sheet, whose bottom is square', () => {
+    const css = rules();
+    for (const [holder, radius] of [
+      ['.upload-tray {', 'var(--radius-surface)'],
+      ['.upload-tray-bar {', 'var(--radius-pill)'],
+    ]) {
+      const rule = blockAfter(css, holder);
+      expect(rule, holder).toContain(`--holder-radius: ${radius};`);
+      expect(rule, holder).toContain('--holder-border: 1px;');
+      expect(rule, holder).toContain('--holder-pad: 0px;');
+    }
+    expect(css).not.toContain('.upload-tray-sheet {');
+    expect(css).not.toContain('--radius-stadium');
+  });
+
+  it('draws the parts in a corner region concentric, the holder less the real gap, and leaves the rest their pill', () => {
+    const css = rules();
+    // The list subtracts the holder's edge and padding, and the trailing button its real gap: the row's inline
+    // padding less the actions' 0.5rem pull-in.
+    expect(blockAfter(css, '.upload-list {')).toContain(
+      '--upload-list-radius: max(0px, calc(var(--holder-radius) - var(--holder-border, 0px) - var(--holder-pad, 0px)));',
+    );
+    expect(blockAfter(css, '.upload-row {')).toContain(
+      '--upload-row-radius: max(0px, calc(var(--upload-list-radius) - (var(--spacing-inset) - 0.5rem)));',
+    );
+    expect(blockAfter(css, '.upload-row {')).toContain('padding: 0.625rem var(--spacing-inset);');
+    expect(blockAfter(css, '.upload-row-actions {')).toContain('margin-inline-end: -0.5rem;');
+    // Only the trailing button of the last row, and of the first unless the list sits under the panel's header.
+    expect(
+      blockAfter(
+        css,
+        '.upload-row:last-child .upload-row-actions > .icon-button:last-child, :not(.upload-tray-body) > .upload-list > .upload-row:first-child .upload-row-actions > .icon-button:last-child {',
+      ),
+    ).toContain('border-radius: var(--upload-row-radius, var(--radius-pill));');
+    expect(css).not.toContain('.upload-row :is(.icon-button');
+    // The rows' bars are far from every corner and keep the bar's own pill.
+    expect(css).not.toMatch(/progress-bar-(?:track|fill)/);
+    // The header's trailing button sits its part step in from the panel's edge; the fold beside Close keeps its pill.
+    expect(blockAfter(css, '.upload-tray-header {')).toContain(
+      '--upload-tray-header-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--spacing-part)));',
+    );
+    expect(blockAfter(css, '.upload-tray-header {')).toContain('padding-block: var(--spacing-part);');
+    expect(blockAfter(css, '.upload-tray-header > .icon-button:last-child {')).toContain(
+      'border-radius: var(--upload-tray-header-radius);',
+    );
+    expect(css).not.toContain('.upload-tray-header .icon-button {');
+    // The bar's buttons fill it inside its edge.
+    for (const button of ['.upload-tray-bar-button {', '.upload-tray-bar-clear {']) {
+      expect(blockAfter(css, button), button).toContain(
+        'border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));',
+      );
+    }
+    // No corner copies its holder's.
+    expect(css).not.toMatch(/border-radius:\s*inherit/);
+    const radii = [...css.matchAll(/(?<![\w-])border-radius:\s*([^;]+);/g)].map((match) => match[1]);
+    for (const value of radii.filter(
+      (each) => each !== 'var(--radius-surface)' && each !== 'var(--radius-pill)',
+    )) {
+      expect(value).toMatch(/^(?:max\(0px, calc\(var\(--holder-radius\)|var\(--upload-)/);
+    }
+  });
+
+  it("reserves the phone bar's room under the page and in the root's scroll padding, from tokens, while it shows", async () => {
+    const { tokens } = await import('../dist/tokens.js');
+    const narrow = blockAfter(rules(), `@media (width < ${tokens.breakpoint.sm.value})`);
+    const root = blockAfter(narrow, ':root:has(.upload-tray-bar) {');
+    expect(root).toContain(
+      '--upload-tray-reserve: calc(max(var(--size-field), var(--size-target)) + var(--spacing-inset));',
+    );
+    // In the bottom edge's order: the tab bar's reserve, a sticky bar's offset, then the tray.
+    expect(root).toContain(
+      'scroll-padding-block-end: calc(var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) + var(--upload-tray-reserve));',
+    );
+    expect(blockAfter(narrow, '.app-shell:has(> .upload-tray-bar) .app-shell-workspace {')).toContain(
+      'padding-block-end: calc(var(--app-shell-inset-block-end) + var(--save-bar-offset, 0px) + max(var(--size-field), var(--size-target)) + var(--spacing-inset));',
+    );
+    // Border-box, so the reserve is the bar's whole height.
+    expect(blockAfter(rules(), '.upload-tray-bar {')).toContain('box-sizing: border-box;');
+    // Nothing reserves room on a wide screen, where the panel sits in the corner.
+    expect(blockAfter(rules(), `@media (width >= ${tokens.breakpoint.sm.value})`)).not.toContain('reserve');
+  });
+
+  it("draws the bar's clear X and the sheet's action, and presses as the native :active does too", () => {
+    const css = rules();
+    const clear = blockAfter(css, '.upload-tray-bar-clear {');
+    expect(clear).toContain('inline-size: max(var(--size-field), var(--size-target));');
+    expect(clear).toContain('color: var(--color-slate);');
+    expect(
+      blockAfter(css, ':is(.upload-tray-bar-button, .upload-tray-bar-clear):is(:active, [data-pressed]) {'),
+    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
+    expect(css).not.toMatch(/(?<!:is\(:active, )\[data-pressed\]/);
+    expect(
+      blockAfter(
+        css,
+        ':is(.upload-tray-bar-button, .upload-tray-bar-clear):is(:focus-visible, [data-focus-visible]) {',
+      ),
+    ).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(blockAfter(css, '.upload-tray-sheet-action {')).toContain('inline-size: 100%;');
+  });
+
+  it('leads the title with the error icon while a row has failed, and rings a row that takes focus inside it', () => {
+    const css = rules();
+    expect(blockAfter(css, '.upload-tray-alert {')).toContain('color: var(--color-error);');
+    expect(blockAfter(css, '.upload-row:focus {')).toContain('outline: none;');
+    const ring = blockAfter(css, '.upload-row:is(:focus-visible, [data-focus-visible]) {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: calc(-1 * var(--focus-ring-width));');
+    const forced = blockAfter(css, FORCED);
+    expect(blockAfter(forced, '.upload-row-icon, .upload-tray-alert, .upload-tray-bar-clear {')).toContain(
+      'color: canvastext;',
+    );
+  });
+
+  it('keeps the status host in the page and out of sight', () => {
+    const host = blockAfter(rules(), '.upload-tray-status {');
+    for (const declaration of ['position: absolute;', 'overflow: hidden;', 'clip-path: inset(50%);']) {
+      expect(host, declaration).toContain(declaration);
+    }
+    expect(host).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
+  });
+});
+
+describe('src/components/date-picker.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/date-picker.css')));
+  const RING =
+    '.date-picker-control.input:where(:has(.date-segment:is(:focus-visible, [data-focus-visible])))';
+
+  it("lays the frame out as the range picker's, on .input with one-class rules, never under 12rem", () => {
+    const frame = blockAfter(rules(), '.date-picker-control {');
+    for (const declaration of [
+      'position: relative;',
+      'display: flex;',
+      'align-items: center;',
+      'min-inline-size: 12rem;',
+      'padding-inline: 1.5rem 3rem;',
+      'cursor: text;',
+    ]) {
+      expect(frame, declaration).toContain(declaration);
+    }
+    // The frame clips nothing, so the button's 40px hit area reaches past it at either density.
+    expect(frame).not.toContain('overflow');
+    // The edge, the fill, the height and the states are input.css's.
+    for (const property of ['border', 'background', 'color:', 'height']) {
+      expect(frame, property).not.toContain(property);
+    }
+    const ring = blockAfter(rules(), `${RING} {`);
+    expect(ring).toContain('border: 1.5px solid var(--color-ink);');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+  });
+
+  it("writes no segment rule of its own: date-range-picker.css's are shared", () => {
+    expect(rules()).not.toMatch(/(?:^|[},]\s*)\.date-segment/);
+    expect(rules()).not.toContain('.date-segment[data-placeholder]');
+    const input = blockAfter(rules(), '.date-picker-input {');
+    expect(input).toContain('font-variant-numeric: tabular-nums;');
+    expect(input).toContain('white-space: nowrap;');
+  });
+
+  it('pads the face as a segment, cut short on one line, and draws the disabled segments and face taupe', () => {
+    const face = blockAfter(rules(), '.date-picker-face {');
+    for (const declaration of [
+      'min-inline-size: 0;',
+      'padding-inline: 0.125rem;',
+      'overflow: hidden;',
+      'color: var(--color-ink);',
+      'text-overflow: ellipsis;',
+      'white-space: nowrap;',
+    ]) {
+      expect(face, declaration).toContain(declaration);
+    }
+    expect(
+      blockAfter(rules(), '.date-picker[data-disabled] :is(.date-segment, .date-picker-face) {'),
+    ).toContain('color: var(--color-taupe);');
+  });
+
+  it("sizes the popover as the range picker's: the month's width, padded 16px", () => {
+    const popover = blockAfter(rules(), '.date-picker-popover.popover-padded {');
+    expect(popover).toContain('width: calc(7 * var(--size-control) + 2 * var(--spacing-inset) + 2px);');
+    expect(popover).toContain('padding: var(--spacing-inset);');
+  });
+
+  it("draws no corner of its own: the button is the shared field button and the calendar keeps Calendar's shapes", () => {
+    const css = rules();
+    // The days' circles and the presets' pills are calendar.css's, as in Calendar and DateRangePicker, and the
+    // button's corner is input.css's, as in every framed field.
+    expect(css).not.toContain('border-radius');
+    expect(css).not.toContain('--holder-');
+    expect(css).not.toMatch(/\.date-picker-button\s*\{/);
+    expect(css).not.toMatch(/\.calendar(?:-presets|-preset|-day-number)?\b/);
+  });
+
+  it('draws the disabled segments and face graytext in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(
+      blockAfter(forced, '.date-picker[data-disabled] :is(.date-segment, .date-picker-face) {'),
+    ).toContain('color: graytext;');
+  });
+});
+
+describe('the changed dot, in each framed field', () => {
+  const rules = (file) => closeUp(stripComments(read(`src/components/${file}`)));
+  // A part step before a 36px field button 6px in, and the frame's end padding grown by the dot and a part step.
+  const PAST_BUTTON = 'calc(0.375rem + 2.25rem + var(--spacing-part))';
+  const GROWN = 'calc(3rem + 0.375rem + var(--spacing-part))';
+
+  it("pads a text input and a text area, which are their own frames, clear of the dot at their text's end", () => {
+    // The mark's default place is 1.5rem in, the text's own padding (field.css).
+    const rule = blockAfter(
+      rules('input.css'),
+      '.field[data-changed][data-unlabelled] > :is(input, textarea).input {',
+    );
+    expect(rule).toContain('padding-inline-end: calc(1.5rem + 0.375rem + var(--spacing-part));');
+  });
+
+  it.each([
+    ['combo-box.css', '.combo-box', '.combo-box-input'],
+    ['multi-select.css', '.multi-select', '.multi-select-control'],
+    ['date-range-picker.css', '.date-range-picker', '.date-range-control'],
+    ['date-picker.css', '.date-picker', '.date-picker-control'],
+  ])('%s places the dot before the field button and pads its frame clear of it', (file, field, frame) => {
+    const css = rules(file);
+    expect(blockAfter(css, `${field}[data-changed][data-unlabelled] {`)).toContain(
+      `--field-changed-mark-end: ${PAST_BUTTON};`,
+    );
+    expect(blockAfter(css, `${field}[data-changed][data-unlabelled] ${frame} {`)).toContain(
+      `padding-inline-end: ${GROWN};`,
+    );
+  });
+
+  it.each([
+    ['combo-box.css', '.combo-box', '.combo-box-input'],
+    ['multi-select.css', '.multi-select', '.multi-select-control'],
+  ])('%s moves the dot before the Spinner while options load', (file, field, frame) => {
+    const css = rules(file);
+    expect(blockAfter(css, `${field}[data-changed][data-unlabelled][data-loading] {`)).toContain(
+      '--field-changed-mark-end: 4.5rem;',
+    );
+    expect(blockAfter(css, `${field}[data-changed][data-unlabelled][data-loading] ${frame} {`)).toContain(
+      'padding-inline-end: calc(4.5rem + 0.375rem + var(--spacing-part));',
+    );
+  });
+
+  it('places the dot past the steppers and an end symbol in a number field, and the figure stops short of it', () => {
+    const css = rules('number-field.css');
+    const changed = blockAfter(css, '.number-field[data-changed][data-unlabelled] {');
+    expect(changed).toContain('--number-field-mark: calc(0.375rem + var(--spacing-part));');
+    expect(changed).toContain(
+      '--field-changed-mark-end: calc(var(--number-field-trail) + var(--number-field-symbol-end));',
+    );
+    expect(blockAfter(css, '.number-field {')).toContain('--number-field-mark: 0px;');
+    // At the figure's end in either direction: the trail side of both padding rules adds the mark.
+    const trail =
+      'calc(var(--number-field-trail) + var(--number-field-symbol-end) + var(--number-field-mark))';
+    expect(blockAfter(css, '.number-field-input {')).toContain(trail);
+    expect(blockAfter(css, "[dir='rtl'] .number-field-input {")).toContain(trail);
+  });
+
+  it("places the dot before a select's chevron, which keeps the value clear of it", () => {
+    const css = rules('select.css');
+    expect(blockAfter(css, '.select[data-changed][data-unlabelled] {')).toContain(
+      '--field-changed-mark-end: calc(1rem + 16px + var(--spacing-part));',
+    );
+    expect(blockAfter(css, '.select[data-changed][data-unlabelled] .select-chevron {')).toContain(
+      'margin-inline-start: calc(0.375rem + var(--spacing-part));',
+    );
+  });
+});
+
+describe('src/components/save-bar.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/save-bar.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const OFFSET =
+    '--save-bar-offset: calc(var(--size-control) + 2 * var(--spacing-part) + 2px + var(--spacing-inset));';
+
+  it('draws the bar on the float surface with the frame edge, the surface radius and the float shadow', () => {
+    const bar = blockAfter(outsideForcedColors(rules()), '.save-bar {');
+    for (const declaration of [
+      'border: 1px solid var(--color-frame);',
+      'border-radius: var(--radius-surface);',
+      'background-color: var(--color-float);',
+      'box-shadow: var(--shadow-float);',
+      'color: var(--color-ink);',
+      'padding-block: var(--spacing-part);',
+      'margin-block-start: var(--spacing-peer);',
+      'box-sizing: border-box;',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+    }
+  });
+
+  it("sticks to the bottom above the tab bar reserve, one layer under the header token, as the bulk bar's", () => {
+    const bar = blockAfter(outsideForcedColors(rules()), '.save-bar {');
+    const table = closeUp(stripComments(read('src/components/data-table.css')));
+    const bulk = blockAfter(outsideForcedColors(table), '.data-table-bar {');
+    for (const declaration of [
+      'position: sticky;',
+      'inset-block-end: calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset));',
+      'z-index: calc(var(--z-header) - 1);',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+      expect(bulk, declaration).toContain(declaration);
+    }
+  });
+
+  it("insets the buttons clear of the corner's curve, so a pill keeps its own round (owner rule)", () => {
+    const css = rules();
+    // The end side: at least the surface radius from the outer edge, its 1px edge included, and never under a
+    // part step, so the action at the inline end sits outside the curve in every shape.
+    expect(blockAfter(css, '.save-bar {')).toContain(
+      'padding-inline: var(--spacing-inset) max(var(--spacing-part), calc(var(--radius-surface) - 1px));',
+    );
+    // Stacked, the last button runs to the start side too, which the start padding alone leaves inside the curve.
+    const narrow = blockAfter(css, '@container save-bar (width < 24rem)');
+    expect(blockAfter(narrow, '.save-bar-actions {')).toContain(
+      'margin-inline-start: max(0px, calc(var(--radius-surface) - 1px - var(--spacing-inset)));',
+    );
+    // No button's corner is made to follow the bar's: no radius but the bar's own is written.
+    const radii = [...css.matchAll(/(?<![\w-])border-radius:\s*([^;]+);/g)].map((match) => match[1]);
+    expect(radii).toEqual(['var(--radius-surface)']);
+  });
+
+  it('lays the text, the status and the actions out in one row, the message clamped to two lines', () => {
+    const css = rules();
+    const bar = blockAfter(css, '.save-bar {');
+    for (const declaration of [
+      'container: save-bar / inline-size;',
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'align-items: center;',
+      'gap: var(--spacing-part);',
+    ]) {
+      expect(bar, declaration).toContain(declaration);
+    }
+    const text = blockAfter(css, '.save-bar-text {');
+    expect(text).toContain('flex: 1 1 12rem;');
+    expect(text).toContain('min-width: 0;');
+    const message = blockAfter(css, '.save-bar-message {');
+    for (const declaration of [
+      'display: -webkit-box;',
+      'overflow: hidden;',
+      '-webkit-box-orient: vertical;',
+      '-webkit-line-clamp: 2;',
+      'overflow-wrap: anywhere;',
+      'font-size: var(--text-small);',
+      'font-weight: var(--text-small--font-weight);',
+      'color: var(--color-ink);',
+    ]) {
+      expect(message, declaration).toContain(declaration);
+    }
+    const actions = blockAfter(css, '.save-bar-actions {');
+    expect(actions).toContain('margin-inline-start: auto;');
+    expect(actions).toContain('justify-content: flex-end;');
+    expect(css).not.toMatch(/font-weight:\s*600/);
+  });
+
+  it('puts the actions on a line of their own under 36rem and stacks them full width under 24rem', () => {
+    const css = rules();
+    expect(
+      blockAfter(blockAfter(css, '@container save-bar (width < 36rem)'), '.save-bar-actions {'),
+    ).toContain('flex: 1 1 100%;');
+    const narrow = blockAfter(blockAfter(css, '@container save-bar (width < 24rem)'), '.save-bar-actions {');
+    expect(narrow).toContain('flex-direction: column;');
+    expect(narrow).toContain('align-items: stretch;');
+    // A label longer than the bar wraps inside its button rather than push the page sideways.
+    const button = blockAfter(css, '.save-bar-actions > .button {');
+    expect(button).toContain('white-space: normal;');
+    expect(button).toContain('max-width: 100%;');
+    // Only the two container widths, no viewport query: the bar answers to its own box.
+    expect(
+      [...css.matchAll(/@container save-bar \(width < ([\d.]+rem)\)/g)].map((match) => match[1]),
+    ).toEqual(['36rem', '24rem']);
+    expect(css).not.toMatch(/@media \(width/);
+  });
+
+  it('draws the status slate at the small step, error with its 16px icon, and clips the host while empty', () => {
+    const css = rules();
+    const status = blockAfter(css, '.save-bar-status {');
+    expect(status).toContain('font-size: var(--text-small);');
+    expect(status).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, ".save-bar-status[data-tone='error'] {")).toContain('color: var(--color-error);');
+    const icon = blockAfter(css, '.save-bar-status svg {');
+    expect(icon).toContain('width: 1rem;');
+    expect(icon).toContain('height: 1rem;');
+    const empty = blockAfter(css, '.save-bar-status:empty {');
+    for (const declaration of ['position: absolute;', 'overflow: hidden;', 'clip-path: inset(50%);']) {
+      expect(empty, declaration).toContain(declaration);
+    }
+    expect(empty).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
+  });
+
+  it('declares --save-bar-offset from tokens on the root and the shell while a bar is on the page', () => {
+    expect(blockAfter(rules(), ':root:has(.save-bar), .app-shell:has(.save-bar) {')).toContain(OFFSET);
+  });
+
+  it("pads the root's scroll by the tab bar, the bar and the phone tray's reserve, in the bottom edge's order", () => {
+    expect(blockAfter(rules(), ':root:has(.save-bar) {')).toContain(
+      'scroll-padding-block-end: calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) + var(--upload-tray-reserve, 0px));',
+    );
+  });
+
+  it("loads after upload-tray.css, so the root's scroll padding is the save bar's sum", () => {
+    const entry = read('src/styles.css');
+    expect(entry.indexOf("'./components/save-bar.css'")).toBeGreaterThan(
+      entry.indexOf("'./components/upload-tray.css'"),
+    );
+  });
+
+  it("redraws the edge in the reader's text color in forced colors", () => {
+    expect(blockAfter(blockAfter(rules(), FORCED), '.save-bar {')).toContain('border-color: canvastext;');
   });
 });

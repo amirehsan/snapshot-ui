@@ -1,0 +1,81 @@
+---
+title: Progress bar
+description: "Work getting done: how far an upload has come, or that a reading is under way."
+icon: Loader
+---
+
+<Section>
+
+## Determinate
+
+`value` runs from `minValue` to `maxValue`, 0 to 100 unless you say otherwise, and is clamped to them. The label sits at the start of the head and the value at its end, over an 8px track whose ink fill moves to each new value over 200ms. The value is a whole percentage by default; `valueLabel` puts it in your own words, such as "1.2 of 4 MB", when a percentage says too little.
+
+<Preview name="progress-bar-basic" />
+
+</Section>
+
+<Section>
+
+## Indeterminate
+
+`isIndeterminate` is for work of unknown length, such as reading a document: a segment slides across the track and starts again, and the bar has no value. It shows no value text unless you set `showValueLabel` with a `valueLabel` of your own. When the reader asks for reduced motion the segment slows, and never stops, since a still segment would read as an amount. With animations turned off altogether it rests before the track's start, so the track reads empty. The segment slides from the start of whatever direction the bar's own box reads in, so it follows a nested `dir` or `dir="auto"` as well as the page's.
+
+<Preview name="progress-bar-indeterminate" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+ProgressBar is static. It renders in a server component and ships no client JavaScript. It is never a live region, since a value that changes many times a second would be read out each time: say what matters once in your own status, as the upload tray does, and a screen reader user who reaches the bar hears its current value. The default value text is written in ASCII digits, so a Persian page passes `valueLabel` in its own digits, as it passes every other string. A meter measures against a limit; a progress bar measures work getting done.
+
+A bar with no head needs its value shown in text beside it, such as the upload row's "45%" or "1.2 of 4 MB" in its status line. The track is a faint cue against the surface, not a boundary, so the eye cannot judge how far the fill has come without the words.
+
+```tsx
+import { ProgressBar } from '@snapshot-ui/react';
+
+<ProgressBar label="Uploading invoice.pdf" value={45} />;
+
+// In a row that names the file already: no head, named by aria-label, with the value in the row's own text.
+<ProgressBar aria-label="Uploading invoice.pdf" value={45} showValueLabel={false} />;
+
+// Work of unknown length.
+<ProgressBar label="Reading receipt.jpg" isIndeterminate />;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+ProgressBar accepts every HTML element attribute, on its root. The name (`aria-label` or `aria-labelledby`) and `aria-describedby` go on the track.
+
+<PropsTable label="ProgressBar props" path="../../packages/react/src/progress-bar/ProgressBar.tsx" type="Pick<ProgressBarProps, 'label' | 'aria-label' | 'aria-labelledby' | 'value' | 'minValue' | 'maxValue' | 'isIndeterminate' | 'valueLabel' | 'showValueLabel' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The track is a `role="progressbar"`, named by the label, `aria-label` or `aria-labelledby`; the types ask for one of them. A blank one names nothing, and neither does a blank `valueLabel`: the bar falls back to its value text, and while indeterminate, with no value text, to "Loading", Spinner's own name, which says less than yours. A label that renders nothing, or an `aria-labelledby` that points at nothing, is beyond what the bar can see, so give it a name that says what is being done.
+
+- While determinate it carries `aria-valuemin`, `aria-valuemax`, `aria-valuenow` and `aria-valuetext`, which is `valueLabel` or the percentage. The visible value text is hidden, since the bar reads it.
+- While indeterminate it carries none of the four, which is how the role says the amount is unknown. A `valueLabel` shown on purpose describes the track instead.
+- It is not live: it speaks nothing as it moves. A screen reader's own progress tones, such as NVDA's beeps, are the reader's setting, not the bar speaking.
+- It takes no focus and has no keys.
+- In forced colors the track keeps an outline and the fill is drawn in the reader's text color.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps progress bars in the system.
+
+<Rules dos={['Name what is being done: "Uploading invoice.pdf", not "Progress".', 'Give the value in your own words when a percentage says too little.', 'Say the outcome once, in your own status.', 'Show the value in text beside a bar that has no head.']} donts={['Never announce each step of the bar.', 'Never show a progress bar for a wait shorter than a moment.', 'Never draw it in signal orange, which means consent.']} />
+
+</Section>

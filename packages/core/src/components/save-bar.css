@@ -1,0 +1,153 @@
+/*
+ * SaveBar: a sticky footer for a form or a review, derived in docs/design-system.md ("SaveBar"). One object with
+ * DataTable's bulk-action bar: the float surface, sticky at the viewport's bottom inside its holder, above a tab
+ * bar's reserve, one layer under the header token. The sentence and its chip at the start, the status after it,
+ * the actions at the end; the bar is a size container, so under 36rem of its own box the actions take a line of
+ * their own, and under 24rem each button the full width, stacked in DOM order with the action last.
+ *
+ * The buttons keep their own round. A button in the bar's corner region would sit inside its curve, so the bar
+ * holds them clear of it instead: the end padding is at least the surface radius less the edge, and stacked, the
+ * actions take the same inset from the start side.
+ *
+ * The bottom edge (documents spec 12): while a bar is on the page, the root and the shell declare
+ * --save-bar-offset from the tokens, the one-line bar's height and the inset, which lifts the upload tray and the
+ * toasts; the SaveBar writes its measured height there after hydration. The root's scroll padding keeps a focused
+ * control clear of the tab bar, the bar and a phone's upload bar, in the bottom edge's order, from the server's
+ * HTML on. This file loads after upload-tray.css, whose own scroll padding this one replaces with the full sum.
+ */
+@layer components {
+  .save-bar {
+    container: save-bar / inline-size;
+    position: sticky;
+    inset-block-end: calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset));
+    z-index: calc(var(--z-header) - 1);
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-part);
+    margin-block-start: var(--spacing-peer);
+    padding-block: var(--spacing-part);
+    padding-inline: var(--spacing-inset) max(var(--spacing-part), calc(var(--radius-surface) - 1px));
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-float);
+    box-shadow: var(--shadow-float);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  /* The chip over the sentence, so the bar's height does not change when it comes: 14px and 20px stay inside the
+     control's height. */
+  .save-bar-text {
+    display: flex;
+    flex: 1 1 12rem;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  /* Two lines at most, then an ellipsis; the whole sentence is still the group's name. */
+  .save-bar-message {
+    display: -webkit-box;
+    max-width: 100%;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-ink);
+  }
+
+  .save-bar-status {
+    display: flex;
+    flex: 0 1 auto;
+    gap: 0.375rem;
+    min-width: 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+  }
+
+  .save-bar-status[data-tone='error'] {
+    color: var(--color-error);
+  }
+
+  /* The 16px icon on the first line's middle. */
+  .save-bar-status svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-block-start: calc((1lh - 1rem) / 2);
+  }
+
+  /* Empty, the host stays in the page for a screen reader and takes no room and no gap. */
+  .save-bar-status:empty {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .save-bar-actions {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--spacing-part);
+    min-width: 0;
+    margin-inline-start: auto;
+  }
+
+  /* A label longer than the bar is wide, a long action on a narrow phone, wraps inside its button, which grows from
+     its 40px, rather than push the page sideways. */
+  .save-bar-actions > .button {
+    max-width: 100%;
+    text-align: center;
+    white-space: normal;
+  }
+
+  /* A long action never squeezes the sentence: the actions take their own line, at the end. */
+  @container save-bar (width < 36rem) {
+    .save-bar-actions {
+      flex: 1 1 100%;
+    }
+  }
+
+  /* Each button the full width, the action last, nearest a phone's thumb; the last button runs to the start side
+     too, so the actions keep the corner's radius from it as the end padding does. */
+  @container save-bar (width < 24rem) {
+    .save-bar-actions {
+      flex-direction: column;
+      align-items: stretch;
+      margin-inline-start: max(0px, calc(var(--radius-surface) - 1px - var(--spacing-inset)));
+    }
+  }
+
+  /* The one-line bar's height and the inset: its 40px buttons, two part steps and its 1px edges. */
+  :root:has(.save-bar),
+  .app-shell:has(.save-bar) {
+    --save-bar-offset: calc(var(--size-control) + 2 * var(--spacing-part) + 2px + var(--spacing-inset));
+  }
+
+  /* The root cannot read the shell's reserve, so the tab bar's comes from the toasts' copy (spec correction 12),
+     and a phone's upload bar above the bar adds its own. */
+  :root:has(.save-bar) {
+    scroll-padding-block-end: calc(
+      var(--toast-offset-block, 0px) + var(--save-bar-offset) + var(--upload-tray-reserve, 0px)
+    );
+  }
+
+  /* The edge is redrawn in the reader's color; the chip and the status keep their words. */
+  @media (forced-colors: active) {
+    .save-bar {
+      border-color: canvastext;
+    }
+  }
+}

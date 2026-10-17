@@ -43,6 +43,9 @@ import DataTablePhone from './data-table-phone';
 import DataTableSelection from './data-table-selection';
 import DataTableStates from './data-table-states';
 import DataTableTransactions from './data-table-transactions';
+import DatePickerBasic from './date-picker-basic';
+import DatePickerPresets from './date-picker-presets';
+import DatePickerReviewGrid from './date-picker-review-grid';
 import DateRangePickerBasic from './date-range-picker-basic';
 import DateRangePickerPresets from './date-range-picker-presets';
 import DateRangePickerStates from './date-range-picker-states';
@@ -56,9 +59,14 @@ import DrawerNavigation from './drawer-navigation';
 import EmptyStateBasic from './empty-state-basic';
 import EmptyStateInCard from './empty-state-in-card';
 import EyebrowHeading from './eyebrow-heading';
+import FieldChangedUnlabelled from './field-changed-unlabelled';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
 import FieldStates from './field-states';
+import FileButtonBasic from './file-button-basic';
+import FileDropZoneErrors from './file-drop-zone-errors';
+import FileDropZonePage from './file-drop-zone-page';
+import FileDropZoneReceipt from './file-drop-zone-receipt';
 import FilterBarBasic from './filter-bar-basic';
 import FilterBarUrl from './filter-bar-url';
 import FilterBarWrapped from './filter-bar-wrapped';
@@ -101,10 +109,14 @@ import PaginationPersian from './pagination-persian';
 import PaginationSiblings from './pagination-siblings';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
+import ProgressBarBasic from './progress-bar-basic';
+import ProgressBarIndeterminate from './progress-bar-indeterminate';
 import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
 import RadioGroupValidation from './radio-group-validation';
+import SaveBarForm from './save-bar-form';
+import SaveBarInSidePanel from './save-bar-in-side-panel';
 import SearchFieldBasic from './search-field-basic';
 import SearchFieldStates from './search-field-states';
 import SearchFieldToolbar from './search-field-toolbar';
@@ -153,6 +165,7 @@ import ToastAction from './toast-action';
 import ToastBasic from './toast-basic';
 import TooltipBasic from './tooltip-basic';
 import TooltipShortcut from './tooltip-shortcut';
+import UploadListStatuses from './upload-list-statuses';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
@@ -200,6 +213,9 @@ export const examples = {
   'data-table-selection': DataTableSelection,
   'data-table-states': DataTableStates,
   'data-table-transactions': DataTableTransactions,
+  'date-picker-basic': DatePickerBasic,
+  'date-picker-presets': DatePickerPresets,
+  'date-picker-review-grid': DatePickerReviewGrid,
   'date-range-picker-basic': DateRangePickerBasic,
   'date-range-picker-presets': DateRangePickerPresets,
   'date-range-picker-states': DateRangePickerStates,
@@ -213,9 +229,14 @@ export const examples = {
   'empty-state-basic': EmptyStateBasic,
   'empty-state-in-card': EmptyStateInCard,
   'eyebrow-heading': EyebrowHeading,
+  'field-changed-unlabelled': FieldChangedUnlabelled,
   'field-counter': LengthCounter,
   'field-parts': FieldParts,
   'field-states': FieldStates,
+  'file-button-basic': FileButtonBasic,
+  'file-drop-zone-errors': FileDropZoneErrors,
+  'file-drop-zone-page': FileDropZonePage,
+  'file-drop-zone-receipt': FileDropZoneReceipt,
   'filter-bar-basic': FilterBarBasic,
   'filter-bar-url': FilterBarUrl,
   'filter-bar-wrapped': FilterBarWrapped,
@@ -258,10 +279,14 @@ export const examples = {
   'pagination-siblings': PaginationSiblings,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
+  'progress-bar-basic': ProgressBarBasic,
+  'progress-bar-indeterminate': ProgressBarIndeterminate,
   'radio-group-basic': RadioGroupBasic,
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,
   'radio-group-validation': RadioGroupValidation,
+  'save-bar-form': SaveBarForm,
+  'save-bar-in-side-panel': SaveBarInSidePanel,
   'search-field-basic': SearchFieldBasic,
   'search-field-states': SearchFieldStates,
   'search-field-toolbar': SearchFieldToolbar,
@@ -310,6 +335,7 @@ export const examples = {
   'toast-basic': ToastBasic,
   'tooltip-basic': TooltipBasic,
   'tooltip-shortcut': TooltipShortcut,
+  'upload-list-statuses': UploadListStatuses,
 } satisfies Record<string, ComponentType>;
 
 export type ExampleName = keyof typeof examples;

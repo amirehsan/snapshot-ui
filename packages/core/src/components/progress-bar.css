@@ -1,0 +1,105 @@
+/*
+ * ProgressBar: work getting done, derived in docs/design-system.md ("ProgressBar"). One object with Meter: the
+ * head is Meter's row, the label at the small step at 500 in ink and the value slate in tabular figures at the
+ * line's end; the track is Meter's 8px of the frame color at the pill radius, square under Square; the fill is
+ * ink at the same radius, moving to a new value over 200ms. Indeterminate, a 40% segment slides from the inline
+ * start to the end over 1.6s, the skeleton's rhythm; under reduced motion the determinate move stops and the
+ * slide slows by the spinner's ratio, 900ms to 2400ms, and never stops, since a still segment reads as an amount.
+ * The slide animates the logical inset, so it runs from the track's own inline start whatever set its direction
+ * (an rtl ancestor, a nested dir, dir="auto"), and the segment rests wholly before the start when animations are
+ * off, so a stopped bar reads empty, never 40% done.
+ */
+@layer components {
+  .progress-bar {
+    display: grid;
+    gap: var(--spacing-part);
+    min-width: 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .progress-bar-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--spacing-part);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    overflow-wrap: anywhere;
+  }
+
+  .progress-bar-label {
+    min-width: 0;
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+
+  .progress-bar-value {
+    min-width: 0;
+    margin-inline-start: auto;
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-slate);
+  }
+
+  .progress-bar-track {
+    position: relative;
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-frame);
+  }
+
+  .progress-bar-fill {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: var(--progress-bar-value, 0%);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-ink);
+    transition: inline-size 200ms ease;
+  }
+
+  /* At rest the segment sits where the slide starts, wholly before the track's start, so with animations off the
+     track reads empty. */
+  .progress-bar-track[data-indeterminate] .progress-bar-fill {
+    inset-inline-start: -40%;
+    inline-size: 40%;
+    transition: none;
+    animation: progress-bar-slide 1.6s ease-in-out infinite;
+  }
+
+  /* From wholly before the track's start to wholly past its end, by the logical inset, which follows the track's
+     own direction: the segment is 40% of the track. */
+  @keyframes progress-bar-slide {
+    from {
+      inset-inline-start: -40%;
+    }
+
+    to {
+      inset-inline-start: 100%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .progress-bar-fill {
+      transition: none;
+    }
+
+    .progress-bar-track[data-indeterminate] .progress-bar-fill {
+      animation-duration: calc(1.6s * 8 / 3);
+    }
+  }
+
+  @media (forced-colors: active) {
+    .progress-bar-track {
+      outline: 1px solid canvastext;
+    }
+
+    .progress-bar-fill {
+      background-color: canvastext;
+    }
+  }
+}

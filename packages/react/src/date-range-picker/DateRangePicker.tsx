@@ -16,13 +16,9 @@ import {
   DateFieldContext,
   DateInput,
   DateRangePicker as RACDateRangePicker,
-  DateSegment,
   Dialog,
-  GroupContext,
   RangeCalendar as RACRangeCalendar,
   composeRenderProps,
-  useSlottedContext,
-  type DateInputProps,
   type DateRangePickerProps as RACDateRangePickerProps,
   type DateRangePickerRenderProps,
   type ValidationResult,
@@ -36,9 +32,11 @@ import {
   type DateRange,
   type DateRangePreset,
 } from '../calendar/CalendarParts';
+import { DateFrame, drawSegment, noSegment } from '../calendar/DateFrame';
 import { parseIsoRange, toIso } from '../calendar/iso';
 import { Description } from '../field/Description';
 import { FieldError } from '../field/FieldError';
+import { FieldChangedMark } from '../field/FieldChangedMark';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { Popover, type Placement } from '../popover/Popover';
@@ -178,55 +176,6 @@ function DateFieldNames({ start, end, children }: NamesProps): ReactElement {
   );
 }
 
-/** The picker's group props as React Aria provides them through the group context. */
-type PickerGroup = Record<string, unknown> & {
-  ref?: Ref<HTMLDivElement>;
-  isInvalid?: boolean;
-  isDisabled?: boolean;
-  isReadOnly?: boolean;
-};
-
-interface FrameProps {
-  isDisabled: boolean;
-  children: ReactNode;
-}
-
-/**
- * The drawn frame: the picker's whole group (its role, its labelling, Alt+Arrow Down and its focus within,
- * useDateRangePicker.mjs:126-139) on a plain div, which React Aria positions the popover against. Not React Aria's
- * Group, whose focus-within data-focus-visible (Group.mjs:54-56) would ring the frame while the button has focus.
- */
-function DateRangeFrame({ isDisabled, children }: FrameProps): ReactElement {
-  const context = useSlottedContext(GroupContext) as PickerGroup | null | undefined;
-  // The group's DOM props less the ref and the states React Aria's Group would read, which a div does not take.
-  const { ref, group } = useMemo(() => {
-    const rest: PickerGroup = { ...context };
-    delete rest.ref;
-    delete rest.isInvalid;
-    delete rest.isDisabled;
-    delete rest.isReadOnly;
-    return { ref: context?.ref, group: rest };
-  }, [context]);
-  return (
-    <div
-      {...group}
-      ref={ref}
-      className="input date-range-control"
-      data-disabled={isDisabled ? '' : undefined}
-    >
-      {children}
-    </div>
-  );
-}
-
-/** React Aria's segment, drawn with the library's class. */
-const drawSegment: DateInputProps['children'] = (segment) => (
-  <DateSegment segment={segment} className="date-segment" />
-);
-
-/** Nothing for a segment before hydration: its text, its order and its name come from `Intl`. */
-const noSegment: DateInputProps['children'] = () => <></>;
-
 /**
  * A range of two dates, typed into React Aria's segments in the locale's order or chosen on the range calendar
  * in a popover, with the app's presets. ISO strings in and out, two hidden inputs that submit ISO dates under
@@ -269,11 +218,11 @@ export function DateRangePicker({
   else if (parsedDefault === 'invalid') invalid = `defaultValue ${written(defaultValue)}`;
   useWarnOnce(invalid === null ? null : invalidDate('DateRangePicker', invalid));
 
-  const { chipId, describedBy } = useChangedDescription({
-    // Only a label row has a chip, so only a labelled field has one to read.
-    isChanged: isChanged && isLabelled,
+  const { chipId, markId, describedBy } = useChangedDescription({
+    isChanged,
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
+    isLabelled,
   });
 
   // A range typed with its end before its start, such as a start whose month is typed past the end's, or an
@@ -336,7 +285,7 @@ export function DateRangePicker({
       )}
     >
       {isLabelled ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
-      <DateRangeFrame isDisabled={props.isDisabled === true}>
+      <DateFrame className="date-range-control" isDisabled={props.isDisabled === true}>
         {/* Clipped across, apart from the button, so its hit area reaches past the frame. */}
         <div className="date-range-dates">
           {hydrated ? null : <span className="date-range-face">{valueLabel}</span>}
@@ -357,7 +306,8 @@ export function DateRangePicker({
         <Button className="input-button date-range-button" aria-label={names.open}>
           <CalendarDays aria-hidden="true" />
         </Button>
-      </DateRangeFrame>
+        {isChanged && !isLabelled ? <FieldChangedMark id={markId} label={changedLabel} /> : null}
+      </DateFrame>
       {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
       <Popover className={cx('date-range-popover', popoverClassName)} isPadded placement={placement}>

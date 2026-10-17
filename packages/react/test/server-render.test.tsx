@@ -11,12 +11,14 @@ import { Button } from '../src/button';
 import { Calendar } from '../src/calendar';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { DataTable } from '../src/data-table';
+import { DatePicker } from '../src/date-picker';
 import { DateRangePicker } from '../src/date-range-picker';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
 import { ConfirmDialog, Dialog, DialogTrigger } from '../src/dialog';
 import { Drawer } from '../src/drawer';
+import { FileButton, FileDropZone, PageDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { IconButton } from '../src/icon-button';
@@ -29,6 +31,7 @@ import { Pagination } from '../src/pagination';
 import { PickerOption } from '../src/picker';
 import { Popover } from '../src/popover';
 import { Radio, RadioGroup } from '../src/radio-group';
+import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Select } from '../src/select';
@@ -50,6 +53,7 @@ import { TextArea } from '../src/text-area';
 import { TextField } from '../src/text-field';
 import { ToastRegion } from '../src/toast';
 import { Tooltip, TooltipTrigger } from '../src/tooltip';
+import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 
 /**
  * The client components, rendered on the server. A Next.js server page imports them as client references and
@@ -60,6 +64,16 @@ import { Tooltip, TooltipTrigger } from '../src/tooltip';
  * An overlay renders nothing until it opens, so its row also names what must stay out of the HTML: closed, a
  * dialog draws its trigger and none of its own parts.
  */
+/** Six files, one in each status, as an app's uploads provider holds them. */
+const UPLOADS: UploadItem[] = [
+  { id: 1, name: 'receipt-march.pdf', status: 'waiting' },
+  { id: 2, name: 'invoice.pdf', status: 'uploading', progress: 0.45, progressLabel: '1.8 of 4 MB' },
+  { id: 3, name: 'statement.pdf', status: 'reading' },
+  { id: 4, name: 'lease.pdf', status: 'saved', href: '/documents/lease' },
+  { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
+  { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
+];
+
 const CLIENT: [name: string, element: ReactElement, contains: string[], excludes?: string[]][] = [
   ['Button', <Button>Save</Button>, ['<button', 'class="button button-primary', '>Save<']],
   ['Spinner', <Spinner aria-label="Loading" />, ['role="progressbar"', 'class="spinner']],
@@ -133,6 +147,29 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'aria-label="Choose dates"',
     ],
     ['role="spinbutton"', 'role="dialog"', 'date-range-arrow'],
+  ],
+  [
+    // The face: the frame, the app's valueLabel, the button and the hidden ISO date; the segments, from Intl,
+    // arrive after hydration, and the calendar renders nothing until it opens.
+    'DatePicker',
+    <DatePicker label="Date" value="2026-10-14" valueLabel="14 Oct 2026" name="day" today="2026-10-16" />,
+    [
+      'class="field date-picker"',
+      'class="input date-picker-control"',
+      'class="date-picker-face"',
+      '14 Oct 2026',
+      'name="day"',
+      'value="2026-10-14"',
+      'aria-label="Choose date"',
+    ],
+    ['role="spinbutton"', 'role="dialog"', 'field-changed-mark'],
+  ],
+  [
+    // A changed field with no label writes its changed mark on the server.
+    'DatePicker unlabelled and changed',
+    <DatePicker aria-label="Date, Corner Mart" value="2026-10-14" isChanged />,
+    ['data-unlabelled=""', 'data-changed=""', 'class="field-changed-mark"', '>Changed</span>'],
+    ['class="field-head"', 'role="spinbutton"'],
   ],
   [
     // The summary from React Aria's hidden pass, in list order, and the clear button; no list and no filter.
@@ -748,6 +785,113 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '</div><aside class="side-panel"',
     ],
     ['data-sidebar="collapsed"', 'data-sidebar-folded', 'data-sidebar-unfolded'],
+  ],
+  [
+    // The label, the box with both lines, the button and FileTrigger's hidden input, the description and the
+    // empty status, so the page is laid out before scripts run; no name, so nothing submits natively.
+    'FileDropZone',
+    <FileDropZone
+      label="Receipts"
+      description="PDF, JPG or PNG, up to 10 MB"
+      acceptedFileTypes={['application/pdf']}
+      allowsMultiple
+      onFiles={() => undefined}
+    />,
+    [
+      'class="file-drop-zone field"',
+      'role="group"',
+      'class="file-drop-zone-box"',
+      'class="file-drop-zone-hint"',
+      'class="file-drop-zone-drop"',
+      'Choose files',
+      'type="file"',
+      'class="field-description"',
+      'role="status"',
+    ],
+    ['name=', 'data-drop-target'],
+  ],
+  [
+    'FileButton',
+    <FileButton capture="environment" onFiles={() => undefined}>
+      Take a photo
+    </FileButton>,
+    ['class="button button-primary', 'type="file"', 'capture="environment"'],
+  ],
+  [
+    // Nothing on the server: the overlay exists only while files are dragged over the page.
+    'PageDropZone',
+    <div className="host">
+      <PageDropZone title="Drop files to upload" onFiles={() => undefined} />
+    </div>,
+    ['<div class="host"></div>'],
+    ['page-drop-zone'],
+  ],
+  [
+    // A plain list, every row with its icon, its name, its words and its buttons; the bars are ProgressBar's.
+    'UploadList',
+    <UploadList
+      aria-label="Uploads"
+      items={UPLOADS}
+      onRetry={() => undefined}
+      onRemove={() => undefined}
+      onCancel={() => undefined}
+    />,
+    [
+      'class="upload-list"',
+      'data-status="waiting"',
+      'data-status="failed"',
+      'class="upload-row-stem">invoice</span><span class="upload-row-ext">.pdf</span>',
+      'href="/documents/lease"',
+      'role="progressbar"',
+      '1.8 of 4 MB',
+      'aria-label="Retry video.mov"',
+    ],
+  ],
+  [
+    // With no items, the empty polite host alone: the faces wait for the app's first item.
+    'UploadTray empty',
+    <div className="host">
+      <UploadTray items={[]} />
+    </div>,
+    [
+      '<div class="host"><div class="upload-tray-status" role="status" aria-live="polite" aria-atomic="true" data-react-aria-top-layer="true"></div></div>',
+    ],
+    ['upload-tray"', 'upload-tray-bar'],
+  ],
+  [
+    // Items the server already knows: both faces, which a media query picks between, and no offset of its own.
+    'UploadTray',
+    <UploadTray items={UPLOADS} description="About a minute left" />,
+    [
+      'class="upload-tray-status"',
+      'class="overlay upload-tray"',
+      'class="overlay upload-tray-bar"',
+      'Uploading 4 of 6',
+      'role="region"',
+    ],
+    ['--upload-tray-offset', 'role="dialog"'],
+  ],
+  [
+    // The bar, the sentence that names it, the chip, the empty polite host and the buttons; no question and no offset.
+    'SaveBar',
+    <SaveBar
+      message="2 changes to Corner Mart, 14 Oct"
+      isDirty
+      actionLabel="Save"
+      onAction={() => undefined}
+      onCancel={() => undefined}
+    />,
+    [
+      '<div role="group" aria-labelledby="',
+      'class="save-bar">',
+      'class="save-bar-message"',
+      '>2 changes to Corner Mart, 14 Oct<',
+      'class="field-changed save-bar-chip">Unsaved changes<',
+      '<div class="save-bar-status" role="status" aria-live="polite" aria-atomic="true" data-tone="neutral"></div>',
+      '>Cancel<',
+      '>Save<',
+    ],
+    ['--save-bar-offset', 'alertdialog', 'style='],
   ],
 ];
 

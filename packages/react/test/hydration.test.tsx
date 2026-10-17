@@ -6,13 +6,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
+import { DatePicker } from '../src/date-picker';
 import { DateRangePicker } from '../src/date-range-picker';
+import { FileButton, FileDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
+import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
+import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 
 /**
@@ -64,6 +68,16 @@ const PANEL = (
     <button type="button">Corner Mart</button>
   </SidePanelLayout>
 );
+
+/** Six files, one in each status. */
+const UPLOADS: UploadItem[] = [
+  { id: 1, name: 'receipt-march.pdf', status: 'waiting' },
+  { id: 2, name: 'invoice.pdf', status: 'uploading', progress: 0.45, progressLabel: '1.8 of 4 MB' },
+  { id: 3, name: 'statement.pdf', status: 'reading' },
+  { id: 4, name: 'lease.pdf', status: 'saved', href: '/documents/lease' },
+  { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
+  { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
+];
 
 const HYDRATED: [
   name: string,
@@ -138,6 +152,27 @@ const HYDRATED: [
       expect(segments[0]).toHaveAccessibleName(/Start date, Statement period$/);
       expect(segments[0]).toHaveTextContent('9');
       expect(container.querySelector('input[name="from"]')).toHaveValue('2026-09-01');
+    },
+  ],
+  [
+    'DatePicker',
+    <DatePicker
+      label="Date"
+      value="2026-10-14"
+      valueLabel="14 Oct 2026"
+      name="day"
+      today="2026-10-16"
+      isChanged
+    />,
+    (container) => {
+      expect(container.querySelector('.date-picker-face')).toBeNull();
+      const segments = [...container.querySelectorAll('.date-segment:not([data-type="literal"])')];
+      expect(segments.map((segment) => segment.textContent)).toEqual(['10', '14', '2026']);
+      // On an iPhone React Aria makes each segment a text box (useDateSegment.mjs:303-309).
+      for (const segment of segments) expect(segment).toHaveAttribute('role', 'textbox');
+      expect(segments[0]).toHaveAccessibleName(/Date$/);
+      expect(container.querySelector('input[name="day"]')).toHaveValue('2026-10-14');
+      expect(container.querySelector('.field-changed')).toHaveTextContent('Changed');
     },
   ],
   [
@@ -277,6 +312,80 @@ const HYDRATED: [
       expect(document.querySelector('[role="dialog"]')).toHaveAccessibleName('Groceries');
     },
     viewport(800),
+  ],
+  [
+    // The zone's face is the server's: the group, both lines and the one button, now able to open the picker.
+    'FileDropZone',
+    <FileDropZone
+      label="Receipts"
+      description="PDF, JPG or PNG, up to 10 MB"
+      acceptedFileTypes={['application/pdf', 'image/*']}
+      allowsMultiple
+      onFiles={noop}
+    />,
+    (container) => {
+      const zone = container.querySelector('.file-drop-zone');
+      expect(zone).toHaveAttribute('role', 'group');
+      expect(zone).toHaveAccessibleName('Receipts');
+      expect(container.querySelector('.file-drop-zone-hint')).toHaveTextContent('Drag files here or');
+      expect(container.querySelectorAll('button')).toHaveLength(1);
+      expect(container.querySelector('input[type="file"]')).toHaveAttribute(
+        'accept',
+        'application/pdf,image/*',
+      );
+    },
+  ],
+  [
+    'FileButton',
+    <FileButton acceptedFileTypes={['image/*']} capture="environment" onFiles={noop}>
+      Take a photo
+    </FileButton>,
+    (container) => {
+      expect(container.querySelector('button')).toHaveTextContent('Take a photo');
+      expect(container.querySelector('input[type="file"]')).toHaveAttribute('capture', 'environment');
+    },
+  ],
+  [
+    // The rows are the server's, links and buttons included.
+    'UploadList',
+    <UploadList aria-label="Uploads" items={UPLOADS} onRetry={noop} onRemove={noop} onCancel={noop} />,
+    (container) => {
+      expect(container.querySelectorAll('.upload-row')).toHaveLength(6);
+      expect(container.querySelector('a.upload-row-name')).toHaveAttribute('href', '/documents/lease');
+      expect(container.querySelectorAll('[role="progressbar"]')).toHaveLength(2);
+    },
+  ],
+  [
+    // The host the server wrote, and the faces for items the server already knew; the offset waits for a face.
+    'UploadTray',
+    <UploadTray items={UPLOADS} />,
+    (container) => {
+      expect(container.querySelector('.upload-tray-status')).toHaveAttribute('role', 'status');
+      expect(container.querySelector('.upload-tray-title')).toHaveTextContent('Uploading 4 of 6');
+      expect(container.querySelector('.upload-tray-bar-button')).toHaveTextContent('Uploading 4 of 6');
+    },
+    viewport(1280),
+  ],
+  [
+    // The bar, its sentence, its chip and its buttons are the server's; the status host stays empty, and the offset
+    // waits for a measurement after hydration.
+    'SaveBar',
+    <SaveBar
+      message="2 changes to Corner Mart, 14 Oct"
+      isDirty
+      actionLabel="Save"
+      onAction={noop}
+      onCancel={noop}
+    />,
+    (container) => {
+      expect(container.querySelector('.save-bar')).toHaveAttribute('role', 'group');
+      expect(container.querySelector('.save-bar-chip')).toHaveTextContent('Unsaved changes');
+      expect(container.querySelector('.save-bar-status')).toBeEmptyDOMElement();
+      expect([...container.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+        'Cancel',
+        'Save',
+      ]);
+    },
   ],
 ];
 
