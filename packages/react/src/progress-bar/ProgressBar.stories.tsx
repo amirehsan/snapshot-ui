@@ -112,7 +112,7 @@ export const Values: Story = {
   },
 };
 
-/** Work of unknown length: no value, and a segment that slides over 1.6s and starts again. */
+/** Work of unknown length: no value, a segment that slides over 1.6s and starts again, and rests off the track. */
 export const Indeterminate: Story = {
   tags: ['no-visual'],
   render: () => (
@@ -129,7 +129,21 @@ export const Indeterminate: Story = {
     await expect(segment.animationName).toBe('progress-bar-slide');
     await expect(segment.animationDuration).toBe('1.6s');
     await expect(segment.animationIterationCount).toBe('infinite');
-    const width = part(canvasElement, 'progress-bar-fill').getBoundingClientRect().width;
+    const fill = part(canvasElement, 'progress-bar-fill');
+    const width = fill.getBoundingClientRect().width;
     await expect(Math.abs(width - track.getBoundingClientRect().width * 0.4)).toBeLessThanOrEqual(0.5);
+    // With the slide cancelled, as Playwright's screenshots and a reader's `animation: none` cancel it, the
+    // segment rests at the first frame, wholly before the track's start, so the track reads empty.
+    const [slide] = fill.getAnimations();
+    if (!slide) throw new Error('No slide');
+    slide.cancel();
+    try {
+      const lane = track.getBoundingClientRect();
+      const rest = fill.getBoundingClientRect();
+      await expect(Math.abs(rest.right - lane.left)).toBeLessThanOrEqual(0.5);
+      await expect(Math.abs(rest.left - (lane.left - lane.width * 0.4))).toBeLessThanOrEqual(0.5);
+    } finally {
+      slide.play();
+    }
   },
 };

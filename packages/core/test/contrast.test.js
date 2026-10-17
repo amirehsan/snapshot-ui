@@ -1450,11 +1450,14 @@ describe('the progress bar', () => {
   });
 
   // The track is the frame, a mix and not a token, so the fill against it is measured and recorded, not gated:
-  // Meter's track and fill, on the page and in the tray. The track against its surface is a cue, not a boundary.
+  // Meter's track and fill, on the page, on a card (the upload list's Card) and in the tray. The track against
+  // its surface is a cue, not a boundary.
   it('measures ink against the frame track, recorded and not gated', () => {
     for (const { surface, mode, ink, edge } of [
       { surface: 'canvas', mode: 'light', ink: 12.69, edge: 1.28 },
       { surface: 'canvas', mode: 'dark', ink: 14.19, edge: 1.36 },
+      { surface: 'lifted', mode: 'light', ink: 13.88, edge: 1.28 },
+      { surface: 'lifted', mode: 'dark', ink: 12.19, edge: 1.43 },
       { surface: 'float', mode: 'light', ink: 14.34, edge: 1.29 },
       { surface: 'float', mode: 'dark', ink: 12.19, edge: 1.43 },
     ]) {

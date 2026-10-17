@@ -155,6 +155,48 @@ describe('ProgressBar', () => {
     expect(container.querySelector('.progress-bar-label')).toBeNull();
   });
 
+  it('names an indeterminate bar that nothing else names "Loading", as Spinner does', () => {
+    // The types ask for a name, but a blank label passes them and names nothing; indeterminate, there is no
+    // value text to fall back on.
+    const { container, rerender } = render(<ProgressBar label="" isIndeterminate />);
+    expect(screen.getByRole('progressbar', { name: 'Loading' })).toBe(bar());
+    expect(bar()).not.toHaveAttribute('aria-labelledby');
+    expect(container.querySelector('.progress-bar-head')).toBeNull();
+
+    rerender(<ProgressBar label="  " aria-label=" " aria-labelledby="" isIndeterminate valueLabel="" />);
+    expect(screen.getByRole('progressbar', { name: 'Loading' })).toBe(bar());
+    expect(container.querySelector('.progress-bar-head')).toBeNull();
+    expect(values(bar())).toEqual([null, null, null, null]);
+
+    // A valueLabel that names something is drawn and names the bar before the fallback does.
+    rerender(<ProgressBar label="" isIndeterminate valueLabel="Page 2 of 4" />);
+    expect(screen.getByRole('progressbar', { name: 'Page 2 of 4' })).toBe(bar());
+    expect(bar()).not.toHaveAttribute('aria-label');
+
+    // Any name of the caller's wins over it.
+    rerender(<ProgressBar label="" aria-label="Reading receipt.jpg" isIndeterminate />);
+    expect(screen.getByRole('progressbar', { name: 'Reading receipt.jpg' })).toBe(bar());
+  });
+
+  it('treats a blank valueLabel as absent: the percentage while determinate, nothing while indeterminate', () => {
+    const { container, rerender } = render(<ProgressBar label="Uploading" value={45} valueLabel="" />);
+    expect(bar()).toHaveAttribute('aria-valuetext', '45%');
+    expect(container.querySelector('.progress-bar-value')).toHaveTextContent(/^45%$/);
+
+    rerender(<ProgressBar label="Uploading" value={45} valueLabel="  " />);
+    expect(bar()).toHaveAttribute('aria-valuetext', '45%');
+
+    // Unnamed, the percentage names the bar, never an empty span.
+    rerender(<ProgressBar label="" value={45} valueLabel="" showValueLabel={false} />);
+    expect(screen.getByRole('progressbar', { name: '45%' })).toBe(bar());
+
+    // Indeterminate, shown on purpose: nothing to show, so no empty value and no description.
+    rerender(<ProgressBar label="Reading" isIndeterminate valueLabel="" showValueLabel />);
+    expect(container.querySelector('.progress-bar-value')).toBeNull();
+    expect(bar()).not.toHaveAttribute('aria-describedby');
+    expect(screen.getByRole('progressbar', { name: 'Reading' })).toBe(bar());
+  });
+
   it('draws no head with an aria-label and showValueLabel false', () => {
     const { container } = render(
       <ProgressBar aria-label="Uploading invoice.pdf" value={60} showValueLabel={false} />,
@@ -263,6 +305,8 @@ describe('ProgressBar', () => {
       () => <ProgressBar label="Uploading invoice.pdf" value={30} valueLabel="1.2 of 4 MB" />,
     ],
     ['indeterminate with a label', () => <ProgressBar label="Reading receipt.jpg" isIndeterminate />],
+    ['indeterminate with an empty label', () => <ProgressBar label="" isIndeterminate />],
+    ['with an empty valueLabel', () => <ProgressBar label="" value={45} valueLabel="" />],
   ];
 
   it.each(AXE_CASES)('has no axe violations %s', async (_name, element) => {
