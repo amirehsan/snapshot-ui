@@ -26,6 +26,11 @@ export interface AppShellProps extends Omit<HTMLAttributes<HTMLDivElement>, 'chi
   header?: ReactNode;
   /** The bottom tab bar. Below 1024px the workspace reserves room under its content for it. */
   bottomBar?: ReactNode;
+  /**
+   * Floating chrome that outlives every page, such as an UploadTray: rendered after the workspace and the tab bar,
+   * outside `<main>`, so a client navigation keeps it and it is never a landmark inside main.
+   */
+  floating?: ReactNode;
   /** The page, rendered inside `<main>`. */
   children: ReactNode;
   /** Controlled: whether the rail is collapsed to icons. Pair it with `onSidebarCollapsedChange`. */
@@ -86,8 +91,18 @@ export function useAppShell(): AppShellState {
 }
 
 /**
- * The frame an app runs in: a skip link, the rail, a workspace holding a sticky header and `<main>`, and a
- * bottom tab bar. It owns the collapsed state, because the workspace offset depends on it, and the drawer
+ * The shell's state, or null outside an AppShell, for a part that may be mounted with or without one, such as
+ * UploadTray, which gives focus to the shell's `<main>` when it leaves.
+ *
+ * Internal: not exported from the package.
+ */
+export function useOptionalAppShell(): AppShellState | null {
+  return use(AppShellContext);
+}
+
+/**
+ * The frame an app runs in: a skip link, the rail, a workspace holding a sticky header and `<main>`, a bottom
+ * tab bar, and floating chrome that outlives every page, such as an UploadTray, after them all. It owns the collapsed state, because the workspace offset depends on it, and the drawer
  * state, because the header's menu button and the rail share it. The root carries `data-sidebar="collapsed"`
  * while collapsed and nothing otherwise, so a server paints the right width from a prop, and CSS does the
  * rest. The drawer closes as the window widens past 1024px and on Back and Forward; nothing here needs a
@@ -99,6 +114,7 @@ export function AppShell({
   sidebar,
   header,
   bottomBar,
+  floating,
   children,
   isSidebarCollapsed: isSidebarCollapsedProp,
   defaultSidebarCollapsed,
@@ -228,6 +244,7 @@ export function AppShell({
             </main>
           </div>
           {bottomBar}
+          {floating}
         </div>
       </RailFoldContext>
     </AppShellContext>

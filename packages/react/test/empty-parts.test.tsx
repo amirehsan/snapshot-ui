@@ -12,6 +12,7 @@ import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { EmptyState } from '../src/empty-state';
 import { FileDropZone } from '../src/file-drop-zone';
+import { UploadList, UploadTray } from '../src/upload-tray';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
@@ -268,6 +269,14 @@ describe('an empty shell slot', () => {
     expect(shell).not.toHaveAttribute('data-has-bottom-bar');
   });
 
+  it('draws nothing after the workspace for a floating slot of false, an empty string or null', () => {
+    for (const floating of [false, '', null]) {
+      const { container, unmount } = render(<AppShell floating={floating}>page</AppShell>);
+      expect(container.querySelector('.app-shell')?.lastElementChild).toHaveClass('app-shell-workspace');
+      unmount();
+    }
+  });
+
   it('draws no head, no footer and nothing for the search in a Sidebar given false, an empty string or null', () => {
     // A Sidebar throws outside an AppShell, so the row wraps it in one.
     const { container } = render(
@@ -429,5 +438,30 @@ describe('an empty documents part slot', () => {
     // The button describes itself by nothing that is not drawn.
     expect(screen.getByRole('button', { name: 'Choose a file' })).not.toHaveAttribute('aria-describedby');
     expect(container.querySelector('.file-drop-zone-box')).not.toBeNull();
+  });
+
+  it('draws no reason, progress or link in an UploadList row given empty strings', () => {
+    const { container } = render(
+      <UploadList
+        aria-label="Uploads"
+        items={[
+          { id: 1, name: 'review.pdf', status: 'review', reason: '', href: '' },
+          { id: 2, name: 'upload.pdf', status: 'uploading', progressLabel: '' },
+        ]}
+      />,
+    );
+    expect(container.querySelector('.upload-row-reason')).toBeNull();
+    expect(container.querySelector('.upload-row-progress')).toBeNull();
+    expect(container.querySelector('a')).toBeNull();
+    // The empty progress label leaves the bar without value text, so it is indeterminate and named.
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName('Uploading upload.pdf');
+  });
+
+  it('draws no description in an UploadTray given an empty one', () => {
+    const { container } = render(
+      <UploadTray items={[{ id: 1, name: 'lease.pdf', status: 'saved' }]} description="" />,
+    );
+    expect(container.querySelector('.upload-tray-description')).toBeNull();
+    expect(container.querySelector('.upload-tray-title')).toHaveTextContent('1 upload complete');
   });
 });

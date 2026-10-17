@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRef, type ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
-import { AppShell, useAppShell, type AppShellProps } from './AppShell';
+import { AppShell, useAppShell, useOptionalAppShell, type AppShellProps } from './AppShell';
 
 /** The shell's root, the container's one child. */
 function root(container: HTMLElement): HTMLElement {
@@ -52,6 +52,12 @@ function Probe(): ReactElement {
 }
 
 const probe = (): HTMLElement => screen.getByTestId('probe');
+
+/** Reads the shell's state where there may be no shell, as a floating part does. */
+function OptionalProbe(): ReactElement {
+  const shell = useOptionalAppShell();
+  return <span data-testid="optional" data-main={shell?.mainId ?? 'none'} />;
+}
 
 /** A rail with one link, standing in for a Sidebar. */
 const RAIL = (
@@ -206,6 +212,40 @@ describe('AppShell', () => {
       'app-shell-main',
     ]);
     expect(screen.getByRole('main')).toHaveTextContent('page');
+  });
+
+  it('renders floating after the workspace and the bottom bar, outside main', () => {
+    const { container } = render(
+      <AppShell
+        sidebar={RAIL}
+        bottomBar={BAR}
+        floating={
+          <section aria-label="Uploads" className="tray">
+            <OptionalProbe />
+          </section>
+        }
+      >
+        page
+      </AppShell>,
+    );
+    expect([...root(container).children].map((child) => child.className)).toEqual([
+      'app-shell-skip',
+      'rail',
+      'app-shell-workspace',
+      'bar',
+      'tray',
+    ]);
+    // No wrapper of its own, so it inherits the shell's properties, and never inside main.
+    const tray = screen.getByRole('region', { name: 'Uploads' });
+    expect(tray.parentElement).toBe(root(container));
+    expect(screen.getByRole('main')).not.toContainElement(tray);
+    // The shell's state reaches it.
+    expect(screen.getByTestId('optional')).toHaveAttribute('data-main', screen.getByRole('main').id);
+  });
+
+  it('lets useOptionalAppShell read null outside a shell', () => {
+    render(<OptionalProbe />);
+    expect(screen.getByTestId('optional')).toHaveAttribute('data-main', 'none');
   });
 
   it('collapses and expands on its own when uncontrolled, and tells onSidebarCollapsedChange', async () => {

@@ -1561,6 +1561,41 @@ describe('the file drop zone', () => {
   });
 });
 
+describe('the upload tray', () => {
+  /** `text` on the float surface, the tray's panel, bar and sheet. */
+  const onFloat = (text, mode) => {
+    const palette = paletteFor(tokens, mode);
+    const float = parseColor(palette.float);
+    return contrastRatio(composite(parseColor(palette[text]), float), float);
+  };
+
+  // Each status's word and icon take its color on the float surface: success for saved, warning for needs review,
+  // error for failed, slate for waiting, uploading and reading and every reason; the name is ink, or link blue once
+  // it links. The gate already holds all six as text on float, so the tray adds no pair.
+  const PAIRS = [
+    { text: 'success', light: 7.44, dark: 6.34 },
+    { text: 'warning', light: 6.33, dark: 8.92 },
+    { text: 'error', light: 7.46, dark: 5.73 },
+    { text: 'slate', light: 5.49, dark: 6.94 },
+    { text: 'ink', light: 18.43, dark: 17.42 },
+    { text: 'link', light: 5.86, dark: 5.46 },
+  ];
+
+  it('cites success, warning, error, slate, ink and link on float, which the gate holds', () => {
+    for (const { text } of PAIRS) {
+      expect(CONTRAST_PAIRS, `${text} on float`).toContainEqual(
+        expect.objectContaining({ text, ground: 'float', minimum: TEXT }),
+      );
+    }
+  });
+
+  it.each(PAIRS)('measures $text on float at $light in light and $dark in dark', ({ text, light, dark }) => {
+    expect(onFloat(text, 'light')).toBeCloseTo(light, 2);
+    expect(onFloat(text, 'dark')).toBeCloseTo(dark, 2);
+    expect(Math.min(onFloat(text, 'light'), onFloat(text, 'dark'))).toBeGreaterThanOrEqual(TEXT);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

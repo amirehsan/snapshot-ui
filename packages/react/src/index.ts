@@ -215,6 +215,17 @@ export {
   type FileRejectionReason,
   type PageDropZoneProps,
 } from './file-drop-zone';
+export {
+  UploadList,
+  UploadTray,
+  type UploadCounts,
+  type UploadItem,
+  type UploadListLabels,
+  type UploadListProps,
+  type UploadStatus,
+  type UploadTrayLabels,
+  type UploadTrayProps,
+} from './upload-tray';
 export { EmptyState, type EmptyStateProps } from './empty-state';
 export { Skeleton, type SkeletonProps } from './skeleton';
 export {
