@@ -8467,18 +8467,19 @@ describe('src/components/save-bar.css', () => {
     }
   });
 
-  it("insets the buttons clear of the corner's curve, so a pill keeps its own round (owner rule)", () => {
+  it("insets the buttons clear of the corner's curve on both sides, so a pill keeps its own round (owner rule)", () => {
     const css = rules();
-    // The end side: at least the surface radius from the outer edge, its 1px edge included, and never under a
-    // part step, so the action at the inline end sits outside the curve in every shape.
-    expect(blockAfter(css, '.save-bar {')).toContain(
-      'padding-inline: var(--spacing-inset) max(var(--spacing-part), calc(var(--radius-surface) - 1px));',
+    const bar = blockAfter(css, '.save-bar {');
+    // Each side at least the surface radius from the outer edge, its 1px edge included: the action at the inline
+    // end, and the first button of a line of actions at the start, outside the curve in every shape and in either
+    // direction, since both are logical. The start never under the inset, the end never under a part step.
+    expect(bar).toContain(
+      'padding-inline-start: max(var(--spacing-inset), calc(var(--radius-surface) - 1px));',
     );
-    // Stacked, the last button runs to the start side too, which the start padding alone leaves inside the curve.
-    const narrow = blockAfter(css, '@container save-bar (width < 24rem)');
-    expect(blockAfter(narrow, '.save-bar-actions {')).toContain(
-      'margin-inline-start: max(0px, calc(var(--radius-surface) - 1px - var(--spacing-inset)));',
-    );
+    expect(bar).toContain('padding-inline-end: max(var(--spacing-part), calc(var(--radius-surface) - 1px));');
+    expect(bar).not.toMatch(/padding-(left|right)|padding-inline:/);
+    // No margin of the actions makes up for a start side that falls short.
+    expect(css).not.toMatch(/margin-inline-start: max\(/);
     // No button's corner is made to follow the bar's: no radius but the bar's own is written.
     const radii = [...css.matchAll(/(?<![\w-])border-radius:\s*([^;]+);/g)].map((match) => match[1]);
     expect(radii).toEqual(['var(--radius-surface)']);
@@ -8518,22 +8519,27 @@ describe('src/components/save-bar.css', () => {
     expect(css).not.toMatch(/font-weight:\s*600/);
   });
 
-  it('puts the actions on a line of their own under 36rem and stacks them full width under 24rem', () => {
+  it('puts the actions on a line of their own under 36rem, side by side and growing, never stacked', () => {
     const css = rules();
-    expect(
-      blockAfter(blockAfter(css, '@container save-bar (width < 36rem)'), '.save-bar-actions {'),
-    ).toContain('flex: 1 1 100%;');
-    const narrow = blockAfter(blockAfter(css, '@container save-bar (width < 24rem)'), '.save-bar-actions {');
-    expect(narrow).toContain('flex-direction: column;');
-    expect(narrow).toContain('align-items: stretch;');
+    const narrow = blockAfter(css, '@container save-bar (width < 36rem)');
+    expect(blockAfter(narrow, '.save-bar-actions {')).toContain('flex: 1 1 100%;');
+    expect(blockAfter(narrow, '.save-bar-actions > .button {')).toContain('flex: 1 1 auto;');
+    // No column: the buttons keep DOM order along the line and wrap only when a label is too long for it.
+    for (const actions of [
+      blockAfter(css, '.save-bar-actions {'),
+      blockAfter(narrow, '.save-bar-actions {'),
+    ]) {
+      expect(actions).not.toMatch(/flex-direction/);
+    }
+    expect(blockAfter(css, '.save-bar-actions {')).toContain('flex-wrap: wrap;');
     // A label longer than the bar wraps inside its button rather than push the page sideways.
     const button = blockAfter(css, '.save-bar-actions > .button {');
     expect(button).toContain('white-space: normal;');
     expect(button).toContain('max-width: 100%;');
-    // Only the two container widths, no viewport query: the bar answers to its own box.
+    // The one container width, no viewport query: the bar answers to its own box.
     expect(
       [...css.matchAll(/@container save-bar \(width < ([\d.]+rem)\)/g)].map((match) => match[1]),
-    ).toEqual(['36rem', '24rem']);
+    ).toEqual(['36rem']);
     expect(css).not.toMatch(/@media \(width/);
   });
 
@@ -8557,9 +8563,15 @@ describe('src/components/save-bar.css', () => {
     expect(blockAfter(rules(), ':root:has(.save-bar), .app-shell:has(.save-bar) {')).toContain(OFFSET);
   });
 
-  it("pads the root's scroll by the tab bar, the bar and the phone tray's reserve, in the bottom edge's order", () => {
+  it("pads the root's scroll by the tab bar, the bar and the phone tray's reserve, in the bottom edge's order, and a gap", () => {
     expect(blockAfter(rules(), ':root:has(.save-bar) {')).toContain(
-      'scroll-padding-block-end: calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) + var(--upload-tray-reserve, 0px));',
+      'scroll-padding-block-end: calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) + var(--upload-tray-reserve, 0px) + var(--spacing-inset));',
+    );
+  });
+
+  it("holds the page's sticky offset and the focus gap in the bar's scroll margin, for its scroll clear to read", () => {
+    expect(blockAfter(outsideForcedColors(rules()), '.save-bar {')).toContain(
+      'scroll-margin-block: var(--page-sticky-top, 0px) var(--spacing-inset);',
     );
   });
 

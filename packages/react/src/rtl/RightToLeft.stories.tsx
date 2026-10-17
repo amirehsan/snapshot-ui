@@ -1893,7 +1893,7 @@ export const UploadTrayMirrored: Story = {
 
 /**
  * A save bar in Persian: the sentence and the chip at the right, the actions at the bar's left with the action
- * last, so leftmost; under 24rem the stacked buttons keep the start side's inset from the right.
+ * last, so leftmost; under 36rem one line of buttons that keeps the radius from both bottom corners.
  */
 export const SaveBarMirrored: Story = {
   render: () => (
@@ -1936,11 +1936,17 @@ export const SaveBarMirrored: Story = {
     // The action sits clear of the corner's curve on its own side, the left.
     const radius = parseFloat(getComputedStyle(wide).borderBottomLeftRadius);
     await expect(rect(save).left - rect(wide).left).toBeGreaterThanOrEqual(radius - 0.5);
-    // Stacked: the buttons the actions' full width, the action at the bottom.
+    // Under 36rem: one line of buttons, side by side in DOM order from the right, the action at the left, filling
+    // the line, and both insets at least the radius, the start's at the right as the end's at the left.
     const narrow = find(canvasElement, '.save-bar.narrow');
     const [first, last] = within(narrow).getAllByRole('button');
-    if (!first || !last) throw new Error('Two stacked buttons');
-    await expect(rect(last).top).toBeGreaterThan(rect(first).bottom - 0.5);
-    await expect(rect(last).width).toBeCloseTo(rect(find(narrow, '.save-bar-actions')).width, 0);
+    if (!first || !last) throw new Error('Two buttons');
+    await expect(Math.abs(rect(last).top - rect(first).top)).toBeLessThan(1);
+    await expect(rect(last).right).toBeLessThanOrEqual(rect(first).left + 0.5);
+    const actions = rect(find(narrow, '.save-bar-actions'));
+    await expect(rect(first).right - rect(last).left).toBeCloseTo(actions.width, 0);
+    const corner = parseFloat(getComputedStyle(narrow).borderBottomRightRadius);
+    await expect(rect(narrow).right - rect(first).right).toBeGreaterThanOrEqual(corner - 0.5);
+    await expect(rect(last).left - rect(narrow).left).toBeGreaterThanOrEqual(corner - 0.5);
   },
 };
