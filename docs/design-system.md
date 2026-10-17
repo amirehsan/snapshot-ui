@@ -4807,7 +4807,7 @@ centers in the 70px inside the 72px rail's 1px border, and the icon moves 3px
 inward as the rail narrows, on the rail's own curve; under reduced motion it is
 an instant step.
 
-**The rail's motion** (patch 0.6.1). Recorded frame by frame in Chromium at
+**The rail's motion** (patch 0.6.2). Recorded frame by frame in Chromium at
 1280px, the old collapse and expand were what a reader called flashy, for five
 reasons. Collapsing, every label vanished in the first frame and every icon,
 the brand mark, the search and the group dots jumped to the middle of the rail,
@@ -4847,6 +4847,13 @@ width. So:
   the icon's start, not the item's middle. The footer centers the app's
   collapsed content in the collapsed rail's inside width from the first frame,
   at the start, so it rests while the rail closes around it.
+- One vertical rhythm for both states: collapsing changes the rail's width and
+  nothing else, as in Linear, Notion, VS Code, GitHub's navigation and Material
+  3's navigation rail. The head keeps its row, the search keeps the expanded
+  field's 40px row and place, collapsed a 40px pill around its icon on that
+  row, a group heading keeps its row with its dot on it, and every link and the
+  footer keep their top; the stories and the docs test hold every icon's top
+  within 0.5px in both states and in every frame between.
 - The labels stay in the flow, one line high, and are hidden by opacity, so no
   name changes: they fade out over the first 40% of the closing while the edge
   carries them off, and fade in from a quarter of the opening over half of it,
@@ -4876,7 +4883,10 @@ The docs rail follows the same rules with the same tokens, on its own
 `--rail-duration`, and the site's reduced-motion rule stops it as before. Its
 links never wrapped, so it needs no size container: from 1024px up its group
 names do not wrap either and its labels clip with no ellipsis, at rest too,
-since every name fits the expanded rail. A
+since every name fits the expanded rail. Its version badge and its key chip
+keep their one line and their size, faded and cut by the edge: free to shrink,
+the badge wrapped a letter to a line in the 72px rail and pushed every icon
+below it 81px down. A
 container query there, matched by the drawer's elements with no container
 around them on a phone, left a tab row on the page at its start in Chromium
 after the row had scrolled to its selected tab, so the docs rail has none.

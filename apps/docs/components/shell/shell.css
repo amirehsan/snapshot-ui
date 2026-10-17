@@ -616,6 +616,14 @@
       overflow: hidden;
     }
 
+    /* The version and the key keep their one line and their size, faded and cut by the edge, so the head and the
+       search keep the height of their expanded rows and nothing below them moves down. */
+    .rail-version,
+    .rail-key {
+      flex: none;
+      white-space: nowrap;
+    }
+
     [data-rail='collapsed'] {
       --rail-width: 104px;
       --rail-duration: var(--duration-collapse);
