@@ -57,21 +57,22 @@ function record(story: string, facts: Record<string, unknown>): void {
 
 /**
  * How each engine builds the play's events and reads its transfer, as the spike found it. A script's transfer
- * allows no operation ('none' or 'uninitialized') and the engine may ignore its setter; and React Aria reads a
- * dropped file only through `webkitGetAsEntry()`, which gives no entry for a file a script made, so React Aria's
- * `onDrop` sees no file item for a synthetic drop wherever the entry is null, though the native transfer holds
- * the files in every engine. A real drop from the desktop has its entries; the library reads the transfer
+ * allows no operation ('none') and Chromium and WebKit ignore its setter; and React Aria reads a dropped file
+ * only through `webkitGetAsEntry()`, which in Chromium gives no entry for a file a script made, so there React
+ * Aria's `onDrop` sees no file item for a synthetic drop, though the native transfer holds the files in every
+ * engine. A real drop from the desktop has its entries; the library reads the transfer
  * itself so a play and a real drop take one path (spec correction 5).
  */
 const FOUND = {
   dragEvent: { chromium: 'constructor', webkit: 'constructor', firefox: 'constructor' },
-  pasteEvent: { chromium: 'constructor', webkit: 'constructor', firefox: 'constructor' },
+  // Firefox's ClipboardEvent constructor drops `clipboardData`, so the play defines it on the event.
+  pasteEvent: { chromium: 'constructor', webkit: 'constructor', firefox: 'defined' },
   effectAllowed: {
     chromium: { initial: 'none', setterTook: false },
-    webkit: { initial: 'uninitialized', setterTook: false },
-    firefox: { initial: 'uninitialized', setterTook: true },
+    webkit: { initial: 'none', setterTook: false },
+    firefox: { initial: 'none', setterTook: true },
   },
-  entry: { chromium: null, webkit: null, firefox: 'file' },
+  entry: { chromium: null, webkit: 'file', firefox: 'file' },
 } as const satisfies Record<string, Record<Engine, unknown>>;
 
 /** The files React Aria's `onDrop` reads from a synthetic drop of `names` in this engine. */
