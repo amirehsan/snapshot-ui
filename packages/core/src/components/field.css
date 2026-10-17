@@ -133,4 +133,49 @@
   .field[data-invalid] .field-changed {
     display: none;
   }
+
+  /*
+   * The changed dot of a field with no label (ruling 16, spec correction 2):
+   * the chip's 6px dot in clay, which means exactly unsaved, on the frame's
+   * first line, `--field-changed-mark-end` in from its inline end, which each
+   * field's own file sets past its button or at its text's end, and pads its
+   * text clear of. The element holds the word "Changed" for a screen reader,
+   * clipped to the dot and drawn in no color, and takes no pointer. The field
+   * renders it only while changed, unlabelled and valid.
+   */
+  .field-changed-mark {
+    position: absolute;
+    inset-block-start: calc((var(--size-field) - 0.375rem) / 2);
+    inset-inline-end: var(--field-changed-mark-end, 1.5rem);
+    inline-size: 0.375rem;
+    block-size: 0.375rem;
+    border-radius: var(--radius-dot);
+    background-color: var(--color-clay);
+    overflow: hidden;
+    color: transparent;
+    /* No size, so axe measures no text of it; the word is still the element's own, named by the field. */
+    font-size: 0;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* The field's root holds the mark beside a control that is its own frame (the text input, the text area), and a
+     frame that can hold an element holds it inside: each is the box the mark is placed in. */
+  .field:has(> .field-changed-mark),
+  .input:has(> .field-changed-mark) {
+    position: relative;
+  }
+
+  /* Inside a frame drawn with .input the box starts inside its edge, which is 1.5px on a changed field. */
+  .input > .field-changed-mark {
+    inset-block-start: calc((var(--size-field) - 0.375rem) / 2 - 1.5px);
+  }
+
+  @media (forced-colors: active) {
+    /* Out of the repaint, so the dot is the reader's text color and the word stays unseen. */
+    .field-changed-mark {
+      forced-color-adjust: none;
+      background-color: canvastext;
+    }
+  }
 }

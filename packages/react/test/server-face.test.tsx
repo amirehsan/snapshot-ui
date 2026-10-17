@@ -6,6 +6,7 @@ import { describe, expect, inject, it } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
+import { DatePicker } from '../src/date-picker';
 import { DateRangePicker } from '../src/date-range-picker';
 import { FileButton, FileDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
@@ -88,6 +89,16 @@ const FACES: [name: string, element: ReactElement][] = [
       endName="to"
       today="2026-09-18"
     />,
+  ],
+  [
+    // The frame, the app's valueLabel, the button and the hidden ISO date; no segment, which Intl would write.
+    'DatePicker',
+    <DatePicker label="Date" value="2026-10-14" valueLabel="14 Oct 2026" name="day" today="2026-10-16" />,
+  ],
+  [
+    // A changed field in a review grid: its changed mark is the server's, no Intl in it.
+    'DatePicker unlabelled and changed',
+    <DatePicker aria-label="Date, Corner Mart" value="2026-10-14" valueLabel="14 Oct 2026" isChanged />,
   ],
   [
     'FilterChip single',

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { Button } from '../src/button';
 import { DataTable } from '../src/data-table';
+import { DatePicker } from '../src/date-picker';
 import { DateRangePicker } from '../src/date-range-picker';
 import { FileButton, FileDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
@@ -150,6 +151,27 @@ const HYDRATED: [
       expect(segments[0]).toHaveAccessibleName(/Start date, Statement period$/);
       expect(segments[0]).toHaveTextContent('9');
       expect(container.querySelector('input[name="from"]')).toHaveValue('2026-09-01');
+    },
+  ],
+  [
+    'DatePicker',
+    <DatePicker
+      label="Date"
+      value="2026-10-14"
+      valueLabel="14 Oct 2026"
+      name="day"
+      today="2026-10-16"
+      isChanged
+    />,
+    (container) => {
+      expect(container.querySelector('.date-picker-face')).toBeNull();
+      const segments = [...container.querySelectorAll('.date-segment:not([data-type="literal"])')];
+      expect(segments.map((segment) => segment.textContent)).toEqual(['10', '14', '2026']);
+      // On an iPhone React Aria makes each segment a text box (useDateSegment.mjs:303-309).
+      for (const segment of segments) expect(segment).toHaveAttribute('role', 'textbox');
+      expect(segments[0]).toHaveAccessibleName(/Date$/);
+      expect(container.querySelector('input[name="day"]')).toHaveValue('2026-10-14');
+      expect(container.querySelector('.field-changed')).toHaveTextContent('Changed');
     },
   ],
   [

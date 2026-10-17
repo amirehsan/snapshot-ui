@@ -618,6 +618,44 @@ describe('src/components/field.css', () => {
     // A chip that cannot wrap is as wide as its text, which one long word can push past the screen.
     expect(chip).not.toContain('nowrap');
   });
+
+  it("draws the changed mark as a 6px clay dot on the frame's first line, its text clipped", () => {
+    const css = closeUp(source());
+    const mark = blockAfter(css, '.field-changed-mark {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset-block-start: calc((var(--size-field) - 0.375rem) / 2);',
+      'inset-inline-end: var(--field-changed-mark-end, 1.5rem);',
+      'inline-size: 0.375rem;',
+      'block-size: 0.375rem;',
+      'border-radius: var(--radius-dot);',
+      // Clay, which means exactly unsaved, never light signal orange, 2.87 on raised in light (spec correction 2).
+      'background-color: var(--color-clay);',
+      'overflow: hidden;',
+      'color: transparent;',
+      'font-size: 0;',
+      'white-space: nowrap;',
+      'pointer-events: none;',
+    ]) {
+      expect(mark, declaration).toContain(declaration);
+    }
+    expect(css).not.toMatch(/--color-signal/);
+    // The box it is placed in: the field's root beside a control that is its own frame, or the frame itself.
+    expect(
+      blockAfter(css, '.field:has(> .field-changed-mark), .input:has(> .field-changed-mark) {'),
+    ).toContain('position: relative;');
+    // Inside a frame drawn with .input the box starts inside the changed edge, 1.5px.
+    expect(blockAfter(css, '.input > .field-changed-mark {')).toContain(
+      'inset-block-start: calc((var(--size-field) - 0.375rem) / 2 - 1.5px);',
+    );
+  });
+
+  it('draws the mark canvastext in forced colors, out of the repaint', () => {
+    const forced = blockAfter(closeUp(source()), '@media (forced-colors: active)');
+    const mark = blockAfter(forced, '.field-changed-mark {');
+    expect(mark).toContain('forced-color-adjust: none;');
+    expect(mark).toContain('background-color: canvastext;');
+  });
 });
 
 describe('src/components/badge.css', () => {
@@ -745,10 +783,19 @@ describe('src/components/textarea.css', () => {
         .map((declaration) => declaration.split(':')[0]?.trim() ?? '')
         .filter(Boolean),
     }));
-  const textarea = () => blocks('src/components/textarea.css');
+  // The box's own rules, without the changed mark's place, which draws another element.
+  const textarea = () =>
+    blocks('src/components/textarea.css').filter(({ selector }) => !selector.includes('field-changed-mark'));
 
   it('is one rule on the input, so it outranks the input without depending on import order', () => {
     expect(textarea().map(({ selector }) => selector)).toEqual(['.input.textarea']);
+  });
+
+  it("places the changed mark on the box's first line, past its padding and its changed edge", () => {
+    const rules = closeUp(stripComments(read('src/components/textarea.css')));
+    expect(blockAfter(rules, '.textarea + .field-changed-mark {')).toContain(
+      'inset-block-start: calc(0.75rem + 1.5px + (var(--text-body) * var(--text-body--line-height) - 0.375rem) / 2);',
+    );
   });
 
   it('overrides only the seven things a multi-line box changes', () => {
@@ -4448,7 +4495,10 @@ describe('src/components/select.css', () => {
     expect(blockAfter(css, '.select-value-label {')).toContain('text-overflow: ellipsis;');
     // The placeholder is the trigger's visible text, so it is slate, which meets text contrast (open question 3).
     expect(blockAfter(css, '.select-value[data-placeholder] {')).toContain('color: var(--color-slate);');
-    expect(css).not.toContain('data-unlabelled');
+    // Nothing but the changed dot keys on the missing label: the placeholder is slate either way.
+    expect(css.replace(/\.select\[data-changed\]\[data-unlabelled\][^{]*\{[^}]*\}/g, '')).not.toContain(
+      'data-unlabelled',
+    );
   });
 
   it('draws the value and the placeholder of a disabled trigger taupe, the disabled text', () => {
@@ -4565,6 +4615,11 @@ describe('src/components/combo-box.css', () => {
         '.combo-box[data-loading] .combo-box-input',
         '.combo-box-spinner',
         '.combo-box[data-unlabelled]:not([data-disabled]) .combo-box-input::placeholder',
+        // The changed dot of a field with no label: its place, and the text's padding clear of it.
+        '.combo-box[data-changed][data-unlabelled]',
+        '.combo-box[data-changed][data-unlabelled] .combo-box-input',
+        '.combo-box[data-changed][data-unlabelled][data-loading]',
+        '.combo-box[data-changed][data-unlabelled][data-loading] .combo-box-input',
       ].sort(),
     );
     // Only the unlabelled placeholder's color; everything else is input.css's and menu.css's.
@@ -5232,7 +5287,7 @@ describe('src/components/number-field.css', () => {
   const rules = () => closeUp(stripComments(read('src/components/number-field.css')));
   const PRESSED = ".number-field-sign.input-button:is([data-selected], [aria-pressed='true'])";
   const LEAD = 'calc(var(--number-field-lead) + var(--number-field-symbol-start))';
-  const TRAIL = 'calc(var(--number-field-trail) + var(--number-field-symbol-end))';
+  const TRAIL = 'calc(var(--number-field-trail) + var(--number-field-symbol-end) + var(--number-field-mark))';
 
   it('draws the input as a figure: left to right, isolated, tabular', () => {
     const input = blockAfter(rules(), '.number-field-input {');
@@ -5713,7 +5768,10 @@ describe('src/components/date-range-picker.css', () => {
     expect(selectors().filter((selector) => selector.includes('data-placeholder'))).toEqual([
       '.date-segment[data-placeholder]',
     ]);
-    expect(css).not.toContain('data-unlabelled');
+    // Nothing but the changed dot keys on the missing label.
+    expect(
+      css.replace(/\.date-range-picker\[data-changed\]\[data-unlabelled\][^{]*\{[^}]*\}/g, ''),
+    ).not.toContain('data-unlabelled');
   });
 
   it('lets no placeholder rule outrank the focused segment, so a focused empty segment takes the focus colors', () => {
@@ -8089,5 +8147,191 @@ describe('src/components/upload-tray.css', () => {
       expect(host, declaration).toContain(declaration);
     }
     expect(host).not.toMatch(/display\s*:\s*none|visibility\s*:\s*hidden/);
+  });
+});
+
+describe('src/components/date-picker.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/date-picker.css')));
+  const RING =
+    '.date-picker-control.input:where(:has(.date-segment:is(:focus-visible, [data-focus-visible])))';
+
+  it("lays the frame out as the range picker's, on .input with one-class rules, never under 12rem", () => {
+    const frame = blockAfter(rules(), '.date-picker-control {');
+    for (const declaration of [
+      'position: relative;',
+      'display: flex;',
+      'align-items: center;',
+      'min-inline-size: 12rem;',
+      'padding-inline: 1.5rem 3rem;',
+      'cursor: text;',
+    ]) {
+      expect(frame, declaration).toContain(declaration);
+    }
+    // The frame clips nothing, so the button's 40px hit area reaches past it at either density.
+    expect(frame).not.toContain('overflow');
+    // The edge, the fill, the height and the states are input.css's; the holder properties only describe them.
+    const own = frame.replace(/--holder-[\w-]+:[^;]*;/g, '');
+    for (const property of ['border', 'background', 'color:', 'height']) {
+      expect(own, property).not.toContain(property);
+    }
+    const ring = blockAfter(rules(), `${RING} {`);
+    expect(ring).toContain('border: 1.5px solid var(--color-ink);');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+  });
+
+  it("writes no segment rule of its own: date-range-picker.css's are shared", () => {
+    expect(rules()).not.toMatch(/(?:^|[},]\s*)\.date-segment/);
+    expect(rules()).not.toContain('.date-segment[data-placeholder]');
+    const input = blockAfter(rules(), '.date-picker-input {');
+    expect(input).toContain('font-variant-numeric: tabular-nums;');
+    expect(input).toContain('white-space: nowrap;');
+  });
+
+  it('pads the face as a segment, cut short on one line, and draws the disabled segments and face taupe', () => {
+    const face = blockAfter(rules(), '.date-picker-face {');
+    for (const declaration of [
+      'min-inline-size: 0;',
+      'padding-inline: 0.125rem;',
+      'overflow: hidden;',
+      'color: var(--color-ink);',
+      'text-overflow: ellipsis;',
+      'white-space: nowrap;',
+    ]) {
+      expect(face, declaration).toContain(declaration);
+    }
+    expect(
+      blockAfter(rules(), '.date-picker[data-disabled] :is(.date-segment, .date-picker-face) {'),
+    ).toContain('color: var(--color-taupe);');
+  });
+
+  it("sizes the popover as the range picker's: the month's width, padded 16px", () => {
+    const popover = blockAfter(rules(), '.date-picker-popover.popover-padded {');
+    expect(popover).toContain('width: calc(7 * var(--size-control) + 2 * var(--spacing-inset) + 2px);');
+    expect(popover).toContain('padding: var(--spacing-inset);');
+  });
+
+  it('draws its nested corners concentric: each holder declares its radius, edge and padding from tokens', () => {
+    const CONCENTRIC = 'max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)))';
+    const css = rules();
+    // The frame holds the button; the popover holds the calendar.
+    const frame = blockAfter(css, '.date-picker-control {');
+    expect(frame).toContain('--holder-radius: var(--radius-pill);');
+    expect(frame).toContain('--holder-border: 1px;');
+    const popover = blockAfter(css, '.date-picker-popover.popover-padded {');
+    expect(popover).toContain('--holder-radius: var(--radius-surface);');
+    expect(popover).toContain('--holder-border: 1px;');
+    expect(popover).toContain('--holder-pad: var(--spacing-inset);');
+    // The button's gap is its nearer side's, the block axis: 6px from the frame's outer edge, the edge included.
+    const button = blockAfter(css, '.date-picker-button {');
+    expect(button).toContain('--holder-pad: calc(0.375rem - var(--holder-border));');
+    expect(button).toContain(`border-radius: ${CONCENTRIC};`);
+    // Never a copy of the holder's radius token.
+    expect(button).not.toContain('border-radius: var(--radius');
+    const calendar = blockAfter(css, '.date-picker-popover .calendar {');
+    expect(calendar).toContain(`--date-picker-calendar-radius: ${CONCENTRIC};`);
+    expect(calendar).toContain('border-radius: var(--date-picker-calendar-radius);');
+    // The presets and the days meet the calendar's edge, so each level takes its radius whole.
+    expect(
+      blockAfter(
+        css,
+        '.date-picker-popover :is(.calendar-presets, .calendar-preset, .calendar-day-number) {',
+      ),
+    ).toContain('border-radius: var(--date-picker-calendar-radius);');
+  });
+
+  it('measures the concentric corners in each shape: round, then smaller, then square once the gap reaches them', () => {
+    const tokens = JSON.parse(read('tokens/tokens.json'));
+    /** A radius token's pixels in a shape: Rounded is its value, Soft and Square its extensions. */
+    const radius = (name, shape) => {
+      const token = tokens.radius[name];
+      return shape === 'rounded' ? token.$value.value : token.$extensions['snapshot-ui'].shape[shape].value;
+    };
+    const inset = tokens.spacing.inset.$value.value;
+    const concentric = (holder, border, pad) => Math.max(0, holder - border - pad);
+    // The calendar inside the popover: the surface radius less the 1px frame and the 16px inset.
+    expect(concentric(radius('surface', 'rounded'), 1, inset)).toBe(7);
+    expect(concentric(radius('surface', 'soft'), 1, inset)).toBe(0);
+    expect(concentric(radius('surface', 'square'), 1, inset)).toBe(0);
+    // The button inside the frame, 6px in, the edge included: a pill, then 6px in Soft, then square.
+    expect(concentric(radius('pill', 'rounded'), 1, 5)).toBeGreaterThan(18);
+    expect(concentric(radius('pill', 'soft'), 1, 5)).toBe(6);
+    expect(concentric(radius('pill', 'square'), 1, 5)).toBe(0);
+  });
+
+  it('draws the disabled segments and face graytext in forced colors', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(
+      blockAfter(forced, '.date-picker[data-disabled] :is(.date-segment, .date-picker-face) {'),
+    ).toContain('color: graytext;');
+  });
+});
+
+describe('the changed dot, in each framed field', () => {
+  const rules = (file) => closeUp(stripComments(read(`src/components/${file}`)));
+  // A part step before a 36px field button 6px in, and the frame's end padding grown by the dot and a part step.
+  const PAST_BUTTON = 'calc(0.375rem + 2.25rem + var(--spacing-part))';
+  const GROWN = 'calc(3rem + 0.375rem + var(--spacing-part))';
+
+  it("pads a text input and a text area, which are their own frames, clear of the dot at their text's end", () => {
+    // The mark's default place is 1.5rem in, the text's own padding (field.css).
+    const rule = blockAfter(
+      rules('input.css'),
+      '.field[data-changed][data-unlabelled] > :is(input, textarea).input {',
+    );
+    expect(rule).toContain('padding-inline-end: calc(1.5rem + 0.375rem + var(--spacing-part));');
+  });
+
+  it.each([
+    ['combo-box.css', '.combo-box', '.combo-box-input'],
+    ['multi-select.css', '.multi-select', '.multi-select-control'],
+    ['date-range-picker.css', '.date-range-picker', '.date-range-control'],
+    ['date-picker.css', '.date-picker', '.date-picker-control'],
+  ])('%s places the dot before the field button and pads its frame clear of it', (file, field, frame) => {
+    const css = rules(file);
+    expect(blockAfter(css, `${field}[data-changed][data-unlabelled] {`)).toContain(
+      `--field-changed-mark-end: ${PAST_BUTTON};`,
+    );
+    expect(blockAfter(css, `${field}[data-changed][data-unlabelled] ${frame} {`)).toContain(
+      `padding-inline-end: ${GROWN};`,
+    );
+  });
+
+  it.each([
+    ['combo-box.css', '.combo-box', '.combo-box-input'],
+    ['multi-select.css', '.multi-select', '.multi-select-control'],
+  ])('%s moves the dot before the Spinner while options load', (file, field, frame) => {
+    const css = rules(file);
+    expect(blockAfter(css, `${field}[data-changed][data-unlabelled][data-loading] {`)).toContain(
+      '--field-changed-mark-end: 4.5rem;',
+    );
+    expect(blockAfter(css, `${field}[data-changed][data-unlabelled][data-loading] ${frame} {`)).toContain(
+      'padding-inline-end: calc(4.5rem + 0.375rem + var(--spacing-part));',
+    );
+  });
+
+  it('places the dot past the steppers and an end symbol in a number field, and the figure stops short of it', () => {
+    const css = rules('number-field.css');
+    const changed = blockAfter(css, '.number-field[data-changed][data-unlabelled] {');
+    expect(changed).toContain('--number-field-mark: calc(0.375rem + var(--spacing-part));');
+    expect(changed).toContain(
+      '--field-changed-mark-end: calc(var(--number-field-trail) + var(--number-field-symbol-end));',
+    );
+    expect(blockAfter(css, '.number-field {')).toContain('--number-field-mark: 0px;');
+    // At the figure's end in either direction: the trail side of both padding rules adds the mark.
+    const trail =
+      'calc(var(--number-field-trail) + var(--number-field-symbol-end) + var(--number-field-mark))';
+    expect(blockAfter(css, '.number-field-input {')).toContain(trail);
+    expect(blockAfter(css, "[dir='rtl'] .number-field-input {")).toContain(trail);
+  });
+
+  it("places the dot before a select's chevron, which keeps the value clear of it", () => {
+    const css = rules('select.css');
+    expect(blockAfter(css, '.select[data-changed][data-unlabelled] {')).toContain(
+      '--field-changed-mark-end: calc(1rem + 16px + var(--spacing-part));',
+    );
+    expect(blockAfter(css, '.select[data-changed][data-unlabelled] .select-chevron {')).toContain(
+      'margin-inline-start: calc(0.375rem + var(--spacing-part));',
+    );
   });
 });

@@ -1,0 +1,90 @@
+---
+title: Date picker
+description: 'One date, typed or chosen on a calendar, in and out as an ISO date.'
+icon: CalendarDays
+---
+
+<Section>
+
+## Basic
+
+A field for one day. Type the date into its segments, in the locale's order, or choose it on the calendar. The button at the field's end, or Alt+Arrow Down, opens the calendar on the value's month, or on `today`'s month when there is no value.
+
+- Value: an ISO date, `'2026-10-14'`, in and out. Days only, never times.
+- `onChange`: receives the ISO date once every segment is typed, and `null` once every segment is cleared. React Aria takes each digit of a year as it is typed, so a year being typed sends its shorter years first.
+- Forms: `name` submits the ISO date.
+
+<Preview name="date-picker-basic" />
+
+</Section>
+
+<Section>
+
+## Presets
+
+`presets` adds a row of days you name above the calendar: "Today", "Yesterday". The library computes no dates: compute each from your own today, ideally on the server. A press sets the day, closes the calendar and returns focus to the button. A preset is pressed while its day is chosen, and disabled when its day falls outside `minValue` or `maxValue` or `isDateUnavailable` rejects it.
+
+<Preview name="date-picker-presets" />
+
+</Section>
+
+<Section>
+
+## In a review grid
+
+A grid of fields with no label rows: each field is named by `aria-labelledby`, pointing at its column's header and its row's name, so a screen reader hears "Date Corner Mart". A changed field with no label has no chip to show, so it draws the changed dot instead: a clay dot in its frame, before its button or at its text's end, and a hidden "Changed" read after its name. An invalid field shows its error edge and line, and no dot. Compact density draws the 36px field.
+
+<Preview name="date-picker-review-grid" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+- ISO in and out, Gregorian whatever the calendar shown: a Persian page shows Mehr 1405 and still sends `'2026-10-14'`.
+- Pass `today` from your user's time zone, as an ISO date. It marks today and opens the calendar on its month when there is no value.
+- Pass `valueLabel` wherever the server's HTML should show the day, written like any other string in the app: "14 Oct 2026". The segments' text, order and names come from `Intl`, which the server must not write. Until hydration the field draws the label, the frame at its final size, the button, the hidden input and your `valueLabel` in place of the segments; the segments replace it without moving anything.
+- In a grid, name each field with `aria-label` or `aria-labelledby`, and pass `isChanged` when its value differs from the saved one.
+- A value that is not an ISO date reads as none and warns in the console. A hand-edited URL never throws.
+- Inside a [Data table](/docs/components/data-table) cell the segments keep their keys while they have focus: the arrows change and move between segments, digits type, and J types nothing. Out of the field, the arrows move between cells again.
+
+</Section>
+
+<Section>
+
+## Props
+
+Every date is an ISO string. `name`, `isRequired`, `isDisabled`, `isReadOnly`, `isInvalid`, `firstDayOfWeek`, `isOpen`, `onOpenChange`, `shouldCloseOnSelect` and `autoFocus` are React Aria's. `validate` receives the ISO date as `onChange` does.
+
+<PropsTable label="DatePicker props" path="../../packages/react/src/date-picker/DatePicker.tsx" type="Pick<DatePickerBaseProps, 'label' | 'aria-label' | 'aria-labelledby' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'valueLabel' | 'today' | 'presets' | 'minValue' | 'maxValue' | 'isDateUnavailable' | 'labels' | 'placement' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate' | 'className' | 'popoverClassName'>" />
+
+<PropsTable label="DatePreset" path="../../packages/react/src/date-picker/DatePicker.tsx" type="DatePreset" />
+
+<PropsTable label="DatePickerLabels" path="../../packages/react/src/date-picker/DatePicker.tsx" type="DatePickerLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The field is a `group` named by its label, its `aria-label` or its `aria-labelledby`. Each segment is a `spinbutton` named by its type and the field's name: "month, Date". On iOS, each segment is a text box. The button, named "Choose date" and the field's name, opens a `dialog` with the calendar, and the presets are a group named "Presets".
+
+"Choose date", "Previous month", "Next month" and "Presets" come from `labels`. Segment type names come from the browser. React Aria's announcements, such as the chosen date, have no Persian.
+
+A changed field with no label is described by a hidden "Changed", from `changedLabel`, which leaves while the field is invalid.
+
+<Keys rows={[['Tab', 'Into the segments, then the button.'], ['Left Right', 'Move between segments, in the drawn direction.'], ['Up Down', 'Change the focused segment.'], ['0-9 Backspace', 'Type into or clear the focused segment. Focus moves on when it is full.'], ['Alt+Down', 'Opens the calendar.'], ['Escape', 'Closes the calendar and returns focus to what opened it.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps date fields in the system.
+
+<Rules dos={['Pass valueLabel where the server HTML should show the day.', 'Compute presets from the today of the app, on the server.', 'Name each field of a grid by its column and its row.']} donts={['Never put times in the field.', 'Never mark a change with color alone: pass isChanged.', 'Never show a date string the app did not write.']} />
+
+</Section>

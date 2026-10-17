@@ -11,6 +11,7 @@ import { Button } from '../src/button';
 import { Calendar } from '../src/calendar';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { DataTable } from '../src/data-table';
+import { DatePicker } from '../src/date-picker';
 import { DateRangePicker } from '../src/date-range-picker';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
@@ -145,6 +146,29 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'aria-label="Choose dates"',
     ],
     ['role="spinbutton"', 'role="dialog"', 'date-range-arrow'],
+  ],
+  [
+    // The face: the frame, the app's valueLabel, the button and the hidden ISO date; the segments, from Intl,
+    // arrive after hydration, and the calendar renders nothing until it opens.
+    'DatePicker',
+    <DatePicker label="Date" value="2026-10-14" valueLabel="14 Oct 2026" name="day" today="2026-10-16" />,
+    [
+      'class="field date-picker"',
+      'class="input date-picker-control"',
+      'class="date-picker-face"',
+      '14 Oct 2026',
+      'name="day"',
+      'value="2026-10-14"',
+      'aria-label="Choose date"',
+    ],
+    ['role="spinbutton"', 'role="dialog"', 'field-changed-mark'],
+  ],
+  [
+    // A changed field with no label writes its changed mark on the server.
+    'DatePicker unlabelled and changed',
+    <DatePicker aria-label="Date, Corner Mart" value="2026-10-14" isChanged />,
+    ['data-unlabelled=""', 'data-changed=""', 'class="field-changed-mark"', '>Changed</span>'],
+    ['class="field-head"', 'role="spinbutton"'],
   ],
   [
     // The summary from React Aria's hidden pass, in list order, and the clear button; no list and no filter.

@@ -16,6 +16,7 @@ import {
   CalendarGridBody,
   CalendarGridHeader,
   CalendarHeaderCell,
+  CalendarStateContext,
   Heading,
   RangeCalendarStateContext,
   ToggleButton,
@@ -33,6 +34,15 @@ export interface DateRangePreset {
   label: string;
   /** Its range, computed by the app from its own today. */
   range: DateRange;
+}
+
+/** A day the app names, shown above the calendar: "Today", "Yesterday". */
+export interface DatePreset {
+  id: Key;
+  /** The preset's words, the app's: "Yesterday". */
+  label: string;
+  /** Its day as an ISO date, computed by the app from its own today. */
+  date: string;
 }
 
 export interface CalendarLabels {
@@ -230,6 +240,64 @@ export function CalendarPresets({ presets, label, bounds }: PresetsProps): React
             state.setValue(range);
             // The view moves to the start, in the calendar the locale shows.
             state.setFocusedDate(toCalendar(range.start, state.focusedDate.calendar));
+          }}
+        >
+          {preset.label}
+        </ToggleButton>
+      ))}
+    </div>
+  );
+}
+
+interface DatePresetsProps {
+  presets: readonly DatePreset[];
+  /** The group's name. */
+  label: string;
+  bounds: CalendarBounds;
+}
+
+/**
+ * The single-day presets of a calendar that chooses one day, DatePicker's, reading React Aria's calendar state.
+ * Each is a ToggleButton, as the range presets are (spec correction 7), pressed for the chosen day, and disabled
+ * for a day outside the bounds or one the calendar refuses, which React Aria's own choice never makes. A press sets
+ * the value through the state, which inside a picker reaches the picker's value and closes its popover, and moves
+ * the view to the day. A preset whose date is not an ISO date warns once and is left out.
+ */
+export function CalendarDatePresets({ presets, label, bounds }: DatePresetsProps): ReactElement | null {
+  const state = useContext(CalendarStateContext);
+  const parsed = useMemo(
+    () =>
+      presets.map((preset) => {
+        const date = parseIso(preset.date);
+        if (date === 'invalid' || date === null) return { preset, date: null, outOfReach: false };
+        return { preset, date, outOfReach: isOutOfReach({ start: date, end: date }, bounds) };
+      }),
+    [presets, bounds],
+  );
+  const broken = parsed.find((each) => each.date === null);
+  useWarnOnce(
+    broken === undefined
+      ? null
+      : `DatePicker leaves out the preset "${broken.preset.label}": its date, ${broken.preset.date}, is not an ISO date (YYYY-MM-DD).`,
+  );
+  const usable = parsed.filter((each) => each.date !== null);
+  if (state === null || usable.length === 0) return null;
+  // A calendar that chooses one day holds one date, or none.
+  const value = state.value as AnyCalendarDate | null;
+  const chosen = value === null ? null : toIso(value);
+  const isLocked = state.isDisabled || state.isReadOnly;
+  return (
+    <div className="calendar-presets" role="group" aria-label={label}>
+      {usable.map(({ preset, date, outOfReach }) => (
+        <ToggleButton
+          key={preset.id}
+          className="calendar-preset"
+          isSelected={chosen === toIso(date)}
+          isDisabled={isLocked || outOfReach}
+          onChange={() => {
+            state.setValue(date);
+            // The view moves to the day, in the calendar the locale shows.
+            state.setFocusedDate(toCalendar(date, state.focusedDate.calendar));
           }}
         >
           {preset.label}

@@ -72,6 +72,13 @@ export {
   type DateRangePickerProps,
 } from './date-range-picker';
 export {
+  DatePicker,
+  type DatePickerBaseProps,
+  type DatePickerLabels,
+  type DatePickerProps,
+  type DatePreset,
+} from './date-picker';
+export {
   FilterChip,
   type FilterChipCustomProps,
   type FilterChipLabels,

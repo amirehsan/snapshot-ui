@@ -14,7 +14,7 @@ import {
   type Ref,
   type SyntheticEvent,
 } from 'react';
-import { useFilter, useLocale, type Key, type Selection } from 'react-aria-components';
+import { useFilter, useLocale, type Key, type Selection, type TableState } from 'react-aria-components';
 import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
@@ -315,6 +315,19 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   /** The manager of the face `element` is in. */
   const managerOf = (element: Element): FaceSelectionManager | null =>
     element.closest('.data-table-list') === null ? manager.current : listManager.current;
+  // React Aria's table state, whose keyboard navigation is off while an editable element in a cell has focus.
+  const tableState = useRef<TableState<unknown> | null>(null);
+  const onTableState = useCallback((next: TableState<unknown> | null) => {
+    tableState.current = next;
+  }, []);
+  /** Lets an editable element in a cell keep its arrows while it has focus, and gives them back to the grid. */
+  const editableKeys = (target: Element | null): void => {
+    const state = tableState.current;
+    if (state === null) return;
+    const cell = target?.closest('[role="gridcell"], [role="rowheader"]') ?? null;
+    const editable = cell !== null && cell !== target && target?.closest(EDITABLE) != null;
+    if (state.isKeyboardNavigationDisabled !== editable) state.setKeyboardNavigationDisabled(editable);
+  };
   // Whether the last focus inside the root's DOM was in the bar, which the root's focus capture keeps.
   const focusInBar = useRef(false);
 
@@ -516,6 +529,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         // Focus in a portal opened from the bar (a Menu) keeps what the bar had.
         if (!root.contains(target)) return;
         focusInBar.current = target.closest('.data-table-bar') !== null;
+        editableKeys(target);
         // A focused row or cell of the body, or a list item, is scrolled clear of the sticky header or day
         // heading and the bar, after React Aria's own scroll, which runs in the next frame (WCAG 2.4.11).
         if (target instanceof HTMLElement && target.closest('tbody, tfoot, .data-table-item') !== null) {
@@ -533,6 +547,8 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         if (next instanceof Element && !event.currentTarget.contains(next)) {
           if (portalOf(next) === portalOf(event.currentTarget)) focusInBar.current = false;
         }
+        // Focus that leaves the table gives the arrows back to the grid; a move inside it is the focus capture's.
+        if (!(next instanceof Element) || !event.currentTarget.contains(next)) editableKeys(null);
       }}
       onPointerDownCapture={guardPress}
       onMouseDownCapture={guardPress}
@@ -575,6 +591,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           emptyState={failed ? error : emptyState}
           totalLabel={words.total}
           loadingLabel={words.loading}
+          onState={onTableState}
         />
       </div>
       {/* The list face, shown instead of the grid under 40rem of the root's box (ruling 8); busy as the grid is. */}

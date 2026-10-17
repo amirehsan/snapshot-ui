@@ -1600,6 +1600,54 @@ The five surfaces are canvas, lifted, bone, float and raised. Clay on float and
 error on bone were not in the contrast gate, so they are now: every text color
 a field part uses is gated on every surface.
 
+**The changed dot** (documents spec, ruling 16; spec corrections 2, 3 and 48
+to 51). A field named only by `aria-label` or `aria-labelledby`, as a cell of
+a review grid is, has no label row for the chip, and the changed edge alone is
+a change of hue, which WCAG 1.4.1 forbids as the only cue. So every framed
+field with `isChanged` (TextField, TextArea, NumberField, Select, ComboBox,
+MultiSelect, DateRangePicker and DatePicker) writes `data-unlabelled` while it
+has no label and, while changed, unlabelled and valid, renders
+`span.field-changed-mark`: the chip's 6px dot, holding the word "Changed"
+(`changedLabel`) for a screen reader, named in the control's
+`aria-describedby` through `useChangedDescription`, so the field reads
+"Changed" after its name.
+
+- **Clay, not light signal orange** (spec correction 2). The spec named the
+  chip's dot light signal orange; the chip's dot is `currentcolor`, which is
+  clay, and light signal orange measures 2.87 on the raised fill in light,
+  under the 3:1 a graphic needs. Clay means exactly unsaved and measures 7.04
+  and 6.02 on raised and 7.04 and 6.82 on float, gated as text, which is
+  stricter. The changed edge stays light signal orange.
+- **Its place.** On the frame's first line,
+  `calc((var(--size-field) - 0.375rem) / 2)` down, 1.5px less inside a frame
+  drawn with `.input`, whose box starts inside the changed edge; a text area's
+  on its first line, past its padding, edge and half a line.
+  `--field-changed-mark-end` in from the frame's inline end, which each field's
+  file sets: a part step before the 36px field button 6px in (ComboBox,
+  MultiSelect, DateRangePicker, DatePicker), before the Spinner while options
+  load, before a select's chevron, past a number field's steppers and end
+  symbol, and 1.5rem, the text's own padding, in a text input and a text area.
+  The frame's inline-end padding grows by the dot and a part step while it
+  shows (a select's chevron takes the step as its margin), so typed text never
+  runs under it. Inside the frame where the frame can hold an element (the
+  date frames, the multi-select's, the number field's and the combo box's
+  controls); as the field's next child where the control is the frame (the
+  text input, the text area) and where the frame is a button (Select), whose
+  text would otherwise join its visible name.
+- **The hidden word.** The dot clips its own text: `overflow: hidden`,
+  `color: transparent`, `white-space: nowrap` and `font-size: 0`, so axe
+  measures no text of it, and it takes no pointer. The word is read through
+  `aria-describedby`, which reads an element's text whatever its size.
+- **It leaves while invalid**, by any cause, as the chip does: it reads
+  `FieldErrorContext`, since validation React Aria runs is not something the
+  field's props can see, and an element named in `aria-describedby` is read
+  even when hidden. The error edge, line and description stand alone.
+- **Forced colors.** Out of the repaint, `forced-color-adjust: none`, drawn
+  `canvastext`, so the dot keeps a fill and its word stays unseen.
+- **Its corners.** The dot is a dot: `--radius-dot`, round in every shape, as
+  the chip's own dot is, never a nested surface's concentric radius (spec
+  correction 52).
+
 ## TextField
 
 The document specifies one input, the nav search field, and Appendix A derived
@@ -9209,7 +9257,7 @@ from the edge. The title is an `h2` at `--text-body` weight 500 in ink with
 tabular figures, "Uploading 2 of 5", counting the running batch's settled
 files and the one in hand, so rows settled before the batch began do not
 swell it, then naming what settled, failures and reviews included, "3
-uploads complete, 1 failed, 1 needs review" (spec corrections 43 and 54).
+uploads complete, 1 failed, 1 needs review" (spec corrections 43 and 60).
 While any row has failed, a 20px `CircleX` in error leads the title, hidden
 from assistive technology, since the rows and the announcements say it. The
 app's line under the title is `--text-small` in slate. The fold button's
@@ -9220,7 +9268,7 @@ button shows by ruling 11: `onClear` once nothing is in flight, the Cancel
 all question ("Cancel 1 upload?", "Cancel 3 uploads?") while files are
 waiting or uploading, and none without `onCancelAll`, nor while only files
 being read remain, which have reached the server and have no Cancel (spec
-corrections 53 and 55).
+corrections 59 and 61).
 
 **The body.** `max-block-size: min(24rem, 50dvh)`, about five rows, or half
 a short window, scrolling with the library's thin scrollbar colors and
@@ -9263,19 +9311,19 @@ a Persian page. The full name is the link's or the row's text.
 **Focus.** The list and the tray remember the element that holds focus and
 mend focus only once that element has left the page; focus the reader moves
 anywhere else, the body by a press on empty space included, is theirs and is
-never pulled back (spec correction 48). When Remove or Cancel takes a row
+never pulled back (spec correction 54). When Remove or Cancel takes a row
 away with focus in it, focus moves before paint to the same button on the
 next row, else the previous one, else the tray's heading or, in a page, the
 list; never the body. When the row stays and only its button leaves, through
 Retry or a status the reader did not change, the row itself takes focus
 (`tabindex="-1"`, an inset ring when the keyboard brought it), never a
-button the reader did not choose (spec correction 51). When the tray leaves
+button the reader did not choose (spec correction 57). When the tray leaves
 with focus in it, or after a yes to Cancel all, focus goes to the shell's
 `<main>`, or outside a shell to the first `main` that takes focus (spec
 correction 11); when only a close or clear button leaves with focus on it,
 or after a yes to Cancel all that leaves settled rows, focus goes to what
 stays in that face: the fold button, the sheet's own close or the bar's
-button (spec correction 56).
+button (spec correction 62).
 
 **The phone's bar** (ruling 8). Under 768px a pill fixed across the bottom,
 `inset-inline: var(--overlay-inset)`, on the float surface at
@@ -9292,7 +9340,7 @@ twice (spec correction 41). A sheet left open while the window widens stays
 open; when it closes there, focus goes to the wide face's fold button, the
 one `matchMedia` read.
 
-**The phone's Clear and Cancel uploads** (spec correction 50; Drive, Dropbox
+**The phone's Clear and Cancel uploads** (spec correction 56; Drive, Dropbox
 and Gmail clear and cancel from their phone faces). The wide close button's
 rule is the sheet's footer: a full-width secondary "Clear" (`labels.clear`)
 calling `onClear` once nothing is in flight, or "Cancel uploads"
@@ -9305,7 +9353,7 @@ button is named by `labels.closeSheet` ("Close"), apart from the panel's
 `labels.close`, so an app that names the panel's button for clearing does
 not rename the button that only closes the sheet.
 
-**Room for the bar** (spec correction 49, WCAG 2.4.11). Under 768px, while
+**Room for the bar** (spec correction 55, WCAG 2.4.11). Under 768px, while
 the bar shows, `.app-shell:has(> .upload-tray-bar) .app-shell-workspace`
 pads its end by the shell's reserve, a sticky bar's offset, the bar's
 `max(var(--size-field), var(--size-target))` and the inset, so the page's
@@ -9334,7 +9382,7 @@ the same words twice are said twice.
 **Leaving the page** (ruling 12). While any file is waiting or uploading
 and `warnsOnUnload` holds, a `beforeunload` listener asks the browser to
 warn, in its own words; a file being read is on the server already and holds
-nothing open (spec correction 55). iOS Safari shows nothing, so the tray on the page is the
+nothing open (spec correction 61). iOS Safari shows nothing, so the tray on the page is the
 real warning; a client navigation keeps the shell and needs none.
 
 **The bottom edge, the tray's part** (spec 12). Both faces sit at
@@ -9348,7 +9396,7 @@ never in the server's HTML, so no first paint waits on it. `toast.css` adds
 it, with `--save-bar-offset`, to the toast region's bottom, so the toasts
 sit 16px above the tray in the same column.
 
-**Concentric corners** (spec corrections 47 and 52). A rounded part in a
+**Concentric corners** (spec corrections 47 and 58). A rounded part in a
 rounded holder's corner region takes the holder's radius less the gap
 between them, the holder's edge and the smaller real gap, never a copy, and
 is square once the gap reaches the radius: `max(0px, calc(var(--holder-radius)
@@ -9374,14 +9422,14 @@ rounded holder, such as a Card, names its own corner.
 icons, the header's and the bar's error icon and the bar's clear X keep their
 shapes in `canvastext`; the words carry the status, as the toasts' titles
 carry their tones. The bar's buttons press as the native `:active` does too,
-`:is(:active, [data-pressed])` (spec correction 57).
+`:is(:active, [data-pressed])` (spec correction 63).
 
-**Where the build departs from the plan** (spec corrections 40 to 57). The
+**Where the build departs from the plan** (spec corrections 40 to 63). The
 size limits are above the spec's budgets: `{ UploadList }` measured 2.43 kB
 and is set at 3 kB, and `{ UploadTray }` 7.48 kB, set at 8 kB, by the repo's
 rule; after the review round the list measures 2.5 kB under its 3 kB, and the
 tray, which now also carries Button for the sheet's footer, 8.01 kB, so the
-rule sets 9 kB (spec correction 50). The tray carries Sheet, ConfirmDialog
+rule sets 9 kB (spec correction 56). The tray carries Sheet, ConfirmDialog
 through `useConfirm`, IconButton, Button and the list with its ProgressBar.
 AppShell measured 934 B with its `floating` slot and keeps 1.5 kB.
 
@@ -9391,3 +9439,117 @@ link, word, reason and buttons, the three announcements and how often; on a
 phone, the bar above the tab bar and above a save bar, its sheet, and the
 sheet closing on a link and on a swipe; `beforeunload`, which iOS Safari does
 not show.
+
+## DatePicker
+
+One day in the text input's pill: `DatePicker`, on React Aria's date
+picker, its one date field typed in the locale's order and its calendar in
+a popover, with the app's single-day presets (documents spec 8, rulings 15
+and 16, section 13.2 item 19). It is DateRangePicker's field with one date,
+so most of this record is that one's, cited rather than repeated.
+
+**The shared frame.** `DateFrame` (`calendar/DateFrame.tsx`) is the frame
+DateRangePicker drew for itself, moved out and given a class: the picker's
+whole group value from React Aria's group context, less its ref and the
+states a plain element does not take, on a plain
+`div.input.<class>` that takes the ref, which React Aria positions the
+popover against. DateRangePicker passes `date-range-control` and DatePicker
+`date-picker-control`; `drawSegment` and `noSegment` moved with it, and
+DateRangePicker's tests pass unchanged. Being `.input`, the frame takes the
+hover, disabled, changed and invalid edges through the field's root; it
+rings only while a segment has keyboard focus, never for the button.
+
+**The frame's size.** `padding-inline: 1.5rem 3rem`, clear of the button,
+and `min-inline-size: 12rem`, so a whole date and the button fit at the
+compact size; the field caps it at `--container-field`. It clips nothing,
+so the button's 40px hit area reaches past it at either density.
+
+**Segments.** `DateInput.date-picker-input`, an `inline-flex` row in
+tabular figures that React Aria isolates. The segment rules are
+`date-range-picker.css`'s `.date-segment`, shared and not repeated: ink,
+an empty one slate labelled or not (spec correction 4, since axe measures
+it as text), taupe while disabled, the focused one the ink fill with
+canvas text on `--radius-micro`.
+
+**The face.** On the server and through hydration the `DateInput`
+renders no segments and `span.date-picker-face`, padded as a segment is,
+shows the app's `valueLabel`, ellipsized on one line, in a frame at its
+final size; React Aria's segments replace it in the next render, and a
+story compares the face's field, frame, button and changed dot with the
+hydrated ones at both densities. The hidden input holds the ISO date in
+both passes, React Aria's: the date field's own, which submits under
+`name`, and an autofill `input[type="date"]` with `form=""`, which never
+submits. The server's HTML is one string under `en-US`, `de-DE` and
+`fa-IR` and in UTC and Asia/Tehran.
+
+**Values.** ISO strings in and out: `value` and `defaultValue` read with
+`parseIso`, one that is not `YYYY-MM-DD` read as none with one warning;
+`onChange` gets the Gregorian ISO date once every segment is typed and
+`null` once every segment is cleared; `validate` gets the ISO date. React
+Aria takes each digit of a year as it is typed, so years 2, 20 and 202
+reach `onChange` as whole dates first; the library passes them on, as a
+controlled field would otherwise clear what is being typed, and the docs
+say so (spec correction 53). `today` is the picker's
+`placeholderValue`, which React Aria gives the calendar only while there
+is no value, so the calendar opens on the value's month, else `today`'s.
+
+**The popover** is the range picker's: `isPadded` stepping down to
+`--spacing-inset`, the month's width,
+`calc(7 * var(--size-control) + 2 * var(--spacing-inset) + 2px)`, capped
+at the viewport less 2rem, so one month fits 320px and the calendar stays
+a popover on a phone (ruling 15). It holds React Aria's `Dialog` around a
+bare `Calendar.calendar` that the picker's context fills, with the shared
+`CalendarHeader` and `CalendarDays`.
+
+**Presets.** `CalendarDatePresets`, beside `CalendarPresets`, reads React
+Aria's calendar state: `ToggleButton.calendar-preset`s in a `group` named
+`labels.presets`, pressed for the chosen day, disabled for a day outside
+the props' bounds or one `isDateUnavailable` refuses; a press sets the
+value, which closes the popover through `shouldCloseOnSelect`, and moves
+the view to the day. A preset whose date is not an ISO date warns once and
+is left out. Closing on a day, a preset or Escape gives focus back to what
+opened the calendar, React Aria's.
+
+**Concentric corners** (owner rule, 2026-10-17; spec corrections 47 and 52). A
+rounded part inside a rounded holder takes the holder's radius less the
+gap between them, the holder's border and padding, never a copy of it,
+and is square once the gap reaches the radius; each level subtracts
+again. A holder declares `--holder-radius`, `--holder-border` and
+`--holder-pad` from the radius and spacing tokens, and a part computes
+`max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)))`.
+The frame holds the button at 6px on its nearer side, the block axis,
+the edge included: a pill in Rounded, 6px in Soft, square in Square. The
+popover holds the calendar inside its 1px frame and 16px inset: 7px in
+Rounded, square in Soft and Square; the preset row, its presets and the
+days meet the calendar's edge with no gap of their own and take its
+radius whole, in the holder properties UploadTray names its corners in.
+Calendar and DateRangePicker keep their pills until the rule reaches
+them.
+
+**In a review grid.** A field per cell, named by `aria-label` or by
+`aria-labelledby` of its column's header and its row's name; compact
+density draws the 36px field; a changed field with no label draws the
+changed dot ("Field parts"). Inside a DataTable cell React Aria's own cell
+took every arrow from its children in its key capture, so DataTable now
+turns the grid's keyboard navigation off while an editable element in a
+cell has focus and back on when focus leaves it (spec correction 48, risk
+R8): the segments' arrows step and move, digits type, J types nothing and
+moves no row, in three engines.
+
+**Measured pairs.** Gated: ink on raised, the segments, 18.43 and 15.36;
+slate on raised, the empty segments, 5.49 and 6.44; canvas on ink, the
+focused segment, 16.25 and 19.31; clay on raised, the changed dot, 7.04
+and 6.02. No pair is added to the gate.
+
+**Forced colors.** As DateRangePicker: the focused segment `Highlight`
+with `HighlightText` out of the repaint (shared); disabled segments and
+the face `graytext`; the changed dot `canvastext`.
+
+**Size.** `{ DatePicker }` measures 3.12 kB without React Aria, Lucide and
+`@internationalized/date`, within spec 16's 4 kB budget, which the rule
+keeps as the limit.
+
+**Screen readers and devices.** Not yet verified (owner action 4): the
+segments, the button "Choose date" and the calendar with VoiceOver and
+NVDA, an unlabelled changed field in a grid reading "Changed" after its
+name, and the segments typed with VoiceOver on iOS.

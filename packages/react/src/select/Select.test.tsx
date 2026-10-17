@@ -139,8 +139,9 @@ describe('Select', () => {
     unmount();
     const { container } = render(<Five aria-label="Category" label={undefined} placeholder="Any category" />);
     expect(element('.select-value')).toHaveTextContent('Any category');
-    // Named only by aria-label. The placeholder is slate either way, so the root carries no mark for it.
-    expect(root(container)).not.toHaveAttribute('data-unlabelled');
+    // Named only by aria-label. The placeholder is slate either way; the root says it has no label, which the
+    // changed mark keys on (ruling 16).
+    expect(root(container)).toHaveAttribute('data-unlabelled', '');
     expect(container.querySelector('.field-head')).toBeNull();
   });
 
@@ -615,5 +616,55 @@ describe('Select, in a section', () => {
     await user.click(trigger());
     const spending = screen.getByRole('group', { name: 'Spending' });
     expect(within(spending).getAllByRole('option')).toHaveLength(5);
+  });
+});
+
+describe('Select, changed with no label', () => {
+  it('marks a changed field with no label, and reads the mark after its name', async () => {
+    const { container, rerender } = render(
+      <Select aria-label="Category, Corner Mart" defaultValue="food" isChanged>
+        <PickerOption id="food">Food</PickerOption>
+        <PickerOption id="rent">Rent</PickerOption>
+      </Select>,
+    );
+    const field = container.querySelector('.select');
+    expect(field).toHaveAttribute('data-changed');
+    expect(field).toHaveAttribute('data-unlabelled', '');
+    const mark = container.querySelector('.field-changed-mark');
+    expect(mark).toHaveTextContent('Changed');
+    const control = screen.getByRole('button', { name: /Category, Corner Mart/ });
+    // The field's next child after the trigger, the frame: a button's text is its visible name, never the mark's.
+    expect(mark?.parentElement).toBe(field);
+    expect(mark?.previousElementSibling).toHaveClass('select-trigger');
+    expect(control).not.toHaveAccessibleName(/Changed/);
+    // React Aria's own descriptions come first, the chosen value or range; the mark's word ends it.
+    expect(control).toHaveAccessibleDescription(/(^| )Changed$/);
+    expect(control.getAttribute('aria-describedby')?.split(' ')).toContain(mark?.id);
+    expect(container.querySelector('.field-changed')).toBeNull();
+    await expectNoA11yViolations(container);
+    // With a label the chip says it, and no mark is drawn.
+    rerender(
+      <Select label="Category" defaultValue="food" isChanged>
+        <PickerOption id="food">Food</PickerOption>
+      </Select>,
+    );
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    expect(container.querySelector('.field-changed')).not.toBeNull();
+    expect(container.querySelector('.select')).not.toHaveAttribute('data-unlabelled');
+  });
+
+  it('drops the mark while invalid', () => {
+    const { container } = render(
+      <Select aria-label="Category, Corner Mart" isChanged isInvalid errorMessage="Choose a category.">
+        <PickerOption id="food">Food</PickerOption>
+      </Select>,
+    );
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    // Nothing names a mark that is gone.
+    for (const described of container.querySelectorAll('[aria-describedby]')) {
+      for (const id of described.getAttribute('aria-describedby')?.split(' ') ?? []) {
+        expect(document.getElementById(id), id).not.toBeNull();
+      }
+    }
   });
 });

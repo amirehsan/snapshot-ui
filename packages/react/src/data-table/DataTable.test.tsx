@@ -660,3 +660,45 @@ describe('DataTable', () => {
     expect(up).toBeTruthy();
   });
 });
+
+describe('DataTable, with an editable element in a cell', () => {
+  interface Receipt {
+    id: string;
+    merchant: string;
+    memo: string;
+  }
+  const RECEIPTS: Receipt[] = [
+    { id: 'a', merchant: 'Corner Mart', memo: 'Milk' },
+    { id: 'b', merchant: 'City Transit', memo: 'Bus' },
+  ];
+  const COLUMNS: DataTableColumn<Receipt>[] = [
+    { id: 'merchant', header: 'Merchant', cell: (row) => row.merchant, isRowHeader: true },
+    {
+      id: 'memo',
+      header: 'Memo',
+      cell: (row) => <input aria-label={`Memo, ${row.merchant}`} defaultValue={row.memo} />,
+    },
+  ];
+
+  it('lets the element keep its arrows while it has focus, and gives them back to the grid after', async () => {
+    showFace('table');
+    const user = userEvent.setup();
+    render(<DataTable aria-label="Receipts" items={RECEIPTS} columns={COLUMNS} getKey={(row) => row.id} />);
+    const memo = screen.getByRole('textbox', { name: 'Memo, Corner Mart' });
+    act(() => {
+      memo.focus();
+    });
+    // React Aria's cell takes every arrow from its children in its key capture; with the grid's navigation off
+    // while an editable child has focus, the arrows stay with the child.
+    await user.keyboard('{ArrowDown}{ArrowUp}{ArrowLeft}{ArrowRight}');
+    expect(memo).toHaveFocus();
+    // Out of the field, on a cell of its own, the arrows move between cells again.
+    const [first, second] = screen.getAllByRole('rowheader');
+    if (!first || !second) throw new Error('Two row headers');
+    act(() => {
+      first.focus();
+    });
+    await user.keyboard('{ArrowDown}');
+    expect(second).toHaveFocus();
+  });
+});

@@ -11,6 +11,7 @@ import { CollapsibleCard } from '../collapsible-card';
 import { ComboBox } from '../combo-box';
 import { CommandPalette } from '../command-palette';
 import { DataTable } from '../data-table';
+import { DatePicker } from '../date-picker';
 import { DateRangePicker } from '../date-range-picker';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
@@ -1219,6 +1220,56 @@ export const DateRangePickerMirrored: Story = {
     await expect(focused).toHaveClass('date-segment');
     await expect(focused).not.toBe(first);
     await expect(rect(focused).right).toBeLessThanOrEqual(from.left + 0.5);
+  },
+};
+
+/**
+ * A date picker in right to left: the button and the changed dot at the frame's left, the dot to the button's right,
+ * and the segments in the Persian calendar's own order, year first at the right.
+ */
+export const DatePickerMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(20rem, calc(100vw - 2rem))', display: 'grid', gap: 16 }}>
+        <DatePicker
+          label="تاریخ"
+          defaultValue="2026-10-14"
+          today="2026-10-16"
+          labels={{ open: 'انتخاب تاریخ' }}
+        />
+        <DatePicker
+          aria-label="تاریخ رسید"
+          defaultValue="2026-10-14"
+          today="2026-10-16"
+          isChanged
+          changedLabel="تغییر کرده"
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const [labelled, changed] = [...canvasElement.querySelectorAll<HTMLElement>('.date-picker-control')];
+    if (!labelled || !changed) throw new Error('Two frames');
+    const button = within(canvasElement).getByRole('button', { name: /^انتخاب تاریخ/ });
+    // The button at the left end.
+    await expect(rect(button).left - rect(labelled).left).toBeLessThan(12);
+    // 14 October 2026 is 22 Mehr 1405: the year at the right, then the month, then the day to its left.
+    const segments = [...labelled.querySelectorAll<HTMLElement>('.date-segment:not([data-type="literal"])')];
+    await expect(segments.map((each) => each.textContent)).toEqual(['۱۴۰۵', '۷', '۲۲']);
+    const [year, month, day] = segments;
+    if (!year || !month || !day) throw new Error('Three segments');
+    await expect(rect(year).left).toBeGreaterThan(rect(month).right - 0.5);
+    await expect(rect(month).left).toBeGreaterThan(rect(day).right - 0.5);
+    await expect(rect(day).left).toBeGreaterThan(rect(button).right - 0.5);
+    // The changed dot sits between the date and the button, a part step from the button, on the left.
+    const mark = find(changed, '.field-changed-mark');
+    const own = find(changed, '.date-picker-button');
+    const first = [...changed.querySelectorAll<HTMLElement>('.date-segment:not([data-type="literal"])')].at(
+      -1,
+    );
+    if (!first) throw new Error('No segment');
+    await expect(rect(mark).left).toBeGreaterThanOrEqual(rect(own).right - 0.5);
+    await expect(rect(mark).right).toBeLessThanOrEqual(rect(first).left + 0.5);
   },
 };
 
