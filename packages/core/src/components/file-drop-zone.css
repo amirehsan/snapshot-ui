@@ -5,10 +5,12 @@
  * of its own, so it takes its holder's; a slate upload icon over the hint in ink and the zone's button. Under
  * 20rem of its own box the icon sits beside the line, for a narrow form column. A drag holding files turns the
  * edge solid ink over the 5% ink wash and puts the drop line in place of the hint; invalid outranks it with the
- * error edge, dashed; disabled is taupe. A phone cannot drag a file into a page, so a coarse pointer without
- * hover draws no hint, and the button stays.
+ * error edge, dashed; disabled is taupe. A click anywhere on the box opens the picker, so it takes the pointer
+ * cursor of a control. A phone cannot drag a file into a page, so a coarse pointer without hover draws no hint,
+ * and the button stays.
  *
- * The page overlay covers the workspace and not the rail: fixed, inset from the viewport's edges and from the
+ * The page overlay covers the workspace and not the rail: drawn in the closest AppShell, or the body, so no
+ * ancestor's transform or backdrop filter confines it; fixed, inset from the viewport's edges and from the
  * rail's width, a 2px dashed ink edge at the stadium radius over the canvas at 92%, with a float card at its
  * center. Its layer is one over the fixed chrome, under every modal and the toasts. It fades in over 120ms.
  * FileButton is a Button and draws nothing here.
@@ -31,6 +33,7 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     text-align: center;
+    cursor: pointer;
   }
 
   /* Each on a line of its own, centered: the icon over the hint and the button. */
@@ -215,7 +218,17 @@
       border-color: canvastext;
     }
 
-    .file-drop-zone-box[data-drop-target] {
+    /* Disabled steps back to the reader's disabled color, as a disabled button does. */
+    .file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-box,
+    .file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-icon {
+      border-color: graytext;
+      color: graytext;
+    }
+
+    /* The drop target's solid highlight edge wins over invalid here: with the wash and the error color gone, the
+       edge is the only sign that files are over the box, and the error line still says the zone is invalid. */
+    .file-drop-zone .file-drop-zone-box[data-drop-target] {
+      border-style: solid;
       border-color: highlight;
     }
 

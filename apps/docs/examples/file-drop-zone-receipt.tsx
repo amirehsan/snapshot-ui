@@ -5,6 +5,19 @@ import { useState, type ReactElement } from 'react';
 
 const TEN_MB = 10 * 1024 * 1024;
 
+/** Each type by its MIME type and its extensions, since systems disagree on types; HEIC for a phone's photos. */
+const TYPES = [
+  'application/pdf',
+  '.pdf',
+  'image/jpeg',
+  '.jpg',
+  '.jpeg',
+  'image/png',
+  '.png',
+  'image/heic',
+  '.heic',
+];
+
 export default function FileDropZoneReceipt(): ReactElement {
   const [added, setAdded] = useState<string | null>(null);
   const take = (accepted: File[]): void => {
@@ -14,15 +27,13 @@ export default function FileDropZoneReceipt(): ReactElement {
     <div className="stack" style={{ width: '100%', maxWidth: '28rem' }}>
       <FileDropZone
         label="Receipt"
-        description="PDF, JPG or PNG, up to 10 MB"
-        acceptedFileTypes={['application/pdf', 'image/jpeg', 'image/png', '.heic']}
+        description="PDF, JPG, PNG or HEIC, up to 10 MB"
+        acceptedFileTypes={TYPES}
         maxFileSize={TEN_MB}
-        labels={{
-          rejected: (count) => (count === '1' ? '1 file was not added' : `${count} files were not added`),
-        }}
         onFiles={take}
       />
-      {/* On a phone only: a desktop browser ignores capture and opens the file picker. */}
+      {/* On a phone only, beside the zone rather than on its button, which would then take photos only: a desktop
+          browser ignores capture and opens the file picker. */}
       <span className="touch-only">
         <FileButton
           variant="secondary"

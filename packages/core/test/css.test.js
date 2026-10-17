@@ -7515,6 +7515,8 @@ describe('src/components/file-drop-zone.css', () => {
       'padding: var(--spacing-peer);',
       'border: 2px dashed var(--color-boundary);',
       'border-radius: var(--radius-surface);',
+      // A click anywhere on the box opens the picker: the pointer cursor of a control.
+      'cursor: pointer;',
     ]) {
       expect(box, declaration).toContain(declaration);
     }
@@ -7619,9 +7621,24 @@ describe('src/components/file-drop-zone.css', () => {
   });
 
   it('draws the dashed edges canvastext, the drop target highlight and the overlay canvas in forced colors', () => {
-    const forced = blockAfter(rules(), FORCED);
+    const css = rules();
+    const forced = blockAfter(css, FORCED);
     expect(blockAfter(forced, '.file-drop-zone-box {')).toMatch(/border-color: canvastext;/i);
-    expect(blockAfter(forced, TARGET)).toMatch(/border-color: highlight;/i);
+    // The drop target's edge, solid, wins over invalid: as specific as the invalid rule, and after it.
+    const target = '.file-drop-zone .file-drop-zone-box[data-drop-target] {';
+    expect(blockAfter(forced, target)).toMatch(/border-style: solid;/i);
+    expect(blockAfter(forced, target)).toMatch(/border-color: highlight;/i);
+    expect(css.indexOf(target, css.indexOf(FORCED))).toBeGreaterThan(css.indexOf(INVALID));
+    // A disabled zone in the reader's disabled color: the edge, the text and the icon.
+    const disabled = blockAfter(
+      forced,
+      ".file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-box,",
+    );
+    expect(disabled).toMatch(/border-color: graytext;/i);
+    expect(disabled).toMatch(/(^|[^-])color: graytext;/i);
+    expect(forced).toContain(
+      ".file-drop-zone:is([data-disabled], [aria-disabled='true']) .file-drop-zone-icon {",
+    );
     const overlay = blockAfter(forced, '.page-drop-zone {');
     expect(overlay).toMatch(/border-color: canvastext;/i);
     expect(overlay).toMatch(/background-color: canvas;/i);

@@ -4,6 +4,7 @@ import { I18nProvider } from 'react-aria-components';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { AppShell } from '../app-shell';
 import { Button } from '../button';
+import { Checkbox } from '../checkbox';
 import { Dialog } from '../dialog';
 import { TextField } from '../text-field';
 import {
@@ -144,7 +145,7 @@ export const RightToLeft: Story = {
             dragHint: 'فایل‌ها را اینجا بکشید یا',
             choose: 'انتخاب فایل‌ها',
             drop: 'برای بارگذاری رها کنید',
-            rejected: (count) => `${count} فایل اضافه نشد`,
+            rejected: (_count, formatted) => `${formatted} فایل اضافه نشد`,
           }}
           onFiles={onFiles}
         />
@@ -212,6 +213,8 @@ export const PageOverlay: Story = {
     const box = overlay.getBoundingClientRect();
     await expect(box.left).toBeGreaterThanOrEqual(rail.right);
     await expect(overlay).toHaveAttribute('aria-hidden', 'true');
+    // Drawn in the shell, which declares the rail's width.
+    await expect(overlay.parentElement).toBe(part(canvasElement, 'app-shell'));
   },
 };
 
@@ -256,7 +259,9 @@ export const DropReachesOnFiles: Story = {
     await expect(rejected.map(({ file, reason }) => [file.name, reason])).toEqual([['setup.exe', 'type']]);
     await waitFor(() => expect(box).not.toHaveAttribute('data-drop-target'));
     await waitFor(() =>
-      expect(part(canvasElement, 'file-drop-zone-status')).toHaveTextContent('1 files were not added'),
+      expect(part(canvasElement, 'file-drop-zone-status')).toHaveTextContent(
+        /^1 file was not added: its type is not accepted$/,
+      ),
     );
     // A drag of text is no drop target and its drop adds nothing.
     dragOver(box, textTransfer());
@@ -316,8 +321,40 @@ export const OneTabStop: Story = {
 };
 
 /**
- * While a zone is mounted, a files drop beside it is prevented, so the browser never opens the file in the tab;
- * a drop into a text field is left to it. Three engines.
+ * A click on the box beside the button opens the picker, as Carbon's drop container and react-dropzone do: it
+ * reaches the button's input once, the button's own press reaches it once, and the box adds no tab stop. The
+ * input's click is counted and its default prevented, so no picker opens in the play. Three engines.
+ */
+export const BoxClickOpensPicker: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  play: async ({ canvasElement }) => {
+    const input = part(canvasElement, 'file-drop-zone-box').querySelector('input[type="file"]');
+    if (input === null) throw new Error('No input');
+    let opened = 0;
+    const count = (event: Event): void => {
+      event.preventDefault();
+      opened += 1;
+    };
+    input.addEventListener('click', count);
+    try {
+      part(canvasElement, 'file-drop-zone-hint').click();
+      await expect(opened).toBe(1);
+      part(canvasElement, 'file-drop-zone-icon').click();
+      await expect(opened).toBe(2);
+      within(canvasElement).getByRole('button', { name: 'Choose files' }).click();
+      await waitFor(() => expect(opened).toBe(3));
+      await expect(part(canvasElement, 'file-drop-zone-box')).not.toHaveAttribute('tabindex');
+      await expect(getComputedStyle(part(canvasElement, 'file-drop-zone-box')).cursor).toBe('pointer');
+    } finally {
+      input.removeEventListener('click', count);
+    }
+  },
+};
+
+/**
+ * While a zone is mounted, a files drop beside it is prevented, so the browser never opens the file in the tab,
+ * and its dragover says no drop. A text field takes a drag that also holds text, and is held for files alone,
+ * which would open the file and lose the form; a checkbox is always held. Three engines.
  */
 export const MissedDrop: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -326,6 +363,7 @@ export const MissedDrop: Story = {
       <FileDropZone {...args} />
       <p data-testid="beside">Beside the zone</p>
       <TextField label="Notes" />
+      <Checkbox>Paid</Checkbox>
     </div>
   ),
   play: async ({ canvasElement }) => {
@@ -335,7 +373,12 @@ export const MissedDrop: Story = {
     await expect(fireDrag(beside, 'dragover', data)).toBe(true);
     await expect(fireDrag(beside, 'drop', data)).toBe(true);
     const notes = within(canvasElement).getByRole('textbox', { name: 'Notes' });
-    await expect(fireDrag(notes, 'drop', data)).toBe(false);
+    await expect(fireDrag(notes, 'drop', data)).toBe(true);
+    const linked = filesTransfer([pdf()]);
+    linked.setData('text/uri-list', 'https://example.com/invoice.pdf');
+    await expect(fireDrag(notes, 'drop', linked)).toBe(false);
+    const paid = within(canvasElement).getByRole('checkbox', { name: 'Paid' });
+    await expect(fireDrag(paid, 'drop', linked)).toBe(true);
     await expect(fireDrag(beside, 'drop', textTransfer())).toBe(false);
     await expect(onFiles).not.toHaveBeenCalled();
   },
@@ -402,6 +445,97 @@ export const OverlayDrop: Story = {
     const [accepted, rejected] = onFiles.mock.calls[0] as [File[], { file: File; reason: string }[]];
     await expect(accepted.map((file) => file.name)).toEqual(['invoice.pdf']);
     await expect(rejected.map(({ file, reason }) => [file.name, reason])).toEqual([['blank.pdf', 'empty']]);
+    await waitFor(() => expect(document.querySelector('.page-drop-zone')).toBeNull());
+  },
+};
+
+/**
+ * The overlay never sticks: an element removed under the drag, as a toast that leaves, never gets its leave, so
+ * the zone forgets it at the next enter or leave, and the drag's last leave still hides the overlay; and a
+ * pointer move, which no drag sends, hides an overlay whose leave went missing, as after an Escape the engine
+ * never reported. Three engines.
+ */
+export const NeverSticks: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <CounterPage />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const overlay = (): HTMLElement | null => document.querySelector<HTMLElement>('.page-drop-zone');
+    const data = filesTransfer([pdf()]);
+    // A toast of the app's, outside React's tree here, so the play can take it away as a toast leaves.
+    const toast = document.body.appendChild(document.createElement('p'));
+    toast.textContent = 'Saved';
+    fireDrag(toast, 'dragenter', data);
+    await waitFor(() => expect(overlay()).not.toBeNull());
+    toast.remove();
+    const one = canvas.getByTestId('one');
+    fireDrag(one, 'dragenter', data);
+    fireDrag(one, 'dragleave', data);
+    await waitFor(() => expect(overlay()).toBeNull());
+    fireDrag(one, 'dragenter', data);
+    await waitFor(() => expect(overlay()).not.toBeNull());
+    document.body.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerType: 'mouse' }));
+    await waitFor(() => expect(overlay()).toBeNull());
+  },
+};
+
+/**
+ * A paste of files with focus outside a text field reaches the page zone's check, as GitHub and Slack take one;
+ * a paste into a text field is the field's, and a paste of text is left alone. Three engines.
+ */
+export const PasteOnPage: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <div style={COLUMN}>
+      <CounterPage />
+      <TextField label="Notes" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    onFiles.mockClear();
+    const canvas = within(canvasElement);
+    const [file, empty] = [pdf(), blank()];
+    await expect(firePaste(canvas.getByTestId('one'), filesTransfer([file, empty]))).toBe(true);
+    await waitFor(() => expect(onFiles).toHaveBeenCalledTimes(1));
+    const [accepted, rejected] = onFiles.mock.calls[0] as [File[], { file: File; reason: string }[]];
+    await expect(accepted.map((each) => each.name)).toEqual(['invoice.pdf']);
+    await expect(rejected.map(({ file: each, reason }) => [each.name, reason])).toEqual([
+      ['blank.pdf', 'empty'],
+    ]);
+    await expect(firePaste(canvas.getByRole('textbox', { name: 'Notes' }), filesTransfer([pdf()]))).toBe(
+      false,
+    );
+    await expect(firePaste(canvas.getByTestId('one'), textTransfer())).toBe(false);
+    await expect(onFiles).toHaveBeenCalledTimes(1);
+  },
+};
+
+/**
+ * A page zone mounted inside a holder with a backdrop blur and a transform, as PageHeader's fill has a blur,
+ * still covers the workspace: the overlay is drawn in the shell, not in the holder, which would confine a fixed
+ * child to its own box. Chromium.
+ */
+export const OverlayLeavesItsHolder: Story = {
+  tags: ['no-visual'],
+  globals: DESKTOP,
+  parameters: { layout: 'fullscreen' },
+  render: () => (
+    <AppShell sidebar={<DemoNav />} header={<DemoHeader title="Documents" />}>
+      <div data-testid="holder" style={{ backdropFilter: 'blur(20px)', transform: 'translateZ(0)' }}>
+        <p data-testid="page">Invoices, receipts and statements, newest first.</p>
+        <PageDropZone title="Drop files to upload" onFiles={onFiles} />
+      </div>
+    </AppShell>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    fireDrag(canvas.getByTestId('page'), 'dragenter', filesTransfer([pdf()]));
+    const overlay = await waitFor(() => part(document, 'page-drop-zone'));
+    await expect(overlay.parentElement).toBe(part(canvasElement, 'app-shell'));
+    const box = overlay.getBoundingClientRect();
+    await expect(box.height).toBeGreaterThan(canvas.getByTestId('holder').getBoundingClientRect().height);
+    await expect(window.innerHeight - box.bottom).toBeCloseTo(16, 0);
+    fireDrag(overlay, 'dragend', filesTransfer([pdf()]));
     await waitFor(() => expect(document.querySelector('.page-drop-zone')).toBeNull());
   },
 };

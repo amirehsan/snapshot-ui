@@ -1,4 +1,4 @@
-import { act, render } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -109,19 +109,134 @@ describe('PageDropZone', () => {
     expect(overlay()).toBeNull();
   });
 
-  it('hides it on drop and on dragend', () => {
+  it('hides it once a drop has been dispatched, and on dragend at once', async () => {
     render(<ZONE />);
     drag('dragenter', document.body);
     drag('dragenter', document.body);
     drag('drop', document.body);
-    expect(overlay()).toBeNull();
+    // Still drawn as the drop's own listeners run: a browser commits a state set in a listener before the next
+    // listener, which would take the overlay away before its drop handler ran (spec correction 30).
+    expect(overlay()).not.toBeNull();
+    await waitFor(() => {
+      expect(overlay()).toBeNull();
+    });
     drag('dragenter', document.body);
     expect(overlay()).not.toBeNull();
     drag('dragend', document.body);
     expect(overlay()).toBeNull();
   });
 
-  it('runs the check on a drop on the overlay and reaches onFiles, then leaves', () => {
+  it('keeps a drag that enters again before the hide a drop scheduled', async () => {
+    render(<ZONE />);
+    drag('dragenter', document.body);
+    drag('drop', document.body);
+    drag('dragenter', document.body);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(overlay()).not.toBeNull();
+  });
+
+  it('forgets an element removed under the drag, so the last leave still hides it', () => {
+    render(
+      <div>
+        <p id="page">Page</p>
+        <ZONE />
+      </div>,
+    );
+    const toast = document.body.appendChild(document.createElement('div'));
+    const page = document.getElementById('page');
+    if (page === null) throw new Error('No page');
+    drag('dragenter', toast);
+    expect(overlay()).not.toBeNull();
+    // A toast that leaves under the pointer never gets its dragleave.
+    toast.remove();
+    drag('dragenter', page);
+    drag('dragleave', page);
+    expect(overlay()).toBeNull();
+  });
+
+  it('hides it on a pointer move or press, which no drag sends, and not on a touch', () => {
+    render(<ZONE />);
+    const pointer = (type: string, pointerType: string): void => {
+      const event = new Event(type, { bubbles: true });
+      Object.defineProperty(event, 'pointerType', { value: pointerType });
+      act(() => {
+        document.body.dispatchEvent(event);
+      });
+    };
+    drag('dragenter', document.body);
+    pointer('pointerdown', 'touch');
+    expect(overlay()).not.toBeNull();
+    pointer('pointermove', 'mouse');
+    expect(overlay()).toBeNull();
+    drag('dragenter', document.body);
+    expect(overlay()).not.toBeNull();
+    pointer('pointerdown', 'pen');
+    expect(overlay()).toBeNull();
+    // The next drag starts afresh.
+    drag('dragenter', document.body);
+    expect(overlay()).not.toBeNull();
+  });
+
+  it('draws the overlay in the closest AppShell, with the scope of where the zone is mounted', () => {
+    const { unmount } = render(
+      <div className="app-shell" data-theme="dark">
+        <header style={{ backdropFilter: 'blur(20px)' }}>
+          <ZONE />
+        </header>
+      </div>,
+    );
+    drag('dragenter', document.body);
+    const shown = overlay();
+    expect(shown?.parentElement).toHaveClass('app-shell');
+    expect(shown).toHaveAttribute('data-theme', 'dark');
+    expect(shown).toHaveAttribute('dir', 'ltr');
+    drag('dragend', document.body);
+    unmount();
+    // Outside a shell, in the body.
+    render(<ZONE />);
+    drag('dragenter', document.body);
+    expect(overlay()?.parentElement).toBe(document.body);
+  });
+
+  it('takes a paste of files anywhere but a text field, through the same check', () => {
+    const onFiles = vi.fn();
+    render(
+      <div>
+        <p id="page">Page</p>
+        <input aria-label="Notes" id="notes" />
+        <input aria-label="Done" id="done" type="checkbox" />
+        <ZONE onFiles={onFiles} />
+      </div>,
+    );
+    const paste = (target: Element, files: File[]): Event => {
+      const event = new Event('paste', { bubbles: true, cancelable: true });
+      const items = files.map((file) => ({ kind: 'file', type: file.type, getAsFile: () => file }));
+      Object.defineProperty(event, 'clipboardData', { value: { items, files, types: ['Files'] } });
+      act(() => {
+        target.dispatchEvent(event);
+      });
+      return event;
+    };
+    const [page, notes, done] = ['page', 'notes', 'done'].map((id) => {
+      const element = document.getElementById(id);
+      if (element === null) throw new Error(`No ${id}`);
+      return element;
+    }) as [HTMLElement, HTMLElement, HTMLElement];
+    const file = pdf();
+    const blank = new File([], 'blank.pdf', { type: 'application/pdf' });
+    expect(paste(page, [file, blank]).defaultPrevented).toBe(true);
+    expect(onFiles).toHaveBeenCalledWith([file], [{ file: blank, reason: 'empty' }]);
+    expect(paste(done, [file]).defaultPrevented).toBe(true);
+    expect(onFiles).toHaveBeenCalledTimes(2);
+    // A text field takes its own paste, and a paste with no files is left alone.
+    expect(paste(notes, [file]).defaultPrevented).toBe(false);
+    expect(paste(page, []).defaultPrevented).toBe(false);
+    modal.open = true;
+    expect(paste(page, [file]).defaultPrevented).toBe(false);
+    expect(onFiles).toHaveBeenCalledTimes(2);
+  });
+
+  it('runs the check on a drop on the overlay and reaches onFiles, then leaves', async () => {
     const onFiles = vi.fn();
     render(<ZONE onFiles={onFiles} />);
     drag('dragenter', document.body);
@@ -132,7 +247,9 @@ describe('PageDropZone', () => {
     const drop = drag('drop', drawn, [file, blank]);
     expect(drop.defaultPrevented).toBe(true);
     expect(onFiles).toHaveBeenCalledWith([file], [{ file: blank, reason: 'empty' }]);
-    expect(overlay()).toBeNull();
+    await waitFor(() => {
+      expect(overlay()).toBeNull();
+    });
   });
 
   it('stands down while a modal is open', () => {
@@ -175,7 +292,7 @@ describe('PageDropZone', () => {
     const { unmount } = render(<ZONE />);
     unmount();
     const removed = remove.mock.calls.map(([type]) => type);
-    for (const type of ['dragenter', 'dragleave', 'drop', 'dragend', 'dragover']) {
+    for (const type of ['dragenter', 'dragleave', 'drop', 'dragend', 'dragover', 'pointermove', 'paste']) {
       expect(removed, type).toContain(type);
     }
     drag('dragenter', document.body);
@@ -201,5 +318,6 @@ describe('PageDropZone', () => {
     drag('dragenter', document.body);
     expect(overlay()).not.toBeNull();
     await expectNoA11yViolations(container);
+    await expectNoA11yViolations(document.body);
   });
 });

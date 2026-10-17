@@ -20,7 +20,7 @@ export default function FileDropZoneErrors(): ReactElement {
       <FileDropZone
         label="Statements"
         description="PDF, JPG or PNG, up to 10 MB each, 5 at a time"
-        acceptedFileTypes={['application/pdf', 'image/jpeg', 'image/png']}
+        acceptedFileTypes={['application/pdf', '.pdf', 'image/jpeg', '.jpg', '.jpeg', 'image/png', '.png']}
         maxFileSize={TEN_MB}
         allowsMultiple
         maxFiles={5}

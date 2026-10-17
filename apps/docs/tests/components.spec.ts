@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { icons } from 'lucide-react';
@@ -589,6 +589,21 @@ test.describe('forced colors', () => {
     await dragFilesOver(box);
     await expect(box).toHaveAttribute('data-drop-target', '');
     expect(await edge()).toEqual({ style: 'solid', color: await systemColor(page, 'Highlight') });
+    // On an invalid zone too: the error color is gone, so the solid highlight edge is the only sign of the drag.
+    const zone = page.getByRole('group', { name: 'Receipt', exact: true });
+    await zone
+      .locator('input[type="file"]')
+      .setInputFiles({ name: 'blank.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(0) });
+    await expect(zone).toHaveAttribute('data-invalid', '');
+    const invalidBox = zone.locator('.file-drop-zone-box');
+    await dragFilesOver(invalidBox);
+    await expect(invalidBox).toHaveAttribute('data-drop-target', '');
+    expect(
+      await invalidBox.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { style: style.borderTopStyle, color: style.borderTopColor };
+      }),
+    ).toEqual({ style: 'solid', color: await systemColor(page, 'Highlight') });
   });
 
   test('a line chart draws its first line CanvasText, its second GrayText, and its crosshair Highlight', async ({
@@ -996,7 +1011,7 @@ test('a choice through the receipt field reaches the example and a refusal is sa
   await expect(page.locator('.stage .receipt-added')).toHaveText('Added invoice.pdf');
   await expect(zone).not.toHaveAttribute('data-invalid');
   await input.setInputFiles({ name: 'blank.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(0) });
-  await expect(zone.getByRole('status')).toHaveText('1 file was not added');
+  await expect(zone.getByRole('status')).toHaveText('1 file was not added: it is empty');
   await expect(zone).toHaveAttribute('data-invalid', '');
   await expect(page.locator('.stage .receipt-added')).toHaveText('Added invoice.pdf');
 });
@@ -1031,6 +1046,153 @@ test('the page zone example shows its overlay only while its switch is on', asyn
   await expect(toggle).not.toBeChecked();
   await enter();
   await expect(page.locator('.page-drop-zone')).toHaveCount(0);
+});
+
+/**
+ * Real files on disk for a real drop, in the test's own output folder: a PDF, an empty PDF, a program and a
+ * folder holding a PDF.
+ */
+const filesOnDisk = (): { pdf: string; blank: string; program: string; folder: string } => {
+  const root = test.info().outputPath('drop');
+  const folder = join(root, 'scans');
+  mkdirSync(folder, { recursive: true });
+  const write = (path: string, text: string): string => {
+    writeFileSync(path, text);
+    return path;
+  };
+  write(join(folder, 'statement.pdf'), '%PDF-1.7\n');
+  return {
+    pdf: write(join(root, 'invoice.pdf'), '%PDF-1.7\n'),
+    blank: write(join(root, 'blank.pdf'), ''),
+    program: write(join(root, 'setup.exe'), 'MZ'),
+    folder,
+  };
+};
+
+/**
+ * A real drag of `files` from outside the window, through Chromium's own drag and drop processing by the
+ * DevTools protocol: it enters at `at`, moves a few pixels and ends with `end`. This is the only harness that
+ * runs the browser's dispatch, which runs the microtasks between one listener and the next as a user's drop
+ * does; an event a script dispatches does not, so a play cannot see a part that hides its drop target in a
+ * listener before the target's own handler (spec correction 30).
+ */
+const realDrag = async (
+  page: Page,
+  at: { x: number; y: number },
+  files: string[],
+  end: 'drop' | 'dragCancel' | null = 'drop',
+): Promise<void> => {
+  const cdp = await page.context().newCDPSession(page);
+  const data = { items: [], files, dragOperationsMask: 1 };
+  const send = (type: string, x: number, y: number): Promise<unknown> =>
+    cdp.send('Input.dispatchDragEvent', { type: type as 'dragEnter', x, y, data });
+  await send('dragEnter', at.x, at.y);
+  for (const step of [1, 2, 3]) await send('dragOver', at.x + step, at.y + step);
+  if (end !== null) await send(end, at.x + 3, at.y + 3);
+  await cdp.detach();
+};
+
+/** The middle of `target` in the viewport, scrolled into view. */
+const middleOf = async (target: Locator): Promise<{ x: number; y: number }> => {
+  await target.scrollIntoViewIfNeeded();
+  const box = await target.boundingBox();
+  if (box === null) throw new Error('Not drawn');
+  return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
+};
+
+test.describe('a real drop', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'The DevTools protocol drives Chromium only.');
+
+  test('on the receipt field adds a PDF, and says why an empty file and a folder were not added', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/file-drop-zone');
+    const url = page.url();
+    const files = filesOnDisk();
+    const zone = page.getByRole('group', { name: 'Receipt', exact: true });
+    const box = zone.locator('.file-drop-zone-box');
+    await realDrag(page, await middleOf(box), [files.pdf], null);
+    await expect(box).toHaveAttribute('data-drop-target', '');
+    await realDrag(page, await middleOf(box), [files.pdf]);
+    await expect(page.locator('.stage .receipt-added')).toHaveText('Added invoice.pdf');
+    await expect(box).not.toHaveAttribute('data-drop-target');
+    await realDrag(page, await middleOf(box), [files.blank]);
+    await expect(zone.getByRole('status')).toHaveText('1 file was not added: it is empty');
+    await realDrag(page, await middleOf(box), [files.folder]);
+    await expect(zone.getByRole('status')).toHaveText('1 file was not added: its type is not accepted');
+    await expect(page.locator('.stage .receipt-added')).toHaveText('Added invoice.pdf');
+    expect(page.url()).toBe(url);
+  });
+
+  test('on the page overlay reaches the example with the accepted and refused files, and the overlay leaves', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/file-drop-zone');
+    const url = page.url();
+    const files = filesOnDisk();
+    await page.locator('.stage .switch-text', { hasText: 'Drop anywhere on this page' }).click();
+    await expect(page.getByRole('switch', { name: 'Drop anywhere on this page' })).toBeChecked();
+    const added = page.locator('.stage .page-zone-added');
+    const at = await middleOf(added);
+    // Over the page: the overlay is drawn under the pointer and takes the drag.
+    await realDrag(page, at, [files.pdf], null);
+    const overlay = page.locator('.page-drop-zone');
+    await expect(overlay).toHaveAttribute('data-drop-target', '');
+    await realDrag(page, at, [files.pdf, files.program, files.folder]);
+    await expect(added).toHaveText('Added invoice.pdf');
+    await expect(page.locator('.stage .page-zone-refused')).toHaveText('Not added: setup.exe, scans');
+    await expect(overlay).toHaveCount(0);
+    expect(page.url()).toBe(url);
+  });
+
+  test('cancelled, as with Escape, leaves no overlay once the pointer moves', async ({ page }) => {
+    await visit(page, '/docs/components/file-drop-zone');
+    const files = filesOnDisk();
+    await page.locator('.stage .switch-text', { hasText: 'Drop anywhere on this page' }).click();
+    const at = await middleOf(page.locator('.stage .page-zone-added'));
+    await realDrag(page, at, [files.pdf], 'dragCancel');
+    await page.mouse.move(at.x + 40, at.y + 40);
+    await expect(page.locator('.page-drop-zone')).toHaveCount(0);
+    // The next drag still shows it, and a drop still lands.
+    await realDrag(page, at, [files.pdf]);
+    await expect(page.locator('.stage .page-zone-added')).toHaveText('Added invoice.pdf');
+    await expect(page.locator('.page-drop-zone')).toHaveCount(0);
+  });
+
+  test('over an element that leaves mid-drag, as a toast does, leaves no overlay stuck', async ({ page }) => {
+    await visit(page, '/docs/components/file-drop-zone');
+    const files = filesOnDisk();
+    await page.locator('.stage .switch-text', { hasText: 'Drop anywhere on this page' }).click();
+    // A toast above the overlay's layer, in the corner, that goes away while the drag is over it.
+    await page.evaluate(() => {
+      const toast = document.createElement('div');
+      toast.id = 'leaving';
+      Object.assign(toast.style, {
+        position: 'fixed',
+        insetBlockEnd: '0',
+        insetInlineEnd: '0',
+        width: '200px',
+        height: '80px',
+        zIndex: '2147483647',
+      });
+      document.body.append(toast);
+    });
+    const corner = await middleOf(page.locator('#leaving'));
+    const cdp = await page.context().newCDPSession(page);
+    const data = { items: [], files: [files.pdf], dragOperationsMask: 1 };
+    const send = (type: string, x: number, y: number): Promise<unknown> =>
+      cdp.send('Input.dispatchDragEvent', { type: type as 'dragEnter', x, y, data });
+    await send('dragEnter', corner.x, corner.y);
+    await send('dragOver', corner.x, corner.y);
+    await expect(page.locator('.page-drop-zone')).toHaveCount(1);
+    await page.evaluate(() => document.getElementById('leaving')?.remove());
+    await send('dragOver', corner.x - 300, corner.y - 200);
+    await send('dragOver', corner.x - 310, corner.y - 210);
+    // Out of the window: the drag's last leave.
+    await send('dragOver', -20, -20);
+    await expect(page.locator('.page-drop-zone')).toHaveCount(0);
+    await cdp.detach();
+  });
 });
 
 // ---- Props tables -------------------------------------------------------------------------------

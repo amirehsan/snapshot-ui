@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ClipboardEvent,
+  type MouseEvent,
   type ReactElement,
   type ReactNode,
   type Ref,
@@ -16,7 +17,14 @@ import { Label } from '../field/Label';
 import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
-import { acceptFiles, filesOf, type FileAcceptance, type FileRejection, type TransferFiles } from './accept';
+import {
+  acceptFiles,
+  filesOf,
+  type FileAcceptance,
+  type FileRejection,
+  type FileRejectionReason,
+  type TransferFiles,
+} from './accept';
 import { FileButton } from './FileButton';
 import { holdMissedDrops } from './missed-drop';
 import { useFileDrop } from './useFileDrop';
@@ -28,8 +36,12 @@ export interface FileDropZoneLabels {
   choose: string;
   /** The line while files are over the zone. @default 'Drop to upload' */
   drop: string;
-  /** The error line after a drop with refusals, given the count as `formatCount` writes it. @default (count) => `${count} files were not added` */
-  rejected: (count: string) => string;
+  /**
+   * The error line after a drop, paste or choice with refusals, given how many were refused, that count as
+   * `formatCount` writes it, and the refusals with their reasons.
+   * @default "1 file was not added: it is too large", or "3 files were not added" where the reasons differ
+   */
+  rejected: (count: number, formatted: string, rejected: readonly FileRejection[]) => string;
 }
 
 export type FileDropZoneBaseProps = FileAcceptance & {
@@ -48,7 +60,8 @@ export type FileDropZoneBaseProps = FileAcceptance & {
   isDisabled?: boolean;
   /**
    * On a phone, opens the camera instead of the file picker: `environment` the back camera, `user` the front.
-   * A desktop browser ignores it. Handed to the zone's button.
+   * A desktop browser ignores it. Handed to the zone's button, which is then the camera's only, so a phone can
+   * no longer choose a PDF: prefer a second FileButton with `capture` beside the zone, and list an image type.
    */
   capture?: 'user' | 'environment';
   /** How counts are written, such as in Persian digits. @default String */
@@ -61,18 +74,38 @@ export type FileDropZoneBaseProps = FileAcceptance & {
 /** The props of FileDropZone. The types require a name: a visible `label`, an `aria-label` or an `aria-labelledby`. */
 export type FileDropZoneProps = FileDropZoneBaseProps & AccessibleName<'label'>;
 
+/** Why the refused files were not added, for one file and for several, in the default line. */
+const WHY: Record<FileRejectionReason, readonly [one: string, several: string]> = {
+  type: ['its type is not accepted', 'their type is not accepted'],
+  size: ['it is too large', 'they are too large'],
+  empty: ['it is empty', 'they are empty'],
+  count: ['too many files at once', 'too many files at once'],
+};
+
+/** "1 file was not added: it is empty", with the reason where every refusal shares one. */
+function rejectedLine(count: number, formatted: string, rejected: readonly FileRejection[]): string {
+  const one = count === 1;
+  const line = one ? `${formatted} file was not added` : `${formatted} files were not added`;
+  const reason = rejected[0]?.reason;
+  if (reason === undefined || rejected.some((each) => each.reason !== reason)) return line;
+  return `${line}: ${WHY[reason][one ? 0 : 1]}`;
+}
+
 const defaultLabels = (allowsMultiple: boolean): FileDropZoneLabels => ({
   dragHint: allowsMultiple ? 'Drag files here or' : 'Drag a file here or',
   choose: allowsMultiple ? 'Choose files' : 'Choose a file',
   drop: 'Drop to upload',
-  rejected: (count) => `${count} files were not added`,
+  rejected: rejectedLine,
 });
 
 /**
  * A field that takes files: a dashed box to drop them on, a button that opens the picker and takes a paste, the
- * rules under it and a polite line for the files it refused. One tab stop, the button. Every way in runs one check against `acceptedFileTypes`, `maxFileSize`, `allowsMultiple` and `maxFiles`, and reaches
- * `onFiles` with the accepted files and the refusals with their reasons; the library never reads or sends a
- * file. While mounted, a files drop beside the zone does nothing rather than open the file in the tab.
+ * rules under it and a polite line for the files it refused. One tab stop, the button; a click anywhere on the
+ * box opens the picker too. Every way in runs one check against `acceptedFileTypes`, `maxFileSize`,
+ * `allowsMultiple` and `maxFiles`, and reaches `onFiles` with the accepted files and the refusals with their
+ * reasons; the library never reads or sends a file. List an extension beside each MIME type, since systems
+ * disagree on types (Windows gives a .csv `application/vnd.ms-excel`). While mounted, a files drop beside the
+ * zone does nothing rather than open the file in the tab.
  */
 export function FileDropZone({
   label,
@@ -97,14 +130,17 @@ export function FileDropZone({
   const descriptionId = useId();
   const statusId = useId();
   const boxRef = useRef<HTMLDivElement>(null);
-  /** How many files the last drop, paste or choice refused, and which one it was, so a repeat is said again. */
-  const [refused, setRefused] = useState({ count: 0, round: 0 });
+  /** The files the last drop, paste or choice refused, and which one it was, so a repeat is said again. */
+  const [refused, setRefused] = useState<{ rejected: readonly FileRejection[]; round: number }>({
+    rejected: [],
+    round: 0,
+  });
   const acceptance = { acceptedFileTypes, maxFileSize, allowsMultiple, maxFiles };
 
   useEffect(() => holdMissedDrops(), []);
 
   const settle = (accepted: File[], rejected: FileRejection[]): void => {
-    setRefused((last) => ({ count: rejected.length, round: last.round + 1 }));
+    setRefused((last) => ({ rejected, round: last.round + 1 }));
     onFiles(accepted, rejected);
   };
   const take = ({ files, folders }: TransferFiles): void => {
@@ -122,12 +158,24 @@ export function FileDropZone({
     take(pasted);
   };
 
+  // A click on the box beside the button opens the picker, as the button does: the click is forwarded to the
+  // button's input, cleared first as React Aria clears it at a press, so the box adds no tab stop.
+  const onClick = (event: MouseEvent<HTMLDivElement>): void => {
+    if (isDisabled || !(event.target instanceof Element) || event.target.closest('button, input') !== null)
+      return;
+    const input = boxRef.current?.querySelector<HTMLInputElement>('input[type="file"]');
+    if (input == null) return;
+    input.value = '';
+    input.click();
+  };
+
   const labelled = present(label);
-  const invalid = isInvalid || refused.count > 0;
+  const count = refused.rejected.length;
+  const invalid = isInvalid || count > 0;
   const line: ReactNode = present(errorMessage)
     ? errorMessage
-    : refused.count > 0
-      ? labels.rejected(formatCount(refused.count))
+    : count > 0
+      ? labels.rejected(count, formatCount(count), refused.rejected)
       : null;
   const describedBy = [present(description) ? descriptionId : null, invalid ? statusId : null]
     .filter((id) => id !== null)
@@ -153,12 +201,14 @@ export function FileDropZone({
         </div>
       ) : null}
       {/* A paste on the zone's button bubbles here (ruling 3); the button is the zone's one tab stop. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- a pointer's larger target for the button, which is the keyboard's one stop (ruling 3) */}
       <div
         {...dropProps}
         ref={boxRef}
         className="file-drop-zone-box"
         data-drop-target={isDropTarget ? '' : undefined}
         onPaste={onPaste}
+        onClick={onClick}
       >
         <span className="file-drop-zone-icon" aria-hidden="true">
           <Upload />

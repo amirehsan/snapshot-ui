@@ -1786,6 +1786,8 @@ export const PageDropZoneMirrored: Story = {
     await expect(rail.left).toBeGreaterThan(window.innerWidth / 2);
     await expect(box.right).toBeLessThanOrEqual(rail.left);
     await expect(box.left).toBeCloseTo(16, 0);
+    // Drawn in the shell, it takes the direction of where the zone is mounted.
+    await expect(overlay).toHaveAttribute('dir', 'rtl');
     fireDrag(overlay, 'dragend', filesTransfer([pdf()]));
     await waitFor(() => expect(document.querySelector('.page-drop-zone')).toBeNull());
   },
