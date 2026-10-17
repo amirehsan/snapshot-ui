@@ -4,9 +4,6 @@ import { CHART_PAGES, COMPONENT_PAGES, cornersSettled, settled } from './support
 
 const SHAPES = ['rounded', 'soft', 'square'] as const;
 
-/** The rail takes this rule in its own change; until then its parts are not checked. */
-const PENDING = /\b(?:rail|sidebar|app-shell)/;
-
 const PAGES = ['/', '/docs', ...COMPONENT_PAGES.map(({ url }) => url), ...CHART_PAGES.map(({ url }) => url)];
 
 /*
@@ -31,11 +28,7 @@ for (const url of PAGES) {
         await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       }, shape);
       const findings = await page.evaluate(auditConcentric);
-      found.push(
-        ...findings
-          .filter(({ part, holder }) => !PENDING.test(part) && !PENDING.test(holder))
-          .map((finding) => ({ shape, ...finding })),
-      );
+      found.push(...findings.map((finding) => ({ shape, ...finding })));
     }
     if (found.length > 0) {
       await test.info().attach('findings', {

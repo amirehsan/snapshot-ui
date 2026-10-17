@@ -26,9 +26,6 @@ for (const entry of Object.values(index.entries)) {
 
 const SHAPES = ['rounded', 'soft', 'square'] as const;
 
-/** The rail (Sidebar and AppShell) takes this rule in its own change; until then its parts are not checked. */
-const PENDING = /\b(?:sidebar|app-shell)/;
-
 /** Resolves once the story has rendered and run its play function; rejects if Storybook reports an error. */
 const rendered = async (page: Page, id: string): Promise<void> => {
   const settled = await page.waitForFunction((storyId) => {
@@ -73,11 +70,7 @@ for (const [title, ids] of groups) {
         await rendered(page, id);
         await expect(page.locator('html')).toHaveAttribute('data-shape', shape);
         const findings = await page.evaluate(auditConcentric);
-        found.push(
-          ...findings
-            .filter(({ part, holder }) => !PENDING.test(part) && !PENDING.test(holder))
-            .map((finding) => ({ story: id, shape, ...finding })),
-        );
+        found.push(...findings.map((finding) => ({ story: id, shape, ...finding })));
       }
     }
     if (found.length > 0) {
