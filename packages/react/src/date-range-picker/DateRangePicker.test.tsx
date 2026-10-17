@@ -655,3 +655,48 @@ describe('DateRangePicker', () => {
     expect([granular, typed, nameless, checked, named]).toHaveLength(5);
   });
 });
+
+describe('DateRangePicker, changed with no label', () => {
+  it('marks a changed field with no label, and reads the mark after its name', async () => {
+    const { container, rerender } = render(
+      <DateRangePicker aria-label="Period, Corner Mart" defaultValue={SEPTEMBER} isChanged />,
+    );
+    const field = root(container);
+    expect(field).toHaveAttribute('data-changed');
+    expect(field).toHaveAttribute('data-unlabelled', '');
+    const mark = container.querySelector('.field-changed-mark');
+    expect(mark).toHaveTextContent('Changed');
+    const control = screen.getByRole('group', { name: 'Period, Corner Mart' });
+    // In the frame, after the calendar button.
+    expect(mark?.parentElement).toHaveClass('date-range-control');
+    expect(mark?.previousElementSibling).toHaveClass('date-range-button');
+    // React Aria's own descriptions come first, the chosen value or range; the mark's word ends it.
+    expect(control).toHaveAccessibleDescription(/(^| )Changed$/);
+    expect(control.getAttribute('aria-describedby')?.split(' ')).toContain(mark?.id);
+    expect(container.querySelector('.field-changed')).toBeNull();
+    await expectNoA11yViolations(container);
+    // With a label the chip says it, and no mark is drawn.
+    rerender(<DateRangePicker label="Period" defaultValue={SEPTEMBER} isChanged />);
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    expect(container.querySelector('.field-changed')).not.toBeNull();
+    expect(root(container)).not.toHaveAttribute('data-unlabelled');
+  });
+
+  it('drops the mark while invalid', () => {
+    const { container } = render(
+      <DateRangePicker
+        aria-label="Period, Corner Mart"
+        isChanged
+        isInvalid
+        errorMessage="End after the start."
+      />,
+    );
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    // Nothing names a mark that is gone.
+    for (const described of container.querySelectorAll('[aria-describedby]')) {
+      for (const id of described.getAttribute('aria-describedby')?.split(' ') ?? []) {
+        expect(document.getElementById(id), id).not.toBeNull();
+      }
+    }
+  });
+});

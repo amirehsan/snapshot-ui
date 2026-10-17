@@ -1581,6 +1581,45 @@ describe('the file drop zone', () => {
   });
 });
 
+describe('the changed dot', () => {
+  /** `color` painted on `surface`, against that surface: a 6px dot is a graphic, held to 3:1. */
+  const dot = (color, mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[surface]);
+    return contrastRatio(composite(parseColor(palette[color]), ground), ground);
+  };
+
+  // The dot of a changed field with no label sits on the field's raised fill, and a field in a sheet or a panel
+  // sits on float. Clay on both is gated already, as text, which is stricter than a graphic needs.
+  it('cites clay on raised and on float, which the gate holds', () => {
+    for (const ground of ['raised', 'float']) {
+      expect(CONTRAST_PAIRS, `clay on ${ground}`).toContainEqual(
+        expect.objectContaining({ text: 'clay', ground, minimum: TEXT }),
+      );
+    }
+  });
+
+  it('measures clay on raised at 7.04 and 6.02, and on float at 7.04 and 6.82', () => {
+    for (const { mode, surface, ratio } of [
+      { mode: 'light', surface: 'raised', ratio: 7.04 },
+      { mode: 'dark', surface: 'raised', ratio: 6.02 },
+      { mode: 'light', surface: 'float', ratio: 7.04 },
+      { mode: 'dark', surface: 'float', ratio: 6.82 },
+    ]) {
+      expect(dot('clay', mode, surface), `clay on ${surface}, ${mode}`).toBeCloseTo(ratio, 2);
+      expect(dot('clay', mode, surface)).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+
+  // The spec's light signal orange, the chip dot it named, measures under the 3:1 a graphic needs on the field's
+  // fill in light, which is why the dot is clay (spec correction 2). The changed edge stays light signal orange.
+  it('measures light signal orange on raised at 2.87 in light, under 3:1, which is why it is not used', () => {
+    expect(dot('signal-light', 'light', 'raised')).toBeCloseTo(2.87, 2);
+    expect(dot('signal-light', 'light', 'raised')).toBeLessThan(NON_TEXT);
+    expect(dot('signal-light', 'dark', 'raised')).toBeCloseTo(5.35, 2);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

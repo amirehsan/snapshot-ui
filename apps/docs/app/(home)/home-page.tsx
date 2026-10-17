@@ -697,7 +697,9 @@ export function HomePage(): ReactElement {
             <Card className="catalog-group">
               <Eyebrow>Dates and media</Eyebrow>
               <div className="chips">
-                <span className="chip">Date picker</span>
+                <Link className="chip" href="/docs/components/date-picker">
+                  Date picker
+                </Link>
                 <Link className="chip chip-new" href="/docs/components/date-range-picker">
                   Date range picker
                 </Link>
@@ -810,6 +812,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/command-palette">Command palette</Link>
                 <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
                 <Link href="/docs/components/data-table">Data table</Link>
+                <Link href="/docs/components/date-picker">Date picker</Link>
                 <Link href="/docs/components/date-range-picker">Date range picker</Link>
                 <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/drawer">Drawer</Link>

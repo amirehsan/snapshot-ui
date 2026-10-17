@@ -22,4 +22,12 @@
     /* Up and down only. Sideways would break the field's column. */
     resize: vertical;
   }
+
+  /* The changed dot of a text area with no label sits on its first line: the block padding, the changed edge and
+     half a line, less half the dot. Two classes, after field.css's one. */
+  .textarea + .field-changed-mark {
+    inset-block-start: calc(
+      0.75rem + 1.5px + (var(--text-body) * var(--text-body--line-height) - 0.375rem) / 2
+    );
+  }
 }

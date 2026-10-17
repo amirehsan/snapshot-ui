@@ -656,6 +656,15 @@ test.describe('forced colors', () => {
     );
   });
 
+  test('the changed dot of a field with no label is CanvasText', async ({ page }) => {
+    // Out of the repaint, so the dot keeps a fill, the reader's text color, and its word stays unseen.
+    await visit(page, '/docs/components/field');
+    const canvasText = await systemColor(page, 'CanvasText');
+    const marks = page.locator('.stage .field-changed-mark');
+    expect(await marks.count()).toBeGreaterThan(0);
+    for (const mark of await marks.all()) await expect(mark).toHaveCSS('background-color', canvasText);
+  });
+
   test('the selected tab is Highlight and its changed dot HighlightText', async ({ page }) => {
     // The ink fill is repainted away, so the selected tab takes the reader's selection colors; the clay dot is
     // CanvasText on a resting tab and HighlightText on the selected one.
@@ -998,6 +1007,24 @@ test.describe('forced colors', () => {
 
 // ---- File drop zone -----------------------------------------------------------------------------
 
+test('the date picker example opens on today and closes with focus on its button', async ({ page }) => {
+  await visit(page, '/docs/components/date-picker');
+  const field = page.locator('.stage .date-picker').filter({ hasText: 'Paid on' });
+  const button = field.getByRole('button', { name: /^Choose date/ });
+  await button.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.locator('.calendar-heading')).toHaveText('October 2026');
+  await expect(dialog.locator('.calendar-day-number[data-today]')).toHaveText('16');
+  await expect(dialog.getByRole('button', { name: 'Today', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await dialog.getByRole('button', { name: 'Yesterday', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(button).toBeFocused();
+  await expect(field.locator('.date-segment:not([data-type="literal"])')).toHaveText(['10', '15', '2026']);
+});
+
 test('a choice through the receipt field reaches the example and a refusal is said', async ({ page }) => {
   await visit(page, '/docs/components/file-drop-zone');
   const zone = page.getByRole('group', { name: 'Receipt', exact: true });
@@ -1242,6 +1269,7 @@ const LONG_TARGETS: Record<string, string[]> = {
   // At 320px and 375px the examples draw the list face, whose title and meta line ellipsize on one line; a table
   // cell, in the columns example's frame, does too, so a long payee leaves either face inside 320px.
   'data-table': ['.stage .data-table-cell', '.stage .data-table-item-title', '.stage .data-table-item-meta'],
+  'date-picker': ['.stage .date-picker .field-label'],
   'date-range-picker': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // The title and the line are the app's sentences, and both wrap at any character inside the column.
   'empty-state': ['.stage .empty-state-title', '.stage .empty-state-description'],
@@ -1420,6 +1448,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
     '.stage .data-table-list [role="row"]',
   ],
   // The frame and its button, with the app's valueLabel where the segments go; the calendar waits for a press.
+  'date-picker': ['.stage .date-picker-control', '.stage .date-picker-button'],
   'date-range-picker': ['.stage .date-range-control', '.stage .date-range-button'],
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],

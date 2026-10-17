@@ -710,3 +710,52 @@ describe('MultiSelect', () => {
     expect([withCustomValue, withSelectedKey, nameless, byAriaLabel]).toHaveLength(4);
   });
 });
+
+describe('MultiSelect, changed with no label', () => {
+  it('marks a changed field with no label, and reads the mark after its name', async () => {
+    const { container, rerender } = render(
+      <MultiSelect aria-label="Categories, Corner Mart" defaultValue={['food']} isChanged>
+        <PickerOption id="food">Food</PickerOption>
+        <PickerOption id="rent">Rent</PickerOption>
+      </MultiSelect>,
+    );
+    const field = container.querySelector('.multi-select');
+    expect(field).toHaveAttribute('data-changed');
+    expect(field).toHaveAttribute('data-unlabelled', '');
+    const mark = container.querySelector('.field-changed-mark');
+    expect(mark).toHaveTextContent('Changed');
+    const control = screen.getByRole('combobox', { name: 'Categories, Corner Mart' });
+    // In the frame, after the field button.
+    expect(mark?.parentElement).toHaveClass('multi-select-control');
+    expect(mark?.previousElementSibling).toHaveClass('combo-box-button');
+    // React Aria's own descriptions come first, the chosen value or range; the mark's word ends it.
+    expect(control).toHaveAccessibleDescription(/(^| )Changed$/);
+    expect(control.getAttribute('aria-describedby')?.split(' ')).toContain(mark?.id);
+    expect(container.querySelector('.field-changed')).toBeNull();
+    await expectNoA11yViolations(container);
+    // With a label the chip says it, and no mark is drawn.
+    rerender(
+      <MultiSelect label="Categories" defaultValue={['food']} isChanged>
+        <PickerOption id="food">Food</PickerOption>
+      </MultiSelect>,
+    );
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    expect(container.querySelector('.field-changed')).not.toBeNull();
+    expect(container.querySelector('.multi-select')).not.toHaveAttribute('data-unlabelled');
+  });
+
+  it('drops the mark while invalid', () => {
+    const { container } = render(
+      <MultiSelect aria-label="Categories, Corner Mart" isChanged isInvalid errorMessage="Choose a category.">
+        <PickerOption id="food">Food</PickerOption>
+      </MultiSelect>,
+    );
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    // Nothing names a mark that is gone.
+    for (const described of container.querySelectorAll('[aria-describedby]')) {
+      for (const id of described.getAttribute('aria-describedby')?.split(' ') ?? []) {
+        expect(document.getElementById(id), id).not.toBeNull();
+      }
+    }
+  });
+});
