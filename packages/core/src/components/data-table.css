@@ -12,7 +12,7 @@
  * leaves keeps its cells, drawn zero wide and hidden, so every row and React Aria's spanning empty cell count the
  * same columns in every engine, and the table stays the full width of its box; a skeleton row's cell for it is not drawn at all.
  * With selection on, a 3.5rem checkbox column comes first and a selected row takes the 8% ink wash with its
- * checked box; the bulk-action bar is the float surface, stuck to the viewport's bottom inside the table's box.
+ * checked box; slate in a hovered or selected row turns granite; the bulk-action bar is the float surface, stuck to the viewport's bottom inside the table's box.
  */
 @layer components {
   .data-table {
@@ -307,22 +307,28 @@
       color: var(--color-ink);
     }
 
-    /* Body rows only: the totals row is never opened or selected, so it takes no wash. */
+    /* Body rows only: the totals row is never opened or selected, so it takes no wash. Slate on the 5% wash over
+       the light canvas measures 4.38, so slate in the row, the app's own cell text included, is granite there
+       (5.94), as in a selected row. */
     .data-table-body
       > .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not(
         [data-disabled],
         [data-selected],
         [aria-selected='true']
       ) {
+      --color-slate: var(--color-granite);
+
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
     }
 
-    /* A list item as a body row, its meta line turned ink: slate on the 5% wash over canvas measures 4.38. */
+    /* A list item as a body row, slate in it granite, its meta line turned ink as on a selected item. */
     .data-table-item:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not(
         [data-disabled],
         [data-selected],
         [aria-selected='true']
       ) {
+      --color-slate: var(--color-granite);
+
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
     }
 
@@ -465,9 +471,13 @@
     flex: 0 0 3.5rem;
   }
 
-  /* One step over hover, and it holds under the pointer: a selected row is marked by its box, never color alone. */
+  /* One step over hover, and it holds under the pointer: a selected row is marked by its box, never color alone.
+     Slate on the 8% wash over the light canvas measures 4.11, so slate in the row, the app's own text in a cell
+     included, is granite there (5.59). */
   .data-table-row:is([data-selected], [aria-selected='true']),
   .data-table-row:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
+    --color-slate: var(--color-granite);
+
     background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
   }
 
@@ -753,13 +763,16 @@
     outline-offset: calc(-1 * var(--focus-ring-width));
   }
 
-  /* One step over hover, held under the pointer, beside its checked box or its mark. */
+  /* One step over hover, held under the pointer, beside its checked box or its mark, and slate in it granite, as in
+     a selected row. */
   .data-table-item:is([data-selected], [aria-selected='true']),
   .data-table-item:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
+    --color-slate: var(--color-granite);
+
     background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
   }
 
-  /* Slate falls under 4.5 on either wash over canvas, so the meta line turns ink on a hovered or selected item. */
+  /* The meta line turns ink on a selected item, and on a hovered one above. */
   .data-table-item:is([data-selected], [aria-selected='true']) .data-table-item-meta {
     color: var(--color-ink);
   }

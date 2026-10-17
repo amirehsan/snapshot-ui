@@ -128,6 +128,13 @@
     transition: rotate 200ms ease;
   }
 
+  /* Before hydration the server's toggle holds both names, since only the browser knows whether an open
+     SidePanel folds the rail: the one for the rail as drawn is in the tree, the other is not. Expanded by
+     default; the collapsed rules and the fold's copy below swap them. */
+  .sidebar-collapse-name[data-name='expand'] {
+    display: none;
+  }
+
   /* Folded for an open SidePanel, the rail moves at once, in the frame the panel comes (app-shell.css). */
   [data-sidebar-folded] .sidebar:not(.sidebar-drawer),
   [data-sidebar-folded] .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {
@@ -442,6 +449,14 @@
       rotate: 180deg;
     }
 
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-collapse-name[data-name='collapse'] {
+      display: none;
+    }
+
+    [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-collapse-name[data-name='expand'] {
+      display: inline;
+    }
+
     [data-sidebar='collapsed' i] .sidebar:not(.sidebar-drawer) .sidebar-search {
       justify-content: center;
       width: var(--size-target);
@@ -565,6 +580,22 @@
         .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
       )
       .sidebar:not(.sidebar-drawer)
+      .sidebar-collapse-name[data-name='collapse'] {
+      display: none;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
+      .sidebar-collapse-name[data-name='expand'] {
+      display: inline;
+    }
+
+    [data-has-sidebar]:where(
+        .app-shell:has(.side-panel-layout[data-collapses-rail] > .side-panel):not([data-sidebar-unfolded])
+      )
+      .sidebar:not(.sidebar-drawer)
       .sidebar-search {
       justify-content: center;
       width: var(--size-target);
@@ -658,7 +689,12 @@
   }
 
   @media (forced-colors: active) {
+    /* Out of the repaint, as a selected DataTable row is: inside it Chromium draws a backplate in the system's
+       background color behind the label and the count, which blanks HighlightText. Out of it nothing is forced,
+       so the ring, outside the pill on the rail, is named: Highlight. */
     .sidebar-item:is([aria-current='page'], [data-current]) {
+      forced-color-adjust: none;
+      outline-color: Highlight;
       background-color: Highlight;
       color: HighlightText;
     }

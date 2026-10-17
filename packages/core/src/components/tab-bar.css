@@ -190,7 +190,10 @@
   }
 
   @media (forced-colors: active) {
+    /* Out of the repaint, as a selected DataTable row is: inside it Chromium draws a backplate in the system's
+       background color behind the label, which blanks HighlightText. The count chip keeps its named colors. */
     .tab-bar-item:is([aria-current='page'], [data-current], [data-current-action]) {
+      forced-color-adjust: none;
       background-color: Highlight;
       color: HighlightText;
     }

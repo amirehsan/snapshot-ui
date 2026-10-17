@@ -514,7 +514,9 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'class="sidebar"',
       'aria-current="page"',
       'class="sidebar-item-count"',
-      'aria-expanded="true"',
+      // The collapse button's two names, one for the rail as the stylesheet draws it: a SidePanel may fold it.
+      'class="sidebar-collapse-name" data-name="collapse"',
+      'class="sidebar-collapse-name" data-name="expand"',
       'aria-haspopup="dialog"',
       'class="kbd sidebar-search-shortcut"',
       'Mod K',

@@ -1,7 +1,8 @@
-import { act, createEvent, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, StrictMode, useState, type ReactElement } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
+import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { RouterProvider } from '../link';
@@ -607,5 +608,153 @@ describe('Tabs', () => {
     );
     const fine = <Tab id="all">All</Tab>;
     expect([idless, vertical, fine]).toHaveLength(3);
+  });
+});
+
+describe('Tabs before React Aria has a focused tab', () => {
+  /** The tab order of a server's HTML: each tab's name and its tabindex. */
+  const serverStops = (element: ReactElement): string[] => {
+    const host = document.createElement('div');
+    host.innerHTML = renderToString(element);
+    return [...host.querySelectorAll('[role="tab"]')].map(
+      (each) => `${each.textContent} ${each.getAttribute('tabindex') ?? 'none'}`,
+    );
+  };
+
+  it("puts the selected tab in the tab order in the server's HTML, so the row can be reached before hydration", () => {
+    // React Aria sets its focused key in an effect, so its server HTML had every tab at -1, and axe reported an
+    // overflowing row as a scrollable region no key could reach.
+    expect(serverStops(<Views defaultSelectedKey="spending" />)).toEqual([
+      'All -1',
+      'Spending 0',
+      'Income -1',
+      'Transfers -1',
+    ]);
+    expect(serverStops(<LinkViews view="income" />)).toEqual(['All -1', 'Spending -1', 'Income 0']);
+  });
+
+  it('makes the first enabled tab the stop when the selected key names no tab, on the server and after', () => {
+    const NoMatch = (): ReactElement => (
+      <Tabs selectedKey="archived" keyboardActivation="manual">
+        <TabList aria-label="Views">
+          <Tab id="all" href="?view=all" isDisabled>
+            All
+          </Tab>
+          <Tab id="spending" href="?view=spending">
+            Spending
+          </Tab>
+        </TabList>
+      </Tabs>
+    );
+    expect(serverStops(<NoMatch />)).toEqual(['All none', 'Spending 0']);
+    render(<NoMatch />);
+    expect(tab('Spending')).toHaveAttribute('tabindex', '0');
+  });
+
+  it('keeps one tab stop once React Aria has its own', async () => {
+    const user = userEvent.setup();
+    render(<Views defaultSelectedKey="spending" />);
+    const stops = (): string[] =>
+      screen
+        .getAllByRole('tab')
+        .filter((each) => each.getAttribute('tabindex') === '0')
+        .map((each) => each.textContent);
+    expect(stops()).toEqual(['Spending']);
+    await user.tab();
+    await user.keyboard('{ArrowRight}');
+    expect(stops()).toEqual(['Income']);
+  });
+});
+
+describe('Tabs and a click with no pointerdown before it', () => {
+  /** A click from the page, as a browser sends one: a view and a click count, and no pointerdown here first. */
+  const pageClick = (target: Element, init: MouseEventInit = {}): boolean => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1, button: 0, ...init });
+    // jsdom's MouseEvent refuses its own window as a view under the test runner, so it is set on the event.
+    Object.defineProperty(event, 'view', { value: window });
+    return target.dispatchEvent(event);
+  };
+
+  it('follows a link tab through the router, as a press would, where React Aria cancelled the click', async () => {
+    // A touch that began before hydration reaches the hydrated tab as a click alone. React Aria, which saw no
+    // pointerdown, cancelled it, the anchor's own navigation with it, and opened nothing.
+    const navigate = vi.fn<(path: string) => void>();
+    render(
+      <RouterProvider navigate={navigate}>
+        <LinkViews view="spending" />
+      </RouterProvider>,
+    );
+    expect(pageClick(tab('Income'))).toBe(false);
+    // Followed once the click is handled, as a click with no pointer.
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledOnce();
+    });
+    expect(navigate.mock.calls[0]?.[0]).toBe('?view=income');
+  });
+
+  it("follows a native link tab once: React Aria's own click that opens it is not cancelled", async () => {
+    // With no RouterProvider React Aria opens the link with a click of its own, which has no view; it must reach
+    // the anchor, and the page navigates exactly once.
+    window.history.replaceState(null, '', '/');
+    const hashes: string[] = [];
+    const record = (): void => {
+      hashes.push(window.location.hash);
+    };
+    window.addEventListener('hashchange', record);
+    try {
+      render(
+        <Tabs selectedKey="all" keyboardActivation="manual">
+          <TabList aria-label="Views">
+            <Tab id="all" href="#all">
+              All
+            </Tab>
+            <Tab id="income" href="#income">
+              Income
+            </Tab>
+          </TabList>
+        </Tabs>,
+      );
+      pageClick(tab('Income'));
+      await waitFor(() => {
+        expect(hashes).toEqual(['#income']);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(hashes).toEqual(['#income']);
+    } finally {
+      window.removeEventListener('hashchange', record);
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
+  it('selects a tab without href', async () => {
+    render(<Views defaultSelectedKey="all" />);
+    pageClick(tab('Income'));
+    await waitFor(() => {
+      expect(selectedName()).toBe('Income');
+    });
+  });
+
+  it("leaves a modified click on a link tab to the browser, and React Aria's own clicks to React Aria", async () => {
+    const navigate = vi.fn<(path: string) => void>();
+    render(
+      <RouterProvider navigate={navigate}>
+        <LinkViews view="spending" />
+      </RouterProvider>,
+    );
+    // A new tab or window: neither cancelled nor routed.
+    expect(pageClick(tab('Income'), { ctrlKey: true })).toBe(true);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(navigate).not.toHaveBeenCalled();
+    // A screen reader's click has no click count, and React Aria follows it as before.
+    fireEvent.click(tab('All'), { detail: 0 });
+    expect(navigate).toHaveBeenCalledOnce();
+    expect(navigate.mock.calls[0]?.[0]).toBe('?view=all');
+    // A press React Aria saw begin is React Aria's: one navigation.
+    const user = userEvent.setup();
+    await user.click(tab('Income'));
+    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(navigate.mock.calls[1]?.[0]).toBe('?view=income');
   });
 });
