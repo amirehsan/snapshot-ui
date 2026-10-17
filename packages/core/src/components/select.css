@@ -70,8 +70,14 @@
     color: var(--color-taupe);
   }
 
+  /* The filter field sits in the popup's top corners, so it is concentric with the popup: its radius less the
+     1px edge and this row's 8px, 15px in Rounded and 3px in Soft, which the field's clear button reads too. */
   .select-filter {
     --size-field: var(--size-control);
+    --input-radius: max(
+      0px,
+      calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad) - var(--spacing-part))
+    );
 
     flex: none;
     padding: var(--spacing-part);

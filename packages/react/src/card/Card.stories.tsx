@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
+import { frameAround, HOLDER_CORNER, nestedCardPixels } from '../stories/corner';
 import { tokenPixels } from '../stories/paint';
 import { Card, CardBody, CardHeader, CardNote, CardTitle } from './Card';
 
@@ -82,7 +83,7 @@ export const Nested: Story = {
   play: async ({ canvas }) => {
     await expect(radius(canvas.getByTestId('outer-card'))).toBe(tokenPixels('--radius-stadium'));
     const inner = canvas.getByTestId('inner-card');
-    await expect(radius(inner)).toBe(tokenPixels('--radius-surface'));
+    await expect(radius(inner)).toBe(nestedCardPixels());
     await expect(getComputedStyle(inner).borderTopColor).not.toBe('rgba(0, 0, 0, 0)');
   },
 };
@@ -98,7 +99,7 @@ export const NestedWithoutBody: Story = {
   ),
   play: async ({ canvas }) => {
     await expect(radius(canvas.getByTestId('outer-card'))).toBe(tokenPixels('--radius-stadium'));
-    await expect(radius(canvas.getByTestId('inner-card'))).toBe(tokenPixels('--radius-surface'));
+    await expect(radius(canvas.getByTestId('inner-card'))).toBe(nestedCardPixels());
   },
 };
 
@@ -113,13 +114,7 @@ export const OnAWell: Story = {
   tags: ['no-visual'],
   render: (args) => (
     <Card {...args} data-testid="outer-card">
-      <div
-        style={{
-          padding: 24,
-          borderRadius: 'var(--radius-surface)',
-          background: 'var(--color-canvas)',
-        }}
-      >
+      <div style={{ padding: 24, borderRadius: HOLDER_CORNER, background: 'var(--color-canvas)' }}>
         <Card data-testid="well-card">A card on a well, inside a card.</Card>
       </div>
     </Card>
@@ -144,8 +139,7 @@ export const InsideDarkBlock: Story = {
       style={{
         display: 'grid',
         gap: 16,
-        padding: 24,
-        borderRadius: 'var(--radius-stadium)',
+        ...frameAround(24),
         background: 'var(--color-canvas)',
       }}
     >

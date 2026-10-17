@@ -811,9 +811,9 @@ because it reads as a promise the panel does not keep. The font preview
 loads the selected family on demand so the sample is the setting rather than a
 description of it.
 
-The preview frame takes 24px, one step down from the section's 40px, as
-everything set in a section does; see Nested radii below. 6px would read as a
-utility chip rather than as a panel.
+The preview frame keeps the 24px surface step, never the section's own
+40px, and where it meets the section's corner it takes the section's radius
+less the gap between them; see Nested radii below.
 
 ## Nested radii, derived
 
@@ -822,39 +822,158 @@ surface sits inside another, and a settings panel does that constantly: a
 field's frame inside a section, a picture inside a card, an option inside a
 popup.
 
-**Rounded inside rounded takes the next step down the scale.** An inner corner
-sharper than its frame reads as a box dropped in, and one as round as its frame
-reads as swollen. Both shipped: a 6px picture in a 24px card, and 24px icon
-options in a 24px popup.
+**Rounded inside rounded is concentric.** The inner curve shares the outer
+curve's center, so the band between the two edges keeps one width all the way
+round the corner. The inner radius is the outer radius less the gap between
+the two border boxes, which is the holder's padding plus its drawn edge, and
+never less than 0:
 
-| holder | what it holds | examples |
-| --- | --- | --- |
-| 40px | 24px | a section's field frames, cards, lists, previews and code blocks; a dialog's search results, file tiles, file list and drop zone |
-| 24px | 20px | a card's picture, an image field's preview, the rich text source view, a popup's options and time boxes, a file tile's picture, the slot switcher's tabs |
+```css
+border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));
+```
 
-Should anything ever sit inside a 20px part, it takes 6px.
+Equivalently, the outer radius is the inner one plus the gap. An inner corner
+as round as its frame reads as swollen and pinches the band at the corner; a
+much sharper one reads as a box dropped in and bloats it. Both shipped: 24px
+icon options in a 24px popup, and a 6px picture in a 24px card. The first
+version of this section stepped down one step of the scale instead, 40px to
+24px to 20px, which matches the gap only by chance: a 24px popup with 9px of
+edge and padding holds 15px rows, not 20px ones.
+
+**Surfaces take the formula; controls move out of the corner.** The formula
+is for what fills to the holder's edge: a row, a tab, an option, a frame, a
+nested card, a list, a code block, a field's own button. A button, a field, a
+switch or a chip that would sit inside a holder's corner curve keeps its own
+uniform shape and moves out of the corner instead, as Apple and Material keep
+content clear of a rounded corner. A control is never given one corner smaller
+than its others: a button with three 20px corners and one 7px corner reads as
+damaged, not concentric.
+
+| holder | its corner | edge and padding | part | Rounded | Soft | Square |
+| --- | --- | --- | --- | --- | --- | --- |
+| Card, StatTile | stadium | 1 + 32px (20px compact) | a card or tile in it | 7px (19px compact) | 6px, the micro floor | 0 |
+| Popover, CommandPalette | surface | 1 + the list's 8px | a row, the filter field | 15px | 3px | 0 |
+| a menu row | 15px, 3px | 12px | its key chip | 3px | 0 | 0 |
+| TabList | surface | 4px | a tab | 20px | 8px | 0 |
+| SegmentedControl's track | pill | 1 + 3px | an option | 20px | 8px | 0 |
+| a field | pill | 6px | its field button | a circle | 6px | 0 |
+| MultiSelect's frame | half a field | 6px | a tag | 18px | 6px | 0 |
+
+And the controls that move, by the corner inset (below):
+
+| holder | control | where it stops | Rounded | Soft | Square |
+| --- | --- | --- | --- | --- | --- |
+| Dialog | the last action | the action row ends at the corner inset | 7px further in | as before | as before |
+| SidePanel | the footer's last action | the footer ends at the corner inset | 15px further in | as before | as before |
+| SidePanel | a field or button at the body's foot | the body ends at the corner inset | 39px under it, not 24px | as before | as before |
+| Drawer | the footer's content | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
+| DataTable's bulk bar | its buttons | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
+| Toast | the dismiss | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
+| a card a LineChart ends | the table toggle | the toolbar starts at the corner inset | 7px further in | as before | as before |
+
+**It is a calc on the tokens.** No part writes the number. Each value is the
+holder's token less a length, so Soft and Square follow by construction: in
+Square every token is 0 and every part is 0, and Soft's smaller scale gives
+smaller parts. A pill is the same rule and needs no case of its own: the
+browser draws a 999px corner at half the box, so a field button 6px inside a
+48px field is 999px less 6px, drawn at 18px, half of its 36px, which is the
+field's 24px less the 6px gap. A pill in a pill is concentric whenever it is
+centered with an even gap.
+
+**The holder names its corner.** A holder declares `--holder-radius`,
+`--holder-border` and `--holder-pad` and draws its own corner, edge and
+padding from them, and a part in it reads the three. The holders are Card,
+StatTile through Card, Dialog, Drawer, Sheet, SidePanel, Popover and its
+padded variant, CommandPalette, Toast, the bulk bar and TabList. Each also
+names its corner inset, `--holder-corner-inset`, the padding or the radius
+less the edge, whichever is more:
+`max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)))`.
+A control that far from the holder's edge on either axis is clear of the
+corner curve. It is a calc on the tokens too: in Square it is the padding, so
+nothing moves, and in Soft it is the padding wherever the padding already
+clears the smaller curve. A custom
+property cannot read the value it overrides, so a part that holds parts in
+turn names its own radius, as a menu row's `--menu-item-radius` does, and a
+card in a card writes its value on the
+tokens rather than on the outer card's properties, which it overrides. A
+field's corner is `--input-radius`, the pill unless a holder sets it, as the
+filter row in a popup does, and the field button inside reads it.
+
+**An app's own content follows the same rule.** The library sets the corners
+and insets of the parts it places, but it cannot know where an app puts a
+button or a field in a card's body. A surface an app places in a holder's
+corner takes the formula from the holder's properties; a control stops at the
+holder's corner inset: a button at the foot of a card takes
+`margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad))`, and
+a row of actions at its end takes the same as `padding-inline-end`. The
+stories do exactly this, from `packages/react/src/stories/corner.ts`, and so
+do the docs examples.
+
+**Sharing a corner, or sitting further in.** The rule binds a corner when the
+part's corner lies within the holder's curve: both gaps at that corner, inline
+and block, are smaller than the holder's radius. There a surface, a row or a
+frame takes the formula, on every corner, so no row differs from the next by
+where it falls; a control is not left there at all, it is moved out. A part
+further in, with a gap at least the holder's radius on either side, is clear
+of the curve and keeps its own shape: a button in the middle of a card stays a
+button, and a nested card in Soft, 33px inside a 16px curve, keeps a small
+corner of its own.
+
+**Text-sized parts keep the micro step, never rounder.** A key chip, a badge,
+a checkbox and a title's focus ring keep `--radius-micro`, which is under the
+formula almost everywhere. Where the formula is smaller, they take it, so a
+key chip in a 15px row is 3px, `min(var(--radius-micro), ...)`, and an inner
+corner is never rounder than the corner around it.
+
+**Dots and circles keep their shape.** A dot, on `--radius-dot`, is round by
+meaning, and a pill drawn on a square box is a circle by its size: a field
+button, an icon button, the dialog's well, an avatar. A circle's radius is
+half its side, not a choice, so it is not stepped; where it sits in a corner,
+its placement sets the band, as a field button's 6px does. A tag's remove
+button and a filter chip's clear circle stay circles in every shape but
+Square. A part that is a circle in Rounded and a rounded square in Soft takes
+the formula, which leaves the circle alone in Rounded and fixes the square in
+Soft: a field button is 6px in Soft.
+
+**Floating surfaces are not nested.** A popover, a menu, a toast and a dialog
+sit above the page rather than in it, so each starts a ladder of its own
+wherever it opens: a 24px popup opened from a 40px dialog keeps its 24px, and
+its rows step from there.
+
+**Flush edges are clipped, not rounded.** A part flush with its holder's edge,
+a gap of 0, would need the holder's own radius. It stays square and the
+holder clips it to its corner, as the picture at the top of a file tile is
+clipped and as the Drawer clips its body. `overflow: clip` with
+`overflow-clip-margin: content-box` would clip to the concentric curve of the
+padding box, but Safari does not support it, so nothing relies on it.
+
+**Uneven padding subtracts the smaller side.** A holder padded 16px by 24px
+would need an elliptical inner corner to be exact. In practice the formula
+subtracts the smaller gap, which keeps the curve concentric at the tighter
+edge, where a mismatch shows. The edge counts only where it is drawn: 1px for
+the framed holders and 0 for the tab track, which has none.
+
+**Deeper nesting keeps subtracting.** Each level takes its own gap from the
+level above: a 24px popup, a 15px row, a 3px key chip. Where the result
+reaches 0 and the part should still read as rounded, it takes the micro step
+instead of a sharp corner, which is why a card or a tile in a card is
+`max(var(--radius-micro), ...)`, or the inner padding is reduced.
 
 **Where a ladder starts.** A panel section, a dialog and the rail are 40px. A
-field frame, a card, a list and a popup are 24px, the step under that, and
-keep it wherever a panel places them, a card inside a master-detail list included. Stepping
-a control down inside a card would draw one control two ways on two panels,
-and push its preview to 6px, the chip look the preview is there to avoid. So
-the rule runs from a holder to what is placed in it, and from a control to its
-own parts, never on down through every level.
+field frame, a card, a list and a popup are 24px where nothing holds them.
+The rule runs from a holder to the parts in its corners and from a control to
+its own parts. A control never changes size because of where it is placed;
+only the corner that meets a holder's curve changes.
 
-**What takes no step.**
-
-- **Pills and circles.** They are shapes rather than sizes: buttons, text
-  inputs, chips, nav items, avatars and calendar days keep theirs wherever they
-  sit, and a pill imposes no step on what it holds.
-- **Floating surfaces.** A popup, menu or toast sits above the page rather than
-  in it, so it takes 24px wherever it opens and its parts step down from there.
-- **Text-sized chips and checkboxes.** A key, an inline code sample, a
-  tooltip, a badge or a checkbox keeps 6px, since at a larger radius it would
-  turn into a pill.
-- **Anything flush with its holder's edge.** It is clipped to the holder's own
-  corners rather than rounded, as the picture at the top of a file tile
-  is.
+**The audit.** `apps/storybook/tests/concentric` renders every story in
+Rounded, Soft and Square and measures every rounded element whose corner lies
+within its nearest rounded ancestor's curve (or the frame it is drawn over, as
+a field button is over its input), against the formula, within 1px. A part
+there whose corners differ fails outright, since a control is moved out rather
+than given one smaller corner, and a control outside every curve passes. It
+skips dots, circles, fixed surfaces and text-sized parts that are sharper than
+the formula, and it runs in CI, as does the same check over the docs site's
+pages.
 
 ## Where each text color may go, derived
 
@@ -1104,8 +1223,9 @@ Rounded.
 | `--radius-pill` | 999px | 12px | 0 |
 | `--radius-dot` | 50% | 50% | 50% |
 
-Each scale descends, so the nested-radius rule holds in every shape. Dots never
-change: a square radio would read as a checkbox, so roundness there is meaning.
+A nested radius is a calc on these tokens (Nested radii, derived), so it
+holds in every shape. Dots never change: a square radio would read as a
+checkbox, so roundness there is meaning.
 No component writes a corner of its own, or the shape could not reach it.
 
 ## Rules every component follows
@@ -2467,11 +2587,13 @@ from the document. Seven things were derived.
   `h2`. In a library the card cannot know where it sits in the page's outline,
   so `level` picks the element, `h1` to `h4`, and the type stays the h3 step at
   every level, so the same card looks the same wherever it is placed.
-- **A card in a card steps down.** The app never put a card in a card. The
-  library does, and the nested radii table already says what to do: a 40px
-  holder holds 24px cards. A card placed in another card, directly or in its
-  body, takes `--radius-surface`, which is 12px in Soft and 0 in Square. The
-  rule is those two placements and not any descendant: a card that sits on a
+- **A card in a card is concentric with it.** The app never put a card in a
+  card. The library does, and Nested radii says what to do: the inner card
+  takes the outer card's radius less its edge and padding,
+  `max(var(--radius-micro), calc(var(--radius-stadium) - 1px - var(--spacing-card)))`,
+  7px in Rounded, 19px compact, the micro step in Soft, where the gap passes
+  the outer curve, and 0 in Square. The rule is those two placements and not
+  any descendant: a card that sits on a
   well of its own, such as the docs preview stage, is not on the card's
   surface and keeps its corner. In light a nested card is Lifted on Lifted and
   the hairline is transparent, so nothing would show its edge. It takes the
@@ -2904,10 +3026,11 @@ menu popup already does ("Two surfaces the theme switch needed"). The palette
 is a floating surface and not a panel dialog, so it takes the popup's edge,
 corner and shadow. Modal surfaces take elevation level 3 and floats level 2;
 the sheet casts none, since its only edge is at the bottom of the viewport,
-where a shadow shows nothing. Parts step down the nested-radii ladder: a 24px
-popup holds `--radius-control` rows, a 40px dialog holds 24px parts, and
-buttons keep `--radius-control`, because a pill is a shape and not a size.
-Soft and Square descend by construction.
+where a shadow shows nothing. Parts are concentric with their surface
+(Nested radii): a 24px popup holds 15px rows, its radius less its edge and
+the list's padding, and a dialog's last action keeps its own corner and stops
+at the dialog's corner inset, clear of its curve. Soft and Square follow by
+construction.
 
 **Spacing.** A list popup pads 8px (`--spacing-part`), a free-content popover
 24px (`--spacing-peer`), a dialog 32px (`--spacing-separate`), and a drawer
@@ -3097,9 +3220,10 @@ its buttons 8px apart.
 
 **Padding and corners.** The panel pads 32px, `--spacing-separate`, the
 app's number and the step for a section's header to its body. It takes
-`--radius-stadium`, and its parts step down the nested-radii ladder: the well
-is a circle, buttons keep `--radius-control`, and a field in the body keeps
-its own corner. Soft and Square descend by construction.
+`--radius-stadium`, and its parts are concentric with it where they meet its
+corners: the well is a circle, and the action row ends at the panel's corner
+inset, 7px further in in Rounded, so the last action keeps its own corner and
+sits clear of the panel's curve. Soft and Square follow by construction.
 
 **What React Aria gives.** Its `Dialog` focuses the dialog element on open,
 unless a control inside already holds focus, and its `FocusScope` holds Tab
@@ -3881,7 +4005,7 @@ scrollbar where scrollbars are drawn.
 
 | Part | Value | Why |
 | --- | --- | --- |
-| Row | `display: flex; align-items: center; gap: 0.75rem; min-height: 40px; padding: 0.5rem 0.75rem; border-radius: var(--radius-control); cursor: pointer` | the touch floor; the app's 12px gap and inline padding; the nested-radii table gives a 24px popup's options the next step, 20px, which is the control step, so a row descends in Soft and Square with the popup (a pill would not) |
+| Row | `display: flex; align-items: center; gap: 0.75rem; min-height: 40px; padding: 0.5rem 0.75rem; border-radius: var(--menu-item-radius); cursor: pointer` | the touch floor; the app's 12px gap and inline padding; the corner is concentric with the popup, `max(0px, calc(var(--radius-surface) - 1px - var(--spacing-part)))`, 15px in Rounded and 3px in Soft, so a row follows the popup in every shape (a pill would not) |
 | Coarse pointer | `min-height: 44px` under `@media (pointer: coarse)` | the consumer's 44px on touch |
 | Label | `--text-action` (16px, 500, -3%), ink, `overflow-wrap: anywhere` | a menu item is an action |
 | Description | `--text-small`, slate, under the label | hints are slate: 5.49 light and 6.94 dark on float, both gated |
@@ -5232,8 +5356,9 @@ three tiles 16rem wide in a wrapping flex row.
 **Surface.** The Card's: Lifted, the 1px hairline, `--radius-stadium` and
 `--spacing-card`, so a tile follows density with no token of its own: 32px
 of padding, 20px in compact. A tile directly in a `.card`, or anywhere in a
-`.card-body`, steps down to `--radius-surface` and takes the frame edge, by
-the Card's own rule for a card in a card.
+`.card-body`, is concentric with the card, its radius less the card's edge
+and padding with the micro step as a floor, and takes the frame edge, by the
+Card's own rule for a card in a card.
 
 **Label.** `--text-overline` (14px, 700, uppercase, tracked), slate. With
 `level` it is an `h2`, `h3` or `h4` in the page's outline and looks the same;
@@ -5839,9 +5964,10 @@ lands in the input. Taupe on a disabled field.
 
 **The field button.** A new shared class in `input.css`, `.input-button`,
 for a button inside a field: this clear button, and the combo box's button
-later. A ghost circle a field step smaller than the field,
-`calc(var(--size-field) - 0.75rem)`, so 36px and 24px compact, on
-`--radius-pill`, set `0.375rem` in from the field's inline end and centred
+later. A ghost a field step smaller than the field,
+`calc(var(--size-field) - 0.75rem)`, so 36px and 24px compact, concentric
+with the field, its `--input-radius` less the 6px gap (a circle in Rounded,
+6px in Soft), set `0.375rem` in from the field's inline end and centred
 by `inset-block: 0` and `margin-block: auto`. Its glyph is 16px and slate,
 and turns ink under the 5% ink wash on hover, inside `@media (hover:
 hover)`, and on a press, since touch has no hover to show it. The ring is
@@ -6295,8 +6421,9 @@ correction 13), so an option whose label is not a string needs a
 Categories"; with no visible label, "Selected" and the field's
 `aria-labelledby`, or "Selected" joined to its `aria-label`, never
 "Selected" alone, and holds `TagList.multi-select-tag-list`, a `grid`, of
-`Tag.multi-select-tag`. A tag is a pill, `--radius-pill` (a chip takes no
-nested step), `calc(var(--size-field) - 0.75rem)` tall, 36px and 24px
+`Tag.multi-select-tag`. A tag is concentric with the frame, the frame's
+corner less the 6px between them, a pill in Rounded and 6px in Soft,
+`calc(var(--size-field) - 0.75rem)` tall, 36px and 24px
 compact, `padding-inline: 0.75rem 0.25rem`, on bone, its label in
 `--text-small` at 500, ink, one line and ellipsized past 12rem; its
 whole text stays its name. The value and the group are `display:
@@ -6421,8 +6548,8 @@ Views of one page as a row of pills: `Tabs`, `TabList`, `Tab` and
 derived them with the Design panel's Colors card, and this is the record.
 
 **The track.** The segmented control's row, without its field: the
-`TabList`, `.tab-list`, is a `role="tablist"` row of 40px pills,
-`--size-control`, in a track padded 4px with the surface corner,
+`TabList`, `.tab-list`, is a `role="tablist"` row of 40px tabs,
+`--size-control`, concentric with a track padded 4px with the surface corner,
 `--radius-surface`, 24px Rounded, 12px Soft and square Square, on canvas
 with no edge. A tab switches what is shown and holds no value, so the
 track does not read as a field. On a card it shows as a tint, canvas on

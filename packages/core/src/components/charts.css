@@ -389,6 +389,13 @@
     display: flex;
   }
 
+  /* A chart that ends a card puts its toggle in the card's bottom start corner, inside the card's curve, so
+     the toolbar starts at the card's corner inset and the toggle keeps its own shape: 7px further in in
+     Rounded, nothing more in Soft and Square. */
+  :is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toolbar {
+    padding-inline-start: calc(var(--holder-corner-inset) - var(--holder-pad));
+  }
+
   .line-chart-noscript {
     margin: 0;
     font-size: var(--text-small);

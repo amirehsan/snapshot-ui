@@ -45,17 +45,22 @@
     display: contents;
   }
 
+  /* A holder: its corner and edge are named for the controls in its end corners. */
   .toast {
     --toast-stripe: var(--color-slate);
+    --holder-radius: var(--radius-surface);
+    --holder-border: 1px;
+    --holder-pad: 1rem;
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
 
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
     width: 100%;
-    padding: 1rem var(--spacing-peer);
-    border: 1px solid var(--color-frame);
+    padding: var(--holder-pad) var(--spacing-peer);
+    border: var(--holder-border) solid var(--color-frame);
     border-inline-start: 4px solid var(--toast-stripe);
-    border-radius: var(--radius-surface);
+    border-radius: var(--holder-radius);
     background-color: var(--color-float);
     box-shadow: var(--shadow-float);
     pointer-events: auto;
@@ -122,7 +127,9 @@
     align-items: center;
     gap: var(--spacing-part);
     margin-block: -0.5rem;
-    margin-inline-end: -0.5rem;
+    /* 8px past the padding, except where that would put the dismiss inside the toast's end curve: it stops at
+       the radius less the edge instead, 1px past the padding in Rounded, and keeps its own shape. */
+    margin-inline-end: max(-0.5rem, calc(var(--holder-radius) - var(--holder-border) - var(--spacing-peer)));
   }
 
   /* The frame and the stripe are redrawn in the reader's color, so the words carry the tone. */

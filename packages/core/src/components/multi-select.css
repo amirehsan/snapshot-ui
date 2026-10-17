@@ -9,8 +9,11 @@
  * under a visible label and slate without one.
  */
 @layer components {
-  /* One class, after input.css, so it beats the input's box and none of its states. */
+  /* One class, after input.css, so it beats the input's box and none of its states. Its corner is the field's,
+     capped at half a field so it holds when the frame wraps, and the tags and the field button read it. */
   .multi-select-control {
+    --input-radius: min(var(--radius-pill), calc(var(--size-field) / 2));
+
     position: relative;
     display: flex;
     flex-wrap: wrap;
@@ -20,7 +23,7 @@
     min-height: var(--size-field);
     padding-block: calc(0.375rem - 1.5px);
     padding-inline: 0.5rem 3rem;
-    border-radius: min(var(--radius-pill), calc(var(--size-field) / 2));
+    border-radius: var(--input-radius);
     cursor: text;
   }
 
@@ -98,6 +101,8 @@
     color: var(--color-slate);
   }
 
+  /* A tag sits 6px inside the frame, its padding and its firmest edge, so it is concentric with the frame: a
+     pill in Rounded, 6px in Soft. Its remove button is a circle, which keeps its shape. */
   .multi-select-tag {
     box-sizing: border-box;
     display: inline-flex;
@@ -107,7 +112,7 @@
     height: calc(var(--size-field) - 0.75rem);
     padding-inline: 0.75rem 0.25rem;
     border: 1px solid transparent;
-    border-radius: var(--radius-pill);
+    border-radius: max(0px, calc(var(--input-radius) - 0.375rem));
     background-color: var(--color-bone);
     color: var(--color-ink);
     font-size: var(--text-small);

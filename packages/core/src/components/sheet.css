@@ -18,16 +18,22 @@
      page-sized overlay give way in overlay.css, as the .overlay-scrim.sheet-scrim variant, so they hold in any
      order the two files load. The swipe fades the backdrop, through the keyframes below. */
 
+  /* A holder on its top edge: its corner, edge and padding are named for the parts in its top corners. */
   .sheet {
+    --holder-radius: var(--radius-stadium);
+    --holder-border: 1px;
+    --holder-pad: var(--spacing-peer);
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
+
     display: flex;
     flex-direction: column;
     width: min(100%, 36rem);
     max-height: 92vh;
     max-height: 92dvh;
     margin-inline: auto;
-    border: 1px solid var(--color-hairline);
-    border-start-start-radius: var(--radius-stadium);
-    border-start-end-radius: var(--radius-stadium);
+    border: var(--holder-border) solid var(--color-hairline);
+    border-start-start-radius: var(--holder-radius);
+    border-start-end-radius: var(--holder-radius);
     background-color: var(--color-float);
   }
 

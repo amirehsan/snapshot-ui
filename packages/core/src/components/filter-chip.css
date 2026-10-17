@@ -205,8 +205,10 @@
 
   /* Two classes, after popover.css's one: the panel pads 16px and stays inside a phone's margins. */
   .filter-chip-panel.popover-padded {
+    --holder-pad: var(--spacing-inset);
+
     max-width: min(22rem, 100vw - 2rem);
-    padding: var(--spacing-inset);
+    padding: var(--holder-pad);
   }
 
   /* The tabIndex="-1" dialog React Aria focuses as the panel opens: no ring on the whole panel, as dialog.css. */

@@ -4,15 +4,22 @@
  * shadow, 8px from the trigger, no arrow. Derived in docs/design-system.md ("Popover").
  */
 @layer components {
+  /* A holder: its corner, edge and padding are named for the rows and fields that sit in its corners, which
+     take its radius less the gap (Nested radii in docs/design-system.md). */
   .popover {
+    --holder-radius: var(--radius-surface);
+    --holder-border: 1px;
+    --holder-pad: 0px;
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
+
     box-sizing: border-box;
     max-width: calc(100vw - 2rem);
     max-height: inherit;
     overflow: auto;
     /* A long word in free content, such as a share link, breaks anywhere instead of scrolling it sideways. */
     overflow-wrap: anywhere;
-    border: 1px solid var(--color-frame);
-    border-radius: var(--radius-surface);
+    border: var(--holder-border) solid var(--color-frame);
+    border-radius: var(--holder-radius);
     background-color: var(--color-float);
     box-shadow: var(--shadow-float);
     outline: none;
@@ -22,7 +29,9 @@
   }
 
   .popover-padded {
-    padding: var(--spacing-peer);
+    --holder-pad: var(--spacing-peer);
+
+    padding: var(--holder-pad);
   }
 
   /* Capped as the popover is: a min-width beats a max-width, so a trigger wider than the viewport less 2rem
