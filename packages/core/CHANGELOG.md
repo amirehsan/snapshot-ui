@@ -1,5 +1,15 @@
 # @snapshot-ui/core
 
+## 0.6.1
+
+### Patch Changes
+
+- 6cd2f1f: DataTable: rows have more room. Every text cell now holds its text as far from the row's rules as a one-line row does, so a row of two lines is 72px with 13.5px above and below, where its lines used to fill a 48px row. One-line rows stay 48px, and compact density gives 64px for two lines. A new `data-table-cell-meta` class sets a second line in a cell, such as a category under a name: slate, granite in a hovered or selected row, a quarter rem under the first line, ending in an ellipsis. On a phone, an item's two lines sit 4px apart with the same room above and below, 72px in all.
+- 897a206: DataTable: slate text on a hovered row now meets AA. Slate text you put in a cell, or in a list item, is drawn a step darker while the row is hovered or selected, so it keeps 4.5:1 on the hover and selected washes.
+- 897a206: Forced colors: text drawn in the reader's selection colors stays readable. Chromium drew a block in the system's background color behind the words of a chosen Menu row, the active CommandPalette row, an active FilterChip, a chosen Calendar day or preset, a focused DateRangePicker segment, the selected tab, the chosen SegmentedControl option, the current Pagination page, the current Sidebar item and the current BottomTabBar item, which could hide them. These parts now keep their own system colors, and the focus ring on a chosen Menu row, a chosen day or preset and around an active FilterChip shows against its fill.
+- 6cd2f1f: Pagination keeps a sensible width in any parent. In a flex row beside a link it collapsed to no width, drawing its range one letter per line with the steps stacked; it now takes the room its siblings leave there, in a wrapping row too, fills a block or an `fr` grid column, and draws its narrow row, the range between the two steps, in a column sized by its content. No wrapper is needed. Its range wraps between words and never breaks a word letter by letter. DataTable and StatTile had the same trap: a table in a flex row now draws its table face, and a tile in a flex row is 16rem wide instead of its padding. The nav now carries the range as `data-range` and holds a `div.pagination-box` around its row; markup written by hand needs both.
+- ddf21d0: Sidebar: before the page hydrates, the collapse button's name matches the rail as drawn. Beside an open SidePanel from 1024px to under 1440px the stylesheet folds the rail before any script runs, while the button still said "Collapse the menu"; the server's button now holds both names and the stylesheet shows the right one, and it states no expanded state until the page knows it.
+
 ## 0.6.0
 
 ### Minor Changes
