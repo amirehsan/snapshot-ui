@@ -17,6 +17,21 @@ const closeUp = (css) => css.replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/
  * `[^;{}]` stops at the end of the declaration or the rule, and the closing
  * `[,)]` also catches `var(--color-ink, fallback)` but not `var(--color-inkwell)`.
  */
+/** The parts of the rail that move with it, besides the rail itself and the group dot. */
+const MOVING_PARTS = [
+  '.sidebar-collapse svg',
+  '.sidebar-head',
+  '.sidebar-search',
+  '.sidebar-nav',
+  '.sidebar-group-label',
+  '.sidebar-brand-name',
+  '.sidebar-search-label',
+  '.sidebar-group-text',
+  '.sidebar-item-label',
+  '.sidebar-item-count-number',
+  '.sidebar-search-shortcut',
+];
+
 const INK_RING = /(?<![\w-])outline(?:-color)?\s*:[^;{}]*var\(\s*--color-ink\s*[,)]/i;
 
 /** The text between the braces that follow `header`, nested blocks included. */
@@ -2923,10 +2938,14 @@ describe('src/components/app-shell.css', () => {
       'min-height: 100dvh;',
       'margin-inline-start: var(--app-shell-sidebar);',
       'padding-block-end: var(--app-shell-inset-block-end);',
-      'transition: margin-inline-start 200ms ease;',
+      'transition: margin-inline-start var(--duration-expand) var(--ease-emphasized);',
     ]) {
       expect(workspace, declaration).toContain(declaration);
     }
+    // Closing takes the collapse duration, as the rail does, so the 16px between the rail and the page holds.
+    expect(blockAfter(css, "[data-sidebar='collapsed' i] .app-shell-workspace {")).toBe(
+      ' transition-duration: var(--duration-collapse); ',
+    );
     const header = blockAfter(css, '.app-shell-header {');
     for (const declaration of ['position: sticky;', 'inset-block-start: 0;', 'z-index: var(--z-header);']) {
       expect(header, declaration).toContain(declaration);
@@ -3013,7 +3032,10 @@ describe('src/components/app-shell.css', () => {
     const css = rules();
     const reduced = '@media (prefers-reduced-motion: reduce)';
     expect(blockAfter(blockAfter(css, reduced), '.app-shell-workspace {')).toContain('transition: none;');
-    expect(css.indexOf(reduced)).toBeGreaterThan(css.indexOf('transition: margin-inline-start 200ms ease;'));
+    expect(css.indexOf('transition: margin-inline-start var(--duration-expand)')).toBeGreaterThan(-1);
+    expect(css.indexOf(reduced)).toBeGreaterThan(
+      css.indexOf('transition: margin-inline-start var(--duration-expand)'),
+    );
   });
 });
 
@@ -3024,6 +3046,13 @@ describe('src/components/sidebar.css', () => {
   const WIDE = '@media (width >= 1024px)';
   const NARROW = '@media (width < 1024px)';
   const COLLAPSED = "[data-sidebar='collapsed' i]";
+  /** Every part of the rail copy that moves, under `scope`: the selector a rule that stops them all names. */
+  const movingSelector = (scope) =>
+    [
+      `${scope} .sidebar:not(.sidebar-drawer)`,
+      `${scope} .sidebar:not(.sidebar-drawer) .sidebar-group-label::before`,
+      `${scope} .sidebar:not(.sidebar-drawer) :is(${MOVING_PARTS.join(', ')})`,
+    ].join(', ');
 
   it('fixes the rail 16px clear of the viewport, at the chrome layer, the rail token less its two insets wide', () => {
     const rail = blockAfter(rules(), '.sidebar {');
@@ -3037,7 +3066,7 @@ describe('src/components/sidebar.css', () => {
       'border-radius: var(--radius-stadium);',
       'background-color: var(--color-float);',
       'box-shadow: var(--shadow-lift);',
-      'transition: width 200ms ease;',
+      'transition: width var(--sidebar-duration) var(--ease-emphasized);',
     ]) {
       expect(rail, declaration).toContain(declaration);
     }
@@ -3060,6 +3089,89 @@ describe('src/components/sidebar.css', () => {
     expect(css).not.toMatch(/(^|[\s}])\.sidebar-(close|trigger) \{/);
   });
 
+  it('moves every part on the emphasized curve, for the duration of the state it moves to', () => {
+    const css = rules();
+    const rail = blockAfter(css, '.sidebar {');
+    expect(rail).toContain('--sidebar-duration: var(--duration-expand);');
+    expect(rail).toContain(
+      '--sidebar-inner: calc(var(--container-sidebar) - 2 * var(--spacing-inset) - 2px);',
+    );
+    expect(blockAfter(blockAfter(css, WIDE), `${COLLAPSED} .sidebar:not(.sidebar-drawer) {`)).toBe(
+      ' --sidebar-duration: var(--duration-collapse); ',
+    );
+    // Every transition the rail draws reads the rail's duration and the one curve: none is written in milliseconds,
+    // and none eases on its own, so no two properties fight on the way. The drawer copy and the fold move nothing.
+    const transitions = [...css.matchAll(/transition: ([^;]+);/g)].map((match) => match[1]);
+    const moving = transitions.filter((value) => value !== 'none');
+    expect(moving.length).toBeGreaterThan(6);
+    for (const value of moving) {
+      expect(value).not.toMatch(/\d(ms|s)\b/);
+      for (const part of value.split(/,(?![^(]*\))/)) {
+        expect(part, value).toContain('var(--ease-emphasized)');
+        expect(part, value).toContain('var(--sidebar-duration)');
+      }
+    }
+    // The labels come back late in the opening and leave early in the closing.
+    const LABELS =
+      ':is(.sidebar-brand-name, .sidebar-search-label, .sidebar-group-text, .sidebar-item-label, .sidebar-item-count-number, .sidebar-search-shortcut)';
+    expect(blockAfter(css, `.sidebar:not(.sidebar-drawer) ${LABELS} {`)).toContain(
+      'transition: opacity calc(var(--sidebar-duration) / 2) var(--ease-emphasized) calc(var(--sidebar-duration) / 4);',
+    );
+    const hidden = blockAfter(css, `${COLLAPSED} .sidebar:not(.sidebar-drawer) ${LABELS} {`);
+    expect(hidden).toContain('opacity: 0;');
+    expect(hidden).toContain(
+      'transition: opacity calc(var(--sidebar-duration) * 0.4) var(--ease-emphasized);',
+    );
+    // Hidden by opacity in the flow, never taken out of it, so no row changes height as the rail collapses.
+    expect(hidden).not.toContain('position: absolute');
+  });
+
+  it('never re-centers a collapsed part, so nothing jumps to the middle of the rail while it narrows', () => {
+    const collapsed = [...blockAfter(rules(), WIDE).matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+      .filter((match) => match[1].trim().startsWith(COLLAPSED) && !match[1].includes('.sidebar-footer'))
+      .map((match) => match[2]);
+    expect(collapsed.length).toBeGreaterThan(8);
+    for (const body of collapsed) {
+      expect(body).not.toContain('justify-content: center');
+      expect(body).not.toMatch(/margin-inline: auto/);
+      expect(body).not.toMatch(/(?<![\w-])width: var\(--size-target\)/);
+    }
+  });
+
+  it('keeps every label on one line below the expanded width, the token less its insets and edges', () => {
+    const css = rules();
+    const source = JSON.parse(read('tokens/tokens.json'));
+    const { value, unit } = source.container.sidebar.$value;
+    const inset = source.spacing.inset.$value;
+    // Measured inside the rail's two 1px edges.
+    const query = `@container sidebar (width < calc(${String(value)}${unit} - ${String(2 * inset.value + 2)}${inset.unit}))`;
+    expect(css).toContain(query);
+    const narrow = blockAfter(css, query);
+    expect(
+      blockAfter(
+        narrow,
+        '.sidebar:not(.sidebar-drawer) :is(.sidebar-head, .sidebar-search, .sidebar-nav, .sidebar-footer) {',
+      ),
+    ).toBe(' white-space: nowrap; ');
+    expect(blockAfter(blockAfter(css, WIDE), '.sidebar:not(.sidebar-drawer) {')).toBe(
+      ' container: sidebar / inline-size; ',
+    );
+    // The list's one column never grows past the nav for a label that does not wrap.
+    expect(blockAfter(css, '.sidebar-list {')).toContain('grid-template-columns: minmax(0, 1fr);');
+  });
+
+  it('steps at once under reduced motion: no duration for any part, and no transition on the rail', () => {
+    const css = rules();
+    const reduced = blockAfter(css, '@media (prefers-reduced-motion: reduce)');
+    expect(blockAfter(reduced, `.sidebar, ${COLLAPSED} .sidebar:not(.sidebar-drawer) {`)).toBe(
+      ' --sidebar-duration: 0s; ',
+    );
+    expect(blockAfter(reduced, '.sidebar, .sidebar-collapse svg {')).toBe(' transition: none; ');
+    expect(css.lastIndexOf('@media (prefers-reduced-motion: reduce)')).toBeGreaterThan(
+      css.lastIndexOf('--sidebar-duration: var(--duration-collapse);'),
+    );
+  });
+
   it('declares the four rail constants as written', () => {
     const rail = blockAfter(rules(), '.sidebar {');
     for (const declaration of [
@@ -3072,13 +3184,8 @@ describe('src/components/sidebar.css', () => {
     }
   });
 
-  it('moves the rail copy and its chevron at once while it is folded for a side panel', () => {
-    expect(
-      blockAfter(
-        rules(),
-        '[data-sidebar-folded] .sidebar:not(.sidebar-drawer), [data-sidebar-folded] .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {',
-      ),
-    ).toContain('transition: none;');
+  it('moves the rail copy and every part that moves with it at once while it is folded for a side panel', () => {
+    expect(blockAfter(rules(), `${movingSelector('[data-sidebar-folded]')} {`)).toBe(' transition: none; ');
   });
 
   it('copies every collapsed rule into the side panel fold, with the same declarations, under 1440px', async () => {
@@ -3105,12 +3212,7 @@ describe('src/components/sidebar.css', () => {
     expect(foldOf(forcedFold)).toEqual(collapsedOf(blockAfter(`{${forced}`, '{')));
     expect(foldOf(forcedFold)).toHaveLength(2);
     // It moves at once, as the scripted fold does.
-    expect(
-      blockAfter(
-        foldBlock,
-        `${FOLD} .sidebar:not(.sidebar-drawer), ${FOLD} .sidebar:not(.sidebar-drawer) .sidebar-collapse svg {`,
-      ),
-    ).toBe(' transition: none; ');
+    expect(blockAfter(foldBlock, `${movingSelector(FOLD)} {`)).toBe(' transition: none; ');
     const { tokens } = await import('../dist/tokens.js');
     expect(css).toContain(`@media (${tokens.breakpoint.md.value} <= width < ${tokens.breakpoint.lg.value})`);
     expect(css).toContain(`@media (forced-colors: active) and (width < ${tokens.breakpoint.lg.value})`);
@@ -3190,7 +3292,7 @@ describe('src/components/sidebar.css', () => {
     for (const declaration of [
       'position: absolute;',
       'inset-block-start: calc((var(--sidebar-row) - var(--sidebar-icon)) / 2 - 0.25rem);',
-      'inset-inline-end: calc(50% - var(--sidebar-icon) / 2 - 0.25rem);',
+      'inset-inline-start: calc(var(--sidebar-pill-inset) + var(--sidebar-icon) - 0.25rem);',
       'width: 0.5rem;',
       'height: 0.5rem;',
       'margin: 0;',
