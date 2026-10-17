@@ -323,10 +323,7 @@ export const InDarkScope: Story = {
   tags: ['no-visual'],
   render: (args) => (
     <>
-      <div
-        data-theme="dark"
-        style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
-      >
+      <div data-theme="dark" style={{ ...frameAround(24), background: 'var(--color-canvas)' }}>
         <Card>
           <CardBody>
             <p>A card in a dark block.</p>

@@ -853,9 +853,6 @@ edge and padding holds 15px rows, not 20px ones.
 | SegmentedControl's track | pill | 1 + 3px | an option | 20px | 8px | 0 |
 | a field | pill | 6px | its field button | a circle | 6px | 0 |
 | MultiSelect's frame | half a field | 6px | a tag | 18px | 6px | 0 |
-| a tag | 18px, 6px | 1 + 4px | its remove button | a circle | 1px | 0 |
-| FilterChip | pill | 1 + 4px | its clear circle | a circle | 7px | 0 |
-| Switch's track | pill | 3px | its thumb | a circle | a circle | 0 |
 
 **It is a calc on the tokens.** No part writes the number. Each value is the
 holder's token less a length, so Soft and Square follow by construction: in
@@ -872,8 +869,8 @@ padding from them, and a part in it reads the three. The holders are Card,
 StatTile through Card, Dialog, Drawer, Sheet, SidePanel, Popover and its
 padded variant, CommandPalette, Toast, the bulk bar and TabList. A custom
 property cannot read the value it overrides, so a part that holds parts in
-turn names its own radius, as a menu row's `--menu-item-radius` and a tag's
-`--multi-select-tag-radius` do, and a card in a card writes its value on the
+turn names its own radius, as a menu row's `--menu-item-radius` does, and a
+card in a card writes its value on the
 tokens rather than on the outer card's properties, which it overrides. A
 field's corner is `--input-radius`, the pill unless a holder sets it, as the
 filter row in a popup does, and the field button inside reads it.
@@ -909,10 +906,11 @@ corner is never rounder than the corner around it.
 meaning, and a pill drawn on a square box is a circle by its size: a field
 button, an icon button, the dialog's well, an avatar. A circle's radius is
 half its side, not a choice, so it is not stepped; where it sits in a corner,
-its placement sets the band, as a field button's 6px does. A part that is a
-circle in Rounded and a rounded square in Soft takes the formula, which leaves
-the circle alone in Rounded and fixes the square in Soft: the filter chip's
-clear circle is 7px in Soft.
+its placement sets the band, as a field button's 6px does. A tag's remove
+button and a filter chip's clear circle stay circles in every shape but
+Square. A part that is a circle in Rounded and a rounded square in Soft takes
+the formula, which leaves the circle alone in Rounded and fixes the square in
+Soft: a field button is 6px in Soft.
 
 **Floating surfaces are not nested.** A popover, a menu, a toast and a dialog
 sit above the page rather than in it, so each starts a ladder of its own
@@ -2205,8 +2203,8 @@ library gives it 3px at both ends too. The travel is then the track (52px) less
 the thumb (24px) less two gaps (6px), which is 22px again: the app's distance,
 with the padding changed to match it. Width, thumb size and gap are three
 properties and the travel is computed from them, so a size that changes stays
-symmetric. The thumb is concentric with the track, the track's pill less
-the 3px gap, a circle in Rounded and Soft and a square in Square. It moves by its inline margin and not
+symmetric. The thumb follows `--radius-pill` like the track, a circle in
+Rounded and Soft and a square in Square. It moves by its inline margin and not
 by a transform, so it reverses in right-to-left text without a direction
 selector, which the browser floor does not have.
 
@@ -6282,8 +6280,9 @@ correction 13), so an option whose label is not a string needs a
 Categories"; with no visible label, "Selected" and the field's
 `aria-labelledby`, or "Selected" joined to its `aria-label`, never
 "Selected" alone, and holds `TagList.multi-select-tag-list`, a `grid`, of
-`Tag.multi-select-tag`. A tag is a pill, `--radius-pill` (a chip takes no
-nested step), `calc(var(--size-field) - 0.75rem)` tall, 36px and 24px
+`Tag.multi-select-tag`. A tag is concentric with the frame, the frame's
+corner less the 6px between them, a pill in Rounded and 6px in Soft,
+`calc(var(--size-field) - 0.75rem)` tall, 36px and 24px
 compact, `padding-inline: 0.75rem 0.25rem`, on bone, its label in
 `--text-small` at 500, ink, one line and ellipsized past 12rem; its
 whole text stays its name. The value and the group are `display:
@@ -6292,8 +6291,7 @@ an element with a role never leaves the box tree. Nothing collapses into
 "and 3 more": the frame grows a row at a time.
 
 **The remove button.** `Button slot="remove"`,
-`.multi-select-tag-remove`: a 20px ghost with a 12px slate `X`, concentric
-with its tag (a circle in Rounded, 1px in Soft),
+`.multi-select-tag-remove`: a 20px ghost circle with a 12px slate `X`,
 ink on the 5% wash when hovered or pressed, named "Remove" and the tag
 (`labels.remove`; React Aria reads it with the tag's text, "Remove
 Food"). Its hit area is extended to 24px by a pseudo-element, which meets
@@ -7601,7 +7599,7 @@ hit at the target in height by the trigger's formula,
 11 asks. The trigger pads only 4px to it, so the two touch and never
 overlap: each hit area grows in height alone, and neither reaches over
 the other, the lesson of NumberField's steppers. It draws a
-24px circle, concentric with the chip (7px in Soft), with a 12px canvas X; the circle washes 15% canvas on hover
+24px circle with a 12px canvas X; the circle washes 15% canvas on hover
 and on a press, 1.50 against ink in light and 1.39 in dark, a mix and a
 cue, with the glyph at 10.81 and 13.93 on it; keyboard focus draws the
 canvas ring inside the circle, SegmentedControl's rule on an ink fill.

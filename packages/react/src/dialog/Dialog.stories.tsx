@@ -4,7 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { expect, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody } from '../card';
-import { BOTTOM, BOTTOM_START } from '../stories/corner';
+import { BOTTOM, BOTTOM_START, frameAround } from '../stories/corner';
 import { tokenColor } from '../stories/paint';
 import { TextField } from '../text-field';
 import { Dialog, DialogTrigger, type DialogProps } from './Dialog';
@@ -289,7 +289,11 @@ export const AutoFocusChild: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'calc(var(--radius-control) + 24px)', background: 'var(--color-canvas)' }}
+      style={{
+        padding: 24,
+        borderRadius: 'calc(var(--radius-control) + 24px)',
+        background: 'var(--color-canvas)',
+      }}
     >
       <DialogTrigger>
         <Button variant="secondary">Rename the workspace</Button>

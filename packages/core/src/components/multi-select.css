@@ -102,10 +102,8 @@
   }
 
   /* A tag sits 6px inside the frame, its padding and its firmest edge, so it is concentric with the frame: a
-     pill in Rounded, 6px in Soft. The tag's own radius is named for the remove button in it. */
+     pill in Rounded, 6px in Soft. Its remove button is a circle, which keeps its shape. */
   .multi-select-tag {
-    --multi-select-tag-radius: max(0px, calc(var(--input-radius) - 0.375rem));
-
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
@@ -114,7 +112,7 @@
     height: calc(var(--size-field) - 0.75rem);
     padding-inline: 0.75rem 0.25rem;
     border: 1px solid transparent;
-    border-radius: var(--multi-select-tag-radius);
+    border-radius: max(0px, calc(var(--input-radius) - 0.375rem));
     background-color: var(--color-bone);
     color: var(--color-ink);
     font-size: var(--text-small);
@@ -148,8 +146,7 @@
     margin: 0;
     padding: 0;
     border: 0;
-    /* The tag's radius less its 1px edge and 4px of padding: a circle in Rounded, 1px in Soft. */
-    border-radius: max(0px, calc(var(--multi-select-tag-radius) - 0.3125rem));
+    border-radius: var(--radius-pill);
     background-color: transparent;
     color: var(--color-slate);
     cursor: pointer;

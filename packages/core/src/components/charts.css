@@ -389,6 +389,15 @@
     display: flex;
   }
 
+  /* A chart that ends a card puts its toggle in the card's bottom start corner, inside the card's curve, so
+     that corner is concentric with the card's: its radius less its edge and padding, or the micro step. */
+  :is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toggle {
+    border-end-start-radius: max(
+      var(--radius-micro),
+      calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad))
+    );
+  }
+
   .line-chart-noscript {
     margin: 0;
     font-size: var(--text-small);

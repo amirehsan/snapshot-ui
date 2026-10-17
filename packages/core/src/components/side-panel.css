@@ -37,8 +37,9 @@
     inline-size: 24rem;
     max-block-size: calc(100dvh - var(--page-sticky-top, 0px) - 2 * var(--spacing-inset));
     margin-block-start: var(--spacing-inset);
-    border: var(--holder-border) solid var(--color-hairline);
-    border-radius: var(--holder-radius);
+    /* The rail's surface, declaration for declaration, which the holder properties above name. */
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-stadium);
     background-color: var(--color-float);
     color: var(--color-ink);
     font-family: var(--font-sans);
@@ -141,8 +142,8 @@
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--spacing-part);
-    margin-inline: var(--holder-pad);
-    padding-block: var(--spacing-inset) var(--holder-pad);
+    margin-inline: var(--spacing-peer);
+    padding-block: var(--spacing-inset) var(--spacing-peer);
     border-block-start: 1px solid var(--color-divider);
   }
 

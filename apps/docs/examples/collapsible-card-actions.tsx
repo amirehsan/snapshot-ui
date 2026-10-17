@@ -44,6 +44,7 @@ export default function CollapsibleCardActions(): ReactElement {
       >
         Weekly digest
       </Switch>
+      <p style={{ margin: 0, color: 'var(--color-slate)' }}>Reset puts both back as they were saved.</p>
     </CollapsibleCard>
   );
 }

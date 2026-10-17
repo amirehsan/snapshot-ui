@@ -228,7 +228,9 @@ export const InDarkScope: Story = {
         <CardBody>
           <p>A card in a dark block.</p>
           <DialogTrigger>
-            <Button variant="secondary" style={BOTTOM}>Open the menu</Button>
+            <Button variant="secondary" style={BOTTOM}>
+              Open the menu
+            </Button>
             <Drawer {...args} />
           </DialogTrigger>
         </CardBody>
