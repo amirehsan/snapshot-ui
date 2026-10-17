@@ -1,6 +1,6 @@
 {
   "name": "@snapshot-ui/react",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Accessible React components for Snapshot UI, built on React Aria.",
   "license": "MIT",
   "repository": {
