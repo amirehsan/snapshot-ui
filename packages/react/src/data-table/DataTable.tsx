@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -23,7 +24,7 @@ import { useWarnOnce } from '../utils/useWarnOnce';
 import { BulkBar } from './BulkBar';
 import { DataTableStatus, useQuiet } from './DataTableStatus';
 import { groupsOf } from './groups';
-import { EDITABLE, handleTableKey, type TableKeyActions } from './keys';
+import { EDITABLE, editorRow, escapeEditor, handleTableKey, type TableKeyActions } from './keys';
 import { ListFace, type ListSelection, type ListSelectionManager } from './ListFace';
 import { selectsOnPress } from './press';
 import { portalOf, watchPortal } from '../overlay/watch-portal';
@@ -320,14 +321,47 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   const onTableState = useCallback((next: TableState<unknown> | null) => {
     tableState.current = next;
   }, []);
-  /** Lets an editable element in a cell keep its arrows while it has focus, and gives them back to the grid. */
-  const editableKeys = (target: Element | null): void => {
+  // Whether an editable element in a list item has focus: the list's items then leave their children's arrows
+  // alone, as the table's cells do while its navigation is off (spec correction 57).
+  const [listEditing, setListEditing] = useState(false);
+  /**
+   * Lets an editable element in a cell or a list item keep its arrows while it has focus, and gives them back to
+   * the grid or the list once focus is anywhere else. `target` is the focused element, or null once focus is out.
+   */
+  const editableKeys = useCallback((target: Element | null): void => {
+    const row = editorRow(target);
+    const inList = row?.closest('.data-table-list') != null;
+    setListEditing(inList);
     const state = tableState.current;
     if (state === null) return;
-    const cell = target?.closest('[role="gridcell"], [role="rowheader"]') ?? null;
-    const editable = cell !== null && cell !== target && target?.closest(EDITABLE) != null;
-    if (state.isKeyboardNavigationDisabled !== editable) state.setKeyboardNavigationDisabled(editable);
-  };
+    const editing = row !== null && !inList;
+    if (state.isKeyboardNavigationDisabled !== editing) state.setKeyboardNavigationDisabled(editing);
+  }, []);
+  // The switch turns back on from focus events: an engine that fires no blur when a focused editor is removed or
+  // hidden would leave the arrows off, so focus is checked again whenever the rows change and whenever anything
+  // on the page takes focus (spec correction 59).
+  const recheckEditing = useCallback((): void => {
+    const root = rootRef.current;
+    if (root === null) return;
+    const active = root.ownerDocument.activeElement;
+    editableKeys(active !== null && root.contains(active) ? active : null);
+  }, [editableKeys]);
+  useLayoutEffect(() => {
+    recheckEditing();
+    // React Aria draws the rows of a changed collection in a render of its own, after this one: once more then.
+    const frame = requestAnimationFrame(recheckEditing);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [items, recheckEditing]);
+  useEffect(() => {
+    const document = rootRef.current?.ownerDocument;
+    if (document === undefined) return;
+    document.addEventListener('focusin', recheckEditing);
+    return () => {
+      document.removeEventListener('focusin', recheckEditing);
+    };
+  }, [recheckEditing]);
   // Whether the last focus inside the root's DOM was in the bar, which the root's focus capture keeps.
   const focusInBar = useRef(false);
 
@@ -502,7 +536,9 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
 
   return (
     // The capture handler takes keys before React Aria's grid does (spec 7.2): a capture listener, which
-    // jsx-a11y does not read, so the root needs no role of its own.
+    // jsx-a11y does not read, so the root needs no role of its own. Its one bubble handler is Escape out of an
+    // editor in a cell, after the editor has had it.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the grid and the list inside are the roles; the root only hears an editor's unused Escape on its way up (spec correction 54)
     <div
       ref={rootRefs}
       className={cx('data-table', className)}
@@ -523,6 +559,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         }
         handleTableKey(event, actionsFor(target));
       }}
+      onKeyDown={escapeEditor}
       onFocusCapture={(event: FocusEvent<HTMLDivElement>) => {
         const target = event.target as Element;
         const root = event.currentTarget;
@@ -612,6 +649,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           disabledKeys={disabled}
           disabledBehavior={disabledBehavior}
           selection={listSelection}
+          isEditing={listEditing}
           isLoading={loading && rows.length === 0}
           loadingRowCount={loadingRowCount}
           emptyState={failed ? error : emptyState}

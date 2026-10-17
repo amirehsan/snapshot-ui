@@ -8104,10 +8104,9 @@ describe('src/components/date-picker.css', () => {
     }
     // The frame clips nothing, so the button's 40px hit area reaches past it at either density.
     expect(frame).not.toContain('overflow');
-    // The edge, the fill, the height and the states are input.css's; the holder properties only describe them.
-    const own = frame.replace(/--holder-[\w-]+:[^;]*;/g, '');
+    // The edge, the fill, the height and the states are input.css's.
     for (const property of ['border', 'background', 'color:', 'height']) {
-      expect(own, property).not.toContain(property);
+      expect(frame, property).not.toContain(property);
     }
     const ring = blockAfter(rules(), `${RING} {`);
     expect(ring).toContain('border: 1.5px solid var(--color-ink);');
@@ -8145,52 +8144,14 @@ describe('src/components/date-picker.css', () => {
     expect(popover).toContain('padding: var(--spacing-inset);');
   });
 
-  it('draws its nested corners concentric: each holder declares its radius, edge and padding from tokens', () => {
-    const CONCENTRIC = 'max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)))';
+  it("draws no corner of its own: the button is the shared field button and the calendar keeps Calendar's shapes", () => {
     const css = rules();
-    // The frame holds the button; the popover holds the calendar.
-    const frame = blockAfter(css, '.date-picker-control {');
-    expect(frame).toContain('--holder-radius: var(--radius-pill);');
-    expect(frame).toContain('--holder-border: 1px;');
-    const popover = blockAfter(css, '.date-picker-popover.popover-padded {');
-    expect(popover).toContain('--holder-radius: var(--radius-surface);');
-    expect(popover).toContain('--holder-border: 1px;');
-    expect(popover).toContain('--holder-pad: var(--spacing-inset);');
-    // The button's gap is its nearer side's, the block axis: 6px from the frame's outer edge, the edge included.
-    const button = blockAfter(css, '.date-picker-button {');
-    expect(button).toContain('--holder-pad: calc(0.375rem - var(--holder-border));');
-    expect(button).toContain(`border-radius: ${CONCENTRIC};`);
-    // Never a copy of the holder's radius token.
-    expect(button).not.toContain('border-radius: var(--radius');
-    const calendar = blockAfter(css, '.date-picker-popover .calendar {');
-    expect(calendar).toContain(`--date-picker-calendar-radius: ${CONCENTRIC};`);
-    expect(calendar).toContain('border-radius: var(--date-picker-calendar-radius);');
-    // The presets and the days meet the calendar's edge, so each level takes its radius whole.
-    expect(
-      blockAfter(
-        css,
-        '.date-picker-popover :is(.calendar-presets, .calendar-preset, .calendar-day-number) {',
-      ),
-    ).toContain('border-radius: var(--date-picker-calendar-radius);');
-  });
-
-  it('measures the concentric corners in each shape: round, then smaller, then square once the gap reaches them', () => {
-    const tokens = JSON.parse(read('tokens/tokens.json'));
-    /** A radius token's pixels in a shape: Rounded is its value, Soft and Square its extensions. */
-    const radius = (name, shape) => {
-      const token = tokens.radius[name];
-      return shape === 'rounded' ? token.$value.value : token.$extensions['snapshot-ui'].shape[shape].value;
-    };
-    const inset = tokens.spacing.inset.$value.value;
-    const concentric = (holder, border, pad) => Math.max(0, holder - border - pad);
-    // The calendar inside the popover: the surface radius less the 1px frame and the 16px inset.
-    expect(concentric(radius('surface', 'rounded'), 1, inset)).toBe(7);
-    expect(concentric(radius('surface', 'soft'), 1, inset)).toBe(0);
-    expect(concentric(radius('surface', 'square'), 1, inset)).toBe(0);
-    // The button inside the frame, 6px in, the edge included: a pill, then 6px in Soft, then square.
-    expect(concentric(radius('pill', 'rounded'), 1, 5)).toBeGreaterThan(18);
-    expect(concentric(radius('pill', 'soft'), 1, 5)).toBe(6);
-    expect(concentric(radius('pill', 'square'), 1, 5)).toBe(0);
+    // The days' circles and the presets' pills are calendar.css's, as in Calendar and DateRangePicker, and the
+    // button's corner is input.css's, as in every framed field.
+    expect(css).not.toContain('border-radius');
+    expect(css).not.toContain('--holder-');
+    expect(css).not.toMatch(/\.date-picker-button\s*\{/);
+    expect(css).not.toMatch(/\.calendar(?:-presets|-preset|-day-number)?\b/);
   });
 
   it('draws the disabled segments and face graytext in forced colors', () => {

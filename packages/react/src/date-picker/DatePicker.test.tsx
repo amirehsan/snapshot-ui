@@ -1,7 +1,7 @@
 import { CalendarDate } from '@internationalized/date';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, type ReactElement } from 'react';
+import { createRef, useState, type ReactElement } from 'react';
 import { hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
@@ -89,9 +89,8 @@ describe('DatePicker', () => {
     expect(onChange).not.toHaveBeenCalled();
     expect(segment(2, container)).toHaveFocus();
     await user.keyboard('2026');
-    expect(onChange).toHaveBeenLastCalledWith('2026-10-16');
-    // React Aria takes each digit of a year as it is typed, so years 2, 20 and 202 came first, each a whole date.
-    expect(onChange.mock.calls.every(([date]) => typeof date === 'string')).toBe(true);
+    // React Aria takes each digit of a year as it is typed; the field holds years 2, 20 and 202 back.
+    expect(onChange.mock.calls).toEqual([['2026-10-16']]);
     onChange.mockClear();
     // An emptied segment keeps the date, as React Aria holds it; clearing every segment sends null, once.
     focus(segment(1, container));
@@ -104,6 +103,121 @@ describe('DatePicker', () => {
     await user.keyboard('{Backspace}{Backspace}');
     expect(onChange).toHaveBeenLastCalledWith(null);
     expect(onChange.mock.calls.filter(([date]) => date === null)).toHaveLength(1);
+  });
+
+  it('holds a year back while it is typed, and sends the day once the year is whole', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { container } = render(
+      <form>
+        <DatePicker label="Date" onChange={onChange} name="day" />
+      </form>,
+    );
+    const form = container.querySelector('form');
+    if (!form) throw new Error('No form');
+    focus(segment(0, container));
+    await user.keyboard('1016202');
+    // Month, day and three digits of the year: React Aria holds 0202-10-16, which goes nowhere.
+    expect(texts(container)).toEqual(['10', '16', '202']);
+    expect(onChange).not.toHaveBeenCalled();
+    await user.keyboard('6');
+    expect(onChange.mock.calls).toEqual([['2026-10-16']]);
+    expect(new FormData(form).get('day')).toBe('2026-10-16');
+  });
+
+  it('holds a year back while it is erased, and commits null once it is gone', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { container } = render(
+      <form>
+        <DatePicker label="Date" defaultValue="2026-10-16" onChange={onChange} name="day" />
+      </form>,
+    );
+    const form = container.querySelector('form');
+    if (!form) throw new Error('No form');
+    focus(segment(2, container));
+    await user.keyboard('{Backspace}{Backspace}{Backspace}');
+    expect(texts(container)).toEqual(['10', '16', '2']);
+    expect(onChange).not.toHaveBeenCalled();
+    await user.keyboard('{Backspace}');
+    // No day: the app, the hidden input and the face agree.
+    expect(onChange.mock.calls).toEqual([[null]]);
+    expect(new FormData(form).get('day')).toBe('');
+    expect(segments(container).every((each) => each.hasAttribute('data-placeholder'))).toBe(true);
+  });
+
+  it('holds a year back in a controlled field too, and types over a whole year', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    function Controlled(): ReactElement {
+      const [day, setDay] = useState<string | null>('2026-10-16');
+      return (
+        <DatePicker
+          label="Date"
+          value={day}
+          onChange={(next) => {
+            onChange(next);
+            setDay(next);
+          }}
+        />
+      );
+    }
+    const { container } = render(<Controlled />);
+    focus(segment(2, container));
+    await user.keyboard('202');
+    expect(texts(container)).toEqual(['10', '16', '202']);
+    expect(onChange).not.toHaveBeenCalled();
+    await user.keyboard('5');
+    expect(onChange.mock.calls).toEqual([['2025-10-16']]);
+    expect(texts(container)).toEqual(['10', '16', '2025']);
+    onChange.mockClear();
+    await user.keyboard('{Backspace}{Backspace}{Backspace}{Backspace}');
+    expect(onChange.mock.calls).toEqual([[null]]);
+    expect(segments(container).every((each) => each.hasAttribute('data-placeholder'))).toBe(true);
+  });
+
+  it('commits null on leaving a year short, and shows a required field invalid', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { container } = render(
+      <>
+        <DatePicker label="Date" defaultValue="2026-10-16" onChange={onChange} isRequired />
+        <button type="button">After</button>
+      </>,
+    );
+    focus(segment(2, container));
+    await user.keyboard('{Backspace}{Backspace}');
+    expect(texts(container)).toEqual(['10', '16', '20']);
+    expect(onChange).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'After' }));
+    expect(onChange.mock.calls).toEqual([[null]]);
+    expect(segments(container).every((each) => each.hasAttribute('data-placeholder'))).toBe(true);
+    expect(root(container)).toHaveAttribute('data-invalid');
+  });
+
+  it('holds a Persian year back as it is typed and erased', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { container } = render(
+      <I18nProvider locale="fa-IR">
+        <DatePicker label="تاریخ" defaultValue="2026-10-14" onChange={onChange} />
+      </I18nProvider>,
+    );
+    // The year leads: 1405/7/22. Typed over, 1404 passes through Persian years 1, 14 and 140, before 1000 in the
+    // Gregorian calendar too.
+    focus(segment(0, container));
+    await user.keyboard('140');
+    expect(onChange).not.toHaveBeenCalled();
+    await user.keyboard('4');
+    expect(onChange.mock.calls).toEqual([['2025-10-14']]);
+    onChange.mockClear();
+    // The whole year moved focus on to the month; back on the year, it is erased digit by digit.
+    focus(segment(0, container));
+    await user.keyboard('{Backspace}{Backspace}{Backspace}');
+    expect(texts(container)).toEqual(['۱', '۷', '۲۲']);
+    expect(onChange).not.toHaveBeenCalled();
+    await user.keyboard('{Backspace}');
+    expect(onChange.mock.calls).toEqual([[null]]);
   });
 
   it('takes a value as an ISO date and stays controlled', async () => {

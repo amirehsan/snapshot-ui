@@ -11,7 +11,7 @@ icon: CalendarDays
 A field for one day. Type the date into its segments, in the locale's order, or choose it on the calendar. The button at the field's end, or Alt+Arrow Down, opens the calendar on the value's month, or on `today`'s month when there is no value.
 
 - Value: an ISO date, `'2026-10-14'`, in and out. Days only, never times.
-- `onChange`: receives the ISO date once every segment is typed, and `null` once every segment is cleared. React Aria takes each digit of a year as it is typed, so a year being typed sends its shorter years first.
+- `onChange`: receives the ISO date once every segment is typed and the year has its four digits, and `null` once every segment is cleared. A year being typed or erased is held back: 2, 20 and 202 are never sent. Erasing the year empties the field and sends `null`, and leaving the field with a year cut short does too, so a required field then shows itself invalid. The hidden input and the face agree with what you hold. Days before the year 1000 cannot be entered.
 - Forms: `name` submits the ISO date.
 
 <Preview name="date-picker-basic" />
@@ -47,7 +47,7 @@ A grid of fields with no label rows: each field is named by `aria-labelledby`, p
 - Pass `valueLabel` wherever the server's HTML should show the day, written like any other string in the app: "14 Oct 2026". The segments' text, order and names come from `Intl`, which the server must not write. Until hydration the field draws the label, the frame at its final size, the button, the hidden input and your `valueLabel` in place of the segments; the segments replace it without moving anything.
 - In a grid, name each field with `aria-label` or `aria-labelledby`, and pass `isChanged` when its value differs from the saved one.
 - A value that is not an ISO date reads as none and warns in the console. A hand-edited URL never throws.
-- Inside a [Data table](/docs/components/data-table) cell the segments keep their keys while they have focus: the arrows change and move between segments, digits type, and J types nothing. Out of the field, the arrows move between cells again.
+- Inside a [Data table](/docs/components/data-table) cell, or a list item at a narrow width, the segments keep their keys while they have focus: the arrows change and move between segments, digits type, and J types nothing. To leave the field, press Escape, which returns focus to its row, where the arrows move between rows and cells again; with the calendar open, the first Escape closes it and the second leaves the field. Tab moves on to the button and then to the next field in the table, field to field like a form, and out of the table after the last.
 
 </Section>
 
@@ -75,7 +75,7 @@ The field is a `group` named by its label, its `aria-label` or its `aria-labelle
 
 A changed field with no label is described by a hidden "Changed", from `changedLabel`, which leaves while the field is invalid.
 
-<Keys rows={[['Tab', 'Into the segments, then the button.'], ['Left Right', 'Move between segments, in the drawn direction.'], ['Up Down', 'Change the focused segment.'], ['0-9 Backspace', 'Type into or clear the focused segment. Focus moves on when it is full.'], ['Alt+Down', 'Opens the calendar.'], ['Escape', 'Closes the calendar and returns focus to what opened it.']]} />
+<Keys rows={[['Tab', 'Into the segments, then the button.'], ['Left Right', 'Move between segments, in the drawn direction.'], ['Up Down', 'Change the focused segment.'], ['0-9 Backspace', 'Type into or clear the focused segment. Focus moves on when it is full.'], ['Alt+Down', 'Opens the calendar.'], ['Escape', 'Closes the calendar and returns focus to what opened it. In a data table cell, with the calendar closed, returns focus to the row.']]} />
 
 </Section>
 

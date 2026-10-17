@@ -8426,7 +8426,8 @@ it extends the selection to the shown cell's row, the row React Aria
 would have reached, so a hidden cell never stops Shift from extending
 (the `ShiftPastHidden` play, in three engines). Escape in the table is
 React Aria's: it clears a selection, and passes to the page when there
-is none.
+is none; from an editor in a cell it leaves the editor ("Editors in
+cells").
 
 **One tab stop** (spec 7.2, spec correction 28). React Aria's
 `useFocusable` gives its Link and its checkboxes `tabindex="0"` for
@@ -8442,6 +8443,33 @@ Tab from before it lands on its focused row, the next Tab on the bar
 when it shows and past the table when it does not, and Shift+Tab from
 the bar returns to the row or cell last focused (the `TabStop` play, in
 three engines, and a docs end-to-end test with the real Tab key).
+
+**Editors in cells** (documents spec corrections 48, 54, 57 and 59,
+risk R8). React Aria's cell takes every arrow from its children in its
+key capture, re-dispatching Up and Down to the row and walking the
+cell's focusable children on Left and Right, and the list's item does
+the same. While an editable element in a cell has focus (a text input,
+a text area, a select, editable content such as a date segment, never a
+checkbox), DataTable turns the table's keyboard navigation off through
+React Aria's table state, and draws the list with
+`keyboardNavigationBehavior="tab"`, in which an item leaves its
+children's arrows alone and stops their other keys short of the list:
+the editor's arrows move its caret or step its segments. Escape the
+editor leaves alone, not prevented and not stopped (a search field's
+clearing, an open calendar's closing and a combo box's are theirs, and
+a portal's Escape is not in the root's DOM), gives focus to the row or
+the item, the WAI-ARIA grid pattern's way out of editing mode, and the
+row's focus turns the navigation back on; the table hears it on the
+root's bubble handler, the list on each item part's, before the item
+stops it. Tab and Shift+Tab move from editor to editor in the DOM's
+order, row by row like a form or a spreadsheet, and out of the table
+after the last, in both faces (Chromium, `InTableCell` and
+`InListItem`). The switch turns back on from focus: the root's focus
+capture, its blur when focus leaves, a document `focusin` listener, and
+a layout effect when `items` change, again after a frame since React
+Aria draws a changed collection in a render of its own, so an engine
+that fires no blur when a focused editor is removed or hidden never
+leaves the arrows off.
 
 **The modifier Enter, per engine** (open question 7, spec correction
 32). The `ModifierEnter` play presses Ctrl+Enter on a row and records
@@ -9431,9 +9459,19 @@ submits. The server's HTML is one string under `en-US`, `de-DE` and
 `onChange` gets the Gregorian ISO date once every segment is typed and
 `null` once every segment is cleared; `validate` gets the ISO date. React
 Aria takes each digit of a year as it is typed, so years 2, 20 and 202
-reach `onChange` as whole dates first; the library passes them on, as a
-controlled field would otherwise clear what is being typed, and the docs
-say so (spec correction 53). `today` is the picker's
+reach the picker as whole dates first. The picker holds them back (spec
+correction 58): it controls React Aria itself, with the app's value or
+its own, and a day whose Gregorian year has fewer than four digits stays
+in React Aria's field, shown and never sent, nor given to `validate`.
+Every calendar's year passes through such days as it is typed or erased
+(Persian 1, 14 and 140 are 622, 635 and 761), and a Japanese era's year
+of one or two digits is whole at once; a day before the year 1000 cannot
+be entered. Erasing the year to its placeholder, which React Aria tells
+nobody (it keeps the day it held), commits `null`, seen by a watcher
+drawn beside the year segment, so the face empties and the app and the
+hidden input agree; leaving the field with a year cut short commits
+`null` too, and a required field then shows itself invalid, React Aria's
+own check on blur. A new value from the app drops a held day. `today` is the picker's
 `placeholderValue`, which React Aria gives the calendar only while there
 is no value, so the calendar opens on the value's month, else `today`'s.
 
@@ -9454,21 +9492,15 @@ the view to the day. A preset whose date is not an ISO date warns once and
 is left out. Closing on a day, a preset or Escape gives focus back to what
 opened the calendar, React Aria's.
 
-**Concentric corners** (owner rule, 2026-10-17; spec corrections 47 and 52). A
-rounded part inside a rounded holder takes the holder's radius less the
-gap between them, the holder's border and padding, never a copy of it,
-and is square once the gap reaches the radius; each level subtracts
-again. A holder declares `--holder-radius`, `--holder-border` and
-`--holder-pad` from the radius and spacing tokens, and a part computes
-`max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)))`.
-The frame holds the button at 6px on its nearer side, the block axis,
-the edge included: a pill in Rounded, 6px in Soft, square in Square. The
-popover holds the calendar inside its 1px frame and 16px inset: 7px in
-Rounded, square in Soft and Square; the preset row, its presets and the
-days meet the calendar's edge with no gap of their own and take its
-radius whole, in the holder properties UploadTray names its corners in.
-Calendar and DateRangePicker keep their pills until the rule reaches
-them.
+**Corners** (spec corrections 52, 55 and 56). `date-picker.css` draws no
+corner of its own. The calendar keeps Calendar's shapes, the days'
+circles and the presets' pills, so DatePicker, Calendar and
+DateRangePicker draw one calendar: the days and presets are controls in
+a grid, not surfaces nested in the popover, and a square 7px day in
+Rounded (correction 52's first reading) broke that. The button is the
+shared field button, `.input-button`, as in DateRangePicker and every
+other framed field; the concentric rule reaches it in all of them at
+once, in its own change to `input.css`, never in one field alone.
 
 **In a review grid.** A field per cell, named by `aria-label` or by
 `aria-labelledby` of its column's header and its row's name; compact
@@ -9478,7 +9510,13 @@ took every arrow from its children in its key capture, so DataTable now
 turns the grid's keyboard navigation off while an editable element in a
 cell has focus and back on when focus leaves it (spec correction 48, risk
 R8): the segments' arrows step and move, digits type, J types nothing and
-moves no row, in three engines.
+moves no row, in three engines. Escape gives focus back to the row, the
+grid pattern's way out of editing, and the first Escape with the
+calendar open closes only the calendar; Tab moves field to field, row by
+row, and out of the table after the last. The list face, at a phone's
+width, keeps the segments' keys too (spec corrections 54, 57 and 59;
+"DataTable", "Editors in cells"). The `InTableCell` and `InListItem`
+plays press them in three engines.
 
 **Measured pairs.** Gated: ink on raised, the segments, 18.43 and 15.36;
 slate on raised, the empty segments, 5.49 and 6.44; canvas on ink, the

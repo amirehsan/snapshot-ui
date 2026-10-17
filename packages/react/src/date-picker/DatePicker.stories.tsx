@@ -162,16 +162,11 @@ export const WithPresets: Story = {
       'aria-pressed',
       'false',
     );
-    // Concentric corners: the popover's surface radius less its 1px frame and its inset, for the calendar, the
-    // presets and the days alike, never under zero.
-    const inner = Math.max(0, tokenPixels('--radius-surface') - 1 - tokenPixels('--spacing-inset'));
-    for (const part of [
-      find(popover, '.calendar'),
-      find(popover, '.calendar-preset'),
-      find(popover, '.calendar-day-number'),
-    ]) {
+    // Calendar's shapes, as in Calendar and DateRangePicker: the presets are pills and the days circles.
+    const pill = tokenPixels('--radius-pill');
+    for (const part of [find(popover, '.calendar-preset'), find(popover, '.calendar-day-number')]) {
       await expect(Number.parseFloat(getComputedStyle(part).borderTopLeftRadius), part.className).toBeCloseTo(
-        inner,
+        pill,
         1,
       );
     }
@@ -612,7 +607,7 @@ export const InTableCell: Story = {
       <DataTable aria-label="Receipts" items={RECEIPTS} columns={RECEIPT_COLUMNS} getKey={(row) => row.id} />
     </div>
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     const group = canvas.getByRole('group', { name: 'Date, Corner Mart' });
     const month = segment(group, 0);
     const day = segment(group, 1);
@@ -638,5 +633,57 @@ export const InTableCell: Story = {
     await expect(
       canvas.getByRole('group', { name: 'Date, City Transit' }).contains(document.activeElement),
     ).toBe(false);
+    // Escape leaves the field for its row, where the arrows move between the rows again.
+    await press('{Escape}');
+    const rows = [...canvasElement.querySelectorAll('tbody [role="row"]')];
+    await waitFor(() => expect(rows[0]).toHaveFocus());
+    await press('{ArrowDown}');
+    await waitFor(() => expect(rows[1]).toHaveFocus());
+  },
+};
+
+/**
+ * In the list face, at a phone's width, an editor in an item through its column's listSlot keeps its keys too:
+ * Arrow Up changes the focused segment, Arrow Right moves between segments, and Escape leaves the field for its
+ * item, where the arrows move between the items again. In three engines.
+ */
+export const InListItem: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  parameters: { wide: true },
+  render: () => (
+    <div style={{ width: '20rem' }}>
+      <DataTable
+        aria-label="Receipts"
+        items={RECEIPTS}
+        columns={RECEIPT_COLUMNS.map((column) =>
+          column.id === 'date' ? { ...column, listSlot: 'meta' } : column,
+        )}
+        getKey={(row) => row.id}
+      />
+    </div>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const group = canvas.getByRole('group', { name: 'Date, City Transit' });
+    await expect(group.closest('.data-table-item')).not.toBeNull();
+    const month = segment(group, 0);
+    const day = segment(group, 1);
+    const press = async (keys: string): Promise<void> => {
+      if (!month.isConnected) throw new Error('The story has gone');
+      await userEvent.keyboard(keys);
+    };
+    await focusOn(month);
+    await press('{ArrowUp}');
+    await waitFor(() => expect(month).toHaveTextContent('11'));
+    await expect(month).toHaveFocus();
+    await press('{ArrowRight}');
+    await waitFor(() => expect(day).toHaveFocus());
+    await press('{ArrowDown}');
+    await waitFor(() => expect(day).toHaveTextContent('12'));
+    await expect(day).toHaveFocus();
+    await press('{Escape}');
+    const items = [...canvasElement.querySelectorAll('.data-table-item')];
+    await waitFor(() => expect(items[1]).toHaveFocus());
+    await press('{ArrowDown}');
+    await waitFor(() => expect(items[2]).toHaveFocus());
   },
 };

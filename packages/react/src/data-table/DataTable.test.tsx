@@ -1,10 +1,11 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef, type ReactElement } from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { showFace } from '../../test/dom';
+import { DatePicker } from '../date-picker';
 import { EmptyState } from '../empty-state';
 import { RouterProvider } from '../link';
 import { QUIET_MS } from '../utils/quiet';
@@ -671,8 +672,14 @@ describe('DataTable, with an editable element in a cell', () => {
     { id: 'a', merchant: 'Corner Mart', memo: 'Milk' },
     { id: 'b', merchant: 'City Transit', memo: 'Bus' },
   ];
+  const MERCHANT: DataTableColumn<Receipt> = {
+    id: 'merchant',
+    header: 'Merchant',
+    cell: (row) => row.merchant,
+    isRowHeader: true,
+  };
   const COLUMNS: DataTableColumn<Receipt>[] = [
-    { id: 'merchant', header: 'Merchant', cell: (row) => row.merchant, isRowHeader: true },
+    MERCHANT,
     {
       id: 'memo',
       header: 'Memo',
@@ -700,5 +707,129 @@ describe('DataTable, with an editable element in a cell', () => {
     });
     await user.keyboard('{ArrowDown}');
     expect(second).toHaveFocus();
+  });
+
+  it('gives focus back to the row on Escape, where the arrows move between rows again', async () => {
+    showFace('table');
+    const user = userEvent.setup();
+    render(<DataTable aria-label="Receipts" items={RECEIPTS} columns={COLUMNS} getKey={(row) => row.id} />);
+    const memo = screen.getByRole('textbox', { name: 'Memo, Corner Mart' });
+    await user.click(memo);
+    expect(memo).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(rowAt(0)).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
+    expect(rowAt(1)).toHaveFocus();
+  });
+
+  it('leaves an Escape the editor used with the editor', async () => {
+    showFace('table');
+    const user = userEvent.setup();
+    const columns: DataTableColumn<Receipt>[] = [
+      MERCHANT,
+      {
+        id: 'memo',
+        header: 'Memo',
+        cell: (row) => (
+          <input
+            aria-label={`Memo, ${row.merchant}`}
+            defaultValue={row.memo}
+            onKeyDown={(event) => {
+              // A field that clears itself on Escape, as a search field does.
+              if (event.key === 'Escape') event.preventDefault();
+            }}
+          />
+        ),
+      },
+    ];
+    render(<DataTable aria-label="Receipts" items={RECEIPTS} columns={columns} getKey={(row) => row.id} />);
+    const memo = screen.getByRole('textbox', { name: 'Memo, Corner Mart' });
+    await user.click(memo);
+    await user.keyboard('{Escape}');
+    expect(memo).toHaveFocus();
+  });
+
+  it("closes only a date picker's calendar on Escape, and a second Escape gives focus to the row", async () => {
+    showFace('table');
+    const user = userEvent.setup();
+    const columns: DataTableColumn<Receipt>[] = [
+      MERCHANT,
+      {
+        id: 'date',
+        header: 'Date',
+        cell: (row) => <DatePicker aria-label={`Date, ${row.merchant}`} defaultValue="2026-10-14" />,
+      },
+    ];
+    render(<DataTable aria-label="Receipts" items={RECEIPTS} columns={columns} getKey={(row) => row.id} />);
+    const picker = screen.getByRole('group', { name: 'Date, Corner Mart' });
+    const [month] = within(picker).getAllByRole('spinbutton');
+    if (!month) throw new Error('No month segment');
+    await user.click(month);
+    await user.keyboard('{Alt>}{ArrowDown}{/Alt}');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(rowAt(0)).not.toHaveFocus();
+    expect(picker).toContainElement(document.activeElement as HTMLElement);
+    // Back in the field, Escape leaves it for the row.
+    await user.click(month);
+    await user.keyboard('{Escape}');
+    expect(rowAt(0)).toHaveFocus();
+  });
+
+  it('moves between the editors with Tab, field to field across the rows, and out of the table after the last', async () => {
+    showFace('table');
+    const user = userEvent.setup();
+    render(
+      <>
+        <DataTable aria-label="Receipts" items={RECEIPTS} columns={COLUMNS} getKey={(row) => row.id} />
+        <button type="button">After</button>
+      </>,
+    );
+    const first = screen.getByRole('textbox', { name: 'Memo, Corner Mart' });
+    const second = screen.getByRole('textbox', { name: 'Memo, City Transit' });
+    await user.click(first);
+    await user.tab();
+    expect(second).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(first).toHaveFocus();
+    await user.click(second);
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'After' })).toHaveFocus();
+  });
+
+  it('gives the arrows back to the grid when a focused editor leaves with no blur', async () => {
+    showFace('table');
+    const user = userEvent.setup();
+    interface Lockable extends Receipt {
+      locked: boolean;
+    }
+    // A memo is an editor until its row is locked, when it is text.
+    const columns: DataTableColumn<Lockable>[] = [
+      { id: 'merchant', header: 'Merchant', cell: (row) => row.merchant, isRowHeader: true },
+      {
+        id: 'memo',
+        header: 'Memo',
+        cell: (row) =>
+          row.locked ? row.memo : <input aria-label={`Memo, ${row.merchant}`} defaultValue={row.memo} />,
+      },
+    ];
+    const open = RECEIPTS.map((row) => ({ ...row, locked: false }));
+    const props = { 'aria-label': 'Receipts', columns, getKey: (row: Lockable) => row.id };
+    const { rerender } = render(<DataTable {...props} items={open} />);
+    const memo = screen.getByRole('textbox', { name: 'Memo, Corner Mart' });
+    await user.click(memo);
+    // While the editor has focus React Aria's grid has its navigation off, and with it its own tabindex.
+    expect(grid()).not.toHaveAttribute('tabindex');
+    // The focused field goes, and jsdom, as an engine that fires no blur on removal, says nothing of it.
+    const blur = vi.fn();
+    memo.addEventListener('blur', blur);
+    rerender(<DataTable {...props} items={open.map((row) => ({ ...row, locked: row.id === 'a' }))} />);
+    expect(memo.isConnected).toBe(false);
+    expect(blur).not.toHaveBeenCalled();
+    // The navigation is on again: the grid writes its tabindex once more.
+    await waitFor(() => {
+      expect(grid()).toHaveAttribute('tabindex');
+    });
   });
 });

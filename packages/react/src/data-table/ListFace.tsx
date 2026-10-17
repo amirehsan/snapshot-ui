@@ -17,6 +17,7 @@ import { Skeleton } from '../skeleton/Skeleton';
 import { present } from '../utils/present';
 import type { DataTableColumn } from './DataTable';
 import type { RowGroup } from './groups';
+import { escapeEditor } from './keys';
 import { figure, UNTABBED, type FaceRow } from './TableFace';
 
 /** React Aria's selection manager for the list, which DataTable's keys reach for X and Shift there. */
@@ -68,6 +69,11 @@ export interface ListFaceProps<T> {
   disabledKeys: ReadonlySet<Key>;
   disabledBehavior: 'selection' | 'all';
   selection: ListSelection | undefined;
+  /**
+   * Whether an editable element in an item has focus. React Aria's item takes every arrow from its children in its
+   * key capture, so the list then moves by Tab instead and the editor keeps its arrows (spec correction 57).
+   */
+  isEditing: boolean;
   isLoading: boolean;
   loadingRowCount: number;
   emptyState: ReactNode;
@@ -148,10 +154,13 @@ function ListItem<T>({
   const part = (column: DataTableColumn<T>, index: number, slot?: 'meta' | 'end'): ReactNode => {
     const body = figure(column as DataTableColumn<unknown>, column.cell(row.value));
     return (
+      // An editor's unused Escape gives focus back to the item here, before the item stops its children's keys.
+      // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the item is the row; the part only hears an editor's unused Escape on its way up (spec correction 57)
       <span
         key={column.id}
         className="data-table-item-part"
         id={slot === undefined ? undefined : partId(slot, index)}
+        onKeyDown={escapeEditor}
       >
         {column === rowHeader && hasLink ? (
           <Link
@@ -249,6 +258,7 @@ export function ListFace<T>({
   disabledKeys,
   disabledBehavior,
   selection,
+  isEditing,
   isLoading,
   loadingRowCount,
   emptyState,
@@ -316,6 +326,8 @@ export function ListFace<T>({
         disabledBehavior={disabledBehavior}
         // Letters never move focus (spec correction 10); the Table strips this prop, the GridList takes it.
         disallowTypeAhead
+        // In 'tab', an item leaves its children's arrows to them and stops their other keys short of the list.
+        keyboardNavigationBehavior={isEditing ? 'tab' : 'arrow'}
         renderEmptyState={() =>
           isLoading ? (
             <SkeletonItems count={loadingRowCount} label={loadingLabel} />

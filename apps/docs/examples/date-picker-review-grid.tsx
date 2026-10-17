@@ -6,7 +6,8 @@ import { useState, type CSSProperties, type ReactElement } from 'react';
 interface Receipt {
   id: string;
   merchant: string;
-  date: string;
+  /** An ISO date, or null once the reader has erased it. */
+  date: string | null;
   /** In cents. */
   amount: number;
   memo: string;
@@ -88,11 +89,14 @@ export default function DatePickerReviewGrid(): ReactElement {
                   <DatePicker
                     aria-labelledby={named('date')}
                     value={row.date}
-                    valueLabel={dayLabel(row.date)}
+                    valueLabel={row.date === null ? undefined : dayLabel(row.date)}
                     today="2026-10-16"
                     isChanged={row.date !== saved.date}
+                    // A year being typed is held back, so null means the reader erased the day.
+                    isInvalid={row.date === null}
+                    errorMessage="Enter the date on the receipt."
                     onChange={(date) => {
-                      if (date !== null) change(row.id, { date });
+                      change(row.id, { date });
                     }}
                   />
                 </td>

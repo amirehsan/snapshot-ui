@@ -6,16 +6,13 @@
  * date-range-picker.css's `.date-segment`, shared and not repeated here: ink in tabular figures, an empty one
  * slate, labelled or not, and the focused one the ink fill. The frame is never under 12rem, so a whole date and
  * the button fit at the compact size. The popover is the range picker's: 16px of padding, the month's width.
+ * It draws no corner of its own: the button is the shared field button and the calendar keeps Calendar's
+ * circles and pills, as DateRangePicker's does.
  */
 @layer components {
   /* One class, after input.css, so it beats the input's box and none of its states. It clips nothing, so the
      button's 40px hit area reaches past the frame at either density. The field caps it at --container-field. */
   .date-picker-control {
-    /* A holder of concentric corners, below. */
-    --holder-radius: var(--radius-pill);
-    --holder-border: 1px;
-    --holder-pad: 0px;
-
     position: relative;
     display: flex;
     align-items: center;
@@ -68,43 +65,8 @@
   /* Two classes, after popover.css's one, so the calendar's popover pads 16px, not 24px, and is the month's width,
      as the range picker's is. popover.css caps it at the viewport less 2rem. */
   .date-picker-popover.popover-padded {
-    --holder-radius: var(--radius-surface);
-    --holder-border: 1px;
-    --holder-pad: var(--spacing-inset);
-
     width: calc(7 * var(--size-control) + 2 * var(--spacing-inset) + 2px);
     padding: var(--spacing-inset);
-  }
-
-  /*
-   * Concentric corners. A rounded part inside a rounded holder takes the holder's radius less the gap between
-   * their edges, the holder's border and padding, never a copy of it, and is square once the gap reaches the
-   * radius; each level subtracts again. A holder declares --holder-radius, --holder-border and --holder-pad, from
-   * the radius and spacing tokens, so the corners stay parallel in Rounded, Soft and Square; a part whose own gap
-   * differs sets its own --holder-pad, the nearer side's. The frame holds the button, the popover the calendar.
-   */
-
-  /* 6px from the frame's outer edge on its nearer side, the block axis: the edge and 5px of the frame. */
-  .date-picker-button {
-    --holder-pad: calc(0.375rem - var(--holder-border));
-
-    border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));
-  }
-
-  /* The calendar inside the popover's border and padding: 7px in Rounded, square in Soft and Square. */
-  .date-picker-popover .calendar {
-    --date-picker-calendar-radius: max(
-      0px,
-      calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad))
-    );
-
-    border-radius: var(--date-picker-calendar-radius);
-  }
-
-  /* The preset row, its presets and the days meet the calendar's edge with no gap of their own, so each level
-     takes the calendar's radius whole. */
-  .date-picker-popover :is(.calendar-presets, .calendar-preset, .calendar-day-number) {
-    border-radius: var(--date-picker-calendar-radius);
   }
 
   @media (forced-colors: active) {

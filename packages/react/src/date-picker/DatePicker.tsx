@@ -2,7 +2,16 @@
 
 import type { CalendarDate } from '@internationalized/date';
 import { CalendarDays as CalendarIcon } from 'lucide-react';
-import { useMemo, type ReactElement, type ReactNode, type Ref } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import {
   Button,
   Calendar as RACCalendar,
@@ -10,6 +19,7 @@ import {
   DatePicker as RACDatePicker,
   Dialog,
   composeRenderProps,
+  type DateInputProps,
   type DatePickerProps as RACDatePickerProps,
   type DatePickerRenderProps,
   type ValidationResult,
@@ -83,7 +93,11 @@ export interface DatePickerBaseProps extends Omit<
   value?: string | null;
   /** The day the field starts with when `value` is not given. */
   defaultValue?: string | null;
-  /** Called with the Gregorian ISO date once complete and valid, and with null when cleared. */
+  /**
+   * Called with the Gregorian ISO date once complete and valid, its year all four digits, and with null when
+   * cleared, when the year is erased, or when the field is left with its year cut short. A year being typed or
+   * erased is held back: 2, 20 and 202 are never sent.
+   */
   onChange?: (value: string | null) => void;
   /**
    * Checks the day as `onChange` sends it, alongside React Aria's own checks, so use `isRequired` for an empty
@@ -123,6 +137,28 @@ export type DatePickerProps = DatePickerBaseProps & AccessibleName<'label'>;
 const DEFAULT_LABELS: DatePickerLabels = { ...DEFAULT_CALENDAR_LABELS, open: 'Choose date' };
 
 const NO_PRESETS: readonly DatePreset[] = [];
+
+/**
+ * Whether a day's year is whole: four digits in the Gregorian calendar. A year typed digit by digit in any calendar
+ * shown passes through days before the year 1000 (Persian 1, 14 and 140 are 622, 635 and 761), and a Japanese
+ * era's year of one or two digits is whole at once.
+ */
+const wholeYear = (date: CalendarDate): boolean => /^[1-9]\d{3}-/.test(toIso(date));
+
+/**
+ * Says when the year segment turns to its placeholder, which React Aria tells nobody: it keeps the day it held.
+ * Drawn beside the year segment, inside React Aria's field, whose renders the picker does not see.
+ */
+function YearWatch({ isPlaceholder, onClear }: { isPlaceholder: boolean; onClear: () => void }): null {
+  const latest = useRef(onClear);
+  useLayoutEffect(() => {
+    latest.current = onClear;
+  });
+  useEffect(() => {
+    if (isPlaceholder) latest.current();
+  }, [isPlaceholder]);
+  return null;
+}
 
 /**
  * One date, typed into React Aria's segments in the locale's order or chosen on the calendar in a popover, with
@@ -173,23 +209,64 @@ export function DatePicker({
   const chosen = parsedValue === 'invalid' ? null : parsedValue;
   const initial = parsedDefault === 'invalid' ? null : parsedDefault;
 
+  // The day the app holds: its value when controlled, an invalid one read as none, else the field's own.
+  const controlled = value !== undefined;
+  const [own, setOwn] = useState(initial);
+  const committed = controlled ? chosen : own;
+  // A day React Aria holds whose year is still being typed or erased: shown, never sent (spec correction 58).
+  // React Aria is controlled here, so a held day stays on screen; a new value from the app drops it.
+  const [held, setHeld] = useState<CalendarDate | null>(null);
+  const [lastValue, setLastValue] = useState(value);
+  if (value !== lastValue) {
+    setLastValue(value);
+    setHeld(null);
+  }
+  const commit = (date: CalendarDate | null): void => {
+    setHeld(null);
+    const iso = date === null ? null : toIso(date);
+    // A held year typed back to the day the app holds, or emptied where it holds none, changes nothing.
+    if (iso === (committed === null ? null : toIso(committed))) return;
+    if (!controlled) setOwn(date);
+    onChange?.(iso);
+  };
+  // Erasing the year to its last digit leaves React Aria holding the day while the segment shows its
+  // placeholder, so the field commits none: the app, the hidden input and the face agree it is empty.
+  const yearCleared = (): void => {
+    if ((held ?? committed) !== null) commit(null);
+  };
+  const segment: DateInputProps['children'] = (part) =>
+    part.type === 'year' ? (
+      <>
+        {drawSegment(part)}
+        <YearWatch isPlaceholder={part.isPlaceholder} onClear={yearCleared} />
+      </>
+    ) : (
+      drawSegment(part)
+    );
+
   return (
     <RACDatePicker
       {...props}
-      // Controlled only when the app passes a value; an invalid one reads as none.
-      value={value === undefined ? undefined : chosen}
-      defaultValue={value === undefined ? initial : undefined}
+      value={held ?? committed}
       onChange={(date) => {
-        // React Aria commits a date once every segment is typed, and null once every segment is cleared.
-        onChange?.(date === null ? null : toIso(date));
+        // React Aria commits a date once every segment is typed, and null once every segment is cleared. It takes
+        // each digit of a year as typed, so 2026 arrives as 0002, 0020 and 0202 first: those it holds.
+        if (date !== null && !wholeYear(date)) setHeld(date);
+        else commit(date);
+      }}
+      onBlur={(event) => {
+        // A year left short is no date: the field empties, and an empty required field shows itself invalid.
+        if (held !== null) commit(null);
+        props.onBlur?.(event);
       }}
       // React Aria checks its own CalendarDate, or null for an empty field though its type says otherwise; the
-      // app's check gets the ISO date.
+      // app's check gets the ISO date, and nothing while a year is being typed.
       validate={
         validate === undefined
           ? undefined
           : (date) => {
               const day = date as CalendarDate | null;
+              if (day !== null && !wholeYear(day)) return null;
               return validate(day === null ? null : toIso(day));
             }
       }
@@ -208,7 +285,7 @@ export function DatePicker({
       {isLabelled ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
       <DateFrame className="date-picker-control" isDisabled={props.isDisabled === true}>
         {hydrated ? null : <span className="date-picker-face">{valueLabel}</span>}
-        <DateInput className="date-picker-input">{hydrated ? drawSegment : noSegment}</DateInput>
+        <DateInput className="date-picker-input">{hydrated ? segment : noSegment}</DateInput>
         <Button className="input-button date-picker-button" aria-label={names.open}>
           <CalendarIcon aria-hidden="true" />
         </Button>
