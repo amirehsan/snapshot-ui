@@ -1,5 +1,19 @@
 # @snapshot-ui/react
 
+## 0.6.1
+
+### Patch Changes
+
+- 6cd2f1f: Pagination keeps a sensible width in any parent. In a flex row beside a link it collapsed to no width, drawing its range one letter per line with the steps stacked; it now takes the room its siblings leave there, in a wrapping row too, fills a block or an `fr` grid column, and draws its narrow row, the range between the two steps, in a column sized by its content. No wrapper is needed. Its range wraps between words and never breaks a word letter by letter. DataTable and StatTile had the same trap: a table in a flex row now draws its table face, and a tile in a flex row is 16rem wide instead of its padding. The nav now carries the range as `data-range` and holds a `div.pagination-box` around its row; markup written by hand needs both.
+- ddf21d0: Sidebar: before the page hydrates, the collapse button's name matches the rail as drawn. Beside an open SidePanel from 1024px to under 1440px the stylesheet folds the rail before any script runs, while the button still said "Collapse the menu"; the server's button now holds both names and the stylesheet shows the right one, and it states no expanded state until the page knows it.
+- ddf21d0: Tabs: the selected tab is in the tab order from the server's HTML on, so a row that scrolls can be reached by Tab before the page hydrates and axe no longer reports it as a scrollable region no key can reach. When the selected key names no tab, the first enabled tab takes the stop. A click that reaches a tab with no pointerdown before it, as a touch that begins before hydration and ends after it sends, now selects the tab or follows its link once, where React Aria cancelled it and the link opened nothing; a modified click on a link tab stays the browser's.
+- Updated dependencies [6cd2f1f]
+- Updated dependencies [897a206]
+- Updated dependencies [897a206]
+- Updated dependencies [6cd2f1f]
+- Updated dependencies [ddf21d0]
+  - @snapshot-ui/core@0.6.1
+
 ## 0.6.0
 
 ### Minor Changes
