@@ -4807,6 +4807,29 @@ centers in the 70px inside the 72px rail's 1px border, and the icon moves 3px
 inward as the rail narrows, on the rail's own curve; under reduced motion it is
 an instant step.
 
+**Concentric corners** (patch 0.6.2). A rounded part inside the rail takes
+the rail's corner less the gap between them, never its own token copied: the
+gap is the rail's 1px edge plus the part's inset, the smaller side where the
+insets differ, and the part is never rounder than its own shape and square at
+0 or less. `.sidebar` holds the rail's corner less its edge,
+`--sidebar-corner`, and the two insets, `--sidebar-nav-inset` (12px, 15px
+collapsed) and `--sidebar-search-inset` (12px, and collapsed the inset that
+centers the 40px pill); the nav pads by the first and the search pill sits in
+by the second, so the corner follows the inset in both states. A nav item and
+the search pill draw `min(pill, max(0px, corner - inset))`: 27px in Rounded,
+so a 40px row still draws as a pill, 3px in Soft, and 0 collapsed, where the 15px inset meets the rail's 15px corner
+less its edge, and 0 in Square. One level further in, the search's key chip takes
+the search pill's corner less its 1px edge and its padding, at most
+`--radius-micro`. The drawer copy sits in the Drawer's panel, which has the
+same stadium corner and 1px edge, so the same formula holds there. Shapes that
+keep theirs: the rail itself, the collapse button, which stands outside the
+rail's edge, the count and group dots, and an avatar the app puts in the
+footer. The brand row and the footer draw no surface of their own. The
+CollapseMotion story checks every part against the rule in Rounded, Soft and
+Square, expanded and collapsed, and the docs test does the same for the docs
+rail, whose links, search, key chip and version badge follow the same rule
+from `--rail-corner`, `--rail-nav-inset` and `--rail-search-inset`.
+
 **The rail's motion** (patch 0.6.2). Recorded frame by frame in Chromium at
 1280px, the old collapse and expand were what a reader called flashy, for five
 reasons. Collapsing, every label vanished in the first frame and every icon,

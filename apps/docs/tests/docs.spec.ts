@@ -160,9 +160,10 @@ test('the rail opens and closes on one curve, its icons hold their place and hei
   const climb = (now: { tops: number[] }): number =>
     Math.max(...now.tops.map((top, index) => Math.abs(top - (atRest.tops[index] ?? Number.NaN))));
   for (const name of ['Collapse the menu', 'Expand the menu']) {
-    await page.getByRole('button', { name }).click();
-    // Hold every transition the press started and step it through its end, frame by frame.
-    const end = await page.evaluate(() => {
+    // Press and hold every transition the press started in the same task, so none has moved on a busy runner, then
+    // step them through their end, frame by frame.
+    const end = await page.getByRole('button', { name }).evaluate((button: HTMLElement) => {
+      button.click();
       const moving = document.getAnimations();
       for (const each of moving) each.pause();
       (window as unknown as { moving: Animation[] }).moving = moving;
@@ -192,6 +193,78 @@ test('the rail opens and closes on one curve, its icons hold their place and hei
       'transition-timing-function',
       /cubic-bezier\(0\.2, 0, 0, 1\)/,
     );
+  }
+});
+
+test('every rounded part of the rail is concentric with it, in every shape, expanded and collapsed', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page);
+  /** The largest miss of the rule: a part's corner is its holder's drawn corner less the gap, within its own shape. */
+  const miss = (): Promise<number> =>
+    page.evaluate(() => {
+      const px = (value: string): number => Number.parseFloat(value) || 0;
+      const rail = document.querySelector<HTMLElement>('#rail');
+      if (!rail) throw new Error('No rail');
+      const style = getComputedStyle(rail);
+      const tokens = getComputedStyle(document.documentElement);
+      const pill = px(tokens.getPropertyValue('--radius-pill'));
+      const micro = px(tokens.getPropertyValue('--radius-micro'));
+      /** `part` inside `holder`: the holder's drawn corner less its edge and the smaller inset at that corner. */
+      const check = (part: Element, holder: Element, own: number, side: 'left' | 'right'): number => {
+        const outer = holder.getBoundingClientRect();
+        const box = part.getBoundingClientRect();
+        const holderStyle = getComputedStyle(holder);
+        const edge = px(holderStyle.borderTopWidth);
+        const drawn = Math.min(px(holderStyle.borderTopLeftRadius), outer.height / 2, outer.width / 2);
+        const inset =
+          side === 'left'
+            ? box.left - outer.left - edge
+            : Math.min(outer.right - edge - box.right, box.top - outer.top - edge);
+        const want = Math.min(own, Math.max(0, drawn - edge - inset));
+        return Math.abs(px(getComputedStyle(part).borderTopLeftRadius) - want);
+      };
+      // The links and the search inside the rail: its corner less its edge and their inset, at most a pill.
+      const misses = [...rail.querySelectorAll('.rail-link, .rail-search')].map((part) => {
+        const outer = rail.getBoundingClientRect();
+        const box = part.getBoundingClientRect();
+        const edge = px(style.borderLeftWidth);
+        const want = Math.min(
+          pill,
+          Math.max(0, px(style.borderTopLeftRadius) - edge - (box.left - outer.left - edge)),
+        );
+        return Math.abs(px(getComputedStyle(part).borderTopLeftRadius) - want);
+      });
+      const search = rail.querySelector('.rail-search');
+      const key = rail.querySelector('.rail-key');
+      if (search && key && getComputedStyle(key).opacity === '1')
+        misses.push(check(key, search, micro, 'right'));
+      const badge = rail.querySelector('.rail-version');
+      if (badge && getComputedStyle(badge).opacity === '1') {
+        const outer = rail.getBoundingClientRect();
+        const box = badge.getBoundingClientRect();
+        const edge = px(style.borderTopWidth);
+        const inset = Math.min(outer.right - edge - box.right, box.top - outer.top - edge);
+        const want = Math.min(micro, Math.max(0, px(style.borderTopLeftRadius) - edge - inset));
+        misses.push(Math.abs(px(getComputedStyle(badge).borderTopLeftRadius) - want));
+      }
+      return Math.max(...misses);
+    });
+  for (const shape of ['rounded', 'soft', 'square']) {
+    // The site eases a change of shape over 200ms: settle it before measuring.
+    await page.evaluate((each) => {
+      document.documentElement.dataset.shape = each;
+      for (const running of document.getAnimations()) running.finish();
+    }, shape);
+    for (const name of ['Collapse the menu', 'Expand the menu']) {
+      expect(await miss(), `${shape}, before ${name}`).toBeLessThanOrEqual(0.5);
+      await page.getByRole('button', { name }).click();
+      await page.evaluate(() => {
+        for (const each of document.getAnimations()) each.finish();
+      });
+      expect(await miss(), `${shape}, after ${name}`).toBeLessThanOrEqual(0.5);
+    }
   }
 });
 

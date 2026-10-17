@@ -3081,9 +3081,15 @@ describe('src/components/sidebar.css', () => {
 
   it('centers a collapsed item inside the rail border, and outranks the icon button for the close button', () => {
     const css = rules();
-    // The 72px rail less its two 1px edges is 70px: 15px a side leaves a 40px item centered.
-    expect(blockAfter(css, `${COLLAPSED} .sidebar:not(.sidebar-drawer) .sidebar-nav {`)).toContain(
-      'padding-inline: calc(1rem - 1px);',
+    // The 72px rail less its two 1px edges is 70px: 15px a side leaves a 40px item centered. The nav pads by the
+    // inset, which the collapsed rail sets, and so does the search pill.
+    expect(blockAfter(css, '.sidebar-nav {')).toContain(
+      'padding: var(--spacing-peer) var(--sidebar-nav-inset);',
+    );
+    const collapsedRail = blockAfter(blockAfter(css, WIDE), `${COLLAPSED} .sidebar:not(.sidebar-drawer) {`);
+    expect(collapsedRail).toContain('--sidebar-nav-inset: calc(1rem - 1px);');
+    expect(collapsedRail).toContain(
+      '--sidebar-search-inset: calc((var(--sidebar-inner) - var(--size-target)) / 2);',
     );
     expect(blockAfter(css, '.icon-button.sidebar-close {')).toContain('margin-inline-start: auto;');
     expect(css).not.toMatch(/(^|[\s}])\.sidebar-(close|trigger) \{/);
@@ -3096,8 +3102,8 @@ describe('src/components/sidebar.css', () => {
     expect(rail).toContain(
       '--sidebar-inner: calc(var(--container-sidebar) - 2 * var(--spacing-inset) - 2px);',
     );
-    expect(blockAfter(blockAfter(css, WIDE), `${COLLAPSED} .sidebar:not(.sidebar-drawer) {`)).toBe(
-      ' --sidebar-duration: var(--duration-collapse); ',
+    expect(blockAfter(blockAfter(css, WIDE), `${COLLAPSED} .sidebar:not(.sidebar-drawer) {`)).toContain(
+      ' --sidebar-duration: var(--duration-collapse);',
     );
     // Every transition the rail draws reads the rail's duration and the one curve: none is written in milliseconds,
     // and none eases on its own, so no two properties fight on the way. The drawer copy and the fold move nothing.
@@ -3170,6 +3176,31 @@ describe('src/components/sidebar.css', () => {
     expect(css.lastIndexOf('@media (prefers-reduced-motion: reduce)')).toBeGreaterThan(
       css.lastIndexOf('--sidebar-duration: var(--duration-collapse);'),
     );
+  });
+
+  it('draws every rounded part inside the rail concentric with it: its corner less the gap, never past its own', () => {
+    const css = rules();
+    expect(blockAfter(css, '.sidebar {')).toContain('--sidebar-corner: calc(var(--radius-stadium) - 1px);');
+    // A nav item and the search pill: the rail's corner less its edge and their inset, at most a pill, square at 0.
+    expect(blockAfter(css, '.sidebar-item {')).toContain(
+      'border-radius: min(var(--radius-pill), max(0px, calc(var(--sidebar-corner) - var(--sidebar-nav-inset))));',
+    );
+    const search = blockAfter(css, '.sidebar-search {');
+    expect(search).toContain(
+      '--sidebar-search-corner: min(var(--radius-pill), max(0px, calc(var(--sidebar-corner) - var(--sidebar-search-inset))));',
+    );
+    expect(search).toContain('margin: var(--spacing-part) var(--sidebar-search-inset) 0;');
+    expect(search).toContain('border-radius: var(--sidebar-search-corner);');
+    // One level further in, the key chip: the search's corner less its 1px edge and its padding, at most a chip.
+    expect(blockAfter(css, '.kbd.sidebar-search-shortcut {')).toBe(
+      ' border-radius: min(var(--radius-micro), max(0px, calc(var(--sidebar-search-corner) - 1px - var(--sidebar-pill-inset)))); ',
+    );
+    // No rounded part in the rail copies a token outright, except the shapes that keep theirs: the rail itself, the
+    // collapse button outside its edge, and the dots.
+    const copied = [...css.matchAll(/([^{}]+)\{[^{}]*border-radius: var\(--radius-(\w+)\);/g)].map(
+      (match) => `${match[1].trim()} ${match[2]}`,
+    );
+    for (const each of copied) expect(each).toMatch(/^(\.sidebar|\.sidebar-collapse) (stadium|pill)$|dot$/);
   });
 
   it('declares the four rail constants as written', () => {

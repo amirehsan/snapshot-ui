@@ -5,6 +5,13 @@
     /* How long the rail takes to reach the state it is moving to: opening, unless the collapsed rule says closing. The
        library's motion tokens, as the Sidebar's (docs/design-system.md, "The rail's motion"). */
     --rail-duration: var(--duration-expand);
+    /* How far the links and the search sit in from the rail's inside edge: 12px, and collapsed the insets that center
+       them in the 70px inside. */
+    --rail-nav-inset: 12px;
+    --rail-search-inset: 12px;
+    /* Concentric corners: a rounded part inside the rail takes the rail's corner less the gap between them, its 1px
+       edge and the part's inset, never more than its own shape, and square at 0 or less. */
+    --rail-corner: calc(var(--radius-stadium) - 1px);
   }
 
   /* ---- Floating rail ------------------------------------------- */
@@ -38,11 +45,17 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 8px 12px 4px;
+    /* Its corner, which the key chip inside it measures its own from. */
+    --rail-search-corner: min(
+      var(--radius-pill),
+      max(0px, calc(var(--rail-corner) - var(--rail-search-inset)))
+    );
+
+    margin: 8px var(--rail-search-inset) 4px;
     min-height: 42px;
     padding: 0 12px;
     border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-pill);
+    border-radius: var(--rail-search-corner);
     background-color: var(--color-canvas);
     color: var(--color-slate);
     font-size: 0.9375rem;
@@ -65,7 +78,7 @@
   .rail-nav {
     flex: 1;
     overflow-y: auto;
-    padding: 8px 12px 24px;
+    padding: 8px var(--rail-nav-inset) 24px;
   }
 
   .rail-group {
@@ -118,7 +131,7 @@
     justify-content: space-between;
     min-height: 40px;
     padding: 0 12px;
-    border-radius: var(--radius-pill);
+    border-radius: min(var(--radius-pill), max(0px, calc(var(--rail-corner) - var(--rail-nav-inset))));
     color: var(--color-charcoal);
     font-size: 0.9375rem;
     font-weight: 500;
@@ -468,6 +481,17 @@
     display: none;
   }
 
+  /* One level further in, by the same rule: the key chip in the search less the search's edge and padding, and the
+     version badge in the head less the head's 24px, the smaller of the two insets at the rail's corner. Two classes,
+     so each outranks the chip's or the badge's own corner. */
+  .kbd.rail-key {
+    border-radius: min(var(--radius-micro), max(0px, calc(var(--rail-search-corner) - 1px - 12px)));
+  }
+
+  .badge.rail-version {
+    border-radius: min(var(--radius-micro), max(0px, calc(var(--rail-corner) - 24px)));
+  }
+
   /* The header's menu button floats: an outline IconButton at 48px with a float fill, a hairline edge and a lift shadow. */
   .header-menu {
     --icon-button-bg: var(--color-float);
@@ -627,6 +651,8 @@
     [data-rail='collapsed'] {
       --rail-width: 104px;
       --rail-duration: var(--duration-collapse);
+      --rail-nav-inset: 15px;
+      --rail-search-inset: 13px;
     }
 
     [data-rail='collapsed'] .rail-collapse svg {
@@ -650,12 +676,7 @@
       transition: opacity calc(var(--rail-duration) * 0.4) var(--ease-emphasized);
     }
 
-    [data-rail='collapsed'] .rail-search {
-      margin-inline: 13px;
-    }
-
     [data-rail='collapsed'] .rail-nav {
-      padding-inline: 15px;
       scrollbar-width: none;
     }
 
@@ -693,6 +714,8 @@
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded]))) {
       --rail-width: 104px;
       --rail-duration: var(--duration-collapse);
+      --rail-nav-inset: 15px;
+      --rail-search-inset: 13px;
     }
 
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded])))
@@ -721,13 +744,7 @@
       transition: opacity calc(var(--rail-duration) * 0.4) var(--ease-emphasized);
     }
 
-    :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded])))
-      .rail-search {
-      margin-inline: 13px;
-    }
-
     :is([data-rail='collapsed'], :where(:root:has(.stage .side-panel):not([data-rail-unfolded]))) .rail-nav {
-      padding-inline: 15px;
       scrollbar-width: none;
     }
 
