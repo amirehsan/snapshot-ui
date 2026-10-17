@@ -9,11 +9,14 @@
     padding: var(--overlay-inset);
   }
 
-  /* A holder: its corner, edge and padding are named for the parts that sit in its corners. */
+  /* A holder: its corner, edge and padding are named for the parts that sit in its corners, and so is the
+     inset that keeps a control clear of its corner curve: the padding, or the radius less the edge where
+     that is more (39px in Rounded, the padding in Soft and Square). */
   .dialog {
     --holder-radius: var(--radius-stadium);
     --holder-border: 1px;
     --holder-pad: var(--spacing-separate);
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
 
     position: relative;
     display: flex;
@@ -126,21 +129,16 @@
     outline-offset: var(--focus-ring-offset);
   }
 
+  /* The last action would sit inside the panel's bottom end curve. A control keeps its own shape and moves
+     out of the corner instead: the row ends at the corner inset, 7px further in in Rounded and nothing more
+     in Soft and Square. */
   .dialog-actions {
     display: flex;
     flex: none;
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--spacing-part);
-  }
-
-  /* The last action sits in the panel's bottom end corner, inside its curve, so that corner is concentric
-     with the panel's: 7px in Rounded. Where the gap passes the curve (Soft) it is the micro step. */
-  .dialog-actions > :last-child {
-    border-end-end-radius: max(
-      var(--radius-micro),
-      calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad))
-    );
+    padding-inline-end: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
   /* The hairline is transparent in light; forced colors redraws it, so the panel keeps its shape. */

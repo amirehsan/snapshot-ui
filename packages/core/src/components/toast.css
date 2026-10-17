@@ -51,6 +51,7 @@
     --holder-radius: var(--radius-surface);
     --holder-border: 1px;
     --holder-pad: 1rem;
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
 
     display: flex;
     align-items: flex-start;
@@ -126,14 +127,9 @@
     align-items: center;
     gap: var(--spacing-part);
     margin-block: -0.5rem;
-    margin-inline-end: -0.5rem;
-  }
-
-  /* The row reaches 8px past the padding, so its controls sit 9px from the toast's top and bottom edges,
-     inside its curve: every control in the row is concentric with the toast, 15px in Rounded and 3px in Soft,
-     the dismiss included, so the row keeps one corner. */
-  .toast-controls > :is(.button, .icon-button) {
-    border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad) + 0.5rem));
+    /* 8px past the padding, except where that would put the dismiss inside the toast's end curve: it stops at
+       the radius less the edge instead, 1px past the padding in Rounded, and keeps its own shape. */
+    margin-inline-end: max(-0.5rem, calc(var(--holder-radius) - var(--holder-border) - var(--spacing-peer)));
   }
 
   /* The frame and the stripe are redrawn in the reader's color, so the words carry the tone. */

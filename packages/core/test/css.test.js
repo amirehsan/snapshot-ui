@@ -1878,14 +1878,14 @@ describe('src/components/drawer.css', () => {
     );
   });
 
-  it('pads the header, the body and the footer 24px, the footer clear of the home indicator', () => {
+  it('pads the header, the body and the footer 24px, the footer to the corner inset and clear of the home indicator', () => {
     const css = rules();
     expect(blockAfter(css, '.drawer-header {')).toContain(
       'padding: var(--spacing-peer) var(--spacing-peer) 0;',
     );
     expect(blockAfter(css, '.drawer-body {')).toContain('padding: var(--spacing-peer);');
     expect(blockAfter(css, '.drawer-footer {')).toContain(
-      'padding: 0 var(--spacing-peer) calc(var(--spacing-peer) + env(safe-area-inset-bottom, 0px));',
+      'padding: 0 var(--holder-pad) calc(var(--holder-corner-inset) + env(safe-area-inset-bottom, 0px));',
     );
     // The close button lines its icon up with the padding edge.
     expect(blockAfter(css, '.drawer-close {')).toContain('margin-inline-end: -0.5rem;');
@@ -2595,13 +2595,14 @@ describe('src/components/toast.css', () => {
     expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
   });
 
-  it('pulls the controls in by 8px at the block ends and the inline end, so the 40px dismiss does not grow a one-line toast', () => {
+  it('pulls the controls in by 8px at the block ends and up to 8px at the inline end, so the 40px dismiss does not grow a one-line toast', () => {
     const controls = blockAfter(rules(), '.toast-controls {');
     for (const declaration of [
       'flex: none;',
       'gap: var(--spacing-part);',
       'margin-block: -0.5rem;',
-      'margin-inline-end: -0.5rem;',
+      // Never past the toast's corner inset: the dismiss stays clear of the end curve.
+      'margin-inline-end: max(-0.5rem, calc(var(--holder-radius) - var(--holder-border) - var(--spacing-peer)));',
     ]) {
       expect(controls, declaration).toContain(declaration);
     }
@@ -7258,7 +7259,7 @@ describe('src/components/side-panel.css', () => {
     expect(spacer).toContain('display: block;');
     expect(spacer).toContain('block-size: var(--spacing-inset);');
     expect(blockAfter(css, '.side-panel-body:last-child {')).toContain(
-      'padding-block-end: var(--spacing-peer);',
+      'padding-block-end: var(--holder-corner-inset);',
     );
     for (const declaration of [
       'box-sizing: border-box;',
@@ -7522,6 +7523,8 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
   const css = (file) => closeUp(stripComments(read(`src/components/${file}`)));
   // The start of the formula: a part may take a further gap of its own after it, as a toast's row does.
   const FORMULA = 'calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)';
+  // How much further in than its padding a control near the holder's corner sits.
+  const EXTRA = 'calc(var(--holder-corner-inset) - var(--holder-pad))';
 
   // Each holder names its corner, its edge and its padding.
   const HOLDERS = [
@@ -7543,33 +7546,74 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       expect(rule).toContain(`--holder-radius: ${radius};`);
       expect(rule).toMatch(/--holder-border: [\d.]+px;/);
       expect(rule).toMatch(/--holder-pad: [^;]+;/);
+      expect(rule).toContain(
+        '--holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));',
+      );
     });
   }
 
-  // The parts that sit in a holder's corners take its radius less the gap, read from the holder's properties.
-  const PARTS = [
-    ['dialog.css', '.dialog-actions > :last-child {'],
-    ['side-panel.css', '.side-panel-footer > :last-child {'],
-    ['toast.css', '.toast-controls > :is(.button, .icon-button) {'],
-    ['data-table.css', '.data-table-bar :is(.button, .icon-button) {'],
+  // A surface, a row or a frame that fills to the holder's edge takes its radius less the gap.
+  const FILLS = [
     ['tabs.css', '.tab {'],
     ['stat-tile.css', '.card > .stat-tile, .card-body .stat-tile {'],
-    ['charts.css', ':is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toggle {'],
     ['select.css', '.select-filter {'],
   ];
 
-  for (const [file = '', header = ''] of PARTS) {
+  for (const [file = '', header = ''] of FILLS) {
     it(`makes ${header.slice(0, -2)} concentric with its holder in ${file}`, () => {
       expect(blockAfter(css(file), header)).toContain(FORMULA);
     });
   }
 
-  it('never copies a holder radius onto a part: every read of it subtracts the edge and the padding', () => {
+  // A control keeps its own shape and moves out of the corner: the end part it sits in stops at the corner
+  // inset, the holder's padding or its radius less its edge, whichever is more.
+  const CLEAR = [
+    ['dialog.css', '.dialog-actions {', `padding-inline-end: ${EXTRA};`],
+    ['side-panel.css', '.side-panel-footer {', `padding-inline-end: ${EXTRA};`],
+    ['side-panel.css', '.side-panel-body:last-child {', 'padding-block-end: var(--holder-corner-inset);'],
+    ['drawer.css', '.drawer-footer {', 'calc(var(--holder-corner-inset) + env(safe-area-inset-bottom, 0px))'],
+    [
+      'data-table.css',
+      '.data-table-bar {',
+      'padding-inline: max(var(--spacing-inset), var(--holder-corner-inset)) var(--holder-corner-inset);',
+    ],
+    [
+      'charts.css',
+      ':is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toolbar {',
+      `padding-inline-start: ${EXTRA};`,
+    ],
+  ];
+
+  for (const [file = '', header = '', declaration = ''] of CLEAR) {
+    it(`keeps the controls in ${header.slice(0, -2)} clear of the corner in ${file}`, () => {
+      expect(blockAfter(css(file), header)).toContain(declaration);
+    });
+  }
+
+  it('gives no control one corner of its own, only a part that fills the holder takes the formula', () => {
+    for (const file of components) {
+      // A single corner longhand that reads the holder's radius is a control given one smaller corner.
+      expect(css(file), file).not.toMatch(
+        /border-(?:start|end)-(?:start|end)-radius:[^;]*calc\(var\(--holder-radius/,
+      );
+      expect(css(file), file).not.toMatch(
+        /border-(?:top|bottom)-(?:left|right)-radius:[^;]*calc\(var\(--holder-radius/,
+      );
+    }
+  });
+
+  it('never copies a holder radius onto a part: every read of it subtracts the edge, and every radius the padding too', () => {
     for (const file of components) {
       const source = css(file);
-      // A calc that starts from the holder's radius subtracts both, never one or neither.
+      // A calc that starts from the holder's radius subtracts its edge: the corner inset stops there.
       for (const match of source.matchAll(/calc\(var\(--holder-radius\)[^;]*/g)) {
-        expect(match[0], file).toContain(FORMULA);
+        expect(match[0], file).toContain('calc(var(--holder-radius) - var(--holder-border)');
+      }
+      // A radius read from it subtracts the padding as well.
+      for (const match of source.matchAll(
+        /(?:border(?:-[\w-]+)?-radius|--[\w-]*radius[\w-]*):([^;]*calc\(var\(--holder-radius\)[^;]*);/g,
+      )) {
+        expect(match[1], file).toContain(FORMULA);
       }
       // The holder's radius is drawn as it is only by the holder that names it.
       for (const match of source.matchAll(

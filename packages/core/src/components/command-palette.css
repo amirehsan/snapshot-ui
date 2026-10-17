@@ -17,6 +17,7 @@
     --holder-radius: var(--radius-surface);
     --holder-border: 1px;
     --holder-pad: 0px;
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
 
     display: flex;
     flex-direction: column;

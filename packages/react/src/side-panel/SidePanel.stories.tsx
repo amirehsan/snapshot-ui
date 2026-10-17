@@ -10,7 +10,6 @@ import { RouterProvider } from '../link';
 import { NumberField } from '../number-field';
 import { PickerOption } from '../picker';
 import { Select } from '../select';
-import { FIELD_AT_BOTTOM } from '../stories/corner';
 import { focusOn } from '../stories/focus';
 import { DemoHeader, DemoNav } from '../stories/shell-fixture';
 import {
@@ -69,10 +68,7 @@ function Detail({ row }: { row: Transaction }): ReactElement {
           </PickerOption>
         ))}
       </Select>
-      {/* The last field sits in the panel's bottom corners, so it takes the panel's concentric corner. */}
-      <div style={FIELD_AT_BOTTOM}>
-        <NumberField label="Amount" money={{ symbol: '$' }} allowsNegative defaultValue={row.minor} />
-      </div>
+      <NumberField label="Amount" money={{ symbol: '$' }} allowsNegative defaultValue={row.minor} />
     </div>
   );
 }

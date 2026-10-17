@@ -6,7 +6,7 @@ import { Button } from '../button';
 import { NumberField } from '../number-field';
 import { PickerOption } from '../picker';
 import { MENU_ROW_A11Y } from '../stories/a11y';
-import { BOTTOM } from '../stories/corner';
+import { CLEAR_OF_FOOT } from '../stories/corner';
 import { focusOn } from '../stories/focus';
 import { tokenColor, tokenPixels, washColor } from '../stories/paint';
 import { FilterChip, type FilterChipLabels } from './FilterChip';
@@ -193,7 +193,7 @@ function Amount({ over = null, isDisabled }: { over?: number | null; isDisabled?
             <NumberField label="Over" money={{ symbol: '$' }} value={min} onChange={setMin} />
             <NumberField label="Under" money={{ symbol: '$' }} value={max} onChange={setMax} />
           </div>
-          <Button variant="secondary" style={BOTTOM} onPress={close}>
+          <Button variant="secondary" style={CLEAR_OF_FOOT} onPress={close}>
             Done
           </Button>
         </div>

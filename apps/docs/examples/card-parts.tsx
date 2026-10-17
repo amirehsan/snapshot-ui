@@ -2,11 +2,10 @@ import { Button, Card, CardBody, CardHeader, CardNote, CardTitle } from '@snapsh
 import type { ReactElement } from 'react';
 
 /**
- * The corner a part takes where it sits in a card's corner: the card's radius less its edge and padding, read
- * from the properties the card sets, so the two curves share a center in every shape.
+ * The buttons end the card's body, inside its bottom end curve, so the row stops at the card's corner inset and
+ * the buttons keep their own shape: 7px further in in Rounded, nothing more in Soft and Square.
  */
-const CARD_CORNER =
-  'max(var(--radius-micro), calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)))';
+const CLEAR_OF_CORNER = 'calc(var(--holder-corner-inset) - var(--holder-pad))';
 
 export default function CardParts(): ReactElement {
   return (
@@ -20,9 +19,9 @@ export default function CardParts(): ReactElement {
       <CardBody>
         <p>Product updates, when something ships.</p>
         <p>A weekly digest, every Tuesday morning.</p>
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <div className="row" style={{ justifyContent: 'flex-end', paddingInlineEnd: CLEAR_OF_CORNER }}>
           <Button variant="tertiary">Discard</Button>
-          <Button style={{ borderEndEndRadius: CARD_CORNER }}>Save changes</Button>
+          <Button>Save changes</Button>
         </div>
       </CardBody>
     </Card>

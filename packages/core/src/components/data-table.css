@@ -490,12 +490,14 @@
   /* ---- The bulk-action bar: the float surface, stuck to the viewport's bottom inside the table's box -- */
   /* It rides with the table and clears a bottom tab bar's reserve; once the table has scrolled past, it stays
      with it and never covers what follows. One layer under the header token, as the header cells. */
-  /* A holder: the buttons in it fill its content height and sit in its end corners, so every one of them takes
-     its radius less the 1px edge and the 8px of block padding, 15px in Rounded and 3px in Soft. */
+  /* A holder. Its buttons fill its content height, which leaves them inside its corner curves at either end,
+     so the bar pads each end to the corner inset, its radius less its edge where that is more than the padding,
+     and the buttons keep their own shape: 23px in Rounded, 11px in Soft. */
   .data-table-bar {
     --holder-radius: var(--radius-surface);
     --holder-border: 1px;
     --holder-pad: var(--spacing-part);
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
 
     position: sticky;
     inset-block-end: calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset));
@@ -507,7 +509,7 @@
     gap: var(--spacing-part);
     margin-block-start: var(--spacing-inset);
     padding-block: var(--holder-pad);
-    padding-inline: var(--spacing-inset) var(--holder-pad);
+    padding-inline: max(var(--spacing-inset), var(--holder-corner-inset)) var(--holder-corner-inset);
     border: var(--holder-border) solid var(--color-frame);
     border-radius: var(--holder-radius);
     background-color: var(--color-float);
@@ -527,10 +529,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-part);
-  }
-
-  .data-table-bar :is(.button, .icon-button) {
-    border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));
   }
 
   /* ---- Columns that leave, by the table's own box ----------------------------------------------- */

@@ -10,6 +10,7 @@
     --holder-radius: var(--radius-surface);
     --holder-border: 1px;
     --holder-pad: 0px;
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
 
     box-sizing: border-box;
     max-width: calc(100vw - 2rem);

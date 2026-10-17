@@ -4,6 +4,12 @@ export interface Finding {
   part: string;
   /** The nearest rounded ancestor the part sits in. */
   holder: string;
+  /**
+   * `concentric`: a part inside the holder's corner curve whose radius is not the holder's less the gap.
+   * `one corner`: a part inside the curve whose corners differ, a control given one smaller corner instead of
+   * being moved out of the corner; `expected` is then its own radius.
+   */
+  rule: 'concentric' | 'one corner';
   corner: 'top-left' | 'top-right' | 'bottom-right' | 'bottom-left';
   /** The holder's radius at that corner, as drawn. */
   holderRadius: number;
@@ -28,6 +34,9 @@ export interface Finding {
  *   at that corner.
  * - The expected radius is max(0, holder radius - the smaller gap), within 1px, and never more than half the
  *   part's own side, the most a corner can draw.
+ * - A part inside a corner curve keeps one shape: corners that differ there fail, since a control is moved
+ *   out of the corner rather than given one smaller corner. A part flush with a holder that clips it is
+ *   drawn by the holder's corner and is not held to this.
  * - A part may be sharper than that, never rounder, in two cases: it sits at the micro step or under (a key,
  *   a badge, a title's focus ring: text-sized parts keep their small corner), or its holder clips what it
  *   holds, which then draws the part's corner itself.
@@ -169,32 +178,47 @@ export function auditConcentric(): Finding[] {
     const clips =
       holder === ancestor && (holder.style.overflowX !== 'visible' || holder.style.overflowY !== 'visible');
 
+    const round = (value: number) => Math.round(value * 10) / 10;
+    const report = (corner: Corner, rule: Finding['rule'], gap: number, expected: number) => {
+      findings.push({
+        part: describe(element),
+        holder: describe(holder.element),
+        rule,
+        corner,
+        holderRadius: round(holder.radii[corner]),
+        gap: round(gap),
+        radius: round(part.radii[corner]),
+        expected: round(expected),
+      });
+    };
+    const radii = CORNERS.map((corner) => part.radii[corner]);
+    const uniform = Math.max(...radii) - Math.min(...radii) <= TOLERANCE;
+
     for (const corner of CORNERS) {
       const radius = part.radii[corner];
       const holderRadius = holder.radii[corner];
-      if (radius <= 0.5 || holderRadius <= 0.5) continue;
+      if (holderRadius <= 0.5) continue;
       const x = corner.endsWith('left')
         ? part.rect.left - holder.rect.left
         : holder.rect.right - part.rect.right;
       const y = corner.startsWith('top')
         ? part.rect.top - holder.rect.top
         : holder.rect.bottom - part.rect.bottom;
-      // Outside the holder, or clear of its curve: the two corners do not meet.
-      if (x < -0.5 || y < -0.5 || x >= holderRadius || y >= holderRadius) continue;
+      // Outside the holder, or clear of its curve (half a pixel of layout rounding allowed): the corners do
+      // not meet.
+      if (x < -0.5 || y < -0.5 || x >= holderRadius - 0.5 || y >= holderRadius - 0.5) continue;
       const gap = Math.max(0, Math.min(x, y));
       const expected = Math.min(Math.max(0, holderRadius - gap), part.rect.width / 2, part.rect.height / 2);
+      // A control keeps one shape: inside a corner curve it is moved out of the corner, never given one
+      // smaller corner. A part flush with a holder that clips it is drawn by the holder's corner instead.
+      if (!uniform && !(clips && gap <= 0.5)) {
+        report(corner, 'one corner', gap, Math.max(...radii));
+        continue;
+      }
+      if (radius <= 0.5) continue;
       if (Math.abs(radius - expected) <= TOLERANCE) continue;
       if (radius < expected && (clips || radius <= micro + 0.5)) continue;
-      const round = (value: number) => Math.round(value * 10) / 10;
-      findings.push({
-        part: describe(element),
-        holder: describe(holder.element),
-        corner,
-        holderRadius: round(holderRadius),
-        gap: round(gap),
-        radius: round(radius),
-        expected: round(expected),
-      });
+      report(corner, 'concentric', gap, expected);
     }
   }
   return findings;
