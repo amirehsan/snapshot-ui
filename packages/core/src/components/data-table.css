@@ -29,11 +29,8 @@
     /* What covers a row that focus scrolls to (WCAG 2.4.11): the page's sticky offset and the 40px header row
        above it, and, while the bar shows, the bar and its inset from the viewport's bottom below it: its
        buttons, a part step of padding either side and its 1px edges. Rows and list items keep clear of both.
-       The root's scroll padding already holds an AppShell header's height (app-shell.css), and a browser adds a
-       margin to the padding, so the margin takes only what the sticky offset has beyond it. */
-    --data-table-scroll-start: calc(
-      max(0px, var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px)) + var(--size-target)
-    );
+       Nothing pads the root's scroll, so the margin holds the whole sticky offset (spec correction 121). */
+    --data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--size-target));
     --data-table-scroll-end: 0px;
 
     /* A size container has no content width to give a parent that sizes it from its content, a flex row or an
@@ -619,10 +616,7 @@
        controls are 44px (spec correction 64). */
     --data-table-list-head: calc(max(var(--size-target), var(--size-control)) + 1px);
     /* What covers an item that focus scrolls to: the page's sticky offset and, in Select mode, the head. */
-    --data-table-scroll-start: calc(
-      max(0px, var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px)) +
-        var(--data-table-list-offset, 0px)
-    );
+    --data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));
 
     display: none;
   }
@@ -655,9 +649,8 @@
   /* Grouped, an item also keeps clear of its day heading: a peer and a part step around one overline line. */
   .data-table-list:has(.data-table-section) {
     --data-table-scroll-start: calc(
-      max(0px, var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px)) +
-        var(--data-table-list-offset, 0px) + var(--spacing-peer) + var(--spacing-part) +
-        var(--text-overline) * var(--text-overline--line-height)
+      var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px) + var(--spacing-peer) +
+        var(--spacing-part) + var(--text-overline) * var(--text-overline--line-height)
     );
   }
 

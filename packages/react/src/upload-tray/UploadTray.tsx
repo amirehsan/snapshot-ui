@@ -9,6 +9,7 @@ import { useConfirm } from '../dialog/useConfirm';
 import { IconButton } from '../icon-button/IconButton';
 import { Sheet } from '../sheet/Sheet';
 import { cx } from '../utils/cx';
+import { useChrome } from '../utils/focus-clear';
 import { present } from '../utils/present';
 import { useBeforeUnload } from '../utils/useBeforeUnload';
 import { useControllableState } from '../utils/useControllableState';
@@ -257,6 +258,10 @@ export function UploadTray({
   const hasFailed = counts.failed > 0;
   const message = useUploadAnnouncements(items, labels, formatCount);
   useBeforeUnload(warnsOnUnload && cancellable > 0);
+  // A control on the page that focus lands on under the wide panel, open or folded, or under the phone's bar is
+  // scrolled clear of it by a gap, as of a save bar (WCAG 2.4.11). The face the viewport hides measures nothing.
+  useChrome(wideRef, 'bottom', hasItems);
+  useChrome(barRef, 'bottom', hasItems);
 
   // The element in the tray that holds focus: in either face or the sheet. A row or the whole tray leaving takes
   // it from the page with no focus event, so this keeps it until focus moves on to anything still in the page,

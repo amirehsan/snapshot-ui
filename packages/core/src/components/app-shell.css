@@ -4,8 +4,8 @@
  * bottom tab bar. The collapsed width comes from the generated sidebar axis: data-sidebar="collapsed"
  * on any ancestor remaps --container-sidebar, and this file only reads the token. The skip link is the
  * first tab stop, out of sight until it is focused, then an ink pill over the rail's corner with the
- * inverted ring an ink fill takes. The header slot is the first part of <main>, sticky, and the root's scroll
- * padding keeps a focused control clear of it. 1024px is the --breakpoint-md token, written out because a media
+ * inverted ring an ink fill takes. The header slot is the first part of <main>, sticky, and the shell's script
+ * scrolls a focused control out from under it; nothing pads the root's scroll (spec correction 121). 1024px is the --breakpoint-md token, written out because a media
  * query cannot read a custom property, and 4rem is the tab bar's height, written in tab-bar.css too;
  * test/css.test.js keeps both equal. Derived in docs/design-system.md ("Floating chrome and the shell").
  * A rail an open SidePanel folds (data-sidebar-folded) folds at once, with no transition ("SidePanel"), and the
@@ -72,13 +72,6 @@
     position: sticky;
     inset-block-start: 0;
     z-index: var(--z-header);
-  }
-
-  /* A control that focus scrolls to stops clear of the stuck header (WCAG 2.4.11): the shell writes the header's
-     measured height on the root once hydrated, and until then nothing is padded. A part that keeps its own scroll
-     margin under the header, as DataTable does, subtracts this. */
-  :root:has(.app-shell-main > .app-shell-header) {
-    scroll-padding-block-start: var(--app-shell-header-block-size, 0px);
   }
 
   /* The skip link's landing never rings the whole page. */

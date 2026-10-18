@@ -16,6 +16,7 @@ import {
   type Ref,
 } from 'react';
 import { cx } from '../utils/cx';
+import { useChrome } from '../utils/focus-clear';
 import { present } from '../utils/present';
 import { useControllableState } from '../utils/useControllableState';
 
@@ -25,13 +26,12 @@ export interface AppShellProps extends Omit<HTMLAttributes<HTMLDivElement>, 'chi
   /**
    * The page header, such as a PageHeader: the first part of `<main>`, so the skip link lands on the page's title.
    * Sticky to the top: once hydrated, its height is the page's `--page-sticky-top`, under which a DataTable's header
-   * row and a SidePanel stick, and the root's scroll padding, which keeps a focused control out from under it.
+   * row and a SidePanel stick, and a control that focus lands on under it is scrolled clear of it.
    */
   header?: ReactNode;
   /**
-   * Whether the shell measures its header once hydrated and writes the height as `--page-sticky-top` on `<main>`
-   * and as `--app-shell-header-block-size` on the root element. Pass false to set `--page-sticky-top` yourself, on
-   * the shell's `style` or an ancestor. While it measures, a `--page-sticky-top` on the shell's `style` is an
+   * Whether the shell measures its header once hydrated and writes the height as `--page-sticky-top` on `<main>`.
+   * Pass false to set `--page-sticky-top` yourself, on the shell's `style` or an ancestor. While it measures, a `--page-sticky-top` on the shell's `style` is an
    * estimate for the first paint, which the measurement replaces. @default true
    */
   measuresHeader?: boolean;
@@ -77,22 +77,6 @@ const AppShellContext = createContext<AppShellState | null>(null);
 
 /** The page's sticky offset, which every sticky part of a page reads. */
 const STICKY_TOP = '--page-sticky-top';
-
-/** The shell header's height on the root element, which the root's scroll padding reads (`app-shell.css`). */
-const HEADER_SIZE = '--app-shell-header-block-size';
-
-/**
- * The header height each outermost measuring shell last wrote, keyed by its `<main>`, so two shells on one page never
- * remove each other's value: the root takes the tallest, and loses the property only with the last of them.
- */
-const headerSizes = new Map<HTMLElement, number>();
-
-/** Writes the tallest recorded header height on the root element, or removes it with none recorded. */
-function writeHeaderSize(): void {
-  const root = document.documentElement;
-  if (headerSizes.size === 0) root.style.removeProperty(HEADER_SIZE);
-  else root.style.setProperty(HEADER_SIZE, `${String(Math.max(...headerSizes.values()))}px`);
-}
 
 /** Asks the shell to fold its rail, and returns what gives it back. Internal: SidePanel's, through `useRailFold`. */
 const RailFoldContext = createContext<(() => () => void) | null>(null);
@@ -244,30 +228,27 @@ export function AppShell({
   // The header sticks, so its height is the page's sticky offset: a DataTable's header row and a SidePanel stick
   // under it, never behind it. Measured after hydration, so no first paint waits on it, and written on `<main>`,
   // whose page reads it, so an estimate on the shell's own style holds until then and returns when the header
-  // leaves. The outermost shell also writes it on the root element, whose scroll padding keeps a control that focus
-  // scrolls to out from under the header (WCAG 2.4.11); a shell inside another's page leaves that to the outer one.
+  // leaves. Nothing is written on the root element: a control that focus lands on under the stuck header is scrolled
+  // clear of it by the header's registration as chrome (WCAG 2.4.11, `utils/focus-clear.ts`), whether or not the
+  // shell measures.
   const headerRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const hasHeader = present(header);
+  useChrome(headerRef, 'top', hasHeader);
   useEffect(() => {
     const wrapper = headerRef.current;
     const main = mainRef.current;
     if (!measuresHeader || !wrapper || !main || typeof ResizeObserver !== 'function') return;
-    const isOutermost = !main.closest('.app-shell')?.parentElement?.closest('.app-shell');
     const observer = new ResizeObserver((entries) => {
       const entry = entries.at(-1);
       if (entry === undefined) return;
       const height = entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height;
       main.style.setProperty(STICKY_TOP, `${String(height)}px`);
-      if (!isOutermost) return;
-      headerSizes.set(main, height);
-      writeHeaderSize();
     });
     observer.observe(wrapper);
     return () => {
       observer.disconnect();
       main.style.removeProperty(STICKY_TOP);
-      if (headerSizes.delete(main)) writeHeaderSize();
     };
   }, [hasHeader, measuresHeader]);
 

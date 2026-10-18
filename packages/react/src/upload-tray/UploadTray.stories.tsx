@@ -9,6 +9,7 @@ import { Card, CardBody, CardHeader, CardTitle } from '../card';
 import { focusOn } from '../stories/focus';
 import { DemoHeader, DemoNav } from '../stories/shell-fixture';
 import { DESKTOP, PHONE, VIEWPORT_OPTIONS } from '../stories/viewports';
+import { TextField } from '../text-field';
 import { toast, ToastRegion } from '../toast';
 import type { UploadItem } from './counts';
 import { UploadTray, type UploadTrayProps } from './UploadTray';
@@ -144,6 +145,22 @@ async function panelAtRest(): Promise<HTMLElement> {
   return panel;
 }
 
+/** Resolves with the phone's bar, or any face, once its rise has finished, so a play reads it at rest. */
+async function atRest(selector: string): Promise<HTMLElement> {
+  const face = await waitFor(() => only(selector));
+  await Promise.all(face.getAnimations().map((animation) => animation.finished.catch(() => null)));
+  return face;
+}
+
+/** How long a play waits for what follows a key or a scroll: a busy runner, WebKit's above all, is slow. */
+const LONG = { timeout: 5000 };
+
+/** The gap a focused control keeps above the tray's faces, `--spacing-inset`. */
+const GAP = 16;
+
+/** A pixel for an engine's rounding: WebKit and Firefox round a scroll position, and fields sit on fractions. */
+const ROUNDING = 1;
+
 /** Presses `keys` unless the story has gone: a play that outlived its time limit stops rather than type on. */
 function guardedKeys(anchor: Element): (keys: string) => Promise<void> {
   return async (keys) => {
@@ -269,20 +286,23 @@ export const PhoneBar: Story = {
   },
 };
 
-/** The bar pressed: the sheet with the title, the line, the list and Cancel uploads in its footer, at rest. */
+/**
+ * The bar pressed: the sheet with the title, the line, the list and Cancel uploads in its footer, at rest. The play
+ * runs in three engines, with a pixel for an engine's rounding.
+ */
 export const PhoneSheet: Story = {
-  tags: ['viewport-phone'],
+  tags: ['viewport-phone', 'webkit', 'firefox'],
   globals: PHONE,
   args: { description: 'About a minute left', onCancelAll: fn() },
   render: (args) => <Shell {...args} tabs />,
   play: async () => {
-    const button = within(await waitFor(() => only('.upload-tray-bar'))).getByRole('button');
+    const button = within(await waitFor(() => only('.upload-tray-bar'), LONG)).getByRole('button');
     button.click();
     const sheet = await waitFor(async () => {
       const found = only('.upload-tray-sheet');
       await expect(found).not.toHaveAttribute('data-entering');
       return found;
-    });
+    }, LONG);
     // Every finite animation in it: the reading row's slide never ends.
     await Promise.all(
       sheet
@@ -292,13 +312,15 @@ export const PhoneSheet: Story = {
     );
     const dialog = within(document.body).getByRole('dialog', { name: 'Uploading 2 of 5' });
     await expect(within(dialog).getAllByRole('listitem')).toHaveLength(5);
-    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    await waitFor(() => expect(button).toHaveAttribute('aria-expanded', 'true'), LONG);
     // The wide panel's close rule in the footer, as wide as it, and the sheet's own close named for itself.
     const action = within(dialog).getByRole('button', { name: 'Cancel uploads' });
     const footer = action.closest('.sheet-footer');
     if (!footer) throw new Error('No footer');
     const padding = Number.parseFloat(getComputedStyle(footer).paddingInlineStart) * 2;
-    await expect(action.getBoundingClientRect().width).toBeCloseTo(footer.clientWidth - padding, 0);
+    await expect(
+      Math.abs(action.getBoundingClientRect().width - (footer.clientWidth - padding)),
+    ).toBeLessThanOrEqual(ROUNDING);
     await expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveClass('sheet-close');
   },
 };
@@ -325,11 +347,12 @@ function LongPage(): ReactElement {
 }
 
 /**
- * At 375 by 812 the page keeps room for the bar under its content, and the root's scroll padding keeps a focused
- * control clear of it, with the tab bar (WCAG 2.4.11).
+ * At 375 by 812 the page keeps room for the bar under its content, and the tray's focus clear keeps a focused
+ * control the gap clear of it, over the tab bar (WCAG 2.4.11), reached by Tab and by focus(). Three engines, with a
+ * pixel for an engine's rounding.
  */
 export const PhoneKeepsClear: Story = {
-  tags: ['no-visual', 'viewport-phone'],
+  tags: ['no-visual', 'viewport-phone', 'webkit', 'firefox'],
   globals: PHONE,
   render: (args) => (
     <AppShell
@@ -342,24 +365,111 @@ export const PhoneKeepsClear: Story = {
     </AppShell>
   ),
   play: async ({ canvasElement }) => {
-    const bar = await waitFor(() => only('.upload-tray-bar'));
+    const bar = await atRest('.upload-tray-bar');
     const last = within(canvasElement).getByRole('button', { name: 'Load earlier months' });
+    const menu = within(only('.app-shell-header')).getByRole('button');
     const scroller = document.scrollingElement ?? document.documentElement;
+    /** Where the last control's bottom may reach: the gap above the bar, and a pixel for an engine's rounding. */
+    const clearOfBar = (): number => bar.getBoundingClientRect().top - GAP + ROUNDING;
     try {
       await expect(scroller.scrollHeight).toBeGreaterThan(window.innerHeight);
-      // Focus reaches the last control from the top of the page: it scrolls clear of the bar.
+      // Tab reaches the last control from the header's menu button at the top of the page: it scrolls clear.
       scroller.scrollTop = 0;
+      await focusOn(menu);
+      await guardedKeys(bar)('{Tab}');
+      await waitFor(() => expect(last).toHaveFocus(), LONG);
+      await waitFor(
+        () => expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(clearOfBar()),
+        LONG,
+      );
+      // And focus() does, from the top again.
+      last.blur();
+      scroller.scrollTop = 0;
+      await waitFor(() => expect(last.getBoundingClientRect().top).toBeGreaterThan(window.innerHeight), LONG);
       await focusOn(last);
-      await waitFor(() =>
-        expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(bar.getBoundingClientRect().top),
+      await waitFor(
+        () => expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(clearOfBar()),
+        LONG,
       );
       // Scrolled to the very end, the last control still sits above the bar.
       scroller.scrollTop = scroller.scrollHeight;
-      await waitFor(() =>
-        expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(bar.getBoundingClientRect().top),
+      await waitFor(
+        () =>
+          expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+            bar.getBoundingClientRect().top + ROUNDING,
+          ),
+        LONG,
       );
       await expect(bar.getBoundingClientRect().bottom).toBeLessThanOrEqual(
-        only('.tab-bar').getBoundingClientRect().top,
+        only('.tab-bar').getBoundingClientRect().top + ROUNDING,
+      );
+    } finally {
+      scroller.scrollTop = 0;
+    }
+  },
+};
+
+/** A page of full-width fields, long enough that some sit under the wide panel in the bottom end corner. */
+function FieldsPage(): ReactElement {
+  return (
+    <div style={{ display: 'grid', gap: 24, padding: 'var(--spacing-inset)' }}>
+      {Array.from({ length: 14 }, (_, index) => (
+        <TextField key={index} label={`Reference ${String(index + 1)}`} defaultValue={`R-${String(index)}`} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * WCAG 2.4.11 from 768px (spec correction 122): at 1280 by 720 a field wholly or partly under the open wide panel,
+ * reached by Tab and by focus(), ends the gap above the panel's top. Three engines, with a pixel for rounding.
+ */
+export const FocusClearOfPanel: Story = {
+  tags: ['no-visual', 'viewport-desktop', 'webkit', 'firefox'],
+  globals: DESKTOP,
+  render: (args) => (
+    <AppShell
+      sidebar={<DemoNav />}
+      header={<DemoHeader title="Documents" />}
+      floating={<UploadTray {...args} />}
+    >
+      <FieldsPage />
+    </AppShell>
+  ),
+  play: async ({ canvasElement }) => {
+    const panel = await panelAtRest();
+    const inputs = [...canvasElement.querySelectorAll<HTMLInputElement>('.app-shell-main input')];
+    const scroller = document.scrollingElement ?? document.documentElement;
+    const field = (input: Element): Element => input.closest('.field') ?? input;
+    const clearOfPanel = (): number => panel.getBoundingClientRect().top - GAP + ROUNDING;
+    try {
+      scroller.scrollTop = 0;
+      // The first field under the panel, wholly in the view, and the one before it, which is clear.
+      const index = inputs.findIndex(
+        (input) =>
+          field(input).getBoundingClientRect().bottom > panel.getBoundingClientRect().top &&
+          input.getBoundingClientRect().bottom < window.innerHeight,
+      );
+      const [before, under] = [inputs[index - 1], inputs[index]];
+      if (!before || !under) throw new Error('No field under the panel');
+      await expect(under.getBoundingClientRect().right).toBeGreaterThan(panel.getBoundingClientRect().left);
+      await focusOn(before);
+      await guardedKeys(panel)('{Tab}');
+      await waitFor(() => expect(under).toHaveFocus(), LONG);
+      await waitFor(
+        () => expect(field(under).getBoundingClientRect().bottom).toBeLessThanOrEqual(clearOfPanel()),
+        LONG,
+      );
+      under.blur();
+      scroller.scrollTop = 0;
+      await waitFor(
+        () => expect(field(under).getBoundingClientRect().bottom).toBeGreaterThan(clearOfPanel()),
+        LONG,
+      );
+      under.focus();
+      await waitFor(
+        () => expect(field(under).getBoundingClientRect().bottom).toBeLessThanOrEqual(clearOfPanel()),
+        LONG,
       );
     } finally {
       scroller.scrollTop = 0;
@@ -521,9 +631,9 @@ export const FocusAfterRemove: Story = {
   },
 };
 
-/** The last row removed: the tray leaves, and focus goes to main, never the body. */
+/** The last row removed: the tray leaves, and focus goes to main, never the body. Three engines. */
 export const FocusAfterLeave: Story = {
-  tags: ['no-visual', 'viewport-desktop'],
+  tags: ['no-visual', 'viewport-desktop', 'webkit', 'firefox'],
   globals: DESKTOP,
   render: () => <Removing initial={SETTLED.slice(0, 1)} />,
   play: async ({ canvasElement }) => {
@@ -531,8 +641,8 @@ export const FocusAfterLeave: Story = {
     const remove = within(panel).getByRole('button', { name: 'Remove lease-agreement.pdf' });
     await focusOn(remove);
     await guardedKeys(panel)('{Enter}');
-    await waitFor(() => expect(document.querySelector('.upload-tray')).toBeNull());
-    await waitFor(() => expect(within(canvasElement).getByRole('main')).toHaveFocus());
+    await waitFor(() => expect(document.querySelector('.upload-tray')).toBeNull(), LONG);
+    await waitFor(() => expect(within(canvasElement).getByRole('main')).toHaveFocus(), LONG);
   },
 };
 

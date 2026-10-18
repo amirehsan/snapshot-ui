@@ -99,7 +99,7 @@ The first Tab lands on a skip link, hidden until focused and then shown as an in
 
 ## The sticky header
 
-The header sticks to the top as the page scrolls. Once the page has loaded, the shell measures it and writes its height twice: as `--page-sticky-top` on `<main>`, under which a [Data table](/docs/components/data-table)'s header row and a [Side panel](/docs/components/side-panel) stick, and as `--app-shell-header-block-size` on the root element, whose scroll padding keeps a control that focus moves to out from under the header. Both follow the header as it grows or wraps, and both go when it does.
+The header sticks to the top as the page scrolls. Once the page has loaded, the shell measures it and writes its height as `--page-sticky-top` on `<main>`, under which a [Data table](/docs/components/data-table)'s header row and a [Side panel](/docs/components/side-panel) stick. It follows the header as it grows or wraps, and goes when it does. Nothing is written on the root element, and the page's scroll is never padded: a control that focus lands on under the stuck header, by Shift+Tab or a script's `focus()`, is scrolled just clear of it, and focus on the header's own controls never moves the page.
 
 Nothing is measured for the first paint, so until the page has loaded a table's header row sticks at the top and moves down under the header once measured. To keep that jump small, give the shell an estimate, which the measurement replaces:
 
@@ -174,7 +174,7 @@ AppShell is a client component that a server layout can render. Every prop excep
 
 ## Accessibility
 
-The shell renders one `<main>`, and the skip link to it is the first tab stop. The header is the first part of `<main>`, so a `header` element there is not a banner landmark, and the page's title is in the main landmark. A control that focus moves to is never left under the stuck header: the root's scroll padding is the header's height. The rail and the tab bar each have a named nav, and only one is ever in the accessibility tree: the rail from 1024px up, the tab bar below. The rail root and header wrapper carry no landmark role. While the drawer is open, the page behind it is hidden from assistive technology and does not scroll.
+The shell renders one `<main>`, and the skip link to it is the first tab stop. The header is the first part of `<main>`, so a `header` element there is not a banner landmark, and the page's title is in the main landmark. A control that focus moves to is never left under the stuck header: once the page has loaded, the shell scrolls it just clear. The rail and the tab bar each have a named nav, and only one is ever in the accessibility tree: the rail from 1024px up, the tab bar below. The rail root and header wrapper carry no landmark role. While the drawer is open, the page behind it is hidden from assistive technology and does not scroll.
 
 <Keys rows={[['Tab', 'The skip link first, then the rail, the header and the page.'], ['Enter', 'On the skip link, moves focus to the main content, which starts with the header.']]} />
 

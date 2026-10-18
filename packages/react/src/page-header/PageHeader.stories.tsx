@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Download, Ellipsis, FolderInput, Trash2 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
-import { expect, fn, userEvent, waitFor } from 'storybook/test';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { AppShell } from '../app-shell';
 import { Breadcrumb, Breadcrumbs } from '../breadcrumbs';
 import { DataTable } from '../data-table';
@@ -249,17 +249,15 @@ export const InAppShell: Story = {
     window.scrollTo(0, 240);
     await waitFor(() => expect(window.scrollY).toBe(240));
     await waitFor(() => expect(rect(header).top).toBeCloseTo(0, 0));
-    // The header's height is the page's sticky offset, written on main once measured, and the root's scroll padding.
+    // The header's height is the page's sticky offset, written on main once measured; nothing pads the root's
+    // scroll (spec correction 121).
     await waitFor(() =>
       expect(parseFloat(main.style.getPropertyValue('--page-sticky-top'))).toBeCloseTo(
         rect(header).height,
         0,
       ),
     );
-    await expect(parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)).toBeCloseTo(
-      rect(header).height,
-      0,
-    );
+    await expect(getComputedStyle(document.documentElement).scrollPaddingTop).toBe('auto');
   },
 };
 
@@ -310,7 +308,7 @@ export const StickyOffset: Story = {
         for (const cell of cells()) await expect(Math.abs(rect(cell).top - bottom)).toBeLessThan(1);
       });
       // A row scrolled to the view's start stops under the table's header row, not a header's height lower: the
-      // root's scroll padding holds the page header, and the row's margin only the header row beyond it.
+      // row's margin holds the page header and the header row, and nothing pads the root's scroll.
       const row = [...canvasElement.querySelectorAll<HTMLElement>('.data-table-body > [role="row"]')][9];
       if (row === undefined) throw new Error('No tenth row');
       const above = Math.round(window.scrollY + rect(row).bottom + 120);
@@ -390,14 +388,9 @@ export const ActionsBesideDescription: Story = {
 /** Rows of a long page, far apart, each with a control, so one can sit wholly under the stuck header. */
 const RECEIPTS = Array.from({ length: 16 }, (_, index) => `Receipt ${String(index + 1)}`);
 
-/**
- * WCAG 2.4.11: with a control wholly under the stuck header, Shift+Tab to it from the next brings it clear of the
- * header, as the root's scroll padding is the header's measured height.
- */
-export const FocusClearOfHeader: Story = {
-  tags: ['no-visual'],
-  globals: DESKTOP,
-  render: () => (
+/** The receipts' page in the shell, under a stuck PageHeader with its Upload button and More menu. */
+function ReceiptsPage(): ReactElement {
+  return (
     <RouterProvider navigate={noop}>
       <AppShell
         sidebar={<DemoNav />}
@@ -412,27 +405,86 @@ export const FocusClearOfHeader: Story = {
         </PageColumn>
       </AppShell>
     </RouterProvider>
-  ),
+  );
+}
+
+/** Waits until the shell has measured its header, after hydration, as its focus clear is registered by then. */
+async function measured(canvasElement: HTMLElement): Promise<void> {
+  await waitFor(() =>
+    expect(find(canvasElement, '.app-shell-main').style.getPropertyValue('--page-sticky-top')).not.toBe(''),
+  );
+}
+
+/** Scrolls the window to `top` and waits until it is there, within an engine's rounding of a pixel. */
+async function scrollToTop(top: number): Promise<void> {
+  window.scrollTo(0, top);
+  await waitFor(() => expect(Math.abs(window.scrollY - top)).toBeLessThanOrEqual(1));
+}
+
+/** Resolves after a few frames and a pause, once a focus and the clear it schedules two frames later have run. */
+async function settled(): Promise<void> {
+  for (let frame = 0; frame < 4; frame += 1) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 100));
+}
+
+/**
+ * WCAG 2.4.11: with a control wholly under the stuck header, Shift+Tab to it from the next brings it clear of the
+ * header, by the shell's focus clear (spec correction 121). Three engines.
+ */
+export const FocusClearOfHeader: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: DESKTOP,
+  render: () => <ReceiptsPage />,
   play: async ({ canvas, canvasElement }) => {
     const header = find(canvasElement, '.stuck');
     const covered = canvas.getByRole('button', { name: 'Open Receipt 6' });
     const next = canvas.getByRole('button', { name: 'Open Receipt 7' });
     try {
-      // Once the shell has measured its header.
-      await waitFor(() =>
-        expect(document.documentElement.style.getPropertyValue('--app-shell-header-block-size')).not.toBe(''),
-      );
+      await measured(canvasElement);
       // Scroll the control to the middle of the stuck header, wholly under it, the next one clear below it.
       const height = rect(header).height;
-      const target = Math.round(window.scrollY + rect(covered).top - (height - rect(covered).height) / 2);
-      window.scrollTo(0, target);
-      await waitFor(() => expect(window.scrollY).toBe(target));
-      await expect(rect(covered).bottom).toBeLessThanOrEqual(rect(header).bottom);
+      await scrollToTop(Math.round(window.scrollY + rect(covered).top - (height - rect(covered).height) / 2));
+      await expect(rect(covered).bottom).toBeLessThanOrEqual(rect(header).bottom + 1);
       await expect(rect(next).top).toBeGreaterThan(rect(header).bottom);
       await focusOn(next);
       await userEvent.tab({ shift: true });
       await waitFor(() => expect(covered).toHaveFocus());
       await waitFor(() => expect(rect(covered).top).toBeGreaterThanOrEqual(rect(header).bottom - 1));
+    } finally {
+      window.scrollTo(0, 0);
+    }
+  },
+};
+
+/**
+ * Shift+Tab from the page into the stuck header leaves the page where it was: the header's own controls are never
+ * scrolled for. The root's scroll padding this replaced scrolled the page up here, to bring the stuck button out of
+ * the padding (spec correction 121). Three engines.
+ */
+export const FocusInStuckHeader: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: DESKTOP,
+  render: () => <ReceiptsPage />,
+  play: async ({ canvas, canvasElement }) => {
+    const header = find(canvasElement, '.stuck');
+    const first = canvas.getByRole('button', { name: 'Open Receipt 1' });
+    const more = within(header).getByRole('button', { name: 'More actions' });
+    try {
+      await measured(canvasElement);
+      await scrollToTop(600);
+      await waitFor(() => expect(Math.abs(rect(header).top)).toBeLessThanOrEqual(1));
+      // The page's first control, scrolled out above the view, takes focus without a scroll.
+      first.focus({ preventScroll: true });
+      await waitFor(() => expect(first).toHaveFocus());
+      await settled();
+      const before = window.scrollY;
+      await userEvent.tab({ shift: true });
+      await waitFor(() => expect(more).toHaveFocus());
+      await settled();
+      await expect(Math.abs(window.scrollY - before)).toBeLessThanOrEqual(1);
+      await expect(Math.abs(rect(header).top)).toBeLessThanOrEqual(1);
     } finally {
       window.scrollTo(0, 0);
     }

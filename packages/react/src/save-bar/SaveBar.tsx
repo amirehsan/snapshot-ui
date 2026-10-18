@@ -21,8 +21,8 @@ import { present } from '../utils/present';
 import { QUIET_MS } from '../utils/quiet';
 import { isThenable, report } from '../utils/report';
 import { useBeforeUnload } from '../utils/useBeforeUnload';
+import { useChrome } from '../utils/focus-clear';
 import { useBottomBarOffset } from '../utils/useBottomBarOffset';
-import { uncover } from './uncover';
 
 export interface SaveBarLabels {
   /** The clay chip while there are unsaved changes. @default 'Unsaved changes' */
@@ -99,7 +99,7 @@ function isGone(element: Element): boolean {
  * app's secondary actions, and a primary action whose label the app writes and whose promise keeps the bar
  * pending. Put it as the last child of the form's holder: it sticks at the viewport's bottom while the holder is in
  * view and rests at its end. It is always drawn; the action is never disabled, so answer a press that cannot save
- * with a `status`. It warns before the page unloads while dirty, keeps a focused control in its holder clear of
+ * with a `status`. It warns before the page unloads while dirty, keeps a focused control on the page clear of
  * itself, and lifts the upload tray and the toasts by its height (`--save-bar-offset`). It takes no Mod+S.
  */
 export function SaveBar({
@@ -170,29 +170,9 @@ export function SaveBar({
   useBeforeUnload(warnsOnUnload && isDirty);
   useBottomBarOffset(barRef);
 
-  // A control in the holder that focus lands on with its field under the bar is scrolled clear of it by a gap, two
-  // frames after the focus, after the browser's own scroll, as DataTable clears its rows of its bulk-action bar.
-  useEffect(() => {
-    const bar = barRef.current;
-    const holder = bar?.parentElement;
-    if (!bar || !holder) return;
-    let frame = 0;
-    const onFocusIn = (event: FocusEvent): void => {
-      const target = event.target;
-      if (!(target instanceof HTMLElement) || bar.contains(target)) return;
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        frame = requestAnimationFrame(() => {
-          uncover(target, bar);
-        });
-      });
-    };
-    holder.addEventListener('focusin', onFocusIn);
-    return () => {
-      holder.removeEventListener('focusin', onFocusIn);
-      cancelAnimationFrame(frame);
-    };
-  }, []);
+  // A control that focus lands on under the bar is scrolled clear of it by a gap, two frames after the focus
+  // (`utils/focus-clear.ts`).
+  useChrome(barRef, 'bottom');
 
   // The bar's control that holds focus. Cancel is disabled while pending and may leave with `onCancel`, and an app's
   // secondary action may leave too: focus on one that can no longer hold it goes to the action, never the body.

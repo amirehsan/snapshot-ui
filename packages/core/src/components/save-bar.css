@@ -12,10 +12,9 @@
  *
  * The bottom edge (documents spec 12): while a bar is on the page, the root and the shell declare
  * --save-bar-offset from the tokens, the one-line bar's height and the inset, which lifts the upload tray and the
- * toasts; the SaveBar writes its measured height there after hydration. The root's scroll padding keeps a focused
- * control clear of the tab bar, the bar and a phone's upload bar, in the bottom edge's order, with an inset's gap
- * above them, from the server's HTML on. This file loads after upload-tray.css, whose own scroll padding this one
- * replaces with the full sum.
+ * toasts; the SaveBar writes its measured height there after hydration. A focused control under the bar is
+ * scrolled clear of it, with an inset's gap, by the bar's script once hydrated; nothing pads the root's scroll,
+ * which moved the page when focus landed on the stuck bar's own buttons (spec correction 121).
  */
 @layer components {
   .save-bar {
@@ -39,7 +38,7 @@
        8px in Square. */
     padding-inline: max(var(--spacing-inset), var(--holder-corner-inset)) var(--holder-corner-inset);
     /* Not for the bar's own scroll: the page's sticky offset and the gap a focused control keeps above the bar,
-       which the bar's scroll clear reads here resolved to pixels. */
+       which the focus clear reads here resolved to pixels. */
     scroll-margin-block: var(--page-sticky-top, 0px) var(--spacing-inset);
     border: var(--holder-border) solid var(--color-frame);
     border-radius: var(--holder-radius);
@@ -143,16 +142,6 @@
   :root:has(.save-bar),
   .app-shell:has(.save-bar) {
     --save-bar-offset: calc(var(--size-control) + 2 * var(--spacing-part) + 2px + var(--spacing-inset));
-  }
-
-  /* The root cannot read the shell's reserve, so the tab bar's comes from the toasts' copy (spec correction 12),
-     and a phone's upload bar above the bar adds its own. The last inset is the gap above the topmost of them, so
-     a focused field's ring and the line under it are never flush against the bar. */
-  :root:has(.save-bar) {
-    scroll-padding-block-end: calc(
-      var(--toast-offset-block, 0px) + var(--save-bar-offset) + var(--upload-tray-reserve, 0px) +
-        var(--spacing-inset)
-    );
   }
 
   /* The edge is redrawn in the reader's color; the chip and the status keep their words. */

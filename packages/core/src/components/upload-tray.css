@@ -22,9 +22,10 @@
  * reads no holder: a rounded box of an app's own that holds it keeps its corners clear as the app's content does.
  *
  * Under 768px the bar covers the bottom of the page, so while it shows the shell's workspace reserves room under
- * its content and the root's scroll padding keeps a focused control clear of it (WCAG 2.4.11), from tokens only:
- * the bar's height, max(--size-field, --size-target), and the inset, over the tab bar's reserve and a sticky
- * bar's offset, in the bottom edge's order (tab bar, sticky bar, tray, toasts).
+ * its content, from tokens only: the bar's height, max(--size-field, --size-target), and the inset, over the tab
+ * bar's reserve and a sticky bar's offset, in the bottom edge's order (tab bar, sticky bar, tray, toasts). A
+ * focused control under the bar or the panel is scrolled clear of it by the tray's script (WCAG 2.4.11), which
+ * reads the gap it keeps from each face's scroll margin; nothing pads the root's scroll (spec correction 121).
  */
 @layer components {
   /* The polite live region, present before its text, hidden from sight and kept out of aria-hidden, as the
@@ -198,6 +199,8 @@
     z-index: var(--z-chrome);
     display: flex;
     flex-direction: column;
+    /* Not for the panel's own scroll: the gap a focused control keeps above it, which the tray's script reads. */
+    scroll-margin-block-end: var(--spacing-inset);
     width: min(28rem, calc(100vw - 2rem));
     overflow: hidden;
     border: var(--holder-border) solid var(--color-frame);
@@ -323,6 +326,8 @@
     display: flex;
     block-size: var(--size-field);
     min-block-size: var(--size-target);
+    /* Not for the bar's own scroll: the gap a focused control keeps above it, which the tray's script reads. */
+    scroll-margin-block-end: var(--spacing-inset);
     border: var(--holder-border) solid var(--color-frame);
     border-radius: var(--holder-radius);
     background-color: var(--color-float);
@@ -440,17 +445,7 @@
     }
 
     /* While the bar shows, the page keeps room for it under its content, over the tab bar's reserve and a
-       sticky bar's offset, and the root's scroll padding keeps a focused control clear of it: the bar's height,
-       never under the target, and the inset. The root reads the tab bar from --toast-offset-block (spec
-       correction 12), and a save bar's own scroll padding adds --upload-tray-reserve. */
-    :root:has(.upload-tray-bar) {
-      --upload-tray-reserve: calc(max(var(--size-field), var(--size-target)) + var(--spacing-inset));
-
-      scroll-padding-block-end: calc(
-        var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) + var(--upload-tray-reserve)
-      );
-    }
-
+       sticky bar's offset: the bar's height, never under the target, and the inset. */
     .app-shell:has(> .upload-tray-bar) .app-shell-workspace {
       padding-block-end: calc(
         var(--app-shell-inset-block-end) + var(--save-bar-offset, 0px) +

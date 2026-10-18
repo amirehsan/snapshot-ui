@@ -502,9 +502,55 @@ export const FocusClear: Story = {
   },
 };
 
+/** Resolves after `count` frames and a pause, once a focus and the clear it schedules two frames later have run. */
+async function settled(count = 4): Promise<void> {
+  for (let frame = 0; frame < count; frame += 1) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 100));
+}
+
 /**
- * A bar in a box that scrolls, as in a SidePanel's or a Dialog's body: the root's scroll padding does not reach a
- * scroll port of its own, so a field under the bar, reached by Tab and by focus(), is scrolled clear by the bar.
+ * Tab onto the stuck bar's Cancel, from the last field below the view, leaves the page where it was: the bar's own
+ * controls are never scrolled for. The root's scroll padding this replaced moved the page here, as the browser
+ * scrolled to bring the stuck Cancel out of the padding (spec correction 121).
+ */
+export const TabOntoStuckBar: Story = {
+  tags: ['no-visual', 'viewport-desktop', 'webkit', 'firefox'],
+  globals: DESKTOP,
+  args: { isDirty: true },
+  parameters: { layout: 'fullscreen' },
+  render: (args) => <ShellForm {...args} />,
+  play: async () => {
+    const bar = await waitFor(() => only('.save-bar'), LONG);
+    const cancel = within(bar).getByRole('button', { name: 'Cancel' });
+    const last = [...document.querySelectorAll<HTMLInputElement>('.app-shell-workspace input')].at(-1);
+    if (!last) throw new Error('No field');
+    const scroller = document.scrollingElement ?? document.documentElement;
+    try {
+      scroller.scrollTop = 120;
+      await waitFor(() => expect(Math.abs(scroller.scrollTop - 120)).toBeLessThanOrEqual(ROUNDING), LONG);
+      // Stuck its inset above the view's bottom, with the last field below the view.
+      await waitFor(() => expect(window.innerHeight - rect(bar).bottom).toBeCloseTo(16, 0), LONG);
+      await expect(rect(last).top).toBeGreaterThan(window.innerHeight);
+      last.focus({ preventScroll: true });
+      await waitFor(() => expect(last).toHaveFocus(), LONG);
+      await settled();
+      const before = scroller.scrollTop;
+      await guardedKeys(bar)('{Tab}');
+      await waitFor(() => expect(cancel).toHaveFocus(), LONG);
+      await settled();
+      await expect(Math.abs(scroller.scrollTop - before)).toBeLessThanOrEqual(ROUNDING);
+      await expect(window.innerHeight - rect(bar).bottom).toBeCloseTo(16, 0);
+    } finally {
+      scroller.scrollTop = 0;
+    }
+  },
+};
+
+/**
+ * A bar in a box that scrolls, as in a SidePanel's or a Dialog's body: a field under the bar, reached by Tab and by
+ * focus(), is scrolled clear of it in the box's own scroll port.
  */
 export const FocusClearInScroller: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],

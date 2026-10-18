@@ -6,6 +6,7 @@ import { Toolbar, type Key } from 'react-aria-components';
 import { Button } from '../button/Button';
 import { IconButton } from '../icon-button/IconButton';
 import { Tooltip, TooltipTrigger } from '../tooltip/Tooltip';
+import { useChrome } from '../utils/focus-clear';
 import { present } from '../utils/present';
 import { useBottomBarOffset } from '../utils/useBottomBarOffset';
 import { isBulkActionData, isDrawn } from './bulk-actions';
@@ -66,6 +67,9 @@ export function BulkBar({
 }: BulkBarProps): ReactElement {
   const barRef = useRef<HTMLDivElement>(null);
   useBottomBarOffset(barRef);
+  // A control elsewhere on the page that focus lands on under the stuck bar is scrolled clear of it; DataTable's own
+  // rows are cleared by `scroll.ts`, flush with the bar, which keeps no gap so the two never add.
+  useChrome(barRef, 'bottom');
 
   // The control that last held focus in the bar, and its place among the controls then reachable; null once the
   // reader has moved focus out of the bar, so a later change in the bar never takes it back (spec correction 111).

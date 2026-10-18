@@ -4416,6 +4416,88 @@ test.describe('the recipe on a phone', () => {
   });
 });
 
+for (const slug of ['app-shell', 'sidebar']) {
+  test(`an outline link on the ${slug} page lands its heading at the docs' usual offset, whatever its examples' shells measure`, async ({
+    page,
+  }) => {
+    // An AppShell in an example is the page's outermost shell; it once wrote its header's height on the docs'
+    // root, whose scroll padding then added it to the headings' own 150px (spec correction 124).
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await visit(page, `/docs/components/${slug}`);
+    await expect(page.locator('.stage .app-shell-main:has(> .app-shell-header)').first()).toHaveAttribute(
+      'style',
+      /--page-sticky-top/,
+    );
+    const id = await page.locator('.docs-section > h2[id]').nth(2).getAttribute('id');
+    if (id === null) throw new Error('No heading');
+    await page.locator(`.toc a[href$="#${id}"]`).click();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          (target) => Math.abs((document.getElementById(target)?.getBoundingClientRect().top ?? 0) - 150),
+          id,
+        ),
+      )
+      .toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).scrollPaddingTop)).toBe(
+      'auto',
+    );
+  });
+}
+
+for (const width of [768, 1280]) {
+  test(`Tab through the recipe's review at ${String(width)}px never leaves a focused control under the open tray`, async ({
+    page,
+  }) => {
+    // WCAG 2.4.11 from 768px (spec correction 122): the open panel in the bottom end corner covers the page's end,
+    // and every control focus lands on there, a row's buttons, a date picker's segments and button, the grid's
+    // fields and the save bar's own buttons, is scrolled clear of it.
+    await page.setViewportSize({ width, height: 720 });
+    await visit(page, RECIPE_PAGE);
+    await uploadThroughButton(page, [SAVED_FILE, REVIEW_FILE, LARGE_FILE]);
+    await expect(trayRow(page, 'statement-large')).toHaveAttribute('data-status', 'failed', SETTLE);
+    await expect(trayRow(page, 'receipt-march')).toHaveAttribute('data-status', 'saved', SETTLE);
+    await expect(trayRow(page, 'blurry-receipt')).toHaveAttribute('data-status', 'review', SETTLE);
+    const stage = documentsRecipe(page);
+    await stage.getByRole('link', { name: 'Statement, September', exact: true }).click();
+    await expect(
+      stage.getByRole('heading', { level: 2, name: 'Statement, September', exact: true }),
+    ).toBeVisible();
+    // From the trail's first link, at the top of the review, through every control of the view to the tray.
+    await stage.locator('.breadcrumbs a').first().focus();
+    const panel = page.locator('.upload-tray');
+    await expect(page.locator('.upload-tray-fold')).toHaveAttribute('aria-expanded', 'true');
+    /** How far the focused control reaches under the panel: the overlap's height, 0 when it is clear or in the tray. */
+    const under = (): Promise<number> =>
+      page.evaluate(() => {
+        const active = document.activeElement;
+        const tray = document.querySelector('.upload-tray');
+        if (!(active instanceof HTMLElement) || tray === null || tray.contains(active)) return 0;
+        const box = (active.closest('.field') ?? active).getBoundingClientRect();
+        const cover = tray.getBoundingClientRect();
+        if (box.right <= cover.left || box.left >= cover.right) return 0;
+        return Math.max(0, Math.min(box.bottom, cover.bottom) - Math.max(box.top, cover.top));
+      });
+    let checked = 0;
+    for (let press = 0; press < 160; press += 1) {
+      await page.keyboard.press('Tab');
+      const where = await page.evaluate(() => {
+        const active = document.activeElement;
+        if (active?.closest('.upload-tray')) return 'tray';
+        return active?.closest('.stage')?.querySelector('.page-header') ? 'recipe' : 'other';
+      });
+      if (where === 'tray') break;
+      if (where !== 'recipe') continue;
+      // A pixel for the browser's rounding of a scroll position.
+      await expect.poll(under, { timeout: 2000 }).toBeLessThanOrEqual(1);
+      checked += 1;
+    }
+    // The grid's fields, its date pickers and the save bar's buttons, at least.
+    expect(checked).toBeGreaterThan(10);
+    await expect(panel).toBeVisible();
+  });
+}
+
 test("the review page's save bar asks before Cancel while dirty, and its action moves to the next document and its heading", async ({
   page,
 }) => {

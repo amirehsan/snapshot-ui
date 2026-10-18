@@ -221,7 +221,7 @@
     "path": "dist/index.js",
     "import": "{ AppShell }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
-    "limit": "1.5 kB"
+    "limit": "3 kB"
   },
   {
     "name": "import { Sidebar, SidebarGroup, SidebarItem, SidebarBrand, SidebarSearch, SidebarTrigger } from \"@snapshot-ui/react\"",
@@ -347,7 +347,7 @@
     "path": "dist/index.js",
     "import": "{ DataTable }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "12 kB"
+    "limit": "13 kB"
   },
   {
     "name": "import { SidePanel, SidePanelLayout } from \"@snapshot-ui/react\"",
@@ -446,5 +446,12 @@
     "import": "{ Pagination }",
     "ignore": ["react", "react-dom"],
     "limit": "20 kB"
+  },
+  {
+    "name": "DataTable with React Aria (watch only)",
+    "path": "dist/index.js",
+    "import": "{ DataTable }",
+    "ignore": ["react", "react-dom"],
+    "limit": "100 kB"
   }
 ]

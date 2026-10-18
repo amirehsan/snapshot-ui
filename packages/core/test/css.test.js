@@ -3063,10 +3063,8 @@ describe('src/components/app-shell.css', () => {
     expect(blockAfter(css, '.app-shell-main {')).toContain('outline: none;');
   });
 
-  it("pads the root's scroll by the header's measured height while main holds one, so focus stops clear of it", () => {
-    expect(blockAfter(rules(), ':root:has(.app-shell-main > .app-shell-header) {')).toBe(
-      ' scroll-padding-block-start: var(--app-shell-header-block-size, 0px); ',
-    );
+  it("never pads the root's scroll for the header, which moved the page when focus landed in it (spec correction 121)", () => {
+    expect(rules()).not.toMatch(/scroll-padding|app-shell-header-block-size/);
   });
 
   it('hides the skip link with the clip pattern, and draws it focused as an ink pill above the chrome', () => {
@@ -7124,12 +7122,12 @@ describe('src/components/data-table.css', () => {
   it('keeps a focused row or cell clear of the sticky header and, while it shows, the bar (WCAG 2.4.11)', () => {
     const css = rules();
     const root = blockAfter(css, '.data-table {');
-    // The root's scroll padding holds an AppShell header's height already, and a browser adds a margin to it, so
-    // the margin takes only what the page's offset has beyond it; the grid's own margin keeps the whole offset,
-    // which the key handler reads.
+    // Nothing pads the root's scroll (spec correction 121), so a row's margin holds the page's whole offset, as the
+    // grid's own margin does, which the key handler reads.
     expect(root).toContain(
-      '--data-table-scroll-start: calc(max(0px, var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px)) + var(--size-target));',
+      '--data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--size-target));',
     );
+    expect(css).not.toContain('app-shell-header-block-size');
     expect(blockAfter(css, '.data-table-table {')).toContain(
       'scroll-margin-block-start: var(--page-sticky-top, 0px);',
     );
@@ -7377,14 +7375,11 @@ describe('src/components/data-table.css', () => {
       ),
     ).toBe(true);
     // An item keeps clear of the page offset and the head, and of its day heading where there are groups.
-    // Less what the root's scroll padding holds of the page offset, as the table face's.
     expect(blockAfter(css, '.data-table-list {')).toContain(
-      '--data-table-scroll-start: calc(max(0px, var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px)) + var(--data-table-list-offset, 0px));',
+      '--data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));',
     );
     const grouped = blockAfter(css, '.data-table-list:has(.data-table-section) {');
-    expect(grouped).toContain(
-      'max(0px, var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px)) + var(--data-table-list-offset, 0px)',
-    );
+    expect(grouped).toContain('calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px) +');
     expect(grouped).toContain(
       'var(--spacing-peer) + var(--spacing-part) + var(--text-overline) * var(--text-overline--line-height)',
     );
@@ -8389,22 +8384,23 @@ describe('src/components/upload-tray.css', () => {
     ]);
   });
 
-  it("reserves the phone bar's room under the page and in the root's scroll padding, from tokens, while it shows", async () => {
+  it("reserves the phone bar's room under the page from tokens while it shows, and never pads the root's scroll", async () => {
     const { tokens } = await import('../dist/tokens.js');
     const narrow = blockAfter(rules(), `@media (width < ${tokens.breakpoint.sm.value})`);
-    const root = blockAfter(narrow, ':root:has(.upload-tray-bar) {');
-    expect(root).toContain(
-      '--upload-tray-reserve: calc(max(var(--size-field), var(--size-target)) + var(--spacing-inset));',
-    );
+    // A focused control is scrolled clear by the tray's script (spec correction 121).
+    expect(rules()).not.toContain('scroll-padding');
+    expect(rules()).not.toContain(':root:has(.upload-tray-bar)');
     // In the bottom edge's order: the tab bar's reserve, a sticky bar's offset, then the tray.
-    expect(root).toContain(
-      'scroll-padding-block-end: calc(var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) + var(--upload-tray-reserve));',
-    );
     expect(blockAfter(narrow, '.app-shell:has(> .upload-tray-bar) .app-shell-workspace {')).toContain(
       'padding-block-end: calc(var(--app-shell-inset-block-end) + var(--save-bar-offset, 0px) + max(var(--size-field), var(--size-target)) + var(--spacing-inset));',
     );
     // Border-box, so the reserve is the bar's whole height.
     expect(blockAfter(rules(), '.upload-tray-bar {')).toContain('box-sizing: border-box;');
+    // The gap a focused control keeps above either face, which the tray's script reads.
+    expect(blockAfter(rules(), '.upload-tray-bar {')).toContain(
+      'scroll-margin-block-end: var(--spacing-inset);',
+    );
+    expect(blockAfter(rules(), '.upload-tray {')).toContain('scroll-margin-block-end: var(--spacing-inset);');
     // Nothing reserves room on a wide screen, where the panel sits in the corner.
     expect(blockAfter(rules(), `@media (width >= ${tokens.breakpoint.sm.value})`)).not.toContain('reserve');
   });
@@ -8737,22 +8733,13 @@ describe('src/components/save-bar.css', () => {
     expect(blockAfter(rules(), ':root:has(.save-bar), .app-shell:has(.save-bar) {')).toContain(OFFSET);
   });
 
-  it("pads the root's scroll by the tab bar, the bar and the phone tray's reserve, in the bottom edge's order, and a gap", () => {
-    expect(blockAfter(rules(), ':root:has(.save-bar) {')).toContain(
-      'scroll-padding-block-end: calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) + var(--upload-tray-reserve, 0px) + var(--spacing-inset));',
-    );
+  it("never pads the root's scroll, which moved the page when focus landed on the stuck bar (spec correction 121)", () => {
+    expect(rules()).not.toContain('scroll-padding');
   });
 
   it("holds the page's sticky offset and the focus gap in the bar's scroll margin, for its scroll clear to read", () => {
     expect(blockAfter(outsideForcedColors(rules()), '.save-bar {')).toContain(
       'scroll-margin-block: var(--page-sticky-top, 0px) var(--spacing-inset);',
-    );
-  });
-
-  it("loads after upload-tray.css, so the root's scroll padding is the save bar's sum", () => {
-    const entry = read('src/styles.css');
-    expect(entry.indexOf("'./components/save-bar.css'")).toBeGreaterThan(
-      entry.indexOf("'./components/upload-tray.css'"),
     );
   });
 

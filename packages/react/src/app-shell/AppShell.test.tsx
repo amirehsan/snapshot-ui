@@ -246,9 +246,8 @@ describe('AppShell', () => {
     }
 
     const stickyTop = (element: HTMLElement): string => element.style.getPropertyValue('--page-sticky-top');
-    /** The header's height on the root element, which the root's scroll padding reads. */
-    const headerSize = (): string =>
-      document.documentElement.style.getPropertyValue('--app-shell-header-block-size');
+    /** Every inline style on the root element: the shell writes none (spec correction 121). */
+    const rootStyle = (): string => document.documentElement.getAttribute('style') ?? '';
 
     afterEach(() => {
       vi.unstubAllGlobals();
@@ -262,7 +261,6 @@ describe('AppShell', () => {
       expect(observed).toEqual([wrapper]);
       // Nothing is written before the first measurement, as the server's HTML has nothing.
       expect(stickyTop(main)).toBe('');
-      expect(headerSize()).toBe('');
       report(120.5);
       expect(stickyTop(main)).toBe('120.5px');
       expect(stickyTop(root(container))).toBe('');
@@ -273,15 +271,15 @@ describe('AppShell', () => {
       expect(stickyTop(main)).toBe('');
     });
 
-    it('writes the height on the root element for its scroll padding, and removes it as the shell unmounts', () => {
+    it('writes nothing on the root element, whose scroll is never padded for the header', () => {
       const { report } = stubResizeObserver();
+      const before = rootStyle();
       const { unmount } = render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
       report(96);
-      expect(headerSize()).toBe('96px');
-      report(72);
-      expect(headerSize()).toBe('72px');
+      expect(rootStyle()).toBe(before);
+      expect(document.documentElement.style.getPropertyValue('--app-shell-header-block-size')).toBe('');
       unmount();
-      expect(headerSize()).toBe('');
+      expect(rootStyle()).toBe(before);
     });
 
     it("takes an offset on the shell's style as the first paint's estimate, which the measurement replaces", () => {
@@ -322,7 +320,7 @@ describe('AppShell', () => {
       expect(observed).toEqual([]);
       expect(stickyTop(root(container))).toBe('64px');
       expect(stickyTop(screen.getByRole('main'))).toBe('');
-      expect(headerSize()).toBe('');
+      expect(rootStyle()).toBe('');
     });
 
     it('measures whatever an ancestor declares, since the header slot is what sticks', () => {
@@ -338,7 +336,7 @@ describe('AppShell', () => {
       }
     });
 
-    it("lets a nested shell write its own page's offset, and leaves the root's to the outer shell", () => {
+    it("lets a nested shell write its own page's offset beside the outer shell's", () => {
       const observers: ((height: number) => void)[] = [];
       class Stub {
         constructor(private readonly callback: ResizeObserverCallback) {}
@@ -375,22 +373,21 @@ describe('AppShell', () => {
       };
       expect(stickyTop(mainOf('outer'))).toBe('96px');
       expect(stickyTop(mainOf('inner'))).toBe('56px');
-      expect(headerSize()).toBe('96px');
       rerender(
         <AppShell mainId="outer" header={<header>Outer</header>}>
           page
         </AppShell>,
       );
-      expect(headerSize()).toBe('96px');
+      expect(stickyTop(mainOf('outer'))).toBe('96px');
+      expect(rootStyle()).toBe('');
       unmount();
-      expect(headerSize()).toBe('');
     });
 
     it('renders with no ResizeObserver, which a test environment may lack', () => {
       vi.stubGlobal('ResizeObserver', undefined);
       render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
       expect(stickyTop(screen.getByRole('main'))).toBe('');
-      expect(headerSize()).toBe('');
+      expect(rootStyle()).toBe('');
     });
   });
 

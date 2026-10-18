@@ -191,6 +191,8 @@ import { AppShell, UploadTray } from '@snapshot-ui/react';
 
 The panel is a region named by its title, which a screen reader reaches with its landmark keys; on a phone the bar is a region named "Uploads" holding the button that opens a dialog titled by the same title, and once everything has settled a Clear; the dialog's own close button is named for closing it, apart from Clear and Cancel uploads at its foot. The list is a plain list in the page's tab order: each row reads its name or its link, its status in words with the reason, its bar while it moves, and its buttons, named for their file, such as "Retry invoice.pdf".
 
+The tray never hides what has focus. Once the page has loaded, a control on the page that focus lands on under the panel, open or folded, or under the phone's bar, is scrolled 16px clear of it, by Tab, Shift+Tab or a script's `focus()`; a control beside the panel, not under it, stays where it is.
+
 The tray says three things politely, and nothing else:
 
 - once, as a batch starts, how many files it holds ("Uploading 5 files");
