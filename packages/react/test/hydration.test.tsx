@@ -390,7 +390,8 @@ const HYDRATED: [
     },
   ],
   [
-    // Nothing is a collection, so nothing is drawn again: both faces are the server's real links, kept as they were.
+    // Nothing is a collection, so nothing is drawn again: the server's real links, one per crumb above the current
+    // page, which the stylesheet draws as either face, kept as they were.
     'Breadcrumbs in a PageHeader',
     <PageHeader
       title="Receipts, 2026"
@@ -405,7 +406,6 @@ const HYDRATED: [
     (container) => {
       expect([...container.querySelectorAll('a')].map((link) => link.getAttribute('href'))).toEqual([
         '/',
-        '/documents',
         '/documents',
       ]);
       expect(container.querySelector('.breadcrumbs-current')).toHaveAttribute('aria-current', 'page');

@@ -895,7 +895,8 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     ['--save-bar-offset', 'alertdialog', 'style='],
   ],
   [
-    // Both faces, as real links: the list with the current page last, and the back link to the parent.
+    // Real links, one per crumb above the current page, the current page last; the parent's link holds the phone
+    // face's back chevron and words, which the stylesheet draws under 768px.
     'Breadcrumbs',
     <Breadcrumbs>
       <Breadcrumb href="/">Home</Breadcrumb>
@@ -908,8 +909,8 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '<a class="link breadcrumbs-link"',
       'href="/documents"',
       '<span class="breadcrumbs-current" aria-current="page">',
-      '<a class="link breadcrumbs-back"',
-      '>Back to Documents<',
+      '<span class="breadcrumbs-back-words">Back to </span>',
+      '<span class="breadcrumbs-text" title="Documents">Documents</span>',
     ],
     ['role="link"', 'aria-disabled', 'data-collection'],
   ],
