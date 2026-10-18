@@ -1,6 +1,0 @@
----
-'@snapshot-ui/core': minor
-'@snapshot-ui/react': minor
----
-
-Add DatePicker: one date, typed into segments or chosen on the calendar in a popover (on a phone too), its button named "Choose date", with your named `presets` above the calendar, each a single day you compute. ISO dates in and out (`value` or `defaultValue`, and `onChange` with null once cleared), Gregorian whatever calendar it shows, a hidden input under `name`, `minValue`, `maxValue`, `isDateUnavailable` and `validate`, and `today` from your user's time zone. A year is held back while it is typed or erased, so 2, 20 and 202 never reach `onChange`; erasing it, or leaving the field with a year cut short, sends null, so a day before the year 1000 cannot be entered. Before hydration it shows `valueLabel` in its frame at its final size, so pass the date as you write it; in a grid name it with `aria-label` or `aria-labelledby`. In a DataTable cell its segments keep their arrows, and Escape returns focus to the row. It shares DateRangePicker's frame and Calendar's days and presets. Exports `DatePicker` and the types `DatePickerProps`, `DatePickerBaseProps`, `DatePickerLabels` and `DatePreset`. `date-picker.css` in `styles.css`.
