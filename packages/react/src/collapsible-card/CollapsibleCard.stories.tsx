@@ -3,6 +3,7 @@ import { useState, type ReactElement } from 'react';
 import { expect, waitFor } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
+import { nestedCardPixels } from '../stories/corner';
 import { firstLineOffset, lineCount, tokenColor, tokenPixels } from '../stories/paint';
 import { TextField } from '../text-field';
 import { CollapsibleCard, type CollapsibleCardProps } from './CollapsibleCard';
@@ -215,8 +216,8 @@ export const WithActions: Story = {
 };
 
 /**
- * In a card or in another collapsible card, the corner steps down to the surface radius and takes an
- * outline, as a nested card does. An inner card keeps its own fold.
+ * In a card or in another collapsible card, the corner is concentric with the outer card's and the card takes
+ * an outline, as a nested card does. An inner card keeps its own fold.
  */
 export const Nested: Story = {
   render: (args) => (
@@ -249,7 +250,7 @@ export const Nested: Story = {
     await expect(radius(byTestId(canvasElement, 'outer'))).toBe(tokenPixels('--radius-stadium'));
     for (const id of ['in-card', 'inner']) {
       const nested = byTestId(canvasElement, id);
-      await expect(radius(nested)).toBe(tokenPixels('--radius-surface'));
+      await expect(radius(nested)).toBe(nestedCardPixels());
       await expect(getComputedStyle(nested).borderTopColor).not.toBe('rgba(0, 0, 0, 0)');
     }
     // The outer card is open and the inner one keeps its own fold.

@@ -272,6 +272,16 @@
     border-top: 1px solid var(--color-divider);
   }
 
+  /* A list, a code block or a props table set in a card is concentric with it, as a card in a card is: the
+     card's radius less its edge and padding, or the micro step where that runs out (Nested radii in
+     docs/design-system.md). */
+  .card :is(.settings-list, .code, .props) {
+    border-radius: max(
+      var(--radius-micro),
+      calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad))
+    );
+  }
+
   /*
    * A settings row, drawn as the mockup draws it: the label at the h4 step over its hint at the
    * start, and the track at the end, centred on the two. The label row and the switch's own label

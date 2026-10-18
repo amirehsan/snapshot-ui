@@ -1,8 +1,8 @@
 /*
  * FileDropZone and PageDropZone: files dropped on a field or on the whole page, derived in docs/design-system.md
- * ("FileDropZone"). The inline box is the field's control: the surface radius, the nested-radii table's drop
- * zone step; a 2px dashed boundary edge, above the 3:1 a control's edge needs on canvas and on lifted; no fill
- * of its own, so it takes its holder's; a slate upload icon over the hint in ink and the zone's button. Under
+ * ("FileDropZone"). The inline box is the field's control: the surface radius, a field frame's step, which it
+ * keeps in a holder's corner, where a control moves out of the curve instead; a 2px dashed boundary edge, above
+ * the 3:1 a control's edge needs on canvas and on lifted; no fill of its own, so it takes its holder's; a slate upload icon over the hint in ink and the zone's button. Under
  * 20rem of its own box the icon sits beside the line, for a narrow form column. A drag holding files turns the
  * edge solid ink over the 5% ink wash and puts the drop line in place of the hint; invalid outranks it with the
  * error edge, dashed; disabled is taupe. A click anywhere on the box opens the picker, so it takes the pointer

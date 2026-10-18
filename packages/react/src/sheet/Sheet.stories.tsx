@@ -7,6 +7,7 @@ import { Checkbox, CheckboxGroup } from '../checkbox';
 import { Link } from '../link';
 import { PickerOption } from '../picker';
 import { Select } from '../select';
+import { CLEAR_OF_FOOT, frameAround } from '../stories/corner';
 import { tokenColor, tokenPixels } from '../stories/paint';
 import { TextField } from '../text-field';
 import { Text } from '../typography';
@@ -244,13 +245,15 @@ export const InDarkScope: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+      style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
     >
       <Card>
         <CardBody>
           <p>A card in a dark block.</p>
           <SheetTrigger>
-            <Button variant="secondary">Filter transactions</Button>
+            <Button variant="secondary" style={CLEAR_OF_FOOT}>
+              Filter transactions
+            </Button>
             <Sheet {...args} />
           </SheetTrigger>
         </CardBody>

@@ -181,22 +181,25 @@ export const Open: Story = {
     await expect(within(panel).getAllByRole('listitem')).toHaveLength(5);
     // The phone's bar is not drawn at this width.
     await expect(getComputedStyle(only('.upload-tray-bar')).display).toBe('none');
-    // Concentric corners in Rounded, only in the panel's corner regions: Close, the header's trailing button, 8px
-    // in from the inner edge, takes the panel's 24px less its 1px edge and that 8px, 15px; so does the last row's
-    // trailing Remove, whose real gap is the row's 16px padding less the actions' 8px pull-in.
-    const radius = (element: Element): string => getComputedStyle(element).borderTopLeftRadius;
-    await expect(radius(within(panel).getByRole('button', { name: 'Close' }))).toBe('15px');
-    await expect(radius(within(panel).getByRole('button', { name: 'Remove receipt-april.pdf' }))).toBe(
-      '15px',
-    );
-    // Far from every corner, the rest keep their own pill: the fold button beside Close, a middle row's Cancel
-    // and the bar's track.
-    const pill = radius(within(panel).getByRole('button', { name: 'Upload details' }));
-    await expect(Number.parseFloat(pill)).toBeGreaterThan(100);
-    await expect(radius(within(panel).getByRole('button', { name: 'Cancel invoice-0142.pdf' }))).toBe(pill);
+    // Every button keeps its own round; the two in the panel's end corners move down out of its curve instead,
+    // so they stay on one end edge: Close under the header's block-start padding, the last row's Remove over its
+    // row's block-end padding, each at least the panel's radius from the outer edge, its 1px edge included.
+    const radius = (element: Element): number =>
+      Number.parseFloat(getComputedStyle(element).borderTopLeftRadius);
+    const close = within(panel).getByRole('button', { name: 'Close' }).getBoundingClientRect();
+    const remove = within(panel)
+      .getByRole('button', { name: 'Remove receipt-april.pdf' })
+      .getBoundingClientRect();
+    const corner = Number.parseFloat(getComputedStyle(panel).borderTopRightRadius);
+    await expect(close.top - box.top).toBeGreaterThanOrEqual(corner - 0.5);
+    await expect(box.bottom - remove.bottom).toBeGreaterThanOrEqual(corner - 0.5);
+    await expect(close.right).toBeCloseTo(remove.right, 0);
+    for (const name of ['Close', 'Remove receipt-april.pdf', 'Upload details', 'Cancel invoice-0142.pdf']) {
+      await expect(radius(within(panel).getByRole('button', { name }))).toBeGreaterThan(100);
+    }
     const track = panel.querySelector('.upload-row .progress-bar-track');
     if (!track) throw new Error('No track');
-    await expect(radius(track)).toBe(pill);
+    await expect(radius(track)).toBeGreaterThan(100);
   },
 };
 
@@ -212,7 +215,14 @@ export const Collapsed: Story = {
       'aria-expanded',
       'false',
     );
-    await expect(window.innerHeight - panel.getBoundingClientRect().bottom).toBeCloseTo(16, 0);
+    const box = panel.getBoundingClientRect();
+    await expect(window.innerHeight - box.bottom).toBeCloseTo(16, 0);
+    // Folded, the panel is a single row: its trailing button, the fold here, keeps its own round and moves in,
+    // at least the panel's radius from its end edge, its 1px edge included.
+    const fold = within(panel).getByRole('button', { name: 'Upload details' });
+    const corner = Number.parseFloat(getComputedStyle(panel).borderTopRightRadius);
+    await expect(box.right - fold.getBoundingClientRect().right).toBeGreaterThanOrEqual(corner - 0.5);
+    await expect(Number.parseFloat(getComputedStyle(fold).borderTopLeftRadius)).toBeGreaterThan(100);
   },
 };
 

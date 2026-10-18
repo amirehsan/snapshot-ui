@@ -91,6 +91,8 @@
     max-width: 44ch;
   }
 
+  /* A pill padded 6px inside its 1px edge: the copy button in it is concentric, a circle in Rounded and 5px in
+     Soft. */
   .install {
     display: flex;
     align-items: center;
@@ -110,6 +112,10 @@
     border-radius: var(--radius-micro);
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
+  }
+
+  .install .icon-button {
+    border-radius: max(0px, calc(var(--radius-pill) - 7px));
   }
 
   .install b {
@@ -342,18 +348,23 @@
   }
 
   .axis-tile {
+    --axis-tile-pad: 28px;
+
     display: grid;
     gap: 20px;
-    padding: 28px;
+    padding: var(--axis-tile-pad);
     border: 1px solid var(--color-frame);
     border-radius: var(--radius-stadium);
     background-color: var(--color-canvas);
     color: var(--color-ink);
   }
 
+  /* The card sits in the tile's bottom corners, so it is concentric with the tile: the tile's radius less its
+     edge and padding, or the micro step where that runs out. The card is a holder too and names its own
+     corner, so this reads the tile's tokens, not the holder properties. */
   .axis-tile .card {
     padding: 22px;
-    border-radius: var(--radius-surface);
+    border-radius: max(var(--radius-micro), calc(var(--radius-stadium) - 1px - var(--axis-tile-pad)));
   }
 
   .axis-label {
@@ -371,10 +382,13 @@
     gap: 24px;
   }
 
+  /* The chips wrap to the group's last row, which would put a pill in the card's bottom start corner, so the
+     group pads its foot past the card's curve and no chip sits inside it. */
   .catalog-group {
     display: grid;
     gap: 18px;
     align-content: start;
+    padding-block-end: max(var(--spacing-card), calc(var(--radius-stadium) - 1px));
   }
 
   .chips {
@@ -509,6 +523,12 @@
 
   .frame-card-offset {
     margin-top: 64px;
+  }
+
+  /* Save ends the card's body inside its bottom end curve, so the row keeps the card's corner inset under it,
+     and the button keeps its own shape and its place on the column's end edge. */
+  .frame-card .push-end {
+    margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
   .push-end {
@@ -783,11 +803,11 @@
     }
 
     .axis-tile {
-      padding: 20px;
+      --axis-tile-pad: 20px;
     }
 
     .catalog .card {
-      padding: 24px;
+      padding: 24px 24px max(24px, calc(var(--radius-stadium) - 1px));
     }
 
     .cta {

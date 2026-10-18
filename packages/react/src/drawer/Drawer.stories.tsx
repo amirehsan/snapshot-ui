@@ -7,6 +7,7 @@ import { Card, CardBody } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { DialogTrigger } from '../dialog';
 import { Link } from '../link';
+import { CLEAR_OF_FOOT, frameAround } from '../stories/corner';
 import { firstLineOffset, tokenColor } from '../stories/paint';
 import { Switch } from '../switch';
 import { Text } from '../typography';
@@ -221,13 +222,15 @@ export const InDarkScope: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+      style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
     >
       <Card>
         <CardBody>
           <p>A card in a dark block.</p>
           <DialogTrigger>
-            <Button variant="secondary">Open the menu</Button>
+            <Button variant="secondary" style={CLEAR_OF_FOOT}>
+              Open the menu
+            </Button>
             <Drawer {...args} />
           </DialogTrigger>
         </CardBody>

@@ -50,9 +50,7 @@ function InCard({
           width,
           paddingInline: 0,
           paddingBlock: 'var(--spacing-part)',
-          // The card names its corner, so the buttons in its corners are concentric with it.
-          '--holder-radius': 'var(--radius-stadium)',
-          '--holder-border': '1px',
+          // The card's padding beside the rows, none, which it names for what reads it.
           '--holder-pad': '0px',
         } as CSSProperties
       }
@@ -89,14 +87,11 @@ export const Statuses: Story = {
       await expect(width).toBeGreaterThanOrEqual(40);
       await expect(height).toBeGreaterThanOrEqual(40);
     }
-    // Concentric with the card the story names as holder, in Rounded, only in its corner regions: the first and
-    // last rows' trailing buttons take its 40px less its 1px edge and their real 8px gap, 31px. Every other
-    // button is far from a corner and keeps its pill.
-    const corners = [rows[0], rows[5]].map((row) => row?.querySelector('.upload-row-actions > :last-child'));
+    // Every button keeps its own round, the first and last rows' trailing buttons in the card's corners too: a
+    // control is never given a corner of the card's, and these are circles in Rounded and clear of the card's
+    // smaller curve in Soft.
     for (const button of buttons) {
-      const radius = getComputedStyle(button).borderTopLeftRadius;
-      if (corners.includes(button)) await expect(radius).toBe('31px');
-      else await expect(Number.parseFloat(radius)).toBeGreaterThan(100);
+      await expect(Number.parseFloat(getComputedStyle(button).borderTopLeftRadius)).toBeGreaterThan(100);
     }
     // The progress at the status line's end, the bar a part step under it, spanning the text column.
     const uploading = rows[1];

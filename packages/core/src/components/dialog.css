@@ -9,7 +9,15 @@
     padding: var(--overlay-inset);
   }
 
+  /* A holder: its corner, edge and padding are named for the parts that sit in its corners, and so is the
+     inset that keeps a control clear of its corner curve: the padding, or the radius less the edge where
+     that is more (39px in Rounded, the padding in Soft and Square). */
   .dialog {
+    --holder-radius: var(--radius-stadium);
+    --holder-border: 1px;
+    --holder-pad: var(--spacing-separate);
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
+
     position: relative;
     display: flex;
     flex-direction: column;
@@ -18,9 +26,12 @@
        leave 100% nothing to cap. With no minimum the row is the scrim's, and a long body scrolls. */
     min-height: 0;
     max-height: 100%;
-    padding: var(--spacing-separate);
-    border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-stadium);
+    /* The foot pads to the corner inset, so the last action, or whatever ends the body, sits clear of the
+       bottom corners' curve while its end stays on the content column's edge: 39px in Rounded, the padding in
+       Soft and Square. */
+    padding: var(--holder-pad) var(--holder-pad) var(--holder-corner-inset);
+    border: var(--holder-border) solid var(--color-hairline);
+    border-radius: var(--holder-radius);
     background-color: var(--color-float);
     box-shadow: var(--shadow-dramatic);
     transition:

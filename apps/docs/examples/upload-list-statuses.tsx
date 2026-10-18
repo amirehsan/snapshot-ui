@@ -5,17 +5,15 @@ import { useState, type CSSProperties, type ReactElement } from 'react';
 import { UPLOADS } from './uploads-data';
 
 /**
- * The card is the list's rounded holder, and names its corner so the buttons in its corners, the first and last
- * rows' trailing buttons, are concentric with it: its radius, its 1px edge, and its padding beside the rows,
- * none, since the rows run to its sides.
+ * The rows run to the card's sides, so the card names its padding beside them, none, for what reads it. The
+ * buttons in its corners, the first and last rows' trailing buttons, keep their own round: circles in Rounded,
+ * and clear of the card's smaller curve in Soft.
  */
 const HOLDER = {
   width: '100%',
   maxWidth: '28rem',
   paddingInline: 0,
   paddingBlock: 'var(--spacing-part)',
-  '--holder-radius': 'var(--radius-stadium)',
-  '--holder-border': '1px',
   '--holder-pad': '0px',
 } as CSSProperties;
 

@@ -24,7 +24,7 @@ One family, Sofia Sans. Body text is weight 450, and headings are 500 with tight
 
 ## Corners
 
-Corners come from a gapped scale: 6, 20, 24 and 40 pixels, pills and circles, and nothing in between. Rounded inside rounded steps down one place, so a field inside a card is never as round as the card.
+Corners come from a gapped scale: 6, 20, 24 and 40 pixels, pills and circles, and nothing in between. Rounded inside rounded is concentric: a part in a holder's corner takes the holder's radius less the gap between them, so the two curves share a center and the band between them keeps one width. A surface, a row or a frame that fills to the holder's edge takes `max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)))`; a button or another control keeps its own shape and moves out of the corner, to the holder's `--holder-corner-inset`, rather than taking one smaller corner. It moves down, so a trailing action stays on the end edge of the fields above it; only a single-row holder, such as a toast, moves it inward. Never copy a holder's radius onto what it holds.
 
 </Section>
 

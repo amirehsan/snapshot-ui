@@ -23,7 +23,13 @@
     outline: none;
   }
 
+  /* A holder: its corner and edge are named for the parts in its corners. The padding is its parts' own. */
   .side-panel {
+    --holder-radius: var(--radius-stadium);
+    --holder-border: 1px;
+    --holder-pad: var(--spacing-peer);
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
+
     position: sticky;
     inset-block-start: calc(var(--page-sticky-top, 0px) + var(--spacing-inset));
     box-sizing: border-box;
@@ -32,6 +38,7 @@
     inline-size: 24rem;
     max-block-size: calc(100dvh - var(--page-sticky-top, 0px) - 2 * var(--spacing-inset));
     margin-block-start: var(--spacing-inset);
+    /* The rail's surface, declaration for declaration, which the holder properties above name. */
     border: 1px solid var(--color-hairline);
     border-radius: var(--radius-stadium);
     background-color: var(--color-float);
@@ -122,8 +129,10 @@
     outline-offset: calc(-1 * var(--focus-ring-width));
   }
 
+  /* A body that ends the panel ends at the corner inset, so a field or a button at its foot sits clear of the
+     panel's bottom corners: 39px in Rounded, the peer step in Soft and Square. */
   .side-panel-body:last-child {
-    padding-block-end: var(--spacing-peer);
+    padding-block-end: var(--holder-corner-inset);
   }
 
   .side-panel-sheet .sheet-body {
@@ -137,7 +146,9 @@
     justify-content: flex-end;
     gap: var(--spacing-part);
     margin-inline: var(--spacing-peer);
-    padding-block: var(--spacing-inset) var(--spacing-peer);
+    /* The foot pads to the corner inset, so the last action sits clear of the panel's bottom end curve and
+       its end stays on the fields' edge above: 39px in Rounded, the peer step in Soft and Square. */
+    padding-block: var(--spacing-inset) var(--holder-corner-inset);
     border-block-start: 1px solid var(--color-divider);
   }
 

@@ -5,6 +5,8 @@
  * contract in field.css says, and invalid is declared last so it outranks
  * changed. `.input-button` is a button inside a field: the search field's
  * clear button and the button of the combo box and of the multi-select.
+ * `--input-radius` is the field's corner, the pill unless a holder sets it
+ * (a filter row in a popup does), and the button inside reads it.
  */
 @layer components {
   .input {
@@ -18,7 +20,7 @@
     padding-block: 0;
     padding-inline: 1.5rem;
     border: 1px solid var(--color-boundary);
-    border-radius: var(--radius-pill);
+    border-radius: var(--input-radius, var(--radius-pill));
     background-color: var(--color-raised);
     color: var(--color-ink);
     font-family: var(--font-sans);
@@ -78,8 +80,9 @@
     padding-inline-end: calc(1.5rem + 0.375rem + var(--spacing-part));
   }
 
-  /* A button inside a field: a ghost circle a field step smaller than the field (36px, 24px compact), 6px in
-     from the field's inline end, with a 16px slate glyph that turns ink. Hit at the target in both axes by the
+  /* A button inside a field: a ghost a field step smaller than the field (36px, 24px compact), 6px in from the
+     field's inline end, with a 16px slate glyph that turns ink. Its corner is concentric with the field's, the
+     field's radius less those 6px: a circle in Rounded, 6px in Soft. Hit at the target in both axes by the
      formula every control shares, so a compact one is still hit at 40px; the field pads its text clear of it,
      and the control around both is positioned. */
   .input-button {
@@ -94,7 +97,7 @@
     margin-block: auto;
     padding: 0;
     border: 0;
-    border-radius: var(--radius-pill);
+    border-radius: max(0px, calc(var(--input-radius, var(--radius-pill)) - 0.375rem));
     background-color: transparent;
     color: var(--color-slate);
     cursor: pointer;

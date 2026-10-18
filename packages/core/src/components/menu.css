@@ -1,6 +1,7 @@
 /*
  * Menu: the rows every list popup shares (the listbox of the choice controls inherits them). A
- * 24px popup holds 20px rows: the control step, 40px tall (44px on touch), 8px by 12px of padding,
+ * 24px popup holds concentric rows, its radius less its 1px edge and the list's 8px: 15px in Rounded,
+ * 3px in Soft. A row is 40px tall (44px on touch), 8px by 12px of padding,
  * 4px apart so two washes keep a seam, an action-step label, a slate description, a 16px icon, an
  * end value and a key chip at the end and a check whose room every row of a selectable list keeps.
  * Single selection is the ink pill with a check; multiple is the check alone. Derived in
@@ -54,14 +55,20 @@
     background-color: var(--color-divider);
   }
 
+  /* A row sits in the popup's corners at the top and bottom of the list, so every row takes the popup's
+     radius less the gap, the 1px edge and the list's padding; one row never differs from the next. The
+     popup is a surface popover or the command palette, both the surface corner, so the value is written on
+     the tokens. It is named, so the key chip in the row can step down from it. */
   .menu-item {
+    --menu-item-radius: max(0px, calc(var(--radius-surface) - 1px - var(--spacing-part)));
+
     display: flex;
     flex: none;
     align-items: center;
     gap: 0.75rem;
     min-height: 40px;
     padding: 0.5rem 0.75rem;
-    border-radius: var(--radius-control);
+    border-radius: var(--menu-item-radius);
     color: var(--color-ink);
     text-decoration: none;
     cursor: pointer;
@@ -116,11 +123,13 @@
 
   /* The one key look (Kbd), at the row's end. Keys read left to right in any direction, so a chip of two
      keys in a right-to-left row does not draw its comma or its modifier on the other side. */
+  /* It keeps the micro step it has everywhere, but never a corner rounder than the row's less the row's
+     12px of padding, so it is concentric with a 15px row and square in a 3px one. */
   .menu-item-shortcut {
     flex: none;
     margin-inline-start: auto;
     padding: 0.125rem 0.375rem;
-    border-radius: var(--radius-micro);
+    border-radius: min(var(--radius-micro), max(0px, calc(var(--menu-item-radius) - 0.75rem)));
     background-color: var(--color-bone);
     color: var(--color-slate);
     font-family: var(--font-sans);

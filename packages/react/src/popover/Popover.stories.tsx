@@ -5,6 +5,7 @@ import { Button } from '../button';
 import { Card, CardBody } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { DialogTrigger } from '../dialog';
+import { CLEAR_OF_FOOT, frameAround } from '../stories/corner';
 import { tokenColor, tokenPixels } from '../stories/paint';
 import { Popover, type PopoverProps } from './Popover';
 
@@ -184,13 +185,13 @@ export const InDarkScope: Story = {
     <div
       data-theme="dark"
       data-testid="dark-scope"
-      style={{ padding: 24, borderRadius: 'var(--radius-stadium)', background: 'var(--color-canvas)' }}
+      style={{ ...frameAround(24), background: 'var(--color-canvas)' }}
     >
       <Card>
         <CardBody>
           <p>A card in a dark block.</p>
           <div data-shape="soft">
-            <Opened {...args} />
+            <Opened {...args} triggerStyle={CLEAR_OF_FOOT} />
           </div>
         </CardBody>
       </Card>
