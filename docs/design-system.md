@@ -4902,13 +4902,27 @@ the whole page.
 
 **The header's height.** Once hydrated, the shell measures its header
 wrapper and writes the height as `--page-sticky-top` on `<main>`, under
-which the page's sticky parts stick, and the outermost shell writes it as
-`--app-shell-header-block-size` on the root element, whose
-`scroll-padding-block-start` it becomes while main holds a header, so a
-control that focus scrolls to stops clear of the stuck header (WCAG
-2.4.11). Nothing is measured for the first paint; an estimate on the
-shell's own `style` holds until the measurement, and `measuresHeader={false}`
-leaves the offset to the app (spec corrections 94 and 95).
+which the page's sticky parts stick. Nothing is measured for the first
+paint; an estimate on the shell's own `style` holds until the measurement,
+and `measuresHeader={false}` leaves the offset to the app (spec correction
+94). Nothing is written on the root element and the root's scroll is never
+padded (spec correction 121, replacing correction 95's
+`--app-shell-header-block-size`): a browser applies root scroll padding to
+every focus scroll, and Shift+Tab onto the stuck header's own button
+scrolled the page up by 340px, while a shell in a docs example, as the
+page's outermost, added its header to the docs' 150px heading offsets.
+
+**Focus clear of the header** (WCAG 2.4.11, spec correction 121). The
+header wrapper registers itself as top chrome with the shared focus clear,
+`utils/focus-clear.ts`, while the shell has a header, whether or not it
+measures. Two frames after a focus, a control wholly or partly under the
+stuck header is scrolled down by the least that brings its top to the
+header's bottom, with no gap, the edge DataTable's rows and a SidePanel
+stick at; a control in the header itself is pinned there, so focus on it
+never moves the page. `FocusClearOfHeader` and `FocusInStuckHeader` pin
+both in three engines. `{ AppShell }` measures 2.07 kB with the shared
+focus clear, over its 1.5 kB limit, so the rule rounds up to 2.5 kB and
+adds 0.5 kB: 3 kB.
 
 **The skip link** is the first tab stop, clipped out of sight until it is
 focused. Focused, it is an ink pill with canvas text in the `--text-action`
@@ -8529,11 +8543,9 @@ correction 43).
 spec correction 42). A focused row must not end hidden behind the sticky
 header row or the bulk-action bar. Rows and body cells carry
 `scroll-margin-block` of `--data-table-scroll-start`,
-`--page-sticky-top` plus the 40px header row, less what the root's scroll
-padding already holds of an AppShell header (`max(0px,
-var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px))`,
-since a browser adds the margin to the padding; documents plan, spec
-correction 95), and
+`--page-sticky-top` plus the 40px header row (the root's scroll is never
+padded, so the margin holds the whole offset; documents plan, spec
+correction 121, which undoes correction 95's subtraction), and
 `--data-table-scroll-end`, while the bar shows (`.data-table:has(>
 .data-table-bar)`) the bar's inset and height,
 `--app-shell-inset-block-end` plus 16px plus `--size-control`, two part
@@ -9091,7 +9103,11 @@ React as a child it cannot draw (spec correction 118).
 upload tray and the toasts sit above it; with a save bar on the page too,
 each holder keeps both bars' heights and writes the taller (spec
 correction 81). It sets no root scroll padding: the rows keep their own
-scroll margin above it.
+scroll margin above it, and the bar registers itself as bottom chrome with
+the shared focus clear (spec correction 121), so a control elsewhere in
+the table's box that focus lands on under the stuck bar comes clear of
+it. Its gap is 0, the bar's having no scroll margin of its own, so a row
+the table's own clear has brought flush with the bar is not moved again.
 
 **The size.** The entry `{ DataTable }` measured 2.62 kB without React
 Aria, Lucide and `@internationalized/date`, Link and Skeleton included;
@@ -9109,7 +9125,12 @@ totals, and without the mark's icon, measured 8.32 kB, still 9 kB. With
 `listBelow`, the X with its Tooltip and the More menu, batch 4 measured
 11.11 kB, which the rule sets at 12 kB (spec correction 108 of the
 documents plan); its review fix round, with the focus the bar forgets
-and the malformed data guard, measures 11.39 kB, inside it.
+and the malformed data guard, measures 11.39 kB, inside it. The shared
+focus clear the bar registers with (spec correction 121) brings it to
+12.07 kB, which the rule sets at 13 kB. With React Aria the entry
+measured 80.5 kB at that review fix round and 81.19 kB with the focus
+clear; the watch-only entry "DataTable with React Aria" holds it at 100
+kB.
 
 **Screen readers.** Not yet verified with VoiceOver and NVDA (owner
 action 4): a row read by its row header and cells, the current row's
@@ -9783,15 +9804,27 @@ not rename the button that only closes the sheet.
 the bar shows, `.app-shell:has(> .upload-tray-bar) .app-shell-workspace`
 pads its end by the shell's reserve, a sticky bar's offset, the bar's
 `max(var(--size-field), var(--size-target))` and the inset, so the page's
-last control scrolls clear of it; and `:root:has(.upload-tray-bar)` declares
-`--upload-tray-reserve` (the bar and the inset) and sets
-`scroll-padding-block-end` to `--toast-offset-block` plus `--save-bar-offset`
-plus that reserve, so a control focused from the keyboard scrolls clear of
-the tab bar, a sticky bar and the tray, in that order. Tokens only, nothing
-measured. A row's own scroll margin under DataTable's bulk bar adds to the
-root's padding. `PhoneKeepsClear` focuses the last control of a long page at
-375 by 812 and checks it above the bar, then scrolls to the end and checks
-again.
+last control scrolls clear of it. Tokens only, nothing measured. The root's
+scroll is not padded for the bar (spec correction 121): a control that
+focus lands on under it is scrolled clear by the focus clear below.
+
+**Focus clear of the tray** (WCAG 2.4.11, spec corrections 121 and 122).
+Both faces register themselves as bottom chrome with the shared focus
+clear, `utils/focus-clear.ts`, while the tray has items; the face the
+viewport hides measures nothing and counts for nothing. Each face's
+`scroll-margin-block-end`, `var(--spacing-inset)`, is the gap a focused
+control keeps above it. So from 768px a control wholly or partly under the
+open or folded 28rem panel, and only one that overlaps it across, is
+scrolled up two frames after the focus until its field ends 16px above the
+panel's top, and under 768px the same above the phone's bar, which, fixed
+at the bottom, covers the view down to its edge, the tab bar under it
+included. `PhoneKeepsClear` reaches the last control of a long page at 375
+by 812 by Tab and by `focus()` and finds it 16px above the bar, then
+scrolls to the end and finds it above the bar still; `FocusClearOfPanel`
+does the same for a full-width field under the panel at 1280 by 720; both
+run in three engines. The docs' end-to-end run tabs through the recipe's
+review at 768 and 1280 with the panel open and finds no focused control
+under it.
 
 **The three announcements** (ruling 10). A polite status host, mounted in
 the server's HTML, clipped as the toasts' host is and kept out of a modal's
@@ -10099,8 +10132,7 @@ too (spec correction 83). Mod+S is not
 taken (section 13.3 item 6). While dirty, `beforeunload` asks the browser
 to warn (ruling 12); a client navigation is not guarded.
 
-**The offset and the scroll padding** (spec corrections 12, 13, 55, 78 and
-81). While a bar is on the page, `:root:has(.save-bar)` and
+**The offset** (spec corrections 13 and 81). While a bar is on the page, `:root:has(.save-bar)` and
 `.app-shell:has(.save-bar)` declare `--save-bar-offset: calc(var(--size-control)
 + 2 * var(--spacing-part) + 2px + var(--spacing-inset))`, the one-line
 bar's height and the inset, which lifts the upload tray and the toasts from
@@ -10112,44 +10144,47 @@ bar on one page never overwrite each other: the holder takes the taller,
 and loses the property only with its last bar. A bar that measures
 nothing, a hidden one, writes `0px` rather than nothing, so the
 stylesheet's one-line value does not lift the tray and the toasts over a
-bar that is not drawn. The root's `scroll-padding-block-end` is
-`calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) +
-var(--upload-tray-reserve, 0px) + var(--spacing-inset))`: the tab bar's
-height from the toasts' copy, since the root cannot read the shell's
-reserve, the bar, and a phone's upload bar above it, in the bottom edge's
-order, and a 16px gap above the topmost, so a focused field's ring and the
-line under it are never flush against a bar. `save-bar.css` loads after
-`upload-tray.css`, so this sum replaces the tray's own.
+bar that is not drawn. The root's scroll is never padded (spec correction
+121, which removes correction 12's `scroll-padding-block-end`): a browser
+applies root scroll padding to every focus scroll, and Tab onto the stuck
+bar's own Cancel scrolled the page from 287 to 695px.
 
-**Focus not obscured** (WCAG 2.4.11, risk R6, spec corrections 73, 78 and
-82). Which engine needed the bar's own clear, and where: only Chromium was
-probed without it. Where the window scrolls, Chromium did not need it: with
-the clear removed it scrolled a field wholly in view under the tab bar, the
-save bar and the phone's upload bar clear of them at 375 by 812, on Tab and
-on `focus()`, through the root's padding alone. In a box that scrolls,
-which the root's padding does not reach, Chromium did need it: it left the
-field 58px under the bar. WebKit and Firefox have run only with the clear
-in place, where both plays pass in CI, so whether either needs it in
-either case is unknown. So in every engine the bar listens for `focusin`
-on its holder and, two frames after the focus, scrolls the control's field
-(its label, control, description and error line; the control alone
-outside a field) by the least whole pixels that bring it 16px above the
-bar, and where the window scrolls above the phone's upload bar too, the
-gap the bar's `scroll-margin-block-end` holds resolved; since the root's
-padding brings only the control into view, this clear acts in the window
-too wherever a field's description or error line is left under the bar.
-It scrolls the control's own scroll port first and then the bar's by what
-is still covered, for a control in a box that scrolls inside the bar's
-holder, and never past the control's top: a control taller than the room
-keeps its top at the view's top, below the page's `--page-sticky-top`
-where the window scrolls (read from the bar's `scroll-margin-block-start`),
-as DataTable's clear does. Nothing moves when the field is clear already
-or under the gap by half a pixel or less. Whole pixels, because WebKit and
-Firefox round a scroll position and the fields sit on fractional lines, so
-a browser's own scroll can stop short by under a pixel. The `FocusClear`
-and `FocusClearInScroller` plays, which require the gap within a pixel,
-run in Chromium, WebKit and Firefox; `FocusClearTall` and the docs' Tab
-test run in Chromium.
+**Focus not obscured** (WCAG 2.4.11, risk R6, spec corrections 73, 78, 82
+and 121). The clear is one shared internal utility, `utils/focus-clear.ts`,
+which grew from the bar's own (`save-bar/uncover.ts`, now gone). Each piece
+of chrome registers itself while it is mounted: the bar and DataTable's
+bulk-action bar, the upload tray's two faces at the bottom, and AppShell's
+header at the top. One `focusin` listener on the document, added with the
+first and removed with the last, takes no part on the server, and two
+frames after a focus, after the browser's own scroll and React Aria's,
+scrolls the focused control's field (its label, control, description and
+error line; the control alone outside a field) by the least whole pixels
+that bring it out from under every registered piece that overlaps it
+across: 16px above a bottom piece, the gap its `scroll-margin-block-end`
+holds resolved (the bar's and the tray's faces are `var(--spacing-inset)`,
+the bulk bar's 0), and level with a top piece's bottom. A stack is cleared
+to its topmost: the tab bar, the bar and a phone's upload bar. A piece
+stuck or fixed at its edge covers the view to that edge, so a control
+under the tab bar under a stuck bar comes clear of the bar too, as the
+root's padding gave before; a bar resting in the page's flow covers only
+itself. It scrolls the control's own scroll port first and then each port
+around it by what is still covered, counting there only a piece that holds
+still as that port scrolls, and never past the control's top: a control
+taller than the room keeps its top at the view's top, below the top
+pieces and, where the window scrolls, the page's `--page-sticky-top` (read
+from the bar's `scroll-margin-block-start`), as DataTable's clear does.
+Nothing moves when the field is clear already or covered by half a pixel
+or less, when focus is in a popover, a modal or a sheet, or when the
+control is pinned where it is: fixed, or in a sticky piece stuck at its
+offset, so focus on the stuck bar's own buttons, or the stuck header's,
+never moves the page, while the bar's buttons, at rest in the page's flow
+under the open upload panel, come clear of it. Whole pixels, because
+WebKit and Firefox round a scroll position and the fields sit on
+fractional lines, so a browser's own scroll can stop short by under a
+pixel. The `FocusClear`, `FocusClearInScroller` and `TabOntoStuckBar`
+plays, which require the gap within a pixel and an unmoved page, run in
+Chromium, WebKit and Firefox; `FocusClearTall` and the docs' Tab test run
+in Chromium.
 
 **Measured pairs**, all on float, light then dark, each gated already as
 text: ink, the sentence, 18.43 and 17.42; slate, the status, 5.49 and 6.94;
@@ -10164,7 +10199,10 @@ above spec 16's 3 kB budget, so the rule sets 5.5 kB (spec correction 75):
 it carries ConfirmDialog through `useConfirm`, 2.99 kB alone, Button,
 FieldChanged and the scroll helpers. After the review fix round, with the
 whole field's clear, the clamp, the nested scroll, the per-bar record and
-the focus checks, it measures 4.94 kB, still within the limit.
+the focus checks, it measures 4.94 kB, still within the limit, and 5.36 kB
+with the shared focus clear (spec correction 121). `pendingLabel` defaults
+to `labels.pending`, "Saving", so one translated string names the spinner
+and the status (spec correction 127).
 
 **Screen readers and devices.** Not yet verified (owner action 4): the bar
 read as a group named by its message, its status politely, the discard
@@ -10243,7 +10281,9 @@ workspace, the room beside the rail shared on both sides. A column inside a
 column takes no second cap and no second padding. In Tailwind,
 `max-w-page` is the page column's width: the theme writes
 `--max-width-page`, which Tailwind reads before `--spacing-page`, and
-`max-w-(--container-page)` works as well (spec correction 101).
+`max-w-(--container-page)` works as well (spec correction 101). On 0.6
+`max-w-page` was the `page` spacing step, 48px; the changeset says so, and
+`max-w-(--spacing-page)` keeps the old width (spec correction 127).
 
 **Sticky** (ruling 20). PageHeader has no position of its own. In
 AppShell's `header` slot, the first part of `<main>`, it sticks with the
@@ -10251,8 +10291,9 @@ shell's wrapper at `--z-header`; at the top of the content it scrolls away;
 it never condenses. The shell measures its header wrapper after hydration
 and writes the height as `--page-sticky-top` on `<main>`, so a DataTable's
 header row and a SidePanel stick under the header and not behind it, and
-as the root's scroll padding, so a control that focus moves to stops clear
-of it (spec corrections 86, 94 and 95). Until then a table's header row
+the header registers with the shared focus clear, so a control that focus
+lands on under it comes clear of it, while focus on its own buttons never
+moves the page (spec corrections 86, 94 and 121). Until then a table's header row
 sticks at the top; an estimate on the shell's style keeps the jump small.
 The docs advise a sticky header without a sentence, since a phone's screen
 is short.
@@ -10374,7 +10415,7 @@ property, and no first paint waits on a measurement.
 | --- | --- | --- | --- |
 | 1 | BottomTabBar, under 1024px | the viewport's bottom | `--app-shell-inset-block-end` on `.app-shell` (`calc(4rem + env(safe-area-inset-bottom, 0px))` under 1024px, `0px` above), and its copy for the root, `--toast-offset-block` on `:root:has(.tab-bar)` |
 | 2 | SaveBar, or DataTable's bulk-action bar, sticky in its holder | `calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset))` | `--save-bar-offset` on `:root` and `.app-shell` while a bar is on the page |
-| 3 | UploadTray, fixed: the panel from 768px, the bar under it | `calc(var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) + var(--save-bar-offset, 0px))` | `--upload-tray-offset` on the root while it draws; under 768px also `--upload-tray-reserve` for the page's room |
+| 3 | UploadTray, fixed: the panel from 768px, the bar under it | `calc(var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) + var(--save-bar-offset, 0px))` | `--upload-tray-offset` on the root while it draws |
 | 4 | Toasts, fixed at the root | `calc(var(--overlay-inset) + var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) + var(--upload-tray-offset, 0px))` | none |
 
 **When each is written.** `--app-shell-inset-block-end` and
@@ -10392,25 +10433,23 @@ removed with the holder's last bar (spec corrections 13 and 81). A bar on
 two lines lifts the tray a little short until then. `--upload-tray-offset`
 is written by the tray's own `ResizeObserver` only once a face draws,
 which it never does on the server, and removed when it draws nothing.
-`--upload-tray-reserve` is declared on `:root:has(.upload-tray-bar)` from
-tokens, the bar's `max(var(--size-field), var(--size-target))` and the
-inset (spec correction 55). None of these is in a measurement a first
-paint waits on.
+None of these is in a measurement a first paint waits on.
 
-**Scroll padding, the same order.** The root's `scroll-padding-block-end`
-is `calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) +
-var(--upload-tray-reserve, 0px) + var(--spacing-inset))` while a save bar
-is on the page, and `calc(var(--toast-offset-block, 0px) +
-var(--save-bar-offset, 0px) + var(--upload-tray-reserve))` while only the
-tray's bar is. The root reads the tab bar from `--toast-offset-block`,
-since the shell's reserve is declared on `.app-shell`, which the root
-cannot read (spec correction 12). `save-bar.css` loads after
-`upload-tray.css`, so its sum, which holds the tray's reserve, replaces the
-tray's. The shell pads the workspace's end by the same parts while the
-tray's bar shows, so the page's last control stays above it (spec
-correction 55). At the top, the root's `scroll-padding-block-start` is the
-shell header's measured `--app-shell-header-block-size` (spec correction
-95).
+**Focus, the same order.** Nothing pads the root's scroll (spec
+correction 121, which replaces corrections 12, 55 and 95's padding): a
+browser applies root scroll padding to every focus scroll, the one onto a
+stuck bar's or a stuck header's own button included, and moved the page
+there. Instead each part that covers an edge registers with the shared
+focus clear, `utils/focus-clear.ts`: the save bar, the bulk-action bar and
+the tray's faces at the bottom, AppShell's header at the top. A control
+that focus lands on under them is scrolled out, two frames later, 16px
+above the topmost bottom part it meets (the bulk bar's gap is 0) or level
+with the header's bottom, and a part stuck or fixed at its edge covers the
+view down to it, so the tab bar under a stuck bar is cleared with it. The
+shell pads the workspace's end by the same parts while the tray's bar
+shows, so the page's last control stays above it (spec correction 55).
+DataTable's rows keep their own scroll margin, the whole page offset and
+the header row, with no padding to subtract.
 
 **The wide screen** has no tab bar: the tray sits 16px above the
 viewport's bottom, or above a save bar while one shows, and the toasts
@@ -10429,10 +10468,12 @@ toasts, from the bottom up. `BottomEdgeWide` (`viewport-desktop`) pins the
 wide face, the tray above the save bar and the toasts above the tray.
 `OffsetMeasured` proves the measured height replaces the token value;
 `PhoneKeepsClear` (UploadTray) that the page's last control is never under
-the tray's bar; `WithToasts` the toasts above the panel; `FocusClear`,
+the tray's bar; `FocusClearOfPanel` the same under the wide panel;
+`WithToasts` the toasts above the panel; `FocusClear`,
 `FocusClearInScroller` and `FocusClearTall` that a focused field stays
-16px clear of the bars; and `FocusClearOfHeader` (PageHeader) the same
-under the stuck header.
+16px clear of the bars; `TabOntoStuckBar` that Tab onto the stuck bar's
+Cancel leaves the page where it was; and `FocusClearOfHeader` and
+`FocusInStuckHeader` (PageHeader) the same two under the stuck header.
 
 **Revisit after use** (section 13.3 item 4, risk R7). On a phone the
 tray's bar and the save bar stack, as the owner settled open question 3:
