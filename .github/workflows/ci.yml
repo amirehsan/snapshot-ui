@@ -110,7 +110,8 @@ jobs:
     name: Visual regression
     needs: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # About 2200 shots: a passing run takes most of 20 minutes, and a failing one, with its retries, more.
+    timeout-minutes: 35
     # The baselines were made in this image, so compare in it too.
     container:
       image: mcr.microsoft.com/playwright:v1.64.0-noble
