@@ -67,11 +67,13 @@ export function BulkBar({
   const barRef = useRef<HTMLDivElement>(null);
   useBottomBarOffset(barRef);
 
-  // The control that last held focus in the bar, and its place among the controls then reachable.
+  // The control that last held focus in the bar, and its place among the controls then reachable; null once the
+  // reader has moved focus out of the bar, so a later change in the bar never takes it back (spec correction 111).
   const last = useRef<{ control: HTMLElement; index: number } | null>(null);
   /**
    * Gives focus to the control in the place of the one that held it, once that one has left, been hidden or been
-   * disabled and focus has fallen to the page. Focus the reader moved anywhere else is left alone.
+   * disabled and focus has fallen to the page. Focus the reader moved anywhere else, the page's body included, is
+   * left alone.
    */
   const mend = (): void => {
     const bar = barRef.current;
@@ -96,12 +98,39 @@ export function BulkBar({
       if (!(event.target instanceof HTMLElement)) return;
       last.current = { control: event.target, index: reachable(bar).indexOf(event.target) };
     };
+    // Focus that leaves a control which is still connected, drawn and enabled a frame later was moved by the
+    // reader, by Tab or by a press on plain text, which leaves it on the body: the bar forgets it. A control that
+    // has left, been hidden or been disabled by then is the mend's; the frame lets a render or the container
+    // query settle first.
+    const frames = new Set<number>();
+    const onFocusOut = (event: FocusEvent): void => {
+      const control = event.target;
+      if (!(control instanceof HTMLElement)) return;
+      const frame = requestAnimationFrame(() => {
+        frames.delete(frame);
+        if (last.current?.control !== control) return;
+        if (bar.contains(bar.ownerDocument.activeElement)) return;
+        if (control.isConnected && isDrawn(control) && !control.matches(':disabled')) last.current = null;
+      });
+      frames.add(frame);
+    };
+    // A press outside the bar moves the reader on at once, whatever the frame's check would find.
+    const onPointerDown = (event: PointerEvent): void => {
+      if (event.target instanceof Node && bar.contains(event.target)) return;
+      last.current = null;
+    };
+    const document = bar.ownerDocument;
     bar.addEventListener('focusin', onFocusIn);
+    bar.addEventListener('focusout', onFocusOut);
+    document.addEventListener('pointerdown', onPointerDown, true);
     // A bar that narrows past its container query hides its promoted buttons: read again as it resizes.
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(mend) : null;
     observer?.observe(bar);
     return () => {
       bar.removeEventListener('focusin', onFocusIn);
+      bar.removeEventListener('focusout', onFocusOut);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      for (const frame of frames) cancelAnimationFrame(frame);
       observer?.disconnect();
     };
     // `mend` reads only refs, so the first one serves for the bar's life.

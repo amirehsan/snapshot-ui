@@ -5,7 +5,7 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import type { Key } from 'react-aria-components';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
-import { showFace } from '../../test/dom';
+import { holdFrames, showFace } from '../../test/dom';
 import { Button } from '../button';
 import { SaveBar } from '../save-bar';
 import { COLUMNS, keyOf, TRANSACTIONS, type Transaction } from '../stories/transactions';
@@ -93,6 +93,7 @@ function layOut(): void {
 /** A narrow bar, as its container query under 40rem draws it: the promoted buttons are not drawn. */
 function narrowBar(): () => void {
   const style = document.createElement('style');
+  style.dataset.narrowBar = '';
   style.textContent = '.data-table-bar-actions > [data-action-id] { display: none; }';
   document.head.append(style);
   return () => {
@@ -113,6 +114,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  // A narrow bar a test left behind would hide the next test's promoted buttons.
+  for (const style of document.head.querySelectorAll('style[data-narrow-bar]')) style.remove();
 });
 
 describe('DataTable listBelow', () => {
@@ -310,6 +313,25 @@ describe('DataTable bulk-action bar', () => {
     );
   });
 
+  it('warns once and draws nothing for an entry of the data form that is not an action, rather than crashing', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const spy = vi.fn();
+    const malformed = [
+      ...actionsWith(spy).slice(0, 2),
+      { id: 'archive', label: 'Archive' },
+      { id: 'delete', title: 'Delete', onAction: () => undefined },
+    ] as unknown as DataTableBulkAction[];
+    render(<Selecting initial={['t1']} bulkActions={malformed} />);
+    const named = within(bar())
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label') ?? button.textContent);
+    expect(named).toEqual(['Clear selection', 'Categorize', 'Export', 'More actions']);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      'DataTable: bulkActions[2] is not an action: each needs a string id, a string label and an onAction function. The bar draws nothing for it.',
+    );
+  });
+
   it('draws a node bulkActions as 0.6.0 did, beside the icon', () => {
     render(
       <Selecting
@@ -423,6 +445,50 @@ describe('DataTable bulk-action bar', () => {
     });
   });
 
+  it('puts focus on the table in its passive effect when the grid cannot take it in the layout effect', async () => {
+    const user = userEvent.setup();
+    function Emptying(): ReactElement {
+      const [keys, setKeys] = useState<Key[]>(['t1', 't2']);
+      return (
+        <DataTable
+          aria-label="Transactions"
+          items={FIVE}
+          columns={COLUMNS}
+          getKey={keyOf}
+          selectedKeys={keys}
+          onSelectionChange={setKeys}
+          bulkActions={
+            <Button
+              onPress={() => {
+                setKeys([]);
+              }}
+            >
+              Delete
+            </Button>
+          }
+        />
+      );
+    }
+    render(<Emptying />);
+    // The grid refuses its first focus, as a page React Aria's open menu still holds inert does in a browser, and
+    // no frame comes: the table's second try is the passive effect of the same commit.
+    const grid = screen.getByRole('grid');
+    const focusGrid = grid.focus.bind(grid);
+    let refused = 0;
+    vi.spyOn(grid, 'focus').mockImplementation((options) => {
+      if (refused === 0) {
+        refused += 1;
+        return;
+      }
+      focusGrid(options);
+    });
+    holdFrames();
+    await user.click(within(bar()).getByRole('button', { name: 'Delete' }));
+    expect(screen.queryByRole('toolbar')).toBeNull();
+    expect(refused).toBe(1);
+    expect(grid.contains(document.activeElement)).toBe(true);
+  });
+
   it('gives focus to the control that takes the place of one that leaves, never the body', async () => {
     const user = userEvent.setup();
     layOut();
@@ -488,6 +554,86 @@ describe('DataTable bulk-action bar', () => {
     });
     expect(document.activeElement).toHaveAccessibleName('More actions');
     vi.unstubAllGlobals();
+  });
+
+  it('leaves focus on the page when the reader clicked away and then the bar narrows', async () => {
+    const user = userEvent.setup();
+    layOut();
+    const observers: ResizeObserverCallback[] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          observers.push(callback);
+        }
+        observe = (): void => undefined;
+        disconnect = (): void => undefined;
+        unobserve = (): void => undefined;
+      },
+    );
+    const narrow = (): void => {
+      act(() => {
+        for (const observer of observers) observer([], {} as ResizeObserver);
+      });
+    };
+    render(
+      <>
+        <p>Plain text above the table</p>
+        <Selecting initial={['t1']} bulkActions={actionsWith(vi.fn())} />
+      </>,
+    );
+    // A press on Export, then on plain text above the table, which leaves focus on the body.
+    await user.click(within(bar()).getByRole('button', { name: 'Export' }));
+    await user.click(screen.getByText('Plain text above the table'));
+    expect(document.activeElement).toBe(document.body);
+    const restore = narrowBar();
+    narrow();
+    expect(document.activeElement).toBe(document.body);
+    restore();
+    // By keyboard too, with no press anywhere: focus that left a control still drawn a frame later was moved by the
+    // reader, and the bar forgets it.
+    act(() => {
+      within(bar()).getByRole('button', { name: 'Categorize' }).focus();
+    });
+    act(() => {
+      (document.activeElement as HTMLElement).blur();
+    });
+    await act(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        }),
+    );
+    const restoreAgain = narrowBar();
+    narrow();
+    expect(document.activeElement).toBe(document.body);
+    restoreAgain();
+    vi.unstubAllGlobals();
+  });
+
+  it('leaves focus on the page when the reader clicked away and then the control disables', async () => {
+    const user = userEvent.setup();
+    layOut();
+    const withExport = (isDisabled: boolean): DataTableBulkAction[] =>
+      actionsWith(vi.fn()).map((action) => (action.id === 'export' ? { ...action, isDisabled } : action));
+    const { rerender } = render(
+      <>
+        <p>Plain text above the table</p>
+        <Selecting initial={['t1']} bulkActions={withExport(false)} />
+      </>,
+    );
+    await user.click(within(bar()).getByRole('button', { name: 'Export' }));
+    await user.click(screen.getByText('Plain text above the table'));
+    rerender(
+      <>
+        <p>Plain text above the table</p>
+        <Selecting initial={['t1']} bulkActions={withExport(true)} />
+      </>,
+    );
+    expect(within(bar()).getByRole('button', { name: 'Export' })).toBeDisabled();
+    expect(document.activeElement).toBe(document.body);
   });
 
   it('writes its height as --save-bar-offset, the tallest with a save bar, and takes it back when it leaves', () => {

@@ -1,6 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Archive, Download, Ellipsis, Receipt, RotateCw, Tag, Trash2 } from 'lucide-react';
-import { useState, type ComponentType, type CSSProperties, type ReactElement, type ReactNode } from 'react';
+import {
+  useEffect,
+  useState,
+  type ComponentType,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
@@ -2787,5 +2794,180 @@ export const ListBelowSwitch: Story = {
     // Without the attribute the default switch, 40rem, draws the list in the same box.
     root.removeAttribute('data-list-below');
     await waitFor(() => expect(getComputedStyle(grid).display).toBe('none'));
+  },
+};
+
+// ---- The review fix round: focus the reader moved away, the X's tip, More with every action promoted ----------
+
+/** Waits for `count` animation frames, so a check that waits a frame, or a resize observer, has had its turn. */
+const frames = async (count: number): Promise<void> => {
+  for (let index = 0; index < count; index += 1) {
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        resolve();
+      });
+    });
+  }
+};
+
+/** The event a play sends to disable Export from outside the bar, as an app's own state would. */
+const DISABLE_EXPORT = 'story-disable-export';
+
+/** The bar's data actions under a line of plain text, in a box whose width a play sets. */
+function ClickAwayBulk(): ReactElement {
+  const [disabled, setDisabled] = useState(false);
+  useEffect(() => {
+    const disable = (): void => {
+      setDisabled(true);
+    };
+    window.addEventListener(DISABLE_EXPORT, disable);
+    return () => {
+      window.removeEventListener(DISABLE_EXPORT, disable);
+    };
+  }, []);
+  return (
+    <Box width="60rem">
+      <p>Plain text above the table</p>
+      <Selecting
+        initial={['t1', 't2']}
+        bulkActions={(BULK_ACTIONS as DataTableBulkAction[]).map((action) =>
+          action.id === 'export' ? { ...action, isDisabled: disabled } : action,
+        )}
+      />
+    </Box>
+  );
+}
+
+/**
+ * Focus the reader moved out of the bar stays where they put it (spec correction 111): a press on Export, then on
+ * plain text above the table, leaves focus on the page, and neither the bar narrowing past 40rem nor Export
+ * disabling takes it back to More or the next control.
+ */
+export const BarClickedAway: Story = {
+  tags: ['no-visual'],
+  render: () => <ClickAwayBulk />,
+  play: async ({ canvasElement }) => {
+    const box = only(canvasElement, '.data-table').parentElement;
+    if (box === null) throw new Error('No box');
+    const exportButton = within(canvasElement).getByRole('button', { name: 'Export' });
+    try {
+      await userEvent.click(exportButton);
+      await waitFor(() => expect(exportButton).toHaveFocus());
+      await userEvent.click(within(canvasElement).getByText('Plain text above the table'));
+      await waitFor(() => expect(document.activeElement).toBe(document.body));
+      // The bar narrows: Export leaves the line and More holds it, and focus stays on the page.
+      box.style.width = '30rem';
+      await waitFor(() => expect(getComputedStyle(exportButton).display).toBe('none'));
+      await frames(3);
+      await expect(document.activeElement).toBe(document.body);
+      // Widened again and Export disabled by the app: focus still stays on the page.
+      box.style.width = '60rem';
+      await waitFor(() => expect(getComputedStyle(exportButton).display).not.toBe('none'));
+      window.dispatchEvent(new Event(DISABLE_EXPORT));
+      await waitFor(() => expect(exportButton).toBeDisabled());
+      await frames(3);
+      await expect(document.activeElement).toBe(document.body);
+    } finally {
+      window.scrollTo(0, 0);
+    }
+  },
+};
+
+/**
+ * Tab onto the bar's X opens its tip at once; the first Escape closes the tip, React Aria's, and keeps the
+ * selection, and the second clears with focus back on the table.
+ */
+export const EscapeClosesTipFirst: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box>
+      <Selecting initial={['t1', 't2']} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await focusRow(canvasElement, 0);
+    await userEvent.tab();
+    const clear = within(canvasElement).getByRole('button', { name: 'Clear selection' });
+    await waitFor(() => expect(clear).toHaveFocus());
+    await waitFor(() => expect(document.querySelector('[role="tooltip"]')).not.toBeNull());
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(document.querySelector('[role="tooltip"]')).toBeNull());
+    await expect(selectedKeysOf(canvasElement)).toEqual(['t1', 't2']);
+    await expect(clear).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual([]));
+    await waitFor(() =>
+      expect(only(canvasElement, '[role="grid"]').contains(document.activeElement)).toBe(true),
+    );
+  },
+};
+
+/**
+ * With every action promoted, More (`data-promoted-only`) is `display: none` at 40rem of the bar or wider, where
+ * every button shows, and drawn under it, where it holds them all.
+ */
+export const MoreHiddenWhenAllPromoted: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box width="60rem">
+      <Selecting initial={['t1']} bulkActions={(BULK_ACTIONS as DataTableBulkAction[]).slice(0, 2)} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = only(canvasElement, '.data-table').parentElement;
+    if (box === null) throw new Error('No box');
+    const bar = only(canvasElement, '.data-table-bar');
+    const more = only(bar, '.data-table-bar-more');
+    await expect(more).toHaveAttribute('data-promoted-only');
+    // The bar's content box, which its container query reads: 40rem or more here.
+    const content = (): number =>
+      bar.clientWidth -
+      parseFloat(getComputedStyle(bar).paddingLeft) -
+      parseFloat(getComputedStyle(bar).paddingRight);
+    await expect(content()).toBeGreaterThanOrEqual(640);
+    await expect(getComputedStyle(more).display).toBe('none');
+    try {
+      box.style.width = '30rem';
+      await waitFor(() => expect(getComputedStyle(more).display).not.toBe('none'));
+      for (const button of bar.querySelectorAll('[data-action-id]')) {
+        await expect(getComputedStyle(button).display).toBe('none');
+      }
+    } finally {
+      window.scrollTo(0, 0);
+    }
+  },
+};
+
+/**
+ * listBelow="32rem" across its switch in Select mode: the list at 30rem in Select mode with an item selected, the
+ * table at 34rem with that row selected and the bar's count, and the list again at 30rem, still in Select mode.
+ */
+export const ListBelowSelectMode: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box width="30rem">
+      <Selecting listBelow="32rem" getGroup={groupOf} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = only(canvasElement, '.data-table').parentElement;
+    if (box === null) throw new Error('No box');
+    const grid = only(canvasElement, '.data-table-grid');
+    const list = only(canvasElement, '.data-table-list');
+    await expect(getComputedStyle(list).display).toBe('block');
+    await enterSelectMode(canvasElement);
+    await pressAt(only(itemAt(canvasElement, 1), '.data-table-item-title'));
+    await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual(['t2']));
+    box.style.width = BESIDE_PANEL;
+    await waitFor(() => expect(getComputedStyle(grid).display).not.toBe('none'));
+    await expect(getComputedStyle(list).display).toBe('none');
+    await expect(selectedKeysOf(canvasElement)).toEqual(['t2']);
+    await expect(within(canvasElement).getByRole('toolbar', { name: 'Bulk actions' })).toHaveTextContent(
+      '1 selected',
+    );
+    box.style.width = '30rem';
+    await waitFor(() => expect(getComputedStyle(list).display).toBe('block'));
+    await expect(canvasElement.querySelector('.data-table-list[data-selecting]')).not.toBeNull();
+    await expect(selectedItemsOf(canvasElement)).toEqual(['t2']);
   },
 };

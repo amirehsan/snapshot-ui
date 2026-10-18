@@ -22,7 +22,7 @@ import { mergeRefs } from '../utils/merge-refs';
 import { present } from '../utils/present';
 import { useWarnOnce } from '../utils/useWarnOnce';
 import { BulkBar, MOST_PROMOTED } from './BulkBar';
-import { isBulkActionData } from './bulk-actions';
+import { readBulkActions } from './bulk-actions';
 import { DataTableStatus, useQuiet } from './DataTableStatus';
 import { groupsOf } from './groups';
 import { EDITABLE, editorRow, escapeEditor, handleTableKey, type TableKeyActions } from './keys';
@@ -254,6 +254,10 @@ function shownGrid(root: HTMLElement | null): HTMLElement | null {
   return null;
 }
 
+/** Whether focus has fallen to the page: on the body, or nowhere. */
+const fallenFocus = (document: Document): boolean =>
+  document.activeElement === null || document.activeElement === document.body;
+
 /** The row whose checkbox `target` is in, inside `root`; null for the select-all box and anything else. */
 function rowOfBox(target: Element, root: Element): Element | null {
   const row = target.closest('[data-selection] .checkbox-field')?.closest('[role="row"]');
@@ -417,35 +421,35 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   // page: focus the reader has since moved elsewhere stays where it is. When an action opened a dialog or a menu
   // that holds focus as the bar leaves, such as a confirm whose Delete cleared the selection, the table waits
   // for that portal to close and takes focus then, if it fell to the page.
+  // Whether the layout effect below found focus fallen and the grid could not take it yet.
+  const focusLater = useRef(false);
   useLayoutEffect(() => {
     if (hasBar || !focusInBar.current) return;
     focusInBar.current = false;
     const root = rootRef.current;
     if (root === null) return;
     const document = root.ownerDocument;
-    const fallen = (): boolean => document.activeElement === null || document.activeElement === document.body;
-    if (fallen()) {
+    if (fallenFocus(document)) {
       shownGrid(root)?.focus();
       // A menu that leaves with the bar, its More menu, has made the page inert while open, and React Aria takes
-      // that away only in an effect after this one, so the table cannot take focus yet: it does a frame later,
-      // if focus is still on the page by then (spec correction 102).
-      if (!fallen()) return;
-      let frames = 0;
-      let frame = requestAnimationFrame(function retry(): void {
-        if (!fallen() || !root.isConnected) return;
-        shownGrid(root)?.focus();
-        frames += 1;
-        if (fallen() && frames < 10) frame = requestAnimationFrame(retry);
-      });
-      return () => {
-        cancelAnimationFrame(frame);
-      };
+      // that away in its passive cleanup, so the table cannot take focus yet: the passive effect below tries once
+      // more (spec corrections 102 and 113).
+      focusLater.current = fallenFocus(document);
+      return;
     }
     const active = document.activeElement;
     if (active === null || root.contains(active)) return;
     return watchPortal(root, active, () => {
       shownGrid(root)?.focus();
     });
+  }, [hasBar]);
+  // React runs every passive cleanup of a commit before its passive mount effects, so by now the menu that left in
+  // the same commit has taken the page's `inert` away, and the grid takes focus if it is still on the page.
+  useEffect(() => {
+    if (!focusLater.current) return;
+    focusLater.current = false;
+    const root = rootRef.current;
+    if (root !== null && fallenFocus(root.ownerDocument)) shownGrid(root)?.focus();
   }, [hasBar]);
 
   // React Aria sees only the selected rows it draws, so a selection of stale keys shows no indeterminate header
@@ -581,9 +585,13 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
       ? null
       : `DataTable: selectedKeys holds keys that are not in items: ${stale.map(String).join(', ')}. Clear the selection when the rows change.`,
   );
-  const promoted = isBulkActionData(bulkActions)
-    ? bulkActions.filter((action) => action.isPromoted === true)
-    : [];
+  const bulk = readBulkActions(bulkActions);
+  useWarnOnce(
+    bulk.kind === 'data' && bulk.firstInvalid !== null
+      ? `DataTable: bulkActions[${String(bulk.firstInvalid)}] is not an action: each needs a string id, a string label and an onAction function. The bar draws nothing for it.`
+      : null,
+  );
+  const promoted = bulk.kind === 'data' ? bulk.actions.filter((action) => action.isPromoted === true) : [];
   useWarnOnce(
     promoted.length > MOST_PROMOTED
       ? `DataTable: ${String(promoted.length)} bulk actions are promoted; at most three are drawn as buttons. "${promoted[MOST_PROMOTED]?.id ?? ''}" and those after it are in More.`
@@ -729,7 +737,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         <BulkBar
           label={words.toolbar}
           count={words.selected(formatCount(counted.length))}
-          actions={bulkActions}
+          actions={bulk.kind === 'data' ? bulk.actions : bulkActions}
           selectAllMatching={selectAllMatching}
           keys={counted}
           clearLabel={words.clearSelection}
