@@ -461,7 +461,7 @@ export default function DocumentsRecipe(): ReactElement {
         router.push(href, { scroll: false });
       }}
     >
-      <div style={{ width: '100%' }}>
+      <div style={{ width: '100%', minWidth: 0 }}>
         {/* The page is static, so the server renders the fallback: the Documents page. */}
         <Suspense fallback={<Views {...props} params={FIRST} />}>
           <ViewsFromUrl {...props} />

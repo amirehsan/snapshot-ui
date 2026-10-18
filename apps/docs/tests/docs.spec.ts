@@ -4445,6 +4445,17 @@ for (const slug of ['app-shell', 'sidebar']) {
   });
 }
 
+test('the recipe document view fits a 375px phone with no sideways scroll', async ({ page }) => {
+  // The review grid scrolls inside its own box; the view around it never pushes the page wider (spec correction 125).
+  await page.setViewportSize({ width: 375, height: 667 });
+  await visit(page, `${RECIPE_PAGE}?doc=statement-september`);
+  await expect(
+    documentsRecipe(page).getByRole('heading', { level: 2, name: 'Statement, September', exact: true }),
+  ).toBeVisible();
+  await expect(documentsRecipe(page).locator('.save-bar')).toBeVisible();
+  expect(await sideways(page)).toBe(0);
+});
+
 for (const width of [768, 1280]) {
   test(`Tab through the recipe's review at ${String(width)}px never leaves a focused control under the open tray`, async ({
     page,
