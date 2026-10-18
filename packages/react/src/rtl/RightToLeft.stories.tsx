@@ -2077,7 +2077,7 @@ export const BreadcrumbsMirrored: Story = {
     <I18nProvider locale="fa-IR">
       <RouterProvider navigate={() => undefined}>
         <div dir="rtl" lang="fa">
-          <Breadcrumbs aria-label="مسیر" backLabel={(parent) => `بازگشت به ${parent}`}>
+          <Breadcrumbs aria-label="مسیر" backLabel="بازگشت به {parent}">
             <Breadcrumb href="#home">خانه</Breadcrumb>
             <Breadcrumb href="#documents">اسناد</Breadcrumb>
             <Breadcrumb>رسیدها</Breadcrumb>
@@ -2096,7 +2096,7 @@ export const BreadcrumbsMirrored: Story = {
     // The separator follows its crumb, to its left, and points left: its drawn path is mirrored.
     const separator = find(home, '.breadcrumbs-separator');
     await expect(rect(separator).right).toBeLessThanOrEqual(rect(find(home, '.breadcrumbs-link')).left + 0.5);
-    for (const icon of canvasElement.querySelectorAll('.breadcrumbs-separator svg, .breadcrumbs-back svg')) {
+    for (const icon of canvasElement.querySelectorAll('.breadcrumbs-separator svg, .breadcrumbs-back-icon')) {
       await expect(getComputedStyle(icon).scale).toBe('-1 1');
     }
   },

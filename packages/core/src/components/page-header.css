@@ -2,13 +2,16 @@
  * PageHeader: a page's header, derived in docs/design-system.md ("PageHeader"): the docs site's header on tokens.
  * The header is the fill and spans its holder; its row is a page column, so the trail, the eyebrow, the title and
  * the sentence start where the page's content does, and the actions end where it ends. The row wraps: the actions
- * sit at the titles' end while they fit and fall under them when they do not, and under 768px they take a line of
- * their own at the inline start. No rule beneath it. It sticks only in AppShell's header slot, whose wrapper sticks,
- * so it has no position of its own.
+ * sit at the title's end, their bottom on its last line, while the title keeps 20rem beside them, and fall under it
+ * when it would not; under 768px they take a line of their own at the inline start. The sentence takes a line of
+ * its own under them both, so a sentence never decides where the actions sit. No rule beneath it. It sticks only in
+ * AppShell's header slot, whose wrapper sticks, so it has no position of its own.
  *
  * The fill is the canvas at 80% with a blur, the docs header's, so what scrolls under a stuck header stays behind
- * it and the page keeps its paper; where the blur is not supported, the canvas whole. 768px is the --breakpoint-sm
- * token, written out because a media query cannot read a custom property; test/css.test.js keeps them equal.
+ * it and the page keeps its paper; where the blur is not supported, or the reader asks for less transparency or
+ * more contrast, the canvas whole. The blur makes the header the containing block of a fixed descendant. 768px is
+ * the --breakpoint-sm token, written out because a media query cannot read a custom property; test/css.test.js
+ * keeps them equal.
  *
  * The page column (.page-column, PageColumn) is the page's content column: --container-page wide, its inline
  * padding inside, and centered in its holder past that width, as the docs content column is. A column inside a
@@ -41,36 +44,58 @@
     }
   }
 
+  /* A reader who asks for less transparency or more contrast gets the canvas whole, with no blur. */
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    .page-header {
+      background-color: var(--color-canvas);
+      backdrop-filter: none;
+    }
+  }
+
   .page-header-row {
+    --page-header-gap: var(--spacing-peer);
+
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
-    gap: var(--spacing-peer);
+    gap: var(--page-header-gap);
     padding-block: var(--spacing-separate) var(--spacing-peer);
   }
 
-  /* The titles take the room the actions leave, so the actions sit at the row's end; a title too long to share its
-     line with them wraps onto lines of its own, and the actions fall under it. The column may narrow past what its
-     parts hold, so a trail's long crumb ellipsizes rather than widen the page. */
+  /* The titles start at 20rem and take the room the actions leave, so the actions sit at the row's end and fall
+     under the title only when it would keep less than 20rem; a long title wraps onto lines of its own beside them.
+     The column may narrow past what its parts hold, so a trail's long crumb ellipsizes rather than widen the page. */
   .page-header-titles {
     display: grid;
-    flex: 1 1 auto;
+    flex: 1 1 20rem;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--spacing-part);
     min-width: 0;
   }
 
-  /* A reading measure: the sentence never runs the page's width. */
-  .page-header-description {
-    max-inline-size: var(--container-field);
+  /* A long trail never widens the titles' column, nor a holder that sizes the header from its content. */
+  .page-header-titles > .breadcrumbs {
+    contain: inline-size;
   }
 
   .page-header-actions {
     display: flex;
+    flex: none;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--spacing-part);
+  }
+
+  /* The sentence's own line, a part step under the title's line rather than the row's gap. */
+  .page-header-detail {
+    flex: 0 0 100%;
+    margin-block-start: calc(var(--spacing-part) - var(--page-header-gap));
+  }
+
+  /* A reading measure: the sentence never runs the page's width. */
+  .page-header-description {
+    max-inline-size: var(--container-field);
   }
 
   @media (width < 768px) {
@@ -79,7 +104,8 @@
     }
 
     .page-header-row {
-      gap: var(--spacing-inset);
+      --page-header-gap: var(--spacing-inset);
+
       padding-block: var(--spacing-inset);
     }
 

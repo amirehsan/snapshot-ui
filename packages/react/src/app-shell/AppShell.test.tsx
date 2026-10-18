@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, type ReactElement } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { createRef, type CSSProperties, type ReactElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { AppShell, useAppShell, useOptionalAppShell, type AppShellProps } from './AppShell';
 
@@ -185,13 +185,32 @@ describe('AppShell', () => {
     expect(root(container)).toHaveAttribute('data-has-bottom-bar', '');
   });
 
-  it('wraps the header in the sticky wrapper only when there is one', () => {
+  it('wraps the header in the sticky wrapper only when there is one, as the first part of main', () => {
     const { container, rerender } = render(<AppShell>page</AppShell>);
     expect(container.querySelector('.app-shell-header')).toBeNull();
-    rerender(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+    rerender(
+      <AppShell header={<header>Budgets</header>}>
+        <p>page</p>
+      </AppShell>,
+    );
     const wrapper = container.querySelector('.app-shell-header');
-    expect(wrapper).toContainElement(screen.getByRole('banner'));
-    expect(wrapper?.parentElement).toHaveClass('app-shell-workspace');
+    const main = screen.getByRole('main');
+    expect(wrapper?.parentElement).toBe(main);
+    expect(main.firstElementChild).toBe(wrapper);
+    expect(wrapper?.nextElementSibling).toHaveTextContent('page');
+    // Inside main, a header element is not a banner landmark: the page's title is in the main landmark.
+    expect(wrapper?.querySelector('header')?.closest('main')).toBe(main);
+  });
+
+  it("lands the skip link on main, whose first heading is the header's title", () => {
+    render(
+      <AppShell header={<h1>Receipts, 2026</h1>}>
+        <h2>March</h2>
+      </AppShell>,
+    );
+    const main = screen.getByRole('main');
+    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', `#${main.id}`);
+    expect(main.querySelector('h1, h2')).toBe(screen.getByRole('heading', { level: 1 }));
   });
 
   describe("the header's height as the page's sticky offset", () => {
@@ -227,46 +246,155 @@ describe('AppShell', () => {
     }
 
     const stickyTop = (element: HTMLElement): string => element.style.getPropertyValue('--page-sticky-top');
+    /** The header's height on the root element, which the root's scroll padding reads. */
+    const headerSize = (): string =>
+      document.documentElement.style.getPropertyValue('--app-shell-header-block-size');
 
-    it("writes the sticky header wrapper's height as --page-sticky-top on the shell, and removes it with the header", () => {
-      const { observed, report } = stubResizeObserver();
-      const { container, rerender } = render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
-      const wrapper = container.querySelector('.app-shell-header');
-      expect(observed).toEqual([wrapper]);
-      // Nothing is written before the first measurement, as the server's HTML has nothing.
-      expect(stickyTop(root(container))).toBe('');
-      report(120.5);
-      expect(stickyTop(root(container))).toBe('120.5px');
-      report(88);
-      expect(stickyTop(root(container))).toBe('88px');
-      rerender(<AppShell>page</AppShell>);
-      expect(observed).toEqual([]);
-      expect(stickyTop(root(container))).toBe('');
+    afterEach(() => {
       vi.unstubAllGlobals();
     });
 
-    it('writes nothing without a header, and leaves an offset the app declares itself', () => {
-      const { observed } = stubResizeObserver();
-      const { container, unmount } = render(<AppShell>page</AppShell>);
-      expect(observed).toEqual([]);
+    it("writes the sticky header wrapper's height as --page-sticky-top on main, and removes it with the header", () => {
+      const { observed, report } = stubResizeObserver();
+      const { container, rerender } = render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      const wrapper = container.querySelector('.app-shell-header');
+      const main = screen.getByRole('main');
+      expect(observed).toEqual([wrapper]);
+      // Nothing is written before the first measurement, as the server's HTML has nothing.
+      expect(stickyTop(main)).toBe('');
+      expect(headerSize()).toBe('');
+      report(120.5);
+      expect(stickyTop(main)).toBe('120.5px');
       expect(stickyTop(root(container))).toBe('');
-      unmount();
-      document.documentElement.style.setProperty('--page-sticky-top', '64px');
-      render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      report(88);
+      expect(stickyTop(main)).toBe('88px');
+      rerender(<AppShell>page</AppShell>);
       expect(observed).toEqual([]);
-      document.documentElement.style.removeProperty('--page-sticky-top');
-      vi.unstubAllGlobals();
+      expect(stickyTop(main)).toBe('');
+    });
+
+    it('writes the height on the root element for its scroll padding, and removes it as the shell unmounts', () => {
+      const { report } = stubResizeObserver();
+      const { unmount } = render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      report(96);
+      expect(headerSize()).toBe('96px');
+      report(72);
+      expect(headerSize()).toBe('72px');
+      unmount();
+      expect(headerSize()).toBe('');
+    });
+
+    it("takes an offset on the shell's style as the first paint's estimate, which the measurement replaces", () => {
+      const { observed, report } = stubResizeObserver();
+      const style = { '--page-sticky-top': '7rem' } as CSSProperties;
+      const { container, rerender } = render(
+        <AppShell style={style} header={<header>Budgets</header>}>
+          page
+        </AppShell>,
+      );
+      const main = screen.getByRole('main');
+      expect(stickyTop(root(container))).toBe('7rem');
+      expect(observed).toHaveLength(1);
+      report(100);
+      // Main's own value is what the page reads; the estimate stays on the shell and comes back with no header.
+      expect(stickyTop(main)).toBe('100px');
+      expect(stickyTop(root(container))).toBe('7rem');
+      rerender(
+        <AppShell style={style} header={null}>
+          page
+        </AppShell>,
+      );
+      expect(stickyTop(main)).toBe('');
+      expect(stickyTop(root(container))).toBe('7rem');
+    });
+
+    it("leaves the app's own offset alone with measuresHeader false, and writes nothing on the root", () => {
+      const { observed } = stubResizeObserver();
+      const { container } = render(
+        <AppShell
+          measuresHeader={false}
+          style={{ '--page-sticky-top': '64px' } as CSSProperties}
+          header={<header>Budgets</header>}
+        >
+          page
+        </AppShell>,
+      );
+      expect(observed).toEqual([]);
+      expect(stickyTop(root(container))).toBe('64px');
+      expect(stickyTop(screen.getByRole('main'))).toBe('');
+      expect(headerSize()).toBe('');
+    });
+
+    it('measures whatever an ancestor declares, since the header slot is what sticks', () => {
+      const { observed, report } = stubResizeObserver();
+      document.documentElement.style.setProperty('--page-sticky-top', '64px');
+      try {
+        render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+        expect(observed).toHaveLength(1);
+        report(80);
+        expect(stickyTop(screen.getByRole('main'))).toBe('80px');
+      } finally {
+        document.documentElement.style.removeProperty('--page-sticky-top');
+      }
+    });
+
+    it("lets a nested shell write its own page's offset, and leaves the root's to the outer shell", () => {
+      const observers: ((height: number) => void)[] = [];
+      class Stub {
+        constructor(private readonly callback: ResizeObserverCallback) {}
+        observe = (): void => {
+          observers.push((blockSize) => {
+            const entry = {
+              borderBoxSize: [{ blockSize, inlineSize: 800 }],
+              contentRect: { height: blockSize },
+            };
+            act(() => {
+              this.callback([entry] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+            });
+          });
+        };
+        unobserve = (): void => undefined;
+        disconnect = (): void => undefined;
+      }
+      vi.stubGlobal('ResizeObserver', Stub);
+      const { rerender, unmount } = render(
+        <AppShell mainId="outer" header={<header>Outer</header>}>
+          <AppShell mainId="inner" header={<header>Inner</header>}>
+            page
+          </AppShell>
+        </AppShell>,
+      );
+      // Effects run inner first: the inner shell's observer, then the outer's.
+      const [inner, outer] = observers;
+      outer?.(96);
+      inner?.(56);
+      const mainOf = (id: string): HTMLElement => {
+        const element = document.getElementById(id);
+        if (element === null) throw new Error(`No main ${id}`);
+        return element;
+      };
+      expect(stickyTop(mainOf('outer'))).toBe('96px');
+      expect(stickyTop(mainOf('inner'))).toBe('56px');
+      expect(headerSize()).toBe('96px');
+      rerender(
+        <AppShell mainId="outer" header={<header>Outer</header>}>
+          page
+        </AppShell>,
+      );
+      expect(headerSize()).toBe('96px');
+      unmount();
+      expect(headerSize()).toBe('');
     });
 
     it('renders with no ResizeObserver, which a test environment may lack', () => {
       vi.stubGlobal('ResizeObserver', undefined);
-      const { container } = render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
-      expect(stickyTop(root(container))).toBe('');
-      vi.unstubAllGlobals();
+      render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      expect(stickyTop(screen.getByRole('main'))).toBe('');
+      expect(headerSize()).toBe('');
     });
   });
 
-  it('draws the skip link, the rail, the workspace and the bar in that order, the header before main', () => {
+  it('draws the skip link, the rail, the workspace and the bar in that order, the header first in main', () => {
     const { container } = render(
       <AppShell sidebar={RAIL} header={<header>Budgets</header>} bottomBar={BAR}>
         page
@@ -279,11 +407,9 @@ describe('AppShell', () => {
       'bar',
     ]);
     const workspace = container.querySelector('.app-shell-workspace');
-    expect([...(workspace?.children ?? [])].map((child) => child.className)).toEqual([
-      'app-shell-header',
-      'app-shell-main',
-    ]);
-    expect(screen.getByRole('main')).toHaveTextContent('page');
+    expect([...(workspace?.children ?? [])].map((child) => child.className)).toEqual(['app-shell-main']);
+    expect(screen.getByRole('main').firstElementChild).toHaveClass('app-shell-header');
+    expect(screen.getByRole('main')).toHaveTextContent('Budgetspage');
   });
 
   it('renders floating after the workspace and the bottom bar, outside main', () => {

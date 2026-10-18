@@ -1,18 +1,20 @@
 /*
  * Breadcrumbs: where a page sits, derived in docs/design-system.md ("Breadcrumbs"). A trail of links at the small
- * step in slate, underlined as Link draws them, ink on hover; the current page last, ink at 500 and not a link; a
- * 16px chevron between crumbs, a part step either side, pointing along the trail, so it is mirrored in right to
- * left. Slate and not link blue: link blue is for a link inside text, and a trail is navigation, as the rail's items
- * are. Each crumb's text ellipsizes past 16rem, its full text in a title and in the link's name.
+ * step in slate, underlined as Link draws them, ink on hover; the current page last, ink at 500, not a link and
+ * never cut, wrapping instead; a 16px chevron after every crumb but the last, a part step either side, pointing
+ * along the trail, so it is mirrored in right to left. Slate and not link blue: link blue is for a link inside text,
+ * and a trail is navigation, as the rail's items are. A link's text ellipsizes past 16rem, its full text in a title
+ * and in the link's name, and runs whole while the link has keyboard focus.
  *
  * Each link is drawn at its text's height and hit at 40px tall by an ::after that extends its box, the formula every
  * control shares, so the target holds without moving the line; wrapped lines sit a target apart, so two lines' hit
  * areas meet and never overlap.
  *
- * Under 768px the list is not drawn and the back link is: one link to the parent, its chevron pointing back. Both
- * faces are in the server's HTML and the media query picks one; the hidden face is display: none, out of the
- * accessibility tree. With one crumb there is no parent, so on a phone the landmark is not drawn at all. 768px is
- * the --breakpoint-sm token, written out; test/css.test.js keeps them equal.
+ * Under 768px only the parent's item is drawn, the second to last: its link turns into the back link, a back
+ * chevron before its text and its back label's words said but not shown, "Back to Documents". One set of links in
+ * the server's HTML and the media query picks what is drawn; a hidden crumb is display: none, out of the
+ * accessibility tree. With no parent's link, one crumb or a parent without href, the landmark is not drawn on a
+ * phone at all. 768px is the --breakpoint-sm token, written out; test/css.test.js keeps them equal.
  */
 @layer components {
   /* A one-column grid that may narrow past what it holds, so a long crumb ellipsizes rather than hold a page, a
@@ -47,18 +49,17 @@
 
   /* One class after link.css, so the trail's slate wins over Link Blue by order; the underline and the focus ring
      are Link's own. */
-  .breadcrumbs-link,
-  .breadcrumbs-back {
+  .breadcrumbs-link {
     position: relative;
     display: inline-flex;
     align-items: center;
+    gap: var(--spacing-part);
     min-width: 0;
     max-width: 100%;
     color: var(--color-slate);
   }
 
-  .breadcrumbs-link::after,
-  .breadcrumbs-back::after {
+  .breadcrumbs-link::after {
     content: '';
     position: absolute;
     inset-block: min(0px, calc((100% - var(--size-target)) / 2));
@@ -76,28 +77,29 @@
 
   /* A link is a flex box, which does not carry its underline onto the text it holds in every engine, so the text
      draws Link's underline itself, thickening with it on hover and press. */
-  .breadcrumbs-link .breadcrumbs-text,
-  .breadcrumbs-back .breadcrumbs-text {
+  .breadcrumbs-link .breadcrumbs-text {
     text-decoration: inherit;
   }
 
-  /* The back link's text runs to the line's end, past 16rem: it is the one link on the line. */
-  .breadcrumbs-back .breadcrumbs-text {
+  /* A focused link shows its whole text, so the reader sees where Enter goes. */
+  .breadcrumbs-link:is(:focus-visible, [data-focus-visible]) .breadcrumbs-text {
     max-inline-size: none;
   }
 
-  /* Its own width, not the line's, so the hit area is the link's. */
-  .breadcrumbs-back {
-    justify-self: start;
-    gap: var(--spacing-part);
-  }
-
-  .breadcrumbs-current {
+  /* The current page, by its state as well as its class: ink at 500, never cut, wrapping at any character. */
+  :is(.breadcrumbs-current, .breadcrumbs-item > [aria-current='page']) {
     display: inline-flex;
     min-width: 0;
     max-width: 100%;
     color: var(--color-ink);
     font-weight: 500;
+  }
+
+  :is(.breadcrumbs-current, .breadcrumbs-item > [aria-current='page']) .breadcrumbs-text {
+    max-inline-size: none;
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .breadcrumbs-separator {
@@ -106,51 +108,71 @@
     margin-inline: var(--spacing-part);
   }
 
+  .breadcrumbs-item:last-child > .breadcrumbs-separator {
+    display: none;
+  }
+
   .breadcrumbs-separator svg,
-  .breadcrumbs-back svg {
+  .breadcrumbs-back-icon {
     flex: none;
     width: 1rem;
     height: 1rem;
   }
 
-  /* The chevrons point along the trail, and the back link's back along it, so both turn in right to left. */
+  /* The phone face's parts, drawn only for the parent under 768px. */
+  .breadcrumbs-back-icon,
+  .breadcrumbs-back-words {
+    display: none;
+  }
+
+  /* The chevrons point along the trail, and the back chevron back along it, so both turn in right to left. */
   [dir='rtl'] .breadcrumbs-separator svg,
-  [dir='rtl'] .breadcrumbs-back svg {
+  [dir='rtl'] .breadcrumbs-back-icon {
     scale: -1 1;
   }
 
   @media (hover: hover) {
-    .breadcrumbs-link:is(:hover, [data-hovered]),
-    .breadcrumbs-back:is(:hover, [data-hovered]) {
+    .breadcrumbs-link:is(:hover, [data-hovered]) {
       color: var(--color-ink);
     }
   }
 
   @media (width < 768px) {
-    .breadcrumbs-list {
+    .breadcrumbs-item:not(:nth-last-child(2)),
+    .breadcrumbs:not(:has(.breadcrumbs-item:nth-last-child(2) > .breadcrumbs-link)),
+    .breadcrumbs-item:nth-last-child(2) > .breadcrumbs-separator {
       display: none;
     }
 
-    .breadcrumbs:not(:has(> .breadcrumbs-back)) {
-      display: none;
+    .breadcrumbs-item:nth-last-child(2) .breadcrumbs-back-icon {
+      display: block;
     }
-  }
 
-  @media (width >= 768px) {
-    .breadcrumbs-back {
-      display: none;
+    /* Said as part of the link's name, not shown: the chevron says "back" to the eye. */
+    .breadcrumbs-item:nth-last-child(2) .breadcrumbs-back-words {
+      position: absolute;
+      display: block;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: pre;
+    }
+
+    /* The one link on its line runs to the line's end. */
+    .breadcrumbs-item:nth-last-child(2) .breadcrumbs-text {
+      max-inline-size: none;
     }
   }
 
   @media (forced-colors: active) {
-    .breadcrumbs-link,
-    .breadcrumbs-back {
+    .breadcrumbs-link {
       color: linktext;
     }
 
-    .breadcrumbs-current,
-    .breadcrumbs-separator,
-    .breadcrumbs-item > .breadcrumbs-text {
+    :is(.breadcrumbs-current, .breadcrumbs-item > [aria-current='page']),
+    .breadcrumbs-separator {
       color: canvastext;
     }
   }

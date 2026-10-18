@@ -3063,6 +3063,12 @@ describe('src/components/app-shell.css', () => {
     expect(blockAfter(css, '.app-shell-main {')).toContain('outline: none;');
   });
 
+  it("pads the root's scroll by the header's measured height while main holds one, so focus stops clear of it", () => {
+    expect(blockAfter(rules(), ':root:has(.app-shell-main > .app-shell-header) {')).toBe(
+      ' scroll-padding-block-start: var(--app-shell-header-block-size, 0px); ',
+    );
+  });
+
   it('hides the skip link with the clip pattern, and draws it focused as an ink pill above the chrome', () => {
     const css = rules();
     const resting = blockAfter(css, '.app-shell-skip {');
@@ -7088,8 +7094,14 @@ describe('src/components/data-table.css', () => {
   it('keeps a focused row or cell clear of the sticky header and, while it shows, the bar (WCAG 2.4.11)', () => {
     const css = rules();
     const root = blockAfter(css, '.data-table {');
+    // The root's scroll padding holds an AppShell header's height already, and a browser adds a margin to it, so
+    // the margin takes only what the page's offset has beyond it; the grid's own margin keeps the whole offset,
+    // which the key handler reads.
     expect(root).toContain(
-      '--data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--size-target));',
+      '--data-table-scroll-start: calc(max(0px, var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px)) + var(--size-target));',
+    );
+    expect(blockAfter(css, '.data-table-table {')).toContain(
+      'scroll-margin-block-start: var(--page-sticky-top, 0px);',
     );
     expect(root).toContain('--data-table-scroll-end: 0px;');
     expect(blockAfter(css, '.data-table:has(> .data-table-bar) {')).toContain(
@@ -7335,11 +7347,19 @@ describe('src/components/data-table.css', () => {
       ),
     ).toBe(true);
     // An item keeps clear of the page offset and the head, and of its day heading where there are groups.
+    // Less what the root's scroll padding holds of the page offset, as the table face's.
     expect(blockAfter(css, '.data-table-list {')).toContain(
-      '--data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));',
+      '--data-table-scroll-start: calc(max(0px, var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px)) + var(--data-table-list-offset, 0px));',
     );
-    expect(blockAfter(css, '.data-table-list:has(.data-table-section) {')).toContain(
+    const grouped = blockAfter(css, '.data-table-list:has(.data-table-section) {');
+    expect(grouped).toContain(
+      'max(0px, var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px)) + var(--data-table-list-offset, 0px)',
+    );
+    expect(grouped).toContain(
       'var(--spacing-peer) + var(--spacing-part) + var(--text-overline) * var(--text-overline--line-height)',
+    );
+    expect(blockAfter(css, '.data-table-grid-list {')).toContain(
+      'scroll-margin-block-start: var(--page-sticky-top, 0px);',
     );
   });
 
@@ -8740,11 +8760,12 @@ describe('src/components/page-header.css', () => {
     const css = rules();
     const row = blockAfter(css, '.page-header-row {');
     for (const declaration of [
+      '--page-header-gap: var(--spacing-peer);',
       'display: flex;',
       'flex-wrap: wrap;',
       'align-items: flex-end;',
       'justify-content: space-between;',
-      'gap: var(--spacing-peer);',
+      ' gap: var(--page-header-gap);',
       // The docs header's 32px top and, where the docs wrote 20px, the peer step beneath.
       'padding-block: var(--spacing-separate) var(--spacing-peer);',
     ]) {
@@ -8761,6 +8782,19 @@ describe('src/components/page-header.css', () => {
     expect(actions).toContain('gap: var(--spacing-part);');
   });
 
+  it('wraps the actions only when the title would keep less than 20rem, whatever the trail or the sentence hold', () => {
+    const css = rules();
+    // A definite basis: the titles' content never decides the line, and the actions never shrink.
+    expect(blockAfter(css, '.page-header-titles {')).toContain('flex: 1 1 20rem;');
+    expect(blockAfter(css, '.page-header-actions {')).toContain('flex: none;');
+    // A long trail adds nothing to the titles' width, nor to a holder that sizes the header from its content.
+    expect(blockAfter(css, '.page-header-titles > .breadcrumbs {')).toContain('contain: inline-size;');
+    // The sentence takes its own line under the title's and the actions', a part step under the title.
+    const detail = blockAfter(css, '.page-header-detail {');
+    expect(detail).toContain('flex: 0 0 100%;');
+    expect(detail).toContain('margin-block-start: calc(var(--spacing-part) - var(--page-header-gap));');
+  });
+
   it("pads a phone's header and column by the inset, and puts the actions on their own line, at the small breakpoint", async () => {
     const { tokens } = await import('../dist/tokens.js');
     const css = rules();
@@ -8768,7 +8802,7 @@ describe('src/components/page-header.css', () => {
     expect(blockAfter(phone, '.page-column {')).toContain('padding-inline: var(--spacing-inset);');
     const row = blockAfter(phone, '.page-header-row {');
     expect(row).toContain('padding-block: var(--spacing-inset);');
-    expect(row).toContain('gap: var(--spacing-inset);');
+    expect(row).toContain('--page-header-gap: var(--spacing-inset);');
     expect(blockAfter(phone, '.page-header-actions {')).toContain('flex-basis: 100%;');
     // Every width query is the token.
     for (const [, width] of css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)) {
@@ -8803,6 +8837,16 @@ describe('src/components/page-header.css', () => {
     expect(css).not.toMatch(/z-index\s*:/);
   });
 
+  it('fills the canvas whole, with no blur, for a reader who asks for less transparency or more contrast', () => {
+    const css = rules();
+    const query = '@media (prefers-reduced-transparency: reduce), (prefers-contrast: more)';
+    const header = blockAfter(blockAfter(css, query), '.page-header {');
+    expect(header).toContain('background-color: var(--color-canvas);');
+    expect(header).toContain('backdrop-filter: none;');
+    // After the blur, so it wins over it.
+    expect(css.indexOf(query)).toBeGreaterThan(css.indexOf(SUPPORTS));
+  });
+
   it("draws the system's background color with no blur in forced colors", () => {
     const header = blockAfter(blockAfter(rules(), FORCED), '.page-header {');
     expect(header).toContain('background-color: canvas;');
@@ -8814,7 +8858,7 @@ describe('src/components/breadcrumbs.css', () => {
   // The rules without their comments, with their whitespace closed up.
   const rules = () => closeUp(stripComments(read('src/components/breadcrumbs.css')));
   const FORCED = '@media (forced-colors: active)';
-  const LINKS = '.breadcrumbs-link, .breadcrumbs-back {';
+  const CURRENT = ":is(.breadcrumbs-current, .breadcrumbs-item > [aria-current='page'])";
 
   it('sets the trail at the small step, 450, in slate, with the links slate and underlined', () => {
     const css = rules();
@@ -8828,10 +8872,10 @@ describe('src/components/breadcrumbs.css', () => {
       expect(trail, declaration).toContain(declaration);
     }
     // Slate, not link blue: a trail is navigation. Link's own underline stays, carried onto the text's box.
-    expect(blockAfter(outsideForcedColors(css), LINKS)).toContain('color: var(--color-slate);');
-    expect(
-      blockAfter(css, '.breadcrumbs-link .breadcrumbs-text, .breadcrumbs-back .breadcrumbs-text {'),
-    ).toContain('text-decoration: inherit;');
+    expect(blockAfter(outsideForcedColors(css), '.breadcrumbs-link {')).toContain(
+      'color: var(--color-slate);',
+    );
+    expect(blockAfter(css, '.breadcrumbs-link .breadcrumbs-text {')).toContain('text-decoration: inherit;');
     expect(css).not.toMatch(/text-decoration(?:-line)?:\s*none/);
     expect(css).not.toContain('--color-link');
   });
@@ -8840,8 +8884,6 @@ describe('src/components/breadcrumbs.css', () => {
     const trail = blockAfter(rules(), '.breadcrumbs {');
     expect(trail).toContain('display: grid;');
     expect(trail).toContain('grid-template-columns: minmax(0, 1fr);');
-    // The back link keeps its own width, so its hit area is no wider than it.
-    expect(rules()).toContain('} .breadcrumbs-back { justify-self: start;');
   });
 
   it('turns a link ink on hover, only where hover exists', () => {
@@ -8851,26 +8893,41 @@ describe('src/components/breadcrumbs.css', () => {
     expect(outside).not.toMatch(/:hover/);
   });
 
-  it('draws the current page in ink at 500, not underlined', () => {
-    const current = blockAfter(outsideForcedColors(rules()), '.breadcrumbs-current {');
+  it('draws the current page, by its state as well as its class, in ink at 500, not underlined and never cut', () => {
+    const css = outsideForcedColors(rules());
+    const current = blockAfter(css, `${CURRENT} {`);
     expect(current).toContain('color: var(--color-ink);');
     expect(current).toContain('font-weight: 500;');
+    // It wraps, at any character, rather than ellipsize.
+    const text = blockAfter(css, `${CURRENT} .breadcrumbs-text {`);
+    for (const declaration of [
+      'max-inline-size: none;',
+      'overflow: visible;',
+      'white-space: normal;',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(text, declaration).toContain(declaration);
+    }
     expect(rules()).not.toMatch(/font-weight:\s*600/);
   });
 
-  it('draws 16px slate separators a part step either side, mirrored in right to left with the back chevron', () => {
+  it('draws 16px slate separators a part step either side, none after the last, mirrored with the back chevron', () => {
     const css = rules();
     expect(blockAfter(css, '.breadcrumbs-separator {')).toContain('margin-inline: var(--spacing-part);');
-    const icon = blockAfter(css, '.breadcrumbs-separator svg, .breadcrumbs-back svg {');
+    expect(blockAfter(css, '.breadcrumbs-item:last-child > .breadcrumbs-separator {')).toContain(
+      'display: none;',
+    );
+    const icon = blockAfter(css, '.breadcrumbs-separator svg, .breadcrumbs-back-icon {');
     expect(icon).toContain('width: 1rem;');
     expect(icon).toContain('height: 1rem;');
     expect(
-      blockAfter(css, "[dir='rtl'] .breadcrumbs-separator svg, [dir='rtl'] .breadcrumbs-back svg {"),
+      blockAfter(css, "[dir='rtl'] .breadcrumbs-separator svg, [dir='rtl'] .breadcrumbs-back-icon {"),
     ).toContain('scale: -1 1;');
   });
 
-  it("ellipsizes each crumb's text past 16rem, on one line", () => {
-    const text = blockAfter(rules(), '.breadcrumbs-text {');
+  it("ellipsizes a link's text past 16rem, on one line, and shows it whole while the link has keyboard focus", () => {
+    const css = rules();
+    const text = blockAfter(css, '.breadcrumbs-text {');
     for (const declaration of [
       'max-inline-size: 16rem;',
       'overflow: hidden;',
@@ -8879,12 +8936,15 @@ describe('src/components/breadcrumbs.css', () => {
     ]) {
       expect(text, declaration).toContain(declaration);
     }
+    expect(
+      blockAfter(css, '.breadcrumbs-link:is(:focus-visible, [data-focus-visible]) .breadcrumbs-text {'),
+    ).toContain('max-inline-size: none;');
   });
 
-  it('hits each link and the back link at 40px tall through ::after, the shared formula', () => {
+  it('hits each link at 40px tall through ::after, the shared formula', () => {
     const css = rules();
-    expect(blockAfter(outsideForcedColors(css), LINKS)).toContain('position: relative;');
-    const hit = blockAfter(css, '.breadcrumbs-link::after, .breadcrumbs-back::after {');
+    expect(blockAfter(outsideForcedColors(css), '.breadcrumbs-link {')).toContain('position: relative;');
+    const hit = blockAfter(css, '.breadcrumbs-link::after {');
     for (const declaration of [
       "content: '';",
       'position: absolute;',
@@ -8897,15 +8957,43 @@ describe('src/components/breadcrumbs.css', () => {
     expect(blockAfter(css, '.breadcrumbs-list {')).toContain('row-gap: calc(var(--size-target) - 1lh);');
   });
 
-  it('switches to the back link at the small breakpoint, written out', async () => {
+  it("hides the phone face's chevron and words over the small breakpoint", () => {
+    expect(blockAfter(rules(), '.breadcrumbs-back-icon, .breadcrumbs-back-words {')).toContain(
+      'display: none;',
+    );
+  });
+
+  it("draws only the parent's link under the small breakpoint, written out, its words said but not shown", async () => {
     const { tokens } = await import('../dist/tokens.js');
     const css = rules();
     const narrow = blockAfter(css, `@media (width < ${tokens.breakpoint.sm.value})`);
-    expect(blockAfter(narrow, '.breadcrumbs-list {')).toContain('display: none;');
-    // With one crumb there is no parent, and the landmark would hold nothing on a phone.
-    expect(blockAfter(narrow, '.breadcrumbs:not(:has(> .breadcrumbs-back)) {')).toContain('display: none;');
-    const wide = blockAfter(css, `@media (width >= ${tokens.breakpoint.sm.value})`);
-    expect(blockAfter(wide, '.breadcrumbs-back {')).toContain('display: none;');
+    // Every crumb but the parent, the landmark with no parent's link, and the parent's separator.
+    expect(
+      blockAfter(
+        narrow,
+        '.breadcrumbs-item:not(:nth-last-child(2)), .breadcrumbs:not(:has(.breadcrumbs-item:nth-last-child(2) > .breadcrumbs-link)), .breadcrumbs-item:nth-last-child(2) > .breadcrumbs-separator {',
+      ),
+    ).toContain('display: none;');
+    expect(blockAfter(narrow, '.breadcrumbs-item:nth-last-child(2) .breadcrumbs-back-icon {')).toContain(
+      'display: block;',
+    );
+    const words = blockAfter(narrow, '.breadcrumbs-item:nth-last-child(2) .breadcrumbs-back-words {');
+    for (const declaration of [
+      'position: absolute;',
+      'display: block;',
+      'width: 1px;',
+      'height: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+      // Its spaces are part of the name: "Back to " and the text.
+      'white-space: pre;',
+    ]) {
+      expect(words, declaration).toContain(declaration);
+    }
+    // The one link on its line runs to the line's end.
+    expect(blockAfter(narrow, '.breadcrumbs-item:nth-last-child(2) .breadcrumbs-text {')).toContain(
+      'max-inline-size: none;',
+    );
     for (const [, width] of css.matchAll(/@media \(width [<>]=? (\d+px)\)/g)) {
       expect(width).toBe(tokens.breakpoint.sm.value);
     }
@@ -8913,13 +9001,8 @@ describe('src/components/breadcrumbs.css', () => {
 
   it("draws the links in the reader's link color and the rest in their text color in forced colors", () => {
     const forced = blockAfter(rules(), FORCED);
-    expect(blockAfter(forced, LINKS)).toContain('color: linktext;');
-    expect(
-      blockAfter(
-        forced,
-        '.breadcrumbs-current, .breadcrumbs-separator, .breadcrumbs-item > .breadcrumbs-text {',
-      ),
-    ).toContain('color: canvastext;');
+    expect(blockAfter(forced, '.breadcrumbs-link {')).toContain('color: linktext;');
+    expect(blockAfter(forced, `${CURRENT}, .breadcrumbs-separator {`)).toContain('color: canvastext;');
   });
 });
 

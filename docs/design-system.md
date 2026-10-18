@@ -4891,11 +4891,24 @@ both. The root never writes `expanded`, so it never resets an attribute set
 higher up. Nothing is measured, and `matchMedia` and `popstate` are effects.
 
 **The frame.** In DOM order: the skip link, the rail as given, the workspace
-holding the header wrapper and `<main>`, the tab bar as given, and the
-`floating` slot as given. The header
-wrapper is sticky at `--z-header` and draws nothing; the look is the header's.
-`<main>` has `tabIndex={-1}` so it takes the focus the skip link sends, and no
-outline, so the landing never rings the whole page.
+holding `<main>`, the tab bar as given, and the `floating` slot as given.
+The header wrapper is `<main>`'s first child (documents plan, spec
+correction 93, the owner's decision): the page's title and actions belong
+to the page, so the skip link lands on the title, and a `header` there is
+not a banner landmark. The wrapper is sticky at `--z-header` and draws
+nothing; the look is the header's. `<main>` has `tabIndex={-1}` so it takes
+the focus the skip link sends, and no outline, so the landing never rings
+the whole page.
+
+**The header's height.** Once hydrated, the shell measures its header
+wrapper and writes the height as `--page-sticky-top` on `<main>`, under
+which the page's sticky parts stick, and the outermost shell writes it as
+`--app-shell-header-block-size` on the root element, whose
+`scroll-padding-block-start` it becomes while main holds a header, so a
+control that focus scrolls to stops clear of the stuck header (WCAG
+2.4.11). Nothing is measured for the first paint; an estimate on the
+shell's own `style` holds until the measurement, and `measuresHeader={false}`
+leaves the offset to the app (spec corrections 94 and 95).
 
 **The skip link** is the first tab stop, clipped out of sight until it is
 focused. Focused, it is an ink pill with canvas text in the `--text-action`
@@ -8254,9 +8267,11 @@ eight marked rows never draw a block of ink.
 **Sticky and its layer.** A table's header row is the page's own sticky
 element, so it sits at `calc(var(--z-header) - 1)`, under the page's
 header and every piece of chrome ("The chrome's layers"), and sticks at
-`--page-sticky-top`, the app's header height, which the app sets once on
-an ancestor. The shell's header is the app's content and has no fixed
-height, so no token is added.
+`--page-sticky-top`, the page header's height. AppShell's header slot
+writes it from the header's measured height once hydrated (documents plan,
+spec corrections 86 and 94); an app sets it itself, once on an ancestor,
+only for a header outside the shell. The shell's header is the app's
+content and has no fixed height, so no token is added.
 
 **Never sideways.** A table never scrolls sideways in its own box: a
 sticky header sticks to its nearest scroller, so inside one it would no
@@ -8476,7 +8491,11 @@ correction 43).
 spec correction 42). A focused row must not end hidden behind the sticky
 header row or the bulk-action bar. Rows and body cells carry
 `scroll-margin-block` of `--data-table-scroll-start`,
-`--page-sticky-top` plus the 40px header row, and
+`--page-sticky-top` plus the 40px header row, less what the root's scroll
+padding already holds of an AppShell header (`max(0px,
+var(--page-sticky-top, 0px) - var(--app-shell-header-block-size, 0px))`,
+since a browser adds the margin to the padding; documents plan, spec
+correction 95), and
 `--data-table-scroll-end`, while the bar shows (`.data-table:has(>
 .data-table-bar)`) the bar's inset and height,
 `--app-shell-inset-block-end` plus 16px plus `--size-control`, two part
@@ -10053,19 +10072,28 @@ space-between`, `gap: var(--spacing-peer)`. Its padding is
 `var(--spacing-peer)` beneath, where the docs wrote 20px, which no token
 holds; under 768px the inset, 16px, all round, with a 16px gap, the docs'
 phone numbers. The titles are a grid with `gap: var(--spacing-part)`, 8px
-where the docs wrote 6px: the trail, the Eyebrow, the title and the
-sentence. The titles take the room the actions leave (`flex: 1 1 auto`), so
-the actions sit at the row's end while they fit and fall under the title,
-at the inline start, when a long title needs the line (ruling 23); under
-768px they always take a line of their own. Nothing is measured and nothing
-moves into a menu. The titles' one column is `minmax(0, 1fr)`, so a trail's
-long crumb ellipsizes rather than hold the column open past a phone's width.
+where the docs wrote 6px: the trail, the Eyebrow and the title. The titles
+start at 20rem and take the room the actions leave (`flex: 1 1 20rem`, the
+actions `flex: none`), so the actions sit at the row's end, their bottom on
+the title's, and fall under the title, at the inline start, only when it
+would keep less than 20rem beside them (ruling 23); under 768px they always
+take a line of their own. A trail adds nothing to the titles' width
+(`contain: inline-size`), so a long one wraps rather than push the actions
+down. The sentence takes its own line under the title's and the actions'
+(`.page-header-detail`, `flex: 0 0 100%`), a part step under the title, so
+the actions sit on the title, as Primer and Polaris place them, and never
+on a sentence's last line (spec correction 100). Nothing is measured and
+nothing moves into a menu. The titles' one column is `minmax(0, 1fr)`, so a
+trail's long crumb ellipsizes rather than hold the column open past a
+phone's width.
 
 **The title** is `Heading level={1} size={2}`, the section step: 36px,
 28px under 768px by the type tokens' own rule, weight 500 and -2%
-tracking, wrapping at any character and never cut. A page has one. The
-sentence is Text muted, slate at 450, held to `--container-field`, a
-reading measure.
+tracking, wrapping at any character and never cut. A page has one;
+`headingLevel` lowers it, at the same size, for a header that is not the
+page's own, as the docs' examples are (spec correction 101). The sentence
+is Text muted, slate at 450, held to `--container-field`, a reading
+measure.
 
 **No rule beneath it** (Appendix A). The header parts from the page by its
 fill and its bottom padding, as the docs header does.
@@ -10082,7 +10110,11 @@ can scroll under it, 3.16 and 5.03; ink, the title and the current crumb,
 16.25 and 19.31 over the canvas and 10.61 and 10.67 over solid ink. Under
 the 4.5 a text needs only over solid ink, which the 20px blur averages into
 the canvas before the text is read. Slate and ink on the canvas and on
-lifted, the header at rest, are gated already.
+lifted, the header at rest, are gated already. A reader who asks for less
+transparency or more contrast (`prefers-reduced-transparency: reduce`,
+`prefers-contrast: more`) gets the canvas whole and no blur, the gated
+pairs. The blur makes the header the containing block of a `position:
+fixed` descendant, which the page says; the library's overlays portal out.
 
 **The page column** (spec correction 85). `--container-page` is 82.5rem,
 1320px, the docs content column's cap, its inline padding included. The
@@ -10095,37 +10127,43 @@ the titles start where a PageColumn's content starts and the actions end
 where it ends, at any width; past 1320px both are centered in the
 workspace, the room beside the rail shared on both sides. A column inside a
 column takes no second cap and no second padding. In Tailwind,
-`max-w-page` reads `--spacing-page` first, so the width is
-`max-w-(--container-page)`.
+`max-w-page` is the page column's width: the theme writes
+`--max-width-page`, which Tailwind reads before `--spacing-page`, and
+`max-w-(--container-page)` works as well (spec correction 101).
 
 **Sticky** (ruling 20). PageHeader has no position of its own. In
-AppShell's `header` slot it sticks with the shell's wrapper at
-`--z-header`; at the top of the content it scrolls away; it never
-condenses. The shell measures its header wrapper after hydration and
-writes the height as `--page-sticky-top` on itself, so a DataTable's header
-row and a SidePanel stick under the header and not behind it, and an
-offset the app declares itself is left alone (spec correction 86). The
-docs advise a sticky header without a sentence, since a phone's screen is
-short.
+AppShell's `header` slot, the first part of `<main>`, it sticks with the
+shell's wrapper at `--z-header`; at the top of the content it scrolls away;
+it never condenses. The shell measures its header wrapper after hydration
+and writes the height as `--page-sticky-top` on `<main>`, so a DataTable's
+header row and a SidePanel stick under the header and not behind it, and
+as the root's scroll padding, so a control that focus moves to stops clear
+of it (spec corrections 86, 94 and 95). Until then a table's header row
+sticks at the top; an estimate on the shell's style keeps the jump small.
+The docs advise a sticky header without a sentence, since a phone's screen
+is short.
 
-**Landmarks.** A `header` element: the banner landmark in the shell's
-slot, outside `<main>`, and a plain header at the top of `<main>`. It takes
-no focus and has no keys.
+**Landmarks.** A `header` element, inside `<main>` in the shell's slot as
+at the top of any page's `<main>`, so a plain header and never a banner:
+the skip link lands on the title, the first heading of the main landmark
+(spec correction 93). It takes no focus and has no keys.
 
 **Forced colors.** The system's background color whole, with no blur,
 since forced colors keep an author color's alpha.
 
-**Size.** `{ PageHeader, PageColumn }` measures 445 B, so the rule sets
+**Size.** `{ PageHeader, PageColumn }` measures 460 B, so the rule sets
 1 kB, spec 16's budget.
 
 **The docs site's own header** moves to PageHeader in the next batch
 (section 13.3 item 7). Its CSS is left as it is here; its 1320px cap and
-32px padding equal the page column's. The next batch also has to place the
-shell's menu button, which the docs header draws before its titles and
-PageHeader has no slot for.
+32px padding equal the page column's. It draws no sentence, only the
+eyebrow and the title with its controls on the title's bottom, so the
+sentence's line under the title's changes nothing it keeps. The next batch
+also has to place the shell's menu button, which the docs header draws
+before its titles and PageHeader has no slot for.
 
-**Screen readers.** Not yet verified (owner action 4): the banner and its
-`h1` in the shell's slot, a plain header inside `<main>`.
+**Screen readers.** Not yet verified (owner action 4): the header and its
+`h1` as the start of the main landmark, where the skip link lands.
 
 ## Breadcrumbs
 
@@ -10139,28 +10177,34 @@ link and is a collection React Aria draws again after hydration, so the
 library writes `nav.breadcrumbs[aria-label]` holding
 `ol.breadcrumbs-list` of `li.breadcrumbs-item`, each the library's Link
 to its `href` and the last a `span.breadcrumbs-current[aria-current=page]`,
-the WAI-ARIA breadcrumb pattern. Breadcrumbs reads its children's props; a
-Breadcrumb renders nothing by itself. A Breadcrumb a server component
-renders reaches the client module as a reference React resolves lazily, so
-a crumb is told by its type or by its shape (spec correction 87). Both
-faces are real `<a href>` links in the server's HTML, so the trail works
-before hydration and with scripts off; once hydrated, Link takes a press
-through the app's RouterProvider.
+the WAI-ARIA breadcrumb pattern. Each Breadcrumb draws its own item, so
+Breadcrumbs reads nothing from its children: a crumb a server component
+renders, or one a component of the app's wraps, draws as any other, and a
+crumb is the current page by having no `href`. Breadcrumbs checks its list
+in an effect and warns once for anything else in it, a current page above
+the last and a last crumb with an `href` (spec correction 96). Each crumb
+above the current page is one real `<a href>` in the server's HTML, which
+both faces draw, so the trail works before hydration and with scripts off;
+once hydrated, Link takes a press through the app's RouterProvider.
 
 **Slate, not link blue** (section 13.2 item 17). Link blue is for a link
 inside text; a trail is navigation, as the rail's items are ink and slate.
 The trail is `--text-small` at 450, its links slate and underlined as Link
 draws them, ink on hover where hover exists; the current page is ink at
 500, not underlined, so it is told by weight and `aria-current` as well as
-color. Each crumb's text ellipsizes past 16rem with its whole text in a
-`title` and the link's name. A link is a flex box, which not every engine
+color, and the stylesheet draws it by `[aria-current='page']` as well as
+its class. A link's text ellipsizes past 16rem with its whole text in a
+`title` and the link's name, and shows whole while the link has keyboard
+focus; the current page is never cut, wrapping at any character instead
+(spec correction 99). A link is a flex box, which not every engine
 carries its underline into, so the text draws the underline itself
 (`text-decoration: inherit`), thickening with Link's on hover and press.
 
 **Separators** are Lucide's `ChevronRight` at 16px in slate, a part step
-either side, hidden from assistive technology, after every crumb but the
-last. They point along the trail, so `[dir='rtl']` turns them with
-`scale: -1 1`, the back link's `ChevronLeft` with them, as Pagination's
+either side, hidden from assistive technology, in every crumb and hidden
+in the last (`:last-child`). They point along the trail, so `[dir='rtl']`
+turns them with `scale: -1 1`, the back link's `ChevronLeft` with them, as
+Pagination's
 and Calendar's chevrons turn; a trail with its own `dir="ltr"` inside a
 right-to-left page turns with the page, as theirs do.
 
@@ -10171,28 +10215,34 @@ does not move. A long trail wraps, its lines `calc(var(--size-target) -
 1lh)` apart, a target from line to line, so two lines' hit areas meet and
 never overlap.
 
-**The back link** (ruling 22). Under 768px of viewport the list is
-`display: none` and `a.breadcrumbs-back` is drawn: the parent's link, its
-chevron first, named "Back to Documents" by `backLabel`. Over 768px it is
-`display: none`. Both are in the server's HTML and the media query picks,
-so nothing is measured and the hidden face is out of the accessibility
-tree. Its text runs to the line's end, as the one link there; it keeps its
-own width (`justify-self: start`), so its hit area is no wider than it.
-With one crumb there is no parent, and on a phone the landmark is not drawn
-(`:not(:has(> .breadcrumbs-back))`), so it is never an empty landmark.
-Focus never falls to the page as the faces switch: as the viewport crosses
-768px with focus in the face being hidden, the trail gives it from a
-crumb's link to the back link, or from the back link to the parent's link,
-before the new face is drawn (spec correction 89). The
-trail is a one-column grid, `minmax(0, 1fr)`, so in a centering grid or a
-flex row a long crumb ellipsizes rather than widen its holder (spec
-correction 88).
+**The back link** (ruling 22). Under 768px of viewport only the parent's
+item, the second to last, is drawn, and its link is the back link: a
+`ChevronLeft` before its text, its separator hidden, and the back label's
+words said and not shown (visually hidden, `white-space: pre`), so it reads
+"Documents" beside the chevron and is named "Back to Documents". Over
+768px the chevron and the words are `display: none`, so each link is named
+by its text. One set of links is in the server's HTML and the media query
+picks what is drawn, so nothing is measured and a hidden crumb is out of
+the accessibility tree. Its text runs to the line's end, as the one link
+there. With no parent's link, one crumb or a parent without `href`, the
+landmark is not drawn on a phone, so it is never an empty landmark.
+`backLabel` is a template, `'Back to {parent}'`, which a server component
+can pass, or a function from a client one; the parent's text stays in the
+name, said whole after a label that does not hold it (spec correction 97).
+Focus never falls to the page as the viewport narrows past 768px with focus
+on a crumb the phone does not draw: the trail remembers the last element
+focused in it and gives focus to the parent's link, whether focus is still
+on the hidden crumb or, as in Chromium, already on the body (spec
+correction 98). The trail is a one-column grid, `minmax(0, 1fr)`, so in a
+centering grid or a flex row a long crumb ellipsizes rather than widen its
+holder (spec correction 88).
 
-**Forced colors.** The links `linktext`, the current page, a crumb with no
-link and the separators `canvastext`.
+**Forced colors.** The links `linktext`, the current page and the
+separators `canvastext`.
 
-**Size.** `{ Breadcrumbs, Breadcrumb }` measures 985 B without React Aria
-and Lucide, so the rule sets 1.5 kB, spec 16's budget; it carries Link.
+**Size.** `{ Breadcrumbs, Breadcrumb }` measures 1.14 kB without React
+Aria and Lucide, under its 1.5 kB limit, spec 16's budget; it carries
+Link.
 
 **Screen readers.** Not yet verified (owner action 4): the trail read as a
 navigation landmark with the current page, and on a phone its one back

@@ -8,7 +8,7 @@ icon: PanelTop
 
 ## Basic
 
-`PageHeader` draws a page's header as this site draws its own: a [Breadcrumbs](/docs/components/breadcrumbs) trail, an eyebrow that names the category, the page's one `h1`, a sentence in slate and your actions at the title's end. `PageColumn` holds the page under it, so the content starts where the title does and ends where the actions end.
+`PageHeader` draws a page's header as this site draws its own: a [Breadcrumbs](/docs/components/breadcrumbs) trail, an eyebrow that names the category, the page's one `h1`, your actions at the title's end and a sentence in slate under them. `PageColumn` holds the page under it, so the content starts where the title does and ends where the actions end. The examples on this page are not this page's own header, so their titles are `h2`s, through `headingLevel`; this page keeps its one `h1`.
 
 <Preview name="page-header-basic" />
 
@@ -29,11 +29,12 @@ A page that takes files anywhere pairs a [Page drop zone](/docs/components/file-
 ## Usage
 
 - PageHeader is static. It renders in a server component and ships no client JavaScript; a Breadcrumbs or a FileButton you put in it is a client part of its own.
-- The title is always an `h1`, drawn at the 36px section step (28px under 768px). A page has one, so render one PageHeader per page.
-- It never sticks by itself. Put it in [App shell](/docs/components/app-shell)'s `header` slot and it sticks with the shell's header, and the shell writes its height as `--page-sticky-top` once the page has loaded, so a [Data table](/docs/components/data-table)'s header row and a [Side panel](/docs/components/side-panel) stick under it. At the top of the page's content it scrolls away. A stuck header with a description takes a phone's screen, so give the sticky one a title and actions only.
-- Actions sit at the end of the title's line while they fit and wrap under the title when they do not; under 768px they take a line of their own. Nothing is measured and nothing moves into a menu, so a page with many actions passes a [Menu](/docs/components/menu) as the last one.
+- The title is an `h1`, drawn at the 36px section step (28px under 768px). A page has one, so render one PageHeader per page. Where a page shows a header that is not its own, as a gallery of examples does, `headingLevel` lowers the heading and keeps the size.
+- It never sticks by itself. Put it in [App shell](/docs/components/app-shell)'s `header` slot, the first part of `<main>`, and it sticks with the shell's header, and the shell writes its height as `--page-sticky-top` once the page has loaded, so a [Data table](/docs/components/data-table)'s header row and a [Side panel](/docs/components/side-panel) stick under it. Before that, the table's header row sticks at the top; give the shell an estimate to keep the jump small, as the shell's page shows. At the top of the page's content it scrolls away. A stuck header with a description takes a phone's screen, so give the sticky one a title and actions only.
+- Actions sit at the end of the title's line, their bottom on the title's, and fall under the title only when it would keep less than 20rem beside them; under 768px they take a line of their own. A long trail wraps within the titles and a sentence takes its own line under the title and the actions, so neither moves them. Nothing is measured and nothing moves into a menu, so a page with many actions passes a [Menu](/docs/components/menu) as the last one.
 - The header's fill spans its holder and its row is a page column: `--container-page` wide, 82.5rem with its padding, and centered past it, as this site's content column is. Put your page in a `PageColumn` beside the header, not around it; a column inside a column takes no second padding. Set `--container-page` on the root, or on the shell, to change both at once.
-- A Tailwind user writes the page width as `max-w-(--container-page)`: `max-w-page` reads the spacing token of the same name first.
+- A Tailwind user writes the page width as `max-w-page`, or `max-w-(--container-page)`.
+- The fill's blur makes the header the containing block of a `position: fixed` element inside it, which then sits within the header rather than the window, so render a popover or a dialog of its actions in a portal, as the library's own do.
 
 ```tsx
 import { AppShell, Breadcrumb, Breadcrumbs, PageColumn, PageHeader } from '@snapshot-ui/react';
@@ -66,7 +67,7 @@ import { AppShell, Breadcrumb, Breadcrumbs, PageColumn, PageHeader } from '@snap
 
 PageHeader accepts every HTML attribute on its `header`, and PageColumn on its `div`.
 
-<PropsTable label="PageHeader props" path="../../packages/react/src/page-header/PageHeader.tsx" type="Pick<PageHeaderProps, 'title' | 'breadcrumbs' | 'eyebrow' | 'description' | 'actions' | 'className'>" />
+<PropsTable label="PageHeader props" path="../../packages/react/src/page-header/PageHeader.tsx" type="Pick<PageHeaderProps, 'title' | 'headingLevel' | 'breadcrumbs' | 'eyebrow' | 'description' | 'actions' | 'className'>" />
 
 </Section>
 
@@ -74,7 +75,7 @@ PageHeader accepts every HTML attribute on its `header`, and PageColumn on its `
 
 ## Accessibility
 
-The header is a `header` element holding the page's one `h1`. In the shell's `header` slot, outside `<main>`, it is the page's banner landmark; at the top of `<main>` it is a plain header, and the `h1` is still the first heading a screen reader lands on. The trail is a navigation landmark of its own, and the eyebrow is a label, never a heading. The header takes no focus and has no keys; its actions are in the page's tab order after the trail, in the order they are drawn. In forced colors the header draws the system's background color with no blur.
+The header is a `header` element holding the page's one `h1`. The shell's `header` slot is the first part of `<main>`, so there, as at the top of `<main>` in any page, it is a plain header, not a banner landmark: the skip link lands on the title, and the `h1` is the first heading in the main landmark. The trail is a navigation landmark of its own, and the eyebrow is a label, never a heading. The header takes no focus and has no keys; its actions are in the page's tab order after the trail, in the order they are drawn. A control that focus moves to never stays under the stuck header, as the shell pads the page's scroll by its height. For a reader who asks for less transparency or more contrast, and in forced colors, the header draws its background whole with no blur.
 
 </Section>
 

@@ -571,12 +571,14 @@ export const FocusStaysOut: Story = {
     const panel = await panelAtRest();
     const remove = within(panel).getByRole('button', { name: 'Remove lease-agreement.pdf' });
     await focusOn(remove);
-    // A press on the header's empty space, outside main and every control: focus goes to the body.
+    // A press on the header's empty space, outside every control: the header is the first part of main, which
+    // takes the focus, as a press anywhere else in the page does.
+    const main = only('.app-shell-main');
     await userEvent.click(only('.app-shell-header'));
-    await waitFor(() => expect(document.body).toHaveFocus());
+    await waitFor(() => expect(main).toHaveFocus());
     // Several ticks later, focus is still where the reader left it.
     await new Promise((resolve) => setTimeout(resolve, 500));
-    await expect(document.body).toHaveFocus();
+    await expect(main).toHaveFocus();
     await expect(remove).toBeInTheDocument();
   },
 };

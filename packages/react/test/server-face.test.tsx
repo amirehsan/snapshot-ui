@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, inject, it } from 'vitest';
+import { AppShell } from '../src/app-shell';
 import { Breadcrumb, Breadcrumbs } from '../src/breadcrumbs';
 import { Calendar, RangeCalendar } from '../src/calendar';
 import { Button } from '../src/button';
@@ -13,6 +14,7 @@ import { FileButton, FileDropZone } from '../src/file-drop-zone';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
+import { PageHeader } from '../src/page-header';
 import { PickerOption } from '../src/picker';
 import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
@@ -240,6 +242,14 @@ const FACES: [name: string, element: ReactElement][] = [
       <Breadcrumb href="/documents">Documents</Breadcrumb>
       <Breadcrumb>Receipts, 2026</Breadcrumb>
     </Breadcrumbs>,
+  ],
+  [
+    // The header slot is the first part of main, so the skip link lands on the page's title; nothing is measured on
+    // the server, so no offset is written.
+    'AppShell with a PageHeader',
+    <AppShell mainId="main" header={<PageHeader title="Receipts, 2026" />}>
+      page
+    </AppShell>,
   ],
 ];
 

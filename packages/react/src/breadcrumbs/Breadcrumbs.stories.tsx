@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
-import { expect, fn, userEvent, waitFor } from 'storybook/test';
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { RouterProvider } from '../link';
 import { focusOn } from '../stories/focus';
-import { PHONE, VIEWPORT_OPTIONS } from '../stories/viewports';
+import { resizeViewport } from '../stories/resize';
+import { DESKTOP, PHONE, VIEWPORT_OPTIONS } from '../stories/viewports';
 import { Breadcrumb, Breadcrumbs, type BreadcrumbsProps } from './Breadcrumbs';
 
 const noop = (): void => undefined;
@@ -60,23 +61,26 @@ type Story = StoryObj<typeof meta>;
 /** Three crumbs: slate links with chevrons and the current page in ink; at 375, one "Back to Documents" link. */
 export const Trail: Story = {
   play: async ({ canvas, canvasElement }) => {
-    const list = find(canvasElement, '.breadcrumbs-list');
-    const back = find(canvasElement, '.breadcrumbs-back');
+    const [home, documents, current] = [...canvasElement.querySelectorAll<HTMLElement>('.breadcrumbs-item')];
+    if (!home || !documents || !current) throw new Error('Three crumbs');
     if (isPhone()) {
-      await expect(getComputedStyle(list).display).toBe('none');
-      await expect(canvas.getByRole('link', { name: 'Back to Documents' })).toBe(back);
+      // Only the parent's item is drawn, its link named "Back to" its text, with the back chevron and no separator.
+      await expect(getComputedStyle(home).display).toBe('none');
+      await expect(getComputedStyle(current).display).toBe('none');
+      await expect(canvas.getByRole('link', { name: 'Back to Documents' })).toBe(find(documents, 'a'));
+      await expect(getComputedStyle(find(documents, '.breadcrumbs-back-icon')).display).toBe('block');
+      await expect(getComputedStyle(find(documents, '.breadcrumbs-separator')).display).toBe('none');
     } else {
-      await expect(getComputedStyle(back).display).toBe('none');
-      await expect(canvas.getAllByRole('link').map((link) => link.textContent)).toEqual([
-        'Home',
-        'Documents',
-      ]);
-      // The current page is ink at 500; the links are slate at 450.
-      const current = find(canvasElement, '.breadcrumbs-current');
-      await expect(getComputedStyle(current).fontWeight).toBe('500');
+      await expect(getComputedStyle(find(documents, '.breadcrumbs-back-icon')).display).toBe('none');
+      await expect(getComputedStyle(find(current, '.breadcrumbs-separator')).display).toBe('none');
+      await expect(canvas.getByRole('link', { name: 'Home' })).toBe(find(home, 'a'));
+      await expect(canvas.getByRole('link', { name: 'Documents' })).toBe(find(documents, 'a'));
+      // The current page is ink at 500, styled by its state; the links are slate at 450.
+      const page = find(current, '[aria-current="page"]');
+      await expect(getComputedStyle(page).fontWeight).toBe('500');
       const link = find(canvasElement, '.breadcrumbs-link');
       await expect(getComputedStyle(link).fontWeight).toBe('450');
-      await expect(getComputedStyle(link).color).not.toBe(getComputedStyle(current).color);
+      await expect(getComputedStyle(link).color).not.toBe(getComputedStyle(page).color);
     }
   },
 };
@@ -137,7 +141,7 @@ export const RightToLeft: Story = {
     <Routed>
       <I18nProvider locale="fa-IR">
         <div dir="rtl" lang="fa">
-          <Breadcrumbs aria-label="مسیر" backLabel={(parent) => `بازگشت به ${parent}`}>
+          <Breadcrumbs aria-label="مسیر" backLabel="بازگشت به {parent}">
             <Breadcrumb href="#home">خانه</Breadcrumb>
             <Breadcrumb href="#documents">اسناد</Breadcrumb>
             <Breadcrumb>رسیدها، ۱۴۰۵</Breadcrumb>
@@ -149,8 +153,12 @@ export const RightToLeft: Story = {
   play: async ({ canvasElement }) => {
     if (isPhone()) {
       // The back chevron points right, back along a trail that reads from the right.
-      const chevron = find(canvasElement, '.breadcrumbs-back svg');
+      const chevron = find(canvasElement, '.breadcrumbs-item:nth-last-child(2) .breadcrumbs-back-icon');
       await expect(getComputedStyle(chevron).scale).toBe('-1 1');
+      await expect(within(canvasElement).getByRole('link', { name: 'بازگشت به اسناد' })).toHaveAttribute(
+        'href',
+        '#documents',
+      );
       return;
     }
     const [home, documents] = [...canvasElement.querySelectorAll('.breadcrumbs-link')];
@@ -194,11 +202,16 @@ export const BackLinkName: Story = {
     const back = canvas.getByRole('link', { name: 'Back to Documents' });
     await expect(back).toHaveAttribute('href', '#documents');
     await expect(nav).toContainElement(back);
+    // The words are said, not shown: the line reads the chevron and "Documents".
+    const words = find(back, '.breadcrumbs-back-words');
+    await expect(rect(words).width).toBeLessThanOrEqual(1);
+    await expect(find(back, '.breadcrumbs-text')).toBeVisible();
     // Hit at 40px tall: a point 15px below the text's middle still lands on the link.
     const box = rect(find(back, '.breadcrumbs-text'));
     const hit = document.elementFromPoint(box.left + 4, box.top + box.height / 2 + 15);
     await expect(back.contains(hit)).toBe(true);
-    await expect(find(canvasElement, '.breadcrumbs-list')).not.toBeVisible();
+    await expect(canvas.queryByRole('link', { name: 'Home' })).toBeNull();
+    await expect(find(canvasElement, '.breadcrumbs-current')).not.toBeVisible();
   },
 };
 
@@ -239,5 +252,73 @@ export const RouterNavigation: Story = {
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(navigate).toHaveBeenCalledTimes(2));
     await expect(navigate.mock.calls[1]?.[0]).toBe('#home');
+  },
+};
+
+/**
+ * Turned across 768px with focus on a crumb, as a tablet turning: the crumb is hidden, and focus goes to the parent's
+ * link, the one the phone face draws, never to the page. Chromium has moved focus to the body before the change is
+ * heard; WebKit and Firefox hear it first.
+ */
+export const FocusAcrossFaces: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: DESKTOP,
+  play: async ({ canvas }) => {
+    const home = canvas.getByRole('link', { name: 'Home' });
+    const documents = canvas.getByRole('link', { name: 'Documents' });
+    try {
+      await focusOn(home);
+      if (!(await resizeViewport(375, 812))) return;
+      await waitFor(() => expect(home.checkVisibility()).toBe(false));
+      await waitFor(() => expect(documents).toHaveFocus());
+      // Widening hides nothing: focus stays on the parent's link, a crumb again.
+      await resizeViewport(1280, 800);
+      await waitFor(() => expect(home.checkVisibility()).toBe(true));
+      await expect(documents).toHaveFocus();
+    } finally {
+      await resizeViewport(1280, 800);
+    }
+  },
+};
+
+/** The current page past 16rem wraps and is never cut; a long link shows its whole text while it has focus. */
+export const LongWords: Story = {
+  tags: ['no-visual'],
+  globals: DESKTOP,
+  args: {
+    children: [
+      <Breadcrumb key="home" href="#home">
+        Home
+      </Breadcrumb>,
+      <Breadcrumb key="household" href="#household">
+        The household account we share with the whole family and the lodger
+      </Breadcrumb>,
+      <Breadcrumb key="receipts">
+        Receipts, statements and invoices from every account, filed for 2026
+      </Breadcrumb>,
+    ],
+  },
+  render: (args) => (
+    <Routed>
+      <div style={{ width: '20rem' }}>
+        <Breadcrumbs {...args} />
+      </div>
+    </Routed>
+  ),
+  play: async ({ canvasElement }) => {
+    const current = find(canvasElement, '.breadcrumbs-current .breadcrumbs-text');
+    // Every word drawn, on more than one line, and no title: nothing is hidden to tell.
+    await expect(current.scrollWidth).toBeLessThanOrEqual(current.clientWidth);
+    await expect(rect(current).height).toBeGreaterThan(
+      parseFloat(getComputedStyle(current).lineHeight) * 1.5,
+    );
+    await expect(current).not.toHaveAttribute('title');
+    const long = find(canvasElement, '.breadcrumbs-link[href="#household"] .breadcrumbs-text');
+    await expect(rect(long).width).toBeLessThanOrEqual(256.5);
+    // Keyboard focus lifts the cap, within the trail's width.
+    await focusOn(find(canvasElement, '.breadcrumbs-link[href="#home"]'));
+    await userEvent.tab();
+    await waitFor(() => expect(rect(long).width).toBeGreaterThan(257));
+    await expect(rect(long).right).toBeLessThanOrEqual(rect(find(canvasElement, '.breadcrumbs')).right + 1);
   },
 };

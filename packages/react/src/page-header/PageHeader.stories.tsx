@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Download, Ellipsis, FolderInput, Trash2 } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
-import { expect, fn, waitFor } from 'storybook/test';
+import { expect, fn, userEvent, waitFor } from 'storybook/test';
 import { AppShell } from '../app-shell';
 import { Breadcrumb, Breadcrumbs } from '../breadcrumbs';
 import { DataTable } from '../data-table';
@@ -10,6 +10,7 @@ import { FileButton } from '../file-drop-zone';
 import { IconButton } from '../icon-button';
 import { RouterProvider } from '../link';
 import { Menu, MenuItem, MenuTrigger } from '../menu';
+import { focusOn } from '../stories/focus';
 import { DemoNav } from '../stories/shell-fixture';
 import { COLUMNS, hrefOf, keyOf, manyTransactions } from '../stories/transactions';
 import { DESKTOP, VIEWPORT_OPTIONS } from '../stories/viewports';
@@ -124,13 +125,17 @@ export const Full: Story = {
       await expect(rect(actions).top).toBeGreaterThanOrEqual(rect(title).bottom - 0.5);
       await expect(Math.abs(rect(actions).left - content.left)).toBeLessThan(1);
     } else {
-      // Beside the titles, at the row's end, their bottom on the title's.
+      // Beside the titles, at the row's end, their bottom on the title's and not the sentence's.
       await expect(Math.abs(rect(actions).right - content.right)).toBeLessThan(1);
       await expect(rect(actions).left).toBeGreaterThan(rect(title).right);
-      await expect(
-        Math.abs(rect(actions).bottom - rect(find(canvasElement, '.page-header-titles')).bottom),
-      ).toBeLessThan(1);
+      await expect(Math.abs(rect(actions).bottom - rect(title).bottom)).toBeLessThan(1);
     }
+    // The sentence under the title's line, a part step under the title.
+    const description = find(canvasElement, '.page-header-description');
+    await expect(rect(description).top).toBeGreaterThanOrEqual(
+      Math.max(rect(title).bottom, rect(actions).bottom) - 0.5,
+    );
+    await expect(Math.abs(rect(description).left - content.left)).toBeLessThan(1);
     // No rule beneath it.
     await expect(getComputedStyle(find(canvasElement, '.page-header')).borderBottomWidth).toBe('0px');
   },
@@ -144,7 +149,10 @@ export const TitleOnly: Story = {
   },
 };
 
-/** A title too long to share its line: it wraps, never truncated, and the actions fall under it. */
+/**
+ * A long title in a column too narrow to keep 20rem beside the actions: it wraps, never truncated, and the actions
+ * fall under it.
+ */
 export const LongTitle: Story = {
   args: {
     breadcrumbs: TRAIL,
@@ -153,7 +161,7 @@ export const LongTitle: Story = {
     actions: ACTIONS,
   },
   render: (args) => (
-    <div style={{ width: 'min(48rem, 100%)' }}>
+    <div style={{ width: 'min(30rem, 100%)' }}>
       <Page {...args} />
     </div>
   ),
@@ -176,7 +184,7 @@ export const RightToLeft: Story = {
       <div dir="rtl" lang="fa">
         <Page
           breadcrumbs={
-            <Breadcrumbs aria-label="مسیر" backLabel={(parent) => `بازگشت به ${parent}`}>
+            <Breadcrumbs aria-label="مسیر" backLabel="بازگشت به {parent}">
               <Breadcrumb href="#home">خانه</Breadcrumb>
               <Breadcrumb href="#documents">اسناد</Breadcrumb>
               <Breadcrumb>رسیدها، ۱۴۰۵</Breadcrumb>
@@ -234,17 +242,23 @@ export const InAppShell: Story = {
   ),
   play: async ({ canvasElement }) => {
     const header = find(canvasElement, '.stuck');
-    const shell = find(canvasElement, '.app-shell');
+    const main = find(canvasElement, '.app-shell-main');
+    // The header is the first part of main, so the skip link lands on the page's title.
+    await expect(main.firstElementChild?.contains(header)).toBe(true);
     // The scroll stays: the page under the stuck header is the picture.
     window.scrollTo(0, 240);
     await waitFor(() => expect(window.scrollY).toBe(240));
     await waitFor(() => expect(rect(header).top).toBeCloseTo(0, 0));
-    // The header's height is the page's sticky offset, written on the shell once measured.
+    // The header's height is the page's sticky offset, written on main once measured, and the root's scroll padding.
     await waitFor(() =>
-      expect(parseFloat(shell.style.getPropertyValue('--page-sticky-top'))).toBeCloseTo(
+      expect(parseFloat(main.style.getPropertyValue('--page-sticky-top'))).toBeCloseTo(
         rect(header).height,
         0,
       ),
+    );
+    await expect(parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)).toBeCloseTo(
+      rect(header).height,
+      0,
     );
   },
 };
@@ -280,19 +294,145 @@ export const StickyOffset: Story = {
     const header = find(canvasElement, '.stuck');
     try {
       await waitFor(() =>
-        expect(find(canvasElement, '.app-shell').style.getPropertyValue('--page-sticky-top')).not.toBe(''),
+        expect(find(canvasElement, '.app-shell-main').style.getPropertyValue('--page-sticky-top')).not.toBe(
+          '',
+        ),
       );
       window.scrollTo(0, 600);
       await waitFor(() => expect(window.scrollY).toBe(600));
       const bottom = rect(header).bottom;
+      const cells = (): HTMLElement[] =>
+        [...canvasElement.querySelectorAll<HTMLElement>('.data-table-table [role="columnheader"]')].filter(
+          (cell) => getComputedStyle(cell).visibility !== 'hidden',
+        );
       await waitFor(async () => {
-        const cells = [
-          ...canvasElement.querySelectorAll<HTMLElement>('.data-table-table [role="columnheader"]'),
-        ];
-        const drawn = cells.filter((cell) => getComputedStyle(cell).visibility !== 'hidden');
-        await expect(drawn.length).toBeGreaterThan(0);
-        for (const cell of drawn) await expect(Math.abs(rect(cell).top - bottom)).toBeLessThan(1);
+        await expect(cells().length).toBeGreaterThan(0);
+        for (const cell of cells()) await expect(Math.abs(rect(cell).top - bottom)).toBeLessThan(1);
       });
+      // A row scrolled to the view's start stops under the table's header row, not a header's height lower: the
+      // root's scroll padding holds the page header, and the row's margin only the header row beyond it.
+      const row = [...canvasElement.querySelectorAll<HTMLElement>('.data-table-body > [role="row"]')][9];
+      if (row === undefined) throw new Error('No tenth row');
+      const above = Math.round(window.scrollY + rect(row).bottom + 120);
+      window.scrollTo(0, above);
+      await waitFor(() => expect(window.scrollY).toBe(above));
+      await expect(rect(row).bottom).toBeLessThan(0);
+      row.scrollIntoView({ block: 'start', behavior: 'instant' });
+      const headerRow = cells()[0];
+      if (headerRow === undefined) throw new Error('No header row');
+      await waitFor(() => expect(Math.abs(rect(row).top - rect(headerRow).bottom)).toBeLessThan(1.5));
+    } finally {
+      window.scrollTo(0, 0);
+    }
+  },
+};
+
+/** Six crumbs above the page, a trail longer than its line. */
+const LONG_TRAIL: ReactElement = (
+  <Breadcrumbs>
+    <Breadcrumb href="#home">Home</Breadcrumb>
+    <Breadcrumb href="#accounts">Accounts</Breadcrumb>
+    <Breadcrumb href="#household">The household account we share with the whole family</Breadcrumb>
+    <Breadcrumb href="#documents">Documents</Breadcrumb>
+    <Breadcrumb href="#receipts">Receipts and statements for the tax office</Breadcrumb>
+    <Breadcrumb>2026</Breadcrumb>
+  </Breadcrumbs>
+);
+
+/** Whether the actions sit on the title's line, at its end, their bottom on its bottom. */
+async function expectActionsBesideTitle(canvasElement: HTMLElement): Promise<void> {
+  const title = find(canvasElement, '.page-header-title');
+  const actions = find(canvasElement, '.page-header-actions');
+  await expect(rect(actions).left).toBeGreaterThanOrEqual(
+    rect(find(canvasElement, '.page-header-titles')).right,
+  );
+  await expect(Math.abs(rect(actions).bottom - rect(title).bottom)).toBeLessThan(1);
+}
+
+/** At 1024px a six-crumb trail over a short title: the trail wraps, and the actions stay beside the title. */
+export const ActionsBesideLongTrail: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <div style={{ width: 1024 }}>
+      <Page breadcrumbs={LONG_TRAIL} title="2026" actions={ACTIONS} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expectActionsBesideTitle(canvasElement);
+    // The trail wrapped within the titles' column rather than push the actions under the title.
+    const trail = find(canvasElement, '.breadcrumbs');
+    await expect(trail.scrollWidth).toBeLessThanOrEqual(trail.clientWidth);
+  },
+};
+
+/** At 1024px a sentence under the title: the actions stay beside the title, their bottom on its bottom. */
+export const ActionsBesideDescription: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <div style={{ width: 1024 }}>
+      <Page
+        breadcrumbs={TRAIL}
+        title="Receipts, 2026"
+        description="Every receipt you uploaded this year, read and filed by month, with its merchant, its date and its amount, so the year's spending reads at a glance."
+        actions={ACTIONS}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expectActionsBesideTitle(canvasElement);
+    const description = find(canvasElement, '.page-header-description');
+    await expect(rect(description).top).toBeGreaterThanOrEqual(
+      rect(find(canvasElement, '.page-header-actions')).bottom,
+    );
+  },
+};
+
+/** Rows of a long page, far apart, each with a control, so one can sit wholly under the stuck header. */
+const RECEIPTS = Array.from({ length: 16 }, (_, index) => `Receipt ${String(index + 1)}`);
+
+/**
+ * WCAG 2.4.11: with a control wholly under the stuck header, Shift+Tab to it from the next brings it clear of the
+ * header, as the root's scroll padding is the header's measured height.
+ */
+export const FocusClearOfHeader: Story = {
+  tags: ['no-visual'],
+  globals: DESKTOP,
+  render: () => (
+    <RouterProvider navigate={noop}>
+      <AppShell
+        sidebar={<DemoNav />}
+        header={<PageHeader breadcrumbs={TRAIL} title="Receipts, 2026" actions={ACTIONS} className="stuck" />}
+      >
+        <PageColumn>
+          {RECEIPTS.map((receipt) => (
+            <div key={receipt} style={{ minBlockSize: 200 }}>
+              <button type="button">{`Open ${receipt}`}</button>
+            </div>
+          ))}
+        </PageColumn>
+      </AppShell>
+    </RouterProvider>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const header = find(canvasElement, '.stuck');
+    const covered = canvas.getByRole('button', { name: 'Open Receipt 6' });
+    const next = canvas.getByRole('button', { name: 'Open Receipt 7' });
+    try {
+      // Once the shell has measured its header.
+      await waitFor(() =>
+        expect(document.documentElement.style.getPropertyValue('--app-shell-header-block-size')).not.toBe(''),
+      );
+      // Scroll the control to the middle of the stuck header, wholly under it, the next one clear below it.
+      const height = rect(header).height;
+      const target = Math.round(window.scrollY + rect(covered).top - (height - rect(covered).height) / 2);
+      window.scrollTo(0, target);
+      await waitFor(() => expect(window.scrollY).toBe(target));
+      await expect(rect(covered).bottom).toBeLessThanOrEqual(rect(header).bottom);
+      await expect(rect(next).top).toBeGreaterThan(rect(header).bottom);
+      await focusOn(next);
+      await userEvent.tab({ shift: true });
+      await waitFor(() => expect(covered).toHaveFocus());
+      await waitFor(() => expect(rect(covered).top).toBeGreaterThanOrEqual(rect(header).bottom - 1));
     } finally {
       window.scrollTo(0, 0);
     }
