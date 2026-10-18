@@ -38,7 +38,9 @@ export function Button({
   const labelId = useId();
   // React Aria joins the spinner's name to a pending button's only when an attribute names the button. A
   // button named by its text gets its label as that attribute while pending, so the spinner's name joins it
-  // in every engine; at rest it is named by its text again.
+  // in every engine; at rest it is named by its text again. The label keeps its id at rest too: React Aria's
+  // live announcer says a focused button's pending start by these ids and keeps that sentence for seconds after
+  // the pending ends, so the label's id must still resolve then.
   const namedByLabel =
     props.isPending === true && props['aria-label'] == null && props['aria-labelledby'] == null;
   return (
@@ -51,7 +53,7 @@ export function Button({
     >
       {composeRenderProps(children, (resolved, { isPending }) => (
         <>
-          <span id={namedByLabel ? labelId : undefined} className="button-label">
+          <span id={labelId} className="button-label">
             {resolved}
           </span>
           {isPending ? <Spinner className="button-spinner" aria-label={pendingLabel} /> : null}

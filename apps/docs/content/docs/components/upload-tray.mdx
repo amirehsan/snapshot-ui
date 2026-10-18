@@ -1,0 +1,217 @@
+---
+title: Upload tray
+description: "Each file from waiting to saved, needs review or failed, in a panel that stays across pages."
+icon: Upload
+---
+
+<Section>
+
+## The six statuses
+
+`UploadList` draws each file your app is uploading as a row: an icon, the name, the status in words and, while it moves, a bar. A file is waiting, uploading, being read, saved, needing review or failed. The word carries the status, so its color never carries it alone: slate while the file is on its way, success once it is saved, warning when it needs review and error when it failed, each with the reason in your words after it. A name keeps its extension in view, so a long receipt still says it is a JPG, and once a file has become a document its name links there. Retry, Remove and Cancel show where your app handles them; press them below.
+
+<Preview name="upload-list-statuses" />
+
+</Section>
+
+<Section>
+
+## The tray
+
+`UploadTray` holds the list where the reader can always find it. From 768px it is a panel in the bottom end corner, 28rem wide, the same column the toasts use, with a title that counts the running batch ("Uploading 2 of 5"), then names what settled, failures included ("3 uploads complete, 1 failed, 1 needs review"), an error icon before it while any file has failed, a line of your own under it, a button that folds it to its header and a close button. Under 768px it is a pill bar above the tab bar that says the title, with a Clear at its end once everything has settled, and pressing it opens a sheet with the list and Clear or Cancel uploads at its foot; while the bar shows, the page keeps room for it under its content, so it never covers the page's last control. It is not a dialog: the reader goes on working while files upload. The toasts rise above it, so the corner holds every report on background work in one column.
+
+With no items the tray draws only its status host, which is in the page from the first render, so a screen reader is listening before anything is said. Mount it once and give it items as your app adds files.
+
+</Section>
+
+<Section>
+
+## The Documents recipe
+
+A documents flow with the Next App Router: a Documents page that takes files, a review page for each document, and the uploads in flight, which outlive both. The uploads are the one piece of state that belongs to no page, so they live in a provider in the root layout, beside the shell, and the tray is mounted once, in [AppShell](/docs/components/app-shell#floating)'s `floating` slot:
+
+```tsx
+// app/layout.tsx
+import { AppShell } from '@snapshot-ui/react';
+import '@snapshot-ui/core/styles.css';
+import { Nav } from './nav';
+import { Tray, UploadsProvider } from './uploads';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <UploadsProvider>
+          <AppShell sidebar={<Nav />} floating={<Tray />}>
+            {children}
+          </AppShell>
+        </UploadsProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+The provider holds the items and does the uploading: one `XMLHttpRequest` a file, since `fetch` reports no upload progress, whose `upload.onprogress` moves the row's bar and whose answer says whether the server saved the file, needs it reviewed or refused it. The words are yours, as is the size, which your own `sizeLabel` writes:
+
+```tsx
+// app/uploads.tsx
+'use client';
+
+import { UploadTray, type UploadItem } from '@snapshot-ui/react';
+import { createContext, use, useRef, useState } from 'react';
+
+const Uploads = createContext<UploadsValue | null>(null);
+
+export function UploadsProvider({ children }: { children: React.ReactNode }) {
+  const [items, setItems] = useState<UploadItem[]>([]);
+  const requests = useRef(new Map<string, XMLHttpRequest>());
+  const put = (id: string, patch: Partial<UploadItem>) =>
+    setItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+
+  const send = (id: string, file: File) => {
+    const request = new XMLHttpRequest();
+    requests.current.set(id, request);
+    request.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      put(id, { status: 'uploading', progress: event.loaded / event.total, progressLabel: sizeLabel(event.loaded, event.total) });
+    };
+    // Every byte is sent: the server is reading the file now, and the row's bar slides.
+    request.upload.onload = () => put(id, { status: 'reading', progress: undefined });
+    request.onload = () => {
+      requests.current.delete(id);
+      const answer = JSON.parse(request.responseText) as { status: 'saved' | 'review' | 'failed'; reason?: string; documentId?: string };
+      put(id, { status: answer.status, reason: answer.reason, href: answer.documentId && `/documents/${answer.documentId}` });
+    };
+    request.onerror = () => put(id, { status: 'failed', reason: 'The connection dropped' });
+    request.open('POST', '/api/documents');
+    request.send(file);
+  };
+
+  const add = (files: File[]) => {
+    const added = files.map((file) => ({ id: crypto.randomUUID(), name: file.name, status: 'waiting' as const, file }));
+    setItems((current) => [...added.map(({ file, ...item }) => item), ...current]);
+    for (const { id, file } of added) send(id, file);
+  };
+  const cancel = (id: UploadItem['id']) => {
+    requests.current.get(String(id))?.abort();
+    setItems((current) => current.filter((item) => item.id !== id));
+  };
+  // retry, remove, clear and cancelAll follow the same pattern.
+  return <Uploads value={{ items, add, cancel /* ... */ }}>{children}</Uploads>;
+}
+
+// The tray in the shell's floating slot, and the pages' Upload buttons and page zones, read the provider.
+export function Tray() {
+  const uploads = use(Uploads)!;
+  return (
+    <UploadTray
+      items={uploads.items}
+      onRetry={uploads.retry}
+      onRemove={uploads.remove}
+      onCancel={uploads.cancel}
+      onClear={uploads.clear}
+      onCancelAll={uploads.cancelAll}
+    />
+  );
+}
+```
+
+The library never reads or sends a file, so the check in the drop zone and the button is a courtesy to the reader. Check every file again on your server: its size, and its type by its content rather than its name or the type the browser sent, since a renamed file passes any check by its name (OWASP's File Upload Cheat Sheet). Store it under a name of your own, out of the web root.
+
+- The Documents page puts a `PageHeader` at its top with an Upload `FileButton` in its actions, and a `PageDropZone` at its root, so a file dropped anywhere on the page joins the tray; the button is the drop's keyboard twin. Both call the provider's `add`.
+- A row's `href`, once the server has read the file, is its document's page, so the name links there through your `RouterProvider`. A client navigation keeps the root layout, and with it the shell, the tray, its items, its scroll and whether it is folded.
+- A document's page is its own URL, so a review can be shared and reloaded. It holds a review grid, a `DatePicker`, a `NumberField` and a `TextField` for each line, and a `SaveBar` under it. The bar's action saves, moves on to the next document with `router.push` and gives focus to that document's heading, so a keyboard or screen reader user starts the next review at its title. Its Cancel asks before throwing the edits away while they are unsaved.
+- The tray warns before the tab closes or reloads while files are waiting or uploading; moving between documents is a client navigation, and needs no warning.
+
+The example below is the same flow in one client component, since this site is static and makes no request: timers stand in for the request and for the server's reading, the two pages are `?doc=` on this page's URL, and the tray sits at the example's root, outside both, as the shell's `floating` slot does. Press Upload and choose a few PDFs or photos: each waits, uploads, is read, and ends saved. A file over 10 MB fails ("Over 10 MB"), and Retry starts it again; a file whose name holds "blurry" needs review ("The total could not be read"). Open a document from its row or from the list, change a line, and confirm: the next document opens with focus on its heading, and the tray stays as it was. Turn the switch on and drop files anywhere on the page.
+
+<Preview name="documents-recipe" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+The library never uploads. Your app holds the files in a provider in its root layout, sends each one, and gives the tray each file's status, progress and words; the tray draws and announces. Mount `<UploadTray>` in [AppShell](/docs/components/app-shell#floating)'s `floating` slot from that layout, so a client navigation keeps it, with its scroll and its folded state, while the reader opens the documents it links to.
+
+- `waiting`, `uploading` and `reading` are in flight: the file is queued, being sent, or being read by your server. `saved`, `review` and `failed` have settled. A file being read is on your server already, so it has no Cancel, Cancel all does not count it and it does not hold the page open.
+- `progress` runs from 0 to 1 while a file uploads, and `progressLabel` says it in your words, such as "1.8 of 4 MB". Without `progress` an uploading row draws a bar that slides, rather than one that looks stuck. A reading row always slides.
+- `reason` is required for `failed`: say why, in the reader's words, such as "Over 10 MB". A review row's reason says what to check.
+- `href` links the name to the document the file became, through your [RouterProvider](/docs/routing).
+- `onRetry` shows Retry on failed rows, `onRemove` shows Remove on waiting and settled rows, and `onCancel` shows Cancel on uploading rows. Each gets the row's `id`. When a row leaves, focus moves to the same button on the next row; when only its button leaves, as after Retry or when an upload finishes on its own, focus stays on the row itself, never on a button the reader did not choose. Focus the reader has moved elsewhere, the page's empty space included, is never pulled back.
+- Once nothing is in flight, the close button, and on a phone the sheet's footer button, which then reads "Clear", and the bar's Clear, call `onClear`, and your app drops its settled items. While files are waiting or uploading, the close button and the footer's "Cancel uploads" ask "Cancel 3 uploads?" first ("Cancel 1 upload?" for one) and call `onCancelAll` on yes; without `onCancelAll` they show only once everything has settled, and with neither handler there are none. When the tray leaves with focus inside, focus goes to `<main>`; when only the close button leaves, focus goes to the fold button.
+- `warnsOnUnload`, on by default, asks the browser to warn before the tab closes or reloads while any file is waiting or uploading. The browser shows its own words, and iOS Safari shows none, so the tray is the reader's real warning. A client navigation keeps the shell and needs none.
+- Corners follow the shared rule for rounded parts inside rounded parts. The panel and the bar name their corner, edge and padding as holders. The bar's button and its clear X fill it, so they take its radius less the gap. A button in the panel keeps its own round ends and moves out of the panel's corner instead: Close, or the fold when Close is not shown, sits below the corner, and so does the last row's trailing button, so both stay on the end edge of the other rows' buttons. Folded to its header, the panel is one row, and the trailing button moves inward instead. The sheet rounds only its top, which no row reaches. `UploadList` reads no holder: in a rounded box of your own, such as a Card, keep its buttons clear of the box's corners as you would any control of your own.
+- `formatCount` writes the counts in the title and the announcements, such as in Persian digits, and `labels` replaces every word the tray writes.
+- The labels that write a count take one of two shapes. `title`, `started` and `settled` say several counts, so they get them all and `formatCount` itself, `(counts, format)`, and call `format` on each count they say. `cancelAllTitle`, as FileDropZone's `rejected`, says one count, so it gets that count and the count already written by `formatCount`, `(count, formatted)`: use `count` to choose the plural and `formatted` in the words.
+
+```tsx
+import { AppShell, UploadTray } from '@snapshot-ui/react';
+
+// app/layout.tsx, inside your uploads provider.
+<AppShell
+  sidebar={<Nav />}
+  floating={
+    <UploadTray
+      items={uploads.items}
+      onRetry={uploads.retry}
+      onRemove={uploads.remove}
+      onCancel={uploads.cancel}
+      onClear={uploads.clear}
+      onCancelAll={uploads.cancelAll}
+    />
+  }
+>
+  {children}
+</AppShell>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+`UploadTray` takes the list's `items` and handlers. `className` goes on both of its faces; on `UploadList`, `className` and `ref` go on the list.
+
+<PropsTable label="UploadTray props" path="../../packages/react/src/upload-tray/UploadTray.tsx" type="Pick<UploadTrayProps, 'items' | 'onRetry' | 'onRemove' | 'onCancel' | 'description' | 'isCollapsed' | 'defaultCollapsed' | 'onCollapsedChange' | 'onClear' | 'onCancelAll' | 'warnsOnUnload' | 'formatCount' | 'labels' | 'className'>" />
+
+<PropsTable label="UploadList props" path="../../packages/react/src/upload-tray/UploadList.tsx" type="Pick<UploadListProps, 'items' | 'onRetry' | 'onRemove' | 'onCancel' | 'labels' | 'aria-label' | 'aria-labelledby' | 'className'>" />
+
+<PropsTable label="UploadItem" path="../../packages/react/src/upload-tray/counts.ts" type="UploadItem" />
+
+<PropsTable label="UploadTrayLabels" path="../../packages/react/src/upload-tray/UploadTray.tsx" type="UploadTrayLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The panel is a region named by its title, which a screen reader reaches with its landmark keys; on a phone the bar is a region named "Uploads" holding the button that opens a dialog titled by the same title, and once everything has settled a Clear; the dialog's own close button is named for closing it, apart from Clear and Cancel uploads at its foot. The list is a plain list in the page's tab order: each row reads its name or its link, its status in words with the reason, its bar while it moves, and its buttons, named for their file, such as "Retry invoice.pdf".
+
+The tray never hides what has focus. Once the page has loaded, a control on the page that focus lands on under the panel, open or folded, or under the phone's bar, is scrolled 16px clear of it, by Tab, Shift+Tab or a script's `focus()`; a control beside the panel, not under it, stays where it is.
+
+The tray says three things politely, and nothing else:
+
+- once, as a batch starts, how many files it holds ("Uploading 5 files");
+- rows that failed or need review, gathered over a short pause, so five failures in a burst are one sentence ("2 uploads failed");
+- a summary once every file has settled ("5 uploads finished: 3 saved, 1 needs review, 1 failed").
+
+It never says a percentage, or a file turning saved on its own: the summary says it. A retry that starts at once hears no summary first.
+
+<Keys rows={[['Tab Shift+Tab', 'Through the header\'s buttons, then each row\'s link and buttons, in order; on a phone, the bar\'s button and its Clear.'], ['Enter Space', 'On the fold button, folds or unfolds the list; on a link, opens the document; on Retry, Remove or Cancel, does it.'], ['Escape', 'In the phone\'s sheet, closes it, and focus returns to the bar. The panel is not a dialog and takes no Escape.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps uploads in the system.
+
+<Rules dos={["Say why a file failed, in the reader's words.", 'Link a saved file to its document.', 'Mount one tray, in the shell, from the root layout.']} donts={['Never say a percentage in words.', 'Never put uploads in a modal.', 'Never draw a row in signal orange or clay.']} />
+
+</Section>

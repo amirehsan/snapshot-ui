@@ -7,18 +7,9 @@
  * read is of the layout at that moment, never at render.
  */
 
-/** Whether an element scrolls in the block direction: an overflow that scrolls and more to scroll. */
-export function scrolls(element: Element): boolean {
-  const { overflowY } = getComputedStyle(element);
-  return /auto|scroll|overlay/.test(overflowY) && element.scrollHeight > element.clientHeight;
-}
+import { scrollPortOf } from '../utils/scroll-port';
 
-/** The nearest ancestor of `element` that scrolls, or null for the window. */
-export function scrollPortOf(element: Element): Element | null {
-  let port: Element | null = element.parentElement;
-  while (port !== null && !scrolls(port)) port = port.parentElement;
-  return port;
-}
+export { scrollPortOf } from '../utils/scroll-port';
 
 /**
  * The page's sticky offset, `--page-sticky-top`, resolved to pixels: the grid's own scroll margin holds it (the

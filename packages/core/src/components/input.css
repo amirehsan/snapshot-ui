@@ -73,6 +73,13 @@
     border: 1.5px solid var(--color-error);
   }
 
+  /* A text input or a text area with no label draws the changed dot at its text's end, 24px in (field.css's
+     default place), so its text stops a dot and a part step sooner and never runs under it. Only a control that
+     is its own frame, the field's direct child; a frame with a button pads in its own file. */
+  .field[data-changed][data-unlabelled] > :is(input, textarea).input {
+    padding-inline-end: calc(1.5rem + 0.375rem + var(--spacing-part));
+  }
+
   /* A button inside a field: a ghost a field step smaller than the field (36px, 24px compact), 6px in from the
      field's inline end, with a 16px slate glyph that turns ink. Its corner is concentric with the field's, the
      field's radius less those 6px: a circle in Rounded, 6px in Soft. Hit at the target in both axes by the

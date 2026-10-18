@@ -11,6 +11,7 @@ import {
 import { Description } from '../field/Description';
 import { FieldCounter, type FieldCounterProps } from '../field/FieldCounter';
 import { FieldError } from '../field/FieldError';
+import { FieldChangedMark } from '../field/FieldChangedMark';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { useValueLength } from '../field/useValueLength';
@@ -91,11 +92,12 @@ export function TextField({
 }: TextFieldProps): ReactElement {
   // The count follows the value whether the caller controls it or not.
   const { length, onChange: trackChange } = useValueLength({ value: props.value, defaultValue, onChange });
-  const { chipId, describedBy } = useChangedDescription({
-    // Only a label row has a chip, so only a labelled field has one to read.
-    isChanged: isChanged && present(label),
+  const isLabelled = present(label);
+  const { chipId, markId, describedBy } = useChangedDescription({
+    isChanged,
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
+    isLabelled,
   });
   return (
     <RACTextField
@@ -103,11 +105,15 @@ export function TextField({
       defaultValue={defaultValue}
       aria-describedby={describedBy}
       data-changed={isChanged ? '' : undefined}
+      // Without a visible label a changed field draws the changed mark (ruling 16).
+      data-unlabelled={isLabelled ? undefined : ''}
       className={composeRenderProps(className, (userClassName) => cx('field', userClassName))}
       onChange={trackChange}
     >
-      {present(label) ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
+      {isLabelled ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
       <Input ref={inputRef} placeholder={placeholder} />
+      {/* The input is the frame and holds no element, so the mark is the field's next child after it. */}
+      {isChanged && !isLabelled ? <FieldChangedMark id={markId} label={changedLabel} /> : null}
       {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
       {budget === undefined ? null : <FieldCounter {...counter} count={length} budget={budget} />}

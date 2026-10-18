@@ -19,6 +19,24 @@
     padding-inline-end: 4.5rem;
   }
 
+  /* The changed dot of a field with no label: a part step before the 36px button, 6px in, or before the Spinner
+     while options load, and the text stops a dot and a part step sooner. */
+  .combo-box[data-changed][data-unlabelled] {
+    --field-changed-mark-end: calc(0.375rem + 2.25rem + var(--spacing-part));
+  }
+
+  .combo-box[data-changed][data-unlabelled][data-loading] {
+    --field-changed-mark-end: 4.5rem;
+  }
+
+  .combo-box[data-changed][data-unlabelled] .combo-box-input {
+    padding-inline-end: calc(3rem + 0.375rem + var(--spacing-part));
+  }
+
+  .combo-box[data-changed][data-unlabelled][data-loading] .combo-box-input {
+    padding-inline-end: calc(4.5rem + 0.375rem + var(--spacing-part));
+  }
+
   /* Just before the button: 2px clear of its 6px inset and its width, in every density. */
   .combo-box-spinner {
     position: absolute;

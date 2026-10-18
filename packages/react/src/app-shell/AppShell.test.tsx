@@ -1,9 +1,9 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, type ReactElement } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { createRef, type CSSProperties, type ReactElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
-import { AppShell, useAppShell, type AppShellProps } from './AppShell';
+import { AppShell, useAppShell, useOptionalAppShell, type AppShellProps } from './AppShell';
 
 /** The shell's root, the container's one child. */
 function root(container: HTMLElement): HTMLElement {
@@ -52,6 +52,12 @@ function Probe(): ReactElement {
 }
 
 const probe = (): HTMLElement => screen.getByTestId('probe');
+
+/** Reads the shell's state where there may be no shell, as a floating part does. */
+function OptionalProbe(): ReactElement {
+  const shell = useOptionalAppShell();
+  return <span data-testid="optional" data-main={shell?.mainId ?? 'none'} />;
+}
 
 /** A rail with one link, standing in for a Sidebar. */
 const RAIL = (
@@ -179,16 +185,213 @@ describe('AppShell', () => {
     expect(root(container)).toHaveAttribute('data-has-bottom-bar', '');
   });
 
-  it('wraps the header in the sticky wrapper only when there is one', () => {
+  it('wraps the header in the sticky wrapper only when there is one, as the first part of main', () => {
     const { container, rerender } = render(<AppShell>page</AppShell>);
     expect(container.querySelector('.app-shell-header')).toBeNull();
-    rerender(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+    rerender(
+      <AppShell header={<header>Budgets</header>}>
+        <p>page</p>
+      </AppShell>,
+    );
     const wrapper = container.querySelector('.app-shell-header');
-    expect(wrapper).toContainElement(screen.getByRole('banner'));
-    expect(wrapper?.parentElement).toHaveClass('app-shell-workspace');
+    const main = screen.getByRole('main');
+    expect(wrapper?.parentElement).toBe(main);
+    expect(main.firstElementChild).toBe(wrapper);
+    expect(wrapper?.nextElementSibling).toHaveTextContent('page');
+    // Inside main, a header element is not a banner landmark: the page's title is in the main landmark.
+    expect(wrapper?.querySelector('header')?.closest('main')).toBe(main);
   });
 
-  it('draws the skip link, the rail, the workspace and the bar in that order, the header before main', () => {
+  it("lands the skip link on main, whose first heading is the header's title", () => {
+    render(
+      <AppShell header={<h1>Receipts, 2026</h1>}>
+        <h2>March</h2>
+      </AppShell>,
+    );
+    const main = screen.getByRole('main');
+    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', `#${main.id}`);
+    expect(main.querySelector('h1, h2')).toBe(screen.getByRole('heading', { level: 1 }));
+  });
+
+  describe("the header's height as the page's sticky offset", () => {
+    /** A ResizeObserver whose callback the test calls with a height, standing in for the browser's. */
+    function stubResizeObserver(): { observed: Element[]; report: (blockSize: number) => void } {
+      const observed: Element[] = [];
+      let callback: ResizeObserverCallback | undefined;
+      class Stub {
+        constructor(each: ResizeObserverCallback) {
+          callback = each;
+        }
+        observe = (target: Element): void => {
+          observed.push(target);
+        };
+        unobserve = (): void => undefined;
+        disconnect = (): void => {
+          observed.length = 0;
+        };
+      }
+      vi.stubGlobal('ResizeObserver', Stub);
+      return {
+        observed,
+        report: (blockSize) => {
+          const entry = {
+            borderBoxSize: [{ blockSize, inlineSize: 800 }],
+            contentRect: { height: blockSize },
+          };
+          act(() => {
+            callback?.([entry] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+          });
+        },
+      };
+    }
+
+    const stickyTop = (element: HTMLElement): string => element.style.getPropertyValue('--page-sticky-top');
+    /** Every inline style on the root element: the shell writes none (spec correction 121). */
+    const rootStyle = (): string => document.documentElement.getAttribute('style') ?? '';
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("writes the sticky header wrapper's height as --page-sticky-top on main, and removes it with the header", () => {
+      const { observed, report } = stubResizeObserver();
+      const { container, rerender } = render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      const wrapper = container.querySelector('.app-shell-header');
+      const main = screen.getByRole('main');
+      expect(observed).toEqual([wrapper]);
+      // Nothing is written before the first measurement, as the server's HTML has nothing.
+      expect(stickyTop(main)).toBe('');
+      report(120.5);
+      expect(stickyTop(main)).toBe('120.5px');
+      expect(stickyTop(root(container))).toBe('');
+      report(88);
+      expect(stickyTop(main)).toBe('88px');
+      rerender(<AppShell>page</AppShell>);
+      expect(observed).toEqual([]);
+      expect(stickyTop(main)).toBe('');
+    });
+
+    it('writes nothing on the root element, whose scroll is never padded for the header', () => {
+      const { report } = stubResizeObserver();
+      const before = rootStyle();
+      const { unmount } = render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      report(96);
+      expect(rootStyle()).toBe(before);
+      expect(document.documentElement.style.getPropertyValue('--app-shell-header-block-size')).toBe('');
+      unmount();
+      expect(rootStyle()).toBe(before);
+    });
+
+    it("takes an offset on the shell's style as the first paint's estimate, which the measurement replaces", () => {
+      const { observed, report } = stubResizeObserver();
+      const style = { '--page-sticky-top': '7rem' } as CSSProperties;
+      const { container, rerender } = render(
+        <AppShell style={style} header={<header>Budgets</header>}>
+          page
+        </AppShell>,
+      );
+      const main = screen.getByRole('main');
+      expect(stickyTop(root(container))).toBe('7rem');
+      expect(observed).toHaveLength(1);
+      report(100);
+      // Main's own value is what the page reads; the estimate stays on the shell and comes back with no header.
+      expect(stickyTop(main)).toBe('100px');
+      expect(stickyTop(root(container))).toBe('7rem');
+      rerender(
+        <AppShell style={style} header={null}>
+          page
+        </AppShell>,
+      );
+      expect(stickyTop(main)).toBe('');
+      expect(stickyTop(root(container))).toBe('7rem');
+    });
+
+    it("leaves the app's own offset alone with measuresHeader false, and writes nothing on the root", () => {
+      const { observed } = stubResizeObserver();
+      const { container } = render(
+        <AppShell
+          measuresHeader={false}
+          style={{ '--page-sticky-top': '64px' } as CSSProperties}
+          header={<header>Budgets</header>}
+        >
+          page
+        </AppShell>,
+      );
+      expect(observed).toEqual([]);
+      expect(stickyTop(root(container))).toBe('64px');
+      expect(stickyTop(screen.getByRole('main'))).toBe('');
+      expect(rootStyle()).toBe('');
+    });
+
+    it('measures whatever an ancestor declares, since the header slot is what sticks', () => {
+      const { observed, report } = stubResizeObserver();
+      document.documentElement.style.setProperty('--page-sticky-top', '64px');
+      try {
+        render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+        expect(observed).toHaveLength(1);
+        report(80);
+        expect(stickyTop(screen.getByRole('main'))).toBe('80px');
+      } finally {
+        document.documentElement.style.removeProperty('--page-sticky-top');
+      }
+    });
+
+    it("lets a nested shell write its own page's offset beside the outer shell's", () => {
+      const observers: ((height: number) => void)[] = [];
+      class Stub {
+        constructor(private readonly callback: ResizeObserverCallback) {}
+        observe = (): void => {
+          observers.push((blockSize) => {
+            const entry = {
+              borderBoxSize: [{ blockSize, inlineSize: 800 }],
+              contentRect: { height: blockSize },
+            };
+            act(() => {
+              this.callback([entry] as unknown as ResizeObserverEntry[], {} as ResizeObserver);
+            });
+          });
+        };
+        unobserve = (): void => undefined;
+        disconnect = (): void => undefined;
+      }
+      vi.stubGlobal('ResizeObserver', Stub);
+      const { rerender, unmount } = render(
+        <AppShell mainId="outer" header={<header>Outer</header>}>
+          <AppShell mainId="inner" header={<header>Inner</header>}>
+            page
+          </AppShell>
+        </AppShell>,
+      );
+      // Effects run inner first: the inner shell's observer, then the outer's.
+      const [inner, outer] = observers;
+      outer?.(96);
+      inner?.(56);
+      const mainOf = (id: string): HTMLElement => {
+        const element = document.getElementById(id);
+        if (element === null) throw new Error(`No main ${id}`);
+        return element;
+      };
+      expect(stickyTop(mainOf('outer'))).toBe('96px');
+      expect(stickyTop(mainOf('inner'))).toBe('56px');
+      rerender(
+        <AppShell mainId="outer" header={<header>Outer</header>}>
+          page
+        </AppShell>,
+      );
+      expect(stickyTop(mainOf('outer'))).toBe('96px');
+      expect(rootStyle()).toBe('');
+      unmount();
+    });
+
+    it('renders with no ResizeObserver, which a test environment may lack', () => {
+      vi.stubGlobal('ResizeObserver', undefined);
+      render(<AppShell header={<header>Budgets</header>}>page</AppShell>);
+      expect(stickyTop(screen.getByRole('main'))).toBe('');
+      expect(rootStyle()).toBe('');
+    });
+  });
+
+  it('draws the skip link, the rail, the workspace and the bar in that order, the header first in main', () => {
     const { container } = render(
       <AppShell sidebar={RAIL} header={<header>Budgets</header>} bottomBar={BAR}>
         page
@@ -201,11 +404,43 @@ describe('AppShell', () => {
       'bar',
     ]);
     const workspace = container.querySelector('.app-shell-workspace');
-    expect([...(workspace?.children ?? [])].map((child) => child.className)).toEqual([
-      'app-shell-header',
-      'app-shell-main',
+    expect([...(workspace?.children ?? [])].map((child) => child.className)).toEqual(['app-shell-main']);
+    expect(screen.getByRole('main').firstElementChild).toHaveClass('app-shell-header');
+    expect(screen.getByRole('main')).toHaveTextContent('Budgetspage');
+  });
+
+  it('renders floating after the workspace and the bottom bar, outside main', () => {
+    const { container } = render(
+      <AppShell
+        sidebar={RAIL}
+        bottomBar={BAR}
+        floating={
+          <section aria-label="Uploads" className="tray">
+            <OptionalProbe />
+          </section>
+        }
+      >
+        page
+      </AppShell>,
+    );
+    expect([...root(container).children].map((child) => child.className)).toEqual([
+      'app-shell-skip',
+      'rail',
+      'app-shell-workspace',
+      'bar',
+      'tray',
     ]);
-    expect(screen.getByRole('main')).toHaveTextContent('page');
+    // No wrapper of its own, so it inherits the shell's properties, and never inside main.
+    const tray = screen.getByRole('region', { name: 'Uploads' });
+    expect(tray.parentElement).toBe(root(container));
+    expect(screen.getByRole('main')).not.toContainElement(tray);
+    // The shell's state reaches it.
+    expect(screen.getByTestId('optional')).toHaveAttribute('data-main', screen.getByRole('main').id);
+  });
+
+  it('lets useOptionalAppShell read null outside a shell', () => {
+    render(<OptionalProbe />);
+    expect(screen.getByTestId('optional')).toHaveAttribute('data-main', 'none');
   });
 
   it('collapses and expands on its own when uncontrolled, and tells onSidebarCollapsedChange', async () => {

@@ -72,6 +72,13 @@ export {
   type DateRangePickerProps,
 } from './date-range-picker';
 export {
+  DatePicker,
+  type DatePickerBaseProps,
+  type DatePickerLabels,
+  type DatePickerProps,
+  type DatePreset,
+} from './date-picker';
+export {
   FilterChip,
   type FilterChipCustomProps,
   type FilterChipLabels,
@@ -201,11 +208,40 @@ export {
 export { Avatar, type AvatarProps } from './avatar';
 export { StatTile, type StatTileChange, type StatTileProps } from './stat-tile';
 export { Meter, type MeterBaseProps, type MeterProps, type MeterSegment } from './meter';
+export { ProgressBar, type ProgressBarBaseProps, type ProgressBarProps } from './progress-bar';
+export {
+  FileButton,
+  FileDropZone,
+  PageDropZone,
+  type FileAcceptance,
+  type FileButtonProps,
+  type FileDropZoneBaseProps,
+  type FileDropZoneLabels,
+  type FileDropZoneProps,
+  type FileRejection,
+  type FileRejectionReason,
+  type PageDropZoneProps,
+} from './file-drop-zone';
+export {
+  UploadList,
+  UploadTray,
+  type UploadCounts,
+  type UploadItem,
+  type UploadListLabels,
+  type UploadListProps,
+  type UploadStatus,
+  type UploadTrayLabels,
+  type UploadTrayProps,
+} from './upload-tray';
+export { SaveBar, type SaveBarLabels, type SaveBarProps } from './save-bar';
+export { PageColumn, PageHeader, type PageColumnProps, type PageHeaderProps } from './page-header';
+export { Breadcrumb, Breadcrumbs, type BreadcrumbProps, type BreadcrumbsProps } from './breadcrumbs';
 export { EmptyState, type EmptyStateProps } from './empty-state';
 export { Skeleton, type SkeletonProps } from './skeleton';
 export {
   DataTable,
   type DataTableBaseProps,
+  type DataTableBulkAction,
   type DataTableColumn,
   type DataTableLabels,
   type DataTableProps,

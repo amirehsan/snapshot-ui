@@ -32,6 +32,10 @@ vi.mock('react', async () => {
 // server build, so the linked tile's client module is a stand-in here.
 vi.mock('../src/stat-tile/StatTileLink', () => ({ StatTileLink: () => null }));
 
+// Pagination's page size picker is a client leaf, a native select with its change handler, which a server bundler
+// replaces with a reference; a server page cannot pass the function it calls, so no row here draws it.
+vi.mock('../src/pagination/PaginationPageSize', () => ({ PaginationPageSize: () => null }));
+
 // Pagination's three client leaves, as stand-ins that write what they were given as plain markup and record
 // their props, so a test can see that the shell hands them no function.
 const leaves = vi.hoisted(() => ({ props: [] as [leaf: string, props: Record<string, unknown>][] }));
@@ -81,7 +85,9 @@ import { EmptyState } from '../src/empty-state';
 import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
 import { Meter } from '../src/meter';
+import { PageColumn, PageHeader } from '../src/page-header';
 import { Pagination } from '../src/pagination';
+import { ProgressBar } from '../src/progress-bar';
 import { Skeleton } from '../src/skeleton';
 import { StatTile } from '../src/stat-tile';
 import { Eyebrow, Heading, Text } from '../src/typography';
@@ -142,6 +148,50 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     <Skeleton shape="circle" width="2rem" />,
     '<span class="skeleton" data-shape="circle" aria-hidden="true" style="inline-size:2rem;block-size:2rem"></span>',
   ],
+  [
+    'ProgressBar',
+    <ProgressBar label="Uploading" value={45} />,
+    '<div class="progress-bar"><div class="progress-bar-head"><span class="progress-bar-label" id="_R_0_-label">Uploading</span>' +
+      '<span class="progress-bar-value" aria-hidden="true">45%</span></div>' +
+      '<div class="progress-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="45" aria-valuetext="45%"' +
+      ' style="--progress-bar-value:45%" aria-labelledby="_R_0_-label"><span class="progress-bar-fill"></span></div></div>',
+  ],
+  [
+    'ProgressBar indeterminate',
+    <ProgressBar aria-label="Reading" isIndeterminate />,
+    '<div class="progress-bar"><div class="progress-bar-track" role="progressbar" data-indeterminate="" aria-label="Reading">' +
+      '<span class="progress-bar-fill"></span></div></div>',
+  ],
+  [
+    'PageHeader',
+    <PageHeader title="Documents" />,
+    '<header class="page-header"><div class="page-column page-header-row"><div class="page-header-titles">' +
+      '<h1 class="heading heading-2 page-header-title">Documents</h1></div></div></header>',
+  ],
+  [
+    // A Breadcrumbs is a client module, so a server page hands it in as a reference; a nav stands in for it here.
+    'PageHeader with every static slot',
+    <PageHeader
+      breadcrumbs={<nav aria-label="Breadcrumbs" />}
+      eyebrow="Documents"
+      title="Receipts, 2026"
+      description="Every receipt you uploaded this year."
+      actions={<a href="/upload">Upload</a>}
+    />,
+    '<header class="page-header"><div class="page-column page-header-row"><div class="page-header-titles">' +
+      '<nav aria-label="Breadcrumbs"></nav><p class="eyebrow">Documents</p>' +
+      '<h1 class="heading heading-2 page-header-title">Receipts, 2026</h1></div>' +
+      '<div class="page-header-actions"><a href="/upload">Upload</a></div>' +
+      '<div class="page-header-detail"><p class="copy copy-muted page-header-description">' +
+      'Every receipt you uploaded this year.</p></div></div></header>',
+  ],
+  [
+    'PageHeader at a lower heading level',
+    <PageHeader headingLevel={2} title="Notifications" />,
+    '<header class="page-header"><div class="page-column page-header-row"><div class="page-header-titles">' +
+      '<h2 class="heading heading-2 page-header-title">Notifications</h2></div></div></header>',
+  ],
+  ['PageColumn', <PageColumn>The receipts.</PageColumn>, '<div class="page-column">The receipts.</div>'],
 ];
 
 describe('the static components in a server component', () => {
@@ -305,6 +355,9 @@ const STATIC_MODULES = [
   'pagination/Pagination.tsx',
   'empty-state/EmptyState.tsx',
   'skeleton/Skeleton.tsx',
+  'progress-bar/ProgressBar.tsx',
+  'page-header/PageHeader.tsx',
+  'page-header/PageColumn.tsx',
 ];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {

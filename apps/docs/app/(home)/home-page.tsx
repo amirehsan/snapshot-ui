@@ -697,7 +697,9 @@ export function HomePage(): ReactElement {
             <Card className="catalog-group">
               <Eyebrow>Dates and media</Eyebrow>
               <div className="chips">
-                <span className="chip">Date picker</span>
+                <Link className="chip" href="/docs/components/date-picker">
+                  Date picker
+                </Link>
                 <Link className="chip chip-new" href="/docs/components/date-range-picker">
                   Date range picker
                 </Link>
@@ -754,7 +756,9 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/sidebar">
                   Sidebar
                 </Link>
-                <span className="chip">Save bar</span>
+                <Link className="chip" href="/docs/components/save-bar">
+                  Save bar
+                </Link>
               </div>
             </Card>
           </div>
@@ -801,6 +805,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/avatar">Avatar</Link>
                 <Link href="/docs/components/badge">Badge</Link>
                 <Link href="/docs/components/bottom-tab-bar">Bottom tab bar</Link>
+                <Link href="/docs/components/breadcrumbs">Breadcrumbs</Link>
                 <Link href="/docs/components/button">Button</Link>
                 <Link href="/docs/components/calendar">Calendar</Link>
                 <Link href="/docs/components/card">Card</Link>
@@ -810,11 +815,13 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/command-palette">Command palette</Link>
                 <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
                 <Link href="/docs/components/data-table">Data table</Link>
+                <Link href="/docs/components/date-picker">Date picker</Link>
                 <Link href="/docs/components/date-range-picker">Date range picker</Link>
                 <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/drawer">Drawer</Link>
                 <Link href="/docs/components/empty-state">Empty state</Link>
                 <Link href="/docs/components/field">Field parts</Link>
+                <Link href="/docs/components/file-drop-zone">File drop zone</Link>
                 <Link href="/docs/components/filter-bar">Filter bar</Link>
                 <Link href="/docs/components/filter-chip">Filter chip</Link>
                 <Link href="/docs/components/icon-button">Icon button</Link>
@@ -824,9 +831,12 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/meter">Meter</Link>
                 <Link href="/docs/components/multi-select">Multi-select</Link>
                 <Link href="/docs/components/number-field">Number field</Link>
+                <Link href="/docs/components/page-header">Page header</Link>
                 <Link href="/docs/components/pagination">Pagination</Link>
                 <Link href="/docs/components/popover">Popover</Link>
+                <Link href="/docs/components/progress-bar">Progress bar</Link>
                 <Link href="/docs/components/radio-group">Radio group</Link>
+                <Link href="/docs/components/save-bar">Save bar</Link>
                 <Link href="/docs/components/search-field">Search field</Link>
                 <Link href="/docs/components/segmented-control">Segmented control</Link>
                 <Link href="/docs/components/select">Select</Link>
@@ -843,6 +853,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/toast">Toast</Link>
                 <Link href="/docs/components/tooltip">Tooltip</Link>
                 <Link href="/docs/components/typography">Typography</Link>
+                <Link href="/docs/components/upload-tray">Upload tray</Link>
                 <Link href="/docs/charts/line-chart">Line chart</Link>
                 <Link href="/docs/charts/sparkline">Sparkline</Link>
               </div>

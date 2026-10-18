@@ -31,6 +31,18 @@ The first field below is changed. The second is changed and invalid.
 
 <Section>
 
+## Changed, with no label
+
+A field named only by `aria-label` or `aria-labelledby`, as a cell of a review grid is, has no label row for the chip. Changed, it draws the changed dot instead: the chip's 6px dot in clay, inside its frame, before its button or at its text's end, with its text padded clear. The dot holds the word "Changed", or your `changedLabel`, unseen, and the field names it in `aria-describedby`, so a screen reader reads it after the field's name. It leaves while the field is invalid, as the chip does.
+
+Every field with a frame draws it: Text field, Text area, Number field, Select, Combo box, Multi-select, Date range picker and Date picker. The first two fields below are changed; the third is not.
+
+<Preview name="field-changed-unlabelled" />
+
+</Section>
+
+<Section>
+
 ## Length count
 
 A count advises and never blocks. It stays empty until the value reaches 70% of the budget, then reads "34 of about 40". Past the budget it turns to ink at 700, and the value still grows and saves.

@@ -5,6 +5,7 @@
     "avatar",
     "badge",
     "bottom-tab-bar",
+    "breadcrumbs",
     "button",
     "calendar",
     "card",
@@ -14,11 +15,13 @@
     "command-palette",
     "confirm-dialog",
     "data-table",
+    "date-picker",
     "date-range-picker",
     "dialog",
     "drawer",
     "empty-state",
     "field",
+    "file-drop-zone",
     "filter-bar",
     "filter-chip",
     "icon-button",
@@ -28,9 +31,12 @@
     "meter",
     "multi-select",
     "number-field",
+    "page-header",
     "pagination",
     "popover",
+    "progress-bar",
     "radio-group",
+    "save-bar",
     "search-field",
     "segmented-control",
     "select",
@@ -46,6 +52,7 @@
     "text-field",
     "toast",
     "tooltip",
-    "typography"
+    "typography",
+    "upload-tray"
   ]
 }

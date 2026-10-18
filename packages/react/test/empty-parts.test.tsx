@@ -11,14 +11,19 @@ import { DateRangePicker } from '../src/date-range-picker';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { EmptyState } from '../src/empty-state';
+import { FileDropZone } from '../src/file-drop-zone';
+import { UploadList, UploadTray } from '../src/upload-tray';
 import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
 import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
+import { PageHeader } from '../src/page-header';
 import { PickerOption } from '../src/picker';
+import { ProgressBar } from '../src/progress-bar';
 import { Radio, RadioGroup } from '../src/radio-group';
+import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Select } from '../src/select';
@@ -266,6 +271,14 @@ describe('an empty shell slot', () => {
     expect(shell).not.toHaveAttribute('data-has-bottom-bar');
   });
 
+  it('draws nothing after the workspace for a floating slot of false, an empty string or null', () => {
+    for (const floating of [false, '', null]) {
+      const { container, unmount } = render(<AppShell floating={floating}>page</AppShell>);
+      expect(container.querySelector('.app-shell')?.lastElementChild).toHaveClass('app-shell-workspace');
+      unmount();
+    }
+  });
+
   it('draws no head, no footer and nothing for the search in a Sidebar given false, an empty string or null', () => {
     // A Sidebar throws outside an AppShell, so the row wraps it in one.
     const { container } = render(
@@ -400,6 +413,98 @@ describe('an empty data part slot', () => {
       );
       expect(container.querySelector('.data-table-bar'), String(bulkActions)).not.toBeNull();
       expect(container.querySelector('.data-table-bar-actions'), String(bulkActions)).toBeNull();
+      unmount();
+    }
+  });
+});
+
+describe('an empty documents part slot', () => {
+  it('draws no label span for a ProgressBar given an empty label and an aria-label', () => {
+    const { container } = render(<ProgressBar label="" aria-label="Uploading invoice.pdf" value={45} />);
+    expect(container.querySelector('.progress-bar')).not.toBeNull();
+    expect(container.querySelector('.progress-bar-label')).toBeNull();
+    const track = screen.getByRole('progressbar', { name: 'Uploading invoice.pdf' });
+    expect(track).not.toHaveAttribute('aria-labelledby');
+    // The value still shows in the head, alone.
+    expect(container.querySelector('.progress-bar-head')?.children).toHaveLength(1);
+  });
+
+  it('draws no label row or description for a FileDropZone given an empty label and description', () => {
+    const { container } = render(
+      <FileDropZone label="" description="" aria-label="Receipt" onFiles={() => undefined} />,
+    );
+    const zone = screen.getByRole('group', { name: 'Receipt' });
+    expect(zone.querySelector('.field-head')).toBeNull();
+    expect(zone.querySelector('.field-description')).toBeNull();
+    expect(zone).not.toHaveAttribute('aria-labelledby');
+    // The button describes itself by nothing that is not drawn.
+    expect(screen.getByRole('button', { name: 'Choose a file' })).not.toHaveAttribute('aria-describedby');
+    expect(container.querySelector('.file-drop-zone-box')).not.toBeNull();
+  });
+
+  it('draws no reason, progress or link in an UploadList row given empty strings', () => {
+    const { container } = render(
+      <UploadList
+        aria-label="Uploads"
+        items={[
+          { id: 1, name: 'review.pdf', status: 'review', reason: '', href: '' },
+          { id: 2, name: 'upload.pdf', status: 'uploading', progressLabel: '' },
+        ]}
+      />,
+    );
+    expect(container.querySelector('.upload-row-reason')).toBeNull();
+    expect(container.querySelector('.upload-row-progress')).toBeNull();
+    expect(container.querySelector('a')).toBeNull();
+    // The empty progress label leaves the bar without value text, so it is indeterminate and named.
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName('Uploading upload.pdf');
+  });
+
+  it('draws no description in an UploadTray given an empty one', () => {
+    const { container } = render(
+      <UploadTray items={[{ id: 1, name: 'lease.pdf', status: 'saved' }]} description="" />,
+    );
+    expect(container.querySelector('.upload-tray-description')).toBeNull();
+    expect(container.querySelector('.upload-tray-title')).toHaveTextContent('1 upload complete');
+  });
+
+  it('draws no secondary actions and no status text in a SaveBar given false, an empty string or null', () => {
+    for (const empty of [false, '', null]) {
+      const { container, unmount } = render(
+        <SaveBar
+          message="2 changes to Corner Mart"
+          actionLabel="Save"
+          onAction={() => undefined}
+          onCancel={() => undefined}
+          secondaryActions={empty}
+          status={empty}
+          statusTone="error"
+        />,
+      );
+      // Cancel and the action, with nothing between them.
+      const actions = container.querySelector('.save-bar-actions');
+      expect(actions?.children).toHaveLength(2);
+      expect(actions?.childNodes).toHaveLength(2);
+      // The host stays, empty and polite, with no icon for a status that is not there.
+      expect(container.querySelector('.save-bar-status')).toBeEmptyDOMElement();
+      unmount();
+    }
+  });
+
+  it('draws no trail, eyebrow, description or actions in a PageHeader given false, an empty string or null', () => {
+    for (const empty of [false, '', null]) {
+      const { container, unmount } = render(
+        <PageHeader
+          title="Documents"
+          breadcrumbs={empty}
+          eyebrow={empty}
+          description={empty}
+          actions={empty}
+        />,
+      );
+      // The title alone in the titles, and no actions wrapper beside them.
+      const titles = container.querySelector('.page-header-titles');
+      expect(titles?.childNodes).toHaveLength(1);
+      expect(container.querySelector('.page-header-row')?.children).toHaveLength(1);
       unmount();
     }
   });
