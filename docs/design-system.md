@@ -7133,17 +7133,29 @@ current page's `aria-current="true"` and no `href`.
 NVDA: not yet verified (risk R3).
 
 **The page size picker** (the owner's addition in batch 4, spec
-correction 109 of the documents plan). `pageSize`, `pageSizeOptions`
-(10, 25, 50 and 100 by default) and `onPageSizeChange(pageSize, page)`,
-typed together or not at all, draw a rows-per-page picker at the row's
-start: the library's Select in a client leaf, labelled "Rows per page"
-(`labels.pageSize`) beside it at the range's small step in slate, its
-trigger as tall as the page controls, its options written with
-`pageLabel`. A new size is handed on with the page that holds the first
+corrections 109 and 112 of the documents plan). `pageSize`,
+`pageSizeOptions` (10, 25, 50 and 100 by default) and
+`onPageSizeChange(pageSize, page)`, typed together or not at all, draw a
+rows-per-page picker at the row's start: a native `select` in a client
+leaf, as Polaris draws its page size, labelled "Rows per page"
+(`labels.pageSize`) by a `label` tied to it through `for` and an id from
+`useId`, beside it at the range's small step in slate. The select wears
+`.input`, so its edge, raised fill, hover, focus edge and ring and
+radius (`--input-radius`, the pill unless a holder sets it) are the text
+field's and the Select trigger's; it is as tall as the page controls
+(`--size-control`), drops its own arrow (`appearance: none`) and draws
+Lucide's chevron down in slate inside its inline end, a part step from
+the value and 1rem from the edge, in `CanvasText` under forced colors,
+and on the left in right to left. Its options are written with
+`pageLabel`, so Persian digits reach them, and the current size is
+always among them. It imports nothing from React Aria: a phone opens its
+own wheel or sheet, the keys are the platform's (Up and Down choose at
+once on Windows and Linux and open the list on a Mac), and its HTML on
+the server is the working control with its size selected. A new size is handed on with the page that holds the first
 row of the current page at that size, so the reader keeps their place;
 the range stays the app's sentence, said politely once it settles. With
-the picker the step words become hidden names under 52rem of the box,
-the list wraps to its own line at the end below about 45rem, and under
+the picker the step words become hidden names under 54rem of the box,
+the list wraps to its own line at the end below about 47rem, and under
 30rem and in the short form the picker takes its own line above the
 steps; nothing scrolls sideways at 320px, and right to left mirrors it.
 It calls a function, so a client component renders it, in either mode;
@@ -7155,8 +7167,14 @@ spec's 1.5 kB budget: the entry measured 1.55 kB, the shell with its
 three client leaves, the page items and the focus handoff, and the rule
 rounds up to 2 kB and adds 0.5 kB. With the cleaned inputs, the warning
 for no pages and the blur rule it measures 1.63 kB, inside the limit.
-With the page size picker, which brings Select, it measured 4.05 kB,
-which the rule sets at 5 kB.
+With the page size picker on the library's Select it measured 4.05 kB
+without React Aria and 55.56 kB with it, since every Pagination, a
+server page's that cannot show the picker included, carried Select's
+list, popover and option. As a native select (spec correction 112) it
+measures 2 kB without React Aria, which the rule sets at 2.5 kB, the
+limit it had before the picker, and 13.48 kB with it, the links' and
+buttons' React Aria alone; a watch-only entry, "Pagination with React
+Aria", holds that at 20 kB, so Select coming back would fail it.
 
 ## The server face
 
@@ -9003,7 +9021,7 @@ with Pagination (open question 6).
 0.6.0: it named 40rem, the width at which the table gives way to its
 list, so it changed nothing (open question 9).
 
-**Beside a side panel** (ruling 24, spec corrections 107 and 108 of the
+**Beside a side panel** (ruling 24, spec correction 107 of the
 documents plan). `listBelow: '40rem' | '32rem'`, a container width and not
 a breakpoint, moves the switch to the list face. DataTable writes
 `data-list-below="32rem"` for the second value and nothing for the
@@ -9014,9 +9032,13 @@ select mode, the scroll clears and the sticky offsets follow the face
 drawn, as DataTable reads the drawn face's `display`. At 1440px in an app
 a table beside the 24rem panel is about 34rem: the table, its `hideBelow:
 'md'` columns gone. Every phone held upright is under 32rem: the list.
-The docs show an outline of the page from 1440px, so there the recipe's
-box beside the panel is about 19rem and draws its list; its end-to-end
-test runs at 1280, a 36.75rem box.
+The docs show an outline of the page beside the content from 1440px,
+which left the recipe's box beside the panel about 19rem there; while an
+example's panel is open they fold the outline under the content from
+1440px, as they fold the rail, so the recipe's box is about 45.75rem at
+1440 and draws its table, as an app's does. Its end-to-end test runs at
+1440, and again at 1280, where the box is 36.75rem and `listBelow` is
+what keeps the table.
 
 **The bulk-action bar's data form** (ruling 25, spec corrections 14, 18
 and 102 to 106 of the documents plan). Clear selection is a 40px ghost X
@@ -9030,8 +9052,10 @@ ellipsis `IconButton` named `labels.moreActions` whose menu, opening above
 the bar, is read as it opens: the unpromoted actions and every promoted
 one whose button is not drawn (`isDrawn`, `getClientRects()`, since
 `checkVisibility()` is above the Safari floor). The bar is its own size
-container: under 40rem the promoted buttons are `display: none`, so More
-holds every action; a More holding only promoted actions
+container, and a container query reads its content box, inside the
+padding that follows the shape: under 40rem of the bar's content the
+promoted buttons are `display: none`, so More holds every action (spec
+correction 116); a More holding only promoted actions
 (`data-promoted-only`) is hidden at 40rem and wider; under 24rem the
 select-all place takes a line of its own after the controls. The bar
 keeps `flex-wrap: wrap` only as a last resort. The X and More are
@@ -9041,11 +9065,24 @@ audit passes. A node `bulkActions` draws as 0.6.0 did after the X.
 
 Focus never falls to the page: a control that leaves the bar, by a
 render, by being disabled or by the container query hiding it, hands
-focus to the control in its place (More for a hidden promoted button);
-an action in More that clears the selection takes the bar and the menu
-away together, and the table takes focus, a frame later if React Aria's
-open menu still holds the page inert. The count is said once by the
-polite status, as before; the menu's items keep the actions' names.
+focus to the control in its place (More for a hidden promoted button).
+Focus the reader moves out of the bar is theirs: a press outside it, or
+focus that leaves a control still connected, drawn and enabled a frame
+later, makes the bar forget the control, so a press on plain text, which
+leaves focus on the body, is never followed by the bar taking it back as
+it narrows or a control disables (spec correction 111). An action in
+More that clears the selection takes the bar and the menu away together,
+and the table takes focus in its layout effect, or, while React Aria's
+open menu still holds the page inert, in its passive effect of the same
+commit, after the menu's passive cleanup has taken `inert` away (spec
+correction 113). The count is said once by the polite status, as before;
+the menu's items keep the actions' names. With the X's tip open, as Tab
+onto the X opens it, the first Escape is the tip's and the second clears
+(spec correction 114); the tip repeats the X's name as its description,
+which the Tooltip record accepts for every icon button until the owner's
+screen reader check. A data array holding an entry that is not an
+action warns once and draws nothing for that entry, rather than reach
+React as a child it cannot draw (spec correction 118).
 
 **The bar's offset.** The bar writes its border-box height as
 `--save-bar-offset` through `useBottomBarOffset`, as SaveBar does, and
@@ -9071,7 +9108,8 @@ round, with the item descriptions, the tap in Select mode and the named
 totals, and without the mark's icon, measured 8.32 kB, still 9 kB. With
 `listBelow`, the X with its Tooltip and the More menu, batch 4 measured
 11.11 kB, which the rule sets at 12 kB (spec correction 108 of the
-documents plan).
+documents plan); its review fix round, with the focus the bar forgets
+and the malformed data guard, measures 11.39 kB, inside it.
 
 **Screen readers.** Not yet verified with VoiceOver and NVDA (owner
 action 4): a row read by its row header and cells, the current row's
