@@ -1,44 +1,46 @@
 # Insights: BarChart, the chart palette and Prose: design
 
-Status: written for review on 2026-10-18. Nothing here is approved yet. The owner's calls are the open questions in section 15, each with a recommended answer; everything else is decided here and listed in section 13.
+Status: written for review on 2026-10-18; revised the same day with the consumer's answers to open question 1 (section 3), which settle the build order, grouped bars, the previous-period look, a press on a bar, and Prose's input. Nothing here is approved yet. The owner's remaining calls are the open questions in section 15, each with a recommended answer; everything else is decided here and listed in section 13.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document takes the next slice of phase 6, "Charts" (its bar chart and the chart palette derivation the parent spec requires before any chart with a palette is built), and adds Prose, which the parent spec does not list. It answers batch 6 ("Insights") of the first consumer's roadmap, agreed with the consumer as BarChart and Prose. The design authority remains `docs/design-system.md`.
 Released before this: batch 5 ("Accounts"), `@snapshot-ui/core` and `@snapshot-ui/react` 0.8.0 (`docs/specs/2026-10-18-accounts-design.md`, on `docs/accounts-spec` at the time of writing), with the `@snapshot-ui/charts` patch that moves its core peer to `^0.8.0`. This batch is the 0.9.0 minor release of core and react and a minor release of `@snapshot-ui/charts`. Section 2 lists what it takes from batches 1 to 5.
 
 ## Summary for the owner
 
-What this batch adds, in plain words:
+What this batch adds, in plain words, in the order the consumer needs it:
 
-- **BarChart**, the third chart. Bars standing up (months, categories) or lying down (merchants, budgets with long names), bars below a zero line for negative figures such as a month that cost more than it brought in, and bars split into stacked parts (spending by category) or set side by side (this month against last month). It shows figures on the bars when asked, a table of the same figures behind a button, a legend, and a loading, empty or error state in the chart's own space. A keyboard user moves from bar to bar with the arrow keys, and each bar says its category, its series and its figure.
-- **The chart palette.** Four new colors for charts with several series: a teal, a violet, an olive and a magenta, each chosen to stay clear of the colors that already mean something (red for failure, green for success and money in, amber for warning, orange for consent and unsaved, blue for links), and checked for color-blind readers and for contrast in light and dark. A fifth series is slate, read as "Other". One series is still drawn in ink, and two series compared over time are still ink and slate, as the line chart draws them.
-- **Prose**, a style for long-form text the app does not write by hand: a help article, a monthly summary, Markdown or a CMS's HTML. One class, `prose`, or the `Prose` wrapper, gives every heading, paragraph, list, link, quote, code block, table, image and rule the library's type scale and spacing, at a comfortable line length, in both directions and both color modes.
+- **BarChart**, the third chart, first. Bars lying down for a ranked list (spending by category, merchant or account: the top 8 to 12 and an "Other", the name at the start of each row and the amount at the end, refunds pulling a row below zero), and bars standing up for months (income beside spending, or net cash flow above and below a zero line). Any view can be compared with the previous period: this period's bar beside last period's, drawn in the same color but striped, so "this and last" never reads as two categories. A table of the same figures sits behind a button, and the chart has a loading, empty or error state in its own space. A keyboard user moves from bar to bar with the arrow keys, and each bar says its category, its series and its figure.
+- **Prose**, second: a style for long-form text the app does not write by hand, here a monthly report and a weekly coaching note written by a model in Markdown, later Ask answers, and a goals guide in English and Persian. One class, `prose`, or the `Prose` wrapper, gives every heading, paragraph, list, quote, code block, table and rule the library's type scale and spacing, at a comfortable line length, in both directions and both color modes, with no client JavaScript. Wide tables scroll inside it on a phone, and links and images the app has turned into plain text have a documented look.
+- **Stacked bars and the chart palette**, last: a month's spending split into its top four categories and "Other", which needs four new colors (a teal, a violet, an olive and a magenta), each chosen to stay clear of the colors that already mean something and checked for color-blind readers and for contrast in light and dark. The consumer uses it in a later phase; it is built last in this batch.
 - **Under the hood**, the line chart's table, legend, readout, keys and naming move into shared pieces both charts use, with no change to the line chart a reader or an app can see.
 
-Why: the consumer's next page is Insights, which explains where the money went over a month and a year, in charts and in a written summary.
+Why: the consumer's next page is Insights: a strip of figures, a filter bar, one chart card whose grouping (month, category, merchant, account) is a segmented control, a table under it, and a written report.
 
-What it does not add: area and donut charts, a bar that is a link or opens a detail on Enter, a 100% stacked bar, charts that switch orientation on their own, a small size of Prose, and a heading step between 14px and 24px. Section 15 lists each as a question with a recommendation.
+What it does not add: a bar that is a link or responds to a press (the table under the chart links to the transactions), area and donut charts, a 100% stacked bar, charts that switch orientation on their own, a small size of Prose, and a heading step between 14px and 24px. Section 15 lists each as a question with a recommendation.
 
 ## 1. Goal
 
-Give an insights page its parts: a bar chart for amounts by category or by period, in either orientation, with negatives, stacks and comparisons, that a keyboard and a screen reader can read bar by bar and that renders on the server; the categorical palette it needs, derived and measured; and a long-form text style for the words around the charts. Ship them as the batch 6 release: core and react 0.9.0, charts 0.2.0.
+Give an insights page its parts: a bar chart for amounts by category or by period, in either orientation, with negatives, a comparison with the previous period and stacks, that a keyboard and a screen reader can read bar by bar and that renders on the server; the categorical palette its stacks need, derived and measured; and a long-form text style for the report around the chart. Ship them as the batch 6 release: core and react 0.9.0, charts 0.2.0.
 
-The hard parts. A bar chart is the chart most often drawn badly: a truncated axis, red for down, a label rotated 45 degrees, a number on every bar, a palette nobody checked. Each has a rule here (section 4). The library's own rules make two more: nothing may be measured before the first paint, so a long label, a value label and a bar's thickness are laid out by CSS from known numbers; and every figure is the app's string, so a stack's total is the app's too. Prose's hard part is the opposite of a component's: it styles HTML the library never sees, written by a CMS or a Markdown renderer, so its rules must be safe for any order and nesting of elements and must never reach a component placed inside it.
+The hard parts. A bar chart is the chart most often drawn badly: a truncated axis, red for down, a label rotated 45 degrees, a number on every bar, a palette nobody checked. Each has a rule here (section 4). The library's own rules make two more: nothing may be measured before the first paint, so a long label, a value label and a bar's thickness are laid out by CSS from known numbers; and every figure is the app's string, so a stack's total is the app's too. Prose's hard part is the opposite of a component's: it styles HTML the library never sees, written by a model through a Markdown renderer, so its rules must be safe for any order and nesting of elements, must never reach a component placed inside it, and must not rely on the links and images the app strips out.
 
-Build order, which is also the plan's order:
+Build order, which is also the plan's order. It is the consumer's order of need: BarChart's horizontal and grouped month views, then Prose, then stacked bars. The palette moves next to the stacks, the only part that needs it:
 
-1. **The chart palette** (section 5): four tokens with light and dark values, the validator ported into core's tests, the Appendix B record.
-2. **The shared chart foundations** (section 6): LineChart's table, legend, readout placement, keys, naming and active state moved to `src/foundations/`, with LineChart's tests and baselines unchanged as the proof.
-3. **BarChart, vertical** (section 7): one series, then grouped and stacked, negatives, value labels, the table, the states.
-4. **BarChart, horizontal** (section 7): the row grid, long labels, the narrow layout.
-5. **Prose** (section 8): `prose.css` and the `Prose` wrapper.
+1. **The shared chart foundations** (section 6): LineChart's table, legend, readout placement, keys, naming and active state moved to `src/foundations/`, with LineChart's tests and baselines unchanged as the proof.
+2. **BarChart, horizontal** (section 7): one series, the row grid with labels at the start and amounts at the end, negatives, long labels, the narrow layout, the table, the states.
+3. **BarChart, vertical and grouped** (section 7): months, negatives split at zero, two series side by side (income in `gain` beside spending in ink), and the previous-period look in both orientations.
+4. **Prose** (section 8): `prose.css`, the `Prose` wrapper and `ProseScroll`, and the documented spans for neutralized links and images.
+5. **The chart palette** (section 5): four tokens with light and dark values, the validator ported into core's tests, the Appendix B record.
+6. **BarChart, stacked** (section 7): the stacks by sign, totals, the palette and "Other", textures.
 
 Out of scope, each recorded where it is deferred:
 
+- A press on a bar, `onBarPress` or an `href` per bar: the consumer's table under the chart links to the transactions, so neither is needed now. A later candidate (open question 13).
 - Area and donut charts (parent spec, phase 6). The donut's arc helper waits for the gauge's (accounts spec, section 7.4), which it can copy.
-- A bar that navigates or opens a detail on Enter or a press (open question 13).
 - A 100% (normalized) stack, a waterfall, a histogram, a bullet chart and a dual axis. The dual axis is never: two measures take two charts.
+- Grouped bars of three or more series: the consumer groups two at most (open question 2).
 - Animation of bars, on first paint or on change. Every chart renders what it is given (home spec, section 1).
 - Number and date formatting, as everywhere: every figure, tick, total and category is the app's string.
-- Sanitizing HTML for Prose. The library never parses or injects HTML; the app sanitizes what it renders (section 8.1).
+- Sanitizing HTML for Prose. The library never parses or injects HTML; the consumer renders model output with `skipHtml` (section 8.1).
 - A small size of Prose, and syntax highlighting inside it (open questions 19 and 21).
 
 ## 2. Depends on
@@ -59,20 +61,31 @@ Out of scope, each recorded where it is deferred:
 | The docs site's code block (`apps/docs/app/site.css`, `.code`): bone, the frame edge, the surface radius, 1.25rem by 1.5rem, 0.875rem at 1.7, and its Shiki css-variables mapping onto the palette | Prose's `pre` |
 | The concentric audit (`apps/storybook/tests/concentric`) | Run on every new story in three shapes |
 | `Heading`, `Card`, `EmptyState`, `Skeleton` in `@snapshot-ui/react` | Composed by the app around a chart, and in the docs |
+| `StatTile`'s `change` line, `SegmentedControl`, `Switch`, `FilterBar`, `DataTable`, `PageHeader` | The consumer's Insights page around the chart, unchanged (section 3; StatTile's line checked in section 7.16) |
+| Meter's hatch (`repeating-linear-gradient(45deg, ...)` 2px every 6px, with a 1px border, and its forced-colors block) | The previous-period look (section 5.5) |
 
 React Aria parts used for the first time: none. BarChart is a client part because it holds the active bar and the view, as LineChart is; it imports nothing from React Aria. Prose imports nothing and is a server part.
 
 ## 3. What the consumer needs
 
-The repository holds no verbatim batch 6 request. The specs and plans name Insights among the consumer's destinations (the app shell spec measures "Insights" among Home, Transactions, Documents, Accounts, Goals and Settings, section 8, and the sidebar docs group Reports and Budgets under it), and batch 6 was agreed with the consumer as BarChart (vertical, horizontal, negatives, stacked) and Prose (styles for long-form rendered content, such as Markdown or CMS HTML, in the library's type scale). What follows is the page those parts serve, written as input; open question 1 asks the consumer to confirm it before the plan.
+The consumer answered open question 1 on 2026-10-18. Its Insights page, as input:
 
-1. **Spending by category, month by month.** Twelve months, each a stacked bar of four or five categories with an "Other", a total over each bar, a legend, and the table.
-2. **Money in against money out.** Twelve months, two bars per month side by side: income and spending. Income is money that arrived, so `gain` is its color by meaning; spending is ink.
-3. **Net cash flow.** One bar per month, above zero when more arrived than left and below it otherwise, the sign carried by the bar's side of the zero line and by the figure, never by red and green.
-4. **Top merchants and budgets.** Horizontal bars with long names ("Whole Foods Market, Mission Street"), sorted by the app, a figure at each bar's end.
-5. **This month by day.** Thirty-one daily bars on a time axis, with the newest at the inline end (at the left in the Persian guide, home spec ruling 3).
-6. **The written summary.** A monthly summary and help articles rendered from Markdown or the app's CMS: headings, paragraphs, lists, links, a quote, a table of figures, now and then a code sample or an image, in a Card or straight in the page column.
-7. **Every state.** A chart that is loading, has nothing for the period, or failed to load, keeping its place on the page in each.
+1. **Above the chart, parts that exist.** A health strip of StatTiles and a FilterBar. A tile's change ("Up $120 vs September") is StatTile's existing change line (section 7.16).
+2. **One chart card, grouped by a SegmentedControl.** The control picks Month, Category, Merchant or Account; the card holds one BarChart and swaps its props.
+3. **Month.** Vertical bars, one band per month. "Both" is grouped: income beside spending, two series at most. Net cash flow by month goes below zero, so vertical bars split at zero.
+4. **Category, Merchant, Account.** Horizontal bars sorted by amount (the app sorts), the top 8 to 12 and then "Other", the label at the start of the row and the amount at its end. These can net negative too, from refunds.
+5. **Compare to previous period.** Grouped, this period beside the last, in any grouping. The previous period needs a muted look, the same hue lighter or hatched, so "this and last" is not read as two categories (section 5.5).
+6. **A table under the chart** links each row to its transactions. So bars need no press and no `href` now; both are recorded as a later candidate.
+7. **Later (the consumer's phase 9).** Stacked vertical bars, the top four categories and "Other" per month, five series at most. Four palette colors and a slate "Other" are enough.
+8. **Colors.** Income in `gain`, spending in ink, as section 5.4 says.
+9. **Order of need.** BarChart (horizontal with negatives, and the grouped vertical month view) first, then Prose, then stacked. Stacked stays in this batch, built last.
+
+And for Prose:
+
+1. **Where.** A monthly report and a weekly coaching note, model output in Markdown; Ask answers later; a goals guide in English and in Persian, right to left, set in Vazirmatn.
+2. **How.** Rendered on the server with react-markdown in a server component; Prose must need no client JavaScript.
+3. **What reaches it.** Model output renders with `skipHtml`, and links and images are neutralized into plain spans. So Prose must not depend on `a` or `img` for its layout, and needs a documented class for the spans they become (section 8.10).
+4. **Wide tables** scroll inside Prose on a phone (section 8.11).
 
 Its rules for every part, unchanged from batch 5: `'use client'` only on interactive parts; no `Intl` formatting and no `window` at render, and no first-paint measurement; no external request and no injected script; light and dark, all three shapes, right to left (the Persian guide), comfortable and compact density; WCAG 2.2 AA including 2.5.8; navigation through `RouterProvider`; everything exported from the package index, with the CSS in `core/styles.css`.
 
@@ -80,11 +93,11 @@ Its rules for every part, unchanged from batch 5: `'use client'` only on interac
 
 **Bars are HTML; the drawing that stretches is SVG.** LineChart's rule is that anything that must keep its shape is HTML over a stretched svg (home spec, section 4). A bar must keep its shape: its end is rounded by a radius token, its thickness is capped in pixels, its focus ring follows its corners. An svg `rect` in a `viewBox` stretched by `preserveAspectRatio="none"` would turn a 6px corner into an ellipse and could not take a token. So every bar is an absolutely positioned `span` placed by percentages and logical insets, its corners from `--radius-micro`, and the gridlines stay in the svg with non-scaling strokes, as in LineChart. Right to left mirrors the bars by their logical insets and the svg by `--chart-flip`, from the same attribute.
 
-**The layout is CSS arithmetic on known numbers.** The number of bands, the number of bars in a band and each value's place on the scale are known in render; a bar's thickness is `min(1.5rem, ...)` of its band, written as a `calc()` on custom properties the render writes, resolved by the browser against the plot's box. Nothing is measured, so the server's HTML is the final picture. A long category label wraps in its own grid cell; a value label sits outside the bar's end in room reserved from the longest label's length in characters.
+**The layout is CSS arithmetic on known numbers.** The number of bands, the number of bars in a band and each value's place on the scale are known in render; a bar's thickness is `min(1.5rem, ...)` of its band, written as a `calc()` on custom properties the render writes, resolved by the browser against the plot's box. Nothing is measured, so the server's HTML is the final picture. A long category label wraps in its own grid cell; an amount sits in a horizontal row's end column, which the grid sizes from the amounts themselves, or outside a vertical bar's end in room reserved by a line's height.
 
 **Bars start at zero, always.** A bar's length is its value, so the value axis always includes zero; a `valueDomain` that leaves it out is widened to it, with a development warning. Negatives hang below (or before) the zero line, which is drawn firmer than a gridline whenever the domain crosses it.
 
-**Color by meaning, then by identity.** One series is ink, two series compared are ink and slate (LineChart's emphasis form), and only a chart of several peers (a stack of categories, three or more series) takes the categorical palette. `gain` is allowed on a series only when the series is money that arrived. There is no loss color: a negative is ink below the line, as NumberField's record says of a negative amount ("never error, since nothing failed, and never gain; the sign carries it").
+**Color by meaning, then by identity.** One series is ink; two grouped series take their colors by meaning (income in `gain` beside spending in ink, the consumer's month view) or by emphasis (ink and slate, LineChart's form); a previous period is the current period's color, striped (section 5.5); and only a stack of categories takes the categorical palette. `gain` is allowed on a series only when the series is money that arrived. There is no loss color: a negative is ink below the line, as NumberField's record says of a negative amount ("never error, since nothing failed, and never gain; the sign carries it").
 
 **A bar is a stop, one at a time.** The chart is one tab stop, as LineChart is, but the stop is the active bar itself, moved by the arrow keys with a roving tab index, so a screen reader reads the bar's own name (its category, its series and its value, from the table's cells) and the focus ring is drawn round the bar. This is the per-bar model the Highcharts and Visa Chart Components keyboard modules take (section 7.15, to verify in detail), and it needs no live region.
 
@@ -101,7 +114,7 @@ Rejected along the way:
 
 - **A chart library** (Recharts, visx, Chart.js, Observable Plot) for bars. The home spec rejected one for lines (section 4): each measures on the client, or renders nothing useful on the server, or brings its own focus model. Bars add two layouts and one orientation, a few hundred lines on the same foundations.
 - **SVG `rect` bars with `rx`.** The stretch distorts the corner (above).
-- **Value labels inside the bar.** Whether a label fits inside a bar is a measurement. Labels sit outside the end, where the room is reserved (section 7.5).
+- **Value labels inside the bar.** Whether a label fits inside a bar is a measurement. Amounts sit in the end column of a horizontal row or outside a vertical bar's end (section 7.5).
 - **Rotated category labels.** A label at 45 degrees is read with a tilted head and still collides; long labels wrap, or the chart is horizontal (section 7.5).
 - **Red and green by sign.** Error means a failure and success a save (the meaning rules in "Six colors added"); a month that cost more than it brought in is neither.
 - **The chart's own live region**, LineChart's model (section 7.6 and open question 6).
@@ -109,7 +122,7 @@ Rejected along the way:
 
 ## 5. The chart palette
 
-The parent spec asks for "a categorical chart palette, which the design system lacks, derived and measured for contrast in both themes before any chart is built", and Appendix B's "Charts" says the categorical validator of the data-visualization method is run "when it adds one". Batch 6 adds one, because a stack of categories is the first chart with more than two series.
+The parent spec asks for "a categorical chart palette, which the design system lacks, derived and measured for contrast in both themes before any chart is built", and Appendix B's "Charts" says the categorical validator of the data-visualization method is run "when it adds one". Batch 6 adds one, because a stack of categories is the first chart with more than two series. Only the stacks use it, so it is built fifth, just before them (section 1); the horizontal and grouped views the consumer needs first draw in ink, slate, `gain` and the previous-period look of section 5.5, none of which needs it.
 
 ### 5.1 The rule
 
@@ -168,9 +181,27 @@ All six checks pass in both modes on the adjacent pairlist, which is the one bar
 | --- | --- |
 | One series | ink |
 | Two series, grouped | ink, slate: the story and its context, LineChart's emphasis form |
-| Two or more, stacked; three or more, grouped | `chart-1`, `chart-2`, `chart-3`, `chart-4`, then slate |
+| Two to five, stacked | `chart-1`, `chart-2`, `chart-3`, `chart-4`, then slate |
+| A series with `look: 'hatched'` | The color of the first series with `look: 'fill'`, striped (section 5.5) |
 
-`color` takes `'ink' | 'slate' | 'gain' | 'chart-1' | 'chart-2' | 'chart-3' | 'chart-4'`. `gain` is for a series that is money that arrived (the meaning rule: "an amount that arrived"), drawn with its legend label saying so ("Income"); the docs show it beside an ink "Spending" and never beside a palette color, so a reader never compares a meaning with an identity in one chart (the method's collision rule). `error`, `success`, `warning`, `clay` and both signal oranges are not in the type.
+`color` takes `'ink' | 'slate' | 'gain' | 'chart-1' | 'chart-2' | 'chart-3' | 'chart-4'`. `gain` is for a series that is money that arrived (the meaning rule: "an amount that arrived"), drawn with its legend label saying so ("Income"); the docs show it beside an ink "Spending" and never beside a palette color, so a reader never compares a meaning with an identity in one chart (the method's collision rule). `error`, `success`, `warning`, `clay` and both signal oranges are not in the type. The consumer's month view sets `color: 'gain'` on Income and `color: 'ink'` on Spending, so the two keep their colors when the control shows one of them alone.
+
+### 5.5 The previous-period look
+
+The consumer compares a period with the one before it in every grouping: this month's bar beside last month's, this period's merchants beside the last period's. Two colors would read as two categories, so the previous period takes the same color as the current one in a second look. `look: 'hatched'` on a series draws its bars as stripes of the series' color, 2px every 6px at 45 degrees, over the surface, inside a 1px border in the series' color: Meter's "held" segment, so the library's one striped look keeps one meaning, "the same thing, not the main amount". The legend's key is Meter's hatched swatch. The series' `label` is the app's ("September", "Previous period"), and each bar's name says it, so the stripes are never the only cue.
+
+**Why stripes and not a lighter fill.** A lighter step of the same hue has to clear 3:1 against the surface, to be seen, and stay apart from the solid bar beside it. Measured against Lifted, mixing the color with the surface:
+
+| Color, mode | 40% | 50% | 60% |
+| --- | --- | --- | --- |
+| ink, light: against Lifted, against solid ink | 2.56, 6.96 | 3.43, 5.20 | 4.78, 3.73 |
+| ink, dark | 3.83, 4.55 | 5.24, 3.32 | 6.90, 2.52 |
+| gain, light | 1.92, 3.75 | 2.33, 3.09 | 2.86, 2.51 |
+| gain, dark | 2.37, 3.40 | 2.99, 2.69 | 3.70, 2.17 |
+
+Ink has a band that works (about 50% in light, 40% to 50% in dark), but `gain` has none in either mode: a light enough green to differ from `gain` is too light to see. Slate, LineChart's context color, is a different hue from `gain` and a second color beside ink, which is what the consumer asked to avoid. The hatched bar's extent is drawn by its border, which is the series' color at full strength (ink 17.84 and 17.42, `gain` 7.20 and 8.04 against Lifted), and its stripes average about a third of the color (2.14 and 3.03 for ink, 1.71 and 2.02 for `gain`), a texture and not an edge, so it reads as the same color, lighter, with no contrast lost (open question 25 keeps the lighter fill for ink as the alternative).
+
+**Rules.** A hatched series without `color` takes the color of the first series with a fill, so `[{ label: 'October' }, { label: 'September', look: 'hatched' }]` is ink beside striped ink, and `[{ label: 'Income', color: 'gain' }, { label: 'Income, September', color: 'gain', look: 'hatched' }]` is green beside striped green. It is drawn after its current bar in the group (to the inline end in a vertical chart, under it in a horizontal row), and its amount, in the end column of a horizontal chart, is slate. It is for grouped charts, two series at most; a stacked series with `look: 'hatched'` warns once and draws as a fill, since stripes in a stack already mean texture (section 7.11). In forced colors the stripes are `CanvasText` on the system background and the border `CanvasText`, Meter's block, while the current bar is solid `CanvasText`; so solid against striped survives every palette.
 
 ## 6. The shared chart foundations
 
@@ -198,7 +229,7 @@ BarChart reuses what LineChart built. Today most of it is inside `LineChart.tsx`
 
 - `div.bar-chart-chart`, the chart view: the legend (`ul.bar-chart-legend`, two or more series), and the plot.
 - **Vertical:** `div.bar-chart-plot` (the svg of gridlines and the zero line, `div.bar-chart-bars` with one `span.bar-chart-bar` per value, the value labels, the y tick labels, the readout) and under it `div.bar-chart-categories`, the category labels, hidden from assistive technology.
-- **Horizontal:** `div.bar-chart-rows`, a grid with one row per category: `span.bar-chart-category` (hidden from assistive technology) and `div.bar-chart-track` holding that category's bars and value label; a gridline layer spans every row's track column; the value tick labels sit under the last row.
+- **Horizontal:** `div.bar-chart-rows`, a grid with one row per category and three columns: `span.bar-chart-category` at the start, `div.bar-chart-track` holding that category's bars, and `span.bar-chart-amounts` at the end with one amount per bar (all three hidden from assistive technology, since each bar's name says them); a gridline layer spans every row's track column; the value tick labels sit under the last row.
 - `table.bar-chart-table` (hidden while the chart shows), the toolbar with the toggle, the `noscript` note and table, and `span.bar-chart-status`, the polite status.
 
 `className`, `ref` and the other attributes go on the figure.
@@ -217,13 +248,20 @@ export interface BarValue {
 export type ChartColor = 'ink' | 'slate' | 'gain' | 'chart-1' | 'chart-2' | 'chart-3' | 'chart-4';
 
 export interface BarSeries {
-  /** "Groceries", "This month", "Income". Names the series in the legend, the readout, each bar's name and the table. */
+  /** "Groceries", "October", "Income". Names the series in the legend, the readout, each bar's name and the table. */
   label: string;
   /** One per category, aligned with `categories`. `null` is no value: no bar, skipped by the keys, an empty cell. */
   values: readonly (BarValue | null)[];
   /** Pins the series to a color, so it keeps it when another series is filtered out. @default by place, section 5.4 */
   color?: ChartColor;
+  /** 'hatched' draws the series as the previous period: the color of the first filled series, striped (section 5.5). Grouped charts only. @default 'fill' */
+  look?: 'fill' | 'hatched';
 }
+
+/** Grouped bars hold one or two series (the consumer's limit, open question 2); stacked bars up to five. */
+export type BarChartSeries =
+  | { layout?: 'grouped'; series: readonly [BarSeries] | readonly [BarSeries, BarSeries] }
+  | { layout: 'stacked'; series: readonly BarSeries[] };
 
 /** The strings the chart writes itself. Give all six, so no default in English is left on the page. */
 export interface BarChartLabels {
@@ -249,15 +287,12 @@ export interface ChartStatusLabels {
 }
 
 export type BarChartProps = Omit<HTMLAttributes<HTMLElement>, 'children' | 'aria-label' | 'aria-labelledby'> &
-  AriaName & {
-    /** One to five series; a sixth and later warn and draw in slate (section 5.2). */
-    series: readonly BarSeries[];
-    /** The bands' labels, formatted: "Groceries", "Oct", "Oct 12". */
+  AriaName &
+  BarChartSeries & {
+    /** The bands' labels, formatted: "Groceries", "Oct", "Whole Foods Market", "Other". In the app's order: a ranked list is sorted by the app. */
     categories: readonly string[];
     /** @default 'vertical' */
     orientation?: 'vertical' | 'horizontal';
-    /** How two or more series share a band. @default 'grouped' */
-    layout?: 'grouped' | 'stacked';
     /** Whether the bands are periods in order or peers. @default 'category' */
     bands?: 'category' | 'time';
     /** Which category labels show, by index. @default every one for 'category'; first, middle and last for 'time' */
@@ -266,7 +301,7 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLElement>, 'children' | 'aria
     valueTicks?: readonly { value: number; label: string }[];
     /** The value domain. Always widened to include zero. @default from the least to the greatest stacked sum, zero included, rounded out by niceDomain */
     valueDomain?: readonly [number, number];
-    /** Figures at the bars' ends: none, every bar, or the bands at these indexes. Stacked bars show `totals`. @default 'none' */
+    /** Amounts: none, every bar, or the bands at these indexes. Stacked bars show `totals`. @default 'all' for horizontal, 'none' for vertical */
     valueLabels?: 'none' | 'all' | readonly number[];
     /** Each band's total, formatted by the app, for a stacked chart's labels, readout and table. */
     totals?: readonly (string | null)[];
@@ -287,6 +322,8 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLElement>, 'children' | 'aria
 - **Orientation-neutral names.** LineChart's `xTicks`, `yTicks` and `yDomain` name axes; a bar chart's axes swap with its orientation, so BarChart says `categoryTicks`, `valueTicks` and `valueDomain`. LineChart keeps its names.
 - **`categories` and `values` align by index,** as LineChart's `xLabels` and `points` do. A series' values past the categories are dropped and a value that is not finite is `null`, as in LineChart.
 - **Required name,** through `AriaName`, as LineChart.
+- **Series count in the types.** `BarChartSeries` makes a third grouped series a type error, as LineChart's tuple does; a stacked chart past five series warns once in development and draws the sixth and later in slate (section 5.2).
+- **One chart, four groupings.** The consumer's card swaps `categories`, `series` and `orientation` when its SegmentedControl changes; the chart keeps no state that depends on them except the active bar, which resets to the first stop when `categories` changes, so focus never rests on a bar that is gone.
 
 ### 7.3 Layout and geometry
 
@@ -304,9 +341,9 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLElement>, 'children' | 'aria
 
 A percentage inside a custom property resolves where it is used, on the bar, against the plot it is positioned in, so `100%` is the plot's width (vertical). Each bar's inline start is its band's centre less half its group, plus its place in the group: `calc(var(--bar-chart-centre) - (k * t + (k - 1) * 2px) / 2 + j * (t + 2px))`, with `t` the thickness, `j` its place and `--bar-chart-centre` written in render as a percent. So bars are at most 24px thick, the method's cap, take 60% of their band at most, sit 2px apart in a group (the method's surface gap between touching marks, here air on the surface), and thin as the box narrows: 31 daily bars in a 280px plot are about 5px.
 
-**Horizontal rows.** A horizontal chart is a CSS grid, `grid-template-columns: fit-content(var(--bar-chart-label-size, 40%)) minmax(0, 1fr)`: the label column is as wide as the longest label up to 40% of the chart (an app sets `--bar-chart-label-size`), and each row is at least 2.5rem tall (`--size-target`, so the row is a 40px target for the pointer) or as tall as its wrapped label. Bars in a row are `min(1.5rem, calc((2rem - (k - 1) * 2px) / k))` thick, centred in the row, so a grouped row of four is four 6.5px bars. The gridline layer is one element in the track column spanning every row (`grid-row: 1 / -1`), so the lines run unbroken behind the rows.
+**Horizontal rows.** A horizontal chart is a CSS grid, `grid-template-columns: fit-content(var(--bar-chart-label-size, 40%)) minmax(0, 1fr) max-content`: the label column at the start is as wide as the longest label up to 40% of the chart (an app sets `--bar-chart-label-size`), the amount column at the end is as wide as the widest amount, which the grid finds from the content itself with no script, and the track takes the rest. Each row is at least 2.5rem tall (`--size-target`, so the row is a 40px target for the pointer) or as tall as its wrapped label. Bars in a row are `min(1.5rem, calc((2rem - (k - 1) * 2px) / k))` thick, centred in the row, so a grouped row is two 15px bars. The gridline layer is one element in the track column spanning every row (`grid-row: 1 / -1`), so the lines run unbroken behind the rows. The consumer's ranked list of 8 to 12 rows and an "Other" is 13 rows at most, 520px at the least; "Other" is a category like the rest, last because the app puts it last.
 
-**Grouped or stacked** (open question 2). Grouped places a band's bars side by side, for comparing series within a band (this month against last month per category). Stacked places them end to end, for a total and its parts. One series ignores `layout`.
+**Grouped or stacked** (open question 2, answered). Grouped places a band's two bars side by side, for income beside spending or this period beside the last. Stacked places up to five end to end, for a total and its parts, the consumer's later month view. One series ignores `layout`.
 
 **The zero line.** When the domain crosses zero, a 1px line at zero in `--color-boundary`, the edge color the system measures at 3:1 or more (3.36 light and 5.59 dark on Lifted, the record's values), because it separates the two signs and a reader must find it. When zero is the domain's edge, as in a chart with no negatives, the line is `--color-frame`, LineChart's baseline, a cue: the bars' own square ends draw the baseline. Gridlines are LineChart's, 1px `--color-divider` at each `valueTicks` value inside the domain, solid, in the svg with `vector-effect: non-scaling-stroke`; vertical gridlines are never drawn for a vertical chart, and horizontal ones never for a horizontal chart.
 
@@ -326,9 +363,11 @@ A bar has two ends: the baseline end, at zero, and the data end, at its value.
 
 **Category labels, horizontal.** In the label column, `--text-small` in ink (the row's name, which the reader scans), wrapping freely with `overflow-wrap: anywhere`, never truncated, aligned to the row's start. At a chart under 24rem (a container query on the chart) the column folds: each label sits on its own line above its bar, at the track's full width (section 7.13).
 
-**Value labels.** Off by default; the method's rule is "never a number on every point", and the table, the readout and the bars' names carry every value. `valueLabels="all"` labels every bar, the right choice for a short horizontal list; an index list labels the bands the story is about. Each label is `--text-small`, ink, tabular, left to right with its sign kept by the numeral rule, `white-space: nowrap`, hidden from assistive technology, and sits outside the bar's data end with a 4px gap: above a vertical positive bar, below a negative one; after a horizontal positive bar, before a negative one. Stacked bars label the stack, with `totals[i]`, at each sign's outer end; a stacked chart asked for labels without `totals` warns once and draws none.
+**Value labels, horizontal: the amount column.** On by default (`'all'`): a ranked list reads as a list, name at the start and amount at the end, the consumer's layout and the method's "bars: value at the tip" made a column so the amounts align. Each row's amounts sit in the end column, one line per bar in group order, end-aligned, `--text-small`, tabular, left to right with the sign kept by the numeral rule, `white-space: nowrap`: the current period in ink, a hatched series' amount in slate. A refund that nets a row below zero draws its bar toward the start from the zero line and keeps its amount in the same column, so a sorted list's negatives at the bottom still line up. Stacked rows show `totals[i]`.
 
-**Room for value labels, reserved without measuring.** Vertical: the plot gains 1.25rem above (positives) and below (negatives) when labels show, the space LineChart reserves for its top tick label, and the scale maps the domain inside it. Horizontal: the track reserves `calc(Nch + 0.25rem)` at each end that has labels, where `N` is the longest label shown, in code points, counted in render. In Sofia Sans `1ch` is a tabular zero, the widest figure, so digits, separators and signs fit; a label of wider letters ("1.2M ريال") may overrun its reserve by a character into the plot's padding, never off the chart (risk R10).
+**Value labels, vertical.** Off by default; the method's rule is "never a number on every point", and the table, the readout and the bars' names carry every value. `'all'` labels every bar and an index list the bands the story is about. Each label has the horizontal column's look and sits outside the bar's data end with a 4px gap, above a positive bar and below a negative one. Stacked bars label the stack, with `totals[i]`, at each sign's outer end; a stacked chart asked for labels without `totals` warns once and draws none.
+
+**Room for value labels, reserved without measuring.** Vertical: the plot gains 1.25rem above (positives) and below (negatives) when labels show, the space LineChart reserves for its top tick label, and the scale maps the domain inside it. Horizontal: the amount column is `max-content`, so the grid sizes it from the amounts themselves; the track narrows to fit (risk R10).
 
 **Value tick labels.** Vertical: LineChart's y labels, at the inline start above their gridline, slate, tabular. Horizontal: under the last row at each tick, centred on it and kept inside the track at either edge, LineChart's x label rule.
 
@@ -377,15 +416,15 @@ The figure keeps its size in every state, so the page does not move when the dat
 
 ### 7.10 Color in use
 
-Section 5.4 assigns colors. In use: a bar is its series' color, solid; the legend key is a 12px swatch, Meter's, at `--radius-micro`; the readout's swatches are the same. Text never takes a chart color. A negative bar is its series' color, below the line. A bar with `gain` keeps `gain` on both sides of zero: money that arrived and was then reversed is still drawn as the series it belongs to, and the sign and the figure say which way.
+Section 5.4 assigns colors. In use: a bar is its series' color, solid; the legend key is a 12px swatch, Meter's, at `--radius-micro`; the readout's swatches are the same. Text never takes a chart color. A hatched series is its first filled series' color, striped (section 5.5). A negative bar is its series' color, below the line. A bar with `gain` keeps `gain` on both sides of zero: money that arrived and was then reversed is still drawn as the series it belongs to, and the sign and the figure say which way.
 
 ### 7.11 Look and CSS
 
-- **Bars.** `background-color` from `--bar-chart-color`, set per series by `data-color` on the bar: `--color-ink`, `--color-slate`, `--color-gain` or `--color-chart-1` to `-4`.
-- **Texture** (`hasTexture`, and always in forced colors). Slot by series position, the method's two directions only: the first series solid, the second 45 degree stripes, the third 135 degree stripes, the fourth both, the fifth solid in slate; stripes 2px every 6px, Meter's hatch, with a 1px border in the series' color so a textured bar keeps its outline when stripes do not print. For readers who cannot tell the colors apart, a printout without color, and forced colors.
+- **Bars.** `background-color` from `--bar-chart-color`, set per series by `data-color` on the bar: `--color-ink`, `--color-slate`, `--color-gain` or `--color-chart-1` to `-4`. Under `[data-look='hatched']` the fill is Meter's stripes in `--bar-chart-color` (`repeating-linear-gradient(45deg, ...)`, 2px every 6px) with a 1px border in the same color; the stripes keep their 45 degrees in right to left, as Meter's do, since they are a texture and not an arrow.
+- **Texture** (`hasTexture`, and always in forced colors), for stacks. Slot by series position, the method's two directions only: the first series solid, the second 45 degree stripes, the third 135 degree stripes, the fourth both, the fifth solid in slate; stripes 2px every 6px, Meter's hatch, with a 1px border in the series' color so a textured bar keeps its outline when stripes do not print. For readers who cannot tell the colors apart, a printout without color, and forced colors.
 - **Legend.** Two or more series: the shared legend at the top inline start, `--text-small`, ink labels, swatch keys.
-- **Contrast.** Each bar color against Lifted, the canvas and Float: ink 17.84, 16.25, 18.43 light and 17.42, 19.31, 17.42 dark (the Sparkline record's values); slate 5.31, 4.84, 5.49 and 6.94, 7.26, 6.94 (LineChart's); gain 7.20, 6.55, 7.44 and 8.04, 8.92, 8.04 (its record's); the palette in section 5.2. All past 3:1. The zero line in boundary, 3.36 light and 5.59 dark on Lifted; gridlines and the frame baseline are cues (1.23 and 1.28, LineChart's). Value labels and category labels are ink or slate, gated as text. The palette's pairs join the contrast gate as graphics (3:1) against canvas, Lifted and Float in both modes, twenty-four pairs, and the categorical checks become a test.
-- **Forced colors.** Bars opt out of the repaint (`forced-color-adjust: none`), as Skeleton does, and draw in `CanvasText` with the textures on, since a system palette has one text color and a stack needs four looks; the gaps between segments become the system background color through `--chart-surface`; the zero line is `CanvasText`, the gridlines `GrayText`; the focused bar's ring and the active band's bars are `Highlight`. The swatches follow the bars.
+- **Contrast.** Each bar color against Lifted, the canvas and Float: ink 17.84, 16.25, 18.43 light and 17.42, 19.31, 17.42 dark (the Sparkline record's values); slate 5.31, 4.84, 5.49 and 6.94, 7.26, 6.94 (LineChart's); gain 7.20, 6.55, 7.44 and 8.04, 8.92, 8.04 (its record's); the palette in section 5.2. All past 3:1. A hatched bar's border is its color at full strength and its stripes a texture (section 5.5). The zero line in boundary, 3.36 light and 5.59 dark on Lifted; gridlines and the frame baseline are cues (1.23 and 1.28, LineChart's). Value labels and category labels are ink or slate, gated as text. The palette's pairs join the contrast gate as graphics (3:1) against canvas, Lifted and Float in both modes, twenty-four pairs, and the categorical checks become a test.
+- **Forced colors.** Bars opt out of the repaint (`forced-color-adjust: none`), as Skeleton does, and draw in `CanvasText` with the textures on, since a system palette has one text color and a stack needs four looks; a grouped comparison is solid `CanvasText` beside `CanvasText` stripes in a `CanvasText` border; the gaps between segments become the system background color through `--chart-surface`; the zero line is `CanvasText`, the gridlines `GrayText`; the focused bar's ring and the active band's bars are `Highlight`. The swatches follow the bars.
 - **Reduced motion.** Nothing moves: no bar animates in or on change, the pointer's dimming is instant, the readout appears without a transition. The skeleton stops pulsing.
 - **Print.** `print-color-adjust: exact` on the figure, as `.line-chart` and `.meter` set.
 - **Density.** Nothing changes in compact: the chart's sizes are its own, and its container (a Card) changes its padding.
@@ -405,13 +444,13 @@ The figure is an inline-size container (`container-type: inline-size`) with `con
 | --- | --- | --- |
 | 30rem and up | As drawn | Label column beside the track |
 | Under 30rem | Category labels drop to one line, ellipsized, and value labels of `'all'` show only on the first and last band and the bands an index list names | As drawn |
-| Under 24rem | `bands="category"` labels hide under the bands past every third; time ticks stay first, middle and last | Each label on its own line above its bar, the track full width |
+| Under 24rem | `bands="category"` labels hide under the bands past every third; time ticks stay first, middle and last | Each label on its own line above its bar; the track and the amount column share the line under it |
 
-Thickness narrows by itself (section 7.3). At 320px with a Card's 20px padding the plot is 248px: twelve monthly bars are 12px, thirty-one daily bars 4.8px, each reachable by keys and by its band with the pointer. Nothing scrolls sideways; a docs e2e checks 320px.
+Thickness narrows by itself (section 7.3). At 320px with a Card's 20px padding the plot is 248px: twelve monthly bars are 12px, grouped pairs 5.2px each, thirty-one daily bars 4.8px, each reachable by keys and by its band with the pointer. A horizontal list at 248px puts its labels above the bars, and an amount of 12 characters ("-$12,345.67") takes about 80px, leaving the track about 168px. Nothing scrolls sideways; a docs e2e checks 320px.
 
 ### 7.14 Server rendering
 
-BarChart is a client part (`'use client'`), for the active bar, the view and the pointer, as LineChart is, and imports nothing from React Aria. On the server it renders the final picture: every bar's position, size and corner, the labels, the legend, the hidden table, the toggle, the status host, the `noscript` copy. No `Intl`, no `window`, no measurement: the label room is a count of code points, the thickness a `calc()`. The ids that name each bar come from `useId`, so the server and the client agree. After mount it sets the active bar's tab stop. The hydration suite renders it under `en-US`, `de-DE` and `fa-IR` in UTC and Asia/Tehran with `onRecoverableError` failing the test; it writes nothing from a locale, so it has no server face of its own ("The server face" record).
+BarChart is a client part (`'use client'`), for the active bar, the view and the pointer, as LineChart is, and imports nothing from React Aria. On the server it renders the final picture: every bar's position, size and corner, the labels, the legend, the hidden table, the toggle, the status host, the `noscript` copy. No `Intl`, no `window`, no measurement: the amount column is a grid track sized by its content, the thickness a `calc()`. The ids that name each bar come from `useId`, so the server and the client agree. After mount it sets the active bar's tab stop. The hydration suite renders it under `en-US`, `de-DE` and `fa-IR` in UTC and Asia/Tehran with `onRecoverableError` failing the test; it writes nothing from a locale, so it has no server face of its own ("The server face" record).
 
 ### 7.15 How others do it
 
@@ -427,6 +466,10 @@ Each claim marked "to verify" is from memory and is checked by the plan before t
 | Highcharts (accessibility module) | Rounded `borderRadius` by default since version 11 (to verify) | `pointPadding` 0.1, `groupPadding` 0.2 (to verify) | Stacking with negatives | Arrow keys move point to point and Up and Down move between series; each point is focused and announced; a screen reader section before the chart (to verify) | A data table export option | Per-bar focus; series moved by the cross axis |
 | Visa Chart Components | Square (to verify) | | | One tab stop into the chart, arrow keys between marks, Enter and Shift with Enter to move into and out of groups, instructions in a hidden region (to verify) | A data table component beside every chart; textures for accessibility | Per-bar focus; textures as the backup channel |
 | WAI-ARIA and the WAI tutorials | | | | No chart pattern in the Authoring Practices; the roving tab index technique from "Developing a Keyboard Interface"; the Graphics ARIA module's `graphics-symbol` with uneven support (to verify); the Images tutorial's "complex images" ask for the data as a table or a long description | The data as a table | The roving tab index, `role="img"` on each bar, the table as the alternative |
+
+### 7.16 StatTile's change line, checked
+
+The consumer's health strip wants "Up $120 vs September" on a tile. StatTile already has it: `change: { direction: 'up' | 'down' | 'flat', label, tone?: 'neutral' | 'gain' | 'warning' }` draws an arrow and the app's sentence under the value (home spec, section 6.2), and the `WithTrend` story shows it beside a sparkline (its default args carry "Up 12% from last month"). It is a line of text in slate, or `gain` or `warning` by meaning, not a chip: no fill and no pill. So `change={{ direction: 'up', label: 'Up $120 vs September' }}` gives the consumer what it asked for today. Whether it wants the line drawn as a chip (a filled pill, as some dashboards draw a delta) is open question 26; recommended: keep the line.
 
 ## 8. Prose
 
@@ -444,9 +487,9 @@ export interface ProseProps extends HTMLAttributes<HTMLElement> {
 }
 ```
 
-It renders the element with `className={cx('prose', className)}` and its children. No state, no hook, no client directive.
+It renders the element with `className={cx('prose', className)}` and its children. No state, no hook, no client directive, so the consumer's server component renders react-markdown's output inside it with no client JavaScript. `ProseScroll`, its one companion, holds a wide table (section 8.11). Ask answers, later, may stream into a client component; Prose renders there unchanged, since it imports nothing client-only.
 
-- **HTML from a CMS or a renderer.** The library never parses or injects HTML. An app that has HTML passes it to React its own way, which React names `dangerouslySetInnerHTML` and which reaches the element as any attribute does; the docs say to sanitize it first (DOMPurify or sanitize-html, to verify current names) and to render Markdown on the server where possible. There is no `html` prop (open question 20).
+- **Markdown and HTML.** The library never parses or injects HTML. The consumer's path is the recommended one: Markdown rendered by react-markdown in a server component, with `skipHtml` for model output and its links and images mapped to plain spans (section 8.10). An app that has HTML from a CMS passes it to React its own way, which React names `dangerouslySetInnerHTML` and which reaches the element as any attribute does; the docs say to sanitize it first (DOMPurify or sanitize-html, to verify current names). There is no `html` prop (open question 20).
 - **`not-prose`.** A subtree under `.not-prose` is left alone, so a Badge, a Button or a chart in an article draws as itself. Every rule's selector is `.prose :where(<element>):not(:where(.not-prose, .not-prose *))`, Tailwind Typography's mechanism.
 - **Zero extra specificity.** `:where()` keeps every rule at one class, the specificity of a component's own class, and `prose.css` sits before the components in `styles.css`, so a component inside prose wins on order even without `not-prose`. The test renders every component inside `.prose` and asserts none changes.
 
@@ -459,7 +502,7 @@ It renders the element with `className={cx('prose', className)}` and its childre
 | `h2` | The `heading-3` step: 24px, 500, -2% | The docs' MDX `h2` |
 | `h3` | The `heading-4` step: 14px, 700, ink | The docs' MDX `h3` (open question 16) |
 | `h4`, `h5`, `h6` | The `heading-4` step; `h5` and `h6` in slate | No step below; slate is read text |
-| `a` | The Link record: link blue, 1px underline at 0.25em offset, 2px on hover and press, the focus ring with `--radius-micro`, breaks anywhere | Restated in `prose.css` on the same tokens; the CSS test pins it to `link.css` |
+| `a` | The Link record: link blue, 1px underline at 0.25em offset, 2px on hover and press, the focus ring with `--radius-micro`, breaks anywhere | Restated in `prose.css` on the same tokens; the CSS test pins it to `link.css`. Paint only: nothing is laid out by `a` (section 8.10) |
 | `strong`, `b` | 700 | 500 against 450 is a step a reader barely sees at 16px (open question 17) |
 | `em`, `i` | The italic face | `base.css` turns synthesis off, so the app must load the italic (risk R9) |
 | `ul`, `ol` | `padding-inline-start: 1.25rem`, items 8px apart (a part step), markers slate, `ol` markers tabular; nested `ul` disc, circle, square; nested `ol` decimal, lower-alpha, lower-roman | The docs' lists; markers are not the text the reader reads first |
@@ -467,8 +510,8 @@ It renders the element with `className={cx('prose', className)}` and its childre
 | `blockquote` | `border-inline-start: 2px solid var(--color-frame)`, `padding-inline-start: 1.25rem`, ink text, no italics, no quote marks drawn | The rule is a cue; the indent equals a list's, so a quote's text and a list's text share an edge |
 | `code` (inline) | `--font-mono` at 0.875em, `--color-bone`, `--radius-micro`, `padding: 1px 6px`, `direction: ltr`, `unicode-bidi: isolate` | The docs' inline code |
 | `pre` | The docs' `.code`: `--color-bone`, a 1px `--color-frame` edge, the frame radius below, `padding: 1.25rem 1.5rem`, `--font-mono` at 0.875rem and 1.7, `overflow-x: auto`, `tab-size: 2`, `white-space: pre`, `overflow-wrap: normal`, left to right, the focus ring on `:focus-visible`, and the docs' `--shiki-*` mapping onto the palette | Moved from `apps/docs/app/site.css`, so highlighted code never borrows a reserved color |
-| `table` | Full width of the prose box, `border-collapse: collapse`, `--text-small`, tabular figures; `th` 500 in slate, `td` ink; cells `padding: 0.5rem 0.75rem` with a 1px `--color-divider` rule under each row; text from the cell's `align` or `style` (GFM writes one); `caption` slate at the start; cells break anywhere | LineChart's table, so a table in an article and a chart's table are one look |
-| `figure`, `img`, `video` | `figure` no margin of its own; `img` and `video` `display: block`, `max-inline-size: 100%`, `block-size: auto`, the frame radius; `figcaption` `--text-small` slate, 8px under | A picture is a framed block |
+| `table` | In a `ProseScroll` for a phone (section 8.11); full width of the prose box, `border-collapse: collapse`, `--text-small`, tabular figures; `th` 500 in slate, `td` ink; cells `padding: 0.5rem 0.75rem` with a 1px `--color-divider` rule under each row; text from the cell's `align` or `style` (GFM writes one); `caption` slate at the start; cells break anywhere | LineChart's table, so a table in an article and a chart's table are one look |
+| `figure`, `img`, `video` | `figure` no margin of its own; `img` and `video` `max-inline-size: 100%`, `block-size: auto`, the frame radius; `figcaption` `--text-small` slate, 8px under | A picture is a framed block; `img` stays inline as the browser draws it, so a neutralized image changes no layout (section 8.10) |
 | `hr` | No border but a 1px `--color-divider` top, `--spacing-separate` above and below | A rule inside a surface |
 | `kbd` | The Kbd record, restated | |
 | `mark` | `color-mix(in srgb, var(--color-signal-light) 20%, transparent)` over the surface, ink text: 14.63 on Lifted in light and 12.86 in dark | Light signal orange is the attention cue, which a highlight is; never body color, and here it is a wash under ink |
@@ -512,7 +555,7 @@ An app that mixes rendered HTML with components (a chart in a monthly summary, a
 - **Code is left to right.** `pre` is `direction: ltr; text-align: left`; inline `code` is `direction: ltr; unicode-bidi: isolate`, so a path in a Persian sentence keeps its order and does not reorder the words around it.
 - **Numbers.** Ordered lists under `:lang(fa)` count in Persian digits (`list-style-type: persian`, supported in Chromium and Firefox, to verify in WebKit; a fallback to decimal is harmless); open question 22. Figures in the text are the app's.
 - **Tracking.** The heading steps carry -2% tracking, and spacing letters breaks the joins of a cursive script. Under `:lang(fa)` and `:lang(ar)` prose headings take `letter-spacing: normal` (CSS Text says a browser should not space cursive scripts, and engines differ, to verify); the same fix is owed to `Heading`, recorded as a follow-up in risk R11.
-- **The font.** Sofia Sans has no Arabic script, so a Persian page's `--font-sans` names a Persian face first (the docs' example uses Vazirmatn, under the OFL, to verify). The 1.6 line height leaves room for Persian's taller marks.
+- **The font.** Sofia Sans has no Arabic script, so the consumer's goals guide sets `--font-sans` to Vazirmatn first under `:lang(fa)`, loaded by the app through `next/font` (Vazirmatn is under the OFL and has a variable weight axis, so 450 and 500 draw; to verify both). The 1.6 line height leaves room for Persian's taller marks. Vazirmatn has no italic, and `base.css` turns synthesis off, so under `:lang(fa)` and `:lang(ar)` `em` draws at weight 500 instead, upright, the emphasis a Persian text uses.
 - **Mixed paragraphs.** A paragraph's direction is its element's. User content that mixes English and Persian paragraphs wants `dir="auto"` on each, which the renderer writes; Prose does not set `unicode-bidi: plaintext` (open question 23).
 
 ### 8.7 Dark mode and forced colors
@@ -535,12 +578,35 @@ An app that mixes rendered HTML with components (a chart in a monthly summary, a
 | GitHub Primer, `markdown-body` | A wrapper class, styles every element | No max width; 16px at 1.5; blocks 16px apart (to verify) | `h1` 2em and `h2` 1.5em with a rule under each; `h6` muted (to verify) | Code on a subtle fill; tables with borders and striped rows (to verify) | A muted last heading level; footnotes small and muted |
 | GOV.UK Frontend | A class per element (`govuk-body`, `govuk-list`, `govuk-heading-l`), no descendant wrapper | Body 19px (16px on a phone) at about 1.32; content in a two-thirds column; spacing on a fixed scale (to verify) | `govuk-heading-xl` 48px to `govuk-heading-s` 19px, bold (to verify) | Tables with a header rule; inset text with a 5px rule (to verify) | The start-edge column; a quote's rule; one spacing scale; not a class per element, since the library styles HTML it does not write |
 
+### 8.10 Neutralized links and images
+
+The consumer renders model output with react-markdown's `skipHtml`, and turns every link and image into a plain span, so a model can never send the reader to an address or load a picture from one. Prose therefore lays nothing out by `a` or `img`: every rule on them is paint (a color, an underline, a radius), and no spacing, column or measure depends on their being there. A paragraph that held a link holds a span and reads the same.
+
+The documented spans, which the docs' recipe writes through react-markdown's `components` map (open question 27):
+
+| Becomes | Class | Look | Why |
+| --- | --- | --- | --- |
+| A link, `[text](url)` | `span.prose-unlinked` holding the link's text | The surrounding text's look exactly: no blue, no underline, no pointer, and `overflow-wrap: anywhere`, since model text often makes a bare address its link text | A neutralized link is not a link, and anything that looks like one but does nothing breaks the reader's trust; the Link record's blue and underline mean "this goes somewhere" |
+| An image, `![alt](url)` | `span.prose-image` holding the alt text, or nothing when there is none | `--text-small` in slate, inline, in a `--color-bone` box with `--radius-micro` and `padding: 1px 6px`, the inline code's box in the sans face; empty, it is not drawn (`:empty { display: none }`) | The reader learns a picture was described, in the model's words, without a request; slate, since it is read |
+
+The CSS test asserts that `.prose` rules never select `a` or `img` with a property that changes layout (margin, padding, display, width, position), so the guarantee holds as the file grows. An app that keeps real links for its own content (the goals guide) gets the Link record's look on `a`, as section 8.2 says.
+
+### 8.11 Wide tables on a phone
+
+A table is wider than a phone's column as soon as it has four columns of figures. It must scroll inside Prose and keep its table semantics, and a scrolling region must be reachable by keys and named.
+
+- **`ProseScroll`**, a second static part in `@snapshot-ui/react`: `div.prose-scroll[role="region"][tabindex="0"]` with a required name (`AriaName`), `overflow-x: auto`, `max-inline-size: 100%`, and the focus ring on `:focus-visible`. It draws no frame of its own, since it cannot know whether its table overflows; the table's row rules carry the shape. The table inside keeps `display: table`, so a screen reader still reads rows and columns.
+- **With react-markdown in a server component,** the app maps `table` to `<ProseScroll aria-label={labels.table}><table {...props} /></ProseScroll>` in its `components`; it is a server part, so the report stays free of client JavaScript. The docs' recipe does exactly this, with a Persian label on the Persian guide.
+- **Without a wrapper,** `.prose table` cells break anywhere (section 8.2), so a table never pushes the page sideways; it only gets tall. The docs say to wrap.
+- **Why not `display: block` on the table.** It scrolls with no wrapper, but some engines drop table semantics when a table's display changes (to verify current WebKit with VoiceOver), and the box still needs a `tabindex` and a name, which CSS cannot add.
+- **`pre`** scrolls in its own box already; the recipe maps it to add `tabIndex={0}` for the same reason, since only Chromium makes a scrolling region focusable by itself (section 9).
+
 ## 9. Accessibility
 
-- **Roles and names.** BarChart: a `figure` named by the app; a `group` with `aria-roledescription` (`labels.roleDescription`) holding the bars, named as the figure; each bar `role="img"` with `aria-roledescription` (`labels.bar`) and a name from its table cells; a `table` named as the chart; a `button` toggling it; a polite `status`. Prose: the app's own elements; `Prose` adds none, or an `article` or `section` when asked (an `article` is not a landmark; a `section` is a region only when named, which the docs explain).
-- **Keyboard (2.1.1, 2.4.3).** Every bar is reachable; one tab stop; the order follows the drawing; Escape never traps; keys not used are not prevented. A scrolling `pre` must be focusable to be scrolled by keys: Chromium makes scrollable regions focusable by itself since version 130 (to verify), and the docs ask the renderer to add `tabindex="0"` to a `pre` for the other engines.
+- **Roles and names.** BarChart: a `figure` named by the app; a `group` with `aria-roledescription` (`labels.roleDescription`) holding the bars, named as the figure; each bar `role="img"` with `aria-roledescription` (`labels.bar`) and a name from its table cells; a `table` named as the chart; a `button` toggling it; a polite `status`. Prose: the app's own elements; `Prose` adds none, or an `article` or `section` when asked (an `article` is not a landmark; a `section` is a region only when named, which the docs explain); `ProseScroll` a named `region` that takes focus; a neutralized link is text and not a link, so it is no stop and has no role.
+- **Keyboard (2.1.1, 2.4.3).** Every bar is reachable; one tab stop; the order follows the drawing; Escape never traps; keys not used are not prevented. A scrolling `pre` or table must be focusable to be scrolled by keys: Chromium makes scrollable regions focusable by itself since version 130 (to verify), so `ProseScroll` carries `tabindex="0"` and the docs' react-markdown map gives `pre` one, for the other engines.
 - **Focus visible (2.4.7) and not obscured (2.4.11).** The ring on the bar, concentric; the readout never covers the active bar.
-- **Never color alone (1.4.1).** Two or more series have a legend with labels; each bar's name says its series; textures on request and in forced colors; the zero line and the figures say the sign; links in prose are underlined.
+- **Never color alone (1.4.1).** Two or more series have a legend with labels; each bar's name says its series; the previous period is striped as well as named; textures on request and in forced colors; the zero line and the figures say the sign; links in prose are underlined.
 - **Non-text contrast (1.4.11).** Every bar color 3:1 or more on every surface (sections 5.2 and 7.11); the pointer's dimming is a transient emphasis, recorded.
 - **Text spacing and reflow (1.4.12, 1.4.10).** Prose at 1.6 line height and margins in rem; nothing in either part scrolls sideways at 320px except a `pre` or a table inside its own box.
 - **Targets (2.5.8).** A bar is reached by its whole band, never only its drawn width; a horizontal row is at least 40px; the toggle is a Button. Inline links in prose are exempt, as the Link record says.
@@ -549,102 +615,121 @@ An app that mixes rendered HTML with components (a chart in a monthly summary, a
 
 ## 10. Testing
 
-- **Core (`css.test.js`, `token-only.test.js`, `contrast.test.js`).** `prose.css` and the new rules in `charts.css` are tokens only, in `@layer components`, with system colors only in their forced-colors blocks and logical properties throughout; `prose.css` rules all use `:where()` and the `not-prose` guard; the prose link values equal `link.css`'s and the `pre` values the docs' `.code`; no chart token in a `color:` declaration. The contrast test gains the palette's twenty-four graphic pairs, and a palette test ports the method's checks (lightness band, chroma floor, adjacent CVD at least 8 under Machado 2009, normal at least 15, at least 10 from every reserved color) and fails if a token edit breaks one.
+- **Core (`css.test.js`, `token-only.test.js`, `contrast.test.js`).** No `.prose` rule selects `a` or `img` with a layout property (margin, padding, display, width, position). `prose.css` and the new rules in `charts.css` are tokens only, in `@layer components`, with system colors only in their forced-colors blocks and logical properties throughout; `prose.css` rules all use `:where()` and the `not-prose` guard; the prose link values equal `link.css`'s and the `pre` values the docs' `.code`; no chart token in a `color:` declaration. The contrast test gains the palette's twenty-four graphic pairs, and a palette test ports the method's checks (lightness band, chroma floor, adjacent CVD at least 8 under Machado 2009, normal at least 15, at least 10 from every reserved color) and fails if a token edit breaks one.
 - **Charts (Vitest, jsdom).**
   - The foundations: `valueDomain`, `placeReadout`, `moveFrom`, `chartName` with fixed inputs; the stacking function by sign; the band and thickness custom properties written for each layout.
   - LineChart, unchanged: its suite passes untouched after the move.
-  - BarChart: bars' insets and sizes as percentages for positives, negatives, stacks of mixed sign and zero; `[data-nonzero]`; the domain widened to zero with its warning; colors by section 5.4 and by `color`; the sixth-series warning; each bar's `aria-labelledby` resolving to category, series and value; the roving tab index after mount and none in the server's HTML; every key in both orientations, both layouts and both directions, Escape stopped once, modifiers ignored, unused keys not prevented; the first stop for time and category bands; the pointer snapping to bands; value labels and the reserved `ch` room; `totals` in the labels, the readout and the table, and their warning; each status's markup, `aria-busy` and the status text; `statusContent`; the table and the toggle; axe in each state.
+  - BarChart: bars' insets and sizes as percentages for positives, negatives, stacks of mixed sign and zero; `[data-nonzero]`; the domain widened to zero with its warning; colors by section 5.4 and by `color`; `look: 'hatched'` taking the first filled series' color, its slate amount, its warning in a stack; a third grouped series refused by the types (a `@ts-expect-error` test); the sixth stacked series' warning; the active bar reset when `categories` change; each bar's `aria-labelledby` resolving to category, series and value; the roving tab index after mount and none in the server's HTML; every key in both orientations, both layouts and both directions, Escape stopped once, modifiers ignored, unused keys not prevented; the first stop for time and category bands; the pointer snapping to bands; the amount column on by default for horizontal and off for vertical, a negative row's amount in the column; `totals` in the labels, the readout and the table, and their warning; each status's markup, `aria-busy` and the status text; `statusContent`; the table and the toggle; axe in each state.
   - Server render: BarChart in the server-render and hydration suites under three locales and two zones.
-- **React.** `Prose`: the element by `as`, the class merged, attributes passed through (including React's raw HTML attribute), a server render with no client code; axe over a fixture of every element in section 8.2.
+- **React.** `Prose`: the element by `as`, the class merged, attributes passed through (including React's raw HTML attribute), a server render with no client code; `ProseScroll`: its role, name, `tabindex` and class, and the types requiring a name; a react-markdown fixture rendered in a server component with `skipHtml` and the docs' `components` map, asserting no `a` and no `img` in the output and the two spans present; axe over a fixture of every element in section 8.2.
 - **Storybook.** Section 11's stories, baselined in the four theme and shape modes and at 375px, compact where tagged. Play tests in the four story projects (Chromium light and dark, WebKit, Firefox): the keys of every layout and orientation, in right to left too (`no-visual`); the pointer's band snapping and dimming; the readout's placement at both ends; the table toggle; the concentric audit on every new story in three shapes; a story putting library components in `.prose` asserting their computed styles equal the same components outside; the focus ring's corner radius equal to the bar's plus the offset, measured in three engines (risk R12).
-- **Docs e2e.** Completeness maps for the new pages; 320px with no sideways scroll for both parts and the recipe; the chart's table with scripts on and off; forced colors on a stacked chart (textures) and on prose (inline code edge, `mark`); a Persian prose page's markers at the right and code left to right.
+- **Docs e2e.** Completeness maps for the new pages; 320px with no sideways scroll for both parts and the recipe; the chart's table with scripts on and off; forced colors on a stacked chart (textures) and on prose (inline code edge, `mark`); a Persian prose page's markers at the right and code left to right; at 375px a wide report table scrolls inside its `ProseScroll` and the page does not; forced colors on a hatched comparison (solid against stripes).
 
 ## 11. Docs and stories
 
-- **Pages.** `charts/bar-chart` beside the line chart in the "Charts" group, leading with "Bar, line or stat tile" (a bar compares amounts across categories or periods, a line shows a change over continuous time, a tile says one figure); sections for orientation, grouped and stacked, negatives, time bands, value labels, long labels, states, color and the palette, keys and accessibility. `charts/palette` (or a section of `theming`, the plan decides) with the four tokens, the rules of section 5.3 and the measurements. `components/prose` with every element, rhythm and measure, `not-prose`, in a Card, in a PageColumn, right to left, and "Rendering Markdown and CMS HTML safely". The `line-chart` page gains its states.
-- **The Insights recipe**, with the Next App Router: a PageHeader "Insights"; a Card "Spending by category" (stacked, twelve months, four categories and Other, totals); a Card "Money in and out" (grouped, `gain` Income and ink Spending); a Card "Net" (one series with negatives, zero line, value labels at the ends); a Card "Top merchants" (horizontal, long names, value labels); and an `article` with the month's summary as Prose rendered from Markdown on the server. Sample content keeps the reservations: no red or green for down and up, `gain` only on Income.
+- **Pages.** `charts/bar-chart` beside the line chart in the "Charts" group, leading with "Bar, line or stat tile" (a bar compares amounts across categories or periods, a line shows a change over continuous time, a tile says one figure); sections for a ranked list (horizontal, the amount column, "Other", refunds below zero), months (vertical, negatives), two series side by side, comparing with the previous period, stacked, time bands, long labels, states, color and the palette, keys and accessibility. `charts/palette` (or a section of `theming`, the plan decides) with the four tokens, the previous-period look, the rules of section 5.3 and the measurements. `components/prose` with every element, rhythm and measure, `not-prose`, the neutralized spans, `ProseScroll`, in a Card, in a PageColumn, right to left in Vazirmatn, and "Rendering Markdown safely" (react-markdown in a server component, `skipHtml`, the `components` map of section 8.10). The `line-chart` page gains its states; the `stat-tile` page gains "A change against a period" with "Up $120 vs September".
+- **The Insights recipe**, the consumer's page, with the Next App Router: a PageHeader "Insights"; a health strip of StatTiles with change lines; a FilterBar; one Card whose header holds a SegmentedControl (Month, Category, Merchant, Account) and a "Compare to previous period" Switch, and whose body holds one BarChart: Month draws vertical bars with Income (`gain`) beside Spending (ink) or Net alone with negatives, and Category, Merchant and Account draw a horizontal list of the top ten and "Other" with a refund row below zero; comparing adds the hatched previous period; under the chart, a DataTable whose rows link to the transactions. Then an `article` with the month's report as Prose, rendered from Markdown by react-markdown in a server component with `skipHtml`, neutralized links and images, and a wide table in a `ProseScroll`. A second page shows the goals guide in Persian, right to left, in Vazirmatn. The docs site makes no request, so the Markdown is a fixture. Sample content keeps the reservations: no red or green for down and up, `gain` only on Income.
 - **Stories:**
-  - `Charts/BarChart`: `Default` (vertical, one series), `Horizontal`, `Negatives`, `NegativesHorizontal`, `Grouped` (ink and slate), `Stacked` (palette and Other, totals), `StackedNegatives`, `TimeBands` (31 days), `ValueLabels`, `LongLabels` (vertical, clamped), `LongLabelsHorizontal`, `Narrow` (horizontal in a 20rem frame, labels above), `ActiveBar` (a play focuses a bar: ring and readout), `PointerBand` (dimming), `TableView`, `Loading`, `Empty`, `Error`, `Textures`, `GainSeries`, `InCard` (density); `Keys`, `KeysHorizontal` and `NoScript` as `no-visual`.
+  - `Charts/BarChart`, horizontal: `Horizontal` (ten merchants and Other, amounts at the end), `HorizontalNegatives` (refunds), `LongLabelsHorizontal`, `Narrow` (a 20rem frame, labels above), `CompareHorizontal` (hatched previous period).
+  - `Charts/BarChart`, vertical: `Default` (twelve months), `Negatives` (net cash flow), `IncomeAndSpending` (`gain` beside ink), `CompareToPrevious` (ink beside hatched ink), `TimeBands` (31 days), `ValueLabels`, `LongLabels` (clamped).
+  - `Charts/BarChart`, shared: `ActiveBar` (a play focuses a bar: ring and readout), `PointerBand` (dimming), `TableView`, `Loading`, `Empty`, `Error`, `InCard` (density, the consumer's card with its SegmentedControl).
+  - `Charts/BarChart`, stacked: `Stacked` (four categories and Other, totals), `StackedNegatives`, `Textures`.
+  - `Charts/BarChart`, `no-visual`: `Keys`, `KeysHorizontal`, `KeysCompare`, `GroupingChange` (a play switches the SegmentedControl and asserts the tab stop moved to the new first bar), `NoScript`.
   - `Charts/LineChart`: `Loading`, `Empty`, `Error`.
-  - `Components/Prose`: `Default` (every element), `InCard` (density), `InPageColumn`, `Nested`, `CodeAndTables` (a long line, a wide table), `Figures`, `WithComponents`.
-  - `Pages/Insights`: the recipe.
-  - `rtl/RightToLeft.stories.tsx`: `BarChart`, `BarChartHorizontal` and `Prose` in Persian.
-- **Design record:** Appendix B sections "Chart palette", "BarChart" and "Prose", with every derived value, its reason and the measured pairs; "Charts" loses "There is no palette" and gains the color table of section 5.4; "Nested radii, derived" names a bar's data end among the parts that keep the micro step.
+  - `Components/Prose`: `Default` (every element), `InCard` (density), `InPageColumn`, `Nested`, `CodeBlocks` (a long line), `WideTable` (in a `ProseScroll`; scrolls at 375px), `Figures`, `ModelOutput` (neutralized links and images, `skipHtml` output), `WithComponents`.
+  - `Components/StatTile`: no new story; `WithTrend` already shows the change line.
+  - `Pages/Insights`: the recipe's page.
+  - `rtl/RightToLeft.stories.tsx`: `BarChart` (months, negatives), `BarChartHorizontal` (a ranked list with a refund) and `Prose` (the goals guide in Persian, in Vazirmatn).
+- **Vazirmatn in the stories.** The visual baselines run in a Docker image with no network, so the plan adds Vazirmatn's variable woff2 (OFL, with its license) to the Storybook static folder and loads it in the preview under `:lang(fa)`; until it is there, the right-to-left baselines would draw the image's fallback Arabic face.
+- **Design record:** Appendix B sections "Chart palette" (with the previous-period look), "BarChart" and "Prose", with every derived value, its reason and the measured pairs; "Charts" loses "There is no palette" and gains the color table of section 5.4; "Nested radii, derived" names a bar's data end among the parts that keep the micro step; "Meter" notes that its hatch now also means a previous period in a chart.
 
 ## 12. Responsive, right to left and server rendering, together
 
-- **320px.** BarChart in a Card at 248px: vertical bars thin, labels follow section 7.13; horizontal labels go above bars. Prose at 248px: text wraps, `pre` and wide tables scroll in their own boxes, images shrink.
+- **320px.** BarChart in a Card at 248px: vertical bars thin, labels follow section 7.13; horizontal labels go above bars, with the amounts at the end of the bar's line. Prose at 248px: text wraps, `pre` and a table in a `ProseScroll` scroll in their own boxes, images shrink.
 - **Right to left.** Sections 7.12 and 8.6; the stories in `rtl/RightToLeft.stories.tsx`.
-- **Server.** BarChart's server HTML is its final picture (section 7.14); Prose is static. Neither reads `window`, formats or measures before the first paint.
+- **Server.** BarChart's server HTML is its final picture (section 7.14); Prose and ProseScroll are static, so the consumer's report sends no client JavaScript. Neither reads `window`, formats or measures before the first paint.
 
 ## 13. Decided here
 
-1. Four chart tokens, `chart-1` to `chart-4` (teal, violet, olive, magenta), with light and dark values, at least 30 degrees of hue and 10 of distance from every reserved color, passing the method's checks on adjacent pairs in both modes, and 3:1 on every surface; slate as the fifth, "Other".
-2. One series ink; two grouped ink and slate; stacks and three or more from the palette; `color` pins a series; `gain` only for money that arrived; no loss color.
-3. LineChart's table, legend, readout placement, keys, naming and active state move to `src/foundations/`, with no change LineChart's tests or baselines can see.
-4. Bars are HTML over an svg of gridlines; thickness, placement and room are CSS `calc()` on values written in render; nothing is measured.
-5. Bars at most 24px thick and 60% of their band, 2px apart in a group; horizontal rows at least 40px tall.
-6. The value axis always includes zero; a domain without it is widened with a warning; any nonzero value draws at least 1px.
-7. Stacks diverge by sign; grouped and stacked are both in scope.
-8. The data end takes `--radius-micro` (6px, 6px, 0), the baseline end is square, inner joins are square with a 2px surface gap; the focus ring is concentric by the outline's offset.
-9. The zero line is `--color-boundary` when the domain crosses zero and `--color-frame` otherwise.
-10. Value labels off by default, outside the data end, ink, left to right; stacks label their totals; room reserved by line height (vertical) and by `ch` count (horizontal).
-11. Category labels never rotate: vertical clamps at two lines, time bands show ticks, horizontal wraps in a `fit-content(40%)` column and goes above the bar under 24rem.
-12. One tab stop that is the active bar, a roving tab index set after mount, each bar `role="img"` named by its table cells; arrow keys move to the bar drawn in that direction; no live region.
-13. The pointer's hit area is the band; the other bands dim to 40% under a pointer only.
-14. `status` with loading (skeleton bars, `aria-busy`, one polite word), empty and error (the app's content or a sentence), keeping the figure's size, with their strings in `ChartStatusLabels`; LineChart gains the same.
-15. Textures on request and always in forced colors: solid, 45, 135, both, slate.
-16. `.prose` with `:where()` rules and `not-prose`; `Prose` a static wrapper with `as`; no `html` prop.
-17. Prose type: `h1` to `h3` take the heading steps two to four, `h4` to `h6` the fourth, `h5` and `h6` slate; body at 1.6; `strong` 700.
-18. Prose rhythm from the system's steps (8, 24, 32), top margins only, first and last trimmed; measure 70ch on text blocks only.
-19. Prose's `pre` is the docs' code block moved to core, with its Shiki mapping; framed blocks take the holder's concentric radius or the surface step.
-20. Prose code is left to right in right-to-left pages; headings lose tracking under `:lang(fa)` and `:lang(ar)`; ordered lists count in Persian digits under `:lang(fa)`.
-21. The docs site has no `.bar-chart` or `.prose` classes outside the library's to collide with; its `.docs-section` prose rules stay (open question 21). The plan checks again.
-22. One 0.9.0 minor release of core and react and a 0.2.0 minor release of charts with its core peer at `^0.9.0` (section 18).
+1. Build order: the shared foundations, BarChart horizontal, BarChart vertical and grouped with the previous-period look, Prose, the chart palette, stacked bars; the consumer's order of need.
+2. Four chart tokens, `chart-1` to `chart-4` (teal, violet, olive, magenta), with light and dark values, at least 30 degrees of hue and 10 of distance from every reserved color, passing the method's checks on adjacent pairs in both modes, and 3:1 on every surface; slate as the fifth, "Other". Only stacks use them.
+3. One series ink; two grouped ink and slate unless set; stacks from the palette; `color` pins a series; `gain` only for money that arrived (Income), spending ink; no loss color.
+4. The previous period is `look: 'hatched'`: the current series' color in Meter's stripes inside a 1px border of that color, its amount in slate, grouped charts only; solid against striped in forced colors.
+5. Grouped holds two series at most, in the types; stacked up to five.
+6. LineChart's table, legend, readout placement, keys, naming and active state move to `src/foundations/`, with no change LineChart's tests or baselines can see.
+7. Bars are HTML over an svg of gridlines; thickness and placement are CSS `calc()` on values written in render; nothing is measured.
+8. Bars at most 24px thick and 60% of their band, 2px apart in a group; horizontal rows at least 40px tall.
+9. The value axis always includes zero; a domain without it is widened with a warning; any nonzero value draws at least 1px.
+10. Stacks diverge by sign.
+11. The data end takes `--radius-micro` (6px, 6px, 0), the baseline end is square, inner joins are square with a 2px surface gap; the focus ring is concentric by the outline's offset.
+12. The zero line is `--color-boundary` when the domain crosses zero and `--color-frame` otherwise.
+13. Horizontal: labels at the start in a `fit-content(40%)` column, amounts at the end in a `max-content` column, on by default; a negative row's amount stays in the column. Vertical: value labels off by default, outside the data end, with 1.25rem reserved.
+14. Category labels never rotate: vertical clamps at two lines, time bands show ticks, horizontal wraps and goes above the bar under 24rem.
+15. One tab stop that is the active bar, a roving tab index set after mount and reset when `categories` change, each bar `role="img"` named by its table cells; arrow keys move to the bar drawn in that direction; no live region.
+16. No press and no `href` on a bar in this batch; the consumer's table under the chart links to the transactions.
+17. The pointer's hit area is the band; the other bands dim to 40% under a pointer only.
+18. `status` with loading (skeleton bars, `aria-busy`, one polite word), empty and error (the app's content or a sentence), keeping the figure's size, with their strings in `ChartStatusLabels`; LineChart gains the same.
+19. Textures for stacks, on request and always in forced colors: solid, 45, 135, both, slate.
+20. StatTile's change line already says "Up $120 vs September"; nothing is added to StatTile.
+21. `.prose` with `:where()` rules and `not-prose`; `Prose` a static wrapper with `as`; `ProseScroll` a static, named, focusable region for a wide table; no `html` prop.
+22. Prose lays nothing out by `a` or `img`; a neutralized link is `span.prose-unlinked` in the text's own look and a neutralized image `span.prose-image` with its alt text in a small slate box.
+23. Prose type: `h1` to `h3` take the heading steps two to four, `h4` to `h6` the fourth, `h5` and `h6` slate; body at 1.6; `strong` 700; `em` at 500 under `:lang(fa)` and `:lang(ar)`.
+24. Prose rhythm from the system's steps (8, 24, 32), top margins only, first and last trimmed; measure 70ch on text blocks only.
+25. Prose's `pre` is the docs' code block moved to core, with its Shiki mapping; framed blocks take the holder's concentric radius or the surface step.
+26. Prose code is left to right in right-to-left pages; headings lose tracking under `:lang(fa)` and `:lang(ar)`; ordered lists count in Persian digits under `:lang(fa)`; the app's `--font-sans` names Vazirmatn first under `:lang(fa)`.
+27. The docs site has no `.bar-chart`, `.prose` or `.prose-*` classes outside the library's to collide with; its `.docs-section` prose rules stay (open question 21). The plan checks again.
+28. One 0.9.0 minor release of core and react and a 0.2.0 minor release of charts with its core peer at `^0.9.0` (section 18).
 
 ## 14. Risks
 
 - **R1. Class collisions.** `.prose` is also Tailwind Typography's class, and an app with both gets both. Mitigation: the docs say not to load the plugin beside the library's prose, and the library's rules sit in `@layer components`, where an app's unlayered plugin output would win, which the docs show; the parent spec's R1 covers unprefixed classes in general (open question 15).
-- **R2. Many elements.** 31 bands by five series is 155 bars, fine; 365 daily bars is a list, not a chart. Mitigation: the docs cap a vertical chart at about 60 bands and point to LineChart past that; a story renders 120 bands to bound the cost.
+- **R2. Many elements.** 31 bands by two series is 62 bars and the consumer's later stacks 12 by five, 60; 365 daily bars is a list, not a chart. Mitigation: the docs cap a vertical chart at about 60 bands and point to LineChart past that; a story renders 120 bands to bound the cost.
 - **R3. Screen reader support for focusable images.** `role="img"` with a roving tab index and `aria-roledescription` is read as intended in principle, but readers differ on the description and on images in focus mode. Mitigation: the names carry everything without the description; a VoiceOver and NVDA pass before release, recorded as not yet verified until then.
 - **R4. Names from hidden cells.** The accessible name computation includes hidden content referenced by `aria-labelledby`, which every engine implements (to verify in WebKit with VoiceOver). Mitigation: a play test reads each bar's computed name in three engines; the fallback is an `aria-label` joined from the three strings with a space, as the live region's parts were.
 - **R5. A container in a shrink-to-fit parent.** As StatTile and the accounts list. Mitigation: `contain-intrinsic-inline-size: 20rem` and a story in a flex row.
 - **R6. The refactor.** Moving LineChart's insides could change it. Mitigation: the move is its own commit with LineChart's tests and baselines unchanged and its size within 0.1 kB.
 - **R7. The palette's near neighbors.** Olive is 4.4 from warning under deuteranopia in light, violet 2.9 from link blue under deuteranopia in dark, teal 10.2 from success in dark. Mitigation: no chart draws a status or a link beside a series (the meaning rules, enforced by the `ChartColor` type), every series has a legend label and a bar name, and textures are one prop away.
-- **R8. Untrusted HTML.** Prose styles what an app renders, and an app that renders a CMS's HTML unsanitized has a cross-site scripting hole the library cannot see. Mitigation: no `html` prop, the docs' safe rendering section, and the docs' examples render Markdown on the server.
-- **R9. No italic face.** `base.css` sets `font-synthesis: none`, so `em` in prose draws upright if the app loaded only the roman face. Mitigation: the installation docs load the italic axis too, and the Prose page says so; a story draws `em` and the baseline shows it.
-- **R10. The `ch` estimate.** Room for horizontal value labels is the longest label's code points in `ch`; a label of letters wider than a zero (a currency word) can overrun by a character. Mitigation: the reserve adds 0.25rem, the track's end padding absorbs the rest, and `--bar-chart-value-room` lets an app set it.
+- **R8. Untrusted content.** Prose styles what an app renders. Model output can carry links and markup meant to mislead. Mitigation: the consumer renders with `skipHtml` and neutralizes links and images (section 8.10), which the docs make the recommended path; no `html` prop; the docs' safe rendering section for CMS HTML.
+- **R9. No italic face.** `base.css` sets `font-synthesis: none`, so `em` in prose draws upright if the app loaded only the roman face. Mitigation: the installation docs load the italic axis too, and the Prose page says so; a story draws `em` and the baseline shows it; Persian, whose face has no italic, takes weight 500 instead.
+- **R10. A wide amount column.** The `max-content` amount column takes its width from the widest amount, so a long figure ("-$123,456.78", about 85px at 14px) narrows every row's track. Mitigation: under 24rem the labels leave the row, so the track keeps at least about 160px at 320px; the docs advise compact figures ("$12.3K") in a narrow card; a story pins the widest figure the consumer expects.
 - **R11. Tracking and cursive scripts.** Headings' -2% tracking spaces Persian letters in engines that apply it. Mitigation: prose resets it under `:lang(fa)` and `:lang(ar)`; the same reset for `Heading` is a follow-up the plan records, since it changes a shipped part.
-- **R12. The outline's corner.** An outline follows `border-radius` in Chromium, Firefox and WebKit at the browser floor (to verify for Safari 16.4). Mitigation: the play test measures the ring in three engines; the fallback is a `box-shadow`-free ring drawn as a pseudo-element border with the radius plus the offset.
+- **R12. The outline's corner.** An outline follows `border-radius` in Chromium, Firefox and WebKit at the browser floor (to verify for Safari 16.4). Mitigation: the play test measures the ring in three engines; the fallback is a ring drawn as a pseudo-element border with the radius plus the offset.
+- **R13. Hatched read as a category.** Stripes might still read as a second thing. Mitigation: the same color, the legend's hatched key, the period in the series' label and in each bar's name, and slate amounts; the consumer reviews `CompareToPrevious` and `CompareHorizontal` before the release, and the lighter fill for ink stays the alternative (open question 25).
+- **R14. The neutralized spans depend on the app.** Prose cannot see react-markdown's `components` map; an app that forgets it renders real links in model output. Mitigation: the recipe and the Prose page show the map first, and the docs' `ModelOutput` story is the reference; the library cannot enforce it.
+- **R15. A scrolling region per table.** Every `ProseScroll` is a tab stop and a named region, so a report with many tables adds stops and landmarks. Mitigation: the docs wrap only tables wider than three columns, and the label names the table ("Spending by category, table").
 
 ## 15. Open questions
 
 Each has a recommended answer; the owner may take it or the alternative.
 
-1. **The consumer's Insights page.** The repository records no verbatim batch 6 request, so section 3 is inferred from the agreed scope. Recommended: send section 3 to the consumer to confirm before the plan, in particular whether it compares periods side by side (grouped) and how many categories a stack holds (four and Other, or more).
-2. **Grouped bars.** The agreed scope says stacked, not grouped. Recommended: include grouped, because comparing this month with last month per category is the commonest insight chart, and its cost is layout only (the keys, colors and table already handle several series). Alternative: stacked only now, grouped when the consumer asks, which saves about six stories.
-3. **The palette.** Recommended: the four hues of section 5.2, as tokens, with slate as "Other". Alternative: no new hues, stacks drawn as an ink ramp, which keeps the system monochrome but encodes an order the categories do not have.
-4. **The palette's size.** Recommended: four. Alternative: six, adding a sky and a raspberry; it passes the adjacent checks (9.5 worst) but puts the sky 5.7 from the teal for normal vision and the raspberry 10.4 from error.
+1. **The consumer's Insights page.** Answered by the consumer on 2026-10-18; section 3 records the answers and sections 1, 5.5, 7, 8.10 and 8.11 apply them.
+2. **Grouped bars.** Settled: included, two series at most (income beside spending, this period beside the last), enforced by the types (section 7.2).
+3. **The palette.** Recommended: the four hues of section 5.2, as tokens, with slate as "Other", built just before the stacks. Alternative: no new hues, stacks drawn as an ink ramp, which keeps the system monochrome but encodes an order the categories do not have.
+4. **The palette's size.** Recommended: four, which the consumer confirms is enough for its top four and Other. Alternative: six, adding a sky and a raspberry; it passes the adjacent checks (9.5 worst) but puts the sky 5.7 from the teal for normal vision and the raspberry 10.4 from error.
 5. **Bar ends.** Recommended: `--radius-micro` at the data end in Rounded and Soft, square in Square, square at the baseline. Alternative: Meter's pill (a half circle at the data end in Rounded and Soft), closer to the system's stadium language but hiding the value at the top of a curve and turning short bars into dots.
 6. **The focus model.** Recommended: per-bar roving focus for BarChart, LineChart unchanged in this batch, and LineChart's points reconsidered after the screen reader pass of risk R3. Alternative: BarChart on LineChart's model (one focusable plot, a live region), one model for both charts but no ring on the bar and a live region a screen reader may cut short.
 7. **Pointer emphasis.** Recommended: dim the other bands to 40% under a pointer. Alternative: a band wash behind the active band (Carbon's and Recharts' cursor, to verify), which adds a shape whose corners must be concentric with bars of varying height and gap.
-8. **Value labels inside bars.** Recommended: never; outside the end only. Alternative: inside when the app says it fits (`valueLabelPlacement`), which the library cannot check without measuring.
-9. **Long category labels in a vertical chart.** Recommended: two lines then an ellipsis, with the docs steering long labels to a horizontal chart. Alternative: wrap without a limit, which can make the label area taller than the plot.
+8. **Value labels inside bars.** Recommended: never; the amount column (horizontal) or outside the end (vertical). Alternative: inside when the app says it fits (`valueLabelPlacement`), which the library cannot check without measuring.
+9. **Long category labels in a vertical chart.** Recommended: two lines then an ellipsis, with the docs steering long labels to a horizontal chart (the consumer's month labels are short). Alternative: wrap without a limit, which can make the label area taller than the plot.
 10. **States on LineChart too.** Recommended: yes, in this batch, from the shared frame. Alternative: BarChart only, leaving LineChart's states to the app.
 11. **Textures.** Recommended: `hasTexture` off by default and always on in forced colors. Alternative: textures on by default for stacks, safer for color-blind readers but busier than the system's quiet surfaces.
-12. **A color for money out.** Recommended: none; spending is ink and a negative is ink below zero, the NumberField record's rule. Alternative: a "loss" token, which the system has never had and which would be read as error.
-13. **Bars that act.** Recommended: not in this batch; a bar's band links to nothing, and an app puts its links in the table or beside the chart. Alternative: `onBarAction` (Enter, Space and a press) or an `href` per value, a drill-down Highcharts and Visa Chart Components support (to verify), with a router and a second key model.
-14. **Orientation by width.** Recommended: no; the app picks `orientation`, and a narrow horizontal chart puts labels above its bars. Alternative: vertical over 30rem and horizontal under, by container query, which the HTML bars make possible but which changes the keys and the reading order with the box.
+12. **A color for money out.** Settled by the consumer: none; income is `gain`, spending ink, and a negative is ink below zero, the NumberField record's rule.
+13. **Bars that act.** Settled: later. The consumer's table under the chart links to the transactions, so `onBarPress` and an `href` per bar are not built now. Recorded as a later candidate: Enter, Space and a press on the focused bar, through `RouterProvider` for an `href`, with the bar's role becoming `link` or `button`, when a consumer asks for drill-down from the chart itself.
+14. **Orientation by width.** Recommended: no; the app picks `orientation` per grouping, as the consumer's SegmentedControl does, and a narrow horizontal chart puts labels above its bars. Alternative: vertical over 30rem and horizontal under, by container query, which the HTML bars make possible but which changes the keys and the reading order with the box.
 15. **The class name `prose`.** Recommended: `prose`, as agreed, with the docs' note about Tailwind Typography (risk R1). Alternative: `article-body` or `rich-text`, free of the collision but unfamiliar to every Tailwind user.
 16. **A heading step for `h3`.** Recommended: no new step; `h3` takes the 14px, 700 subhead, the docs' own MDX rule. Alternative: a 20px step for prose `h3` (Tailwind's and Primer's 1.25em, to verify), which needs a measured reason in the type scale and a token.
 17. **Bold.** Recommended: `strong` at 700. Alternative: 500, the headings' weight, which keeps bold quieter but which readers can barely tell from 450 at 16px.
 18. **The measure.** Recommended: 70ch on text blocks, the docs' value. Alternative: 65ch on the whole box, Tailwind's, which also narrows tables and code.
-19. **A small size.** Recommended: one size now. Alternative: a `prose-small` variant at the small step for side panels and help popovers, added when the consumer needs it.
+19. **A small size.** Recommended: one size now; Ask answers, which may sit in a narrower panel, are later. Alternative: a `prose-small` variant at the small step for side panels and help popovers, added when Ask needs it.
 20. **HTML input.** Recommended: children only; React's raw HTML attribute passes through for an app that has sanitized HTML. Alternative: an `html` prop, shorter to use but an invitation to render unsanitized strings.
 21. **Dogfooding Prose in the docs.** Recommended: move the docs' code block to core's `pre` look now (one source of truth), and move the docs' MDX sections onto `.prose` in the next batch, after the consumer has used it, since the docs' section notes and preview stages need their own exceptions. Alternative: move the MDX sections now, one docs task with no screenshot baselines but a check of every page.
-22. **Persian list numbers.** Recommended: Persian digits under `:lang(fa)` by default. Alternative: decimal everywhere unless the app sets `list-style-type`, which leaves Latin digits in a Persian article.
+22. **Persian list numbers.** Recommended: Persian digits under `:lang(fa)` by default, for the goals guide. Alternative: decimal everywhere unless the app sets `list-style-type`, which leaves Latin digits in a Persian article.
 23. **Mixed-direction paragraphs.** Recommended: the renderer writes `dir="auto"` per paragraph; Prose sets nothing. Alternative: `unicode-bidi: plaintext` on text blocks, automatic but with alignment that differs by engine (to verify).
-24. **The next charts.** Recommended: area (LineChart's `hasArea` grown into stacked areas) before donut, since a donut's arcs are the gauge's and an area's paths are already in `path.ts`. Alternative: donut first, if the consumer's Insights page wants a share of the month at a glance.
+24. **The next charts.** Recommended: area (LineChart's `hasArea` grown into stacked areas) before donut, since a donut's arcs are the gauge's and an area's paths are already in `path.ts`. Alternative: donut first, if a later Insights view wants a share of the month at a glance.
+25. **The previous-period look.** Recommended: `look: 'hatched'`, Meter's stripes in the series' color inside a full-strength border, because it keeps one color, clears 3:1 for both ink and `gain` in both modes by its border, and survives forced colors as solid against striped. Alternative: the same hue lighter, which works for ink at about 50% in light and 40% to 50% in dark but has no step for `gain` that is both visible and apart from solid `gain` (section 5.5), so Income compared with the last period would need stripes anyway.
+26. **A change chip on StatTile.** StatTile has a change line (an arrow, the app's sentence, a neutral, `gain` or `warning` tone), not a chip. Recommended: keep the line; "Up $120 vs September" is `change={{ direction: 'up', label: 'Up $120 vs September' }}` today, and a filled chip would add a second look for the same words and a fill whose tone must stay neutral by the color rules. Alternative: `change.look: 'chip'`, a pill in a 12% wash of the tone's color, as some dashboards draw a delta, added in a later batch if the consumer's design asks for it.
+27. **The neutralized spans' classes.** Recommended: `span.prose-unlinked` (the text's own look) and `span.prose-image` (the alt text in a small slate box), documented on the Prose page with the react-markdown `components` map. Alternative: no classes, the spans drawn as plain text by default, simpler but leaving a dropped image invisible and a bare address unbreakable.
+28. **`ProseScroll` as a part.** Recommended: a static part in `@snapshot-ui/react` with a required name, so the scrolling region is named and focusable by construction. Alternative: only the `.prose-scroll` class, documented with the attributes it needs, smaller but easy to use without a name or a `tabindex`.
 
 ## 16. Size budget
 
@@ -652,12 +737,12 @@ Measured as the others, without React, React Aria and Lucide, to start at:
 
 | Entry | Budget | Reason |
 | --- | --- | --- |
-| `{ BarChart }` | 5.5 kB | LineChart's entry measures 3.25 kB with its table, keys and readout; BarChart shares those through the foundations and adds stacking, two orientations, the roving focus and the states, estimated at 4.5 to 5 kB; the rule rounds up and adds 0.5 kB |
+| `{ BarChart }` | 5.5 kB | LineChart's entry measures 3.25 kB with its table, keys and readout; BarChart shares those through the foundations and adds stacking, two orientations, the amount column, the hatched look (CSS only), the roving focus and the states, estimated at 4.5 to 5 kB; the rule rounds up and adds 0.5 kB. Grouped at two series removes no code, since stacks keep the series loop |
 | `{ LineChart }` | 4 kB, unchanged | The refactor may not grow it by more than 0.1 kB; the states add about 0.3 kB, inside the same limit |
 | `{ LineChart, BarChart }` | 7.5 kB | The shared foundations counted once; a new entry, so an app that uses both sees the saving |
-| `{ Prose }` | 0.5 kB | One element |
+| `{ Prose, ProseScroll }` | 0.5 kB | Two elements |
 
-The CSS adds about 6.5 kB to `styles.css` before compression: the bar chart about 3.5 kB in `charts.css` (shared selectors keep LineChart's rules from being written twice), `prose.css` about 3 kB, and eight color declarations in the tokens. A part over its budget is reported with the number, as 3c's SidePanel was, and the limit follows the rule: the measured entry rounded up to 0.5 kB, plus 0.5 kB.
+The CSS adds about 7 kB to `styles.css` before compression: the bar chart about 3.8 kB in `charts.css` (the hatched look and the amount column included; shared selectors keep LineChart's rules from being written twice), `prose.css` about 3.2 kB (the neutralized spans and `prose-scroll` included), and eight color declarations in the tokens. A part over its budget is reported with the number, as 3c's SidePanel was, and the limit follows the rule: the measured entry rounded up to 0.5 kB, plus 0.5 kB.
 
 ## 17. Visual baseline estimate
 
@@ -665,26 +750,32 @@ Each visual story is baselined in five modes (Rounded light, Rounded dark, Soft 
 
 | Group | Visual stories | Of them with compact | Baselines |
 | --- | --- | --- | --- |
-| BarChart | 21 | 1 (`InCard`) | 106 |
+| BarChart, horizontal | 5 | 0 | 25 |
+| BarChart, vertical and grouped | 7 | 0 | 35 |
+| BarChart, shared | 7 | 1 (`InCard`) | 36 |
+| BarChart, stacked | 3 | 0 | 15 |
 | LineChart states | 3 | 0 | 15 |
-| Prose | 7 | 1 (`InCard`) | 36 |
+| Prose | 9 | 1 (`InCard`) | 46 |
 | Pages/Insights | 1 | 1 | 6 |
 | Right to left (`BarChart`, `BarChartHorizontal`, `Prose`) | 3 | 0 | 15 |
-| **New** | **35** | **3** | **178** |
+| **New** | **38** | **3** | **193** |
 
-Existing baselines: none should change. LineChart's 40 are the refactor's proof (section 6) and must stay byte-identical; `charts.css`'s shared selectors draw the same values; no existing story draws `.prose` or a chart token. Expect 165 to 190 new files, depending on how the plan splits BarChart's layouts and states into stories; any change to an existing baseline is investigated before it is committed, and every new one goes through `pnpm --filter @snapshot-ui/storybook visual:docker`.
+Existing baselines: none should change. LineChart's 40 are the refactor's proof (section 6) and must stay byte-identical; `charts.css`'s shared selectors draw the same values; StatTile gains no story; no existing story draws `.prose` or a chart token. Expect 180 to 205 new files, depending on how the plan splits BarChart's layouts and states into stories; the stacked group's 15 come last, with the palette. Any change to an existing baseline is investigated before it is committed, and every new one goes through `pnpm --filter @snapshot-ui/storybook visual:docker`.
 
 ## 18. Release
 
-- **Changesets.** For `@snapshot-ui/core` and `@snapshot-ui/react`, minor, released together as 0.9.0: `chart-palette.md` (the four tokens and their Tailwind names), `prose.md` (`prose.css`, `Prose`, `ProseProps`). For `@snapshot-ui/charts`, minor, 0.2.0: `bar-chart.md` (BarChart and its types: `BarChartProps`, `BarSeries`, `BarValue`, `BarChartLabels`, `ChartStatusLabels`, `ChartColor`), `line-chart-status.md` (LineChart's `status`, `statusContent` and `statusLabels`).
-- **The core peer.** Charts' `@snapshot-ui/core` peer is `workspace:^`, which publishes as a caret on core's version at release, `^0.9.0`. A 0.x caret accepts only its own minor, so charts 0.2.0 needs core 0.9, and it must: BarChart reads the `--color-chart-*` tokens and the bar rules that only core 0.9.0's `styles.css` has. The charts changeset says so, as each earlier peer patch did; and from here every core minor needs a charts release that moves the peer again, as batches 3a to 5 did.
+- **Changesets.** For `@snapshot-ui/core` and `@snapshot-ui/react`, minor, released together as 0.9.0: `prose.md` (`prose.css`, `Prose`, `ProseScroll` and their props types, the `prose-unlinked` and `prose-image` classes), `chart-palette.md` (the four tokens and their Tailwind names). For `@snapshot-ui/charts`, minor, 0.2.0: `bar-chart.md` (BarChart and its types: `BarChartProps`, `BarChartSeries`, `BarSeries`, `BarValue`, `BarChartLabels`, `ChartStatusLabels`, `ChartColor`), `line-chart-status.md` (LineChart's `status`, `statusContent` and `statusLabels`).
+- **One release, built in the consumer's order.** The batch ships as one release even though stacked bars come last; if the stacks slip, the horizontal and grouped chart and Prose can ship first as 0.9.0 and charts 0.2.0, with the palette and stacks as a later minor of each (charts 0.3.0, core 0.10.0), since nothing before them depends on the palette.
+- **The core peer.** Charts' `@snapshot-ui/core` peer is `workspace:^`, which publishes as a caret on core's version at release, `^0.9.0`. A 0.x caret accepts only its own minor, so charts 0.2.0 needs core 0.9, and it must: BarChart reads the bar rules that only core 0.9.0's `charts.css` has, and its stacks the `--color-chart-*` tokens. The charts changeset says so, as each earlier peer patch did; and from here every core minor needs a charts release that moves the peer again, as batches 3a to 5 did.
 - **`LineChartLabels` does not grow.** The type requires all its labels together (the LineChart record), so adding `loading`, `empty` and `error` to it would break every app that passes `labels`. The three live in `ChartStatusLabels`, a separate optional prop with English defaults on both charts, so LineChart's change is additive and stays inside a minor.
 - **Release note for the consumer:**
   - Upgrade `@snapshot-ui/core` and `@snapshot-ui/react` to 0.9.0 and `@snapshot-ui/charts` to 0.2.0 together; charts 0.2.0 refuses core 0.8.
-  - Every figure is your string, including a stack's `totals`; the chart never sums or formats.
-  - Pass `color` on a series whose entity must keep its color when a filter removes another; `gain` only on a series of money that arrived; never red or green for direction.
+  - Every figure is your string, including amounts and a stack's `totals`; the chart never sums, sorts or formats. Sort a ranked list and put "Other" last yourself.
+  - Month view: `orientation="vertical"`, Income with `color: 'gain'` beside Spending with `color: 'ink'`, or Net alone; negatives split at zero by themselves.
+  - Category, Merchant and Account: `orientation="horizontal"`; amounts sit at the end by default; refunds below zero keep their amount in the column.
+  - Compare: a second series with `look: 'hatched'` and the previous period's name as its `label`; it takes the first series' color.
+  - Two series at most when grouped; the types refuse a third. Stacks take up to five, the fifth your "Other".
   - Bars always start at zero; a `valueDomain` without zero is widened.
-  - A chart of more than four peers folds the rest into an "Other" you sum and label.
-  - Pass `labels` (all six for BarChart) and `statusLabels` (all three) on a Persian page, and Persian digits in every string.
-  - Long category names want `orientation="horizontal"`.
-  - Prose styles HTML you render: sanitize CMS HTML first, shift Markdown headings so the page keeps one `h1`, load Sofia Sans's italic, and wrap components inside an article in `not-prose` when in doubt.
+  - Pass `labels` (all six) and `statusLabels` (all three) on a Persian page, and Persian digits in every string.
+  - StatTile's `change` already draws "Up $120 vs September".
+  - Prose: render Markdown with react-markdown in a server component, `skipHtml` for model output, map `a` to `span.prose-unlinked` and `img` to `span.prose-image`, wrap `table` in `ProseScroll` with a name, and give `pre` a `tabIndex`; set `--font-sans` to Vazirmatn first under `:lang(fa)`; shift Markdown headings so the page keeps one `h1`; load Sofia Sans's italic.
