@@ -1,6 +1,6 @@
 # Insights: BarChart, the chart palette and Prose: design
 
-Status: written for review on 2026-10-18; revised the same day with the consumer's answers to open question 1 (section 3), which settle the build order, grouped bars, the previous-period look, a press on a bar, and Prose's input. Nothing here is approved yet. The owner's remaining calls are the open questions in section 15, each with a recommended answer; everything else is decided here and listed in section 13.
+Status: approved on 2026-10-18. Written for review and revised the same day with the consumer's answers to open question 1 (section 3); the owner then took every recommendation of section 15, and section 19 records the rulings. Everything else is decided here and listed in section 13.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document takes the next slice of phase 6, "Charts" (its bar chart and the chart palette derivation the parent spec requires before any chart with a palette is built), and adds Prose, which the parent spec does not list. It answers batch 6 ("Insights") of the first consumer's roadmap, agreed with the consumer as BarChart and Prose. The design authority remains `docs/design-system.md`.
 Released before this: batch 5 ("Accounts"), `@snapshot-ui/core` and `@snapshot-ui/react` 0.8.0 (`docs/specs/2026-10-18-accounts-design.md`, on `docs/accounts-spec` at the time of writing), with the `@snapshot-ui/charts` patch that moves its core peer to `^0.8.0`. This batch is the 0.9.0 minor release of core and react and a minor release of `@snapshot-ui/charts`. Section 2 lists what it takes from batches 1 to 5.
 
@@ -700,7 +700,7 @@ A table is wider than a phone's column as soon as it has four columns of figures
 
 ## 15. Open questions
 
-Each has a recommended answer; the owner may take it or the alternative.
+Each has a recommended answer. The owner took every recommendation on 2026-10-18 (section 19).
 
 1. **The consumer's Insights page.** Answered by the consumer on 2026-10-18; section 3 records the answers and sections 1, 5.5, 7, 8.10 and 8.11 apply them.
 2. **Grouped bars.** Settled: included, two series at most (income beside spending, this period beside the last), enforced by the types (section 7.2).
@@ -779,3 +779,36 @@ Existing baselines: none should change. LineChart's 40 are the refactor's proof 
   - Pass `labels` (all six) and `statusLabels` (all three) on a Persian page, and Persian digits in every string.
   - StatTile's `change` already draws "Up $120 vs September".
   - Prose: render Markdown with react-markdown in a server component, `skipHtml` for model output, map `a` to `span.prose-unlinked` and `img` to `span.prose-image`, wrap `table` in `ProseScroll` with a name, and give `pre` a `tabIndex`; set `--font-sans` to Vazirmatn first under `:lang(fa)`; shift Markdown headings so the page keeps one `h1`; load Sofia Sans's italic.
+
+## 19. Owner rulings (owner, 2026-10-18)
+
+The owner approved this spec on 2026-10-18 and took every recommendation. Each ruling names the section it settles; the plan, `docs/plans/2026-10-18-insights.md`, names the task that builds it.
+
+1. **Scope and release.** The whole batch ships as one release: `@snapshot-ui/core` and `@snapshot-ui/react` 0.9.0 and `@snapshot-ui/charts` 0.2.0, in the build order of section 1, with stacked bars and their palette last. The fallback of section 18 (stacks in a later minor if they slip) stays a fallback, not the plan.
+2. **The consumer's page** (open question 1). Section 3 is the input, as the consumer answered it.
+3. **Grouped bars** (open question 2). In scope, two series at most, enforced by `BarChartSeries`.
+4. **The palette** (open questions 3 and 4). Four tokens, teal, violet, olive and magenta, with the values of section 5.2, and slate as "Other"; built just before the stacks.
+5. **Bar ends** (open question 5). `--radius-micro` at the data end in Rounded and Soft, square in Square, square at the baseline.
+6. **The focus model** (open question 6). Per-bar roving focus for BarChart; LineChart's model unchanged in this batch, and reconsidered after the screen reader pass.
+7. **Pointer emphasis** (open question 7). The other bands dim to 40% under a pointer only.
+8. **Value labels** (open question 8). Never inside a bar: the amount column for a horizontal chart, outside the data end for a vertical one.
+9. **Long vertical labels** (open question 9). Two lines and an ellipsis; the docs steer long labels to a horizontal chart.
+10. **States on LineChart** (open question 10). Yes, in this batch, with `ChartStatusLabels` as a separate prop.
+11. **Textures** (open question 11). `hasTexture` off by default, always on in forced colors.
+12. **Money out** (open question 12). No color of its own: spending is ink, a negative is ink below zero.
+13. **Bars that act** (open question 13). Later; no `onBarPress` and no `href` in this batch.
+14. **Orientation** (open question 14). The app's choice; no switch by width.
+15. **The class name** (open question 15). `prose`, with the docs' note about Tailwind Typography.
+16. **Prose's `h3`** (open question 16). No new step: the 14px, 700 subhead.
+17. **Bold** (open question 17). `strong` at 700.
+18. **The measure** (open question 18). 70ch on text blocks only.
+19. **A small Prose** (open question 19). Not in this batch.
+20. **HTML input** (open question 20). Children only; no `html` prop.
+21. **Dogfooding** (open question 21). The docs' code block look moves to core's `pre` in this batch; the docs' MDX sections move onto `.prose` in the next.
+22. **Persian list numbers** (open question 22). Persian digits under `:lang(fa)` by default.
+23. **Mixed-direction paragraphs** (open question 23). The renderer writes `dir="auto"`; Prose sets nothing.
+24. **The next charts** (open question 24). Area before donut, in a later batch.
+25. **The previous-period look** (open question 25). `look: 'hatched'`: Meter's stripes in the series' color inside a full-strength border, amounts in slate, solid against striped in forced colors.
+26. **StatTile's change** (open question 26). Keep the line; no chip.
+27. **The neutralized spans** (open question 27). `span.prose-unlinked` and `span.prose-image`, documented with the react-markdown `components` map.
+28. **`ProseScroll`** (open question 28). A static part in `@snapshot-ui/react` with a required name.
