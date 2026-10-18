@@ -1413,11 +1413,19 @@ test('the bulk actions example puts the rest in More, and every action in More a
   await bar.getByRole('button', { name: 'More actions' }).click();
   expect(await menuItems(page)).toEqual(['Categorize', 'Export', 'Archive', 'Delete']);
   await page.keyboard.press('Escape');
-  // Delete clears the selection, and focus goes to the table, never to the page.
+  // Delete clears the selection, and focus goes to the table, never to the page. The stage is held by its
+  // element, since the locator finds it by the More button, which leaves with the bar.
+  const held = await stage.elementHandle();
   await bar.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('menuitem', { name: 'Delete' }).click();
-  await expect(bar).toHaveCount(0);
-  await expect.poll(() => stage.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await expect
+    .poll(() => held.evaluate((element) => element.querySelector('.data-table-bar') === null))
+    .toBe(true);
+  await expect
+    .poll(() =>
+      held.evaluate((element) => element.querySelector('.data-table')?.contains(document.activeElement)),
+    )
+    .toBe(true);
 });
 
 test('the bulk actions example offers every match once the page is selected', async ({ page }) => {

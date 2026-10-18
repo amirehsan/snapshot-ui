@@ -734,22 +734,14 @@ describe('Pagination page size', () => {
   });
 
   it('takes pageSize and onPageSizeChange together or neither, in its types', () => {
+    const base = { page: 1, pageCount: 2, rangeLabel: '', getPageHref: href };
+    // Each @ts-expect-error line below fails `pnpm typecheck` if the type stops refusing it.
     // @ts-expect-error onPageSizeChange needs the size it changes
-    const noSize = (
-      <Pagination
-        page={1}
-        pageCount={2}
-        rangeLabel=""
-        getPageHref={href}
-        onPageSizeChange={() => undefined}
-      />
-    );
+    const noSize = <Pagination {...base} onPageSizeChange={() => undefined} />;
     // @ts-expect-error a size with no way to change it draws no picker
-    const noChange = <Pagination page={1} pageCount={2} rangeLabel="" getPageHref={href} pageSize={25} />;
+    const noChange = <Pagination {...base} pageSize={25} />;
     // @ts-expect-error options without the rest
-    const onlyOptions = (
-      <Pagination page={1} pageCount={2} rangeLabel="" getPageHref={href} pageSizeOptions={[10]} />
-    );
+    const onlyOptions = <Pagination {...base} pageSizeOptions={[10]} />;
     expect([noSize, noChange, onlyOptions]).toHaveLength(3);
   });
 });
