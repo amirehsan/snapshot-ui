@@ -218,6 +218,18 @@ describe('SaveBar', () => {
     });
   });
 
+  it('names the spinner by labels.pending when no pendingLabel is given, one string for both', async () => {
+    const user = userEvent.setup();
+    const work = deferred();
+    render(<SaveBar {...BASE} onAction={() => work.promise} labels={{ pending: 'Speichern' }} />);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByRole('button', { name: 'Save Speichern' })).toBeInTheDocument();
+    await act(async () => {
+      work.resolve();
+      await work.promise;
+    });
+  });
+
   it('reports a rejected action through reportError and stays', async () => {
     const reportError = vi.fn();
     vi.stubGlobal('reportError', reportError);

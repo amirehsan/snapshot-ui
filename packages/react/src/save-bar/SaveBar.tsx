@@ -31,7 +31,8 @@ export interface SaveBarLabels {
   cancel: string;
   /**
    * Said in the status once the action has been pending for QUIET_MS, when the action did not hold focus as the
-   * pending began; while it does, React Aria's Button says its pending itself. @default 'Saving'
+   * pending began; while it does, React Aria's Button says its pending itself. Also the spinner's name unless
+   * `pendingLabel` is given, so one translated string covers both. @default 'Saving'
    */
   pending: string;
   /**
@@ -55,7 +56,7 @@ export interface SaveBarProps {
   onAction: () => void | Promise<void>;
   /** Pending for work the app tracks itself: the action shows its spinner and Cancel is disabled. */
   isPending?: boolean;
-  /** The spinner's name, read with the action's. @default 'Saving' */
+  /** The spinner's name, read with the action's. @default labels.pending, 'Saving' */
   pendingLabel?: string;
   /** Shows Cancel. Called at once when clean, and after the discard question when dirty. */
   onCancel?: () => void;
@@ -108,7 +109,7 @@ export function SaveBar({
   actionLabel,
   onAction,
   isPending: isPendingOutside = false,
-  pendingLabel = 'Saving',
+  pendingLabel: pendingLabelProp,
   onCancel,
   secondaryActions,
   status,
@@ -119,6 +120,7 @@ export function SaveBar({
   ref,
 }: SaveBarProps): ReactElement {
   const labels: SaveBarLabels = { ...DEFAULT_LABELS, ...labelsProp };
+  const pendingLabel = pendingLabelProp ?? labels.pending;
   const messageId = useId();
   const barRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
