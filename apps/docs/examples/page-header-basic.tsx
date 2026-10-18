@@ -5,6 +5,8 @@ export default function PageHeaderBasic(): ReactElement {
   return (
     <div style={{ width: '100%' }}>
       <PageHeader
+        // An example on a docs page, which has its own h1; a page's own header keeps the default, 1.
+        headingLevel={2}
         breadcrumbs={
           // Two trails share this docs page, so this one names its landmark apart; a page has one.
           <Breadcrumbs aria-label="Breadcrumbs, settings">

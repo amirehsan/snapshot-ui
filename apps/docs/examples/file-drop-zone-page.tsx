@@ -17,6 +17,8 @@ export default function FileDropZonePage(): ReactElement {
     <div className="stack" style={{ width: '100%', maxWidth: '32rem' }}>
       {/* The page zone's keyboard twin: every page zone has a button in the page header's actions. */}
       <PageHeader
+        // An example on a docs page, which has its own h1.
+        headingLevel={2}
         title="Documents"
         actions={
           <FileButton acceptedFileTypes={TYPES} allowsMultiple onFiles={take}>

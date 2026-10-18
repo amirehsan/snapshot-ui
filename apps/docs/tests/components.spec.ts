@@ -1064,8 +1064,11 @@ test('the date picker example opens on today and closes with focus on its button
 test('a crumb navigates through the router, and at 375 the trail is one back link', async ({ page }) => {
   await visit(page, '/docs/components/page-header');
   const trail = page.locator('.stage').nth(1).getByRole('navigation', { name: 'Breadcrumbs' });
-  // The current page is text, the links are the two above it, and the back link is not drawn.
-  await expect(trail.getByRole('link')).toHaveText(['Home', 'Documents']);
+  // The current page is text, the links are the two above it, named by their text: the back words are not drawn.
+  const links = trail.getByRole('link');
+  await expect(links).toHaveCount(2);
+  await expect(links.nth(0)).toHaveAccessibleName('Home');
+  await expect(links.nth(1)).toHaveAccessibleName('Documents');
   await expect(trail.locator('.breadcrumbs-current')).toHaveAttribute('aria-current', 'page');
   // A client navigation keeps the page's window: a full load would lose this mark.
   const mark = (): Promise<void> =>
@@ -1083,8 +1086,13 @@ test('a crumb navigates through the router, and at 375 the trail is one back lin
   await visit(page, '/docs/components/page-header');
   const narrow = page.locator('.stage').nth(1).getByRole('navigation', { name: 'Breadcrumbs' });
   await expect(narrow.getByRole('link')).toHaveCount(1);
-  const back = narrow.getByRole('link', { name: 'Back to Documents' });
+  const back = narrow.getByRole('link', { name: 'Back to Documents', exact: true });
   await expect(back).toHaveAttribute('href', '/docs/components/upload-tray');
+  // "Back to" is said, not shown: the line draws the chevron and the parent's text.
+  await expect(back.locator('.breadcrumbs-text')).toBeVisible();
+  expect(
+    await back.locator('.breadcrumbs-back-words').evaluate((words) => words.getBoundingClientRect().width),
+  ).toBeLessThanOrEqual(1);
   await mark();
   await back.click();
   await expect(page).toHaveURL(/[/]docs[/]components[/]upload-tray$/);
@@ -1567,6 +1575,14 @@ for (const { slug, url } of PAGES) {
   }
 }
 
+for (const { slug, url } of PAGES) {
+  test(`the ${slug} page has one h1, its own title`, async ({ page }) => {
+    // An example of a page's header is not this page's, so it takes a lower level (PageHeader's headingLevel).
+    await visit(page, url);
+    await expect(page.locator('h1')).toHaveCount(1);
+  });
+}
+
 // ---- Server rendering ---------------------------------------------------------------------------
 
 /**
@@ -1629,7 +1645,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The figure is the server face's plain text, and the symbol is drawn beside it.
   'number-field': ['.stage .number-field-input', '.stage .number-field-symbol'],
   // A static part: the header and its h1 are in the server's HTML.
-  'page-header': ['.stage .page-header h1'],
+  'page-header': ['.stage .page-header .page-header-title'],
   // The row and the current page are in the server's HTML; the shell is a server component.
   pagination: ['.stage .pagination', '.stage .pagination-page[aria-current]'],
   popover: ['.stage .button'],

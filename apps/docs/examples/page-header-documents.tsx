@@ -31,6 +31,8 @@ export default function PageHeaderDocuments(): ReactElement {
     >
       <div style={{ width: '100%' }}>
         <PageHeader
+          // An example on a docs page, which has its own h1; a page's own header keeps the default, 1.
+          headingLevel={2}
           breadcrumbs={
             <Breadcrumbs>
               <Breadcrumb href="/docs">Home</Breadcrumb>
