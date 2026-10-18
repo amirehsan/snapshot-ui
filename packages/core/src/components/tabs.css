@@ -20,13 +20,20 @@
     min-width: 0;
   }
 
+  /* A holder: the tabs in it take its radius less its 4px of padding, so their corners are concentric with
+     the track's, 20px in Rounded and 8px in Soft. */
   .tab-list {
+    --holder-radius: var(--radius-surface);
+    --holder-border: 0px;
+    --holder-pad: 0.25rem;
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
+
     box-sizing: border-box;
     display: inline-flex;
     gap: 0.25rem;
     max-width: 100%;
-    padding: 0.25rem;
-    border-radius: var(--radius-surface);
+    padding: var(--holder-pad);
+    border-radius: var(--holder-radius);
     background-color: var(--color-canvas);
     overflow-x: auto;
     overscroll-behavior-inline: contain;
@@ -43,7 +50,7 @@
     justify-content: center;
     min-height: var(--size-control);
     padding-inline: 1rem;
-    border-radius: var(--radius-pill);
+    border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));
     color: var(--color-slate);
     font-family: var(--font-sans);
     font-size: var(--text-action);

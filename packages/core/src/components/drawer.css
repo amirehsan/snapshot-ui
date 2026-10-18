@@ -10,7 +10,13 @@
     padding: var(--overlay-inset);
   }
 
+  /* A holder: its corner, edge and padding are named for the parts that sit in its corners. */
   .drawer {
+    --holder-radius: var(--radius-stadium);
+    --holder-border: 1px;
+    --holder-pad: var(--spacing-peer);
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
+
     display: flex;
     flex-direction: column;
     width: min(20rem, 100%);
@@ -21,8 +27,8 @@
     /* With no footer the body's square corners meet the 40px curve: the body's ring and the text scrolling
        through its padding stay inside the panel's shape. Nothing inside paints past the edge on purpose. */
     overflow: clip;
-    border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-stadium);
+    border: var(--holder-border) solid var(--color-hairline);
+    border-radius: var(--holder-radius);
     background-color: var(--color-float);
     box-shadow: var(--shadow-dramatic);
     transition: translate 180ms ease;
@@ -107,7 +113,8 @@
 
   .drawer-footer {
     flex: none;
-    padding: 0 var(--spacing-peer) calc(var(--spacing-peer) + env(safe-area-inset-bottom, 0px));
+    /* It ends at the corner inset, so a control at its foot sits clear of the panel's bottom corners. */
+    padding: 0 var(--holder-pad) calc(var(--holder-corner-inset) + env(safe-area-inset-bottom, 0px));
     overflow-wrap: anywhere;
   }
 

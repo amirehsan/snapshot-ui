@@ -2,7 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { ReactElement } from 'react';
 import { expect } from 'storybook/test';
 import { Card, CardBody } from '../card';
-import { paint, tokenColor, tokenPixels } from '../stories/paint';
+import { nestedCardPixels } from '../stories/corner';
+import { paint, tokenColor } from '../stories/paint';
 import { StatTile } from './StatTile';
 
 /** Each tile fills its column up to 24rem: 318px of content at 1280, over the 18rem the trend moves at. */
@@ -121,7 +122,7 @@ export const LinkedKeyboardFocus: Story = {
   },
 };
 
-/** In a card, the tile steps down to the surface corner and takes the frame edge, as a card in a card does. */
+/** In a card, the tile's corner is concentric with the card's and it takes the frame edge, as a card in a card does. */
 export const InCard: Story = {
   render: (args) => (
     <Card style={{ width: '100%', maxWidth: '30rem' }}>
@@ -132,9 +133,7 @@ export const InCard: Story = {
   ),
   play: async ({ canvasElement }) => {
     const tile = part(canvasElement, 'stat-tile');
-    await expect(parseFloat(getComputedStyle(tile).borderTopLeftRadius)).toBe(
-      tokenPixels('--radius-surface'),
-    );
+    await expect(parseFloat(getComputedStyle(tile).borderTopLeftRadius)).toBe(nestedCardPixels());
   },
 };
 

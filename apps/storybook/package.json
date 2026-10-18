@@ -10,7 +10,8 @@
     "test:visual": "playwright test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "visual:docker": "bash scripts/visual-docker.sh"
+    "visual:docker": "bash scripts/visual-docker.sh",
+    "test:concentric": "playwright test -c playwright.concentric.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/sofia-sans": "5.3.0",

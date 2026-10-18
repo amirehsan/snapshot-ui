@@ -4,10 +4,17 @@ import { AppShell, Button, Card, CardBody, useAppShell } from '@snapshot-ui/reac
 import type { ReactElement } from 'react';
 import { ShellHeader, ShellNav } from './shell-nav';
 
+/** The button spans the card's foot, so it stops at the card's corner inset and keeps its own shape. */
+const CLEAR_OF_FOOT = { marginBlockEnd: 'calc(var(--holder-corner-inset) - var(--holder-pad))' };
+
 /** Opens the drawer at any width, as the header's menu button does below 1024px. */
 function OpenTheMenu(): ReactElement {
   const { openDrawer } = useAppShell();
-  return <Button onPress={openDrawer}>Open the menu</Button>;
+  return (
+    <Button onPress={openDrawer} style={CLEAR_OF_FOOT}>
+      Open the menu
+    </Button>
+  );
 }
 
 export default function SidebarDrawer(): ReactElement {
