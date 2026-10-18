@@ -5458,10 +5458,9 @@ describe('src/components/pagination.css', () => {
     ]) {
       expect(picker, declaration).toContain(declaration);
     }
-    const label = blockAfter(css, '.pagination-size .field-label {');
+    const label = blockAfter(css, '.pagination-size-label {');
     expect(label).toContain('color: var(--color-slate);');
     expect(label).toContain('font-size: var(--text-small);');
-    expect(blockAfter(css, '.pagination-size .select-trigger {')).toContain('inline-size: auto;');
     expect(blockAfter(css, '.pagination-row:has(> .pagination-size) {')).toContain(
       'justify-content: flex-start;',
     );
@@ -5470,6 +5469,37 @@ describe('src/components/pagination.css', () => {
     );
     // A row without the picker keeps the 0.6.1 layout: the range at the start, the list at the end.
     expect(blockAfter(css, '.pagination-row {')).toContain('justify-content: space-between;');
+  });
+
+  it('draws the picker as a native select wearing the field, at the control height with a chevron (spec correction 112)', () => {
+    const css = rules();
+    // One more class than input.css's, so the height and the paddings win; the edge, fill, states and radius
+    // are the field's.
+    const select = blockAfter(css, '.pagination-size-select.input {');
+    for (const declaration of [
+      'inline-size: auto;',
+      'height: var(--size-control);',
+      'padding-inline: 1.5rem calc(1rem + 16px + var(--spacing-part));',
+      'appearance: none;',
+    ]) {
+      expect(select, declaration).toContain(declaration);
+    }
+    expect(select).not.toMatch(/border-radius|border:|background/);
+    expect(blockAfter(css, '.pagination-size-field {')).toContain('position: relative;');
+    const chevron = blockAfter(css, '.pagination-size-chevron {');
+    for (const declaration of [
+      'position: absolute;',
+      'inset-inline-end: 1rem;',
+      'width: 16px;',
+      'color: var(--color-slate);',
+      'pointer-events: none;',
+    ]) {
+      expect(chevron, declaration).toContain(declaration);
+    }
+    const forced = blockAfter(css, '@media (forced-colors: active)');
+    expect(blockAfter(forced, '.pagination-size-chevron {')).toContain('color: CanvasText;');
+    // The worded row with the picker hides its step words under 54rem of the box.
+    expect(css).toContain('@container pagination (width < 54rem)');
   });
 
   it('puts the picker on a line of its own above the steps under 30rem and in the short form', () => {

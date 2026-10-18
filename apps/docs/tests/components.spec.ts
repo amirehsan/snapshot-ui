@@ -1453,25 +1453,21 @@ test('the page size example writes the size and the page that keeps the first ro
   await nav.getByRole('link', { name: 'Page 3', exact: true }).click();
   await expect(page).toHaveURL(/[?&]page=3(&|$)/);
   await expect(nav.locator('.pagination-range')).toHaveText('51 to 75 of 240');
-  // By keyboard: the picker opens, Up chooses 10, and row 51 is on page 6.
-  const trigger = nav.locator('.pagination-size .select-trigger');
-  await expect(trigger).toHaveAccessibleName(/Rows per page/);
-  await trigger.focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('listbox')).toBeVisible();
+  // By keyboard: Up on the native select chooses 10 in Chromium, and row 51 is on page 6.
+  const picker = nav.getByRole('combobox', { name: 'Rows per page' });
+  await expect(picker).toHaveValue('25');
+  await picker.focus();
   await page.keyboard.press('ArrowUp');
-  await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/[?&]size=10(&|$)/);
   await expect(page).toHaveURL(/[?&]page=6(&|$)/);
   await expect(nav.locator('.pagination-range')).toHaveText('51 to 60 of 240');
-  await expect(trigger).toBeFocused();
+  await expect(picker).toBeFocused();
+  await expect(picker).toHaveValue('10');
   // The default size on page 1 writes no parameter, and never a bare ?.
-  await trigger.click();
-  await page.getByRole('option', { name: '100', exact: true }).click();
+  await picker.selectOption('100');
   await expect(page).toHaveURL(/[?&]size=100(&|$)/);
   expect(new URL(page.url()).searchParams.get('page')).toBeNull();
-  await trigger.click();
-  await page.getByRole('option', { name: '25', exact: true }).click();
+  await picker.selectOption('25');
   await expect(page).not.toHaveURL(/[?&](size|page)=/);
   expect(page.url()).not.toMatch(/\?$/);
 });

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState, type CSSProperties, type ReactElement } from 'react';
 import { expect, userEvent, waitFor } from 'storybook/test';
 import { focusOn } from '../stories/focus';
-import { tokenColor, tokenPixels, washColor } from '../stories/paint';
+import { paint, tokenColor, tokenPixels, washColor } from '../stories/paint';
 import { Pagination, type PaginationProps } from '.';
 
 const href = (page: number): string => `#page-${String(page)}`;
@@ -427,8 +427,9 @@ function Sized({
   );
 }
 
-/** The picker's trigger. */
-const sizeTrigger = (scope: ParentNode): HTMLElement => find(scope, '.pagination-size .select-trigger');
+/** The picker: a native select. */
+const sizePicker = (scope: ParentNode): HTMLSelectElement =>
+  find(scope, '.pagination-size select') as HTMLSelectElement;
 
 /** Whether the story's box or the page scrolls sideways. */
 const scrollsSideways = (scope: Element): boolean =>
@@ -436,18 +437,34 @@ const scrollsSideways = (scope: Element): boolean =>
 
 /**
  * Page 3 of 240 rows at 25 a page: "Rows per page" and its field at the row's start, then the range, and the
- * page controls at its end, on one line.
+ * page controls at its end, on one line. The field is a native select drawn as the library's field: as tall as
+ * the page controls, at the field's radius, with a slate chevron at its end.
  */
 export const PageSize: Story = {
   render: () => <Sized />,
   play: async ({ canvasElement }) => {
     const picker = find(canvasElement, '.pagination-size');
-    const label = find(picker, '.field-label');
-    const trigger = sizeTrigger(canvasElement);
+    const label = find(picker, '.pagination-size-label');
+    const trigger = sizePicker(canvasElement);
     const shown = find(canvasElement, '.pagination-range');
     const list = find(canvasElement, '.pagination-list');
     const nav = find(canvasElement, '.pagination');
-    await expect(trigger).toHaveTextContent('25');
+    await expect(trigger).toHaveValue('25');
+    await expect(trigger).toHaveAccessibleName('Rows per page');
+    // Drawn as the field: the control's height, the field's radius and edge, and a chevron inside its end.
+    await expect(Math.abs(rect(trigger).height - tokenPixels('--size-control'))).toBeLessThanOrEqual(1);
+    const field = document.createElement('input');
+    field.className = 'input';
+    picker.append(field);
+    const fieldStyle = getComputedStyle(field);
+    const [radius, edge] = [fieldStyle.borderTopLeftRadius, fieldStyle.borderTopColor];
+    field.remove();
+    await expect(getComputedStyle(trigger).borderTopLeftRadius).toBe(radius);
+    await expect(getComputedStyle(trigger).borderTopColor).toBe(edge);
+    const chevron = find(picker, '.pagination-size-chevron');
+    await expect(rect(chevron).right).toBeLessThanOrEqual(rect(trigger).right);
+    await expect(rect(chevron).left).toBeGreaterThan(rect(trigger).left + rect(trigger).width / 2);
+    await expect(getComputedStyle(chevron).color).toBe(tokenColor('--color-slate'));
     // The label beside its field, the field before the range, the list at the end.
     await expect(rect(label).right).toBeLessThanOrEqual(rect(trigger).left);
     await expect(rect(trigger).right).toBeLessThanOrEqual(rect(shown).left);
@@ -485,29 +502,43 @@ export const PageSizeNarrow: Story = {
 };
 
 /**
- * A size chosen by keyboard: 10 a page from page 3 at 25 keeps row 51 in view on page 6, the range says so, and
- * focus stays on the picker.
+ * A size chosen with focus on the picker: 10 a page from page 3 at 25 keeps row 51 in view on page 6, the range
+ * says so, and focus stays on the picker, the same element. Each engine opens its own list, so the play chooses
+ * the option as the browser's list does, with a change event. Three engines.
  */
 export const PageSizeChange: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
   render: () => <Sized />,
   play: async ({ canvasElement }) => {
-    const trigger = sizeTrigger(canvasElement);
-    const press = async (keys: string): Promise<void> => {
-      if (!trigger.isConnected) throw new Error('The story has gone');
-      await userEvent.keyboard(keys);
-    };
+    const trigger = sizePicker(canvasElement);
     await focusOn(trigger);
-    await press('{Enter}');
-    await waitFor(() => expect(document.querySelector('[role="listbox"]')).not.toBeNull());
-    await press('{ArrowUp}');
-    await press('{Enter}');
+    await userEvent.selectOptions(trigger, '10');
     await waitFor(() =>
       expect(find(canvasElement, '.pagination-range')).toHaveTextContent('51 to 60 of 240'),
     );
     await expect(pageControl(canvasElement, '6')).toHaveAttribute('aria-current', 'true');
+    await expect(sizePicker(canvasElement)).toBe(trigger);
     await waitFor(() => expect(trigger).toHaveFocus());
-    await expect(trigger).toHaveTextContent('10');
+    await expect(trigger).toHaveValue('10');
+  },
+};
+
+/**
+ * The picker's focus ring: the field's 1.5px ink edge and the ring around it, as the library's field and Select
+ * trigger draw on keyboard focus.
+ */
+export const PageSizeFocus: Story = {
+  tags: ['no-visual'],
+  render: () => <Sized />,
+  play: async ({ canvasElement }) => {
+    const trigger = sizePicker(canvasElement);
+    await userEvent.tab();
+    await waitFor(() => expect(trigger).toHaveFocus());
+    const style = getComputedStyle(trigger);
+    await expect(style.outlineStyle).toBe('solid');
+    await expect(style.outlineColor).toBe(paint('var(--focus-ring-color)', trigger));
+    // The focus edge is ink; Chrome draws the 1.5px edge at a whole device pixel, so its color is what is read.
+    await expect(style.borderTopColor).toBe(tokenColor('--color-ink', trigger));
   },
 };
 
@@ -525,12 +556,16 @@ export const PageSizeRightToLeft: Story = {
     const picker = find(canvasElement, '.pagination-size');
     const nav = find(canvasElement, '.pagination');
     await expect(Math.abs(rect(picker).right - rect(nav).right)).toBeLessThan(1);
-    await expect(rect(find(picker, '.field-label')).left).toBeGreaterThanOrEqual(
-      rect(sizeTrigger(canvasElement)).right,
+    await expect(rect(find(picker, '.pagination-size-label')).left).toBeGreaterThanOrEqual(
+      rect(sizePicker(canvasElement)).right,
+    );
+    // The chevron keeps the field's end, the left in right to left.
+    await expect(rect(find(picker, '.pagination-size-chevron')).left).toBeLessThan(
+      rect(sizePicker(canvasElement)).left + rect(sizePicker(canvasElement)).width / 2,
     );
     await expect(Math.abs(rect(find(canvasElement, '.pagination-list')).left - rect(nav).left)).toBeLessThan(
       1,
     );
-    await expect(sizeTrigger(canvasElement)).toHaveTextContent('۲۵');
+    await expect(sizePicker(canvasElement).selectedOptions[0]).toHaveTextContent('۲۵');
   },
 };

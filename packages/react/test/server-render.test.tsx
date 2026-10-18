@@ -648,6 +648,28 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     ['href='],
   ],
   [
+    // The page size picker is a native select in the server's HTML, its label tied to it and the size chosen, so
+    // it works before the script; nothing of React Aria's Select or its hidden pass is drawn.
+    'Pagination, with a page size picker',
+    <Pagination
+      page={3}
+      pageCount={10}
+      rangeLabel="51 to 75 of 240"
+      onPageChange={() => undefined}
+      pageSize={25}
+      onPageSizeChange={() => undefined}
+    />,
+    [
+      '<label class="pagination-size-label" for="',
+      '<select id="',
+      'class="input pagination-size-select"',
+      '<option value="25" selected="">25</option>',
+      '<option value="100">100</option>',
+      'class="pagination-size-chevron"',
+    ],
+    ['select-trigger', 'listbox', '<template'],
+  ],
+  [
     // Every row and its link, the current row, the sort marks, the figures and the totals, from a client
     // component; nothing is busy and the status is empty.
     'DataTable',

@@ -32,8 +32,8 @@ vi.mock('react', async () => {
 // server build, so the linked tile's client module is a stand-in here.
 vi.mock('../src/stat-tile/StatTileLink', () => ({ StatTileLink: () => null }));
 
-// Pagination's page size picker is a client leaf on the library's Select, which a server bundler replaces with a
-// reference; a server page cannot pass the function it calls, so no row here draws it.
+// Pagination's page size picker is a client leaf, a native select with its change handler, which a server bundler
+// replaces with a reference; a server page cannot pass the function it calls, so no row here draws it.
 vi.mock('../src/pagination/PaginationPageSize', () => ({ PaginationPageSize: () => null }));
 
 // Pagination's three client leaves, as stand-ins that write what they were given as plain markup and record

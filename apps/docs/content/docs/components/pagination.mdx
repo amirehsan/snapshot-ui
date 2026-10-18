@@ -73,7 +73,7 @@ On a phone it narrows with the row it is in, never below the range's longest wor
 
 Pass `pageSize` and `onPageSizeChange` together and the row starts with a rows-per-page picker, labelled "Rows per page" (`labels.pageSize`), with the page controls at its end. It offers 10, 25, 50 and 100 rows, or your `pageSizeOptions`, written with `pageLabel` like the page numbers. `onPageSizeChange` gets the size chosen and the page that holds the first row of the current page at that size, so the reader keeps their place: page 3 at 25 a page starts at row 51, which is on page 6 at 10 a page. Set both, and write the new range, which is announced once it settles.
 
-The picker is the library's [Select](/docs/components/select), with a visible label. Where the row is narrow it takes a line of its own above the steps, and a right-to-left page puts it at the right. It calls your function, so render Pagination from a client component to show it, in link mode or button mode; from a server page, render it without a picker, or move it into a client component, as this example and the [Transactions recipe](/docs/components/data-table#the-transactions-recipe) do. The size belongs in the URL beside the page:
+The picker is the browser's own `select`, drawn as the library's fields are, with a visible label tied to it, so a phone opens its own wheel or sheet and a Pagination carries no list or popover of its own. Where the row is narrow it takes a line of its own above the steps, and a right-to-left page puts it at the right. It calls your function, so render Pagination from a client component to show it, in link mode or button mode; from a server page, render it without a picker, or move it into a client component, as this example and the [Transactions recipe](/docs/components/data-table#the-transactions-recipe) do. The size belongs in the URL beside the page:
 
 ```tsx
 'use client';
@@ -206,10 +206,10 @@ A `nav` named "Pagination" (or `labels.navigation`) holds a list of links or but
 
 - Names: each page is named "Page" and its number, and the steps by their words, even when the narrow row hides them.
 - Announcements: the range is announced once, 600ms after it last changed, so three quick presses of Next announce one range. Nothing is announced on page load, and the visible range is not live, so it is never read twice.
-- The page size picker: a Select labelled "Rows per page", named by its label and its value, inside the navigation landmark. A new size changes the range, which is announced as a page change is.
+- The page size picker: a native `select` named by its visible label, "Rows per page", inside the navigation landmark. A new size changes the range, which is announced as a page change is.
 - Disabled steps: they leave the tab order. If a focused step disables, as Next does on the last page, focus moves to the current page, or to the other step when the numbers are hidden.
 
-<Keys rows={[['Tab', 'Moves between the controls.'], ['Enter', 'Goes to the page; a button also takes Space. On the page size picker, opens its list, where Up and Down move and Enter chooses.']]} />
+<Keys rows={[['Tab', 'Moves between the controls.'], ['Enter', 'Goes to the page; a button also takes Space.'], ['Up Down', "On the page size picker, the browser's own keys: on Windows and Linux they choose the size before or after at once, and Alt+Down opens the list; on a Mac they open the list, where Enter chooses."]]} />
 
 </Section>
 

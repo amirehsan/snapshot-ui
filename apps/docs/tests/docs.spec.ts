@@ -4056,8 +4056,8 @@ test('the recipe writes its page size to the URL, on the page that keeps the fir
   await expect(page).toHaveURL(/[?&]page=2(&|$)/);
   await expect(stage.locator('.pagination-range')).toHaveText('6 to 10 of 12');
   // Ten a page: row 6 is on page 1, which writes no page; the size is replaced in history.
-  await pages.locator('.pagination-size .select-trigger').click();
-  await page.getByRole('option', { name: '10', exact: true }).click();
+  const picker = pages.getByRole('combobox', { name: 'Rows per page' });
+  await picker.selectOption('10');
   await expect(page).toHaveURL(/[?&]size=10(&|$)/);
   expect(new URL(page.url()).searchParams.get('page')).toBeNull();
   expect(page.url()).not.toMatch(/\?$/);
@@ -4065,11 +4065,10 @@ test('the recipe writes its page size to the URL, on the page that keeps the fir
   await expect(rows).toHaveCount(10);
   await page.reload();
   await settled(page);
-  await expect(pages.locator('.pagination-size .select-trigger')).toHaveText(/10/);
+  await expect(picker).toHaveValue('10');
   await expect(rows).toHaveCount(10);
   // Back to the first size writes no parameter, and never a bare ?.
-  await pages.locator('.pagination-size .select-trigger').click();
-  await page.getByRole('option', { name: '5', exact: true }).click();
+  await picker.selectOption('5');
   await expect(page).not.toHaveURL(/size=/);
   expect(page.url()).not.toMatch(/\?$/);
 });

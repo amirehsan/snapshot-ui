@@ -298,7 +298,7 @@
     "path": "dist/index.js",
     "import": "{ Pagination }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
-    "limit": "5 kB"
+    "limit": "2.5 kB"
   },
   {
     "name": "import { NumberField } from \"@snapshot-ui/react\"",
@@ -439,5 +439,12 @@
     "import": "{ CommandPalette }",
     "ignore": ["react", "react-dom"],
     "limit": "70 kB"
+  },
+  {
+    "name": "Pagination with React Aria (watch only)",
+    "path": "dist/index.js",
+    "import": "{ Pagination }",
+    "ignore": ["react", "react-dom"],
+    "limit": "20 kB"
   }
 ]

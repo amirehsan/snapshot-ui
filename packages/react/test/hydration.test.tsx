@@ -332,9 +332,9 @@ const HYDRATED: [
       onPageSizeChange={noop}
     />,
     (container) => {
-      const trigger = container.querySelector('.pagination-size .select-trigger');
-      expect(trigger).toHaveTextContent('25');
-      expect(container.querySelector('.pagination-size .field-label')).toHaveTextContent('Rows per page');
+      const select = container.querySelector('.pagination-size select');
+      expect(select).toHaveValue('25');
+      expect(select).toHaveAccessibleName('Rows per page');
       expect(container.querySelector('.pagination-page[aria-current="true"]')).toHaveTextContent('3');
     },
   ],
