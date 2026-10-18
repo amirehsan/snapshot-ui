@@ -727,7 +727,7 @@ export function HomePage(): ReactElement {
                 <Link className="chip" href="/docs/components/empty-state">
                   Empty state
                 </Link>
-                <Link className="chip chip-new" href="/docs/charts/line-chart">
+                <Link className="chip chip-new" href="/docs/charts/bar-chart">
                   Charts
                 </Link>
               </div>
@@ -854,6 +854,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/tooltip">Tooltip</Link>
                 <Link href="/docs/components/typography">Typography</Link>
                 <Link href="/docs/components/upload-tray">Upload tray</Link>
+                <Link href="/docs/charts/bar-chart">Bar chart</Link>
                 <Link href="/docs/charts/line-chart">Line chart</Link>
                 <Link href="/docs/charts/sparkline">Sparkline</Link>
               </div>

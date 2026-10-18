@@ -1,4 +1,14 @@
 export {
+  BarChart,
+  type BarChartLabels,
+  type BarChartProps,
+  type BarChartSeries,
+  type BarSeries,
+  type BarValue,
+  type ChartColor,
+  type ChartStatusLabels,
+} from './bar-chart';
+export {
   LineChart,
   type LineChartLabels,
   type LineChartProps,

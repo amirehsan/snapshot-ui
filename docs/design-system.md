@@ -5741,6 +5741,23 @@ data-visualization method is not run; phase 6 runs it when it adds one. The
 stroke widths are literals in `charts.css`, since two size tokens are not
 worth adding.
 
+**Which color a series gets** (the insights spec, section 5.4). Color goes
+by meaning first, then by identity:
+
+| The chart | Series colors, in order, unless a series sets `color` |
+| --- | --- |
+| One series | ink |
+| Two series, grouped | ink, slate: the story and its context, LineChart's emphasis form |
+| A series with `look: 'hatched'` | the color of the first series with `look: 'fill'`, striped |
+
+A bar chart's `color` pins a series to its color, so it keeps it when
+another series is filtered out. `gain` is for a series that is money that
+arrived, labelled so ("Income"), drawn beside an ink "Spending" and never
+beside a palette color. There is no color for money out: spending is ink,
+and a negative is its series' color below the zero line, never error,
+since nothing failed (NumberField's rule). Error, success, warning, clay,
+the two signal oranges and taupe are not in the `ChartColor` type.
+
 **The surface.** A ring or a spacer is a border in the surface the chart
 sits on, `var(--chart-surface, var(--color-lifted))`: read with a fallback
 and never declared by a chart, so an app sets `--chart-surface` once on any
@@ -10486,3 +10503,216 @@ review page on a phone.
 **Screen readers and devices.** Not yet verified (owner action 4): on a
 real phone, the tray's bar above the tab bar and above a save bar, and a
 focused field scrolled clear of both.
+
+## BarChart
+
+Amounts as bars: `BarChart`, the third chart of `@snapshot-ui/charts`,
+from the insights spec (section 7) and the owner's rulings in its section
+19. This section records the horizontal face, the consumer's ranked list
+of categories, merchants and accounts; the vertical face, two series side
+by side, the previous period and the stacks join it in later commits of
+the batch.
+
+**Bars are HTML.** A bar keeps its shape: its data end is rounded by a
+radius token, its thickness is capped in pixels, and the focus ring
+follows its corners. An svg `rect` in a stretched `viewBox` would turn a
+6px corner into an ellipse and could not take a token, so every bar is an
+absolutely placed `span.bar-chart-bar`, its `inset-inline-start` and
+`inline-size` written in render in percent with three decimals. The
+gridlines and the zero line stay in a stretched svg with non-scaling
+strokes, as a line chart's do. Nothing is measured, so the server's HTML
+is the final picture.
+
+**Anatomy.** `figure.bar-chart[data-orientation][data-layout][data-view][data-status]`,
+named by its `aria-label` or `aria-labelledby`, holds `div.bar-chart-chart`
+(the legend, for two series, then the rows), the shared table, toolbar
+and `noscript`, and `span.bar-chart-status`, a polite status mounted from
+the first render. `div.bar-chart-rows` is a `group` with
+`aria-roledescription` from `labels.roleDescription`, named as the figure,
+holding the gridlines' layer, a `div.bar-chart-row` per category, the
+value labels and the readout.
+
+**The row grid, three tracks.** `.bar-chart-rows` is a grid of
+`fit-content(var(--bar-chart-label-size, 40%)) minmax(0, 1fr) max-content`
+with an 8px column gap and no row gap. Each `div.bar-chart-row` is
+`display: contents`, so its three parts are the grid's cells:
+`span.bar-chart-category` at the start, as wide as the longest name up
+to 40% of the chart (an app sets its own share by the property);
+`div.bar-chart-track`, which takes the rest; and `span.bar-chart-amounts`
+at the end, as wide as the widest amount, which the grid finds from the
+amounts themselves with no script. The name and the amounts are hidden
+from assistive technology, since each bar's name says them. The rows run
+in `--chart-direction`, the attribute the svg's flip reads, so the marks
+and the drawing always agree.
+
+**The 2.5rem row and the 24px cap.** A track is at least `--size-target`,
+40px, so a row is a 40px target for the pointer, or as tall as its
+wrapped name. A bar is `min(1.5rem, calc((2rem - (k - 1) * 2px) / k))`
+thick for `k` bars in the row (`--bar-chart-group`, written in render),
+centred in the row and moved to its place in the group
+(`--bar-chart-place`): 24px alone, the method's cap, and two 15px bars
+2px apart in a pair.
+
+**The data end and why micro.** A bar has two ends. The end at zero is
+square in every shape, since the bar stands on its line, and a rounded
+foot would lift it off the line it measures from. The data end takes
+`--radius-micro` (6px in Rounded and Soft, 0 in Square) on its two
+corners only, in logical properties: `border-start-end-radius` and
+`border-end-end-radius` for a positive bar, the start corners for a
+negative one, so right to left moves them with the bar. A bar is a mark,
+not a surface or a control, and the nested-radii record keeps mark-sized
+parts at the micro step; a pill (Meter's end) would hide the value at the
+top of a curve and turn a short bar into a dot (owner ruling 5). A bar
+thinner than 12px has its corners scaled by the browser to fit. Any bar
+that is not zero is at least 1px long (`min-inline-size` under
+`[data-nonzero]`), so a small amount never vanishes; a zero is a bar of no
+length that the keys still reach.
+
+**Zero, always.** A bar's length is its value, so the value axis always
+includes zero: from the values, `niceDomain` over their extent with zero
+included; a given `valueDomain` without zero is widened to it, with a
+development warning once (`useWarnOnce`, the react package's pattern
+copied). Negatives run from zero toward the inline start.
+
+**The zero line's two colors.** Where the domain crosses zero, the zero
+line is 1px of `--color-boundary` (`data-crosses`), the edge color a
+reader must find, since it separates the signs: drawn on the surface, it
+measures 3.45 and 5.21 against Lifted and 3.38 and 5.34 against canvas,
+the switch's off-track pairs the gate holds at 3:1 (the plan's spec
+correction 15). Where zero is the domain's edge, as in a list with no
+refunds, it is the shared baseline in `--color-frame`, a cue, since the
+bars' square ends draw the line. Gridlines are a line chart's, 1px
+`--color-divider` at each `valueTicks` value inside the domain, with
+their labels under the last row in slate, centred on the line and kept
+inside the track at its ends. The layer, `div.bar-chart-gridlines`, is
+one element absolutely placed over the track column across every row
+(`grid-row: 1 / span var(--bar-chart-rows)`), so the lines run unbroken
+behind the rows and the layer takes no cell from them.
+
+**The amount column, on by default here.** A ranked list reads as a list,
+name at the start and amount at the end, the consumer's layout and the
+method's "value at the tip" made a column so the amounts align.
+`valueLabels` is `'all'` by default for a horizontal chart; `'none'`
+leaves the column empty (the track is `max-content` of nothing) and a
+list of row indexes fills only those rows. Each amount is `--text-small`,
+tabular, ink and `white-space: nowrap`, with the numeral rule's
+`direction: ltr`, `unicode-bidi: isolate` and both `text-align`
+spellings, so a figure reads left to right and stands at its column's
+end in either direction. A refund that nets a row below zero keeps its
+amount in the same column, so a sorted list's negatives line up. Value
+labels are never inside a bar (owner ruling 8).
+
+**Long names and the narrow chart.** A name wraps anywhere in its column
+and is never cut short or rotated. The figure is the container
+(`container: bar-chart / inline-size`), with
+`contain-intrinsic-inline-size: 20rem` so it is 20rem wide in a flex row
+or an auto grid column (StatTile's 0.6.1 lesson); a query on a container
+styles its children, never the container itself, so the figure and not
+the rows is the container (the plan's spec correction 14). The 20rem is
+its least width too, wherever a holder is sized from its content with
+`min-width: auto`, so a flex item or a grid item that holds a chart on a
+phone takes `min-width: 0`, as the docs' samples do (spec correction 19).
+Under 24rem of
+its own width the grid is `minmax(0, 1fr) max-content`: each name takes a
+line of its own above its bar (`grid-column: 1 / -1`), and the track and
+the amounts share the line under it. The name then crosses the gridlines'
+layer, so it is drawn over it in `--chart-surface`, as wide as its text;
+the render writes `--bar-chart-rows-narrow` (twice the rows) for the
+layer's span, since nothing measures which face is drawn.
+
+**One stop, on a bar** (owner ruling 6). Each bar is `role="img"` with
+`aria-roledescription` from `labels.bar` and `aria-labelledby` naming its
+row header and its cell in the table, and its column header with two
+series. The table is in the DOM while hidden, and the name computation
+follows `aria-labelledby` into hidden content, so a screen reader hears
+"Whole Foods Market $612.40, bar" from the app's own strings, with no
+punctuation of the library's. The server writes no `tabindex`; after
+mount the active bar is `0` and every other `-1`, the roving tab index.
+Tab lands first on the first row with a value (the newest for
+`bands="time"`) and after that on the bar last active. Down and Up move
+bar by bar in drawn order, skipping a row with no value; Home and End go
+to the first and last row with a value; Page Up and Page Down move seven
+rows, `moveFrom`'s rule; focus moves with the key, so the reader hears
+each bar's name with no live region. Left and Right are not moves in a
+horizontal chart and are not prevented. Escape hides the readout once,
+stopped as well as prevented; a second Escape goes on. A key with Alt,
+Control or Meta is left alone. When `categories` change, by their joined
+strings and not by the array's identity, the stop goes back to the first
+bar, and a bar that held focus hands it to the new first bar in an
+effect, never to the body, whether its row is gone or still there.
+
+**The pointer's dimming.** A mouse or a pen over the rows activates the
+row under it, read from each row's parts' boxes in the handler, and its
+bar under the pointer or its first; the whole row is the target. While a
+pointer holds a row the rows container is `[data-pointer]` and the other
+rows' bars are at 40% opacity, with no new shape and no transition. Ink
+so dimmed measures 2.57 against Lifted in light and 3.81 in dark, under
+3:1 in light for as long as the pointer rests: a transient emphasis,
+recorded and not gated, while the active row is at full strength and the
+readout says its values. Under the keyboard nothing dims. Leaving gives
+the active mark back to a focused bar, or clears it; a touch holds until a
+press outside.
+
+**The readout.** The shared float panel, hidden from assistive
+technology: the category in slate, then a line per series with a value,
+a 12px swatch in the series' color, the value in 500 and the series'
+label in slate, and with `totals` a last line with the total and
+`labels.total`. It sits over the active row's track, placed in that row's
+grid area by the `--bar-chart-row` the render writes, above the row when
+its lines fit there and below it otherwise (`placeReadout` along the
+block axis from the row's index, the row count and 40px rows), so it
+never covers the bar (the plan's spec correction 12). Along the row it is
+at the far end of the row's longest bar, aligned start, centre or end by
+quarter. It is the rows' last child, so it draws over every bar with no
+`z-index`.
+
+**The states.** `status` draws in the rows' place and keeps the figure's
+size: the height of `categories.length` rows when the app passes the
+categories it expects, and four otherwise
+(`calc(var(--bar-chart-rows) * var(--size-target))`). Loading draws a row
+per category of still bars in Skeleton's fill and pulse (70%, 50%, 85%,
+40%, repeating), square at zero, hidden from assistive technology, with
+`aria-busy` on the figure, and the status says `statusLabels.loading`
+once after mount; no legend, toggle or table. Empty draws `statusContent`
+or `p.bar-chart-message` with `statusLabels.empty` in slate; error the
+same with `statusLabels.error` in `--color-error`, the one meaning that
+color has, a load that failed, and the status says it once. Both keep the
+gridlines and the zero line behind, and draw no toggle. The three strings
+are `ChartStatusLabels`, shared with LineChart later in the batch. The
+chart composes and does not import: `statusContent` is the app's, such as
+the react package's EmptyState.
+
+**Color.** Section "Charts" assigns each series its color. One series is
+ink; two take ink and slate by place unless a series pins its `color`.
+`data-color` sets `--bar-chart-color`, which the bar, the legend key and
+the readout swatch read; text never takes it. Ink measures 17.84, 16.25
+and 18.43 against Lifted, canvas and Float in light and 17.42, 19.31 and
+17.42 in dark; slate 5.31, 4.84, 5.49 and 6.94, 7.26, 6.94; `gain` 7.20,
+6.55, 7.44 and 8.04, 8.92, 8.04. All are gated as text, so past the 3:1 a
+graphic needs, and the bars add no pair to the gate.
+
+**Forced colors.** The bars and the swatches opt out of the repaint
+(`forced-color-adjust: none`) and draw in `CanvasText`, and the active
+row's bars in `Highlight`, as does the focused bar's ring. The zero line
+between the signs is `CanvasText`; the gridlines and a zero line at the
+domain's edge are `GrayText`, a line chart's rules.
+
+**Right to left.** The rows run from the inline start, so under
+`dir="rtl"` the names are at the right and the bars grow from the right
+toward the left, negatives toward the right of zero. The data end's
+corners are logical, so they move with the bar. The amounts stay left to
+right inside their isolates. Up and Down do not change with the
+direction.
+
+**Where the build departs from the plan.** The plan's spec corrections
+13 to 19 record them: the horizontal face drawn for any `orientation`
+until the vertical one lands, with a warning; the figure as the container
+and the gridlines' layer as its own class; the zero line's and the dimmed
+bar's measured contrast; the plays' engines; the combined size limit set
+by the rule; and the 20rem least width in a holder sized from content.
+
+**Screen readers and devices.** Not yet verified (owner action 3): Tab
+onto one bar and the arrows bar by bar in VoiceOver and NVDA, each bar's
+name from its hidden cells in WebKit, the bars and the zero line in a
+Windows contrast theme, and the list with its names above its bars on a
+phone at 320px to 430px.

@@ -1,0 +1,158 @@
+---
+title: Bar chart
+description: "Amounts by category or by period: a ranked list lying down, or months standing up, with negatives at a zero line."
+icon: ChartColumn
+---
+
+<Section>
+
+## Bar, line or stat tile
+
+Pick the chart by the question it answers.
+
+- A bar chart compares amounts across categories or periods: where the month's money went, merchant by merchant.
+- A [line chart](/docs/charts/line-chart) shows a change over continuous time: spending day by day.
+- A [stat tile](/docs/components/stat-tile) says one figure, with a sparkline at most.
+
+</Section>
+
+<Section>
+
+## A ranked list
+
+Lay the bars down with `orientation="horizontal"` to rank categories, merchants or accounts. Each row has its name at the start, its bar from the zero line, and its amount at the end, in a column as wide as the widest amount, so the amounts align.
+
+- Order: the chart draws the rows in your order. Sort them by amount, show the top eight to twelve, and sum the rest as "Other", last.
+- Amounts: on by default for a horizontal chart. `valueLabels="none"` drops the column, and a list of row indexes shows only those rows' amounts.
+- Gridlines: `valueTicks` draws a line at each value, with its label under the last row. The zero line is always drawn.
+
+<Preview name="bar-chart-ranked" />
+
+</Section>
+
+<Section>
+
+## Below zero
+
+A row can net below zero, such as a category whose refunds outweigh its spending. Its bar runs from the zero line toward the start, and its amount stays in the end column, so a sorted list's negatives at the bottom still line up.
+
+- Zero line: in the boundary color when the bars cross zero, so the reader finds it. With no negatives it is a quiet edge.
+- Color: a negative bar is drawn in its series' color, ink here. Never red: error means a failure, and a refund is not one. The sign and the figure say which way it went.
+- Domain: the value axis always includes zero, since a bar's length is its value. A `valueDomain` that leaves zero out is widened to include it, with a warning in development.
+
+<Preview name="bar-chart-refunds" />
+
+</Section>
+
+<Section>
+
+## Long names
+
+A long name wraps in the label column, which takes the longest name's width up to 40% of the chart. Names are never cut short or rotated. Set `--bar-chart-label-size` on the chart to give the column another share.
+
+When the chart is narrower than 24rem, each name moves to a line of its own above its bar, and the bar and its amount share the line below. The chart reads its own width, not the viewport's, so it behaves the same in a narrow card on a wide screen.
+
+In a flex row or a grid column sized by its content, the chart is 20rem wide rather than nothing, and never narrower. On a phone, give the flex or grid item that holds it `min-width: 0` so it can shrink with the screen.
+
+</Section>
+
+<Section>
+
+## States
+
+`status` draws a state in the rows' place, at the height of the rows the chart expects: pass the categories you will show, or the chart keeps room for four.
+
+- Loading: still bars in Skeleton's fill, with no legend, toggle or table. The chart says "Loading" once, politely.
+- Empty: a sentence in slate over the zero line, or your `statusContent`, such as an EmptyState.
+- Error: a sentence in the error color, which means a load failed, or your `statusContent` with a way to try again. The chart says it once.
+
+<Preview name="bar-chart-states" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+```bash
+pnpm add @snapshot-ui/charts @snapshot-ui/core
+```
+
+It needs the same 0.x minor of `@snapshot-ui/core` (0.7 for charts 0.1.4), whose `styles.css` styles it. BarChart is a client part, and its server HTML is the final picture: every bar's place and size, the labels, the amounts, the legend and the table. The client adds the tab stop, the keys, the pointer and the readout. Nothing is measured, so the page does not move when it hydrates.
+
+- Formatting: every figure is your string. `valueLabel` is what the reader sees, and `value` only places the bar. Currency, compact figures and Persian digits are yours, and the chart never sums, sorts or formats.
+- `labels` and `statusLabels`: in another language, pass all six strings the chart writes itself and all three of its states, so no English is left on the page.
+
+```tsx
+import { BarChart } from '@snapshot-ui/charts';
+
+<BarChart
+  aria-label="هزینه بر اساس فروشگاه، مهر"
+  orientation="horizontal"
+  categories={['هایپراستار', 'اسنپ', 'سایر']}
+  series={[
+    {
+      label: 'مهر',
+      values: [
+        { value: 412.3, valueLabel: '۴۱۲٫۳۰ دلار' },
+        { value: 186.75, valueLabel: '۱۸۶٫۷۵ دلار' },
+        { value: 64.1, valueLabel: '۶۴٫۱۰ دلار' },
+      ],
+    },
+  ]}
+  labels={{
+    showTable: 'نمایش جدول',
+    showChart: 'نمایش نمودار',
+    noScript: 'اسکریپت‌ها خاموش‌اند، پس داده‌های نمودار در جدول زیر است.',
+    roleDescription: 'نمودار',
+    bar: 'میله',
+    total: 'جمع',
+  }}
+  statusLabels={{ loading: 'در حال بارگذاری', empty: 'برای این دوره چیزی نیست', error: 'نمودار بارگذاری نشد' }}
+/>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+A BarChart accepts every HTML attribute, applied to its root `figure`.
+
+<PropsTable label="BarChart props" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="Pick<BarChartProps, 'series' | 'layout' | 'categories' | 'orientation' | 'bands' | 'categoryTicks' | 'valueTicks' | 'valueDomain' | 'valueLabels' | 'totals' | 'status' | 'statusContent' | 'hasTexture' | 'labels' | 'statusLabels' | 'aria-label' | 'aria-labelledby' | 'className'>" />
+
+<PropsTable label="BarSeries" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="BarSeries" />
+
+<PropsTable label="BarChartLabels" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="BarChartLabels" />
+
+<PropsTable label="ChartStatusLabels" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="ChartStatusLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The chart is a `figure` named by `aria-label` or `aria-labelledby`, which the types require. Its bars are a group named like the figure, with the role description "chart" (`labels.roleDescription`), and the table is the full alternative.
+
+- One stop: the chart is a single tab stop, the active bar, so eleven rows are never eleven stops. It becomes focusable once scripts run, and Tab comes back to the bar last active.
+- Names: each bar is an image named by its table cells, the row's category and its value, and its series when there are two. A screen reader says it on every move, with no live region, and with your strings only.
+- Readout: it sits above the active row, or below it near the top, so it never covers the bar. It repeats the bar's name, so it is hidden from assistive technology.
+- Pointer: the whole row is the target, not only the bar, and the other rows step back to 40% while a pointer holds one. A pointer never moves focus.
+- Table: the Show as table toggle under the chart swaps in a table of the same strings, for everyone who would rather read the numbers. With scripts off it is shown under the chart.
+- Forced colors: the bars take the reader's text color and the active row Highlight; the zero line between the signs is the text color, and the gridlines GrayText.
+
+<Keys rows={[['Tab', 'Moves to the active bar, one stop for the whole chart, then to the table toggle.'], ['Up Down', 'The bar above or below, skipping rows with no value.'], ['Home End', 'The first or last row with a value.'], ['PageUp PageDown', 'Seven rows up or down.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter Space', 'On the toggle, swaps the chart and the table.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps bar charts in the system.
+
+<Rules dos={['Sort a ranked list by amount, and put Other last.', 'Keep every amount in your own format, the one the rest of the page uses.', 'Lay the bars down when the names are long or there are more than eight.']} donts={['Never draw a direction in red or green. A refund below zero is ink, like the rest.', 'Never pass a domain without zero. A bar that starts anywhere else misstates its value.', 'Never rotate a label. Let it wrap, or lay the chart down.']} />
+
+</Section>

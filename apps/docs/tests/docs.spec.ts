@@ -609,7 +609,7 @@ test('the installation page explains the server face and the date library', asyn
 });
 
 test('the chart pages name the core version charts needs', async ({ page }) => {
-  for (const slug of ['line-chart', 'sparkline']) {
+  for (const slug of ['bar-chart', 'line-chart', 'sparkline']) {
     await visit(page, `/docs/charts/${slug}`);
     await expect(page.locator('main'), slug).toContainText('0.7 for charts 0.1.4');
   }

@@ -15,7 +15,7 @@ const closeUp = (css) => css.replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/
  * The charts whose shared rules charts.css writes once, as `:is()` lists of each chart's own class (spec 6). A
  * chart joins every shared rule by joining this list, so the tests below follow with no other change.
  */
-const CHART_BLOCKS = ['line-chart'];
+const CHART_BLOCKS = ['line-chart', 'bar-chart'];
 
 /** A shared chart rule's selector list: `:is(.line-chart-legend)` for 'legend', `:is(.line-chart)` for ''. */
 const chartList = (part, blocks = CHART_BLOCKS) =>
@@ -4163,7 +4163,12 @@ describe('src/components/charts.css, the shared rules and the sparkline', () => 
     const css = rules();
     expect(blockAfter(css, ":where([dir='ltr' i]) {")).toContain('--chart-direction: ltr;');
     expect(blockAfter(css, ":where([dir='rtl' i]) {")).toContain('--chart-direction: rtl;');
-    for (const selector of ['.sparkline-plot {', '.line-chart-plot {', '.line-chart-x {'])
+    for (const selector of [
+      '.sparkline-plot {',
+      '.line-chart-plot {',
+      '.line-chart-x {',
+      '.bar-chart-rows {',
+    ])
       expect(blockAfter(css, selector), selector).toContain('direction: var(--chart-direction, ltr);');
     expect(css).not.toMatch(/--chart-direction\s*:(?!\s*(?:ltr|rtl);)/);
   });
@@ -4222,6 +4227,9 @@ describe('src/components/charts.css, the shared rules and the sparkline', () => 
     const area = blockAfter(css, '.sparkline-area {');
     expect(area).toContain('fill: color-mix(in srgb, var(--color-ink) 10%, transparent);');
     expect(area).toContain('stroke: none;');
+    // No mark takes a reserved color. The one exception is the bar chart's message for a load that failed,
+    // which is a failure, the error color's one meaning (the bar chart's describe checks it is the only one).
+    const marks = css.replace(/\.bar-chart-message\[data-tone='error'\] \{[^}]*\}/, '');
     for (const reserved of [
       '--color-error',
       '--color-success',
@@ -4229,7 +4237,7 @@ describe('src/components/charts.css, the shared rules and the sparkline', () => 
       '--color-signal',
       '--color-taupe',
     ]) {
-      expect(css, reserved).not.toContain(reserved);
+      expect(marks, reserved).not.toContain(reserved);
     }
   });
 
@@ -4274,7 +4282,7 @@ describe('src/components/charts.css, the shared rules and the sparkline', () => 
 
   it('keeps the dots when the page is printed without backgrounds', () => {
     const css = rules();
-    for (const selector of ['.sparkline {', '.line-chart {']) {
+    for (const selector of ['.sparkline {', '.line-chart {', '.bar-chart {']) {
       const block = blockAfter(css, selector);
       expect(block, selector).toContain('-webkit-print-color-adjust: exact;');
       expect(block, selector).toContain('print-color-adjust: exact;');
@@ -4722,6 +4730,275 @@ describe('src/components/charts.css, the line chart', () => {
     expect(dot).toContain('border-color: canvas;');
     expect(dot).toContain('background-color: Highlight;');
     expect(blockAfter(forced, '.line-chart-plot:focus-visible {')).toContain('outline-color: Highlight;');
+  });
+});
+
+describe('src/components/charts.css, the bar chart', () => {
+  const rules = () => closeUp(stripComments(read('src/components/charts.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const NARROW = '@container bar-chart (inline-size < 24rem)';
+  /** The rules outside forced colors, where the look is drawn. */
+  const look = () => outsideForcedColors(rules());
+  const HORIZONTAL = ".bar-chart[data-orientation='horizontal'] .bar-chart-bar";
+  const expectAll = (body, declarations, label) => {
+    for (const declaration of declarations) expect(body, `${label}: ${declaration}`).toContain(declaration);
+  };
+  /** Every rule block of `css` that holds no nested block, as [selector, body]. */
+  const blocks = (css) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => [m[1].trim(), m[2]]);
+
+  it('lays a horizontal chart out as label, track and a max-content amount column', () => {
+    const css = look();
+    expectAll(
+      blockAfter(css, '.bar-chart-rows {'),
+      [
+        'position: relative;',
+        'display: grid;',
+        // The label column as wide as the longest label up to 40%, an app's own share by a property.
+        'grid-template-columns: fit-content(var(--bar-chart-label-size, 40%)) minmax(0, 1fr) max-content;',
+        'column-gap: var(--spacing-part);',
+        'direction: var(--chart-direction, ltr);',
+      ],
+      'rows',
+    );
+    // No row gap, so the gridlines behind the rows run unbroken.
+    expect(blockAfter(css, '.bar-chart-rows {')).not.toMatch(/(?<![\w-])(?:row-)?gap\s*:/);
+    expect(blockAfter(css, '.bar-chart-row {')).toContain('display: contents;');
+    // A row is a 40px target at least, or as tall as its wrapped label.
+    expectAll(
+      blockAfter(css, '.bar-chart-track {'),
+      ['position: relative;', 'min-block-size: var(--size-target);'],
+      'track',
+    );
+    expectAll(
+      blockAfter(css, '.bar-chart-category {'),
+      [
+        'align-self: center;',
+        'color: var(--color-ink);',
+        'overflow-wrap: anywhere;',
+        'font-size: var(--text-small);',
+      ],
+      'label',
+    );
+    expect(blockAfter(css, '.bar-chart-category {')).not.toMatch(/text-overflow|line-clamp|nowrap/);
+    expectAll(
+      blockAfter(css, '.bar-chart-amounts {'),
+      [
+        'font-size: var(--text-small);',
+        'font-variant-numeric: tabular-nums;',
+        'color: var(--color-ink);',
+        'text-align: end;',
+      ],
+      'amounts',
+    );
+    // The gridlines' layer spans every row's track, absolutely placed so it takes no cell from the rows.
+    expectAll(
+      blockAfter(css, '.bar-chart-gridlines {'),
+      ['position: absolute;', 'inset: 0;', 'grid-column: 2;', 'grid-row: 1 / span var(--bar-chart-rows, 1);'],
+      'gridlines',
+    );
+    expect(blockAfter(css, '.bar-chart-gridlines svg {')).toContain('scale: var(--chart-flip, 1) 1;');
+    // The value labels and the readout keep to the track column.
+    expect(blockAfter(css, '.bar-chart-ticks {')).toContain('grid-column: 2;');
+    expectAll(
+      blockAfter(css, '.bar-chart-readout[data-place] {'),
+      ['grid-column: 2;', 'grid-row: var(--bar-chart-row, 1);'],
+      'readout',
+    );
+  });
+
+  it('draws a horizontal bar at most 24px thick, centred in its row, and 2px from the other bar of a pair', () => {
+    expectAll(
+      blockAfter(look(), `${HORIZONTAL} {`),
+      [
+        '--bar-chart-thickness: min(1.5rem, calc((2rem - (var(--bar-chart-group, 1) - 1) * 2px) / var(--bar-chart-group, 1)));',
+        '--bar-chart-offset: calc((var(--bar-chart-place, 0) - (var(--bar-chart-group, 1) - 1) / 2) * (var(--bar-chart-thickness) + 2px));',
+        'position: absolute;',
+        'inset-block-start: 50%;',
+        'block-size: var(--bar-chart-thickness);',
+        'translate: 0 calc(-50% + var(--bar-chart-offset, 0px));',
+      ],
+      'bar',
+    );
+    expect(blockAfter(look(), '.bar-chart-bar {')).toContain(
+      'background-color: var(--bar-chart-color, var(--color-ink));',
+    );
+  });
+
+  it('colors a bar by its series, never by a state', () => {
+    const css = look();
+    for (const [name, token] of [
+      ['ink', '--color-ink'],
+      ['slate', '--color-slate'],
+      ['gain', '--color-gain'],
+    ])
+      expect(blockAfter(css, `.bar-chart [data-color='${name}'] {`), name).toContain(
+        `--bar-chart-color: var(${token});`,
+      );
+    // The error color is a failed load's message alone; no bar draws a reserved color.
+    const reserved = /--color-(?:error|success|warning|clay|signal|taupe)/;
+    const uses = blocks(css).filter(([, body]) => reserved.test(body));
+    expect(uses.map(([selector]) => selector).filter((selector) => selector.includes('bar-chart'))).toEqual([
+      ".bar-chart-message[data-tone='error']",
+    ]);
+  });
+
+  it('rounds only the data end, with the micro radius, logically', () => {
+    const css = look();
+    const positive = blockAfter(css, `${HORIZONTAL}[data-sign='positive'] {`);
+    const negative = blockAfter(css, `${HORIZONTAL}[data-sign='negative'] {`);
+    expectAll(
+      positive,
+      ['border-start-end-radius: var(--radius-micro);', 'border-end-end-radius: var(--radius-micro);'],
+      'positive',
+    );
+    expectAll(
+      negative,
+      ['border-start-start-radius: var(--radius-micro);', 'border-end-start-radius: var(--radius-micro);'],
+      'negative',
+    );
+    // The end at zero stays square, and no bar is rounded all round.
+    expect(positive).not.toContain('-start-radius');
+    expect(negative).not.toContain('-end-radius');
+    expect(blockAfter(css, `${HORIZONTAL} {`)).not.toContain('border-radius');
+    expect(blockAfter(css, '.bar-chart-bar {')).not.toContain('border-radius');
+  });
+
+  it('draws any nonzero bar at least 1px', () => {
+    expect(blockAfter(look(), `${HORIZONTAL}[data-nonzero] {`)).toContain('min-inline-size: 1px;');
+  });
+
+  it('rings a focused bar with the token ring, which follows its corners', () => {
+    expectAll(
+      blockAfter(look(), '.bar-chart-bar:focus-visible {'),
+      [
+        'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
+        'outline-offset: var(--focus-ring-offset);',
+      ],
+      'ring',
+    );
+  });
+
+  it('dims other rows to 40% under a pointer only', () => {
+    const css = look();
+    const dimmed = '.bar-chart-rows[data-pointer] .bar-chart-row:not([data-active]) .bar-chart-bar {';
+    expect(blockAfter(css, dimmed)).toContain('opacity: 0.4;');
+    // The only opacity in the bar chart is the pointer's, and nothing moves to it.
+    const dims = blocks(css).filter(
+      ([selector, body]) => selector.includes('bar-chart') && /(?<![\w-])opacity\s*:/.test(body),
+    );
+    expect(dims.map(([selector]) => `${selector} {`)).toEqual([dimmed]);
+  });
+
+  it('draws the zero line in the boundary color where the domain crosses zero, and the frame otherwise', () => {
+    const css = look();
+    expect(blockAfter(css, '.bar-chart-baseline[data-crosses] {')).toContain(
+      'stroke: var(--color-boundary);',
+    );
+    // At the domain's edge it is the shared baseline: the frame color, a cue.
+    expect(blockAfter(css, `${chartList('baseline')} {`)).toContain('stroke: var(--color-frame);');
+  });
+
+  it('folds labels above the bars under 24rem, with a 20rem intrinsic width', () => {
+    const css = look();
+    expectAll(
+      blockAfter(css, '.bar-chart {'),
+      [
+        'container: bar-chart / inline-size;',
+        'contain-intrinsic-inline-size: 20rem;',
+        '-webkit-print-color-adjust: exact;',
+        'print-color-adjust: exact;',
+      ],
+      'figure',
+    );
+    const narrow = blockAfter(css, NARROW);
+    expect(narrow).not.toBe('');
+    expect(blockAfter(narrow, '.bar-chart-rows {')).toContain(
+      'grid-template-columns: minmax(0, 1fr) max-content;',
+    );
+    expectAll(
+      blockAfter(narrow, '.bar-chart-category {'),
+      [
+        'grid-column: 1 / -1;',
+        'justify-self: start;',
+        // Over the gridlines it crosses, in the surface it sits on.
+        'position: relative;',
+        'background-color: var(--chart-surface, var(--color-lifted));',
+      ],
+      'label',
+    );
+    expectAll(
+      blockAfter(narrow, '.bar-chart-gridlines {'),
+      ['grid-column: 1;', 'grid-row: 1 / span var(--bar-chart-rows-narrow, 2);'],
+      'gridlines',
+    );
+    expect(blockAfter(narrow, '.bar-chart-ticks, .bar-chart-readout[data-place] {')).toContain(
+      'grid-column: 1;',
+    );
+    expect(blockAfter(narrow, '} .bar-chart-readout[data-place] {')).toContain(
+      'grid-row: var(--bar-chart-row-narrow, 2);',
+    );
+    // The query reads the chart's own width, never the viewport's.
+    expect(css).not.toMatch(/@media[^{]*width/);
+  });
+
+  it('keeps amounts left to right and isolated', () => {
+    const amount = blockAfter(look(), '.bar-chart-amount {');
+    expectAll(
+      amount,
+      [
+        'direction: ltr;',
+        'unicode-bidi: isolate;',
+        'text-align: -webkit-match-parent;',
+        'text-align: match-parent;',
+        'white-space: nowrap;',
+      ],
+      'amount',
+    );
+    // Chromium knows only the prefixed name and Firefox only the standard one, so both are written, in order.
+    expect(amount.indexOf('text-align: match-parent;')).toBeGreaterThan(
+      amount.indexOf('text-align: -webkit-match-parent;'),
+    );
+  });
+
+  it("draws the states in the rows' place, as tall as the rows, and the error in the error color", () => {
+    const css = look();
+    expectAll(
+      blockAfter(css, '.bar-chart-state {'),
+      ['grid-column: 1 / -1;', 'min-block-size: calc(var(--bar-chart-rows, 4) * var(--size-target));'],
+      'state',
+    );
+    expect(blockAfter(css, '.bar-chart-message {')).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, ".bar-chart-message[data-tone='error'] {")).toContain(
+      'color: var(--color-error);',
+    );
+    // The loading bars are square at zero, as a bar is.
+    expectAll(
+      blockAfter(css, '.bar-chart-track > .bar-chart-skeleton {'),
+      ['border-start-start-radius: 0;', 'border-end-start-radius: 0;', 'inset-inline-start: 0;'],
+      'skeleton',
+    );
+    expectAll(
+      blockAfter(css, '.bar-chart-status {'),
+      ['position: absolute;', 'width: 1px;', 'height: 1px;', 'overflow: hidden;', 'clip-path: inset(50%);'],
+      'status',
+    );
+  });
+
+  it('names forced colors for bars, the zero line, the gridlines and the focus ring', () => {
+    const forced = blockAfter(rules(), FORCED);
+    const bars = blockAfter(forced, '.bar-chart-bar, .bar-chart-key {');
+    expectAll(bars, ['forced-color-adjust: none;', 'background-color: CanvasText;'], 'bars');
+    expect(blockAfter(forced, '.bar-chart-row[data-active] .bar-chart-bar {')).toContain(
+      'background-color: Highlight;',
+    );
+    expect(blockAfter(forced, '.bar-chart-bar:focus-visible {')).toContain('outline-color: Highlight;');
+    expect(blockAfter(forced, '.bar-chart-baseline[data-crosses] {')).toContain('stroke: CanvasText;');
+    expect(
+      blockAfter(
+        forced,
+        `.line-chart-line[data-series='2'], ${chartList('grid')}, ${chartList('baseline')} {`,
+      ),
+    ).toContain('stroke: GrayText;');
   });
 });
 

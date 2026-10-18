@@ -109,6 +109,24 @@ describe.each(STATIC_MODULES)('the source of %s', (file) => {
   });
 });
 
+/** The charts that hold state, which a server component imports as client references. */
+const CLIENT_MODULES = ['line-chart/LineChart.tsx', 'bar-chart/BarChart.tsx'];
+
+describe.each(CLIENT_MODULES)('the source of %s', (file) => {
+  // A Next.js server page imports a client module as a reference and renders it once to HTML, which
+  // server-render.test.tsx proves; this proves the module says what it is and pulls in nothing heavy.
+  const source = readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8');
+
+  it('starts with the client directive', () => {
+    expect(source.startsWith("'use client';")).toBe(true);
+  });
+
+  it('imports neither React Aria nor Lucide', () => {
+    expect(source).not.toContain('react-aria');
+    expect(source).not.toContain('lucide-react');
+  });
+});
+
 describe('every chart source', () => {
   // A static chart that is not listed above is never checked to stay one, so every source is either a
   // client module, which says so on its first line, or listed. Tests and stories never ship.

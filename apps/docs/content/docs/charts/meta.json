@@ -1,4 +1,4 @@
 {
   "title": "Charts",
-  "pages": ["line-chart", "sparkline"]
+  "pages": ["bar-chart", "line-chart", "sparkline"]
 }

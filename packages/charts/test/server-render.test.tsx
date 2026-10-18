@@ -2,6 +2,7 @@
 import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { BarChart, type BarSeries } from '../src/bar-chart';
 import { LineChart, type LineSeries } from '../src/line-chart';
 
 /**
@@ -30,6 +31,17 @@ const LAST_MONTH: LineSeries = {
     { value: 35, valueLabel: '$35.00' },
     { value: 61, valueLabel: '$61.00' },
     { value: 90, valueLabel: '$90.00' },
+  ],
+};
+
+/** A month's spending by merchant, with a refund that nets below zero and a row with no value. */
+const MERCHANTS: BarSeries = {
+  label: 'October',
+  values: [
+    { value: 420, valueLabel: '$420.00' },
+    { value: 260, valueLabel: '$260.00' },
+    null,
+    { value: -60, valueLabel: '-$60.00' },
   ],
 };
 
@@ -70,6 +82,48 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     // The plot takes its tab stop once scripts run: with them off, its keys would do nothing.
     ['line-chart-readout', 'line-chart-crosshair', 'line-chart-dot', 'data-active', 'tabindex'],
   ],
+  [
+    // Every bar's place and size, the labels, the amounts and the zero line are the server's: the final
+    // picture. Nothing is active, and the bars take their roving tab stop once scripts run.
+    'BarChart',
+    <BarChart
+      aria-label="Spending by merchant"
+      orientation="horizontal"
+      categories={['Whole Foods Market', 'Shell', 'Netflix', 'Apple Store']}
+      series={[MERCHANTS]}
+      valueDomain={[-100, 500]}
+      valueTicks={[
+        { value: 0, label: '$0' },
+        { value: 500, label: '$500' },
+      ]}
+    />,
+    [
+      '<figure',
+      'class="bar-chart"',
+      'data-orientation="horizontal"',
+      'aria-label="Spending by merchant"',
+      'class="bar-chart-rows" role="group" aria-roledescription="chart"',
+      '--bar-chart-rows:4',
+      'class="bar-chart-gridlines" aria-hidden="true"',
+      'preserveAspectRatio="none"',
+      'class="bar-chart-baseline" data-crosses="" x1="16.667" x2="16.667"',
+      'class="bar-chart-category" aria-hidden="true">Whole Foods Market<',
+      'role="img" aria-roledescription="bar"',
+      'data-sign="positive" data-nonzero=""',
+      'inset-inline-start:16.667%;inline-size:70%',
+      'data-sign="negative"',
+      'inset-inline-start:6.667%;inline-size:10%',
+      'class="bar-chart-amount">-$60.00<',
+      'class="bar-chart-tick" data-edge="end"',
+      '<caption>Spending by merchant</caption>',
+      'hidden=""',
+      '>Show as table<',
+      '<noscript>',
+      'class="bar-chart-noscript"',
+      'class="bar-chart-status" role="status"></span>',
+    ],
+    ['bar-chart-readout', 'data-active', 'data-pointer', 'tabindex', 'aria-busy'],
+  ],
 ];
 
 describe('the client charts on the server', () => {
@@ -82,6 +136,23 @@ describe('the client charts on the server', () => {
     const html = renderToString(element);
     for (const part of contains) expect(html).toContain(part);
     for (const part of excludes) expect(html).not.toContain(part);
+  });
+
+  it("names each bar on the server by the shown table's ids, which the noscript copy does not repeat", () => {
+    const html = renderToString(
+      <BarChart
+        aria-label="Spending by merchant"
+        orientation="horizontal"
+        categories={['Whole Foods Market', 'Shell']}
+        series={[MERCHANTS]}
+      />,
+    );
+    const names = [...html.matchAll(/aria-labelledby="([^"]+)"/g)].map((match) => match[1] ?? '');
+    expect(names).toHaveLength(2);
+    for (const id of names.flatMap((name) => name.split(' '))) {
+      expect(html.match(new RegExp(` id="${id}"`, 'g'))).toHaveLength(1);
+      expect(html.slice(html.indexOf('<noscript>'))).not.toContain(id);
+    }
   });
 
   it('puts a second, shown table in noscript', () => {

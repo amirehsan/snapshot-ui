@@ -673,6 +673,35 @@ test.describe('forced colors', () => {
     await expectVisibleRing(plot);
   });
 
+  test('a bar chart keeps its bars, its zero line and its focus ring', async ({ page }) => {
+    // The bars keep a fill of their own, out of the repaint: the reader's text color, and Highlight for the active
+    // row. The zero line between the signs is the text color too; the gridlines step back to GrayText.
+    await visit(page, '/docs/charts/bar-chart');
+    const chart = page.getByRole('figure', {
+      name: 'Spending by category, October, with refunds',
+      exact: true,
+    });
+    await expect(chart).toHaveCount(1);
+    const system = await systemColors(page);
+    const bars = chart.locator('.bar-chart-bar');
+    await expect(bars).toHaveCount(6);
+    for (const bar of await bars.all()) expect((await paint(bar)).fill).toBe(system.canvasText);
+    const stroke = (selector: string): Promise<string> =>
+      chart
+        .locator(selector)
+        .first()
+        .evaluate((element) => getComputedStyle(element).stroke);
+    expect(await stroke('.bar-chart-baseline')).toBe(system.canvasText);
+    expect(await stroke('.bar-chart-grid')).toBe(system.grayText);
+
+    const first = bars.first();
+    await expect(first).toHaveAttribute('tabindex', '0');
+    await first.focus();
+    await expect(chart.locator('.bar-chart-row[data-active]')).toHaveCount(1);
+    expect((await paint(first)).fill).toBe(system.highlight);
+    await expectVisibleRing(first);
+  });
+
   test('a tooltip keeps a border and loses its arrow', async ({ page }) => {
     // The arrow is an svg fill, which the repaint would turn into a shape of the wrong color or none, so it
     // goes. The tip's transparent border is repainted in the reader's text color, so the tip keeps its shape.
@@ -1545,6 +1574,8 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
 const LONG_TARGETS: Record<string, string[]> = {
   'app-shell': ['.stage .app-shell-main p'],
   badge: ['.stage .badge'],
+  // A row's name is the app's and wraps at any character in its column, or above its bar under 24rem.
+  'bar-chart': ['.stage .bar-chart-category'],
   // A crumb's text is the app's and ellipsizes past 16rem on one line, so a long one never pushes the page.
   breadcrumbs: ['.stage .breadcrumbs-text'],
   card: ['.stage .card-title', '.stage .card-note'],
@@ -1737,6 +1768,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'app-shell': ['.stage .app-shell'],
   avatar: ['.stage .avatar', '.stage .avatar-initials'],
   badge: ['.stage .badge'],
+  // Every bar, its place and its size, the table and its toggle are the server's: the final picture.
+  'bar-chart': ['.stage .bar-chart .bar-chart-bar', '.stage .bar-chart-table', '.stage .bar-chart-toggle'],
   'bottom-tab-bar': ['.stage .tab-bar'],
   // Real links in the server's HTML, both faces: the trail works before hydration and with scripts off.
   breadcrumbs: ['.stage .breadcrumbs a[href]'],

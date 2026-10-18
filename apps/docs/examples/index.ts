@@ -7,6 +7,9 @@ import AvatarFallback from './avatar-fallback';
 import AvatarSizes from './avatar-sizes';
 import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
+import BarChartRanked from './bar-chart-ranked';
+import BarChartRefunds from './bar-chart-refunds';
+import BarChartStates from './bar-chart-states';
 import BottomTabBarBasic from './bottom-tab-bar-basic';
 import BottomTabBarMore from './bottom-tab-bar-more';
 import BreadcrumbsBasic from './breadcrumbs-basic';
@@ -183,6 +186,9 @@ export const examples = {
   'avatar-sizes': AvatarSizes,
   'badge-counts': BadgeCounts,
   'badge-tones': BadgeTones,
+  'bar-chart-ranked': BarChartRanked,
+  'bar-chart-refunds': BarChartRefunds,
+  'bar-chart-states': BarChartStates,
   'bottom-tab-bar-basic': BottomTabBarBasic,
   'bottom-tab-bar-more': BottomTabBarMore,
   'breadcrumbs-basic': BreadcrumbsBasic,

@@ -1,6 +1,6 @@
 # @snapshot-ui/charts
 
-Charts for Snapshot UI, drawn on the server in SVG. Needs React 19 or later.
+Charts for Snapshot UI, drawn on the server in SVG and HTML. Needs React 19 or later.
 
 ## Install
 
@@ -23,7 +23,7 @@ export function Trend({ spending }: { spending: number[] }) {
 }
 ```
 
-`LineChart` is a client component for its keys, its pointer and its readout, and its drawing, legend and table still render on the server.
+`BarChart` and `LineChart` are client components for their keys, their pointer and their readout, and their drawing, legend and table still render on the server.
 
 Every figure a chart shows is a string from your app, and nothing is measured, so the server's HTML is final in any locale.
 
@@ -31,6 +31,7 @@ Every figure a chart shows is a string from your app, and nothing is measured, s
 
 Every name links to its page in the documentation, with examples, props and design rules.
 
+- [Bar chart](https://snapshotui.com/docs/charts/bar-chart)
 - [Line chart](https://snapshotui.com/docs/charts/line-chart)
 - [Sparkline](https://snapshotui.com/docs/charts/sparkline)
 

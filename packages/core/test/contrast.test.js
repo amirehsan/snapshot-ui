@@ -667,6 +667,71 @@ describe('the charts', () => {
   });
 });
 
+describe('the bar chart', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName, alpha = 1) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    const color = parseColor(palette[name]);
+    return contrastRatio(composite({ ...color, a: color.a * alpha }, ground), ground);
+  };
+
+  // A bar is ink, slate or gain, a graphic on the surface the chart sits on; its label and its amount are ink and
+  // its value labels slate. The gate holds each as text on lifted, float and canvas, past the 3:1 a graphic
+  // needs, so the bars add no pair.
+  it('cites ink, slate and gain on lifted, float and canvas, which the gate holds', () => {
+    for (const text of ['ink', 'slate', 'gain']) {
+      for (const ground of ['lifted', 'float', 'canvas']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // The zero line where the domain crosses zero is the boundary color drawn on the surface itself, which the gate
+  // holds against canvas and lifted as the switch's off track, at the graphic minimum. (A field's edge, the
+  // boundary over a Raised fill, measures 3.36 and 5.59 on lifted; a line on the surface measures as below,
+  // spec correction 15.)
+  it('cites the boundary on canvas and lifted, the zero line between the signs', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      expect(CONTRAST_PAIRS, ground).toContainEqual(
+        expect.objectContaining({ text: 'boundary', ground, minimum: NON_TEXT }),
+      );
+    }
+    expect(measured('light', 'boundary', 'lifted'), 'light').toBeCloseTo(3.45, 2);
+    expect(measured('dark', 'boundary', 'lifted'), 'dark').toBeCloseTo(5.21, 2);
+    expect(measured('light', 'boundary', 'canvas'), 'light').toBeCloseTo(3.38, 2);
+    expect(measured('dark', 'boundary', 'canvas'), 'dark').toBeCloseTo(5.34, 2);
+  });
+
+  // Each bar color against lifted, canvas and float, as the record states them.
+  it('measures the bar colors Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'float', light: 18.43, dark: 17.42 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'float', light: 5.49, dark: 6.94 },
+      { name: 'gain', ground: 'lifted', light: 7.2, dark: 8.04 },
+      { name: 'gain', ground: 'canvas', light: 6.55, dark: 8.92 },
+      { name: 'gain', ground: 'float', light: 7.44, dark: 8.04 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+
+  // Under a pointer the other rows' bars draw at 40% opacity, composited over the surface as the browser does: a
+  // transient emphasis, measured and recorded, not gated. An ink bar so dimmed falls under 3:1 in light while the
+  // pointer rests; the active row is at full strength (spec correction 15).
+  it('measures the dimmed bar the record states, in both modes', () => {
+    expect(measured('light', 'ink', 'lifted', 0.4), 'light').toBeCloseTo(2.57, 2);
+    expect(measured('dark', 'ink', 'lifted', 0.4), 'dark').toBeCloseTo(3.81, 2);
+  });
+});
+
 describe('the search field', () => {
   /** A token color painted over `ground` and measured against it, as a reader sees it. */
   const measured = (mode, name, groundName) => {
