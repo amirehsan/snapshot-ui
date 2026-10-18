@@ -14,6 +14,8 @@ import { PickerOption } from '../src/picker';
 import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
+import { DescriptionList, DescriptionListItem } from '../src/description-list';
+import { Link } from '../src/link';
 
 /**
  * Each part's server HTML, hydrated in the browser on a mocked iPhone (plan, spec corrections 1 and 2). The HTML
@@ -159,6 +161,31 @@ const HYDRATED: [
       expect(container.querySelector('.filter-chip-value')).toHaveTextContent(/^Food, Rent and 2 more$/);
       expect(container.querySelector('.filter-chip-trigger')).toHaveAccessibleName(
         'Category Food, Rent and 2 more',
+      );
+    },
+  ],
+  [
+    // Static, with a client leaf as a row's action: the server's HTML is what the browser keeps.
+    'DescriptionList',
+    <DescriptionList>
+      <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+      <DescriptionListItem term="Nickname" actions={<Link href="/accounts/visa/nickname">Add</Link>} />
+      <DescriptionListItem term="Credit limit" isNumeric>
+        $5,000.00
+      </DescriptionListItem>
+      <DescriptionListItem term="APR" isNumeric>
+        24.9%
+      </DescriptionListItem>
+    </DescriptionList>,
+    (container) => {
+      expect(container.querySelector('[data-empty]')).toHaveTextContent(/^Not set$/);
+      expect([...container.querySelectorAll('[data-numeric]')].map((value) => value.textContent)).toEqual([
+        '$5,000.00',
+        '24.9%',
+      ]);
+      expect(container.querySelector('.description-list-actions a')).toHaveAttribute(
+        'href',
+        '/accounts/visa/nickname',
       );
     },
   ],

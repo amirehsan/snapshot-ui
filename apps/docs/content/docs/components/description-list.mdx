@@ -1,0 +1,112 @@
+---
+title: Description list
+description: "An account's details: each name beside its value where there is room, above it where there is not."
+icon: List
+---
+
+<Section>
+
+## Layouts
+
+A list of named values: each row is a term, its value and, if it has any, the row's actions. The list's own width decides the layout, not the screen's. From 30rem of the list's width the terms sit in a column beside their values, and under it each term stands above its value. A list beside a side panel or in a narrow card stacks on a wide screen, and every list stacks on a phone.
+
+The list is a size container, so it takes its width from its column, never from its content: give it a width in a flex row or a centered column, where it would otherwise be 20rem wide.
+
+`layout` holds one layout at every width: `horizontal` or `stacked`. The term column is 30% of the row, which holds "Routing number" on one line from 30rem; set `--description-list-term-size` on the list for a wider or narrower one. Rows follow density, and a rule separates each row from the next.
+
+<Preview name="description-list-basic" />
+
+</Section>
+
+<Section>
+
+## Actions
+
+`actions` puts a row's controls in a cell of their own after the value: at the end of the row side by side, and at the end of the term's line when stacked. Name each control with its term, as GOV.UK names its "Change" links: it shows "Edit" and reads "Edit Nickname", with `aria-label` or visually hidden words. The name starts with the word it shows, so voice control finds it.
+
+A status is a value too. Put its word in a [Badge](/docs/components/badge) and the fix in a link after it: a bank feed that failed to sync is a failure, so its Badge is `error`, and an account that is open is neutral, never `success`, which means a save.
+
+<Preview name="description-list-actions" />
+
+</Section>
+
+<Section>
+
+## Empty, long and numeric values
+
+A value that is absent, `null`, `false` or an empty string shows "Not set" in slate. Pass `emptyValue` for your own words, or a link to add the value. `0` is a value.
+
+A long value wraps, and a long unbroken word, such as an IBAN or an email address, breaks anywhere inside its column. Nothing is cut off with an ellipsis.
+
+Set `isNumeric` on amounts, limits, percentages and the last four digits of a card: tabular figures, read left to right and starting at the line's start, on a Persian page too.
+
+<Preview name="description-list-values" />
+
+</Section>
+
+<Section>
+
+## In a card
+
+Make the list a card's body for an account's details. A row whose controls would sit in the card's rounded corner, the last row of a list that ends the card or the first of one that starts it, grows by the card's corner inset, so its controls stand clear of the curve and stay on the column's end edge. The list does this itself: 7px more in Rounded, nothing in Soft and Square.
+
+<Preview name="description-list-card" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+The list is static: a server component renders it with no client JavaScript. It is composed, so a value can be any node, such as a Badge or a link, and each row takes its own props. A `DescriptionListItem` belongs in a `DescriptionList`: on its own it is a `div` of a `dt` and `dd` with no list around them, which is invalid HTML. The library writes "Not set" in English, so a page in another language passes its own `emptyValue`, or wraps `DescriptionListItem` in a component that does.
+
+```tsx
+import { DescriptionList, DescriptionListItem, Link } from '@snapshot-ui/react';
+
+<DescriptionList>
+  <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+  <DescriptionListItem term="Credit limit" isNumeric>
+    $5,000.00
+  </DescriptionListItem>
+  <DescriptionListItem
+    term="Nickname"
+    actions={
+      <Link href="/accounts/visa/nickname" aria-label="Add a nickname">
+        Add
+      </Link>
+    }
+  />
+</DescriptionList>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+Both parts accept every attribute of their element, a `dl` and a `div`.
+
+<PropsTable label="DescriptionList props" path="../../packages/react/src/description-list/DescriptionList.tsx" type="Pick<DescriptionListProps, 'children' | 'layout' | 'hasDividers' | 'className'>" />
+
+<PropsTable label="DescriptionListItem props" path="../../packages/react/src/description-list/DescriptionList.tsx" type="Pick<DescriptionListItemProps, 'term' | 'children' | 'emptyValue' | 'actions' | 'isNumeric' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The list is a real `dl`, each row a `div` holding a `dt` and its `dd`s, which the HTML standard allows. No role is added: `role="list"` would drop the term and definition semantics. VoiceOver announces a description list and its terms; NVDA and JAWS announce less, and every reader reads each term and its value in order. Tab moves through the rows' actions in reading order; the list has no keys of its own. Name each action with its term, so a list of Edits reads as Edit Name, Edit Nickname.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps description lists in the system.
+
+<Rules dos={['Keep terms short, a word or two.', "Write each value in the reader's words, as they would say it.", 'Show "Not set", or a link to add the value, for a value that is missing.']} donts={['Never show a dash or a blank for an empty value.', 'Never truncate a value. Let it wrap.', 'Never color a value to say its state. Use a Badge with its word.']} />
+
+</Section>

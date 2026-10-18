@@ -77,6 +77,7 @@ vi.mock('../src/pagination/PaginationStatus', async () => {
 import * as react from 'react';
 import { Badge } from '../src/badge';
 import { Card, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { EmptyState } from '../src/empty-state';
 import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
@@ -123,6 +124,29 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     </Card>,
     '<section aria-label="Danger zone" class="card"><div class="card-header"><h3 class="card-title">Delete the workspace</h3>' +
       '<p class="card-note">This cannot be undone.</p></div><div class="card-body">Everything goes.</div></section>',
+  ],
+  [
+    'DescriptionList',
+    <DescriptionList>
+      <DescriptionListItem term="Type">Credit card</DescriptionListItem>
+    </DescriptionList>,
+    '<dl class="description-list" data-layout="auto" data-dividers=""><div class="description-list-item">' +
+      '<dt class="description-list-term">Type</dt><dd class="description-list-value">Credit card</dd></div></dl>',
+  ],
+  [
+    // An empty value shows the library's words and is never a figure; a row's actions follow in a dd of their own.
+    'DescriptionList empty and numeric',
+    <DescriptionList layout="horizontal" hasDividers={false}>
+      <DescriptionListItem term="Nickname" isNumeric actions={<a href="/edit">Edit</a>} />
+      <DescriptionListItem term="Credit limit" isNumeric>
+        $5,000.00
+      </DescriptionListItem>
+    </DescriptionList>,
+    '<dl class="description-list" data-layout="horizontal"><div class="description-list-item">' +
+      '<dt class="description-list-term">Nickname</dt><dd class="description-list-value" data-empty="">Not set</dd>' +
+      '<dd class="description-list-actions"><a href="/edit">Edit</a></dd></div><div class="description-list-item">' +
+      '<dt class="description-list-term">Credit limit</dt>' +
+      '<dd class="description-list-value" data-numeric="">$5,000.00</dd></div></dl>',
   ],
   [
     'FieldCounter',
@@ -298,6 +322,7 @@ const STATIC_MODULES = [
   'kbd/Kbd.tsx',
   'badge/Badge.tsx',
   'card/Card.tsx',
+  'description-list/DescriptionList.tsx',
   'field/FieldCounter.tsx',
   'field/FieldChanged.tsx',
   'stat-tile/StatTile.tsx',

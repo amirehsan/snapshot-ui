@@ -50,6 +50,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Confirm dialog](https://snapshotui.com/docs/components/confirm-dialog)
 - [Data table](https://snapshotui.com/docs/components/data-table)
 - [Date range picker](https://snapshotui.com/docs/components/date-range-picker)
+- [Description list](https://snapshotui.com/docs/components/description-list)
 - [Dialog](https://snapshotui.com/docs/components/dialog)
 - [Drawer](https://snapshotui.com/docs/components/drawer)
 - [Empty state](https://snapshotui.com/docs/components/empty-state)

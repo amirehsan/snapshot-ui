@@ -47,6 +47,10 @@ import DateRangePickerBasic from './date-range-picker-basic';
 import DateRangePickerPresets from './date-range-picker-presets';
 import DateRangePickerStates from './date-range-picker-states';
 import DateRangePickerUrl from './date-range-picker-url';
+import DescriptionListActions from './description-list-actions';
+import DescriptionListBasic from './description-list-basic';
+import DescriptionListCard from './description-list-card';
+import DescriptionListValues from './description-list-values';
 import DensityControls from './density-controls';
 import DialogBasic from './dialog-basic';
 import DialogDanger from './dialog-danger';
@@ -204,6 +208,10 @@ export const examples = {
   'date-range-picker-presets': DateRangePickerPresets,
   'date-range-picker-states': DateRangePickerStates,
   'date-range-picker-url': DateRangePickerUrl,
+  'description-list-actions': DescriptionListActions,
+  'description-list-basic': DescriptionListBasic,
+  'description-list-card': DescriptionListCard,
+  'description-list-values': DescriptionListValues,
   'density-controls': DensityControls,
   'dialog-basic': DialogBasic,
   'dialog-danger': DialogDanger,

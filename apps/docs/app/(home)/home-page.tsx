@@ -811,6 +811,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
                 <Link href="/docs/components/data-table">Data table</Link>
                 <Link href="/docs/components/date-range-picker">Date range picker</Link>
+                <Link href="/docs/components/description-list">Description list</Link>
                 <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/drawer">Drawer</Link>
                 <Link href="/docs/components/empty-state">Empty state</Link>

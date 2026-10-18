@@ -11,6 +11,7 @@ import { ComboBox } from '../combo-box';
 import { CommandPalette } from '../command-palette';
 import { DataTable } from '../data-table';
 import { DateRangePicker } from '../date-range-picker';
+import { DescriptionList, DescriptionListItem } from '../description-list';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { EmptyState } from '../empty-state';
@@ -1338,6 +1339,57 @@ export const EmptyStateMirrored: Story = {
     const description = find(canvasElement, '.empty-state-description');
     await expect(getComputedStyle(description).direction).toBe('rtl');
     await expectInside(rect(description), box);
+  },
+};
+
+/**
+ * A description list on a Persian page, terms beside values: each term starts at the row's right edge, the
+ * row's actions end it at the left, and a limit reads "$5,000.00" left to right while it starts at the value
+ * column's right edge, the start of a right-to-left line (`match-parent`).
+ */
+export const DescriptionListMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
+        <DescriptionList layout="horizontal">
+          <DescriptionListItem term="نام">ویزای روزمره</DescriptionListItem>
+          <DescriptionListItem term="سقف اعتبار" isNumeric>
+            $5,000.00
+          </DescriptionListItem>
+          <DescriptionListItem
+            term="نام مستعار"
+            actions={
+              <Button variant="secondary" aria-label="ویرایش نام مستعار">
+                ویرایش
+              </Button>
+            }
+          >
+            کارت سفر
+          </DescriptionListItem>
+        </DescriptionList>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const rows = [...canvasElement.querySelectorAll('.description-list-item')];
+    await expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      await expectSameEdge(rect(find(row, '.description-list-term')).right, rect(row).right);
+    }
+    const [, limit, nickname] = rows;
+    if (!limit || !nickname) throw new Error('No rows');
+    // The actions end the row at its left, after the value.
+    const actions = rect(find(nickname, '.description-list-actions'));
+    await expectSameEdge(actions.left, rect(nickname).left);
+    await expect(actions.right).toBeLessThanOrEqual(
+      rect(find(nickname, '.description-list-value')).left + 0.5,
+    );
+    // The figure keeps its order and starts at the value column's right edge.
+    const value = find(limit, '.description-list-value');
+    await expect(value).toHaveTextContent('$5,000.00');
+    await expect(getComputedStyle(value).direction).toBe('ltr');
+    await expectSameEdge(lastText(value).right, rect(value).right);
+    await expect(characterBox(value, 0).right).toBeLessThanOrEqual(characterBox(value, 1).left + 0.5);
   },
 };
 

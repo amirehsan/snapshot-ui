@@ -131,6 +131,13 @@ export {
 } from './card';
 export { CollapsibleCard, type CollapsibleCardProps } from './collapsible-card';
 export {
+  DescriptionList,
+  DescriptionListItem,
+  type DescriptionListItemProps,
+  type DescriptionListLayout,
+  type DescriptionListProps,
+} from './description-list';
+export {
   ConfirmDialog,
   Dialog,
   DialogTrigger,

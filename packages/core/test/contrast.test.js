@@ -585,6 +585,41 @@ describe('the meter', () => {
   });
 });
 
+describe('the description list', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The values are ink and the terms and "Not set" slate, on the canvas, in a card on lifted, or in a panel on
+  // float. The gate already holds each as text there, so the list adds no pair, and its divider is a cue.
+  it('cites ink and slate on canvas, lifted and float, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'ink', ground: 'float', light: 18.43, dark: 17.42 },
+      { name: 'slate', ground: 'float', light: 5.49, dark: 6.94 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
 describe('the charts', () => {
   /** A token color painted over `ground` and measured against it, as a reader sees it. */
   const measured = (mode, name, groundName) => {

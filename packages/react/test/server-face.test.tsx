@@ -14,6 +14,8 @@ import { PickerOption } from '../src/picker';
 import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
+import { DescriptionList, DescriptionListItem } from '../src/description-list';
+import { Link } from '../src/link';
 
 /**
  * The server face (ruling 1): every date and number part writes one HTML, byte for byte, under en-US, de-DE and
@@ -99,6 +101,21 @@ const FACES: [name: string, element: ReactElement][] = [
     <FilterChip label="Amount" valueLabel="Over $100" onClear={noop}>
       <p>Two amounts</p>
     </FilterChip>,
+  ],
+  [
+    // A static part reads no locale and no zone: four rows, one empty, two numeric and one with a Link as its
+    // action, write one HTML everywhere.
+    'DescriptionList',
+    <DescriptionList>
+      <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+      <DescriptionListItem term="Nickname" actions={<Link href="/accounts/visa/nickname">Add</Link>} />
+      <DescriptionListItem term="Credit limit" isNumeric>
+        $5,000.00
+      </DescriptionListItem>
+      <DescriptionListItem term="APR" isNumeric>
+        24.9%
+      </DescriptionListItem>
+    </DescriptionList>,
   ],
   [
     // The count in the Filters button's Badge, More and Clear all; no panel and no sheet.

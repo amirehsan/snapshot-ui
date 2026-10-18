@@ -8,6 +8,7 @@ import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { ComboBox } from '../src/combo-box';
 import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
+import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { EmptyState } from '../src/empty-state';
@@ -314,6 +315,24 @@ describe('an empty meter label', () => {
     expect(container.querySelector('.meter')).not.toBeNull();
     expect(container.querySelector('.meter-label')).toBeNull();
     expect(screen.getByRole('meter', { name: 'Groceries' })).not.toHaveAttribute('aria-labelledby');
+  });
+});
+
+describe('an empty accounts part slot', () => {
+  it('draws no actions dd for an actions node of false, null or an empty string', () => {
+    for (const actions of [false, null, '']) {
+      const { container, unmount } = render(
+        <DescriptionList>
+          <DescriptionListItem term="Nickname" actions={actions}>
+            Travel card
+          </DescriptionListItem>
+        </DescriptionList>,
+      );
+      // The term and the value, and nothing after them.
+      expect(container.querySelector('.description-list-item')?.children).toHaveLength(2);
+      expect(container.querySelector('.description-list-actions')).toBeNull();
+      unmount();
+    }
   });
 });
 

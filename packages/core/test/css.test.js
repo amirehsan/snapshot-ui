@@ -156,6 +156,20 @@ describe('src/styles.css', () => {
     }
   });
 
+  it('imports the accounts files after the files they read from, in order', () => {
+    // The list reads the card's holder properties, so it follows card.css; the gauge and the month grid read the
+    // meter's track and looks, so they follow meter.css. Each is checked once it exists.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('card.css')).toBeGreaterThanOrEqual(0);
+    expect(at('description-list.css')).toBeGreaterThan(at('card.css'));
+    let previous = at('meter.css');
+    for (const file of ['gauge.css', 'month-grid.css']) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
+
   it('imports the shell files after the last overlay file, in order', () => {
     // app-shell.css is required; the sidebar and the tab bar are checked once they exist.
     const at = (file) => entry.indexOf(`'./components/${file}'`);
@@ -1423,6 +1437,167 @@ describe('src/components/card.css, the collapsible card', () => {
       expect(css.indexOf(`${selector} {`)).toBeLessThan(start);
     }
     expect(reduced).toContain('transition: none;');
+  });
+});
+
+describe('src/components/description-list.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/description-list.css')));
+  const CONTAINER = '@container description-list (inline-size >= 30rem)';
+  const ROW = '.description-list-item {';
+  const PAD = 'calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad))';
+  const LAST =
+    ':is(.card, .card > .card-body:last-child) > .description-list:last-child > .description-list-item:last-child:has(> .description-list-actions) {';
+  const FIRST =
+    ':is(.card, .card > .card-body:first-child) > .description-list:first-child > .description-list-item:first-child:has(> .description-list-actions) {';
+  const HORIZONTAL = ".description-list[data-layout='horizontal'] > .description-list-item {";
+  const AUTO = ".description-list[data-layout='auto'] > .description-list-item {";
+
+  /** The CSS with the container query's block taken out, so the narrow layout is read on its own. */
+  const outsideContainer = (css) => {
+    const start = css.indexOf(CONTAINER);
+    if (start === -1) return css;
+    const end = css.indexOf('{', start) + 1 + blockAfter(css, CONTAINER).length + 1;
+    return css.slice(0, start) + css.slice(end);
+  };
+
+  it('is a size container switching at 30rem, with a 20rem intrinsic width', () => {
+    const css = rules();
+    const list = blockAfter(css, '.description-list {');
+    expect(list).toContain('container: description-list / inline-size;');
+    expect(list).toContain('contain-intrinsic-inline-size: 20rem;');
+    expect(list).toContain('margin: 0;');
+    expect(list).toContain('padding: 0;');
+    // Stacked under 30rem: the term and the actions share the first line, the value spans the second.
+    const stacked = blockAfter(outsideContainer(css), ROW);
+    expect(stacked).toContain('grid-template-columns: minmax(0, 1fr) auto;');
+    expect(stacked).toContain("grid-template-areas: 'term actions' 'value value';");
+    expect(stacked).toContain('row-gap: calc(var(--spacing-part) / 2);');
+    // Side by side from 30rem, and only for the auto layout; horizontal holds it at every width.
+    const wide = blockAfter(css, CONTAINER);
+    const side = blockAfter(wide, AUTO);
+    expect(side).toContain("grid-template-areas: 'term value actions';");
+    expect(side).toContain('row-gap: 0;');
+    const horizontal = blockAfter(outsideContainer(css), HORIZONTAL);
+    expect(horizontal).toContain("grid-template-areas: 'term value actions';");
+    expect(horizontal).toContain('row-gap: 0;');
+    expect(css).not.toContain("[data-layout='stacked']");
+    // A row with no actions gives their column to the term or the value.
+    expect(
+      blockAfter(outsideContainer(css), '.description-list-item:not(:has(> .description-list-actions)) {'),
+    ).toContain("grid-template-areas: 'term term' 'value value';");
+    expect(
+      blockAfter(
+        wide,
+        ".description-list[data-layout='auto'] > .description-list-item:not(:has(> .description-list-actions)) {",
+      ),
+    ).toContain("grid-template-areas: 'term value value';");
+  });
+
+  it('draws the Dense data row against the body line, and a divider rule between rows only', () => {
+    const css = rules();
+    const row = blockAfter(outsideContainer(css), ROW);
+    expect(row).toContain('--description-list-row: max(var(--size-target), var(--size-field));');
+    expect(row).toContain(
+      '--description-list-pad: max(0px, calc((var(--description-list-row) - 1lh - 1px) / 2));',
+    );
+    expect(row).toContain('min-block-size: var(--description-list-row);');
+    expect(row).toContain('padding-block: var(--description-list-pad);');
+    expect(row).toContain('box-sizing: border-box;');
+    expect(row).toContain('align-items: baseline;');
+    expect(row).toContain('column-gap: var(--spacing-peer);');
+    // The rule is drawn on a row that follows another, so never above the first or under the last.
+    expect(
+      blockAfter(css, '.description-list[data-dividers] > .description-list-item + .description-list-item {'),
+    ).toContain('border-block-start: 1px solid var(--color-divider);');
+    expect(css).not.toMatch(/border(?:-block-end)?:/);
+    // The actions take back what a control has over the line, so the row does not grow for its button.
+    const actions = blockAfter(css, '.description-list-actions {');
+    expect(actions).toContain('margin-block: min(0px, calc((1lh - var(--size-control)) / 2));');
+    expect(actions).toContain('gap: var(--spacing-part);');
+    expect(actions).toContain('justify-content: flex-end;');
+  });
+
+  it('sets terms at the small step 500 in slate and values at the body step 450 in ink, empty values slate', () => {
+    const css = rules();
+    const row = blockAfter(outsideContainer(css), ROW);
+    expect(row).toContain('font-size: var(--text-body);');
+    expect(row).toContain('line-height: var(--text-body--line-height);');
+    const term = blockAfter(css, '.description-list-term {');
+    for (const declaration of [
+      'grid-area: term;',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: 500;',
+      'color: var(--color-slate);',
+    ]) {
+      expect(term, declaration).toContain(declaration);
+    }
+    const value = blockAfter(css, '.description-list-value {');
+    for (const declaration of [
+      'grid-area: value;',
+      'font-weight: var(--text-body--font-weight);',
+      'color: var(--color-ink);',
+      // Wraps, and breaks a long word anywhere: nothing truncates.
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(value, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.description-list-value[data-empty] {')).toContain('color: var(--color-slate);');
+    expect(css).not.toMatch(/text-overflow|line-clamp|--color-taupe|font-weight:\s*600/);
+  });
+
+  it('keeps numeric values left to right, isolated and at the line start', () => {
+    const numeric = blockAfter(rules(), '.description-list-value[data-numeric] {');
+    for (const declaration of [
+      'font-variant-numeric: tabular-nums;',
+      'direction: ltr;',
+      'unicode-bidi: isolate;',
+      'text-align: -webkit-match-parent;',
+      'text-align: match-parent;',
+    ]) {
+      expect(numeric, declaration).toContain(declaration);
+    }
+    // The standard name last, so a browser that knows it uses it.
+    expect(numeric.indexOf('text-align: match-parent;')).toBeGreaterThan(
+      numeric.indexOf('text-align: -webkit-match-parent;'),
+    );
+  });
+
+  it('takes the term column from --description-list-term-size, 30% by default', () => {
+    const css = rules();
+    const template =
+      'grid-template-columns: minmax(0, var(--description-list-term-size, 30%)) minmax(0, 1fr) auto;';
+    expect(blockAfter(outsideContainer(css), HORIZONTAL)).toContain(template);
+    expect(blockAfter(blockAfter(css, CONTAINER), AUTO)).toContain(template);
+  });
+
+  it("moves a first or last row's controls by the holder's corner inset less its padding, in a card only", () => {
+    const css = rules();
+    expect(blockAfter(css, LAST)).toContain(`padding-block-end: ${PAD};`);
+    expect(blockAfter(css, FIRST)).toContain(`padding-block-start: ${PAD};`);
+    // Down, never in, so a trailing action keeps the column's end edge; and only in a card.
+    expect(css).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);
+    const moved = [...css.matchAll(/([^{}]+)\{[^{}]*--holder-corner-inset/g)].map((match) => match[1].trim());
+    expect(moved).toHaveLength(2);
+    for (const selector of moved) expect(selector).toMatch(/^:is\(\.card, \.card > \.card-body/);
+    // Logical properties throughout, so the layout mirrors in right to left.
+    expect(css).not.toMatch(/(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right):/);
+  });
+
+  it("hides the actions in print and names the rule's color in forced colors", () => {
+    const css = rules();
+    expect(blockAfter(blockAfter(css, '@media print'), '.description-list-actions {')).toContain(
+      'display: none;',
+    );
+    const forced = blockAfter(css, '@media (forced-colors: active)');
+    expect(
+      blockAfter(
+        forced,
+        '.description-list[data-dividers] > .description-list-item + .description-list-item {',
+      ),
+    ).toContain('border-block-start-color: canvastext;');
   });
 });
 

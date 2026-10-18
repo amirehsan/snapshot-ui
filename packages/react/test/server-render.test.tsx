@@ -43,6 +43,7 @@ import {
   SidebarTrigger,
 } from '../src/sidebar';
 import { Spinner } from '../src/spinner';
+import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { COLUMNS, columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Switch } from '../src/switch';
 import { Tab, TabList, TabPanel, Tabs } from '../src/tabs';
@@ -575,6 +576,30 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       change={{ direction: 'down', label: 'Down 4% from last month', tone: 'gain' }}
     />,
     ['<a', 'href="/spending"', 'class="stat-tile"', 'data-direction="down"', 'data-tone="gain"'],
+  ],
+  [
+    // A static list holding a client leaf, React Aria's Link, as a row's action: the leaf renders in Node inside
+    // the list's own markup, and an empty and a numeric value are the library's attributes.
+    'DescriptionList with a Link as an action',
+    <DescriptionList>
+      <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+      <DescriptionListItem term="Nickname" actions={<Link href="/accounts/visa/nickname">Add</Link>} />
+      <DescriptionListItem term="Credit limit" isNumeric>
+        $5,000.00
+      </DescriptionListItem>
+      <DescriptionListItem term="APR" isNumeric>
+        24.9%
+      </DescriptionListItem>
+    </DescriptionList>,
+    [
+      '<dl class="description-list" data-layout="auto" data-dividers="">',
+      '<dd class="description-list-value" data-empty="">Not set</dd>',
+      '<dd class="description-list-actions"><a',
+      'href="/accounts/visa/nickname"',
+      'class="link"',
+      '<dd class="description-list-value" data-numeric="">$5,000.00</dd>',
+    ],
+    ['role='],
   ],
   [
     // The selected tab and its panel are in the HTML; the panel of a tab not selected is not mounted. The scroll

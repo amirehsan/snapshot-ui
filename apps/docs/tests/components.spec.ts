@@ -578,6 +578,27 @@ test.describe('forced colors', () => {
     await expect(tip.locator('.tooltip-arrow')).toBeHidden();
   });
 
+  test('a description list keeps its rules between rows', async ({ page }) => {
+    await visit(page, '/docs/components/description-list');
+    const { canvasText } = await systemColors(page);
+    const rows = page
+      .locator('.stage .description-list[data-dividers]')
+      .first()
+      .locator('.description-list-item');
+    expect(await rows.count()).toBeGreaterThan(1);
+    // The rule is on every row after the first, drawn in the reader's text color; none above the first.
+    const edges = await rows.evaluateAll((items) =>
+      items.map((item) => {
+        const style = getComputedStyle(item);
+        return { width: style.borderTopWidth, style: style.borderTopStyle, color: style.borderTopColor };
+      }),
+    );
+    expect(edges[0]?.style).toBe('none');
+    for (const edge of edges.slice(1)) {
+      expect(edge).toEqual({ width: '1px', style: 'solid', color: canvasText });
+    }
+  });
+
   test('a select chevron is CanvasText', async ({ page }) => {
     await visit(page, '/docs/components/select');
     const canvasText = await systemColor(page, 'CanvasText');
@@ -979,6 +1000,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   // cell, in the columns example's frame, does too, so a long payee leaves either face inside 320px.
   'data-table': ['.stage .data-table-cell', '.stage .data-table-item-title', '.stage .data-table-item-meta'],
   'date-range-picker': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
+  // A value wraps and breaks a long word anywhere inside its column, in both layouts; nothing truncates.
+  'description-list': ['.stage .description-list-value'],
   // The title and the line are the app's sentences, and both wrap at any character inside the column.
   'empty-state': ['.stage .empty-state-title', '.stage .empty-state-description'],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
@@ -1153,6 +1176,12 @@ const SERVER_RENDERED: Record<string, string[]> = {
   ],
   // The frame and its button, with the app's valueLabel where the segments go; the calendar waits for a press.
   'date-range-picker': ['.stage .date-range-control', '.stage .date-range-button'],
+  // A static part: the whole list, its empty words and its numeric values are in the server's HTML.
+  'description-list': [
+    '.stage dl.description-list',
+    '.stage .description-list-value[data-empty]',
+    '.stage .description-list-value[data-numeric]',
+  ],
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],
   // A static part: the whole column is in the server's HTML.

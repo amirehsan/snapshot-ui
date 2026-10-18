@@ -879,6 +879,7 @@ And the controls that move, by the corner inset (below):
 | SidePanel | a field or button at the body's foot | down | the body ends at the corner inset | 39px under it, not 24px | as before | as before |
 | Drawer | the footer's content | down | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
 | a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
+| Card | the list's first or last row's controls | down | the row's block padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
 | Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
 
@@ -9070,3 +9071,146 @@ NVDA (owner action 4): the panel read as a complementary landmark named
 by its title with focus on its heading, and the sheet read as a dialog;
 on a real iPhone and an Android phone, the sheet opening from a row and
 closing on a swipe, and a refused swipe rising again.
+
+## DescriptionList
+
+Named values, such as an account's name, type, institution, last four
+digits, bank feed, credit limit and APR: `DescriptionList` holding
+`DescriptionListItem`s (accounts spec, section 5; owner rulings 7, 8 and
+9). The document has no list of names and values, so this one is derived
+from the Dense data row, the numeral rule and the corner rule.
+
+**A `dl` of `div` rows, and no role.** The list is a `dl`; each row is a
+`div` holding a `dt` (the term), a `dd` (the value) and, when the row has
+actions, a second `dd` holding them, the grouping the HTML standard allows
+inside a `dl` and GOV.UK's summary list row. The `div` keeps a row one box
+for the layout and the rule, and axe's `definition-list` and `dlitem` rules
+pass with it. No ARIA role is added: `role="list"` on the `dl` would drop
+the term and definition semantics VoiceOver announces. A
+`DescriptionListItem` outside a `DescriptionList` draws the same markup,
+which axe's `dlitem` rule fails, and the docs say so. Both parts are static,
+with no hook, context or id, so a server component renders them with no
+client JavaScript.
+
+**Layout by its own width.** The list is a size container
+(`container: description-list / inline-size`). From 30rem of its content
+box, `layout="auto"` draws a row as three columns: the term at
+`--description-list-term-size`, 30% by default, the value, and the actions;
+under it the term and the actions share the first line and the value spans
+the second, 4px under the term (half the part step, StatTile's caption
+gap). 30rem is chosen so the term column is at least 9rem (144px), which
+holds "Routing number", about 105px at 14px and 500, on one line; under it
+most terms would wrap. `horizontal` and `stacked` hold one layout at every
+width. Every row has the same template, so the term column lines up down
+the list with and without actions, with no subgrid. A row without actions
+gives their column to the value side by side and to the term stacked. A
+viewport breakpoint was rejected: a list in a 24rem side panel on a wide
+screen would draw a 7rem name column.
+
+**A width of its own** (risk R1). A size container takes no width from its
+content, so the list names `contain-intrinsic-inline-size: 20rem`, StatTile's
+0.6.1 fix: in a flex row or an `auto` grid column it is 20rem, and stacked,
+rather than nothing wide. The `InAFlexRow` story measures it.
+
+**The row** (Dense data, against the value's line). `min-block-size:
+max(var(--size-target), var(--size-field))`, 48px, 40px in compact and 44px
+compact on a coarse pointer, and block padding
+`max(0px, calc((row - 1lh - 1px) / 2))` against the body line, 22.4px: 12.3px
+in comfortable, 8.3px in compact and 10.3px on a coarse pointer. Dense data
+pads against the small step's line, 13.5px; a list's values are body text,
+so it pads against theirs. The padding is `--description-list-pad`, which
+the corner rule below reads. One 1px `--color-divider` rule on a row that
+follows another, so none above the first row and none under the last, and
+a list in a card ends at the card's padding. `hasDividers={false}` draws
+none.
+
+**Term and value.** A term is `--text-small` at 500 in slate: a name, read
+before its value, so not ink, and set apart from a hint's 450. A value is
+`--text-body` at its token weight, 450, in ink. The list draws no frame,
+fill or radius of its own, so no part of it is a surface in a holder's
+corner.
+
+**Empty values** (ruling 9). A value that is absent, `null`, `false`, `true`
+or `''` is empty, `present()`'s definition, and `0` is a value. The value's
+`dd` carries `data-empty` and shows `emptyValue`, "Not set" by default, in
+slate. It is words the reader has to read, so by the test in "Where each
+text color may go" it is slate and never taupe; that table's "unset
+indicator" in taupe is a mark, such as an empty swatch, not words (spec
+correction 6). It is never a dash, which a screen reader reads as "dash" or
+as nothing. `emptyValue` may be a link to add the value, GOV.UK's guidance
+for a missing answer. The library writes "Not set" in English, so a page in
+another language passes its own.
+
+**Long values.** A value wraps, and a long unbroken word, an IBAN or an
+email address, breaks anywhere (`overflow-wrap: anywhere`, the Card's rule,
+set on the value so a list outside a card has it too). Nothing truncates: an
+ellipsis on a value hides data. A long term wraps in its column.
+
+**Numeric values.** `isNumeric` writes `data-numeric` and gives the value
+`copy.css`'s numeral rules at the body size: tabular figures,
+`direction: ltr`, `unicode-bidi: isolate` and
+`text-align: match-parent` (with `-webkit-match-parent` before it for
+Chromium), so "$5,000.00", "24.9%" or "4821" keeps its order and starts at
+the line's start on a Persian page. A numeric value does not take the
+numerals' `nowrap`; it is a value in a column, and breaks rather than push
+a 320px page sideways. An empty numeric value drops `data-numeric`, since
+"Not set" is words.
+
+**Actions.** The app's nodes, in their own `dd` after the value, as
+GOV.UK's summary list puts its "Change" link: the row's last column side by
+side, and the end of the term's line stacked, as the gear stands beside each
+heading in GitHub's pull request sidebar. `display: flex` with the part
+step between, at the end. A 40px control sits level with the line beside it
+through `margin-block: min(0px, calc((1lh - var(--size-control)) / 2))`, the
+collapsible card toggle's technique, so the row does not grow for its
+button. Each control names its row: "Edit" shown and "Edit Nickname" as its
+name, through `aria-label` or visually hidden words, so WCAG 2.5.3 holds.
+
+**The corner** ("Nested radii, derived"). A control in the last row of a
+list that ends a card sits in the card's corner curve: in Rounded
+comfortable a 40px button on a 22.4px line overhangs it by 8.8px, which
+leaves the button 1 + 32 + 3.5 = 36.5px from the card's bottom edge (36.7px
+as Chromium draws it, by baseline alignment) and 33px from its side, both
+under the 40px radius. The rule for a control at a holder's foot applies: it
+moves down, not in, so it stays on the column's end edge. The last row of a
+list that is the last child of a card, or of a card's body that is the
+card's last child, adds `calc(var(--holder-corner-inset) - var(--holder-pad))`
+to its block-end padding while it holds actions: 7px in Rounded, 19px in
+Rounded compact, nothing in Soft and Square, where the padding already
+clears the 16px curve and Square has none. The first row of a list that
+starts a card with no header takes the same at its block start. Only the
+controls' row grows; a row without actions keeps the Dense data padding.
+The button then ends 43.5px over the card's bottom edge in comfortable and
+41.5px in compact, past the 39px corner inset. The selector
+is the LineChart toolbar's, `:is(.card, .card > .card-body:last-child)`, so
+a list in a body followed by something else is not at the card's foot and
+does not move (spec correction 4). The `CornerClear` story measures it in
+Chromium, WebKit and Firefox, and the concentric audit runs every story in
+the three shapes.
+
+**Right to left** (ruling 7). Logical properties throughout: on a Persian
+page the term column is on the right and the actions on the left. A numeric
+value stays left to right and starts at the line's start, the right edge of
+its column.
+
+**Print.** Rules and text print; the actions are hidden under
+`@media print`, since a printed page cannot press them.
+
+**Forced colors.** The rules are borders, which the repaint keeps; the
+block names their color, `canvastext`, so the CSS test's forced-colors
+block holds something. Text takes the reader's colors.
+
+**Contrast.** Gated already as text and cited by the contrast test, not
+added: ink on canvas 16.25 in light and 19.31 in dark, on lifted 17.84 and
+17.42, on float 18.43 and 17.42; slate on canvas 4.84 and 7.26, on lifted
+5.31 and 6.94, on float 5.49 and 6.94. The divider is a cue, not a boundary.
+
+**The size.** The entry `{ DescriptionList, DescriptionListItem }` measures
+328 B without React Aria, Lucide and `@internationalized/date`, and 328 B
+with them, since it imports none; the rule rounds up to 0.5 kB and adds
+0.5 kB: 1 kB, the spec's budget.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): the terms and values read in order, and how each reader
+announces the list; on a real iPhone and an Android phone at 320px to 430px,
+the stacked list legible.
