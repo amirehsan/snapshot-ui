@@ -858,7 +858,8 @@ stays the padding, so the trailing action's end stays on the column's end
 edge. Material, Apple's guidelines and Fluent all keep a trailing action on
 that edge; one that stops short of the fields above it reads as a layout bug.
 Only a holder that is a single row, too short to clear its curve vertically,
-moves its controls inward: the bulk bar and a toast.
+moves its controls inward: the bulk bar, SaveBar, a toast and UploadTray's
+panel folded to its header.
 
 | holder | its corner | edge and padding | part | Rounded | Soft | Square |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -880,7 +881,11 @@ And the controls that move, by the corner inset (below):
 | Drawer | the footer's content | down | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
 | a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
+| SaveBar | its buttons | in | each end pads to the corner inset, as the bulk bar's | 23px each side | 16px and 11px | 16px and 8px |
 | Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
+| UploadTray's panel | the header's trailing button | down | the header's block-start padding is the corner inset | 23px over it, not 8px | 11px | as before |
+| UploadTray's panel | the last row's trailing button | down | its row's block-end padding is the corner inset | 23px under it, not 10px | 11px | as before |
+| UploadTray's panel, folded | the header's trailing button | in | the header's end padding is the corner inset | 23px, not 8px | 11px | as before |
 
 **It is a calc on the tokens.** No part writes the number. Each value is the
 holder's token less a length, so Soft and Square follow by construction: in
@@ -895,7 +900,8 @@ centered with an even gap.
 `--holder-border` and `--holder-pad` and draws its own corner, edge and
 padding from them, and a part in it reads the three. The holders are Card,
 StatTile through Card, Dialog, Drawer, Sheet, SidePanel, Popover and its
-padded variant, CommandPalette, Toast, the bulk bar and TabList. Each also
+padded variant, CommandPalette, Toast, the bulk bar, TabList, SaveBar, and
+UploadTray's panel and phone bar. Each also
 names its corner inset, `--holder-corner-inset`, the padding or the radius
 less the edge, whichever is more:
 `max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)))`.
@@ -9320,8 +9326,9 @@ and is decided by the extension entries. A dropped folder is refused as
 16). The check is a courtesy: the docs say the server checks again, since
 a renamed file passes any check by name.
 
-**The box.** `--radius-surface`, 24px: the nested-radii table's "drop
-zone" inside a 40px holder, and a field frame's step. A 2px dashed
+**The box.** `--radius-surface`, 24px, a field frame's step. It is the
+field's control, so in a holder's corner it keeps that corner and moves out
+of the curve, as every control does (Nested radii, derived). A 2px dashed
 `--color-boundary` edge, the control boundary, measured at 3.38 on canvas
 and 3.45 on lifted in light, 5.34 and 5.21 in dark, each past the 3:1 a
 control's edge needs (gated as the boundary on canvas and lifted; spec
@@ -9682,27 +9689,28 @@ never in the server's HTML, so no first paint waits on it. `toast.css` adds
 it, with `--save-bar-offset`, to the toast region's bottom, so the toasts
 sit 16px above the tray in the same column.
 
-**Concentric corners** (spec corrections 47 and 58). A rounded part in a
-rounded holder's corner region takes the holder's radius less the gap
-between them, the holder's edge and the smaller real gap, never a copy, and
-is square once the gap reaches the radius: `max(0px, calc(var(--holder-radius)
-- var(--holder-border) - var(--holder-pad)))`. Only parts in a corner region
-take it. The panel (`--radius-surface`, 1px, no padding) and the phone's bar
-(`--radius-pill`, 1px, none) name their corners in those three properties;
-the sheet names none, since it rounds only its top corners, which its header
-holds. The header's trailing button, a part step in from the panel's edge,
-takes the panel's radius less its edge and that step; the fold button beside
-Close is 57px in and keeps its pill. The trailing button of the list's last
-row, and of its first unless the list sits under the panel's header, takes
-the list's radius less its real gap, the row's inline padding less the
-actions' 0.5rem pull-in, 8px, which is smaller than its block gap. The bar's
-button and its clear X take the pill less its edge. The rows' other buttons
-and their bars, 53px and more from every corner, keep their own pill. In
-Rounded: 15px for the header's trailing button and the last row's trailing
-button, 998px for the bar's buttons, 31px for a Card's corner rows (its 40px
-stadium less its edge and the 8px gap); in Soft 3px, 11px and 7px; in Square
-0. A list in no named holder keeps its parts' own pill radius, and an app's
-rounded holder, such as a Card, names its own corner.
+**Corners** (spec corrections 47, 58 and 92). The shared rule, Nested
+radii, derived: the panel and the phone's bar are holders, and the panel's
+buttons are controls that move out of its corners. The panel
+(`--radius-surface`, 1px, no padding) and the bar (`--radius-pill`, 1px,
+none) name `--holder-radius`, `--holder-border`, `--holder-pad` and
+`--holder-corner-inset` and draw their edge and corner from them. The bar's
+button and its clear X fill the bar inside its edge, so they take its radius
+less the gap, 998px in Rounded. Every button in the panel keeps its own
+round. The two in its end corners move down, so they stay on the end edge
+of the rows' buttons, where a trailing action belongs: the header's trailing
+button, Close or the fold when Close is not shown, sits under the header's
+block-start padding, and the last row's trailing button over its row's
+block-end padding, each the corner inset where that is more than the
+padding: 23px in Rounded, 11px in Soft, and the part step and 10px as before
+in Square. Folded, the panel is one row, too short to clear both end corners
+downward, so the header's trailing button moves inward to the same inset
+instead, as a toast's dismiss does. The sheet rounds only its top corners,
+which its header holds, and no row reaches them. The list reads no holder: a
+rounded box of an app's own that holds it keeps its buttons clear as it does
+any control of its own. In a Card, as the stories and the docs example put
+it, they are circles in Rounded, which the rule exempts, and clear of the
+card's 16px curve in Soft.
 
 **Forced colors.** The panel's and the bar's edges are `canvastext`; the
 icons, the header's and the bar's error icon and the bar's clear X keep their
@@ -9806,15 +9814,17 @@ the view to the day. A preset whose date is not an ISO date warns once and
 is left out. Closing on a day, a preset or Escape gives focus back to what
 opened the calendar, React Aria's.
 
-**Corners** (spec corrections 52, 65 and 66). `date-picker.css` draws no
-corner of its own. The calendar keeps Calendar's shapes, the days'
+**Corners** (spec corrections 52, 65, 66 and 92). `date-picker.css` draws
+no corner of its own. The calendar keeps Calendar's shapes, the days'
 circles and the presets' pills, so DatePicker, Calendar and
 DateRangePicker draw one calendar: the days and presets are controls in
 a grid, not surfaces nested in the popover, and a square 7px day in
-Rounded (correction 52's first reading) broke that. The button is the
-shared field button, `.input-button`, as in DateRangePicker and every
-other framed field; the concentric rule reaches it in all of them at
-once, in its own change to `input.css`, never in one field alone.
+Rounded (correction 52's first reading) broke that. Under Nested radii,
+derived, the days are circles, which keep their shape, and the presets
+are controls, which keep theirs. The button is the shared field button,
+`.input-button`, as in DateRangePicker and every other framed field; the
+concentric rule reaches it in all of them at once in `input.css`, the
+field's `--input-radius` less its 6px gap, never in one field alone.
 
 **In a review grid.** A field per cell, named by `aria-label` or by
 `aria-labelledby` of its column's header and its row's name; compact
@@ -9877,18 +9887,18 @@ nearest ancestor that scrolls, which in a SidePanel or a Dialog is the body,
 where it belongs (risk R10). It is always drawn (ruling 18): dirty adds the
 chip and the guard, so the page never moves under the reader as they type.
 
-**Corners** (owner rule, 2026-10-17; spec corrections 70 and 84). The
-buttons keep their own uniform round; the bar holds them clear of its
-corners instead of bending them. Both inline paddings are at least the
-surface radius less the edge: the start
-`max(var(--spacing-inset), calc(var(--radius-surface) - 1px))`, the end
-`max(var(--spacing-part), calc(var(--radius-surface) - 1px))`, so the
-action's gap to the end edge and the first button's gap to the start edge
-of a line of actions, the edge included, are at least the surface radius:
-24px each side in Rounded, 17px and 12px in Soft, 17px and 9px in Square.
-Both are logical, so a Persian bar mirrors them. No margin of the actions
-makes up a shortfall. The bulk bar keeps its 8px until its own task
-reaches it.
+**Corners** (owner rule, 2026-10-17; spec corrections 70, 84 and 92).
+The bar is a holder, as the bulk bar is, and a single row, so under Nested
+radii, derived, its buttons keep their own uniform round and move inward,
+out of its corners. It names `--holder-radius` (`--radius-surface`),
+`--holder-border` (1px), `--holder-pad` (the part step, its block padding)
+and `--holder-corner-inset`, and pads its inline sides as the bulk bar
+does, `max(var(--spacing-inset), var(--holder-corner-inset))` at the start
+and the corner inset at the end, so the action's gap to the end edge and
+the first button's gap to the start edge of a line of actions, the edge
+included, are at least the surface radius: 24px each side in Rounded, 17px
+and 12px in Soft, 17px and 9px in Square. Both are logical, so a Persian
+bar mirrors them. No margin of the actions makes up a shortfall.
 
 **Layout** (spec corrections 71 and 80). The bar is a wrapping flex row and
 its own size container, `save-bar`. The text column, `flex: 1 1 12rem`,
