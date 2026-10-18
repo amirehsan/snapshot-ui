@@ -18,7 +18,7 @@ icon: FileUp
 
 ## Errors in your words
 
-Every drop, paste and choice runs one check, and `onFiles` gets the files that passed and the ones that did not, each with its reason: `'type'`, `'size'`, `'empty'` or `'count'`. A drop of five with one too large adds four. By default the zone says how many were not added and, when they share one, why: "1 file was not added: it is too large". `labels.rejected` gets the count, the count as `formatCount` writes it and the refusals, to say it in your words; `errorMessage` replaces that line with your own, such as one that names each file in the GOV.UK Design System's words: "The selected file must be smaller than 10 MB".
+Every drop, paste and choice runs one check, and `onFiles` gets the files that passed and the ones that did not, each with its reason: `'type'`, `'size'`, `'empty'` or `'count'`. A drop of five with one too large adds four. By default the zone says how many were not added and, when they share one, why: "1 file was not added: it is too large". `labels.rejected` gets the count, the count as `formatCount` writes it and the refusals, `(count, formatted, rejected)`, to say it in your words, the shape of UploadTray's `cancelAllTitle`, while its `title`, `started` and `settled` take every count and `formatCount` itself; `errorMessage` replaces that line with your own, such as one that names each file in the GOV.UK Design System's words: "The selected file must be smaller than 10 MB".
 
 <Preview name="file-drop-zone-errors" />
 
