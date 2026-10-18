@@ -26,7 +26,7 @@ Charts are a separate package with their own versions.
 pnpm add @snapshot-ui/charts
 ```
 
-It needs React 19 and the same 0.x minor of `@snapshot-ui/core` (0.6 for charts 0.1.3), whose `styles.css` already draws the charts. It does not need React Aria. See the [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
+It needs React 19 and the same 0.x minor of `@snapshot-ui/core` (0.7 for charts 0.1.4), whose `styles.css` already draws the charts. It does not need React Aria. See the [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
 
 </Section>
 
@@ -119,9 +119,11 @@ export function PersianGuide({ children }) {
 
 ## Next.js server components
 
-Stateful or interactive components carry `'use client'`. Static ones do not, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, EmptyState, Skeleton, the field counter and chip, Meter, a StatTile without `href`, Sparkline, and Pagination. A server page builds Pagination's links with `getPageHref`, and only its controls and status are client components. Never import React Aria into a server component.
+Stateful or interactive components carry `'use client'`. Static ones do not, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, EmptyState, Skeleton, the field counter and chip, Meter, a StatTile without `href`, Sparkline, Pagination, ProgressBar, PageHeader and PageColumn. A server page builds Pagination's links with `getPageHref`, and only its controls and status are client components; its page size picker calls a function, so render Pagination from a client component to show it. Never import React Aria into a server component.
 
 DataTable and SidePanel are client components. DataTable takes functions in its props, its columns, `getKey` and `getRowHref`, so render it from a client component and pass it the rows your server page loaded. A SidePanel open in the URL is in the server's HTML beside the table; on a phone it opens as a sheet once scripts run.
+
+FileDropZone, PageDropZone, FileButton, UploadTray, DatePicker, SaveBar and Breadcrumbs are client components. FileDropZone and DatePicker render their label, frame and button on the server; Breadcrumbs renders real links. Mount UploadTray once, in AppShell's `floating` slot in your root layout, so it outlives every page; the library never uploads, so give it your items.
 
 The date and number fields render their label, hint, error line and hidden inputs on the server. Their formatted text, which React Aria writes with `Intl`, appears from the first render after hydration. Before it, a number field shows its plain figure, a date range picker its `valueLabel`, and an inline calendar its empty frame. So the server's HTML is the same in every locale and time zone. Pass `today` from your user's time zone, and `valueLabel` where the server's HTML should show a range.
 

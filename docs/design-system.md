@@ -10361,3 +10361,87 @@ Link.
 **Screen readers.** Not yet verified (owner action 4): the trail read as a
 navigation landmark with the current page, and on a phone its one back
 link.
+
+## The bottom edge
+
+Batch 4 (documents spec, section 12). Five parts can want the bottom of
+the screen at once on a phone: the tab bar, a sticky save bar or DataTable's
+bulk-action bar, the upload tray's bar and the toasts. They stack in one
+order, from the bottom up, each lifting the next through a custom
+property, and no first paint waits on a measurement.
+
+| From the bottom | Part | Sits at | Its offset for the parts above |
+| --- | --- | --- | --- |
+| 1 | BottomTabBar, under 1024px | the viewport's bottom | `--app-shell-inset-block-end` on `.app-shell` (`calc(4rem + env(safe-area-inset-bottom, 0px))` under 1024px, `0px` above), and its copy for the root, `--toast-offset-block` on `:root:has(.tab-bar)` |
+| 2 | SaveBar, or DataTable's bulk-action bar, sticky in its holder | `calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset))` | `--save-bar-offset` on `:root` and `.app-shell` while a bar is on the page |
+| 3 | UploadTray, fixed: the panel from 768px, the bar under it | `calc(var(--app-shell-inset-block-end, 0px) + var(--overlay-inset) + var(--save-bar-offset, 0px))` | `--upload-tray-offset` on the root while it draws; under 768px also `--upload-tray-reserve` for the page's room |
+| 4 | Toasts, fixed at the root | `calc(var(--overlay-inset) + var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) + var(--upload-tray-offset, 0px))` | none |
+
+**When each is written.** `--app-shell-inset-block-end` and
+`--toast-offset-block` are declared by the stylesheets from the tab bar's
+4rem, as before this batch. `--save-bar-offset` is declared from tokens
+on `:root:has(.save-bar)`, `.app-shell:has(.save-bar)`,
+`:root:has(.data-table-bar)` and `.app-shell:has(.data-table-bar)` as
+`calc(var(--size-control) + 2 * var(--spacing-part) + 2px +
+var(--spacing-inset))`, the one-line bar's height and the inset, so it is
+in place from the server's HTML on; after hydration `useBottomBarOffset`
+writes each bar's measured border-box height and the inset inline on the
+root and on the closest shell through a `ResizeObserver`, the tallest of
+several bars winning, `0px` for a bar that is hidden, and the property
+removed with the holder's last bar (spec corrections 13 and 81). A bar on
+two lines lifts the tray a little short until then. `--upload-tray-offset`
+is written by the tray's own `ResizeObserver` only once a face draws,
+which it never does on the server, and removed when it draws nothing.
+`--upload-tray-reserve` is declared on `:root:has(.upload-tray-bar)` from
+tokens, the bar's `max(var(--size-field), var(--size-target))` and the
+inset (spec correction 55). None of these is in a measurement a first
+paint waits on.
+
+**Scroll padding, the same order.** The root's `scroll-padding-block-end`
+is `calc(var(--toast-offset-block, 0px) + var(--save-bar-offset) +
+var(--upload-tray-reserve, 0px) + var(--spacing-inset))` while a save bar
+is on the page, and `calc(var(--toast-offset-block, 0px) +
+var(--save-bar-offset, 0px) + var(--upload-tray-reserve))` while only the
+tray's bar is. The root reads the tab bar from `--toast-offset-block`,
+since the shell's reserve is declared on `.app-shell`, which the root
+cannot read (spec correction 12). `save-bar.css` loads after
+`upload-tray.css`, so its sum, which holds the tray's reserve, replaces the
+tray's. The shell pads the workspace's end by the same parts while the
+tray's bar shows, so the page's last control stays above it (spec
+correction 55). At the top, the root's `scroll-padding-block-start` is the
+shell header's measured `--app-shell-header-block-size` (spec correction
+95).
+
+**The wide screen** has no tab bar: the tray sits 16px above the
+viewport's bottom, or above a save bar while one shows, and the toasts
+above the tray, in the bottom end corner's one 28rem column. The toasts
+lift above a save bar at every width, not only on a phone (open question
+6 of the plan, settled as recommended).
+
+**One sticky bar a page.** A list with a selection and a form with
+unsaved changes on one page is not a pattern the docs show. If both show,
+the holders keep the taller bar's offset, so the tray and the toasts sit
+above it; the two bars themselves sit only by their own sticky offsets.
+
+**The stories.** `BottomEdge` (SaveBar, tagged `viewport-phone`) pins the
+stack at 375 by 812: the tab bar, the save bar, the tray's bar and the
+toasts, from the bottom up. `BottomEdgeWide` (`viewport-desktop`) pins the
+wide face, the tray above the save bar and the toasts above the tray.
+`OffsetMeasured` proves the measured height replaces the token value;
+`PhoneKeepsClear` (UploadTray) that the page's last control is never under
+the tray's bar; `WithToasts` the toasts above the panel; `FocusClear`,
+`FocusClearInScroller` and `FocusClearTall` that a focused field stays
+16px clear of the bars; and `FocusClearOfHeader` (PageHeader) the same
+under the stuck header.
+
+**Revisit after use** (section 13.3 item 4, risk R7). On a phone the
+tray's bar and the save bar stack, as the owner settled open question 3:
+with the tab bar, a dirty save bar of one line of buttons (100px at 375 in
+Rounded, spec correction 80), the tray's 48px bar and a toast, the stack
+can take a third of a 640px-tall screen. The alternative, an uploads badge
+inside the save bar, stays open until the first consumer has used its
+review page on a phone.
+
+**Screen readers and devices.** Not yet verified (owner action 4): on a
+real phone, the tray's bar above the tab bar and above a save bar, and a
+focused field scrolled clear of both.

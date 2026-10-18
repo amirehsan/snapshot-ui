@@ -611,7 +611,7 @@ test('the installation page explains the server face and the date library', asyn
 test('the chart pages name the core version charts needs', async ({ page }) => {
   for (const slug of ['line-chart', 'sparkline']) {
     await visit(page, `/docs/charts/${slug}`);
-    await expect(page.locator('main'), slug).toContainText('0.6 for charts 0.1.3');
+    await expect(page.locator('main'), slug).toContainText('0.7 for charts 0.1.4');
   }
 });
 
@@ -622,6 +622,20 @@ test('the routing page names the tabs and the page links among the parts that na
   await expect(section.locator('a[href="/docs/components/tabs"]')).toHaveCount(1);
   await expect(section.locator('a[href="/docs/components/pagination"]')).toHaveCount(1);
   await expect(section.locator('a[href="/docs/components/data-table"]')).toHaveCount(1);
+  await expect(section.locator('a[href="/docs/components/breadcrumbs"]')).toHaveCount(1);
+  await expect(section.locator('a[href="/docs/components/upload-tray"]')).toHaveCount(1);
+  await expect(section).not.toContainText('when they ship');
+});
+
+test('the installation page names the documents parts, static and client, and the floating slot', async ({
+  page,
+}) => {
+  await visit(page, '/docs/installation');
+  const section = guideSection(page, 'Next.js server components');
+  await expect(section).toHaveCount(1);
+  for (const text of ['ProgressBar', 'PageHeader', 'UploadTray', 'floating', 'FileDropZone', 'Breadcrumbs']) {
+    await expect(section, text).toContainText(text);
+  }
 });
 
 test('the installation page names EmptyState and Skeleton among the static parts and DataTable among the client ones', async ({
@@ -3200,7 +3214,7 @@ test('the installation page installs the charts package and names the core versi
   const section = page
     .locator('.docs-section')
     .filter({ has: page.getByRole('heading', { name: 'Charts', exact: true }) });
-  await expect(section).toContainText('0.6 for charts 0.1.3');
+  await expect(section).toContainText('0.7 for charts 0.1.4');
   await expect(section.getByRole('link', { name: 'Line chart', exact: true })).toHaveAttribute(
     'href',
     '/docs/charts/line-chart',
@@ -4243,3 +4257,209 @@ for (const width of [1024, 1440]) {
     expect(await focusedDrawnKey(page)).toBe('t1');
   });
 }
+
+// ---- The Documents recipe -----------------------------------------------------------------------
+
+const RECIPE_PAGE = '/docs/components/upload-tray';
+
+/** The recipe's stage: the only example on the upload tray page with a page header. */
+const documentsRecipe = (page: Page): Locator =>
+  page.locator('.stage').filter({ has: page.locator('.page-header') });
+
+interface RecipeFile {
+  name: string;
+  mimeType: string;
+  buffer: Buffer;
+}
+
+/** A file the simulated server saves, one it reads without a total ("blurry"), and one over 10 MB it refuses. */
+const SAVED_FILE: RecipeFile = {
+  name: 'receipt-march.pdf',
+  mimeType: 'application/pdf',
+  buffer: Buffer.from('%PDF'),
+};
+const REVIEW_FILE: RecipeFile = {
+  name: 'blurry-receipt.jpg',
+  mimeType: 'image/jpeg',
+  buffer: Buffer.from('jpeg'),
+};
+const LARGE_FILE: RecipeFile = {
+  name: 'statement-large.pdf',
+  mimeType: 'application/pdf',
+  buffer: Buffer.alloc(11 * 1024 * 1024),
+};
+
+/** Chooses `files` through the recipe's Upload button and its file picker, as a reader does. */
+const uploadThroughButton = async (page: Page, files: RecipeFile[]): Promise<void> => {
+  const chooser = page.waitForEvent('filechooser');
+  await documentsRecipe(page).getByRole('button', { name: 'Upload', exact: true }).click();
+  await (await chooser).setFiles(files);
+};
+
+/** The wide tray's row for a file. */
+const trayRow = (page: Page, name: string): Locator =>
+  page.locator('.upload-tray .upload-row').filter({ hasText: name });
+
+/** The simulated upload and reading take under 4 seconds a file; a busy runner gets more. */
+const SETTLE = { timeout: 15_000 };
+
+test('the documents recipe uploads chosen files to saved, needs review and failed, and retries one', async ({
+  page,
+}) => {
+  await visit(page, RECIPE_PAGE);
+  await uploadThroughButton(page, [SAVED_FILE, REVIEW_FILE, LARGE_FILE]);
+  const tray = page.locator('.upload-tray');
+  await expect(tray).toBeVisible();
+  await expect(trayRow(page, 'receipt-march')).toHaveAttribute('data-status', 'saved', SETTLE);
+  await expect(trayRow(page, 'blurry-receipt')).toHaveAttribute('data-status', 'review', SETTLE);
+  await expect(trayRow(page, 'blurry-receipt')).toContainText('The total could not be read');
+  const failed = trayRow(page, 'statement-large');
+  await expect(failed).toHaveAttribute('data-status', 'failed', SETTLE);
+  await expect(failed).toContainText('Over 10 MB');
+  await expect(tray.locator('.upload-tray-title')).toHaveText('1 upload complete, 1 failed, 1 needs review');
+  // A saved file is a document now: its name links there, and it joins the page's list.
+  await expect(trayRow(page, 'receipt-march').getByRole('link')).toHaveAttribute('href', /[?]doc=upload-/);
+  await expect(documentsRecipe(page).getByRole('link', { name: 'receipt-march', exact: true })).toHaveCount(
+    1,
+  );
+  // Retry starts the failed one again, and the server refuses it again.
+  await page.getByRole('button', { name: 'Retry statement-large.pdf', exact: true }).click();
+  await expect(failed).toHaveAttribute('data-status', /waiting|uploading|reading/);
+  await expect(failed).toHaveAttribute('data-status', 'failed', SETTLE);
+});
+
+test('a file dropped on the recipe page joins the tray', async ({ page }) => {
+  await visit(page, RECIPE_PAGE);
+  const stage = documentsRecipe(page);
+  await stage.locator('.switch-text', { hasText: 'Drop anywhere on this page' }).click();
+  await expect(stage.getByRole('switch', { name: 'Drop anywhere on this page' })).toBeChecked();
+  // A drag holding a PDF enters the page, and the overlay is drawn under it. The transfer is made in the page and
+  // allows every operation, as a drag from another app does (the drop spike's finding).
+  await page.evaluate(() => {
+    const data = new DataTransfer();
+    data.items.add(new File(['%PDF'], 'invoice.pdf', { type: 'application/pdf' }));
+    Object.defineProperty(data, 'effectAllowed', { value: 'all' });
+    (window as unknown as { drag: DataTransfer }).drag = data;
+    document.body.dispatchEvent(
+      new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: data }),
+    );
+  });
+  const overlay = page.locator('.page-drop-zone');
+  await expect(overlay).toHaveCount(1);
+  // The overlay takes the drag and its drop.
+  await overlay.evaluate((element) => {
+    const data = (window as unknown as { drag: DataTransfer }).drag;
+    for (const type of ['dragenter', 'dragover', 'drop']) {
+      element.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }));
+    }
+  });
+  await expect(overlay).toHaveCount(0);
+  await expect(trayRow(page, 'invoice')).toHaveCount(1);
+  await expect(trayRow(page, 'invoice')).toHaveAttribute('data-status', 'saved', SETTLE);
+  expect(page.url()).toMatch(new RegExp(`${RECIPE_PAGE}$`));
+});
+
+test('the tray survives a client navigation to a document and back', async ({ page }) => {
+  await visit(page, RECIPE_PAGE);
+  await uploadThroughButton(page, [SAVED_FILE, LARGE_FILE]);
+  await expect(trayRow(page, 'receipt-march')).toHaveAttribute('data-status', 'saved', SETTLE);
+  await expect(trayRow(page, 'statement-large')).toHaveAttribute('data-status', 'failed', SETTLE);
+  const fold = page.locator('.upload-tray-fold');
+  await expect(fold).toHaveAttribute('aria-expanded', 'true');
+  // A client navigation keeps the page's window: a full load would lose this mark.
+  await page.evaluate(() => {
+    (window as unknown as { kept: boolean }).kept = true;
+  });
+  const kept = (): Promise<boolean | undefined> =>
+    page.evaluate(() => (window as unknown as { kept?: boolean }).kept);
+  await trayRow(page, 'receipt-march').getByRole('link').click();
+  await expect(page).toHaveURL(/[?]doc=upload-\d+$/);
+  const stage = documentsRecipe(page);
+  await expect(stage.getByRole('heading', { level: 2, name: 'receipt-march', exact: true })).toBeVisible();
+  expect(await kept()).toBe(true);
+  // The tray is as it was, with both rows; fold it here.
+  await expect(page.locator('.upload-tray .upload-row')).toHaveCount(2);
+  await fold.click();
+  await expect(fold).toHaveAttribute('aria-expanded', 'false');
+  // Back to the Documents page: the tray is still folded and still holds both rows.
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`${RECIPE_PAGE}$`));
+  await expect(stage.getByRole('heading', { level: 2, name: 'Documents', exact: true })).toBeVisible();
+  expect(await kept()).toBe(true);
+  await expect(fold).toHaveAttribute('aria-expanded', 'false');
+  await fold.click();
+  await expect(page.locator('.upload-tray .upload-row')).toHaveCount(2);
+});
+
+test.describe('the recipe on a phone', () => {
+  test.use({ viewport: { width: 375, height: 667 } });
+
+  test('the tray is a bar on a phone that opens its sheet', async ({ page }) => {
+    await visit(page, RECIPE_PAGE);
+    await uploadThroughButton(page, [SAVED_FILE]);
+    const bar = page.locator('.upload-tray-bar');
+    await expect(bar).toBeVisible();
+    await expect(page.locator('.upload-tray')).toBeHidden();
+    const button = bar.locator('.upload-tray-bar-button');
+    await expect(button).toHaveText('1 upload complete', SETTLE);
+    await button.click();
+    const sheet = page.getByRole('dialog', { name: '1 upload complete' });
+    await expect(sheet).toBeVisible();
+    // Focus moves in once the sheet has scrolled in; then it has stopped moving.
+    await expect(sheet).toBeFocused();
+    await expect(page.locator('.upload-tray-sheet')).not.toHaveAttribute('data-entering');
+    await expect(sheet.locator('.upload-row[data-status="saved"]')).toHaveCount(1);
+    expect(await sideways(page)).toBe(0);
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+    await expect(button).toBeFocused();
+  });
+});
+
+test("the review page's save bar asks before Cancel while dirty, and its action moves to the next document and its heading", async ({
+  page,
+}) => {
+  await visit(page, RECIPE_PAGE);
+  const stage = documentsRecipe(page);
+  await stage.getByRole('link', { name: 'Statement, September', exact: true }).click();
+  await expect(page).toHaveURL(/[?]doc=statement-september$/);
+  const bar = stage.locator('.save-bar');
+  await expect(bar).toContainText('Statement, September, 3 lines');
+  // A changed memo makes the bar dirty, and Cancel asks first.
+  const memo = stage.getByRole('textbox', { name: 'Memo Line 1', exact: true });
+  await memo.fill('Corner Mart, groceries');
+  await expect(bar).toContainText('Unsaved changes');
+  await expect(bar).toContainText('1 change to Statement, September');
+  await bar.getByRole('button', { name: 'Cancel', exact: true }).click();
+  const question = page.getByRole('alertdialog', { name: 'Discard changes?' });
+  await expect(question).toBeVisible();
+  await question.getByRole('button', { name: 'Keep editing', exact: true }).click();
+  await expect(question).toHaveCount(0);
+  await expect(memo).toHaveValue('Corner Mart, groceries');
+  // The action saves and opens the next document to review, with focus on its heading.
+  await bar.getByRole('button', { name: 'Confirm and review next (1 left)', exact: true }).click();
+  await expect(page).toHaveURL(/[?]doc=receipt-corner-mart$/);
+  await expect(
+    stage.getByRole('heading', { level: 2, name: 'Receipt, Corner Mart', exact: true }),
+  ).toBeFocused();
+  // The last one to review goes back to the Documents page, where both now read reviewed.
+  await stage.locator('.save-bar').getByRole('button', { name: 'Confirm', exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`${RECIPE_PAGE}$`));
+  await expect(stage.getByRole('heading', { level: 2, name: 'Documents', exact: true })).toBeFocused();
+  await expect(stage.locator('li', { hasText: 'Statement, September' })).toContainText('Reviewed');
+  await expect(stage.locator('li', { hasText: 'Receipt, Corner Mart' })).toContainText('Reviewed');
+});
+
+test('closing the page while files upload asks first', async ({ page }) => {
+  await visit(page, RECIPE_PAGE);
+  await uploadThroughButton(page, [LARGE_FILE]);
+  await expect(trayRow(page, 'statement-large')).toHaveAttribute('data-status', /waiting|uploading/);
+  const shown = new Promise<string>((resolve) => {
+    page.once('dialog', (dialog) => {
+      resolve(dialog.type());
+      void dialog.accept();
+    });
+  });
+  await page.close({ runBeforeUnload: true });
+  expect(await shown).toBe('beforeunload');
+});

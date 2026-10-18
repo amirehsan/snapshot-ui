@@ -26,6 +26,112 @@ With no items the tray draws only its status host, which is in the page from the
 
 <Section>
 
+## The Documents recipe
+
+A documents flow with the Next App Router: a Documents page that takes files, a review page for each document, and the uploads in flight, which outlive both. The uploads are the one piece of state that belongs to no page, so they live in a provider in the root layout, beside the shell, and the tray is mounted once, in [AppShell](/docs/components/app-shell#floating)'s `floating` slot:
+
+```tsx
+// app/layout.tsx
+import { AppShell } from '@snapshot-ui/react';
+import '@snapshot-ui/core/styles.css';
+import { Nav } from './nav';
+import { Tray, UploadsProvider } from './uploads';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <UploadsProvider>
+          <AppShell sidebar={<Nav />} floating={<Tray />}>
+            {children}
+          </AppShell>
+        </UploadsProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+The provider holds the items and does the uploading: one `XMLHttpRequest` a file, since `fetch` reports no upload progress, whose `upload.onprogress` moves the row's bar and whose answer says whether the server saved the file, needs it reviewed or refused it. The words are yours, as is the size, which your own `sizeLabel` writes:
+
+```tsx
+// app/uploads.tsx
+'use client';
+
+import { UploadTray, type UploadItem } from '@snapshot-ui/react';
+import { createContext, use, useRef, useState } from 'react';
+
+const Uploads = createContext<UploadsValue | null>(null);
+
+export function UploadsProvider({ children }: { children: React.ReactNode }) {
+  const [items, setItems] = useState<UploadItem[]>([]);
+  const requests = useRef(new Map<string, XMLHttpRequest>());
+  const put = (id: string, patch: Partial<UploadItem>) =>
+    setItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+
+  const send = (id: string, file: File) => {
+    const request = new XMLHttpRequest();
+    requests.current.set(id, request);
+    request.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      put(id, { status: 'uploading', progress: event.loaded / event.total, progressLabel: sizeLabel(event.loaded, event.total) });
+    };
+    // Every byte is sent: the server is reading the file now, and the row's bar slides.
+    request.upload.onload = () => put(id, { status: 'reading', progress: undefined });
+    request.onload = () => {
+      requests.current.delete(id);
+      const answer = JSON.parse(request.responseText) as { status: 'saved' | 'review' | 'failed'; reason?: string; documentId?: string };
+      put(id, { status: answer.status, reason: answer.reason, href: answer.documentId && `/documents/${answer.documentId}` });
+    };
+    request.onerror = () => put(id, { status: 'failed', reason: 'The connection dropped' });
+    request.open('POST', '/api/documents');
+    request.send(file);
+  };
+
+  const add = (files: File[]) => {
+    const added = files.map((file) => ({ id: crypto.randomUUID(), name: file.name, status: 'waiting' as const, file }));
+    setItems((current) => [...added.map(({ file, ...item }) => item), ...current]);
+    for (const { id, file } of added) send(id, file);
+  };
+  const cancel = (id: UploadItem['id']) => {
+    requests.current.get(String(id))?.abort();
+    setItems((current) => current.filter((item) => item.id !== id));
+  };
+  // retry, remove, clear and cancelAll follow the same pattern.
+  return <Uploads value={{ items, add, cancel /* ... */ }}>{children}</Uploads>;
+}
+
+// The tray in the shell's floating slot, and the pages' Upload buttons and page zones, read the provider.
+export function Tray() {
+  const uploads = use(Uploads)!;
+  return (
+    <UploadTray
+      items={uploads.items}
+      onRetry={uploads.retry}
+      onRemove={uploads.remove}
+      onCancel={uploads.cancel}
+      onClear={uploads.clear}
+      onCancelAll={uploads.cancelAll}
+    />
+  );
+}
+```
+
+The library never reads or sends a file, so the check in the drop zone and the button is a courtesy to the reader. Check every file again on your server: its size, and its type by its content rather than its name or the type the browser sent, since a renamed file passes any check by its name (OWASP's File Upload Cheat Sheet). Store it under a name of your own, out of the web root.
+
+- The Documents page puts a `PageHeader` at its top with an Upload `FileButton` in its actions, and a `PageDropZone` at its root, so a file dropped anywhere on the page joins the tray; the button is the drop's keyboard twin. Both call the provider's `add`.
+- A row's `href`, once the server has read the file, is its document's page, so the name links there through your `RouterProvider`. A client navigation keeps the root layout, and with it the shell, the tray, its items, its scroll and whether it is folded.
+- A document's page is its own URL, so a review can be shared and reloaded. It holds a review grid, a `DatePicker`, a `NumberField` and a `TextField` for each line, and a `SaveBar` under it. The bar's action saves, moves on to the next document with `router.push` and gives focus to that document's heading, so a keyboard or screen reader user starts the next review at its title. Its Cancel asks before throwing the edits away while they are unsaved.
+- The tray warns before the tab closes or reloads while files are waiting or uploading; moving between documents is a client navigation, and needs no warning.
+
+The example below is the same flow in one client component, since this site is static and makes no request: timers stand in for the request and for the server's reading, the two pages are `?doc=` on this page's URL, and the tray sits at the example's root, outside both, as the shell's `floating` slot does. Press Upload and choose a few PDFs or photos: each waits, uploads, is read, and ends saved. A file over 10 MB fails ("Over 10 MB"), and Retry starts it again; a file whose name holds "blurry" needs review ("The total could not be read"). Open a document from its row or from the list, change a line, and confirm: the next document opens with focus on its heading, and the tray stays as it was. Turn the switch on and drop files anywhere on the page.
+
+<Preview name="documents-recipe" />
+
+</Section>
+
+<Section>
+
 ## Usage
 
 The library never uploads. Your app holds the files in a provider in its root layout, sends each one, and gives the tray each file's status, progress and words; the tray draws and announces. Mount `<UploadTray>` in [AppShell](/docs/components/app-shell#floating)'s `floating` slot from that layout, so a client navigation keeps it, with its scroll and its folded state, while the reader opens the documents it links to.

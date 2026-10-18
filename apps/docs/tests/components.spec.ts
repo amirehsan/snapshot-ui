@@ -620,6 +620,34 @@ test.describe('forced colors', () => {
     expect(await icon.evaluate((element) => getComputedStyle(element).color)).toBe(text);
   });
 
+  test("the recipe's failed row and current crumb keep their words and colors", async ({ page }) => {
+    // The Documents recipe on the same page: a file over 10 MB fails in the tray, whose row keeps its word and
+    // its icon's shape in the reader's text color; the trail's current page is text in that color too.
+    await visit(page, '/docs/components/upload-tray');
+    const text = await systemColor(page, 'CanvasText');
+    const recipe = page.locator('.stage').filter({ has: page.locator('.page-header') });
+    const current = recipe.locator('.breadcrumbs-current');
+    await expect(current).toHaveText('Documents');
+    expect(await current.evaluate((element) => getComputedStyle(element).color)).toBe(text);
+    const chooser = page.waitForEvent('filechooser');
+    await recipe.getByRole('button', { name: 'Upload', exact: true }).click();
+    await (
+      await chooser
+    ).setFiles({
+      name: 'statement-large.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.alloc(11 * 1024 * 1024),
+    });
+    const row = page.locator('.upload-tray .upload-row[data-status="failed"]');
+    await expect(row).toHaveCount(1, { timeout: 15_000 });
+    await expect(row.locator('.upload-row-word')).toHaveText('Failed');
+    await expect(row.locator('.upload-row-word')).toBeVisible();
+    await expect(row).toContainText('Over 10 MB');
+    const icon = row.locator('.upload-row-icon svg');
+    await expect(icon).toBeVisible();
+    expect(await icon.evaluate((element) => getComputedStyle(element).color)).toBe(text);
+  });
+
   test('a line chart draws its first line CanvasText, its second GrayText, and its crosshair Highlight', async ({
     page,
   }) => {

@@ -56,6 +56,7 @@ import DensityControls from './density-controls';
 import DialogBasic from './dialog-basic';
 import DialogDanger from './dialog-danger';
 import DialogLong from './dialog-long';
+import DocumentsRecipe from './documents-recipe';
 import DrawerEnd from './drawer-end';
 import DrawerNavigation from './drawer-navigation';
 import EmptyStateBasic from './empty-state-basic';
@@ -231,6 +232,7 @@ export const examples = {
   'dialog-basic': DialogBasic,
   'dialog-danger': DialogDanger,
   'dialog-long': DialogLong,
+  'documents-recipe': DocumentsRecipe,
   'drawer-end': DrawerEnd,
   'drawer-navigation': DrawerNavigation,
   'empty-state-basic': EmptyStateBasic,
