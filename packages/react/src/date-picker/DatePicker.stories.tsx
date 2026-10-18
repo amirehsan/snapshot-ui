@@ -540,9 +540,12 @@ export const Keys: Story = {
   },
 };
 
-/** Closing on a day, on a preset and on Escape gives focus back to the button that opened the calendar. */
+/**
+ * Closing on a day, on a preset and on Escape gives focus back to the button that opened the calendar. Three
+ * engines: each check waits, as an engine may give focus back a frame after the popover leaves.
+ */
 export const CloseReturnsFocus: Story = {
-  tags: ['no-visual'],
+  tags: ['no-visual', 'webkit', 'firefox'],
   render: () => <DatePicker label="Date" today={TODAY} presets={PRESETS} onChange={change} />,
   play: async ({ canvas, canvasElement }) => {
     change.mockClear();
@@ -554,20 +557,22 @@ export const CloseReturnsFocus: Story = {
     if (!seventh) throw new Error('No 7th');
     await userEvent.click(seventh);
     await closed();
-    await expect(change).toHaveBeenLastCalledWith('2026-10-07');
-    await expect(button).toHaveFocus();
+    await waitFor(() => expect(change).toHaveBeenLastCalledWith('2026-10-07'));
+    await waitFor(() => expect(button).toHaveFocus());
     await userEvent.click(button);
     popover = await atRest();
     await userEvent.click(within(popover).getByRole('button', { name: 'Yesterday' }));
     await closed();
-    await expect(change).toHaveBeenLastCalledWith('2026-10-15');
-    await expect(button).toHaveFocus();
-    await expect(segments(canvasElement).map((each) => each.textContent)).toEqual(['10', '15', '2026']);
+    await waitFor(() => expect(change).toHaveBeenLastCalledWith('2026-10-15'));
+    await waitFor(() => expect(button).toHaveFocus());
+    await waitFor(() =>
+      expect(segments(canvasElement).map((each) => each.textContent)).toEqual(['10', '15', '2026']),
+    );
     await userEvent.click(button);
     await atRest();
     await userEvent.keyboard('{Escape}');
     await closed();
-    await expect(button).toHaveFocus();
+    await waitFor(() => expect(button).toHaveFocus());
   },
 };
 

@@ -2681,10 +2681,10 @@ export const MoreReadsDrawnButtons: Story = {
 
 /**
  * A promoted button that the bar's narrowing hides while it has focus hands focus to More, which now holds its
- * action, never to the page.
+ * action, never to the page. Three engines.
  */
 export const BarNarrowsUnderFocus: Story = {
-  tags: ['no-visual'],
+  tags: ['no-visual', 'webkit', 'firefox'],
   render: () => <ResizableBulk />,
   play: async ({ canvasElement }) => {
     const box = only(canvasElement, '.data-table').parentElement;
@@ -2841,10 +2841,10 @@ function ClickAwayBulk(): ReactElement {
 /**
  * Focus the reader moved out of the bar stays where they put it (spec correction 111): a press on Export, then on
  * plain text above the table, leaves focus on the page, and neither the bar narrowing past 40rem nor Export
- * disabling takes it back to More or the next control.
+ * disabling takes it back to More or the next control. Three engines.
  */
 export const BarClickedAway: Story = {
-  tags: ['no-visual'],
+  tags: ['no-visual', 'webkit', 'firefox'],
   render: () => <ClickAwayBulk />,
   play: async ({ canvasElement }) => {
     const box = only(canvasElement, '.data-table').parentElement;
