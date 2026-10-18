@@ -614,3 +614,51 @@ describe('ComboBox', () => {
     expect([withSelectedKey, withOnSelectionChange, nameless, byAriaLabel]).toHaveLength(4);
   });
 });
+
+describe('ComboBox, changed with no label', () => {
+  it('marks a changed field with no label, and reads the mark after its name', async () => {
+    const { container, rerender } = render(
+      <ComboBox aria-label="Merchant, Row 1" isChanged>
+        <PickerOption id="mart">Corner Mart</PickerOption>
+      </ComboBox>,
+    );
+    const field = container.querySelector('.combo-box');
+    expect(field).toHaveAttribute('data-changed');
+    expect(field).toHaveAttribute('data-unlabelled', '');
+    const mark = container.querySelector('.field-changed-mark');
+    expect(mark).toHaveTextContent('Changed');
+    const control = screen.getByRole('combobox', { name: 'Merchant, Row 1' });
+    // In the control, after the field button.
+    expect(mark?.parentElement).toHaveClass('combo-box-control');
+    expect(mark?.previousElementSibling).toHaveClass('combo-box-button');
+    // React Aria's own descriptions come first, the chosen value or range; the mark's word ends it.
+    expect(control).toHaveAccessibleDescription(/(^| )Changed$/);
+    expect(control.getAttribute('aria-describedby')?.split(' ')).toContain(mark?.id);
+    expect(container.querySelector('.field-changed')).toBeNull();
+    await expectNoA11yViolations(container);
+    // With a label the chip says it, and no mark is drawn.
+    rerender(
+      <ComboBox label="Merchant" isChanged>
+        <PickerOption id="mart">Corner Mart</PickerOption>
+      </ComboBox>,
+    );
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    expect(container.querySelector('.field-changed')).not.toBeNull();
+    expect(container.querySelector('.combo-box')).not.toHaveAttribute('data-unlabelled');
+  });
+
+  it('drops the mark while invalid', () => {
+    const { container } = render(
+      <ComboBox aria-label="Merchant, Row 1" isChanged isInvalid errorMessage="Choose a merchant.">
+        <PickerOption id="mart">Corner Mart</PickerOption>
+      </ComboBox>,
+    );
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    // Nothing names a mark that is gone.
+    for (const described of container.querySelectorAll('[aria-describedby]')) {
+      for (const id of described.getAttribute('aria-describedby')?.split(' ') ?? []) {
+        expect(document.getElementById(id), id).not.toBeNull();
+      }
+    }
+  });
+});

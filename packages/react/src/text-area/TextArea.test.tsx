@@ -280,12 +280,13 @@ describe('TextArea', () => {
     );
   });
 
-  it('draws no chip for a field without a label row', () => {
+  it('draws no chip for a field without a label row, and the changed mark instead', () => {
     const { container } = render(<TextArea aria-label="Notes" isChanged />);
     expect(root(container)).toHaveAttribute('data-changed', '');
     expect(container.querySelector('.field-head')).toBeNull();
-    expect(screen.queryByText('Changed')).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox')).not.toHaveAttribute('aria-describedby');
+    expect(container.querySelector('.field-changed')).toBeNull();
+    expect(screen.getByText('Changed')).toHaveClass('field-changed-mark');
+    expect(screen.getByRole('textbox')).toHaveAccessibleDescription('Changed');
   });
 
   it('lets invalid outrank changed: the chip is gone and no longer announced', async () => {
@@ -552,5 +553,45 @@ describe('TextArea', () => {
   ] satisfies [string, Partial<TextAreaProps>][])('has no axe violations when %s', async (_state, props) => {
     const { container } = render(<TextArea label="Short description" {...props} />);
     await expectNoA11yViolations(container);
+  });
+});
+
+describe('TextArea, changed with no label', () => {
+  it('marks a changed field with no label, and reads the mark after its name', async () => {
+    const { container, rerender } = render(
+      <TextArea aria-label="Note, Corner Mart" defaultValue="Milk" isChanged />,
+    );
+    const field = root(container);
+    expect(field).toHaveAttribute('data-changed');
+    expect(field).toHaveAttribute('data-unlabelled', '');
+    const mark = container.querySelector('.field-changed-mark');
+    expect(mark).toHaveTextContent('Changed');
+    const control = screen.getByRole('textbox', { name: 'Note, Corner Mart' });
+    // The text area is the frame and holds no element, so the mark is the field's next child after it.
+    expect(mark?.previousElementSibling).toHaveClass('input', 'textarea');
+    expect(mark?.parentElement).toBe(field);
+    // React Aria's own descriptions come first, the chosen value or range; the mark's word ends it.
+    expect(control).toHaveAccessibleDescription(/(^| )Changed$/);
+    expect(control.getAttribute('aria-describedby')?.split(' ')).toContain(mark?.id);
+    expect(container.querySelector('.field-changed')).toBeNull();
+    await expectNoA11yViolations(container);
+    // With a label the chip says it, and no mark is drawn.
+    rerender(<TextArea label="Note" defaultValue="Milk" isChanged />);
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    expect(container.querySelector('.field-changed')).not.toBeNull();
+    expect(root(container)).not.toHaveAttribute('data-unlabelled');
+  });
+
+  it('drops the mark while invalid', () => {
+    const { container } = render(
+      <TextArea aria-label="Note, Corner Mart" isChanged isInvalid errorMessage="Keep it short." />,
+    );
+    expect(container.querySelector('.field-changed-mark')).toBeNull();
+    // Nothing names a mark that is gone.
+    for (const described of container.querySelectorAll('[aria-describedby]')) {
+      for (const id of described.getAttribute('aria-describedby')?.split(' ') ?? []) {
+        expect(document.getElementById(id), id).not.toBeNull();
+      }
+    }
   });
 });

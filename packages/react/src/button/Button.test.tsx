@@ -82,6 +82,21 @@ describe('Button', () => {
     expect(button).not.toHaveAttribute('aria-labelledby');
   });
 
+  it('keeps the label’s id at rest, so a pending sentence React Aria said by it still resolves', () => {
+    const { rerender } = render(
+      <Button isPending pendingLabel="Saving">
+        Save
+      </Button>,
+    );
+    const label = document.querySelector('.button-label');
+    const id = label?.id ?? '';
+    expect(id).not.toBe('');
+    expect(screen.getByRole('button').getAttribute('aria-labelledby')?.split(' ')).toContain(id);
+    rerender(<Button pendingLabel="Saving">Save</Button>);
+    expect(document.getElementById(id)).toBe(label);
+    expect(label).toHaveTextContent('Save');
+  });
+
   it('keeps a name given by attribute, and adds the pending label to it', () => {
     render(
       <>

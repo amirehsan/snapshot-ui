@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -14,16 +15,17 @@ import {
   type Ref,
   type SyntheticEvent,
 } from 'react';
-import { useFilter, useLocale, type Key, type Selection } from 'react-aria-components';
+import { useFilter, useLocale, type Key, type Selection, type TableState } from 'react-aria-components';
 import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
 import { present } from '../utils/present';
 import { useWarnOnce } from '../utils/useWarnOnce';
-import { BulkBar } from './BulkBar';
+import { BulkBar, MOST_PROMOTED } from './BulkBar';
+import { readBulkActions } from './bulk-actions';
 import { DataTableStatus, useQuiet } from './DataTableStatus';
 import { groupsOf } from './groups';
-import { EDITABLE, handleTableKey, type TableKeyActions } from './keys';
+import { EDITABLE, editorRow, escapeEditor, handleTableKey, type TableKeyActions } from './keys';
 import { ListFace, type ListSelection, type ListSelectionManager } from './ListFace';
 import { selectsOnPress } from './press';
 import { portalOf, watchPortal } from '../overlay/watch-portal';
@@ -51,8 +53,8 @@ export interface DataTableColumn<T> {
   width?: string;
   /**
    * The column leaves the table face when DataTable's own box is narrower than 48rem: a container width, not a
-   * breakpoint. Under 40rem the list face is drawn instead, where `listSlot` places every column. The row header
-   * never leaves.
+   * breakpoint. Under 40rem, or the table's `listBelow`, the list face is drawn instead, where `listSlot` places
+   * every column. The row header never leaves.
    */
   hideBelow?: 'md';
   /** The totals row's cell for this column. */
@@ -75,8 +77,8 @@ export interface DataTableColumn<T> {
    */
   isHeaderHidden?: boolean;
   /**
-   * Where the cell goes in an item of the list face, the face drawn under 40rem of the table's own box: on its
-   * first line, on its second line in slate, at its end, or nowhere.
+   * Where the cell goes in an item of the list face, the face drawn under 40rem of the table's own box (or its
+   * `listBelow`): on its first line, on its second line in slate, at its end, or nowhere.
    * @default 'title' for the row header, 'hidden' for every other column
    */
   listSlot?: 'title' | 'meta' | 'end' | 'hidden';
@@ -90,7 +92,7 @@ export interface DataTableLabels {
    * @default 'Select'
    */
   select: string;
-  /** The bar's button that clears the selection. @default 'Clear selection' */
+  /** The bar's X that clears the selection: its name and its tip. @default 'Clear selection' */
   clearSelection: string;
   /** The bar's count, given the count as `formatCount` writes it. @default (count) => `${count} selected` */
   selected: (count: string) => string;
@@ -104,6 +106,27 @@ export interface DataTableLabels {
   selectItems: string;
   /** The same button while the checkboxes show, which hides them and keeps the selection. @default 'Done' */
   doneSelecting: string;
+  /** The bar's More button, which opens the actions it does not show, and its menu's name. @default 'More actions' */
+  moreActions: string;
+}
+
+/** One action of the bulk-action bar's data form: a promoted button, or an item of its More menu. */
+export interface DataTableBulkAction {
+  /** Unique among the actions. */
+  id: string;
+  /** The action's name, on its button and in the More menu. */
+  label: string;
+  /** A 16px Lucide icon, drawn before the label on a button and in the menu, hidden from assistive technology. */
+  icon?: ReactNode;
+  /** Runs the action. Receives the selected keys present in `items`. */
+  onAction: (keys: Key[]) => void;
+  /**
+   * A button in the bar while it has room; the rest are in More. At most three are drawn as buttons; a fourth
+   * warns and goes to More. Under 40rem of the bar every action is in More.
+   * @default false
+   */
+  isPromoted?: boolean;
+  isDisabled?: boolean;
 }
 
 /** Selection: both props or neither. */
@@ -168,8 +191,21 @@ export interface DataTableShared<T> {
    * It wins over `isLoading` and `emptyState`.
    */
   error?: ReactNode;
-  /** The bulk-action bar's buttons, shown while any row is selected, before Clear selection. */
-  bulkActions?: ReactNode;
+  /**
+   * The bulk-action bar's actions, shown while any row is selected: data, which the bar lays out as up to three
+   * promoted buttons and a More menu that never wraps, or the app's own buttons as a node, drawn as they are.
+   */
+  bulkActions?: ReactNode | readonly DataTableBulkAction[];
+  /** After the bar's count: the app's "Select all 1,240 matching" button, or what it says once pressed. */
+  selectAllMatching?: ReactNode;
+  /**
+   * The width of the table's own box under which the list face is drawn in place of the table: a container
+   * width, not a breakpoint. `'32rem'` keeps the table beside an open SidePanel, when the columns that stay under
+   * 48rem (the row header and those without `hideBelow`) fit in 32rem; every phone held upright still draws the
+   * list.
+   * @default '40rem'
+   */
+  listBelow?: '40rem' | '32rem';
   /** How the bar writes its count, such as in Persian digits. @default String */
   formatCount?: (count: number) => string;
   /** The words the table writes itself, each with an English default. */
@@ -195,6 +231,7 @@ const DEFAULT_LABELS: DataTableLabels = {
   toolbar: 'Bulk actions',
   selectItems: 'Select',
   doneSelecting: 'Done',
+  moreActions: 'More actions',
 };
 
 /** Whether React Aria's selection holds exactly `keys`, so it can go back to React Aria with its anchor. */
@@ -216,6 +253,10 @@ function shownGrid(root: HTMLElement | null): HTMLElement | null {
   }
   return null;
 }
+
+/** Whether focus has fallen to the page: on the body, or nowhere. */
+const fallenFocus = (document: Document): boolean =>
+  document.activeElement === null || document.activeElement === document.body;
 
 /** The row whose checkbox `target` is in, inside `root`; null for the select-all box and anything else. */
 function rowOfBox(target: Element, root: Element): Element | null {
@@ -272,6 +313,8 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     selectedKeys,
     onSelectionChange,
     bulkActions,
+    selectAllMatching,
+    listBelow = '40rem',
     formatCount = String,
     isLoading = false,
     loadingRowCount = 8,
@@ -315,6 +358,52 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   /** The manager of the face `element` is in. */
   const managerOf = (element: Element): FaceSelectionManager | null =>
     element.closest('.data-table-list') === null ? manager.current : listManager.current;
+  // React Aria's table state, whose keyboard navigation is off while an editable element in a cell has focus.
+  const tableState = useRef<TableState<unknown> | null>(null);
+  const onTableState = useCallback((next: TableState<unknown> | null) => {
+    tableState.current = next;
+  }, []);
+  // Whether an editable element in a list item has focus: the list's items then leave their children's arrows
+  // alone, as the table's cells do while its navigation is off (spec correction 67).
+  const [listEditing, setListEditing] = useState(false);
+  /**
+   * Lets an editable element in a cell or a list item keep its arrows while it has focus, and gives them back to
+   * the grid or the list once focus is anywhere else. `target` is the focused element, or null once focus is out.
+   */
+  const editableKeys = useCallback((target: Element | null): void => {
+    const row = editorRow(target);
+    const inList = row?.closest('.data-table-list') != null;
+    setListEditing(inList);
+    const state = tableState.current;
+    if (state === null) return;
+    const editing = row !== null && !inList;
+    if (state.isKeyboardNavigationDisabled !== editing) state.setKeyboardNavigationDisabled(editing);
+  }, []);
+  // The switch turns back on from focus events: an engine that fires no blur when a focused editor is removed or
+  // hidden would leave the arrows off, so focus is checked again whenever the rows change and whenever anything
+  // on the page takes focus (spec correction 69).
+  const recheckEditing = useCallback((): void => {
+    const root = rootRef.current;
+    if (root === null) return;
+    const active = root.ownerDocument.activeElement;
+    editableKeys(active !== null && root.contains(active) ? active : null);
+  }, [editableKeys]);
+  useLayoutEffect(() => {
+    recheckEditing();
+    // React Aria draws the rows of a changed collection in a render of its own, after this one: once more then.
+    const frame = requestAnimationFrame(recheckEditing);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [items, recheckEditing]);
+  useEffect(() => {
+    const document = rootRef.current?.ownerDocument;
+    if (document === undefined) return;
+    document.addEventListener('focusin', recheckEditing);
+    return () => {
+      document.removeEventListener('focusin', recheckEditing);
+    };
+  }, [recheckEditing]);
   // Whether the last focus inside the root's DOM was in the bar, which the root's focus capture keeps.
   const focusInBar = useRef(false);
 
@@ -332,20 +421,35 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
   // page: focus the reader has since moved elsewhere stays where it is. When an action opened a dialog or a menu
   // that holds focus as the bar leaves, such as a confirm whose Delete cleared the selection, the table waits
   // for that portal to close and takes focus then, if it fell to the page.
+  // Whether the layout effect below found focus fallen and the grid could not take it yet.
+  const focusLater = useRef(false);
   useLayoutEffect(() => {
     if (hasBar || !focusInBar.current) return;
     focusInBar.current = false;
     const root = rootRef.current;
     if (root === null) return;
-    const active = root.ownerDocument.activeElement;
-    if (active === null || active === root.ownerDocument.body) {
+    const document = root.ownerDocument;
+    if (fallenFocus(document)) {
       shownGrid(root)?.focus();
+      // A menu that leaves with the bar, its More menu, has made the page inert while open, and React Aria takes
+      // that away in its passive cleanup, so the table cannot take focus yet: the passive effect below tries once
+      // more (spec corrections 102 and 113).
+      focusLater.current = fallenFocus(document);
       return;
     }
-    if (root.contains(active)) return;
+    const active = document.activeElement;
+    if (active === null || root.contains(active)) return;
     return watchPortal(root, active, () => {
       shownGrid(root)?.focus();
     });
+  }, [hasBar]);
+  // React runs every passive cleanup of a commit before its passive mount effects, so by now the menu that left in
+  // the same commit has taken the page's `inert` away, and the grid takes focus if it is still on the page.
+  useEffect(() => {
+    if (!focusLater.current) return;
+    focusLater.current = false;
+    const root = rootRef.current;
+    if (root !== null && fallenFocus(root.ownerDocument)) shownGrid(root)?.focus();
   }, [hasBar]);
 
   // React Aria sees only the selected rows it draws, so a selection of stale keys shows no indeterminate header
@@ -481,6 +585,18 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
       ? null
       : `DataTable: selectedKeys holds keys that are not in items: ${stale.map(String).join(', ')}. Clear the selection when the rows change.`,
   );
+  const bulk = readBulkActions(bulkActions);
+  useWarnOnce(
+    bulk.kind === 'data' && bulk.firstInvalid !== null
+      ? `DataTable: bulkActions[${String(bulk.firstInvalid)}] is not an action: each needs a string id, a string label and an onAction function. The bar draws nothing for it.`
+      : null,
+  );
+  const promoted = bulk.kind === 'data' ? bulk.actions.filter((action) => action.isPromoted === true) : [];
+  useWarnOnce(
+    promoted.length > MOST_PROMOTED
+      ? `DataTable: ${String(promoted.length)} bulk actions are promoted; at most three are drawn as buttons. "${promoted[MOST_PROMOTED]?.id ?? ''}" and those after it are in More.`
+      : null,
+  );
   useWarnOnce(
     items.length === 0 && !isLoading && !failed && !present(emptyState)
       ? 'DataTable: the table has no rows and no emptyState. Pass an EmptyState that says what is missing.'
@@ -489,10 +605,14 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
 
   return (
     // The capture handler takes keys before React Aria's grid does (spec 7.2): a capture listener, which
-    // jsx-a11y does not read, so the root needs no role of its own.
+    // jsx-a11y does not read, so the root needs no role of its own. Its one bubble handler is Escape out of an
+    // editor in a cell, after the editor has had it.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- the grid and the list inside are the roles; the root only hears an editor's unused Escape on its way up (spec correction 64)
     <div
       ref={rootRefs}
       className={cx('data-table', className)}
+      // The 40rem switch is the stylesheet's default, so only the other width is written (ruling 24).
+      data-list-below={listBelow === '32rem' ? listBelow : undefined}
       onKeyDownCapture={(event: KeyboardEvent<HTMLDivElement>) => {
         const target = event.target as Element;
         if (
@@ -510,12 +630,14 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         }
         handleTableKey(event, actionsFor(target));
       }}
+      onKeyDown={escapeEditor}
       onFocusCapture={(event: FocusEvent<HTMLDivElement>) => {
         const target = event.target as Element;
         const root = event.currentTarget;
         // Focus in a portal opened from the bar (a Menu) keeps what the bar had.
         if (!root.contains(target)) return;
         focusInBar.current = target.closest('.data-table-bar') !== null;
+        editableKeys(target);
         // A focused row or cell of the body, or a list item, is scrolled clear of the sticky header or day
         // heading and the bar, after React Aria's own scroll, which runs in the next frame (WCAG 2.4.11).
         if (target instanceof HTMLElement && target.closest('tbody, tfoot, .data-table-item') !== null) {
@@ -533,6 +655,8 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         if (next instanceof Element && !event.currentTarget.contains(next)) {
           if (portalOf(next) === portalOf(event.currentTarget)) focusInBar.current = false;
         }
+        // Focus that leaves the table gives the arrows back to the grid; a move inside it is the focus capture's.
+        if (!(next instanceof Element) || !event.currentTarget.contains(next)) editableKeys(null);
       }}
       onPointerDownCapture={guardPress}
       onMouseDownCapture={guardPress}
@@ -575,9 +699,11 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           emptyState={failed ? error : emptyState}
           totalLabel={words.total}
           loadingLabel={words.loading}
+          onState={onTableState}
         />
       </div>
-      {/* The list face, shown instead of the grid under 40rem of the root's box (ruling 8); busy as the grid is. */}
+      {/* The list face, shown instead of the grid under 40rem of the root's box, or 32rem with listBelow (rulings 8
+          and 24); busy as the grid is. */}
       <div
         className="data-table-list"
         aria-busy={loading ? 'true' : undefined}
@@ -595,6 +721,7 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           disabledKeys={disabled}
           disabledBehavior={disabledBehavior}
           selection={listSelection}
+          isEditing={listEditing}
           isLoading={loading && rows.length === 0}
           loadingRowCount={loadingRowCount}
           emptyState={failed ? error : emptyState}
@@ -610,8 +737,11 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
         <BulkBar
           label={words.toolbar}
           count={words.selected(formatCount(counted.length))}
-          actions={bulkActions}
+          actions={bulk.kind === 'data' ? bulk.actions : bulkActions}
+          selectAllMatching={selectAllMatching}
+          keys={counted}
           clearLabel={words.clearSelection}
+          moreLabel={words.moreActions}
           onClear={clear}
         />
       ) : null}

@@ -235,6 +235,18 @@
     max-width: 28rem;
   }
 
+  /* What only a phone draws, such as a "Take a photo" button: a coarse pointer without hover. A desktop browser
+     ignores a file input's capture and opens the file picker, so the button would repeat "Choose a file". */
+  .touch-only {
+    display: none;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .touch-only {
+      display: contents;
+    }
+  }
+
   /* A chart's card up to 40rem: the chart takes the whole width it is given, and the stage centers it. */
   .chart-sample {
     width: 100%;

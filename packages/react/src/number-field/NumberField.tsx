@@ -29,6 +29,7 @@ import {
 } from 'react-aria-components';
 import { Description } from '../field/Description';
 import { FieldError } from '../field/FieldError';
+import { FieldChangedMark } from '../field/FieldChangedMark';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { Input } from '../text-field/Input';
@@ -253,6 +254,8 @@ interface ControlProps {
   /** The app's handlers, called from the guards that stop an event before the input. */
   onKeyDown: AppKeyDown;
   onPaste: AppPaste;
+  /** The changed mark of a field with no label, drawn in the control after the steppers. */
+  mark: ReactNode;
 }
 
 /** The pill: the sign button, the symbol, the input and the steppers, on React Aria's state. */
@@ -269,6 +272,7 @@ function NumberFieldControl({
   isLocked,
   onKeyDown,
   onPaste,
+  mark,
 }: ControlProps): ReactElement {
   const state = useContext(NumberFieldStateContext);
   const hydrated = useHydrated();
@@ -376,6 +380,7 @@ function NumberFieldControl({
           </Button>
         </>
       ) : null}
+      {mark}
     </Group>
   );
 }
@@ -477,11 +482,11 @@ export function NumberField({
     bound === undefined ? undefined : money ? toUnits(bound, digits) : bound;
 
   const inputMode = money || fractionDigitsOf(formatOptions) > 0 ? 'decimal' : 'numeric';
-  const { chipId, describedBy } = useChangedDescription({
-    // Only a label row has a chip, so only a labelled field has one to read.
-    isChanged: isChanged && isLabelled,
+  const { chipId, markId, describedBy } = useChangedDescription({
+    isChanged,
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
+    isLabelled,
   });
   // The symbol's room is its length in ch, a property of the string and not a measurement.
   const room = money ? `calc(${String(money.symbol.length)}ch + 0.5rem)` : undefined;
@@ -536,6 +541,7 @@ export function NumberField({
         isLocked={props.isDisabled === true || props.isReadOnly === true}
         onKeyDown={props.onKeyDown}
         onPaste={props.onPaste}
+        mark={isChanged && !isLabelled ? <FieldChangedMark id={markId} label={changedLabel} /> : null}
       />
       {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>

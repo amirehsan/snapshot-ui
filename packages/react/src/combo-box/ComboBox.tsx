@@ -16,6 +16,7 @@ import {
 } from 'react-aria-components';
 import { Description } from '../field/Description';
 import { FieldError } from '../field/FieldError';
+import { FieldChangedMark } from '../field/FieldChangedMark';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { Popover, type Placement } from '../popover/Popover';
@@ -110,6 +111,8 @@ interface ControlProps {
   inputRef: Ref<HTMLInputElement> | undefined;
   isLoading: boolean;
   labels: PickerLabels;
+  /** The changed mark of a field with no label, after the field button. */
+  children: ReactNode;
 }
 
 /**
@@ -119,7 +122,7 @@ interface ControlProps {
  * It is a plain div and not React Aria's Group, which would bring a group role and a focus-within ring with it
  * (spec correction 7).
  */
-function ComboBoxControl({ placeholder, inputRef, isLoading, labels }: ControlProps): ReactElement {
+function ComboBoxControl({ placeholder, inputRef, isLoading, labels, children }: ControlProps): ReactElement {
   const group = useSlottedContext(GroupContext);
   return (
     <div ref={group?.ref} className="combo-box-control">
@@ -135,6 +138,7 @@ function ComboBoxControl({ placeholder, inputRef, isLoading, labels }: ControlPr
       <Button className="input-button combo-box-button" aria-label={labels.open}>
         <ChevronDown aria-hidden="true" />
       </Button>
+      {children}
     </div>
   );
 }
@@ -206,11 +210,11 @@ export function ComboBox<T extends object = object>({
 }: ComboBoxProps<T>): ReactElement {
   const isLabelled = present(label);
   const words = { ...DEFAULT_LABELS, ...labels };
-  const { chipId, describedBy } = useChangedDescription({
-    // Only a label row has a chip, so only a labelled field has one to read.
-    isChanged: isChanged && isLabelled,
+  const { chipId, markId, describedBy } = useChangedDescription({
+    isChanged,
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
+    isLabelled,
   });
   return (
     <RACComboBox<T>
@@ -224,7 +228,9 @@ export function ComboBox<T extends object = object>({
       className={composeRenderProps(className, (userClassName) => cx('field', 'combo-box', userClassName))}
     >
       {isLabelled ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
-      <ComboBoxControl placeholder={placeholder} inputRef={inputRef} isLoading={isLoading} labels={words} />
+      <ComboBoxControl placeholder={placeholder} inputRef={inputRef} isLoading={isLoading} labels={words}>
+        {isChanged && !isLabelled ? <FieldChangedMark id={markId} label={changedLabel} /> : null}
+      </ComboBoxControl>
       {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
       <ComboBoxPopover<T>

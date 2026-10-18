@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampPage, pageItems, type PageItem } from './pages';
+import { clampPage, pageForSize, pageItems, pageSizesOf, type PageItem } from './pages';
 
 /** The items as a row of words: a page's number, or "…" for a gap. */
 const row = (items: PageItem[]): string =>
@@ -64,5 +64,31 @@ describe('clampPage', () => {
     expect(clampPage(2.7, 26)).toBe(2);
     expect(clampPage(1, 0)).toBe(1);
     expect(clampPage(5, 0)).toBe(1);
+  });
+});
+
+describe('pageForSize', () => {
+  it('keeps the first row of the page in view at the new size', () => {
+    // Page 3 of 25 starts at row 51: at 10 a page, row 51 is on page 6; at 50, on page 2; at 100, on page 1.
+    expect(pageForSize(3, 25, 10)).toBe(6);
+    expect(pageForSize(3, 25, 50)).toBe(2);
+    expect(pageForSize(3, 25, 100)).toBe(1);
+    expect(pageForSize(1, 25, 100)).toBe(1);
+    expect(pageForSize(2, 100, 25)).toBe(5);
+  });
+
+  it('gives page 1 for a page or a size that is not a whole positive number', () => {
+    expect(pageForSize(Number.NaN, 25, 10)).toBe(1);
+    expect(pageForSize(3, 0, 10)).toBe(1);
+    expect(pageForSize(3, 25, 0)).toBe(1);
+  });
+});
+
+describe('pageSizesOf', () => {
+  it('keeps whole positive sizes once each, smallest first, with the current size among them', () => {
+    expect(pageSizesOf([10, 25, 50, 100], 25)).toEqual([10, 25, 50, 100]);
+    expect(pageSizesOf([50, 10, 25, 10], 25)).toEqual([10, 25, 50]);
+    expect(pageSizesOf([10, 25, 50], 30)).toEqual([10, 25, 30, 50]);
+    expect(pageSizesOf([0, -5, 2.5, Number.NaN, 20], 20)).toEqual([20]);
   });
 });

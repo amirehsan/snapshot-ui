@@ -40,6 +40,16 @@
     outline-offset: var(--focus-ring-offset);
   }
 
+  /* The changed dot of a field with no label: a part step before the 36px button, 6px in, and the dates stop a
+     dot and a part step sooner. */
+  .date-range-picker[data-changed][data-unlabelled] {
+    --field-changed-mark-end: calc(0.375rem + 2.25rem + var(--spacing-part));
+  }
+
+  .date-range-picker[data-changed][data-unlabelled] .date-range-control {
+    padding-inline-end: calc(3rem + 0.375rem + var(--spacing-part));
+  }
+
   .date-range-input {
     display: inline-flex;
     flex: none;

@@ -4,7 +4,8 @@
  * bottom tab bar. The collapsed width comes from the generated sidebar axis: data-sidebar="collapsed"
  * on any ancestor remaps --container-sidebar, and this file only reads the token. The skip link is the
  * first tab stop, out of sight until it is focused, then an ink pill over the rail's corner with the
- * inverted ring an ink fill takes. 1024px is the --breakpoint-md token, written out because a media
+ * inverted ring an ink fill takes. The header slot is the first part of <main>, sticky, and the shell's script
+ * scrolls a focused control out from under it; nothing pads the root's scroll (spec correction 121). 1024px is the --breakpoint-md token, written out because a media
  * query cannot read a custom property, and 4rem is the tab bar's height, written in tab-bar.css too;
  * test/css.test.js keeps both equal. Derived in docs/design-system.md ("Floating chrome and the shell").
  * A rail an open SidePanel folds (data-sidebar-folded) folds at once, with no transition ("SidePanel"), and the
@@ -65,7 +66,8 @@
     }
   }
 
-  /* The look is the header's own. This only keeps it on top of the page as the page scrolls. */
+  /* The look is the header's own. This only keeps it on top of the page as the page scrolls: the first part of
+     <main>, which spans the page, so it sticks for the page's whole length. */
   .app-shell-header {
     position: sticky;
     inset-block-start: 0;

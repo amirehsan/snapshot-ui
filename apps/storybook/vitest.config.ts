@@ -8,7 +8,8 @@ const configDir = path.join(import.meta.dirname, '.storybook');
 export default defineConfig({
   test: {
     // CI runs four browsers beside the unit tests, and WebKit stalls first on a busy runner; locally the default holds.
-    testTimeout: process.env.CI ? 30_000 : 15_000,
+    // DataTable's R3Sizes renders 250 rows to a string, about 6 seconds on a laptop, and overran 30 on a busy runner.
+    testTimeout: process.env.CI ? 60_000 : 15_000,
     projects: [
       {
         extends: true,

@@ -560,3 +560,42 @@ describe('DataTable list face', () => {
     await expectNoA11yViolations(container);
   });
 });
+
+describe('DataTable list face, with an editable element in an item', () => {
+  interface Receipt {
+    id: string;
+    merchant: string;
+    memo: string;
+  }
+  const RECEIPTS: Receipt[] = [
+    { id: 'a', merchant: 'Corner Mart', memo: 'Milk' },
+    { id: 'b', merchant: 'City Transit', memo: 'Bus' },
+  ];
+  // The memo's editor is drawn on the item's meta line, through its listSlot.
+  const COLUMNS: DataTableColumn<Receipt>[] = [
+    { id: 'merchant', header: 'Merchant', cell: (row) => row.merchant, isRowHeader: true },
+    {
+      id: 'memo',
+      header: 'Memo',
+      listSlot: 'meta',
+      cell: (row) => <input aria-label={`Memo, ${row.merchant}`} defaultValue={row.memo} />,
+    },
+  ];
+
+  it('lets the editor keep its arrows, and gives focus back to the item on Escape', async () => {
+    const user = userEvent.setup();
+    render(<DataTable aria-label="Receipts" items={RECEIPTS} columns={COLUMNS} getKey={(row) => row.id} />);
+    const memo = screen.getByRole('textbox', { name: 'Memo, City Transit' });
+    await user.click(memo);
+    expect(memo).toHaveFocus();
+    // React Aria's item would take Up and Down to the item above and below, and Left and Right to its other
+    // focusable children.
+    await user.keyboard('{ArrowUp}{ArrowDown}{ArrowLeft}{ArrowRight}');
+    expect(memo).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(itemAt(1)).toHaveFocus();
+    // Back on the item, the arrows move between the items again.
+    await user.keyboard('{ArrowUp}');
+    expect(itemAt(0)).toHaveFocus();
+  });
+});

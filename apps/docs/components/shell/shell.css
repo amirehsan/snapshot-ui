@@ -827,6 +827,29 @@
     }
   }
 
+  /* ---- From 1440, beside an open example panel, the side column folds under the content too ----
+     The fold beside an open example panel, as the rail's above: the stage beside a 24rem panel is the content
+     column less about 524px, and beside the outline that column is about 826px at every width from 1440, since
+     the content caps at 1320px, so a table there has about 19rem, under the 32rem `listBelow` keeps a table face
+     down to. Folded, the column is the content's whole 1256px and the table's box about 45.75rem, so the recipe
+     shows the face an app at 1440 draws. The page has no width at which the outline fits beside such a table,
+     so the fold has no upper bound; it lasts only while a panel is open (spec correction 115). */
+  @media (width >= 1440px) {
+    :where(:root:has(.stage .side-panel)) :is(.panel-main, .panel-side) {
+      grid-column: 1 / -1;
+    }
+
+    :where(:root:has(.stage .side-panel)) .panel-side {
+      position: static;
+      grid-template-columns: repeat(2, 1fr);
+      align-items: start;
+    }
+
+    :where(:root:has(.stage .side-panel)) .panel-side .toc-card {
+      display: none;
+    }
+  }
+
   /* ---- Under 1024: the rail becomes a drawer ------------------------ */
   @media (width < 1024px) {
     :root {

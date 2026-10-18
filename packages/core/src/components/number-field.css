@@ -15,6 +15,14 @@
     --number-field-trail: 1.5rem;
     --number-field-symbol-start: 0px;
     --number-field-symbol-end: 0px;
+    --number-field-mark: 0px;
+  }
+
+  /* The changed dot of a field with no label: at the figure's end, past the steppers and an end symbol, and the
+     figure stops a dot and a part step sooner. */
+  .number-field[data-changed][data-unlabelled] {
+    --number-field-mark: calc(0.375rem + var(--spacing-part));
+    --field-changed-mark-end: calc(var(--number-field-trail) + var(--number-field-symbol-end));
   }
 
   .number-field[data-signed] {
@@ -43,13 +51,15 @@
     direction: ltr;
     unicode-bidi: isolate;
     padding-inline: calc(var(--number-field-lead) + var(--number-field-symbol-start))
-      calc(var(--number-field-trail) + var(--number-field-symbol-end));
+      calc(var(--number-field-trail) + var(--number-field-symbol-end) + var(--number-field-mark));
     font-variant-numeric: tabular-nums;
     text-align: start;
   }
 
   [dir='rtl'] .number-field-input {
-    padding-inline: calc(var(--number-field-trail) + var(--number-field-symbol-end))
+    padding-inline: calc(
+        var(--number-field-trail) + var(--number-field-symbol-end) + var(--number-field-mark)
+      )
       calc(var(--number-field-lead) + var(--number-field-symbol-start));
     text-align: end;
   }

@@ -350,10 +350,16 @@ StyleDictionary.registerFormat({
     const { base } = splitTokens(dictionary.allTokens);
     const lines = [];
     for (const [ns, opts] of Object.entries(TAILWIND)) if (opts.reset) lines.push(`--${ns}-*: initial;`);
+    const spacing = new Set(base.filter((t) => t.path[0] === 'spacing').map((t) => t.path.at(-1)));
     for (const t of base) {
       const opts = TAILWIND[t.path[0]];
       if (!opts) continue;
       lines.push(opts.literal ? decl(t.name, t.$value) : `--${t.name}: var(--${t.name});`);
+      // max-w-* reads --max-width-* before --spacing-*, so a width that shares its name with a spacing step,
+      // container.page and spacing.page, is written there too, and max-w-page is the page column's width.
+      if (t.path[0] === 'container' && spacing.has(t.path.at(-1))) {
+        lines.push(`--max-width-${t.path.at(-1)}: var(--${t.name});`);
+      }
     }
     return `${await fileHeader({ file, commentStyle: 'long' })}${block('@theme inline reference', lines, 0)}\n`;
   },

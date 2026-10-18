@@ -221,7 +221,7 @@
     "path": "dist/index.js",
     "import": "{ AppShell }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
-    "limit": "1.5 kB"
+    "limit": "3 kB"
   },
   {
     "name": "import { Sidebar, SidebarGroup, SidebarItem, SidebarBrand, SidebarSearch, SidebarTrigger } from \"@snapshot-ui/react\"",
@@ -354,7 +354,7 @@
     "path": "dist/index.js",
     "import": "{ DataTable }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "9 kB"
+    "limit": "13 kB"
   },
   {
     "name": "import { SidePanel, SidePanelLayout } from \"@snapshot-ui/react\"",
@@ -362,6 +362,69 @@
     "import": "{ SidePanel, SidePanelLayout }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
     "limit": "4.5 kB"
+  },
+  {
+    "name": "import { ProgressBar } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ ProgressBar }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "1.5 kB"
+  },
+  {
+    "name": "import { FileDropZone, FileButton } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ FileDropZone, FileButton }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "3 kB"
+  },
+  {
+    "name": "import { PageDropZone } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ PageDropZone }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "2.5 kB"
+  },
+  {
+    "name": "import { UploadList } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ UploadList }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "3 kB"
+  },
+  {
+    "name": "import { UploadTray } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ UploadTray }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "9 kB"
+  },
+  {
+    "name": "import { DatePicker } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ DatePicker }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "4 kB"
+  },
+  {
+    "name": "import { SaveBar } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ SaveBar }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "5.5 kB"
+  },
+  {
+    "name": "import { PageHeader, PageColumn } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ PageHeader, PageColumn }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "1 kB"
+  },
+  {
+    "name": "import { Breadcrumbs, Breadcrumb } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Breadcrumbs, Breadcrumb }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "1.5 kB"
   },
   {
     "name": "Button with React Aria (watch only)",
@@ -383,5 +446,19 @@
     "import": "{ CommandPalette }",
     "ignore": ["react", "react-dom"],
     "limit": "70 kB"
+  },
+  {
+    "name": "Pagination with React Aria (watch only)",
+    "path": "dist/index.js",
+    "import": "{ Pagination }",
+    "ignore": ["react", "react-dom"],
+    "limit": "20 kB"
+  },
+  {
+    "name": "DataTable with React Aria (watch only)",
+    "path": "dist/index.js",
+    "import": "{ DataTable }",
+    "ignore": ["react", "react-dom"],
+    "limit": "100 kB"
   }
 ]

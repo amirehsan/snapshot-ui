@@ -1,8 +1,9 @@
 import { createElement, type HTMLAttributes, type ReactElement, type ReactNode, type Ref } from 'react';
 import { cx } from '../utils/cx';
-import { clampPage, pageItems } from './pages';
+import { clampPage, pageForSize, pageItems, pageSizesOf } from './pages';
 import { PaginationButton } from './PaginationButton';
 import { PaginationLink } from './PaginationLink';
+import { PaginationPageSize } from './PaginationPageSize';
 import { PaginationStatus } from './PaginationStatus';
 
 export interface PaginationLabels {
@@ -23,6 +24,8 @@ export interface PaginationLabels {
   next: string;
   /** A page control's name, given the page's written label. @default (label) => `Page ${label}` */
   page: (label: string) => string;
+  /** The page size picker's visible label, which names it. @default 'Rows per page' */
+  pageSize: string;
 }
 
 interface PaginationBase extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'onChange' | 'aria-label'> {
@@ -32,7 +35,10 @@ interface PaginationBase extends Omit<HTMLAttributes<HTMLElement>, 'children' | 
   pageCount: number;
   /** The range, formatted by the app: "1 to 50 of 1,284". Shown, and spoken after a change. */
   rangeLabel: string;
-  /** How a page number is written, such as Persian digits. Runs in the shell. @default String(page) */
+  /**
+   * How a page number, and a page size in the picker, is written, such as Persian digits. Runs in the shell.
+   * @default String(page)
+   */
   pageLabel?: (page: number) => string;
   /** Page numbers shown each side of the current one, in whole pages. A non-finite value means 1. @default 1 */
   siblingCount?: number;
@@ -42,9 +48,34 @@ interface PaginationBase extends Omit<HTMLAttributes<HTMLElement>, 'children' | 
    * @default true
    */
   hasPageNumbers?: boolean;
-  /** The library's own words: the landmark's name, Previous, Next and each page control's name. */
+  /** The library's own words: the landmark's name, Previous, Next, each page control's name and the picker's label. */
   labels?: Partial<PaginationLabels>;
   ref?: Ref<HTMLElement>;
+}
+
+/** No page size picker. */
+interface PaginationFixedSize {
+  pageSize?: undefined;
+  pageSizeOptions?: undefined;
+  onPageSizeChange?: undefined;
+}
+/**
+ * A rows-per-page picker at the row's start. It calls a function, so render Pagination from a client component
+ * to show it, in either mode.
+ */
+interface PaginationSizes {
+  /** The rows on a page, the picker's value. */
+  pageSize: number;
+  /**
+   * The sizes the picker offers, in whole rows, smallest first; `pageSize` is always among them.
+   * @default [10, 25, 50, 100]
+   */
+  pageSizeOptions?: readonly number[];
+  /**
+   * Called with the size chosen and the page that holds the first row of the current page at that size, so the
+   * reader keeps their place. Set both, and write a new `rangeLabel`, which is spoken once it settles.
+   */
+  onPageSizeChange: (pageSize: number, page: number) => void;
 }
 
 /** Link mode: every control is a link. Pass it from a server component; the function runs there. */
@@ -58,14 +89,20 @@ interface PaginationButtons {
   getPageHref?: undefined;
 }
 
-export type PaginationProps = PaginationBase & (PaginationLinks | PaginationButtons);
+export type PaginationProps = PaginationBase &
+  (PaginationLinks | PaginationButtons) &
+  (PaginationFixedSize | PaginationSizes);
 
 const DEFAULT_LABELS: PaginationLabels = {
   navigation: 'Pagination',
   previous: 'Previous',
   next: 'Next',
   page: (label) => `Page ${label}`,
+  pageSize: 'Rows per page',
 };
+
+/** The sizes the picker offers when the app names none. */
+const PAGE_SIZES: readonly number[] = [10, 25, 50, 100];
 
 /**
  * Lucide's chevron geometry, drawn inline: lucide-react's Icon is a client module, and the shell is static.
@@ -100,9 +137,11 @@ interface ControlProps {
 
 /**
  * Pages of rows: Previous, numbered pages with gaps and Next beside the range the app formats, in a row whose
- * slots never move. Static: it has no hooks and no client directive, so a server page renders it and passes
- * functions; it calls `getPageHref`, `pageLabel` and `labels.page` here, and its client leaves (the links or
- * buttons and the status) receive only strings, numbers, booleans and the children it renders.
+ * slots never move, and with `onPageSizeChange` a rows-per-page picker at its start. Static: it has no hooks and no
+ * client directive, so a server page renders it and passes functions; it calls `getPageHref`, `pageLabel` and
+ * `labels.page` here, and its client leaves (the links or buttons and the status) receive only strings, numbers,
+ * booleans and the children it renders. The picker and button mode call the app's functions, so a client
+ * component renders them.
  */
 export function Pagination(props: PaginationProps): ReactElement {
   const {
@@ -115,6 +154,9 @@ export function Pagination(props: PaginationProps): ReactElement {
     labels: given,
     getPageHref,
     onPageChange,
+    pageSize,
+    pageSizeOptions = PAGE_SIZES,
+    onPageSizeChange,
     className,
     ...rest
   } = props;
@@ -123,6 +165,7 @@ export function Pagination(props: PaginationProps): ReactElement {
     previous: given?.previous ?? DEFAULT_LABELS.previous,
     next: given?.next ?? DEFAULT_LABELS.next,
     page: given?.page ?? DEFAULT_LABELS.page,
+    pageSize: given?.pageSize ?? DEFAULT_LABELS.pageSize,
   };
   const write = (n: number): string => (pageLabel === undefined ? String(n) : pageLabel(n));
   // The inputs cleaned once, and only these used below: whole pages, none for a count that is not a finite
@@ -203,6 +246,16 @@ export function Pagination(props: PaginationProps): ReactElement {
     },
     <div className="pagination-box">
       <div className="pagination-row" data-page-numbers={hasPageNumbers ? undefined : 'false'}>
+        {pageSize !== undefined ? (
+          <PaginationPageSize
+            label={labels.pageSize}
+            value={pageSize}
+            options={pageSizesOf(pageSizeOptions, pageSize).map((size) => ({ size, text: write(size) }))}
+            onChange={(size) => {
+              onPageSizeChange(size, pageForSize(current, pageSize, size));
+            }}
+          />
+        ) : null}
         <p className="pagination-range">{rangeLabel}</p>
         {count > 1 ? (
           <ol className="pagination-list">

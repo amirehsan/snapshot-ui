@@ -78,6 +78,8 @@ export interface TableFaceProps<T> {
   emptyState: ReactNode;
   totalLabel: string;
   loadingLabel: string;
+  /** Receives React Aria's table state once the table has one, and null when it goes. */
+  onState: (state: TableState<unknown> | null) => void;
 }
 
 /** The figure span for an end-aligned column, so its digits are tabular, unbroken and an isolated run. */
@@ -129,6 +131,23 @@ function SelectAll({
     };
   }, [manager, onManager]);
   return <Checkbox slot="selection" aria-label={label} {...UNTABBED} />;
+}
+
+/**
+ * Hands DataTable React Aria's table state and draws nothing. DataTable turns the grid's own keyboard navigation off
+ * while an editable element in a cell has focus, so that element keeps its arrows: a date segment's Arrow Up steps
+ * its value, where React Aria's cell would otherwise take every arrow from its children (useGridCell.mjs, its
+ * key capture).
+ */
+function TableStateBridge({ onState }: { onState: (state: TableState<unknown> | null) => void }): null {
+  const state = useContext(TableStateContext) as TableState<unknown> | null;
+  useEffect(() => {
+    onState(state);
+    return () => {
+      onState(null);
+    };
+  }, [state, onState]);
+  return null;
 }
 
 interface TableRowProps<T> {
@@ -258,6 +277,7 @@ export function TableFace<T>({
   emptyState,
   totalLabel,
   loadingLabel,
+  onState,
   ...name
 }: TableFaceProps<T>): ReactElement {
   const hasTotals = rows.length > 0 && columns.some((column) => present(column.total));
@@ -305,7 +325,7 @@ export function TableFace<T>({
             <SelectAll label={selection.selectAllLabel} onManager={selection.onManager} />
           </Column>
         )}
-        {columns.map((column) => (
+        {columns.map((column, index) => (
           <Column
             key={column.id}
             id={column.id}
@@ -328,6 +348,7 @@ export function TableFace<T>({
               <span className="data-table-column-inner">
                 <span className="data-table-column-label">{column.header}</span>
                 {column.allowsSorting === true ? <SortMark direction={sortDirection} /> : null}
+                {index === 0 ? <TableStateBridge onState={onState} /> : null}
               </span>
             )}
           </Column>

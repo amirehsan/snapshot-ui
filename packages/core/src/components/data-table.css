@@ -8,11 +8,13 @@
  * Hover is the 5% ink wash where hover exists, focus the inset ring, the current row a 3px ink border at its
  * first shown cell's inline start and its row header at 700. The header cells stick at --page-sticky-top, one
  * layer under the page's header. A column with data-hide-below="md" leaves by a container query on the table's
- * own box under 48rem, a width and not a breakpoint token; under 40rem the list face takes over. A column that
+ * own box under 48rem, a width and not a breakpoint token; under 40rem, or 32rem with listBelow, the list face takes over. A column that
  * leaves keeps its cells, drawn zero wide and hidden, so every row and React Aria's spanning empty cell count the
  * same columns in every engine, and the table stays the full width of its box; a skeleton row's cell for it is not drawn at all.
  * With selection on, a 3.5rem checkbox column comes first and a selected row takes the 8% ink wash with its
- * checked box; slate in a hovered or selected row turns granite; the bulk-action bar is the float surface, stuck to the viewport's bottom inside the table's box.
+ * checked box; slate in a hovered or selected row turns granite; the bulk-action bar is the float surface, stuck to the viewport's bottom inside the table's box,
+ * one line of the X, the count, the app's select-all place and the actions, the data form's promoted ones hidden
+ * under 40rem of the bar's own box, where More holds every action.
  */
 @layer components {
   .data-table {
@@ -26,7 +28,8 @@
     --data-table-fill: var(--data-table-surface, var(--color-canvas));
     /* What covers a row that focus scrolls to (WCAG 2.4.11): the page's sticky offset and the 40px header row
        above it, and, while the bar shows, the bar and its inset from the viewport's bottom below it: its
-       buttons, a part step of padding either side and its 1px edges. Rows and list items keep clear of both. */
+       buttons, a part step of padding either side and its 1px edges. Rows and list items keep clear of both.
+       Nothing pads the root's scroll, so the margin holds the whole sticky offset (spec correction 121). */
     --data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--size-target));
     --data-table-scroll-end: 0px;
 
@@ -492,8 +495,11 @@
      with it and never covers what follows. One layer under the header token, as the header cells. */
   /* A holder. Its buttons fill its content height, which leaves them inside its corner curves at either end,
      so the bar pads each end to the corner inset, its radius less its edge where that is more than the padding,
-     and the buttons keep their own shape: 23px in Rounded, 11px in Soft. */
+     and the buttons keep their own shape: 23px in Rounded, 11px in Soft. It is a single row, so the X at its
+     start and More at its end move inward, as every control in it does. It is the size container its own
+     queries read, so a bar beside a panel narrows by its own width, not the viewport's. */
   .data-table-bar {
+    container: data-table-bar / inline-size;
     --holder-radius: var(--radius-surface);
     --holder-border: 1px;
     --holder-pad: var(--spacing-part);
@@ -518,17 +524,64 @@
   }
 
   .data-table-bar-count {
-    margin-inline-end: auto;
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
     font-weight: 500;
     font-variant-numeric: tabular-nums;
   }
 
+  /* The app's "Select all 1,240 matching", after the count. */
+  .data-table-bar-select-all {
+    display: flex;
+    align-items: center;
+    min-inline-size: 0;
+  }
+
+  /* The actions keep the bar's inline end, whatever comes before them. */
   .data-table-bar-actions {
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-part);
+    margin-inline-start: auto;
+  }
+
+  .data-table-bar-icon {
+    display: inline-flex;
+  }
+
+  .data-table-bar-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* A narrow bar draws no promoted button, so More holds every action (spec 11.2); More reads which are drawn
+     as it opens. A wide bar draws a More that holds only promoted actions not at all. */
+  @container data-table-bar (width < 40rem) {
+    .data-table-bar-actions > [data-action-id] {
+      display: none;
+    }
+  }
+
+  @container data-table-bar (width >= 40rem) {
+    .data-table-bar-more[data-promoted-only] {
+      display: none;
+    }
+  }
+
+  /* On the narrowest bar the select-all place takes a line of its own under the X, the count and More. */
+  @container data-table-bar (width < 24rem) {
+    .data-table-bar-select-all {
+      order: 1;
+      flex-basis: 100%;
+    }
+  }
+
+  /* The one-line bar's height and the inset, as SaveBar declares it: its 40px controls, two part steps and its
+     1px edges. The bar writes its measured height over this once hydrated (useBottomBarOffset), so the upload
+     tray and the toasts sit above it; with a save bar too, the taller wins. */
+  :root:has(.data-table-bar),
+  .app-shell:has(.data-table-bar) {
+    --save-bar-offset: calc(var(--size-control) + 2 * var(--spacing-part) + 2px + var(--spacing-inset));
   }
 
   /* ---- Columns that leave, by the table's own box ----------------------------------------------- */
@@ -601,12 +654,24 @@
     );
   }
 
+  /* listBelow '32rem' moves the switch to 32rem of the box (ruling 24), so a table beside an open panel keeps
+     its table face; the 40rem block leaves such a table alone. */
   @container data-table (width < 40rem) {
-    .data-table-grid {
+    .data-table:not([data-list-below='32rem']) > .data-table-grid {
       display: none;
     }
 
-    .data-table-list {
+    .data-table:not([data-list-below='32rem']) > .data-table-list {
+      display: block;
+    }
+  }
+
+  @container data-table (width < 32rem) {
+    .data-table[data-list-below='32rem'] > .data-table-grid {
+      display: none;
+    }
+
+    .data-table[data-list-below='32rem'] > .data-table-list {
       display: block;
     }
   }
