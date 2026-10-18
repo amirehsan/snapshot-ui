@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Ellipsis, Receipt, RotateCw } from 'lucide-react';
+import { Archive, Download, Ellipsis, Receipt, RotateCw, Tag, Trash2 } from 'lucide-react';
 import { useState, type ComponentType, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider, type Key } from 'react-aria-components';
@@ -23,8 +23,9 @@ import {
   TRANSACTIONS,
   type Transaction,
 } from '../stories/transactions';
+import { PHONE, VIEWPORT_OPTIONS } from '../stories/viewports';
 import { QUIET_MS } from '../utils/quiet';
-import { DataTable, type DataTableColumn, type DataTableProps } from './DataTable';
+import { DataTable, type DataTableBulkAction, type DataTableColumn, type DataTableProps } from './DataTable';
 
 /** The args the stories take: each story renders its own table, so none. */
 type StoryArgs = Record<string, never>;
@@ -935,7 +936,10 @@ export const SelectedRightToLeft: Story = {
   ),
 };
 
-/** The bar's ring: two rows selected by X, then Tab from the table lands on Categorize with the ring. */
+/**
+ * The bar's ring: two rows selected by X, then Tab from the table lands on the bar's Clear selection X first, and
+ * Arrow Right moves to Categorize, which shows the ring.
+ */
 export const BarKeyboardFocus: Story = {
   render: () => (
     <Box>
@@ -949,9 +953,14 @@ export const BarKeyboardFocus: Story = {
     await userEvent.keyboard('x');
     await expect(selectedKeysOf(canvasElement)).toEqual(['t1', 't2']);
     await userEvent.tab();
+    const clear = within(canvasElement).getByRole('button', { name: 'Clear selection' });
+    await waitFor(() => expect(clear).toHaveFocus());
+    await userEvent.keyboard('{ArrowRight}');
     const categorize = within(canvasElement).getByRole('button', { name: 'Categorize' });
     await waitFor(() => expect(categorize).toHaveFocus());
     await expect(categorize).toHaveAttribute('data-focus-visible');
+    // The X's tip, shown while it had keyboard focus, has left with it.
+    await waitFor(() => expect(document.querySelector('[role="tooltip"]')).toBeNull());
   },
 };
 
@@ -1116,10 +1125,11 @@ export const TabStop: Story = {
     await waitFor(() => expect(rowAt(canvasElement, 0)).toHaveFocus());
     await userEvent.keyboard('{ArrowDown}{ArrowDown}x');
     await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual(['t3']));
-    // With the bar shown, the next stop is the bar, and Shift+Tab comes back to the third row.
+    // With the bar shown, the next stop is the bar's first control, the X, and Shift+Tab comes back to the third
+    // row.
     await userEvent.tab();
-    const categorize = within(canvasElement).getByRole('button', { name: 'Categorize' });
-    await waitFor(() => expect(categorize).toHaveFocus());
+    const clear = within(canvasElement).getByRole('button', { name: 'Clear selection' });
+    await waitFor(() => expect(clear).toHaveFocus());
     await userEvent.tab({ shift: true });
     await waitFor(() => expect(rowAt(canvasElement, 2)).toHaveFocus());
     await userEvent.tab({ shift: true });
@@ -2462,5 +2472,320 @@ export const SelectModeTapsNoLink: Story = {
     await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual(['t1']));
     await pressAt(only(itemAt(canvasElement, 3), '.data-table-item-end'));
     await waitFor(() => expect(selectedItemsOf(canvasElement)).toEqual(['t1', 't4']));
+  },
+};
+
+// ---- listBelow, and the bar's actions as data (rulings 24 and 25) ------------------------------------------
+
+/** A box 34rem wide, as a table beside an open 24rem panel at 1440px is: under 40rem and over 32rem. */
+const BESIDE_PANEL = '34rem';
+
+/**
+ * listBelow="32rem" in a 34rem box: the table face, where the default would draw the list, with its Category
+ * column (`hideBelow: 'md'`) gone, as under 48rem.
+ */
+export const ListBelow32: Story = {
+  render: () => (
+    <Box width={BESIDE_PANEL}>
+      <Sorted listBelow="32rem" currentKey="t3" />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(only(canvasElement, '.data-table-grid')).toBeVisible();
+    await expect(getComputedStyle(only(canvasElement, '.data-table-list')).display).toBe('none');
+    // The Category column has left, as under 48rem, and the others are drawn.
+    await expect(isShown(only(canvasElement, 'th[data-hide-below="md"]'))).toBe(false);
+    await expect(within(canvasElement).getByRole('columnheader', { name: 'Account' })).toBeVisible();
+  },
+};
+
+/** The same table at 375: its box is under 32rem, so the list face is drawn, as every phone held upright does. */
+export const ListBelow32Phone: Story = {
+  tags: ['!viewport-desktop', 'viewport-phone'],
+  parameters: { layout: 'padded', viewport: { options: VIEWPORT_OPTIONS } },
+  globals: PHONE,
+  render: () => (
+    <Box>
+      <Sorted listBelow="32rem" getGroup={groupOf} currentKey="t3" />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(getComputedStyle(only(canvasElement, '.data-table-grid')).display).toBe('none'),
+    );
+    await expect(only(canvasElement, '.data-table-list')).toBeVisible();
+  },
+};
+
+/** The four actions the bar's data stories draw: Categorize and Export promoted, Archive and Delete in More. */
+const BULK_ACTIONS: DataTableProps<Transaction>['bulkActions'] = [
+  { id: 'categorize', label: 'Categorize', icon: <Tag />, isPromoted: true, onAction: noop },
+  { id: 'export', label: 'Export', icon: <Download />, isPromoted: true, onAction: noop },
+  { id: 'archive', label: 'Archive', icon: <Archive />, onAction: noop },
+  { id: 'delete', label: 'Delete', icon: <Trash2 />, onAction: noop },
+];
+
+/** The app's "Select all 1,240 matching", a tertiary button after the count. */
+const SELECT_ALL_MATCHING = <Button variant="tertiary">Select all 1,240 matching</Button>;
+
+/** The names of the open More menu's items. */
+const moreItemsOf = (): string[] =>
+  [...document.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"]')].map(
+    (item) => item.textContent,
+  );
+
+/** Whether the open menu holds focus. */
+const menuHasFocus = (): boolean =>
+  document.querySelector('[role="menu"]')?.contains(document.activeElement) === true;
+
+/**
+ * Three selected with the actions as data: the X at the bar's start, the count, "Select all 1,240 matching",
+ * Categorize and Export as buttons and More at the end, on one line, the X and More the corner inset in.
+ */
+export const BulkActionsData: Story = {
+  render: () => (
+    <Box>
+      <Selecting
+        initial={['t2', 't4', 't5']}
+        bulkActions={BULK_ACTIONS}
+        selectAllMatching={SELECT_ALL_MATCHING}
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = only(canvasElement, '.data-table-bar');
+    const controls = within(bar).getAllByRole('button');
+    await expect(
+      controls.map((control) => control.getAttribute('aria-label') ?? control.textContent),
+    ).toEqual(['Clear selection', 'Select all 1,240 matching', 'Categorize', 'Export', 'More actions']);
+    // One line: every control's middle within a pixel of the X's.
+    const middle = (element: Element): number => {
+      const box = element.getBoundingClientRect();
+      return box.top + box.height / 2;
+    };
+    const first = controls[0];
+    const more = controls.at(-1);
+    if (first === undefined || more === undefined) throw new Error('No X or More');
+    for (const control of controls) {
+      await expect(Math.abs(middle(control) - middle(first))).toBeLessThan(1);
+    }
+    // The X and More are controls in a single-row holder: each stands the corner inset in from its end.
+    const inset = parseFloat(getComputedStyle(bar).borderBottomLeftRadius) - 1;
+    await expect(
+      first.getBoundingClientRect().left - bar.getBoundingClientRect().left,
+    ).toBeGreaterThanOrEqual(inset - 0.5);
+    await expect(
+      bar.getBoundingClientRect().right - more.getBoundingClientRect().right,
+    ).toBeGreaterThanOrEqual(inset - 0.5);
+  },
+};
+
+/** More opened with Enter: Archive and Delete, the actions not drawn as buttons, above the bar. */
+export const BulkMoreOpen: Story = {
+  render: () => (
+    <Box>
+      <Selecting
+        initial={['t2', 't4', 't5']}
+        bulkActions={BULK_ACTIONS}
+        selectAllMatching={SELECT_ALL_MATCHING}
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const more = within(canvasElement).getByRole('button', { name: 'More actions' });
+    await focusOn(more);
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(moreItemsOf()).toEqual(['Archive', 'Delete']));
+    await waitFor(() => expect(menuHasFocus()).toBe(true));
+  },
+};
+
+/** On a phone, in Select mode with two selected: the bar draws no promoted button, and More holds every action. */
+export const BulkNarrowBar: Story = {
+  tags: ['!viewport-desktop', 'viewport-phone'],
+  parameters: { layout: 'padded', viewport: { options: VIEWPORT_OPTIONS } },
+  globals: PHONE,
+  render: () => (
+    <Box>
+      <Selecting initial={['t2', 't4']} getGroup={groupOf} bulkActions={BULK_ACTIONS} />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    await enterSelectMode(canvasElement);
+    const bar = only(canvasElement, '.data-table-bar');
+    for (const button of bar.querySelectorAll('[data-action-id]')) {
+      await expect(getComputedStyle(button).display).toBe('none');
+    }
+    const more = within(bar).getByRole('button', { name: 'More actions' });
+    await focusOn(more);
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(moreItemsOf()).toEqual(['Categorize', 'Export', 'Archive', 'Delete']));
+  },
+};
+
+/** The bar's data actions and select-all place, in a box whose width a play sets. */
+function ResizableBulk(): ReactElement {
+  return (
+    <Box width="60rem">
+      <Selecting initial={['t1', 't2']} bulkActions={BULK_ACTIONS} selectAllMatching={SELECT_ALL_MATCHING} />
+    </Box>
+  );
+}
+
+/**
+ * More reads the bar at the press (spec correction 14): the box narrowed under 40rem, More holds every action;
+ * widened, it holds the unpromoted ones. Three engines, since it reads `getClientRects()` at the press.
+ */
+export const MoreReadsDrawnButtons: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <ResizableBulk />,
+  play: async ({ canvasElement }) => {
+    const box = only(canvasElement, '.data-table').parentElement;
+    if (box === null) throw new Error('No box');
+    const more = within(canvasElement).getByRole('button', { name: 'More actions' });
+    const categorize = within(canvasElement).getByRole('button', { name: 'Categorize' });
+    /** A key, unless the story has gone: a play that outlived its time limit stops rather than type into the next. */
+    const press = async (keys: string): Promise<void> => {
+      if (!more.isConnected) throw new Error('The story has gone');
+      await userEvent.keyboard(keys);
+    };
+    /** Opens More by Enter, reads its items, and closes it with Escape, focus back on More. */
+    const open = async (): Promise<string[]> => {
+      await focusOn(more);
+      await press('{Enter}');
+      await waitFor(() => expect(moreItemsOf().length).toBeGreaterThan(0));
+      const items = moreItemsOf();
+      await press('{Escape}');
+      await waitFor(() => expect(document.querySelector('[role="menu"]')).toBeNull());
+      return items;
+    };
+    try {
+      box.style.width = '30rem';
+      await waitFor(() => expect(getComputedStyle(categorize).display).toBe('none'));
+      await expect(await open()).toEqual(['Categorize', 'Export', 'Archive', 'Delete']);
+      box.style.width = '60rem';
+      await waitFor(() => expect(getComputedStyle(categorize).display).not.toBe('none'));
+      await expect(await open()).toEqual(['Archive', 'Delete']);
+    } finally {
+      window.scrollTo(0, 0);
+    }
+  },
+};
+
+/**
+ * A promoted button that the bar's narrowing hides while it has focus hands focus to More, which now holds its
+ * action, never to the page.
+ */
+export const BarNarrowsUnderFocus: Story = {
+  tags: ['no-visual'],
+  render: () => <ResizableBulk />,
+  play: async ({ canvasElement }) => {
+    const box = only(canvasElement, '.data-table').parentElement;
+    if (box === null) throw new Error('No box');
+    const export_ = within(canvasElement).getByRole('button', { name: 'Export' });
+    await focusOn(export_);
+    box.style.width = '30rem';
+    await waitFor(() => expect(document.activeElement).toHaveAccessibleName('More actions'));
+  },
+};
+
+/** The bar's actions with a Delete in More that empties the selection, as an app's does once it has deleted. */
+function EmptyingBulk(): ReactElement {
+  const [keys, setKeys] = useState<Key[]>(['t1', 't2']);
+  return (
+    <Box>
+      <Sorted
+        selectedKeys={keys}
+        onSelectionChange={setKeys}
+        bulkActions={[
+          ...(BULK_ACTIONS as DataTableBulkAction[]).slice(0, 3),
+          {
+            id: 'delete',
+            label: 'Delete',
+            onAction: () => {
+              setKeys([]);
+            },
+          },
+        ]}
+      />
+    </Box>
+  );
+}
+
+/**
+ * Delete in More, pressed with the pointer, empties the selection: the bar and its menu leave together, and focus
+ * goes to the table, never to the page. Three engines.
+ */
+export const MoreActionClears: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <EmptyingBulk />,
+  play: async ({ canvasElement }) => {
+    const more = within(canvasElement).getByRole('button', { name: 'More actions' });
+    await userEvent.click(more);
+    const remove = await waitFor(() => {
+      const item = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+        (each) => each.textContent === 'Delete',
+      );
+      if (item === undefined) throw new Error('No Delete');
+      return item;
+    });
+    await userEvent.click(remove);
+    await waitFor(() => expect(canvasElement.querySelector('.data-table-bar')).toBeNull());
+    await waitFor(() =>
+      expect(only(canvasElement, '[role="grid"]').contains(document.activeElement)).toBe(true),
+    );
+  },
+};
+
+/** The arrows move through the bar's controls, and Escape clears with focus on the table. Three engines. */
+export const BarArrows: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <ResizableBulk />,
+  play: async ({ canvasElement }) => {
+    const bar = only(canvasElement, '.data-table-bar');
+    const clear = within(bar).getByRole('button', { name: 'Clear selection' });
+    const press = async (keys: string): Promise<void> => {
+      if (!clear.isConnected) throw new Error('The story has gone');
+      await userEvent.keyboard(keys);
+    };
+    await focusOn(clear);
+    for (const name of ['Select all 1,240 matching', 'Categorize', 'Export', 'More actions']) {
+      await press('{ArrowRight}');
+      await waitFor(() => expect(document.activeElement).toHaveAccessibleName(name));
+    }
+    await press('{ArrowLeft}');
+    await waitFor(() => expect(document.activeElement).toHaveAccessibleName('Export'));
+    await press('{Escape}');
+    await waitFor(() => expect(selectedKeysOf(canvasElement)).toEqual([]));
+    await waitFor(() =>
+      expect(only(canvasElement, '[role="grid"]').contains(document.activeElement)).toBe(true),
+    );
+  },
+};
+
+/** listBelow="32rem" across its switch: the table at 34rem, the list at 30rem, the table again at 34rem. */
+export const ListBelowSwitch: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <Box width={BESIDE_PANEL}>
+      <Sorted listBelow="32rem" />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const root = only(canvasElement, '.data-table');
+    const box = root.parentElement;
+    if (box === null) throw new Error('No box');
+    const grid = only(canvasElement, '.data-table-grid');
+    const list = only(canvasElement, '.data-table-list');
+    await expect(getComputedStyle(grid).display).not.toBe('none');
+    box.style.width = '30rem';
+    await waitFor(() => expect(getComputedStyle(grid).display).toBe('none'));
+    await expect(getComputedStyle(list).display).toBe('block');
+    box.style.width = BESIDE_PANEL;
+    await waitFor(() => expect(getComputedStyle(grid).display).not.toBe('none'));
+    await expect(getComputedStyle(list).display).toBe('none');
+    // Without the attribute the default switch, 40rem, draws the list in the same box.
+    root.removeAttribute('data-list-below');
+    await waitFor(() => expect(getComputedStyle(grid).display).toBe('none'));
   },
 };

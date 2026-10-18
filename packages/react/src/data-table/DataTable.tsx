@@ -21,7 +21,8 @@ import { cx } from '../utils/cx';
 import { mergeRefs } from '../utils/merge-refs';
 import { present } from '../utils/present';
 import { useWarnOnce } from '../utils/useWarnOnce';
-import { BulkBar } from './BulkBar';
+import { BulkBar, MOST_PROMOTED } from './BulkBar';
+import { isBulkActionData } from './bulk-actions';
 import { DataTableStatus, useQuiet } from './DataTableStatus';
 import { groupsOf } from './groups';
 import { EDITABLE, editorRow, escapeEditor, handleTableKey, type TableKeyActions } from './keys';
@@ -52,8 +53,8 @@ export interface DataTableColumn<T> {
   width?: string;
   /**
    * The column leaves the table face when DataTable's own box is narrower than 48rem: a container width, not a
-   * breakpoint. Under 40rem the list face is drawn instead, where `listSlot` places every column. The row header
-   * never leaves.
+   * breakpoint. Under 40rem, or the table's `listBelow`, the list face is drawn instead, where `listSlot` places
+   * every column. The row header never leaves.
    */
   hideBelow?: 'md';
   /** The totals row's cell for this column. */
@@ -76,8 +77,8 @@ export interface DataTableColumn<T> {
    */
   isHeaderHidden?: boolean;
   /**
-   * Where the cell goes in an item of the list face, the face drawn under 40rem of the table's own box: on its
-   * first line, on its second line in slate, at its end, or nowhere.
+   * Where the cell goes in an item of the list face, the face drawn under 40rem of the table's own box (or its
+   * `listBelow`): on its first line, on its second line in slate, at its end, or nowhere.
    * @default 'title' for the row header, 'hidden' for every other column
    */
   listSlot?: 'title' | 'meta' | 'end' | 'hidden';
@@ -91,7 +92,7 @@ export interface DataTableLabels {
    * @default 'Select'
    */
   select: string;
-  /** The bar's button that clears the selection. @default 'Clear selection' */
+  /** The bar's X that clears the selection: its name and its tip. @default 'Clear selection' */
   clearSelection: string;
   /** The bar's count, given the count as `formatCount` writes it. @default (count) => `${count} selected` */
   selected: (count: string) => string;
@@ -105,6 +106,27 @@ export interface DataTableLabels {
   selectItems: string;
   /** The same button while the checkboxes show, which hides them and keeps the selection. @default 'Done' */
   doneSelecting: string;
+  /** The bar's More button, which opens the actions it does not show, and its menu's name. @default 'More actions' */
+  moreActions: string;
+}
+
+/** One action of the bulk-action bar's data form: a promoted button, or an item of its More menu. */
+export interface DataTableBulkAction {
+  /** Unique among the actions. */
+  id: string;
+  /** The action's name, on its button and in the More menu. */
+  label: string;
+  /** A 16px Lucide icon, drawn before the label on a button and in the menu, hidden from assistive technology. */
+  icon?: ReactNode;
+  /** Runs the action. Receives the selected keys present in `items`. */
+  onAction: (keys: Key[]) => void;
+  /**
+   * A button in the bar while it has room; the rest are in More. At most three are drawn as buttons; a fourth
+   * warns and goes to More. Under 40rem of the bar every action is in More.
+   * @default false
+   */
+  isPromoted?: boolean;
+  isDisabled?: boolean;
 }
 
 /** Selection: both props or neither. */
@@ -169,8 +191,21 @@ export interface DataTableShared<T> {
    * It wins over `isLoading` and `emptyState`.
    */
   error?: ReactNode;
-  /** The bulk-action bar's buttons, shown while any row is selected, before Clear selection. */
-  bulkActions?: ReactNode;
+  /**
+   * The bulk-action bar's actions, shown while any row is selected: data, which the bar lays out as up to three
+   * promoted buttons and a More menu that never wraps, or the app's own buttons as a node, drawn as they are.
+   */
+  bulkActions?: ReactNode | readonly DataTableBulkAction[];
+  /** After the bar's count: the app's "Select all 1,240 matching" button, or what it says once pressed. */
+  selectAllMatching?: ReactNode;
+  /**
+   * The width of the table's own box under which the list face is drawn in place of the table: a container
+   * width, not a breakpoint. `'32rem'` keeps the table beside an open SidePanel, when the columns that stay under
+   * 48rem (the row header and those without `hideBelow`) fit in 32rem; every phone held upright still draws the
+   * list.
+   * @default '40rem'
+   */
+  listBelow?: '40rem' | '32rem';
   /** How the bar writes its count, such as in Persian digits. @default String */
   formatCount?: (count: number) => string;
   /** The words the table writes itself, each with an English default. */
@@ -196,6 +231,7 @@ const DEFAULT_LABELS: DataTableLabels = {
   toolbar: 'Bulk actions',
   selectItems: 'Select',
   doneSelecting: 'Done',
+  moreActions: 'More actions',
 };
 
 /** Whether React Aria's selection holds exactly `keys`, so it can go back to React Aria with its anchor. */
@@ -273,6 +309,8 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     selectedKeys,
     onSelectionChange,
     bulkActions,
+    selectAllMatching,
+    listBelow = '40rem',
     formatCount = String,
     isLoading = false,
     loadingRowCount = 8,
@@ -384,12 +422,27 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     focusInBar.current = false;
     const root = rootRef.current;
     if (root === null) return;
-    const active = root.ownerDocument.activeElement;
-    if (active === null || active === root.ownerDocument.body) {
+    const document = root.ownerDocument;
+    const fallen = (): boolean => document.activeElement === null || document.activeElement === document.body;
+    if (fallen()) {
       shownGrid(root)?.focus();
-      return;
+      // A menu that leaves with the bar, its More menu, has made the page inert while open, and React Aria takes
+      // that away only in an effect after this one, so the table cannot take focus yet: it does a frame later,
+      // if focus is still on the page by then (spec correction 102).
+      if (!fallen()) return;
+      let frames = 0;
+      let frame = requestAnimationFrame(function retry(): void {
+        if (!fallen() || !root.isConnected) return;
+        shownGrid(root)?.focus();
+        frames += 1;
+        if (fallen() && frames < 10) frame = requestAnimationFrame(retry);
+      });
+      return () => {
+        cancelAnimationFrame(frame);
+      };
     }
-    if (root.contains(active)) return;
+    const active = document.activeElement;
+    if (active === null || root.contains(active)) return;
     return watchPortal(root, active, () => {
       shownGrid(root)?.focus();
     });
@@ -528,6 +581,14 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
       ? null
       : `DataTable: selectedKeys holds keys that are not in items: ${stale.map(String).join(', ')}. Clear the selection when the rows change.`,
   );
+  const promoted = isBulkActionData(bulkActions)
+    ? bulkActions.filter((action) => action.isPromoted === true)
+    : [];
+  useWarnOnce(
+    promoted.length > MOST_PROMOTED
+      ? `DataTable: ${String(promoted.length)} bulk actions are promoted; at most three are drawn as buttons. "${promoted[MOST_PROMOTED]?.id ?? ''}" and those after it are in More.`
+      : null,
+  );
   useWarnOnce(
     items.length === 0 && !isLoading && !failed && !present(emptyState)
       ? 'DataTable: the table has no rows and no emptyState. Pass an EmptyState that says what is missing.'
@@ -542,6 +603,8 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
     <div
       ref={rootRefs}
       className={cx('data-table', className)}
+      // The 40rem switch is the stylesheet's default, so only the other width is written (ruling 24).
+      data-list-below={listBelow === '32rem' ? listBelow : undefined}
       onKeyDownCapture={(event: KeyboardEvent<HTMLDivElement>) => {
         const target = event.target as Element;
         if (
@@ -631,7 +694,8 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           onState={onTableState}
         />
       </div>
-      {/* The list face, shown instead of the grid under 40rem of the root's box (ruling 8); busy as the grid is. */}
+      {/* The list face, shown instead of the grid under 40rem of the root's box, or 32rem with listBelow (rulings 8
+          and 24); busy as the grid is. */}
       <div
         className="data-table-list"
         aria-busy={loading ? 'true' : undefined}
@@ -666,7 +730,10 @@ export function DataTable<T>(props: DataTableProps<T>): ReactElement {
           label={words.toolbar}
           count={words.selected(formatCount(counted.length))}
           actions={bulkActions}
+          selectAllMatching={selectAllMatching}
+          keys={counted}
           clearLabel={words.clearSelection}
+          moreLabel={words.moreActions}
           onClear={clear}
         />
       ) : null}

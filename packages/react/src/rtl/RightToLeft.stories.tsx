@@ -1568,13 +1568,88 @@ export const DataTableMirrored: Story = {
       const cell = find(row, '[data-selection]');
       await expect(Math.abs(rect(cell).right - rect(row).right)).toBeLessThan(1);
     }
-    // The bar's count at its right, the actions to its left.
+    // The bar's X at its right, inside its padding, the count to its left, and the actions to the count's left.
     const bar = find(selecting, '.data-table-bar');
+    const clear = find(bar, '.data-table-bar-clear');
     const count = find(bar, '.data-table-bar-count');
     await expect(count).toHaveTextContent('۱ انتخاب شده');
     const barPadding = parseFloat(getComputedStyle(bar).paddingRight);
-    await expect(Math.abs(rect(count).right - (rect(bar).right - barPadding - 1))).toBeLessThan(1.5);
+    await expect(Math.abs(rect(clear).right - (rect(bar).right - barPadding - 1))).toBeLessThan(1.5);
+    await expect(rect(count).right).toBeLessThanOrEqual(rect(clear).left);
     await expect(rect(find(bar, '.data-table-bar-actions')).right).toBeLessThan(rect(count).left);
+  },
+};
+
+/** Persian digits, as an app's formatCount writes them. */
+const persianDigits = (count: number): string =>
+  String(count).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit);
+
+/** A Persian table with two rows selected and its bar's actions as data: one promoted, two in More. */
+function MirroredBulk(): ReactElement {
+  const [keys, setKeys] = useState<Key[]>(['p1', 'p2']);
+  return (
+    <DataTable
+      aria-label="تراکنش‌ها"
+      items={PERSIAN_ROWS}
+      columns={[
+        { id: 'payee', header: 'گیرنده', cell: (row) => row.payee },
+        { id: 'amount', header: 'مبلغ', cell: (row) => row.amount, align: 'end', width: '10rem' },
+      ]}
+      getKey={(row) => row.id}
+      selectedKeys={keys}
+      onSelectionChange={setKeys}
+      formatCount={persianDigits}
+      bulkActions={[
+        { id: 'categorize', label: 'دسته‌بندی', isPromoted: true, onAction: () => undefined },
+        { id: 'archive', label: 'بایگانی', onAction: () => undefined },
+        { id: 'delete', label: 'حذف', onAction: () => undefined },
+      ]}
+      selectAllMatching={<Button variant="tertiary">انتخاب همه ۱٬۲۴۰ مورد</Button>}
+      labels={{
+        selectAll: 'انتخاب همه',
+        select: 'انتخاب',
+        clearSelection: 'پاک کردن انتخاب',
+        selected: (count) => `${count} انتخاب شده`,
+        toolbar: 'کارهای گروهی',
+        moreActions: 'کارهای بیشتر',
+      }}
+    />
+  );
+}
+
+/**
+ * The bulk-action bar on a Persian page: the X at the bar's right, the count and the select-all place to its left,
+ * the promoted button after them and More at the bar's left, each end the corner inset in; the arrows follow the
+ * reading order, so Arrow Left moves from the X toward More.
+ */
+export const BulkBarMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(48rem, calc(100vw - 2rem))' }}>
+        <MirroredBulk />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = find(canvasElement, '.data-table-bar');
+    const clear = within(bar).getByRole('button', { name: 'پاک کردن انتخاب' });
+    const more = within(bar).getByRole('button', { name: 'کارهای بیشتر' });
+    const promoted = within(bar).getByRole('button', { name: 'دسته‌بندی' });
+    const count = find(bar, '.data-table-bar-count');
+    await expect(count).toHaveTextContent('۲ انتخاب شده');
+    const inset = parseFloat(getComputedStyle(bar).borderBottomRightRadius) - 1;
+    await expect(rect(bar).right - rect(clear).right).toBeGreaterThanOrEqual(inset - 0.5);
+    await expect(rect(more).left - rect(bar).left).toBeGreaterThanOrEqual(inset - 0.5);
+    await expect(rect(count).right).toBeLessThanOrEqual(rect(clear).left);
+    await expect(rect(find(bar, '.data-table-bar-select-all')).right).toBeLessThanOrEqual(rect(count).left);
+    await expect(rect(more).right).toBeLessThanOrEqual(rect(promoted).left);
+    // React Aria's toolbar follows the direction: Arrow Left moves on from the X.
+    clear.focus();
+    await waitFor(() => expect(clear).toHaveFocus());
+    await userEvent.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(document.activeElement).toHaveAccessibleName('انتخاب همه ۱٬۲۴۰ مورد'));
+    await userEvent.keyboard('{ArrowLeft}{ArrowLeft}');
+    await waitFor(() => expect(more).toHaveFocus());
   },
 };
 

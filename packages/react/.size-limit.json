@@ -347,7 +347,7 @@
     "path": "dist/index.js",
     "import": "{ DataTable }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "9 kB"
+    "limit": "12 kB"
   },
   {
     "name": "import { SidePanel, SidePanelLayout } from \"@snapshot-ui/react\"",

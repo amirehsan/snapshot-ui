@@ -241,6 +241,7 @@ export { Skeleton, type SkeletonProps } from './skeleton';
 export {
   DataTable,
   type DataTableBaseProps,
+  type DataTableBulkAction,
   type DataTableColumn,
   type DataTableLabels,
   type DataTableProps,

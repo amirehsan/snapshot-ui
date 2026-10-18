@@ -47,7 +47,7 @@ function Selecting({ initial = [], onChange, emptying = false, ...props }: Selec
       Archive
     </Button>
   ) : (
-    props.bulkActions
+    (props.bulkActions as ReactNode)
   );
   return (
     <RouterProvider navigate={navigate}>
@@ -289,7 +289,7 @@ describe('DataTable selection', () => {
     document.removeEventListener('keydown', outside);
   });
 
-  it('shows the bar while a row is selected: a toolbar named Bulk actions with the count, the actions and Clear selection', async () => {
+  it('shows the bar while a row is selected: a toolbar named Bulk actions with Clear selection, the count and the actions', async () => {
     const user = userEvent.setup();
     const { container } = render(
       <Selecting
@@ -319,7 +319,9 @@ describe('DataTable selection', () => {
         .map((button) => button.textContent),
     ).toEqual(['Categorize', 'Delete']);
     const clear = within(bar).getByRole('button', { name: 'Clear selection' });
-    expect(clear).toHaveClass('button-tertiary', 'data-table-bar-clear');
+    // An X icon at the bar's start since 0.7.0 (ruling 25), named as the text button was.
+    expect(clear).toHaveClass('icon-button', 'data-table-bar-clear');
+    expect(clear.textContent).toBe('');
     await user.click(screen.getByRole('checkbox', { name: 'Select Corner Mart' }));
     await user.click(screen.getByRole('checkbox', { name: 'Select Northside Rent' }));
     expect(screen.queryByRole('toolbar')).toBeNull();

@@ -6849,11 +6849,11 @@ describe('src/components/data-table.css', () => {
     }
   });
 
-  it('sets the count at the small step at 500, tabular, pushing the actions to the end', () => {
+  it('sets the count at the small step at 500, tabular, with the actions pushed to the end', () => {
     const css = rules();
     const count = blockAfter(css, '.data-table-bar-count {');
+    expect(count).not.toContain('margin-inline-end: auto;');
     for (const declaration of [
-      'margin-inline-end: auto;',
       'font-size: var(--text-small);',
       'font-weight: 500;',
       'font-variant-numeric: tabular-nums;',
@@ -6863,6 +6863,37 @@ describe('src/components/data-table.css', () => {
     const actions = blockAfter(css, '.data-table-bar-actions {');
     expect(actions).toContain('display: flex;');
     expect(actions).toContain('gap: var(--spacing-part);');
+    expect(actions).toContain('margin-inline-start: auto;');
+    expect(blockAfter(css, '.data-table-bar-select-all {')).toContain('min-inline-size: 0;');
+    expect(blockAfter(css, '.data-table-bar-icon svg {')).toContain('width: 16px;');
+  });
+
+  it('makes the bar its own size container: no promoted button under 40rem, select-all on its own line under 24rem', () => {
+    const css = rules();
+    expect(blockAfter(outsideForcedColors(css), '.data-table-bar {')).toContain(
+      'container: data-table-bar / inline-size;',
+    );
+    const narrow = blockAfter(css, '@container data-table-bar (width < 40rem)');
+    expect(blockAfter(narrow, '.data-table-bar-actions > [data-action-id] {')).toContain('display: none;');
+    // A More holding only promoted actions is drawn only while their buttons are not.
+    const wide = blockAfter(css, '@container data-table-bar (width >= 40rem)');
+    expect(blockAfter(wide, '.data-table-bar-more[data-promoted-only] {')).toContain('display: none;');
+    const narrowest = blockAfter(css, '@container data-table-bar (width < 24rem)');
+    const place = blockAfter(narrowest, '.data-table-bar-select-all {');
+    expect(place).toContain('order: 1;');
+    expect(place).toContain('flex-basis: 100%;');
+  });
+
+  it('declares --save-bar-offset from the tokens while the bar is on the page, as SaveBar does', () => {
+    const css = rules();
+    const offset = blockAfter(css, ':root:has(.data-table-bar), .app-shell:has(.data-table-bar) {');
+    expect(offset).toContain(
+      '--save-bar-offset: calc(var(--size-control) + 2 * var(--spacing-part) + 2px + var(--spacing-inset));',
+    );
+    // The same one-line height as the save bar's, so either bar lifts the tray and the toasts alike.
+    expect(closeUp(stripComments(read('src/components/save-bar.css')))).toContain(
+      '--save-bar-offset: calc(var(--size-control) + 2 * var(--spacing-part) + 2px + var(--spacing-inset));',
+    );
   });
 
   it('rings a focused row, cell or header inside, in the focus ring token', () => {
@@ -7082,15 +7113,29 @@ describe('src/components/data-table.css', () => {
     }
   });
 
-  it('shows the list and hides the grid under 40rem of the table box, by container query only', () => {
+  it('shows the list and hides the grid under 40rem of the table box, or 32rem with listBelow, by container query only', () => {
     const css = rules();
     expect(blockAfter(css, '.data-table-list {')).toContain('display: none;');
-    // The one 40rem block is the switch.
+    // The one 40rem block is the switch, and it leaves a table with listBelow '32rem' alone.
     const queries = [...css.matchAll(/@container data-table \(width < 40rem\)/g)].map((match) => match.index);
     expect(queries).toHaveLength(1);
     const swap = blockAfter(css, '@container data-table (width < 40rem)');
-    expect(blockAfter(swap, '.data-table-grid {')).toContain('display: none;');
-    expect(blockAfter(swap, '.data-table-list {')).toContain('display: block;');
+    expect(blockAfter(swap, ".data-table:not([data-list-below='32rem']) > .data-table-grid {")).toContain(
+      'display: none;',
+    );
+    expect(blockAfter(swap, ".data-table:not([data-list-below='32rem']) > .data-table-list {")).toContain(
+      'display: block;',
+    );
+    // The 32rem block is the same switch, for listBelow '32rem' only (ruling 24).
+    const below = [...css.matchAll(/@container data-table \(width < 32rem\)/g)];
+    expect(below).toHaveLength(1);
+    const narrow = blockAfter(css, '@container data-table (width < 32rem)');
+    expect(blockAfter(narrow, ".data-table[data-list-below='32rem'] > .data-table-grid {")).toContain(
+      'display: none;',
+    );
+    expect(blockAfter(narrow, ".data-table[data-list-below='32rem'] > .data-table-list {")).toContain(
+      'display: block;',
+    );
     // Never by the viewport, so a table beside an open panel is a list too (ruling 8).
     expect(css).not.toMatch(/@media \((?:min-|max-)?width/);
   });

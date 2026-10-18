@@ -1,6 +1,7 @@
 export {
   DataTable,
   type DataTableBaseProps,
+  type DataTableBulkAction,
   type DataTableColumn,
   type DataTableLabels,
   type DataTableProps,
