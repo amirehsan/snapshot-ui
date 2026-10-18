@@ -1,6 +1,6 @@
 {
   "name": "@snapshot-ui/core",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Design tokens, the Tailwind v4 theme and component CSS for Snapshot UI.",
   "license": "MIT",
   "repository": {
