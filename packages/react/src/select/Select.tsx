@@ -13,6 +13,7 @@ import {
 } from 'react-aria-components';
 import { Description } from '../field/Description';
 import { FieldError } from '../field/FieldError';
+import { FieldChangedMark } from '../field/FieldChangedMark';
 import { FieldHead } from '../field/FieldHead';
 import { useChangedDescription } from '../field/useChangedDescription';
 import { PickerValueContext } from '../picker/PickerOption';
@@ -120,11 +121,11 @@ export function Select<T extends object = object>({
   ...props
 }: SelectProps<T>): ReactElement {
   const isLabelled = present(label);
-  const { chipId, describedBy } = useChangedDescription({
-    // Only a label row has a chip, so only a labelled field has one to read.
-    isChanged: isChanged && isLabelled,
+  const { chipId, markId, describedBy } = useChangedDescription({
+    isChanged,
     isInvalid: props.isInvalid,
     describedBy: props['aria-describedby'],
+    isLabelled,
   });
   // Whether the filter takes focus as the list opens: not on a coarse pointer, where a phone's keyboard would
   // cover the list. It is read when the user opens the list, an event, and never while rendering, and goes back
@@ -142,6 +143,8 @@ export function Select<T extends object = object>({
       aria-describedby={describedBy}
       onOpenChange={openChange}
       data-changed={isChanged ? '' : undefined}
+      // Without a visible label a changed field draws the changed mark (ruling 16).
+      data-unlabelled={isLabelled ? undefined : ''}
       className={composeRenderProps(className, (userClassName) => cx('field', 'select', userClassName))}
     >
       {isLabelled ? <FieldHead label={label} changedLabel={changedLabel} chipId={chipId} /> : null}
@@ -153,6 +156,9 @@ export function Select<T extends object = object>({
           <ChevronDown />
         </span>
       </Button>
+      {/* The trigger is the frame, and a button's text is its visible name, so the mark is the field's next child
+          after it rather than a word inside it. */}
+      {isChanged && !isLabelled ? <FieldChangedMark id={markId} label={changedLabel} /> : null}
       {present(description) ? <Description>{description}</Description> : null}
       <FieldError>{errorMessage}</FieldError>
       <SelectPopover<T>

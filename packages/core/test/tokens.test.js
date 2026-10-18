@@ -134,6 +134,7 @@ describe('tokens.css', () => {
       ...['lift', 'float', 'dramatic'].map((name) => `--shadow-${name}`),
       ...['part', 'peer', 'separate', 'page', 'card', 'inset'].map((name) => `--spacing-${name}`),
       '--container-field',
+      '--container-page',
       '--container-sidebar',
       ...['control', 'field', 'target'].map((name) => `--size-${name}`),
       ...['sm', 'md', 'lg'].map((name) => `--breakpoint-${name}`),
@@ -188,6 +189,8 @@ describe('tokens.css', () => {
     expect(root).toContain('--spacing-card: 32px;');
     expect(root).toContain('--spacing-inset: 16px;');
     expect(root).toContain('--container-sidebar: 20rem;');
+    // The page column: the docs content column's 1320px cap, its inline padding included.
+    expect(root).toContain('--container-page: 82.5rem;');
     expect(root).toContain('--z-header: 20;');
     expect(root).toContain('--z-chrome: 30;');
   });

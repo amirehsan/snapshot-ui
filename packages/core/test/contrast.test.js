@@ -1464,6 +1464,271 @@ describe('the side panel', () => {
   });
 });
 
+describe('the progress bar', () => {
+  /** Ink over the track, the frame composited over `surface`, and measured against the track. */
+  const fillOnTrack = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const track = composite(parseColor(palette.frame), parseColor(palette[surface]));
+    return contrastRatio(composite(parseColor(palette.ink), track), track);
+  };
+  /** The track, the frame composited over `surface`, against that surface. */
+  const track = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[surface]);
+    return contrastRatio(composite(parseColor(palette.frame), ground), ground);
+  };
+
+  // The label is ink and the value text slate, on the page, on a card or in the tray's float surface. The gate
+  // already holds all six as text, so the progress bar adds no pair.
+  it('cites ink and slate on canvas, lifted and float, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // The track is the frame, a mix and not a token, so the fill against it is measured and recorded, not gated:
+  // Meter's track and fill, on the page, on a card (the upload list's Card) and in the tray. The track against
+  // its surface is a cue, not a boundary.
+  it('measures ink against the frame track, recorded and not gated', () => {
+    for (const { surface, mode, ink, edge } of [
+      { surface: 'canvas', mode: 'light', ink: 12.69, edge: 1.28 },
+      { surface: 'canvas', mode: 'dark', ink: 14.19, edge: 1.36 },
+      { surface: 'lifted', mode: 'light', ink: 13.88, edge: 1.28 },
+      { surface: 'lifted', mode: 'dark', ink: 12.19, edge: 1.43 },
+      { surface: 'float', mode: 'light', ink: 14.34, edge: 1.29 },
+      { surface: 'float', mode: 'dark', ink: 12.19, edge: 1.43 },
+    ]) {
+      expect(fillOnTrack(mode, surface), `ink on the track on ${surface}, ${mode}`).toBeCloseTo(ink, 2);
+      expect(fillOnTrack(mode, surface), `ink on ${surface}, ${mode}`).toBeGreaterThanOrEqual(NON_TEXT);
+      expect(track(mode, surface), `the track on ${surface}, ${mode}`).toBeCloseTo(edge, 2);
+    }
+    expect(CONTRAST_PAIRS.some((pair) => pair.text === 'frame' || pair.ground === 'frame')).toBe(false);
+  });
+});
+
+describe('the file drop zone', () => {
+  /** The boundary painted on `surface`, against that surface: the zone's dashed edge. */
+  const edge = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[surface]);
+    return contrastRatio(composite(parseColor(palette.boundary), ground), ground);
+  };
+  /** `text` on the float card, the overlay's. */
+  const onFloat = (text, mode) => {
+    const palette = paletteFor(tokens, mode);
+    const float = parseColor(palette.float);
+    return contrastRatio(composite(parseColor(palette[text]), float), float);
+  };
+  /** Ink on the 5% ink wash over `surface`, the drop target's line. */
+  const onWash = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ink = parseColor(palette.ink);
+    const wash = composite({ ...ink, a: 0.05 }, parseColor(palette[surface]));
+    return contrastRatio(ink, wash);
+  };
+
+  // The edge is the boundary on the zone's holder (spec correction 6), gated as the switch's off track is; the
+  // overlay's title is ink and its description slate on the float card (spec correction 7), gated as text.
+  it('cites the boundary on canvas and lifted, and ink and slate on float, which the gate holds', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      expect(CONTRAST_PAIRS, `the boundary on ${ground}`).toContainEqual(
+        expect.objectContaining({ text: 'boundary', ground, minimum: NON_TEXT }),
+      );
+    }
+    for (const text of ['ink', 'slate']) {
+      expect(CONTRAST_PAIRS, `${text} on float`).toContainEqual(
+        expect.objectContaining({ text, ground: 'float', minimum: TEXT }),
+      );
+    }
+  });
+
+  it('measures the dashed edge at 3.38 and 3.45 in light and 5.34 and 5.21 in dark', () => {
+    for (const { mode, surface, ratio } of [
+      { mode: 'light', surface: 'canvas', ratio: 3.38 },
+      { mode: 'light', surface: 'lifted', ratio: 3.45 },
+      { mode: 'dark', surface: 'canvas', ratio: 5.34 },
+      { mode: 'dark', surface: 'lifted', ratio: 5.21 },
+    ]) {
+      expect(edge(mode, surface), `the edge on ${surface}, ${mode}`).toBeCloseTo(ratio, 2);
+      expect(edge(mode, surface)).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+
+  it('measures slate on float, the overlay description, at 5.49 and 6.94', () => {
+    for (const { mode, ratio } of [
+      { mode: 'light', ratio: 5.49 },
+      { mode: 'dark', ratio: 6.94 },
+    ]) {
+      expect(onFloat('slate', mode), mode).toBeCloseTo(ratio, 2);
+    }
+  });
+
+  // The wash is a mix, not a token, so ink on it is measured and recorded, not gated.
+  it('measures ink on the 5% wash over canvas and lifted, recorded and not gated', () => {
+    for (const { mode, surface, ratio } of [
+      { mode: 'light', surface: 'canvas', ratio: 14.7 },
+      { mode: 'dark', surface: 'canvas', ratio: 17.41 },
+      { mode: 'light', surface: 'lifted', ratio: 16.11 },
+      { mode: 'dark', surface: 'lifted', ratio: 15.25 },
+    ]) {
+      expect(onWash(mode, surface), `ink on the wash over ${surface}, ${mode}`).toBeCloseTo(ratio, 2);
+      expect(onWash(mode, surface)).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+});
+
+describe('the upload tray', () => {
+  /** `text` on the float surface, the tray's panel, bar and sheet. */
+  const onFloat = (text, mode) => {
+    const palette = paletteFor(tokens, mode);
+    const float = parseColor(palette.float);
+    return contrastRatio(composite(parseColor(palette[text]), float), float);
+  };
+
+  // Each status's word and icon take its color on the float surface: success for saved, warning for needs review,
+  // error for failed, slate for waiting, uploading and reading and every reason; the name is ink, or link blue once
+  // it links. The gate already holds all six as text on float, so the tray adds no pair.
+  const PAIRS = [
+    { text: 'success', light: 7.44, dark: 6.34 },
+    { text: 'warning', light: 6.33, dark: 8.92 },
+    { text: 'error', light: 7.46, dark: 5.73 },
+    { text: 'slate', light: 5.49, dark: 6.94 },
+    { text: 'ink', light: 18.43, dark: 17.42 },
+    { text: 'link', light: 5.86, dark: 5.46 },
+  ];
+
+  it('cites success, warning, error, slate, ink and link on float, which the gate holds', () => {
+    for (const { text } of PAIRS) {
+      expect(CONTRAST_PAIRS, `${text} on float`).toContainEqual(
+        expect.objectContaining({ text, ground: 'float', minimum: TEXT }),
+      );
+    }
+  });
+
+  it.each(PAIRS)('measures $text on float at $light in light and $dark in dark', ({ text, light, dark }) => {
+    expect(onFloat(text, 'light')).toBeCloseTo(light, 2);
+    expect(onFloat(text, 'dark')).toBeCloseTo(dark, 2);
+    expect(Math.min(onFloat(text, 'light'), onFloat(text, 'dark'))).toBeGreaterThanOrEqual(TEXT);
+  });
+});
+
+describe('the changed dot', () => {
+  /** `color` painted on `surface`, against that surface: a 6px dot is a graphic, held to 3:1. */
+  const dot = (color, mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[surface]);
+    return contrastRatio(composite(parseColor(palette[color]), ground), ground);
+  };
+
+  // The dot of a changed field with no label sits on the field's raised fill, and a field in a sheet or a panel
+  // sits on float. Clay on both is gated already, as text, which is stricter than a graphic needs.
+  it('cites clay on raised and on float, which the gate holds', () => {
+    for (const ground of ['raised', 'float']) {
+      expect(CONTRAST_PAIRS, `clay on ${ground}`).toContainEqual(
+        expect.objectContaining({ text: 'clay', ground, minimum: TEXT }),
+      );
+    }
+  });
+
+  it('measures clay on raised at 7.04 and 6.02, and on float at 7.04 and 6.82', () => {
+    for (const { mode, surface, ratio } of [
+      { mode: 'light', surface: 'raised', ratio: 7.04 },
+      { mode: 'dark', surface: 'raised', ratio: 6.02 },
+      { mode: 'light', surface: 'float', ratio: 7.04 },
+      { mode: 'dark', surface: 'float', ratio: 6.82 },
+    ]) {
+      expect(dot('clay', mode, surface), `clay on ${surface}, ${mode}`).toBeCloseTo(ratio, 2);
+      expect(dot('clay', mode, surface)).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+
+  // The spec's light signal orange, the chip dot it named, measures under the 3:1 a graphic needs on the field's
+  // fill in light, which is why the dot is clay (spec correction 2). The changed edge stays light signal orange.
+  it('measures light signal orange on raised at 2.87 in light, under 3:1, which is why it is not used', () => {
+    expect(dot('signal-light', 'light', 'raised')).toBeCloseTo(2.87, 2);
+    expect(dot('signal-light', 'light', 'raised')).toBeLessThan(NON_TEXT);
+    expect(dot('signal-light', 'dark', 'raised')).toBeCloseTo(5.35, 2);
+  });
+});
+
+describe('the save bar', () => {
+  /** `text` on the float surface, the bar's. */
+  const onFloat = (text, mode) => {
+    const palette = paletteFor(tokens, mode);
+    const float = parseColor(palette.float);
+    return contrastRatio(composite(parseColor(palette[text]), float), float);
+  };
+
+  // The message is ink, the neutral status slate, the Unsaved chip and its dot clay, and the error status and its
+  // icon error, all on the float surface. The gate already holds the four as text on float, so the bar adds no pair.
+  const PAIRS = [
+    { text: 'ink', light: 18.43, dark: 17.42 },
+    { text: 'slate', light: 5.49, dark: 6.94 },
+    { text: 'clay', light: 7.04, dark: 6.82 },
+    { text: 'error', light: 7.46, dark: 5.73 },
+  ];
+
+  it('cites ink, slate, clay and error on float, which the gate holds', () => {
+    for (const { text } of PAIRS) {
+      expect(CONTRAST_PAIRS, `${text} on float`).toContainEqual(
+        expect.objectContaining({ text, ground: 'float', minimum: TEXT }),
+      );
+    }
+  });
+
+  it.each(PAIRS)('measures $text on float at $light in light and $dark in dark', ({ text, light, dark }) => {
+    expect(onFloat(text, 'light')).toBeCloseTo(light, 2);
+    expect(onFloat(text, 'dark')).toBeCloseTo(dark, 2);
+    expect(Math.min(onFloat(text, 'light'), onFloat(text, 'dark'))).toBeGreaterThanOrEqual(TEXT);
+  });
+});
+
+describe('the page header', () => {
+  /** `text` on the header's fill, the canvas at 80%, laid over `under`: what scrolls beneath a stuck header. */
+  const onFill = (text, mode, under) => {
+    const palette = paletteFor(tokens, mode);
+    const fill = composite({ ...parseColor(palette.canvas), a: 0.8 }, parseColor(palette[under]));
+    return contrastRatio(composite(parseColor(palette[text]), fill), fill);
+  };
+
+  // The trail's links, the eyebrow and the description are slate, the title and the current crumb ink, on the
+  // canvas a header at the page's top shows, or on lifted, a Card's, where the app draws one. The gate holds the
+  // four as text.
+  it('cites slate and ink on canvas and lifted, which the gate holds', () => {
+    for (const text of ['slate', 'ink']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // Measured and recorded, not gated: the fill is the canvas at 80%, so what shows through it moves the ground.
+  // Over the canvas and over lifted, slate passes as text; over solid ink, the worst a page can scroll under it,
+  // light slate measures 3.16, which the 20px blur averages away into the canvas before the text is read, and
+  // forced colors draw the system's background color with no blur.
+  const FILL = [
+    { text: 'slate', under: 'canvas', light: 4.84, dark: 7.26 },
+    { text: 'slate', under: 'lifted', light: 4.93, dark: 7.22 },
+    { text: 'slate', under: 'ink', light: 3.16, dark: 5.03 },
+    { text: 'ink', under: 'canvas', light: 16.25, dark: 19.31 },
+    { text: 'ink', under: 'ink', light: 10.61, dark: 10.67 },
+  ];
+
+  it.each(FILL)(
+    'measures $text on the fill over $under at $light in light and $dark in dark',
+    ({ text, under, light, dark }) => {
+      expect(onFill(text, 'light', under)).toBeCloseTo(light, 2);
+      expect(onFill(text, 'dark', under)).toBeCloseTo(dark, 2);
+    },
+  );
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

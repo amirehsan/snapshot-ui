@@ -19,11 +19,16 @@
     white-space: nowrap;
   }
 
-  /* --toast-offset-block is 0 unless chrome docked at the bottom lifts the stack: tab-bar.css sets it while a bar
-     is on a narrow page, and a save bar will too. */
+  /* The top of the bottom edge's stack, which runs from the bottom up: the tab bar, a sticky save bar or bulk-action
+     bar, the upload tray, then the toasts. Each offset is 0 until its part shows: --toast-offset-block is the tab
+     bar's (tab-bar.css, on a narrow page), --save-bar-offset a sticky bar's height and the inset, and
+     --upload-tray-offset the tray's height and the inset, which the tray writes once it draws. */
   .toast-region {
     position: fixed;
-    inset-block-end: calc(var(--overlay-inset) + var(--toast-offset-block, 0px));
+    inset-block-end: calc(
+      var(--overlay-inset) + var(--toast-offset-block, 0px) + var(--save-bar-offset, 0px) +
+        var(--upload-tray-offset, 0px)
+    );
     inset-inline-end: var(--overlay-inset);
     z-index: var(--z-toast);
     width: min(28rem, calc(100vw - 2rem));

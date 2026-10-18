@@ -66,6 +66,17 @@
     rotate: 180deg;
   }
 
+  /* The changed dot of a field with no label, the field's next child after the trigger: a part step before the
+     chevron, which sits in the trigger's 16px end padding, and the chevron keeps the value a dot and a part step
+     further off. */
+  .select[data-changed][data-unlabelled] {
+    --field-changed-mark-end: calc(1rem + 16px + var(--spacing-part));
+  }
+
+  .select[data-changed][data-unlabelled] .select-chevron {
+    margin-inline-start: calc(0.375rem + var(--spacing-part));
+  }
+
   .select-trigger:is(:disabled, [data-disabled]) :is(.select-chevron, .menu-item-icon) {
     color: var(--color-taupe);
   }

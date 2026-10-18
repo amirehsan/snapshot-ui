@@ -69,6 +69,62 @@ On a phone it narrows with the row it is in, never below the range's longest wor
 
 <Section>
 
+## Page size
+
+Pass `pageSize` and `onPageSizeChange` together and the row starts with a rows-per-page picker, labelled "Rows per page" (`labels.pageSize`), with the page controls at its end. It offers 10, 25, 50 and 100 rows, or your `pageSizeOptions`, written with `pageLabel` like the page numbers. `onPageSizeChange` gets the size chosen and the page that holds the first row of the current page at that size, so the reader keeps their place: page 3 at 25 a page starts at row 51, which is on page 6 at 10 a page. Set both, and write the new range, which is announced once it settles.
+
+The picker is the browser's own `select`, drawn as the library's fields are, with a visible label tied to it, so a phone opens its own wheel or sheet and a Pagination carries no list or popover of its own. Where the row is narrow it takes a line of its own above the steps, and a right-to-left page puts it at the right. It calls your function, so render Pagination from a client component to show it, in link mode or button mode; from a server page, render it without a picker, or move it into a client component, as this example and the [Transactions recipe](/docs/components/data-table#the-transactions-recipe) do. The size belongs in the URL beside the page:
+
+```tsx
+'use client';
+
+const SIZES = [10, 25, 50, 100];
+const DEFAULT_SIZE = 25;
+
+function Pages({ page, size, total }: { page: number; size: number; total: number }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // The URL with some parameters changed; the defaults write none, and a bare ? is never written.
+  const hrefWith = (changes: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams);
+    for (const [name, value] of Object.entries(changes)) {
+      if (value === null) params.delete(name);
+      else params.set(name, value);
+    }
+    const query = params.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  };
+  return (
+    <Pagination
+      page={page}
+      pageCount={Math.ceil(total / size)}
+      rangeLabel={formatRange(page, size, total)}
+      getPageHref={(n) => hrefWith({ page: n === 1 ? null : String(n) })}
+      pageSize={size}
+      pageSizeOptions={SIZES}
+      onPageSizeChange={(nextSize, nextPage) => {
+        router.replace(
+          hrefWith({
+            size: nextSize === DEFAULT_SIZE ? null : String(nextSize),
+            page: nextPage === 1 ? null : String(nextPage),
+          }),
+          { scroll: false },
+        );
+      }}
+    />
+  );
+}
+```
+
+A new size is replaced in history, as a sort is, with `{ scroll: false }`, so the page does not jump. Read the size back from the URL and check it against your sizes, as the page is checked.
+
+<Preview name="pagination-page-size" />
+
+</Section>
+
+<Section>
+
 ## Without numbers
 
 For a cursor-paged list, where the API says only whether another page follows, pass `hasPageNumbers={false}` and `pageCount={hasMore ? page + 1 : page}`. While there is more, the count is one past this page, which enables Next. On the last page it equals this page, which disables Next. Write the range from what you know, here "1 to 25" with no total.
@@ -136,6 +192,8 @@ Every `nav` attribute is accepted except `aria-label`, which comes from `labels.
 
 <PropsTable label="Pagination props" path="../../packages/react/src/pagination/Pagination.tsx" type="Pick<PaginationProps, 'page' | 'pageCount' | 'rangeLabel' | 'getPageHref' | 'onPageChange' | 'pageLabel' | 'siblingCount' | 'hasPageNumbers' | 'labels' | 'className'>" />
 
+<PropsTable label="Page size props" path="../../packages/react/src/pagination/Pagination.tsx" type="Pick<Extract<PaginationProps, { pageSize: number }>, 'pageSize' | 'pageSizeOptions' | 'onPageSizeChange'>" />
+
 <PropsTable label="PaginationLabels" path="../../packages/react/src/pagination/Pagination.tsx" type="PaginationLabels" />
 
 </Section>
@@ -148,9 +206,10 @@ A `nav` named "Pagination" (or `labels.navigation`) holds a list of links or but
 
 - Names: each page is named "Page" and its number, and the steps by their words, even when the narrow row hides them.
 - Announcements: the range is announced once, 600ms after it last changed, so three quick presses of Next announce one range. Nothing is announced on page load, and the visible range is not live, so it is never read twice.
+- The page size picker: a native `select` named by its visible label, "Rows per page", inside the navigation landmark. A new size changes the range, which is announced as a page change is.
 - Disabled steps: they leave the tab order. If a focused step disables, as Next does on the last page, focus moves to the current page, or to the other step when the numbers are hidden.
 
-<Keys rows={[['Tab', 'Moves between the controls.'], ['Enter', 'Goes to the page; a button also takes Space.']]} />
+<Keys rows={[['Tab', 'Moves between the controls.'], ['Enter', 'Goes to the page; a button also takes Space.'], ['Up Down', "On the page size picker, the browser's own keys: on Windows and Linux they choose the size before or after at once, and Alt+Down opens the list; on a Mac they open the list, where Enter chooses."]]} />
 
 </Section>
 
@@ -160,6 +219,6 @@ A `nav` named "Pagination" (or `labels.navigation`) holds a list of links or but
 
 What keeps pagination in the system.
 
-<Rules dos={['Write the range in your own words: "1 to 50 of 1,284".', 'Render link mode from a server page, with the page in the URL.', 'Choose a page size that keeps the controls still while a person pages.']} donts={['Never ask the library to format a page number. Pass pageLabel for other digits.', 'Never show a pager without the range.', 'Never page a list a person reads to the end. Show it whole.']} />
+<Rules dos={['Write the range in your own words: "1 to 50 of 1,284".', 'Render link mode from a server page, with the page in the URL.', 'Choose a page size that keeps the controls still while a person pages.', 'Keep the page size in the URL beside the page, and offer a few sizes.']} donts={['Never ask the library to format a page number. Pass pageLabel for other digits.', 'Never show a pager without the range.', 'Never page a list a person reads to the end. Show it whole.']} />
 
 </Section>

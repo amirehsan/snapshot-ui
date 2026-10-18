@@ -16,16 +16,32 @@ import {
   type Ref,
 } from 'react';
 import { cx } from '../utils/cx';
+import { useChrome } from '../utils/focus-clear';
 import { present } from '../utils/present';
 import { useControllableState } from '../utils/useControllableState';
 
 export interface AppShellProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** The rail: a Sidebar. Fixed and floating; the workspace is offset by its width from 1024px up. */
   sidebar?: ReactNode;
-  /** The page header, above the main content and outside it. Sticky to the top. */
+  /**
+   * The page header, such as a PageHeader: the first part of `<main>`, so the skip link lands on the page's title.
+   * Sticky to the top: once hydrated, its height is the page's `--page-sticky-top`, under which a DataTable's header
+   * row and a SidePanel stick, and a control that focus lands on under it is scrolled clear of it.
+   */
   header?: ReactNode;
+  /**
+   * Whether the shell measures its header once hydrated and writes the height as `--page-sticky-top` on `<main>`.
+   * Pass false to set `--page-sticky-top` yourself, on the shell's `style` or an ancestor. While it measures, a `--page-sticky-top` on the shell's `style` is an
+   * estimate for the first paint, which the measurement replaces. @default true
+   */
+  measuresHeader?: boolean;
   /** The bottom tab bar. Below 1024px the workspace reserves room under its content for it. */
   bottomBar?: ReactNode;
+  /**
+   * Floating chrome that outlives every page, such as an UploadTray: rendered after the workspace and the tab bar,
+   * outside `<main>`, so a client navigation keeps it and it is never a landmark inside main.
+   */
+  floating?: ReactNode;
   /** The page, rendered inside `<main>`. */
   children: ReactNode;
   /** Controlled: whether the rail is collapsed to icons. Pair it with `onSidebarCollapsedChange`. */
@@ -59,6 +75,9 @@ export interface AppShellState {
 
 const AppShellContext = createContext<AppShellState | null>(null);
 
+/** The page's sticky offset, which every sticky part of a page reads. */
+const STICKY_TOP = '--page-sticky-top';
+
 /** Asks the shell to fold its rail, and returns what gives it back. Internal: SidePanel's, through `useRailFold`. */
 const RailFoldContext = createContext<(() => () => void) | null>(null);
 
@@ -86,8 +105,18 @@ export function useAppShell(): AppShellState {
 }
 
 /**
- * The frame an app runs in: a skip link, the rail, a workspace holding a sticky header and `<main>`, and a
- * bottom tab bar. It owns the collapsed state, because the workspace offset depends on it, and the drawer
+ * The shell's state, or null outside an AppShell, for a part that may be mounted with or without one, such as
+ * UploadTray, which gives focus to the shell's `<main>` when it leaves.
+ *
+ * Internal: not exported from the package.
+ */
+export function useOptionalAppShell(): AppShellState | null {
+  return use(AppShellContext);
+}
+
+/**
+ * The frame an app runs in: a skip link, the rail, a workspace holding `<main>`, whose first part is the sticky
+ * header, so the skip link lands on the page's title, a bottom tab bar, and floating chrome that outlives every page, such as an UploadTray, after them all. It owns the collapsed state, because the workspace offset depends on it, and the drawer
  * state, because the header's menu button and the rail share it. The root carries `data-sidebar="collapsed"`
  * while collapsed and nothing otherwise, so a server paints the right width from a prop, and CSS does the
  * rest. The drawer closes as the window widens past 1024px and on Back and Forward; nothing here needs a
@@ -98,7 +127,9 @@ export function useAppShell(): AppShellState {
 export function AppShell({
   sidebar,
   header,
+  measuresHeader = true,
   bottomBar,
+  floating,
   children,
   isSidebarCollapsed: isSidebarCollapsedProp,
   defaultSidebarCollapsed,
@@ -194,6 +225,33 @@ export function AppShell({
     };
   }, [closeDrawer]);
 
+  // The header sticks, so its height is the page's sticky offset: a DataTable's header row and a SidePanel stick
+  // under it, never behind it. Measured after hydration, so no first paint waits on it, and written on `<main>`,
+  // whose page reads it, so an estimate on the shell's own style holds until then and returns when the header
+  // leaves. Nothing is written on the root element: a control that focus lands on under the stuck header is scrolled
+  // clear of it by the header's registration as chrome (WCAG 2.4.11, `utils/focus-clear.ts`), whether or not the
+  // shell measures.
+  const headerRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const hasHeader = present(header);
+  useChrome(headerRef, 'top', hasHeader);
+  useEffect(() => {
+    const wrapper = headerRef.current;
+    const main = mainRef.current;
+    if (!measuresHeader || !wrapper || !main || typeof ResizeObserver !== 'function') return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries.at(-1);
+      if (entry === undefined) return;
+      const height = entry.borderBoxSize[0]?.blockSize ?? entry.contentRect.height;
+      main.style.setProperty(STICKY_TOP, `${String(height)}px`);
+    });
+    observer.observe(wrapper);
+    return () => {
+      observer.disconnect();
+      main.style.removeProperty(STICKY_TOP);
+    };
+  }, [hasHeader, measuresHeader]);
+
   const state = useMemo<AppShellState>(
     () => ({ isSidebarCollapsed, setSidebarCollapsed, isDrawerOpen, openDrawer, closeDrawer, mainId }),
     [isSidebarCollapsed, setSidebarCollapsed, isDrawerOpen, openDrawer, closeDrawer, mainId],
@@ -222,12 +280,17 @@ export function AppShell({
           </a>
           {sidebar}
           <div className="app-shell-workspace">
-            {present(header) && <div className="app-shell-header">{header}</div>}
-            <main className="app-shell-main" id={mainId} tabIndex={-1}>
+            <main className="app-shell-main" id={mainId} tabIndex={-1} ref={mainRef}>
+              {hasHeader && (
+                <div className="app-shell-header" ref={headerRef}>
+                  {header}
+                </div>
+              )}
               {children}
             </main>
           </div>
           {bottomBar}
+          {floating}
         </div>
       </RailFoldContext>
     </AppShellContext>

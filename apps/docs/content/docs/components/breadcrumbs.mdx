@@ -1,0 +1,82 @@
+---
+title: Breadcrumbs
+description: 'Where a page sits, as links to the pages above it, and one back link on a phone.'
+icon: ChevronsRight
+---
+
+<Section>
+
+## Basic
+
+`Breadcrumbs` takes `Breadcrumb` elements from the top of the trail down to the current page, which comes last and has no `href`. The links are slate and underlined, with a chevron between them, and the current page is ink. Narrow the window under 768px and the trail becomes one link to the parent, a back chevron and "Documents", named "Back to Documents".
+
+<Preview name="breadcrumbs-basic" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+- The current page is the last crumb, without `href`: a crumb without one is drawn as text and marked as the current page, so every crumb above it has its `href`. A trail that marks another crumb, or none, warns in the console.
+- Each `Breadcrumb` draws its own item, so a component of yours that renders one, and one a server component renders, both work.
+- The links go through your `RouterProvider`, as every library link does. They are real links in the server's HTML, so the trail works before the page has loaded and with scripts off.
+- A long trail wraps onto a second line. A link's text ends in an ellipsis past 16rem, with its whole text in a tooltip and in the link's name, and shows whole while the link has keyboard focus. The current page is never cut: it wraps. Nothing collapses into a menu.
+- Under 768px the trail is the parent's link alone, a back chevron before its text and "Back to" said before it: a phone gets the one step it can use. With one crumb, or a parent without `href`, there is no back link, and the trail is not drawn on a phone at all.
+- `backLabel` names the back link in your words, for another language: a template where `{parent}` stands for the parent's text, which a server component can pass, or a function, which only a client component can. The parent's text stays in the name, so what a reader sees is what a voice user says.
+- Put it in a [Page header](/docs/components/page-header)'s `breadcrumbs`, above the title.
+
+```tsx
+// app/documents/[year]/page.tsx, a server component
+import { Breadcrumb, Breadcrumbs } from '@snapshot-ui/react';
+
+export default function Page() {
+  return (
+    <>
+      <Breadcrumbs>
+        <Breadcrumb href="/">Home</Breadcrumb>
+        <Breadcrumb href="/documents">Documents</Breadcrumb>
+        <Breadcrumb>Receipts, 2026</Breadcrumb>
+      </Breadcrumbs>
+      {/* A Persian trail names its landmark and its back link in Persian. */}
+      <Breadcrumbs aria-label="مسیر" backLabel="بازگشت به {parent}">
+        <Breadcrumb href="/">خانه</Breadcrumb>
+        <Breadcrumb href="/documents">اسناد</Breadcrumb>
+        <Breadcrumb>رسیدها</Breadcrumb>
+      </Breadcrumbs>
+    </>
+  );
+}
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+<PropsTable label="Breadcrumbs props" path="../../packages/react/src/breadcrumbs/Breadcrumbs.tsx" type="BreadcrumbsProps" />
+
+<PropsTable label="Breadcrumb props" path="../../packages/react/src/breadcrumbs/Breadcrumbs.tsx" type="BreadcrumbProps" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The trail is a navigation landmark named "Breadcrumbs" holding an ordered list, as the WAI-ARIA breadcrumb pattern describes. The current page is the last item, marked `aria-current="page"` and drawn at a heavier weight, so it is never told by color alone; it is text, not a link, and not a tab stop. The chevrons are hidden from assistive technology. On a phone the same landmark holds one link, the parent's, named "Back to Documents"; "Back to" is said but not shown. When the window narrows past 768px with focus on a crumb the phone does not draw, focus moves to the parent's link, never to the page; widening hides nothing, so focus stays. Each link is hit at 40px tall. In forced colors the links take the reader's link color and the current page their text color.
+
+<Keys rows={[['Tab', 'Through each crumb\'s link, then on; the current page is not a stop.'], ['Enter', 'On a crumb, follows its link through your router.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps a trail in the system.
+
+<Rules dos={['End the trail with the current page.', 'Use the pages\' own titles as the crumbs.', 'Keep the trail to the levels above the page.']} donts={['Never draw the trail in link blue: it is navigation, not a link in text.', 'Never give the current page a link.', 'Never fold the middle of a trail into a menu.']} />
+
+</Section>

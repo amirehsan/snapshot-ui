@@ -7,6 +7,23 @@ export function clampPage(page: number, pageCount: number): number {
   return Math.min(Math.max(1, Math.trunc(page)), Math.max(1, Math.trunc(pageCount)));
 }
 
+/** Whether `value` is a whole number of 1 or more. */
+const isCount = (value: number): boolean => Number.isInteger(value) && value >= 1;
+
+/**
+ * The page at `nextSize` rows a page that holds the first row of `page` at `pageSize`, so changing the size keeps
+ * that row in view. Page 1 for a page or a size that is not a whole positive number.
+ */
+export function pageForSize(page: number, pageSize: number, nextSize: number): number {
+  if (!isCount(page) || !isCount(pageSize) || !isCount(nextSize)) return 1;
+  return Math.floor(((page - 1) * pageSize) / nextSize) + 1;
+}
+
+/** The sizes the picker offers: whole positive ones, once each, smallest first, with `pageSize` among them. */
+export function pageSizesOf(options: readonly number[], pageSize: number): number[] {
+  return [...new Set([...options, pageSize])].filter(isCount).sort((a, b) => a - b);
+}
+
 /**
  * The first page, the last, the current one with `siblingCount` each side, and a gap where pages are left out.
  * The row always has `2 * siblingCount + 5` slots, wherever the current page is, so the controls never move

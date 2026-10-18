@@ -1,0 +1,77 @@
+/*
+ * DatePicker: one date field in the text input's pill with the shared field button at its end, opening the
+ * calendar in a popover, derived in docs/design-system.md ("DatePicker"). It is DateRangePicker's frame with one
+ * date: the frame is .input on a plain element, so the hover, disabled, changed and invalid edges reach it through
+ * the field's root, and it rings only while a segment has keyboard focus, never for the button. Its segments are
+ * date-range-picker.css's `.date-segment`, shared and not repeated here: ink in tabular figures, an empty one
+ * slate, labelled or not, and the focused one the ink fill. The frame is never under 12rem, so a whole date and
+ * the button fit at the compact size. The popover is the range picker's: 16px of padding, the month's width.
+ * It draws no corner of its own: the button is the shared field button and the calendar keeps Calendar's
+ * circles and pills, as DateRangePicker's does.
+ */
+@layer components {
+  /* One class, after input.css, so it beats the input's box and none of its states. It clips nothing, so the
+     button's 40px hit area reaches past the frame at either density. The field caps it at --container-field. */
+  .date-picker-control {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-inline-size: 12rem;
+    padding-inline: 1.5rem 3rem;
+    cursor: text;
+  }
+
+  /* Two classes with the test in :where(): it beats the hover edge by order, and the changed and invalid edges,
+     three classes, still beat it. */
+  .date-picker-control.input:where(:has(.date-segment:is(:focus-visible, [data-focus-visible]))) {
+    border: 1.5px solid var(--color-ink);
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .date-picker-input {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* Padded as a segment is, so the app's text starts where the first segment's will, and cut short on one line. */
+  .date-picker-face {
+    flex: auto;
+    min-inline-size: 0;
+    padding-inline: 0.125rem;
+    overflow: hidden;
+    color: var(--color-ink);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .date-picker[data-disabled] :is(.date-segment, .date-picker-face) {
+    color: var(--color-taupe);
+  }
+
+  /* The changed dot of a field with no label: a part step before the 36px button, 6px in, and the date stops a
+     dot and a part step sooner. */
+  .date-picker[data-changed][data-unlabelled] {
+    --field-changed-mark-end: calc(0.375rem + 2.25rem + var(--spacing-part));
+  }
+
+  .date-picker[data-changed][data-unlabelled] .date-picker-control {
+    padding-inline-end: calc(3rem + 0.375rem + var(--spacing-part));
+  }
+
+  /* Two classes, after popover.css's one, so the calendar's popover pads 16px, not 24px, and is the month's width,
+     as the range picker's is. popover.css caps it at the viewport less 2rem. */
+  .date-picker-popover.popover-padded {
+    width: calc(7 * var(--size-control) + 2 * var(--spacing-inset) + 2px);
+    padding: var(--spacing-inset);
+  }
+
+  @media (forced-colors: active) {
+    .date-picker[data-disabled] :is(.date-segment, .date-picker-face) {
+      color: graytext;
+    }
+  }
+}

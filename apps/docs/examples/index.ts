@@ -9,6 +9,7 @@ import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
 import BottomTabBarBasic from './bottom-tab-bar-basic';
 import BottomTabBarMore from './bottom-tab-bar-more';
+import BreadcrumbsBasic from './breadcrumbs-basic';
 import ButtonStates from './button-states';
 import ButtonVariants from './button-variants';
 import CalendarBasic from './calendar-basic';
@@ -35,6 +36,7 @@ import ConfirmDialogBasic from './confirm-dialog-basic';
 import ConfirmDialogDanger from './confirm-dialog-danger';
 import ConfirmDialogHook from './confirm-dialog-hook';
 import DataTableBasic from './data-table-basic';
+import DataTableBulkActions from './data-table-bulk-actions';
 import DataTableColumnOptions from './data-table-column-options';
 import DataTableColumns from './data-table-columns';
 import DataTableFigures from './data-table-figures';
@@ -43,6 +45,9 @@ import DataTablePhone from './data-table-phone';
 import DataTableSelection from './data-table-selection';
 import DataTableStates from './data-table-states';
 import DataTableTransactions from './data-table-transactions';
+import DatePickerBasic from './date-picker-basic';
+import DatePickerPresets from './date-picker-presets';
+import DatePickerReviewGrid from './date-picker-review-grid';
 import DateRangePickerBasic from './date-range-picker-basic';
 import DateRangePickerPresets from './date-range-picker-presets';
 import DateRangePickerStates from './date-range-picker-states';
@@ -51,14 +56,20 @@ import DensityControls from './density-controls';
 import DialogBasic from './dialog-basic';
 import DialogDanger from './dialog-danger';
 import DialogLong from './dialog-long';
+import DocumentsRecipe from './documents-recipe';
 import DrawerEnd from './drawer-end';
 import DrawerNavigation from './drawer-navigation';
 import EmptyStateBasic from './empty-state-basic';
 import EmptyStateInCard from './empty-state-in-card';
 import EyebrowHeading from './eyebrow-heading';
+import FieldChangedUnlabelled from './field-changed-unlabelled';
 import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
 import FieldStates from './field-states';
+import FileButtonBasic from './file-button-basic';
+import FileDropZoneErrors from './file-drop-zone-errors';
+import FileDropZonePage from './file-drop-zone-page';
+import FileDropZoneReceipt from './file-drop-zone-receipt';
 import FilterBarBasic from './filter-bar-basic';
 import FilterBarUrl from './filter-bar-url';
 import FilterBarWrapped from './filter-bar-wrapped';
@@ -92,19 +103,26 @@ import NumberFieldNegative from './number-field-negative';
 import NumberFieldPersian from './number-field-persian';
 import NumberFieldStates from './number-field-states';
 import NumberFieldUrl from './number-field-url';
+import PageHeaderBasic from './page-header-basic';
+import PageHeaderDocuments from './page-header-documents';
 import PaginationButtons from './pagination-buttons';
 import PaginationCursor from './pagination-cursor';
 import PaginationInARow from './pagination-in-a-row';
 import PaginationLinks from './pagination-links';
 import PaginationNarrow from './pagination-narrow';
+import PaginationPageSize from './pagination-page-size';
 import PaginationPersian from './pagination-persian';
 import PaginationSiblings from './pagination-siblings';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
+import ProgressBarBasic from './progress-bar-basic';
+import ProgressBarIndeterminate from './progress-bar-indeterminate';
 import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
 import RadioGroupValidation from './radio-group-validation';
+import SaveBarForm from './save-bar-form';
+import SaveBarInSidePanel from './save-bar-in-side-panel';
 import SearchFieldBasic from './search-field-basic';
 import SearchFieldStates from './search-field-states';
 import SearchFieldToolbar from './search-field-toolbar';
@@ -153,6 +171,7 @@ import ToastAction from './toast-action';
 import ToastBasic from './toast-basic';
 import TooltipBasic from './tooltip-basic';
 import TooltipShortcut from './tooltip-shortcut';
+import UploadListStatuses from './upload-list-statuses';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
@@ -166,6 +185,7 @@ export const examples = {
   'badge-tones': BadgeTones,
   'bottom-tab-bar-basic': BottomTabBarBasic,
   'bottom-tab-bar-more': BottomTabBarMore,
+  'breadcrumbs-basic': BreadcrumbsBasic,
   'button-states': ButtonStates,
   'button-variants': ButtonVariants,
   'calendar-basic': CalendarBasic,
@@ -192,6 +212,7 @@ export const examples = {
   'confirm-dialog-danger': ConfirmDialogDanger,
   'confirm-dialog-hook': ConfirmDialogHook,
   'data-table-basic': DataTableBasic,
+  'data-table-bulk-actions': DataTableBulkActions,
   'data-table-column-options': DataTableColumnOptions,
   'data-table-columns': DataTableColumns,
   'data-table-figures': DataTableFigures,
@@ -200,6 +221,9 @@ export const examples = {
   'data-table-selection': DataTableSelection,
   'data-table-states': DataTableStates,
   'data-table-transactions': DataTableTransactions,
+  'date-picker-basic': DatePickerBasic,
+  'date-picker-presets': DatePickerPresets,
+  'date-picker-review-grid': DatePickerReviewGrid,
   'date-range-picker-basic': DateRangePickerBasic,
   'date-range-picker-presets': DateRangePickerPresets,
   'date-range-picker-states': DateRangePickerStates,
@@ -208,14 +232,20 @@ export const examples = {
   'dialog-basic': DialogBasic,
   'dialog-danger': DialogDanger,
   'dialog-long': DialogLong,
+  'documents-recipe': DocumentsRecipe,
   'drawer-end': DrawerEnd,
   'drawer-navigation': DrawerNavigation,
   'empty-state-basic': EmptyStateBasic,
   'empty-state-in-card': EmptyStateInCard,
   'eyebrow-heading': EyebrowHeading,
+  'field-changed-unlabelled': FieldChangedUnlabelled,
   'field-counter': LengthCounter,
   'field-parts': FieldParts,
   'field-states': FieldStates,
+  'file-button-basic': FileButtonBasic,
+  'file-drop-zone-errors': FileDropZoneErrors,
+  'file-drop-zone-page': FileDropZonePage,
+  'file-drop-zone-receipt': FileDropZoneReceipt,
   'filter-bar-basic': FilterBarBasic,
   'filter-bar-url': FilterBarUrl,
   'filter-bar-wrapped': FilterBarWrapped,
@@ -249,19 +279,26 @@ export const examples = {
   'number-field-persian': NumberFieldPersian,
   'number-field-states': NumberFieldStates,
   'number-field-url': NumberFieldUrl,
+  'page-header-basic': PageHeaderBasic,
+  'page-header-documents': PageHeaderDocuments,
   'pagination-buttons': PaginationButtons,
   'pagination-cursor': PaginationCursor,
   'pagination-in-a-row': PaginationInARow,
   'pagination-links': PaginationLinks,
   'pagination-narrow': PaginationNarrow,
+  'pagination-page-size': PaginationPageSize,
   'pagination-persian': PaginationPersian,
   'pagination-siblings': PaginationSiblings,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
+  'progress-bar-basic': ProgressBarBasic,
+  'progress-bar-indeterminate': ProgressBarIndeterminate,
   'radio-group-basic': RadioGroupBasic,
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,
   'radio-group-validation': RadioGroupValidation,
+  'save-bar-form': SaveBarForm,
+  'save-bar-in-side-panel': SaveBarInSidePanel,
   'search-field-basic': SearchFieldBasic,
   'search-field-states': SearchFieldStates,
   'search-field-toolbar': SearchFieldToolbar,
@@ -310,6 +347,7 @@ export const examples = {
   'toast-basic': ToastBasic,
   'tooltip-basic': TooltipBasic,
   'tooltip-shortcut': TooltipShortcut,
+  'upload-list-statuses': UploadListStatuses,
 } satisfies Record<string, ComponentType>;
 
 export type ExampleName = keyof typeof examples;

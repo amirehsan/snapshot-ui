@@ -3,6 +3,8 @@ import { House, Settings, ShoppingCart, User } from 'lucide-react';
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { AppShell } from '../app-shell';
+import { Breadcrumb, Breadcrumbs } from '../breadcrumbs';
 import { Button } from '../button';
 import { RangeCalendar } from '../calendar';
 import { Checkbox, CheckboxGroup } from '../checkbox';
@@ -10,26 +12,34 @@ import { CollapsibleCard } from '../collapsible-card';
 import { ComboBox } from '../combo-box';
 import { CommandPalette } from '../command-palette';
 import { DataTable } from '../data-table';
+import { DatePicker } from '../date-picker';
 import { DateRangePicker } from '../date-range-picker';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { EmptyState } from '../empty-state';
+import { FileDropZone, PageDropZone } from '../file-drop-zone';
 import { FilterBar } from '../filter-bar';
 import { FilterChip } from '../filter-chip';
 import { Link, RouterProvider } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { MultiSelect } from '../multi-select';
 import { NumberField } from '../number-field';
+import { PageColumn, PageHeader } from '../page-header';
 import { Pagination } from '../pagination';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
+import { ProgressBar } from '../progress-bar';
 import { Radio, RadioGroup } from '../radio-group';
+import { SaveBar } from '../save-bar';
 import { SearchField } from '../search-field';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
 import { Select } from '../select';
 import { Sheet, SheetTrigger } from '../sheet';
 import { SidePanel, SidePanelLayout } from '../side-panel';
 import { MENU_ROW_A11Y } from '../stories/a11y';
+import { filesTransfer, fireDrag, pdf } from '../stories/drag';
+import { DemoHeader, DemoNav } from '../stories/shell-fixture';
+import { DESKTOP, VIEWPORT_OPTIONS } from '../stories/viewports';
 import { firstLineOffset, lineCount } from '../stories/paint';
 import { Switch } from '../switch';
 import { Tab, TabList, TabPanel, Tabs } from '../tabs';
@@ -37,6 +47,7 @@ import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
 import { toast, ToastRegion } from '../toast';
 import { Eyebrow, Text } from '../typography';
+import { UploadTray } from '../upload-tray';
 
 /**
  * Right-to-left text, checked for every field in a real browser: layout needs a
@@ -1216,6 +1227,56 @@ export const DateRangePickerMirrored: Story = {
 };
 
 /**
+ * A date picker in right to left: the button and the changed dot at the frame's left, the dot to the button's right,
+ * and the segments in the Persian calendar's own order, year first at the right.
+ */
+export const DatePickerMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(20rem, calc(100vw - 2rem))', display: 'grid', gap: 16 }}>
+        <DatePicker
+          label="تاریخ"
+          defaultValue="2026-10-14"
+          today="2026-10-16"
+          labels={{ open: 'انتخاب تاریخ' }}
+        />
+        <DatePicker
+          aria-label="تاریخ رسید"
+          defaultValue="2026-10-14"
+          today="2026-10-16"
+          isChanged
+          changedLabel="تغییر کرده"
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const [labelled, changed] = [...canvasElement.querySelectorAll<HTMLElement>('.date-picker-control')];
+    if (!labelled || !changed) throw new Error('Two frames');
+    const button = within(canvasElement).getByRole('button', { name: /^انتخاب تاریخ/ });
+    // The button at the left end.
+    await expect(rect(button).left - rect(labelled).left).toBeLessThan(12);
+    // 14 October 2026 is 22 Mehr 1405: the year at the right, then the month, then the day to its left.
+    const segments = [...labelled.querySelectorAll<HTMLElement>('.date-segment:not([data-type="literal"])')];
+    await expect(segments.map((each) => each.textContent)).toEqual(['۱۴۰۵', '۷', '۲۲']);
+    const [year, month, day] = segments;
+    if (!year || !month || !day) throw new Error('Three segments');
+    await expect(rect(year).left).toBeGreaterThan(rect(month).right - 0.5);
+    await expect(rect(month).left).toBeGreaterThan(rect(day).right - 0.5);
+    await expect(rect(day).left).toBeGreaterThan(rect(button).right - 0.5);
+    // The changed dot sits between the date and the button, a part step from the button, on the left.
+    const mark = find(changed, '.field-changed-mark');
+    const own = find(changed, '.date-picker-button');
+    const first = [...changed.querySelectorAll<HTMLElement>('.date-segment:not([data-type="literal"])')].at(
+      -1,
+    );
+    if (!first) throw new Error('No segment');
+    await expect(rect(mark).left).toBeGreaterThanOrEqual(rect(own).right - 0.5);
+    await expect(rect(mark).right).toBeLessThanOrEqual(rect(first).left + 0.5);
+  },
+};
+
+/**
  * A filter chip in right to left: the pill runs from the right, so its label is at the right and its clear button
  * at the left end, and neither the chevron nor the X is mirrored, since neither has a direction.
  */
@@ -1507,13 +1568,88 @@ export const DataTableMirrored: Story = {
       const cell = find(row, '[data-selection]');
       await expect(Math.abs(rect(cell).right - rect(row).right)).toBeLessThan(1);
     }
-    // The bar's count at its right, the actions to its left.
+    // The bar's X at its right, inside its padding, the count to its left, and the actions to the count's left.
     const bar = find(selecting, '.data-table-bar');
+    const clear = find(bar, '.data-table-bar-clear');
     const count = find(bar, '.data-table-bar-count');
     await expect(count).toHaveTextContent('۱ انتخاب شده');
     const barPadding = parseFloat(getComputedStyle(bar).paddingRight);
-    await expect(Math.abs(rect(count).right - (rect(bar).right - barPadding - 1))).toBeLessThan(1.5);
+    await expect(Math.abs(rect(clear).right - (rect(bar).right - barPadding - 1))).toBeLessThan(1.5);
+    await expect(rect(count).right).toBeLessThanOrEqual(rect(clear).left);
     await expect(rect(find(bar, '.data-table-bar-actions')).right).toBeLessThan(rect(count).left);
+  },
+};
+
+/** Persian digits, as an app's formatCount writes them. */
+const persianDigits = (count: number): string =>
+  String(count).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit);
+
+/** A Persian table with two rows selected and its bar's actions as data: one promoted, two in More. */
+function MirroredBulk(): ReactElement {
+  const [keys, setKeys] = useState<Key[]>(['p1', 'p2']);
+  return (
+    <DataTable
+      aria-label="تراکنش‌ها"
+      items={PERSIAN_ROWS}
+      columns={[
+        { id: 'payee', header: 'گیرنده', cell: (row) => row.payee },
+        { id: 'amount', header: 'مبلغ', cell: (row) => row.amount, align: 'end', width: '10rem' },
+      ]}
+      getKey={(row) => row.id}
+      selectedKeys={keys}
+      onSelectionChange={setKeys}
+      formatCount={persianDigits}
+      bulkActions={[
+        { id: 'categorize', label: 'دسته‌بندی', isPromoted: true, onAction: () => undefined },
+        { id: 'archive', label: 'بایگانی', onAction: () => undefined },
+        { id: 'delete', label: 'حذف', onAction: () => undefined },
+      ]}
+      selectAllMatching={<Button variant="tertiary">انتخاب همه ۱٬۲۴۰ مورد</Button>}
+      labels={{
+        selectAll: 'انتخاب همه',
+        select: 'انتخاب',
+        clearSelection: 'پاک کردن انتخاب',
+        selected: (count) => `${count} انتخاب شده`,
+        toolbar: 'کارهای گروهی',
+        moreActions: 'کارهای بیشتر',
+      }}
+    />
+  );
+}
+
+/**
+ * The bulk-action bar on a Persian page: the X at the bar's right, the count and the select-all place to its left,
+ * the promoted button after them and More at the bar's left, each end the corner inset in; the arrows follow the
+ * reading order, so Arrow Left moves from the X toward More.
+ */
+export const BulkBarMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(48rem, calc(100vw - 2rem))' }}>
+        <MirroredBulk />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = find(canvasElement, '.data-table-bar');
+    const clear = within(bar).getByRole('button', { name: 'پاک کردن انتخاب' });
+    const more = within(bar).getByRole('button', { name: 'کارهای بیشتر' });
+    const promoted = within(bar).getByRole('button', { name: 'دسته‌بندی' });
+    const count = find(bar, '.data-table-bar-count');
+    await expect(count).toHaveTextContent('۲ انتخاب شده');
+    const inset = parseFloat(getComputedStyle(bar).borderBottomRightRadius) - 1;
+    await expect(rect(bar).right - rect(clear).right).toBeGreaterThanOrEqual(inset - 0.5);
+    await expect(rect(more).left - rect(bar).left).toBeGreaterThanOrEqual(inset - 0.5);
+    await expect(rect(count).right).toBeLessThanOrEqual(rect(clear).left);
+    await expect(rect(find(bar, '.data-table-bar-select-all')).right).toBeLessThanOrEqual(rect(count).left);
+    await expect(rect(more).right).toBeLessThanOrEqual(rect(promoted).left);
+    // React Aria's toolbar follows the direction: Arrow Left moves on from the X.
+    clear.focus();
+    await waitFor(() => expect(clear).toHaveFocus());
+    await userEvent.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(document.activeElement).toHaveAccessibleName('انتخاب همه ۱٬۲۴۰ مورد'));
+    await userEvent.keyboard('{ArrowLeft}{ArrowLeft}');
+    await waitFor(() => expect(more).toHaveFocus());
   },
 };
 
@@ -1630,5 +1766,338 @@ export const SidePanelMirrored: Story = {
     await expect(
       Math.abs(rect(title).right - (rect(header).right - parseFloat(getComputedStyle(header).paddingRight))),
     ).toBeLessThan(1.5);
+  },
+};
+
+/**
+ * The indeterminate bars of `ProgressBarMirrored`, by test id, with the direction each track resolves to: on the
+ * Persian page, in an ltr box nested in it, and under `dir="auto"` reading Latin; then on an English page, in an
+ * rtl box nested in it, and under `dir="auto"` reading Persian. Only the track's own direction may steer the
+ * slide, never an ancestor's attribute.
+ */
+const SLIDES: readonly (readonly [testId: string, direction: 'ltr' | 'rtl'])[] = [
+  ['reading', 'rtl'],
+  ['nested-ltr', 'ltr'],
+  ['auto-latin', 'ltr'],
+  ['ltr', 'ltr'],
+  ['nested-rtl', 'rtl'],
+  ['auto-persian', 'rtl'],
+];
+
+/**
+ * A progress bar on a Persian page at 45: the fill grows from the inline start, the right, so its right edge is
+ * the track's; the label starts at the right and the value sits at the head's left end. The indeterminate
+ * segment slides from the inline start of the direction its own track resolves to, however that was set: the
+ * play pauses each slide and places it at its first frame, wholly before the start, and at half its run, 30% of
+ * the track in from the start (the inset runs from -40% to 100%, and ease-in-out is half done at half time).
+ * Geometry only, no timing; in three engines, since each animates the logical inset itself.
+ */
+export const ProgressBarMirrored: Story = {
+  tags: ['webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div style={{ width: 'min(28rem, calc(100vw - 2rem))', display: 'grid', gap: '1rem' }}>
+        <div dir="rtl" lang="fa" style={{ display: 'grid', gap: '1rem' }}>
+          <ProgressBar label="در حال بارگذاری فاکتور" value={45} valueLabel="۴۵٪" />
+          <ProgressBar label="در حال خواندن رسید" isIndeterminate data-testid="reading" />
+          <div dir="ltr" lang="en">
+            <ProgressBar label="Reading receipt.jpg" isIndeterminate data-testid="nested-ltr" />
+          </div>
+          <div dir="auto" lang="en">
+            <ProgressBar label="Reading invoice.pdf" isIndeterminate data-testid="auto-latin" />
+          </div>
+        </div>
+        <div dir="ltr" lang="en" style={{ display: 'grid', gap: '1rem' }}>
+          <ProgressBar label="Reading statement.pdf" isIndeterminate data-testid="ltr" />
+          <div dir="rtl" lang="fa">
+            <ProgressBar label="در حال خواندن قرارداد" isIndeterminate data-testid="nested-rtl" />
+          </div>
+          <div dir="auto" lang="fa">
+            <ProgressBar label="در حال خواندن صورت‌حساب" isIndeterminate data-testid="auto-persian" />
+          </div>
+        </div>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const bar = find(canvasElement, '.progress-bar');
+    const track = rect(find(bar, '.progress-bar-track'));
+    const fill = rect(find(bar, '.progress-bar-fill'));
+    await expect(Math.abs(fill.right - track.right)).toBeLessThan(1);
+    await expect(Math.abs(fill.width - track.width * 0.45)).toBeLessThan(1);
+    const head = rect(find(bar, '.progress-bar-head'));
+    await expect(Math.abs(rect(find(bar, '.progress-bar-label')).right - head.right)).toBeLessThan(1);
+    await expect(Math.abs(rect(find(bar, '.progress-bar-value')).left - head.left)).toBeLessThan(1);
+
+    for (const [testId, direction] of SLIDES) {
+      const slideTrack = find(canvasElement, `[data-testid="${testId}"] .progress-bar-track`);
+      await expect(getComputedStyle(slideTrack).direction, testId).toBe(direction);
+      const segment = find(slideTrack, '.progress-bar-fill');
+      const [slide] = segment.getAnimations();
+      if (!slide) throw new Error(`${testId} has no slide`);
+      const duration = Number(slide.effect?.getComputedTiming().duration);
+      await expect(duration, testId).toBeGreaterThan(0);
+      slide.pause();
+      try {
+        for (const [time, start] of [
+          [0, -0.4],
+          [duration / 2, 0.3],
+        ] as const) {
+          slide.currentTime = time;
+          const lane = rect(slideTrack);
+          const box = rect(segment);
+          // How far the segment's inline start is from the track's, in the track's own direction.
+          const inset = direction === 'ltr' ? box.left - lane.left : lane.right - box.right;
+          const moment = `${testId} at ${String(time)}ms`;
+          await expect(Math.abs(inset - lane.width * start), moment).toBeLessThan(1);
+          await expect(Math.abs(box.width - lane.width * 0.4), `${testId} width`).toBeLessThan(1);
+        }
+      } finally {
+        slide.play();
+      }
+    }
+  },
+};
+
+/**
+ * A drop zone on a Persian page in a narrow column: the icon at the right, the start of the line, and the hint
+ * before the button from the right; the label at the right of the head.
+ */
+export const FileDropZoneMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(18rem, calc(100vw - 2rem))' }}>
+        <FileDropZone
+          label="رسید"
+          labels={{ dragHint: 'فایل را بکشید یا', choose: 'انتخاب', drop: 'رها کنید' }}
+          onFiles={() => undefined}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const box = rect(find(canvasElement, '.file-drop-zone-box'));
+    const icon = rect(find(canvasElement, '.file-drop-zone-icon'));
+    const line = rect(find(canvasElement, '.file-drop-zone-line'));
+    // One row: the icon beside the line, at its right.
+    await expect(icon.left).toBeGreaterThanOrEqual(line.right - 0.5);
+    await expect(box.right - icon.right).toBeLessThan(icon.left - box.left);
+    const hint = rect(find(canvasElement, '.file-drop-zone-hint'));
+    const button = rect(find(canvasElement, '.file-drop-zone-line .button'));
+    // The hint first, from the right: at the button's right, or above it where the line wraps.
+    await expect(hint.right > button.right - 0.5 || hint.bottom <= button.top + 0.5).toBe(true);
+    const head = rect(find(canvasElement, '.field-head'));
+    await expectSameEdge(rect(find(canvasElement, '.field-label')).right, head.right);
+  },
+};
+
+/**
+ * The page overlay on a Persian page in the shell: the rail is on the right, so the overlay's right edge clears
+ * it by the inset, and its left edge is the inset from the viewport's.
+ */
+export const PageDropZoneMirrored: Story = {
+  globals: DESKTOP,
+  parameters: { layout: 'fullscreen', viewport: { options: VIEWPORT_OPTIONS } },
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa">
+        <AppShell sidebar={<DemoNav />} header={<DemoHeader title="اسناد" />}>
+          <p data-testid="page">فاکتورها و رسیدها</p>
+          <PageDropZone title="برای بارگذاری رها کنید" onFiles={() => undefined} />
+        </AppShell>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    fireDrag(find(canvasElement, '[data-testid="page"]'), 'dragenter', filesTransfer([pdf()]));
+    const overlay = await waitFor(() => find(document, '.page-drop-zone'));
+    const rail = rect(find(canvasElement, '.sidebar'));
+    const box = rect(overlay);
+    await expect(rail.left).toBeGreaterThan(window.innerWidth / 2);
+    await expect(box.right).toBeLessThanOrEqual(rail.left);
+    await expect(box.left).toBeCloseTo(16, 0);
+    // Drawn in the shell, it takes the direction of where the zone is mounted.
+    await expect(overlay).toHaveAttribute('dir', 'rtl');
+    fireDrag(overlay, 'dragend', filesTransfer([pdf()]));
+    await waitFor(() => expect(document.querySelector('.page-drop-zone')).toBeNull());
+  },
+};
+
+/**
+ * The upload tray on a Persian page in the shell: the panel in the bottom left corner, 16px from the window's
+ * left, and a Persian file name with its extension at its left end, the end of a name read from the right.
+ */
+export const UploadTrayMirrored: Story = {
+  globals: DESKTOP,
+  parameters: { layout: 'fullscreen', viewport: { options: VIEWPORT_OPTIONS } },
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa">
+        <AppShell
+          sidebar={<DemoNav />}
+          header={<DemoHeader title="اسناد" />}
+          floating={
+            <UploadTray
+              items={[
+                { id: 1, name: 'صورت‌حساب-شهریور-فروشگاه-محله-و-تعطیلات-آخر-هفته.pdf', status: 'saved' },
+                { id: 2, name: 'invoice-0142.pdf', status: 'saved' },
+              ]}
+            />
+          }
+        >
+          <p>فاکتورها و رسیدها</p>
+        </AppShell>
+      </div>
+    </I18nProvider>
+  ),
+  play: async () => {
+    const panel = await waitFor(() => find(document, '.upload-tray'));
+    await Promise.all(panel.getAnimations().map((animation) => animation.finished.catch(() => null)));
+    await expect(rect(panel).left).toBeCloseTo(16, 0);
+    const [persian, latin] = [...panel.querySelectorAll<HTMLElement>('.upload-row-name')];
+    if (!persian || !latin) throw new Error('Two names');
+    // The Persian name reads from the right: its extension at the left end, after the cut stem.
+    const stem = rect(find(persian, '.upload-row-stem'));
+    const ext = rect(find(persian, '.upload-row-ext'));
+    await expect(ext.right).toBeLessThanOrEqual(stem.left + 0.5);
+    await expectSameEdge(ext.left, rect(persian).left);
+    // A Latin name keeps its own direction: its extension at its right end.
+    await expect(rect(find(latin, '.upload-row-ext')).left).toBeGreaterThanOrEqual(
+      rect(find(latin, '.upload-row-stem')).right - 0.5,
+    );
+  },
+};
+
+/**
+ * A save bar in Persian: the sentence and the chip at the right, the actions at the bar's left with the action
+ * last, so leftmost; under 36rem one line of buttons that keeps the radius from both bottom corners.
+ */
+export const SaveBarMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ display: 'grid', gap: 24, width: 'min(40rem, calc(100vw - 2rem))' }}>
+        <SaveBar
+          className="wide"
+          message="۲ تغییر در فروشگاه محله، ۲۲ مهر"
+          isDirty
+          actionLabel="ذخیره"
+          onAction={() => undefined}
+          onCancel={() => undefined}
+          labels={{ unsaved: 'تغییرات ذخیره نشده', cancel: 'انصراف' }}
+        />
+        <div style={{ width: 'min(22rem, 100%)' }}>
+          <SaveBar
+            className="narrow"
+            message="۲ تغییر در فروشگاه محله، ۲۲ مهر"
+            actionLabel="ذخیره"
+            onAction={() => undefined}
+            onCancel={() => undefined}
+            labels={{ cancel: 'انصراف' }}
+          />
+        </div>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const wide = find(canvasElement, '.save-bar.wide');
+    const [cancel, save] = within(wide).getAllByRole('button');
+    if (!cancel || !save) throw new Error('Two buttons');
+    // The actions at the left, the action leftmost, the sentence and the chip at the right.
+    await expect(rect(save).right).toBeLessThanOrEqual(rect(cancel).left + 0.5);
+    await expect(rect(save).left - rect(wide).left).toBeLessThan(rect(wide).right - rect(save).right);
+    await expectSameEdge(
+      rect(find(wide, '.save-bar-chip')).right,
+      rect(find(wide, '.save-bar-message')).right,
+    );
+    await expect(rect(find(wide, '.save-bar-text')).right).toBeGreaterThan(rect(cancel).right);
+    // The action sits clear of the corner's curve on its own side, the left.
+    const radius = parseFloat(getComputedStyle(wide).borderBottomLeftRadius);
+    await expect(rect(save).left - rect(wide).left).toBeGreaterThanOrEqual(radius - 0.5);
+    // Under 36rem: one line of buttons, side by side in DOM order from the right, the action at the left, filling
+    // the line, and both insets at least the radius, the start's at the right as the end's at the left.
+    const narrow = find(canvasElement, '.save-bar.narrow');
+    const [first, last] = within(narrow).getAllByRole('button');
+    if (!first || !last) throw new Error('Two buttons');
+    await expect(Math.abs(rect(last).top - rect(first).top)).toBeLessThan(1);
+    await expect(rect(last).right).toBeLessThanOrEqual(rect(first).left + 0.5);
+    const actions = rect(find(narrow, '.save-bar-actions'));
+    await expect(rect(first).right - rect(last).left).toBeCloseTo(actions.width, 0);
+    const corner = parseFloat(getComputedStyle(narrow).borderBottomRightRadius);
+    await expect(rect(narrow).right - rect(first).right).toBeGreaterThanOrEqual(corner - 0.5);
+    await expect(rect(last).left - rect(narrow).left).toBeGreaterThanOrEqual(corner - 0.5);
+  },
+};
+
+/**
+ * A Persian page header: the trail, the eyebrow, the title and the sentence at the right, the actions at the left,
+ * and the page column under it with the same two edges.
+ */
+export const PageHeaderMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <RouterProvider navigate={() => undefined}>
+        <div dir="rtl" lang="fa" style={{ width: 'min(48rem, calc(100vw - 2rem))' }}>
+          <PageHeader
+            breadcrumbs={
+              <Breadcrumbs aria-label="مسیر">
+                <Breadcrumb href="#home">خانه</Breadcrumb>
+                <Breadcrumb>اسناد</Breadcrumb>
+              </Breadcrumbs>
+            }
+            eyebrow="بایگانی"
+            title="اسناد"
+            description="همه رسیدهایی که امسال بارگذاری کرده‌اید."
+            actions={<Button>بارگذاری</Button>}
+          />
+          <PageColumn className="content">
+            <Text>فروشگاه محله، ۲۲ مهر.</Text>
+          </PageColumn>
+        </div>
+      </RouterProvider>
+    </I18nProvider>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const content = find(canvasElement, '.content');
+    const style = getComputedStyle(content);
+    const start = rect(content).right - parseFloat(style.paddingRight);
+    const end = rect(content).left + parseFloat(style.paddingLeft);
+    const title = canvas.getByRole('heading', { level: 1, name: 'اسناد' });
+    await expectSameEdge(rect(title).right, start);
+    await expectSameEdge(rect(find(canvasElement, '.breadcrumbs-list')).right, start);
+    await expectSameEdge(rect(find(canvasElement, '.page-header-description')).right, start);
+    const action = canvas.getByRole('button', { name: 'بارگذاری' });
+    if (window.innerWidth >= 768) await expectSameEdge(rect(action).left, end);
+    else await expectSameEdge(rect(action).right, start);
+  },
+};
+
+/** A Persian trail: it reads from the right, the chevrons point left, and the narrow face's chevron points right. */
+export const BreadcrumbsMirrored: Story = {
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <RouterProvider navigate={() => undefined}>
+        <div dir="rtl" lang="fa">
+          <Breadcrumbs aria-label="مسیر" backLabel="بازگشت به {parent}">
+            <Breadcrumb href="#home">خانه</Breadcrumb>
+            <Breadcrumb href="#documents">اسناد</Breadcrumb>
+            <Breadcrumb>رسیدها</Breadcrumb>
+          </Breadcrumbs>
+        </div>
+      </RouterProvider>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const items = [...canvasElement.querySelectorAll<HTMLElement>('.breadcrumbs-item')];
+    const [home, documents, current] = items;
+    if (!home || !documents || !current) throw new Error('Three crumbs');
+    // From the right: Home, then Documents to its left, then the current page.
+    await expect(rect(home).left).toBeGreaterThan(rect(documents).right - 0.5);
+    await expect(rect(documents).left).toBeGreaterThan(rect(current).right - 0.5);
+    // The separator follows its crumb, to its left, and points left: its drawn path is mirrored.
+    const separator = find(home, '.breadcrumbs-separator');
+    await expect(rect(separator).right).toBeLessThanOrEqual(rect(find(home, '.breadcrumbs-link')).left + 0.5);
+    for (const icon of canvasElement.querySelectorAll('.breadcrumbs-separator svg, .breadcrumbs-back-icon')) {
+      await expect(getComputedStyle(icon).scale).toBe('-1 1');
+    }
   },
 };

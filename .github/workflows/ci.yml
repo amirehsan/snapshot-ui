@@ -47,7 +47,9 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # The gates, the story tests in three engines, the docs end-to-end run and the concentric audit: a passing
+    # run with batch 4's stories came within minutes of 25, so 35 leaves room for a slow runner.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -110,7 +112,8 @@ jobs:
     name: Visual regression
     needs: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # About 2200 shots: a passing run takes most of 20 minutes, and a failing one, with its retries, more.
+    timeout-minutes: 35
     # The baselines were made in this image, so compare in it too.
     container:
       image: mcr.microsoft.com/playwright:v1.64.0-noble
