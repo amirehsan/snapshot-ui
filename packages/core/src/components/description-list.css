@@ -9,11 +9,12 @@
  */
 @layer components {
   /* A size container takes no width from its content, so in a flex row or an auto grid column the list names a
-     stand-in width, 20rem, at which it stacks, as StatTile names its own. A block or a sized column still sets
-     its width. */
+     stand-in width, 16rem, at which it stacks, the whole tile StatTile names. It is also the list's min-content
+     width, so a flex or grid item that holds it takes min-width: 0, or it is at least 16rem wide; 16rem fits the
+     288px a 320px phone leaves inside its 16px margins. A block or a sized column still sets its width. */
   .description-list {
     container: description-list / inline-size;
-    contain-intrinsic-inline-size: 20rem;
+    contain-intrinsic-inline-size: 16rem;
     display: grid;
     min-width: 0;
     margin: 0;
@@ -134,11 +135,22 @@
   /* The corner (design record, "Nested radii, derived"): a row whose controls would sit in a card's corner
      curve stands them the corner inset from the card's edge, down, not in, so they stay on the column's end
      edge. 7px more in Rounded, 19px in compact, nothing in Soft and Square, where the padding already clears
-     the curve. Only a list that ends or starts the card, directly or as its body's last or first child. */
-  :is(.card, .card > .card-body:last-child)
-    > .description-list:last-child
+     the curve. Only a list that ends or starts the card: directly, as its body's last or first child, or as the
+     last child of a collapsible card's body. At the foot, only side by side, where the controls stand on the
+     last row's first line; stacked they share the term's line at the row's top, clear of the curve, and the row
+     keeps its padding. */
+  :is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)
+    > .description-list[data-layout='horizontal']:last-child
     > .description-list-item:last-child:has(> .description-list-actions) {
     padding-block-end: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));
+  }
+
+  @container description-list (inline-size >= 30rem) {
+    :is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)
+      > .description-list[data-layout='auto']:last-child
+      > .description-list-item:last-child:has(> .description-list-actions) {
+      padding-block-end: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));
+    }
   }
 
   :is(.card, .card > .card-body:first-child)

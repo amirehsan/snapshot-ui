@@ -11,9 +11,10 @@ import {
 import type { ReactElement } from 'react';
 
 /**
- * The list is the card's body. Its last row's Add ends the card, inside its bottom end curve, so the row takes
- * the card's corner inset under it and Add keeps its place on the column's end edge: 7px more in Rounded,
- * nothing more in Soft and Square. The list does this itself.
+ * The list is the card's body. Its last row's Edit ends the card, inside its bottom end curve, so the row takes
+ * the card's corner inset under it and Edit keeps its place on the column's end edge: 7px more in Rounded,
+ * nothing more in Soft and Square, and nothing while the list is stacked, where Edit is on the term's line. The
+ * list does this itself.
  */
 export default function DescriptionListCard(): ReactElement {
   return (
@@ -38,20 +39,22 @@ export default function DescriptionListCard(): ReactElement {
           <DescriptionListItem term="Bank feed">
             <Badge>Connected</Badge>
           </DescriptionListItem>
-          <DescriptionListItem term="Credit limit" isNumeric>
-            $5,000.00
-          </DescriptionListItem>
+          {/* A missing value: a link to add it, in place of the value, and no action beside it. */}
+          <DescriptionListItem term="Nickname" emptyValue={<Link href="#nickname">Add a nickname</Link>} />
           <DescriptionListItem term="APR" isNumeric>
             24.9%
           </DescriptionListItem>
           <DescriptionListItem
-            term="Nickname"
+            term="Credit limit"
+            isNumeric
             actions={
-              <Link href="#nickname" aria-label="Add a nickname">
-                Add
+              <Link href="#credit-limit" aria-label="Edit Credit limit">
+                Edit
               </Link>
             }
-          />
+          >
+            $5,000.00
+          </DescriptionListItem>
         </DescriptionList>
       </CardBody>
     </Card>

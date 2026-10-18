@@ -5,6 +5,7 @@ import { expect, waitFor } from 'storybook/test';
 import { Badge } from '../badge';
 import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
+import { CollapsibleCard } from '../collapsible-card';
 import { Link } from '../link';
 import { DESKTOP, VIEWPORT_OPTIONS } from '../stories/viewports';
 import { DescriptionList, DescriptionListItem } from './DescriptionList';
@@ -87,8 +88,9 @@ export const Stacked: Story = {
 };
 
 /**
- * A row's controls in a dd of their own, each named with its term: Edit beside the name, Add beside an empty
- * nickname, and Reconnect beside a feed that failed, an error Badge, since a feed that failed is a failure.
+ * A row's controls in a dd of their own, each named with its term: Edit beside the name, and Reconnect beside a
+ * feed that failed, an error Badge, since a feed that failed is a failure. An empty nickname shows a link to add
+ * it in place of the value, with no action.
  */
 export const WithActions: Story = {
   tags: ['density'],
@@ -105,14 +107,11 @@ export const WithActions: Story = {
       >
         Everyday Visa
       </DescriptionListItem>,
+      // A missing value is added from where it would be, GOV.UK's pattern, not from an action beside "Not set".
       <DescriptionListItem
         key="nickname"
         term="Nickname"
-        actions={
-          <Link href="#nickname" aria-label="Add a nickname">
-            Add
-          </Link>
-        }
+        emptyValue={<Link href="#nickname">Add a nickname</Link>}
       />,
       <DescriptionListItem
         key="feed"
@@ -349,7 +348,7 @@ export const SwitchesAtItsWidth: Story = {
   },
 };
 
-/** In a flex row a list takes the 20rem it names in place of the content a size container does not give. */
+/** In a flex row a list takes the 16rem it names in place of the content a size container does not give. */
 export const InAFlexRow: Story = {
   tags: ['no-visual'],
   render: (args) => (
@@ -360,15 +359,49 @@ export const InAFlexRow: Story = {
   play: async ({ canvasElement }) => {
     const list = part(canvasElement, 'description-list');
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
-    await expect(Math.abs(list.getBoundingClientRect().width - 20 * rem)).toBeLessThanOrEqual(1);
+    await expect(Math.abs(list.getBoundingClientRect().width - 16 * rem)).toBeLessThanOrEqual(1);
   },
 };
 
+/** The rows a corner case measures, the last with an Edit. */
+function caseRows(): ReactElement[] {
+  const edit = (
+    <Button variant="secondary" aria-label="Edit Nickname">
+      Edit
+    </Button>
+  );
+  const nickname = (
+    <DescriptionListItem key="nickname" term="Nickname" actions={edit}>
+      Travel card
+    </DescriptionListItem>
+  );
+  return [
+    <DescriptionListItem key="name" term="Name">
+      Everyday Visa
+    </DescriptionListItem>,
+    <DescriptionListItem key="limit" term="Credit limit" isNumeric>
+      $5,000.00
+    </DescriptionListItem>,
+    nickname,
+  ];
+}
+
+/** A card 36rem wide at most, named, so its list sits terms beside values at 1280. */
+const CASE_CARD = { width: '100%', maxWidth: '36rem' } as const;
+
 /**
- * A row's controls clear of a card's corner, measured. Rounded, comfortable and compact: the last row's Edit
- * ends at least the card's corner inset above the card's bottom edge, and in a card with no header the first
- * row's Edit starts at least that far under its top edge. Soft and Square: the row keeps the Dense data
- * padding, since the card's padding already clears the curve.
+ * A row's controls clear of a card's corner, measured in each place a list can stand in a card. Rounded,
+ * comfortable and compact: where the rule applies, the Edit stands at least the card's corner inset from the
+ * card's edge, and the row grows by the inset less the padding on that side only. Soft and Square: every row
+ * keeps the Dense data padding, since the card's padding already clears the curve.
+ *
+ * - `foot`: the list ends the card's body, side by side.
+ * - `head`: the list starts a card with no header, so its first row moves down.
+ * - `direct`: the list is the card's own last child, with no body.
+ * - `collapsible`: the list ends a collapsible card's body.
+ * - `stacked`: the list ends the body but is stacked, so Edit is on the term's line at the row's top, clear
+ *   of the curve, and the row keeps its padding.
+ * - `followed`: the list is followed by a paragraph in the body, so it is not at the card's foot.
  */
 export const CornerClear: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -377,19 +410,49 @@ export const CornerClear: Story = {
     <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
       <DetailsCard />
       <DetailsCard hasHeader={false} label="Nickname" />
+      <Card as="section" aria-label="Directly in the card" data-case="direct" style={CASE_CARD}>
+        <DescriptionList>{caseRows()}</DescriptionList>
+      </Card>
+      <CollapsibleCard title="Collapsible details" level={3} data-case="collapsible" style={CASE_CARD}>
+        <DescriptionList>{caseRows()}</DescriptionList>
+      </CollapsibleCard>
+      <Card as="section" aria-label="Stacked details" data-case="stacked" style={CASE_CARD}>
+        <CardBody>
+          <DescriptionList layout="stacked">{caseRows()}</DescriptionList>
+        </CardBody>
+      </Card>
+      <Card as="section" aria-label="Details and a note" data-case="followed" style={CASE_CARD}>
+        <CardBody>
+          <DescriptionList>{caseRows()}</DescriptionList>
+          <p>Synced with the bank every morning.</p>
+        </CardBody>
+      </Card>
     </div>
   ),
   play: async ({ canvasElement }) => {
     const root = document.documentElement;
     const { shape, density } = root.dataset;
-    const [footCard, headCard] = [...canvasElement.querySelectorAll<HTMLElement>('.card')];
+    const cards = [...canvasElement.querySelectorAll<HTMLElement>(':scope > div > .card')];
+    const [footCard, headCard] = cards;
+    const caseCard = (name: string): HTMLElement => {
+      const card = cards.find((each) => each.dataset.case === name);
+      if (!card) throw new Error(`No ${name} card`);
+      return card;
+    };
     if (!footCard || !headCard) throw new Error('No cards');
-    const lastRow = footCard.querySelector('.description-list-item:last-child');
+    const lastRow = (card: Element): Element => {
+      const row = card.querySelector('.description-list-item:last-child');
+      if (!row) throw new Error('No last row');
+      return row;
+    };
     const firstRow = headCard.querySelector('.description-list-item:first-child');
-    if (!lastRow || !firstRow) throw new Error('No rows');
+    if (!firstRow) throw new Error('No first row');
     const button = (row: Element): DOMRect => part(row, 'button').getBoundingClientRect();
     const padding = (row: Element, side: 'Top' | 'Bottom'): number =>
       parseFloat(getComputedStyle(row)[`padding${side}`]);
+    /** How much more padding the row has at `side` than at the other side. */
+    const grown = (row: Element, side: 'Top' | 'Bottom'): number =>
+      padding(row, side) - padding(row, side === 'Top' ? 'Bottom' : 'Top');
     try {
       for (const [nextShape, nextDensity] of [
         ['rounded', 'comfortable'],
@@ -399,15 +462,21 @@ export const CornerClear: Story = {
       ] as const) {
         root.dataset.shape = nextShape;
         root.dataset.density = nextDensity;
-        // The row holds terms beside values at this width, so Edit ends the row's first line.
-        await waitFor(() => expect(areas(lastRow)).toBe('"term value actions"'), { timeout: 5000 });
+        // The rows hold terms beside values at this width, so Edit ends the row's first line; stacked holds.
+        await waitFor(() => expect(areas(lastRow(footCard))).toBe('"term value actions"'), { timeout: 5000 });
+        await waitFor(() => expect(areas(lastRow(caseCard('collapsible')))).toBe('"term value actions"'), {
+          timeout: 5000,
+        });
+        await expect(areas(lastRow(caseCard('stacked')))).toBe('"term actions" "value value"');
         const inset = lengthIn(footCard, 'var(--holder-corner-inset)');
         const extra = inset - lengthIn(footCard, 'var(--holder-pad)');
         if (nextShape === 'rounded') {
           await expect(extra).toBeGreaterThan(0);
-          await expect(
-            footCard.getBoundingClientRect().bottom - button(lastRow).bottom,
-          ).toBeGreaterThanOrEqual(inset - 1);
+          for (const card of [footCard, caseCard('direct'), caseCard('collapsible')]) {
+            await expect(
+              card.getBoundingClientRect().bottom - button(lastRow(card)).bottom,
+            ).toBeGreaterThanOrEqual(inset - 1);
+          }
           await expect(button(firstRow).top - headCard.getBoundingClientRect().top).toBeGreaterThanOrEqual(
             inset - 1,
           );
@@ -415,10 +484,14 @@ export const CornerClear: Story = {
           await expect(extra).toBe(0);
         }
         // The row grows by the inset less the padding, and only on the side at the card's edge.
-        await expect(Math.abs(padding(lastRow, 'Bottom') - padding(lastRow, 'Top') - extra)).toBeLessThan(1);
-        await expect(Math.abs(padding(firstRow, 'Top') - padding(firstRow, 'Bottom') - extra)).toBeLessThan(
-          1,
-        );
+        for (const card of [footCard, caseCard('direct'), caseCard('collapsible')]) {
+          await expect(Math.abs(grown(lastRow(card), 'Bottom') - extra)).toBeLessThan(1);
+        }
+        await expect(Math.abs(grown(firstRow, 'Top') - extra)).toBeLessThan(1);
+        // Stacked, or not at the card's foot, the last row keeps the Dense data padding.
+        for (const name of ['stacked', 'followed']) {
+          await expect(Math.abs(grown(lastRow(caseCard(name)), 'Bottom'))).toBeLessThan(1);
+        }
       }
     } finally {
       root.dataset.shape = shape ?? 'rounded';

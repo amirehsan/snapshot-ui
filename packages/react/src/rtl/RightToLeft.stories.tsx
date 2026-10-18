@@ -1409,6 +1409,8 @@ export const EmptyStateMirrored: Story = {
  * column's right edge, the start of a right-to-left line (`match-parent`).
  */
 export const DescriptionListMirrored: Story = {
+  // match-parent is the standard name in Firefox and the prefixed one in WebKit and Chromium: all three engines.
+  tags: ['webkit', 'firefox'],
   render: () => (
     <I18nProvider locale="fa-IR">
       <div dir="rtl" lang="fa" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
