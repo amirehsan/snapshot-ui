@@ -1,5 +1,11 @@
 # @snapshot-ui/core
 
+## 0.6.3
+
+### Patch Changes
+
+- 91eb6c9: Rounded parts inside rounded parts now take concentric corners: a part in a holder's corner takes the holder's radius less the gap between them, its padding and its edge, so the two curves share a center in every shape. Menu, listbox and command palette rows are 15px in a 24px popup (3px in Soft), and a popup's filter field matches them; tabs are concentric with their track, the field button with its field (6px in Soft), and MultiSelect's tags with their frame. A card or a StatTile in a card is 7px in Rounded (19px compact, 6px in Soft) instead of 24px. A control never takes one smaller corner: it keeps its own shape and moves out of the holder's corner curve, and it moves down, not in, so a trailing action stays on the end edge of the fields above it: a dialog, a side panel's footer and body, a drawer's footer and a line chart that ends a card pad their foot to the corner inset (39px in Rounded instead of 32px or 24px). Only the single-row holders move their controls inward: the bulk bar pads both ends to the inset and a toast's dismiss stops at it. In Soft and Square most of these stay where they were. Card, Dialog, Drawer, Sheet, SidePanel, Popover, CommandPalette, Toast, the bulk bar and TabList now name their corner, edge and padding as `--holder-radius`, `--holder-border` and `--holder-pad`, and the inset that clears their corner as `--holder-corner-inset`, so an app can give a surface in their corners the same corner, `max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)))`, and stop a control of its own at the inset. A field's corner is `--input-radius`, which its field button reads.
+
 ## 0.6.2
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @snapshot-ui/react
 
+## 0.6.3
+
+### Patch Changes
+
+- Updated dependencies [91eb6c9]
+  - @snapshot-ui/core@0.6.3
+
 ## 0.6.2
 
 ### Patch Changes
