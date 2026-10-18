@@ -4470,10 +4470,13 @@ for (const width of [768, 1280]) {
     await expect(trayRow(page, 'receipt-march')).toHaveAttribute('data-status', 'saved', SETTLE);
     await expect(trayRow(page, 'blurry-receipt')).toHaveAttribute('data-status', 'review', SETTLE);
     const stage = documentsRecipe(page);
-    await stage.getByRole('link', { name: 'Statement, September', exact: true }).click();
+    // By the keyboard, so the open panel over the list's end never takes the press.
+    await stage.getByRole('link', { name: 'Statement, September', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/[?]doc=statement-september$/, SETTLE);
     await expect(
       stage.getByRole('heading', { level: 2, name: 'Statement, September', exact: true }),
-    ).toBeVisible();
+    ).toBeVisible(SETTLE);
     // From the trail's first link, at the top of the review, through every control of the view to the tray.
     await stage.locator('.breadcrumbs a').first().focus();
     const panel = page.locator('.upload-tray');
