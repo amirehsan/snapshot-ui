@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState, type CSSProperties, type ReactElement } from 'react';
-import { expect, waitFor } from 'storybook/test';
+import { expect, userEvent, waitFor } from 'storybook/test';
+import { focusOn } from '../stories/focus';
 import { tokenColor, tokenPixels, washColor } from '../stories/paint';
 import { Pagination, type PaginationProps } from '.';
 
@@ -14,8 +15,11 @@ const range = (page: number): string =>
 const persian = (value: number | string): string =>
   String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)] ?? digit);
 
-/** Link mode, the stories' default: the server page's form. */
-type LinkModeProps = Extract<PaginationProps, { getPageHref: (page: number) => string }>;
+/** Link mode with no page size picker, the stories' default: the server page's form. */
+type LinkModeProps = Extract<
+  PaginationProps,
+  { getPageHref: (page: number) => string; pageSize?: undefined }
+>;
 
 /** Pagination in link mode, so the stories' args have one shape. */
 function Pages(props: LinkModeProps): ReactElement {
@@ -373,5 +377,160 @@ export const CompactHitArea: Story = {
     await expect(rect(two).height).toBe(size);
     const hit = parseFloat(getComputedStyle(two, '::before').height);
     await expect(hit).toBe(Math.max(size, tokenPixels('--size-target')));
+  },
+};
+
+// ---- The rows-per-page picker -----------------------------------------------------------------------------------
+
+/** 240 rows whose page and size a client page holds, as it would in its URL; Persian when `persianDigits`. */
+function Sized({
+  initialPage = 3,
+  persianDigits = false,
+}: {
+  initialPage?: number;
+  persianDigits?: boolean;
+}): ReactElement {
+  const [page, setPage] = useState(initialPage);
+  const [size, setSize] = useState(25);
+  const total = 240;
+  const write = persianDigits ? persian : String;
+  const first = (page - 1) * size + 1;
+  const last = Math.min(page * size, total);
+  return (
+    <Pagination
+      page={page}
+      pageCount={Math.ceil(total / size)}
+      rangeLabel={
+        persianDigits
+          ? `${write(first)} تا ${write(last)} از ${write(total)}`
+          : `${write(first)} to ${write(last)} of ${write(total)}`
+      }
+      onPageChange={setPage}
+      pageSize={size}
+      onPageSizeChange={(next, nextPage) => {
+        setSize(next);
+        setPage(nextPage);
+      }}
+      pageLabel={persianDigits ? persian : undefined}
+      labels={
+        persianDigits
+          ? {
+              navigation: 'صفحه‌ها',
+              previous: 'قبلی',
+              next: 'بعدی',
+              page: (label: string) => `صفحه ${label}`,
+              pageSize: 'ردیف در هر صفحه',
+            }
+          : undefined
+      }
+    />
+  );
+}
+
+/** The picker's trigger. */
+const sizeTrigger = (scope: ParentNode): HTMLElement => find(scope, '.pagination-size .select-trigger');
+
+/** Whether the story's box or the page scrolls sideways. */
+const scrollsSideways = (scope: Element): boolean =>
+  overflows(scope) || document.documentElement.scrollWidth > document.documentElement.clientWidth;
+
+/**
+ * Page 3 of 240 rows at 25 a page: "Rows per page" and its field at the row's start, then the range, and the
+ * page controls at its end, on one line.
+ */
+export const PageSize: Story = {
+  render: () => <Sized />,
+  play: async ({ canvasElement }) => {
+    const picker = find(canvasElement, '.pagination-size');
+    const label = find(picker, '.field-label');
+    const trigger = sizeTrigger(canvasElement);
+    const shown = find(canvasElement, '.pagination-range');
+    const list = find(canvasElement, '.pagination-list');
+    const nav = find(canvasElement, '.pagination');
+    await expect(trigger).toHaveTextContent('25');
+    // The label beside its field, the field before the range, the list at the end.
+    await expect(rect(label).right).toBeLessThanOrEqual(rect(trigger).left);
+    await expect(rect(trigger).right).toBeLessThanOrEqual(rect(shown).left);
+    await expect(Math.abs(rect(picker).left - rect(nav).left)).toBeLessThan(1);
+    await expect(Math.abs(rect(list).right - rect(nav).right)).toBeLessThan(1);
+    const middle = (element: Element): number => rect(element).top + rect(element).height / 2;
+    await expect(Math.abs(middle(trigger) - middle(list))).toBeLessThan(1);
+    await expect(getComputedStyle(label).color).toBe(tokenColor('--color-slate'));
+  },
+};
+
+/**
+ * At 20rem, a 320px phone's content: the picker takes a line of its own above Previous, the range and Next, and
+ * nothing scrolls sideways.
+ */
+export const PageSizeNarrow: Story = {
+  render: () => <Sized />,
+  decorators: [
+    (Story) => (
+      <div style={{ width: '20rem', maxWidth: '100%' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const picker = find(canvasElement, '.pagination-size');
+    const previous = rect(step(canvasElement, 'previous'));
+    const next = rect(step(canvasElement, 'next'));
+    const shown = rect(find(canvasElement, '.pagination-range'));
+    await expect(rect(picker).bottom).toBeLessThanOrEqual(Math.min(previous.top, shown.top) + 0.5);
+    await expect(previous.right).toBeLessThanOrEqual(shown.left);
+    await expect(shown.right).toBeLessThanOrEqual(next.left);
+    await expect(scrollsSideways(find(canvasElement, '.pagination'))).toBe(false);
+  },
+};
+
+/**
+ * A size chosen by keyboard: 10 a page from page 3 at 25 keeps row 51 in view on page 6, the range says so, and
+ * focus stays on the picker.
+ */
+export const PageSizeChange: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <Sized />,
+  play: async ({ canvasElement }) => {
+    const trigger = sizeTrigger(canvasElement);
+    const press = async (keys: string): Promise<void> => {
+      if (!trigger.isConnected) throw new Error('The story has gone');
+      await userEvent.keyboard(keys);
+    };
+    await focusOn(trigger);
+    await press('{Enter}');
+    await waitFor(() => expect(document.querySelector('[role="listbox"]')).not.toBeNull());
+    await press('{ArrowUp}');
+    await press('{Enter}');
+    await waitFor(() =>
+      expect(find(canvasElement, '.pagination-range')).toHaveTextContent('51 to 60 of 240'),
+    );
+    await expect(pageControl(canvasElement, '6')).toHaveAttribute('aria-current', 'true');
+    await waitFor(() => expect(trigger).toHaveFocus());
+    await expect(trigger).toHaveTextContent('10');
+  },
+};
+
+/**
+ * Right to left with Persian digits: the picker at the row's right, its label right of its field, and the page
+ * controls at the left.
+ */
+export const PageSizeRightToLeft: Story = {
+  render: () => (
+    <div dir="rtl" lang="fa">
+      <Sized persianDigits />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const picker = find(canvasElement, '.pagination-size');
+    const nav = find(canvasElement, '.pagination');
+    await expect(Math.abs(rect(picker).right - rect(nav).right)).toBeLessThan(1);
+    await expect(rect(find(picker, '.field-label')).left).toBeGreaterThanOrEqual(
+      rect(sizeTrigger(canvasElement)).right,
+    );
+    await expect(Math.abs(rect(find(canvasElement, '.pagination-list')).left - rect(nav).left)).toBeLessThan(
+      1,
+    );
+    await expect(sizeTrigger(canvasElement)).toHaveTextContent('۲۵');
   },
 };

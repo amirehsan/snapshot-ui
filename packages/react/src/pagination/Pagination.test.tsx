@@ -541,3 +541,215 @@ describe('Pagination', () => {
     expect([both, neither, named, fine]).toHaveLength(4);
   });
 });
+
+/** Rows of `total` in pages whose size and page the caller holds, as a client page does in its URL. */
+function Sized({
+  total = 240,
+  initialPage = 1,
+  initialSize = 25,
+  onChange,
+  ...props
+}: {
+  total?: number;
+  initialPage?: number;
+  initialSize?: number;
+  onChange?: (size: number, page: number) => void;
+} & Partial<PaginationProps>): ReactElement {
+  const [page, setPage] = useState(initialPage);
+  const [size, setSize] = useState(initialSize);
+  const first = (page - 1) * size + 1;
+  return (
+    <Pagination
+      {...(props as object)}
+      page={page}
+      pageCount={Math.ceil(total / size)}
+      rangeLabel={`${String(first)} to ${String(Math.min(page * size, total))} of ${String(total)}`}
+      onPageChange={setPage}
+      pageSize={size}
+      onPageSizeChange={(next, nextPage) => {
+        onChange?.(next, nextPage);
+        setSize(next);
+        setPage(nextPage);
+      }}
+    />
+  );
+}
+
+/** The picker's trigger: the button named by its value and its label. */
+const sizeTrigger = (): HTMLElement => {
+  const trigger = document.querySelector<HTMLElement>('.pagination-size .select-trigger');
+  if (trigger === null) throw new Error('No page size picker');
+  return trigger;
+};
+
+describe('Pagination page size', () => {
+  it('draws no picker without onPageSizeChange', () => {
+    render(<Pagination page={1} pageCount={5} rangeLabel={range(1)} onPageChange={() => undefined} />);
+    expect(document.querySelector('.pagination-size')).toBeNull();
+  });
+
+  it('draws a picker labelled Rows per page, first in the row, showing the size', () => {
+    render(<Sized />);
+    // First in the row, before the range; React Aria's hidden collection template, which draws nothing, aside.
+    const row = document.querySelector('.pagination-row');
+    const drawn = [...(row?.children ?? [])].filter((child) => child.tagName !== 'TEMPLATE');
+    const picker = drawn[0];
+    expect(picker).toHaveClass('pagination-size', 'select');
+    expect(drawn[1]).toHaveClass('pagination-range');
+    // A visible label, which names the button with its value.
+    expect(within(picker as HTMLElement).getByText('Rows per page')).toBeVisible();
+    expect(sizeTrigger()).toHaveAccessibleName(/Rows per page/);
+    expect(sizeTrigger()).toHaveTextContent('25');
+    // Inside the navigation landmark, beside the range.
+    expect(screen.getByRole('navigation', { name: 'Pagination' }).contains(sizeTrigger())).toBe(true);
+  });
+
+  it('offers 10, 25, 50 and 100 by default, or pageSizeOptions, written with pageLabel', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Sized />);
+    await user.click(sizeTrigger());
+    expect(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['10', '25', '50', '100']);
+    unmount();
+    render(<Sized initialSize={20} pageSizeOptions={[50, 20, 10]} pageLabel={persian} />);
+    await user.click(sizeTrigger());
+    expect(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['۱۰', '۲۰', '۵۰']);
+  });
+
+  it('calls onPageSizeChange with the size and the page that keeps the first row in view', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Sized initialPage={3} onChange={onChange} />);
+    expect(screen.getByText('51 to 75 of 240')).toBeInTheDocument();
+    await user.click(sizeTrigger());
+    await user.click(screen.getByRole('option', { name: '10' }));
+    expect(onChange).toHaveBeenLastCalledWith(10, 6);
+    expect(screen.getByText('51 to 60 of 240')).toBeInTheDocument();
+    expect(sizeTrigger()).toHaveTextContent('10');
+    await user.click(sizeTrigger());
+    await user.click(screen.getByRole('option', { name: '100' }));
+    expect(onChange).toHaveBeenLastCalledWith(100, 1);
+    // The same size again calls nothing.
+    await user.click(sizeTrigger());
+    await user.click(screen.getByRole('option', { name: '100' }));
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('chooses a size by keyboard, keeping focus on the picker', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Sized onChange={onChange} />);
+    act(() => {
+      sizeTrigger().focus();
+    });
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith(50, 1);
+    expect(sizeTrigger()).toHaveFocus();
+  });
+
+  it('says the new range politely once it has settled', () => {
+    vi.useFakeTimers();
+    const { rerender } = render(
+      <Pagination
+        page={1}
+        pageCount={10}
+        rangeLabel="1 to 25 of 240"
+        onPageChange={() => undefined}
+        pageSize={25}
+        onPageSizeChange={() => undefined}
+      />,
+    );
+    const status = screen.getByRole('status');
+    rerender(
+      <Pagination
+        page={1}
+        pageCount={24}
+        rangeLabel="1 to 10 of 240"
+        onPageChange={() => undefined}
+        pageSize={10}
+        onPageSizeChange={() => undefined}
+      />,
+    );
+    expect(status).toBeEmptyDOMElement();
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    expect(status).toHaveTextContent('1 to 10 of 240');
+  });
+
+  it('takes the label from labels.pageSize, and works in link mode from a client page', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <Pagination
+        page={2}
+        pageCount={10}
+        rangeLabel="26 to 50 of 240"
+        getPageHref={href}
+        pageSize={25}
+        onPageSizeChange={onChange}
+        labels={{ pageSize: 'Rows' }}
+      />,
+    );
+    expect(sizeTrigger()).toHaveAccessibleName(/Rows/);
+    expect(
+      within(sizeTrigger().closest<HTMLElement>('.pagination-size') ?? document.body).getByText('Rows'),
+    ).toBeVisible();
+    await user.click(sizeTrigger());
+    await user.click(screen.getByRole('option', { name: '50' }));
+    expect(onChange).toHaveBeenLastCalledWith(50, 1);
+  });
+
+  it('draws the picker with one page or none, so the size can still change', () => {
+    render(
+      <Pagination
+        page={1}
+        pageCount={1}
+        rangeLabel="1 to 12 of 12"
+        onPageChange={() => undefined}
+        pageSize={25}
+        onPageSizeChange={() => undefined}
+      />,
+    );
+    expect(document.querySelector('.pagination-size')).not.toBeNull();
+    expect(document.querySelector('.pagination-list')).toBeNull();
+  });
+
+  it('has no axe violations with the picker, closed and open', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Sized initialPage={2} />);
+    await expectNoA11yViolations(container);
+    await user.click(sizeTrigger());
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    await expectNoA11yViolations(document.body);
+  });
+
+  it('takes pageSize and onPageSizeChange together or neither, in its types', () => {
+    // @ts-expect-error onPageSizeChange needs the size it changes
+    const noSize = (
+      <Pagination
+        page={1}
+        pageCount={2}
+        rangeLabel=""
+        getPageHref={href}
+        onPageSizeChange={() => undefined}
+      />
+    );
+    // @ts-expect-error a size with no way to change it draws no picker
+    const noChange = <Pagination page={1} pageCount={2} rangeLabel="" getPageHref={href} pageSize={25} />;
+    // @ts-expect-error options without the rest
+    const onlyOptions = (
+      <Pagination page={1} pageCount={2} rangeLabel="" getPageHref={href} pageSizeOptions={[10]} />
+    );
+    expect([noSize, noChange, onlyOptions]).toHaveLength(3);
+  });
+});

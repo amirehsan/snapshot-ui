@@ -6,7 +6,8 @@
  * nav is a size container: under 36rem of it the step words become visually hidden names, and under 30rem the
  * numbers and gaps leave too and the range sits between the two steps. The row is what the queries re-lay,
  * since a container query styles only what is inside the container. The short form, a row with no page numbers, is
- * that narrow row at every width. The current page is `aria-current` ("page" on a link, "true" on a button) or React Aria's
+ * that narrow row at every width. A rows-per-page picker, when the app asks for one, leads the row and takes a
+ * line of its own above the steps wherever the row is narrow. The current page is `aria-current` ("page" on a link, "true" on a button) or React Aria's
  * `data-current`; a disabled step is a disabled button, or a link React Aria draws as a span with
  * `aria-disabled` and `data-disabled`.
  */
@@ -204,6 +205,52 @@
     color: var(--color-slate);
   }
 
+  /*
+   * The rows-per-page picker leads the row, before the range, and the page controls keep its end. Its label sits
+   * beside the field at the range's step in slate, and wraps above it only where the two do not fit on a line;
+   * the field is as wide as its value. A row without the picker is drawn as before.
+   */
+  .pagination .pagination-size {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-inline-size: 0;
+  }
+
+  .pagination-size .field-label {
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+  }
+
+  /* As tall as the page controls beside it, and as wide as its value. */
+  .pagination-size .select-trigger {
+    inline-size: auto;
+    height: var(--size-control);
+  }
+
+  .pagination-row:has(> .pagination-size) {
+    justify-content: flex-start;
+  }
+
+  .pagination-row:has(> .pagination-size) > .pagination-list {
+    margin-inline-start: auto;
+  }
+
+  /* The short form keeps the picker on a line of its own above Previous, the range and Next. */
+  .pagination-row[data-page-numbers='false'] > .pagination-size {
+    grid-area: 1 / 1;
+    justify-self: start;
+  }
+
+  .pagination-row[data-page-numbers='false']:has(> .pagination-size)
+    > :is(.pagination-range, .pagination-list) {
+    grid-area: 2 / 1;
+    margin-inline-start: 0;
+  }
+
   .pagination-status {
     position: absolute;
     width: 1px;
@@ -276,6 +323,27 @@
     }
   }
 
+  /*
+   * With the picker the worded row is about 51rem at the default siblingCount (the picker and its label, 178px,
+   * the range and the 811px row they make with the worded list), so the step words become hidden names under
+   * 52rem there; without them the row is about 45rem, and narrower the list wraps to a line of its own at the end.
+   */
+  @container pagination (width < 52rem) {
+    .pagination-row:has(> .pagination-size) .pagination-step {
+      padding-inline: 0;
+    }
+
+    .pagination-row:has(> .pagination-size) .pagination-step-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
   /* Under 30rem of the nav: Previous, the range, Next. Two 40px targets and the range stay. */
   @container pagination (width < 30rem) {
     .pagination-row {
@@ -303,6 +371,17 @@
 
     .pagination-item:is([data-kind='page'], [data-kind='gap']) {
       display: none;
+    }
+
+    /* The picker takes a line of its own above the steps and the range. */
+    .pagination-row > .pagination-size {
+      grid-area: 1 / 1;
+      justify-self: start;
+    }
+
+    .pagination-row:has(> .pagination-size) > :is(.pagination-range, .pagination-list) {
+      grid-area: 2 / 1;
+      margin-inline-start: 0;
     }
 
     .pagination-step {

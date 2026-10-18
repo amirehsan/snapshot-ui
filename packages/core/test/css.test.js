@@ -5440,6 +5440,48 @@ describe('src/components/pagination.css', () => {
   it('writes no transition, since nothing in a pagination row moves', () => {
     expect(rules()).not.toMatch(/transition|animation/);
   });
+
+  it('leads the row with the page size picker, its label beside it in slate, and keeps the controls at the end', () => {
+    const css = rules();
+    const picker = blockAfter(css, '.pagination .pagination-size {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'align-items: center;',
+      'min-inline-size: 0;',
+    ]) {
+      expect(picker, declaration).toContain(declaration);
+    }
+    const label = blockAfter(css, '.pagination-size .field-label {');
+    expect(label).toContain('color: var(--color-slate);');
+    expect(label).toContain('font-size: var(--text-small);');
+    expect(blockAfter(css, '.pagination-size .select-trigger {')).toContain('inline-size: auto;');
+    expect(blockAfter(css, '.pagination-row:has(> .pagination-size) {')).toContain(
+      'justify-content: flex-start;',
+    );
+    expect(blockAfter(css, '.pagination-row:has(> .pagination-size) > .pagination-list {')).toContain(
+      'margin-inline-start: auto;',
+    );
+    // A row without the picker keeps the 0.6.1 layout: the range at the start, the list at the end.
+    expect(blockAfter(css, '.pagination-row {')).toContain('justify-content: space-between;');
+  });
+
+  it('puts the picker on a line of its own above the steps under 30rem and in the short form', () => {
+    const css = rules();
+    const query = blockAfter(css, QUERY);
+    for (const scope of [query, css]) {
+      const own = scope === query ? '.pagination-row > .pagination-size {' : `${SHORT} > .pagination-size {`;
+      expect(blockAfter(scope, own)).toContain('grid-area: 1 / 1;');
+      const below =
+        scope === query
+          ? '.pagination-row:has(> .pagination-size) > :is(.pagination-range, .pagination-list) {'
+          : `${SHORT}:has(> .pagination-size) > :is(.pagination-range, .pagination-list) {`;
+      const rest = blockAfter(scope, below);
+      expect(rest).toContain('grid-area: 2 / 1;');
+      // The steps span the line again, rather than keep the wide row's push to the end.
+      expect(rest).toContain('margin-inline-start: 0;');
+    }
+  });
 });
 
 describe('src/components/number-field.css', () => {

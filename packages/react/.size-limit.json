@@ -298,7 +298,7 @@
     "path": "dist/index.js",
     "import": "{ Pagination }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
-    "limit": "2.5 kB"
+    "limit": "5 kB"
   },
   {
     "name": "import { NumberField } from \"@snapshot-ui/react\"",

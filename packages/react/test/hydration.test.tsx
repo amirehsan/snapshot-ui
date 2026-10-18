@@ -14,6 +14,7 @@ import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PageHeader } from '../src/page-header';
+import { Pagination } from '../src/pagination';
 import { PickerOption } from '../src/picker';
 import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
@@ -292,6 +293,49 @@ const HYDRATED: [
       expect(container.querySelectorAll('.data-table-item[aria-selected="true"]')).toHaveLength(2);
       expect(container.querySelector('.data-table-list-mode')).toHaveTextContent(/^Select$/);
       expect(container.querySelector('.data-table-list input[type="checkbox"]')).toBeNull();
+    },
+  ],
+  [
+    'DataTable bulk actions as data, listBelow 32rem',
+    <DataTable
+      aria-label="Transactions"
+      items={TRANSACTIONS.slice(0, 5)}
+      columns={columnsWithTotal(TRANSACTIONS.slice(0, 5))}
+      getKey={keyOf}
+      onSortChange={noop}
+      selectedKeys={['t1', 't3']}
+      onSelectionChange={noop}
+      listBelow="32rem"
+      bulkActions={[
+        { id: 'export', label: 'Export', isPromoted: true, onAction: noop },
+        { id: 'delete', label: 'Delete', onAction: noop },
+      ]}
+      selectAllMatching={<Button variant="tertiary">Select all 1,240 matching</Button>}
+    />,
+    (container) => {
+      expect(container.querySelector('.data-table')).toHaveAttribute('data-list-below', '32rem');
+      const bar = container.querySelector('.data-table-bar');
+      expect(bar?.querySelector('.data-table-bar-clear')).toHaveAttribute('aria-label', 'Clear selection');
+      expect(bar?.querySelector('[data-action-id="export"]')).toHaveTextContent('Export');
+      expect(bar?.querySelector('.data-table-bar-more')).toHaveAttribute('aria-label', 'More actions');
+      expect(bar?.querySelector('.data-table-bar-select-all')).toHaveTextContent('Select all 1,240 matching');
+    },
+  ],
+  [
+    'Pagination with a page size picker',
+    <Pagination
+      page={3}
+      pageCount={10}
+      rangeLabel="51 to 75 of 240"
+      onPageChange={noop}
+      pageSize={25}
+      onPageSizeChange={noop}
+    />,
+    (container) => {
+      const trigger = container.querySelector('.pagination-size .select-trigger');
+      expect(trigger).toHaveTextContent('25');
+      expect(container.querySelector('.pagination-size .field-label')).toHaveTextContent('Rows per page');
+      expect(container.querySelector('.pagination-page[aria-current="true"]')).toHaveTextContent('3');
     },
   ],
   [
