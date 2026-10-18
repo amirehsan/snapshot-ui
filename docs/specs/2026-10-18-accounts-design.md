@@ -1,6 +1,6 @@
 # Accounts: DescriptionList, CardActions, Gauge and MonthGrid: design
 
-Status: written for review on 2026-10-18 and revised the same day with the consumer's answers to open question 1 (section 3). Nothing here is approved yet. The owner's calls are the open questions in section 18, each with a recommended answer; everything else is decided here and listed in section 14.
+Status: approved on 2026-10-18. Written for review and revised the same day with the consumer's answers to open question 1 (section 3); the owner then took every open question of section 18 as recommended, question 4 among them: both low score bands are warning. Section 14.2 records the rulings; everything else is decided here and listed in section 14.1. The plan is `docs/plans/2026-10-18-accounts.md`.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document pulls forward the phase 4 row "DescriptionList" and adds CardActions, Gauge and MonthGrid, which the parent spec does not list. Gauge is the circular sibling of the phase 4 Meter that batch 2 built (`docs/specs/2026-10-13-home-design.md`, section 7). It answers batch 5 ("Accounts") of the first consumer's roadmap, agreed with the consumer as DescriptionList and Gauge, to which the consumer's answers add CardActions and a month grid. The design authority remains `docs/design-system.md`.
 Released before this: batch 4, `@snapshot-ui/core` and `@snapshot-ui/react` 0.7.0 (the documents parts, on `feat/documents` at the time of writing). This batch is the 0.8.0 minor release of core and react. Section 2 lists what it takes from batches 1 to 4.
 
@@ -69,7 +69,7 @@ The consumer answered open question 1 on 2026-10-18. Its answers, as input:
 1. **The accounts list.** Summary StatTiles exist already. The list is grouped by account type; each row has an Avatar logo, "Name ending 1234", a coverage line, the balance with its date, and the bank feed status or a failure with a link to fix it. A duplicate shows as a Badge. Each row links to the account's detail page. It is built from DataTable or a plain list; nothing new is needed there.
 2. **The account's detail page.** A balance LineChart, then a Details card holding a DescriptionList: Name, Type, Institution, Last four, Bank feed status, and for a card the Credit limit and APR. "Edit" sits in the Details card's header and opens a Dialog. Merge opens a Dialog and Remove a ConfirmDialog. Amounts, limits and percentages are numeric and stay left to right on a Persian page.
 3. **The credit tab.**
-   - A score card: a Gauge from 300 to 850, a 160px semicircle, the score as the centre numeral with a word under it, and four marks at 580, 670, 740 and 800. Higher is better; the app picks neutral for good scores, warning from 580 to 669 and error under 580 (open question 4 weighs the last).
+   - A score card: a Gauge from 300 to 850, a 160px semicircle, the score as the centre numeral with a word under it, and four marks at 580, 670, 740 and 800. Higher is better; the app asked for neutral for good scores, warning from 580 to 669 and error under 580. The owner's ruling (section 14.2 item 2) draws both lower bands in warning, told apart by the word under the figure and by the marks.
    - Utilization: 0 to 100%, lower is better, with marks at 10% and 30%: a 32px ring in each table row and a 96px ring for the overall figure.
 4. **Not needed:** CopyButton (numbers are masked; deferred, kept for later), several values in one gauge, AvatarGroup, AccountMenu and ThemeSwitch.
 5. **A new request, the coverage strip.** A compact month grid, twelve cells to a row and one row per year, each cell held, missing or partial, with a text alternative such as "Missing: March, April 2025". Asked for as a generic part: the app passes the years and a state per month, its own named states mapped to a small fixed set of library looks (filled, empty, partial); the labels are the app's; it renders on the server; it has a text summary and a visually hidden table or list; it covers right to left, Persian months through the calendar system where feasible, forced colors and the corner rule for its cells. Suggested name MonthGrid (open question 17).
@@ -493,7 +493,9 @@ Batch 4 built PageHeader to reproduce the docs site's header and the owner ruled
 
 Sections 5.4, 7.7 and 8.6 hold the comparisons. In short: the list is GOV.UK's summary list on Polaris' `dl` with its layout switched by its own width; the gauge is SwiftUI's label, value and figure on Carbon's two forms with Ant's round caps, under WAI-ARIA's `meter`; the month grid is Statuspage's strip with Carbon's table alternative, in Meter's looks.
 
-## 14. Decided here
+## 14. Decisions
+
+### 14.1 Decided here
 
 1. DescriptionList, DescriptionListItem, CardActions, Gauge and MonthGrid are server parts.
 2. The list is a `dl` of `div` rows, each a `dt`, a value `dd` and an actions `dd`, with no ARIA role added.
@@ -521,6 +523,22 @@ Sections 5.4, 7.7 and 8.6 hold the comparisons. In short: the list is GOV.UK's s
 24. No new tokens. Sizes, strokes, the cell height and the 2px gaps are literals in their files, as Meter's track is in `meter.css`.
 25. The docs site has no `.description-list`, `.card-actions`, `.gauge` or `.month-grid` classes outside the library's to collide with; the plan checks again.
 26. One 0.8.0 minor release of core and react, and a patch to `@snapshot-ui/charts` for its core peer (section 16).
+
+### 14.2 Owner rulings and answers (owner, 2026-10-18)
+
+The owner approved the spec and took every open question of section 18 as recommended. Each item names the plan task that builds it (`docs/plans/2026-10-18-accounts.md`).
+
+1. **Scope, order and name** (open questions 12 and 17; Tasks 1 to 4). All four parts ship in 0.8.0, in the consumer's order of need: DescriptionList, CardActions, Gauge, then MonthGrid, under that name. CopyButton stays deferred (section 5.6).
+2. **The score's bands** (open question 4; Tasks 3 and 5). Both low score bands are warning: from 580 to 669 ("Fair") and under 580 ("Poor"). Error keeps its strict meaning, a failure or an invalid value, such as a limit that stopped a payment. Fair and Poor are told apart by the word under the figure (`figureCaption`) and by the marks at 580 and 670, never by color. The library's `tone` keeps `neutral`, `warning` and `error` as section 7.2 types them; the props' comment, the docs page, the recipe and the changeset say which is which.
+3. **Gauge in `@snapshot-ui/react`** (open question 2; Task 3), with `gauge.css` in core.
+4. **The docs header moves to PageHeader in this batch** (open question 3; Task 5), as the owner ruled in batch 4.
+5. **Round caps in every shape** (open question 5; Task 3), the spinner's rule.
+6. **Gauge's motion** (open question 6; Task 3): 200ms when the value changes, no sweep on first appearance, none under reduced motion.
+7. **Direction follows the page** (open question 7; Tasks 1, 3 and 4): a ring counter-clockwise, a semicircle from the right and the first month on the right in right to left.
+8. **Composition for the list** (open question 8; Task 1): `DescriptionList` holding `DescriptionListItem`s.
+9. **"Not set" in slate** for an empty value (open question 11; Task 1), or the app's add link.
+10. **MonthGrid's English default summary** (open question 18; Task 4), replaced by the app's `summary` in any other language.
+11. **Answered by the consumer and not built:** editing in place (question 10), AccountMenu and ThemeSwitch (14), AvatarGroup (15), several values in one gauge (16). **Withdrawn:** questions 9 and 13, with CopyButton.
 
 ## 15. Testing
 
@@ -561,13 +579,13 @@ Sections 5.4, 7.7 and 8.6 hold the comparisons. In short: the list is GOV.UK's s
 - **R3. Dashes and caps across engines.** A dash on a full circle, a zero-length dash with round caps and `getTotalLength()` differ slightly between Chromium, WebKit and Firefox, and `pathLength` was unreliable in older WebKit. Mitigation: no `pathLength`, a share of 0 not drawn, dashes computed from the radius, and the `AcrossTheRange` story measured in three engines.
 - **R4. A figure that does not fit.** A static part cannot measure or warn. Mitigation: the per-size character budget in the props' comments and docs, and the `LongestFigure` story.
 - **R5. A gauge used for progress.** An upload drawn as a gauge would announce a meter. Mitigation: the docs page leads with the choice, and the props comment names `meter`.
-- **R6. The error tone on a score band.** The consumer's plan draws scores under 580 in error, which the design record reserves for a failure or an invalid value (open question 4). Mitigation: the owner's ruling before the plan, and the docs' rule written into the props' comment either way.
+- **R6. The error tone on a score band.** The consumer's first plan drew scores under 580 in error, which the design record reserves for a failure or an invalid value. Resolved by the owner's ruling (section 14.2 item 2): both lower bands are warning, and the props' comment and the docs say that error is for a limit that stopped something.
 - **R7. Tiny cells.** At 320px a month cell is 12px to 14px wide, and the stripes of a partial month (2px every 6px) show about two stripes. Mitigation: the outline and the fill stay distinct at any width, the `Narrow` story and the 375px baselines show them, and the table and summary carry every month.
 - **R8. The docs header move.** Every docs page changes its header in one task. Mitigation: no screenshot baselines exist for the docs site; the e2e maps, the 320px checks and the docs corner audit run on every page, and differences are fixed in PageHeader and recorded.
 
 ## 18. Open questions
 
-Each has a recommended answer; the owner may take it or the alternative. Numbers are kept from the first draft, so the answered and withdrawn ones stay in place.
+Each has a recommended answer. Numbers are kept from the first draft, so the answered and withdrawn ones stay in place. **Settled by the owner, 2026-10-18:** every open question as recommended; section 14.2 records the answers.
 
 1. **The consumer's Accounts page.** Answered by the consumer on 2026-10-18; section 3 records it.
 2. **Where Gauge lives.** Recommended: `@snapshot-ui/react`, beside Meter and ProgressBar (section 7.1), because it is a meter with one value and no series, and SwiftUI, Ant Design and Material all keep theirs in the core set. Alternative: `@snapshot-ui/charts`, Carbon's choice, which groups everything drawn in svg but makes an app install a second package for a meter.
