@@ -42,7 +42,14 @@ describe('PageHeader', () => {
     expect(screen.getAllByRole('heading')).toHaveLength(1);
   });
 
-  it('is a header holding a page column row, its titles and then its actions', () => {
+  it("takes a lower heading level for a header that is not the page's own, at the same size", () => {
+    render(<PageHeader headingLevel={2} title="Notifications" />);
+    const title = screen.getByRole('heading', { level: 2, name: 'Notifications' });
+    expect(title).toHaveClass('heading', 'heading-2', 'page-header-title');
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+  });
+
+  it('is a header holding a page column row: its titles, then its actions, then the sentence on its own line', () => {
     const { container } = render(FULL);
     const header = root(container);
     expect(header.tagName).toBe('HEADER');
@@ -52,21 +59,25 @@ describe('PageHeader', () => {
     expect([...(row?.children ?? [])].map((child) => child.className)).toEqual([
       'page-header-titles',
       'page-header-actions',
+      'page-header-detail',
     ]);
   });
 
-  it('orders the titles: the trail, the eyebrow, the title and the description', () => {
+  it('orders the titles: the trail, the eyebrow and the title; the description after the actions', () => {
     const { container } = render(FULL);
     const titles = container.querySelector('.page-header-titles');
     expect([...(titles?.children ?? [])].map((child) => [child.tagName, child.className])).toEqual([
       ['NAV', 'breadcrumbs'],
       ['P', 'eyebrow'],
       ['H1', 'heading heading-2 page-header-title'],
-      ['P', 'copy copy-muted page-header-description'],
     ]);
     const actions = container.querySelector<HTMLElement>('.page-header-actions');
     if (actions === null) throw new Error('No actions');
     expect(within(actions).getByRole('button')).toHaveTextContent('Upload');
+    const detail = container.querySelector('.page-header-detail');
+    expect([...(detail?.children ?? [])].map((child) => [child.tagName, child.className])).toEqual([
+      ['P', 'copy copy-muted page-header-description'],
+    ]);
   });
 
   it('draws no wrapper for a slot it is not given', () => {
@@ -75,6 +86,7 @@ describe('PageHeader', () => {
     expect(container.querySelector('.page-header-actions')).toBeNull();
     expect(container.querySelector('.eyebrow')).toBeNull();
     expect(container.querySelector('.page-header-description')).toBeNull();
+    expect(container.querySelector('.page-header-detail')).toBeNull();
   });
 
   it('draws no wrapper for a slot given false, an empty string or null', () => {

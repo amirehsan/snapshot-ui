@@ -176,9 +176,16 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     />,
     '<header class="page-header"><div class="page-column page-header-row"><div class="page-header-titles">' +
       '<nav aria-label="Breadcrumbs"></nav><p class="eyebrow">Documents</p>' +
-      '<h1 class="heading heading-2 page-header-title">Receipts, 2026</h1>' +
-      '<p class="copy copy-muted page-header-description">Every receipt you uploaded this year.</p></div>' +
-      '<div class="page-header-actions"><a href="/upload">Upload</a></div></div></header>',
+      '<h1 class="heading heading-2 page-header-title">Receipts, 2026</h1></div>' +
+      '<div class="page-header-actions"><a href="/upload">Upload</a></div>' +
+      '<div class="page-header-detail"><p class="copy copy-muted page-header-description">' +
+      'Every receipt you uploaded this year.</p></div></div></header>',
+  ],
+  [
+    'PageHeader at a lower heading level',
+    <PageHeader headingLevel={2} title="Notifications" />,
+    '<header class="page-header"><div class="page-column page-header-row"><div class="page-header-titles">' +
+      '<h2 class="heading heading-2 page-header-title">Notifications</h2></div></div></header>',
   ],
   ['PageColumn', <PageColumn>The receipts.</PageColumn>, '<div class="page-column">The receipts.</div>'],
 ];
