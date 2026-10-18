@@ -5,7 +5,11 @@
 
 export type Move = 'next' | 'previous' | 'first' | 'last' | 'page-forward' | 'page-back';
 
-/** How far Page Up and Page Down move: a week of days. Exported for the docs' Keys tables. */
+/**
+ * How far Page Up and Page Down move, in positions: seven, a week on a chart of days, landing on the nearest
+ * position with data at or past it. Exported so each chart's keys and tests read one number; the docs' Keys
+ * tables state it in words.
+ */
 export const PAGE = 7;
 
 /** A key with Alt, Control or Meta is the browser's or the page's shortcut, never a move. Shift is not one. */

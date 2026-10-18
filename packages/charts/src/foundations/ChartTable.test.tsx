@@ -165,6 +165,14 @@ describe('ChartTable', () => {
   });
 
   // One test per state, so each axe pass has its own time budget on a busy runner.
+  it('draws no toggle, no note and no copy without hasToggle, and keeps the hidden table', () => {
+    const html = renderToStaticMarkup(<Table hasToggle={false} />);
+    expect(html).toContain('<table class="line-chart-table" hidden="">');
+    expect([...html.matchAll(/<table/g)]).toHaveLength(1);
+    for (const part of ['line-chart-toolbar', 'line-chart-toggle', '<noscript>', 'line-chart-noscript'])
+      expect(html).not.toContain(part);
+  });
+
   it.each(['chart', 'table'] as const)('has no axe violations in the %s view', async (view) => {
     const { container } = render(
       <div>

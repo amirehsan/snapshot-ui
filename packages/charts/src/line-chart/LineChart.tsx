@@ -17,7 +17,7 @@ import { coordinate, percent } from '../foundations/format';
 import { hasModifier, isRightToLeft, moveFrom, type Move } from '../foundations/keys';
 import { chartName } from '../foundations/naming';
 import { areaPath, linePath, type PlotPoint } from '../foundations/path';
-import { placeReadout, readoutAlign } from '../foundations/readout';
+import { placeReadout, READOUT_GAP, readoutAlign } from '../foundations/readout';
 import { linearScale } from '../foundations/scale';
 import { useChartActive, type ChartSource } from '../foundations/useChartActive';
 import type { AriaName } from '../utils/accessible-name';
@@ -271,7 +271,7 @@ export function LineChart({
           const mark = points[current];
           return mark ? [Math.min(Math.max(mark.y, 0), 100)] : [];
         });
-  const readout = placeReadout({ marks: dotYs, height, lines: readings.length + 1 });
+  const readout = placeReadout({ marks: dotYs, height, lines: readings.length + 1, gap: READOUT_GAP });
   const readoutStyle =
     readout.place === 'above'
       ? { insetInlineStart: percent(x), insetBlockEnd: percent(readout.inset) }
@@ -306,7 +306,9 @@ export function LineChart({
           data-active={current === null ? undefined : ''}
           style={{ blockSize: height }}
           onKeyDown={onKeyDown}
-          onFocus={onFocus}
+          onFocus={() => {
+            onFocus();
+          }}
           onBlur={onBlur}
           onPointerMove={onPointerMove}
           onPointerLeave={onPointerLeave}

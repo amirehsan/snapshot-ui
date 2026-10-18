@@ -35,6 +35,12 @@ export interface ChartTableProps {
   labels: ChartTableLabels;
   /** Called when the toggle is pressed. */
   onToggle: () => void;
+  /**
+   * Draws the toggle and, with scripts off, the note and the shown copy. A chart with nothing to show as a
+   * table, such as an empty or a failed one, passes false and keeps only the hidden table, which a caller that
+   * wants none leaves out with the whole part. @default true
+   */
+  hasToggle?: boolean;
 }
 
 /**
@@ -51,6 +57,7 @@ export function ChartTable({
   view,
   labels,
   onToggle,
+  hasToggle = true,
 }: ChartTableProps): ReactElement {
   const table = (isCopy: boolean): ReactElement => {
     const idOf = (row: number, column: number): string | undefined =>
@@ -93,15 +100,19 @@ export function ChartTable({
   return (
     <>
       {table(false)}
-      <div className={`${block}-toolbar`}>
-        <button type="button" className={`button button-tertiary ${block}-toggle`} onClick={onToggle}>
-          {view === 'chart' ? labels.showTable : labels.showChart}
-        </button>
-      </div>
-      <noscript>
-        <p className={`${block}-noscript`}>{labels.noScript}</p>
-        {table(true)}
-      </noscript>
+      {hasToggle ? (
+        <>
+          <div className={`${block}-toolbar`}>
+            <button type="button" className={`button button-tertiary ${block}-toggle`} onClick={onToggle}>
+              {view === 'chart' ? labels.showTable : labels.showChart}
+            </button>
+          </div>
+          <noscript>
+            <p className={`${block}-noscript`}>{labels.noScript}</p>
+            {table(true)}
+          </noscript>
+        </>
+      ) : null}
     </>
   );
 }

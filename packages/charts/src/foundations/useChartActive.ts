@@ -5,7 +5,13 @@ import { useEffect, useState, type RefObject } from 'react';
 /** What set the active mark: a key or focus, which a chart may announce, or a pointer or a touch, which it does not. */
 export type ChartSource = 'key' | 'pointer' | 'touch';
 
-export interface ChartActiveOptions<T> {
+/**
+ * What names a mark: a number (LineChart's x position) or a string (BarChart's `band:series`), compared with
+ * `===`, so a mark is the same mark however it was found.
+ */
+export type ChartMark = number | string;
+
+export interface ChartActiveOptions<T extends ChartMark> {
   /** The mark focus lands on when nothing is active, such as the newest with data; null when there is none. */
   onFirstFocus: () => T | null;
   /** Whether an active mark still has data, by the current props: one that has lost it is not current. @default every mark */
@@ -14,13 +20,19 @@ export interface ChartActiveOptions<T> {
   within: RefObject<Element | null>;
 }
 
-export interface ChartActive<T> {
+export interface ChartActive<T extends ChartMark> {
   /** The active mark as set, which new props may have left without data. */
   active: T | null;
   /** The active mark when it still has data, which is what the chart draws; else null. */
   current: T | null;
   source: ChartSource | null;
-  /** Escape hid the readout; the next move shows it again. */
+  /**
+   * The last mark made active, kept when the chart clears on blur or a press outside: a roving tab stop's
+   * place, so Tab comes back to the bar it left. Null until a mark is first active. LineChart's one stop is the
+   * plot, so it reads none.
+   */
+  stop: T | null;
+  /** Escape hid the readout; the next move to another mark shows it again. */
   isReadoutHidden: boolean;
   /** True once mounted: the tab stop is the script's, since with scripts off its keys would do nothing. */
   isInteractive: boolean;
@@ -28,27 +40,35 @@ export interface ChartActive<T> {
   activate: (value: T, from: ChartSource) => void;
   clear: () => void;
   hideReadout: () => void;
-  /** For the tab stop's focus: a pointer that already holds a mark keeps it, else focus lands on `onFirstFocus`'s. */
-  onFocus: () => void;
+  /**
+   * For focus. Given the mark that took focus (a bar of a roving tab stop), that mark is active. Given none (a
+   * chart that is one tab stop), a mark a pointer already holds stays, and with none focus lands on
+   * `onFirstFocus`'s. Wrap it, since a focus event is not a mark: `onFocus={() => chart.onFocus()}`.
+   */
+  onFocus: (mark?: T) => void;
 }
 
 /**
  * The active mark a chart shares between its keys, its pointer and its readout: which mark, what set it, the
- * readout hidden by Escape, a touch held until a press outside, and the tab stop set after mount.
+ * last one for a roving tab stop, the readout hidden by Escape, a touch held until a press outside, and the tab
+ * stop set after mount.
  */
-export function useChartActive<T>(options: ChartActiveOptions<T>): ChartActive<T> {
+export function useChartActive<T extends ChartMark>(options: ChartActiveOptions<T>): ChartActive<T> {
   const { onFirstFocus, isAvailable, within } = options;
   const [active, setActive] = useState<T | null>(null);
+  const [stop, setStop] = useState<T | null>(null);
   const [source, setSource] = useState<ChartSource | null>(null);
   const [isReadoutHidden, setReadoutHidden] = useState(false);
   const [isInteractive, setInteractive] = useState(false);
 
+  // A mark that has lost its data since it was set, by new props, shows nothing.
   const current = active !== null && (isAvailable?.(active) ?? true) ? active : null;
 
   const activate = (value: T, from: ChartSource): void => {
     // A move shows the readout again; a key that goes nowhere leaves an Escape standing.
     if (value !== current) setReadoutHidden(false);
     setActive(value);
+    setStop(value);
     setSource(from);
   };
 
@@ -61,7 +81,12 @@ export function useChartActive<T>(options: ChartActiveOptions<T>): ChartActive<T
     setReadoutHidden(true);
   };
 
-  const onFocus = (): void => {
+  const onFocus = (mark?: T): void => {
+    if (mark !== undefined) {
+      activate(mark, 'key');
+      return;
+    }
+    // A pointer that already holds a mark keeps it.
     if (active !== null) return;
     const first = onFirstFocus();
     if (first !== null) activate(first, 'key');
@@ -90,5 +115,16 @@ export function useChartActive<T>(options: ChartActiveOptions<T>): ChartActive<T
     };
   }, [source, within]);
 
-  return { active, current, source, isReadoutHidden, isInteractive, activate, clear, hideReadout, onFocus };
+  return {
+    active,
+    current,
+    source,
+    stop,
+    isReadoutHidden,
+    isInteractive,
+    activate,
+    clear,
+    hideReadout,
+    onFocus,
+  };
 }

@@ -98,7 +98,7 @@
   }
 
   /* Author CSS outranks the user agent's [hidden], so the two views the toggle hides say so again. */
-  .line-chart-chart[hidden],
+  :is(.line-chart-chart)[hidden],
   :is(.line-chart-table)[hidden] {
     display: none;
   }

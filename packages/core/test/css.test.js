@@ -12,6 +12,16 @@ const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 const closeUp = (css) => css.replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')');
 
 /**
+ * The charts whose shared rules charts.css writes once, as `:is()` lists of each chart's own class (spec 6). A
+ * chart joins every shared rule by joining this list, so the tests below follow with no other change.
+ */
+const CHART_BLOCKS = ['line-chart'];
+
+/** A shared chart rule's selector list: `:is(.line-chart-legend)` for 'legend', `:is(.line-chart)` for ''. */
+const chartList = (part, blocks = CHART_BLOCKS) =>
+  `:is(${blocks.map((block) => `.${block}${part === '' ? '' : `-${part}`}`).join(', ')})`;
+
+/**
  * An `outline` or `outline-color` declaration that reads ink, in CSS without
  * comments. The lookbehind keeps `.badge-outline` and `--outline` out, the
  * `[^;{}]` stops at the end of the declaration or the rule, and the closing
@@ -4200,12 +4210,12 @@ describe('src/components/charts.css, the line chart', () => {
     const css = look();
     expect(blockAfter(css, '.line-chart {')).toContain('display: grid;');
     expect(blockAfter(css, '.line-chart-chart {')).toContain('display: grid;');
-    const hidden = '.line-chart-chart[hidden], :is(.line-chart-table)[hidden] {';
+    const hidden = `${chartList('chart')}[hidden], ${chartList('table')}[hidden] {`;
     expect(blockAfter(css, hidden)).toContain('display: none;');
     // After every rule that gives either view a display, so it wins on order as well.
     expect(css.indexOf(hidden)).toBeGreaterThan(css.indexOf('.line-chart-chart {'));
     expect(css.indexOf(hidden)).toBeGreaterThan(css.indexOf('.line-chart {'));
-    expect(blockAfter(css, ':is(.line-chart-table) {')).not.toContain('display:');
+    expect(blockAfter(css, `${chartList('table')} {`)).not.toContain('display:');
   });
 
   it('draws the first series 2px ink and the second 1.5px slate, both with round caps and fixed widths', () => {
@@ -4261,12 +4271,12 @@ describe('src/components/charts.css, the line chart', () => {
   it('rules the gridlines in the divider color and the baseline in the frame color, 1px and fixed', () => {
     const css = look();
     expectAll(
-      blockAfter(css, ':is(.line-chart-grid) {'),
+      blockAfter(css, `${chartList('grid')} {`),
       ['stroke: var(--color-divider);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
       'grid',
     );
     expectAll(
-      blockAfter(css, ':is(.line-chart-baseline) {'),
+      blockAfter(css, `${chartList('baseline')} {`),
       ['stroke: var(--color-frame);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
       'baseline',
     );
@@ -4274,7 +4284,7 @@ describe('src/components/charts.css, the line chart', () => {
 
   it('places the axis labels as HTML in tabular slate at the small step', () => {
     const css = look();
-    for (const selector of [':is(.line-chart-y-label) {', '.line-chart-x {']) {
+    for (const selector of [`${chartList('y-label')} {`, '.line-chart-x {']) {
       expectAll(
         blockAfter(css, selector),
         [
@@ -4287,7 +4297,7 @@ describe('src/components/charts.css, the line chart', () => {
       );
     }
     expectAll(
-      blockAfter(css, ':is(.line-chart-y-label) {'),
+      blockAfter(css, `${chartList('y-label')} {`),
       ['position: absolute;', 'inset-inline-start: 0;', 'translate: 0 -100%;', 'white-space: nowrap;'],
       'y label',
     );
@@ -4298,7 +4308,7 @@ describe('src/components/charts.css, the line chart', () => {
 
   it('centres the x labels and the readout by the flip, and keeps the end ones inside the plot', () => {
     const css = look();
-    for (const name of ['.line-chart-x-label', ':is(.line-chart-readout)']) {
+    for (const name of ['.line-chart-x-label', chartList('readout')]) {
       expect(blockAfter(css, `${name} {`), name).toContain('translate: calc(var(--chart-flip, 1) * -50%) 0;');
     }
     expect(blockAfter(css, ".line-chart-x-label[data-edge='start'] {")).toContain('translate: none;');
@@ -4306,7 +4316,7 @@ describe('src/components/charts.css, the line chart', () => {
       'translate: calc(var(--chart-flip, 1) * -100%) 0;',
     );
     expectAll(
-      blockAfter(css, ":is(.line-chart-readout)[data-align='start'] {"),
+      blockAfter(css, `${chartList('readout')}[data-align='start'] {`),
       [
         'translate: none;',
         'margin-inline-start: var(--spacing-part);',
@@ -4315,7 +4325,7 @@ describe('src/components/charts.css, the line chart', () => {
       'start',
     );
     expectAll(
-      blockAfter(css, ":is(.line-chart-readout)[data-align='end'] {"),
+      blockAfter(css, `${chartList('readout')}[data-align='end'] {`),
       [
         'translate: calc(var(--chart-flip, 1) * -100%) 0;',
         'margin-inline-start: calc(-1 * var(--spacing-part));',
@@ -4327,7 +4337,7 @@ describe('src/components/charts.css, the line chart', () => {
 
   it('keeps the readout off its dots and inside the plot: anchored above or below, and wrapping within its width', () => {
     const css = look();
-    const panel = blockAfter(css, ':is(.line-chart-readout) {');
+    const panel = blockAfter(css, `${chartList('readout')} {`);
     // Centred in the middle half, so half the plot on either side of the x is all it may take.
     expectAll(
       panel,
@@ -4338,10 +4348,10 @@ describe('src/components/charts.css, the line chart', () => {
     expect(panel).not.toContain('inset-block-start');
     expect(panel).not.toContain('nowrap');
     // The gap is the dot's 6px radius and 4px of air, on the side the panel is on.
-    expect(blockAfter(css, ":is(.line-chart-readout)[data-place='above'] {")).toContain(
+    expect(blockAfter(css, `${chartList('readout')}[data-place='above'] {`)).toContain(
       'margin-block-end: 0.625rem;',
     );
-    expect(blockAfter(css, ":is(.line-chart-readout)[data-place='below'] {")).toContain(
+    expect(blockAfter(css, `${chartList('readout')}[data-place='below'] {`)).toContain(
       'margin-block-start: 0.625rem;',
     );
   });
@@ -4349,7 +4359,7 @@ describe('src/components/charts.css, the line chart', () => {
   it('draws the readout as a float panel: float, frame edge, surface corner, float shadow', () => {
     const css = look();
     expectAll(
-      blockAfter(css, ':is(.line-chart-readout) {'),
+      blockAfter(css, `${chartList('readout')} {`),
       [
         'position: absolute;',
         'border: 1px solid var(--color-frame);',
@@ -4361,8 +4371,8 @@ describe('src/components/charts.css, the line chart', () => {
       ],
       'readout',
     );
-    expect(blockAfter(css, ':is(.line-chart-readout-value) {')).toContain('font-weight: 500;');
-    expect(blockAfter(css, ':is(.line-chart-readout-series) {')).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, `${chartList('readout-value')} {`)).toContain('font-weight: 500;');
+    expect(blockAfter(css, `${chartList('readout-series')} {`)).toContain('color: var(--color-slate);');
   });
 
   it('draws the dots as 8px in a 2px border ring of the surface, never a shadow', () => {
@@ -4422,13 +4432,13 @@ describe('src/components/charts.css, the line chart', () => {
   it('rules the table with the divider and right-aligns its values by end', () => {
     const css = look();
     expectAll(
-      blockAfter(css, ':is(.line-chart-table) :is(th, td) {'),
+      blockAfter(css, `${chartList('table')} :is(th, td) {`),
       ['border-block-end: 1px solid var(--color-divider);', 'text-align: start;'],
       'cells',
     );
-    expect(blockAfter(css, ':is(.line-chart-table) tbody td {')).toContain('text-align: end;');
-    expect(blockAfter(css, ':is(.line-chart-table) thead th {')).toContain('font-weight: 500;');
-    expect(blockAfter(css, ':is(.line-chart-table) caption {')).toContain('text-align: start;');
+    expect(blockAfter(css, `${chartList('table')} tbody td {`)).toContain('text-align: end;');
+    expect(blockAfter(css, `${chartList('table')} thead th {`)).toContain('font-weight: 500;');
+    expect(blockAfter(css, `${chartList('table')} caption {`)).toContain('text-align: start;');
     // Weights 400, 450, 500 and 700 only.
     for (const [, weight] of css.matchAll(/font-weight:\s*(\d+);/g))
       expect(['400', '450', '500', '700']).toContain(weight);
@@ -4441,7 +4451,7 @@ describe('src/components/charts.css, the line chart', () => {
     /** @type {[selector: string, declarations: string[]][]} */
     const SHARED = [
       [
-        ':is(.line-chart-legend) {',
+        `${chartList('legend')} {`,
         [
           'display: flex;',
           'flex-wrap: wrap;',
@@ -4455,20 +4465,20 @@ describe('src/components/charts.css, the line chart', () => {
         ],
       ],
       [
-        ':is(.line-chart-legend-item) {',
+        `${chartList('legend-item')} {`,
         ['display: inline-flex;', 'align-items: center;', 'gap: var(--spacing-part);', 'min-width: 0;'],
       ],
-      [':is(.line-chart-legend-label) {', ['min-width: 0;', 'color: var(--color-ink);']],
+      [`${chartList('legend-label')} {`, ['min-width: 0;', 'color: var(--color-ink);']],
       [
-        ':is(.line-chart-grid) {',
+        `${chartList('grid')} {`,
         ['stroke: var(--color-divider);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
       ],
       [
-        ':is(.line-chart-baseline) {',
+        `${chartList('baseline')} {`,
         ['stroke: var(--color-frame);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
       ],
       [
-        ':is(.line-chart-y-label) {',
+        `${chartList('y-label')} {`,
         [
           'position: absolute;',
           'inset-inline-start: 0;',
@@ -4482,7 +4492,7 @@ describe('src/components/charts.css, the line chart', () => {
         ],
       ],
       [
-        ':is(.line-chart-readout) {',
+        `${chartList('readout')} {`,
         [
           'position: absolute;',
           'box-sizing: border-box;',
@@ -4501,7 +4511,7 @@ describe('src/components/charts.css, the line chart', () => {
         ],
       ],
       [
-        ":is(.line-chart-readout)[data-align='start'] {",
+        `${chartList('readout')}[data-align='start'] {`,
         [
           'max-width: min(16rem, 75% - var(--spacing-part));',
           'translate: none;',
@@ -4509,21 +4519,21 @@ describe('src/components/charts.css, the line chart', () => {
         ],
       ],
       [
-        ":is(.line-chart-readout)[data-align='end'] {",
+        `${chartList('readout')}[data-align='end'] {`,
         [
           'max-width: min(16rem, 75% - var(--spacing-part));',
           'translate: calc(var(--chart-flip, 1) * -100%) 0;',
           'margin-inline-start: calc(-1 * var(--spacing-part));',
         ],
       ],
-      [":is(.line-chart-readout)[data-place='above'] {", ['margin-block-end: 0.625rem;']],
-      [":is(.line-chart-readout)[data-place='below'] {", ['margin-block-start: 0.625rem;']],
-      [':is(.line-chart-readout-x) {', ['margin: 0;', 'color: var(--color-slate);']],
-      [':is(.line-chart-readout-list) {', ['margin: 0;', 'padding: 0;', 'list-style: none;']],
-      [':is(.line-chart-readout-value) {', ['font-weight: 500;', 'font-variant-numeric: tabular-nums;']],
-      [':is(.line-chart-readout-series) {', ['margin-inline-start: 0.25rem;', 'color: var(--color-slate);']],
+      [`${chartList('readout')}[data-place='above'] {`, ['margin-block-end: 0.625rem;']],
+      [`${chartList('readout')}[data-place='below'] {`, ['margin-block-start: 0.625rem;']],
+      [`${chartList('readout-x')} {`, ['margin: 0;', 'color: var(--color-slate);']],
+      [`${chartList('readout-list')} {`, ['margin: 0;', 'padding: 0;', 'list-style: none;']],
+      [`${chartList('readout-value')} {`, ['font-weight: 500;', 'font-variant-numeric: tabular-nums;']],
+      [`${chartList('readout-series')} {`, ['margin-inline-start: 0.25rem;', 'color: var(--color-slate);']],
       [
-        ':is(.line-chart-table) {',
+        `${chartList('table')} {`,
         [
           'width: 100%;',
           'border-collapse: collapse;',
@@ -4533,11 +4543,11 @@ describe('src/components/charts.css, the line chart', () => {
         ],
       ],
       [
-        ':is(.line-chart-table) caption {',
+        `${chartList('table')} caption {`,
         ['padding-block-end: var(--spacing-part);', 'text-align: start;', 'color: var(--color-slate);'],
       ],
       [
-        ':is(.line-chart-table) :is(th, td) {',
+        `${chartList('table')} :is(th, td) {`,
         [
           'padding: 0.5rem 0.75rem;',
           'border-block-end: 1px solid var(--color-divider);',
@@ -4546,15 +4556,15 @@ describe('src/components/charts.css, the line chart', () => {
           'overflow-wrap: anywhere;',
         ],
       ],
-      [':is(.line-chart-table) thead th {', ['font-weight: 500;', 'color: var(--color-slate);']],
-      [':is(.line-chart-table) tbody td {', ['text-align: end;']],
-      [':is(.line-chart-toolbar) {', ['display: flex;']],
+      [`${chartList('table')} thead th {`, ['font-weight: 500;', 'color: var(--color-slate);']],
+      [`${chartList('table')} tbody td {`, ['text-align: end;']],
+      [`${chartList('toolbar')} {`, ['display: flex;']],
       [
-        ':is(.card, .card > .card-body:last-child) > :is(.line-chart):last-child :is(.line-chart-toolbar) {',
+        `:is(.card, .card > .card-body:last-child) > ${chartList('')}:last-child ${chartList('toolbar')} {`,
         ['margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad));'],
       ],
       [
-        ':is(.line-chart-noscript) {',
+        `${chartList('noscript')} {`,
         [
           'margin: 0;',
           'font-size: var(--text-small);',
@@ -4577,18 +4587,26 @@ describe('src/components/charts.css, the line chart', () => {
       const start = `} ${selector}`;
       expect(css.split(start), selector).toHaveLength(2);
       expect(declarations(blockAfter(css, start)), selector).toEqual(values);
-      const lone = selector.replace(/:is\((\.line-chart(?:-[\w-]+)?)\)/g, '$1');
-      expect(lone, selector).not.toBe(selector);
-      expect(rules(), lone).not.toContain(lone);
+      // Each chart's own class alone where the list stands: `.line-chart-legend {` for `:is(.line-chart-legend) {`.
+      const [first = ''] = CHART_BLOCKS;
+      for (const block of CHART_BLOCKS) {
+        const lone = selector.replace(/:is\((\.[\w-]+(?:, \.[\w-]+)*)\)/g, (list, members) =>
+          members.startsWith(`.${first}`)
+            ? `.${block}${members.split(', ')[0].slice(first.length + 1)}`
+            : list,
+        );
+        expect(lone, selector).not.toBe(selector);
+        expect(rules(), lone).not.toContain(lone);
+      }
     }
     // The hidden table and the forced-colors rules take the same lists.
-    expect(blockAfter(css, '.line-chart-chart[hidden], :is(.line-chart-table)[hidden] {')).toContain(
+    expect(blockAfter(css, `${chartList('chart')}[hidden], ${chartList('table')}[hidden] {`)).toContain(
       'display: none;',
     );
     expect(
       blockAfter(
         blockAfter(rules(), FORCED),
-        ".line-chart-line[data-series='2'], :is(.line-chart-grid), :is(.line-chart-baseline) {",
+        `.line-chart-line[data-series='2'], ${chartList('grid')}, ${chartList('baseline')} {`,
       ),
     ).toContain('stroke: GrayText;');
   });
@@ -4599,7 +4617,7 @@ describe('src/components/charts.css, the line chart', () => {
     expect(
       blockAfter(
         forced,
-        ".line-chart-line[data-series='2'], :is(.line-chart-grid), :is(.line-chart-baseline) {",
+        `.line-chart-line[data-series='2'], ${chartList('grid')}, ${chartList('baseline')} {`,
       ),
     ).toContain('stroke: GrayText;');
     expect(blockAfter(forced, '.line-chart-key {')).toContain('border-block-start-color: CanvasText;');
@@ -7880,7 +7898,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     ],
     [
       'charts.css',
-      ':is(.card, .card > .card-body:last-child) > :is(.line-chart):last-child :is(.line-chart-toolbar) {',
+      `:is(.card, .card > .card-body:last-child) > ${chartList('')}:last-child ${chartList('toolbar')} {`,
       `margin-block-end: ${EXTRA};`,
     ],
   ];
@@ -7891,7 +7909,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       ['side-panel.css', '.side-panel-footer {'],
       [
         'charts.css',
-        ':is(.card, .card > .card-body:last-child) > :is(.line-chart):last-child :is(.line-chart-toolbar) {',
+        `:is(.card, .card > .card-body:last-child) > ${chartList('')}:last-child ${chartList('toolbar')} {`,
       ],
     ]) {
       expect(blockAfter(css(file), header), header).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);

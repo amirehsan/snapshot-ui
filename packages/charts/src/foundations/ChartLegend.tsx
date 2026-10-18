@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import type { ChartBlock } from './ChartTable';
+import type { ChartColor } from './color';
 
 /** One key and its label. The chart's CSS draws the key from the data attributes the item is given. */
 export interface ChartLegendItem {
@@ -8,7 +9,7 @@ export interface ChartLegendItem {
   /** The series' place, 1 or 2, which LineChart's keys are drawn by. */
   series?: number;
   /** The series' color by name, which a bar's key is drawn by. */
-  color?: string;
+  color?: ChartColor;
   /** The key's shape: a stroke, a filled swatch or the hatched swatch of a previous period. */
   look?: 'line' | 'swatch' | 'hatched';
 }

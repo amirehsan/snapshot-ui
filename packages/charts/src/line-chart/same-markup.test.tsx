@@ -7,9 +7,11 @@ import { LineChart, type LinePoint, type LineSeries } from './LineChart';
 /*
  * LineChart's markup, byte for byte, as it was before its table, legend, keys, naming, rounding and readout
  * placement moved to src/foundations. Written against the chart before the move and kept after it: a change
- * to any of these strings is a change an app can see, so the move made none. The fixtures are the eight visual
- * stories' (LineChart.stories.tsx, copied here so a story edit cannot change what this proves), then the edges
- * the stories do not draw. Each long render is held as its length and an FNV-1a hash of its UTF-8 bytes; one
+ * to any of these strings is a change an app can see, so the move made none. The fixtures are the five
+ * distinct server renders of the eight visual stories (LineChart.stories.tsx, copied here so a story edit cannot
+ * change what this proves; ActivePoint, ReadoutNearStart and TableView render TwoSeries' args and differ only in
+ * their plays, which the mounted journey below and the visual baselines cover), then the edges the stories do
+ * not draw. Each long render is held as its length and an FNV-1a hash of its UTF-8 bytes; one
  * short render is held whole, so the shape the hashes stand for can be read. The last test holds the mounted
  * chart's markup after each step of a reader's journey through focus, the keys, Escape, the rest that
  * announces, a mouse, a touch and the toggle, so the active state that moved to useChartActive moved too.
@@ -52,10 +54,6 @@ const FIXTURES: [name: string, element: ReactElement][] = [
   ['TwoSeries', <LineChart aria-label={NAME} series={BOTH} xLabels={DAYS} yTicks={TICKS} />],
   ['WithArea', <LineChart aria-label={NAME} series={[THIS_MONTH]} xLabels={DAYS} yTicks={TICKS} hasArea />],
   ['Gaps', <LineChart aria-label={NAME} series={[SO_FAR]} xLabels={DAYS} yTicks={TICKS} />],
-  // ActivePoint, ReadoutNearStart and TableView render TwoSeries' args and then act in their plays.
-  ['ActivePoint', <LineChart aria-label={NAME} series={BOTH} xLabels={DAYS} yTicks={TICKS} />],
-  ['ReadoutNearStart', <LineChart aria-label={NAME} series={BOTH} xLabels={DAYS} yTicks={TICKS} />],
-  ['TableView', <LineChart aria-label={NAME} series={BOTH} xLabels={DAYS} yTicks={TICKS} />],
   [
     'RightToLeft',
     <div dir="rtl">
@@ -131,12 +129,9 @@ describe("LineChart's markup", () => {
     );
     expect(digests).toMatchInlineSnapshot(`
       {
-        "ActivePoint": "7152 136762014b87b7cb",
         "Default": "5399 2d65958ad481f882",
         "Gaps": "5005 2849a5fe4ff835fe",
-        "ReadoutNearStart": "7152 136762014b87b7cb",
         "RightToLeft": "7173 6a8136a1098b696c",
-        "TableView": "7152 136762014b87b7cb",
         "TwoSeries": "7152 136762014b87b7cb",
         "WithArea": "5776 10a71045e1e0f8e7",
         "blank names, falling to the column headers": "6653 4ba1e1ef7f770dca",
