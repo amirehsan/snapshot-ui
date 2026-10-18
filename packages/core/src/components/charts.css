@@ -8,7 +8,9 @@
  * insets. The HTML over a drawing takes its direction from --chart-direction, set by the same attribute, so a
  * dir="auto" or a CSS direction can never mirror the marks without the svg. The first series is ink and the
  * second slate; there is no palette. Rings are borders in the surface the chart sits on, --chart-surface, read
- * with Lifted as its fallback.
+ * with Lifted as its fallback. The rules every chart shares (the legend, the readout panel, the gridlines and
+ * the baseline, the y labels, the table, its toolbar and the noscript note) are written once, as :is() lists of
+ * each chart's own class, so a chart joins a rule by adding its class to the list and keeps its own class names.
  */
 @layer components {
   :where([dir='ltr' i]) {
@@ -97,11 +99,11 @@
 
   /* Author CSS outranks the user agent's [hidden], so the two views the toggle hides say so again. */
   .line-chart-chart[hidden],
-  .line-chart-table[hidden] {
+  :is(.line-chart-table)[hidden] {
     display: none;
   }
 
-  .line-chart-legend {
+  :is(.line-chart-legend) {
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-part) var(--spacing-peer);
@@ -113,7 +115,7 @@
     overflow-wrap: anywhere;
   }
 
-  .line-chart-legend-item {
+  :is(.line-chart-legend-item) {
     display: inline-flex;
     align-items: center;
     gap: var(--spacing-part);
@@ -131,7 +133,7 @@
     border-block-start: 1.5px solid var(--color-slate);
   }
 
-  .line-chart-legend-label {
+  :is(.line-chart-legend-label) {
     min-width: 0;
     color: var(--color-ink);
   }
@@ -164,13 +166,13 @@
     scale: var(--chart-flip, 1) 1;
   }
 
-  .line-chart-grid {
+  :is(.line-chart-grid) {
     stroke: var(--color-divider);
     stroke-width: 1px;
     vector-effect: non-scaling-stroke;
   }
 
-  .line-chart-baseline {
+  :is(.line-chart-baseline) {
     stroke: var(--color-frame);
     stroke-width: 1px;
     vector-effect: non-scaling-stroke;
@@ -207,7 +209,7 @@
     pointer-events: none;
   }
 
-  .line-chart-y-label {
+  :is(.line-chart-y-label) {
     position: absolute;
     inset-inline-start: 0;
     translate: 0 -100%;
@@ -253,7 +255,7 @@
    * side, or from the x inward in the outer quarters, where three quarters do: each width keeps it inside the
    * plot, and its text wraps within that width rather than running past its border.
    */
-  .line-chart-readout {
+  :is(.line-chart-readout) {
     position: absolute;
     box-sizing: border-box;
     width: max-content;
@@ -270,44 +272,44 @@
     translate: calc(var(--chart-flip, 1) * -50%) 0;
   }
 
-  .line-chart-readout[data-align='start'] {
+  :is(.line-chart-readout)[data-align='start'] {
     max-width: min(16rem, 75% - var(--spacing-part));
     translate: none;
     margin-inline-start: var(--spacing-part);
   }
 
-  .line-chart-readout[data-align='end'] {
+  :is(.line-chart-readout)[data-align='end'] {
     max-width: min(16rem, 75% - var(--spacing-part));
     translate: calc(var(--chart-flip, 1) * -100%) 0;
     margin-inline-start: calc(-1 * var(--spacing-part));
   }
 
   /* The dot's 6px radius and 4px of air between the panel and the dots, on the side the panel is on. */
-  .line-chart-readout[data-place='above'] {
+  :is(.line-chart-readout)[data-place='above'] {
     margin-block-end: 0.625rem;
   }
 
-  .line-chart-readout[data-place='below'] {
+  :is(.line-chart-readout)[data-place='below'] {
     margin-block-start: 0.625rem;
   }
 
-  .line-chart-readout-x {
+  :is(.line-chart-readout-x) {
     margin: 0;
     color: var(--color-slate);
   }
 
-  .line-chart-readout-list {
+  :is(.line-chart-readout-list) {
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  .line-chart-readout-value {
+  :is(.line-chart-readout-value) {
     font-weight: 500;
     font-variant-numeric: tabular-nums;
   }
 
-  .line-chart-readout-series {
+  :is(.line-chart-readout-series) {
     margin-inline-start: 0.25rem;
     color: var(--color-slate);
   }
@@ -354,7 +356,7 @@
     translate: calc(var(--chart-flip, 1) * -100%) 0;
   }
 
-  .line-chart-table {
+  :is(.line-chart-table) {
     width: 100%;
     border-collapse: collapse;
     font-size: var(--text-small);
@@ -362,13 +364,13 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .line-chart-table caption {
+  :is(.line-chart-table) caption {
     padding-block-end: var(--spacing-part);
     text-align: start;
     color: var(--color-slate);
   }
 
-  .line-chart-table :is(th, td) {
+  :is(.line-chart-table) :is(th, td) {
     padding: 0.5rem 0.75rem;
     border-block-end: 1px solid var(--color-divider);
     text-align: start;
@@ -376,27 +378,27 @@
     overflow-wrap: anywhere;
   }
 
-  .line-chart-table thead th {
+  :is(.line-chart-table) thead th {
     font-weight: 500;
     color: var(--color-slate);
   }
 
-  .line-chart-table tbody td {
+  :is(.line-chart-table) tbody td {
     text-align: end;
   }
 
-  .line-chart-toolbar {
+  :is(.line-chart-toolbar) {
     display: flex;
   }
 
   /* A chart that ends a card puts its toggle in the card's bottom start corner, inside the card's curve, so
      the toolbar keeps the card's corner inset under it and the toggle keeps its own shape and its place on
      the chart's start edge: 7px more in Rounded, nothing more in Soft and Square. */
-  :is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toolbar {
+  :is(.card, .card > .card-body:last-child) > :is(.line-chart):last-child :is(.line-chart-toolbar) {
     margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
-  .line-chart-noscript {
+  :is(.line-chart-noscript) {
     margin: 0;
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
@@ -422,8 +424,8 @@
     }
 
     .line-chart-line[data-series='2'],
-    .line-chart-grid,
-    .line-chart-baseline {
+    :is(.line-chart-grid),
+    :is(.line-chart-baseline) {
       stroke: GrayText;
     }
 

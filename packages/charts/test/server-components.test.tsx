@@ -85,8 +85,15 @@ describe('the static charts in a server component', () => {
   });
 });
 
-/** The source file of every static chart, relative to `src`. */
-const STATIC_MODULES = ['sparkline/Sparkline.tsx'];
+/**
+ * The source file of every static chart, relative to `src`, and of each part the charts share that holds no
+ * state and so carries no directive.
+ */
+const STATIC_MODULES = [
+  'sparkline/Sparkline.tsx',
+  'foundations/ChartLegend.tsx',
+  'foundations/ChartTable.tsx',
+];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {
   // Rendering above proves the chart runs without client APIs today; this proves it stays a server

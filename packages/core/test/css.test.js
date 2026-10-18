@@ -4200,12 +4200,12 @@ describe('src/components/charts.css, the line chart', () => {
     const css = look();
     expect(blockAfter(css, '.line-chart {')).toContain('display: grid;');
     expect(blockAfter(css, '.line-chart-chart {')).toContain('display: grid;');
-    const hidden = '.line-chart-chart[hidden], .line-chart-table[hidden] {';
+    const hidden = '.line-chart-chart[hidden], :is(.line-chart-table)[hidden] {';
     expect(blockAfter(css, hidden)).toContain('display: none;');
     // After every rule that gives either view a display, so it wins on order as well.
     expect(css.indexOf(hidden)).toBeGreaterThan(css.indexOf('.line-chart-chart {'));
     expect(css.indexOf(hidden)).toBeGreaterThan(css.indexOf('.line-chart {'));
-    expect(blockAfter(css, '.line-chart-table {')).not.toContain('display:');
+    expect(blockAfter(css, ':is(.line-chart-table) {')).not.toContain('display:');
   });
 
   it('draws the first series 2px ink and the second 1.5px slate, both with round caps and fixed widths', () => {
@@ -4261,12 +4261,12 @@ describe('src/components/charts.css, the line chart', () => {
   it('rules the gridlines in the divider color and the baseline in the frame color, 1px and fixed', () => {
     const css = look();
     expectAll(
-      blockAfter(css, '.line-chart-grid {'),
+      blockAfter(css, ':is(.line-chart-grid) {'),
       ['stroke: var(--color-divider);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
       'grid',
     );
     expectAll(
-      blockAfter(css, '.line-chart-baseline {'),
+      blockAfter(css, ':is(.line-chart-baseline) {'),
       ['stroke: var(--color-frame);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
       'baseline',
     );
@@ -4274,7 +4274,7 @@ describe('src/components/charts.css, the line chart', () => {
 
   it('places the axis labels as HTML in tabular slate at the small step', () => {
     const css = look();
-    for (const selector of ['.line-chart-y-label {', '.line-chart-x {']) {
+    for (const selector of [':is(.line-chart-y-label) {', '.line-chart-x {']) {
       expectAll(
         blockAfter(css, selector),
         [
@@ -4287,7 +4287,7 @@ describe('src/components/charts.css, the line chart', () => {
       );
     }
     expectAll(
-      blockAfter(css, '.line-chart-y-label {'),
+      blockAfter(css, ':is(.line-chart-y-label) {'),
       ['position: absolute;', 'inset-inline-start: 0;', 'translate: 0 -100%;', 'white-space: nowrap;'],
       'y label',
     );
@@ -4298,7 +4298,7 @@ describe('src/components/charts.css, the line chart', () => {
 
   it('centres the x labels and the readout by the flip, and keeps the end ones inside the plot', () => {
     const css = look();
-    for (const name of ['.line-chart-x-label', '.line-chart-readout']) {
+    for (const name of ['.line-chart-x-label', ':is(.line-chart-readout)']) {
       expect(blockAfter(css, `${name} {`), name).toContain('translate: calc(var(--chart-flip, 1) * -50%) 0;');
     }
     expect(blockAfter(css, ".line-chart-x-label[data-edge='start'] {")).toContain('translate: none;');
@@ -4306,7 +4306,7 @@ describe('src/components/charts.css, the line chart', () => {
       'translate: calc(var(--chart-flip, 1) * -100%) 0;',
     );
     expectAll(
-      blockAfter(css, ".line-chart-readout[data-align='start'] {"),
+      blockAfter(css, ":is(.line-chart-readout)[data-align='start'] {"),
       [
         'translate: none;',
         'margin-inline-start: var(--spacing-part);',
@@ -4315,7 +4315,7 @@ describe('src/components/charts.css, the line chart', () => {
       'start',
     );
     expectAll(
-      blockAfter(css, ".line-chart-readout[data-align='end'] {"),
+      blockAfter(css, ":is(.line-chart-readout)[data-align='end'] {"),
       [
         'translate: calc(var(--chart-flip, 1) * -100%) 0;',
         'margin-inline-start: calc(-1 * var(--spacing-part));',
@@ -4327,7 +4327,7 @@ describe('src/components/charts.css, the line chart', () => {
 
   it('keeps the readout off its dots and inside the plot: anchored above or below, and wrapping within its width', () => {
     const css = look();
-    const panel = blockAfter(css, '.line-chart-readout {');
+    const panel = blockAfter(css, ':is(.line-chart-readout) {');
     // Centred in the middle half, so half the plot on either side of the x is all it may take.
     expectAll(
       panel,
@@ -4338,10 +4338,10 @@ describe('src/components/charts.css, the line chart', () => {
     expect(panel).not.toContain('inset-block-start');
     expect(panel).not.toContain('nowrap');
     // The gap is the dot's 6px radius and 4px of air, on the side the panel is on.
-    expect(blockAfter(css, ".line-chart-readout[data-place='above'] {")).toContain(
+    expect(blockAfter(css, ":is(.line-chart-readout)[data-place='above'] {")).toContain(
       'margin-block-end: 0.625rem;',
     );
-    expect(blockAfter(css, ".line-chart-readout[data-place='below'] {")).toContain(
+    expect(blockAfter(css, ":is(.line-chart-readout)[data-place='below'] {")).toContain(
       'margin-block-start: 0.625rem;',
     );
   });
@@ -4349,7 +4349,7 @@ describe('src/components/charts.css, the line chart', () => {
   it('draws the readout as a float panel: float, frame edge, surface corner, float shadow', () => {
     const css = look();
     expectAll(
-      blockAfter(css, '.line-chart-readout {'),
+      blockAfter(css, ':is(.line-chart-readout) {'),
       [
         'position: absolute;',
         'border: 1px solid var(--color-frame);',
@@ -4361,8 +4361,8 @@ describe('src/components/charts.css, the line chart', () => {
       ],
       'readout',
     );
-    expect(blockAfter(css, '.line-chart-readout-value {')).toContain('font-weight: 500;');
-    expect(blockAfter(css, '.line-chart-readout-series {')).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, ':is(.line-chart-readout-value) {')).toContain('font-weight: 500;');
+    expect(blockAfter(css, ':is(.line-chart-readout-series) {')).toContain('color: var(--color-slate);');
   });
 
   it('draws the dots as 8px in a 2px border ring of the surface, never a shadow', () => {
@@ -4422,23 +4422,185 @@ describe('src/components/charts.css, the line chart', () => {
   it('rules the table with the divider and right-aligns its values by end', () => {
     const css = look();
     expectAll(
-      blockAfter(css, '.line-chart-table :is(th, td) {'),
+      blockAfter(css, ':is(.line-chart-table) :is(th, td) {'),
       ['border-block-end: 1px solid var(--color-divider);', 'text-align: start;'],
       'cells',
     );
-    expect(blockAfter(css, '.line-chart-table tbody td {')).toContain('text-align: end;');
-    expect(blockAfter(css, '.line-chart-table thead th {')).toContain('font-weight: 500;');
-    expect(blockAfter(css, '.line-chart-table caption {')).toContain('text-align: start;');
+    expect(blockAfter(css, ':is(.line-chart-table) tbody td {')).toContain('text-align: end;');
+    expect(blockAfter(css, ':is(.line-chart-table) thead th {')).toContain('font-weight: 500;');
+    expect(blockAfter(css, ':is(.line-chart-table) caption {')).toContain('text-align: start;');
     // Weights 400, 450, 500 and 700 only.
     for (const [, weight] of css.matchAll(/font-weight:\s*(\d+);/g))
       expect(['400', '450', '500', '700']).toContain(weight);
+  });
+
+  it("writes the shareable rules once, as selector lists, with LineChart's values", () => {
+    // Each rule a later chart shares, as a list of LineChart's class alone, so another chart joins it by adding
+    // its own class to the list and LineChart's markup and values stay as they were (spec 6, plan Task 1). Each
+    // body is LineChart's, declaration for declaration.
+    /** @type {[selector: string, declarations: string[]][]} */
+    const SHARED = [
+      [
+        ':is(.line-chart-legend) {',
+        [
+          'display: flex;',
+          'flex-wrap: wrap;',
+          'gap: var(--spacing-part) var(--spacing-peer);',
+          'margin: 0;',
+          'padding: 0;',
+          'list-style: none;',
+          'font-size: var(--text-small);',
+          'line-height: var(--text-small--line-height);',
+          'overflow-wrap: anywhere;',
+        ],
+      ],
+      [
+        ':is(.line-chart-legend-item) {',
+        ['display: inline-flex;', 'align-items: center;', 'gap: var(--spacing-part);', 'min-width: 0;'],
+      ],
+      [':is(.line-chart-legend-label) {', ['min-width: 0;', 'color: var(--color-ink);']],
+      [
+        ':is(.line-chart-grid) {',
+        ['stroke: var(--color-divider);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
+      ],
+      [
+        ':is(.line-chart-baseline) {',
+        ['stroke: var(--color-frame);', 'stroke-width: 1px;', 'vector-effect: non-scaling-stroke;'],
+      ],
+      [
+        ':is(.line-chart-y-label) {',
+        [
+          'position: absolute;',
+          'inset-inline-start: 0;',
+          'translate: 0 -100%;',
+          'padding-block-end: 0.125rem;',
+          'font-size: var(--text-small);',
+          'line-height: var(--text-small--line-height);',
+          'font-variant-numeric: tabular-nums;',
+          'white-space: nowrap;',
+          'color: var(--color-slate);',
+        ],
+      ],
+      [
+        ':is(.line-chart-readout) {',
+        [
+          'position: absolute;',
+          'box-sizing: border-box;',
+          'width: max-content;',
+          'max-width: min(16rem, 50%);',
+          'padding: 0.375rem 0.625rem;',
+          'border: 1px solid var(--color-frame);',
+          'border-radius: var(--radius-surface);',
+          'background-color: var(--color-float);',
+          'box-shadow: var(--shadow-float);',
+          'font-size: var(--text-small);',
+          'line-height: var(--text-small--line-height);',
+          'color: var(--color-ink);',
+          'overflow-wrap: anywhere;',
+          'translate: calc(var(--chart-flip, 1) * -50%) 0;',
+        ],
+      ],
+      [
+        ":is(.line-chart-readout)[data-align='start'] {",
+        [
+          'max-width: min(16rem, 75% - var(--spacing-part));',
+          'translate: none;',
+          'margin-inline-start: var(--spacing-part);',
+        ],
+      ],
+      [
+        ":is(.line-chart-readout)[data-align='end'] {",
+        [
+          'max-width: min(16rem, 75% - var(--spacing-part));',
+          'translate: calc(var(--chart-flip, 1) * -100%) 0;',
+          'margin-inline-start: calc(-1 * var(--spacing-part));',
+        ],
+      ],
+      [":is(.line-chart-readout)[data-place='above'] {", ['margin-block-end: 0.625rem;']],
+      [":is(.line-chart-readout)[data-place='below'] {", ['margin-block-start: 0.625rem;']],
+      [':is(.line-chart-readout-x) {', ['margin: 0;', 'color: var(--color-slate);']],
+      [':is(.line-chart-readout-list) {', ['margin: 0;', 'padding: 0;', 'list-style: none;']],
+      [':is(.line-chart-readout-value) {', ['font-weight: 500;', 'font-variant-numeric: tabular-nums;']],
+      [':is(.line-chart-readout-series) {', ['margin-inline-start: 0.25rem;', 'color: var(--color-slate);']],
+      [
+        ':is(.line-chart-table) {',
+        [
+          'width: 100%;',
+          'border-collapse: collapse;',
+          'font-size: var(--text-small);',
+          'line-height: var(--text-small--line-height);',
+          'font-variant-numeric: tabular-nums;',
+        ],
+      ],
+      [
+        ':is(.line-chart-table) caption {',
+        ['padding-block-end: var(--spacing-part);', 'text-align: start;', 'color: var(--color-slate);'],
+      ],
+      [
+        ':is(.line-chart-table) :is(th, td) {',
+        [
+          'padding: 0.5rem 0.75rem;',
+          'border-block-end: 1px solid var(--color-divider);',
+          'text-align: start;',
+          'font-weight: var(--text-small--font-weight);',
+          'overflow-wrap: anywhere;',
+        ],
+      ],
+      [':is(.line-chart-table) thead th {', ['font-weight: 500;', 'color: var(--color-slate);']],
+      [':is(.line-chart-table) tbody td {', ['text-align: end;']],
+      [':is(.line-chart-toolbar) {', ['display: flex;']],
+      [
+        ':is(.card, .card > .card-body:last-child) > :is(.line-chart):last-child :is(.line-chart-toolbar) {',
+        ['margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad));'],
+      ],
+      [
+        ':is(.line-chart-noscript) {',
+        [
+          'margin: 0;',
+          'font-size: var(--text-small);',
+          'line-height: var(--text-small--line-height);',
+          'color: var(--color-slate);',
+        ],
+      ],
+    ];
+    const css = look();
+    /** A rule's declarations, one per entry, as written. */
+    const declarations = (body) =>
+      body
+        .split(';')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => `${part};`);
+    for (const [selector, values] of SHARED) {
+      // Written once: one rule starts with the list, after the rule before it, and none starts with the lone
+      // class. (The toolbar's list also ends the corner rule's selector, which is a rule of its own.)
+      const start = `} ${selector}`;
+      expect(css.split(start), selector).toHaveLength(2);
+      expect(declarations(blockAfter(css, start)), selector).toEqual(values);
+      const lone = selector.replace(/:is\((\.line-chart(?:-[\w-]+)?)\)/g, '$1');
+      expect(lone, selector).not.toBe(selector);
+      expect(rules(), lone).not.toContain(lone);
+    }
+    // The hidden table and the forced-colors rules take the same lists.
+    expect(blockAfter(css, '.line-chart-chart[hidden], :is(.line-chart-table)[hidden] {')).toContain(
+      'display: none;',
+    );
+    expect(
+      blockAfter(
+        blockAfter(rules(), FORCED),
+        ".line-chart-line[data-series='2'], :is(.line-chart-grid), :is(.line-chart-baseline) {",
+      ),
+    ).toContain('stroke: GrayText;');
   });
 
   it('draws the first line CanvasText, the second and the rules GrayText, and the crosshair and dots Highlight in forced colors', () => {
     const forced = blockAfter(rules(), FORCED);
     expect(blockAfter(forced, ".line-chart-line[data-series='1'] {")).toContain('stroke: CanvasText;');
     expect(
-      blockAfter(forced, ".line-chart-line[data-series='2'], .line-chart-grid, .line-chart-baseline {"),
+      blockAfter(
+        forced,
+        ".line-chart-line[data-series='2'], :is(.line-chart-grid), :is(.line-chart-baseline) {",
+      ),
     ).toContain('stroke: GrayText;');
     expect(blockAfter(forced, '.line-chart-key {')).toContain('border-block-start-color: CanvasText;');
     expect(blockAfter(forced, ".line-chart-legend-item[data-series='2'] .line-chart-key {")).toContain(
@@ -7718,7 +7880,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     ],
     [
       'charts.css',
-      ':is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toolbar {',
+      ':is(.card, .card > .card-body:last-child) > :is(.line-chart):last-child :is(.line-chart-toolbar) {',
       `margin-block-end: ${EXTRA};`,
     ],
   ];
@@ -7729,7 +7891,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       ['side-panel.css', '.side-panel-footer {'],
       [
         'charts.css',
-        ':is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toolbar {',
+        ':is(.card, .card > .card-body:last-child) > :is(.line-chart):last-child :is(.line-chart-toolbar) {',
       ],
     ]) {
       expect(blockAfter(css(file), header), header).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);

@@ -11,19 +11,24 @@ import {
   type ReactElement,
   type Ref,
 } from 'react';
+import { ChartLegend } from '../foundations/ChartLegend';
+import { ChartTable } from '../foundations/ChartTable';
+import { coordinate, percent } from '../foundations/format';
+import { hasModifier, isRightToLeft, moveFrom, type Move } from '../foundations/keys';
+import { chartName } from '../foundations/naming';
 import { areaPath, linePath, type PlotPoint } from '../foundations/path';
+import { placeReadout, readoutAlign } from '../foundations/readout';
 import { linearScale } from '../foundations/scale';
+import { useChartActive, type ChartSource } from '../foundations/useChartActive';
 import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import {
   chartDomain,
   defaultTicks,
-  moveFrom,
   nearestWithData,
   positionsWithData,
   readingsAt,
   xPosition,
-  type Move,
 } from './geometry';
 
 export interface LinePoint {
@@ -81,9 +86,6 @@ const DEFAULT_LABELS: LineChartLabels = {
   roleDescription: 'chart',
 };
 
-/** What set the active position: a key or focus, which is announced, or a pointer, which is not. */
-type Source = 'key' | 'pointer' | 'touch';
-
 /** The keys the plot moves by. Left and Right follow the drawn direction, which right to left mirrors. */
 const KEYS: Record<string, Move | ((rtl: boolean) => Move)> = {
   ArrowRight: (rtl) => (rtl ? 'previous' : 'next'),
@@ -99,32 +101,6 @@ const REST = 150;
 
 /** A coordinate far past the plot, for a value far outside the domain: drawn off the plot, never at an infinity. */
 const FAR = 1e6;
-
-/**
- * The readout's place, in px at the default text size: a line of `--text-small` (14px at 1.43), the panel's
- * padding and border, and the gap between it and the dots (`margin-block-*` in charts.css, the 6px radius of a
- * dot and 4px of air). Known before anything is drawn, so the place needs no measurement.
- */
-const READOUT_LINE = 20;
-const READOUT_EDGES = 14;
-const READOUT_GAP = 10;
-
-/** A string that names something: given and not only spaces. */
-const named = (text: string | undefined): text is string => text !== undefined && text.trim() !== '';
-
-/** A number for an svg attribute: three decimals at most, and String writes -0 as 0. */
-const coordinate = (value: number): string => String(Math.round(value * 1000) / 1000);
-
-/** A percentage of the plot, for an HTML mark placed over the svg. */
-const percent = (value: number): string => `${coordinate(value)}%`;
-
-/**
- * Whether the drawing runs right to left: the nearest explicit `dir="ltr"` or `dir="rtl"`, the attribute
- * charts.css sets `--chart-flip` and `--chart-direction` from, so the keys and the pointer agree with what is
- * drawn. `dir="auto"` sets neither, so it is looked past, as the CSS looks past it.
- */
-const isRightToLeft = (element: Element): boolean =>
-  element.closest("[dir='ltr' i], [dir='rtl' i]")?.getAttribute('dir')?.toLowerCase() === 'rtl';
 
 /**
  * The month as a line: one or two series drawn on the server in an svg stretched to the plot, with gridlines,
@@ -150,12 +126,7 @@ export function LineChart({
   const id = useId();
   const plotRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<'chart' | 'table'>('chart');
-  const [active, setActive] = useState<number | null>(null);
-  const [source, setSource] = useState<Source | null>(null);
-  const [isReadoutHidden, setReadoutHidden] = useState(false);
   const [announced, setAnnounced] = useState<number | null>(null);
-  // The tab stop is the script's: with scripts off its keys would do nothing, so the server writes none.
-  const [isInteractive, setInteractive] = useState(false);
 
   const count = xLabels.length;
   // The series as drawn: points past the x labels are dropped, and a value that is not a finite number is a
@@ -183,37 +154,39 @@ export function LineChart({
 
   // The first name that names something, aria-labelledby first. With neither, the series' column headers name
   // the plot, so the one tab stop is never a chart with no name.
-  const labelledBy = named(ariaLabelledBy) ? ariaLabelledBy : undefined;
-  const label = labelledBy === undefined && named(ariaLabel) ? ariaLabel : undefined;
   const headerId = (at: number): string => `${id}-series-${String(at + 1)}`;
-  const plotName =
-    labelledBy !== undefined
-      ? { 'aria-labelledby': labelledBy }
-      : label !== undefined
-        ? { 'aria-label': label }
-        : { 'aria-labelledby': drawn.map((_, at) => headerId(at)).join(' ') };
+  const name = chartName(
+    { 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy },
+    drawn.map((_, at) => headerId(at)),
+  );
+  const { labelledBy, label } = name;
 
-  // A position that has lost its data since it was set, by new props, shows nothing.
-  const current = active !== null && withData.includes(active) ? active : null;
+  // The active position, its source, the readout hidden by Escape, a touch held until a press outside the plot,
+  // and the tab stop once scripts run. A position that has lost its data since it was set, by new props, is
+  // not current and shows nothing; a pointer that already holds a position keeps it on focus, and otherwise
+  // focus lands on the newest day with data.
+  const {
+    active,
+    current,
+    source,
+    isReadoutHidden,
+    isInteractive,
+    activate: setActivePosition,
+    clear,
+    hideReadout,
+    onFocus,
+  } = useChartActive<number>({
+    onFirstFocus: () => withData.at(-1) ?? null,
+    isAvailable: (index) => withData.includes(index),
+    within: plotRef,
+  });
 
-  const activate = (index: number, from: Source): void => {
-    // A move shows the readout again; a key that goes nowhere leaves an Escape standing.
-    if (index !== current) setReadoutHidden(false);
+  const activate = (index: number, from: ChartSource): void => {
     // A pointer's position is not announced, so the region lets go of the last one: a key that lands back on
     // it is then a change the screen reader hears.
     if (from !== 'key') setAnnounced(null);
-    setActive(index);
-    setSource(from);
+    setActivePosition(index, from);
   };
-
-  const clear = (): void => {
-    setActive(null);
-    setSource(null);
-  };
-
-  useEffect(() => {
-    setInteractive(true);
-  }, []);
 
   // The rest before a key or a focus is announced; a new move restarts it, and blur or unmount cancels it.
   useEffect(() => {
@@ -226,32 +199,16 @@ export function LineChart({
     };
   }, [active, source]);
 
-  // A touch holds its position until a press anywhere outside the plot.
-  useEffect(() => {
-    const plot = plotRef.current;
-    if (source !== 'touch' || !plot) return;
-    const onPress = (event: globalThis.PointerEvent): void => {
-      if (!(event.target instanceof Node && plot.contains(event.target))) {
-        setActive(null);
-        setSource(null);
-      }
-    };
-    plot.ownerDocument.addEventListener('pointerdown', onPress);
-    return () => {
-      plot.ownerDocument.removeEventListener('pointerdown', onPress);
-    };
-  }, [source]);
-
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     // A key with Alt, Control or Meta is the browser's or the page's shortcut, never a move.
-    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (hasModifier(event)) return;
     if (event.key === 'Escape') {
       // Stopped as well as prevented, since a React Aria overlay around the chart closes on any Escape that
       // reaches it. The next Escape, with nothing to hide, goes on to it.
       if (current !== null && !isReadoutHidden) {
         event.preventDefault();
         event.stopPropagation();
-        setReadoutHidden(true);
+        hideReadout();
       }
       return;
     }
@@ -268,19 +225,13 @@ export function LineChart({
     activate(moveFrom(withData, current, move), 'key');
   };
 
-  const onFocus = (): void => {
-    // A pointer that already holds a position keeps it; otherwise focus lands on the newest day with data.
-    const last = withData.at(-1);
-    if (active === null && last !== undefined) activate(last, 'key');
-  };
-
   const onBlur = (): void => {
     clear();
     setAnnounced(null);
   };
 
   /** Activates the position with data nearest the pointer, read across the plot from its oldest side. */
-  const snap = (event: PointerEvent<HTMLDivElement>, from: Source): void => {
+  const snap = (event: PointerEvent<HTMLDivElement>, from: ChartSource): void => {
     const { left, width } = event.currentTarget.getBoundingClientRect();
     const across = width > 0 ? (event.clientX - left) / width : 0;
     const fraction = isRightToLeft(event.currentTarget) ? 1 - across : across;
@@ -306,33 +257,6 @@ export function LineChart({
     setView((shown) => (shown === 'chart' ? 'table' : 'chart'));
   };
 
-  /** The table of the same strings. The noscript copy is shown and carries no ids, so the page has one of each. */
-  const table = (isCopy: boolean): ReactElement => (
-    <table className="line-chart-table" hidden={!isCopy && view === 'chart'} aria-labelledby={labelledBy}>
-      {label === undefined ? null : <caption>{label}</caption>}
-      <thead>
-        <tr>
-          <td />
-          {drawn.map((line, at) => (
-            <th key={at} scope="col" id={isCopy ? undefined : headerId(at)}>
-              {line.label}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {xLabels.map((xLabel, index) => (
-          <tr key={index}>
-            <th scope="row">{xLabel}</th>
-            {drawn.map((line, at) => (
-              <td key={at}>{line.points[index]?.valueLabel}</td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-
   const x = current === null ? 0 : xPosition(current, count);
   const readings = current === null ? [] : readingsAt(drawn, current);
 
@@ -347,15 +271,11 @@ export function LineChart({
           const mark = points[current];
           return mark ? [Math.min(Math.max(mark.y, 0), 100)] : [];
         });
-  const highest = dotYs.length > 0 ? Math.min(...dotYs) : 0;
-  const lowest = dotYs.length > 0 ? Math.max(...dotYs) : 0;
-  const needed = (readings.length + 1) * READOUT_LINE + READOUT_EDGES + READOUT_GAP;
-  const above = (highest / 100) * height;
-  const below = ((100 - lowest) / 100) * height;
-  const isAbove = above >= needed || (below < needed && above >= below);
-  const readoutStyle = isAbove
-    ? { insetInlineStart: percent(x), insetBlockEnd: percent(100 - highest) }
-    : { insetInlineStart: percent(x), insetBlockStart: percent(lowest) };
+  const readout = placeReadout({ marks: dotYs, height, lines: readings.length + 1 });
+  const readoutStyle =
+    readout.place === 'above'
+      ? { insetInlineStart: percent(x), insetBlockEnd: percent(readout.inset) }
+      : { insetInlineStart: percent(x), insetBlockStart: percent(readout.inset) };
   const spoken = announced === null ? [] : readingsAt(drawn, announced);
 
   return (
@@ -368,14 +288,10 @@ export function LineChart({
     >
       <div className="line-chart-chart" hidden={view === 'table'}>
         {drawn.length > 1 ? (
-          <ul className="line-chart-legend">
-            {drawn.map((line, at) => (
-              <li key={at} className="line-chart-legend-item" data-series={at + 1}>
-                <span className="line-chart-key" aria-hidden="true" />
-                <span className="line-chart-legend-label">{line.label}</span>
-              </li>
-            ))}
-          </ul>
+          <ChartLegend
+            block="line-chart"
+            items={drawn.map((line, at) => ({ label: line.label, series: at + 1 }))}
+          />
         ) : null}
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the chart is one tab stop that arrow keys move through (spec 9.2), the WAI-ARIA pattern for a composite with a roledescription */}
         <div
@@ -383,7 +299,7 @@ export function LineChart({
           className="line-chart-plot"
           role="group"
           aria-roledescription={labels.roleDescription}
-          {...plotName}
+          {...name.stop}
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the same one tab stop: the rule reports the attribute's line
           tabIndex={isInteractive ? 0 : undefined}
           data-has-y-labels={ticks.length > 0 ? '' : undefined}
@@ -446,8 +362,8 @@ export function LineChart({
                 {isReadoutHidden ? null : (
                   <div
                     className="line-chart-readout"
-                    data-align={x < 25 ? 'start' : x > 75 ? 'end' : 'center'}
-                    data-place={isAbove ? 'above' : 'below'}
+                    data-align={readoutAlign(x)}
+                    data-place={readout.place}
                     style={readoutStyle}
                   >
                     <p className="line-chart-readout-x">{xLabels[current]}</p>
@@ -495,16 +411,18 @@ export function LineChart({
           ))}
         </div>
       </div>
-      {table(false)}
-      <div className="line-chart-toolbar">
-        <button type="button" className="button button-tertiary line-chart-toggle" onClick={onToggle}>
-          {view === 'chart' ? labels.showTable : labels.showChart}
-        </button>
-      </div>
-      <noscript>
-        <p className="line-chart-noscript">{labels.noScript}</p>
-        {table(true)}
-      </noscript>
+      {/* The table of the same strings, its toggle, and with scripts off a shown copy that carries no ids. */}
+      <ChartTable
+        block="line-chart"
+        columns={drawn.map((line) => line.label)}
+        rows={xLabels}
+        cell={(row, column) => drawn[column]?.points[row]?.valueLabel}
+        id={(row, column) => (row < 0 ? headerId(column) : undefined)}
+        name={name}
+        view={view}
+        labels={labels}
+        onToggle={onToggle}
+      />
     </figure>
   );
 }
