@@ -881,6 +881,7 @@ And the controls that move, by the corner inset (below):
 | Drawer | the footer's content | down | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
 | a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
 | Card | the list's first or last row's controls | down | the row's block padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
+| Card | CardActions | down | the header's top grows by the corner inset less the card's padding, its first row a control high | 7px, 19px compact | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
 | SaveBar | its buttons | in | each end pads to the corner inset, as the bulk bar's | 23px each side | 16px and 11px | 16px and 8px |
 | Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
@@ -2690,6 +2691,74 @@ The title is ink and the note is slate, both on Lifted, and both pairings are
 in the contrast gate. Ink measures 17.84 in light and 17.42 in dark, and slate
 5.31 and 6.94. The app's collapse toggle is not part of Card. It arrives with
 the collapsible card.
+
+**Actions in a plain card's header.** The first consumer's Details card puts
+Edit, and Merge and Remove beside it, in its header, as GOV.UK's summary card
+puts its card-level actions there. `CardActions` is a `div.card-actions`
+placed after `CardTitle` and `CardNote`, so the reading order is the title,
+the note, then the actions; it adds no role, and the app names each button
+("Edit details"). It is static. Six things were derived (accounts plan, spec
+corrections 8 to 13).
+
+- **A grid, not CollapsibleCard's flex row.** CollapsibleCard wraps its title
+  and note in a heading block and lets a flex row wrap the actions under it.
+  A plain header holds the title and the note as siblings, and a flex row of
+  three siblings cannot put the actions beside the title and the note under
+  it, then the actions under the note, without reordering them. So a header
+  holding actions is a one-column grid and a size container, `card-header`:
+  from 24rem of its content box the actions take a second column on the first
+  row, at the end; under it nothing places them and they follow the note at
+  the inline start, the reading order. A container query cannot style the
+  container it measures, so the header's own columns never change: the second
+  column is an implicit one that exists only while the actions are in it, so
+  a narrow header keeps no gap for it. 24rem is the width at which a 12rem
+  title, the peer step and an Edit and a More button fit side by side.
+- **The title keeps 12rem beside them.** CollapsibleCard's heading never goes
+  under 12rem (192px holds a typical title on one line). Here the actions'
+  column is capped at `calc(100cqi - 12rem - var(--spacing-peer))`, so between
+  24rem and the width all of them need, they wrap among themselves at the end
+  and the title keeps its 12rem. A single button wider than what is left takes
+  its own width (`min-inline-size: min-content`) and narrows the title rather
+  than overlapping it. Edit, Merge and Remove (75, 90 and 103px with two part
+  steps between, 284px) share one line from a 500px header, a 566px card.
+- **The first row is at least a control high, not exactly.** A row fixed at
+  40px let a title that wraps to two lines (57.6px) run into the note's row.
+  The row is `minmax(var(--size-control), auto)`, its items start-aligned, the
+  actions at least a control high with their buttons centred, and the title's
+  first line centred on a control's height by a top margin of
+  `(var(--size-control) - 1lh) / 2`, 5.6px and 3.6px compact. So the actions
+  are level with the title's first line, within a pixel, however many lines it
+  takes, and with a one-line title the row is 40px, the title centred in it.
+- **The corner, down.** The actions sit at the card's top end: 1 + 32px from
+  the top and the end in Rounded comfortable, inside the 40px curve on both
+  axes. The record's rule moves a control down where a column stands under it,
+  and the actions end on the body's column edge, so while the header holds
+  actions its block-start padding grows by
+  `calc(var(--holder-corner-inset) - var(--holder-pad))`, as UploadTray's panel
+  moves its header's trailing button: 7px in Rounded and 19px compact, 0 in
+  Soft and Square. The actions' top is then 1 + 32 + 7 = 40px from the card's
+  outer edge in Rounded comfortable and 1 + 20 + 19 = 40px compact, at or past
+  the 39px corner inset, and the title moves down with the row, level with
+  them. The padding grows under 24rem too, since a container cannot query
+  itself; there it only adds 7px above the title.
+- **A stand-in width.** A size container takes no width from its content, so
+  a card that takes the width of what it holds, in a flex row or a centred
+  column, would shrink to its padding with only a header. The header names
+  `contain-intrinsic-inline-size: 20rem`, under the 24rem switch, as the list
+  and StatTile name theirs.
+- **CollapsibleCard is not matched.** Every rule names `.card > .card-header`,
+  and CollapsibleCard's header sits in `.card-disclosure`, so its header, its
+  flex row and its baselines are unchanged (plan open question 2). Its header
+  takes no size container for the reason its own record gives: a folded card
+  whose header gave no width would shrink to its padding.
+
+Measured in Chromium, WebKit and Firefox by the stories `ActionsWrap` (a long
+title on a phone, every shape and density: the actions under the note at the
+start, overlapping nothing, one radius on each button, none in a corner
+curve) and `ActionsClearOfCorner` (a 40rem card, every shape and density: one
+line level with the title's first line, on the body's end edge, the top 40px
+from the edge in Rounded and the padding alone in Soft and Square). Screen
+readers are not yet verified (owner action 3).
 
 ## CollapsibleCard
 
@@ -10523,7 +10592,7 @@ gives their column to the value side by side and to the term stacked. A
 viewport breakpoint was rejected: a list in a 24rem side panel on a wide
 screen would draw a 7rem name column.
 
-**A width of its own** (risk R1; spec correction 8). A size container takes
+**A width of its own** (risk R1; spec correction 14). A size container takes
 no width from its content, so the list names
 `contain-intrinsic-inline-size: 16rem`, StatTile's 0.6.1 fix and its 16rem
 tile: in a flex row or an `auto` grid column it is 16rem, and stacked, rather
@@ -10557,7 +10626,7 @@ corner.
 **Empty values** (ruling 9). A value that is absent, `null`, `false`, `true`
 or `''` is empty, `present()`'s definition, and so is an array that holds
 only those, as a list mapped from data with no entries gives (spec
-correction 12); `0` is a value. The value's
+correction 18); `0` is a value. The value's
 `dd` carries `data-empty` and shows `emptyValue`, "Not set" by default, in
 slate. It is words the reader has to read, so by the test in "Where each
 text color may go" it is slate and never taupe; that table's "unset
@@ -10565,8 +10634,8 @@ indicator" in taupe is a mark, such as an empty swatch, not words (spec
 correction 6). It is never a dash, which a screen reader reads as "dash" or
 as nothing. `emptyValue` may be a link to add the value, GOV.UK's guidance
 for a missing answer: the link stands where the value would, and the row has
-no action of its own beside "Not set" (spec correction 13). The library writes "Not set" in English, so a page in
-another language passes its own.
+no action of its own beside "Not set" (spec correction 19). The library
+writes "Not set" in English, so a page in another language passes its own.
 
 **Long values.** A value wraps, and a long unbroken word, an IBAN or an
 email address, breaks anywhere (`overflow-wrap: anywhere`, the Card's rule,
@@ -10601,7 +10670,7 @@ as Chromium draws it, by baseline alignment) and 33px from its side, both
 under the 40px radius. The rule for a control at a holder's foot applies: it
 moves down, not in, so it stays on the column's end edge. The last row of a
 list that is the last child of a card, of a card's body that is the card's
-last child, or of a collapsible card's body (spec correction 10), adds
+last child, or of a collapsible card's body (spec correction 16), adds
 `calc(var(--holder-corner-inset) - var(--holder-pad))` to its block-end
 padding while it holds actions and the list sits side by side: 7px in
 Rounded, 19px in Rounded compact, nothing in Soft and Square, where the
@@ -10611,7 +10680,7 @@ line and more above the curve, so the row keeps its padding: the rule is
 written for `[data-layout='horizontal']` and, inside the list's 30rem
 container query, for `auto`, and a stacked list in a card ends at the
 Dense data padding with no dead space under its last value (spec correction
-9). The first row of a list that starts a card with no header takes the same
+15). The first row of a list that starts a card with no header takes the same
 at its block start in every layout, since its controls stand on its first
 line either way; a collapsible card always has its header above the body, so
 it has no first-row form. Only the controls' row grows; a row without
@@ -10632,7 +10701,7 @@ page the term column is on the right and the actions on the left. A numeric
 value stays left to right and starts at the line's start, the right edge of
 its column. `match-parent` is the standard name in Firefox and the prefixed
 one in WebKit and Chromium, so the `DescriptionListMirrored` play runs in all
-three engines (spec correction 11).
+three engines (spec correction 17).
 
 **Print.** Rules and text print; the actions are hidden under
 `@media print`, since a printed page cannot press them.
@@ -10647,9 +10716,10 @@ added: ink on canvas 16.25 in light and 19.31 in dark, on lifted 17.84 and
 5.31 and 6.94, on float 5.49 and 6.94. The divider is a cue, not a boundary.
 
 **The size.** The entry `{ DescriptionList, DescriptionListItem }` measures
-328 B without React Aria, Lucide and `@internationalized/date`, and 328 B
-with them, since it imports none; the rule rounds up to 0.5 kB and adds
-0.5 kB: 1 kB, the spec's budget.
+360 B without React Aria, Lucide and `@internationalized/date`, and 360 B
+with them, since it imports none (328 B before the empty-array test of spec
+correction 18); the rule rounds up to 0.5 kB and adds 0.5 kB: 1 kB, the
+spec's budget.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): the terms and values read in order, and how each reader

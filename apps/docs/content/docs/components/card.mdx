@@ -16,6 +16,26 @@ The header holds a title and a note, ruled off from the body. The title is the c
 
 <Section>
 
+## Actions in the header
+
+Put a card's own buttons, such as Edit, Merge and Remove on an account's Details card, in `CardActions` after the title and the note. They end the title's line, level with its first line however far the title wraps, and wrap among themselves at the end while the title keeps 12rem. In a header narrower than 24rem they take a row of their own after the note, at the start, so the order on screen is the order a screen reader reads. While the header holds actions its top grows by the card's corner inset, so the buttons keep their own shape and stand clear of the rounded corner, on the body's column edge: 7px more in Rounded, nothing in Soft and Square. For more than two or three actions, keep the first as a button and put the rest in a More menu.
+
+<Preview name="card-actions" />
+
+</Section>
+
+<Section>
+
+## A description list in a card
+
+An account's details are a [description list](/docs/components/description-list) as the card's body, with the card's Edit in its header. The list keeps a row's controls clear of the bottom corner, as CardActions keeps the header's clear of the top one.
+
+<Preview name="description-list-card" />
+
+</Section>
+
+<Section>
+
 ## Nesting
 
 A card inside another card, directly or in its body, takes a corner concentric with the outer card's, its radius less the outer card's edge and padding (7px in Rounded), and takes an outline. A card on a card has no tone step to set it apart. A control of your own in a card's corner, such as a button that ends its body, keeps its own shape and moves out of the corner instead: keep the card's `--holder-corner-inset` under it, so it stays on the column's edge, as the row under Header and body does with `margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad))`.
@@ -28,10 +48,10 @@ A card inside another card, directly or in its body, takes a corner concentric w
 
 ## Usage
 
-Card is static. It renders on the server and ships no JavaScript. For a card that folds, use [Collapsible card](/docs/components/collapsible-card). Choose the element with `as` and the heading level with `level`, so the card fits the page's outline.
+Card is static. It renders on the server and ships no JavaScript, and so does CardActions: the buttons you put in it are yours. For a card that folds, use [Collapsible card](/docs/components/collapsible-card), whose `actions` prop draws the same way. Choose the element with `as` and the heading level with `level`, so the card fits the page's outline.
 
 ```tsx
-import { Card, CardBody, CardHeader, CardNote, CardTitle } from '@snapshot-ui/react';
+import { Button, Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '@snapshot-ui/react';
 
 export function Notifications() {
   return (
@@ -41,6 +61,11 @@ export function Notifications() {
           Notifications
         </CardTitle>
         <CardNote>Where we reach you, and how often.</CardNote>
+        <CardActions>
+          <Button variant="secondary" aria-label="Edit notifications">
+            Edit
+          </Button>
+        </CardActions>
       </CardHeader>
       <CardBody>...</CardBody>
     </Card>
@@ -64,6 +89,12 @@ Every part takes `className` (merged after its own class), `ref` and its other H
 
 <PropsTable label="CardTitle props" path="../../packages/react/src/card/Card.tsx" type="Pick<CardTitleProps, 'level' | 'className'>" />
 
+### CardActions
+
+A `div` with no props of its own; its children are your buttons, links or a menu trigger.
+
+<PropsTable label="CardActions props" path="../../packages/react/src/card/Card.tsx" type="Pick<CardActionsProps, 'children' | 'className'>" />
+
 </Section>
 
 <Section>
@@ -76,6 +107,8 @@ The header is a div, not a header element. A header outside sectioning content i
 
 A card is not interactive. To make one lead somewhere, put a link in its title. Never nest buttons or links in a clickable card.
 
+CardActions adds no role and comes after the title and the note, so a screen reader and the Tab key meet the actions after the words they act on. Name each button with what it acts on, "Edit details" rather than "Edit", since a page of cards holds many Edits. A button that opens a dialog gets focus back when the dialog closes.
+
 </Section>
 
 <Section>
@@ -84,6 +117,6 @@ A card is not interactive. To make one lead somewhere, put a link in its title. 
 
 What keeps cards in the system.
 
-<Rules dos={['One title per card, and make it the heading that names the card.', 'Nest a card only for something that stands apart, such as a danger zone.', 'Let the body space its children at 24px and leave their margins alone.', 'Wrap text in a paragraph. The body is a grid, so bare text beside an element takes a row of its own.']} donts={['Never trim the 32px padding to fit more in. It is what separates a card from its content.', 'Never use a card for a single control or a short label. A card holds a section.']} />
+<Rules dos={['One title per card, and make it the heading that names the card.', 'Nest a card only for something that stands apart, such as a danger zone.', 'Let the body space its children at 24px and leave their margins alone.', 'Wrap text in a paragraph. The body is a grid, so bare text beside an element takes a row of its own.', "Put the card's own actions in CardActions, after the title and the note."]} donts={['Never trim the 32px padding to fit more in. It is what separates a card from its content.', 'Never use a card for a single control or a short label. A card holds a section.', "Never place a button in the header's corner by hand. CardActions keeps it clear of the curve."]} />
 
 </Section>

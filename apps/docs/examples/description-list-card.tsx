@@ -1,6 +1,7 @@
 import {
   Badge,
   Card,
+  CardActions,
   CardBody,
   CardHeader,
   CardTitle,
@@ -14,7 +15,8 @@ import type { ReactElement } from 'react';
  * The list is the card's body. Its last row's Edit ends the card, inside its bottom end curve, so the row takes
  * the card's corner inset under it and Edit keeps its place on the column's end edge: 7px more in Rounded,
  * nothing more in Soft and Square, and nothing while the list is stacked, where Edit is on the term's line. The
- * list does this itself.
+ * list does this itself. The header's Edit, in CardActions, stands clear of the top end curve the same way: the
+ * header's top grows by the corner inset.
  */
 export default function DescriptionListCard(): ReactElement {
   return (
@@ -27,6 +29,11 @@ export default function DescriptionListCard(): ReactElement {
         <CardTitle id="description-list-card-title" level={3}>
           Details
         </CardTitle>
+        <CardActions>
+          <Link href="#edit-details" aria-label="Edit details">
+            Edit
+          </Link>
+        </CardActions>
       </CardHeader>
       <CardBody>
         <DescriptionList>

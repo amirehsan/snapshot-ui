@@ -16,6 +16,7 @@ import CalendarBasic from './calendar-basic';
 import CalendarPersian from './calendar-persian';
 import CalendarRange from './calendar-range';
 import CalendarUnavailable from './calendar-unavailable';
+import CardActions from './card-actions';
 import CardNested from './card-nested';
 import CardParts from './card-parts';
 import CheckboxBasic from './checkbox-basic';
@@ -196,6 +197,7 @@ export const examples = {
   'calendar-persian': CalendarPersian,
   'calendar-range': CalendarRange,
   'calendar-unavailable': CalendarUnavailable,
+  'card-actions': CardActions,
   'card-nested': CardNested,
   'card-parts': CardParts,
   'checkbox-basic': CheckboxBasic,

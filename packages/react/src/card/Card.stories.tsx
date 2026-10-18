@@ -1,15 +1,27 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect } from 'storybook/test';
+import { Ellipsis } from 'lucide-react';
+import type { ReactElement } from 'react';
+import { expect, waitFor } from 'storybook/test';
+import { Button } from '../button';
+import { DescriptionList, DescriptionListItem } from '../description-list';
+import { Dialog, DialogTrigger } from '../dialog';
+import { IconButton } from '../icon-button';
+import { Link } from '../link';
+import { Menu, MenuItem, MenuTrigger } from '../menu';
 import { frameAround, HOLDER_CORNER, nestedCardPixels } from '../stories/corner';
-import { tokenPixels } from '../stories/paint';
-import { Card, CardBody, CardHeader, CardNote, CardTitle } from './Card';
+import { firstLineOffset, tokenPixels } from '../stories/paint';
+import { DESKTOP, PHONE, VIEWPORT_OPTIONS } from '../stories/viewports';
+import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from './Card';
+
+/** The frame every story draws its card in, unless the story names a wider one as `parameters.frame`. */
+const FRAME = 'min(480px, calc(100vw - 48px))';
 
 const meta = {
   title: 'Components/Card',
   component: Card,
   decorators: [
-    (Story) => (
-      <div style={{ width: 'min(480px, calc(100vw - 48px))' }}>
+    (Story, { parameters }) => (
+      <div style={{ width: typeof parameters.frame === 'string' ? parameters.frame : FRAME }}>
         <Story />
       </div>
     ),
@@ -215,5 +227,361 @@ export const LongContent: Story = {
     for (const text of card.querySelectorAll<HTMLElement>('.card-title, .card-note, .card-body > p')) {
       await expect(text.scrollWidth).toBeLessThanOrEqual(text.clientWidth);
     }
+  },
+};
+
+/** The first element with this class inside `scope`. */
+const part = (scope: ParentNode, name: string): HTMLElement => {
+  const element = scope.querySelector<HTMLElement>(`.${name}`);
+  if (!element) throw new Error(`No .${name}`);
+  return element;
+};
+
+/** The card's body, whose content box is the column the header's actions end on. */
+const body = (card: Element): HTMLElement => part(card, 'card-body');
+
+/** A length on the tokens, in px, as it resolves inside `scope`: the holder's properties included. */
+const lengthIn = (scope: Element, value: string): number => {
+  const probe = document.createElement('div');
+  probe.style.position = 'absolute';
+  probe.style.inlineSize = value;
+  scope.append(probe);
+  const { width } = probe.getBoundingClientRect();
+  probe.remove();
+  return width;
+};
+
+/** The width of an element's content box, in px. */
+const contentWidth = (element: Element): number => {
+  const style = getComputedStyle(element);
+  return element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+};
+
+/** Whether two boxes share any area, half a pixel of layout rounding allowed. */
+const overlaps = (a: DOMRect, b: DOMRect): boolean =>
+  a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+
+/**
+ * How far `control` reaches into the nearest of `card`'s four corner curves, in px: 0 when it is clear of
+ * all four. A corner is entered only where both gaps there, inline and block, are under the card's radius.
+ */
+const intoCorner = (card: Element, control: Element): number => {
+  const outer = card.getBoundingClientRect();
+  const inner = control.getBoundingClientRect();
+  const curve = parseFloat(getComputedStyle(card).borderTopLeftRadius);
+  const start = inner.left - outer.left;
+  const end = outer.right - inner.right;
+  const top = inner.top - outer.top;
+  const bottom = outer.bottom - inner.bottom;
+  const gaps: [number, number][] = [
+    [start, top],
+    [end, top],
+    [end, bottom],
+    [start, bottom],
+  ];
+  return Math.max(0, ...gaps.map(([x, y]) => Math.min(curve - x, curve - y)));
+};
+
+/** How many different radii a control draws on its four corners: 1 for a control that keeps its shape. */
+const cornerCount = (control: Element): number => {
+  const style = getComputedStyle(control);
+  return new Set([
+    style.borderTopLeftRadius,
+    style.borderTopRightRadius,
+    style.borderBottomRightRadius,
+    style.borderBottomLeftRadius,
+  ]).size;
+};
+
+/** Every shape in both densities: the corner moves the actions only where its curve is deeper than the padding. */
+const THEMES = [
+  ['rounded', 'comfortable'],
+  ['rounded', 'compact'],
+  ['soft', 'comfortable'],
+  ['soft', 'compact'],
+  ['square', 'comfortable'],
+  ['square', 'compact'],
+] as const;
+
+/** Runs `check` in every shape and density, then puts the toolbar's back for the next story. */
+async function inEveryTheme(check: (shape: string) => Promise<void>): Promise<void> {
+  const root = document.documentElement;
+  const { shape, density } = root.dataset;
+  try {
+    for (const [nextShape, nextDensity] of THEMES) {
+      root.dataset.shape = nextShape;
+      root.dataset.density = nextDensity;
+      await check(nextShape);
+    }
+  } finally {
+    root.dataset.shape = shape ?? 'rounded';
+    root.dataset.density = density ?? 'comfortable';
+  }
+}
+
+/** A title long enough to wrap beside the actions, and over its own lines on a phone. */
+const LONG_TITLE = 'Details of the Everyday Visa Platinum Rewards card';
+
+/**
+ * The first consumer's Details card with Edit, Merge and Remove side by side, each named for what it does to
+ * the account. Their Dialog and ConfirmDialog are left out: the corner and the wrap are the point here, and
+ * WithActions opens Edit's.
+ */
+function AccountCard({ title = 'Details', id }: { title?: string; id: string }): ReactElement {
+  return (
+    <Card as="section" aria-labelledby={id}>
+      <CardHeader>
+        <CardTitle id={id} level={3}>
+          {title}
+        </CardTitle>
+        <CardNote>Updated from your bank feed</CardNote>
+        <CardActions>
+          <Button variant="secondary" aria-label="Edit details">
+            Edit
+          </Button>
+          <Button variant="secondary" aria-label="Merge account">
+            Merge
+          </Button>
+          <Button variant="secondary" aria-label="Remove account">
+            Remove
+          </Button>
+        </CardActions>
+      </CardHeader>
+      <CardBody>
+        <DescriptionList>
+          <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+          <DescriptionListItem term="Credit limit" isNumeric>
+            $5,000.00
+          </DescriptionListItem>
+        </DescriptionList>
+      </CardBody>
+    </Card>
+  );
+}
+
+/**
+ * Buttons in a plain card's header, after its title and note: Edit opens a Dialog, and a More menu holds
+ * Merge and Remove. They sit at the end of the title's line, which is a control high, and the header's top
+ * grows by the card's corner inset less its padding, so in Rounded they stand clear of the top end curve and
+ * end on the body's column edge. At 375 the header is under 24rem and they follow the note at the start.
+ */
+export const WithActions: Story = {
+  tags: ['density'],
+  render: (args) => (
+    <Card {...args} as="section" aria-labelledby="details-title">
+      <CardHeader>
+        <CardTitle id="details-title" level={3}>
+          Details
+        </CardTitle>
+        <CardNote>Updated from your bank feed</CardNote>
+        <CardActions>
+          <DialogTrigger>
+            <Button variant="secondary" aria-label="Edit details">
+              Edit
+            </Button>
+            <Dialog
+              title="Edit details"
+              description="The name and type the account shows everywhere."
+              actions={({ close }) => (
+                <>
+                  <Button variant="secondary" onPress={close}>
+                    Cancel
+                  </Button>
+                  <Button onPress={close}>Save details</Button>
+                </>
+              )}
+            />
+          </DialogTrigger>
+          <MenuTrigger>
+            <IconButton aria-label="More actions" variant="outline">
+              <Ellipsis />
+            </IconButton>
+            <Menu>
+              <MenuItem id="merge">Merge</MenuItem>
+              <MenuItem id="remove">Remove</MenuItem>
+            </Menu>
+          </MenuTrigger>
+        </CardActions>
+      </CardHeader>
+      <CardBody>
+        <DescriptionList>
+          <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+          <DescriptionListItem term="Type">Credit card</DescriptionListItem>
+          <DescriptionListItem term="Credit limit" isNumeric>
+            $5,000.00
+          </DescriptionListItem>
+          <DescriptionListItem
+            term="Nickname"
+            actions={
+              <Link href="#nickname" aria-label="Edit Nickname">
+                Edit
+              </Link>
+            }
+          >
+            Travel card
+          </DescriptionListItem>
+        </DescriptionList>
+      </CardBody>
+    </Card>
+  ),
+};
+
+/**
+ * On a phone a long title wraps over its lines and the header is under 24rem, so Edit, Merge and Remove take
+ * a row of their own after the note, at the inline start, wrapping among themselves. In every shape and
+ * density nothing overlaps the title or the note, each button keeps one radius on its four corners, and none
+ * enters a corner curve of the card or passes its padding.
+ */
+export const ActionsWrap: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: PHONE,
+  parameters: { viewport: { options: VIEWPORT_OPTIONS } },
+  render: () => <AccountCard id="wrap-title" title={LONG_TITLE} />,
+  play: async ({ canvasElement }) => {
+    const card = part(canvasElement, 'card');
+    const header = part(card, 'card-header');
+    const title = part(header, 'card-title');
+    const note = part(header, 'card-note');
+    const actions = part(header, 'card-actions');
+    const buttons = [...actions.querySelectorAll('button')];
+    await expect(buttons).toHaveLength(3);
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    await inEveryTheme(async () => {
+      // The header is under 24rem on a 375px screen in both densities, so the actions follow the note.
+      await waitFor(
+        () =>
+          expect(actions.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+            note.getBoundingClientRect().bottom,
+          ),
+        { timeout: 5000 },
+      );
+      await expect(contentWidth(header)).toBeLessThan(24 * rem);
+      // The long title wraps, and the note follows its last line.
+      await expect(title.getBoundingClientRect().height).toBeGreaterThan(
+        1.5 * parseFloat(getComputedStyle(title).lineHeight),
+      );
+      await expect(note.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        title.getBoundingClientRect().bottom,
+      );
+      // At the inline start, where the title starts.
+      await expect(
+        Math.abs(actions.getBoundingClientRect().left - title.getBoundingClientRect().left),
+      ).toBeLessThan(1);
+      const end = body(card).getBoundingClientRect().right;
+      for (const button of buttons) {
+        const box = button.getBoundingClientRect();
+        await expect(overlaps(box, title.getBoundingClientRect())).toBe(false);
+        await expect(overlaps(box, note.getBoundingClientRect())).toBe(false);
+        await expect(cornerCount(button)).toBe(1);
+        await expect(intoCorner(card, button)).toBeLessThanOrEqual(1);
+        await expect(box.right).toBeLessThanOrEqual(end + 1);
+      }
+    });
+  },
+};
+
+/**
+ * Beside the title, measured in every shape and density in a 40rem card. Edit, Merge and Remove share one
+ * line level with the title's first line, within 1px, whether the title takes one line or wraps, and end on
+ * the body's column edge. In Rounded the header's top grows by the corner inset less the card's padding, 7px
+ * and 19px compact, so the actions start the corner inset under the card's top edge; in Soft and Square the
+ * padding already clears the curve and nothing grows. No button overlaps the title or enters a corner curve,
+ * and each keeps one radius.
+ */
+export const ActionsClearOfCorner: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: DESKTOP,
+  parameters: { viewport: { options: VIEWPORT_OPTIONS }, frame: 'min(40rem, calc(100vw - 48px))' },
+  render: () => (
+    <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
+      <AccountCard id="short-title" />
+      <AccountCard id="long-title" title={LONG_TITLE} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const cards = [...canvasElement.querySelectorAll<HTMLElement>('.card')];
+    await expect(cards).toHaveLength(2);
+    await inEveryTheme(async (shape) => {
+      for (const card of cards) {
+        const header = part(card, 'card-header');
+        const title = part(header, 'card-title');
+        const note = part(header, 'card-note');
+        const actions = part(header, 'card-actions');
+        const buttons = [...actions.querySelectorAll('button')];
+        const [first] = buttons;
+        if (!first) throw new Error('No actions');
+        // Beside the title, above the note.
+        await waitFor(
+          () =>
+            expect(actions.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+              note.getBoundingClientRect().top,
+            ),
+          { timeout: 5000 },
+        );
+        // On one line, level with the title's first line, and on the body's end edge.
+        for (const button of buttons) {
+          await expect(
+            Math.abs(button.getBoundingClientRect().top - first.getBoundingClientRect().top),
+          ).toBeLessThan(1);
+        }
+        await expect(Math.abs(firstLineOffset(first, title))).toBeLessThanOrEqual(1);
+        await expect(
+          Math.abs(actions.getBoundingClientRect().right - body(card).getBoundingClientRect().right),
+        ).toBeLessThan(1);
+        // The header's top grows by the corner inset less the padding: 7px, 19px compact, in Rounded alone.
+        const inset = lengthIn(card, 'var(--holder-corner-inset)');
+        const extra = inset - lengthIn(card, 'var(--holder-pad)');
+        await expect(Math.abs(parseFloat(getComputedStyle(header).paddingTop) - extra)).toBeLessThan(0.5);
+        if (shape === 'rounded') {
+          await expect(extra).toBeGreaterThan(0);
+          await expect(
+            first.getBoundingClientRect().top - card.getBoundingClientRect().top,
+          ).toBeGreaterThanOrEqual(inset - 1);
+        } else {
+          await expect(extra).toBe(0);
+        }
+        for (const button of buttons) {
+          await expect(overlaps(button.getBoundingClientRect(), title.getBoundingClientRect())).toBe(false);
+          await expect(cornerCount(button)).toBe(1);
+          await expect(intoCorner(card, button)).toBeLessThanOrEqual(1);
+        }
+      }
+      // The long title wraps beside the actions, and they stay on its first line.
+      const long = part(cards[1] ?? canvasElement, 'card-title');
+      await expect(long.getBoundingClientRect().height).toBeGreaterThan(
+        1.5 * parseFloat(getComputedStyle(long).lineHeight),
+      );
+    });
+  },
+};
+
+/**
+ * A header holding actions is a size container, which takes no width from its content, so in a flex row,
+ * where a card takes the width of what it holds, the header names the 20rem it stands in for, as a
+ * description list and a stat tile do, instead of shrinking the card to its padding.
+ */
+export const ActionsInAFlexRow: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <div style={{ display: 'flex' }}>
+      <Card as="section" aria-labelledby="flex-title">
+        <CardHeader>
+          <CardTitle id="flex-title" level={3}>
+            Details
+          </CardTitle>
+          <CardActions>
+            <Button variant="secondary" aria-label="Edit details">
+              Edit
+            </Button>
+          </CardActions>
+        </CardHeader>
+      </Card>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    await expect(Math.abs(contentWidth(part(canvasElement, 'card-header')) - 20 * rem)).toBeLessThanOrEqual(
+      1,
+    );
   },
 };

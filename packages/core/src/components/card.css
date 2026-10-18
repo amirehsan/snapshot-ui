@@ -327,6 +327,61 @@
     transition: none;
   }
 
+  /*
+   * CardActions: buttons in a plain card's header, after its title and note, derived in
+   * docs/design-system.md ("Card", "Actions in a plain card's header"). A plain header holds the title and
+   * the note as siblings, not in a heading block as CollapsibleCard's does, so the look that header draws
+   * with a wrapping flex row is drawn here with a grid. Every rule names `.card > .card-header`, so
+   * CollapsibleCard's header, which sits in .card-disclosure, is never matched.
+   */
+
+  /* One column, so under 24rem of the header the title, the note and the actions stack in the reading order.
+     The first row is at least a control high, and grows for a title that wraps, so nothing overhangs it. The
+     header's top grows by the corner inset less the card's padding while it holds actions, 7px in Rounded
+     and 19px compact, so the actions start the corner inset under the card's edge, clear of its top end
+     curve, and still end on the body's column edge: down, not in, as UploadTray's panel moves its header's
+     trailing button (design record, "Nested radii, derived"). Soft and Square add nothing. The header is
+     the size container the actions' place is read from, and a size container takes no width from what it
+     holds, so it names a stand-in, 20rem, as the list and StatTile do. */
+  .card > .card-header:has(> .card-actions) {
+    container: card-header / inline-size;
+    contain-intrinsic-inline-size: 20rem;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(var(--size-control), auto);
+    column-gap: var(--spacing-peer);
+    align-items: start;
+    padding-block-start: calc(var(--holder-corner-inset) - var(--holder-pad));
+  }
+
+  /* The title's first line is centred on a control's height, 5.6px down and 3.6px compact, so it is level
+     with the actions' first line however many lines the title takes. */
+  .card > .card-header:has(> .card-actions) > .card-title {
+    margin-block-start: max(0px, calc((var(--size-control) - 1lh) / 2));
+  }
+
+  /* At least a control high, its buttons centred in it, so a link among them is level too. */
+  .card > .card-header > .card-actions {
+    min-block-size: var(--size-control);
+  }
+
+  /* From 24rem of the header the actions end the title's line, in a column of their own after a gap of the
+     peer step, and wrap among themselves at the end where they need to. The title keeps 12rem beside them,
+     as CollapsibleCard's heading does; a lone button wider than what is left takes its own width, so it
+     never overlaps the title. Under 24rem nothing places them, so they follow the note at the start. */
+  @container card-header (inline-size >= 24rem) {
+    .card > .card-header:has(> .card-actions) > :is(.card-title, .card-note) {
+      grid-column: 1;
+    }
+
+    .card > .card-header > .card-actions {
+      grid-column: 2;
+      grid-row: 1;
+      justify-content: flex-end;
+      min-inline-size: min-content;
+      max-inline-size: calc(100cqi - 12rem - var(--spacing-peer));
+    }
+  }
+
   /* Forced colors repaint text in the reader's palette, but an svg keeps the
      color its author set, so the slate or ink chevron would stay as it was. It
      takes the toggle's color there, the reader's text color, at rest, under the
