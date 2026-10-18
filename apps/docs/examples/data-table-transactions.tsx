@@ -12,10 +12,11 @@ import {
   RouterProvider,
   SidePanel,
   SidePanelLayout,
+  type DataTableBulkAction,
   type DataTableColumn,
   type Key,
 } from '@snapshot-ui/react';
-import { SearchX } from 'lucide-react';
+import { Download, SearchX, Tag, Trash2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useId, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import {
@@ -27,7 +28,15 @@ import {
   type Transaction,
 } from './transactions-data';
 
-const PAGE_SIZE = 5;
+/** The rows a page shows: `?size=` holds another of PAGE_SIZES; the first writes no parameter. */
+const PAGE_SIZES = [5, 10, 25] as const;
+const PAGE_SIZE = PAGE_SIZES[0];
+
+/** The page size the URL asks for, if it is one the page offers. */
+function sizeOf(raw: string | null): number {
+  const asked = Number(raw ?? PAGE_SIZE);
+  return PAGE_SIZES.find((size) => size === asked) ?? PAGE_SIZE;
+}
 
 interface Sort {
   column: 'date' | 'amount';
@@ -55,21 +64,23 @@ function rowsFor(params: URLSearchParams): {
   sort: Sort;
   page: number;
   pageCount: number;
+  pageSize: number;
   total: number;
 } {
   const category = CATEGORIES[params.get('category') ?? ''];
   const sort = sortOf(params.get('sort'));
+  const pageSize = sizeOf(params.get('size'));
   const matching = TRANSACTIONS.filter((row) => category === undefined || row.category === category).sort(
     (a, b) => {
       const order = sort.column === 'amount' ? a.minor - b.minor : a.date.localeCompare(b.date);
       return sort.direction === 'ascending' ? order : -order;
     },
   );
-  const pageCount = Math.max(1, Math.ceil(matching.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(matching.length / pageSize));
   const asked = Number(params.get('page') ?? '1');
   const page = Number.isInteger(asked) && asked >= 1 && asked <= pageCount ? asked : 1;
-  const rows = matching.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  return { rows, sort, page, pageCount, total: matching.length };
+  const rows = matching.slice((page - 1) * pageSize, page * pageSize);
+  return { rows, sort, page, pageCount, pageSize, total: matching.length };
 }
 
 /** The columns, with the amount's total for the rows shown: one page's, so the totals row says "Page total". */
@@ -119,7 +130,7 @@ function Transactions({ params, close }: TransactionsProps): ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const titleId = useId();
-  const { rows, sort, page, pageCount, total } = rowsFor(params);
+  const { rows, sort, page, pageCount, pageSize, total } = rowsFor(params);
   const openId = params.get('open');
   const open = TRANSACTIONS.find((row) => row.id === openId) ?? null;
 
@@ -147,12 +158,22 @@ function Transactions({ params, close }: TransactionsProps): ReactElement {
     setSelected([]);
   }
 
-  const first = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const last = Math.min(page * PAGE_SIZE, total);
+  const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const last = Math.min(page * pageSize, total);
   const category = params.get('category');
   const clearFilters = (): void => {
     replace({ category: null, page: null });
   };
+  // The bar's actions as data: Export and Categorize as buttons while the bar has room, Delete in More. An app
+  // sends the selected keys to its server; here each one clears the selection, as the work is done.
+  const done = (): void => {
+    setSelected([]);
+  };
+  const bulkActions: DataTableBulkAction[] = [
+    { id: 'export', label: 'Export', icon: <Download />, isPromoted: true, onAction: done },
+    { id: 'categorize', label: 'Categorize', icon: <Tag />, isPromoted: true, onAction: done },
+    { id: 'delete', label: 'Delete', icon: <Trash2 />, onAction: done },
+  ];
 
   return (
     <SidePanelLayout
@@ -196,6 +217,9 @@ function Transactions({ params, close }: TransactionsProps): ReactElement {
         </FilterBar>
         <DataTable
           aria-labelledby={titleId}
+          // Its columns that stay under 48rem, the date, the payee and the amount, fit in 32rem, so the table
+          // keeps its face beside the open panel.
+          listBelow="32rem"
           items={rows}
           columns={columnsFor(rows)}
           getKey={(row) => row.id}
@@ -214,7 +238,7 @@ function Transactions({ params, close }: TransactionsProps): ReactElement {
           }
           selectedKeys={selected}
           onSelectionChange={setSelected}
-          bulkActions={<Button variant="secondary">Export</Button>}
+          bulkActions={bulkActions}
           labels={{ total: 'Page total' }}
           emptyState={
             <EmptyState
@@ -234,6 +258,16 @@ function Transactions({ params, close }: TransactionsProps): ReactElement {
           pageCount={pageCount}
           rangeLabel={`${String(first)} to ${String(last)} of ${String(total)}`}
           getPageHref={(n) => hrefWith({ page: n === 1 ? null : String(n) })}
+          pageSize={pageSize}
+          pageSizeOptions={PAGE_SIZES}
+          // A new size keeps the first row in view on the page Pagination works out, and is replaced in history,
+          // as a sort is; the first size and the first page write no parameter.
+          onPageSizeChange={(size, nextPage) => {
+            replace({
+              size: size === PAGE_SIZE ? null : String(size),
+              page: nextPage === 1 ? null : String(nextPage),
+            });
+          }}
           labels={{ navigation: 'Transactions pages' }}
         />
       </div>

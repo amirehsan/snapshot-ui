@@ -36,6 +36,7 @@ import ConfirmDialogBasic from './confirm-dialog-basic';
 import ConfirmDialogDanger from './confirm-dialog-danger';
 import ConfirmDialogHook from './confirm-dialog-hook';
 import DataTableBasic from './data-table-basic';
+import DataTableBulkActions from './data-table-bulk-actions';
 import DataTableColumnOptions from './data-table-column-options';
 import DataTableColumns from './data-table-columns';
 import DataTableFigures from './data-table-figures';
@@ -108,6 +109,7 @@ import PaginationCursor from './pagination-cursor';
 import PaginationInARow from './pagination-in-a-row';
 import PaginationLinks from './pagination-links';
 import PaginationNarrow from './pagination-narrow';
+import PaginationPageSize from './pagination-page-size';
 import PaginationPersian from './pagination-persian';
 import PaginationSiblings from './pagination-siblings';
 import PopoverBasic from './popover-basic';
@@ -209,6 +211,7 @@ export const examples = {
   'confirm-dialog-danger': ConfirmDialogDanger,
   'confirm-dialog-hook': ConfirmDialogHook,
   'data-table-basic': DataTableBasic,
+  'data-table-bulk-actions': DataTableBulkActions,
   'data-table-column-options': DataTableColumnOptions,
   'data-table-columns': DataTableColumns,
   'data-table-figures': DataTableFigures,
@@ -281,6 +284,7 @@ export const examples = {
   'pagination-in-a-row': PaginationInARow,
   'pagination-links': PaginationLinks,
   'pagination-narrow': PaginationNarrow,
+  'pagination-page-size': PaginationPageSize,
   'pagination-persian': PaginationPersian,
   'pagination-siblings': PaginationSiblings,
   'popover-basic': PopoverBasic,

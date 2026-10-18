@@ -3344,10 +3344,10 @@ test('a data table is one tab stop with the real Tab key, then the bar, and Shif
   expect(await inTable()).toBe(false);
   await page.keyboard.press('Shift+Tab');
   await expect(rows.nth(2)).toBeFocused();
-  // With a row selected the next stop is the bar, and Shift+Tab comes back to the row.
+  // With a row selected the next stop is the bar's first control, its X, and Shift+Tab comes back to the row.
   await page.keyboard.press('x');
   await page.keyboard.press('Tab');
-  await expect(stage.getByRole('button', { name: 'Categorize' })).toBeFocused();
+  await expect(stage.getByRole('button', { name: 'Clear selection' })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
   await expect(rows.nth(2)).toBeFocused();
 });
@@ -3942,7 +3942,8 @@ test('the transactions recipe writes the sort, the page and the open row to the 
   await page.reload();
   await settled(page);
   // Read back: the sort, the page and the open row, its heading drawn beside the rows.
-  // Beside the panel the box draws its list, so the table's sorted header is read hidden.
+  // With listBelow="32rem" the table keeps its face beside the panel at this width, its box under 40rem.
+  await expect(table).toBeVisible();
   await expect(table.locator('[role="columnheader"][aria-sort="ascending"]')).toContainText('Amount');
   await expect(pages.getByRole('link', { name: 'Page 2', exact: true })).toHaveAttribute(
     'aria-current',
@@ -3976,8 +3977,8 @@ test('closing the recipe panel goes back to the list entry, and another row take
   await expect(page).toHaveURL(/[?&]page=2(&|$)/);
   await rows.first().locator('.data-table-link').click();
   await expect(page).toHaveURL(/[?&]open=t6(&|$)/);
-  // Another row, from the list beside the panel: the open row's entry is replaced.
-  await stage.locator('.data-table-list [role="row"][data-key="t8"] .data-table-link').click();
+  // Another row, from the table beside the panel: the open row's entry is replaced.
+  await stage.locator('.data-table-table [role="row"][data-key="t8"] .data-table-link').click();
   await expect(page).toHaveURL(/[?&]open=t8(&|$)/);
   await stage.getByRole('button', { name: 'Close' }).click();
   await expect(stage.locator('.side-panel')).toHaveCount(0);
@@ -4008,6 +4009,69 @@ test('the recipe clears its selection when the page changes', async ({ page }) =
   await expect(page).not.toHaveURL(/page=/);
   await expect(rows.first()).toHaveAttribute('aria-selected', 'false');
   await expect(bar).toHaveCount(0);
+});
+
+test('the recipe keeps the table face beside its open panel, and its bar keeps every action on one line', async ({
+  page,
+}) => {
+  // At 1280 this site shows no page outline, so the recipe's box beside the panel is about 36.75rem, as a table
+  // beside a 24rem panel in an app at 1440 is; from 1440 the outline narrows the docs' own column further.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const { stage, table, rows } = transactionsRecipe(page);
+  await rows.first().locator('.data-table-link').click();
+  await expect(stage.getByRole('complementary', { name: 'Corner Mart' })).toBeVisible();
+  // Beside the open panel the table's box is under 40rem and over 32rem: the table, not the list, is drawn.
+  const width = await table.evaluate(
+    (element) => element.closest('.data-table')?.getBoundingClientRect().width ?? 0,
+  );
+  expect(width).toBeLessThan(640);
+  expect(width).toBeGreaterThanOrEqual(512);
+  await expect(table).toBeVisible();
+  await expect(stage.locator('.data-table-list')).toBeHidden();
+  await expect(table.getByRole('columnheader', { name: 'Category' })).toBeHidden();
+  // A row selected: the bar draws the X, the count and More, on one line.
+  await rows.nth(1).focus();
+  await page.keyboard.press('x');
+  const bar = stage.getByRole('toolbar', { name: 'Bulk actions' });
+  await expect(bar).toContainText('1 selected');
+  const more = bar.getByRole('button', { name: 'More actions' });
+  const clear = bar.getByRole('button', { name: 'Clear selection' });
+  const [moreBox, clearBox] = [await more.boundingBox(), await clear.boundingBox()];
+  if (moreBox === null || clearBox === null) throw new Error('No More or X');
+  expect(Math.abs(moreBox.y - clearBox.y)).toBeLessThan(1);
+  await more.click();
+  await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(more).toBeFocused();
+});
+
+test('the recipe writes its page size to the URL, on the page that keeps the first row, and reads it back', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, '/docs/components/data-table');
+  const { stage, rows, pages } = transactionsRecipe(page);
+  await pages.getByRole('link', { name: 'Page 2', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]page=2(&|$)/);
+  await expect(stage.locator('.pagination-range')).toHaveText('6 to 10 of 12');
+  // Ten a page: row 6 is on page 1, which writes no page; the size is replaced in history.
+  await pages.locator('.pagination-size .select-trigger').click();
+  await page.getByRole('option', { name: '10', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]size=10(&|$)/);
+  expect(new URL(page.url()).searchParams.get('page')).toBeNull();
+  expect(page.url()).not.toMatch(/\?$/);
+  await expect(stage.locator('.pagination-range')).toHaveText('1 to 10 of 12');
+  await expect(rows).toHaveCount(10);
+  await page.reload();
+  await settled(page);
+  await expect(pages.locator('.pagination-size .select-trigger')).toHaveText(/10/);
+  await expect(rows).toHaveCount(10);
+  // Back to the first size writes no parameter, and never a bare ?.
+  await pages.locator('.pagination-size .select-trigger').click();
+  await page.getByRole('option', { name: '5', exact: true }).click();
+  await expect(page).not.toHaveURL(/size=/);
+  expect(page.url()).not.toMatch(/\?$/);
 });
 
 test('the recipe header sticks under its 4rem header, under the site header', async ({ page }) => {
@@ -4147,8 +4211,9 @@ for (const width of [1024, 1440]) {
     await page.setViewportSize({ width, height: 800 });
     await visit(page, '/docs/components/data-table');
     const { stage } = transactionsRecipe(page);
-    // Sorted by date, the list's day headings are rows too: the item is found by its key.
-    await stage.locator('.data-table-list [role="row"][data-key="t1"]').focus();
+    // The row of the face drawn, the table's or the list's, by its key: sorted by date, the list's day headings
+    // are rows too.
+    await stage.locator('[role="row"][data-key="t1"]').filter({ visible: true }).focus();
     await page.keyboard.press('Enter');
     await expect(stage.getByRole('heading', { level: 2, name: 'Corner Mart' })).toBeFocused();
     await page.keyboard.press('Escape');

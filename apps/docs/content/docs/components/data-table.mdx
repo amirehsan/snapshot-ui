@@ -48,6 +48,14 @@ With selection on, the list draws no checkboxes until the reader presses Select 
 
 <Section>
 
+## Beside a side panel
+
+`listBelow="32rem"` moves the switch from 40rem of the table's box to 32rem, so a table beside an open [Side panel](/docs/components/side-panel) keeps its table face at 1440px, with its `hideBelow: 'md'` columns gone, as under 48rem. Every phone held upright still draws the list, since a phone's box is under 32rem. Pass it when the columns that stay under 48rem fit in 32rem: a row header, a date, an amount and the checkbox column do. The select mode, the scroll clears and the sticky offsets follow the face drawn, and the server's HTML is right at every width, as before. The default, `'40rem'`, is the switch the table has always had. The Transactions recipe below passes it: open a row and the table stays a table beside the panel.
+
+</Section>
+
+<Section>
+
 ## Column options
 
 A column with `overflow: 'wrap'` reads to two lines and ends in an ellipsis there, for a memo a reader wants to read without opening the row; figures never wrap. `firstSortDirection: 'descending'` makes the first press on a column sort it largest or newest first, and each later press flips it, two states only. A column of row menus takes `isHeaderHidden`: its header draws nothing and is still named by `header` for a screen reader.
@@ -96,9 +104,23 @@ When filters or a search hide every row, the table is empty for a different reas
 
 ## Selection
 
-Pass `selectedKeys` and `onSelectionChange` together to turn selection on: a first column of checkboxes, and a bar of bulk actions that sticks to the bottom of the screen while any row is selected. Hold the selection in your page's state, never in the URL, and clear it whenever the rows change, on a new page, sort or filter, as this example clears it on a sort. A press on a row still opens it, and a press on a row without a link does nothing; only the checkbox, Space and X select, and Shift with a press on a checkbox selects every row from the last one chosen. `disabledKeys` turns a row's selection off, and with `disabledBehavior: 'selection'` only that: the row still opens and reads as any other. The header checkbox selects the rows on this page, and `onSelectionChange` always gets an array of their keys, never "all": to act on every result, offer that in the bar yourself. `bulkActions` are your buttons, shown before Clear selection, and `formatCount` writes the bar's count in your reader's digits. The bar counts only selected keys that are still in `items`, and the table draws only those as selected; a key that is not stays in what `onSelectionChange` gets until you drop it, and is warned about once in the console. Clear selection clears every key. When a bulk action asks first, in a dialog whose confirm clears the selection, the table takes focus back once the dialog has closed. A table inside a dialog keeps its keys.
+Pass `selectedKeys` and `onSelectionChange` together to turn selection on: a first column of checkboxes, and a bar of bulk actions that sticks to the bottom of the screen while any row is selected. Hold the selection in your page's state, never in the URL, and clear it whenever the rows change, on a new page, sort or filter, as this example clears it on a sort. A press on a row still opens it, and a press on a row without a link does nothing; only the checkbox, Space and X select, and Shift with a press on a checkbox selects every row from the last one chosen. `disabledKeys` turns a row's selection off, and with `disabledBehavior: 'selection'` only that: the row still opens and reads as any other. The header checkbox selects the rows on this page, and `onSelectionChange` always gets an array of their keys, never "all": to act on every result, offer that in the bar yourself, through `selectAllMatching`. The bar starts with an X that clears the selection, named Clear selection, then the count; `bulkActions` are your actions, as data the bar lays out (below) or as your own buttons, and `formatCount` writes the bar's count in your reader's digits. The bar counts only selected keys that are still in `items`, and the table draws only those as selected; a key that is not stays in what `onSelectionChange` gets until you drop it, and is warned about once in the console. Clear selection clears every key. When a bulk action asks first, in a dialog whose confirm clears the selection, the table takes focus back once the dialog has closed. A table inside a dialog keeps its keys.
 
 <Preview name="data-table-selection" />
+
+</Section>
+
+<Section>
+
+## Bulk actions
+
+Pass `bulkActions` as data and the bar lays them out on one line that never wraps: the actions with `isPromoted`, three at most, as buttons with their icons, and the rest in a More menu at the bar's end, named "More actions" (`labels.moreActions`). Each action's `onAction` gets the selected keys that are in `items`. More reads which buttons are drawn as it opens, so where the bar is narrower than 40rem, on a phone or in a narrow column, the buttons step aside and More holds every action; where every action is promoted and the bar is wide, there is no More. A fourth promoted action goes to More with a console warning.
+
+`selectAllMatching` is a place after the count for your "Select all 24 matching", as here once every row on the page is selected: the table selects only the rows it draws, so acting on every match is yours. On the narrowest bar it takes a line of its own. When your button leaves, as this one does once pressed, focus moves to the next control in the bar, never to the page; so does focus on a button the bar hides as it narrows, which moves to More.
+
+`bulkActions` still takes your own buttons as a node, drawn as they are after the count, so nothing breaks; the bar's X is drawn either way. The bar writes its height as `--save-bar-offset` once scripts run, as [Save bar](/docs/components/save-bar) does, so the upload tray and the toasts sit above it; with a save bar on the page too, the taller wins.
+
+<Preview name="data-table-bulk-actions" />
 
 </Section>
 
@@ -112,7 +134,7 @@ A list page with the Next App Router, its state in the URL: the sort, the page, 
 // app/transactions/page.tsx, a server component
 import { TransactionsList } from './transactions-list';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZES = [25, 50, 100];
 
 export default async function TransactionsPage({
   searchParams,
@@ -124,15 +146,18 @@ export default async function TransactionsPage({
   // ?sort=amount is ascending and ?sort=amount- descending; no sort is the newest first.
   const sort = one(params.sort) ?? 'date-';
   const page = Math.max(1, Math.trunc(Number(one(params.page) ?? '1')) || 1);
+  // ?size= is one of the sizes the picker offers; anything else is 50.
+  const pageSize = PAGE_SIZES.find((size) => String(size) === one(params.size)) ?? 50;
   const category = one(params.category);
   const openId = one(params.open);
-  const { rows, total } = await loadTransactions({ sort, page, category, pageSize: PAGE_SIZE });
+  const { rows, total } = await loadTransactions({ sort, page, category, pageSize });
   const open = openId === null ? null : await loadTransaction(openId);
   return (
     <TransactionsList
       rows={rows}
-      pageCount={Math.max(1, Math.ceil(total / PAGE_SIZE))}
-      rangeLabel={formatRange(page, PAGE_SIZE, total)}
+      pageCount={Math.max(1, Math.ceil(total / pageSize))}
+      pageSize={pageSize}
+      rangeLabel={formatRange(page, pageSize, total)}
       sort={sort}
       page={page}
       category={category}
@@ -142,7 +167,7 @@ export default async function TransactionsPage({
 }
 ```
 
-The client component writes the URL with the router, starting from the parameters already there, so a sort keeps the filters and the open row. A sort and a filter are replaced in history and start again at page 1; a page is pushed, so Back returns to the last page. Selection is the page's own state and never the URL's, and it clears whenever the rows change, on a new page, sort or filter: it was made on the rows before. The component clears it as it renders the new rows, so no frame shows the old selection, and the bar never counts a row that has left.
+The client component writes the URL with the router, starting from the parameters already there, so a sort keeps the filters and the open row. A sort and a filter are replaced in history and start again at page 1; a page is pushed, so Back returns to the last page. A new page size is replaced too, on the page that keeps the reader's first row in view, which Pagination works out. Pagination's picker calls a function, which is why it is rendered here, in the client component. Selection is the page's own state and never the URL's, and it clears whenever the rows change, on a new page, sort or filter: it was made on the rows before. The component clears it as it renders the new rows, so no frame shows the old selection, and the bar never counts a row that has left.
 
 ```tsx
 'use client';
@@ -151,7 +176,7 @@ import { DataTable, Pagination, SidePanel, SidePanelLayout, type Key } from '@sn
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
-export function TransactionsList({ rows, pageCount, rangeLabel, sort, page, category, open }: TransactionsListProps) {
+export function TransactionsList({ rows, pageCount, pageSize, rangeLabel, sort, page, category, open }: TransactionsListProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -212,7 +237,12 @@ export function TransactionsList({ rows, pageCount, rangeLabel, sort, page, cate
         getGroup={descriptor.column === 'date' ? (row) => ({ id: row.date, label: row.dayLabel }) : undefined}
         selectedKeys={selected}
         onSelectionChange={setSelected}
-        bulkActions={<ExportButton />}
+        bulkActions={[
+          { id: 'export', label: 'Export', icon: <Download />, isPromoted: true, onAction: exportRows },
+          { id: 'delete', label: 'Delete', icon: <Trash2 />, onAction: confirmDelete },
+        ]}
+        // The date, the payee and the amount fit in 32rem: the table keeps its face beside the panel.
+        listBelow="32rem"
         labels={{ total: 'Page total' }}
       />
       <Pagination
@@ -220,6 +250,11 @@ export function TransactionsList({ rows, pageCount, rangeLabel, sort, page, cate
         pageCount={pageCount}
         rangeLabel={rangeLabel}
         getPageHref={(n) => hrefWith({ page: n === 1 ? null : String(n) })}
+        pageSize={pageSize}
+        // The page Pagination works out keeps the first row of this page in view at the new size.
+        onPageSizeChange={(size, next) =>
+          replace({ size: size === 50 ? null : String(size), page: next === 1 ? null : String(next) })
+        }
       />
     </SidePanelLayout>
   );
@@ -259,7 +294,7 @@ const closePanel = (closedHref: string) => {
 - Pass `getGroup` only while the rows are sorted by date: only rows next to each other group.
 - Strings are yours: the dates, the amounts, the day headings and the range. React Aria announces a sort and a change of selection in its own English words, even on a Persian page; the bar's count is yours, through `formatCount`.
 
-The example below is the same page in a client component, since this site is static: it reads the URL in the browser, so here the open row's detail appears once scripts run, where an app's server page draws it at once. A 4rem header stands in for your app's, under this site's own, and the offset is both. Sort by amount, go to page 2 and open a row, then reload: the URL holds all three. While the panel is open this site folds its menu to its icons under 1640px, as AppShell folds an app's rail under 1440px, since the examples sit in a narrower column than an app's content.
+The example below is the same page in a client component, since this site is static: it reads the URL in the browser, so here the open row's detail appears once scripts run, where an app's server page draws it at once. A 4rem header stands in for your app's, under this site's own, and the offset is both. Sort by amount, go to page 2 and open a row, then reload: the URL holds all three. Choose 10 rows a page and the URL holds that too. With `listBelow="32rem"` the table keeps its face beside the open panel at 1280px, where this site shows no outline of the page beside its content. While the panel is open this site folds its menu to its icons under 1640px, as AppShell folds an app's rail under 1440px, since the examples sit in a narrower column than an app's content.
 
 <Preview name="data-table-transactions" />
 
@@ -312,9 +347,11 @@ export function Transactions({ rows, sort, openId }: TransactionsProps) {
 
 The root also takes `ref`, and `className` is merged after its own class. A name is required: `aria-label`, or `aria-labelledby` with the id of a visible heading.
 
-<PropsTable label="DataTable props" path="../../packages/react/src/data-table/DataTable.tsx" type="Pick<DataTableBaseProps<object>, 'items' | 'columns' | 'getKey' | 'getRowHref' | 'currentKey' | 'sortDescriptor' | 'onSortChange' | 'selectedKeys' | 'onSelectionChange' | 'bulkActions' | 'formatCount' | 'disabledKeys' | 'disabledBehavior' | 'isLoading' | 'loadingRowCount' | 'emptyState' | 'error' | 'getGroup' | 'labels' | 'className'>" />
+<PropsTable label="DataTable props" path="../../packages/react/src/data-table/DataTable.tsx" type="Pick<DataTableBaseProps<object>, 'items' | 'columns' | 'getKey' | 'getRowHref' | 'currentKey' | 'sortDescriptor' | 'onSortChange' | 'selectedKeys' | 'onSelectionChange' | 'bulkActions' | 'selectAllMatching' | 'listBelow' | 'formatCount' | 'disabledKeys' | 'disabledBehavior' | 'isLoading' | 'loadingRowCount' | 'emptyState' | 'error' | 'getGroup' | 'labels' | 'className'>" />
 
 <PropsTable label="DataTableColumn" path="../../packages/react/src/data-table/DataTable.tsx" type="DataTableColumn<object>" />
+
+<PropsTable label="DataTableBulkAction" path="../../packages/react/src/data-table/DataTable.tsx" type="DataTableBulkAction" />
 
 <PropsTable label="DataTableLabels" path="../../packages/react/src/data-table/DataTable.tsx" type="DataTableLabels" />
 
@@ -328,11 +365,11 @@ The table is a `grid` named by your `aria-label` or heading. Each header is a `c
 
 The list is a second `grid` of the same name, shown where the table is not, so a screen reader meets one; each day is a `rowgroup` named by its heading, and each item is named by its row's name and described by its second line and its end, so a screen reader hears the category and the amount too. With selection on, the list's Select button is a plain button whose name says what it does next, Select or Done, and focus stays on it when it is pressed; its items say whether they are selected whether their boxes show or not. On a touch screen Select, Done and Select all are 44px tall. A table or list with no rows takes focus itself and draws the ring. The list has no typeahead at all, so every letter reaches the page.
 
-With selection on, the grid is multiselectable and each row says whether it is selected. The header checkbox is named "Select all" and a row's "Select" followed by the row's name, such as "Select Corner Mart". The bar is a toolbar named "Bulk actions". React Aria announces each selection change in its own English words, and the bar's polite status says the count in yours, once the selection has held for a moment, so a run of X presses is said once. Letters never move focus: J and K move as the arrows, X toggles, and every other letter does nothing, on any keyboard layout.
+With selection on, the grid is multiselectable and each row says whether it is selected. The header checkbox is named "Select all" and a row's "Select" followed by the row's name, such as "Select Corner Mart". The bar is a toolbar named "Bulk actions": its X is named "Clear selection" and shows a tip of the same words on hover and keyboard focus, More is named "More actions" and opens a menu whose items keep the actions' names, and a control that leaves the bar hands focus to the one in its place. React Aria announces each selection change in its own English words, and the bar's polite status says the count in yours, once the selection has held for a moment, so a run of X presses is said once. Letters never move focus: J and K move as the arrows, X toggles, and every other letter does nothing, on any keyboard layout.
 
 A field in a cell, such as a text input or a [Date picker](/docs/components/date-picker), keeps its own keys while it has focus, in the table and in an item of the list through its column's `listSlot`: its arrows move its caret or step its segments, and letters type. Escape returns focus to its row or item, where the arrows move between rows again, as the grid pattern's editing mode does; Tab moves on to the next field, row by row like a form.
 
-<Keys rows={[['Down Up J K', 'Move to the next or previous row; from the first row, Up reaches the headers. J and K act as the arrows on any keyboard layout.'], ['Right Left', 'Into and between the cells of a row, skipping a column that has left, and back to the row; in the header row, between the headers, stopping at its ends.'], ['Home End', "The first or last row; in a cell or a header, the row's first or last one that has not left. With Ctrl, from a cell, the table's first or last cell."], ['PageUp PageDown', 'Move by the rows that fit in the view, never past the first or the last row; with Shift, extend the selection.'], ['Enter', "Opens the focused row, from the row, one of its cells or its checkbox, and never selects it, in the list's Select mode too. On a sortable header, sorts."], ['Ctrl+Enter Shift+Enter', "Opens the focused row in a new tab or window, as a modifier click on its link does. A browser that ignores a modifier on a click a script sends, as Safari may, opens it in place: press Right to reach the row's link and the modifier Enter there."], ['Space X', "Toggle the focused row's selection, and in the list the focused item's, whether its box shows or not. Space on a header sorts."], ['Shift+Down Shift+Up', 'Extend the selection, past a column that has left too.'], ['Mod+A', 'Selects every row on the page.'], ['Escape', 'Clears the selection; in the bar too, with focus back in the table. In a field in a cell or an item, returns focus to its row or item, where the arrows move between rows again; a field or an open calendar that uses Escape keeps it.'], ['A-Z', 'Nothing: a letter never moves focus. A key no row or header starts with, such as a page shortcut, reaches the page; in the list every letter does.'], ['Tab', 'Into and out of the table, one stop, then the bar, where Left and Right move between its buttons. Above the list, the Select button, and Select all while the boxes show, come first. From a field in a cell or an item, to the next field, row by row like a form, and out of the table after the last; Shift+Tab goes back.']]} />
+<Keys rows={[['Down Up J K', 'Move to the next or previous row; from the first row, Up reaches the headers. J and K act as the arrows on any keyboard layout.'], ['Right Left', 'Into and between the cells of a row, skipping a column that has left, and back to the row; in the header row, between the headers, stopping at its ends.'], ['Home End', "The first or last row; in a cell or a header, the row's first or last one that has not left. With Ctrl, from a cell, the table's first or last cell."], ['PageUp PageDown', 'Move by the rows that fit in the view, never past the first or the last row; with Shift, extend the selection.'], ['Enter', "Opens the focused row, from the row, one of its cells or its checkbox, and never selects it, in the list's Select mode too. On a sortable header, sorts."], ['Ctrl+Enter Shift+Enter', "Opens the focused row in a new tab or window, as a modifier click on its link does. A browser that ignores a modifier on a click a script sends, as Safari may, opens it in place: press Right to reach the row's link and the modifier Enter there."], ['Space X', "Toggle the focused row's selection, and in the list the focused item's, whether its box shows or not. Space on a header sorts."], ['Shift+Down Shift+Up', 'Extend the selection, past a column that has left too.'], ['Mod+A', 'Selects every row on the page.'], ['Escape', 'Clears the selection; in the bar too, with focus back in the table. In a field in a cell or an item, returns focus to its row or item, where the arrows move between rows again; a field or an open calendar that uses Escape keeps it.'], ['A-Z', 'Nothing: a letter never moves focus. A key no row or header starts with, such as a page shortcut, reaches the page; in the list every letter does.'], ['Tab', 'Into and out of the table, one stop, then the bar, where Left and Right move between Clear selection, your select-all control, the buttons and More, and Enter, Space or Down on More opens its menu. Above the list, the Select button, and Select all while the boxes show, come first. From a field in a cell or an item, to the next field, row by row like a form, and out of the table after the last; Shift+Tab goes back.']]} />
 
 </Section>
 
@@ -342,6 +379,6 @@ A field in a cell, such as a text input or a [Date picker](/docs/components/date
 
 What keeps data tables in the system.
 
-<Rules dos={['Make the payee or the name the row header, the column a reader looks a row up by.', 'Put figures at the end, with their sign and currency in the string.', 'Add a totals row only for figures that add up.', 'Give the empty body an EmptyState that says what is missing and what to do.', "Write the bar's count in your reader's words and digits.", 'Clear the selection when the page, the sort or a filter changes.', 'Name a total of one page "Page total".', 'Pass getGroup only while the rows are sorted by date.', 'Give each column a listSlot, so a phone reads the item as a line and its detail.', 'Write a negative amount with a real minus sign.', 'Offer Clear filters when filters hide every row.', 'Give a failed load an error with a way to retry.']} donts={['Never let the table scroll sideways. Let columns leave instead.', 'Never stripe the rows. A hairline between them is enough.', 'Never mark a row by color alone.', 'Never draw a spinner in place of the rows. Skeleton rows keep the shape.', 'Never keep the selection in the URL.', 'Never make a press on a row select it. A press opens; the checkbox selects.']} />
+<Rules dos={['Make the payee or the name the row header, the column a reader looks a row up by.', 'Put figures at the end, with their sign and currency in the string.', 'Add a totals row only for figures that add up.', 'Give the empty body an EmptyState that says what is missing and what to do.', "Write the bar's count in your reader's words and digits.", 'Clear the selection when the page, the sort or a filter changes.', 'Name a total of one page "Page total".', 'Pass getGroup only while the rows are sorted by date.', 'Give each column a listSlot, so a phone reads the item as a line and its detail.', 'Write a negative amount with a real minus sign.', 'Offer Clear filters when filters hide every row.', 'Give a failed load an error with a way to retry.', 'Promote the one to three actions used most; put the rest in More.', 'Pass listBelow="32rem" beside a side panel when the columns that stay fit.']} donts={['Never let the table scroll sideways. Let columns leave instead.', 'Never stripe the rows. A hairline between them is enough.', 'Never mark a row by color alone.', 'Never draw a spinner in place of the rows. Skeleton rows keep the shape.', 'Never keep the selection in the URL.', 'Never make a press on a row select it. A press opens; the checkbox selects.']} />
 
 </Section>

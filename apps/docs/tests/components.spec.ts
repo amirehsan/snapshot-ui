@@ -792,6 +792,17 @@ test.describe('forced colors', () => {
     );
   });
 
+  test('the bulk actions example draws its X and More in CanvasText terms, legible in forced colors', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/data-table');
+    const stage = page.locator('.stage').filter({ has: page.getByRole('button', { name: 'More actions' }) });
+    const bar = stage.getByRole('toolbar', { name: 'Bulk actions' });
+    await expect(bar).toHaveCSS('border-top-color', await systemColor(page, 'CanvasText'));
+    await expect(bar.getByRole('button', { name: 'More actions' })).toBeVisible();
+    await expect(bar.getByRole('button', { name: 'Clear selection' })).toBeVisible();
+  });
+
   test('a selected data table list item is Highlight with HighlightText as drawn, its mark and its box legible', async ({
     page,
   }) => {
@@ -1366,6 +1377,101 @@ test.describe('a real drop', () => {
 });
 
 // ---- Props tables -------------------------------------------------------------------------------
+
+/** The data table page's bulk actions example: its stage, with the More button only it starts with. */
+const bulkExample = (page: Page): Locator =>
+  page.locator('.stage').filter({ has: page.getByRole('button', { name: 'More actions' }) });
+
+/** The names of the open menu's items. */
+const menuItems = (page: Page): Promise<string[]> => page.getByRole('menuitem').allTextContents();
+
+test('the bulk actions example puts the rest in More, and every action in More at 375', async ({ page }) => {
+  await visit(page, '/docs/components/data-table');
+  const stage = bulkExample(page);
+  const bar = stage.getByRole('toolbar', { name: 'Bulk actions' });
+  await expect(bar).toContainText('2 selected');
+  await expect(bar.getByRole('button', { name: 'Categorize' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Export' })).toBeVisible();
+  await bar.getByRole('button', { name: 'More actions' }).click();
+  expect(await menuItems(page)).toEqual(['Archive', 'Delete']);
+  await page.getByRole('menuitem', { name: 'Archive' }).click();
+  await expect(stage.getByRole('status').filter({ hasText: 'Archived' })).toHaveText(
+    'Archived 2 transactions',
+  );
+  await expect(bar.getByRole('button', { name: 'More actions' })).toBeFocused();
+  // On a phone the bar draws no promoted button, and More holds every action, read as it opens.
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(bar.getByRole('button', { name: 'Categorize' })).toBeHidden();
+  await bar.getByRole('button', { name: 'More actions' }).click();
+  expect(await menuItems(page)).toEqual(['Categorize', 'Export', 'Archive', 'Delete']);
+  await page.keyboard.press('Escape');
+  // Delete clears the selection, and focus goes to the table, never to the page.
+  await bar.getByRole('button', { name: 'More actions' }).click();
+  await page.getByRole('menuitem', { name: 'Delete' }).click();
+  await expect(bar).toHaveCount(0);
+  await expect.poll(() => stage.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+});
+
+test('the bulk actions example offers every match once the page is selected', async ({ page }) => {
+  await visit(page, '/docs/components/data-table');
+  const stage = bulkExample(page);
+  await stage.locator('thead .checkbox-box').click();
+  const bar = stage.getByRole('toolbar', { name: 'Bulk actions' });
+  const all = bar.getByRole('button', { name: 'Select all 24 matching' });
+  await all.focus();
+  await page.keyboard.press('Enter');
+  await expect(bar).toContainText('All 24 matching are selected');
+  // The button left with focus on it: the next control in the bar has focus.
+  await expect(bar.getByRole('button', { name: 'Categorize' })).toBeFocused();
+  await bar.getByRole('button', { name: 'Export' }).click();
+  await expect(stage.getByRole('status').filter({ hasText: 'Exported' })).toHaveText(
+    'Exported 24 transactions',
+  );
+});
+
+test('the page size example writes the size and the page that keeps the first row to the URL', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/pagination');
+  const nav = page.getByRole('navigation', { name: 'Payment pages' });
+  await nav.getByRole('link', { name: 'Page 3', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]page=3(&|$)/);
+  await expect(nav.locator('.pagination-range')).toHaveText('51 to 75 of 240');
+  // By keyboard: the picker opens, Up chooses 10, and row 51 is on page 6.
+  const trigger = nav.locator('.pagination-size .select-trigger');
+  await expect(trigger).toHaveAccessibleName(/Rows per page/);
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/[?&]size=10(&|$)/);
+  await expect(page).toHaveURL(/[?&]page=6(&|$)/);
+  await expect(nav.locator('.pagination-range')).toHaveText('51 to 60 of 240');
+  await expect(trigger).toBeFocused();
+  // The default size on page 1 writes no parameter, and never a bare ?.
+  await trigger.click();
+  await page.getByRole('option', { name: '100', exact: true }).click();
+  await expect(page).toHaveURL(/[?&]size=100(&|$)/);
+  expect(new URL(page.url()).searchParams.get('page')).toBeNull();
+  await trigger.click();
+  await page.getByRole('option', { name: '25', exact: true }).click();
+  await expect(page).not.toHaveURL(/[?&](size|page)=/);
+  expect(page.url()).not.toMatch(/\?$/);
+});
+
+test('the page size example puts its picker above the steps at 320 with nothing scrolling sideways', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await visit(page, '/docs/components/pagination');
+  const nav = page.getByRole('navigation', { name: 'Payment pages' });
+  const picker = await nav.locator('.pagination-size').boundingBox();
+  const next = await nav.locator('.pagination-step[data-step="next"]').boundingBox();
+  if (picker === null || next === null) throw new Error('No picker or Next');
+  expect(picker.y + picker.height).toBeLessThanOrEqual(next.y + 0.5);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
 
 test('every props table on a component or chart page has a name of its own', async ({ page }) => {
   // A page with several tables names each one, so a screen reader's list of tables tells them apart.
