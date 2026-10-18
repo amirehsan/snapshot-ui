@@ -7132,11 +7132,31 @@ current page's `aria-current="true"` and no `href`.
 **Screen readers.** Pagination's spoken range in VoiceOver on macOS and
 NVDA: not yet verified (risk R3).
 
+**The page size picker** (the owner's addition in batch 4, spec
+correction 109 of the documents plan). `pageSize`, `pageSizeOptions`
+(10, 25, 50 and 100 by default) and `onPageSizeChange(pageSize, page)`,
+typed together or not at all, draw a rows-per-page picker at the row's
+start: the library's Select in a client leaf, labelled "Rows per page"
+(`labels.pageSize`) beside it at the range's small step in slate, its
+trigger as tall as the page controls, its options written with
+`pageLabel`. A new size is handed on with the page that holds the first
+row of the current page at that size, so the reader keeps their place;
+the range stays the app's sentence, said politely once it settles. With
+the picker the step words become hidden names under 52rem of the box,
+the list wraps to its own line at the end below about 45rem, and under
+30rem and in the short form the picker takes its own line above the
+steps; nothing scrolls sideways at 320px, and right to left mirrors it.
+It calls a function, so a client component renders it, in either mode;
+a server page renders Pagination without it. Without it nothing is drawn
+differently, so the 0.6.1 row and box are unchanged.
+
 **The size.** The size limit is 2.5 kB for `Pagination`, above the
 spec's 1.5 kB budget: the entry measured 1.55 kB, the shell with its
 three client leaves, the page items and the focus handoff, and the rule
 rounds up to 2 kB and adds 0.5 kB. With the cleaned inputs, the warning
 for no pages and the blur rule it measures 1.63 kB, inside the limit.
+With the page size picker, which brings Select, it measured 4.05 kB,
+which the rule sets at 5 kB.
 
 ## The server face
 
@@ -8983,6 +9003,59 @@ with Pagination (open question 6).
 0.6.0: it named 40rem, the width at which the table gives way to its
 list, so it changed nothing (open question 9).
 
+**Beside a side panel** (ruling 24, spec corrections 107 and 108 of the
+documents plan). `listBelow: '40rem' | '32rem'`, a container width and not
+a breakpoint, moves the switch to the list face. DataTable writes
+`data-list-below="32rem"` for the second value and nothing for the
+default; `data-table.css` keeps one 40rem block, scoped to
+`:not([data-list-below='32rem'])`, and adds the same switch at 32rem for
+the attribute, so the server's HTML is right at every width and the
+select mode, the scroll clears and the sticky offsets follow the face
+drawn, as DataTable reads the drawn face's `display`. At 1440px in an app
+a table beside the 24rem panel is about 34rem: the table, its `hideBelow:
+'md'` columns gone. Every phone held upright is under 32rem: the list.
+The docs show an outline of the page from 1440px, so there the recipe's
+box beside the panel is about 19rem and draws its list; its end-to-end
+test runs at 1280, a 36.75rem box.
+
+**The bulk-action bar's data form** (ruling 25, spec corrections 14, 18
+and 102 to 106 of the documents plan). Clear selection is a 40px ghost X
+`IconButton` at the bar's start, named `labels.clearSelection`, with a tip
+of the same words, in both forms; the count follows, then
+`selectAllMatching` in `div.data-table-bar-select-all`, then the actions,
+which take the line's end with `margin-inline-start: auto`. As data, up
+to three `isPromoted` actions are secondary Buttons with a 16px icon and
+`data-action-id`, a fourth warns once and goes to More, and More is an
+ellipsis `IconButton` named `labels.moreActions` whose menu, opening above
+the bar, is read as it opens: the unpromoted actions and every promoted
+one whose button is not drawn (`isDrawn`, `getClientRects()`, since
+`checkVisibility()` is above the Safari floor). The bar is its own size
+container: under 40rem the promoted buttons are `display: none`, so More
+holds every action; a More holding only promoted actions
+(`data-promoted-only`) is hidden at 40rem and wider; under 24rem the
+select-all place takes a line of its own after the controls. The bar
+keeps `flex-wrap: wrap` only as a last resort. The X and More are
+controls in a single-row holder, held clear of its corners by the bar's
+ends at `--holder-corner-inset` (Nested radii, derived), and the corner
+audit passes. A node `bulkActions` draws as 0.6.0 did after the X.
+
+Focus never falls to the page: a control that leaves the bar, by a
+render, by being disabled or by the container query hiding it, hands
+focus to the control in its place (More for a hidden promoted button);
+an action in More that clears the selection takes the bar and the menu
+away together, and the table takes focus, a frame later if React Aria's
+open menu still holds the page inert. The count is said once by the
+polite status, as before; the menu's items keep the actions' names.
+
+**The bar's offset.** The bar writes its border-box height as
+`--save-bar-offset` through `useBottomBarOffset`, as SaveBar does, and
+`data-table.css` declares the one-line height from tokens on
+`:root:has(.data-table-bar)` and `.app-shell:has(.data-table-bar)`, so the
+upload tray and the toasts sit above it; with a save bar on the page too,
+each holder keeps both bars' heights and writes the taller (spec
+correction 81). It sets no root scroll padding: the rows keep their own
+scroll margin above it.
+
 **The size.** The entry `{ DataTable }` measured 2.62 kB without React
 Aria, Lucide and `@internationalized/date`, Link and Skeleton included;
 the rule rounds up to 3 kB and adds 0.5 kB: 3.5 kB, under the spec's 4
@@ -8995,7 +9068,10 @@ the page keys, the error state and the reloading cue, it measured 6.99
 kB, which the rule sets at 7.5 kB. With the list face and its Select
 mode, Task 4 measured 8.02 kB, which the rule sets at 9 kB; its review
 round, with the item descriptions, the tap in Select mode and the named
-totals, and without the mark's icon, measured 8.32 kB, still 9 kB.
+totals, and without the mark's icon, measured 8.32 kB, still 9 kB. With
+`listBelow`, the X with its Tooltip and the More menu, batch 4 measured
+11.11 kB, which the rule sets at 12 kB (spec correction 108 of the
+documents plan).
 
 **Screen readers.** Not yet verified with VoiceOver and NVDA (owner
 action 4): a row read by its row header and cells, the current row's
