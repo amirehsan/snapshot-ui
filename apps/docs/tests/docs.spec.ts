@@ -3778,8 +3778,15 @@ test('the docs header sets --page-sticky-top, so a data table header sticks unde
 /** The side panel page's basic example: its stage, the open aside, and the list items beside it. */
 const sidePanelExample = (page: Page): { stage: Locator; items: Locator } => {
   const stage = page.locator('.stage').first();
-  // Beside the 24rem panel the table's box is under 40rem, so its list is the face drawn.
-  return { stage, items: stage.locator('.data-table-list [role="row"]') };
+  // Beside the 24rem panel the table's box is under 40rem up to 1440px, so its list is the face drawn; from 1440px
+  // this site folds its outline under the content while the panel is open, and the box draws its table. The rows of
+  // the face drawn.
+  return {
+    stage,
+    items: stage
+      .locator('.data-table-list [role="row"], .data-table-table .data-table-body [role="row"]')
+      .filter({ visible: true }),
+  };
 };
 
 test('a side panel sits beside the content from 1024px and becomes a sheet under it, keeping focus', async ({
@@ -4014,19 +4021,22 @@ test('the recipe clears its selection when the page changes', async ({ page }) =
 test('the recipe keeps the table face beside its open panel, and its bar keeps every action on one line', async ({
   page,
 }) => {
-  // At 1280 this site shows no page outline, so the recipe's box beside the panel is about 36.75rem, as a table
-  // beside a 24rem panel in an app at 1440 is; from 1440 the outline narrows the docs' own column further.
-  await page.setViewportSize({ width: 1280, height: 900 });
+  // At 1440 this site folds its outline under the content while an example's panel is open, as it folds its rail,
+  // so the recipe's box beside the panel is about 45.75rem: the table face, as an app at 1440 draws it.
+  await page.setViewportSize({ width: 1440, height: 900 });
   await visit(page, '/docs/components/data-table');
   const { stage, table, rows } = transactionsRecipe(page);
+  await expect(page.locator('.toc-card')).toBeVisible();
   await rows.first().locator('.data-table-link').click();
   await expect(stage.getByRole('complementary', { name: 'Corner Mart' })).toBeVisible();
-  // Beside the open panel the table's box is under 40rem and over 32rem: the table, not the list, is drawn.
-  const width = await table.evaluate(
-    (element) => element.closest('.data-table')?.getBoundingClientRect().width ?? 0,
-  );
-  expect(width).toBeLessThan(640);
-  expect(width).toBeGreaterThanOrEqual(512);
+  await expect(page.locator('.toc-card')).toBeHidden();
+  const main = await page.locator('.panel-main').boundingBox();
+  const side = await page.locator('.panel-side').boundingBox();
+  if (main === null || side === null) throw new Error('No content or side column');
+  expect(side.y).toBeGreaterThanOrEqual(main.y + main.height);
+  const boxWidth = (): Promise<number> =>
+    table.evaluate((element) => element.closest('.data-table')?.getBoundingClientRect().width ?? 0);
+  expect(await boxWidth()).toBeGreaterThanOrEqual(512);
   await expect(table).toBeVisible();
   await expect(stage.locator('.data-table-list')).toBeHidden();
   await expect(table.getByRole('columnheader', { name: 'Category' })).toBeHidden();
@@ -4044,6 +4054,18 @@ test('the recipe keeps the table face beside its open panel, and its bar keeps e
   await expect(page.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(more).toBeFocused();
+  // At 1280, where this site shows no outline, the box beside the panel is about 36.75rem, under 40rem and over
+  // 32rem: listBelow="32rem" is what keeps the table face there.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect.poll(boxWidth).toBeLessThan(640);
+  expect(await boxWidth()).toBeGreaterThanOrEqual(512);
+  await expect(table).toBeVisible();
+  await expect(stage.locator('.data-table-list')).toBeHidden();
+  // Closed, the outline is back beside the content at 1440.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await stage.getByRole('button', { name: 'Close' }).click();
+  await expect(stage.locator('.side-panel')).toHaveCount(0);
+  await expect(page.locator('.toc-card')).toBeVisible();
 });
 
 test('the recipe writes its page size to the URL, on the page that keeps the first row, and reads it back', async ({

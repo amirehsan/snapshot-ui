@@ -1434,9 +1434,12 @@ test('the bulk actions example offers every match once the page is selected', as
   await stage.locator('thead .checkbox-box').click();
   const bar = stage.getByRole('toolbar', { name: 'Bulk actions' });
   const all = bar.getByRole('button', { name: 'Select all 24 matching' });
+  // The sentence's polite status is mounted empty beside the button, so the sentence is announced once it comes.
+  const said = bar.getByRole('status');
+  await expect(said).toHaveText('');
   await all.focus();
   await page.keyboard.press('Enter');
-  await expect(bar).toContainText('All 24 matching are selected');
+  await expect(said).toHaveText('All 24 matching are selected');
   // The button left with focus on it: the next control in the bar has focus.
   await expect(bar.getByRole('button', { name: 'Categorize' })).toBeFocused();
   await bar.getByRole('button', { name: 'Export' }).click();

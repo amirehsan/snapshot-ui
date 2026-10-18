@@ -76,17 +76,23 @@ export default function DataTableBulkActions(): ReactElement {
           onSelectionChange={select}
           bulkActions={actions}
           selectAllMatching={
-            selected.length === rows.length && !allMatching ? (
-              <Button
-                variant="tertiary"
-                onPress={() => {
-                  setAllMatching(true);
-                }}
-              >
-                {`Select all ${String(MATCHING)} matching`}
-              </Button>
-            ) : allMatching ? (
-              <span>{`All ${String(MATCHING)} matching are selected`}</span>
+            selected.length === rows.length ? (
+              <>
+                {allMatching ? null : (
+                  <Button
+                    variant="tertiary"
+                    onPress={() => {
+                      setAllMatching(true);
+                    }}
+                  >
+                    {`Select all ${String(MATCHING)} matching`}
+                  </Button>
+                )}
+                {/* Mounted empty beside the button, so its sentence is announced as the button leaves. */}
+                <span role="status">
+                  {allMatching ? `All ${String(MATCHING)} matching are selected` : ''}
+                </span>
+              </>
             ) : null
           }
         />
