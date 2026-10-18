@@ -5,9 +5,10 @@
  * the actions at the end; the bar is a size container, so under 36rem of its own box the actions take a line of
  * their own, side by side in DOM order, each growing along it. They are never stacked (spec correction 80).
  *
- * The buttons keep their own round. A button in the bar's corner region would sit inside its curve, so the bar
- * holds them clear of it instead: each inline padding is at least the surface radius less the edge, so the first
- * button of a line of actions is as clear of the start corner as the action is of the end one.
+ * The bar is a holder, as the bulk bar is, and a single row, so its buttons keep their own round and move inward
+ * out of its corners (docs/design-system.md, "Nested radii, derived"): each inline padding is at least the corner
+ * inset, the surface radius less the edge, so the first button of a line of actions is as clear of the start
+ * corner as the action is of the end one. The start also keeps the inset step, as the bulk bar's does.
  *
  * The bottom edge (documents spec 12): while a bar is on the page, the root and the shell declare
  * --save-bar-offset from the tokens, the one-line bar's height and the inset, which lifts the upload tray and the
@@ -18,6 +19,11 @@
  */
 @layer components {
   .save-bar {
+    --holder-radius: var(--radius-surface);
+    --holder-border: 1px;
+    --holder-pad: var(--spacing-part);
+    --holder-corner-inset: max(var(--holder-pad), calc(var(--holder-radius) - var(--holder-border)));
+
     container: save-bar / inline-size;
     position: sticky;
     inset-block-end: calc(var(--app-shell-inset-block-end, 0px) + var(--spacing-inset));
@@ -28,14 +34,15 @@
     align-items: center;
     gap: var(--spacing-part);
     margin-block-start: var(--spacing-peer);
-    padding-block: var(--spacing-part);
-    padding-inline-start: max(var(--spacing-inset), calc(var(--radius-surface) - 1px));
-    padding-inline-end: max(var(--spacing-part), calc(var(--radius-surface) - 1px));
+    padding-block: var(--holder-pad);
+    /* The bulk bar's insets: 23px each side in Rounded, so 24px with the edge; 16px and 11px in Soft, 16px and
+       8px in Square. */
+    padding-inline: max(var(--spacing-inset), var(--holder-corner-inset)) var(--holder-corner-inset);
     /* Not for the bar's own scroll: the page's sticky offset and the gap a focused control keeps above the bar,
        which the bar's scroll clear reads here resolved to pixels. */
     scroll-margin-block: var(--page-sticky-top, 0px) var(--spacing-inset);
-    border: 1px solid var(--color-frame);
-    border-radius: var(--radius-surface);
+    border: var(--holder-border) solid var(--color-frame);
+    border-radius: var(--holder-radius);
     background-color: var(--color-float);
     box-shadow: var(--shadow-float);
     color: var(--color-ink);
