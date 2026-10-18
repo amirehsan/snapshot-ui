@@ -14,6 +14,7 @@ import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { DataTable } from '../src/data-table';
 import { DatePicker } from '../src/date-picker';
 import { DateRangePicker } from '../src/date-range-picker';
+import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
@@ -614,6 +615,41 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       change={{ direction: 'down', label: 'Down 4% from last month', tone: 'gain' }}
     />,
     ['<a', 'href="/spending"', 'class="stat-tile"', 'data-direction="down"', 'data-tone="gain"'],
+  ],
+  [
+    // A static card whose header holds CardActions with client leaves, a Button and a Link, and whose body is a
+    // static list: the leaves render in Node inside the header's markup, after the title and the note.
+    'Card with CardActions and a DescriptionList',
+    <Card as="section" aria-labelledby="details-title">
+      <CardHeader>
+        <CardTitle id="details-title" level={3}>
+          Details
+        </CardTitle>
+        <CardNote>Updated from your bank feed</CardNote>
+        <CardActions>
+          <Button variant="secondary" aria-label="Edit details">
+            Edit
+          </Button>
+          <Link href="/accounts/visa/merge">Merge</Link>
+        </CardActions>
+      </CardHeader>
+      <CardBody>
+        <DescriptionList>
+          <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+          <DescriptionListItem term="Credit limit" isNumeric>
+            $5,000.00
+          </DescriptionListItem>
+        </DescriptionList>
+      </CardBody>
+    </Card>,
+    [
+      '<p class="card-note">Updated from your bank feed</p><div class="card-actions"><button',
+      'class="button button-secondary"',
+      'aria-label="Edit details"',
+      'href="/accounts/visa/merge"',
+      '</div></div><div class="card-body"><dl class="description-list"',
+    ],
+    ['role='],
   ],
   [
     // A static list holding a client leaf, React Aria's Link, as a row's action: the leaf renders in Node inside

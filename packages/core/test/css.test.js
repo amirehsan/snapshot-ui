@@ -1252,6 +1252,110 @@ describe('src/components/card.css', () => {
   });
 });
 
+describe('src/components/card.css, CardActions in a plain card header', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/card.css')));
+  const HEADER = '.card > .card-header:has(> .card-actions) {';
+  const TITLE = '.card > .card-header:has(> .card-actions) > .card-title {';
+  const ACTIONS = '.card > .card-header > .card-actions {';
+  const WIDE = '@container card-header (inline-size >= 24rem)';
+  /** Every rule that holds declarations, as its selector and its declarations, media blocks included. */
+  const all = (css = rules()) =>
+    [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector = '', body = '']) => ({
+      selector: selector.trim(),
+      body: body.trim(),
+    }));
+  /** The CSS with the container query's block taken out, so the narrow layout is read on its own. */
+  const narrow = () => {
+    const css = rules();
+    const start = css.indexOf(WIDE);
+    const end = css.indexOf('{', start) + 1 + blockAfter(css, WIDE).length + 1;
+    return css.slice(0, start) + css.slice(end);
+  };
+
+  it('lays out a plain card header holding actions as a grid with a control-high first row', () => {
+    const css = rules();
+    const header = blockAfter(css, HEADER);
+    // One column: under 24rem the title, the note and the actions stack in the reading order.
+    expect(header).toContain('grid-template-columns: minmax(0, 1fr);');
+    // At least a control high, and taller for a title that wraps, so nothing overhangs the row.
+    expect(header).toContain('grid-template-rows: minmax(var(--size-control), auto);');
+    expect(header).toContain('column-gap: var(--spacing-peer);');
+    expect(header).toContain('align-items: start;');
+    // The title's first line is centred on a control's height, level with the actions' first line.
+    expect(blockAfter(css, TITLE)).toContain(
+      'margin-block-start: max(0px, calc((var(--size-control) - 1lh) / 2));',
+    );
+    expect(blockAfter(css, ACTIONS)).toContain('min-block-size: var(--size-control);');
+    // The shared rule still draws them: a wrapping flex row with the part step between, each centred.
+    const shared = blockAfter(css, '.card-actions {');
+    expect(shared).toContain('display: flex;');
+    expect(shared).toContain('flex-wrap: wrap;');
+    expect(shared).toContain('align-items: center;');
+    expect(shared).toContain('gap: var(--spacing-part);');
+  });
+
+  it("grows that header's top by the corner inset less the padding", () => {
+    expect(blockAfter(rules(), HEADER)).toContain(
+      'padding-block-start: calc(var(--holder-corner-inset) - var(--holder-pad));',
+    );
+    // Down, never in: the actions end on the body's column edge.
+    for (const { selector, body } of all().filter((rule) => rule.selector.includes('card-actions'))) {
+      expect(body, selector).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);
+    }
+  });
+
+  it('sets the actions beside the title from 24rem of the header, and keeps the title 12rem beside them', () => {
+    const css = rules();
+    const header = blockAfter(css, HEADER);
+    expect(header).toContain('container: card-header / inline-size;');
+    // A size container takes no width from its content, so it names a stand-in, as the list and StatTile do.
+    expect(header).toContain('contain-intrinsic-inline-size: 20rem;');
+    const wide = blockAfter(css, WIDE);
+    expect(
+      blockAfter(wide, '.card > .card-header:has(> .card-actions) > :is(.card-title, .card-note) {'),
+    ).toContain('grid-column: 1;');
+    const beside = blockAfter(wide, ACTIONS);
+    expect(beside).toContain('grid-column: 2;');
+    expect(beside).toContain('grid-row: 1;');
+    expect(beside).toContain('justify-content: flex-end;');
+    // The title keeps 12rem beside them, and a lone button wider than what is left still never overlaps it.
+    expect(beside).toContain('max-inline-size: calc(100cqi - 12rem - var(--spacing-peer));');
+    expect(beside).toContain('min-inline-size: min-content;');
+  });
+
+  it('moves the actions under the note under 24rem of the header', () => {
+    // Outside the query nothing places them, so they follow the note in a row of their own, at the inline
+    // start, and the header has no second column, so no gap is kept for one.
+    for (const { selector, body } of all(narrow())) {
+      if (selector.includes('card-header')) expect(body, selector).not.toMatch(/grid-(?:row|column)\s*:/);
+    }
+    expect(blockAfter(narrow(), ACTIONS)).not.toContain('justify-content');
+  });
+
+  it("matches only a header that is a card's own child, so a collapsible card's header is untouched", () => {
+    const placed = all().filter(
+      ({ selector }) => selector.includes('card-header') && selector.includes('card-actions'),
+    );
+    expect(placed).toHaveLength(5);
+    for (const { selector } of placed) {
+      // A collapsible card's header sits in .card-disclosure, never directly in the card.
+      expect(selector).toMatch(/^\.card > \.card-header/);
+      expect(selector).not.toContain('card-disclosure');
+    }
+  });
+
+  it('uses logical properties only', () => {
+    for (const { selector, body } of all().filter((rule) =>
+      rule.selector.startsWith('.card > .card-header'),
+    )) {
+      expect(body, selector).not.toMatch(
+        /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|width|height)\s*:/,
+      );
+    }
+  });
+});
+
 describe('src/components/card.css, the collapsible card', () => {
   // The rules without their comments, with their whitespace closed up.
   const rules = () => closeUp(stripComments(read('src/components/card.css')));
@@ -1437,12 +1541,16 @@ describe('src/components/card.css, the collapsible card', () => {
   });
 
   it('sizes the header from what it holds: no size container, so a card that fits its content fits the title', () => {
-    const css = rules();
     // A size container takes no width from its content, which let a folded card shrink to its padding, and
-    // it also made the header a containing block and a stacking context.
-    expect(css).not.toMatch(/container(?:-type|-name)?\s*:/);
-    expect(css).not.toContain('@container');
-    expect(css).not.toMatch(/grid-(?:row|column)\s*:/);
+    // it also made the header a containing block and a stacking context. Only a plain card's header holding
+    // CardActions is one (the CardActions describe), and none of its rules reaches a collapsible card's header.
+    const collapsible = all().filter(({ selector }) => !selector.startsWith('.card > .card-header'));
+    for (const { selector, body } of collapsible) {
+      expect(body, selector).not.toMatch(/container(?:-type|-name)?\s*:/);
+      expect(body, selector).not.toMatch(/grid-(?:row|column)\s*:/);
+    }
+    expect(rules().match(/@container/g)).toEqual(['@container']);
+    expect(rules()).toContain('@container card-header (inline-size >= 24rem)');
   });
 
   it('sets the chevron level with the first line of a title that wraps', () => {
@@ -9289,6 +9397,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       ':is(.card, .card > .card-body:first-child) > .description-list:first-child > .description-list-item:first-child:has(> .description-list-actions) {',
       'padding-block-start: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));',
     ],
+    ['card.css', '.card > .card-header:has(> .card-actions) {', `padding-block-start: ${EXTRA};`],
   ];
 
   it('moves no control inward where a content column stands above it, so a trailing action keeps its edge', () => {

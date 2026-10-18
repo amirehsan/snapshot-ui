@@ -126,10 +126,12 @@ export { Pagination, type PaginationLabels, type PaginationProps } from './pagin
 export type { AccessibleName, AriaName } from './utils/accessible-name';
 export {
   Card,
+  CardActions,
   CardBody,
   CardHeader,
   CardNote,
   CardTitle,
+  type CardActionsProps,
   type CardBodyProps,
   type CardHeaderProps,
   type CardNoteProps,

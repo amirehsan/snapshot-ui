@@ -80,7 +80,7 @@ vi.mock('../src/pagination/PaginationStatus', async () => {
 
 import * as react from 'react';
 import { Badge } from '../src/badge';
-import { Card, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { EmptyState } from '../src/empty-state';
 import { FieldChanged, FieldCounter } from '../src/field';
@@ -130,6 +130,14 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     </Card>,
     '<section aria-label="Danger zone" class="card"><div class="card-header"><h3 class="card-title">Delete the workspace</h3>' +
       '<p class="card-note">This cannot be undone.</p></div><div class="card-body">Everything goes.</div></section>',
+  ],
+  [
+    // A place for the app's buttons in a plain card's header: one div, its children as given.
+    'CardActions',
+    <CardActions>
+      <a href="/edit">Edit</a>
+    </CardActions>,
+    '<div class="card-actions"><a href="/edit">Edit</a></div>',
   ],
   [
     'DescriptionList',

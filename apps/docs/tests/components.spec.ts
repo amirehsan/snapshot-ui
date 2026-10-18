@@ -1766,7 +1766,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   button: ['.stage .button'],
   // With scripts off an inline calendar is its face: an empty frame of its final size.
   calendar: ['.stage .calendar[data-face]'],
-  card: ['.stage .card', '.stage .card-title', '.stage .card-note'],
+  card: ['.stage .card', '.stage .card-title', '.stage .card-note', '.stage .card-actions'],
   checkbox: ['.stage .checkbox-box'],
   'collapsible-card': ['.stage .card-collapsible', '.stage .card-toggle', '.stage .card-chevron'],
   // The input and its button; the list renders nothing until it opens.

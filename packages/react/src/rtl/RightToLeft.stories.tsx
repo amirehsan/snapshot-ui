@@ -7,6 +7,7 @@ import { AppShell } from '../app-shell';
 import { Breadcrumb, Breadcrumbs } from '../breadcrumbs';
 import { Button } from '../button';
 import { RangeCalendar } from '../calendar';
+import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { CollapsibleCard } from '../collapsible-card';
 import { ComboBox } from '../combo-box';
@@ -1451,6 +1452,55 @@ export const DescriptionListMirrored: Story = {
     await expect(getComputedStyle(value).direction).toBe('ltr');
     await expectSameEdge(lastText(value).right, rect(value).right);
     await expect(characterBox(value, 0).right).toBeLessThanOrEqual(characterBox(value, 1).left + 0.5);
+  },
+};
+
+/**
+ * A card's header actions on a Persian page: the title starts at the header's right edge, and the actions end
+ * the title's line at its left, on the body's column edge. In a frame under 24rem they follow the note and
+ * start at the right.
+ */
+export const CardActionsMirrored: Story = {
+  render: () => {
+    const card = (width: string) => (
+      <div style={{ width }}>
+        <Card>
+          <CardHeader>
+            <CardTitle level={3}>جزئیات</CardTitle>
+            <CardNote>به‌روزشده از حساب بانکی</CardNote>
+            <CardActions>
+              <Button variant="secondary" aria-label="ویرایش جزئیات">
+                ویرایش
+              </Button>
+            </CardActions>
+          </CardHeader>
+          <CardBody>
+            <p>ویزای روزمره</p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+    return (
+      <I18nProvider locale="fa-IR">
+        <div dir="rtl" lang="fa" style={{ display: 'grid', gap: 24 }}>
+          {card('min(36rem, calc(100vw - 2rem))')}
+          {card('20rem')}
+        </div>
+      </I18nProvider>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const [wide, narrow] = [...canvasElement.querySelectorAll('.card')];
+    if (!wide || !narrow) throw new Error('No cards');
+    const body = rect(find(wide, '.card-body'));
+    await expectSameEdge(rect(find(wide, '.card-title')).right, body.right);
+    const actions = rect(find(wide, '.card-actions .button'));
+    await expectSameEdge(actions.left, body.left);
+    await expect(actions.bottom).toBeLessThanOrEqual(rect(find(wide, '.card-note')).top + 0.5);
+    // Under the note, at the inline start, which is the right.
+    const under = rect(find(narrow, '.card-actions .button'));
+    await expect(under.top).toBeGreaterThanOrEqual(rect(find(narrow, '.card-note')).bottom);
+    await expectSameEdge(under.right, rect(find(narrow, '.card-body')).right);
   },
 };
 

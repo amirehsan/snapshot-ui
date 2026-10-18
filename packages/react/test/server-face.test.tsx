@@ -21,6 +21,7 @@ import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
+import { Card, CardActions, CardHeader, CardTitle } from '../src/card';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 
@@ -128,6 +129,19 @@ const FACES: [name: string, element: ReactElement][] = [
     <FilterChip label="Amount" valueLabel="Over $100" onClear={noop}>
       <p>Two amounts</p>
     </FilterChip>,
+  ],
+  [
+    // A static header's actions read no locale and no zone either: a Button and a Link write one HTML everywhere.
+    'Card with CardActions',
+    <Card>
+      <CardHeader>
+        <CardTitle level={3}>Details</CardTitle>
+        <CardActions>
+          <Button variant="secondary">Edit</Button>
+          <Link href="/accounts/visa/merge">Merge</Link>
+        </CardActions>
+      </CardHeader>
+    </Card>,
   ],
   [
     // A static part reads no locale and no zone: four rows, one empty, two numeric and one with a Link as its

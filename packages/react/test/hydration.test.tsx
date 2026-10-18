@@ -21,6 +21,7 @@ import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
+import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 
@@ -200,6 +201,35 @@ const HYDRATED: [
       expect(container.querySelector('.filter-chip-trigger')).toHaveAccessibleName(
         'Category Food, Rent and 2 more',
       );
+    },
+  ],
+  [
+    // A static card with client leaves in its header's actions and a static list as its body.
+    'Card with CardActions',
+    <Card as="section" aria-labelledby="details-title">
+      <CardHeader>
+        <CardTitle id="details-title" level={3}>
+          Details
+        </CardTitle>
+        <CardNote>Updated from your bank feed</CardNote>
+        <CardActions>
+          <Button variant="secondary" aria-label="Edit details">
+            Edit
+          </Button>
+          <Link href="/accounts/visa/merge">Merge</Link>
+        </CardActions>
+      </CardHeader>
+      <CardBody>
+        <DescriptionList>
+          <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+        </DescriptionList>
+      </CardBody>
+    </Card>,
+    (container) => {
+      const actions = container.querySelector('.card-header > .card-actions');
+      expect(actions?.previousElementSibling).toHaveClass('card-note');
+      expect(actions?.querySelector('button')).toHaveAccessibleName('Edit details');
+      expect(actions?.querySelector('a')).toHaveAttribute('href', '/accounts/visa/merge');
     },
   ],
   [
