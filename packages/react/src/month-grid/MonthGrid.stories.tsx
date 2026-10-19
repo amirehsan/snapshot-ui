@@ -289,7 +289,7 @@ export const CellsInTheCorner: Story = {
 };
 
 /**
- * On a 320px phone a size container takes its width from its holder, never from a stand-in (spec corrections 34 and 37):
+ * On a 320px phone a size container takes its width from its holder, never from a stand-in (spec corrections 34 and 45):
  * in a `flex: 1` wrapper, in a `1fr` grid and two up in a `1fr 1fr` grid, every grid stays inside the page and
  * draws its cells, and nothing scrolls sideways, in every shape. In three engines.
  */

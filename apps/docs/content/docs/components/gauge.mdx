@@ -24,6 +24,8 @@ A credit score runs from 300 to 850, so `minValue` and `maxValue` set the range,
 
 Your app picks the tone. Fair and Poor are both `warning`: a low score needs a look, and it is not a failure, so it is never `error`. They are told apart by the word under the figure and by where the arc stops between the marks, never by color. A good score is ink, never green: the words say it is good.
 
+The gauge draws no numbers at its ends. The example puts the range's ends, 300 and 850, under the semicircle's ends, and a legend of the bands under the scores, so a reader can place the arc without knowing the scale. Both are the app's, in its own words and digits.
+
 <Preview name="gauge-score" />
 
 </Section>
@@ -43,6 +45,8 @@ A utilization runs from 0 to 100, the defaults. Marks at 10% and 30% show where 
 ## In a table row
 
 A 32px ring fits a [DataTable](/docs/components/data-table) row in every density. The column header names the cell, so the gauge takes `aria-label` with the row's name, "Utilization, Everyday Visa ending 4821", and shows only its value text beside it. On a phone the ring moves to the item's meta line. A 32px gauge holds two or three marks; marks closer than the stroke's width overlap.
+
+The marks are the same on every row, so give them an empty `label`: a mark with no words is drawn and not read, and a screen reader does not hear the thresholds again on each row. Say them once, in a note by the table, as the example does. A mark's gap is cut out of the arc, so the row's own fill shows through it, hovered or selected too.
 
 <Preview name="gauge-table" />
 
@@ -66,11 +70,11 @@ The gauge is static: a server component renders it with no client JavaScript, an
 
 - `minValue` and `maxValue` set the range, 0 and 100 by default. A value outside it is drawn clamped.
 - `valueLabel` says the state in words and is what a screen reader hears. At a warning or error tone, or over the limit, it says so.
-- `figure` and `figureCaption` draw the numeral and its word at `md` and `lg`; there are none by default and none at `sm`. A figure never wraps or shrinks: keep it to 4 characters at `md` and 6 at `lg`, such as "100%" or "$12.3K". A caption wraps to two lines, then ends in an ellipsis.
+- `figure` and `figureCaption` draw the numeral and its word at `md` and `lg`; there are none by default and none at `sm`. A figure never wraps or shrinks: keep it to 4 characters at `md` and 6 at `lg`, such as "100%" or "$12.3K". In a ring the caption sits in the circle where it narrows, so at `md` it is one line of about 60px, a word or two, and at `lg` two lines of about 104px; in a semicircle it is two lines under the chord. Past that it ends in an ellipsis, and the value text carries the words whole.
 - `tone` is `neutral`, `warning` or `error`, your choice; there is no success tone.
-- `marks` takes up to five; a sixth is not drawn.
-- The arc moves over 200ms when the value changes, never on first appearance, and not at all under reduced motion. It follows the page's direction: on a right-to-left page a ring runs counter-clockwise and a semicircle fills from the right.
-- The marks are ringed in the surface they sit on, `--meter-surface`, Lifted by default, the property Meter reads. On the page itself, set `--meter-surface: var(--color-canvas)` on the gauge or any ancestor. `--gauge-size` on the gauge draws it at another size.
+- `marks` takes up to five; a sixth is not drawn. A mark with an empty `label` is drawn and not read.
+- The arc moves over 200ms when the value changes, to and from 0 too, never on first appearance, and not at all under reduced motion. It follows the page's direction: on a right-to-left page a ring runs counter-clockwise and a semicircle fills from the right.
+- Each mark stands in a gap cut out of the track and the arc, so whatever is behind the gauge shows there: a card, the page, a hovered or selected table row. It needs no surface color. `--gauge-size` on the gauge draws it at another size.
 
 ```tsx
 import { Gauge } from '@snapshot-ui/react';
@@ -117,7 +121,7 @@ The dial is a `role="meter"` from `minValue` to `maxValue`, named by the label, 
 - Its value is read as `valueLabel`, never as a number on its own. The visible value text, the figure and its caption are hidden, since the meter reads the same words, and the same said twice is noise.
 - The marks' labels, in order of value, are read as its description.
 - It takes no focus and has no keys.
-- Screen readers differ on the meter role: some say "meter", some "progress bar", some no role. Every one reads the name and the value text.
+- Chromium, Firefox and WebKit expose the dial to the platform's accessibility interface as a meter with its name, its value text and its description. What a screen reader then says for the role differs between readers and versions and is not yet verified here, so the value text carries the state in words.
 
 </Section>
 

@@ -10609,18 +10609,22 @@ gives their column to the value side by side and to the term stacked. A
 viewport breakpoint was rejected: a list in a 24rem side panel on a wide
 screen would draw a 7rem name column.
 
-**A width of its own** (risk R1; spec correction 14). A size container takes
-no width from its content, so the list names
-`contain-intrinsic-inline-size: 16rem`, StatTile's 0.6.1 fix and its 16rem
-tile: in a flex row or an `auto` grid column it is 16rem, and stacked, rather
-than nothing wide. The stand-in is also the list's min-content width, which
-a `flex: 1` item or a `1fr` track keeps as its narrowest unless it has
-`min-width: 0`. The first value, 20rem, is the 320px of a whole phone and
-pushed a 320px page 32px sideways from a `flex: 1` wrapper in its 288px
-column; 16rem, 256px, fits that column. The docs say that a flex or grid
-item holding the list takes `min-width: 0`, and a docs test puts a list in a
-`flex: 1` wrapper and in a `1fr` grid at 320px with no sideways scroll. The
-`InAFlexRow` story measures the 16rem.
+**No width of its own** (risk R1; spec corrections 14 and 34). A size
+container takes no width from its content, and the library's rule is that
+its intrinsic inline size is 0: the list declares
+`contain-intrinsic-inline-size: 0`. A stand-in width is also the
+container's min-content width, which a `flex: 1` item or a `1fr` track
+keeps as its narrowest. The first value, 20rem, pushed a 320px page 16px
+sideways from a `flex: 1` wrapper in its 288px column, and 16rem still
+scrolled the page with two lists side by side, 512px in 288px; the same
+trap showed in the CardActions header and BarChart's figure. At 0 a block,
+a `flex: 1` item or a `1fr` track gives the list its width, and a holder
+that sizes it from its content (a content-sized flex item,
+`width: max-content`, an `auto` grid track) must give it one, or it draws
+nothing wide; the docs say so. A docs test puts a list in a `flex: 1`
+wrapper, a `1fr` grid and a `1fr 1fr` grid two up at 320px with no
+sideways scroll, and the `InAFlexRow` story gives the list a width in a
+flex row and checks that it fills it.
 
 **The row** (Dense data, against the value's line). `min-block-size:
 max(var(--size-target), var(--size-field))`, 48px, 40px in compact and 44px
@@ -10773,9 +10777,8 @@ not above its start reports `minValue` for all three and draws an empty
 track, ProgressBar's rule. The prop names are React Aria's, as
 ProgressBar's are, with `minValue` first class: 742 on 300 to 850 is 80.4%
 of the arc and reports `aria-valuemin="300"`. The track is Meter's frame
-color, the arc `--gauge-ink`, as Meter's fill is `--meter-ink`, and the
-marks' ring reads `--meter-surface`, so one property set on a canvas
-section serves both. Static: `useId` is its one hook.
+color, and the arc `--gauge-ink`, as Meter's fill is `--meter-ink`.
+Static: `useId` is its one hook.
 
 **Sizes and strokes.** `sm` 32px with a 4px stroke, `md` 96px with 8px,
 Meter's track, and `lg` 160px with 12px, each stroke a twelfth of the box
@@ -10807,8 +10810,11 @@ in user units, as inline `stroke-dasharray` and `stroke-dashoffset`, so no
 change. A semicircle's track is dashed the same way at a share of 1, so its
 caps end exactly at the arc's ends and a full value covers it.
 
-**Zero, the dot and the whole ring.** A share of 0 draws no value path,
-since a zero-length dash with round caps would draw a dot. A share whose
+**Zero, the dot and the whole ring.** A share of 0 paints nothing, since a
+zero-length dash with round caps would draw a dot, but it keeps its value
+path, a zero-length dash marked `data-empty`, which the stylesheet gives
+butt caps, so the path is there to move from and to (accounts plan, spec
+correction 39). A share whose
 arc is shorter than the stroke is a zero-length dash, which its caps draw
 as a dot of the stroke's width at the start: the least a reader can see,
 so 0.5% never reads as nothing. A whole ring has no ends: two caps meeting
@@ -10824,13 +10830,25 @@ and Firefox.
 **Marks.** Up to five, sorted by value, each clamped to the range: a radial
 line across the track at the mark's share, `s * 360` degrees clockwise from
 the top on a ring and `s * 180` degrees from the inline start on a
-semicircle, reaching 2px past the track on both sides. Each is a 6px line in
-the surface the gauge sits on, `var(--meter-surface, var(--color-lifted))`,
-under a 2px line in ink: Meter's pace marker turned radial, so a mark reads
-over the arc and over the track alike. Marks are never toned: a band's edge
-is not over anything. Their labels, in order of value, joined by full stops,
-form a hidden span that describes the dial after the caller's own
-`aria-describedby`. A sixth mark is not drawn or described; a static part
+semicircle, reaching 2px past the track on both sides. Each is a 2px line in
+ink standing in a 6px gap cut out of the track and the arc: Meter's pace
+marker turned radial, so a mark reads over the arc and over the track
+alike. The gap is not painted in a surface color. It is a luminance `mask`
+in the svg, named by `useId`: a white box keeps, and a black 6px line per
+mark cuts, so whatever is behind the gauge shows there, a card, the page,
+or a hovered or selected table row. A gap painted in `--meter-surface` drew
+a pale block wherever the surface was not the one named, which a DataTable
+row's own fill, hovered or selected, always is (spec correction 35). The
+mask's region is the box and a box around it, so the marks' overhang and the
+caps are inside it. Marks are never toned: a band's edge is not over
+anything. Their labels, in order of value, joined by full stops, form a
+hidden span that describes the dial after the caller's own
+`aria-describedby`; a mark with an empty label is drawn and not read, for
+thresholds that repeat on every row of a table and are said once beside it
+(spec correction 37). The `MarksOnRows` play draws a dial on a plain, a
+hovered and a selected DataTable row through the engine's own renderer over
+the fill behind it and reads the gap as that fill, in three engines. A
+sixth mark is not drawn or described; a static part
 cannot warn. On the consumer's score, 580, 670, 740 and 800 fall at 50.9%,
 67.3%, 80.0% and 90.9% of the arc. Two marks closer than the stroke's
 width overlap, so the docs say a 32px gauge holds two or three.
@@ -10844,8 +10862,19 @@ figure is `--text-h3` at `md` (24px) and the `numeral-sm` step at `lg`
 (32px), 500, tabular, in ink, left to right and isolated, and never wraps or
 shrinks: the docs give the budget, 4 characters at `md` and 6 at `lg`
 ("100%", "$12.3K"), and `LongestFigure` holds each within the inner circle.
-The caption is `--text-small` at 450 in slate, never toned, two lines at
-most and then an ellipsis, since the value text carries it whole.
+The caption is `--text-small` at 450 in slate, never toned, and ends in an
+ellipsis past its lines, since the value text carries it whole. In a ring
+the figure and its caption are one block centred in the inner circle,
+which narrows above and below the centre, so the block is kept short and
+the caption narrow (spec correction 36): the figure's line is its own size
+(`line-height: 1`), and the caption is one line at most `S * 5 / 8` wide at
+`md`, 60px of the 80px circle, a word or two, and two lines at most
+`S * 13 / 20` at `lg`, 104px of 136. Then every line box's corners are
+inside the circle: at `md` the widest figure, "100%", 66px, reaches 39.7px
+from the centre of a 40px circle. In a semicircle the caption is two lines
+under the chord, between the arc's ends. `LongestFigure` and
+`FigureInsideRing` measure every line box's corners against the circle in
+three engines.
 
 **The concentric construction inside the dial.** The figure is HTML in the
 dial's one grid cell, over the svg. In a ring it is centred as one block in
@@ -10893,6 +10922,15 @@ gauge stays error, its rule last in the file at equal weight. Exactly
 text must say "over" in words. Signal orange, clay and taupe appear nowhere.
 The tone always comes with words: `valueLabel` is required.
 
+**The range's ends are the app's.** The gauge draws no numbers at its ends:
+a range's ends are figures in the app's digits, and many gauges, a
+utilization among them, need none. Where a reader has to place the arc on
+an unfamiliar scale, the app draws them. The docs' credit score example
+puts 300 and 850 under the semicircle's ends and a legend of the five
+bands, each word with its range, under the scores, and the Accounts recipe
+does the same in its credit tab (spec correction 41). They repeat for the
+eye what the meter already reports, so the ends are `aria-hidden`.
+
 **Round in every shape** (ruling 5). The caps are round and the dial is
 round in Rounded, Soft and Square, the spinner's rule: the ends of a stroke
 are dots, and dots stay round in every shape. `stroke-linecap` cannot read a
@@ -10906,10 +10944,12 @@ and `stroke` transition together, so a tone change moves with it. A
 transition never runs on the first style, so a gauge drawn on the server,
 hydrated, or mounted with its value does not sweep in; a sweep would delay
 the reading and need a client part. Under reduced motion nothing moves. A
-gauge whose value rises from 0 draws its arc at once, since a share of 0
-has no path to move from. The `Motion` play reads no animation on first
-appearance, a 200ms transition after a change, and the reduced-motion rule
-in the page's own stylesheet.
+change to or from 0 moves too, since a share of 0 keeps its path; its caps
+turn from round to butt at once, which a transition cannot ease, so the
+dot at the arc's start comes and goes at the start and the end of the move.
+The `Motion` play reads no animation on first appearance, a 200ms
+transition after a change down, to 0 and up from 0 on the same path, and
+the reduced-motion rule in the page's own stylesheet.
 
 **Direction** (ruling 7). The gauge follows the page, as Meter's fill and
 LineChart's time do: `--gauge-flip` is `1` under `:where([dir='ltr' i])` and
@@ -10935,18 +10975,23 @@ each gated already as text on those surfaces.
 
 **Forced colors.** Strokes are not backgrounds, but an svg keeps the colors
 its author set, so the block names them: the track `graytext`, the arc
-`canvastext` in every tone, the marks `highlight` in a ring of `canvas`,
-the reader's background. The three stay apart, and the words carry the
-tone, as Meter's over state keeps its words. A docs test reads the four.
+`canvastext` in every tone, and the marks `highlight`, in their cut gaps,
+where the reader's own background shows. The three stay apart, the mark
+stays apart from the arc, and the words carry the tone, as Meter's over
+state keeps its words. The mask is luminance, white keeps and black cuts,
+so it takes `forced-color-adjust: none`: repainted in the reader's colors,
+a dark theme's background would turn the keeping white black and hide the
+track and the arc. A docs test reads the three strokes and the mask.
 
 **Print.** `print-color-adjust: exact`, and its `-webkit-` form, as
 `.meter` sets, so a printed track keeps its tint.
 
-**The size.** The entry `{ Gauge }` measures 1371 B without React Aria,
-Lucide and `@internationalized/date`, and 1370 B with React Aria not
-ignored; it imports none, and the byte is size-limit's own drift, as
-CardActions' three were (spec corrections 13 and 28). Under the spec's
-1.5 kB budget; the rule rounds up to 1.5 kB and adds 0.5 kB: a 2 kB limit.
+**The size.** The entry `{ Gauge }` measures 1520 B without React Aria,
+Lucide and `@internationalized/date`, and 1516 B with React Aria not
+ignored; it imports none, and the bytes are size-limit's own drift, as
+CardActions' three were (spec corrections 13, 28 and 42). The mask and the
+empty arc took it 20 B over the spec's 1.5 kB budget; the rule rounds up to
+2 kB and adds 0.5 kB: a 2.5 kB limit.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): that a gauge reads as a meter, or what each reader calls
@@ -10999,7 +11044,7 @@ own columns. The year label is at the inline start, `--text-small` 500 in
 ink with tabular figures and isolated, 8px from the first cell (a padding
 of 6px and the 2px gap); each takes `grid-column: 1`, so every year starts
 its own row and a row of the wrong length cannot move the years under it
-(accounts plan, spec correction 38). Month labels are `--text-small` 450
+(accounts plan, spec correction 46). Month labels are `--text-small` 450
 in slate, centred over their column on one line and clipped. Cells stretch
 with the box, `block-size: 1rem` and the column's share across: measured in
 a card on a 320px phone, about 13px wide (15px compact) by 16px; in a 40rem
@@ -11013,7 +11058,7 @@ two-letter labels never collide. A quarter's label may run on over the
 hidden labels after it rather than be clipped. The server's HTML holds all
 twelve; nothing is measured. Its `contain-intrinsic-inline-size` is 0, the
 library's ruling for every size container (accounts plan, spec corrections
-34 and 37): a stand-in width is also the holder's min-content width, which
+34 and 45): a stand-in width is also the holder's min-content width, which
 a `flex: 1` item or a `1fr` track keeps as its narrowest and which scrolled
 a 320px page sideways. A block, a `flex: 1` item or a `1fr` track gives the
 grid its width; a holder sized to its content must give it one, or it draws
@@ -11035,7 +11080,7 @@ corner audit, which skips text-sized parts sharper than the formula,
 passes. `CellsInTheCorner` reads it in Rounded comfortable and compact,
 Soft and Square. The legend's 12px swatch takes the same corner, not
 Meter's micro step, which is a circle on 12px: a key looks like what it
-stands for (spec correction 38).
+stands for (spec correction 46).
 
 **The summary** (ruling 10). With no `summary` the grid writes English from
 the app's words: for each state whose look is not `filled`, in the order of
@@ -11064,7 +11109,7 @@ table is clipped inside its own box, `div.month-grid-alternative`, placed at
 the figure's start corner, 1px square, `overflow: hidden` and `clip-path:
 inset(50%)`, as the toast's status host is: a table's box takes its
 content's width whatever its own width says, and on one line twelve month
-names would otherwise scroll the page (spec correction 36). It is clipped,
+names would otherwise scroll the page (spec correction 44). It is clipped,
 not hidden, so browse mode and table navigation find it. LineChart's table
 view is the precedent, visible there by a toggle.
 
@@ -11098,7 +11143,7 @@ added. The ink fill and hatch against lifted, light then dark, 17.84 and
 17.42, and against the canvas 16.25 and 19.31. An empty cell has no fill,
 so its edge is the boundary painted on the surface, the switch's off-track
 pair: 3.45 and 5.21 on lifted and 3.38 and 5.34 on the canvas, each over
-3:1 (spec correction 35; the spec's 3.36 and 3.06 are the boundary around a
+3:1 (spec correction 43; the spec's 3.36 and 3.06 are the boundary around a
 Raised fill). The labels are slate and ink and the summary slate, gated as
 text.
 
@@ -11115,7 +11160,7 @@ three shapes: solid, striped, outlined. A docs test reads all four.
 **The size.** The entry `{ MonthGrid }` measures 1050 B without React Aria,
 Lucide and `@internationalized/date`, and 1044 B with React Aria not
 ignored; it imports none of them, and the bytes are size-limit's own drift
-(spec correction 42). Under the spec's 2 kB budget; the rule rounds up to
+(spec correction 50). Under the spec's 2 kB budget; the rule rounds up to
 1.5 kB and adds 0.5 kB: a 2 kB limit.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA

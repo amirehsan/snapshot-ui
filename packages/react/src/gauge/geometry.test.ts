@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { GAUGE_SIZES, gaugeDash, gaugeMark, gaugeShare, gaugeTrack, type GaugeSize } from './geometry';
+import {
+  GAUGE_SIZES,
+  gaugeDash,
+  gaugeMark,
+  gaugeRest,
+  gaugeShare,
+  gaugeTrack,
+  type GaugeSize,
+} from './geometry';
 
 /** The angle of a mark's line, in degrees: clockwise from the top for a ring, from the inline start for a semicircle. */
 const turned = (size: GaugeSize, share: number, form: 'ring' | 'semicircle'): number => {
@@ -79,6 +87,9 @@ describe('the gauge geometry', () => {
     const ring = gaugeTrack('md', 'ring');
     expect(gaugeDash(0, ring)).toBeNull();
     expect(gaugeDash(-0.2, ring)).toBeNull();
+    // The path a share of 0 keeps, to move from: a zero-length dash where the arc starts, painted by no cap.
+    expect(gaugeRest(ring)).toEqual({ dasharray: '0 276.46', dashoffset: '-4' });
+    expect(gaugeRest(gaugeTrack('lg', 'semicircle'))).toEqual({ dasharray: '0 232.478', dashoffset: '-6' });
     // 1% of 276.46 is 2.76, under the 8px stroke: a zero-length dash, which its round caps draw as a dot.
     expect(gaugeDash(0.01, ring)).toEqual({ dasharray: '0 276.46', dashoffset: '-4' });
     expect(gaugeDash(0.5, ring)).toEqual({ dasharray: '130.23 276.46', dashoffset: '-4' });

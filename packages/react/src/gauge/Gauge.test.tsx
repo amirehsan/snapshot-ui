@@ -66,10 +66,11 @@ describe('Gauge', () => {
     expect(children(root(container))).toEqual(['div.gauge-dial', 'div.gauge-text', 'span.gauge-marks-label']);
     expect(children(dial())).toEqual(['svg.gauge-svg', 'span.gauge-figure']);
     expect(children(part(container, 'gauge-svg'))).toEqual([
+      // The mask that cuts each mark's gap, then the track and the arc it cuts, then the four marks.
+      'defs.',
       'path.gauge-track',
       'path.gauge-value',
-      // A ring in the surface under each mark, then the mark, for each of the four.
-      ...Array.from({ length: 4 }, () => ['line.gauge-mark-ring', 'line.gauge-mark']).flat(),
+      ...Array.from({ length: 4 }, () => 'line.gauge-mark'),
     ]);
     expect(children(part(container, 'gauge-figure'))).toEqual([
       'span.gauge-figure-value',
@@ -177,16 +178,19 @@ describe('Gauge', () => {
     // Clamped to the end of the range, the top again.
     expect(second).toHaveAttribute('x1', '48');
     expect(second).toHaveAttribute('y1', '10');
-    for (const [ring, mark] of [...container.querySelectorAll('.gauge-mark-ring')].map((line, index) => [
+    // Each mark's gap in the mask is the mark's own line.
+    for (const [gap, mark] of [...container.querySelectorAll('.gauge-mark-gap')].map((line, index) => [
       line,
       container.querySelectorAll('.gauge-mark')[index],
     ])) {
       for (const name of ['x1', 'y1', 'x2', 'y2'])
-        expect(ring?.getAttribute(name)).toBe(mark?.getAttribute(name));
+        expect(gap?.getAttribute(name)).toBe(mark?.getAttribute(name));
     }
 
     rerender(<Gauge label="Utilization" value={23} valueLabel="23%" />);
     expect(container.querySelector('.gauge-mark')).toBeNull();
+    expect(container.querySelector('mask')).toBeNull();
+    expect(part(container, 'gauge-track')).not.toHaveAttribute('mask');
     expect(container.querySelector('.gauge-marks-label')).toBeNull();
     expect(dial()).not.toHaveAttribute('aria-describedby');
   });
@@ -197,26 +201,55 @@ describe('Gauge', () => {
       <Gauge label="Utilization" value={23} valueLabel="23%" marks={[...marks].reverse()} />,
     );
     expect(container.querySelectorAll('.gauge-mark')).toHaveLength(5);
-    expect(container.querySelectorAll('.gauge-mark-ring')).toHaveLength(5);
+    expect(container.querySelectorAll('.gauge-mark-gap')).toHaveLength(5);
     expect(dial()).toHaveAccessibleDescription('At 10. At 20. At 30. At 40. At 50.');
   });
 
-  it('draws no value path at a share of 0, and gives the value path its dash as inline style', () => {
+  it('keeps an empty value path at a share of 0, and gives the value path its dash as inline style', () => {
     const { container, rerender } = render(<Gauge label="Utilization" value={0} valueLabel="0%" />);
-    expect(container.querySelector('.gauge-value')).toBeNull();
-    expect(container.querySelector('.gauge-track')).not.toBeNull();
+    // A zero-length dash marked empty, which the stylesheet's butt caps leave unpainted: a path to move from.
+    const empty = part(container, 'gauge-value');
+    expect(empty).toHaveAttribute('data-empty', '');
+    expect(empty.style.strokeDasharray).toBe('0 276.46');
+    expect(empty.style.strokeDashoffset).toBe('-4');
 
     rerender(<Gauge label="Utilization" value={50} valueLabel="50%" />);
     const value = part(container, 'gauge-value');
+    // The same element, so the change transitions.
+    expect(value).toBe(empty);
+    expect(value).not.toHaveAttribute('data-empty');
     expect(value.getAttribute('d')).toBe(part(container, 'gauge-track').getAttribute('d'));
     expect(value.style.strokeDasharray).toBe('130.23 276.46');
     expect(value.style.strokeDashoffset).toBe('-4');
     // A ring's track is the whole circle and has no dash.
     expect(part(container, 'gauge-track').getAttribute('style')).toBeNull();
 
-    // Under the stroke's width: a dot.
+    // Under the stroke's width: a dot, the same zero-length dash with its round caps.
     rerender(<Gauge label="Utilization" value={0.5} valueLabel="Under 1%" />);
     expect(part(container, 'gauge-value').style.strokeDasharray).toBe('0 276.46');
+    expect(part(container, 'gauge-value')).not.toHaveAttribute('data-empty');
+  });
+
+  it("cuts each mark's gap out of the track and the arc with a mask named by useId", () => {
+    const { container } = render(score(742, '742 of 850, Very good', 'Very good'));
+    const mask = container.querySelector('mask');
+    if (!mask) throw new Error('No mask');
+    expect(mask.id).not.toBe('');
+    expect(mask).toHaveClass('gauge-mask');
+    expect(mask).toHaveAttribute('maskUnits', 'userSpaceOnUse');
+    // White keeps and black cuts: the whole box and a box around it, less a 6px line per mark.
+    const [keep, ...gaps] = [...mask.children];
+    expect(keep?.tagName).toBe('rect');
+    expect(keep).toHaveAttribute('fill', 'white');
+    expect(gaps).toHaveLength(4);
+    for (const gap of gaps) {
+      expect(gap).toHaveAttribute('stroke', 'black');
+      expect(gap).toHaveAttribute('stroke-width', '6');
+    }
+    for (const name of ['gauge-track', 'gauge-value'])
+      expect(part(container, name)).toHaveAttribute('mask', `url(#${mask.id})`);
+    // The marks themselves are drawn over the cut, never masked.
+    for (const mark of container.querySelectorAll('.gauge-mark')) expect(mark).not.toHaveAttribute('mask');
   });
 
   it("dashes a semicircle's track at the whole share, so its round caps end at the arc's ends", () => {
@@ -278,17 +311,17 @@ describe('Gauge', () => {
     expect(dial()).toHaveAttribute('aria-valuemin', '300');
     expect(dial()).toHaveAttribute('aria-valuemax', '300');
     expect(dial()).toHaveAttribute('aria-valuenow', '300');
-    expect(container.querySelector('.gauge-value')).toBeNull();
+    expect(part(container, 'gauge-value')).toHaveAttribute('data-empty');
     expect(root(container)).not.toHaveAttribute('data-over');
 
     rerender(<Gauge label="Score" minValue={850} maxValue={300} value={500} valueLabel="No score yet" />);
     expect(dial()).toHaveAttribute('aria-valuemax', '850');
     expect(dial()).toHaveAttribute('aria-valuenow', '850');
-    expect(container.querySelector('.gauge-value')).toBeNull();
+    expect(part(container, 'gauge-value')).toHaveAttribute('data-empty');
 
     rerender(<Gauge label="Score" value={Number.NaN} valueLabel="No score yet" />);
     expect(dial()).toHaveAttribute('aria-valuenow', '0');
-    expect(container.querySelector('.gauge-value')).toBeNull();
+    expect(part(container, 'gauge-value')).toHaveAttribute('data-empty');
   });
 
   it('hides the svg, the figure and the value text from assistive technology', () => {

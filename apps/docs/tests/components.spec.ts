@@ -558,10 +558,11 @@ test.describe('forced colors', () => {
 
   test('a gauge keeps its track, arc and marks apart', async ({ page }) => {
     // An svg keeps the colors its author set, so the stylesheet names system colors: the track in the disabled
-    // text color, the arc in the text color in every tone, and the marks in the selection color in a ring of the
-    // page's own background, so the three stay apart and a warning arc is not lost.
+    // text color, the arc in the text color in every tone, and the marks in the selection color, each in a gap
+    // the mask cuts out of the track and the arc, so the three stay apart and a warning arc is not lost. The mask
+    // is luminance, white keeps and black cuts, so it stays out of the repaint and still cuts.
     await visit(page, '/docs/components/gauge');
-    const { canvas, canvasText, grayText, highlight } = await systemColors(page);
+    const { canvasText, grayText, highlight } = await systemColors(page);
     const gauge = page
       .locator('.stage .gauge')
       .filter({ has: page.getByRole('meter', { name: 'Travel Mastercard', exact: true }) });
@@ -576,10 +577,18 @@ test.describe('forced colors', () => {
       track: await stroke('.gauge-track'),
       arc: await stroke('.gauge-value'),
       mark: await stroke('.gauge-mark'),
-      ring: await stroke('.gauge-mark-ring'),
     };
-    expect(drawn).toEqual({ track: grayText, arc: canvasText, mark: highlight, ring: canvas });
-    expect(new Set([drawn.track, drawn.arc, drawn.mark]).size).toBe(3);
+    expect(drawn).toEqual({ track: grayText, arc: canvasText, mark: highlight });
+    expect(new Set(Object.values(drawn)).size).toBe(3);
+    const mask = await gauge.locator('mask').evaluate((element) => ({
+      adjust: getComputedStyle(element).forcedColorAdjust,
+      keep: getComputedStyle(element.querySelector('rect') ?? element).fill,
+      cut: getComputedStyle(element.querySelector('line') ?? element).stroke,
+      id: element.id,
+    }));
+    expect(mask).toEqual({ adjust: 'none', keep: 'rgb(255, 255, 255)', cut: 'rgb(0, 0, 0)', id: mask.id });
+    for (const name of ['.gauge-track', '.gauge-value'])
+      await expect(gauge.locator(name)).toHaveAttribute('mask', `url(#${mask.id})`);
   });
 
   test('a month grid keeps three looks as three shapes', async ({ page }) => {
@@ -1780,11 +1789,11 @@ for (const { slug, url } of PAGES) {
   });
 }
 
-test('a description list in a flex: 1 or a 1fr wrapper keeps a 320px page from scrolling sideways', async ({
+test('a description list in a flex: 1 wrapper, a 1fr grid and two up keeps a 320px page from scrolling sideways', async ({
   page,
 }) => {
-  // A size container's stand-in width is also its min-content width, which a flex: 1 item or a 1fr track gives
-  // the list as its narrowest. 16rem fits the 288px column inside a 320px phone's margins; 20rem did not.
+  // A size container's intrinsic inline size is 0: a stand-in width would be its min-content width too, which a
+  // flex: 1 item or a 1fr track keeps as its narrowest. 20rem scrolled one list sideways and 16rem two.
   await page.setViewportSize({ width: 320, height: 800 });
   await visit(page, '/docs/components/description-list');
   const column = page.locator('.panel-main').first();
@@ -1796,15 +1805,26 @@ test('a description list in a flex: 1 or a 1fr wrapper keeps a 320px page from s
     element.insertAdjacentHTML(
       'afterbegin',
       `<div data-wrapper="flex" style="display: flex"><div style="flex: 1">${markup}</div></div>` +
-        `<div data-wrapper="grid" style="display: grid; grid-template-columns: 1fr"><div>${markup}</div></div>`,
+        `<div data-wrapper="grid" style="display: grid; grid-template-columns: 1fr"><div>${markup}</div></div>` +
+        `<div data-wrapper="two-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">` +
+        `<div>${markup}</div><div>${markup}</div></div>`,
     );
   }, list);
   const columnBox = await column.boundingBox();
   if (!columnBox) throw new Error('No column');
-  for (const wrapper of ['flex', 'grid']) {
-    const box = await page.locator(`[data-wrapper="${wrapper}"] .description-list`).boundingBox();
-    if (!box) throw new Error(`No list in the ${wrapper} wrapper`);
-    expect(box.x + box.width, wrapper).toBeLessThanOrEqual(columnBox.x + columnBox.width + 0.5);
+  for (const wrapper of ['flex', 'grid', 'two-up']) {
+    const lists = page.locator(`[data-wrapper="${wrapper}"] .description-list`);
+    expect(await lists.count(), wrapper).toBeGreaterThan(0);
+    for (const box of await lists.evaluateAll((elements) =>
+      elements.map((element) => {
+        const { x, width } = element.getBoundingClientRect();
+        return { x, width };
+      }),
+    )) {
+      // Drawn, and inside the column.
+      expect(box.width, wrapper).toBeGreaterThan(0);
+      expect(box.x + box.width, wrapper).toBeLessThanOrEqual(columnBox.x + columnBox.width + 0.5);
+    }
   }
   expect(await sideways(page)).toBe(0);
 });
@@ -1813,7 +1833,7 @@ test('a month grid in a flex: 1, a 1fr or a two-up wrapper keeps a 320px page fr
   page,
 }) => {
   // A size container's stand-in width is its min-content width too, so the grid's is 0 (spec corrections 34 and
-  // 37): a flex: 1 item, a 1fr track and two 1fr tracks each give it their width, and its cells stretch to fill it.
+  // 45): a flex: 1 item, a 1fr track and two 1fr tracks each give it their width, and its cells stretch to fill it.
   await page.setViewportSize({ width: 320, height: 800 });
   await visit(page, '/docs/components/month-grid');
   const column = page.locator('.panel-main').first();

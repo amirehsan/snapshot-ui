@@ -655,7 +655,7 @@ describe('the month grid', () => {
       { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
       { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
       // An empty cell has no fill, so its edge is the boundary painted on the surface itself, the switch's off
-      // track pair, and not a control's edge around a Raised fill, spec 8.5's 3.36 and 3.06 (spec correction 35).
+      // track pair, and not a control's edge around a Raised fill, spec 8.5's 3.36 and 3.06 (spec correction 43).
       { name: 'boundary', ground: 'lifted', light: 3.45, dark: 5.21 },
       { name: 'boundary', ground: 'canvas', light: 3.38, dark: 5.34 },
     ]) {

@@ -1647,12 +1647,12 @@ describe('src/components/description-list.css', () => {
     return css.slice(0, start) + css.slice(end);
   };
 
-  it('is a size container switching at 30rem, with a 16rem intrinsic width', () => {
+  it('is a size container switching at 30rem, with an intrinsic width of 0', () => {
     const css = rules();
     const list = blockAfter(css, '.description-list {');
     expect(list).toContain('container: description-list / inline-size;');
-    // 16rem fits the 288px inside a 320px phone's 16px margins; 20rem pushed a flex: 1 wrapper sideways.
-    expect(list).toContain('contain-intrinsic-inline-size: 16rem;');
+    // The library's rule: a stand-in width is also the min-content width, which scrolled a phone page sideways.
+    expect(list).toContain('contain-intrinsic-inline-size: 0;');
     expect(list).toContain('margin: 0;');
     expect(list).toContain('padding: 0;');
     // Stacked under 30rem: the term and the actions share the first line, the value spans the second.
@@ -1838,7 +1838,10 @@ describe('src/components/gauge.css', () => {
     expect(rule(css, '.gauge-value')).toContain('stroke: var(--gauge-ink);');
     expect(rule(css, '.gauge')).toContain('--gauge-ink: var(--color-ink);');
     // Round in every shape: nothing here reads the shape axis.
-    expect(css).not.toMatch(/data-shape|--radius-|stroke-linecap: (?:butt|square)/);
+    expect(css).not.toMatch(/data-shape|--radius-|stroke-linecap: square/);
+    // Butt caps only where nothing is drawn: an empty arc's zero-length dash.
+    expect(css.match(/stroke-linecap: butt/g)).toHaveLength(1);
+    expect(rule(css, '.gauge-value[data-empty]')).toContain('stroke-linecap: butt;');
   });
 
   it('turns --gauge-ink warning for warning and over the limit, and error for error, error last', () => {
@@ -1863,6 +1866,8 @@ describe('src/components/gauge.css', () => {
     );
     // Nothing else moves, and nothing sweeps in: a transition never runs on the first style.
     expect(css.match(/transition:/g)).toHaveLength(2);
+    // A share of 0 keeps its path to move from and to: a zero-length dash that butt caps leave unpainted.
+    expect(rule(css, '.gauge-value[data-empty]')).toContain('stroke-linecap: butt;');
     expect(css).not.toMatch(/animation|@keyframes/);
   });
 
@@ -1876,11 +1881,11 @@ describe('src/components/gauge.css', () => {
     expect(css).not.toContain(':dir(');
   });
 
-  it('rings marks in --meter-surface, falling back to lifted', () => {
+  it('draws marks in ink over gaps the svg cuts, reading no surface color', () => {
     const css = rules();
-    const ring = rule(css, '.gauge-mark-ring');
-    expect(ring).toContain('stroke: var(--meter-surface, var(--color-lifted));');
-    expect(ring).toContain('stroke-width: 6px;');
+    // The 6px gap is a mask in the svg, so the real background shows through it on any surface: nothing here
+    // names the surface a gauge sits on.
+    expect(css).not.toMatch(/--meter-surface|--color-(?:lifted|canvas|float)|gauge-mark-ring/);
     const mark = rule(css, '.gauge-mark');
     expect(mark).toContain('stroke: var(--color-ink);');
     expect(mark).toContain('stroke-width: 2px;');
@@ -1972,12 +1977,24 @@ describe('src/components/gauge.css', () => {
     );
   });
 
-  it('names graytext, canvastext, highlight and canvas in forced colors', () => {
+  it('sizes a ring caption to the inner circle at its line: one line at md and two at lg', () => {
+    const css = rules();
+    // The figure's line is its own size in a ring, so the block is as short as it can be.
+    expect(rule(css, ".gauge[data-form='ring'] .gauge-figure-value")).toContain('line-height: 1;');
+    const ring = rule(css, ".gauge[data-form='ring'] .gauge-figure-caption");
+    expect(ring).toContain('-webkit-line-clamp: 1;');
+    expect(ring).toContain('max-inline-size: calc(var(--gauge-size) * 5 / 8);');
+    const large = rule(css, ".gauge[data-form='ring'][data-size='lg'] .gauge-figure-caption");
+    expect(large).toContain('-webkit-line-clamp: 2;');
+    expect(large).toContain('max-inline-size: calc(var(--gauge-size) * 13 / 20);');
+  });
+
+  it('names graytext, canvastext and highlight in forced colors, and keeps the mask out of the repaint', () => {
     const forced = blockAfter(rules(), '@media (forced-colors: active)');
     expect(rule(forced, '.gauge-track')).toContain('stroke: graytext;');
     expect(rule(forced, '.gauge-value')).toContain('stroke: canvastext;');
     expect(rule(forced, '.gauge-mark')).toContain('stroke: highlight;');
-    expect(rule(forced, '.gauge-mark-ring')).toContain('stroke: canvas;');
+    expect(rule(forced, '.gauge-mask')).toContain('forced-color-adjust: none;');
   });
 
   it('keeps print colors exact', () => {
@@ -2005,7 +2022,7 @@ describe('src/components/month-grid.css', () => {
     const css = rules();
     const grid = rule(css, '.month-grid');
     expect(grid).toContain('container: month-grid / inline-size;');
-    // The library-wide ruling (spec corrections 34 and 37): a stand-in width is the holder's min-content, which
+    // The library-wide ruling (spec corrections 34 and 45): a stand-in width is the holder's min-content, which
     // scrolls a 320px page sideways from a flex: 1 wrapper or a 1fr track, so it is 0 and a content-sized holder
     // gives the grid a width.
     expect(grid).toContain('contain-intrinsic-inline-size: 0;');
@@ -2058,7 +2075,7 @@ describe('src/components/month-grid.css', () => {
     expect(css).not.toContain("[data-look='none']");
     expect(css).not.toMatch(/--color-(?:error|warning|success|gain|signal|clay|taupe)/);
     // The summary and the legend's labels are slate; the swatch is Meter's 12px, on the cell's corner, since the
-    // micro step on 12px is a circle and a key looks like what it stands for (spec correction 38).
+    // micro step on 12px is a circle and a key looks like what it stands for (spec correction 46).
     expect(rule(css, '.month-grid-summary')).toContain('color: var(--color-slate);');
     expect(rule(css, '.month-grid-legend-label')).toContain('color: var(--color-slate);');
     const swatch = rule(css, '.month-grid-swatch');

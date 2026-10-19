@@ -10,12 +10,11 @@ icon: List
 
 A list of named values: each row is a term, its value and, if it has any, the row's actions. The list's own width decides the layout, not the screen's. From 30rem of the list's width the terms sit in a column beside their values, and under it each term stands above its value. A list beside a side panel or in a narrow card stacks on a wide screen, and every list stacks on a phone.
 
-The list is a size container, so it takes its width from its column, never from its content: give it a width in a flex row or a centered column, where it would otherwise be 16rem wide. That 16rem is also its narrowest, so a flex or grid item that holds the list needs `min-width: 0`, as `flex: 1` and `1fr` give it none, or the item stays 16rem wide and can push a phone's page sideways.
+The list is a size container, so it takes its width from its column, never from its content, and has no width of its own to give. A block, a `flex: 1` item or a `1fr` grid track gives it one. A holder that sizes it from its content, such as a flex item without `flex: 1`, `width: max-content` or an `auto` grid track, must give it a width, or it draws nothing wide.
 
 ```css
 .details {
   flex: 1;
-  min-width: 0;
 }
 ```
 

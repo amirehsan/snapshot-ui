@@ -16,6 +16,15 @@ const CARDS: CardRow[] = [
   { id: 'store', name: 'Store card ending 5512', balance: '$40.00', used: 4 },
 ];
 
+/**
+ * The two thresholds, drawn on every row. Their words would be read again on each row, so the marks carry none
+ * and the note above the table says them once.
+ */
+const MARKS = [
+  { value: 10, label: '' },
+  { value: 30, label: '' },
+];
+
 const COLUMNS: readonly DataTableColumn<CardRow>[] = [
   { id: 'name', header: 'Card', cell: (card) => card.name, isRowHeader: true },
   {
@@ -29,10 +38,7 @@ const COLUMNS: readonly DataTableColumn<CardRow>[] = [
         value={card.used}
         valueLabel={card.used > 30 ? `${String(card.used)}%, above 30%` : `${String(card.used)}%`}
         tone={card.used > 30 ? 'warning' : 'neutral'}
-        marks={[
-          { value: 10, label: 'Best under 10%' },
-          { value: 30, label: 'Keep it under 30%' },
-        ]}
+        marks={MARKS}
       />
     ),
     textValue: (card) => `${String(card.used)}%`,
@@ -43,7 +49,10 @@ const COLUMNS: readonly DataTableColumn<CardRow>[] = [
 
 export default function GaugeTable(): ReactElement {
   return (
-    <div style={{ width: '100%' }}>
+    <div className="stack" style={{ width: '100%', gap: 'var(--spacing-part)' }}>
+      <p className="copy copy-small" style={{ margin: 0 }}>
+        Utilization marks: best under 10%, and keep it under 30%.
+      </p>
       <DataTable aria-label="Cards" items={CARDS} columns={COLUMNS} getKey={(card) => card.id} />
     </div>
   );

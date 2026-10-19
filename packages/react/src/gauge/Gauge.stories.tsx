@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState, type CSSProperties, type ReactElement, type ReactNode } from 'react';
-import { I18nProvider } from 'react-aria-components';
+import { I18nProvider, type Key } from 'react-aria-components';
 import { expect, userEvent, waitFor } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
@@ -101,10 +101,12 @@ async function paintsAt(element: SVGPathElement, points: readonly [number, numbe
     .map((part) => String(parseFloat(part)))
     .join(' ');
   const dashoffset = String(parseFloat(element.style.strokeDashoffset));
+  // The caps the stylesheet gives the path: round, or butt for an empty arc.
+  const linecap = getComputedStyle(element).strokeLinecap;
   const source =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${String(width)} ${String(height)}" ` +
     `width="${String(width)}" height="${String(height)}"><path d="${element.getAttribute('d') ?? ''}" ` +
-    `fill="none" stroke="black" stroke-linecap="round" stroke-width="${element.getAttribute('stroke-width') ?? ''}" ` +
+    `fill="none" stroke="black" stroke-linecap="${linecap}" stroke-width="${element.getAttribute('stroke-width') ?? ''}" ` +
     `stroke-dasharray="${dasharray}" stroke-dashoffset="${dashoffset}"/></svg>`;
   const image = new Image(width, height);
   image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
@@ -117,6 +119,119 @@ async function paintsAt(element: SVGPathElement, points: readonly [number, numbe
   context.drawImage(image, 0, 0);
   return points.map(([x, y]) => (context.getImageData(Math.floor(x), Math.floor(y), 1, 1).data[3] ?? 0) > 0);
 }
+
+/**
+ * Whether every line of a ring's figure and caption, clipped to its own box, has its four corners inside the
+ * ring's inner circle, the box less two strokes across: the text never touches the stroke.
+ */
+async function expectInsideRing(gauge: HTMLElement): Promise<void> {
+  const size = gauge.getAttribute('data-size') === 'lg' ? 'lg' : 'md';
+  const { box, stroke } = GAUGE_SIZES[size];
+  const svg = part(gauge, 'gauge-svg').getBoundingClientRect();
+  const [cx, cy] = [svg.left + svg.width / 2, svg.top + svg.height / 2];
+  const radius = (svg.width * (box - 2 * stroke)) / box / 2;
+  for (const name of ['gauge-figure-value', 'gauge-figure-caption']) {
+    const element = gauge.querySelector(`.${name}`);
+    if (!element) continue;
+    const frame = element.getBoundingClientRect();
+    const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    let lines = 0;
+    for (const line of range.getClientRects()) {
+      // The line box: a text run's box is its font's content area, centred in the line, which a tall font makes
+      // taller than the line; the line box is the line height about the same centre. A clamped caption lays out
+      // lines it clips, so only what its box shows is drawn.
+      const middle = (line.top + line.bottom) / 2;
+      const [left, right] = [Math.max(line.left, frame.left), Math.min(line.right, frame.right)];
+      const [top, bottom] = [
+        Math.max(middle - lineHeight / 2, frame.top),
+        Math.min(middle + lineHeight / 2, frame.bottom),
+      ];
+      if (right - left < 0.5 || bottom - top < 0.5) continue;
+      lines += 1;
+      for (const [x, y] of [
+        [left, top],
+        [right, top],
+        [right, bottom],
+        [left, bottom],
+      ] as const)
+        await expect(Math.hypot(x - cx, y - cy), `${size} ${name} corner`).toBeLessThanOrEqual(radius + 0.5);
+    }
+    await expect(lines, `${size} ${name} drawn`).toBeGreaterThan(0);
+  }
+}
+
+/** The first color painted behind an element, going up the tree: what shows through a gap in it. */
+const fillBehind = (element: Element): string => {
+  for (let at: Element | null = element.parentElement; at; at = at.parentElement) {
+    const color = getComputedStyle(at).backgroundColor;
+    if (!/^(?:transparent|rgba\(0, 0, 0, 0\))$/.test(color)) return color;
+  }
+  return getComputedStyle(document.body).backgroundColor;
+};
+
+/**
+ * A dial's svg drawn alone by the engine's own renderer, 8 times its size, over `fill`, with the track blue, the
+ * arc green and the marks red, and three pixels read beside a mark: in its gap, on the track past the gap, and on
+ * the mark. The mask is the page's, so the gap shows `fill` exactly when the mask cuts it.
+ */
+async function aroundMark(
+  svg: SVGSVGElement,
+  fill: string,
+  index: number,
+): Promise<{ behind: number[]; gap: number[]; track: number[]; mark: number[] }> {
+  const scale = 8;
+  const [, , width = 0, height = 0] = (svg.getAttribute('viewBox') ?? '').split(' ').map(Number);
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('width', String(width * scale));
+  clone.setAttribute('height', String(height * scale));
+  clone.removeAttribute('class');
+  for (const [name, color] of [
+    ['gauge-track', 'rgb(0, 0, 255)'],
+    ['gauge-value', 'rgb(0, 160, 0)'],
+    ['gauge-mark', 'rgb(255, 0, 0)'],
+  ] as const) {
+    for (const element of clone.querySelectorAll(`.${name}`)) {
+      element.setAttribute('stroke', color);
+      element.setAttribute('fill', 'none');
+      element.setAttribute('stroke-linecap', name === 'gauge-mark' ? 'butt' : 'round');
+      if (name === 'gauge-mark') element.setAttribute('stroke-width', '2');
+    }
+  }
+  const image = new Image(width * scale, height * scale);
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(clone))}`;
+  await image.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('No canvas');
+  context.fillStyle = fill;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0);
+  const line = svg.querySelectorAll('.gauge-mark')[index];
+  if (!line) throw new Error('No mark');
+  const [x1, y1, x2, y2] = ['x1', 'y1', 'x2', 'y2'].map((name) => Number(line.getAttribute(name)));
+  const [mx, my] = [((x1 ?? 0) + (x2 ?? 0)) / 2, ((y1 ?? 0) + (y2 ?? 0)) / 2];
+  const length = Math.hypot((x2 ?? 0) - (x1 ?? 0), (y2 ?? 0) - (y1 ?? 0));
+  // Across the mark: 2 units from its middle is in the 6-unit gap, past its 2-unit line; 4.5 is on the track.
+  const [px, py] = [-((y2 ?? 0) - (y1 ?? 0)) / length, ((x2 ?? 0) - (x1 ?? 0)) / length];
+  const at = (x: number, y: number): number[] => [
+    ...context.getImageData(Math.floor(x * scale), Math.floor(y * scale), 1, 1).data,
+  ];
+  return {
+    behind: at(0.5, 0.5),
+    gap: at(mx + 2 * px, my + 2 * py),
+    track: at(mx + 4.5 * px, my + 4.5 * py),
+    mark: at(mx, my),
+  };
+}
+
+/** Two colors within a channel's rounding of each other. */
+const sameColor = (a: readonly number[], b: readonly number[]): boolean =>
+  a.slice(0, 3).every((channel, index) => Math.abs(channel - (b[index] ?? 0)) <= 3);
 
 /** An md utilization ring with its figure and the consumer's two marks, at 10% and 30%. */
 export const Default: Story = {};
@@ -194,9 +309,10 @@ export const OverLimit: Story = {
   },
 };
 
-/** Five marks, the most a gauge draws, each 2px of ink in a ring of the card's own color. */
+/** Five marks, the most a gauge draws, each 2px of ink in a 6px gap cut out of the track and the arc. */
 export const WithMarks: Story = {
   args: {
+    label: 'Savings goal',
     size: 'lg',
     value: 62,
     valueLabel: '62% of your savings goal',
@@ -212,9 +328,12 @@ export const WithMarks: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(parts(canvasElement, 'gauge-mark')).toHaveLength(5);
-    const ring = parts(canvasElement, 'gauge-mark-ring')[0];
-    if (!ring) throw new Error('No ring');
-    await expect(getComputedStyle(ring).stroke).toBe(tokenColor('--color-lifted', ring));
+    await expect(canvasElement.querySelectorAll('mask .gauge-mark-gap')).toHaveLength(5);
+    const mask = canvasElement.querySelector('mask');
+    await expect(path(canvasElement, 'gauge-track')).toHaveAttribute('mask', `url(#${mask?.id ?? ''})`);
+    await expect(getComputedStyle(parts(canvasElement, 'gauge-mark')[0] ?? canvasElement).stroke).toBe(
+      tokenColor('--color-ink', canvasElement),
+    );
   },
 };
 
@@ -362,6 +481,12 @@ const CARDS: CardRow[] = [
   { id: 'amex', name: 'Rewards Amex ending 1009', balance: '$860.00', used: 12 },
 ];
 
+/** The thresholds on every row carry no words, which each row would repeat; the page says them once. */
+const ROW_MARKS: GaugeMark[] = [
+  { value: 10, label: '' },
+  { value: 30, label: '' },
+];
+
 const CARD_COLUMNS: readonly DataTableColumn<CardRow>[] = [
   { id: 'name', header: 'Card', cell: (card) => card.name, isRowHeader: true },
   {
@@ -375,7 +500,7 @@ const CARD_COLUMNS: readonly DataTableColumn<CardRow>[] = [
         value={card.used}
         valueLabel={card.used > 30 ? `${String(card.used)}%, above 30%` : `${String(card.used)}%`}
         tone={card.used > 30 ? 'warning' : 'neutral'}
-        marks={UTILIZATION_MARKS}
+        marks={ROW_MARKS}
       />
     ),
     textValue: (card) => `${String(card.used)}%`,
@@ -408,6 +533,58 @@ export const InDataTable: Story = {
   },
 };
 
+/** The cards with selection on and one row selected, so rows show the hover and selected fills. */
+function SelectableCards(): ReactElement {
+  const [selected, setSelected] = useState<Key[]>(['master']);
+  return (
+    <div style={{ width: '100%' }}>
+      <DataTable
+        aria-label="Cards"
+        items={CARDS}
+        columns={CARD_COLUMNS}
+        getKey={(card) => card.id}
+        selectedKeys={selected}
+        onSelectionChange={setSelected}
+      />
+    </div>
+  );
+}
+
+/**
+ * A mark's gap is cut out of the track and the arc, so the row's own fill shows there on a plain row, a hovered
+ * row and a selected one, where a gap painted in a fixed surface color drew a pale block. Each dial is drawn by
+ * the engine's own svg renderer over the fill behind it, and the pixels beside its 30% mark are read: the gap is
+ * the row's fill, the track past it is not. In three engines.
+ */
+export const MarksOnRows: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <SelectableCards />,
+  play: async ({ canvas }) => {
+    const rowOf = (name: string): HTMLElement => {
+      const row = canvas.getByRole('rowheader', { name }).closest<HTMLElement>('[role="row"]');
+      if (!row) throw new Error(`No row for ${name}`);
+      return row;
+    };
+    const hovered = rowOf('Store card ending 5512');
+    await userEvent.hover(hovered);
+    for (const [state, row] of [
+      ['plain', rowOf('Everyday Visa ending 4821')],
+      ['hovered', hovered],
+      ['selected', rowOf('Travel Mastercard ending 0937')],
+    ] as const) {
+      const svg = row.querySelector<SVGSVGElement>('svg.gauge-svg');
+      if (!svg) throw new Error(`No gauge in the ${state} row`);
+      const fill = fillBehind(svg);
+      // The 30% mark, the second of the two.
+      const { behind, gap, track, mark } = await aroundMark(svg, fill, 1);
+      await expect(sameColor(gap, behind), `${state}: the gap is the row's fill, ${fill}`).toBe(true);
+      await expect(sameColor(track, behind), `${state}: the track past the gap is drawn`).toBe(false);
+      await expect(sameColor(mark, [255, 0, 0]), `${state}: the mark is drawn over the gap`).toBe(true);
+    }
+    await expect(rowOf('Travel Mastercard ending 0937')).toHaveAttribute('aria-selected', 'true');
+  },
+};
+
 /** The widest figure each size holds: four characters at md, six at lg. */
 export const LongestFigure: Story = {
   render: () => (
@@ -417,7 +594,7 @@ export const LongestFigure: Story = {
         value={100}
         valueLabel="100% of your limit"
         figure="100%"
-        figureCaption="At the limit"
+        figureCaption="Full"
       />
       <Gauge
         label="Saved"
@@ -439,6 +616,55 @@ export const LongestFigure: Story = {
       const figure = part(gauge, 'gauge-figure-value').getBoundingClientRect();
       const inner = (dial.width * (box - 2 * stroke)) / box;
       await expect(figure.width).toBeLessThanOrEqual(inner + 0.5);
+    }
+    // In the ring, every line of the figure and the caption is inside the inner circle.
+    const ring = parts(canvasElement, 'gauge').find((gauge) => gauge.getAttribute('data-form') === 'ring');
+    if (!ring) throw new Error('No ring');
+    await expectInsideRing(ring);
+  },
+};
+
+/**
+ * The widest figures and long captions in rings: at md the caption is one line, 60px of the 80px inner circle,
+ * and at lg two lines of 104px of 136, so every line's corners stay inside the circle and off the stroke. In three
+ * engines, since each sets its own glyphs.
+ */
+export const FigureInsideRing: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Tile>
+      <Gauge
+        label="Utilization"
+        value={100}
+        valueLabel="100% of your limit"
+        figure="100%"
+        figureCaption="Keep it under thirty percent"
+      />
+      <Gauge
+        label="Utilization"
+        value={100}
+        valueLabel="100% of your limit"
+        figure="100%"
+        figureCaption="At the limit"
+      />
+      <Gauge
+        label="Saved"
+        size="lg"
+        value={41}
+        valueLabel="$12,300 of $30,000 saved"
+        figure="$12.3K"
+        figureCaption="Keep it under thirty percent of your limit"
+      />
+    </Tile>
+  ),
+  play: async ({ canvasElement }) => {
+    for (const gauge of parts(canvasElement, 'gauge')) {
+      await expectInsideRing(gauge);
+      const caption = part(gauge, 'gauge-figure-caption');
+      const lines = Math.round(
+        caption.getBoundingClientRect().height / parseFloat(getComputedStyle(caption).lineHeight),
+      );
+      await expect(lines).toBeLessThanOrEqual(gauge.getAttribute('data-size') === 'lg' ? 2 : 1);
     }
   },
 };
@@ -505,8 +731,14 @@ export const ArcLength: Story = {
       return element;
     };
     for (const form of ['ring', 'semicircle'] as const) {
-      // Nothing at 0: no path, so no dot.
-      await expect(gauge(`${form}-0`).querySelector('.gauge-value')).toBeNull();
+      // Nothing at 0: the path stays, a zero-length dash with butt caps, which paints nothing, not even a dot.
+      const empty = path(gauge(`${form}-0`), 'gauge-value');
+      await expect(empty).toHaveAttribute('data-empty');
+      await expect(getComputedStyle(empty).strokeLinecap).toBe('butt');
+      await expect(
+        await paintsAt(empty, [form === 'ring' ? [52, 4] : [4, 44]] as [number, number][]),
+        `${form} empty`,
+      ).toEqual([false]);
       for (const value of [25, 50, 100]) {
         const share = value / 100;
         const scope = gauge(`${form}-${String(value)}`);
@@ -583,7 +815,7 @@ export const Values: Story = {
     ] as const)
       await expect(scored).toHaveAttribute(name, value);
     await expect(below).toHaveAttribute('aria-valuenow', '300');
-    await expect(below.querySelector('.gauge-value')).toBeNull();
+    await expect(below.querySelector('.gauge-value')).toHaveAttribute('data-empty');
     await expect(over).toHaveAttribute('aria-valuenow', '100');
   },
 };
@@ -636,9 +868,12 @@ export const SemicircleFigure: Story = {
   },
 };
 
-/** A gauge whose value the app changes, to read its motion. */
+/** A gauge whose value the app changes, to read its motion: down, to 0, and up from 0. */
 function Paying(): ReactElement {
   const [used, setUsed] = useState(47);
+  const press = (next: number) => () => {
+    setUsed(next);
+  };
   return (
     <Tile>
       <Gauge
@@ -648,13 +883,14 @@ function Paying(): ReactElement {
         figure={`${String(used)}%`}
         tone={used > 30 ? 'warning' : 'neutral'}
       />
-      <Button
-        variant="secondary"
-        onPress={() => {
-          setUsed(23);
-        }}
-      >
+      <Button variant="secondary" onPress={press(23)}>
         Pay down
+      </Button>
+      <Button variant="secondary" onPress={press(0)}>
+        Pay off
+      </Button>
+      <Button variant="secondary" onPress={press(30)}>
+        Spend
       </Button>
     </Tile>
   );
@@ -672,17 +908,31 @@ export const Motion: Story = {
     const arc = path(canvasElement, 'gauge-value');
     await expect(arc.getAnimations()).toEqual([]);
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    await userEvent.click(canvas.getByRole('button', { name: 'Pay down' }));
-    await waitFor(() => expect(canvas.getByRole('meter')).toHaveAttribute('aria-valuenow', '23'));
-    const moving = arc
-      .getAnimations()
-      .filter((animation): animation is CSSTransition => animation instanceof CSSTransition);
-    if (reduced) {
-      await expect(moving).toEqual([]);
-    } else {
-      await expect(moving.map((transition) => transition.transitionProperty)).toContain('stroke-dasharray');
-      for (const transition of moving)
-        await expect(transition.effect?.getComputedTiming().duration).toBe(200);
+    // Down, then to 0, then up from 0: the same path each time, so each change moves, 0 included.
+    for (const [button, now] of [
+      ['Pay down', '23'],
+      ['Pay off', '0'],
+      ['Spend', '30'],
+    ] as const) {
+      await userEvent.click(canvas.getByRole('button', { name: button }));
+      await waitFor(() => expect(canvas.getByRole('meter')).toHaveAttribute('aria-valuenow', now));
+      await expect(path(canvasElement, 'gauge-value'), button).toBe(arc);
+      await expect(arc.hasAttribute('data-empty'), button).toBe(now === '0');
+      const moving = arc
+        .getAnimations()
+        .filter((animation): animation is CSSTransition => animation instanceof CSSTransition);
+      if (reduced) {
+        await expect(moving, button).toEqual([]);
+      } else {
+        await expect(
+          moving.map((transition) => transition.transitionProperty),
+          button,
+        ).toContain('stroke-dasharray');
+        for (const transition of moving)
+          await expect(transition.effect?.getComputedTiming().duration, button).toBe(200);
+      }
+      // Let this move end before the next starts.
+      for (const transition of moving) transition.finish();
     }
     // The reduced-motion rule ships: the stylesheet stops the arc there.
     const rules = [...document.styleSheets].flatMap((sheet) => {

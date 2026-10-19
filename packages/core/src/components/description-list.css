@@ -8,13 +8,14 @@
  * its edge, as the record's rule for a control at a holder's foot asks.
  */
 @layer components {
-  /* A size container takes no width from its content, so in a flex row or an auto grid column the list names a
-     stand-in width, 16rem, at which it stacks, the whole tile StatTile names. It is also the list's min-content
-     width, so a flex or grid item that holds it takes min-width: 0, or it is at least 16rem wide; 16rem fits the
-     288px a 320px phone leaves inside its 16px margins. A block or a sized column still sets its width. */
+  /* A size container takes no width from its content, and its intrinsic inline size is 0, the library's rule:
+     a stand-in width would be its min-content width too, which a flex: 1 item or a 1fr track keeps as its
+     narrowest, and two lists side by side scrolled a phone's page sideways. A block, a flex: 1 item or a 1fr
+     track gives it its width; a holder that sizes it from its content (a content-sized flex item,
+     width: max-content, an auto grid track) must give it one. */
   .description-list {
     container: description-list / inline-size;
-    contain-intrinsic-inline-size: 16rem;
+    contain-intrinsic-inline-size: 0;
     display: grid;
     min-width: 0;
     margin: 0;
