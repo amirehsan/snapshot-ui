@@ -415,8 +415,9 @@ export function BarChart(props: BarChartProps): ReactElement {
       : stops[barsOf(group).indexOf(target as HTMLElement)];
   };
 
-  // A touch's press: when it began, whether it is down, and whether it was held long enough to be a reading.
-  const touch = useRef({ at: 0, down: false, held: false });
+  // A touch's press: when it began, whether it is down, and when a hold long enough to be a reading ended, 0
+  // for none.
+  const touch = useRef({ at: 0, down: false, held: 0 });
 
   // Focus a reader gave a link before the chart hydrated stays there, and that bar becomes the tab stop, so Tab
   // does not jump back to the first bar.
@@ -568,14 +569,18 @@ export function BarChart(props: BarChartProps): ReactElement {
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
     if (event.pointerType !== 'touch') return;
-    touch.current = { at: event.timeStamp, down: true, held: false };
+    touch.current = { at: event.timeStamp, down: true, held: 0 };
     snap(event, 'touch');
   };
 
   // A touch held past HOLD is a reading: its click follows nothing. A tap is a press.
   const onPointerUp = (event: PointerEvent<HTMLDivElement>): void => {
     if (event.pointerType === 'touch')
-      touch.current = { at: 0, down: false, held: event.timeStamp - touch.current.at >= HOLD };
+      touch.current = {
+        at: 0,
+        down: false,
+        held: event.timeStamp - touch.current.at >= HOLD ? event.timeStamp : 0,
+      };
   };
 
   // A hold keeps the readout in view, not the platform's link menu; a mouse's menu, with its new tab, stays.
@@ -603,8 +608,10 @@ export function BarChart(props: BarChartProps): ReactElement {
     onClick?.(event);
     const group = groupRef.current;
     const isInGroup = group?.contains(event.target as Node);
-    const held = touch.current.held;
-    touch.current.held = false;
+    // Only the click that ends the hold, which follows its lifting at once: a long press usually sends none, and
+    // a later click, Enter or a screen reader's, is a press.
+    const held = touch.current.held > 0 && event.timeStamp - touch.current.held < HOLD;
+    touch.current.held = 0;
     if (held && isInGroup) {
       event.preventDefault();
       return;

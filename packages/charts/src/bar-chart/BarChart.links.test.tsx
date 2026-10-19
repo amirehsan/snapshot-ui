@@ -269,6 +269,26 @@ describe('BarChart links', () => {
       expect(navigate).toHaveBeenCalledExactlyOnceWith('#transactions?merchant=shell');
     });
 
+    it('lets a hold the platform ended with no click go, so the next press is a press', () => {
+      vi.useFakeTimers();
+      const navigate = vi.fn();
+      const { container } = render(<Chart navigate={navigate} />);
+      const hit = hitAt(container, 1);
+      // A long press: the platform sends no click when the finger lifts.
+      fireEvent.pointerDown(hit, { pointerType: 'touch' });
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+      fireEvent.pointerUp(hit, { pointerType: 'touch' });
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      // Later Enter on a focused bar, or a screen reader's activation, is a click with no pointer: it follows.
+      focus(barAt(container, 2));
+      fireEvent.click(barAt(container, 2), { detail: 0 });
+      expect(navigate).toHaveBeenCalledExactlyOnceWith('#transactions?merchant=apple');
+    });
+
     it("leaves a link of the app's own in the status content to the app, never routed", () => {
       const navigate = vi.fn();
       const { container } = render(

@@ -11152,7 +11152,11 @@ the platforms' long press, is a reading: the readout shows, as a hold
 always did, its click follows nothing, the context menu Android opens
 on a held link is prevented while a touch is down, and
 `-webkit-touch-callout: none` keeps Safari's link preview away, so the
-readout can be read. A mouse's context menu stays (correction 98).
+readout can be read. A mouse's context menu stays (correction 98). The
+hold covers only the click that ends it, which follows the lifting at
+once: a long press usually sends no click, and the mark it left made the
+next click in the chart, a mouse's, Enter's on a focused link or a
+screen reader's, follow nothing (the review of e137645, correction 105).
 
 *Before hydration.* The server writes the links with no `tabindex`, so
 before the chart hydrates, and with scripts off, every bar is a link of
