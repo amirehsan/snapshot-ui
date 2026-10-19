@@ -1594,8 +1594,41 @@ hover, no focus ring and no touch target.
   the shape table gives badges, so the shape axis reaches them.
 - **Color is never the only signal.** The label says what the badge means. The
   tone only repeats it.
-- **A long label wraps inside the badge.** It breaks anywhere, so no label can
-  push a narrow screen sideways.
+- **A word stays whole, and so does the badge's width in a row.** The first
+  rule broke a long label anywhere (`overflow-wrap: anywhere`), so a long run
+  of letters could not push a narrow screen sideways. But anywhere also makes
+  one letter the badge's min-content width, the floor a flex row shrinks an
+  item to, so beside a title that wrapped on a 390px phone, "New" was set as
+  "NE" over "W". The badge now breaks with `overflow-wrap: break-word`, which
+  leaves the longest word as its min-content width: a flex row stops shrinking
+  the badge there, and a holder of its own passes the same floor up, so no
+  `shrink-0` is needed at the call site. A label of several words still wraps
+  between them when its holder is narrower than the whole label, and a single
+  word longer than the badge, which `max-width: 100%` keeps to its holder,
+  still breaks inside the outline, so nothing pushes the page sideways.
+- **An inline block, not an inline flex.** The label of an inline flex box is
+  an anonymous flex item whose floor is its own longest word, so a word longer
+  than the box spilled out of the outline instead of breaking. As an inline
+  block the label is set in the badge's own lines and break-word reaches it. A
+  badge holds a word or a number, so it lost nothing to the flex box.
+- **No floor of its own.** `flex-shrink: 0` keeps a label of several words on
+  one line, squeezing the title beside it to a letter a line, and only the
+  badge given straight to the row, not one in a holder. A `min-inline-size` of
+  `min-content` outranks `max-width`, so a long word would push the page
+  sideways. The automatic minimum of a flex item is already the longest word,
+  capped by `max-width`, so the badge declares neither. One limit stays, the
+  cost of the floor: a holder sized by its content, such as a grid column of
+  `auto` or `1fr` or a flex item left at its automatic minimum, takes the
+  badge's longest word as its own floor, so a single word wider than the
+  screen widens it, as any word set with break-word does. A holder of a set
+  width, or one with `min-width: 0` or `minmax(0, 1fr)`, breaks such a word
+  inside the outline. Storybook's centered canvas is such a holder, so the
+  `LongText` story's run of 70 letters widens the canvas at 375px; a status
+  word is never that long.
+  Where the library itself sets a badge nothing moves: a tab and the docs
+  rail's version keep theirs on one line with `nowrap`, FilterBar's count is a
+  number, and a DataTable's fixed columns cap the badge at the cell. StatTile,
+  the Sidebar, CollapsibleCard and FilterChip draw no badge of their own.
 
 Measured as the text color on each surface a badge sits on, light then dark,
 for canvas, lifted, float and raised in that order. The 1px border is the same
@@ -1687,7 +1720,7 @@ everything else here is derived.
   the field lands under the end of the control and a hint wraps at a readable
   measure. Its column may shrink, and the label, hint, error line and count
   break a long unbroken word where they must (`overflow-wrap: anywhere`, as
-  Link, Kbd and Badge do), so one such word wraps inside its part and the page
+  Link and Kbd do), so one such word wraps inside its part and the page
   does not scroll sideways. The label row holds the label and the chip, and the
   chip wraps under a long label instead of overflowing.
 - **Label** is 14/700 in ink, the h4 step. **Description** is 14/450 in slate,

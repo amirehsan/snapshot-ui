@@ -5,12 +5,19 @@
  * badge, so every text pair is one the contrast gate already measures. Neutral
  * is the base; info, success, warning and error only change the color. It is
  * never clay or signal orange, which mean unsaved work and consent.
+ *
+ * A word that fits is never broken and a flex row never squeezes the badge below its longest word: break-word, unlike
+ * anywhere, leaves that word as the badge's min-content width, the floor a flex row shrinks an item to, and
+ * through a holder of its own too. A label of several words still wraps between them, and a word longer than
+ * the badge, which max-width keeps to its holder, breaks inside the outline. An inline block, not an inline
+ * flex, so the label sits in the badge's own lines: as a flex item it would keep its longest word as a floor
+ * and spill out of the outline. No flex-shrink 0 and no min-width: either would let the badge push past a
+ * narrow row.
  */
 @layer components {
   .badge {
     box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
+    display: inline-block;
     max-width: 100%;
     padding-block: 0.125rem;
     padding-inline: 0.5rem;
@@ -25,7 +32,7 @@
     font-weight: var(--text-overline--font-weight);
     font-variant-numeric: tabular-nums;
     text-transform: uppercase;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   .badge-info {

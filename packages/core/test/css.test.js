@@ -719,6 +719,23 @@ describe('src/components/badge.css', () => {
   it('draws the warning tone in the warning color and nothing else', () => {
     expect(closeUp(blockAfter(source(), '.badge-warning {')).trim()).toBe('color: var(--color-warning);');
   });
+
+  it('keeps a word whole and the badge its width in a row, and breaks only a word longer than the box', () => {
+    const badge = blockAfter(source(), '.badge {');
+    // break-word, not anywhere: anywhere lowered the min-content width to one letter, so a flex row squeezed
+    // "New" into "NE" over "W". break-word leaves the longest word as the floor a flex row stops at, and still
+    // breaks a word only when it is longer than the badge, which max-width holds to its holder.
+    expect(badge).toContain('overflow-wrap: break-word;');
+    expect(badge).not.toContain('anywhere');
+    expect(badge).toContain('max-width: 100%;');
+    // An inline block, not an inline flex: the label of a flex box is an anonymous item whose floor is its
+    // longest word, so a word longer than the box would spill out of the outline instead of breaking.
+    expect(badge).toContain('display: inline-block;');
+    expect(badge).not.toMatch(/display:\s*inline-flex/);
+    // No floor of its own: flex-shrink 0 would keep a long label on one line and squeeze the title beside it,
+    // and min-content as a min-width would beat max-width, so a long word would push the page sideways.
+    expect(badge).not.toMatch(/flex-shrink|(?:^|[\s;])flex:|min-width|min-inline-size/);
+  });
 });
 
 describe('src/components/input.css', () => {
