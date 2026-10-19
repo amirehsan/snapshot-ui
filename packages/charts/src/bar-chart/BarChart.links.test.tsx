@@ -2,7 +2,7 @@ import { act, fireEvent, render, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { BarChart, type BarChartProps, type BarSeries, type BarValue } from './BarChart';
 
@@ -445,6 +445,73 @@ describe('BarChart links', () => {
       expect(navigate).toHaveBeenCalledExactlyOnceWith('#transactions?merchant=shell');
       expect(fireEvent.click(link, { metaKey: true })).toBe(true);
       expect(navigate).toHaveBeenCalledOnce();
+    });
+
+    /** The table's view, with focus on the table link named `name`. */
+    const focusTableLink = (container: HTMLElement, name: string): void => {
+      fireEvent.click(within(container).getByRole('button', { name: 'Show as table' }));
+      focus(within(part(container, 'table')).getByRole('link', { name }));
+    };
+
+    // Loading takes the table away; empty and error hide it, which an engine blurs.
+    it.each(['loading', 'error', 'empty'] as const)(
+      'keeps focus off the body when %s takes the table from under a focused link',
+      (status) => {
+        const { container, rerender } = render(<Chart />);
+        focusTableLink(container, 'Shell');
+        rerender(<Chart status={status} />);
+        // The group holds focus while there are no bars, as it does for a bar that leaves.
+        expect(document.activeElement).toBe(part(container, '.bar-chart-rows'));
+        // Ready again in the table's view, focus goes on to the toggle beside the table, which is shown.
+        rerender(<Chart />);
+        expect(document.activeElement).toBe(within(container).getByRole('button', { name: 'Show as chart' }));
+      },
+    );
+
+    it('keeps focus off the body when a status takes the toggle away', () => {
+      const { container, rerender } = render(<Chart />);
+      const toggle = within(container).getByRole('button', { name: 'Show as table' });
+      focus(toggle);
+      rerender(<Chart status="loading" />);
+      expect(document.activeElement).toBe(part(container, '.bar-chart-rows'));
+    });
+
+    it('hands focus to the toggle when new data takes a focused link from the table', () => {
+      const { container, rerender } = render(<Chart />);
+      focusTableLink(container, 'Shell');
+      // Shell's figure keeps its row and loses its href, so its cell is text.
+      const values = OCTOBER.values.map((value, at) => (at === 1 && value ? money(value.value) : value));
+      rerender(<Chart series={[{ ...OCTOBER, values }]} />);
+      expect(document.activeElement).toBe(within(container).getByRole('button', { name: 'Show as chart' }));
+      // Fewer rows take the focused link's row away: the same.
+      focus(within(part(container, 'table')).getByRole('link', { name: 'Apple Store' }));
+      rerender(<Chart categories={MERCHANTS.slice(0, 2)} />);
+      expect(document.activeElement).toBe(within(container).getByRole('button', { name: 'Show as chart' }));
+    });
+
+    it('leaves focus a reader moved out of the chart where it is when the table goes', () => {
+      const outside = document.createElement('button');
+      document.body.append(outside);
+      onTestFinished(() => {
+        outside.remove();
+      });
+      const { container, rerender } = render(<Chart />);
+      focusTableLink(container, 'Shell');
+      focus(outside);
+      rerender(<Chart status="loading" />);
+      expect(document.activeElement).toBe(outside);
+    });
+
+    it("leaves focus a reader let go to the page's empty space there when the table goes", async () => {
+      const { container, rerender } = render(<Chart />);
+      focusTableLink(container, 'Shell');
+      // A press on the page's empty space: focus goes to nothing while the link stays shown.
+      act(() => {
+        within(part(container, 'table')).getByRole('link', { name: 'Shell' }).blur();
+      });
+      await Promise.resolve();
+      rerender(<Chart status="loading" />);
+      expect(document.activeElement).toBe(document.body);
     });
 
     it('links the noscript copy too, which writes no ids of its own', () => {

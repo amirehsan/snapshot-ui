@@ -225,6 +225,8 @@ export function BarChart(props: BarChartProps): ReactElement {
     onBarPress,
     navigate,
     onClick,
+    onFocus,
+    onBlur,
     className,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
@@ -356,20 +358,45 @@ export function BarChart(props: BarChartProps): ReactElement {
     };
   }, []);
 
+  // The table's link or the toggle that last took focus, outside the bars: what a status, new data or a hidden
+  // table can take from under focus, which the effect below hands on. Focus on a bar clears it.
+  const tableFocus = useRef<Element | null>(null);
+
   // Focus parked on the group by a bar that left, for new categories, a new orientation, a status or new data,
   // or held by a bar that new categories made another's: once the chart is ready, it goes to the tab stop, the
   // new first bar for new categories, never the body. The group is never a tab stop and a press never focuses
-  // it, so focus on it while ready is always parked. A layout effect after every commit, so focus moves before
-  // the page paints, whatever changed.
+  // it, so focus on it while ready is always parked. A table link or the toggle that held focus and went, or
+  // was hidden, with the table (a status takes the toggle and hides or takes the table, and new data a link or
+  // its row) hands it to the group while there are no bars, else to the toggle while the table shows, else to
+  // the tab stop, never the body; focus a reader moved elsewhere stays there. A layout effect after every
+  // commit, so focus moves before the page paints (and before an engine blurs a hidden link), whatever changed.
   const shownKey = useRef(key);
   useLayoutEffect(() => {
     const before = shownKey.current;
     shownKey.current = key;
     const element = groupRef.current;
-    const focused = element?.ownerDocument.activeElement ?? null;
+    if (!element) return;
+    const doc = element.ownerDocument;
+    const focused = doc.activeElement;
+    const left = tableFocus.current;
+    const isLost =
+      !!left &&
+      (!left.isConnected || !!left.closest('[hidden]')) &&
+      (focused === left || focused === doc.body);
+    if (isLost) tableFocus.current = null;
     // Focus in the chart moves for new categories, since a bar they kept is now another category's.
-    if (status === 'ready' && element?.contains(focused) && (before !== key || focused === element))
-      element.querySelector<HTMLElement>('.bar-chart-bar[tabindex="0"]')?.focus();
+    if (
+      isLost ||
+      (status === 'ready' && element.contains(focused) && (before !== key || focused === element))
+    )
+      (status === 'ready'
+        ? element
+            .closest('figure')
+            ?.querySelector<HTMLElement>(
+              shownView === 'table' ? '.bar-chart-toggle' : '.bar-chart-bar[tabindex="0"]',
+            )
+        : element
+      )?.focus();
   });
 
   /** The chart's bars, in the order of `stops`. */
@@ -438,7 +465,7 @@ export function BarChart(props: BarChartProps): ReactElement {
     bars[stops.indexOf(to)]?.focus();
   };
 
-  const onBlur = (event: FocusEvent<HTMLDivElement>): void => {
+  const onGroupBlur = (event: FocusEvent<HTMLDivElement>): void => {
     const to = event.relatedTarget;
     if (to instanceof Node && event.currentTarget.contains(to)) return;
     chart.clear();
@@ -1093,6 +1120,22 @@ export function BarChart(props: BarChartProps): ReactElement {
       data-status={status}
       data-texture={hasTexture ? '' : undefined}
       onClick={onFigureClick}
+      onFocus={(event) => {
+        onFocus?.(event);
+        tableFocus.current = groupRef.current?.contains(event.target) ? null : event.target;
+      }}
+      onBlur={(event) => {
+        onBlur?.(event);
+        const left = event.target;
+        // Focus the reader moves out of the chart, or to the page's empty space, is theirs: once this blur is
+        // done, a link or the toggle that lost focus while still shown leaves nothing to hand on. One a status
+        // took, or hid, was handed on in the commit. A window that loses focus keeps it on the link.
+        if (!event.currentTarget.contains(event.relatedTarget))
+          queueMicrotask(() => {
+            if (tableFocus.current === left && left.ownerDocument.activeElement !== left)
+              tableFocus.current = null;
+          });
+      }}
     >
       {/* Busy while loading, the chart's view only: the polite status after it stays outside, so it is heard. */}
       <div
@@ -1133,7 +1176,7 @@ export function BarChart(props: BarChartProps): ReactElement {
           data-press={onBarPress && linked.length === 0 ? '' : undefined}
           style={groupStyle}
           onKeyDown={isReady ? onKeyDown : undefined}
-          onBlur={isReady ? onBlur : undefined}
+          onBlur={isReady ? onGroupBlur : undefined}
           onMouseDown={onMouseDown}
           onPointerMove={isReady ? onPointerMove : undefined}
           onPointerLeave={isReady ? onPointerLeave : undefined}

@@ -11170,6 +11170,23 @@ primary click with no modifier key; any other click stays the browser's.
 `onBarPress(category, series)` hears every press, a link's before it is
 followed (corrections 99 and 100).
 
+*Focus in the table* (the review of e137645, correction 102). The
+table's links are the first stops in the table view besides the toggle,
+and a status takes them from under focus: loading takes the table and
+its toggle away, and empty and error hide the table, which Chromium
+blurs at its next rendering step, so focus fell to the body and stayed.
+New data takes a link too, a cell that lost its href or a row that went.
+The figure keeps the table's link or the toggle that last took focus,
+and the layout effect that hands a leaving bar's focus on does the same
+for it: one that went or was hidden, with focus on it or on the body,
+hands focus to the group while there are no bars, to the toggle while
+the table shows, else to the tab stop. Focus the reader moved out of the
+chart or to the page's empty space, with the link still shown, is
+theirs, and stays (SaveBar's rule). `LinksTableFocus` (three engines)
+holds it: through loading and through an error the group holds focus
+and no hidden link is blurred to nothing, and ready again the toggle
+does.
+
 *Dimming, the readout, focus and forced colors* are unchanged: the
 targets take no opacity and draw nothing, a press focuses nothing as
 before, and the link bars keep the bar's focus ring and its forced

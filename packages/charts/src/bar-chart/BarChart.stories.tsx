@@ -4,7 +4,7 @@ import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { expect, waitFor } from 'storybook/test';
 import { focusOn } from '../stories/focus';
-import { BarChart, type BarChartProps, type BarSeries, type BarValue } from './BarChart';
+import { BarChart, type BarChartProps, type BarSeries, type BarValue, type ChartStatus } from './BarChart';
 
 /** An amount as the app formats it: the number to draw and the string to say it. */
 const money = (value: number): BarValue => ({
@@ -2289,6 +2289,78 @@ export const LinkTargets: Story = {
       }
     } finally {
       view.scrollTo(0, scrolled);
+    }
+  },
+};
+
+/** The ranked list of links whose status a play sets with no focus of its own, as an app's fetch would. */
+const LinksWithStatus = (): ReactElement => {
+  const [status, setStatus] = useState<ChartStatus>('ready');
+  return (
+    <Panel>
+      <BarChart
+        aria-label="Spending by merchant, October"
+        orientation="horizontal"
+        categories={MERCHANTS}
+        series={[LINKED_MERCHANT]}
+        status={status}
+      />
+      {(['ready', 'loading', 'error'] as const).map((to) => (
+        <button
+          key={to}
+          type="button"
+          hidden
+          data-status={to}
+          onClick={() => {
+            setStatus(to);
+          }}
+        />
+      ))}
+    </Panel>
+  );
+};
+
+/**
+ * Focus on a table link never stays on the body: loading takes the table and its toggle away, and an error
+ * hides the table, which an engine blurs at its next rendering step, so the chart hands focus to the group
+ * while there are no bars, before that blur, and to the toggle once the table shows again.
+ */
+export const LinksTableFocus: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <LinksWithStatus />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await interactive(canvasElement);
+    const doc = canvasElement.ownerDocument;
+    const group = part(canvasElement, '.bar-chart-rows');
+    // Every element that lost focus to nothing, which is focus passing through the body.
+    const toNothing: Element[] = [];
+    const watch = (event: FocusEvent): void => {
+      if (event.relatedTarget === null && event.target instanceof Element) toNothing.push(event.target);
+    };
+    /** Sets the chart's status as a fetch would, with no press that moves focus. */
+    const setStatus = (to: string): void => {
+      part(canvasElement, `[data-status="${to}"]`).click();
+    };
+    const toggle = (): HTMLElement => canvas.getByRole('button', { name: 'Show as chart' });
+    await userEvent.click(canvas.getByRole('button', { name: 'Show as table' }));
+    for (const status of ['loading', 'error']) {
+      await focusOn(canvas.getByRole('link', { name: 'Comcast' }));
+      doc.addEventListener('focusout', watch, true);
+      try {
+        setStatus(status);
+        await waitFor(() => expect(doc.activeElement).toBe(group));
+        // A frame on, past the step where an engine blurs a hidden element: focus is where the chart put it.
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        await expect(doc.activeElement).toBe(group);
+        // A hidden link hands focus on before an engine blurs it. A removed one goes before any script runs,
+        // and an engine may say so with a blur; focus lands on the group all the same.
+        if (status === 'error') await expect(toNothing).toEqual([]);
+      } finally {
+        doc.removeEventListener('focusout', watch, true);
+        toNothing.length = 0;
+      }
+      setStatus('ready');
+      await waitFor(() => expect(doc.activeElement).toBe(toggle()));
     }
   },
 };
