@@ -2,6 +2,7 @@
 import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { outermostClasses, proseRoots } from './prose-roots';
 import { BarChart, type BarSeries } from '../src/bar-chart';
 import { LineChart, type LineSeries } from '../src/line-chart';
 
@@ -230,6 +231,18 @@ describe('the client charts on the server', () => {
   it('has neither a window nor a document, so the renders below prove something', () => {
     expect(typeof window).toBe('undefined');
     expect(typeof document).toBe('undefined');
+  });
+
+  // Its outermost element carries a root prose hands back to the layer below, so a chart in an article draws as
+  // it does anywhere (insights spec corrections 52 and 93).
+  const roots = proseRoots();
+  it.each(CLIENT)('%s has a component root prose hands back on its outermost element', (_name, element) => {
+    const classes = outermostClasses(renderToString(element));
+    if (classes === null) return;
+    expect(
+      classes.filter((name) => roots.has(name)),
+      classes.join(' '),
+    ).not.toEqual([]);
   });
 
   it.each(CLIENT)('%s renders to HTML with no browser', (_name, element, contains, excludes) => {

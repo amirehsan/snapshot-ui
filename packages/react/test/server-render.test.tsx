@@ -3,13 +3,14 @@ import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { describe, expect, it } from 'vitest';
+import { outermostClasses, proseRoots } from './prose-roots';
 import { AppShell } from '../src/app-shell';
 import { Avatar } from '../src/avatar';
 import { Breadcrumb, Breadcrumbs } from '../src/breadcrumbs';
 import { StatTile } from '../src/stat-tile';
 import { BottomTabBar, BottomTabBarItem } from '../src/bottom-tab-bar';
 import { Button } from '../src/button';
-import { Calendar } from '../src/calendar';
+import { Calendar, RangeCalendar } from '../src/calendar';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { DataTable } from '../src/data-table';
 import { DatePicker } from '../src/date-picker';
@@ -51,7 +52,8 @@ import { COLUMNS, columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from 
 import { Switch } from '../src/switch';
 import { Tab, TabList, TabPanel, Tabs } from '../src/tabs';
 import { TextArea } from '../src/text-area';
-import { TextField } from '../src/text-field';
+import { Input, TextField } from '../src/text-field';
+import { Description, Label } from '../src/field';
 import { ToastRegion } from '../src/toast';
 import { Tooltip, TooltipTrigger } from '../src/tooltip';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
@@ -116,6 +118,11 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     ],
     ['aria-roledescription', 'role="spinbutton"'],
   ],
+  // The field's parts on their own, as a custom layout places them, and a range calendar's face.
+  ['Label', <Label htmlFor="amount">Amount</Label>, ['class="field-label"']],
+  ['Description', <Description>In dollars</Description>, ['class="field-description"']],
+  ['Input', <Input aria-label="Amount" />, ['class="input"']],
+  ['RangeCalendar', <RangeCalendar aria-label="Dates" />, ['class="calendar range-calendar"']],
   [
     // The face: an empty frame of the calendar's final size; React Aria's month, weekdays and days, all from Intl
     // and the device's zone, mount after hydration.
@@ -948,6 +955,19 @@ describe('the client components on the server', () => {
     const html = renderToString(element);
     for (const part of contains) expect(html).toContain(part);
     for (const part of excludes) expect(html).not.toContain(part);
+  });
+
+  // Prose hands a component back to the layer below its own rules by its root class, from a list core's build
+  // writes (insights spec correction 52); a part whose outermost element carries none of them would be drawn by
+  // prose's element rules inside a prose box (spec correction 93).
+  const roots = proseRoots();
+  it.each(CLIENT)('%s has a component root prose hands back on its outermost element', (_name, element) => {
+    const classes = outermostClasses(renderToString(element));
+    if (classes === null) return;
+    expect(
+      classes.filter((name) => roots.has(name)),
+      classes.join(' '),
+    ).not.toEqual([]);
   });
 
   // React Aria makes a collator while a Select renders, for its closed type-to-select, and while a ComboBox

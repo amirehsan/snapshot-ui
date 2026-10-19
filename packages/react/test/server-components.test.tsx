@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { outermostClasses, proseRoots } from './prose-roots';
 
 // React as a server component sees it: the react-server build, which has no state, no effects, no refs
 // and no context. A component that calls one of those throws here, as it does in a Next.js server tree.
@@ -231,6 +232,20 @@ describe('the static components in a server component', () => {
 
   it.each(STATIC)('%s renders to plain markup', (_name, element, markup) => {
     expect(renderToStaticMarkup(element)).toBe(markup);
+  });
+
+  // Its outermost element carries a root prose hands back to the layer below, so it draws as it does anywhere
+  // inside a prose box (insights spec correction 93).
+  const roots = proseRoots();
+  it.each(STATIC)('%s has a component root prose hands back on its outermost element', (_name, element) => {
+    const classes = outermostClasses(renderToStaticMarkup(element));
+    if (classes === null) return;
+    // Prose and ProseScroll are prose's own box and region, which its rules are written for.
+    if (classes.includes('prose') || classes.includes('prose-scroll')) return;
+    expect(
+      classes.filter((name) => roots.has(name)),
+      classes.join(' '),
+    ).not.toEqual([]);
   });
 
   it('passes a class and attributes through, so a server page can shape them', () => {

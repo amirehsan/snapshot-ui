@@ -43,12 +43,32 @@ export function rootsOf(css) {
 }
 
 /**
- * Every component root in `dir` (src/components), sorted, prose.css left out.
+ * Parts that a component renders as its own outermost element, so the hyphen rule above would leave them out:
+ * a field's Label, Description, FieldCounter or Changed chip placed alone, a Checkbox's row, a Shortcut,
+ * ToastRegion's status host, SidePanelLayout, and an empty UploadTray's status. The react package's server tests
+ * render every component and fail one whose outermost element carries no class of the built list (insights spec
+ * correction 93), so a part missing here is caught there.
+ */
+const OUTERMOST_PARTS = [
+  'checkbox-field',
+  'field-changed',
+  'field-counter',
+  'field-description',
+  'field-label',
+  'menu-item-shortcut',
+  'side-panel-layout',
+  'toast-status-host',
+  'upload-tray-status',
+];
+
+/**
+ * Every component root in `dir` (src/components), and the parts a component renders outermost, sorted,
+ * prose.css left out.
  * @param {string} dir
  * @returns {string[]}
  */
 export function componentRoots(dir) {
-  const roots = new Set();
+  const roots = new Set(OUTERMOST_PARTS);
   for (const file of readdirSync(dir)) {
     if (!file.endsWith('.css') || file === 'prose.css') continue;
     for (const root of rootsOf(readFileSync(path.join(dir, file), 'utf8'))) roots.add(root);

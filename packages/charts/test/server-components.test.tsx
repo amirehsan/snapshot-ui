@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { outermostClasses, proseRoots } from './prose-roots';
 
 // React as a server component sees it: the react-server build, which has no state, no effects, no refs
 // and no context. A component that calls one of those throws here, as it does in a Next.js server tree.
@@ -78,6 +79,18 @@ const STATIC: [name: string, element: ReactElement, contains: string[], excludes
 ];
 
 describe('the static charts in a server component', () => {
+  // Its outermost element carries a root prose hands back to the layer below, so a chart in an article draws as
+  // it does anywhere (insights spec corrections 52 and 93).
+  const roots = proseRoots();
+  it.each(STATIC)('%s has a component root prose hands back on its outermost element', (_name, element) => {
+    const classes = outermostClasses(renderToStaticMarkup(element));
+    if (classes === null) return;
+    expect(
+      classes.filter((name) => roots.has(name)),
+      classes.join(' '),
+    ).not.toEqual([]);
+  });
+
   it.each(STATIC)('%s renders under the server build', (_name, element, contains, excludes) => {
     const html = renderToStaticMarkup(element);
     for (const text of contains) expect(html).toContain(text);

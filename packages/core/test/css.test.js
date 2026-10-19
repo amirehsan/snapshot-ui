@@ -10592,7 +10592,7 @@ describe('src/components/prose.css', () => {
     expect(layer.trimEnd().endsWith('}')).toBe(true);
   });
 
-  it('writes every component root into the built rule, collected from the component stylesheets', async () => {
+  it('writes the roots collected from the component stylesheets into the built rule', async () => {
     const { componentRoots, PARTS_PLACEHOLDER } = await import('../scripts/component-roots.js');
     const roots = componentRoots(new URL('../src/components', import.meta.url).pathname);
     const list = `:is(${roots.map((root) => `.${root}`).join(', ')})`;
@@ -10601,35 +10601,9 @@ describe('src/components/prose.css', () => {
       expect(built, file).not.toContain(PARTS_PLACEHOLDER);
       expect(built, file).toContain(`.prose ${list}, .prose ${list} * { all: revert-layer; }`);
     }
-    // Every stylesheet's component is covered: the first class it styles is a root or a part of one.
-    for (const file of components.filter((name) => name !== 'prose.css')) {
-      const rules = stripComments(read(`src/components/${file}`));
-      const first = /\.([a-z][a-z0-9-]*)/.exec(rules.slice(rules.indexOf('{') + 1))?.[1] ?? '';
-      expect(
-        roots.some((root) => first === root || first.startsWith(`${root}-`)),
-        `${file}: .${first}`,
-      ).toBe(true);
-    }
-    // The compound parts the review found reached by prose, by name.
-    for (const root of [
-      'breadcrumbs',
-      'page-header',
-      'pagination',
-      'calendar',
-      'data-table',
-      'upload-list',
-      'tab-bar',
-      'bar-chart',
-      'line-chart',
-      'link',
-      'heading',
-      'copy',
-      'eyebrow',
-      'kbd',
-      'card',
-    ]) {
-      expect(roots, root).toContain(root);
-    }
+    // Whether each component's markup carries one of these is tested where the components render: the react
+    // and charts packages' prose-roots tests render every part's server markup against the built list (spec
+    // correction 93).
     expect(roots).not.toContain('prose');
     expect(roots).not.toContain('not-prose');
   });
