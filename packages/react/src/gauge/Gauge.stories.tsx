@@ -95,11 +95,17 @@ async function paintsAt(element: SVGPathElement, points: readonly [number, numbe
   const svg = element.ownerSVGElement;
   if (!svg) throw new Error('No svg');
   const [, , width = 0, height = 0] = (svg.getAttribute('viewBox') ?? '').split(' ').map(Number);
+  // Plain numbers in user units: Firefox reads inline dashes back with units and commas, "0px, 276.46px".
+  const dasharray = element.style.strokeDasharray
+    .split(/[ ,]+/)
+    .map((part) => String(parseFloat(part)))
+    .join(' ');
+  const dashoffset = String(parseFloat(element.style.strokeDashoffset));
   const source =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${String(width)} ${String(height)}" ` +
     `width="${String(width)}" height="${String(height)}"><path d="${element.getAttribute('d') ?? ''}" ` +
     `fill="none" stroke="black" stroke-linecap="round" stroke-width="${element.getAttribute('stroke-width') ?? ''}" ` +
-    `stroke-dasharray="${element.style.strokeDasharray}" stroke-dashoffset="${element.style.strokeDashoffset}"/></svg>`;
+    `stroke-dasharray="${dasharray}" stroke-dashoffset="${dashoffset}"/></svg>`;
   const image = new Image(width, height);
   image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
   await image.decode();
@@ -513,7 +519,8 @@ export const ArcLength: Story = {
         // A whole ring is one dash of its length, solid; every other arc is a dash a stroke shorter than its share.
         const drawn = form === 'ring' && share === 1 ? dashOf(arc) : dashOf(arc) + stroke;
         await expect(Math.abs(drawn - share * length), moment).toBeLessThan(1);
-        await expect(arc.style.strokeDashoffset, moment).toBe(String(-stroke / 2));
+        // Firefox reads the inline offset back with its unit, "-4px".
+        await expect(parseFloat(arc.style.strokeDashoffset), moment).toBe(-stroke / 2);
       }
       // The full value closes a ring at its top, with no notch between two caps, and covers a semicircle's track
       // to both its ends.

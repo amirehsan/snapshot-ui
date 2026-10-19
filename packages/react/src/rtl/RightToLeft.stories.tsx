@@ -1560,7 +1560,8 @@ export const GaugeMirrored: Story = {
     for (const scope of [semicircle, ring]) {
       const value = find(scope, '.gauge-figure-value');
       await expect(getComputedStyle(value).direction).toBe('ltr');
-      await expect(characterBox(value, 0).right).toBeLessThanOrEqual(characterBox(value, 1).left + 0.5);
+      // The figure is set tight, so its glyph boxes overlap; the first starts left of the second.
+      await expect(characterBox(value, 0).left).toBeLessThan(characterBox(value, 1).left);
       // The label starts at the right of its text block, the start of a right-to-left line.
       await expect(getComputedStyle(find(scope, '.gauge-text')).direction).toBe('rtl');
     }
