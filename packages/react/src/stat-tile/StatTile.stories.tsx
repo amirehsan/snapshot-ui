@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { ReactElement } from 'react';
-import { expect } from 'storybook/test';
+import { expect, waitFor } from 'storybook/test';
 import { Card, CardBody } from '../card';
 import { nestedCardPixels } from '../stories/corner';
 import { paint, tokenColor } from '../stories/paint';
@@ -31,7 +31,7 @@ const meta = {
   title: 'Components/StatTile',
   component: StatTile,
   // Padded, not centered: a tile is a size container and takes no width from its content, so it needs a block
-  // to fill. Centered, the canvas shrinks to its content and every tile to its 16rem stand-in width.
+  // to fill. Centered, the canvas shrinks to its content and every tile to its padding, its intrinsic width 0.
   parameters: { layout: 'padded' },
   args: {
     label: 'Spending',
@@ -181,27 +181,108 @@ export const LinkedHover: Story = {
   },
 };
 
+/** The page scrolls sideways by this many px: 0 when everything fits the screen. */
+const sideways = (): number => document.documentElement.scrollWidth - document.documentElement.clientWidth;
+
 /**
- * Three tiles in a flex row, each sized from its content as a flex item is: every tile is the 16rem it names in
- * place of the content a size container does not give, with its narrow layout, where it was its padding wide.
+ * Three tiles in a wrapping flex row, each given its width by the row as an app gives it, `flex: 1 1 16rem`:
+ * a size container takes none from its content and its intrinsic width is 0, so a tile left to size itself
+ * would be its padding wide. Each fills its share, at least 16rem, with its narrow layout and its figure whole.
  */
 export const InAFlexRow: Story = {
   tags: ['no-visual'],
   render: (args) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-inset)' }}>
-      <StatTile {...args} style={undefined} />
-      <StatTile {...args} label="Income" style={undefined} />
-      <StatTile {...args} label="Saved" style={undefined} />
+      <StatTile {...args} style={{ flex: '1 1 16rem' }} />
+      <StatTile {...args} label="Income" style={{ flex: '1 1 16rem' }} />
+      <StatTile {...args} label="Saved" style={{ flex: '1 1 16rem' }} />
     </div>
   ),
   play: async ({ canvasElement }) => {
     const tiles = [...canvasElement.querySelectorAll('.stat-tile')];
     await expect(tiles).toHaveLength(3);
-    for (const tile of tiles) await expect(tile.getBoundingClientRect().width).toBe(16 * 16);
+    for (const tile of tiles)
+      await expect(tile.getBoundingClientRect().width).toBeGreaterThanOrEqual(16 * 16);
     // The figure is never broken: one line.
     const value = part(canvasElement, 'stat-tile-value');
     await expect(value.getBoundingClientRect().height).toBeLessThan(
       parseFloat(getComputedStyle(value).lineHeight) * 1.5,
     );
+  },
+};
+
+/** A screen 320px wide, the narrowest the consumer supports, for the play that looks for sideways scroll. */
+const NARROW = {
+  globals: { viewport: { value: 'narrow' } },
+  parameters: {
+    viewport: { options: { narrow: { name: 'Narrow phone', styles: { width: '320px', height: '640px' } } } },
+  },
+} as const;
+
+/**
+ * On a 320px phone a tile takes its width from its holder, never from a stand-in (spec corrections 34 and 51): in
+ * a `flex: 1` wrapper, in a `1fr` grid and two up in a `1fr 1fr` grid, each in a wrapper as an app's section is,
+ * the page never scrolls sideways, and each tile fills its holder, in every shape and density. A stand-in of 16rem made two tiles 512px wide in a 288px
+ * column. A figure is never broken, so one wider than its tile still runs past it: two up, each figure is short.
+ */
+export const OnANarrowPhone: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: NARROW.globals,
+  parameters: { ...NARROW.parameters, layout: 'padded' },
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
+      <div data-wrapper="flex" style={{ display: 'flex' }}>
+        <div style={{ flex: 1 }}>
+          <StatTile {...args} style={undefined} />
+        </div>
+      </div>
+      <div data-wrapper="grid" style={{ display: 'grid', gridTemplateColumns: '1fr' }}>
+        <div>
+          <StatTile {...args} style={undefined} />
+        </div>
+      </div>
+      <div
+        data-wrapper="two-up"
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-part)' }}
+      >
+        {/* Two up at 320px a tile holds about 74px of content: a figure of three characters, as an app sizes it. */}
+        <div>
+          <StatTile {...args} label="Income" value="$84" change={undefined} style={undefined} />
+        </div>
+        <div>
+          <StatTile {...args} label="Saved" value="$62" change={undefined} style={undefined} />
+        </div>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(window.innerWidth).toBe(320);
+    const root = document.documentElement;
+    const { shape, density } = root.dataset;
+    try {
+      for (const [nextShape, nextDensity] of [
+        ['rounded', 'comfortable'],
+        ['rounded', 'compact'],
+        ['soft', 'comfortable'],
+        ['square', 'comfortable'],
+      ] as const) {
+        root.dataset.shape = nextShape;
+        root.dataset.density = nextDensity;
+        await waitFor(() => expect(sideways()).toBeLessThanOrEqual(0), { timeout: 5000 });
+        const tiles = [...canvasElement.querySelectorAll<HTMLElement>('.stat-tile')];
+        await expect(tiles).toHaveLength(4);
+        for (const tile of tiles) {
+          const holder = tile.parentElement?.getBoundingClientRect();
+          if (!holder) throw new Error('No holder');
+          const box = tile.getBoundingClientRect();
+          // Inside the page, and filling its holder: never collapsed to its padding.
+          await expect(box.right).toBeLessThanOrEqual(root.clientWidth);
+          await expect(box.width).toBeGreaterThanOrEqual(holder.width - 1);
+        }
+      }
+    } finally {
+      root.dataset.shape = shape ?? 'rounded';
+      root.dataset.density = density ?? 'comfortable';
+    }
   },
 };

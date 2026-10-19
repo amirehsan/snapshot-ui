@@ -4452,10 +4452,12 @@ describe('src/components/stat-tile.css', () => {
     expect(rules()).not.toContain('box-shadow');
   });
 
-  it('names a 16rem tile as its width in a parent that sizes it from its content', () => {
-    expect(blockAfter(rules(), '.stat-tile {')).toContain(
-      'contain-intrinsic-inline-size: calc(16rem - 2 * var(--spacing-card) - 2px);',
-    );
+  it('is a size container with an intrinsic inline size of 0, never a stand-in width', () => {
+    const tile = blockAfter(rules(), '.stat-tile {');
+    expect(tile).toContain('container: stat-tile / inline-size;');
+    // The library's rule (spec corrections 30, 34 and 51): a stand-in width is also the tile's min-content width,
+    // which a flex: 1 item or a 1fr track keeps as its narrowest, so two tiles scrolled a 320px page sideways.
+    expect(tile).toContain('contain-intrinsic-inline-size: 0;');
   });
 
   it('makes a tile in a card concentric with it, with the frame edge', () => {
@@ -8096,11 +8098,13 @@ describe('src/components/data-table.css', () => {
     ).toContain('color: inherit;');
   });
 
-  it('gives the table a width in a parent that sizes it from its content', () => {
+  it('is a size container with an intrinsic inline size of 0 that takes the room its siblings leave', () => {
     const root = blockAfter(rules(), '.data-table {');
+    // The library's rule (spec corrections 30, 34 and 51): a stand-in width is also the table's min-content
+    // width, which a flex: 1 item or a 1fr track keeps as its narrowest, so two tables scrolled a 320px page.
     for (const declaration of [
       'container: data-table / inline-size;',
-      'contain-intrinsic-inline-size: 12rem;',
+      'contain-intrinsic-inline-size: 0;',
       'flex: 1 1 0;',
       'min-inline-size: 0;',
       'max-block-size: max-content;',
