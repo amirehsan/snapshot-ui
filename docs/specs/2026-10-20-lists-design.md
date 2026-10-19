@@ -1,6 +1,6 @@
 # Lists: ReorderList, TreeBuilder, AvatarGroup, MasterDetailList and TransferList: design
 
-Status: draft for the owner's review. Each open question of section 19 has a recommended answer; everything else is decided here and listed in section 15. No plan exists yet; each batch gets its own plan once the owner rules.
+Status: approved on 2026-10-20. Written for the owner's review with a recommended answer to each open question of section 19; the owner took every recommendation, all 31, and section 23 records the rulings. Everything else is decided here and listed in section 15. The plan for batch 10a is `docs/plans/2026-10-20-ordering.md`; 10b gets its own plan when 10a has merged.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document takes the phase 4 rows of the parent spec's catalog, "Lists and data", that are not yet built or taken: ReorderList, SortableList, TreeBuilder, MasterDetailList, TransferList and the AvatarGroup half of "Avatar, AvatarGroup". Repeater, the seventh row, moved to batch 7 ("Settings", `docs/specs/2026-10-19-settings-design.md`, section 6) and is not in this phase. The design authority remains `docs/design-system.md`.
 Released before this: `main` is at 0.8.0 (batch 5, "Accounts") as this is written. In flight: batch 6 ("Insights", 0.9.0), batch 7 ("Settings", 0.10.0), the choices batch (0.11.0) and the inputs phase (batches 9a, 9b and 9c, `docs/specs/2026-10-20-inputs-design.md`). This phase takes Repeater's focus and announcement rules and PanelLayout's two faces from batch 7, and the corner helpers every batch since 0.6.1 uses; it takes nothing from batch 9. Section 2 recommends two batches, 10a and 10b, each a minor release.
 
@@ -1305,9 +1305,45 @@ The `Dragging`, `KeyboardDrag` and `DropInto` stories are captured mid-drag by t
   - 10b: `avatar-group.md`, `master-detail-list.md`, `transfer-list.md`; a charts patch.
 - **Release notes,** short, per batch: what each part is for, its value's shape, the one prop most apps need (`hasSwitches`, `moveControls`, `maxDepth`, `editor`, `max`, `createItem`, `keepsDetailsMounted`, `onSearchChange`, `maxChosen`, `allowsReordering`), that SortableList is ReorderList with `hasSwitches`, and "Upgrade `@snapshot-ui/core` and `@snapshot-ui/react` together".
 
+## 23. Owner rulings (owner, 2026-10-20)
+
+The owner approved this spec on 2026-10-20 and took every recommendation of section 19, all 31 open questions, as written. Each ruling names the open question it settles; batch 10a's plan (`docs/plans/2026-10-20-ordering.md`) names the task that builds rulings 1 to 16 and 31, and 10b's plan will name the rest.
+
+1. **The split and the order** (open question 1). Two batches, each a minor release: 10a Ordering (ReorderList, TreeBuilder), then 10b Choosing (AvatarGroup, MasterDetailList, TransferList).
+2. **ReorderList and SortableList** (open question 2). One part, ReorderList, with `hasSwitches` and `isLocked`; no SortableList export.
+3. **The name** (open question 3). ReorderList.
+4. **Move controls by default** (open question 4). Visible Move up and Move down buttons on each row; `moveControls="menu"` for long or narrow lists.
+5. **Keyboard shortcuts** (open question 5). Alt+Arrow Up and Down move a row; Alt+Arrow Right and Left indent and outdent in TreeBuilder, in the drawn direction; React Aria's keyboard drag stays.
+6. **Locked rows in the middle** (open question 6). They hold their places, and other rows skip over them.
+7. **The position line after drags** (open question 7). Said after every move, drags included, after React Aria's "Drop complete."
+8. **Persian drag strings** (open question 8). React Aria's fallback is accepted, documented and reported upstream; the library's own words cover every move.
+9. **The grab cursor** (open question 9). `grab` and `grabbing` on the handle, a recorded deviation from the one cursor rule.
+10. **ReorderList's value** (open question 10). The rows themselves, `value` and `onChange(rows)`.
+11. **Form names for an order** (open question 11). One hidden input per row under `name`, in order, read with `getAll`; `enabledName` for the rows switched on.
+12. **TreeBuilder's form value** (open question 12). Ids depth first under `name`, parent ids under `parentName`, rebuilt by the exported `buildTree`.
+13. **TreeBuilder's default depth** (open question 13). 3.
+14. **Where TreeBuilder's editor goes** (open question 14). A region of the part, beside the tree from 48rem of its box and under it below.
+15. **Removing a tree node** (open question 15). Ask when it has children; never for a leaf.
+16. **Where an indented node lands** (open question 16). The last child of the sibling above it.
+17. **MasterDetailList's selection** (open question 17). A press, Enter or Space selects; the arrows only move focus.
+18. **Focus after a selection on the wide face** (open question 18). It stays on the row.
+19. **MasterDetailList on a narrow box** (open question 19). PanelLayout's two faces with Back, driven by state.
+20. **Remove in MasterDetailList** (open question 20). Always asks with ConfirmDialog.
+21. **Mounted details** (open question 21). Only the selected record's detail by default; `keepsDetailsMounted` for a plain form that posts every record.
+22. **TransferList's layout** (open question 22). The chosen pane first in the DOM and at the inline start; the panes paired from 44rem.
+23. **Choosing in TransferList** (open question 23). Tick in the available list, Remove in the chosen list, no buttons between.
+24. **Who searches** (open question 24). The part filters `items` unless the app passes `onSearchChange`.
+25. **The chosen list's order** (open question 25). Unordered by default; `allowsReordering` for an ordered value.
+26. **Paging in TransferList** (open question 26). The library's Pagination under the available list.
+27. **Too few chosen** (open question 27). Validity on submit through a visually hidden input, focus to the search field on `invalid`.
+28. **An interactive "+3"** (open question 28). Static, with every hidden name in its accessible name.
+29. **AvatarGroup's `max`** (open question 29). 4, drawing all when only one would hide.
+30. **Dragging between TransferList's lists** (open question 30). No.
+31. **Reordering in Repeater** (open question 31). Not in this phase.
+
 ## Owner actions
 
-1. **Review this spec** and rule on the open questions of section 19.
+1. **Review this spec** and rule on the open questions of section 19. Done on 2026-10-20: section 23.
 2. **Merge the settings, choices and inputs batches first,** each with its Version Packages pull request, so 10a starts from their release and the baseline count is known; 10a's ReorderList and MasterDetailList rest on batch 7's Repeater and PanelLayout rules.
 3. **Devices and screen readers before each release:** VoiceOver on macOS and iOS, NVDA on Windows and TalkBack on Android for the questions marked "to verify" in sections 7 to 12, above all React Aria's keyboard and screen reader drag and the position line after it (risk R4); a drag by touch on an iPhone and an Android phone (risk R1); Alt+Arrow keys on Windows (risk R6); Windows' contrast themes for the drop indicator, the selected record and a ticked item. Recorded in each Appendix B section; until then "not yet verified".
 4. **Docker, for the baselines,** once after the last task of each batch.
