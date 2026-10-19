@@ -1,5 +1,6 @@
 import {
   Badge,
+  Button,
   Card,
   CardActions,
   CardBody,
@@ -14,8 +15,9 @@ import type { ReactElement } from 'react';
 /**
  * The list is the card's body. Its last row's Add ends the card, inside its bottom end curve, so the row takes
  * the card's corner inset under it and Add keeps its place on the column's end edge: 7px more in Rounded,
- * nothing more in Soft and Square. The list does this itself. The header's Edit, in CardActions, stands clear
- * of the top end curve the same way: the header's top grows by the corner inset.
+ * nothing more in Soft and Square. The list does this itself. The header's Edit, a secondary Button in
+ * CardActions, stands clear of the top end curve the same way: beside the title it moves down by the corner
+ * inset less the card's padding. An app opens its form from it, as the card page's Actions example does.
  */
 export default function DescriptionListCard(): ReactElement {
   return (
@@ -29,9 +31,9 @@ export default function DescriptionListCard(): ReactElement {
           Details
         </CardTitle>
         <CardActions>
-          <Link href="#edit-details" aria-label="Edit details">
+          <Button variant="secondary" aria-label="Edit details">
             Edit
-          </Link>
+          </Button>
         </CardActions>
       </CardHeader>
       <CardBody>

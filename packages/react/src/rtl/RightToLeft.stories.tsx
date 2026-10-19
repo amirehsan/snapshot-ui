@@ -1461,6 +1461,7 @@ export const DescriptionListMirrored: Story = {
  * start at the right.
  */
 export const CardActionsMirrored: Story = {
+  tags: ['webkit', 'firefox'],
   render: () => {
     const card = (width: string) => (
       <div style={{ width }}>

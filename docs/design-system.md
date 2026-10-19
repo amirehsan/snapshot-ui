@@ -881,7 +881,7 @@ And the controls that move, by the corner inset (below):
 | Drawer | the footer's content | down | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
 | a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
 | Card | the list's first or last row's controls | down | the row's block padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
-| Card | CardActions | down | the header's top grows by the corner inset less the card's padding, its first row a control high | 7px, 19px compact | as before | as before |
+| Card | CardActions beside the title | down | the actions and the title take a top margin of the corner inset less the card's padding; under 24rem nothing moves | 7px, 19px compact | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
 | SaveBar | its buttons | in | each end pads to the corner inset, as the bulk bar's | 23px each side | 16px and 11px | 16px and 8px |
 | Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
@@ -2693,59 +2693,72 @@ in the contrast gate. Ink measures 17.84 in light and 17.42 in dark, and slate
 the collapsible card.
 
 **Actions in a plain card's header.** The first consumer's Details card puts
-Edit, and Merge and Remove beside it, in its header, as GOV.UK's summary card
-puts its card-level actions there. `CardActions` is a `div.card-actions`
-placed after `CardTitle` and `CardNote`, so the reading order is the title,
-the note, then the actions; it adds no role, and the app names each button
-("Edit details"). It is static. Six things were derived (accounts plan, spec
-corrections 8 to 13).
+Edit in its header, with Merge and Remove in a More menu beside it, as GOV.UK's
+summary card puts its card-level actions there. `CardActions` is a
+`div.card-actions` placed after `CardTitle` and `CardNote`, so the reading
+order is the title, the note, then the actions; it adds no role, and the app
+names each button ("Edit details"). It is static. Seven things were derived
+(accounts plan, spec corrections 8 to 17).
 
+- **At most two visible actions.** Polaris, Primer and Atlassian keep a card
+  or a page header to one or two visible actions and put the rest in a menu.
+  Three buttons did not fit beside a 12rem title in a card under 566px, so
+  they wrapped among themselves and parted the note from its title. For three
+  or more, show the first and a More menu.
 - **A grid, not CollapsibleCard's flex row.** CollapsibleCard wraps its title
   and note in a heading block and lets a flex row wrap the actions under it.
   A plain header holds the title and the note as siblings, and a flex row of
   three siblings cannot put the actions beside the title and the note under
   it, then the actions under the note, without reordering them. So a header
   holding actions is a one-column grid and a size container, `card-header`:
-  from 24rem of its content box the actions take a second column on the first
-  row, at the end; under it nothing places them and they follow the note at
-  the inline start, the reading order. A container query cannot style the
-  container it measures, so the header's own columns never change: the second
-  column is an implicit one that exists only while the actions are in it, so
-  a narrow header keeps no gap for it. 24rem is the width at which a 12rem
-  title, the peer step and an Edit and a More button fit side by side.
+  from 24rem of its content box the actions take a second column at the end,
+  spanning the title's row and, when there is one, the note's, so a second
+  line of actions never pushes the note down; under it nothing places them
+  and they follow the note at the inline start, the reading order. A
+  container query cannot style the container it measures, so the header's
+  own columns never change: the second column is an implicit one that exists
+  only while the actions are in it, so a narrow header keeps no gap for it.
+  24rem is the width at which a 12rem title, the peer step and an Edit and a
+  More button fit side by side.
 - **The title keeps 12rem beside them.** CollapsibleCard's heading never goes
   under 12rem (192px holds a typical title on one line). Here the actions'
-  column is capped at `calc(100cqi - 12rem - var(--spacing-peer))`, so between
-  24rem and the width all of them need, they wrap among themselves at the end
-  and the title keeps its 12rem. A single button wider than what is left takes
-  its own width (`min-inline-size: min-content`) and narrows the title rather
-  than overlapping it. Edit, Merge and Remove (75, 90 and 103px with two part
-  steps between, 284px) share one line from a 500px header, a 566px card.
-- **The first row is at least a control high, not exactly.** A row fixed at
-  40px let a title that wraps to two lines (57.6px) run into the note's row.
-  The row is `minmax(var(--size-control), auto)`, its items start-aligned, the
-  actions at least a control high with their buttons centred, and the title's
-  first line centred on a control's height by a top margin of
+  column is capped at `calc(100cqi - 12rem - var(--spacing-peer))`, so two
+  buttons that do not fit wrap among themselves at the end, as Edit and
+  Remove do in a 450px card, and the note still follows the title by the
+  header's 8px gap. A single button wider than what is left takes its own
+  width (`min-inline-size: min-content`) and narrows the title rather than
+  overlapping it. A button's label wraps inside it (`white-space: normal`),
+  so a long one never widens the card.
+- **Level with the title's first line.** Beside the title the actions are
+  start-aligned and at least a control high, and the title's first line is
+  centred on a control's height by a top margin of
   `(var(--size-control) - 1lh) / 2`, 5.6px and 3.6px compact. So the actions
-  are level with the title's first line, within a pixel, however many lines it
-  takes, and with a one-line title the row is 40px, the title centred in it.
-- **The corner, down.** The actions sit at the card's top end: 1 + 32px from
-  the top and the end in Rounded comfortable, inside the 40px curve on both
-  axes. The record's rule moves a control down where a column stands under it,
-  and the actions end on the body's column edge, so while the header holds
-  actions its block-start padding grows by
-  `calc(var(--holder-corner-inset) - var(--holder-pad))`, as UploadTray's panel
-  moves its header's trailing button: 7px in Rounded and 19px compact, 0 in
-  Soft and Square. The actions' top is then 1 + 32 + 7 = 40px from the card's
+  are level with the title's first line, within a pixel, however many lines
+  it takes. No row has a fixed height: a row fixed at 40px let a title that
+  wraps to two lines (57.6px) run over the note.
+- **The corner, down, and only where the corner is.** Beside the title the
+  actions sit at the card's top end: 1 + 32px from the top and the end in
+  Rounded comfortable, inside the 40px curve on both axes. The record's rule
+  moves a control down where a column stands under it, and the actions end on
+  the body's column edge, so inside the 24rem query the actions take a top
+  margin of `calc(var(--holder-corner-inset) - var(--holder-pad))` and the
+  title the same plus its centring margin: 7px in Rounded and 19px compact, 0
+  in Soft and Square, as UploadTray's panel moves its header's trailing
+  button. The first control's top is then 1 + 32 + 7 = 40px from the card's
   outer edge in Rounded comfortable and 1 + 20 + 19 = 40px compact, at or past
-  the 39px corner inset, and the title moves down with the row, level with
-  them. The padding grows under 24rem too, since a container cannot query
-  itself; there it only adds 7px above the title.
-- **A stand-in width.** A size container takes no width from its content, so
-  a card that takes the width of what it holds, in a flex row or a centred
-  column, would shrink to its padding with only a header. The header names
-  `contain-intrinsic-inline-size: 20rem`, under the 24rem switch, as the list
-  and StatTile name theirs.
+  the 39px corner inset. Under 24rem the actions follow the note, far from
+  the corner, so nothing moves: the title and the note sit where a header
+  without actions draws them. Actions with no title or note above them, the
+  header's first child, take the same top margin at every width.
+- **An intrinsic inline size of 0.** The library's rule for every size
+  container: its `contain-intrinsic-inline-size` is 0, and a holder that takes
+  the width of its content gives the part a width. A size container takes no
+  width from what it holds, and any stand-in it names becomes its holder's
+  min-content: 20rem on this header made the card 386px, which scrolled a
+  320px page 82px sideways from a `flex: 1` wrapper, and 484px with two cards
+  side by side. So a card that holds only a header with actions and sits
+  where it takes the width of its content, in a flex row, is given a width by
+  the app.
 - **CollapsibleCard is not matched.** Every rule names `.card > .card-header`,
   and CollapsibleCard's header sits in `.card-disclosure`, so its header, its
   flex row and its baselines are unchanged (plan open question 2). Its header
@@ -2753,12 +2766,15 @@ corrections 8 to 13).
   whose header gave no width would shrink to its padding.
 
 Measured in Chromium, WebKit and Firefox by the stories `ActionsWrap` (a long
-title on a phone, every shape and density: the actions under the note at the
-start, overlapping nothing, one radius on each button, none in a corner
-curve) and `ActionsClearOfCorner` (a 40rem card, every shape and density: one
-line level with the title's first line, on the body's end edge, the top 40px
-from the edge in Rounded and the padding alone in Soft and Square). Screen
-readers are not yet verified (owner action 3).
+title on a phone, every shape and density: the title and the note where a card
+without actions has them, the actions under the note at the start, nothing
+overlapped, one radius on each control, none in a corner curve),
+`ActionsClearOfCorner` (a 40rem card, every shape and density: one line level
+with the title's first line, on the body's end edge, 40px from the edge in
+Rounded by their margins), `ActionsInTheMiddle` (cards 450px to 566px: the
+note follows the title by the header's gap), `ActionsAlone` and
+`ActionsOnANarrowPhone` (320px: no sideways scroll, a long label wrapped in its
+button). Screen readers are not yet verified (owner action 3).
 
 ## CollapsibleCard
 
