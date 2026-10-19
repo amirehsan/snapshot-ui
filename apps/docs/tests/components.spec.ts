@@ -1858,9 +1858,13 @@ test('a month grid in a flex: 1, a 1fr or a two-up wrapper keeps a 320px page fr
       const box = await grids.nth(index).boundingBox();
       if (!box) throw new Error(`No grid in the ${wrapper} wrapper`);
       expect(box.x + box.width, wrapper).toBeLessThanOrEqual(columnBox.x + columnBox.width + 0.5);
-      // Its cells are drawn, not collapsed to nothing.
+      // Not collapsed: the grid fills its holder, and its cells are drawn.
+      const holder = await grids
+        .nth(index)
+        .evaluate((element) => element.parentElement?.getBoundingClientRect().width ?? 0);
+      expect(box.width, wrapper).toBeGreaterThanOrEqual(holder - 1);
       const cell = await grids.nth(index).locator('.month-grid-cell').first().boundingBox();
-      expect(cell?.width ?? 0, wrapper).toBeGreaterThan(2);
+      expect(cell?.width ?? 0, wrapper).toBeGreaterThan(0);
     }
   }
   expect(await sideways(page)).toBe(0);

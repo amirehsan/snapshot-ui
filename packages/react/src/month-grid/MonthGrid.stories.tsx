@@ -289,9 +289,9 @@ export const CellsInTheCorner: Story = {
 };
 
 /**
- * On a 320px phone a size container takes its width from its holder, never from a stand-in (spec corrections 34 and 45):
- * in a `flex: 1` wrapper, in a `1fr` grid and two up in a `1fr 1fr` grid, every grid stays inside the page and
- * draws its cells, and nothing scrolls sideways, in every shape. In three engines.
+ * On a 320px phone a size container takes its width from its holder, never from a stand-in (spec corrections 34
+ * and 45): in a `flex: 1` wrapper, in a `1fr` grid and two up in a `1fr 1fr` grid, every grid fills its holder,
+ * stays inside the page and draws its cells, and nothing scrolls sideways, in every shape. In three engines.
  */
 export const OnANarrowPhone: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -311,16 +311,12 @@ export const OnANarrowPhone: Story = {
         data-wrapper="two-up"
         style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-part)' }}
       >
-        <Card aria-label="Everyday Visa">
-          <CardBody>
-            <MonthGrid {...args} aria-label="Everyday Visa" label={undefined} hasLegend={false} />
-          </CardBody>
-        </Card>
-        <Card aria-label="Travel Mastercard">
-          <CardBody>
-            <MonthGrid {...args} aria-label="Travel Mastercard" label={undefined} hasLegend={false} />
-          </CardBody>
-        </Card>
+        <div>
+          <MonthGrid {...args} aria-label="Everyday Visa" label={undefined} hasLegend={false} />
+        </div>
+        <div>
+          <MonthGrid {...args} aria-label="Travel Mastercard" label={undefined} hasLegend={false} />
+        </div>
       </div>
     </div>
   ),
@@ -342,9 +338,10 @@ export const OnANarrowPhone: Story = {
           const holder = wrapper.getBoundingClientRect();
           await expect(box.right).toBeLessThanOrEqual(holder.right + 1);
           await expect(box.left).toBeGreaterThanOrEqual(holder.left - 1);
-          // A grid that collapsed would draw no cells: each is a few pixels wide at the least.
+          // Not collapsed: the grid fills its holder, and every cell is drawn.
+          await expect(box.width).toBeGreaterThanOrEqual(holder.width - 1);
           for (const cell of parts(grid, 'month-grid-cell'))
-            await expect(cell.getBoundingClientRect().width).toBeGreaterThan(2);
+            await expect(cell.getBoundingClientRect().width).toBeGreaterThan(0);
           await expect(box.right).toBeLessThanOrEqual(document.documentElement.clientWidth);
         }
       },
