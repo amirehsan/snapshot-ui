@@ -10,7 +10,14 @@ icon: List
 
 A list of named values: each row is a term, its value and, if it has any, the row's actions. The list's own width decides the layout, not the screen's. From 30rem of the list's width the terms sit in a column beside their values, and under it each term stands above its value. A list beside a side panel or in a narrow card stacks on a wide screen, and every list stacks on a phone.
 
-The list is a size container, so it takes its width from its column, never from its content: give it a width in a flex row or a centered column, where it would otherwise be 20rem wide.
+The list is a size container, so it takes its width from its column, never from its content: give it a width in a flex row or a centered column, where it would otherwise be 16rem wide. That 16rem is also its narrowest, so a flex or grid item that holds the list needs `min-width: 0`, as `flex: 1` and `1fr` give it none, or the item stays 16rem wide and can push a phone's page sideways.
+
+```css
+.details {
+  flex: 1;
+  min-width: 0;
+}
+```
 
 `layout` holds one layout at every width: `horizontal` or `stacked`. The term column is 30% of the row, which holds "Routing number" on one line from 30rem; set `--description-list-term-size` on the list for a wider or narrower one. Rows follow density, and a rule separates each row from the next.
 
@@ -22,7 +29,7 @@ The list is a size container, so it takes its width from its column, never from 
 
 ## Actions
 
-`actions` puts a row's controls in a cell of their own after the value: at the end of the row side by side, and at the end of the term's line when stacked. Name each control with its term, as GOV.UK names its "Change" links: it shows "Edit" and reads "Edit Nickname", with `aria-label` or visually hidden words. The name starts with the word it shows, so voice control finds it.
+`actions` puts a row's controls in a cell of their own after the value: at the end of the row side by side, and at the end of the term's line when stacked. Name each control with its term, as GOV.UK names its "Change" links: it shows "Edit" and reads "Edit Nickname", with `aria-label` or visually hidden words. The name starts with the word it shows, so voice control finds it. A value that is missing takes no action beside "Not set": pass a link to add it as `emptyValue`, so it stands where the value would.
 
 A status is a value too. Put its word in a [Badge](/docs/components/badge) and the fix in a link after it: a bank feed that failed to sync is a failure, so its Badge is `error`, and an account that is open is neutral, never `success`, which means a save.
 
@@ -34,7 +41,7 @@ A status is a value too. Put its word in a [Badge](/docs/components/badge) and t
 
 ## Empty, long and numeric values
 
-A value that is absent, `null`, `false` or an empty string shows "Not set" in slate. Pass `emptyValue` for your own words, or a link to add the value. `0` is a value.
+A value that is absent, `null`, `false`, `true`, an empty string, or an array of nothing but those shows "Not set" in slate. Pass `emptyValue` for your own words, or a link to add the value, as GOV.UK's summary list does: the link stands where the value would, and the row has no action of its own. `0` is a value.
 
 A long value wraps, and a long unbroken word, such as an IBAN or an email address, breaks anywhere inside its column. Nothing is cut off with an ellipsis.
 
@@ -48,7 +55,7 @@ Set `isNumeric` on amounts, limits, percentages and the last four digits of a ca
 
 ## In a card
 
-Make the list a card's body for an account's details. A row whose controls would sit in the card's rounded corner, the last row of a list that ends the card or the first of one that starts it, grows by the card's corner inset, so its controls stand clear of the curve and stay on the column's end edge. The list does this itself: 7px more in Rounded, nothing in Soft and Square.
+Make the list a card's body for an account's details. A row whose controls would sit in the card's rounded corner, the last row of a list that ends the card or the first of one that starts it, grows by the card's corner inset, so its controls stand clear of the curve and stay on the column's end edge. The list does this itself: 7px more in Rounded, nothing in Soft and Square. It does so in a card's body, directly in a card, and at the end of a [collapsible card](/docs/components/collapsible-card)'s body. Stacked, the last row's controls stand on the term's line at the row's top, clear of the curve, so the row keeps its spacing.
 
 <Preview name="description-list-card" />
 
@@ -70,11 +77,7 @@ import { DescriptionList, DescriptionListItem, Link } from '@snapshot-ui/react';
   </DescriptionListItem>
   <DescriptionListItem
     term="Nickname"
-    actions={
-      <Link href="/accounts/visa/nickname" aria-label="Add a nickname">
-        Add
-      </Link>
-    }
+    emptyValue={<Link href="/accounts/visa/nickname">Add a nickname</Link>}
   />
 </DescriptionList>;
 ```

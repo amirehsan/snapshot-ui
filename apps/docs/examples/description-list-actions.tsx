@@ -14,11 +14,20 @@ import { useState, type ReactElement } from 'react';
 type Field = 'Name' | 'Nickname';
 
 export default function DescriptionListActions(): ReactElement {
-  const [values, setValues] = useState<Record<Field, string>>({ Name: 'Everyday Visa', Nickname: '' });
+  const [values, setValues] = useState<Record<Field, string>>({
+    Name: 'Everyday Visa',
+    Nickname: 'Travel card',
+  });
   // The field stays set while the dialog leaves, so its title does not change on the way out.
   const [field, setField] = useState<Field>('Name');
   const [isOpen, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
+
+  const open = (row: Field): void => {
+    setDraft(values[row]);
+    setField(row);
+    setOpen(true);
+  };
 
   /** An Edit for one row, shown as "Edit" and named with the term, so it reads "Edit Nickname". */
   const edit = (row: Field): ReactElement => (
@@ -26,9 +35,7 @@ export default function DescriptionListActions(): ReactElement {
       variant="secondary"
       aria-label={`Edit ${row}`}
       onPress={() => {
-        setDraft(values[row]);
-        setField(row);
-        setOpen(true);
+        open(row);
       }}
     >
       Edit

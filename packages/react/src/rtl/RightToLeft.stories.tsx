@@ -1410,6 +1410,8 @@ export const EmptyStateMirrored: Story = {
  * column's right edge, the start of a right-to-left line (`match-parent`).
  */
 export const DescriptionListMirrored: Story = {
+  // match-parent is the standard name in Firefox and the prefixed one in WebKit and Chromium: all three engines.
+  tags: ['webkit', 'firefox'],
   render: () => (
     <I18nProvider locale="fa-IR">
       <div dir="rtl" lang="fa" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
@@ -1443,15 +1445,14 @@ export const DescriptionListMirrored: Story = {
     // The actions end the row at its left, after the value.
     const actions = rect(find(nickname, '.description-list-actions'));
     await expectSameEdge(actions.left, rect(nickname).left);
-    await expect(actions.right).toBeLessThanOrEqual(
-      rect(find(nickname, '.description-list-value')).left + 0.5,
-    );
+    await expect(actions.right).toBeLessThanOrEqual(rect(find(nickname, '.description-list-value')).left + 1);
     // The figure keeps its order and starts at the value column's right edge.
     const value = find(limit, '.description-list-value');
     await expect(value).toHaveTextContent('$5,000.00');
     await expect(getComputedStyle(value).direction).toBe('ltr');
     await expectSameEdge(lastText(value).right, rect(value).right);
-    await expect(characterBox(value, 0).right).toBeLessThanOrEqual(characterBox(value, 1).left + 0.5);
+    // 1px for an engine's rounding: WebKit's glyph boxes for "$" and "5" overlap by a pixel.
+    await expect(characterBox(value, 0).right).toBeLessThanOrEqual(characterBox(value, 1).left + 1);
   },
 };
 
