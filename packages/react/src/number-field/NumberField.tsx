@@ -3,11 +3,14 @@
 import { Minus, Plus } from 'lucide-react';
 import {
   useContext,
+  useEffect,
   useId,
   useMemo,
   useState,
   type ClipboardEvent,
   type CSSProperties,
+  type FocusEvent,
+  type FocusEventHandler,
   type KeyboardEvent,
   type ReactElement,
   type ReactNode,
@@ -201,6 +204,53 @@ function guardKeys(onKeyDown: AppKeyDown): (event: KeyboardEvent<HTMLElement>) =
   };
 }
 
+/**
+ * React Aria commits the typed text on blur inside flushSync (react-aria 3.53.1, useNumberField.mjs:60-76), which
+ * React refuses inside its own commit: a blur the browser sends while React draws, as when the focused field is
+ * disabled or focus is moved from a layout effect, made React log "flushSync was called from inside a lifecycle
+ * method". One microtask later the commit runs after React's, or at once after a browser's own blur, before the
+ * next element's focus event and before a following click. The event is held on an object whose prototype is the
+ * event, with its target and currentTarget, which React clears after dispatch and React Aria's useFocus compares.
+ */
+const deferBlur = (
+  onBlur: FocusEventHandler<HTMLInputElement> | undefined,
+): FocusEventHandler<HTMLInputElement> | undefined =>
+  onBlur === undefined
+    ? undefined
+    : (event) => {
+        const held = Object.create(event, {
+          target: { value: event.target },
+          currentTarget: { value: event.currentTarget },
+        }) as FocusEvent<HTMLInputElement>;
+        queueMicrotask(() => {
+          onBlur(held);
+        });
+      };
+
+/**
+ * A focused input that React disables while it draws loses focus inside React's commit, and React Aria then
+ * commits from a focusout listener of its own on the input (useSyntheticBlurEvent, interactions/utils.mjs:41-105),
+ * which the deferred onBlur does not reach. The browser's own focusout on a disabled input is stopped at the input,
+ * before that listener and React's, and sent again one microtask later, after the commit.
+ */
+function useDeferredDisabledBlur(input: HTMLInputElement | null): void {
+  useEffect(() => {
+    if (!input) return;
+    const hold = (event: globalThis.FocusEvent): void => {
+      if (!event.isTrusted || event.target !== input || !input.disabled) return;
+      event.stopImmediatePropagation();
+      const relatedTarget = event.relatedTarget;
+      queueMicrotask(() => {
+        input.dispatchEvent(new globalThis.FocusEvent('focusout', { bubbles: true, relatedTarget }));
+      });
+    };
+    input.addEventListener('focusout', hold, true);
+    return () => {
+      input.removeEventListener('focusout', hold, true);
+    };
+  }, [input]);
+}
+
 interface InputPartProps {
   inputMode: 'decimal' | 'numeric';
   /** The input's text before hydration, or undefined from the render after. */
@@ -221,12 +271,14 @@ function NumberFieldInput({
 }: InputPartProps): ReactElement {
   const context = useContext(InputContext) as (RACInputProps & { ref?: Ref<HTMLInputElement> }) | null;
   // React Aria's input props (useNumberField.mjs:216-227) less its localized role description, which differs by
-  // locale and would break the face; the keyboard and, before hydration, the value are set here in both passes.
+  // locale and would break the face, with its blur handler deferred; the keyboard and, before hydration, the
+  // value are set here in both passes.
   const own = useMemo(() => {
     const rest = { ...context };
     delete rest['aria-roledescription'];
     return {
       ...rest,
+      onBlur: deferBlur(rest.onBlur),
       inputMode,
       'aria-describedby': cx(rest['aria-describedby'], describedBy) || undefined,
       ...(face === undefined ? {} : { value: face }),
@@ -280,6 +332,7 @@ function NumberFieldControl({
   // The input element, held in state through a callback ref so the sign button can focus it.
   const [inputElement, setInputElement] = useState<HTMLInputElement | null>(null);
   const ref = useMemo(() => mergeRefs(inputRef, setInputElement), [inputRef]);
+  useDeferredDisabledBlur(inputElement);
   const numberValue = state?.numberValue ?? Number.NaN;
   const isEmpty = Number.isNaN(numberValue);
   // The face is written from the value by integer arithmetic, in ASCII digits with no grouping (ruling 1).

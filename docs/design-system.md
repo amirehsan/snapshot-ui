@@ -7429,18 +7429,51 @@ pulls in, the money arithmetic and its face, the input context, the two
 guards, the sign toggle, the hidden input and the two warnings, and the
 rule rounds up to 2.5 kB and adds 0.5 kB. The guards calling the app's
 handlers, the sign's clamp and validation and the precision warning
-bring it to 2.66 kB, still under the limit, which is unchanged.
+bring it to 2.66 kB, still under the limit, which is unchanged. The
+deferred blur commit of the settings batch takes the entry from 2.76 kB
+to 2.94 kB, still under the limit, and 26.43 kB with React Aria counted.
 
-**A known React Aria warning** (patch 0.6.1). React Aria's `useNumberField`
-commits the typed text on blur inside `flushSync`. A blur the browser sends
-while React commits, as when an app moves focus from a layout effect, or
-disables or removes the focused field, makes React log "flushSync was
-called from inside a lifecycle method", in every mode and at any value,
-with React Aria's own NumberField too, in development only: the commit
-still lands a render later. The library cannot reach the call without
-taking React Aria's blur from it, which would drop the announcement of the
-corrected value, so it is left to React Aria and kept as a test expected
-to fail, which reports when an update fixes it.
+**React Aria's blur commit, deferred** (patch 0.6.1, fixed in the settings
+batch). React Aria's `useNumberField` commits the typed text on blur inside
+`flushSync` (react-aria 3.53.1, `useNumberField.mjs:60-76`), so it can read
+the formatted text back and announce it. A blur the browser sends while
+React commits, as when an app moves focus from a layout effect or disables
+the focused field, made React log "flushSync was called from inside a
+lifecycle method", in every mode and at any value, with React Aria's own
+NumberField too, in development only. The library now defers React Aria's
+blur handler one microtask: `NumberFieldInput` replaces the input context's
+`onBlur` with one that holds the event's `target` and `currentTarget` on an
+object whose prototype is the event, and calls React Aria's handler with it
+in `queueMicrotask`. After a browser's own blur the microtask runs at once,
+before the next element's focus and before a following click, so the value
+commits before a press or a submit reads it; after a blur inside React's
+commit it runs once the commit is done, as React's message advises. The
+commit and its announcement are kept. A disabled field is the second path:
+React Aria commits from a `focusout` listener of its own on the input
+(`useSyntheticBlurEvent`, `interactions/utils.mjs:41-105`), which the
+deferred `onBlur` does not reach, so the field stops the browser's own
+`focusout` on a disabled input at the input, in the capture phase, and
+sends it again a microtask later (settings plan, spec correction 2). An
+app's `onBlur` and `onFocusChange(false)` run a microtask later too, and a
+`requestSubmit()` from script in the same task as a blur reads the form
+before the commit, which the page and the changeset say.
+
+The consumer's reproduction (settings spec, ruling 6), a plain field with
+`minValue={0}` in a Dialog titled "Add a plan", 0 typed, then Save or the
+next field pressed, is a unit test and a play in Chromium, WebKit and
+Firefox with Playwright's own pointer and keys. Neither press logged the
+warning on the old code in jsdom or in Chromium; the same Dialog whose Save
+disables its fields while it saves, reached by Enter, did, in Chromium, and
+so did focus moved from a layout effect, in jsdom and Chromium (settings
+plan, spec correction 1). The plays are `ZeroInADialogThenSave`,
+`ZeroInADialogThenNextField`, `ZeroInADialogThenEnter`, `SubmitAfterBlur`
+and `FocusMovedInALayoutEffect`; the test once expected to fail now passes.
+A focused field disabled before its text commits still drops that text, as
+React Aria's own field does (its listener holds the commit of the render
+that focused it); that is React Aria's, and not changed here. The same
+deferral belongs in React Aria's `commitAndAnnounce`; the owner files the
+issue (settings plan, owner action 4), and the deferral leaves when a React
+Aria release has it.
 
 ## Calendar
 

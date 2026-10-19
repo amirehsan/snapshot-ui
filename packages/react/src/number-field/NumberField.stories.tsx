@@ -1,11 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import type { ComponentType } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ComponentType, type ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
-import { expect, fn, waitFor } from 'storybook/test';
+import { expect, fn, spyOn, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
+import { Dialog, DialogTrigger } from '../dialog';
 import { focusOn } from '../stories/focus';
 import { tokenColor, tokenPixels, washColor } from '../stories/paint';
+import { TextField } from '../text-field';
 import { NumberField } from './NumberField';
 
 /**
@@ -435,5 +437,251 @@ export const HoverButton: Story = {
       await expect(getComputedStyle(increase).backgroundColor).toBe(washColor());
     });
     await expect(getComputedStyle(increase).color).toBe(tokenColor('--color-ink'));
+  },
+};
+
+/** A press and typing: the browser's own through Playwright in a Vitest story run, Storybook's in its UI. */
+interface Presses {
+  click: (element: Element) => Promise<void>;
+  keyboard: (text: string) => Promise<void>;
+}
+
+/**
+ * Playwright's real pointer and keys, which run the browser's own focus moves and event order, in a Vitest story
+ * run; the simulated ones the play was given in Storybook's own UI. `vitest/browser` is a module Vitest serves
+ * only in its browser mode, so it is imported only there, as `stories/resize.ts` does.
+ */
+async function realPresses(simulated: Presses): Promise<Presses> {
+  if (!(globalThis as { __vitest_browser__?: unknown }).__vitest_browser__) return simulated;
+  // Untyped on purpose: the module's types declare its own matchers globally, which the unit tests' types refuse.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- a literal would load those types
+  const browser = (await import('vitest/browser' as string)) as { userEvent: Presses };
+  return browser.userEvent;
+}
+
+/**
+ * Listens to console.error and console.warn while a play runs; React logs its flushSync warning with
+ * console.error, in development. `restore` goes in the play's `finally`.
+ */
+function listenToTheConsole(): { logged: () => string[]; restore: () => void } {
+  const error = spyOn(console, 'error');
+  const warn = spyOn(console, 'warn');
+  return {
+    logged: () => [...error.mock.calls, ...warn.mock.calls].map((call) => call.map(String).join(' ')),
+    restore: () => {
+      error.mockRestore();
+      warn.mockRestore();
+    },
+  };
+}
+
+/** Five seconds, where a busy runner is slow to open or close a Dialog. */
+const LONG = { timeout: 5000 };
+
+/**
+ * The consumer's reproduction (the settings spec, section 24, ruling 6): a plain NumberField with `minValue={0}`,
+ * controlled as the consumer's forms are, in a Dialog titled "Add a plan" whose Save submits the form, saves the
+ * value and closes. With `disablesWhileSaving`, Save also disables the fields while it saves, as a form waiting on
+ * a server does, and closes a moment later.
+ */
+function AddAPlan({ disablesWhileSaving = false }: { disablesWhileSaving?: boolean }): ReactElement {
+  const formId = useId();
+  const [payments, setPayments] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState('nothing');
+  return (
+    <div style={{ display: 'grid', gap: 12, justifyItems: 'start' }}>
+      <DialogTrigger>
+        <Button variant="secondary">Add a plan</Button>
+        <Dialog
+          title="Add a plan"
+          actions={
+            <Button type="submit" form={formId}>
+              Save
+            </Button>
+          }
+        >
+          {({ close }) => (
+            <form
+              id={formId}
+              onSubmit={(event) => {
+                event.preventDefault();
+                setSaved(payments === null ? 'empty' : String(payments));
+                if (!disablesWhileSaving) {
+                  close();
+                  return;
+                }
+                setIsSaving(true);
+                setTimeout(close, 100);
+              }}
+            >
+              <NumberField
+                label="Payments made"
+                minValue={0}
+                value={payments}
+                onChange={setPayments}
+                isDisabled={isSaving}
+              />
+              <TextField label="Name" isDisabled={isSaving} />
+            </form>
+          )}
+        </Dialog>
+      </DialogTrigger>
+      <p style={{ margin: 0 }}>{`Saved: ${saved}`}</p>
+    </div>
+  );
+}
+
+/** Opens Add a plan with a press and types 0 in Payments made, focused directly: the story is about leaving it. */
+async function typeZeroInTheDialog(canvasElement: HTMLElement, presses: Presses): Promise<HTMLElement> {
+  await presses.click(within(canvasElement).getByRole('button', { name: 'Add a plan' }));
+  const page = within(document.body);
+  const field = await page.findByRole('textbox', { name: 'Payments made' }, LONG);
+  await waitFor(() => expect(page.getByRole('dialog')).not.toHaveAttribute('data-entering'), LONG);
+  await focusOn(field);
+  await presses.keyboard('0');
+  await waitFor(() => expect(field).toHaveValue('0'));
+  return field;
+}
+
+/**
+ * The consumer's case: 0 typed in a Dialog, then Save pressed. The value saves, the Dialog closes and nothing is
+ * logged. Run in Chromium, WebKit and Firefox, with the browser's own pointer and keys.
+ */
+export const ZeroInADialogThenSave: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <AddAPlan />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const heard = listenToTheConsole();
+    try {
+      const presses = await realPresses(userEvent);
+      await typeZeroInTheDialog(canvasElement, presses);
+      await presses.click(within(document.body).getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(within(document.body).queryByRole('dialog')).toBeNull(), LONG);
+      await expect(canvas.getByText('Saved: 0')).toBeVisible();
+      await expect(heard.logged()).toEqual([]);
+    } finally {
+      heard.restore();
+    }
+  },
+};
+
+/** The consumer's case again, pressing the next field instead: the field shows 0 and nothing is logged. */
+export const ZeroInADialogThenNextField: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <AddAPlan />,
+  play: async ({ canvasElement, userEvent }) => {
+    const heard = listenToTheConsole();
+    try {
+      const presses = await realPresses(userEvent);
+      const field = await typeZeroInTheDialog(canvasElement, presses);
+      const name = within(document.body).getByRole('textbox', { name: 'Name' });
+      await presses.click(name);
+      await waitFor(() => expect(name).toHaveFocus());
+      await expect(field).toHaveValue('0');
+      await expect(heard.logged()).toEqual([]);
+    } finally {
+      heard.restore();
+    }
+  },
+};
+
+/**
+ * The consumer's Dialog with a Save that disables its fields while it saves, reached by Enter in the field: the
+ * browser blurs the focused field as React disables it, inside React's commit, where React Aria's flushSync made
+ * React log its warning before the field deferred it. The value saves and nothing is logged.
+ */
+export const ZeroInADialogThenEnter: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <AddAPlan disablesWhileSaving />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const heard = listenToTheConsole();
+    try {
+      const presses = await realPresses(userEvent);
+      await typeZeroInTheDialog(canvasElement, presses);
+      await presses.keyboard('{Enter}');
+      await waitFor(() => expect(within(document.body).queryByRole('dialog')).toBeNull(), LONG);
+      await expect(canvas.getByText('Saved: 0')).toBeVisible();
+      await expect(heard.logged()).toEqual([]);
+    } finally {
+      heard.restore();
+    }
+  },
+};
+
+/** A money field's typed amount commits on the press's blur, before the submit reads the form's FormData. */
+export const SubmitAfterBlur: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: function Render() {
+    const [sent, setSent] = useState('nothing');
+    return (
+      <form
+        style={{ display: 'grid', gap: 12, justifyItems: 'start' }}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const amount = new FormData(event.currentTarget).get('amount');
+          setSent(typeof amount === 'string' ? amount : 'nothing');
+        }}
+      >
+        <NumberField label="Amount" money={{ symbol: '$' }} name="amount" />
+        <Button type="submit">Send</Button>
+        <p style={{ margin: 0 }}>{`Sent: ${sent}`}</p>
+      </form>
+    );
+  },
+  play: async ({ canvas, userEvent }) => {
+    const presses = await realPresses(userEvent);
+    const input = canvas.getByRole('textbox', { name: 'Amount' });
+    await focusOn(input);
+    await presses.keyboard('12.50');
+    await waitFor(() => expect(input).toHaveValue('12.50'));
+    await presses.click(canvas.getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(canvas.getByText('Sent: 1250')).toBeVisible(), LONG);
+  },
+};
+
+/** Enter saves, and the app moves focus to Done from a layout effect, inside React's commit. */
+function SavesOnEnter(): ReactElement {
+  const [saved, setSaved] = useState(false);
+  const done = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (saved) done.current?.focus();
+  }, [saved]);
+  return (
+    <div style={{ display: 'grid', gap: 12, justifyItems: 'start' }}>
+      <NumberField
+        label="Guests"
+        value={0}
+        minValue={0}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') setSaved(true);
+        }}
+      />
+      <button ref={done} type="button">
+        Done
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Focus moved off the field from a layout effect, the unit tests' case: the blur comes inside React's commit,
+ * where React Aria's flushSync made React log before the field deferred it. Done holds focus and nothing is
+ * logged.
+ */
+export const FocusMovedInALayoutEffect: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <SavesOnEnter />,
+  play: async ({ canvas, userEvent }) => {
+    const heard = listenToTheConsole();
+    try {
+      const presses = await realPresses(userEvent);
+      await focusOn(canvas.getByRole('textbox', { name: 'Guests' }));
+      await presses.keyboard('{Enter}');
+      await waitFor(() => expect(canvas.getByRole('button', { name: 'Done' })).toHaveFocus());
+      await expect(heard.logged()).toEqual([]);
+    } finally {
+      heard.restore();
+    }
   },
 };
