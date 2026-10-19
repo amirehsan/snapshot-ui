@@ -269,6 +269,24 @@ describe('BarChart links', () => {
       expect(navigate).toHaveBeenCalledExactlyOnceWith('#transactions?merchant=shell');
     });
 
+    it("leaves a link of the app's own in the status content to the app, never routed", () => {
+      const navigate = vi.fn();
+      const { container } = render(
+        <Chart
+          status="error"
+          navigate={navigate}
+          statusContent={
+            <a href="https://help.example.com/charts" target="_blank" rel="noreferrer">
+              Get help
+            </a>
+          }
+        />,
+      );
+      // The app's link opens its own way, here a new tab, and the chart's router never hears it.
+      expect(fireEvent.click(within(container).getByRole('link', { name: 'Get help' }))).toBe(true);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
     it("keeps a mouse's context menu, which opens the link in a new tab", () => {
       const { container } = render(<Chart />);
       fireEvent.pointerDown(hitAt(container, 0), { pointerType: 'mouse', button: 2 });

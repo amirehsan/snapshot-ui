@@ -616,8 +616,9 @@ export function BarChart(props: BarChartProps): ReactElement {
       (stopAt(group, event.target) ??
         (isPointer && hrefOf(activeStop) === undefined ? activeStop : undefined));
     if (pressed) onBarPress?.(pressed.band, pressed.series);
+    // The chart's own links only: one the app passed in `statusContent` opens its own way, a new tab included.
     const link = (event.target as Element).closest('a[href]');
-    if (navigate && link) {
+    if (navigate && link && !link.closest('.bar-chart-state')) {
       event.preventDefault();
       navigate(link.getAttribute('href') ?? '');
     }

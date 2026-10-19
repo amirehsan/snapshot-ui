@@ -172,7 +172,7 @@ Give a bar an `href` to open what it stands for, such as its transactions for th
 - A new tab: the band is a real link, so a click with Command, Control or Shift, a middle click and the context menu open it in a new tab or window as any link does. The chart routes none of them.
 - Touch: a tap follows the link. A hold of half a second or more shows the readout and follows nothing, and the platform's link menu stays away so the readout can be read.
 - Keys: the chart stays one tab stop, moved by the arrows. Enter follows the focused bar's link, and Space does nothing, so it never scrolls the page from under the chart.
-- Your router: the charts carry no React Aria, so they cannot read your `RouterProvider`. In a client component, pass its `navigate` to the chart as well, and a plain click or Enter on a bar or a table link goes through it; a modified click stays the browser's.
+- Your router: the charts carry no React Aria, so they cannot read your `RouterProvider`. In a client component, pass its `navigate` to the chart as well, and a plain click or Enter on a bar or a table link goes through it; a modified click stays the browser's, and a link of your own in `statusContent` opens its own way.
 - A press: `onBarPress(category, series)` is called with the band's and the series' index on every press, a link's before it is followed. A bar with no `href` in a chart with `onBarPress` is a button, which Enter and Space press, and a press anywhere in its band presses it.
 
 <Preview name="bar-chart-links" />

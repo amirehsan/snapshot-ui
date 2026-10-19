@@ -11174,6 +11174,10 @@ read the app's `RouterProvider`: `navigate`, the same function the app
 gives the provider, routes a plain click or Enter on a bar, a target or
 a table link, with React Aria's rule for which clicks a router takes, a
 primary click with no modifier key; any other click stays the browser's.
+It routes the chart's own links only: a link the app passes in
+`statusContent`, such as a help page in a new tab, was routed too,
+which dropped its target, and now opens its own way (the review of
+e137645, correction 104).
 `onBarPress(category, series)` hears every press, a link's before it is
 followed (corrections 99 and 100).
 
