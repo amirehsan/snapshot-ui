@@ -1886,7 +1886,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // A static part: the track with its role and values is in the server's HTML.
   'progress-bar': ['.stage .progress-bar-track[role="progressbar"]'],
   // Rendered from Markdown by react-markdown in a server component, the wide table in its region.
-  prose: ['.stage .prose h2', '.stage .prose-scroll table'],
+  prose: ['.stage .prose h2', '.stage .prose-scroll table', '.stage .prose .bar-chart .bar-chart-bar'],
   'radio-group': ['.stage .radio-indicator'],
   // The bar, its sentence and its buttons, and the polite status host, mounted empty before any status.
   'save-bar': ['.stage .save-bar', '.stage .save-bar-status[role="status"]'],
@@ -1969,7 +1969,8 @@ test('model output on the prose page has no links or images', async ({ page }) =
   for (const text of ['Read the full report', 'October at a glance']) {
     const stage = page.locator('.stage').filter({ hasText: text });
     await expect(stage).toHaveCount(1);
-    await expect(stage.locator('a, img, script, b')).toHaveCount(0);
+    // A footnote's links stay, within the page; nothing else links or loads.
+    await expect(stage.locator('a:not([href^="#"]), img, script, b')).toHaveCount(0);
     expect(await stage.locator('.prose-unlinked').count(), text).toBeGreaterThan(0);
     expect(await stage.locator('.prose-image').count(), text).toBeGreaterThan(0);
   }

@@ -2144,6 +2144,22 @@ export const ProseMirrored: Story = {
     await expect(getComputedStyle(pre).textAlign).toBe('left');
     const block = rect(find(canvasElement, 'article'));
     await expectSameEdge(rect(pre).right, block.right);
+    // An amount in a Persian sentence, in its left-to-right isolate, keeps its sign before its figures.
+    const walker = document.createTreeWalker(find(canvasElement, 'ul'), NodeFilter.SHOW_TEXT);
+    let amount: Text | null = null;
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.textContent?.includes('$1,250.00')) amount = node as Text;
+    }
+    if (!amount) throw new Error('The guide names an amount');
+    const figure: Text = amount;
+    const at = figure.data.indexOf('$1,250.00');
+    const box = (index: number): DOMRect => {
+      const range = document.createRange();
+      range.setStart(figure, index);
+      range.setEnd(figure, index + 1);
+      return range.getBoundingClientRect();
+    };
+    await expect(box(at).right).toBeLessThanOrEqual(box(at + 1).left + 0.5);
     await expectSameEdge(rect(find(canvasElement, 'p')).right, block.right);
   },
 };

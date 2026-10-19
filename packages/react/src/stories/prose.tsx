@@ -33,7 +33,16 @@ export const PICTURE: string =
  * its alt text, a table scrolls in a named region, and a code block takes focus so it scrolls by keys.
  */
 export const modelOutput = (tableLabel: string): Components => ({
-  a: ({ children }) => <span className="prose-unlinked">{children}</span>,
+  // A link within the page, such as a footnote's, stays a link; any other becomes its text.
+  a: ({ children, ...link }) => {
+    // react-markdown's tree node is not an attribute of the link.
+    delete link.node;
+    return link.href?.startsWith('#') ? (
+      <a {...link}>{children}</a>
+    ) : (
+      <span className="prose-unlinked">{children}</span>
+    );
+  },
   img: ({ alt }) => <span className="prose-image">{alt}</span>,
   table: ({ children }) => (
     <ProseScroll aria-label={tableLabel}>

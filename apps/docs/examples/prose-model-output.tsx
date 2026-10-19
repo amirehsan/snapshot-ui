@@ -11,9 +11,7 @@ import { ModelMarkdown } from './prose-markdown';
 export default function ProseModelOutput(): ReactElement {
   return (
     <Prose as="article" style={{ width: '100%' }}>
-      <ModelMarkdown tableLabel="Spending by category, September and October, table">
-        {MODEL_OUTPUT}
-      </ModelMarkdown>
+      <ModelMarkdown>{MODEL_OUTPUT}</ModelMarkdown>
     </Prose>
   );
 }

@@ -27,11 +27,12 @@ date,category,amount
 
 /**
  * A report as a model writes it, with what the reader must never follow or load: a link, a bare address, an
- * image with alt text and one with none, HTML inline and as a block, and a table of six columns.
+ * image with alt text and one with none, HTML inline and as a block, a table of six columns, and a GFM footnote,
+ * whose in-page links the map keeps.
  */
 export const MODEL_OUTPUT = `## October at a glance
 
-You spent **$3,284.10** in October. Most of the drop came from *eating out*, while groceries rose a little.
+You spent **$3,284.10** in October. Most of the drop came from *eating out*, while groceries rose a little.[^refunds]
 
 See [your transactions](https://example.com/transactions) for every entry, or https://example.com/reports/2026/october/spending-by-category?view=table&compare=september for the full table.
 
@@ -48,6 +49,8 @@ The chart above ![](https://example.com/pixel.gif) is drawn from the same figure
 | Eating out | $431.00 | $286.90 | -$144.10 | 9% | $300.00 |
 | Transport | $214.60 | $198.30 | -$16.30 | 6% | $250.00 |
 | Utilities | $176.20 | $181.75 | +$5.55 | 6% | $200.00 |
+
+[^refunds]: Refunds are counted in the month they arrive.
 `;
 
 /** A weekly coaching note, which the consumer shows in a card. */
@@ -63,7 +66,11 @@ Travel fund: $1,240.00 of $2,000.00
 \`\`\`
 `;
 
-/** The goals guide in Persian, the app's own content, so its link stays a link. */
+/**
+ * The goals guide in Persian, the app's own content, so its link stays a link. The amount sits in a
+ * left-to-right isolate, U+2066 to U+2069: after Persian letters a currency sign before figures is otherwise
+ * drawn on their right.
+ */
 export const GOALS_GUIDE_FA = `## راهنمای هدف‌ها
 
 هدف، مبلغی است که برای چیزی کنار می‌گذارید: یک سفر، صندوق اضطراری یا یک لپ‌تاپ تازه. هر ماه سهمی از درآمدتان به آن می‌رسد و پیشرفتش را *هر هفته* می‌بینید.
@@ -75,9 +82,11 @@ export const GOALS_GUIDE_FA = `## راهنمای هدف‌ها
 3. تاریخی را که می‌خواهید به هدف برسید انتخاب کنید.
 
 - هدف‌ها را از پرونده‌ی \`goals.csv\` هم می‌توانید وارد کنید.
-- مبلغ‌ها از چپ به راست نوشته می‌شوند، مانند $1,250.00 در ماه.
+- مبلغ‌ها از چپ به راست نوشته می‌شوند، مانند \u2066$1,250.00\u2069 در ماه.
 
 > هدفی که تاریخ دارد، زودتر به دست می‌آید.
 
-برای جزئیات بیشتر، [راهنمای بودجه‌ها](/docs/components/prose#persian) را ببینید.
+برای جزئیات بیشتر، [راهنمای بودجه‌ها](/docs/components/prose#persian) را ببینید.[^fresh]
+
+[^fresh]: بودجه‌ها هر ماه از نو شروع می‌شوند.
 `;

@@ -130,6 +130,7 @@ import ProseModelOutput from './prose-model-output';
 import ProsePersian from './prose-persian';
 import ProseReport from './prose-report';
 import ProseWideTable from './prose-wide-table';
+import ProseWithChart from './prose-with-chart';
 import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
@@ -319,6 +320,7 @@ export const examples = {
   'prose-persian': ProsePersian,
   'prose-report': ProseReport,
   'prose-wide-table': ProseWideTable,
+  'prose-with-chart': ProseWithChart,
   'radio-group-basic': RadioGroupBasic,
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,

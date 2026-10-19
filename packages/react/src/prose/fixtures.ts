@@ -7,7 +7,7 @@
 /**
  * A monthly report as a model writes it, with everything a model may send that the reader must not follow or
  * load: a link, a bare address, an image with alt text, one with none, inline and block HTML, and a table of six
- * columns that is wider than a phone.
+ * columns that is wider than a phone; and a GFM footnote, whose in-page links the map keeps.
  */
 export const MONTHLY_REPORT = `## October at a glance
 
@@ -17,7 +17,7 @@ You spent **$3,284.10** in October, $212.00 less than in September. Most of the 
 
 1. Rent, $1,450.00, the same as every month.
 2. Groceries, $612.40, up from $588.15.
-3. Eating out, $286.90, down from $431.00.
+3. Eating out, $286.90, down from $431.00.[^refunds]
 
 - Corner Mart was your most frequent stop, with 14 visits.
 - Two refunds came back: $42.00 from Hardware Hub and $18.50 from City Books.
@@ -41,6 +41,8 @@ The chart above ![](https://example.com/pixel.gif) is drawn from the same figure
 | Utilities | $176.20 | $181.75 | +$5.55 | 6% | $200.00 |
 
 To change a limit, open \`Budgets\` and edit the category.
+
+[^refunds]: Refunds are counted in the month they arrive.
 `;
 
 /** A weekly coaching note, shorter: a heading, a few sentences, steps and a tip. */
@@ -59,7 +61,9 @@ You stayed under your groceries budget for the third week running. Eating out is
 
 /**
  * The goals guide in Persian, the app's own content, so it keeps its real link: numbered steps, emphasis,
- * inline code and a code block that stay left to right, a figure that reads left to right, and a small table.
+ * inline code and a code block that stay left to right, a figure that reads left to right, and a small table. Each
+ * amount sits in a left-to-right isolate, U+2066 to U+2069: after Persian letters a currency sign before figures is
+ * otherwise drawn on their right, as "1,250.00$".
  */
 export const GOALS_GUIDE_FA = `## راهنمای هدف‌ها
 
@@ -74,7 +78,7 @@ export const GOALS_GUIDE_FA = `## راهنمای هدف‌ها
 ### پیش از شروع
 
 - هدف‌ها را از پرونده‌ی \`goals.csv\` هم می‌توانید وارد کنید.
-- مبلغ‌ها از چپ به راست نوشته می‌شوند، مانند $1,250.00 در ماه.
+- مبلغ‌ها از چپ به راست نوشته می‌شوند، مانند \u2066$1,250.00\u2069 در ماه.
 
 \`\`\`
 date,name,amount
@@ -85,8 +89,8 @@ date,name,amount
 
 | ماه | پس‌انداز | باقی‌مانده |
 | --- | ---: | ---: |
-| مهر | $1,250.00 | $3,750.00 |
-| آبان | $1,250.00 | $2,500.00 |
+| مهر | \u2066$1,250.00\u2069 | \u2066$3,750.00\u2069 |
+| آبان | \u2066$1,250.00\u2069 | \u2066$2,500.00\u2069 |
 
 برای جزئیات بیشتر، [راهنمای بودجه‌ها](#budgets) را ببینید.
 `;

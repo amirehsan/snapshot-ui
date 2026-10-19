@@ -237,8 +237,8 @@ describe('src/styles.css', () => {
   });
 
   it('imports prose.css right after the tokens and before every component file', () => {
-    // Prose's rules have one class's specificity, a component's own, so a component inside prose wins on order
-    // even without not-prose (insights spec 8.1; spec correction 35).
+    // First, so a component's own declarations follow prose's (insights spec 8.1; spec correction 35); what keeps
+    // a component whole is the components.prose layer and its last rule (spec correction 49).
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     expect(imported[0]).toBe('prose.css');
     expect(entry.indexOf("'./components/prose.css'")).toBeGreaterThan(entry.indexOf("'../dist/tokens.css'"));
@@ -8640,7 +8640,10 @@ describe('dist/styles.css', () => {
     for (const [, names = ''] of built.matchAll(/@layer\s+([\w\s,.-]+?)\s*[;{]/g)) {
       for (const name of names.split(',').map((s) => s.trim())) if (!order.includes(name)) order.push(name);
     }
-    expect(order).toEqual(['theme', 'base', 'components', 'utilities']);
+    // prose.css's element rules sit in one layer nested in components, under the components' own rules.
+    expect(order.filter((name) => name !== 'prose')).toEqual(['theme', 'base', 'components', 'utilities']);
+    expect(order.indexOf('prose')).toBeGreaterThan(order.indexOf('components'));
+    expect(built).not.toMatch(/^@layer prose/m);
   });
 
   it('is lowered for the browser floor and keeps case-insensitive shape selectors', () => {
@@ -10047,7 +10050,16 @@ describe('src/components/prose.css', () => {
   it('wraps every element rule in :where() with the not-prose guard', () => {
     const selectors = blocks(css()).flatMap(([selector]) => splitTop(selector));
     expect(selectors.length).toBeGreaterThan(40);
-    const roots = ['.prose', '.prose-scroll', '.prose-scroll:focus-visible'];
+    // The box, the region, the registered measure and the one rule that hands components back.
+    const roots = [
+      '.prose',
+      '.prose-scroll',
+      '.prose-scroll:focus-visible',
+      '@property --prose-line',
+      '.prose :is(.prose-parts)',
+      '.prose :is(.prose-parts) *',
+      '.prose :is(.prose-parts) *::marker',
+    ];
     const unshaped = selectors.filter((selector) => !roots.includes(selector) && !SHAPE.test(selector));
     expect(unshaped).toEqual([]);
   });
@@ -10077,7 +10089,7 @@ describe('src/components/prose.css', () => {
     expect(checked).toBeGreaterThanOrEqual(6);
   });
 
-  it('sets the body at 1.6 and text blocks at --prose-measure', () => {
+  it('sets the body at 1.6 and text blocks at one measure, resolved once on the box', () => {
     const source = css();
     expectAll(
       blockAfter(source, at('p, ul, ol, dl, blockquote')),
@@ -10085,11 +10097,19 @@ describe('src/components/prose.css', () => {
       'body',
     );
     expect(
-      blockAfter(source, at('p, li, h1, h2, h3, h4, h5, h6, blockquote, dl, figcaption, [data-footnotes]')),
-    ).toBe(' max-inline-size: var(--prose-measure, 70ch); ');
+      blockAfter(
+        source,
+        at('p, li, h1, h2, h3, h4, h5, h6, blockquote, dl, figcaption, [data-footnotes] > *'),
+      ),
+    ).toBe(' max-inline-size: var(--prose-line); ');
+    // A registered length that inherits, so 70ch is computed in the box's own font and a heading shares it.
+    expect(blockAfter(source, '@property --prose-line {')).toBe(
+      " syntax: '<length> | none'; inherits: true; initial-value: none; ",
+    );
+    expect(blockAfter(source, '.prose {')).toContain('--prose-line: var(--prose-measure, 70ch);');
     // No measure on a table, a code block, a figure or a rule: they take the whole box.
     for (const [selector, body] of blocks(source)) {
-      if (body.includes('--prose-measure')) expect(selector).not.toMatch(/\b(?:table|pre|figure|hr|img)\b/);
+      if (body.includes('--prose-line)')) expect(selector).not.toMatch(/\b(?:table|pre|figure|hr|img)\b/);
     }
     expectAll(
       blockAfter(source, '.prose {'),
@@ -10287,6 +10307,7 @@ describe('src/components/prose.css', () => {
       blockAfter(source, at('.prose-image')),
       [
         'padding: 1px 6px;',
+        'border: 1px solid transparent;',
         'border-radius: var(--radius-micro);',
         'background-color: var(--color-bone);',
         'color: var(--color-slate);',
@@ -10366,13 +10387,119 @@ describe('src/components/prose.css', () => {
     );
     expect(blockAfter(forced, at('blockquote'))).toContain('border-inline-start-color: CanvasText;');
     expect(blockAfter(forced, at('hr, [data-footnotes]'))).toContain('border-block-start-color: CanvasText;');
-    expect(
-      blockAfter(forced, `${at('pre:focus-visible').slice(0, -2)}, .prose-scroll:focus-visible {`),
-    ).toContain('outline-color: Highlight;');
+    expect(blockAfter(forced, at('pre:focus-visible'))).toContain('outline-color: Highlight;');
+    expect(blockAfter(forced, at('.prose-image'))).toContain('border-color: CanvasText;');
+    // The region's ring is the box's own, outside the element layer.
+    const rest = source.slice(source.indexOf('.prose-scroll {'));
+    expect(blockAfter(blockAfter(rest, `${FORCED_COLORS} {`), '.prose-scroll:focus-visible {')).toContain(
+      'outline-color: Highlight;',
+    );
     expectAll(
       blockAfter(blockAfter(source, '@media print {'), at('pre')),
       ['white-space: pre-wrap;', 'overflow-wrap: anywhere;'],
       'print',
     );
+  });
+
+  it('puts every element rule in the components.prose layer, and the gaps between its children outside it', () => {
+    const source = css();
+    const layer = blockAfter(source, '@layer prose {');
+    const before = source.slice(0, source.indexOf('@layer prose {'));
+    const after = source.slice(source.indexOf('@layer prose {') + '@layer prose {'.length + layer.length);
+    // Every element rule is in the layer, under every component's own rules whatever their specificity.
+    expect(before + after).not.toContain('.prose :where(');
+    expect(layer).not.toContain('.prose > :where(');
+    // The gaps between the box's own children stay at the components level, so a component spaced as a block
+    // keeps them, and the region's rules are a part's own.
+    for (const header of [
+      child('* + *'),
+      child('* + :is(h1, h2)'),
+      child(':is(h1, h2, h3, h4, h5, h6) + *'),
+    ]) {
+      expect(before, header).toContain(header);
+    }
+    expect(after).toContain('.prose-scroll {');
+  });
+
+  it('hands every library component inside the box back to the layer below, as its last rule', () => {
+    const source = css();
+    const layer = blockAfter(source, '@layer prose {');
+    expect(blockAfter(layer, '.prose :is(.prose-parts), .prose :is(.prose-parts) * {')).toBe(
+      ' all: revert-layer; ',
+    );
+    expect(blockAfter(layer, '.prose :is(.prose-parts) *::marker {')).toBe(
+      ' color: revert-layer; font-variant-numeric: revert-layer; ',
+    );
+    // Its two members of two classes outrank every element rule of one, so it wins whatever comes after it.
+    expect(layer.trimEnd().endsWith('}')).toBe(true);
+  });
+
+  it('writes every component root into the built rule, collected from the component stylesheets', async () => {
+    const { componentRoots, PARTS_PLACEHOLDER } = await import('../scripts/component-roots.js');
+    const roots = componentRoots(new URL('../src/components', import.meta.url).pathname);
+    const list = `:is(${roots.map((root) => `.${root}`).join(', ')})`;
+    for (const file of ['dist/components/prose.css', 'dist/styles.css']) {
+      const built = closeUp(read(file));
+      expect(built, file).not.toContain(PARTS_PLACEHOLDER);
+      expect(built, file).toContain(`.prose ${list}, .prose ${list} * { all: revert-layer; }`);
+    }
+    // Every stylesheet's component is covered: the first class it styles is a root or a part of one.
+    for (const file of components.filter((name) => name !== 'prose.css')) {
+      const rules = stripComments(read(`src/components/${file}`));
+      const first = /\.([a-z][a-z0-9-]*)/.exec(rules.slice(rules.indexOf('{') + 1))?.[1] ?? '';
+      expect(
+        roots.some((root) => first === root || first.startsWith(`${root}-`)),
+        `${file}: .${first}`,
+      ).toBe(true);
+    }
+    // The compound parts the review found reached by prose, by name.
+    for (const root of [
+      'breadcrumbs',
+      'page-header',
+      'pagination',
+      'calendar',
+      'data-table',
+      'upload-list',
+      'tab-bar',
+      'bar-chart',
+      'line-chart',
+      'link',
+      'heading',
+      'copy',
+      'eyebrow',
+      'kbd',
+      'card',
+    ]) {
+      expect(roots, root).toContain(root);
+    }
+    expect(roots).not.toContain('prose');
+    expect(roots).not.toContain('not-prose');
+  });
+
+  it("keeps footnotes' label for screen readers alone, task lists unmarked and Persian emphasis in bold at 700", () => {
+    const source = css();
+    expectAll(
+      blockAfter(source, at("[data-footnotes] > [class~='sr-only']")),
+      [
+        'position: absolute;',
+        'inline-size: 1px;',
+        'block-size: 1px;',
+        'overflow: hidden;',
+        'clip-path: inset(50%);',
+      ],
+      'label',
+    );
+    expect(blockAfter(source, at("[data-footnotes] > [class~='sr-only'] + *"))).toBe(
+      ' margin-block-start: 0; ',
+    );
+    expect(blockAfter(source, at('.contains-task-list'))).toBe(
+      ' padding-inline-start: 0; list-style: none; ',
+    );
+    expect(blockAfter(source, at(':is(strong, b, h3, h4, h5, h6) :is(em, i):is(:lang(fa), :lang(ar))'))).toBe(
+      ' font-weight: 700; ',
+    );
+    expect(
+      source.indexOf(at(':is(strong, b, h3, h4, h5, h6) :is(em, i):is(:lang(fa), :lang(ar))')),
+    ).toBeGreaterThan(source.indexOf(at(':is(em, i):is(:lang(fa), :lang(ar))')));
   });
 });
