@@ -778,7 +778,7 @@ test.describe('forced colors', () => {
     // color on the page's own color, inside a border of the text color, so the two never merge.
     await visit(page, '/docs/charts/bar-chart');
     const chart = page.getByRole('figure', {
-      name: 'Spending by category, October against September',
+      name: 'Spending by month, this year against last year',
       exact: true,
     });
     await expect(chart).toHaveCount(1);

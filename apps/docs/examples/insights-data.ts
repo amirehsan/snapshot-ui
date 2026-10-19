@@ -112,25 +112,29 @@ export const INCOME_TICKS: { value: number; label: string }[] = [
   { value: 5000, label: '$5,000' },
 ];
 
-/** October by category beside September, the previous period, for the comparison. */
-export const COMPARE_CATEGORIES: string[] = ['Groceries', 'Dining', 'Transport', 'Bills', 'Shopping'];
+/**
+ * Five months of spending beside the same months a year before, the previous period, for the comparison.
+ * Standing up, a phone gives each band about 2rem, so its labels are months, whole in their bands; names as long
+ * as a category's want the bars lying down.
+ */
+export const COMPARE_MONTHS: string[] = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
 
-export const OCTOBER_BY_CATEGORY: BarSeries = {
-  label: 'October',
-  values: [640, 312.45, 188.1, 150, 96.2].map(money),
+export const THIS_YEAR_BY_MONTH: BarSeries = {
+  label: '2026',
+  values: [1820.4, 1765.1, 1910.25, 1688.9, 1745.3].map(money),
 };
 
-/** The previous period: no color of its own, so it takes October's, striped. */
-export const SEPTEMBER_BY_CATEGORY: BarSeries = {
-  label: 'September',
+/** The previous period: no color of its own, so it takes this year's, striped. */
+export const LAST_YEAR_BY_MONTH: BarSeries = {
+  label: '2025',
   look: 'hatched',
-  values: [598.3, 355, 201.75, 150, 142.8].map(money),
+  values: [1702.15, 1810.6, 1655, 1740.8, 1598.3].map(money),
 };
 
 export const COMPARE_TICKS: { value: number; label: string }[] = [
   { value: 0, label: '$0' },
-  { value: 250, label: '$250' },
-  { value: 500, label: '$500' },
+  { value: 1000, label: '$1,000' },
+  { value: 2000, label: '$2,000' },
 ];
 
 /**

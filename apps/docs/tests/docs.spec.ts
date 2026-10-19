@@ -3218,8 +3218,9 @@ test.describe('a date range picker without JavaScript', () => {
 
 test("the bar chart page's comparison draws the previous period hatched and names it", async ({ page }) => {
   await visit(page, '/docs/charts/bar-chart');
+  // Months against the same months a year before: short labels, whole in their bands on a phone.
   const chart = page.getByRole('figure', {
-    name: 'Spending by category, October against September',
+    name: 'Spending by month, this year against last year',
     exact: true,
   });
   await expect(chart).toHaveCount(1);
@@ -3236,20 +3237,20 @@ test("the bar chart page's comparison draws the previous period hatched and name
     ]);
   expect(stripes[0]).toContain('repeating-linear-gradient');
   expect(stripes[1]).toBe('1px');
-  await expect(chart.locator('.bar-chart-legend-item[data-look="hatched"]')).toHaveText('September');
+  await expect(chart.locator('.bar-chart-legend-item[data-look="hatched"]')).toHaveText('2025');
   // Each bar's name says its period, from the table's cells, so the stripes are never the only cue.
-  const september = chart.getByRole('img', { name: 'Groceries September $598.30', exact: true });
-  await expect(september).toHaveCount(1);
-  await expect(september).toHaveAttribute('data-look', 'hatched');
+  const lastYear = chart.getByRole('img', { name: 'Jun 2025 $1,702.15', exact: true });
+  await expect(lastYear).toHaveCount(1);
+  await expect(lastYear).toHaveAttribute('data-look', 'hatched');
   // The keys step from this period's bar to the last one's in the same band, then on to the next band.
-  const first = chart.getByRole('img', { name: 'Groceries October $640.00', exact: true });
+  const first = chart.getByRole('img', { name: 'Jun 2026 $1,820.40', exact: true });
   await expect(first).toHaveAttribute('tabindex', '0');
   await first.focus();
   await page.keyboard.press('ArrowRight');
-  await expect(september).toBeFocused();
-  await expect(chart.locator('.bar-chart-readout .bar-chart-readout-x')).toHaveText('Groceries');
+  await expect(lastYear).toBeFocused();
+  await expect(chart.locator('.bar-chart-readout .bar-chart-readout-x')).toHaveText('Jun');
   await page.keyboard.press('ArrowRight');
-  await expect(chart.getByRole('img', { name: 'Dining October $312.45', exact: true })).toBeFocused();
+  await expect(chart.getByRole('img', { name: 'Jul 2026 $1,765.10', exact: true })).toBeFocused();
 });
 
 test("the bar chart page's stack draws the palette in order and slate on top, and moves along the stack", async ({
