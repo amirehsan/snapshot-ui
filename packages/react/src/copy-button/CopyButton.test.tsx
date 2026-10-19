@@ -33,19 +33,29 @@ interface SentCopy {
   defaultPrevented: boolean;
 }
 
+/** A copy event as the browser sends one when the reader copies, sent to the page, and what was done with it. */
+function sendCopy(): SentCopy {
+  const event = new Event('copy', { bubbles: true, cancelable: true });
+  const setData = vi.fn();
+  Object.defineProperty(event, 'clipboardData', { value: { setData } });
+  document.dispatchEvent(event);
+  return { setData, defaultPrevented: event.defaultPrevented };
+}
+
 /**
  * Gives the document a copy command that sends a copy event, as a browser's does, and answers `answer`. The
- * events it sent are returned, so a test reads what the part put on them.
+ * events it sent are returned, so a test reads what the part put on them. `movesFocus` blurs the focused element
+ * first, as an engine whose caret follows the selection does.
  */
-function copyCommand(answer: boolean): { command: ReturnType<typeof vi.fn>; sent: SentCopy[] } {
+function copyCommand(
+  answer: boolean,
+  { movesFocus = false }: { movesFocus?: boolean } = {},
+): { command: ReturnType<typeof vi.fn>; sent: SentCopy[] } {
   const sent: SentCopy[] = [];
   const command = vi.fn((name: string) => {
     if (name !== 'copy') return false;
-    const event = new Event('copy', { bubbles: true, cancelable: true });
-    const setData = vi.fn();
-    Object.defineProperty(event, 'clipboardData', { value: { setData } });
-    document.dispatchEvent(event);
-    sent.push({ setData, defaultPrevented: event.defaultPrevented });
+    if (movesFocus && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    sent.push(sendCopy());
     return answer;
   });
   Object.defineProperty(document, 'execCommand', { value: command, configurable: true });
@@ -140,6 +150,8 @@ describe('CopyButton', () => {
       const host = status(container);
       expect(host).toHaveAttribute('role', 'status');
       expect(host).toHaveAttribute('aria-live', 'polite');
+      // Read whole: the words of one copy are one sentence.
+      expect(host).toHaveAttribute('aria-atomic', 'true');
       expect(host).toBeEmptyDOMElement();
       // The status sits beside the button, never inside it, so the button's name is only its own.
       expect(button().contains(host)).toBe(false);
@@ -245,6 +257,26 @@ describe('CopyButton', () => {
     const selection = document.getSelection();
     expect(selection?.rangeCount).toBe(1);
     expect(selection?.getRangeAt(0).toString()).toBe('Selected before');
+    expect(button()).toHaveFocus();
+  });
+
+  it('leaves the copy event alone once its copy is done, so the reader copies their own text after it', () => {
+    clipboard(undefined);
+    copyCommand(true);
+    const { container } = render(<Webhook />);
+    press(button());
+    expect(status(container)).toHaveTextContent('Copied');
+    const own = sendCopy();
+    expect(own.setData).not.toHaveBeenCalled();
+    expect(own.defaultPrevented).toBe(false);
+  });
+
+  it('puts focus back on the button where the selection took it, as caret browsing does', () => {
+    clipboard(undefined);
+    const { command } = copyCommand(true, { movesFocus: true });
+    render(<Webhook />);
+    press(button());
+    expect(command).toHaveBeenCalledWith('copy');
     expect(button()).toHaveFocus();
   });
 
@@ -434,6 +466,25 @@ describe('CopyButton', () => {
     });
     tabTo(named);
     expect(tip()).toHaveTextContent('Copy webhook address');
+  });
+
+  it('keeps its name tip shut while the outcome tip holds, so a pointer that comes back shows one tip', async () => {
+    vi.useFakeTimers();
+    clipboard(() => Promise.resolve());
+    render(<Webhook />);
+    const named = button();
+    press(named);
+    await settle();
+    expect(tip()).toHaveTextContent('Copied');
+    // A mouse that leaves the button and comes back over it, past the tip's delay.
+    act(() => {
+      fireEvent.pointerMove(document.body, { pointerType: 'mouse' });
+      fireEvent.pointerLeave(named, { pointerType: 'mouse' });
+      fireEvent.pointerEnter(named, { pointerType: 'mouse' });
+    });
+    wait(1000);
+    expect(screen.getAllByRole('tooltip')).toHaveLength(1);
+    expect(tip()).toHaveTextContent('Copied');
   });
 
   it('shows the outcome in a tip for the word look too, which has none at rest', async () => {
