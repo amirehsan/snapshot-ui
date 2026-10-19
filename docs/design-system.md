@@ -11138,7 +11138,14 @@ segment's least 3px; off every target, the band's rule stands. In a
 pair without links the pointer between or beside the bars now takes
 the nearer, the targets' rule, where spec 7.7 took the band's first
 (correction 97). The targets draw nothing in any mode; the link cursor
-shows over them.
+shows over them. A bar with no `href` in a band with a link takes a
+target of its own, a `span.bar-chart-hit` with no href, placed by the
+same rule: otherwise the band's first link's target lay over it, and a
+press on a stack's "Other" with no link, or on a previous period with
+none, opened the band's first bar's link while the readout named
+another. A press there is that bar's own, `onBarPress` or nothing, and
+it shows the plot's cursor, the press cursor where bars press (the
+review of e137645, correction 103).
 
 *Touch.* A tap follows the link. A touch held half a second or more,
 the platforms' long press, is a reading: the readout shows, as a hold

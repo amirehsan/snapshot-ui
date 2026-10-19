@@ -4994,9 +4994,13 @@ describe('src/components/charts.css, the bar chart', () => {
     const css = look();
     expectAll(
       blockAfter(css, '.bar-chart-hit {'),
-      ['position: absolute;', 'cursor: pointer;', '-webkit-touch-callout: none;'],
+      ['position: absolute;', '-webkit-touch-callout: none;'],
       'target',
     );
+    // A link's target shows the link cursor; a target with no href, a bar's own part of a band of links, the
+    // plot's, which is the press cursor only where bars press.
+    expect(blockAfter(css, '.bar-chart-hit {')).not.toContain('cursor');
+    expect(blockAfter(css, '.bar-chart-hit[href] {')).toContain('cursor: pointer;');
     // It draws nothing in any mode: no fill, border, outline or shadow of its own.
     for (const [selector, body] of blocks(rules()).filter(([selector]) => selector.includes('bar-chart-hit')))
       expect(body, selector).not.toMatch(

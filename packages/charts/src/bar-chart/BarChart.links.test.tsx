@@ -403,6 +403,66 @@ describe('BarChart links', () => {
       fireEvent.pointerMove(hitAt(container, 1), { pointerType: 'mouse' });
       expect(barAt(container, 1)).toHaveAttribute('data-active', '');
     });
+
+    it('gives a bar with no href in a band of links its own part, where a press is its own and opens nothing', () => {
+      const navigate = vi.fn();
+      const onBarPress = vi.fn();
+      // September with no links: Whole Foods and Apple Store pair a link with a bar that has none.
+      const plain = { ...SEPTEMBER, values: SEPTEMBER.values.map((value) => value && money(value.value)) };
+      const { container } = render(
+        <Chart series={[OCTOBER, plain]} navigate={navigate} onBarPress={onBarPress} />,
+      );
+      const hits = all(container, '.bar-chart-hit');
+      // Netflix has September alone, with no link: a band with no link has no targets.
+      expect(hits.map((hit) => [hit.tagName, hit.getAttribute('href')])).toEqual([
+        ['A', '#transactions?merchant=whole-foods'],
+        ['SPAN', null],
+        ['A', '#transactions?merchant=shell'],
+        ['A', '#transactions?merchant=apple'],
+        ['SPAN', null],
+      ]);
+      // Hidden from assistive technology and never a stop, as a link's target is, but no link.
+      expect(hits[1]).toHaveAttribute('aria-hidden', 'true');
+      expect(hits[1]).not.toHaveAttribute('tabindex');
+      expect(hits[1]).not.toHaveAttribute('data-whole');
+      // The pointer over it names September's bar, and a press there presses that bar and opens nothing.
+      fireEvent.pointerMove(hitAt(container, 1), { pointerType: 'mouse' });
+      expect(barAt(container, 1)).toHaveAttribute('data-active', '');
+      expect(fireEvent.click(hitAt(container, 1))).toBe(true);
+      expect(onBarPress).toHaveBeenCalledExactlyOnceWith(0, 1);
+      expect(navigate).not.toHaveBeenCalled();
+      // The bars that press show it over the plot, as a chart of buttons does.
+      expect(part(container, '.bar-chart-rows')).toHaveAttribute('data-press', '');
+    });
+
+    it("gives a stack's segment with no href its own run, so it never opens the band's first link", () => {
+      const navigate = vi.fn();
+      const linked = (label: string, values: number[]): BarSeries => ({
+        label,
+        values: values.map((value, at) => money(value, `#t?c=${label}&m=${String(at)}`)),
+      });
+      const { container } = render(
+        <BarChart
+          aria-label="Spending by category and month"
+          categories={['May', 'Jun']}
+          layout="stacked"
+          navigate={navigate}
+          series={[
+            linked('Groceries', [100, 80]),
+            linked('Dining', [40, 60]),
+            { label: 'Other', values: [money(30), money(20)] },
+          ]}
+        />,
+      );
+      const hits = all(container, '.bar-chart-hit');
+      expect(hits.map((hit) => hit.tagName)).toEqual(['A', 'A', 'SPAN', 'A', 'A', 'SPAN']);
+      // Other, the outermost, takes its run on to the plot's edge, over the band's first link's target.
+      expect(hits[2]?.style.insetBlockStart).toBe('');
+      fireEvent.pointerMove(hitAt(container, 2), { pointerType: 'mouse' });
+      expect(barAt(container, 2)).toHaveAttribute('data-active', '');
+      fireEvent.click(hitAt(container, 2));
+      expect(navigate).not.toHaveBeenCalled();
+    });
   });
 
   describe('the table', () => {

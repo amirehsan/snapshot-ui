@@ -312,8 +312,11 @@ export function BarChart(props: BarChartProps): ReactElement {
     : [];
   const marks = stops.map(barMark);
   const hrefOf = (stop?: BarStop): string | undefined => stop && drawn[stop.series]?.values[stop.band]?.href;
-  // The bars that link, each with a target in its band, in drawn order: the targets' order in the DOM.
+  // The bars that link, and every bar of a band with one, each with a target in its band, in drawn order: the
+  // targets' order in the DOM. A bar with no href among links has its own part of the band, so a press on it is
+  // its own and never opens another bar's link.
   const linked = stops.filter((stop) => hrefOf(stop) !== undefined);
+  const targeted = stops.filter((stop) => linked.some(({ band }) => band === stop.band));
   const first = firstStop(isReady ? drawn.map((line) => line.values) : [], bands);
 
   // The categories by their strings, not by the array's identity: a mark made under other categories is gone.
@@ -404,11 +407,11 @@ export function BarChart(props: BarChartProps): ReactElement {
     ...group.querySelectorAll<HTMLElement>('.bar-chart-bar'),
   ];
 
-  /** The bar at `target`: a bar, or the bar a link's target in its band stands for. */
+  /** The bar at `target`: a bar, or the bar a target in its band stands for. */
   const stopAt = (group: Element, target: EventTarget): BarStop | undefined => {
     const hit = (target as Element).closest('.bar-chart-hit');
     return hit
-      ? linked[[...group.querySelectorAll('.bar-chart-hit')].indexOf(hit)]
+      ? targeted[[...group.querySelectorAll('.bar-chart-hit')].indexOf(hit)]
       : stops[barsOf(group).indexOf(target as HTMLElement)];
   };
 
@@ -806,9 +809,9 @@ export function BarChart(props: BarChartProps): ReactElement {
     // A bar that links is an anchor, which says it is a link; one that only presses is a button; else an image.
     const Bar = href === undefined ? 'span' : 'a';
     const isFirst = stops.find((stop) => stop.band === band)?.series === at;
-    // Its target in its band: the whole band for the band's first bar; for a second side by side the half
-    // nearer it; for a segment on another its own run, the outermost of its sign on to the plot's edge. Each
-    // written in the same percent as the bars, so nothing is measured.
+    // Its target in a band with a link: the whole band for the band's first bar; for a second side by side the
+    // half nearer it; for a segment on another its own run, the outermost of its sign on to the plot's edge. Each
+    // written in the same percent as the bars, so nothing is measured. A bar with no href takes a span there.
     const farAtStart = isVertical !== isNegative;
     const run = isStacked && !isFirst;
     const across = isVertical
@@ -851,19 +854,18 @@ export function BarChart(props: BarChartProps): ReactElement {
           activate({ band, series: at }, 'key');
         }}
       />,
-      href === undefined ? null : (
+      targeted.some((one) => one.band === band) ? (
         // The pointer's way to the link, hidden from assistive technology, which reads the bar: never a stop.
-        // eslint-disable-next-line jsx-a11y/anchor-has-content -- a press target over the band, aria-hidden: the bar beside it is the link a reader meets, named by its cells
-        <a
+        <Bar
           key={`${String(at)}-hit`}
           className="bar-chart-hit"
           href={href}
           aria-hidden="true"
-          tabIndex={-1}
+          tabIndex={href === undefined ? undefined : -1}
           data-whole={isFirst ? '' : undefined}
           style={{ ...across, ...along }}
         />
-      ),
+      ) : null,
     ];
   };
 
@@ -1173,7 +1175,7 @@ export function BarChart(props: BarChartProps): ReactElement {
           data-room-end={isVertical && shownValues.some(({ value }) => value.value < 0) ? '' : undefined}
           data-pointer={isPointer && active !== null ? '' : undefined}
           // Bars that are buttons take a press anywhere in their band; links take theirs on their targets.
-          data-press={onBarPress && linked.length === 0 ? '' : undefined}
+          data-press={onBarPress && linked.length < stops.length ? '' : undefined}
           style={groupStyle}
           onKeyDown={isReady ? onKeyDown : undefined}
           onBlur={isReady ? onGroupBlur : undefined}

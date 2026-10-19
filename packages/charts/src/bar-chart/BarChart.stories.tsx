@@ -2138,6 +2138,15 @@ const LinkTargetCharts = (): ReactElement => (
         series={[OCTOBER, SEPTEMBER]}
       />
     </Panel>
+    <Panel>
+      <BarChart
+        aria-label="October linked and September not, lying down"
+        data-case="mixed"
+        orientation="horizontal"
+        categories={COMPARE_CATEGORIES}
+        series={[linkedBy(OCTOBER, 0), SEPTEMBER]}
+      />
+    </Panel>
     <Panel width="320px">
       <BarChart
         aria-label="Linked, narrow"
@@ -2278,6 +2287,30 @@ export const LinkTargets: Story = {
       // May: Travel stands on top of Groceries, Shopping hangs below zero.
       await expectProbe(stacked, may, box.top + 2, href(0, 2));
       await expectProbe(stacked, may, box.bottom - 2, href(0, 1));
+
+      // A band of a link and a bar with none: the bar with none has its own half, which opens nothing and which
+      // the pointer reads as that bar.
+      const mixed = chartOf('mixed');
+      const mixedTracks = [...mixed.querySelectorAll('.bar-chart-track')].map((track) =>
+        track.getBoundingClientRect(),
+      );
+      for (const [band, track] of mixedTracks.entries()) {
+        const x = track.right - 2;
+        await expectProbe(mixed, x, track.top + 2, href(band, 0));
+        const under = doc.elementFromPoint(x, track.bottom - 2);
+        await expect(under).toHaveClass('bar-chart-hit');
+        await expect(under).not.toHaveAttribute('href');
+        await expect(under && getComputedStyle(under).cursor).not.toBe('pointer');
+        under?.dispatchEvent(
+          new PointerEvent('pointermove', {
+            bubbles: true,
+            clientX: x,
+            clientY: track.bottom - 2,
+            pointerType: 'mouse',
+          }),
+        );
+        await waitFor(() => expect(barsOf(mixed)[band * 2 + 1]).toHaveAttribute('data-active'));
+      }
 
       // Links change nothing drawn: every bar's box is the one a chart without links draws.
       const linked = barsOf(chartOf('lying')).map((bar) => bar.getBoundingClientRect());

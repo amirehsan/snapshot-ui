@@ -849,12 +849,16 @@
    * modifier key or the middle button opens a new tab and the context menu offers one; a touch's hold shows the
    * readout rather than the platform's link menu. It draws nothing. Standing up it runs through the bars' box and
    * its room, across the band's column or the half the render writes; a segment on another takes its own run,
-   * written in render too.
+   * written in render too. A bar with no href in a band of links takes a target with no href over its own part,
+   * so a press there is its own; it shows the plot's cursor, the press cursor only where bars press.
    */
   .bar-chart-hit {
     position: absolute;
-    cursor: pointer;
     -webkit-touch-callout: none;
+  }
+
+  .bar-chart-hit[href] {
+    cursor: pointer;
   }
 
   .bar-chart[data-orientation='vertical'] .bar-chart-hit {
