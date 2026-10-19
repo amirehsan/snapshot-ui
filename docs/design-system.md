@@ -11395,7 +11395,11 @@ and a capturing `copy` listener puts the value on the event as
 `text/plain`, so no markup or style is copied with it. The span leaves in
 the same task, the reader's own selection is put back, and focus, which a
 selection does not move, is put back if an engine moved it. Only when the
-command also fails, or does not exist, is the outcome a failure. A docs
+command also fails, or does not exist, is the outcome a failure. A refused
+copy that a later copy has superseded, or that settles after the part has
+left, runs no command and reports `onCopy(false)`: its command would write
+its value over the later copy's, or select in a page the part has left
+(settings plan, spec correction 19). A docs
 test removes the Clipboard API and copies with a real click in Chromium,
 reading the value from the copy event.
 

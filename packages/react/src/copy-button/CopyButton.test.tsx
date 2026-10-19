@@ -347,6 +347,40 @@ describe('CopyButton', () => {
     expect(onCopy.mock.calls).toEqual([[true], [false]]);
   });
 
+  it('runs no copy command for a refused copy that a later copy has superseded', async () => {
+    const slow = deferred();
+    const answers = [slow.promise, Promise.resolve()];
+    clipboard(() => answers.shift() ?? Promise.resolve());
+    const { command } = copyCommand(true);
+    const onCopy = vi.fn();
+    const { container, rerender } = render(<Webhook value="The old address" onCopy={onCopy} />);
+    press(button());
+    rerender(<Webhook value={ADDRESS} onCopy={onCopy} />);
+    press(button());
+    await settle();
+    slow.reject(new Error('late'));
+    await settle();
+    // The later copy wrote the clipboard; the refused earlier one must not write its old value over it.
+    expect(command).not.toHaveBeenCalled();
+    expect(status(container)).toHaveTextContent('Copied');
+    expect(onCopy.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('runs no copy command for a refused copy that settles after the part has left', async () => {
+    const late = deferred();
+    clipboard(() => late.promise);
+    const { command } = copyCommand(true);
+    const onCopy = vi.fn();
+    const { unmount } = render(<Webhook onCopy={onCopy} />);
+    press(button());
+    unmount();
+    late.reject(new Error('late'));
+    await settle();
+    // Nothing of the part is left to select from, and the page's selection is the reader's.
+    expect(command).not.toHaveBeenCalled();
+    expect(onCopy).toHaveBeenCalledWith(false);
+  });
+
   it("keeps the button's name through every outcome", async () => {
     vi.useFakeTimers();
     const answers = [() => Promise.resolve(), () => Promise.reject(new Error('denied'))];

@@ -208,7 +208,9 @@ export function CopyButton({
         show(current, true);
       },
       () => {
-        show(current, byCommand());
+        // Only the latest copy of a part still drawn falls back: a superseded one would write its value over the
+        // later copy's, and a part that has left has nothing to select.
+        show(current, mounted.current && current === copies.current && byCommand());
       },
     );
   };
