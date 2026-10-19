@@ -10592,10 +10592,18 @@ gives their column to the value side by side and to the term stacked. A
 viewport breakpoint was rejected: a list in a 24rem side panel on a wide
 screen would draw a 7rem name column.
 
-**A width of its own** (risk R1). A size container takes no width from its
-content, so the list names `contain-intrinsic-inline-size: 20rem`, StatTile's
-0.6.1 fix: in a flex row or an `auto` grid column it is 20rem, and stacked,
-rather than nothing wide. The `InAFlexRow` story measures it.
+**A width of its own** (risk R1; spec correction 14). A size container takes
+no width from its content, so the list names
+`contain-intrinsic-inline-size: 16rem`, StatTile's 0.6.1 fix and its 16rem
+tile: in a flex row or an `auto` grid column it is 16rem, and stacked, rather
+than nothing wide. The stand-in is also the list's min-content width, which
+a `flex: 1` item or a `1fr` track keeps as its narrowest unless it has
+`min-width: 0`. The first value, 20rem, is the 320px of a whole phone and
+pushed a 320px page 32px sideways from a `flex: 1` wrapper in its 288px
+column; 16rem, 256px, fits that column. The docs say that a flex or grid
+item holding the list takes `min-width: 0`, and a docs test puts a list in a
+`flex: 1` wrapper and in a `1fr` grid at 320px with no sideways scroll. The
+`InAFlexRow` story measures the 16rem.
 
 **The row** (Dense data, against the value's line). `min-block-size:
 max(var(--size-target), var(--size-field))`, 48px, 40px in compact and 44px
@@ -10616,15 +10624,18 @@ fill or radius of its own, so no part of it is a surface in a holder's
 corner.
 
 **Empty values** (ruling 9). A value that is absent, `null`, `false`, `true`
-or `''` is empty, `present()`'s definition, and `0` is a value. The value's
+or `''` is empty, `present()`'s definition, and so is an array that holds
+only those, as a list mapped from data with no entries gives (spec
+correction 18); `0` is a value. The value's
 `dd` carries `data-empty` and shows `emptyValue`, "Not set" by default, in
 slate. It is words the reader has to read, so by the test in "Where each
 text color may go" it is slate and never taupe; that table's "unset
 indicator" in taupe is a mark, such as an empty swatch, not words (spec
 correction 6). It is never a dash, which a screen reader reads as "dash" or
 as nothing. `emptyValue` may be a link to add the value, GOV.UK's guidance
-for a missing answer. The library writes "Not set" in English, so a page in
-another language passes its own.
+for a missing answer: the link stands where the value would, and the row has
+no action of its own beside "Not set" (spec correction 19). The library
+writes "Not set" in English, so a page in another language passes its own.
 
 **Long values.** A value wraps, and a long unbroken word, an IBAN or an
 email address, breaks anywhere (`overflow-wrap: anywhere`, the Card's rule,
@@ -10658,25 +10669,39 @@ leaves the button 1 + 32 + 3.5 = 36.5px from the card's bottom edge (36.7px
 as Chromium draws it, by baseline alignment) and 33px from its side, both
 under the 40px radius. The rule for a control at a holder's foot applies: it
 moves down, not in, so it stays on the column's end edge. The last row of a
-list that is the last child of a card, or of a card's body that is the
-card's last child, adds `calc(var(--holder-corner-inset) - var(--holder-pad))`
-to its block-end padding while it holds actions: 7px in Rounded, 19px in
-Rounded compact, nothing in Soft and Square, where the padding already
-clears the 16px curve and Square has none. The first row of a list that
-starts a card with no header takes the same at its block start. Only the
-controls' row grows; a row without actions keeps the Dense data padding.
-The button then ends 43.5px over the card's bottom edge in comfortable and
-41.5px in compact, past the 39px corner inset. The selector
-is the LineChart toolbar's, `:is(.card, .card > .card-body:last-child)`, so
-a list in a body followed by something else is not at the card's foot and
-does not move (spec correction 4). The `CornerClear` story measures it in
-Chromium, WebKit and Firefox, and the concentric audit runs every story in
-the three shapes.
+list that is the last child of a card, of a card's body that is the card's
+last child, or of a collapsible card's body (spec correction 16), adds
+`calc(var(--holder-corner-inset) - var(--holder-pad))` to its block-end
+padding while it holds actions and the list sits side by side: 7px in
+Rounded, 19px in Rounded compact, nothing in Soft and Square, where the
+padding already clears the 16px curve and Square has none. Stacked, the
+last row's controls stand on the term's line at the row's top, a value's
+line and more above the curve, so the row keeps its padding: the rule is
+written for `[data-layout='horizontal']` and, inside the list's 30rem
+container query, for `auto`, and a stacked list in a card ends at the
+Dense data padding with no dead space under its last value (spec correction
+15). The first row of a list that starts a card with no header takes the same
+at its block start in every layout, since its controls stand on its first
+line either way; a collapsible card always has its header above the body, so
+it has no first-row form. Only the controls' row grows; a row without
+actions keeps the Dense data padding. The button then ends 43.5px over the
+card's bottom edge in comfortable and 41.5px in compact, past the 39px
+corner inset. The selector is the LineChart toolbar's,
+`:is(.card, .card > .card-body:last-child)`, with the collapsible card's
+`.card > .card-disclosure > .card-fold > .card-body:last-child`, so a list in
+a body followed by something else is not at the card's foot and does not
+move (spec correction 4). The `CornerClear` story measures six places in
+Chromium, WebKit and Firefox: a list ending a card's body, starting a card
+with no header, directly in a card, ending a collapsible card's body,
+stacked, and followed by a paragraph; the concentric audit runs every story
+in the three shapes.
 
 **Right to left** (ruling 7). Logical properties throughout: on a Persian
 page the term column is on the right and the actions on the left. A numeric
 value stays left to right and starts at the line's start, the right edge of
-its column.
+its column. `match-parent` is the standard name in Firefox and the prefixed
+one in WebKit and Chromium, so the `DescriptionListMirrored` play runs in all
+three engines (spec correction 17).
 
 **Print.** Rules and text print; the actions are hidden under
 `@media print`, since a printed page cannot press them.
@@ -10691,9 +10716,10 @@ added: ink on canvas 16.25 in light and 19.31 in dark, on lifted 17.84 and
 5.31 and 6.94, on float 5.49 and 6.94. The divider is a cue, not a boundary.
 
 **The size.** The entry `{ DescriptionList, DescriptionListItem }` measures
-328 B without React Aria, Lucide and `@internationalized/date`, and 328 B
-with them, since it imports none; the rule rounds up to 0.5 kB and adds
-0.5 kB: 1 kB, the spec's budget.
+360 B without React Aria, Lucide and `@internationalized/date`, and 360 B
+with them, since it imports none (328 B before the empty-array test of spec
+correction 18); the rule rounds up to 0.5 kB and adds 0.5 kB: 1 kB, the
+spec's budget.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): the terms and values read in order, and how each reader

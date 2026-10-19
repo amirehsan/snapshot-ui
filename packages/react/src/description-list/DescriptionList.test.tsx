@@ -61,8 +61,8 @@ describe('DescriptionList', () => {
     expect(list).not.toHaveAttribute('data-dividers');
   });
 
-  it.each([[undefined], [null], [false], [true], ['']])(
-    'shows Not set for an empty value %s, marked data-empty',
+  it.each<[ReactNode]>([[undefined], [null], [false], [true], [''], [[]], [[null, false, '', []]]])(
+    'shows Not set for an empty value %j, marked data-empty',
     (empty) => {
       const { container } = render(one(<DescriptionListItem term="Nickname">{empty}</DescriptionListItem>));
       const value = valueOf(container);
@@ -76,6 +76,14 @@ describe('DescriptionList', () => {
     const value = valueOf(container);
     expect(value).not.toHaveAttribute('data-empty');
     expect(value).toHaveTextContent(/^0$/);
+  });
+
+  it('keeps an array that holds one value as a value', () => {
+    const { container } = render(
+      one(<DescriptionListItem term="Tags">{[null, '', 'Travel', false]}</DescriptionListItem>),
+    );
+    expect(valueOf(container)).not.toHaveAttribute('data-empty');
+    expect(valueOf(container)).toHaveTextContent(/^Travel$/);
   });
 
   it('shows emptyValue in place of an empty value, a link included', () => {

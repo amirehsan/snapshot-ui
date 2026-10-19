@@ -25,7 +25,10 @@ export interface DescriptionListProps extends Omit<HTMLAttributes<HTMLDListEleme
 export interface DescriptionListItemProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** The name of the value: "Credit limit". */
   term: ReactNode;
-  /** The value. Absent, `null`, `false`, `true` or an empty string is empty; `0` is a value. */
+  /**
+   * The value. Absent, `null`, `false`, `true`, an empty string, or an array of nothing but those, is empty;
+   * `0` is a value.
+   */
   children?: ReactNode;
   /**
    * In place of an empty value: words in slate, or a link to add it, as GOV.UK's summary list does. A page in
@@ -46,6 +49,13 @@ export interface DescriptionListItemProps extends Omit<HTMLAttributes<HTMLDivEle
   isNumeric?: boolean;
   ref?: Ref<HTMLDivElement>;
 }
+
+/**
+ * Whether a value draws nothing: `present()`'s empties, and an array that holds only empties, as a list mapped
+ * from data with no entries gives.
+ */
+const isEmptyValue = (node: ReactNode): boolean =>
+  Array.isArray(node) ? node.every((each: ReactNode) => isEmptyValue(each)) : !present(node);
 
 /**
  * Named values, such as an account's details: a real `dl` of `div` rows, each a term, its value and the row's
@@ -81,7 +91,7 @@ export function DescriptionListItem({
   className,
   ...props
 }: DescriptionListItemProps): ReactElement {
-  const isEmpty = !present(children);
+  const isEmpty = isEmptyValue(children);
   return (
     <div {...props} className={cx('description-list-item', className)}>
       <dt className="description-list-term">{term}</dt>

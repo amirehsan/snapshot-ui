@@ -1625,8 +1625,11 @@ describe('src/components/description-list.css', () => {
   const CONTAINER = '@container description-list (inline-size >= 30rem)';
   const ROW = '.description-list-item {';
   const PAD = 'calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad))';
-  const LAST =
-    ':is(.card, .card > .card-body:last-child) > .description-list:last-child > .description-list-item:last-child:has(> .description-list-actions) {';
+  /** The holders a list ends: a card, a card's last body, and a collapsible card's body. */
+  const FOOT =
+    ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)';
+  const LAST = (layout) =>
+    `${FOOT} > .description-list[data-layout='${layout}']:last-child > .description-list-item:last-child:has(> .description-list-actions) {`;
   const FIRST =
     ':is(.card, .card > .card-body:first-child) > .description-list:first-child > .description-list-item:first-child:has(> .description-list-actions) {';
   const HORIZONTAL = ".description-list[data-layout='horizontal'] > .description-list-item {";
@@ -1640,11 +1643,12 @@ describe('src/components/description-list.css', () => {
     return css.slice(0, start) + css.slice(end);
   };
 
-  it('is a size container switching at 30rem, with a 20rem intrinsic width', () => {
+  it('is a size container switching at 30rem, with a 16rem intrinsic width', () => {
     const css = rules();
     const list = blockAfter(css, '.description-list {');
     expect(list).toContain('container: description-list / inline-size;');
-    expect(list).toContain('contain-intrinsic-inline-size: 20rem;');
+    // 16rem fits the 288px inside a 320px phone's 16px margins; 20rem pushed a flex: 1 wrapper sideways.
+    expect(list).toContain('contain-intrinsic-inline-size: 16rem;');
     expect(list).toContain('margin: 0;');
     expect(list).toContain('padding: 0;');
     // Stacked under 30rem: the term and the actions share the first line, the value spans the second.
@@ -1753,13 +1757,26 @@ describe('src/components/description-list.css', () => {
 
   it("moves a first or last row's controls by the holder's corner inset less its padding, in a card only", () => {
     const css = rules();
-    expect(blockAfter(css, LAST)).toContain(`padding-block-end: ${PAD};`);
+    // The foot: side by side only, horizontal at every width and auto from 30rem, where the controls stand on
+    // the last row's first line. Stacked, they are on the term's line at the row's top, clear of the curve.
+    expect(blockAfter(outsideContainer(css), LAST('horizontal'))).toContain(`padding-block-end: ${PAD};`);
+    const corner = css.slice(css.lastIndexOf(CONTAINER));
+    expect(corner).not.toBe(css.slice(css.indexOf(CONTAINER)));
+    expect(blockAfter(blockAfter(corner, CONTAINER), LAST('auto'))).toContain(`padding-block-end: ${PAD};`);
+    // The head: the first row's controls in every layout, since they stand on its first line either way.
     expect(blockAfter(css, FIRST)).toContain(`padding-block-start: ${PAD};`);
     // Down, never in, so a trailing action keeps the column's end edge; and only in a card.
     expect(css).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);
-    const moved = [...css.matchAll(/([^{}]+)\{[^{}]*--holder-corner-inset/g)].map((match) => match[1].trim());
-    expect(moved).toHaveLength(2);
-    for (const selector of moved) expect(selector).toMatch(/^:is\(\.card, \.card > \.card-body/);
+    const moved = [...css.matchAll(/([^{}]+)\{([^{}]*--holder-corner-inset[^{}]*)\}/g)].map((match) => ({
+      selector: match[1].trim(),
+      declaration: match[2].trim(),
+    }));
+    expect(moved).toHaveLength(3);
+    for (const { selector, declaration } of moved) {
+      expect(selector).toMatch(/^:is\(\.card, \.card > \.card-body/);
+      // Every block-end move names a side-by-side layout.
+      if (declaration.startsWith('padding-block-end')) expect(selector).toContain('[data-layout=');
+    }
     // Logical properties throughout, so the layout mirrors in right to left.
     expect(css).not.toMatch(/(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right):/);
   });
@@ -9579,7 +9596,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     ],
     [
       'description-list.css',
-      ':is(.card, .card > .card-body:last-child) > .description-list:last-child > .description-list-item:last-child:has(> .description-list-actions) {',
+      ":is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .description-list[data-layout='horizontal']:last-child > .description-list-item:last-child:has(> .description-list-actions) {",
       'padding-block-end: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));',
     ],
     [
@@ -9600,7 +9617,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       ],
       [
         'description-list.css',
-        ':is(.card, .card > .card-body:last-child) > .description-list:last-child > .description-list-item:last-child:has(> .description-list-actions) {',
+        ":is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .description-list[data-layout='horizontal']:last-child > .description-list-item:last-child:has(> .description-list-actions) {",
       ],
     ]) {
       expect(blockAfter(css(file), header), header).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);
