@@ -1240,6 +1240,11 @@ describe('src/components/card.css', () => {
     expect(blockAfter(source, '.card-note {')).not.toContain('overflow-wrap');
   });
 
+  it("names its lifted fill as a table's surface, so a table in a card draws its header and cuts in it", () => {
+    // Spec correction 74: a DataTable's sticky header and a meter's cuts in its rows take the card's fill.
+    expect(blockAfter(rules(), '.card {')).toContain('--data-table-surface: var(--color-lifted);');
+  });
+
   it('makes a card concentric only when it sits in a card or in its body, never for any descendant', () => {
     const source = rules();
     const nested = blockAfter(source, '.card > .card,');
@@ -4474,6 +4479,8 @@ describe('src/components/stat-tile.css', () => {
     // The library's rule (spec corrections 30, 34 and 63): a stand-in width is also the tile's min-content width,
     // which a flex: 1 item or a 1fr track keeps as its narrowest, so two tiles scrolled a 320px page sideways.
     expect(tile).toContain('contain-intrinsic-inline-size: 0;');
+    // A tile straight in a flex row is a whole 16rem tile, as 0.6.1 drew it, and shrinks from there (correction 69).
+    expect(tile).toContain('flex: 0 1 16rem;');
   });
 
   it('makes a tile in a card concentric with it, with the frame edge', () => {

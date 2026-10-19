@@ -185,24 +185,23 @@ export const LinkedHover: Story = {
 const sideways = (): number => document.documentElement.scrollWidth - document.documentElement.clientWidth;
 
 /**
- * Three tiles in a wrapping flex row, each given its width by the row as an app gives it, `flex: 1 1 16rem`:
- * a size container takes none from its content and its intrinsic width is 0, so a tile left to size itself
- * would be its padding wide. Each fills its share, at least 16rem, with its narrow layout and its figure whole.
+ * Three tiles placed straight in a wrapping flex row, as 0.6.1 fixed it: each is the 16rem its flex basis names,
+ * with its narrow layout and its figure whole, never its padding wide, though its intrinsic width is 0 (spec
+ * correction 69). In a row too narrow for one, a tile shrinks from that basis rather than push the page.
  */
 export const InAFlexRow: Story = {
   tags: ['no-visual'],
   render: (args) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-inset)' }}>
-      <StatTile {...args} style={{ flex: '1 1 16rem' }} />
-      <StatTile {...args} label="Income" style={{ flex: '1 1 16rem' }} />
-      <StatTile {...args} label="Saved" style={{ flex: '1 1 16rem' }} />
+      <StatTile {...args} style={undefined} />
+      <StatTile {...args} label="Income" style={undefined} />
+      <StatTile {...args} label="Saved" style={undefined} />
     </div>
   ),
   play: async ({ canvasElement }) => {
     const tiles = [...canvasElement.querySelectorAll('.stat-tile')];
     await expect(tiles).toHaveLength(3);
-    for (const tile of tiles)
-      await expect(tile.getBoundingClientRect().width).toBeGreaterThanOrEqual(16 * 16);
+    for (const tile of tiles) await expect(tile.getBoundingClientRect().width).toBe(16 * 16);
     // The figure is never broken: one line.
     const value = part(canvasElement, 'stat-tile-value');
     await expect(value.getBoundingClientRect().height).toBeLessThan(

@@ -245,7 +245,10 @@ export const Loading: Story = {
   ),
 };
 
-/** In a card: the sticky header takes the card's lifted fill through --data-table-surface. */
+/**
+ * In a card: the sticky header takes the card's lifted fill, since the card names it as --data-table-surface
+ * (spec correction 74), and the table needs no wrapper to say so.
+ */
 export const InCard: Story = {
   render: () => (
     <Box>
@@ -254,13 +257,15 @@ export const InCard: Story = {
           <CardTitle id="in-card-title">October</CardTitle>
         </CardHeader>
         <CardBody>
-          <div style={{ '--data-table-surface': 'var(--color-lifted)' } as CSSProperties}>
-            <Sorted aria-label={undefined} aria-labelledby="in-card-title" items={TRANSACTIONS.slice(0, 5)} />
-          </div>
+          <Sorted aria-label={undefined} aria-labelledby="in-card-title" items={TRANSACTIONS.slice(0, 5)} />
         </CardBody>
       </Card>
     </Box>
   ),
+  play: async ({ canvasElement }) => {
+    const header = only(canvasElement, '.data-table-column');
+    await expect(getComputedStyle(header).backgroundColor).toBe(tokenColor('--color-lifted', header));
+  },
 };
 
 /** In a 44rem box Category (md) has left and Account (sm) stays. */

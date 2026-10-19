@@ -9,13 +9,16 @@
  */
 @layer components {
   /* A size container takes no width from its content, and its intrinsic inline size is 0, the library's rule
-     (docs/design-system.md, StatTile, "A width of its own"): a stand-in width is also its min-content width,
+     (docs/design-system.md, StatTile, "A width from its holder"): a stand-in width is also its min-content width,
      which a flex: 1 item or a 1fr track keeps as its narrowest, so two tiles side by side scrolled a 320px phone
-     sideways. A block, a flex: 1 item or a 1fr track gives the tile its width; a holder that sizes it from its
-     content, a content-sized flex item or an auto grid column, gives it one, such as flex: 1 1 16rem. */
+     sideways. A block, a flex: 1 item or a 1fr track gives the tile its width. In a flex row its basis is a
+     whole tile of 16rem, which it may shrink from, as 0.6.1's stand-in drew it there, so a tile placed straight
+     in a row is never its padding wide; min-content stays 0. In a flex column the basis is a height: give the
+     tile flex: none there. An auto grid column gives it no width, so give it one. */
   .stat-tile {
     container: stat-tile / inline-size;
     contain-intrinsic-inline-size: 0;
+    flex: 0 1 16rem;
     box-sizing: border-box;
     display: block;
     min-width: 0;

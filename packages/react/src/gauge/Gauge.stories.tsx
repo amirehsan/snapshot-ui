@@ -6,6 +6,7 @@ import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
 import { DataTable, type DataTableColumn } from '../data-table';
 import { StatTile } from '../stat-tile';
+import { CLEAR_OF_FOOT } from '../stories/corner';
 import { tokenColor } from '../stories/paint';
 import { Gauge, type GaugeMark, type GaugeProps } from './Gauge';
 import { GAUGE_SIZES } from './geometry';
@@ -883,15 +884,18 @@ function Paying(): ReactElement {
         figure={`${String(used)}%`}
         tone={used > 30 ? 'warning' : 'neutral'}
       />
-      <Button variant="secondary" onPress={press(23)}>
-        Pay down
-      </Button>
-      <Button variant="secondary" onPress={press(0)}>
-        Pay off
-      </Button>
-      <Button variant="secondary" onPress={press(30)}>
-        Spend
-      </Button>
+      {/* The buttons may end the card, so they stop at its corner inset, clear of its bottom curve. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-part)', ...CLEAR_OF_FOOT }}>
+        <Button variant="secondary" onPress={press(23)}>
+          Pay down
+        </Button>
+        <Button variant="secondary" onPress={press(0)}>
+          Pay off
+        </Button>
+        <Button variant="secondary" onPress={press(30)}>
+          Spend
+        </Button>
+      </div>
     </Tile>
   );
 }

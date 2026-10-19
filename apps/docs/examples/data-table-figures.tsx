@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardBody, CardHeader, CardTitle, DataTable, type DataTableColumn } from '@snapshot-ui/react';
-import type { CSSProperties, ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { amountLabel, dateLabel, totalLabel, TRANSACTIONS, type Transaction } from './transactions-data';
 
 const ROWS = TRANSACTIONS.slice(0, 5);
@@ -29,15 +29,13 @@ export default function DataTableFigures(): ReactElement {
         </CardTitle>
       </CardHeader>
       <CardBody>
-        {/* In a card the sticky header takes the card's fill. */}
-        <div style={{ '--data-table-surface': 'var(--color-lifted)' } as CSSProperties}>
-          <DataTable
-            aria-labelledby="data-table-figures-title"
-            items={ROWS}
-            columns={COLUMNS}
-            getKey={(row) => row.id}
-          />
-        </div>
+        {/* In a card the sticky header takes the card's fill by itself. */}
+        <DataTable
+          aria-labelledby="data-table-figures-title"
+          items={ROWS}
+          columns={COLUMNS}
+          getKey={(row) => row.id}
+        />
       </CardBody>
     </Card>
   );

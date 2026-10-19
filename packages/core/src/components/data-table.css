@@ -28,7 +28,8 @@
     --data-table-fill: var(--data-table-surface, var(--color-canvas));
     /* A Meter in a row cuts its segments apart and rings its pace marker in --meter-surface, so the cuts take the
        row's own fill: here the table's, and on a hovered or a selected row that row's wash, set beside it below.
-       A cut in a fixed surface drew a pale block on every row that was not Lifted (spec correction 64). */
+       A cut in a fixed surface drew a pale block on every row that was not Lifted (accounts plan, spec
+       correction 64). In a Card the fill is the card's, which the card names as --data-table-surface. */
     --meter-surface: var(--data-table-fill);
     /* What covers a row that focus scrolls to (WCAG 2.4.11): the page's sticky offset and the 40px header row
        above it, and, while the bar shows, the bar and its inset from the viewport's bottom below it: its
@@ -622,7 +623,7 @@
      nothing is measured and a table beside an open panel on a small laptop is a list too. */
   .data-table-list {
     /* The head's height: its tallest control, a target tall at least, and its rule. On a coarse pointer its
-       controls are 44px (spec correction 64). */
+       controls are 44px (data table plan, spec correction 64). */
     --data-table-list-head: calc(max(var(--size-target), var(--size-control)) + 1px);
     /* What covers an item that focus scrolls to: the page's sticky offset and, in Select mode, the head. */
     --data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));
@@ -944,7 +945,7 @@
 
   /* Items already shown that load again: one quiet line at the top of the list, at the foot of the first day's
      heading or, ungrouped, along the list's top, sticky there and out of the flow, so nothing moves as it comes
-     and goes (spec correction 63). */
+     and goes (data table plan, spec correction 63). */
   .data-table-list[data-reloading]
     .data-table-grid-list
     > .data-table-section:not(.data-table-section ~ .data-table-section)
