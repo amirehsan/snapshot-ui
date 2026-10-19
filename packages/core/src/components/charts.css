@@ -449,6 +449,23 @@
     --bar-chart-color: var(--color-gain);
   }
 
+  /* The chart palette, for a stack of peers (spec 5.4). Never text: a value, a label or a legend stays ink or slate. */
+  .bar-chart [data-color='chart-1'] {
+    --bar-chart-color: var(--color-chart-1);
+  }
+
+  .bar-chart [data-color='chart-2'] {
+    --bar-chart-color: var(--color-chart-2);
+  }
+
+  .bar-chart [data-color='chart-3'] {
+    --bar-chart-color: var(--color-chart-3);
+  }
+
+  .bar-chart [data-color='chart-4'] {
+    --bar-chart-color: var(--color-chart-4);
+  }
+
   /*
    * The rows run in the direction the svg is mirrored by, as a line chart's marks do. No row gap, so the
    * gridlines behind the rows run unbroken.

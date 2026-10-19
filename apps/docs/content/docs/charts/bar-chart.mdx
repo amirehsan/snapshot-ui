@@ -85,6 +85,21 @@ Why stripes and not a lighter shade: a lighter fill must clear 3:1 against the c
 
 <Section>
 
+## Color
+
+A series' color says what it is, by meaning first and then by identity. `color` takes `'ink'`, `'slate'`, `'gain'` or one of the [chart palette](/docs/theming#chart-palette)'s four, `'chart-1'` to `'chart-4'`, and pins the series to it.
+
+- One series: ink.
+- Two series side by side: ink and slate, a story and its context, unless you pin them.
+- Money that arrived: `gain`, labelled so, beside an ink series and never beside a palette color, so a meaning and an identity never share a chart.
+- Peers with no meaning of their own, such as a month's top categories: the palette's teal, violet, olive and magenta in that order, and an "Other" you sum and label in slate. Pin each series to its slot, so it keeps its color when a filter removes another.
+
+No series takes error, success, warning, clay, signal orange or taupe; the type has no name for them. Amounts, labels and the legend's names stay ink and slate whatever a bar's color, and the legend's key beside each name carries the color.
+
+</Section>
+
+<Section>
+
 ## Long names
 
 A long name wraps in the label column, which takes the longest name's width up to 40% of the chart. Names are never cut short or rotated. Set `--bar-chart-label-size` on the chart to give the column another share.

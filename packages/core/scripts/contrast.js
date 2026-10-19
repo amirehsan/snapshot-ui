@@ -140,6 +140,16 @@ export const CONTRAST_PAIRS = [
     minimum: NON_TEXT,
     shows: `the switch thumb on its off track on ${surface}`,
   })),
+  // The chart palette's four slots, each a graphic (a bar, a segment, a legend key) on the surface a chart sits on:
+  // a card, the page or a panel. Never text, so never held to the text minimum (insights spec, section 5).
+  ...['chart-1', 'chart-2', 'chart-3', 'chart-4'].flatMap((text) =>
+    ['lifted', 'canvas', 'float'].map((ground) => ({
+      text,
+      ground,
+      minimum: NON_TEXT,
+      shows: `a chart series in ${text} on ${ground}`,
+    })),
+  ),
 ];
 
 /** Parses #rgb, #rrggbb, rgb(r g b), rgb(r g b / a), rgba(r, g, b, a) and transparent. */

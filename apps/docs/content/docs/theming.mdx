@@ -106,6 +106,33 @@ Four variables set the stacking order. If your app's chrome uses larger numbers,
 
 <Section>
 
+## Chart palette
+
+Four colors for a chart whose series are peers with no meaning of their own, such as a stack of spending categories: teal, violet, olive and magenta, in that order. Each has a value chosen for its mode, not an inverted one.
+
+- <span aria-hidden="true" style={{ display: 'inline-block', inlineSize: '0.75em', blockSize: '0.75em', marginInlineEnd: '0.5em', backgroundColor: 'var(--color-chart-1)' }} />`--color-chart-1`, teal: `#029393` in light and in dark.
+- <span aria-hidden="true" style={{ display: 'inline-block', inlineSize: '0.75em', blockSize: '0.75em', marginInlineEnd: '0.5em', backgroundColor: 'var(--color-chart-2)' }} />`--color-chart-2`, violet: `#7024ab` in light, `#af6af2` in dark.
+- <span aria-hidden="true" style={{ display: 'inline-block', inlineSize: '0.75em', blockSize: '0.75em', marginInlineEnd: '0.5em', backgroundColor: 'var(--color-chart-3)' }} />`--color-chart-3`, olive: `#697805` in light, `#7a8a06` in dark.
+- <span aria-hidden="true" style={{ display: 'inline-block', inlineSize: '0.75em', blockSize: '0.75em', marginInlineEnd: '0.5em', backgroundColor: 'var(--color-chart-4)' }} />`--color-chart-4`, magenta: `#910080` in light, `#c344ae` in dark.
+
+In Tailwind they are `bg-chart-1` to `bg-chart-4`. A test in the library measures them on every change:
+
+- Seen: each is at least 3:1 against a card, the page and a floating panel in both modes, so a bar needs no outline. The lowest is teal on the page in light, 3.31.
+- Told apart: neighbours in the order are at least 8 apart under simulated protanopia and deuteranopia and 15 for full color vision (OKLab distance times 100). The closest pair is teal and violet in dark, 13.8 for a color-blind reader.
+- Never a meaning: each is at least 10 from error, success, gain, warning, clay, both signal oranges, link blue and taupe, and 30 degrees of hue from each of them that has a hue, so a series is never read as a state.
+
+Rules for using them:
+
+- Peers only. A series with a meaning keeps its meaning's color: money that arrived is `gain`, and one series is ink. Never use the palette for a state.
+- Never text. Values, labels and legend names stay ink and slate; the colored mark beside them says which series it is.
+- In order, and the order follows the series: pin a series to its color, so it keeps it when a filter removes another.
+- Four at most. Sum the rest into an "Other" that you label, drawn in slate, which reads as the remainder rather than a fifth color.
+- Neighbours only. The order is checked on adjacent pairs, the ones a stack or a group puts side by side. Where any two series can meet, such as a scatter plot, use three at most.
+
+</Section>
+
+<Section>
+
 ## Tokens
 
 Every value is a CSS variable you can read, such as `var(--color-ink)`, `var(--radius-control)` or `var(--spacing-peer)`. The same tokens are available in JavaScript, with each mode's value:
@@ -121,6 +148,7 @@ Beyond the original set, the tokens include:
 
 - `--color-warning`: a state that needs a look soon, with its own rule of use.
 - `--color-gain`: money that arrived, with its own rule of use.
+- `--color-chart-1` to `--color-chart-4`: the chart palette, described in [Chart palette](#chart-palette).
 - `--text-numeral` and `--text-numeral-sm`: type steps for figures.
 - `--size-control`, `--size-field` and `--size-target`: control sizes.
 - `--spacing-card`: card padding.
