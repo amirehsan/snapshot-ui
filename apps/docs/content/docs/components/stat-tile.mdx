@@ -36,6 +36,16 @@ Pass a small drawing, up to 96 by 32, in `trend`. The [Sparkline](/docs/charts/s
 
 <Section>
 
+## A gauge as the trend
+
+A 32px [Gauge](/docs/components/gauge) fits the trend's slot, for a share rather than a change over time: credit used of a limit, a goal saved. A gauge is a meter that names itself, so it is read in the tile; give it an `aria-label` that says what share it is, and its value text beside it.
+
+<Preview name="gauge-tile" />
+
+</Section>
+
+<Section>
+
 ## As a link
 
 `href` makes the whole tile one link, routed through `RouterProvider` as [Routing](/docs/routing) sets up. Its name is everything it shows, in order. Put nothing focusable inside it: a link cannot hold a link or a button, and the console warns when one does.

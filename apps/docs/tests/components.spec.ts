@@ -556,6 +556,32 @@ test.describe('forced colors', () => {
     expect((await paint(meter.locator('.meter-pace'))).fill).toBe(await systemColor(page, 'Highlight'));
   });
 
+  test('a gauge keeps its track, arc and marks apart', async ({ page }) => {
+    // An svg keeps the colors its author set, so the stylesheet names system colors: the track in the disabled
+    // text color, the arc in the text color in every tone, and the marks in the selection color in a ring of the
+    // page's own background, so the three stay apart and a warning arc is not lost.
+    await visit(page, '/docs/components/gauge');
+    const { canvas, canvasText, grayText, highlight } = await systemColors(page);
+    const gauge = page
+      .locator('.stage .gauge')
+      .filter({ has: page.getByRole('meter', { name: 'Travel Mastercard', exact: true }) });
+    await expect(gauge).toHaveCount(1);
+    await expect(gauge).toHaveAttribute('data-tone', 'warning');
+    const stroke = (selector: string): Promise<string> =>
+      gauge
+        .locator(selector)
+        .first()
+        .evaluate((element) => getComputedStyle(element).stroke);
+    const drawn = {
+      track: await stroke('.gauge-track'),
+      arc: await stroke('.gauge-value'),
+      mark: await stroke('.gauge-mark'),
+      ring: await stroke('.gauge-mark-ring'),
+    };
+    expect(drawn).toEqual({ track: grayText, arc: canvasText, mark: highlight, ring: canvas });
+    expect(new Set([drawn.track, drawn.arc, drawn.mark]).size).toBe(3);
+  });
+
   test('a progress bar keeps its track outline and fill', async ({ page }) => {
     // The fill is a background, which the repaint would drop: it is drawn in the reader's text color, and the
     // track is outlined so its end shows, as Meter's are.
@@ -1595,6 +1621,9 @@ const LONG_TARGETS: Record<string, string[]> = {
   'file-drop-zone': ['.stage .file-drop-zone .field-label', '.stage .file-drop-zone .field-description'],
   // A chip's value stays on one line and ellipsizes past 16rem, so the pill stays inside 320px.
   'filter-chip': ['.stage .filter-chip-value'],
+  // The label and the value text wrap and break anywhere under the dial, or beside it at 32px; the caption wraps
+  // to two lines inside the dial and ends in an ellipsis, since the value text carries its words whole.
+  gauge: ['.stage .gauge-label', '.stage .gauge-value-label', '.stage .gauge-figure-caption'],
   kbd: ['.stage .kbd'],
   // The legend names the series in the app's words, and wraps at any character, as the meter's legend does.
   'line-chart': ['.stage .line-chart-legend-label'],
@@ -1840,6 +1869,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'filter-bar': ['.stage .filter-bar-row', '.stage .filter-bar-sheet-button'],
   // The pill and an active chip's summary, from React Aria's hidden pass; the list renders nothing until it opens.
   'filter-chip': ['.stage .filter-chip-trigger', '.stage .filter-chip-value'],
+  // A static part: the dial with its role and the arc's dash are in the server's HTML, so nothing sweeps in.
+  gauge: ['.stage .gauge-dial[role="meter"]', '.stage .gauge-value'],
   'icon-button': ['.stage .icon-button'],
   kbd: ['.stage .kbd'],
   // The drawing, the table the toggle shows and the toggle itself; the readout waits for a key or a pointer.

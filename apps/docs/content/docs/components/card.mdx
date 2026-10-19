@@ -18,7 +18,9 @@ The header holds a title and a note, ruled off from the body. The title is the c
 
 ## Actions in the header
 
-Put a card's own buttons, such as Edit, Merge and Remove on an account's Details card, in `CardActions` after the title and the note. They end the title's line, level with its first line however far the title wraps, and wrap among themselves at the end while the title keeps 12rem. In a header narrower than 24rem they take a row of their own after the note, at the start, so the order on screen is the order a screen reader reads. While the header holds actions its top grows by the card's corner inset, so the buttons keep their own shape and stand clear of the rounded corner, on the body's column edge: 7px more in Rounded, nothing in Soft and Square. For more than two or three actions, keep the first as a button and put the rest in a More menu.
+Put a card's own actions in `CardActions` after the title and the note. Show at most two: for three or more, show the first and put the rest in a More menu, as an account's Details card shows Edit and keeps Merge and Remove in the menu. Beside the title they end its line, level with its first line however far the title wraps, and move down by the card's corner inset, so they keep their own shape and stand clear of the rounded corner, on the body's column edge: 7px in Rounded, nothing in Soft and Square. Where two buttons do not fit beside the title's 12rem they wrap among themselves at the end, and the note still follows the title. In a header narrower than 24rem nothing moves: the title and the note sit where they would without actions, and the actions take a row of their own after the note, at the start, so the order on screen is the order a screen reader reads. A label too long for the card wraps inside its button.
+
+The header takes no width from its actions, so a card on a phone never scrolls the page sideways. A card that holds only a header and sits where it takes the width of its content, such as in a flex row, needs a width of its own.
 
 <Preview name="card-actions" />
 
@@ -117,6 +119,6 @@ CardActions adds no role and comes after the title and the note, so a screen rea
 
 What keeps cards in the system.
 
-<Rules dos={['One title per card, and make it the heading that names the card.', 'Nest a card only for something that stands apart, such as a danger zone.', 'Let the body space its children at 24px and leave their margins alone.', 'Wrap text in a paragraph. The body is a grid, so bare text beside an element takes a row of its own.', "Put the card's own actions in CardActions, after the title and the note."]} donts={['Never trim the 32px padding to fit more in. It is what separates a card from its content.', 'Never use a card for a single control or a short label. A card holds a section.', "Never place a button in the header's corner by hand. CardActions keeps it clear of the curve."]} />
+<Rules dos={['One title per card, and make it the heading that names the card.', 'Nest a card only for something that stands apart, such as a danger zone.', 'Let the body space its children at 24px and leave their margins alone.', 'Wrap text in a paragraph. The body is a grid, so bare text beside an element takes a row of its own.', "Put the card's own actions in CardActions, after the title and the note.", 'Show at most two actions in a header. For three or more, show the first and put the rest in a More menu.']} donts={['Never trim the 32px padding to fit more in. It is what separates a card from its content.', 'Never use a card for a single control or a short label. A card holds a section.', "Never place a button in the header's corner by hand. CardActions keeps it clear of the curve."]} />
 
 </Section>

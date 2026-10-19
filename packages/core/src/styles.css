@@ -42,6 +42,7 @@
 @import './components/stat-tile.css';
 @import './components/meter.css';
 @import './components/charts.css';
+@import './components/gauge.css';
 @import './components/search-field.css';
 @import './components/select.css';
 @import './components/combo-box.css';

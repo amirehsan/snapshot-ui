@@ -158,11 +158,13 @@ describe('src/styles.css', () => {
 
   it('imports the accounts files after the files they read from, in order', () => {
     // The list reads the card's holder properties, so it follows card.css; the gauge and the month grid read the
-    // meter's track and looks, so they follow meter.css. Each is checked once it exists.
+    // meter's track and looks, so they follow meter.css, after charts.css, which keeps its place right after the
+    // meter (spec correction 22). Each is checked once it exists.
     const at = (file) => entry.indexOf(`'./components/${file}'`);
     expect(at('card.css')).toBeGreaterThanOrEqual(0);
     expect(at('description-list.css')).toBeGreaterThan(at('card.css'));
-    let previous = at('meter.css');
+    expect(at('charts.css')).toBeGreaterThan(at('meter.css'));
+    let previous = at('charts.css');
     for (const file of ['gauge.css', 'month-grid.css']) {
       if (!components.includes(file)) continue;
       expect(at(file), file).toBeGreaterThan(previous);
@@ -1258,7 +1260,11 @@ describe('src/components/card.css, CardActions in a plain card header', () => {
   const HEADER = '.card > .card-header:has(> .card-actions) {';
   const TITLE = '.card > .card-header:has(> .card-actions) > .card-title {';
   const ACTIONS = '.card > .card-header > .card-actions {';
+  const ALONE = '.card > .card-header > .card-actions:first-child {';
+  const SPAN = '.card > .card-header:has(> .card-note) > .card-actions {';
+  const BUTTON = '.card > .card-header > .card-actions > .button {';
   const WIDE = '@container card-header (inline-size >= 24rem)';
+  const EXTRA = 'calc(var(--holder-corner-inset) - var(--holder-pad))';
   /** Every rule that holds declarations, as its selector and its declarations, media blocks included. */
   const all = (css = rules()) =>
     [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector = '', body = '']) => ({
@@ -1273,31 +1279,57 @@ describe('src/components/card.css, CardActions in a plain card header', () => {
     return css.slice(0, start) + css.slice(end);
   };
 
-  it('lays out a plain card header holding actions as a grid with a control-high first row', () => {
-    const css = rules();
-    const header = blockAfter(css, HEADER);
-    // One column: under 24rem the title, the note and the actions stack in the reading order.
+  it('makes a header holding actions a one-column grid and a size container with no stand-in width', () => {
+    const header = blockAfter(rules(), HEADER);
+    expect(header).toContain('container: card-header / inline-size;');
+    // Any stand-in width becomes the card's min-content and scrolls a phone's page sideways from a 1fr track.
+    expect(header).toContain('contain-intrinsic-inline-size: 0;');
     expect(header).toContain('grid-template-columns: minmax(0, 1fr);');
-    // At least a control high, and taller for a title that wraps, so nothing overhangs the row.
-    expect(header).toContain('grid-template-rows: minmax(var(--size-control), auto);');
     expect(header).toContain('column-gap: var(--spacing-peer);');
-    expect(header).toContain('align-items: start;');
-    // The title's first line is centred on a control's height, level with the actions' first line.
-    expect(blockAfter(css, TITLE)).toContain(
-      'margin-block-start: max(0px, calc((var(--size-control) - 1lh) / 2));',
-    );
-    expect(blockAfter(css, ACTIONS)).toContain('min-block-size: var(--size-control);');
-    // The shared rule still draws them: a wrapping flex row with the part step between, each centred.
-    const shared = blockAfter(css, '.card-actions {');
-    expect(shared).toContain('display: flex;');
-    expect(shared).toContain('flex-wrap: wrap;');
-    expect(shared).toContain('align-items: center;');
-    expect(shared).toContain('gap: var(--spacing-part);');
   });
 
-  it("grows that header's top by the corner inset less the padding", () => {
-    expect(blockAfter(rules(), HEADER)).toContain(
-      'padding-block-start: calc(var(--holder-corner-inset) - var(--holder-pad));',
+  it('draws a narrow header as a header without actions draws: no row, padding or margin of its own', () => {
+    const header = blockAfter(narrow(), HEADER);
+    expect(header).not.toMatch(/grid-template-rows|padding|margin|align-items/);
+    expect(blockAfter(narrow(), TITLE)).toBe('');
+    for (const { selector, body } of all(narrow())) {
+      if (!selector.includes('card-actions')) continue;
+      // Nothing places the actions, so they follow the note at the inline start.
+      expect(body, selector).not.toMatch(/grid-(?:row|column)\s*:|justify-content/);
+      // Only actions that start the header, with nothing above them, move down at every width.
+      if (body.includes('margin')) expect(selector).toBe(ALONE.slice(0, -2));
+    }
+    expect(blockAfter(narrow(), ALONE).trim()).toBe(`margin-block-start: ${EXTRA};`);
+  });
+
+  it('wraps a long label inside its button rather than widening the card', () => {
+    expect(blockAfter(rules(), BUTTON).trim()).toBe('white-space: normal;');
+  });
+
+  it('sets the actions beside the title from 24rem, keeping the title 12rem beside them', () => {
+    const wide = blockAfter(rules(), WIDE);
+    expect(
+      blockAfter(wide, '.card > .card-header:has(> .card-actions) > :is(.card-title, .card-note) {'),
+    ).toContain('grid-column: 1;');
+    const beside = blockAfter(wide, ACTIONS);
+    expect(beside).toContain('grid-column: 2;');
+    expect(beside).toContain('grid-row: 1;');
+    expect(beside).toContain('align-self: start;');
+    expect(beside).toContain('justify-content: flex-end;');
+    expect(beside).toContain('min-block-size: var(--size-control);');
+    // The title keeps 12rem beside them, and a lone button wider than what is left still never overlaps it.
+    expect(beside).toContain('max-inline-size: calc(100cqi - 12rem - var(--spacing-peer));');
+    expect(beside).toContain('min-inline-size: min-content;');
+    // With a note they span its row too, so a second line of actions never parts the note from the title.
+    expect(blockAfter(wide, SPAN).trim()).toBe('grid-row: 1 / span 2;');
+  });
+
+  it('moves the actions and the title down by the corner inset less the padding beside the title alone', () => {
+    const wide = blockAfter(rules(), WIDE);
+    expect(blockAfter(wide, ACTIONS)).toContain(`margin-block-start: ${EXTRA};`);
+    // The title moves with them, its first line centred on a control's height, level with their first line.
+    expect(blockAfter(wide, TITLE).trim()).toBe(
+      'margin-block-start: calc(var(--holder-corner-inset) - var(--holder-pad) + max(0px, calc((var(--size-control) - 1lh) / 2)));',
     );
     // Down, never in: the actions end on the body's column edge.
     for (const { selector, body } of all().filter((rule) => rule.selector.includes('card-actions'))) {
@@ -1305,39 +1337,11 @@ describe('src/components/card.css, CardActions in a plain card header', () => {
     }
   });
 
-  it('sets the actions beside the title from 24rem of the header, and keeps the title 12rem beside them', () => {
-    const css = rules();
-    const header = blockAfter(css, HEADER);
-    expect(header).toContain('container: card-header / inline-size;');
-    // A size container takes no width from its content, so it names a stand-in, as the list and StatTile do.
-    expect(header).toContain('contain-intrinsic-inline-size: 20rem;');
-    const wide = blockAfter(css, WIDE);
-    expect(
-      blockAfter(wide, '.card > .card-header:has(> .card-actions) > :is(.card-title, .card-note) {'),
-    ).toContain('grid-column: 1;');
-    const beside = blockAfter(wide, ACTIONS);
-    expect(beside).toContain('grid-column: 2;');
-    expect(beside).toContain('grid-row: 1;');
-    expect(beside).toContain('justify-content: flex-end;');
-    // The title keeps 12rem beside them, and a lone button wider than what is left still never overlaps it.
-    expect(beside).toContain('max-inline-size: calc(100cqi - 12rem - var(--spacing-peer));');
-    expect(beside).toContain('min-inline-size: min-content;');
-  });
-
-  it('moves the actions under the note under 24rem of the header', () => {
-    // Outside the query nothing places them, so they follow the note in a row of their own, at the inline
-    // start, and the header has no second column, so no gap is kept for one.
-    for (const { selector, body } of all(narrow())) {
-      if (selector.includes('card-header')) expect(body, selector).not.toMatch(/grid-(?:row|column)\s*:/);
-    }
-    expect(blockAfter(narrow(), ACTIONS)).not.toContain('justify-content');
-  });
-
   it("matches only a header that is a card's own child, so a collapsible card's header is untouched", () => {
     const placed = all().filter(
       ({ selector }) => selector.includes('card-header') && selector.includes('card-actions'),
     );
-    expect(placed).toHaveLength(5);
+    expect(placed).toHaveLength(7);
     for (const { selector } of placed) {
       // A collapsible card's header sits in .card-disclosure, never directly in the card.
       expect(selector).toMatch(/^\.card > \.card-header/);
@@ -1541,9 +1545,11 @@ describe('src/components/card.css, the collapsible card', () => {
   });
 
   it('sizes the header from what it holds: no size container, so a card that fits its content fits the title', () => {
-    // A size container takes no width from its content, which let a folded card shrink to its padding, and
-    // it also made the header a containing block and a stacking context. Only a plain card's header holding
-    // CardActions is one (the CardActions describe), and none of its rules reaches a collapsible card's header.
+    // A size container takes no width from its content. Here the header is all a folded card shows, so a
+    // folded card that takes the width of its content shrank to its padding; it also made the header a
+    // containing block and a stacking context. A plain card's header holding CardActions is a size container
+    // with a stand-in width of 0 (the CardActions describe), so a card that sizes to its content takes its
+    // width from its body or from its place, never from that header; none of its rules reaches this header.
     const collapsible = all().filter(({ selector }) => !selector.startsWith('.card > .card-header'));
     for (const { selector, body } of collapsible) {
       expect(body, selector).not.toMatch(/container(?:-type|-name)?\s*:/);
@@ -1791,6 +1797,193 @@ describe('src/components/description-list.css', () => {
         '.description-list[data-dividers] > .description-list-item + .description-list-item {',
       ),
     ).toContain('border-block-start-color: canvastext;');
+  });
+});
+
+describe('src/components/gauge.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/gauge.css')));
+  const SEMICIRCLE = ".gauge[data-form='semicircle']";
+  /** The block of the rule whose whole selector is `selector`, not one that lists it among others. */
+  const rule = (css, selector) => {
+    const found = [...css.matchAll(/(?<=^|[{}])\s*([^{}]+?)\s*\{/g)].find((match) => match[1] === selector);
+    return found ? blockAfter(css.slice(found.index), `${selector} {`) : '';
+  };
+
+  it('sizes the dial at 2, 6 and 10rem', () => {
+    const css = rules();
+    expect(rule(css, '.gauge')).toContain('--gauge-size: 6rem;');
+    expect(rule(css, ".gauge[data-size='sm']")).toContain('--gauge-size: 2rem;');
+    expect(rule(css, ".gauge[data-size='lg']")).toContain('--gauge-size: 10rem;');
+    expect(rule(css, '.gauge-dial')).toContain('inline-size: var(--gauge-size);');
+    // The stroke's share of each box, 8 of 96, 4 of 32 and 12 of 160, so the figure's inner circle follows an
+    // app's own --gauge-size.
+    expect(rule(css, '.gauge')).toContain('--gauge-band: calc(var(--gauge-size) / 12);');
+    expect(rule(css, ".gauge[data-size='sm']")).toContain('--gauge-band: calc(var(--gauge-size) / 8);');
+    expect(rule(css, ".gauge[data-size='lg']")).toContain('--gauge-band: calc(var(--gauge-size) * 3 / 40);');
+    // The svg scales uniformly from its viewBox, so a circle stays a circle at any size.
+    const svg = rule(css, '.gauge-svg');
+    expect(svg).toContain('inline-size: 100%;');
+    expect(svg).toContain('block-size: auto;');
+    expect(svg).toContain('overflow: visible;');
+  });
+
+  it('strokes the track in the frame color and the value in --gauge-ink, round caps on both', () => {
+    const css = rules();
+    const both = blockAfter(css, '.gauge-track, .gauge-value {');
+    expect(both).toContain('fill: none;');
+    expect(both).toContain('stroke-linecap: round;');
+    expect(rule(css, '.gauge-track')).toContain('stroke: var(--color-frame);');
+    expect(rule(css, '.gauge-value')).toContain('stroke: var(--gauge-ink);');
+    expect(rule(css, '.gauge')).toContain('--gauge-ink: var(--color-ink);');
+    // Round in every shape: nothing here reads the shape axis.
+    expect(css).not.toMatch(/data-shape|--radius-|stroke-linecap: (?:butt|square)/);
+  });
+
+  it('turns --gauge-ink warning for warning and over the limit, and error for error, error last', () => {
+    const css = rules();
+    const warning = ".gauge:is([data-tone='warning'], [data-over]) {";
+    const error = ".gauge[data-tone='error'] {";
+    expect(blockAfter(css, warning)).toContain('--gauge-ink: var(--color-warning);');
+    expect(blockAfter(css, error)).toContain('--gauge-ink: var(--color-error);');
+    // Equal weight, so the later rule wins: an error over the limit stays error.
+    expect(css.indexOf(error)).toBeGreaterThan(css.indexOf(warning));
+    expect(css).not.toMatch(/--color-(?:success|gain|signal|clay|taupe)/);
+  });
+
+  it('moves the value over 200ms and stops under reduced motion', () => {
+    const css = rules();
+    const value = rule(css, '.gauge-value');
+    expect(value).toContain(
+      'transition: stroke-dasharray 200ms ease, stroke-dashoffset 200ms ease, stroke 200ms ease;',
+    );
+    expect(rule(blockAfter(css, '@media (prefers-reduced-motion: reduce)'), '.gauge-value')).toContain(
+      'transition: none;',
+    );
+    // Nothing else moves, and nothing sweeps in: a transition never runs on the first style.
+    expect(css.match(/transition:/g)).toHaveLength(2);
+    expect(css).not.toMatch(/animation|@keyframes/);
+  });
+
+  it('mirrors the svg by --gauge-flip from the dir attribute', () => {
+    const css = rules();
+    expect(rule(css, ":where([dir='ltr' i])")).toContain('--gauge-flip: 1;');
+    expect(rule(css, ":where([dir='rtl' i])")).toContain('--gauge-flip: -1;');
+    expect(rule(css, '.gauge-svg')).toContain('scale: var(--gauge-flip, 1) 1;');
+    // Only the svg mirrors: the figure and the text are HTML and keep their reading order.
+    expect(css.match(/--gauge-flip,/g)).toHaveLength(1);
+    expect(css).not.toContain(':dir(');
+  });
+
+  it('rings marks in --meter-surface, falling back to lifted', () => {
+    const css = rules();
+    const ring = rule(css, '.gauge-mark-ring');
+    expect(ring).toContain('stroke: var(--meter-surface, var(--color-lifted));');
+    expect(ring).toContain('stroke-width: 6px;');
+    const mark = rule(css, '.gauge-mark');
+    expect(mark).toContain('stroke: var(--color-ink);');
+    expect(mark).toContain('stroke-width: 2px;');
+  });
+
+  it('sets the figure at the h3 step at md and the numeral step at lg, 500, tabular, left to right', () => {
+    const css = rules();
+    const figure = rule(css, '.gauge-figure-value');
+    for (const declaration of [
+      'font-size: var(--text-h3);',
+      'line-height: var(--text-h3--line-height);',
+      'letter-spacing: var(--text-h3--letter-spacing);',
+      'font-weight: var(--text-h3--font-weight);',
+      'font-variant-numeric: tabular-nums;',
+      'white-space: nowrap;',
+      'direction: ltr;',
+      'unicode-bidi: isolate;',
+      'color: var(--color-ink);',
+    ]) {
+      expect(figure, declaration).toContain(declaration);
+    }
+    const large = rule(css, ".gauge[data-size='lg'] .gauge-figure-value");
+    for (const declaration of [
+      'font-size: var(--text-numeral-sm);',
+      'line-height: var(--text-numeral-sm--line-height);',
+      'letter-spacing: var(--text-numeral-sm--letter-spacing);',
+      'font-weight: var(--text-numeral-sm--font-weight);',
+    ]) {
+      expect(large, declaration).toContain(declaration);
+    }
+    // The caption is slate, at the small step, never toned, and two lines at most.
+    const caption = rule(css, '.gauge-figure-caption');
+    for (const declaration of [
+      'font-size: var(--text-small);',
+      'font-weight: var(--text-small--font-weight);',
+      'color: var(--color-slate);',
+      '-webkit-line-clamp: 2;',
+      'overflow: hidden;',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(caption, declaration).toContain(declaration);
+    }
+    // Weights 500 and the steps' own tokens only: 500 for the figure and the label, 450 for the caption and the
+    // value text.
+    for (const weight of css.matchAll(/font-weight:\s*([^;]+);/g))
+      expect(weight[1]).toMatch(/^(?:500|var\(--text-(?:h3|numeral-sm|small)--font-weight\))$/);
+  });
+
+  it("centres the figure in a ring's inner circle and sets a semicircle's on its chord", () => {
+    const css = rules();
+    // The dial stacks the svg and the figure in one cell, so a semicircle's caption under the chord gives the dial
+    // its height.
+    expect(rule(css, '.gauge-dial')).toContain('display: grid;');
+    expect(blockAfter(css, '.gauge-svg, .gauge-figure {')).toContain('grid-area: 1 / 1;');
+    const ring = rule(css, '.gauge-figure');
+    expect(ring).toContain('padding: var(--gauge-band);');
+    expect(ring).toContain('justify-content: center;');
+    // A semicircle: a strut half the box tall, whose baseline is its foot, holds the figure's baseline on the chord.
+    const semicircle = rule(css, `${SEMICIRCLE} .gauge-figure`);
+    expect(semicircle).toContain('flex-flow: row wrap;');
+    expect(semicircle).toContain('align-items: baseline;');
+    expect(semicircle).toContain('padding: 0 var(--gauge-band);');
+    expect(rule(css, `${SEMICIRCLE} .gauge-figure::before`)).toContain(
+      'block-size: calc(var(--gauge-size) / 2);',
+    );
+    expect(rule(css, `${SEMICIRCLE} .gauge-figure-caption`)).toContain('flex-basis: 100%;');
+  });
+
+  it('puts the text under the dial at md and lg, at least the dial or 12rem wide, and beside it at sm', () => {
+    const css = rules();
+    const text = rule(css, '.gauge-text');
+    expect(text).toContain('max-inline-size: max(var(--gauge-size), 12rem);');
+    expect(text).toContain('text-align: center;');
+    expect(text).toContain('overflow-wrap: anywhere;');
+    const small = rule(css, ".gauge[data-size='sm']");
+    expect(small).toContain('grid-template-columns: auto minmax(0, 1fr);');
+    expect(small).toContain('align-items: center;');
+    expect(rule(css, ".gauge[data-size='sm'] .gauge-text")).toContain('text-align: start;');
+    const label = rule(css, '.gauge-label');
+    expect(label).toContain('font-weight: 500;');
+    expect(label).toContain('color: var(--color-ink);');
+    const value = rule(css, '.gauge-value-label');
+    expect(value).toContain('font-weight: var(--text-small--font-weight);');
+    expect(value).toContain('font-variant-numeric: tabular-nums;');
+    expect(value).toContain('color: var(--color-slate);');
+    // Logical properties throughout.
+    expect(css).not.toMatch(
+      /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|top|bottom):/,
+    );
+  });
+
+  it('names graytext, canvastext, highlight and canvas in forced colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(rule(forced, '.gauge-track')).toContain('stroke: graytext;');
+    expect(rule(forced, '.gauge-value')).toContain('stroke: canvastext;');
+    expect(rule(forced, '.gauge-mark')).toContain('stroke: highlight;');
+    expect(rule(forced, '.gauge-mark-ring')).toContain('stroke: canvas;');
+  });
+
+  it('keeps print colors exact', () => {
+    const root = rule(rules(), '.gauge');
+    expect(root).toContain('-webkit-print-color-adjust: exact;');
+    expect(root).toContain('print-color-adjust: exact;');
   });
 });
 
@@ -3186,6 +3379,7 @@ describe('src/components/tooltip.css', () => {
         'stat-tile.css',
         'meter.css',
         'charts.css',
+        'gauge.css',
         'search-field.css',
         'select.css',
         'combo-box.css',
@@ -9414,7 +9608,8 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       ':is(.card, .card > .card-body:first-child) > .description-list:first-child > .description-list-item:first-child:has(> .description-list-actions) {',
       'padding-block-start: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));',
     ],
-    ['card.css', '.card > .card-header:has(> .card-actions) {', `padding-block-start: ${EXTRA};`],
+    ['card.css', '.card > .card-header > .card-actions {', `margin-block-start: ${EXTRA};`],
+    ['card.css', '.card > .card-header > .card-actions:first-child {', `margin-block-start: ${EXTRA};`],
   ];
 
   it('moves no control inward where a content column stands above it, so a trailing action keeps its edge', () => {

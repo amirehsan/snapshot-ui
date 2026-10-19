@@ -24,6 +24,15 @@ import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/s
 import { Card, CardActions, CardHeader, CardTitle } from '../src/card';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
+import { Gauge } from '../src/gauge';
+
+/** The consumer's score bands on 300 to 850. */
+const SCORE_BANDS = [
+  { value: 580, label: 'Fair from 580' },
+  { value: 670, label: 'Good from 670' },
+  { value: 740, label: 'Very good from 740' },
+  { value: 800, label: 'Excellent from 800' },
+];
 
 /**
  * The server face (ruling 1): every date and number part writes one HTML, byte for byte, under en-US, de-DE and
@@ -157,6 +166,36 @@ const FACES: [name: string, element: ReactElement][] = [
         24.9%
       </DescriptionListItem>
     </DescriptionList>,
+  ],
+  [
+    // A static part whose numbers are arithmetic on its props, written with three decimals at most: the paths,
+    // the dash and the marks are one string in every locale and zone.
+    'Gauge',
+    <Gauge
+      label="Utilization"
+      value={23}
+      valueLabel="23% of your limit"
+      figure="23%"
+      marks={[
+        { value: 10, label: 'Best under 10%' },
+        { value: 30, label: 'Keep it under 30%' },
+      ]}
+    />,
+  ],
+  [
+    'Gauge score',
+    <Gauge
+      label="Credit score"
+      form="semicircle"
+      size="lg"
+      minValue={300}
+      maxValue={850}
+      value={742}
+      valueLabel="742 of 850, Very good"
+      figure="742"
+      figureCaption="Very good"
+      marks={SCORE_BANDS}
+    />,
   ],
   [
     // The count in the Filters button's Badge, More and Clear all; no panel and no sheet.

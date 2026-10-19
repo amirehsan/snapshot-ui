@@ -24,6 +24,7 @@ import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/s
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
+import { Gauge } from '../src/gauge';
 
 /**
  * Each part's server HTML, hydrated in the browser on a mocked iPhone (plan, spec corrections 1 and 2). The HTML
@@ -255,6 +256,59 @@ const HYDRATED: [
         'href',
         '/accounts/visa/nickname',
       );
+    },
+  ],
+  [
+    // Static: the dash is inline style the server writes, so hydration changes nothing and nothing sweeps in.
+    'Gauge',
+    <Gauge
+      label="Utilization"
+      value={23}
+      valueLabel="23% of your limit"
+      figure="23%"
+      marks={[
+        { value: 10, label: 'Best under 10%' },
+        { value: 30, label: 'Keep it under 30%' },
+      ]}
+    />,
+    (container) => {
+      const dial = container.querySelector('[role="meter"]');
+      expect(dial).toHaveAccessibleName('Utilization');
+      expect(dial).toHaveAccessibleDescription('Best under 10%. Keep it under 30%.');
+      expect(container.querySelector<SVGElement>('.gauge-value')?.style.strokeDasharray).toBe(
+        '55.586 276.46',
+      );
+      expect(container.querySelectorAll('.gauge-mark')).toHaveLength(2);
+    },
+  ],
+  [
+    'Gauge score',
+    <Gauge
+      label="Credit score"
+      form="semicircle"
+      size="lg"
+      minValue={300}
+      maxValue={850}
+      value={742}
+      valueLabel="742 of 850, Very good"
+      figure="742"
+      figureCaption="Very good"
+      marks={[
+        { value: 580, label: 'Fair from 580' },
+        { value: 670, label: 'Good from 670' },
+        { value: 740, label: 'Very good from 740' },
+        { value: 800, label: 'Excellent from 800' },
+      ]}
+    />,
+    (container) => {
+      const dial = container.querySelector('[role="meter"]');
+      expect(dial).toHaveAttribute('aria-valuenow', '742');
+      expect(dial).toHaveAttribute('aria-valuetext', '742 of 850, Very good');
+      expect(container.querySelector('.gauge-track')).toHaveAttribute('d', 'M6 80A74 74 0 0 1 154 80');
+      expect(container.querySelector<SVGElement>('.gauge-value')?.style.strokeDasharray).toBe(
+        '174.828 232.478',
+      );
+      expect(container.querySelector('.gauge-figure-caption')).toHaveTextContent('Very good');
     },
   ],
   [

@@ -335,50 +335,68 @@
    * CollapsibleCard's header, which sits in .card-disclosure, is never matched.
    */
 
-  /* One column, so under 24rem of the header the title, the note and the actions stack in the reading order.
-     The first row is at least a control high, and grows for a title that wraps, so nothing overhangs it. The
-     header's top grows by the corner inset less the card's padding while it holds actions, 7px in Rounded
-     and 19px compact, so the actions start the corner inset under the card's edge, clear of its top end
-     curve, and still end on the body's column edge: down, not in, as UploadTray's panel moves its header's
-     trailing button (design record, "Nested radii, derived"). Soft and Square add nothing. The header is
-     the size container the actions' place is read from, and a size container takes no width from what it
-     holds, so it names a stand-in, 20rem, as the list and StatTile do. */
+  /* The header is the size container the actions' place is read from. Its one column fills it as a plain
+     header's does, so under 24rem a header holding actions draws its title and note exactly where a header
+     without them does, and the actions follow the note at the start, in the reading order: nothing in a
+     narrow header is near the card's top end curve, so nothing moves. A size container takes no width from
+     what it holds, and as every size container in the library its intrinsic inline size is 0: any stand-in
+     would become the card's min-content and push a page sideways from a flex: 1 wrapper or a 1fr track. A
+     holder that takes the width of its content, such as a flex row holding a card with only a header, gives
+     the card a width. */
   .card > .card-header:has(> .card-actions) {
     container: card-header / inline-size;
-    contain-intrinsic-inline-size: 20rem;
+    contain-intrinsic-inline-size: 0;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(var(--size-control), auto);
     column-gap: var(--spacing-peer);
-    align-items: start;
-    padding-block-start: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
-  /* The title's first line is centred on a control's height, 5.6px down and 3.6px compact, so it is level
-     with the actions' first line however many lines the title takes. */
-  .card > .card-header:has(> .card-actions) > .card-title {
-    margin-block-start: max(0px, calc((var(--size-control) - 1lh) / 2));
+  /* A header holding only actions has them at the card's top at every width, so they always start the
+     corner inset under the card's edge (design record, "Nested radii, derived"). */
+  .card > .card-header > .card-actions:first-child {
+    margin-block-start: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
-  /* At least a control high, its buttons centred in it, so a link among them is level too. */
-  .card > .card-header > .card-actions {
-    min-block-size: var(--size-control);
+  /* A label too long for a narrow card wraps inside its button, which keeps its shape, rather than widening
+     the card. */
+  .card > .card-header > .card-actions > .button {
+    white-space: normal;
   }
 
   /* From 24rem of the header the actions end the title's line, in a column of their own after a gap of the
      peer step, and wrap among themselves at the end where they need to. The title keeps 12rem beside them,
      as CollapsibleCard's heading does; a lone button wider than what is left takes its own width, so it
-     never overlaps the title. Under 24rem nothing places them, so they follow the note at the start. */
+     never overlaps the title. With a note they span the title's row and the note's, so a second line of
+     them never pushes the note away from its title.
+
+     There they sit at the card's top end, inside its curve, so they move down by the corner inset less the
+     card's padding, 7px in Rounded and 19px compact, nothing in Soft and Square: their top is the corner
+     inset under the card's edge, and their end stays on the body's column edge, as UploadTray's panel moves
+     its header's trailing button. The title moves down with them, and its first line is centred on a
+     control's height, so it is level with the actions' first line however many lines it takes. */
   @container card-header (inline-size >= 24rem) {
     .card > .card-header:has(> .card-actions) > :is(.card-title, .card-note) {
       grid-column: 1;
     }
 
+    .card > .card-header:has(> .card-actions) > .card-title {
+      margin-block-start: calc(
+        var(--holder-corner-inset) - var(--holder-pad) + max(0px, calc((var(--size-control) - 1lh) / 2))
+      );
+    }
+
     .card > .card-header > .card-actions {
       grid-column: 2;
       grid-row: 1;
+      align-self: start;
       justify-content: flex-end;
+      min-block-size: var(--size-control);
       min-inline-size: min-content;
       max-inline-size: calc(100cqi - 12rem - var(--spacing-peer));
+      margin-block-start: calc(var(--holder-corner-inset) - var(--holder-pad));
+    }
+
+    .card > .card-header:has(> .card-note) > .card-actions {
+      grid-row: 1 / span 2;
     }
   }
 

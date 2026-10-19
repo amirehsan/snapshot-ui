@@ -82,6 +82,11 @@ import FilterChipCustom from './filter-chip-custom';
 import FilterChipMultiple from './filter-chip-multiple';
 import FilterChipSingle from './filter-chip-single';
 import FilterChipStates from './filter-chip-states';
+import GaugeBasic from './gauge-basic';
+import GaugeScore from './gauge-score';
+import GaugeTable from './gauge-table';
+import GaugeTile from './gauge-tile';
+import GaugeUtilization from './gauge-utilization';
 import HeadingSizes from './heading-sizes';
 import IconButtonLink from './icon-button-link';
 import IconButtonStates from './icon-button-states';
@@ -263,6 +268,11 @@ export const examples = {
   'filter-chip-multiple': FilterChipMultiple,
   'filter-chip-single': FilterChipSingle,
   'filter-chip-states': FilterChipStates,
+  'gauge-basic': GaugeBasic,
+  'gauge-score': GaugeScore,
+  'gauge-table': GaugeTable,
+  'gauge-tile': GaugeTile,
+  'gauge-utilization': GaugeUtilization,
   'heading-sizes': HeadingSizes,
   'icon-button-link': IconButtonLink,
   'icon-button-states': IconButtonStates,

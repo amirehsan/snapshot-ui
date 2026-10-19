@@ -49,6 +49,7 @@ import {
 } from '../src/sidebar';
 import { Spinner } from '../src/spinner';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
+import { Gauge } from '../src/gauge';
 import { COLUMNS, columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Switch } from '../src/switch';
 import { Tab, TabList, TabPanel, Tabs } from '../src/tabs';
@@ -650,6 +651,50 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '</div></div><div class="card-body"><dl class="description-list"',
     ],
     ['role='],
+  ],
+  [
+    // A static gauge in each row of a client DataTable, as the consumer's utilization column draws it: each renders
+    // in Node inside its cell, named with its row, its value text beside it.
+    'DataTable with a Gauge per row',
+    <DataTable
+      aria-label="Cards"
+      items={[
+        { id: 'visa', name: 'Everyday Visa ending 4821', used: 23 },
+        { id: 'master', name: 'Travel Mastercard ending 0937', used: 47 },
+      ]}
+      columns={[
+        { id: 'name', header: 'Card', cell: (card) => card.name, isRowHeader: true },
+        {
+          id: 'utilization',
+          header: 'Utilization',
+          cell: (card) => (
+            <Gauge
+              aria-label={`Utilization, ${card.name}`}
+              size="sm"
+              value={card.used}
+              valueLabel={`${String(card.used)}%`}
+              tone={card.used > 30 ? 'warning' : 'neutral'}
+              marks={[
+                { value: 10, label: 'Best under 10%' },
+                { value: 30, label: 'Keep it under 30%' },
+              ]}
+            />
+          ),
+          textValue: (card) => `${String(card.used)}%`,
+        },
+      ]}
+      getKey={(card) => card.id}
+    />,
+    [
+      '<div class="gauge" data-size="sm" data-form="ring" data-tone="neutral">',
+      'aria-label="Utilization, Everyday Visa ending 4821"',
+      '<div class="gauge" data-size="sm" data-form="ring" data-tone="warning">',
+      'role="meter"',
+      'viewBox="0 0 32 32"',
+      'style="stroke-dasharray:',
+      '<span class="gauge-value-label" aria-hidden="true">47%</span>',
+    ],
+    ['gauge-figure', 'gauge-label'],
   ],
   [
     // A static list holding a client leaf, React Aria's Link, as a row's action: the leaf renders in Node inside

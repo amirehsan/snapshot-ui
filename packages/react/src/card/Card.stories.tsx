@@ -322,30 +322,61 @@ async function inEveryTheme(check: (shape: string) => Promise<void>): Promise<vo
 /** A title long enough to wrap beside the actions, and over its own lines on a phone. */
 const LONG_TITLE = 'Details of the Everyday Visa Platinum Rewards card';
 
+/** A screen 320px wide, the narrowest the consumer supports, for the plays that look for sideways scroll. */
+const NARROW = {
+  globals: { viewport: { value: 'narrow' } },
+  parameters: {
+    viewport: { options: { narrow: { name: 'Narrow phone', styles: { width: '320px', height: '640px' } } } },
+  },
+} as const;
+
+/** The actions a Details card holds: Edit and a More menu, two visible buttons, or none. */
+type AccountActions = 'menu' | 'two' | 'none';
+
 /**
- * The first consumer's Details card with Edit, Merge and Remove side by side, each named for what it does to
- * the account. Their Dialog and ConfirmDialog are left out: the corner and the wrap are the point here, and
- * WithActions opens Edit's.
+ * The first consumer's Details card. Its actions are Edit and a More menu holding Merge and Remove, the
+ * library's rule of at most two visible actions; `two` shows Edit and Remove as buttons; `none` draws the
+ * same header without actions, which a narrow header must match. Their dialogs are left out: the corner and
+ * the wrap are the point here, and WithActions opens Edit's.
  */
-function AccountCard({ title = 'Details', id }: { title?: string; id: string }): ReactElement {
+function AccountCard({
+  title = 'Details',
+  id,
+  actions = 'menu',
+}: {
+  title?: string;
+  id: string;
+  actions?: AccountActions;
+}): ReactElement {
   return (
-    <Card as="section" aria-labelledby={id}>
+    <Card>
       <CardHeader>
         <CardTitle id={id} level={3}>
           {title}
         </CardTitle>
         <CardNote>Updated from your bank feed</CardNote>
-        <CardActions>
-          <Button variant="secondary" aria-label="Edit details">
-            Edit
-          </Button>
-          <Button variant="secondary" aria-label="Merge account">
-            Merge
-          </Button>
-          <Button variant="secondary" aria-label="Remove account">
-            Remove
-          </Button>
-        </CardActions>
+        {actions === 'none' ? null : (
+          <CardActions>
+            <Button variant="secondary" aria-label="Edit details">
+              Edit
+            </Button>
+            {actions === 'menu' ? (
+              <MenuTrigger>
+                <IconButton aria-label="More actions" variant="outline">
+                  <Ellipsis />
+                </IconButton>
+                <Menu>
+                  <MenuItem id="merge">Merge</MenuItem>
+                  <MenuItem id="remove">Remove</MenuItem>
+                </Menu>
+              </MenuTrigger>
+            ) : (
+              <Button variant="secondary" aria-label="Remove account">
+                Remove
+              </Button>
+            )}
+          </CardActions>
+        )}
       </CardHeader>
       <CardBody>
         <DescriptionList>
@@ -359,11 +390,36 @@ function AccountCard({ title = 'Details', id }: { title?: string; id: string }):
   );
 }
 
+/** The header's parts and the card's box, read once per check. */
+function headerOf(card: HTMLElement) {
+  const header = part(card, 'card-header');
+  const actions = part(header, 'card-actions');
+  return {
+    card: card.getBoundingClientRect(),
+    title: part(header, 'card-title'),
+    note: part(header, 'card-note'),
+    actions,
+    controls: [...actions.querySelectorAll('button')],
+    gap: parseFloat(getComputedStyle(header).rowGap),
+  };
+}
+
+/** Where an element's box starts and ends, in px under the top of `card`. */
+const fromTop = (card: Element, element: Element): [number, number] => {
+  const top = card.getBoundingClientRect().top;
+  const box = element.getBoundingClientRect();
+  return [box.top - top, box.bottom - top];
+};
+
+/** The page scrolls sideways by this many px: 0 when everything fits the screen. */
+const sideways = (): number => document.documentElement.scrollWidth - document.documentElement.clientWidth;
+
 /**
  * Buttons in a plain card's header, after its title and note: Edit opens a Dialog, and a More menu holds
- * Merge and Remove. They sit at the end of the title's line, which is a control high, and the header's top
- * grows by the card's corner inset less its padding, so in Rounded they stand clear of the top end curve and
- * end on the body's column edge. At 375 the header is under 24rem and they follow the note at the start.
+ * Merge and Remove. Beside the title they move down by the card's corner inset less its padding, so in
+ * Rounded they stand clear of the top end curve, level with the title's first line, and end on the body's
+ * column edge. At 375 the header is under 24rem: the title and the note stay where a card without actions
+ * draws them, and the actions follow the note at the start.
  */
 export const WithActions: Story = {
   tags: ['density'],
@@ -427,26 +483,28 @@ export const WithActions: Story = {
 };
 
 /**
- * On a phone a long title wraps over its lines and the header is under 24rem, so Edit, Merge and Remove take
- * a row of their own after the note, at the inline start, wrapping among themselves. In every shape and
- * density nothing overlaps the title or the note, each button keeps one radius on its four corners, and none
- * enters a corner curve of the card or passes its padding.
+ * On a phone a long title wraps over its lines and the header is under 24rem. In every shape and density the
+ * title and the note sit exactly where the same card without actions draws them, the actions follow the note
+ * at the inline start, nothing overlaps, each control keeps one radius on its four corners, and none enters a
+ * corner curve of the card or passes its padding.
  */
 export const ActionsWrap: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
   globals: PHONE,
   parameters: { viewport: { options: VIEWPORT_OPTIONS } },
-  render: () => <AccountCard id="wrap-title" title={LONG_TITLE} />,
+  render: () => (
+    <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
+      <AccountCard id="wrap-title" title={LONG_TITLE} />
+      <AccountCard id="plain-title" title={LONG_TITLE} actions="none" />
+    </div>
+  ),
   play: async ({ canvasElement }) => {
-    const card = part(canvasElement, 'card');
-    const header = part(card, 'card-header');
-    const title = part(header, 'card-title');
-    const note = part(header, 'card-note');
-    const actions = part(header, 'card-actions');
-    const buttons = [...actions.querySelectorAll('button')];
-    await expect(buttons).toHaveLength(3);
+    const [card, plain] = [...canvasElement.querySelectorAll<HTMLElement>('.card')];
+    if (!card || !plain) throw new Error('No cards');
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
     await inEveryTheme(async () => {
+      const { title, note, actions, controls } = headerOf(card);
+      await expect(controls).toHaveLength(2);
       // The header is under 24rem on a 375px screen in both densities, so the actions follow the note.
       await waitFor(
         () =>
@@ -455,25 +513,28 @@ export const ActionsWrap: Story = {
           ),
         { timeout: 5000 },
       );
-      await expect(contentWidth(header)).toBeLessThan(24 * rem);
-      // The long title wraps, and the note follows its last line.
+      await expect(contentWidth(part(card, 'card-header'))).toBeLessThan(24 * rem);
+      // Nothing above the actions moves: the title and the note are where a header without actions has them.
+      for (const name of ['card-title', 'card-note']) {
+        const [top, bottom] = fromTop(card, part(card, name));
+        const [plainTop, plainBottom] = fromTop(plain, part(plain, name));
+        await expect(Math.abs(top - plainTop)).toBeLessThan(0.5);
+        await expect(Math.abs(bottom - plainBottom)).toBeLessThan(0.5);
+      }
+      // The long title wraps, and the actions start where it starts.
       await expect(title.getBoundingClientRect().height).toBeGreaterThan(
         1.5 * parseFloat(getComputedStyle(title).lineHeight),
       );
-      await expect(note.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-        title.getBoundingClientRect().bottom,
-      );
-      // At the inline start, where the title starts.
       await expect(
         Math.abs(actions.getBoundingClientRect().left - title.getBoundingClientRect().left),
       ).toBeLessThan(1);
       const end = body(card).getBoundingClientRect().right;
-      for (const button of buttons) {
-        const box = button.getBoundingClientRect();
+      for (const control of controls) {
+        const box = control.getBoundingClientRect();
         await expect(overlaps(box, title.getBoundingClientRect())).toBe(false);
         await expect(overlaps(box, note.getBoundingClientRect())).toBe(false);
-        await expect(cornerCount(button)).toBe(1);
-        await expect(intoCorner(card, button)).toBeLessThanOrEqual(1);
+        await expect(cornerCount(control)).toBe(1);
+        await expect(intoCorner(card, control)).toBeLessThanOrEqual(1);
         await expect(box.right).toBeLessThanOrEqual(end + 1);
       }
     });
@@ -481,12 +542,13 @@ export const ActionsWrap: Story = {
 };
 
 /**
- * Beside the title, measured in every shape and density in a 40rem card. Edit, Merge and Remove share one
- * line level with the title's first line, within 1px, whether the title takes one line or wraps, and end on
- * the body's column edge. In Rounded the header's top grows by the corner inset less the card's padding, 7px
- * and 19px compact, so the actions start the corner inset under the card's top edge; in Soft and Square the
- * padding already clears the curve and nothing grows. No button overlaps the title or enters a corner curve,
- * and each keeps one radius.
+ * Beside the title, measured in every shape and density in a 40rem card: Edit and More with a short title
+ * and with a long one, and Edit and Remove. The actions and the title move down by the corner inset less the
+ * card's padding, 7px and 19px compact in Rounded, nothing in Soft and Square, read from their margins, so
+ * the first control's top is the corner inset under the card's top edge, 40px in Rounded in both densities.
+ * The controls share one line, level with the title's first line within 1px, end on the body's column edge,
+ * and the note follows the title by the header's gap. No control overlaps the title or enters a corner
+ * curve, and each keeps one radius. The header's own padding is untouched.
  */
 export const ActionsClearOfCorner: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -496,54 +558,50 @@ export const ActionsClearOfCorner: Story = {
     <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
       <AccountCard id="short-title" />
       <AccountCard id="long-title" title={LONG_TITLE} />
+      <AccountCard id="two-title" actions="two" />
     </div>
   ),
   play: async ({ canvasElement }) => {
     const cards = [...canvasElement.querySelectorAll<HTMLElement>('.card')];
-    await expect(cards).toHaveLength(2);
+    await expect(cards).toHaveLength(3);
     await inEveryTheme(async (shape) => {
       for (const card of cards) {
-        const header = part(card, 'card-header');
-        const title = part(header, 'card-title');
-        const note = part(header, 'card-note');
-        const actions = part(header, 'card-actions');
-        const buttons = [...actions.querySelectorAll('button')];
-        const [first] = buttons;
+        const { title, note, actions, controls, gap } = headerOf(card);
+        const [first] = controls;
         if (!first) throw new Error('No actions');
-        // Beside the title, above the note.
+        // Beside the title, not under the note.
         await waitFor(
-          () =>
-            expect(actions.getBoundingClientRect().bottom).toBeLessThanOrEqual(
-              note.getBoundingClientRect().top,
-            ),
+          () => expect(actions.getBoundingClientRect().top).toBeLessThan(note.getBoundingClientRect().top),
           { timeout: 5000 },
         );
-        // On one line, level with the title's first line, and on the body's end edge.
-        for (const button of buttons) {
+        for (const control of controls) {
           await expect(
-            Math.abs(button.getBoundingClientRect().top - first.getBoundingClientRect().top),
+            Math.abs(control.getBoundingClientRect().top - first.getBoundingClientRect().top),
           ).toBeLessThan(1);
         }
         await expect(Math.abs(firstLineOffset(first, title))).toBeLessThanOrEqual(1);
         await expect(
           Math.abs(actions.getBoundingClientRect().right - body(card).getBoundingClientRect().right),
         ).toBeLessThan(1);
-        // The header's top grows by the corner inset less the padding: 7px, 19px compact, in Rounded alone.
+        await expect(
+          Math.abs(note.getBoundingClientRect().top - title.getBoundingClientRect().bottom - gap),
+        ).toBeLessThan(1);
+        // The margins carry the move; the header's padding is a plain header's.
         const inset = lengthIn(card, 'var(--holder-corner-inset)');
         const extra = inset - lengthIn(card, 'var(--holder-pad)');
-        await expect(Math.abs(parseFloat(getComputedStyle(header).paddingTop) - extra)).toBeLessThan(0.5);
-        if (shape === 'rounded') {
-          await expect(extra).toBeGreaterThan(0);
-          await expect(
-            first.getBoundingClientRect().top - card.getBoundingClientRect().top,
-          ).toBeGreaterThanOrEqual(inset - 1);
-        } else {
-          await expect(extra).toBe(0);
-        }
-        for (const button of buttons) {
-          await expect(overlaps(button.getBoundingClientRect(), title.getBoundingClientRect())).toBe(false);
-          await expect(cornerCount(button)).toBe(1);
-          await expect(intoCorner(card, button)).toBeLessThanOrEqual(1);
+        await expect(parseFloat(getComputedStyle(part(card, 'card-header')).paddingTop)).toBe(0);
+        await expect(Math.abs(parseFloat(getComputedStyle(actions).marginTop) - extra)).toBeLessThan(0.5);
+        await expect(parseFloat(getComputedStyle(title).marginTop)).toBeGreaterThanOrEqual(extra - 0.5);
+        if (shape === 'rounded') await expect(extra).toBeGreaterThan(0);
+        else await expect(extra).toBe(0);
+        // The edge, then the corner inset: 1 + 39 = 40px in Rounded in both densities.
+        await expect(
+          Math.abs(first.getBoundingClientRect().top - card.getBoundingClientRect().top - (1 + inset)),
+        ).toBeLessThan(1);
+        for (const control of controls) {
+          await expect(overlaps(control.getBoundingClientRect(), title.getBoundingClientRect())).toBe(false);
+          await expect(cornerCount(control)).toBe(1);
+          await expect(intoCorner(card, control)).toBeLessThanOrEqual(1);
         }
       }
       // The long title wraps beside the actions, and they stay on its first line.
@@ -556,32 +614,155 @@ export const ActionsClearOfCorner: Story = {
 };
 
 /**
- * A header holding actions is a size container, which takes no width from its content, so in a flex row,
- * where a card takes the width of what it holds, the header names the 20rem it stands in for, as a
- * description list and a stat tile do, instead of shrinking the card to its padding.
+ * Cards 450px to 566px wide, where the header is past 24rem but two buttons do not fit beside a 12rem title
+ * on one line, so they wrap among themselves at the end. With a note they span its row as well, so the note
+ * still follows its title by the header's gap, in every shape and density, and nothing overlaps.
  */
-export const ActionsInAFlexRow: Story = {
-  tags: ['no-visual'],
+export const ActionsInTheMiddle: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: DESKTOP,
+  parameters: { viewport: { options: VIEWPORT_OPTIONS }, frame: 'min(36rem, calc(100vw - 48px))' },
   render: () => (
-    <div style={{ display: 'flex' }}>
-      <Card as="section" aria-labelledby="flex-title">
-        <CardHeader>
-          <CardTitle id="flex-title" level={3}>
-            Details
-          </CardTitle>
-          <CardActions>
-            <Button variant="secondary" aria-label="Edit details">
-              Edit
-            </Button>
-          </CardActions>
-        </CardHeader>
-      </Card>
+    <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
+      {[450, 500, 566].map((width) => (
+        <div key={width} style={{ display: 'grid', gap: 'var(--spacing-separate)', width }}>
+          <AccountCard id={`menu-${String(width)}`} />
+          <AccountCard id={`two-${String(width)}`} actions="two" />
+        </div>
+      ))}
     </div>
   ),
   play: async ({ canvasElement }) => {
+    const cards = [...canvasElement.querySelectorAll<HTMLElement>('.card')];
+    await expect(cards).toHaveLength(6);
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
-    await expect(Math.abs(contentWidth(part(canvasElement, 'card-header')) - 20 * rem)).toBeLessThanOrEqual(
-      1,
-    );
+    let wrapped = 0;
+    await inEveryTheme(async () => {
+      for (const card of cards) {
+        const { title, note, actions, controls, gap } = headerOf(card);
+        if (contentWidth(part(card, 'card-header')) < 24 * rem) continue;
+        await waitFor(
+          () => expect(actions.getBoundingClientRect().top).toBeLessThan(note.getBoundingClientRect().top),
+          { timeout: 5000 },
+        );
+        await expect(
+          Math.abs(note.getBoundingClientRect().top - title.getBoundingClientRect().bottom - gap),
+        ).toBeLessThan(1);
+        const tops = new Set(controls.map((control) => Math.round(control.getBoundingClientRect().top)));
+        if (tops.size > 1) wrapped += 1;
+        for (const control of controls) {
+          await expect(overlaps(control.getBoundingClientRect(), title.getBoundingClientRect())).toBe(false);
+          await expect(overlaps(control.getBoundingClientRect(), note.getBoundingClientRect())).toBe(false);
+          await expect(intoCorner(card, control)).toBeLessThanOrEqual(1);
+        }
+      }
+    });
+    // The band is real: somewhere in it the two buttons took two lines.
+    await expect(wrapped).toBeGreaterThan(0);
+  },
+};
+
+/**
+ * A header holding only actions, with no title and no note, has them at the card's top at every width, so
+ * they move down by the corner inset less the padding in a 20rem card as in a 36rem one: their top is the
+ * corner inset under the card's edge, in every shape and density.
+ */
+export const ActionsAlone: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: DESKTOP,
+  parameters: { viewport: { options: VIEWPORT_OPTIONS }, frame: 'min(36rem, calc(100vw - 48px))' },
+  render: () => (
+    <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
+      {['20rem', '36rem'].map((width) => (
+        <div key={width} style={{ width }}>
+          <Card aria-label="Everyday Visa">
+            <CardHeader>
+              <CardActions>
+                <Button variant="secondary" aria-label="Edit details">
+                  Edit
+                </Button>
+              </CardActions>
+            </CardHeader>
+            <CardBody>
+              <p>Everyday Visa</p>
+            </CardBody>
+          </Card>
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const cards = [...canvasElement.querySelectorAll<HTMLElement>('.card')];
+    await expect(cards).toHaveLength(2);
+    await inEveryTheme(async () => {
+      for (const card of cards) {
+        const button = part(card, 'button');
+        const inset = lengthIn(card, 'var(--holder-corner-inset)');
+        await expect(
+          Math.abs(button.getBoundingClientRect().top - card.getBoundingClientRect().top - (1 + inset)),
+        ).toBeLessThan(1);
+        await expect(intoCorner(card, button)).toBeLessThanOrEqual(1);
+      }
+    });
+  },
+};
+
+/**
+ * At 320px a card with actions in a flex: 1 wrapper and two of them in a 1fr 1fr grid fit the screen: the
+ * header takes no width from its actions, so it never becomes the card's minimum width. A label too long for
+ * the card wraps inside its button, which keeps its shape and stays inside the card.
+ */
+export const ActionsOnANarrowPhone: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: NARROW.globals,
+  parameters: { ...NARROW.parameters, layout: 'padded', frame: '100%' },
+  render: () => (
+    <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
+      <div style={{ display: 'flex' }}>
+        <div style={{ flex: 1 }}>
+          <Card aria-label="Bank feed">
+            <CardHeader>
+              <CardTitle level={3}>Bank feed</CardTitle>
+              <CardActions>
+                <Button variant="secondary">Reconnect the Northwind Bank feed</Button>
+              </CardActions>
+            </CardHeader>
+            <CardBody>
+              <p>The feed stopped on Monday.</p>
+            </CardBody>
+          </Card>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-part)' }}>
+        {['Savings', 'Checking'].map((name) => (
+          <Card key={name} aria-label={name}>
+            <CardHeader>
+              <CardTitle level={3}>{name}</CardTitle>
+              <CardActions>
+                <Button variant="secondary" aria-label={`Edit ${name}`}>
+                  Edit
+                </Button>
+              </CardActions>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(window.innerWidth).toBe(320);
+    await inEveryTheme(async () => {
+      await waitFor(() => expect(sideways()).toBeLessThanOrEqual(0), { timeout: 5000 });
+      const card = part(canvasElement, 'card');
+      const button = part(card, 'button');
+      // Two lines or more inside the button, which stays inside the card's padding box and keeps one radius.
+      await expect(button.getBoundingClientRect().height).toBeGreaterThan(
+        1.5 * parseFloat(getComputedStyle(button).lineHeight),
+      );
+      await expect(button.getBoundingClientRect().right).toBeLessThanOrEqual(
+        body(card).getBoundingClientRect().right + 1,
+      );
+      await expect(cornerCount(button)).toBe(1);
+    });
   },
 };

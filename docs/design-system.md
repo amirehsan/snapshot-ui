@@ -881,7 +881,7 @@ And the controls that move, by the corner inset (below):
 | Drawer | the footer's content | down | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
 | a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
 | Card | the list's first or last row's controls | down | the row's block padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
-| Card | CardActions | down | the header's top grows by the corner inset less the card's padding, its first row a control high | 7px, 19px compact | as before | as before |
+| Card | CardActions beside the title | down | the actions and the title take a top margin of the corner inset less the card's padding; under 24rem nothing moves | 7px, 19px compact | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
 | SaveBar | its buttons | in | each end pads to the corner inset, as the bulk bar's | 23px each side | 16px and 11px | 16px and 8px |
 | Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
@@ -2693,59 +2693,72 @@ in the contrast gate. Ink measures 17.84 in light and 17.42 in dark, and slate
 the collapsible card.
 
 **Actions in a plain card's header.** The first consumer's Details card puts
-Edit, and Merge and Remove beside it, in its header, as GOV.UK's summary card
-puts its card-level actions there. `CardActions` is a `div.card-actions`
-placed after `CardTitle` and `CardNote`, so the reading order is the title,
-the note, then the actions; it adds no role, and the app names each button
-("Edit details"). It is static. Six things were derived (accounts plan, spec
-corrections 8 to 13).
+Edit in its header, with Merge and Remove in a More menu beside it, as GOV.UK's
+summary card puts its card-level actions there. `CardActions` is a
+`div.card-actions` placed after `CardTitle` and `CardNote`, so the reading
+order is the title, the note, then the actions; it adds no role, and the app
+names each button ("Edit details"). It is static. Seven things were derived
+(accounts plan, spec corrections 8 to 13 and 30 to 33).
 
+- **At most two visible actions.** Polaris, Primer and Atlassian keep a card
+  or a page header to one or two visible actions and put the rest in a menu.
+  Three buttons did not fit beside a 12rem title in a card under 566px, so
+  they wrapped among themselves and parted the note from its title. For three
+  or more, show the first and a More menu.
 - **A grid, not CollapsibleCard's flex row.** CollapsibleCard wraps its title
   and note in a heading block and lets a flex row wrap the actions under it.
   A plain header holds the title and the note as siblings, and a flex row of
   three siblings cannot put the actions beside the title and the note under
   it, then the actions under the note, without reordering them. So a header
   holding actions is a one-column grid and a size container, `card-header`:
-  from 24rem of its content box the actions take a second column on the first
-  row, at the end; under it nothing places them and they follow the note at
-  the inline start, the reading order. A container query cannot style the
-  container it measures, so the header's own columns never change: the second
-  column is an implicit one that exists only while the actions are in it, so
-  a narrow header keeps no gap for it. 24rem is the width at which a 12rem
-  title, the peer step and an Edit and a More button fit side by side.
+  from 24rem of its content box the actions take a second column at the end,
+  spanning the title's row and, when there is one, the note's, so a second
+  line of actions never pushes the note down; under it nothing places them
+  and they follow the note at the inline start, the reading order. A
+  container query cannot style the container it measures, so the header's
+  own columns never change: the second column is an implicit one that exists
+  only while the actions are in it, so a narrow header keeps no gap for it.
+  24rem is the width at which a 12rem title, the peer step and an Edit and a
+  More button fit side by side.
 - **The title keeps 12rem beside them.** CollapsibleCard's heading never goes
   under 12rem (192px holds a typical title on one line). Here the actions'
-  column is capped at `calc(100cqi - 12rem - var(--spacing-peer))`, so between
-  24rem and the width all of them need, they wrap among themselves at the end
-  and the title keeps its 12rem. A single button wider than what is left takes
-  its own width (`min-inline-size: min-content`) and narrows the title rather
-  than overlapping it. Edit, Merge and Remove (75, 90 and 103px with two part
-  steps between, 284px) share one line from a 500px header, a 566px card.
-- **The first row is at least a control high, not exactly.** A row fixed at
-  40px let a title that wraps to two lines (57.6px) run into the note's row.
-  The row is `minmax(var(--size-control), auto)`, its items start-aligned, the
-  actions at least a control high with their buttons centred, and the title's
-  first line centred on a control's height by a top margin of
+  column is capped at `calc(100cqi - 12rem - var(--spacing-peer))`, so two
+  buttons that do not fit wrap among themselves at the end, as Edit and
+  Remove do in a 450px card, and the note still follows the title by the
+  header's 8px gap. A single button wider than what is left takes its own
+  width (`min-inline-size: min-content`) and narrows the title rather than
+  overlapping it. A button's label wraps inside it (`white-space: normal`),
+  so a long one never widens the card.
+- **Level with the title's first line.** Beside the title the actions are
+  start-aligned and at least a control high, and the title's first line is
+  centred on a control's height by a top margin of
   `(var(--size-control) - 1lh) / 2`, 5.6px and 3.6px compact. So the actions
-  are level with the title's first line, within a pixel, however many lines it
-  takes, and with a one-line title the row is 40px, the title centred in it.
-- **The corner, down.** The actions sit at the card's top end: 1 + 32px from
-  the top and the end in Rounded comfortable, inside the 40px curve on both
-  axes. The record's rule moves a control down where a column stands under it,
-  and the actions end on the body's column edge, so while the header holds
-  actions its block-start padding grows by
-  `calc(var(--holder-corner-inset) - var(--holder-pad))`, as UploadTray's panel
-  moves its header's trailing button: 7px in Rounded and 19px compact, 0 in
-  Soft and Square. The actions' top is then 1 + 32 + 7 = 40px from the card's
+  are level with the title's first line, within a pixel, however many lines
+  it takes. No row has a fixed height: a row fixed at 40px let a title that
+  wraps to two lines (57.6px) run over the note.
+- **The corner, down, and only where the corner is.** Beside the title the
+  actions sit at the card's top end: 1 + 32px from the top and the end in
+  Rounded comfortable, inside the 40px curve on both axes. The record's rule
+  moves a control down where a column stands under it, and the actions end on
+  the body's column edge, so inside the 24rem query the actions take a top
+  margin of `calc(var(--holder-corner-inset) - var(--holder-pad))` and the
+  title the same plus its centring margin: 7px in Rounded and 19px compact, 0
+  in Soft and Square, as UploadTray's panel moves its header's trailing
+  button. The first control's top is then 1 + 32 + 7 = 40px from the card's
   outer edge in Rounded comfortable and 1 + 20 + 19 = 40px compact, at or past
-  the 39px corner inset, and the title moves down with the row, level with
-  them. The padding grows under 24rem too, since a container cannot query
-  itself; there it only adds 7px above the title.
-- **A stand-in width.** A size container takes no width from its content, so
-  a card that takes the width of what it holds, in a flex row or a centred
-  column, would shrink to its padding with only a header. The header names
-  `contain-intrinsic-inline-size: 20rem`, under the 24rem switch, as the list
-  and StatTile name theirs.
+  the 39px corner inset. Under 24rem the actions follow the note, far from
+  the corner, so nothing moves: the title and the note sit where a header
+  without actions draws them. Actions with no title or note above them, the
+  header's first child, take the same top margin at every width.
+- **An intrinsic inline size of 0.** The library's rule for every size
+  container: its `contain-intrinsic-inline-size` is 0, and a holder that takes
+  the width of its content gives the part a width. A size container takes no
+  width from what it holds, and any stand-in it names becomes its holder's
+  min-content: 20rem on this header made the card 386px, which scrolled a
+  320px page 82px sideways from a `flex: 1` wrapper, and 484px with two cards
+  side by side. So a card that holds only a header with actions and sits
+  where it takes the width of its content, in a flex row, is given a width by
+  the app.
 - **CollapsibleCard is not matched.** Every rule names `.card > .card-header`,
   and CollapsibleCard's header sits in `.card-disclosure`, so its header, its
   flex row and its baselines are unchanged (plan open question 2). Its header
@@ -2753,12 +2766,15 @@ corrections 8 to 13).
   whose header gave no width would shrink to its padding.
 
 Measured in Chromium, WebKit and Firefox by the stories `ActionsWrap` (a long
-title on a phone, every shape and density: the actions under the note at the
-start, overlapping nothing, one radius on each button, none in a corner
-curve) and `ActionsClearOfCorner` (a 40rem card, every shape and density: one
-line level with the title's first line, on the body's end edge, the top 40px
-from the edge in Rounded and the padding alone in Soft and Square). Screen
-readers are not yet verified (owner action 3).
+title on a phone, every shape and density: the title and the note where a card
+without actions has them, the actions under the note at the start, nothing
+overlapped, one radius on each control, none in a corner curve),
+`ActionsClearOfCorner` (a 40rem card, every shape and density: one line level
+with the title's first line, on the body's end edge, 40px from the edge in
+Rounded by their margins), `ActionsInTheMiddle` (cards 450px to 566px: the
+note follows the title by the header's gap), `ActionsAlone` and
+`ActionsOnANarrowPhone` (320px: no sideways scroll, a long label wrapped in its
+button). Screen readers are not yet verified (owner action 3).
 
 ## CollapsibleCard
 
@@ -10592,7 +10608,7 @@ gives their column to the value side by side and to the term stacked. A
 viewport breakpoint was rejected: a list in a 24rem side panel on a wide
 screen would draw a 7rem name column.
 
-**No width of its own** (risk R1; spec corrections 14 and 20). A size
+**No width of its own** (risk R1; spec corrections 14 and 34). A size
 container takes no width from its content, and the library's rule is that
 its intrinsic inline size is 0: the list declares
 `contain-intrinsic-inline-size: 0`. A stand-in width is also the
@@ -10729,3 +10745,215 @@ spec's budget.
 (owner action 3): the terms and values read in order, and how each reader
 announces the list; on a real iPhone and an Android phone at 320px to 430px,
 the stacked list legible.
+
+## Gauge
+
+One figure on a range at a glance: `Gauge`, a ring or a semicircle with
+an arc for the value, a centre numeral and a word under it, up to five
+marks, and the label and the value text under or beside the dial
+(accounts spec, section 7; owner rulings 2, 3, 5, 6 and 7). The first
+consumer draws a credit score on 300 to 850 and a utilization per card.
+The document has no gauge, so this one is derived from Meter.
+
+**In react, not charts** (ruling 3). A gauge is a meter: one value on a
+known range, the WAI-ARIA `meter` role. `@snapshot-ui/charts` holds data
+series on scales, with axes, readouts and a table view, and is versioned
+apart; a gauge has no series, no axis, no palette and no table. Meter and
+ProgressBar live in react, so an app that draws a meter in a row and a
+gauge in a tile imports both from one package. SwiftUI keeps its `Gauge` in
+SwiftUI itself, Ant Design makes its dashboard a `type` of `Progress`, and
+only Carbon puts a gauge with its charts. The arithmetic is two arcs and a
+dash, in `gauge/geometry.ts`, small enough for a later donut to copy.
+
+**One family with Meter.** The role is on the dial, `div.gauge-dial`, and
+not the root, since a meter's children are presentational and the text
+beside it would be lost. The naming chain is Meter's: a non-blank
+`aria-labelledby`, else a non-blank `aria-label`, else the visible label,
+else the value text, so the dial is never unnamed. `aria-valuemin` is
+`minValue`, `aria-valuemax` `maxValue`, `aria-valuenow` the value clamped
+to them, and `aria-valuetext` the app's `valueLabel`. A range whose end is
+not above its start reports `minValue` for all three and draws an empty
+track, ProgressBar's rule. The prop names are React Aria's, as
+ProgressBar's are, with `minValue` first class: 742 on 300 to 850 is 80.4%
+of the arc and reports `aria-valuemin="300"`. The track is Meter's frame
+color, the arc `--gauge-ink`, as Meter's fill is `--meter-ink`, and the
+marks' ring reads `--meter-surface`, so one property set on a canvas
+section serves both. Static: `useId` is its one hook.
+
+**Sizes and strokes.** `sm` 32px with a 4px stroke, `md` 96px with 8px,
+Meter's track, and `lg` 160px with 12px, each stroke a twelfth of the box
+or near it, so a ring reads as the same object at every size. The text sits
+beside a 32px dial, which has no room for a figure, and under the 96 and
+160px ones. No token is added: the sizes and strokes are literals in
+`geometry.ts` and `gauge.css`, as Meter's 8px track is.
+
+**The viewBox is the box in pixels.** `0 0 S S` for a ring and
+`0 0 S (S / 2 + w / 2)` for a semicircle, where `S` is the box and `w` the
+stroke, so at its own size one user unit is one pixel, and an app that sets
+`--gauge-size` scales the svg uniformly by the default
+`preserveAspectRatio`: a circle stays a circle. The charts'
+`preserveAspectRatio="none"` stretch is not used. The track is a circle of
+radius `r = (S - w) / 2` about the centre: a ring is two half arcs from the
+top, clockwise, since one arc command cannot draw a whole circle, and a
+semicircle one arc from the inline start over the top. Its length `L` is
+`2 pi r` or `pi r`. Every number is written with at most three decimals,
+Meter's rounding, so the server and the browser write the same string, and
+the server face writes one HTML in three locales and two zones.
+
+**The arc, caps included, is exactly the value.** Round caps add half a
+stroke at each end of a dash, so a share `s` is a dash of
+`max(0, s L - w)`, offset by `-w / 2` so it starts half a stroke in: the
+arc from the outer edge of its first cap to the outer edge of its last
+spans exactly `s L`. Half the value is half the track. The dash is written
+in user units, as inline `stroke-dasharray` and `stroke-dashoffset`, so no
+`pathLength` is needed (risk R3) and the stylesheet's transition runs on a
+change. A semicircle's track is dashed the same way at a share of 1, so its
+caps end exactly at the arc's ends and a full value covers it.
+
+**Zero, the dot and the whole ring.** A share of 0 draws no value path,
+since a zero-length dash with round caps would draw a dot. A share whose
+arc is shorter than the stroke is a zero-length dash, which its caps draw
+as a dot of the stroke's width at the start: the least a reader can see,
+so 0.5% never reads as nothing. A whole ring has no ends: two caps meeting
+at the top touch at one point and leave a notch in the stroke's outer and
+inner edges as deep as half the stroke, which reads as a cut. So a ring at
+its whole share is one dash of `L` and no gap, drawn solid (accounts plan,
+spec correction 21); at 99% the caps leave the share's gap at the top, so
+99% and 100% differ. The `ArcLength` play draws each value path again
+through the engine's own svg renderer onto a canvas and reads the dot, the
+empty start, the solid top and a semicircle's ends, in Chromium, WebKit
+and Firefox.
+
+**Marks.** Up to five, sorted by value, each clamped to the range: a radial
+line across the track at the mark's share, `s * 360` degrees clockwise from
+the top on a ring and `s * 180` degrees from the inline start on a
+semicircle, reaching 2px past the track on both sides. Each is a 6px line in
+the surface the gauge sits on, `var(--meter-surface, var(--color-lifted))`,
+under a 2px line in ink: Meter's pace marker turned radial, so a mark reads
+over the arc and over the track alike. Marks are never toned: a band's edge
+is not over anything. Their labels, in order of value, joined by full stops,
+form a hidden span that describes the dial after the caller's own
+`aria-describedby`. A sixth mark is not drawn or described; a static part
+cannot warn. On the consumer's score, 580, 670, 740 and 800 fall at 50.9%,
+67.3%, 80.0% and 90.9% of the arc. Two marks closer than the stroke's
+width overlap, so the docs say a 32px gauge holds two or three.
+
+**The figure and its word.** `figure` is the app's numeral and
+`figureCaption` a word under it, drawn at `md` and `lg` and never at `sm`.
+Neither has a default: on a 300 to 850 score a percentage would be wrong, so
+the library never invents a figure. Both are `aria-hidden`, since the value
+text says the value and the word, and the same said twice is noise. The
+figure is `--text-h3` at `md` (24px) and the `numeral-sm` step at `lg`
+(32px), 500, tabular, in ink, left to right and isolated, and never wraps or
+shrinks: the docs give the budget, 4 characters at `md` and 6 at `lg`
+("100%", "$12.3K"), and `LongestFigure` holds each within the inner circle.
+The caption is `--text-small` at 450 in slate, never toned, two lines at
+most and then an ellipsis, since the value text carries it whole.
+
+**The concentric construction inside the dial.** The figure is HTML in the
+dial's one grid cell, over the svg. In a ring it is centred as one block in
+the inner circle, `S - 2w` across, through a padding of `--gauge-band`, the
+stroke's share of the box (a twelfth at `md`, an eighth at `sm`, three
+fortieths at `lg`), so it follows an app's own `--gauge-size`. In a
+semicircle the figure's baseline is on the chord, in the bowl, and the
+caption under the chord between the arc's ends. The baseline is set by a
+strut, a `::before` half the box tall with no text: a flex item with no
+baseline takes its foot as its baseline, so the row's baseline lines up
+the figure's with the chord in any font. Since the figure is in flow, the
+caption under the chord gives the dial its height, and nothing overlaps
+the text under it. `SemicircleFigure` measures the baseline within 1px of
+the chord in three engines.
+
+**The corner rule leaves the dial alone.** The dial is a circle, whose
+radius is half its side and not a choice, so it is not stepped, and the
+corner audit skips it. In a Card, a StatTile or a table cell the gauge keeps
+its size and shape.
+
+**The text.** Under the dial at `md` and `lg`, centred, 8px
+(`--spacing-part`) below it, as wide as the dial or 12rem, whichever is
+more, and wrapping: the label at `--text-small` 500 in ink and the value
+text at `--text-small` 450 in slate with tabular figures, Meter's head
+turned to a column. At `sm` the text is beside the dial, 8px from it, its
+lines centred on the dial. The value text is `aria-hidden`, since the dial
+reads it. In a DataTable row the column header names the cell, so the
+gauge takes `aria-label` with the row's name and shows only its value text;
+the row is 48px, 40px compact, so a 32px dial fits every density. A 32px
+gauge fits StatTile's 96 by 32 trend slot.
+
+**Tones** (ruling 2). The app chooses; the gauge never decides that a value
+is good or bad, since a high score is good and a high utilization is not.
+`neutral` is ink. `warning` is "a state that needs the reader's eye soon
+and is not a failure": a fair or a poor score, a utilization above 30%.
+`error` is a failure only, such as a limit that stopped a payment. Both low
+score bands are warning, and Fair and Poor are told apart by the word under
+the figure and by where the arc stops between the 580 and 670 marks, never
+by color. There is no success tone: a good score is not a save, and the
+words say "Very good" over an ink arc; there is no gain, which is money
+that arrived. Above `maxValue` the root takes `data-over`, the arc fills
+the track, and a neutral gauge resolves to warning, Meter's rule; an error
+gauge stays error, its rule last in the file at equal weight. Exactly
+`maxValue` is not over, and `aria-valuenow` stays at `maxValue`. The value
+text must say "over" in words. Signal orange, clay and taupe appear nowhere.
+The tone always comes with words: `valueLabel` is required.
+
+**Round in every shape** (ruling 5). The caps are round and the dial is
+round in Rounded, Soft and Square, the spinner's rule: the ends of a stroke
+are dots, and dots stay round in every shape. `stroke-linecap` cannot read a
+radius token, and a gauge drawn square would be a different chart. Meter
+and ProgressBar square their ends under Square because their ends are a
+box's corners; a gauge's are not.
+
+**Motion** (ruling 6). When the value changes in the browser the arc moves
+over 200ms, ProgressBar's timing: `stroke-dasharray`, `stroke-dashoffset`
+and `stroke` transition together, so a tone change moves with it. A
+transition never runs on the first style, so a gauge drawn on the server,
+hydrated, or mounted with its value does not sweep in; a sweep would delay
+the reading and need a client part. Under reduced motion nothing moves. A
+gauge whose value rises from 0 draws its arc at once, since a share of 0
+has no path to move from. The `Motion` play reads no animation on first
+appearance, a 200ms transition after a change, and the reduced-motion rule
+in the page's own stylesheet.
+
+**Direction** (ruling 7). The gauge follows the page, as Meter's fill and
+LineChart's time do: `--gauge-flip` is `1` under `:where([dir='ltr' i])` and
+`-1` under `:where([dir='rtl' i])`, the charts' pattern, since `:dir()` is
+above the floor, and the svg takes `scale: var(--gauge-flip, 1) 1`. The
+nearest `dir` attribute wins. On a Persian page a ring runs counter-clockwise
+from the top and a semicircle fills from the right, and the marks move with
+the svg. The figure, its caption and the text are HTML and are not
+mirrored: "60%" reads left to right.
+
+**Contrast**, measured with `contrast.js` and recorded, not gated, since
+the track is a mix (accounts plan, spec correction 23). The arc against the
+track, light then dark: over lifted, ink 13.88 and 12.19, warning 4.77 and
+6.24, error 5.62 and 4.01; over the canvas, ink 12.69 and 14.19, warning
+4.36 and 7.27, error 5.14 and 4.67; over float, ink 14.34 and 12.19,
+warning 4.92 and 6.24, error 5.80 and 4.01. Each clears the 3:1 a graphic
+needs, the lowest the error arc in dark over lifted and float. The track
+against its surface is 1.28 and 1.43 on lifted, 1.28 and 1.36 on the
+canvas and 1.29 and 1.43 on float: a cue, not a boundary, since the value
+text, which is required, carries the extent, as Meter's record says. The
+figure and the label are ink and the caption and the value text slate,
+each gated already as text on those surfaces.
+
+**Forced colors.** Strokes are not backgrounds, but an svg keeps the colors
+its author set, so the block names them: the track `graytext`, the arc
+`canvastext` in every tone, the marks `highlight` in a ring of `canvas`,
+the reader's background. The three stay apart, and the words carry the
+tone, as Meter's over state keeps its words. A docs test reads the four.
+
+**Print.** `print-color-adjust: exact`, and its `-webkit-` form, as
+`.meter` sets, so a printed track keeps its tint.
+
+**The size.** The entry `{ Gauge }` measures 1371 B without React Aria,
+Lucide and `@internationalized/date`, and 1370 B with React Aria not
+ignored; it imports none, and the byte is size-limit's own drift, as
+CardActions' three were (spec corrections 13 and 28). Under the spec's
+1.5 kB budget; the rule rounds up to 1.5 kB and adds 0.5 kB: a 2 kB limit.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): that a gauge reads as a meter, or what each reader calls
+it, with its name, its value text and its marks' description, and never its
+figure twice. Not yet verified in Windows' contrast themes (the track, the
+arc and the marks each distinct) or on a real iPhone and an Android phone
+at 320px to 430px (an `lg` semicircle and its caption legible).
