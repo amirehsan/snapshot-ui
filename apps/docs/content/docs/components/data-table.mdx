@@ -50,7 +50,7 @@ With selection on, the list draws no checkboxes until the reader presses Select 
 
 ## A gauge in a cell
 
-A 32px [Gauge](/docs/components/gauge) fits a row in every density, for a share per row such as each card's utilization. The column header names the cell, so name each gauge with its row, "Utilization, Everyday Visa ending 4821", with `aria-label`, and let its value text show beside it. Give the column a `textValue` with the figure, and `listSlot: 'meta'` to keep the ring on a phone's list.
+A 32px [Gauge](/docs/components/gauge) fits a row in every density, for a share per row such as each card's utilization. The column header names the cell, so name each gauge with its row, "Utilization, Everyday Visa ending 4821", with `aria-label`, and let its value text show beside it. Give the column a `textValue` with the figure, and `listSlot: 'meta'` to keep the ring on a phone's list. Marks that repeat on every row take an empty `label`, so they are drawn and not read again per row; say the thresholds once by the table.
 
 <Preview name="gauge-table" />
 

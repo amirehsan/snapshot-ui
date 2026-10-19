@@ -72,6 +72,15 @@ export function gaugeDash(
   return { dasharray: `${num(dash)} ${num(track.length)}`, dashoffset: num(-track.stroke / 2) };
 }
 
+/**
+ * The value path's dash at a share of 0: a zero-length dash where the arc starts. The path stays drawn, marked
+ * empty, so a change to or from 0 moves like any other; the stylesheet gives an empty path butt caps, and a
+ * zero-length dash with butt caps paints nothing.
+ */
+export function gaugeRest(track: GaugeTrack): { dasharray: string; dashoffset: string } {
+  return { dasharray: `0 ${num(track.length)}`, dashoffset: num(-track.stroke / 2) };
+}
+
 /** A mark's radial line across the track, 2px past it on both sides, at its share of the arc. */
 export function gaugeMark(
   share: number,

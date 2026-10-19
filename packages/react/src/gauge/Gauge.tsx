@@ -2,12 +2,15 @@ import { useId, type HTMLAttributes, type ReactElement, type ReactNode, type Ref
 import type { AccessibleName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { present } from '../utils/present';
-import { gaugeDash, gaugeMark, gaugeShare, gaugeTrack } from './geometry';
+import { GAUGE_SIZES, gaugeDash, gaugeMark, gaugeRest, gaugeShare, gaugeTrack } from './geometry';
 
 export interface GaugeMark {
   /** In the gauge's units, between `minValue` and `maxValue`: 670 on a score, 30 on a utilization. */
   value: number;
-  /** What the mark means, added to the gauge's description: "Good from 670". */
+  /**
+   * What the mark means, added to the gauge's description: "Good from 670". An empty label draws the mark and
+   * adds nothing, for thresholds repeated on every row of a table and said once beside it.
+   */
   label: string;
 }
 
@@ -103,13 +106,20 @@ export function Gauge(props: GaugeProps): ReactElement {
   const resolved = tone === 'neutral' && isOver ? 'warning' : tone;
 
   const track = gaugeTrack(size, form);
-  const dash = gaugeDash(gaugeShare(value, minValue, maxValue), track);
+  const share = gaugeDash(gaugeShare(value, minValue, maxValue), track);
+  // A share of 0 keeps its path, marked empty, so a change to or from 0 moves like any other.
+  const dash = share ?? gaugeRest(track);
   // A semicircle's track has two ends, so it is dashed at the whole share: its round caps end at the arc's ends,
   // and a full value covers it exactly. A ring's track is the whole circle and has no ends.
   const trackDash = form === 'semicircle' ? gaugeDash(1, track) : null;
 
   // Sorted by value and the first five, each clamped to the range.
   const shown = [...marks].sort((a, b) => a.value - b.value).slice(0, MARK_LIMIT);
+  const lines = shown.map((mark) => gaugeMark(gaugeShare(mark.value, minValue, maxValue), size, form));
+  // The mask's region: the box and a box's width around it, so the marks' overhang and the round caps are inside.
+  const { box } = GAUGE_SIZES[size];
+  const maskId = `${id}-gaps`;
+  const masked = lines.length > 0 ? `url(#${maskId})` : undefined;
   const described = shown.map((mark) => mark.label).filter(named);
   const marksLabel = described.length > 0 ? `${described.join('. ')}.` : undefined;
 
@@ -149,33 +159,50 @@ export function Gauge(props: GaugeProps): ReactElement {
         {...name}
       >
         <svg className="gauge-svg" viewBox={track.viewBox} aria-hidden="true" focusable="false">
+          {lines.length > 0 ? (
+            // Each mark's gap is cut out of the track and the arc, so what is behind the gauge shows there on any
+            // surface: a card, the page, a hovered or a selected table row. Luminance, so white keeps and black cuts.
+            <defs>
+              <mask
+                id={maskId}
+                className="gauge-mask"
+                maskUnits="userSpaceOnUse"
+                x={-box}
+                y={-box}
+                width={3 * box}
+                height={3 * box}
+              >
+                <rect x={-box} y={-box} width={3 * box} height={3 * box} fill="white" />
+                {lines.map((line, index) => (
+                  // A mark has no identity beyond its place in the sorted list.
+                  <line key={index} className="gauge-mark-gap" {...line} stroke="black" strokeWidth={6} />
+                ))}
+              </mask>
+            </defs>
+          ) : null}
           <path
             className="gauge-track"
             d={track.d}
             strokeWidth={track.stroke}
+            mask={masked}
             style={
               trackDash
                 ? { strokeDasharray: trackDash.dasharray, strokeDashoffset: trackDash.dashoffset }
                 : undefined
             }
           />
-          {dash ? (
-            <path
-              className="gauge-value"
-              d={track.d}
-              strokeWidth={track.stroke}
-              // Inline, so the stylesheet's transition runs when the value changes.
-              style={{ strokeDasharray: dash.dasharray, strokeDashoffset: dash.dashoffset }}
-            />
-          ) : null}
-          {shown.map((mark, index) => {
-            const line = gaugeMark(gaugeShare(mark.value, minValue, maxValue), size, form);
-            return [
-              // A mark has no identity beyond its place in the sorted list.
-              <line key={`ring-${String(index)}`} className="gauge-mark-ring" {...line} />,
-              <line key={`mark-${String(index)}`} className="gauge-mark" {...line} />,
-            ];
-          })}
+          <path
+            className="gauge-value"
+            d={track.d}
+            strokeWidth={track.stroke}
+            mask={masked}
+            data-empty={share ? undefined : ''}
+            // Inline, so the stylesheet's transition runs when the value changes.
+            style={{ strokeDasharray: dash.dasharray, strokeDashoffset: dash.dashoffset }}
+          />
+          {lines.map((line, index) => (
+            <line key={index} className="gauge-mark" {...line} />
+          ))}
         </svg>
         {hasFigure ? (
           <span className="gauge-figure" aria-hidden="true">

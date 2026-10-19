@@ -201,13 +201,16 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
       '<div class="gauge-dial" role="meter" aria-valuemin="300" aria-valuemax="850" aria-valuenow="742" ' +
       'aria-valuetext="742 of 850, Very good" aria-describedby="_R_0_-marks" aria-labelledby="_R_0_-label">' +
       '<svg class="gauge-svg" viewBox="0 0 160 86" aria-hidden="true" focusable="false">' +
-      '<path class="gauge-track" d="M6 80A74 74 0 0 1 154 80" stroke-width="12" ' +
+      '<defs><mask id="_R_0_-gaps" class="gauge-mask" maskUnits="userSpaceOnUse" x="-160" y="-160" width="480" ' +
+      'height="480"><rect x="-160" y="-160" width="480" height="480" fill="white"></rect>' +
+      '<line class="gauge-mark-gap" x1="81.885" y1="14.027" x2="82.342" y2="-1.967" stroke="black" ' +
+      'stroke-width="6"></line><line class="gauge-mark-gap" x1="114.082" y1="23.481" x2="122.345" y2="9.779" ' +
+      'stroke="black" stroke-width="6"></line></mask></defs>' +
+      '<path class="gauge-track" d="M6 80A74 74 0 0 1 154 80" stroke-width="12" mask="url(#_R_0_-gaps)" ' +
       'style="stroke-dasharray:220.478 232.478;stroke-dashoffset:-6"></path>' +
-      '<path class="gauge-value" d="M6 80A74 74 0 0 1 154 80" stroke-width="12" ' +
+      '<path class="gauge-value" d="M6 80A74 74 0 0 1 154 80" stroke-width="12" mask="url(#_R_0_-gaps)" ' +
       'style="stroke-dasharray:174.828 232.478;stroke-dashoffset:-6"></path>' +
-      '<line class="gauge-mark-ring" x1="81.885" y1="14.027" x2="82.342" y2="-1.967"></line>' +
       '<line class="gauge-mark" x1="81.885" y1="14.027" x2="82.342" y2="-1.967"></line>' +
-      '<line class="gauge-mark-ring" x1="114.082" y1="23.481" x2="122.345" y2="9.779"></line>' +
       '<line class="gauge-mark" x1="114.082" y1="23.481" x2="122.345" y2="9.779"></line></svg>' +
       '<span class="gauge-figure" aria-hidden="true"><span class="gauge-figure-value">742</span>' +
       '<span class="gauge-figure-caption">Very good</span></span></div>' +

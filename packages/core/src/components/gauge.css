@@ -5,9 +5,9 @@
  * 12px stroke), so at its own size one user unit is one pixel, and it scales uniformly when an app sets
  * --gauge-size. --gauge-band is the stroke's share of the box, so the figure's inner circle, S less two
  * strokes, follows the size. Round caps in every shape, the spinner's rule, and the dial is round in every shape.
- * Marks are 2px of ink in a 6px ring of the surface the gauge sits on, --meter-surface with Lifted as its
- * fallback, so one property serves Meter and Gauge. The arc moves over 200ms when the value changes, never on
- * its first style, and not under reduced motion. The svg mirrors with the page's direction through --gauge-flip,
+ * Marks are 2px of ink in a 6px gap the svg's mask cuts out of the track and the arc, so whatever is behind
+ * the gauge shows there: a card, the page, a hovered or a selected table row. The arc moves over 200ms when the
+ * value changes, from and to 0 too, never on its first style, and not under reduced motion. The svg mirrors with the page's direction through --gauge-flip,
  * the charts' pattern; the figure and the text are HTML and do not.
  */
 @layer components {
@@ -97,9 +97,9 @@
       stroke 200ms ease;
   }
 
-  .gauge-mark-ring {
-    stroke: var(--meter-surface, var(--color-lifted));
-    stroke-width: 6px;
+  /* A share of 0: a zero-length dash, which butt caps leave unpainted, so the path is there to move from. */
+  .gauge-value[data-empty] {
+    stroke-linecap: butt;
   }
 
   .gauge-mark {
@@ -174,6 +174,23 @@
     overflow-wrap: anywhere;
   }
 
+  /* In a ring the figure and the caption are one block centred in the inner circle, which narrows above and below:
+     the figure's line is its own size, with no leading, so the widest figure's corners stay inside it, and the
+     caption is one line at md, 60px of the 80px circle, and two at lg, 104px of 136. */
+  .gauge[data-form='ring'] .gauge-figure-value {
+    line-height: 1;
+  }
+
+  .gauge[data-form='ring'] .gauge-figure-caption {
+    -webkit-line-clamp: 1;
+    max-inline-size: calc(var(--gauge-size) * 5 / 8);
+  }
+
+  .gauge[data-form='ring'][data-size='lg'] .gauge-figure-caption {
+    -webkit-line-clamp: 2;
+    max-inline-size: calc(var(--gauge-size) * 13 / 20);
+  }
+
   /* Under the dial at md and lg, centred, as wide as the dial or 12rem; beside it at sm. */
   .gauge-text {
     display: grid;
@@ -212,7 +229,8 @@
   }
 
   /* An svg keeps the colors its author set, so the block names them: the track graytext, the arc canvastext in
-     every tone, the marks highlight in a ring of the page's own background. The words carry the tone. */
+     every tone, the marks highlight in their cut gaps, where the page's own background shows. The mask is
+     luminance, white keeps and black cuts, so its colors are kept out of the repaint. The words carry the tone. */
   @media (forced-colors: active) {
     .gauge-track {
       stroke: graytext;
@@ -226,8 +244,8 @@
       stroke: highlight;
     }
 
-    .gauge-mark-ring {
-      stroke: canvas;
+    .gauge-mask {
+      forced-color-adjust: none;
     }
   }
 }

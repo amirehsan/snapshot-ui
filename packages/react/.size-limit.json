@@ -270,7 +270,7 @@
     "path": "dist/index.js",
     "import": "{ Gauge }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "2 kB"
+    "limit": "2.5 kB"
   },
   {
     "name": "import { DescriptionList, DescriptionListItem } from \"@snapshot-ui/react\"",

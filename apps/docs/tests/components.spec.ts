@@ -558,10 +558,11 @@ test.describe('forced colors', () => {
 
   test('a gauge keeps its track, arc and marks apart', async ({ page }) => {
     // An svg keeps the colors its author set, so the stylesheet names system colors: the track in the disabled
-    // text color, the arc in the text color in every tone, and the marks in the selection color in a ring of the
-    // page's own background, so the three stay apart and a warning arc is not lost.
+    // text color, the arc in the text color in every tone, and the marks in the selection color, each in a gap
+    // the mask cuts out of the track and the arc, so the three stay apart and a warning arc is not lost. The mask
+    // is luminance, white keeps and black cuts, so it stays out of the repaint and still cuts.
     await visit(page, '/docs/components/gauge');
-    const { canvas, canvasText, grayText, highlight } = await systemColors(page);
+    const { canvasText, grayText, highlight } = await systemColors(page);
     const gauge = page
       .locator('.stage .gauge')
       .filter({ has: page.getByRole('meter', { name: 'Travel Mastercard', exact: true }) });
@@ -576,10 +577,18 @@ test.describe('forced colors', () => {
       track: await stroke('.gauge-track'),
       arc: await stroke('.gauge-value'),
       mark: await stroke('.gauge-mark'),
-      ring: await stroke('.gauge-mark-ring'),
     };
-    expect(drawn).toEqual({ track: grayText, arc: canvasText, mark: highlight, ring: canvas });
-    expect(new Set([drawn.track, drawn.arc, drawn.mark]).size).toBe(3);
+    expect(drawn).toEqual({ track: grayText, arc: canvasText, mark: highlight });
+    expect(new Set(Object.values(drawn)).size).toBe(3);
+    const mask = await gauge.locator('mask').evaluate((element) => ({
+      adjust: getComputedStyle(element).forcedColorAdjust,
+      keep: getComputedStyle(element.querySelector('rect') ?? element).fill,
+      cut: getComputedStyle(element.querySelector('line') ?? element).stroke,
+      id: element.id,
+    }));
+    expect(mask).toEqual({ adjust: 'none', keep: 'rgb(255, 255, 255)', cut: 'rgb(0, 0, 0)', id: mask.id });
+    for (const name of ['.gauge-track', '.gauge-value'])
+      await expect(gauge.locator(name)).toHaveAttribute('mask', `url(#${mask.id})`);
   });
 
   test('a progress bar keeps its track outline and fill', async ({ page }) => {

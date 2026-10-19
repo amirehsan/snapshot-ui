@@ -1838,7 +1838,10 @@ describe('src/components/gauge.css', () => {
     expect(rule(css, '.gauge-value')).toContain('stroke: var(--gauge-ink);');
     expect(rule(css, '.gauge')).toContain('--gauge-ink: var(--color-ink);');
     // Round in every shape: nothing here reads the shape axis.
-    expect(css).not.toMatch(/data-shape|--radius-|stroke-linecap: (?:butt|square)/);
+    expect(css).not.toMatch(/data-shape|--radius-|stroke-linecap: square/);
+    // Butt caps only where nothing is drawn: an empty arc's zero-length dash.
+    expect(css.match(/stroke-linecap: butt/g)).toHaveLength(1);
+    expect(rule(css, '.gauge-value[data-empty]')).toContain('stroke-linecap: butt;');
   });
 
   it('turns --gauge-ink warning for warning and over the limit, and error for error, error last', () => {
@@ -1863,6 +1866,8 @@ describe('src/components/gauge.css', () => {
     );
     // Nothing else moves, and nothing sweeps in: a transition never runs on the first style.
     expect(css.match(/transition:/g)).toHaveLength(2);
+    // A share of 0 keeps its path to move from and to: a zero-length dash that butt caps leave unpainted.
+    expect(rule(css, '.gauge-value[data-empty]')).toContain('stroke-linecap: butt;');
     expect(css).not.toMatch(/animation|@keyframes/);
   });
 
@@ -1876,11 +1881,11 @@ describe('src/components/gauge.css', () => {
     expect(css).not.toContain(':dir(');
   });
 
-  it('rings marks in --meter-surface, falling back to lifted', () => {
+  it('draws marks in ink over gaps the svg cuts, reading no surface color', () => {
     const css = rules();
-    const ring = rule(css, '.gauge-mark-ring');
-    expect(ring).toContain('stroke: var(--meter-surface, var(--color-lifted));');
-    expect(ring).toContain('stroke-width: 6px;');
+    // The 6px gap is a mask in the svg, so the real background shows through it on any surface: nothing here
+    // names the surface a gauge sits on.
+    expect(css).not.toMatch(/--meter-surface|--color-(?:lifted|canvas|float)|gauge-mark-ring/);
     const mark = rule(css, '.gauge-mark');
     expect(mark).toContain('stroke: var(--color-ink);');
     expect(mark).toContain('stroke-width: 2px;');
@@ -1972,12 +1977,24 @@ describe('src/components/gauge.css', () => {
     );
   });
 
-  it('names graytext, canvastext, highlight and canvas in forced colors', () => {
+  it('sizes a ring caption to the inner circle at its line: one line at md and two at lg', () => {
+    const css = rules();
+    // The figure's line is its own size in a ring, so the block is as short as it can be.
+    expect(rule(css, ".gauge[data-form='ring'] .gauge-figure-value")).toContain('line-height: 1;');
+    const ring = rule(css, ".gauge[data-form='ring'] .gauge-figure-caption");
+    expect(ring).toContain('-webkit-line-clamp: 1;');
+    expect(ring).toContain('max-inline-size: calc(var(--gauge-size) * 5 / 8);');
+    const large = rule(css, ".gauge[data-form='ring'][data-size='lg'] .gauge-figure-caption");
+    expect(large).toContain('-webkit-line-clamp: 2;');
+    expect(large).toContain('max-inline-size: calc(var(--gauge-size) * 13 / 20);');
+  });
+
+  it('names graytext, canvastext and highlight in forced colors, and keeps the mask out of the repaint', () => {
     const forced = blockAfter(rules(), '@media (forced-colors: active)');
     expect(rule(forced, '.gauge-track')).toContain('stroke: graytext;');
     expect(rule(forced, '.gauge-value')).toContain('stroke: canvastext;');
     expect(rule(forced, '.gauge-mark')).toContain('stroke: highlight;');
-    expect(rule(forced, '.gauge-mark-ring')).toContain('stroke: canvas;');
+    expect(rule(forced, '.gauge-mask')).toContain('forced-color-adjust: none;');
   });
 
   it('keeps print colors exact', () => {
