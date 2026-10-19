@@ -773,13 +773,24 @@
 
   /*
    * Textures on request: each segment and its legend and readout keys in its slot's look, inside a 1px border of
-   * its color, so a textured bar keeps its outline where stripes do not print. A zero draws nothing.
+   * its color, so a textured bar keeps its outline where stripes do not print. A zero draws nothing. A segment
+   * on another has its gap where that border's zero-ward side would be, so its first background layer draws
+   * the outline's missing side: 1px of its color along that edge of its padding box, which the gap rules
+   * place (--bar-chart-edge-at and --bar-chart-edge-size); every other bar's layer is of no size.
    */
   .bar-chart[data-texture]
     :is(.bar-chart-bar[data-series]:not([data-sign='zero']), [data-series] > .bar-chart-key) {
     border: 1px solid var(--bar-chart-color, var(--color-ink));
     background-color: var(--bar-chart-fill, var(--bar-chart-color, var(--color-ink)));
-    background-image: var(--bar-chart-texture, none);
+    background-image:
+      linear-gradient(var(--bar-chart-color, var(--color-ink)), var(--bar-chart-color, var(--color-ink))),
+      var(--bar-chart-texture, none);
+    background-position:
+      var(--bar-chart-edge-at, 0 0),
+      0 0,
+      0 0;
+    background-size: var(--bar-chart-edge-size, 0 0), auto, auto;
+    background-repeat: no-repeat, repeat, repeat;
   }
 
   /*
@@ -789,19 +800,41 @@
    * the surface the chart sits on, and the page's own in forced colors (--bar-chart-gap, set there alone).
    */
   .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-joined][data-sign='positive'] {
+    --bar-chart-edge-at: 0 100%;
+    --bar-chart-edge-size: 100% 1px;
     border-block-end: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
   }
 
   .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-joined][data-sign='negative'] {
+    --bar-chart-edge-at: 0 0;
+    --bar-chart-edge-size: 100% 1px;
     border-block-start: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
   }
 
+  /* Lying down the zero-ward edge is the inline start or end, so its side follows the chart's direction. */
   .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-joined][data-sign='positive'] {
+    --bar-chart-edge-at: calc(50% - 50% * var(--chart-flip, 1)) 0;
+    --bar-chart-edge-size: 1px 100%;
     border-inline-start: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
   }
 
   .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-joined][data-sign='negative'] {
+    --bar-chart-edge-at: calc(50% + 50% * var(--chart-flip, 1)) 0;
+    --bar-chart-edge-size: 1px 100%;
     border-inline-end: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
+  }
+
+  /*
+   * A segment on another is at least 3px, its 2px gap and 1px of its color, so a small nonzero amount never
+   * draws as a gap alone. It is placed from its far end, so the extra grows toward zero, over the segment under
+   * it, and the stack's end stays where its total is.
+   */
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-joined][data-nonzero] {
+    min-block-size: 3px;
+  }
+
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-joined][data-nonzero] {
+    min-inline-size: 3px;
   }
 
   /* The token ring, which follows the bar's corners at its offset: concentric by construction. */
@@ -1248,10 +1281,23 @@
       --bar-chart-color: Highlight;
     }
 
+    /* The active band's fifth stays apart from its first: a Highlight outline over the page, not a fill. */
+    :is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar[data-series='5'] {
+      --bar-chart-fill: canvas;
+    }
+
     .bar-chart :is(.bar-chart-bar[data-series]:not([data-sign='zero']), [data-series] > .bar-chart-key) {
       border: 1px solid var(--bar-chart-color, var(--color-ink));
       background-color: var(--bar-chart-fill, var(--bar-chart-color, var(--color-ink)));
-      background-image: var(--bar-chart-texture, none);
+      background-image:
+        linear-gradient(var(--bar-chart-color, var(--color-ink)), var(--bar-chart-color, var(--color-ink))),
+        var(--bar-chart-texture, none);
+      background-position:
+        var(--bar-chart-edge-at, 0 0),
+        0 0,
+        0 0;
+      background-size: var(--bar-chart-edge-size, 0 0), auto, auto;
+      background-repeat: no-repeat, repeat, repeat;
     }
   }
 }

@@ -8,6 +8,7 @@ import {
   firstStop,
   moveAlong,
   moveBar,
+  nearestStop,
   nonzero,
   seriesColors,
   stackBySign,
@@ -324,6 +325,36 @@ describe('moveBar', () => {
     ['last', { band: 0, series: 0 }, { band: 2, series: 2 }],
   ] as const)('moves %s from %j to %j across stacks, by band', (move, from, to) => {
     expect(moveBar(STACKED, from, move, true)).toEqual(to);
+  });
+});
+
+describe('nearestStop', () => {
+  const STOPS: BarStop[] = [
+    { band: 0, series: 0 },
+    { band: 0, series: 3 },
+    { band: 0, series: 4 },
+    { band: 1, series: 2 },
+  ];
+
+  it('takes the series where the band has it, else the nearest, the earlier on a tie', () => {
+    expect(nearestStop(STOPS, 0, 3)).toEqual({ band: 0, series: 3 });
+    expect(nearestStop(STOPS, 0, 2)).toEqual({ band: 0, series: 3 });
+    // 1 is as far from 0 as from 2, and the earlier wins.
+    expect(nearestStop([...STOPS, { band: 0, series: 2 }].slice(1), 1, 1)).toEqual({ band: 1, series: 2 });
+    expect(
+      nearestStop(
+        [
+          { band: 0, series: 0 },
+          { band: 0, series: 2 },
+        ],
+        0,
+        1,
+      ),
+    ).toEqual({ band: 0, series: 0 });
+  });
+
+  it('finds nothing in a band with no bar', () => {
+    expect(nearestStop(STOPS, 2, 0)).toBeUndefined();
   });
 });
 

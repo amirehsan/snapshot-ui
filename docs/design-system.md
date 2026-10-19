@@ -10964,20 +10964,33 @@ bar's does. A segment that stands on another (`data-joined`) starts with
 the block end above zero and the block start below it standing up, the
 inline start and end lying down, so right to left moves it with the bar.
 The bar is a border box, so the gap is inside the segment's own length
-and the stack's total stays exact; a segment thinner than its gap draws
-the gap alone, 2px. A zero is a segment of no length where its sign has
-reached, never the outermost and never gapped, and the keys still reach
-it (correction 65). `StackInPlace` holds every segment on the zero line
-or on the one before within 1px, its gap at its foot, inner joins and
-zero ends square, and each stack's ends where the gridlines put its
-sums, left to right, right to left and narrow; `StackGaps` holds the same
-along a row in both directions, in three engines.
+and the stack's total stays exact. A segment on another is at least 3px,
+its gap and 1px of its color (`min-block-size`, or `min-inline-size`
+lying down, under `[data-joined][data-nonzero]`), so a small amount
+never draws as a gap alone; it is placed from its far end, so the extra
+grows toward zero over the segment under it, which drew before it, and
+the stack's end stays at its total: what a small segment overshoots is
+its neighbour, by up to 3px less its own size, never the stack
+(correction 72). The first segment of each sign is placed from zero. A
+zero is a segment of no length where its sign has reached, never the
+outermost and never gapped, and the keys still reach it (correction 65).
+`StackInPlace` holds the first segment of each sign on the zero line and
+every other's far end on its sum within 1px, at 3px at least, its gap
+toward zero, inner joins and zero ends square, and each stack's ends
+where the gridlines put its sums, left to right, right to left, narrow
+and with $10 between $600 and $300; `StackGaps` holds the same along a
+row in both directions, in three engines.
 
 **A stack's colors.** Without `color` the series take the palette's slots
 in order, `chart-1` to `chart-4` (teal, violet, olive, magenta), and the
 fifth slate, the remainder; a pinned `color` is kept to the fifth, so a
 category keeps its color when a filter takes another away, and the docs
-pin them. A sixth and later series draw slate whatever they pin, with a
+pin them, "Other" to slate: a series' texture slot is its color's
+(`chart-k` the slot k, slate the fifth, ink or gain its place), so a
+slate "Other" is the fifth look in a month of fewer series too
+(correction 71). The legend, the readout and the table list the series
+first to last, while a standing stack draws them from the foot up, which
+the docs say. A sixth and later series draw slate whatever they pin, with a
 development warning once: the legend and the table still tell them apart.
 A hatched series in a stack warns and draws as a fill in its slot, since
 stripes there are a texture, never a previous period. Text stays ink and
@@ -11007,7 +11020,12 @@ mirrored in right to left, and Up and Down across the rows. At either end
 of its stack a key is prevented and stays, as Right at the last band
 does. Home, End and the pages keep the category, else the nearest
 (correction 67). `KeysStacked` runs both orientations and right to left
-in three engines; the pointer reads a stack's segment along its band.
+in three engines. The pointer takes the band's segment nearest it along
+the band, so past a stack's end the outermost on that side of zero
+(correction 77). When the bar that holds the stop loses its value, the
+stop, and any focus parked by it, go to the nearest series its band
+still has, and to the first stop only when the band has none
+(correction 75).
 
 **Textures** (spec 7.11, owner ruling 11). `hasTexture`, off by default,
 draws each slot's texture as well as its color, for a reader who cannot
@@ -11020,7 +11038,15 @@ keeps its outline where stripes do not print. A slot is `data-series` on
 the segment and on its legend and readout items; the texture is two
 custom properties set on the slot (`--bar-chart-texture` and
 `--bar-chart-fill`) and drawn by one rule for bars and keys. Grouped
-charts write no slot, so a pair's second series is never a texture.
+charts write no slot, so a pair's second series is never a texture. A
+segment on another has its gap where its border's zero-ward side would
+be, so the rule's first background layer draws that side: 1px of the
+color along the padding box's zero-ward edge, which the gap rules place
+by `--bar-chart-edge-at` and `--bar-chart-edge-size`, the inline start
+or end following the chart's direction by `--chart-flip`; on every
+other bar and key the layer has no size (correction 73). `TexturedEdges`
+reads it on every segment, standing and lying, both directions, in three
+engines.
 
 **A stack in forced colors.** Always textured, asked or not, since a
 system palette has one text color and a stack needs five looks: the four
@@ -11030,7 +11056,9 @@ the page's own color: bars are out of the repaint, so a gap drawn in
 `--chart-surface` would show the surface's token on a forced canvas, and
 the library never sets the app's surface variable, so the gap reads
 `--bar-chart-gap`, which only the forced-colors block sets, to `canvas`
-(correction 66). The docs' forced-colors run holds the four looks, the
+(correction 66). The active band's fifth is a `Highlight` outline over
+`canvas`, so it stays apart from the first's solid `Highlight`
+(correction 74). The docs' forced-colors run holds the four looks, the
 fifth's `GrayText` and the gaps.
 
 **Focus through data and status.** A segment that leaves while it holds
@@ -11040,7 +11068,8 @@ gives it to the tab stop whenever the chart is ready and focus is on its
 group, for new data as well as new categories, an orientation or a
 status (correction 68). `StackFocus` takes a stack through a segment's
 value gone, loading and ready again with a segment focused and finds no
-focus lost to nothing.
+focus lost to nothing, and then takes it through the same steps while a
+second chart holds focus, which stays where it is (correction 78).
 
 **Where the build departs from the plan.** The plan's spec corrections
 13 to 20 record them: the horizontal face drawn for any `orientation`
@@ -11060,9 +11089,16 @@ Corrections 63 to 70 record the stacks': one total per band at the end of
 the side it nets to, one series ignoring the layout, the zero never
 outermost and the attributes the CSS reads, the gap's own variable and
 the fifth slot's `GrayText` in forced colors, the keys and the nearest
-series, focus handed on after new data, the plays, and the sizes:
-`{ BarChart }` 6.36 kB against the spec's 5.5 kB budget and inside its
-6.5 kB limit, `{ LineChart, BarChart }` 7.99 kB inside its 8 kB limit.
+series, focus handed on after new data, the plays, and the sizes.
+Corrections 71 to 80 record the review's fixes: the slot from the color,
+the 3px least segment placed from its far end, the textured outline on
+the gap's side, the active fifth in forced colors, the nearest series
+for a lost stop, slate as the palette's fifth neighbour, the pointer
+past a stack, the second chart in `StackFocus`, the docs' order and
+slate "Other", and which stacked baselines change. After them
+`{ BarChart }` is 6.46 kB, over the spec's 5.5 kB budget and accepted by
+the rule with a 7 kB limit, and `{ LineChart, BarChart }` 8.06 kB, with
+the rule's 9 kB limit (correction 70, amended).
 
 **Screen readers and devices.** Not yet verified (owner action 3): Tab
 onto one bar and the arrows bar by bar in VoiceOver and NVDA, each bar's
@@ -11434,6 +11470,15 @@ rest into an "Other" that the app sums and labels, since the library
 never sums a figure it must say. It is drawn in slate, achromatic, so it
 reads as the remainder and never as a fifth hue; slate is gated already
 as text, 5.31 and 6.94 on lifted. A sixth series draws nothing new.
+Drawn on the fourth slot, slate is magenta's neighbour, and the checks
+hold the pair like any other: 21.2 for full color vision and 10.0 for
+the lesser simulation in light, 22.5 and 12.4 in dark. An app pins
+"Other" to slate, so in a month of fewer series it stands on an earlier
+slot; recorded, not gated: teal and slate 13.0 and 8.2 in light, 14.3
+and 6.5 in dark, under the neighbour thresholds, and olive and slate
+12.6 for full color vision in light. The gap, the legend, each
+segment's name and, in forced colors, GrayText against CanvasText tell
+them apart (the plan's spec correction 76).
 
 **Never text, and only in charts.** Values, labels, legend names and
 readouts stay ink and slate; the colored mark beside them carries the

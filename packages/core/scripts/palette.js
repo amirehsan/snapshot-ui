@@ -11,6 +11,12 @@ import { NON_TEXT, composite, contrastRatio, parseColor } from './contrast.js';
 /** The palette's tokens, in slot order. A stack draws them in this order and slate after them. */
 export const CHART_SLOTS = ['chart-1', 'chart-2', 'chart-3', 'chart-4'];
 
+/**
+ * A stack's fifth series, the app's "Other": slate, the remainder, drawn after the fourth slot, so magenta and
+ * slate are neighbours too.
+ */
+export const STACK_REMAINDER = 'slate';
+
 /** The colors that carry a meaning, which no slot may be read as. Taupe is placeholder and disabled text. */
 export const RESERVED = [
   'error',
@@ -192,15 +198,19 @@ export function chartColors(palette) {
     if (value === undefined) throw new Error(`No color "${name}" in the palette`);
     return opaque(value, palette.canvas);
   };
+  const slots = CHART_SLOTS.map((name) => ({ name, color: read(name) }));
   return {
-    slots: CHART_SLOTS.map((name) => ({ name, color: read(name) })),
+    slots,
+    /** A stack's five, in the order they touch: the four slots and slate. */
+    stack: [...slots, { name: STACK_REMAINDER, color: read(STACK_REMAINDER) }],
     reserved: RESERVED.map((name) => ({ name, color: read(name) })),
     read,
   };
 }
 
 /**
- * Every check a slot fails in one mode, as sentences: the lightness band, the chroma floor, its neighbours under
+ * Every check a slot fails in one mode, as sentences: the lightness band, the chroma floor, its neighbours (slate
+ * after the fourth among them) under
  * simulated and normal vision, its distance and hue from each reserved color, and 3:1 on each surface. Empty when
  * the palette passes.
  * @param {Record<string, string>} palette One mode's token values, from `paletteFor`.
@@ -208,7 +218,7 @@ export function chartColors(palette) {
  * @returns {string[]}
  */
 export function paletteFailures(palette, mode) {
-  const { slots, reserved, read } = chartColors(palette);
+  const { slots, stack, reserved, read } = chartColors(palette);
   const [low, high] = LIGHTNESS[mode];
   /** @type {string[]} */
   const failures = [];
@@ -241,7 +251,8 @@ export function paletteFailures(palette, mode) {
         fail(`${name} measures ${fixed(ratio, 2)} on ${ground}, under ${String(NON_TEXT)}`);
     }
   }
-  for (const [before, after] of neighbours(slots)) {
+  // The neighbours a stack draws: the four slots in order and slate after the fourth.
+  for (const [before, after] of neighbours(stack)) {
     const pair = `${before.name} and ${after.name}`;
     const normal = distance(before.color, after.color);
     if (normal < NORMAL_MIN) fail(`${pair} are ${fixed(normal)} apart, under ${String(NORMAL_MIN)}`);

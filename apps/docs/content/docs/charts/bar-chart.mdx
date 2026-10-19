@@ -90,12 +90,32 @@ Why stripes and not a lighter shade: a lighter fill must clear 3:1 against the c
 Give `layout="stacked"` to put up to five series end to end in each band, such as a month's top four categories and the "Other" you sum. Positives stack up from the zero line and negatives down, each sign in your series' order, so a category whose refunds net it below zero hangs under the line while the rest stand over it.
 
 - Colors: without `color`, the series take the chart palette in order, teal, violet, olive and magenta, and the fifth is slate, the remainder. Pin each series to its slot, such as `color: 'chart-2'`, so a category keeps its color when a filter takes another away. A sixth series warns in development and draws slate too: fold it into "Other". A series with `look: 'hatched'` warns and draws as a fill, since stripes in a stack are a texture, not a previous period.
-- Segments: 2px of the card between segments, and only the outermost segment of each sign keeps the rounded end; the joins are square. The gap is inside each segment's length, so a stack is as tall as its total.
+- Other: pin it to `color: 'slate'`, as the example does. A series' texture follows its color, so a slate "Other" is always the fifth look, solid slate, even when a month has fewer than five series and "Other" stands fourth or third; unpinned, it would take the next slot's color and texture and read as one more category.
+- Order: the legend, the readout and the table list the series in your order, first to last, while a standing stack draws them from the bottom up, so your first series is at the foot of each stack and "Other" on top.
+- Segments: 2px of the card between segments, and only the outermost segment of each sign keeps the rounded end; the joins are square. The gap is inside each segment's length, so a stack is as tall as its total. A segment on another is at least 3px, its gap and 1px of its color, so a small amount never vanishes; the extra reaches into the segment under it, and the stack's end stays at its total.
 - Totals: pass `totals`, one string per band, summed and formatted by you, since the chart never adds a figure it must say. With `valueLabels` each total stands at the end of the side its band nets to; lying down it fills the amount column. The readout lists every segment of the band and the total, and the table gains a Total column. Asked for figures without `totals`, the chart warns and labels nothing.
 - Textures: `hasTexture` draws each series' texture as well as its color, for readers who cannot tell the colors apart and for a printout without color: the first solid, the second striped at 45 degrees, the third at 135, the fourth both, and the fifth solid slate, each inside a 1px border of its color, the legend's keys with them. Forced colors always show them.
 - Keys: along a stack, Up and Down standing up, or Left and Right lying down, move segment by segment by what is drawn; the other pair moves to the same category in the band beside, or the nearest category it has.
 
 <Preview name="bar-chart-stacked" />
+
+A month with three categories and "Other" keeps "Other" slate and its fifth texture:
+
+```tsx
+<BarChart
+  aria-label="Spending by category, October"
+  layout="stacked"
+  categories={['Oct']}
+  series={[
+    { label: 'Groceries', color: 'chart-1', values: [{ value: 640, valueLabel: '$640.00' }] },
+    { label: 'Dining', color: 'chart-2', values: [{ value: 312.45, valueLabel: '$312.45' }] },
+    { label: 'Transport', color: 'chart-3', values: [{ value: 188.1, valueLabel: '$188.10' }] },
+    { label: 'Other', color: 'slate', values: [{ value: 376.8, valueLabel: '$376.80' }] },
+  ]}
+  totals={['$1,517.35']}
+  valueLabels="all"
+/>
+```
 
 </Section>
 

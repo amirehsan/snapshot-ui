@@ -133,7 +133,7 @@ export const COMPARE_TICKS: { value: number; label: string }[] = [
 /**
  * The category mix by month: the top four categories, the same four all half year, and the rest summed as
  * "Other", last, for the stacked month view. Pinned to their slots, so a category keeps its color when a filter
- * takes another away.
+ * takes another away, and "Other" to slate, so it keeps the fifth look in a month with fewer categories.
  */
 export const CATEGORY_MIX: BarSeries[] = [
   { label: 'Groceries', color: 'chart-1', values: [612.4, 640, 598.3, 655.1, 621.75, 640].map(money) },
