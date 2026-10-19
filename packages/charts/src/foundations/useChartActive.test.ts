@@ -122,6 +122,27 @@ describe('useChartActive', () => {
     expect(result.current).toMatchObject({ active: null, source: null, stop: 1 });
   });
 
+  it('moves the stop by a key or a touch, never by a mouse passing over', () => {
+    const { result } = renderHook(() => useMarks([0, 1, 2]));
+    act(() => {
+      result.current.activate(0, 'key');
+    });
+    act(() => {
+      result.current.activate(2, 'pointer');
+    });
+    expect(result.current).toMatchObject({ active: 2, source: 'pointer', stop: 0 });
+    act(() => {
+      result.current.activate(1, 'touch');
+    });
+    expect(result.current).toMatchObject({ active: 1, source: 'touch', stop: 1 });
+    // A pointer alone sets no stop at all.
+    const { result: hovered } = renderHook(() => useMarks([0, 1, 2]));
+    act(() => {
+      hovered.current.activate(2, 'pointer');
+    });
+    expect(hovered.current).toMatchObject({ active: 2, stop: null });
+  });
+
   it('holds a touch until a press outside the holder, and only a touch', () => {
     const { holder, inside, outside } = setUp();
     const { result } = renderHook(() => useMarks([0, 1, 2], holder));

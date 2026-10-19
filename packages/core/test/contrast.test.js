@@ -727,8 +727,15 @@ describe('the bar chart', () => {
   // transient emphasis, measured and recorded, not gated. An ink bar so dimmed falls under 3:1 in light while the
   // pointer rests; the active row is at full strength (spec correction 15).
   it('measures the dimmed bar the record states, in both modes', () => {
-    expect(measured('light', 'ink', 'lifted', 0.4), 'light').toBeCloseTo(2.57, 2);
-    expect(measured('dark', 'ink', 'lifted', 0.4), 'dark').toBeCloseTo(3.81, 2);
+    for (const { name, light, dark } of [
+      { name: 'ink', light: 2.57, dark: 3.81 },
+      // A second series and money that arrived step back further, and only while the pointer rests.
+      { name: 'slate', light: 1.75, dark: 2.19 },
+      { name: 'gain', light: 1.93, dark: 2.36 },
+    ]) {
+      expect(measured('light', name, 'lifted', 0.4), `${name}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, 'lifted', 0.4), `${name}, dark`).toBeCloseTo(dark, 2);
+    }
   });
 });
 

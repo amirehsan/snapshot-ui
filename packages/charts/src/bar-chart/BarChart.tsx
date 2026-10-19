@@ -1,14 +1,16 @@
 'use client';
 
 import {
-  useEffect,
+  useCallback,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
   type FocusEvent,
   type HTMLAttributes,
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type ReactElement,
   type ReactNode,
@@ -183,9 +185,6 @@ export function BarChart(props: BarChartProps): ReactElement {
   } = props as DrawnProps;
   const id = useId();
   const rowsRef = useRef<HTMLDivElement>(null);
-  // The bar that last took focus, kept while it is in the page or until focus leaves it, so a bar that new
-  // categories took away hands focus to the new first stop rather than the body.
-  const focusedBar = useRef<HTMLElement | null>(null);
   const [view, setView] = useState<'chart' | 'table'>('chart');
 
   const count = categories.length;
@@ -225,9 +224,10 @@ export function BarChart(props: BarChartProps): ReactElement {
   const scale = linearScale(domain, [0, 100]);
   const [low, high] = [Math.min(...domain), Math.max(...domain)];
   const zero = coordinate(scale(0));
-  const ticks = isReady
-    ? (valueTicks ?? []).filter(({ value }) => Number.isFinite(value) && value >= low && value <= high)
-    : [];
+  // The gridlines and their labels in every status, so the figure keeps its height when the data arrives.
+  const ticks = (valueTicks ?? []).filter(
+    ({ value }) => Number.isFinite(value) && value >= low && value <= high,
+  );
 
   // The bars with a value, in drawn order: row by row, and in a row series by series. The DOM's order too.
   const stops: BarStop[] = isReady
@@ -264,18 +264,38 @@ export function BarChart(props: BarChartProps): ReactElement {
   const activeStop = active === null ? undefined : stops[marks.indexOf(active)];
   const isPointer = chart.current === null ? held !== null : chart.source !== 'key';
 
-  // New categories while a bar holds focus: focus goes to the new first stop, never the body.
-  const shownKey = useRef(key);
-  useEffect(() => {
-    if (shownKey.current === key) return;
-    shownKey.current = key;
+  /**
+   * A bar's ref: one function for the chart's life, so React lets go of it only when the bar leaves the page. A
+   * bar that leaves while it holds focus, to new categories or to a status, first parks focus on the group,
+   * before React removes it, so focus never passes through the body.
+   */
+  const holdFocus = useCallback((bar: HTMLElement | null) => {
+    if (!bar) return;
+    return () => {
+      const rows = rowsRef.current;
+      if (!rows || bar.ownerDocument.activeElement !== bar) return;
+      rows.tabIndex = -1;
+      rows.focus({ preventScroll: true });
+    };
+  }, []);
+
+  // New categories or a status while a bar holds focus: once the chart is ready, focus goes to its tab stop,
+  // the new first bar for new categories, never the body. A layout effect, so it moves before the page paints.
+  const shown = useRef({ key, status });
+  useLayoutEffect(() => {
+    const before = shown.current;
+    shown.current = { key, status };
     const rows = rowsRef.current;
-    const bar = focusedBar.current;
-    if (!rows || !bar) return;
+    if (!rows || (before.key === key && before.status === status)) return;
     const focused = rows.ownerDocument.activeElement;
-    if (bar.isConnected ? focused !== bar : focused !== null && focused !== rows.ownerDocument.body) return;
+    // A bar kept by new categories is the same element, now another category's.
+    const isStale =
+      before.key !== key && focused instanceof HTMLElement && focused.classList.contains('bar-chart-bar');
+    if (status !== 'ready' || !(isStale || focused === rows)) return;
     rows.querySelector<HTMLElement>('.bar-chart-bar[tabindex="0"]')?.focus();
-  }, [key]);
+    // The group is focusable only while it holds focus for a state with no bars.
+    rows.removeAttribute('tabindex');
+  }, [key, status]);
 
   /** The chart's bars, in the order of `stops`. */
   const barsOf = (rows: HTMLElement): HTMLElement[] => [
@@ -307,12 +327,13 @@ export function BarChart(props: BarChartProps): ReactElement {
   const onBlur = (event: FocusEvent<HTMLDivElement>): void => {
     const to = event.relatedTarget;
     if (to instanceof Node && event.currentTarget.contains(to)) return;
-    const bar = event.target;
-    // A bar still in the page lost focus to something else; one that new categories took away keeps its place.
-    queueMicrotask(() => {
-      if (bar.isConnected && focusedBar.current === bar) focusedBar.current = null;
-    });
     chart.clear();
+  };
+
+  // A press on a bar does not focus it, so a touch's hold and a pointer's row stay the pointer's: the keys own
+  // focus, and a pointer never moves it.
+  const onMouseDown = (event: MouseEvent<HTMLDivElement>): void => {
+    if (event.target instanceof Element && event.target.closest('.bar-chart-bar')) event.preventDefault();
   };
 
   /** Activates the row under the pointer, read from each row's parts, and the bar under it or the row's first. */
@@ -447,10 +468,13 @@ export function BarChart(props: BarChartProps): ReactElement {
           role="group"
           aria-roledescription={labels.roleDescription}
           {...name.stop}
+          // Never a tab stop: it holds focus for a state with no bars, so a status never drops focus to the body.
+          tabIndex={chart.isInteractive && !isReady ? -1 : undefined}
           data-pointer={isPointer && active !== null ? '' : undefined}
           style={rowsStyle}
           onKeyDown={isReady ? onKeyDown : undefined}
           onBlur={isReady ? onBlur : undefined}
+          onMouseDown={isReady ? onMouseDown : undefined}
           onPointerMove={isReady ? onPointerMove : undefined}
           onPointerLeave={isReady ? onPointerLeave : undefined}
           onPointerDown={isReady ? onPointerDown : undefined}
@@ -510,6 +534,7 @@ export function BarChart(props: BarChartProps): ReactElement {
                       // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a bar is a stop of the roving tab index, and taking focus makes it the active bar
                       <span
                         key={at}
+                        ref={holdFocus}
                         className="bar-chart-bar"
                         role="img"
                         aria-roledescription={labels.bar}
@@ -526,15 +551,16 @@ export function BarChart(props: BarChartProps): ReactElement {
                         data-nonzero={nonzero(value.value) ? '' : undefined}
                         data-active={active === mark ? '' : undefined}
                         tabIndex={chart.isInteractive ? (mark === stop ? 0 : -1) : undefined}
-                        style={
-                          {
-                            insetInlineStart: percent(start),
-                            inlineSize: percent(size),
-                            '--bar-chart-place': drawn.length > 1 ? at : undefined,
-                          } as CSSProperties
-                        }
-                        onFocus={(event) => {
-                          focusedBar.current = event.currentTarget;
+                        style={{
+                          // Each bar stands on zero: a negative one from its end, so its least 1px runs
+                          // toward the start, as the bar does.
+                          ...(value.value < 0
+                            ? { insetInlineEnd: percent(100 - start - size) }
+                            : { insetInlineStart: percent(start) }),
+                          inlineSize: percent(size),
+                          ...({ '--bar-chart-place': drawn.length > 1 ? at : undefined } as CSSProperties),
+                        }}
+                        onFocus={() => {
                           activate({ band, series: at }, 'key');
                         }}
                       />
@@ -564,7 +590,7 @@ export function BarChart(props: BarChartProps): ReactElement {
               )}
             </div>
           )}
-          {ticks.length > 0 ? (
+          {valueTicks !== undefined && valueTicks.length > 0 ? (
             <div className="bar-chart-ticks" aria-hidden="true">
               {ticks.map((tick, at) => {
                 const x = scale(tick.value);

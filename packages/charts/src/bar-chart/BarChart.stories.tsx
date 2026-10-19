@@ -399,7 +399,9 @@ const Grouping = (args: BarChartProps): ReactElement => {
 
 /**
  * New categories while a bar holds focus, as a grouping control's shortcut would bring them: focus goes to the
- * new first bar, never the body, whether the focused bar's row is gone or still there.
+ * new first bar and never passes through the body, whether the focused bar's row is gone or still there. Any
+ * element that loses focus to nothing is caught as it does, so a pass through the body cannot hide between two
+ * reads.
  */
 export const GroupingChange: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -407,33 +409,170 @@ export const GroupingChange: Story = {
   play: async ({ canvasElement }) => {
     await interactive(canvasElement);
     const doc = canvasElement.ownerDocument;
-    const toggle = part(canvasElement, '.button');
-    // The ninth row is gone in the six categories.
-    await focusOn(barAt(canvasElement, 8));
-    // A press that does not move focus, as a key shortcut's would not.
-    toggle.click();
-    await expect(doc.activeElement).not.toBe(doc.body);
-    await waitFor(() => expect(focusedCategory(canvasElement)).toBe('Groceries'));
-    await expect(barsOf(canvasElement).filter((bar) => bar.tabIndex === 0)).toEqual([doc.activeElement]);
-    // The third row stays in the merchants, now another category's bar.
-    await focusOn(barAt(canvasElement, 2));
-    toggle.click();
-    await expect(doc.activeElement).not.toBe(doc.body);
-    await waitFor(() => expect(focusedCategory(canvasElement)).toBe('Whole Foods Market'));
+    const toNothing: string[] = [];
+    const record = (event: FocusEvent): void => {
+      if (event.relatedTarget === null && event.target instanceof Element)
+        toNothing.push(event.target.className);
+    };
+    doc.addEventListener('focusout', record);
+    try {
+      const toggle = part(canvasElement, '.button');
+      // The ninth row is gone in the six categories.
+      await focusOn(barAt(canvasElement, 8));
+      // A press that does not move focus, as a key shortcut's would not.
+      toggle.click();
+      await expect(doc.activeElement).not.toBe(doc.body);
+      await waitFor(() => expect(focusedCategory(canvasElement)).toBe('Groceries'));
+      await expect(barsOf(canvasElement).filter((bar) => bar.tabIndex === 0)).toEqual([doc.activeElement]);
+      // The third row stays in the merchants, now another category's bar.
+      await focusOn(barAt(canvasElement, 2));
+      toggle.click();
+      await expect(doc.activeElement).not.toBe(doc.body);
+      await waitFor(() => expect(focusedCategory(canvasElement)).toBe('Whole Foods Market'));
+      await expect(toNothing).toEqual([]);
+    } finally {
+      doc.removeEventListener('focusout', record);
+    }
   },
 };
 
-/** In a flex row, which sizes its items to their content, the chart is 20rem wide rather than nothing. */
+/**
+ * A size container takes no width from its content, so its holder gives it one: in a flex row, a basis of
+ * 20rem that grows to the row and shrinks with it. The chart fills its item, and two side by side in a 320px
+ * frame share it with nothing past its edge.
+ */
 export const InAFlexRow: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
   render: (args) => (
-    <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-      <BarChart {...args} />
+    <div style={{ display: 'grid', gap: 24 }}>
+      <div data-testid="row" style={{ display: 'flex', alignItems: 'flex-start' }}>
+        <div style={{ flex: '1 1 20rem' }}>
+          <BarChart {...args} />
+        </div>
+      </div>
+      <div data-testid="two-up" style={{ display: 'flex', gap: 8, width: 320, alignItems: 'flex-start' }}>
+        <div style={{ flex: '1 1 20rem' }}>
+          <BarChart {...args} aria-label="Spending by merchant, October" />
+        </div>
+        <div style={{ flex: '1 1 20rem' }}>
+          <BarChart {...args} aria-label="Spending by merchant, September" />
+        </div>
+      </div>
+    </div>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const row = canvas.getByTestId('row');
+    const [alone, ...pair] = [...canvasElement.querySelectorAll<HTMLElement>('.bar-chart')];
+    if (!alone) throw new Error('No chart');
+    await expect(
+      Math.abs(alone.getBoundingClientRect().width - row.getBoundingClientRect().width),
+    ).toBeLessThanOrEqual(1);
+    const twoUp = canvas.getByTestId('two-up');
+    await expect(twoUp.scrollWidth).toBeLessThanOrEqual(twoUp.clientWidth);
+    for (const chart of pair) {
+      const holder = chart.parentElement?.getBoundingClientRect();
+      await expect(Math.abs(chart.getBoundingClientRect().width - (holder?.width ?? 0))).toBeLessThanOrEqual(
+        1,
+      );
+      // Each takes half of the frame less the gap, and its names move above its bars.
+      await expect(Math.abs(chart.getBoundingClientRect().width - 156)).toBeLessThanOrEqual(1);
+      await expect(
+        getComputedStyle(part(chart, '.bar-chart-rows')).gridTemplateColumns.split(' '),
+      ).toHaveLength(2);
+    }
+    const root = canvasElement.ownerDocument.documentElement;
+    await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+  },
+};
+
+/** The horizontal center of a box, in px. */
+const centreOf = (box: DOMRect): number => box.left + box.width / 2;
+
+/**
+ * Checks one chart: the zero line on the bars' zero edge, and each gridline on its value label, within 1px. In
+ * right to left a bar's start is its right edge.
+ */
+const expectLinesInPlace = async (chart: HTMLElement): Promise<void> => {
+  const rtl = getComputedStyle(part(chart, '.bar-chart-rows')).direction === 'rtl';
+  const zero = centreOf(part(chart, '.bar-chart-baseline').getBoundingClientRect());
+  for (const bar of chart.querySelectorAll<HTMLElement>('.bar-chart-bar[data-nonzero]')) {
+    const box = bar.getBoundingClientRect();
+    const isNegative = bar.dataset.sign === 'negative';
+    // A positive bar starts at zero, a negative one ends there.
+    const edge = isNegative !== rtl ? box.right : box.left;
+    await expect(Math.abs(edge - zero), bar.getAttribute('aria-labelledby') ?? '').toBeLessThanOrEqual(1);
+  }
+  const lines = [...chart.querySelectorAll('.bar-chart-grid')];
+  const labels = [...chart.querySelectorAll<HTMLElement>('.bar-chart-tick')];
+  await expect(lines.length).toBe(labels.length);
+  for (const [at, line] of lines.entries()) {
+    const x = centreOf(line.getBoundingClientRect());
+    const label = labels[at];
+    if (!label) throw new Error('No label');
+    const box = label.getBoundingClientRect();
+    const edge = label.dataset.edge;
+    const atStart = rtl ? box.right : box.left;
+    const atEnd = rtl ? box.left : box.right;
+    const anchor = edge === 'start' ? atStart : edge === 'end' ? atEnd : centreOf(box);
+    await expect(Math.abs(anchor - x), label.textContent).toBeLessThanOrEqual(1);
+  }
+  // The lines stay on the track, never on the names or the amounts.
+  const track = part(chart, '.bar-chart-track').getBoundingClientRect();
+  const layer = part(chart, '.bar-chart-gridlines').getBoundingClientRect();
+  await expect(Math.abs(layer.left - track.left)).toBeLessThanOrEqual(1);
+  await expect(Math.abs(layer.right - track.right)).toBeLessThanOrEqual(1);
+};
+
+/** Refunds below zero, left to right, right to left and narrow: the zero line and the gridlines where they belong. */
+export const LinesInPlace: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  args: {
+    'aria-label': 'Spending by category, October',
+    categories: CATEGORIES,
+    series: [BY_CATEGORY],
+    valueTicks: CATEGORY_TICKS,
+  },
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <Panel>
+        <BarChart {...args} />
+      </Panel>
+      <div dir="rtl">
+        <Panel>
+          <BarChart {...args} aria-label="Spending by category, October, right to left" />
+        </Panel>
+      </div>
+      <Panel width="20rem">
+        <BarChart {...args} aria-label="Spending by category, October, narrow" />
+      </Panel>
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const width = part(canvasElement, '.bar-chart').getBoundingClientRect().width;
-    const rem = parseFloat(getComputedStyle(canvasElement.ownerDocument.documentElement).fontSize);
-    await expect(Math.abs(width - 20 * rem)).toBeLessThanOrEqual(1);
+    const charts = [...canvasElement.querySelectorAll<HTMLElement>('.bar-chart')];
+    await expect(charts).toHaveLength(3);
+    // The narrow one has put its names above its bars.
+    const [, , narrow] = charts;
+    if (!narrow) throw new Error('No narrow chart');
+    await expect(
+      getComputedStyle(part(narrow, '.bar-chart-rows')).gridTemplateColumns.split(' '),
+    ).toHaveLength(2);
+    for (const chart of charts) await expectLinesInPlace(chart);
+  },
+};
+
+/** The first row's readout goes under its row, just below the bar, not under the whole chart. */
+export const ReadoutBelow: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  play: async ({ canvasElement }) => {
+    await interactive(canvasElement);
+    const first = barAt(canvasElement, 0);
+    await focusOn(first);
+    await waitFor(() =>
+      expect(part(canvasElement, '.bar-chart-readout')).toHaveAttribute('data-place', 'below'),
+    );
+    const panel = part(canvasElement, '.bar-chart-readout').getBoundingClientRect();
+    const bar = first.getBoundingClientRect();
+    await expect(panel.top).toBeGreaterThanOrEqual(bar.bottom);
+    await expect(panel.top - bar.bottom).toBeLessThanOrEqual(24);
   },
 };

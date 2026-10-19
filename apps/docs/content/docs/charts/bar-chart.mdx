@@ -52,7 +52,7 @@ A long name wraps in the label column, which takes the longest name's width up t
 
 When the chart is narrower than 24rem, each name moves to a line of its own above its bar, and the bar and its amount share the line below. The chart reads its own width, not the viewport's, so it behaves the same in a narrow card on a wide screen.
 
-In a flex row or a grid column sized by its content, the chart is 20rem wide rather than nothing, and never narrower. On a phone, give the flex or grid item that holds it `min-width: 0` so it can shrink with the screen.
+The chart is a size container, so it takes its width from what holds it and none from its content: a block gives it the whole line, and in a flex row its item needs a basis, such as `flex: 1 1 20rem`, or a grid column a size. Given none, it is no wider than nothing.
 
 </Section>
 

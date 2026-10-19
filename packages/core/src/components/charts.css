@@ -414,11 +414,12 @@
    * BarChart, horizontal: a grid of rows, each its label at the start, its track of bars from the zero line and
    * its amounts at the end. The label column is as wide as the longest label up to 40% of the chart, the amount
    * column as wide as the widest amount, which the grid finds from the amounts themselves, and the track takes
-   * the rest. The figure is the container its queries read, 20rem wide in a shrink-to-fit parent.
+   * the rest. The figure is the container its queries read; a size container takes no width from its content,
+   * so its holder gives it one, as a block or a sized flex or grid item does.
    */
   .bar-chart {
     container: bar-chart / inline-size;
-    contain-intrinsic-inline-size: 20rem;
+    contain-intrinsic-inline-size: 0;
     display: grid;
     gap: var(--spacing-part);
     min-width: 0;
@@ -507,11 +508,14 @@
     white-space: nowrap;
   }
 
-  /* The gridlines and the zero line: one layer over every row's track, under the bars. */
+  /*
+   * The gridlines and the zero line: one layer over every row's track, under the bars. An absolutely placed
+   * grid child reaches the grid's padding edge on a side whose line is auto, so both ends are given.
+   */
   .bar-chart-gridlines {
     position: absolute;
     inset: 0;
-    grid-column: 2;
+    grid-column: 2 / span 1;
     grid-row: 1 / span var(--bar-chart-rows, 1);
     pointer-events: none;
   }
@@ -576,6 +580,12 @@
     outline-offset: var(--focus-ring-offset);
   }
 
+  /* The group holds focus for a status with no bars, never as a tab stop, and shows it with the same ring. */
+  .bar-chart-rows:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
   /* Under a pointer only, the other rows step back to 40%, with no new shape and no motion. */
   .bar-chart-rows[data-pointer] .bar-chart-row:not([data-active]) .bar-chart-bar {
     opacity: 0.4;
@@ -609,11 +619,14 @@
 
   /*
    * The readout over the active row's track, above the row or below it as the component writes, so it never
-   * covers the bar. It is the rows' last child, so it draws over every bar with no z-index.
+   * covers the bar: its grid area is that row's track alone, both ends given, since an absolutely placed grid
+   * child with an auto end reaches the grid's edge. It is the rows' last child, so it draws over every bar
+   * with no z-index, and it never takes the pointer from the rows under it.
    */
   .bar-chart-readout[data-place] {
-    grid-column: 2;
-    grid-row: var(--bar-chart-row, 1);
+    grid-column: 2 / span 1;
+    grid-row: var(--bar-chart-row, 1) / span 1;
+    pointer-events: none;
   }
 
   .bar-chart-readout-item {
@@ -702,17 +715,17 @@
     }
 
     .bar-chart-gridlines {
-      grid-column: 1;
+      grid-column: 1 / span 1;
       grid-row: 1 / span var(--bar-chart-rows-narrow, 2);
     }
 
-    .bar-chart-ticks,
-    .bar-chart-readout[data-place] {
+    .bar-chart-ticks {
       grid-column: 1;
     }
 
     .bar-chart-readout[data-place] {
-      grid-row: var(--bar-chart-row-narrow, 2);
+      grid-column: 1 / span 1;
+      grid-row: var(--bar-chart-row-narrow, 2) / span 1;
     }
   }
 
@@ -780,7 +793,8 @@
       background-color: Highlight;
     }
 
-    .bar-chart-bar:focus-visible {
+    .bar-chart-bar:focus-visible,
+    .bar-chart-rows:focus-visible {
       outline-color: Highlight;
     }
 

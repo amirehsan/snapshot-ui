@@ -79,6 +79,22 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/**
+ * Records every element that lost focus to nothing, which is focus passing through the body: the chart must
+ * never let that happen, whatever its bars do.
+ */
+const watchBody = (): ReturnType<typeof vi.fn> => {
+  const toNothing = vi.fn();
+  const listener = (event: FocusEvent): void => {
+    if (event.relatedTarget === null) toNothing(event.target);
+  };
+  document.addEventListener('focusout', listener);
+  onTestFinished(() => {
+    document.removeEventListener('focusout', listener);
+  });
+  return toNothing;
+};
+
 describe('BarChart', () => {
   it('is exported from the package with its types', () => {
     expect(library.BarChart).toBe(BarChart);
@@ -121,7 +137,9 @@ describe('BarChart', () => {
     expect(whole?.style.insetInlineStart).toBe('16.667%');
     expect(whole?.style.inlineSize).toBe('70%');
     expect(whole).toHaveAttribute('data-sign', 'positive');
-    expect(apple?.style.insetInlineStart).toBe('6.667%');
+    // A negative bar stands on zero from its end, so its least 1px runs toward the start, as it does.
+    expect(apple?.style.insetInlineEnd).toBe('83.333%');
+    expect(apple?.style.insetInlineStart).toBe('');
     expect(apple?.style.inlineSize).toBe('10%');
     expect(apple).toHaveAttribute('data-sign', 'negative');
     expect(corner?.style.insetInlineStart).toBe('16.667%');
@@ -347,17 +365,70 @@ describe('BarChart', () => {
   it('resets to the first stop and keeps focus off the body when the categories change', () => {
     const CATEGORIES = ['Groceries', 'Transport', 'Bills'];
     const BY_CATEGORY: BarSeries = { label: 'October', values: [money(640), money(210), money(180)] };
+    const toNothing = watchBody();
     // A focused bar whose row the new categories take away.
     const { container, rerender } = render(<Chart />);
     focus(barsOf(container)[4]);
     rerender(<Chart categories={CATEGORIES} series={[BY_CATEGORY]} />);
     expect(document.activeElement).not.toBe(document.body);
     expect(focusedCategory()).toBe('Groceries');
+    expect(toNothing).not.toHaveBeenCalled();
+    // The group held focus only for the moment the bar was gone.
+    expect(rowsOf(container)).not.toHaveAttribute('tabindex');
     expect(barsOf(container).filter((bar) => bar.tabIndex === 0)).toEqual([barsOf(container)[0]]);
     // A focused bar whose row stays: the same element, now another category's, hands focus to the first stop.
     focus(barsOf(container)[1]);
     rerender(<Chart />);
     expect(focusedCategory()).toBe('Whole Foods Market');
+    expect(toNothing).not.toHaveBeenCalled();
+  });
+
+  it('parks focus on the group through a status with no bars, and gives it to the tab stop when ready', () => {
+    const toNothing = watchBody();
+    const { container, rerender } = render(<Chart />);
+    focus(barAt(container, 2));
+    rerender(<Chart status="loading" />);
+    expect(document.activeElement).toBe(rowsOf(container));
+    expect(rowsOf(container)).toHaveAttribute('tabindex', '-1');
+    // The same categories: the bar last active, which is the tab stop.
+    rerender(<Chart />);
+    expect(focusedCategory()).toBe('Netflix');
+    expect(rowsOf(container)).not.toHaveAttribute('tabindex');
+    // New categories after an error: their first bar.
+    rerender(<Chart status="error" />);
+    expect(document.activeElement).toBe(rowsOf(container));
+    rerender(
+      <Chart
+        categories={['Groceries', 'Bills']}
+        series={[{ label: 'October', values: [money(640), money(150)] }]}
+      />,
+    );
+    expect(focusedCategory()).toBe('Groceries');
+    expect(toNothing).not.toHaveBeenCalled();
+  });
+
+  it('takes no focus when a status changes while focus is elsewhere', () => {
+    const { container, rerender } = render(
+      <>
+        <button type="button">Elsewhere</button>
+        <Chart />
+      </>,
+    );
+    const elsewhere = within(container).getByRole('button', { name: 'Elsewhere' });
+    focus(elsewhere);
+    rerender(
+      <>
+        <button type="button">Elsewhere</button>
+        <Chart status="loading" />
+      </>,
+    );
+    rerender(
+      <>
+        <button type="button">Elsewhere</button>
+        <Chart />
+      </>,
+    );
+    expect(elsewhere).toHaveFocus();
   });
 
   it('resets the tab stop without taking focus when no bar holds it', () => {
@@ -444,6 +515,34 @@ describe('BarChart', () => {
       fireEvent.pointerLeave(rows, { pointerType: 'mouse' });
       expect(readoutX(container)).toBe('Whole Foods Market');
       expect(rows).not.toHaveAttribute('data-pointer');
+    });
+
+    it('leaves the tab stop where it was when a mouse passes over', () => {
+      const { container } = render(<Chart />);
+      stubRows();
+      focus(barAt(container, 1));
+      act(() => {
+        barAt(container, 1).blur();
+      });
+      fireEvent.pointerMove(rowsOf(container), { clientY: 180, pointerType: 'mouse' });
+      expect(readoutX(container)).toBe('Other');
+      expect(barsOf(container).filter((bar) => bar.tabIndex === 0)).toEqual([barAt(container, 1)]);
+    });
+
+    it('takes no focus from a tap on a bar, so a tap on another row holds that row', async () => {
+      const user = userEvent.setup();
+      const { container } = render(<Chart />);
+      stubRows();
+      await user.pointer({ keys: '[TouchA]', target: barAt(container, 0), coords: { clientY: 20 } });
+      expect(barAt(container, 0)).not.toHaveFocus();
+      expect(readoutX(container)).toBe('Whole Foods Market');
+      // The third row's empty track, past its bar's end.
+      const track = container.querySelectorAll<HTMLElement>('.bar-chart-track')[2];
+      if (!track) throw new Error('No track');
+      await user.pointer({ keys: '[TouchA]', target: track, coords: { clientY: 100 } });
+      expect(readoutX(container)).toBe('Netflix');
+      const active = [...container.querySelectorAll('.bar-chart-row[data-active]')];
+      expect(active.map((row) => row.querySelector('.bar-chart-category')?.textContent)).toEqual(['Netflix']);
     });
 
     it('holds a touch until a press outside', () => {
@@ -579,6 +678,27 @@ describe('BarChart', () => {
       }
       // Keys do nothing while it is not ready.
       expect(fireEvent.keyDown(rows, { key: 'ArrowDown' })).toBe(true);
+    },
+  );
+
+  it.each(['loading', 'empty', 'error'] as const)(
+    'keeps the value labels and their gridlines while %s, so nothing moves when the data arrives',
+    (status) => {
+      const TICKS = [
+        { value: 0, label: '$0' },
+        { value: 250, label: '$250' },
+        { value: 500, label: '$500' },
+      ];
+      const { container } = render(<Chart status={status} valueDomain={[0, 500]} valueTicks={TICKS} />);
+      expect([...container.querySelectorAll('.bar-chart-tick')].map((tick) => tick.textContent)).toEqual([
+        '$0',
+        '$250',
+        '$500',
+      ]);
+      expect(container.querySelectorAll('.bar-chart-gridlines line.bar-chart-grid')).toHaveLength(3);
+      // With no domain of its own, the row of labels still keeps its place.
+      const { container: bare } = render(<Chart status={status} valueTicks={TICKS} />);
+      expect(bare.querySelector('.bar-chart-ticks')).not.toBeNull();
     },
   );
 

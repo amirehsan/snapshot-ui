@@ -27,9 +27,9 @@ export interface ChartActive<T extends ChartMark> {
   current: T | null;
   source: ChartSource | null;
   /**
-   * The last mark made active, kept when the chart clears on blur or a press outside: a roving tab stop's
-   * place, so Tab comes back to the bar it left. Null until a mark is first active. LineChart's one stop is the
-   * plot, so it reads none.
+   * The last mark a key, focus or a touch made active, kept when the chart clears on blur or a press outside: a
+   * roving tab stop's place, so Tab comes back to the bar it left. A mouse passing over leaves it. Null until
+   * such a mark. LineChart's one stop is the plot, so it reads none.
    */
   stop: T | null;
   /** Escape hid the readout; the next move to another mark shows it again. */
@@ -68,7 +68,8 @@ export function useChartActive<T extends ChartMark>(options: ChartActiveOptions<
     // A move shows the readout again; a key that goes nowhere leaves an Escape standing.
     if (value !== current) setReadoutHidden(false);
     setActive(value);
-    setStop(value);
+    // A mouse or a pen passing over is no choice of the reader's, so it leaves the tab stop where it was.
+    if (from !== 'pointer') setStop(value);
     setSource(from);
   };
 

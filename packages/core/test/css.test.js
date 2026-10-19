@@ -4790,20 +4790,30 @@ describe('src/components/charts.css, the bar chart', () => {
       ],
       'amounts',
     );
-    // The gridlines' layer spans every row's track, absolutely placed so it takes no cell from the rows.
+    // The gridlines' layer spans every row's track, absolutely placed so it takes no cell from the rows. An
+    // absolutely placed grid child with an auto end reaches the grid's padding edge, so both ends are given.
     expectAll(
       blockAfter(css, '.bar-chart-gridlines {'),
-      ['position: absolute;', 'inset: 0;', 'grid-column: 2;', 'grid-row: 1 / span var(--bar-chart-rows, 1);'],
+      [
+        'position: absolute;',
+        'inset: 0;',
+        'grid-column: 2 / span 1;',
+        'grid-row: 1 / span var(--bar-chart-rows, 1);',
+      ],
       'gridlines',
     );
     expect(blockAfter(css, '.bar-chart-gridlines svg {')).toContain('scale: var(--chart-flip, 1) 1;');
-    // The value labels and the readout keep to the track column.
+    // The value labels and the readout keep to the track column; the readout to its row's track alone.
     expect(blockAfter(css, '.bar-chart-ticks {')).toContain('grid-column: 2;');
     expectAll(
       blockAfter(css, '.bar-chart-readout[data-place] {'),
-      ['grid-column: 2;', 'grid-row: var(--bar-chart-row, 1);'],
+      ['grid-column: 2 / span 1;', 'grid-row: var(--bar-chart-row, 1) / span 1;', 'pointer-events: none;'],
       'readout',
     );
+    // No absolutely placed part leaves an end of its grid area to auto.
+    for (const selector of ['.bar-chart-gridlines {', '.bar-chart-readout[data-place] {'])
+      for (const [, value] of blockAfter(css, selector).matchAll(/grid-(?:column|row):\s*([^;]+);/g))
+        expect(value, selector).toContain('/');
   });
 
   it('draws a horizontal bar at most 24px thick, centred in its row, and 2px from the other bar of a pair', () => {
@@ -4867,15 +4877,16 @@ describe('src/components/charts.css, the bar chart', () => {
     expect(blockAfter(look(), `${HORIZONTAL}[data-nonzero] {`)).toContain('min-inline-size: 1px;');
   });
 
-  it('rings a focused bar with the token ring, which follows its corners', () => {
-    expectAll(
-      blockAfter(look(), '.bar-chart-bar:focus-visible {'),
-      [
-        'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
-        'outline-offset: var(--focus-ring-offset);',
-      ],
-      'ring',
-    );
+  it('rings a focused bar with the token ring, which follows its corners, and the group that holds focus', () => {
+    for (const selector of ['.bar-chart-bar:focus-visible {', '.bar-chart-rows:focus-visible {'])
+      expectAll(
+        blockAfter(look(), selector),
+        [
+          'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
+          'outline-offset: var(--focus-ring-offset);',
+        ],
+        selector,
+      );
   });
 
   it('dims other rows to 40% under a pointer only', () => {
@@ -4898,13 +4909,14 @@ describe('src/components/charts.css, the bar chart', () => {
     expect(blockAfter(css, `${chartList('baseline')} {`)).toContain('stroke: var(--color-frame);');
   });
 
-  it('folds labels above the bars under 24rem, with a 20rem intrinsic width', () => {
+  it('folds labels above the bars under 24rem, as a size container with no intrinsic width', () => {
     const css = look();
+    // A size container's intrinsic inline size is 0, never a stand-in: its holder gives it a width.
     expectAll(
       blockAfter(css, '.bar-chart {'),
       [
         'container: bar-chart / inline-size;',
-        'contain-intrinsic-inline-size: 20rem;',
+        'contain-intrinsic-inline-size: 0;',
         '-webkit-print-color-adjust: exact;',
         'print-color-adjust: exact;',
       ],
@@ -4928,14 +4940,14 @@ describe('src/components/charts.css, the bar chart', () => {
     );
     expectAll(
       blockAfter(narrow, '.bar-chart-gridlines {'),
-      ['grid-column: 1;', 'grid-row: 1 / span var(--bar-chart-rows-narrow, 2);'],
+      ['grid-column: 1 / span 1;', 'grid-row: 1 / span var(--bar-chart-rows-narrow, 2);'],
       'gridlines',
     );
-    expect(blockAfter(narrow, '.bar-chart-ticks, .bar-chart-readout[data-place] {')).toContain(
-      'grid-column: 1;',
-    );
-    expect(blockAfter(narrow, '} .bar-chart-readout[data-place] {')).toContain(
-      'grid-row: var(--bar-chart-row-narrow, 2);',
+    expect(blockAfter(narrow, '.bar-chart-ticks {')).toContain('grid-column: 1;');
+    expectAll(
+      blockAfter(narrow, '.bar-chart-readout[data-place] {'),
+      ['grid-column: 1 / span 1;', 'grid-row: var(--bar-chart-row-narrow, 2) / span 1;'],
+      'readout',
     );
     // The query reads the chart's own width, never the viewport's.
     expect(css).not.toMatch(/@media[^{]*width/);
@@ -4991,7 +5003,9 @@ describe('src/components/charts.css, the bar chart', () => {
     expect(blockAfter(forced, '.bar-chart-row[data-active] .bar-chart-bar {')).toContain(
       'background-color: Highlight;',
     );
-    expect(blockAfter(forced, '.bar-chart-bar:focus-visible {')).toContain('outline-color: Highlight;');
+    expect(blockAfter(forced, '.bar-chart-bar:focus-visible, .bar-chart-rows:focus-visible {')).toContain(
+      'outline-color: Highlight;',
+    );
     expect(blockAfter(forced, '.bar-chart-baseline[data-crosses] {')).toContain('stroke: CanvasText;');
     expect(
       blockAfter(

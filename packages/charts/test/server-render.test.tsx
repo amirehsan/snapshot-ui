@@ -112,7 +112,7 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'data-sign="positive" data-nonzero=""',
       'inset-inline-start:16.667%;inline-size:70%',
       'data-sign="negative"',
-      'inset-inline-start:6.667%;inline-size:10%',
+      'inset-inline-end:83.333%;inline-size:10%',
       'class="bar-chart-amount">-$60.00<',
       'class="bar-chart-tick" data-edge="end"',
       '<caption>Spending by merchant</caption>',

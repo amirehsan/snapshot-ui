@@ -10586,8 +10586,14 @@ bars' square ends draw the line. Gridlines are a line chart's, 1px
 their labels under the last row in slate, centred on the line and kept
 inside the track at its ends. The layer, `div.bar-chart-gridlines`, is
 one element absolutely placed over the track column across every row
-(`grid-row: 1 / span var(--bar-chart-rows)`), so the lines run unbroken
-behind the rows and the layer takes no cell from them.
+(`grid-column: 2 / span 1; grid-row: 1 / span var(--bar-chart-rows)`), so
+the lines run unbroken behind the rows and the layer takes no cell from
+them. Both ends of each axis are given: an absolutely placed grid child
+whose end line is `auto` reaches the grid's padding edge, which drew the
+zero line and the gridlines across the amount column at first (the plan's
+spec correction 20). The `LinesInPlace` play holds the zero line on the
+bars' zero edge and each gridline on its label within 1px, left to right,
+right to left and narrow, in all three engines.
 
 **The amount column, on by default here.** A ranked list reads as a list,
 name at the start and amount at the end, the consumer's layout and the
@@ -10604,15 +10610,17 @@ labels are never inside a bar (owner ruling 8).
 
 **Long names and the narrow chart.** A name wraps anywhere in its column
 and is never cut short or rotated. The figure is the container
-(`container: bar-chart / inline-size`), with
-`contain-intrinsic-inline-size: 20rem` so it is 20rem wide in a flex row
-or an auto grid column (StatTile's 0.6.1 lesson); a query on a container
-styles its children, never the container itself, so the figure and not
-the rows is the container (the plan's spec correction 14). The 20rem is
-its least width too, wherever a holder is sized from its content with
-`min-width: auto`, so a flex item or a grid item that holds a chart on a
-phone takes `min-width: 0`, as the docs' samples do (spec correction 19).
-Under 24rem of
+(`container: bar-chart / inline-size`); a query on a container styles its
+children, never the container itself, so the figure and not the rows is
+the container (the plan's spec correction 14). A size container's
+intrinsic inline size is 0 and never a stand-in width
+(`contain-intrinsic-inline-size: 0`, the library's ruling): a stand-in is
+also the container's least width, so in any holder sized from its
+content it would push a phone's page sideways. The holder gives the width:
+a block its whole line, a flex item a basis such as `flex: 1 1 20rem`, a
+grid a sized column (the plan's spec correction 19; the `InAFlexRow` play
+holds one chart filling its row and two sharing a 320px frame with
+nothing past its edge). Under 24rem of
 its own width the grid is `minmax(0, 1fr) max-content`: each name takes a
 line of its own above its bar (`grid-column: 1 / -1`), and the track and
 the amounts share the line under it. The name then crosses the gridlines'
@@ -10638,20 +10646,31 @@ horizontal chart and are not prevented. Escape hides the readout once,
 stopped as well as prevented; a second Escape goes on. A key with Alt,
 Control or Meta is left alone. When `categories` change, by their joined
 strings and not by the array's identity, the stop goes back to the first
-bar, and a bar that held focus hands it to the new first bar in an
-effect, never to the body, whether its row is gone or still there.
+bar, and a bar that held focus hands it to the new first bar, never to
+the body, whether its row is gone or still there. A bar's ref is one
+function for the chart's life, and its cleanup runs before React removes
+the bar: a bar that leaves while it holds focus parks focus on the rows
+group (`tabIndex={-1}`, never a tab stop, ringed with the token ring)
+first, so no element ever loses focus to nothing. A status with no bars
+keeps it there; when the chart is ready again, a layout effect gives it to
+the tab stop, the bar last active for the same categories and the first
+bar for new ones, before the page paints (the plan's spec correction 20).
+A press on a bar does not focus it (`preventDefault` on its
+`mousedown`), so a touch's hold and a pointer's row stay the pointer's,
+and a tap on another row's empty track takes the hold.
 
 **The pointer's dimming.** A mouse or a pen over the rows activates the
 row under it, read from each row's parts' boxes in the handler, and its
 bar under the pointer or its first; the whole row is the target. While a
 pointer holds a row the rows container is `[data-pointer]` and the other
-rows' bars are at 40% opacity, with no new shape and no transition. Ink
-so dimmed measures 2.57 against Lifted in light and 3.81 in dark, under
-3:1 in light for as long as the pointer rests: a transient emphasis,
-recorded and not gated, while the active row is at full strength and the
-readout says its values. Under the keyboard nothing dims. Leaving gives
-the active mark back to a focused bar, or clears it; a touch holds until a
-press outside.
+rows' bars are at 40% opacity, with no new shape and no transition.
+Against Lifted, ink so dimmed measures 2.57 in light and 3.81 in dark,
+slate 1.75 and 2.19, and `gain` 1.93 and 2.36, all under 3:1 for as long
+as the pointer rests: a transient emphasis, recorded and not gated, while
+the active row is at full strength and the readout says its values. Under
+the keyboard nothing dims. A mouse passing over moves no tab stop: only a
+key, focus or a touch does. Leaving gives the active mark back to a
+focused bar, or clears it; a touch holds until a press outside.
 
 **The readout.** The shared float panel, hidden from assistive
 technology: the category in slate, then a line per series with a value,
@@ -10663,8 +10682,12 @@ its lines fit there and below it otherwise (`placeReadout` along the
 block axis from the row's index, the row count and 40px rows), so it
 never covers the bar (the plan's spec correction 12). Along the row it is
 at the far end of the row's longest bar, aligned start, centre or end by
-quarter. It is the rows' last child, so it draws over every bar with no
-`z-index`.
+quarter. Its grid area is the active row's track alone, both ends given
+(`grid-row: var(--bar-chart-row) / span 1`), so a readout below the first
+row sits under that row and not under the whole chart; the `ReadoutBelow`
+play holds it within 24px of the bar. It is the rows' last child, so it
+draws over every bar with no `z-index`, and `pointer-events: none`, so it
+never takes the pointer from the rows under it.
 
 **The states.** `status` draws in the rows' place and keeps the figure's
 size: the height of `categories.length` rows when the app passes the
@@ -10677,7 +10700,10 @@ once after mount; no legend, toggle or table. Empty draws `statusContent`
 or `p.bar-chart-message` with `statusLabels.empty` in slate; error the
 same with `statusLabels.error` in `--color-error`, the one meaning that
 color has, a load that failed, and the status says it once. Both keep the
-gridlines and the zero line behind, and draw no toggle. The three strings
+gridlines and the zero line behind, and draw no toggle. Every state keeps
+the row of value labels when `valueTicks` is given, with the labels and
+gridlines inside its domain, so the figure does not move when the data
+arrives. The three strings
 are `ChartStatusLabels`, shared with LineChart later in the batch. The
 chart composes and does not import: `statusContent` is the app's, such as
 the react package's EmptyState.
@@ -10699,17 +10725,19 @@ domain's edge are `GrayText`, a line chart's rules.
 
 **Right to left.** The rows run from the inline start, so under
 `dir="rtl"` the names are at the right and the bars grow from the right
-toward the left, negatives toward the right of zero. The data end's
+toward the left, negatives toward the right of zero. A negative bar is
+placed by `inset-inline-end`, from zero, so its least 1px also runs from
+zero toward the start. The data end's
 corners are logical, so they move with the bar. The amounts stay left to
 right inside their isolates. Up and Down do not change with the
 direction.
 
 **Where the build departs from the plan.** The plan's spec corrections
-13 to 19 record them: the horizontal face drawn for any `orientation`
+13 to 20 record them: the horizontal face drawn for any `orientation`
 until the vertical one lands, with a warning; the figure as the container
 and the gridlines' layer as its own class; the zero line's and the dimmed
 bar's measured contrast; the plays' engines; the combined size limit set
-by the rule; and the 20rem least width in a holder sized from content.
+by the rule; the intrinsic size of 0; and the review's fixes.
 
 **Screen readers and devices.** Not yet verified (owner action 3): Tab
 onto one bar and the arrows bar by bar in VoiceOver and NVDA, each bar's

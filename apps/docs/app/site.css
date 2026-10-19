@@ -247,13 +247,11 @@
     }
   }
 
-  /* A chart's card up to 40rem: the chart takes the whole width it is given, and the stage centers it. The
-     stage is a grid whose column is sized from its content, and a bar chart, a container, is 20rem wide by its
-     content alone, so the sample may shrink past that on a phone, as an app's holder of a chart may. */
+  /* A chart's card up to 40rem: the chart takes the whole width it is given, and the stage centers it. A bar
+     chart is a size container, which takes no width from its content, so this width is the one it draws in. */
   .chart-sample {
     width: 100%;
     max-width: 40rem;
-    min-width: 0;
   }
 
   .setting {
