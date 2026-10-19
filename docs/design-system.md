@@ -10592,18 +10592,22 @@ gives their column to the value side by side and to the term stacked. A
 viewport breakpoint was rejected: a list in a 24rem side panel on a wide
 screen would draw a 7rem name column.
 
-**A width of its own** (risk R1; spec correction 14). A size container takes
-no width from its content, so the list names
-`contain-intrinsic-inline-size: 16rem`, StatTile's 0.6.1 fix and its 16rem
-tile: in a flex row or an `auto` grid column it is 16rem, and stacked, rather
-than nothing wide. The stand-in is also the list's min-content width, which
-a `flex: 1` item or a `1fr` track keeps as its narrowest unless it has
-`min-width: 0`. The first value, 20rem, is the 320px of a whole phone and
-pushed a 320px page 32px sideways from a `flex: 1` wrapper in its 288px
-column; 16rem, 256px, fits that column. The docs say that a flex or grid
-item holding the list takes `min-width: 0`, and a docs test puts a list in a
-`flex: 1` wrapper and in a `1fr` grid at 320px with no sideways scroll. The
-`InAFlexRow` story measures the 16rem.
+**No width of its own** (risk R1; spec corrections 14 and 20). A size
+container takes no width from its content, and the library's rule is that
+its intrinsic inline size is 0: the list declares
+`contain-intrinsic-inline-size: 0`. A stand-in width is also the
+container's min-content width, which a `flex: 1` item or a `1fr` track
+keeps as its narrowest. The first value, 20rem, pushed a 320px page 16px
+sideways from a `flex: 1` wrapper in its 288px column, and 16rem still
+scrolled the page with two lists side by side, 512px in 288px; the same
+trap showed in the CardActions header and BarChart's figure. At 0 a block,
+a `flex: 1` item or a `1fr` track gives the list its width, and a holder
+that sizes it from its content (a content-sized flex item,
+`width: max-content`, an `auto` grid track) must give it one, or it draws
+nothing wide; the docs say so. A docs test puts a list in a `flex: 1`
+wrapper, a `1fr` grid and a `1fr 1fr` grid two up at 320px with no
+sideways scroll, and the `InAFlexRow` story gives the list a width in a
+flex row and checks that it fills it.
 
 **The row** (Dense data, against the value's line). `min-block-size:
 max(var(--size-target), var(--size-field))`, 48px, 40px in compact and 44px

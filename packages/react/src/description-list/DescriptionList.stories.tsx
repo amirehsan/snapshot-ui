@@ -43,7 +43,7 @@ const meta = {
   title: 'Components/DescriptionList',
   component: DescriptionList,
   // Padded, not centered: a list is a size container and takes no width from its content, so it needs a block
-  // to fill. Centered, the canvas shrinks to its content and the list to its 20rem stand-in width.
+  // to fill. Centered, the canvas shrinks to its content, and the list, with no width of its own, to nothing.
   parameters: { layout: 'padded', viewport: { options: VIEWPORT_OPTIONS } },
   args: { children: DETAILS },
 } satisfies Meta<typeof DescriptionList>;
@@ -348,18 +348,29 @@ export const SwitchesAtItsWidth: Story = {
   },
 };
 
-/** In a flex row a list takes the 16rem it names in place of the content a size container does not give. */
+/**
+ * In a flex row, which sizes its items from their content, the list has none to give, so the app gives it a
+ * width, and the list fills it.
+ */
 export const InAFlexRow: Story = {
   tags: ['no-visual'],
   render: (args) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-inset)' }}>
-      <DescriptionList {...args} />
+      <DescriptionList {...args} style={{ width: '24rem', maxWidth: '100%' }} />
     </div>
   ),
   play: async ({ canvasElement }) => {
     const list = part(canvasElement, 'description-list');
+    const frame = list.parentElement?.getBoundingClientRect().width ?? 0;
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
-    await expect(Math.abs(list.getBoundingClientRect().width - 16 * rem)).toBeLessThanOrEqual(1);
+    await expect(
+      Math.abs(list.getBoundingClientRect().width - Math.min(24 * rem, frame)),
+    ).toBeLessThanOrEqual(1);
+    // Its rows fill it too, so the width given is the width drawn.
+    const row = part(list, 'description-list-item');
+    await expect(
+      Math.abs(row.getBoundingClientRect().width - list.getBoundingClientRect().width),
+    ).toBeLessThan(1);
   },
 };
 

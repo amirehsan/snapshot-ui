@@ -1712,11 +1712,11 @@ for (const { slug, url } of PAGES) {
   });
 }
 
-test('a description list in a flex: 1 or a 1fr wrapper keeps a 320px page from scrolling sideways', async ({
+test('a description list in a flex: 1 wrapper, a 1fr grid and two up keeps a 320px page from scrolling sideways', async ({
   page,
 }) => {
-  // A size container's stand-in width is also its min-content width, which a flex: 1 item or a 1fr track gives
-  // the list as its narrowest. 16rem fits the 288px column inside a 320px phone's margins; 20rem did not.
+  // A size container's intrinsic inline size is 0: a stand-in width would be its min-content width too, which a
+  // flex: 1 item or a 1fr track keeps as its narrowest. 20rem scrolled one list sideways and 16rem two.
   await page.setViewportSize({ width: 320, height: 800 });
   await visit(page, '/docs/components/description-list');
   const column = page.locator('.panel-main').first();
@@ -1728,15 +1728,26 @@ test('a description list in a flex: 1 or a 1fr wrapper keeps a 320px page from s
     element.insertAdjacentHTML(
       'afterbegin',
       `<div data-wrapper="flex" style="display: flex"><div style="flex: 1">${markup}</div></div>` +
-        `<div data-wrapper="grid" style="display: grid; grid-template-columns: 1fr"><div>${markup}</div></div>`,
+        `<div data-wrapper="grid" style="display: grid; grid-template-columns: 1fr"><div>${markup}</div></div>` +
+        `<div data-wrapper="two-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">` +
+        `<div>${markup}</div><div>${markup}</div></div>`,
     );
   }, list);
   const columnBox = await column.boundingBox();
   if (!columnBox) throw new Error('No column');
-  for (const wrapper of ['flex', 'grid']) {
-    const box = await page.locator(`[data-wrapper="${wrapper}"] .description-list`).boundingBox();
-    if (!box) throw new Error(`No list in the ${wrapper} wrapper`);
-    expect(box.x + box.width, wrapper).toBeLessThanOrEqual(columnBox.x + columnBox.width + 0.5);
+  for (const wrapper of ['flex', 'grid', 'two-up']) {
+    const lists = page.locator(`[data-wrapper="${wrapper}"] .description-list`);
+    expect(await lists.count(), wrapper).toBeGreaterThan(0);
+    for (const box of await lists.evaluateAll((elements) =>
+      elements.map((element) => {
+        const { x, width } = element.getBoundingClientRect();
+        return { x, width };
+      }),
+    )) {
+      // Drawn, and inside the column.
+      expect(box.width, wrapper).toBeGreaterThan(0);
+      expect(box.x + box.width, wrapper).toBeLessThanOrEqual(columnBox.x + columnBox.width + 0.5);
+    }
   }
   expect(await sideways(page)).toBe(0);
 });

@@ -1641,12 +1641,12 @@ describe('src/components/description-list.css', () => {
     return css.slice(0, start) + css.slice(end);
   };
 
-  it('is a size container switching at 30rem, with a 16rem intrinsic width', () => {
+  it('is a size container switching at 30rem, with an intrinsic width of 0', () => {
     const css = rules();
     const list = blockAfter(css, '.description-list {');
     expect(list).toContain('container: description-list / inline-size;');
-    // 16rem fits the 288px inside a 320px phone's 16px margins; 20rem pushed a flex: 1 wrapper sideways.
-    expect(list).toContain('contain-intrinsic-inline-size: 16rem;');
+    // The library's rule: a stand-in width is also the min-content width, which scrolled a phone page sideways.
+    expect(list).toContain('contain-intrinsic-inline-size: 0;');
     expect(list).toContain('margin: 0;');
     expect(list).toContain('padding: 0;');
     // Stacked under 30rem: the term and the actions share the first line, the value spans the second.
