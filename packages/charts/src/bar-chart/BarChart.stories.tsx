@@ -1369,6 +1369,13 @@ const BY_ACCOUNT: BarSeries[] = [
   { label: 'Other', values: [140, 95, -130, 155, 120, 135].map(money) },
 ];
 
+/** A stack with an amount far smaller than its gap, above zero in May and below it in June. */
+const SMALL_IN_A_STACK: BarSeries[] = [
+  { label: 'Groceries', values: [600, -600].map(money) },
+  { label: 'Gifts', values: [10, -10].map(money) },
+  { label: 'Other', values: [300, -300].map(money) },
+];
+
 const ACCOUNT_TICKS = [
   { value: -1000, label: '-$1,000' },
   { value: 0, label: '$0' },
@@ -1424,15 +1431,84 @@ export const Textures: Story = {
   render: Default.render,
 };
 
+/** The numbers of a computed background layer's first two values, such as 0 and 100 for "0% 100%". */
+const firstLayer = (value: string): number[] =>
+  [...(value.split(',')[0] ?? '').matchAll(/-?[\d.]+/g)].map((match) => Number(match[0]));
+
+/**
+ * A textured segment on another keeps its outline on the side its gap takes: a 1px layer of its color along
+ * its zero-ward edge, the foot above zero and the top below it standing up, and lying down the inline start or
+ * end, so the right edge of a positive segment right to left. A segment on the line has its border there.
+ */
+export const TexturedEdges: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <Wide>
+        <BarChart
+          aria-label="Net change by account and month, textured"
+          categories={HALF_YEAR}
+          layout="stacked"
+          series={BY_ACCOUNT}
+          hasTexture
+        />
+      </Wide>
+      {(['ltr', 'rtl'] as const).map((dir) => (
+        <div key={dir} dir={dir}>
+          <Panel>
+            <BarChart
+              aria-label={`Net change by account, textured, ${dir}`}
+              orientation="horizontal"
+              categories={HALF_YEAR}
+              layout="stacked"
+              series={BY_ACCOUNT}
+              valueLabels="none"
+              hasTexture
+            />
+          </Panel>
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const charts = [...canvasElement.querySelectorAll<HTMLElement>('.bar-chart')];
+    await expect(charts).toHaveLength(3);
+    for (const [index, chart] of charts.entries()) {
+      const isVertical = index === 0;
+      const rtl = index === 2;
+      for (const segment of chart.querySelectorAll<HTMLElement>('.bar-chart-bar')) {
+        const style = getComputedStyle(segment);
+        const label = segment.getAttribute('aria-labelledby') ?? '';
+        const size = firstLayer(style.backgroundSize);
+        if (!segment.hasAttribute('data-joined')) {
+          await expect(size, label).toEqual([0, 0]);
+          continue;
+        }
+        const isPositive = segment.dataset.sign === 'positive';
+        const [x, y] = firstLayer(style.backgroundPosition);
+        if (isVertical) {
+          await expect(size, label).toEqual([100, 1]);
+          await expect(y, label).toBe(isPositive ? 100 : 0);
+        } else {
+          await expect(size, label).toEqual([1, 100]);
+          // The zero-ward side: a positive segment's inline start, the left left to right.
+          await expect(x, label).toBe(isPositive !== rtl ? 0 : 100);
+        }
+      }
+    }
+  },
+};
+
 /** The vertical middle of a band's stack, its top and its foot, each a segment's box. */
 const stackOf = (chart: HTMLElement, band: number): HTMLElement[] => [
   ...(chart.querySelectorAll('.bar-chart-band')[band]?.querySelectorAll<HTMLElement>('.bar-chart-bar') ?? []),
 ];
 
 /**
- * Checks one stacked chart standing up: the first segment of each sign stands on the zero line, each segment
- * on another starts where that one ends, with its 2px gap inside its own length; the stack's far ends are
- * where the gridlines put its sums; and only the outermost segment of each sign has rounded corners.
+ * Checks one stacked chart standing up, on the gridlines' scale: the first segment of each sign stands on the
+ * zero line; each segment on another ends where its sum does, with its 2px gap inside its own length, and is
+ * at least 3px, so a small one still draws 1px of its color; the stack's far ends are where its sums are; and
+ * only the outermost segment of each sign has rounded corners.
  */
 const expectStackInPlace = async (chart: HTMLElement, series: readonly BarSeries[]): Promise<void> => {
   const zero = middleOf(part(chart, '.bar-chart-baseline').getBoundingClientRect());
@@ -1452,15 +1528,24 @@ const expectStackInPlace = async (chart: HTMLElement, series: readonly BarSeries
       const value = series[at]?.values[band]?.value ?? 0;
       const style = getComputedStyle(segment);
       const label = segment.getAttribute('aria-labelledby') ?? '';
+      const before = value >= 0 ? up : down;
+      // Where the segment's far end belongs, in px down the page.
+      const far = zero - (before + value) * perUnit;
+      if (before === 0) {
+        // The first of its sign stands on the line.
+        await expect(Math.abs((value >= 0 ? box.bottom : box.top) - zero), label).toBeLessThanOrEqual(1);
+      } else {
+        // On another: its far end where its sum is, its gap toward zero, and its gap and 1px of color at least.
+        await expect(Math.abs((value >= 0 ? box.top : box.bottom) - far), label).toBeLessThanOrEqual(1);
+        await expect(box.height, label).toBeGreaterThanOrEqual(Math.max(3, Math.abs(value) * perUnit) - 1);
+      }
+      await expect(value >= 0 ? style.borderBottomWidth : style.borderTopWidth, label).toBe(
+        before === 0 ? '0px' : '2px',
+      );
       if (value >= 0) {
-        // Its foot on the line or on the segment under it, its gap at its foot.
-        await expect(Math.abs(box.bottom - top), label).toBeLessThanOrEqual(1);
-        await expect(style.borderBottomWidth, label).toBe(up > 0 ? '2px' : '0px');
         up += value;
         top = box.top;
       } else {
-        await expect(Math.abs(box.top - foot), label).toBeLessThanOrEqual(1);
-        await expect(style.borderTopWidth, label).toBe(down < 0 ? '2px' : '0px');
         down += value;
         foot = box.bottom;
       }
@@ -1502,12 +1587,30 @@ export const StackInPlace: Story = {
       <Panel width="20rem">
         <BarChart {...args} aria-label="Net change by account and month, narrow" />
       </Panel>
+      <Wide>
+        <BarChart
+          aria-label="A small amount between two large ones"
+          categories={['May', 'Jun']}
+          layout="stacked"
+          series={SMALL_IN_A_STACK}
+          valueTicks={ACCOUNT_TICKS}
+        />
+      </Wide>
     </div>
   ),
   play: async ({ canvasElement }) => {
     const charts = [...canvasElement.querySelectorAll<HTMLElement>('.bar-chart')];
-    await expect(charts).toHaveLength(3);
-    for (const chart of charts) await expectStackInPlace(chart, BY_ACCOUNT);
+    await expect(charts).toHaveLength(4);
+    const [ltr, rtl, narrow, small] = charts;
+    if (!ltr || !rtl || !narrow || !small) throw new Error('No charts');
+    for (const chart of [ltr, rtl, narrow]) await expectStackInPlace(chart, BY_ACCOUNT);
+    // $10 of [-1,000, 1,000] in 240px is about 1px: drawn 3px, its gap and 1px of violet, over Groceries' top.
+    await expectStackInPlace(small, SMALL_IN_A_STACK);
+    for (const band of [0, 1]) {
+      const [, tiny] = stackOf(small, band);
+      if (!tiny) throw new Error('No small segment');
+      await expect(Math.abs(tiny.getBoundingClientRect().height - 3)).toBeLessThanOrEqual(0.5);
+    }
   },
 };
 
@@ -1734,6 +1837,16 @@ const StackChanges = (): ReactElement => {
           status={now === 'loading' ? 'loading' : 'ready'}
         />
       </Wide>
+      {/* A second chart on the page, which holds focus while the first one's data and status move on. */}
+      <Wide>
+        <BarChart
+          aria-label="Net change by account and month"
+          bands="time"
+          categories={HALF_YEAR}
+          layout="stacked"
+          series={BY_ACCOUNT}
+        />
+      </Wide>
     </div>
   );
 };
@@ -1757,8 +1870,10 @@ export const StackFocus: Story = {
     doc.addEventListener('focusout', record);
     try {
       const control = part(canvasElement, '.button');
-      const group = part(canvasElement, '[role="group"]');
-      const [, dining] = stackOf(canvasElement, 5);
+      const [changing, other] = [...canvasElement.querySelectorAll<HTMLElement>('.bar-chart')];
+      if (!changing || !other) throw new Error('No charts');
+      const group = part(changing, '[role="group"]');
+      const [, dining] = stackOf(changing, 5);
       if (!dining) throw new Error('No segment');
       await focusOn(dining);
       for (const next of ['fewer', 'loading', 'ready'] as const) {
@@ -1771,6 +1886,17 @@ export const StackFocus: Story = {
           await waitFor(() =>
             expect(doc.activeElement).toBe(group.querySelector('.bar-chart-bar[tabindex="0"]')),
           );
+        // October's Dining went: the nearest category October still has, Groceries, holds the stop.
+        if (next === 'fewer') await expect(doc.activeElement).toBe(stackOf(changing, 5)[0]);
+      }
+      // The other chart holds focus while the first moves on through its steps: focus stays where it is.
+      const [held] = stackOf(other, 2);
+      if (!held) throw new Error('No segment');
+      await focusOn(held);
+      for (let step = 0; step < 4; step++) {
+        control.click();
+        await waitFor(() => expect(control).toHaveTextContent(`now ${STACK_STEPS[step % 4] ?? ''}`));
+        await expect(doc.activeElement).toBe(held);
       }
       await expect(toNothing).toEqual([]);
     } finally {

@@ -5405,15 +5405,27 @@ describe('src/components/charts.css, the stacked bar chart', () => {
       expect(css.indexOf(square), rounded).toBeGreaterThan(css.indexOf(rounded));
     // Each segment that stands on another has a 2px border of the surface on its edge toward zero, inside its
     // own length, so the stack's total stays exact; in the stacking direction of its sign and its face.
+    // Each gap rule also places the textured outline's zero-ward side: along the block edge standing up, and
+    // along the inline edge lying down, its side taken from the chart's direction.
     const gaps = [
-      ['vertical', 'positive', 'border-block-end'],
-      ['vertical', 'negative', 'border-block-start'],
-      ['horizontal', 'positive', 'border-inline-start'],
-      ['horizontal', 'negative', 'border-inline-end'],
+      ['vertical', 'positive', 'border-block-end', '0 100%', '100% 1px'],
+      ['vertical', 'negative', 'border-block-start', '0 0', '100% 1px'],
+      [
+        'horizontal',
+        'positive',
+        'border-inline-start',
+        'calc(50% - 50% * var(--chart-flip, 1)) 0',
+        '1px 100%',
+      ],
+      ['horizontal', 'negative', 'border-inline-end', 'calc(50% + 50% * var(--chart-flip, 1)) 0', '1px 100%'],
     ];
-    for (const [face, sign, side] of gaps) {
+    for (const [face, sign, side, at, size] of gaps) {
       const selector = `.bar-chart[data-orientation='${face}'] .bar-chart-bar[data-joined][data-sign='${sign}'] {`;
-      expect(blockAfter(css, selector), selector).toContain(`${side}: ${SURFACE}`);
+      expectAll(
+        blockAfter(css, selector),
+        [`${side}: ${SURFACE}`, `--bar-chart-edge-at: ${at};`, `--bar-chart-edge-size: ${size};`],
+        selector,
+      );
       // After the textures' outline, so the gap takes its edge at the same specificity.
       expect(css.indexOf(selector), selector).toBeGreaterThan(
         css.indexOf(`.bar-chart[data-texture] ${TEXTURED}`),
@@ -5421,6 +5433,16 @@ describe('src/components/charts.css, the stacked bar chart', () => {
     }
     // The bar is a border box, so the gap is inside the length the render writes.
     expect(blockAfter(css, '.bar-chart-bar {')).toContain('box-sizing: border-box;');
+    // A segment on another is its gap and at least 1px of its color, 3px, so a small amount is never a gap alone.
+    expect(
+      blockAfter(css, ".bar-chart[data-orientation='vertical'] .bar-chart-bar[data-joined][data-nonzero] {"),
+    ).toContain('min-block-size: 3px;');
+    expect(
+      blockAfter(
+        css,
+        ".bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-joined][data-nonzero] {",
+      ),
+    ).toContain('min-inline-size: 3px;');
   });
 
   it('draws the four textures and slate, and turns them on in forced colors', () => {
@@ -5449,7 +5471,11 @@ describe('src/components/charts.css, the stacked bar chart', () => {
     const textured = [
       'border: 1px solid var(--bar-chart-color, var(--color-ink));',
       'background-color: var(--bar-chart-fill, var(--bar-chart-color, var(--color-ink)));',
-      'background-image: var(--bar-chart-texture, none);',
+      // First a layer of the color along the zero-ward edge, of no size but on a segment the gap rules place.
+      'background-image: linear-gradient(var(--bar-chart-color, var(--color-ink)), var(--bar-chart-color, var(--color-ink))), var(--bar-chart-texture, none);',
+      'background-position: var(--bar-chart-edge-at, 0 0), 0 0, 0 0;',
+      'background-size: var(--bar-chart-edge-size, 0 0), auto, auto;',
+      'background-repeat: no-repeat, repeat, repeat;',
     ];
     expectAll(blockAfter(css, `.bar-chart[data-texture] ${TEXTURED}`), textured, 'on request');
     // Always in forced colors: one text color and four looks, the fifth GrayText, the active band Highlight,
@@ -5462,6 +5488,13 @@ describe('src/components/charts.css, the stacked bar chart', () => {
       blockAfter(forced, ':is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar[data-series] {'),
     ).toContain('--bar-chart-color: Highlight;');
     expect(blockAfter(forced, ".bar-chart[data-layout='stacked'] {")).toContain('--bar-chart-gap: canvas;');
+    // The active band's fifth is a Highlight outline over the page, so it never merges with the first's fill.
+    expect(
+      blockAfter(
+        forced,
+        ":is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar[data-series='5'] {",
+      ),
+    ).toContain('--bar-chart-fill: canvas;');
     // Never outside forced colors: there the gap is the surface the app sets.
     expect(css).not.toMatch(/--bar-chart-gap\s*:/);
     // After the bars' CanvasText fill and the active band's Highlight, which it outranks.

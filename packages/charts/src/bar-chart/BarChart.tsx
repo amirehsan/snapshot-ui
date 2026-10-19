@@ -38,6 +38,7 @@ import {
   firstStop,
   moveAlong,
   moveBar,
+  nearestStop,
   nonzero,
   seriesColors,
   stackBySign,
@@ -231,8 +232,16 @@ export function BarChart(props: BarChartProps): ReactElement {
   const stack = isStacked
     ? stackBySign(drawn.map((line) => line.values.map((value) => value?.value ?? null)))
     : [];
-  /** The texture's slot, by place: the fifth and every one after share slate's. */
-  const slotOf = (at: number): number | undefined => (isStacked ? Math.min(at + 1, 5) : undefined);
+  /**
+   * The texture's slot, from the color the series draws in: a palette slot's own number, slate's 5, so a pinned
+   * "Other" is always the fifth look, and ink or gain by place.
+   */
+  const slotOf = (at: number): number | undefined =>
+    isStacked
+      ? colors[at] === 'slate'
+        ? 5
+        : Number(colors[at]?.slice(6)) || Math.min(at + 1, 5)
+      : undefined;
   useWarnOnce(
     isStacked && drawn.length > 5 ? 'BarChart: a stack holds five series; any more draw in slate.' : null,
   );
@@ -291,10 +300,11 @@ export function BarChart(props: BarChartProps): ReactElement {
     chart.activate(barMark(stop), from);
   };
   // The roving tab stop: the bar last active under these categories, else the first stop.
-  const stop =
-    chart.stop !== null && markedFor === key && marks.includes(chart.stop)
-      ? chart.stop
-      : first && barMark(first);
+  // A bar whose value went away hands the stop to the nearest series of its band, else to the first stop.
+  const [lastBand, lastSeries] = (chart.stop ?? '').split(':').map(Number);
+  const near =
+    chart.stop !== null && markedFor === key ? nearestStop(stops, lastBand ?? 0, lastSeries ?? 0) : undefined;
+  const stop = near ? barMark(near) : first && barMark(first);
   // A story's held band, as a pointer would hold it, until a reader acts.
   const held =
     defaultActive === undefined || chart.source !== null
@@ -396,16 +406,22 @@ export function BarChart(props: BarChartProps): ReactElement {
     from: ChartSource,
   ): void => {
     const inBand = stops.filter((stop) => stop.band === band);
-    const stop = inBand.find((_, at) => {
+    // How far the pointer is from each bar's box: in a stack the nearest segment is taken, so past a stack's
+    // end it is the outermost on that side of zero; side by side, only the bar under it, else the first.
+    let found = inBand[0];
+    let nearest = Infinity;
+    inBand.forEach((stop, at) => {
       const box = bars[at]?.getBoundingClientRect();
-      return (
-        box !== undefined &&
-        (isVertical === isStacked
-          ? event.clientY >= box.top && event.clientY <= box.bottom
-          : event.clientX >= box.left && event.clientX <= box.right)
-      );
+      if (!box) return;
+      const apart =
+        isVertical === isStacked
+          ? Math.max(box.top - event.clientY, event.clientY - box.bottom, 0)
+          : Math.max(box.left - event.clientX, event.clientX - box.right, 0);
+      if (apart < nearest && (isStacked || apart === 0)) {
+        nearest = apart;
+        found = stop;
+      }
     });
-    const found = stop ?? inBand[0];
     if (found) activate(found, from);
   };
 
@@ -629,10 +645,15 @@ export function BarChart(props: BarChartProps): ReactElement {
     const segment = stack[at]?.[band];
     const { start, size } = barExtent(value.value, scale, segment?.from);
     const isNegative = value.value < 0;
-    // Each bar stands on zero: a negative one from its far end's side, so its least 1px runs from zero.
+    // A segment that stands on another, which a gap starts.
+    const isJoined = Boolean(segment?.from) && value.value !== 0;
+    // Each bar is placed from its end at zero, so its least size grows from the line: a positive one from below,
+    // a negative one from above. A segment on another is placed from its far end instead, so its least size
+    // grows toward zero, over the segment under it, which drew before it, and the stack's end stays exact.
+    const fromStart = isNegative !== isJoined;
     const place = isVertical
       ? {
-          ...(isNegative
+          ...(fromStart
             ? { insetBlockStart: percent(start) }
             : { insetBlockEnd: percent(100 - start - size) }),
           blockSize: percent(size),
@@ -640,7 +661,7 @@ export function BarChart(props: BarChartProps): ReactElement {
           '--bar-chart-index': isStacked ? 0 : at,
         }
       : {
-          ...(isNegative
+          ...(fromStart
             ? { insetInlineEnd: percent(100 - start - size) }
             : { insetInlineStart: percent(start) }),
           inlineSize: percent(size),
@@ -664,7 +685,7 @@ export function BarChart(props: BarChartProps): ReactElement {
         data-series={slotOf(at)}
         // A stack's outermost segment of its sign keeps the data end's corners, and one on another takes a gap.
         data-outer={segment?.outer ? '' : undefined}
-        data-joined={segment?.from && value.value ? '' : undefined}
+        data-joined={isJoined ? '' : undefined}
         data-active={active === mark ? '' : undefined}
         tabIndex={chart.isInteractive ? (mark === stop ? 0 : -1) : undefined}
         style={place}

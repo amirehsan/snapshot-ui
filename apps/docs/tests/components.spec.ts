@@ -749,7 +749,9 @@ test.describe('forced colors', () => {
     await expect(chart).toHaveCount(1);
     await expect(chart).not.toHaveAttribute('data-texture');
     const system = await systemColors(page);
-    const look = (bar: Locator): Promise<{ fill: string; image: string; edge: string; gap: string }> =>
+    const look = (
+      bar: Locator,
+    ): Promise<{ fill: string; image: string; edge: string; gap: string; layer: string }> =>
       bar.evaluate((element) => {
         const style = getComputedStyle(element);
         return {
@@ -757,6 +759,8 @@ test.describe('forced colors', () => {
           image: style.backgroundImage,
           edge: style.borderTopColor,
           gap: style.borderBottomColor,
+          // The first layer's size: the outline's side under the gap on a segment on another.
+          layer: style.backgroundSize.split(',')[0]?.trim() ?? '',
         };
       });
     const may = chart.locator('.bar-chart-band').first().locator('.bar-chart-bar');
@@ -764,7 +768,7 @@ test.describe('forced colors', () => {
     const drawn = await Promise.all([0, 1, 2, 3, 4].map((at) => look(may.nth(at))));
     const [first, second, third, fourth, fifth] = drawn;
     expect(first?.fill).toBe(system.canvasText);
-    expect(first?.image).toBe('none');
+    expect(first?.image).not.toContain('repeating-linear-gradient');
     for (const textured of [second, third, fourth]) {
       expect(textured?.image).toContain('repeating-linear-gradient');
       expect(textured?.edge).toBe(system.canvasText);
@@ -772,8 +776,13 @@ test.describe('forced colors', () => {
     expect(second?.image).not.toBe(third?.image);
     expect(fourth?.image.match(/repeating-linear-gradient/g)).toHaveLength(2);
     expect(fifth?.fill).toBe(system.grayText);
-    expect(fifth?.image).toBe('none');
-    for (const joined of drawn.slice(1)) expect(joined.gap).toBe(system.canvas);
+    expect(fifth?.image).not.toContain('repeating-linear-gradient');
+    // Under its gap, in the page's own color, each segment on another draws its outline's missing side.
+    for (const joined of drawn.slice(1)) {
+      expect(joined.gap).toBe(system.canvas);
+      expect(joined.layer).toBe('100% 1px');
+    }
+    expect(first?.layer).toBe('0px 0px');
     // The legend's keys follow their segments.
     const key = chart.locator('.bar-chart-legend-item[data-series="4"] .bar-chart-key');
     expect((await look(key)).image.match(/repeating-linear-gradient/g)).toHaveLength(2);

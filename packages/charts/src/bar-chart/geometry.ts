@@ -154,15 +154,18 @@ export function moveBar(stops: readonly BarStop[], from: BarStop, move: Move, by
     return stops[at + (move === 'next' ? 1 : -1)] ?? from;
   }
   const band = moveFrom([...new Set(stops.map((stop) => stop.band))], from.band, move);
-  let found = from;
-  let distance = Infinity;
-  for (const stop of stops) {
-    const apart = Math.abs(stop.series - from.series);
-    if (stop.band === band && apart < distance) {
+  return nearestStop(stops, band, from.series) ?? from;
+}
+
+/**
+ * The bar of `band` nearest to `series` among `stops`: that series where the band has it, else the nearest by
+ * series index, the earlier on a tie. Undefined when the band has no bar.
+ */
+export function nearestStop(stops: readonly BarStop[], band: number, series: number): BarStop | undefined {
+  let found: BarStop | undefined;
+  for (const stop of stops)
+    if (stop.band === band && (!found || Math.abs(stop.series - series) < Math.abs(found.series - series)))
       found = stop;
-      distance = apart;
-    }
-  }
   return found;
 }
 

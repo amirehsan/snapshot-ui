@@ -13,6 +13,7 @@ import {
   RESERVED,
   RESERVED_DISTANCE_MIN,
   RESERVED_HUE_MIN,
+  STACK_REMAINDER,
   chartColors,
   cvdDistance,
   distance,
@@ -118,6 +119,16 @@ describe.each(MODES)('the chart palette in %s', (mode) => {
     }
   });
 
+  // Slate is a stack's fifth, drawn on the fourth slot, so the two are neighbours like any other pair.
+  it("keeps magenta and slate, the stack's last neighbours, 8 apart simulated and 15 for normal vision", () => {
+    const { stack } = colorsIn(mode);
+    const [before, after] = neighbours(stack).at(-1) ?? [];
+    if (!before || !after) throw new Error('No last pair');
+    expect([before.name, after.name]).toEqual(['chart-4', STACK_REMAINDER]);
+    expect(cvdDistance(before.color, after.color)).toBeGreaterThanOrEqual(CVD_MIN);
+    expect(distance(before.color, after.color)).toBeGreaterThanOrEqual(NORMAL_MIN);
+  });
+
   it.each(CHART_SLOTS)('keeps %s 10 from every reserved color for normal vision', (name) => {
     for (const other of reserved) {
       expect(distance(read(name), other.color), other.name).toBeGreaterThanOrEqual(RESERVED_DISTANCE_MIN);
@@ -204,6 +215,34 @@ describe("spec 5.2's figures", () => {
     expect(nearest('dark')).toEqual(['success 10.2', 'link 12.9', 'success 12.1', 'error 18.7']);
   });
 
+  // Slate beside each slot, normal and the lesser simulation. Drawn on the fourth (magenta), it passes; an app
+  // that pins "Other" to slate with fewer than five series puts it on an earlier slot, and teal (and olive in
+  // light) are under the neighbour thresholds there, recorded and not gated: the 2px gap, the legend, each
+  // segment's name and, in forced colors, GrayText against CanvasText tell them apart.
+  it('measures slate beside each slot, the fifth on any stack', () => {
+    const measured = Object.fromEntries(
+      MODES.map((mode) => {
+        const { slots, read } = colorsIn(mode);
+        const slate = read(STACK_REMAINDER);
+        return [mode, slots.map(({ color }) => [at(distance(color, slate)), at(cvdDistance(color, slate))])];
+      }),
+    );
+    expect(measured).toEqual({
+      light: [
+        ['13.0', '8.2'],
+        ['21.2', '17.8'],
+        ['12.6', '10.9'],
+        ['21.2', '10.0'],
+      ],
+      dark: [
+        ['14.3', '6.5'],
+        ['20.5', '17.2'],
+        ['17.0', '15.1'],
+        ['22.5', '12.4'],
+      ],
+    });
+  });
+
   // The two near neighbours under color vision deficiency that risk R7 records: never drawn beside each other,
   // since no chart draws a state or a link beside a series.
   it('measures the close reserved pairs risk R7 records', () => {
@@ -251,6 +290,12 @@ describe('paletteFailures', () => {
         'light: chart-2 and chart-3 are 0.0 apart under deuteranopia, under 8',
       ]),
     );
+  });
+
+  it("fails a fourth slot a stack's slate fifth cannot be told from", () => {
+    // Magenta's slot given slate's value: the stack's last pair, no distance apart.
+    const failures = paletteFailures({ ...light, 'chart-4': String(light.slate) }, 'light');
+    expect(failures).toContain('light: chart-4 and slate are 0.0 apart, under 15');
   });
 
   it('fails a slot outside the band, under the chroma floor or under 3:1', () => {

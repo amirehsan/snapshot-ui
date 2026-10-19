@@ -112,10 +112,12 @@ describe('BarChart, stacked', () => {
     const bands = [...container.querySelectorAll('.bar-chart-band')];
     expect(bands.map((band) => band.querySelectorAll('.bar-chart-bar').length)).toEqual([5, 5, 4]);
     // May on [0, 1000]: Groceries 0 to 400, Dining 400 to 600, Transport to 700, Bills to 800, Other to 850.
+    // The first stands on the line; each one on another is placed from its far end, its top, so the least it
+    // draws grows toward zero, over the segment under it, and the stack's top is exact.
     const may = barsOf(container).slice(0, 5);
-    expect(may.map((bar) => bar.style.insetBlockEnd)).toEqual(['0%', '40%', '60%', '70%', '80%']);
+    expect(may.map((bar) => bar.style.insetBlockEnd)).toEqual(['0%', '', '', '', '']);
+    expect(may.map((bar) => bar.style.insetBlockStart)).toEqual(['', '40%', '30%', '20%', '15%']);
     expect(may.map((bar) => bar.style.blockSize)).toEqual(['40%', '20%', '10%', '10%', '5%']);
-    for (const bar of may) expect(bar.style.insetBlockStart).toBe('');
     // June's transport is 0: a segment of no length where the stack has reached, still a stop.
     const transport = barAt(container, 7);
     expect(transport).toHaveAttribute('data-sign', 'zero');
@@ -127,7 +129,7 @@ describe('BarChart, stacked', () => {
     // The sums run to 850, so [0, 1000]: from the values alone, 400, the stacks would run off the plot.
     const { container } = render(<Chart />);
     const other = barAt(container, 4);
-    expect(other.style.insetBlockEnd).toBe('80%');
+    expect(other.style.insetBlockStart).toBe('15%');
     expect(other.style.blockSize).toBe('5%');
   });
 
@@ -154,7 +156,8 @@ describe('BarChart, stacked', () => {
     const [groceries, shopping, travel, june0, june1, june2] = barsOf(container);
     expect(groceries?.style.insetBlockEnd).toBe('25%');
     expect(groceries?.style.blockSize).toBe('25%');
-    expect(travel?.style.insetBlockEnd).toBe('50%');
+    // On Groceries, so placed from its top, 130 of [-100, 300].
+    expect(travel?.style.insetBlockStart).toBe('42.5%');
     expect(travel?.style.blockSize).toBe('7.5%');
     expect(shopping?.style.insetBlockStart).toBe('75%');
     expect(shopping?.style.blockSize).toBe('10%');
@@ -162,7 +165,8 @@ describe('BarChart, stacked', () => {
     expect(june0?.style.insetBlockStart).toBe('75%');
     expect(june0?.style.blockSize).toBe('12.5%');
     expect(june1?.style.insetBlockEnd).toBe('25%');
-    expect(june2?.style.insetBlockStart).toBe('87.5%');
+    // Under Groceries, so placed from its foot, -70.
+    expect(june2?.style.insetBlockEnd).toBe('7.5%');
     expect(june2?.style.blockSize).toBe('5%');
     expect(each(container, 'data-sign')).toEqual([
       'positive',
@@ -183,11 +187,12 @@ describe('BarChart, stacked', () => {
     const [groceries, shopping, travel, , , june2] = barsOf(container);
     expect(groceries?.style.insetInlineStart).toBe('25%');
     expect(groceries?.style.inlineSize).toBe('25%');
-    expect(travel?.style.insetInlineStart).toBe('50%');
+    // On Groceries, so placed from its far end, 130.
+    expect(travel?.style.insetInlineEnd).toBe('42.5%');
     expect(travel?.style.inlineSize).toBe('7.5%');
     expect(shopping?.style.insetInlineEnd).toBe('75%');
     expect(shopping?.style.inlineSize).toBe('10%');
-    expect(june2?.style.insetInlineEnd).toBe('87.5%');
+    expect(june2?.style.insetInlineStart).toBe('7.5%');
     // One bar thick in its row, so no segment is moved off the row's middle.
     expect(part(container, '.bar-chart-rows').style.getPropertyValue('--bar-chart-group')).toBe('1');
     for (const bar of barsOf(container)) expect(bar.style.getPropertyValue('--bar-chart-index')).toBe('');
@@ -230,6 +235,28 @@ describe('BarChart, stacked', () => {
       />,
     );
     expect(each(pinned, 'data-color').slice(0, 2)).toEqual(['chart-2', 'slate']);
+  });
+
+  it('takes the texture slot from the color a series draws in, so a pinned slate "Other" is always the fifth', () => {
+    // Four series, "Other" pinned to slate, as the docs ask when there are fewer than five.
+    const { container } = render(
+      <Chart series={[GROCERIES, DINING, TRANSPORT, { ...OTHER, color: 'slate' }]} hasTexture />,
+    );
+    const may = barsOf(container).slice(0, 4);
+    expect(may.map((bar) => bar.getAttribute('data-color'))).toEqual([
+      'chart-1',
+      'chart-2',
+      'chart-3',
+      'slate',
+    ]);
+    expect(may.map((bar) => bar.getAttribute('data-series'))).toEqual(['1', '2', '3', '5']);
+    const items = [...container.querySelectorAll('.bar-chart-legend-item')];
+    expect(items.map((item) => item.getAttribute('data-series'))).toEqual(['1', '2', '3', '5']);
+    // A pinned slot is its own slot wherever the series stands; ink and gain take their place.
+    const { container: pinned } = render(
+      <Chart series={[{ ...DINING, color: 'chart-3' }, { ...GROCERIES, color: 'ink' }, OTHER]} />,
+    );
+    expect(each(pinned, 'data-series').slice(0, 3)).toEqual(['3', '2', '3']);
   });
 
   it('draws one series as one series, whatever the layout: ink, every bar its own data end', () => {
@@ -495,6 +522,19 @@ describe('BarChart, stacked', () => {
     // June's fourth segment from the foot, 20 to 40px down: Bills.
     expect(barAt(container, 8)).toHaveAttribute('data-active', '');
     expect(document.activeElement).toBe(document.body);
+    // Over the stack's top, the outermost segment on that side, Other; under its foot, the one at the foot.
+    fireEvent.pointerMove(part(container, '.bar-chart-plot'), {
+      clientX: 150,
+      clientY: -10,
+      pointerType: 'mouse',
+    });
+    expect(barAt(container, 9)).toHaveAttribute('data-active', '');
+    fireEvent.pointerMove(part(container, '.bar-chart-plot'), {
+      clientX: 150,
+      clientY: 140,
+      pointerType: 'mouse',
+    });
+    expect(barAt(container, 5)).toHaveAttribute('data-active', '');
   });
 
   it('keeps focus off the body when a focused segment loses its value, and gives it to the tab stop', () => {
@@ -503,8 +543,17 @@ describe('BarChart, stacked', () => {
     focus(barAt(container, 6));
     const fewer = { ...DINING, values: [money(200), null, money(150)] };
     rerender(<Chart series={[GROCERIES, fewer, TRANSPORT, BILLS, OTHER]} />);
+    // The nearest series June still has, Groceries before Transport on the tie.
+    expect(document.activeElement).toBe(barAt(container, 5));
+    expect(barAt(container, 5)).toHaveAccessibleName('Jun Groceries $300.00');
+    expect(barAt(container, 5).tabIndex).toBe(0);
+    // A band with nothing left hands focus to the first stop.
+    const empty = (line: BarSeries): BarSeries => ({
+      ...line,
+      values: [line.values[0] ?? null, null, line.values[2] ?? null],
+    });
+    rerender(<Chart series={[GROCERIES, fewer, TRANSPORT, BILLS, OTHER].map(empty)} />);
     expect(document.activeElement).toBe(barAt(container, 0));
-    expect(barAt(container, 0).tabIndex).toBe(0);
     expect(toNothing).not.toHaveBeenCalled();
   });
 

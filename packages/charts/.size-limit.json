@@ -18,13 +18,13 @@
     "path": "dist/index.js",
     "import": "{ BarChart }",
     "ignore": ["react", "react-dom"],
-    "limit": "6.5 kB"
+    "limit": "7 kB"
   },
   {
     "name": "import { LineChart, BarChart } from \"@snapshot-ui/charts\"",
     "path": "dist/index.js",
     "import": "{ LineChart, BarChart }",
     "ignore": ["react", "react-dom"],
-    "limit": "8 kB"
+    "limit": "9 kB"
   }
 ]

@@ -206,7 +206,7 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'class="bar-chart-legend-item" data-series="3" data-color="chart-3" data-look="swatch"',
       'data-color="chart-1" data-look="fill" data-sign="positive" data-nonzero="" data-series="1"',
       'data-color="chart-3" data-look="fill" data-sign="positive" data-nonzero="" data-series="3" data-outer="" data-joined=""',
-      'inset-block-end:50%;block-size:7.5%;--bar-chart-centre:25%;--bar-chart-index:0',
+      'inset-block-start:42.5%;block-size:7.5%;--bar-chart-centre:25%;--bar-chart-index:0',
       'class="bar-chart-value-text">-$10.00<',
       '>Total<',
     ],
