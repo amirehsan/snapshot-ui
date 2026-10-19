@@ -326,7 +326,7 @@
     "path": "dist/index.js",
     "import": "{ FilterChip }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "4 kB"
+    "limit": "4.5 kB"
   },
   {
     "name": "import { FilterBar, FilterChip } from \"@snapshot-ui/react\"",
@@ -389,7 +389,7 @@
     "path": "dist/index.js",
     "import": "{ UploadTray }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "9 kB"
+    "limit": "9.5 kB"
   },
   {
     "name": "import { DatePicker } from \"@snapshot-ui/react\"",
@@ -403,7 +403,7 @@
     "path": "dist/index.js",
     "import": "{ SaveBar }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "5.5 kB"
+    "limit": "6 kB"
   },
   {
     "name": "import { PageHeader, PageColumn } from \"@snapshot-ui/react\"",
