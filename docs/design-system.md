@@ -7481,9 +7481,13 @@ save unmounts. `ConsumerEnterFastSave`, `ConsumerEnterSlowSave`,
 by a press, with a save that settles at once or after 100ms; they read the
 saved 0, no warning, and focus back on the trigger. They logged nothing in
 Chromium before the fix either.
-A focused field disabled before its text commits still drops that text, as
-React Aria's own field does (its listener holds the commit of the render
-that focused it); that is React Aria's, and not changed here. The same
+A focused field that is disabled goes back to the text it had when it was
+focused, as React Aria's own field does: its listener for a disabled field
+holds the commit of the render that focused it, so it drops text typed
+since and reverts a value Enter committed since, calling `onChange` with
+the old value (settings plan, spec correction 8). That is React Aria's,
+the same before the deferral, kept as a test expected to fail and named in
+the upstream issue. The same
 deferral belongs in React Aria's `commitAndAnnounce`; the owner files the
 issue (settings plan, owner action 4), and the deferral leaves when a React
 Aria release has it.

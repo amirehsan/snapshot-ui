@@ -770,7 +770,13 @@ function SavesOnEnter(): ReactElement {
  * browser's focusout leaves a disabled field inside React's commit. React Aria commits a disabled field's text
  * from a focusout listener of its own (useSyntheticBlurEvent, interactions/utils.mjs:41-105), which flushed there.
  */
-function DisablesOnEnter({ onBlur }: { onBlur?: () => void }): ReactElement {
+function DisablesOnEnter({
+  onBlur,
+  onChange,
+}: {
+  onBlur?: () => void;
+  onChange?: (value: number | null) => void;
+}): ReactElement {
   const [saving, setSaving] = useState(false);
   const done = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
@@ -784,6 +790,7 @@ function DisablesOnEnter({ onBlur }: { onBlur?: () => void }): ReactElement {
         minValue={0}
         isDisabled={saving}
         onBlur={onBlur}
+        onChange={onChange}
         onKeyDown={(event) => {
           if (event.key === 'Enter') setSaving(true);
         }}
@@ -832,6 +839,26 @@ describe('NumberField disabled while it holds focus', () => {
     expect(heard[0]?.relatedTarget).toBe(screen.getByRole('button', { name: 'Done' }));
     expect(onBlur).toHaveBeenCalledTimes(1);
   });
+
+  // React Aria's, and expected to fail until a release fixes it: its listener for a disabled field holds the
+  // commit of the render that focused the field (useSyntheticBlurEvent keeps the blur handler of that render),
+  // so it commits the text the field had then, 0 here, over the 5 that Enter committed. Before the field
+  // deferred it the listener did the same inside React's commit; the upstream issue reports both.
+  it.fails(
+    'keeps the value Enter committed when the save disables the field (React Aria reverts it)',
+    async () => {
+      const onChange = vi.fn();
+      const user = userEvent.setup();
+      render(<DisablesOnEnter onChange={onChange} />);
+      await user.click(amount('Guests'));
+      await user.keyboard('{Backspace}5{Enter}');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(onChange.mock.calls).toEqual([[5]]);
+      expect(amount('Guests')).toHaveValue('5');
+    },
+  );
 
   it('sends the stopped focusout itself when React Aria sends none', async () => {
     // Focused while React ignores events, from an insertion effect, so React Aria never heard the focus and holds
