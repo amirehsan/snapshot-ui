@@ -1,6 +1,6 @@
 # Settings: PanelLayout, Repeater, ConditionalFields, field extras, ThemeSwitch, AccountMenu and CopyButton: design
 
-Status: draft for review, 2026-10-19. Every open question in section 21 carries a recommendation; section 17 lists what is decided here.
+Status: approved on 2026-10-19. Written for review the same day; the owner took every recommendation of section 21, all 26 open questions, and the consumer then answered open question 1. Section 24 records the rulings and the consumer's answers, which supersede the sections they name where they differ; everything else is decided here and listed in section 17. The plan is `docs/plans/2026-10-19-settings.md`.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document takes the phase 5 rows "PanelLayout", "AccountMenu, ThemeSwitch", "ConditionalFields" and "Field extras", and pulls forward the phase 4 row "Repeater". It adds CopyButton, whose design the accounts spec deferred (`docs/specs/2026-10-18-accounts-design.md`, section 5.6), and a fix to NumberField. It answers batch 7 ("Settings") of the first consumer's roadmap. The design authority remains `docs/design-system.md`.
 Released before this: batch 6 ("Insights"), `@snapshot-ui/core` and `@snapshot-ui/react` 0.9.0 and `@snapshot-ui/charts` 0.2.0 (`docs/specs/2026-10-18-insights-design.md`, on `feat/insights` at the time of writing), after batch 5 ("Accounts"), 0.8.0 (on `feat/accounts`). `main` is at 0.7.0 (24d426c) as this is written; both batches merge first. This batch is the 0.10.0 minor release of core and react, with a patch to `@snapshot-ui/charts` for its core peer. Section 2 lists what it takes from batches 1 to 6.
 
@@ -73,7 +73,7 @@ React Aria parts used for the first time: `SubmenuTrigger`, for the Theme submen
 
 ## 3. What the consumer needs
 
-The consumer's requests for this batch, as relayed to this spec, in its order:
+The consumer's requests for this batch, as relayed to this spec, in its order. The consumer answered open question 1 on 2026-10-19: section 24, ruling 2, records its answers, which supersede items 1 to 6 where they differ (eight sections, zero to three tiers, a disabled Add at the maximum, a controlled Repeater, the defaults and the reproduction).
 
 1. **A settings page.** Sections Coach, Notifications, Bank sync, Logos, Data and Danger zone, a list on the left and the form beside it. On a phone, the list first; a section opens as its own page with Back. URL-driven and server-renderable; links, not state. Focus moves to the heading on a section change. It must sit inside AppShell, with its header and its BottomTabBar.
 2. **Wait tiers.** Rows of "up to $amount, wait N hours", each a money NumberField and a Select, added and removed, at most 6, with a row-level error.
@@ -1140,9 +1140,52 @@ Each visual story is baselined in five modes (Rounded light, Rounded dark, Soft 
 
 Existing baselines: none should change. `menu.css` gains rules that match only `[data-has-submenu]`, which no existing story draws; NumberField's fix changes no pixel; the docs header's switch has no screenshot baselines. Starting from batch 6's count (2570 by its plan, to verify after both merges), expect 195 to 225 new files, depending on how the plan splits the faces and the menu's open states into stories. Any change to an existing baseline is investigated before it is committed, and every new one goes through `pnpm --filter @snapshot-ui/storybook visual:docker`.
 
+## 24. Owner rulings and the consumer's answers (owner, 2026-10-19)
+
+The owner approved this spec on 2026-10-19 and took every recommendation of section 21, all 26 open questions. The consumer then answered open question 1, and its answers change six earlier decisions; rulings 2 to 6 record them and name the sections they supersede. Each ruling names what it settles; the plan, `docs/plans/2026-10-19-settings.md`, names the task that builds it.
+
+1. **Scope, release and order.** Every part of section 1 ships in one release, `@snapshot-ui/core` and `@snapshot-ui/react` 0.10.0, with a patch to `@snapshot-ui/charts` that moves its core peer to `^0.10.0`, after batches 5 (0.8.0) and 6 (0.9.0, charts 0.2.0) have merged and released. The plan builds the small independent parts first, as section 1 item 6 allows for the NumberField fix, so every later task composes parts that already exist: the NumberField fix, CopyButton, ConditionalFields, FieldExtras, Repeater, PanelLayout and PanelRow, then ThemeSwitch, ThemeMenu, AccountMenu and Menu's SubmenuTrigger with the docs header's switch, and last the Settings recipe, the guides and the changesets.
+2. **The consumer's page** (open question 1, answered). Section 3 is the input as the consumer answered it, with these changes:
+   1. **Eight sections, in an order the owner may change.** Coach, Notifications, Bank sync, AI assistant (an API key and a choice of model), Logos, Appearance, Data and Danger zone. The library's docs and examples call the fourth by a generic name, "AI assistant", and never name a product. Nothing in the library, the recipe or the tests depends on how many sections there are or in which order: the recipe holds them in one array and its tests walk the nav it draws. On a desktop `/settings` shows the list beside the first section (`isDefault` on whichever is first); on a phone the list alone; each section has its own address. This confirms open questions 2 and 3 and decided items 2 to 5. Appearance is now a section of its own (section 19's "in Data or its own card").
+   2. **Zero to the app's maximum.** A Repeater's `minRows` is 0 by default and the consumer passes 0; `maxRows` is the app's. The consumer's form allows 0 to 3 tiers and its store accepts up to 5, so the recipe passes 3. Zero rows is a state of its own: the Repeater draws an empty line in the rows' place (`labels.empty`, the app's sentence, "No tiers. The coach never waits.") with Add under it. "All rows empty means none": the app drops a row whose fields are all empty when it saves; the Repeater reads no value (section 6.3). Revises section 6.2's `minRows` comment and 6.5's first item for the consumer's case; `minRows` above 0 still hides Remove at the minimum.
+   3. **At the maximum, Add stays, disabled, with the reason.** Add is drawn disabled and a sentence after it says why, `labels.full(maxRows)`: "3 of 3. Remove a tier to add another." This reverses section 6.5's second item, decided item 9's "Add is replaced by a line at `maxRows`" and open question 9's recommendation. The library's Button does not keep a disabled button focusable: `isDisabled` writes the native `disabled`, which takes it out of the tab order (`Button.test.tsx`, "does not fire onPress when disabled"); only a pending Button stays focusable with `aria-disabled`, and React Aria's `allowFocusWhenDisabled` is undocumented and gives `tabIndex={-1}` only. So the reason is reachable three ways: the sentence is visible text in the reading order beside Add; Add's `aria-describedby` names it, so a screen reader reaches the disabled button in browse mode and hears "Add a tier, button, unavailable, 3 of 3. Remove a tier to add another."; and the add that reaches the maximum, which leaves focus in the new row, says it in the status: "Tier 3 added. 3 of 3. Remove a tier to add another." A focusable disabled Button is not built in this batch (the plan's open question 1).
+   4. **No reorder.** Confirms open question 7. The app sorts the tiers by amount when it saves and refuses a repeated amount with a row error on the later row ("Another tier waits from $500.00").
+   5. **A controlled Repeater and an uncontrolled one.** The app's forms are controlled and send typed objects to server actions, so the Repeater takes its rows as a value: `value` and `onChange(rows)` controlled, `defaultValue` uncontrolled, and `createRow()`, which makes a new row with its own id. They replace section 6.2's `rows`, `onAdd` and `onRemove`. The render function also receives `update(row)`, which writes one row back into the value. Controlled, the app reads its typed rows from its state and sends them; uncontrolled, the Repeater holds the rows' ids and order, the fields hold their values, and repeated names read with `FormData.getAll` stay the path of section 6.7. Both are documented and tested. Revises decided items 8 and 12.
+   6. **The defaults.** The tiers default to $100 waits 3 days, $500 waits a week and $1,500 waits a month, and "Reset to default" applies to the tiers as a group: `FieldExtras` takes `scope="group"` and wraps a Repeater, its offer line under the whole set, its button named "Reset to default, Wait tiers", and after it is taken focus goes to the first field of the set, else Add (section 8). `controlRef` becomes optional for that reason. The cushion defaults to empty, which means one month of fixed bills, and offers a suggestion: "Suggested: $2,340, a month of your fixed bills", with Use. Push amounts default to off and the weekly email to on. These are the recipe's values; revises section 19's Coach item ("a default on the first tier's wait and a suggestion on its amount").
+3. **Hidden fields** (open question 11, confirmed). Kept in the page and never submitted, by the hidden disabled fieldset of section 7.4: a secret key typed and then hidden is not sent, which a test proves. The weekly email's gate hides only a status line and "Send a test", with no inputs (section 7.2's last item, without the DescriptionList).
+4. **The theme** (open questions 16 to 20, confirmed). Applied at once and outside every SaveBar. The app writes a cookie through a server action and the server renders `data-theme` on `<html>`, none for System. The library takes a controlled value and `onChange` only: ThemeSwitch drops section 9.2's `defaultValue`, and its `value` is `ThemeChoice | null`, where `null` shows no choice, for a value the browser learns only after hydration (the docs header's case). The library writes no storage and injects no script: the consumer's content security policy is nonce-locked (section 9.4).
+5. **Confirmed as drafted.** One address per section and focus to the section's heading (decided items 2 and 5); focus to the next row's first field after a remove (decided item 10); CopyButton copies a string (decided item 23, open question 21).
+6. **The NumberField reproduction** (section 12.2, risk R9, owner action 4, answered). A NumberField in plain mode with `minValue={0}`, inside a Dialog titled "Add a plan", the field labelled "Payments made": type 0, then press the next field or Save. The value saves and the console warns. The app moves no focus itself; the Dialog's focus handling may run on Save. The plan reproduces exactly this, a NumberField in a Dialog, typing 0, then pressing Save and, separately, the next field, in a play in Chromium, WebKit and Firefox, watches it fail before the fix where the engine logs the warning, and confirms that the microtask deferral of section 12.3 removes it; the case joins the unit tests too.
+7. **Open questions 2 to 26** as recommended, except where ruling 2 changes them (questions 7 and 9) or ruling 4 confirms them:
+   1. Question 2: the index shows the list beside a default section on a desktop, the list alone on a phone.
+   2. Question 3: focus to the heading on both faces.
+   3. Question 4: PanelRow in this batch, two pairs and the mirror; the spanning form later.
+   4. Question 5: a 16rem side column and the split at 48rem.
+   5. Question 6: fieldsets and buttons, not GridList.
+   6. Question 7: no reorder (ruling 2.4).
+   7. Question 8: after a remove, the first field of the row now in its place, with the status saying what left.
+   8. Question 9: taken the other way by the consumer (ruling 2.3).
+   9. Question 10: repeated names with `getAll` for the uncontrolled path, indexed names documented for form libraries; the controlled path of ruling 2.5 needs neither.
+   10. Question 11: kept, not submitted, not checked (ruling 3).
+   11. Question 12: no reveal motion.
+   12. Question 13: the `FieldExtras` wrapper, now with a group scope (ruling 2.6).
+   13. Question 14: the suggestion in this batch, beside the default.
+   14. Question 15: after an offer is taken, focus to the field's control, or the group's first field.
+   15. Question 16: SegmentedControl by default, RadioGroup rows as `look="radio"`.
+   16. Question 17: a submenu by default, `display="section"` for one level.
+   17. Question 18: applied at once, never Changed, outside every form.
+   18. Question 19: no theme script from the library.
+   19. Question 20: the docs header's color switch becomes ThemeSwitch in this batch.
+   20. Question 21: a string only.
+   21. Question 22: a CopyButton in a DescriptionList row's `actions`.
+   22. Question 23: defer React Aria's blur handler by a microtask, as a patch, and report it upstream.
+   23. Question 24: the app's `navigate` asks with `useConfirm` before leaving a dirty section.
+   24. Question 25: the danger zone is a plain Card with danger Buttons and a ConfirmDialog.
+   25. Question 26: PanelNavItem's description on the list face only.
+
 ## Owner actions
 
 1. **Merge batches 5 and 6 first**, each with its Version Packages pull request, so this batch starts from 0.9.0 and the baseline count is known.
 2. **Docker, for the baselines,** once after the last task.
 3. **Devices and screen readers before the release:** VoiceOver on macOS and iOS and NVDA on Windows for section 13's list; a real iPhone and an Android phone at 320px to 430px for the list face, a section with Back, a Repeater's rows, the AccountMenu in the drawer with its submenu, and a CopyButton's status; Windows' contrast themes for the nav's current item and the submenu's chosen item. Recorded in each Appendix B section; until then "not yet verified".
-4. **Ask the consumer for its NumberField reproduction** (section 12.2), to add as a test of the fix.
+4. **Ask the consumer for its NumberField reproduction** (section 12.2), to add as a test of the fix. Answered on 2026-10-19: section 24, ruling 6.
