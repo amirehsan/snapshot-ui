@@ -137,7 +137,11 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
   ],
   ['Eyebrow', <Eyebrow>Workspace</Eyebrow>, '<p class="eyebrow">Workspace</p>'],
   ['Kbd', <Kbd>Esc</Kbd>, '<kbd class="kbd">Esc</kbd>'],
-  ['Badge', <Badge tone="info">Beta</Badge>, '<span class="badge badge-info">Beta</span>'],
+  [
+    'Badge',
+    <Badge tone="info">Beta</Badge>,
+    '<span class="badge badge-info"><span class="badge-label">Beta</span></span>',
+  ],
   [
     'Card and its parts',
     <Card as="section" aria-label="Danger zone">

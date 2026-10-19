@@ -6,13 +6,17 @@
  * is the base; info, success, warning and error only change the color. It is
  * never clay or signal orange, which mean unsaved work and consent.
  *
- * A word that fits is never broken and a flex row never squeezes the badge below its longest word: break-word, unlike
- * anywhere, leaves that word as the badge's min-content width, the floor a flex row shrinks an item to, and
- * through a holder of its own too. A label of several words still wraps between them, and a word longer than
- * the badge, which max-width keeps to its holder, breaks inside the outline. An inline block, not an inline
- * flex, so the label sits in the badge's own lines: as a flex item it would keep its longest word as a floor
- * and spill out of the outline. No flex-shrink 0 and no min-width: either would let the badge push past a
- * narrow row.
+ * A word is kept whole, and a flex row never squeezes the badge below it. break-word, unlike anywhere, leaves
+ * the longest word as the badge's min-content width, the floor a flex row shrinks an item to, through a holder
+ * of its own too. A label of several words still wraps between them, and a word wider than the badge, which
+ * max-width keeps to its holder, breaks inside the outline. An inline block, not an inline flex: the label of
+ * a flex box is a flex item that keeps its longest word as a floor and would spill out of the outline.
+ *
+ * The label caps that floor. A holder sized by its content, an auto or 1fr track or a flex item at its
+ * automatic minimum, takes the badge's min-content width as its own, so one long web address would push a
+ * phone's page sideways. Only a max-width in a length, never a percentage, caps that, and the badge's own
+ * max-width must stay 100% to keep it inside a narrow holder, so the cap is on the label: a word of up to
+ * 16em, about twenty letters, stays whole, and anything longer breaks there.
  */
 @layer components {
   .badge {
@@ -33,6 +37,11 @@
     font-variant-numeric: tabular-nums;
     text-transform: uppercase;
     overflow-wrap: break-word;
+  }
+
+  .badge-label {
+    display: block;
+    max-width: 16em;
   }
 
   .badge-info {

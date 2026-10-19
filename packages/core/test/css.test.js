@@ -736,6 +736,15 @@ describe('src/components/badge.css', () => {
     // and min-content as a min-width would beat max-width, so a long word would push the page sideways.
     expect(badge).not.toMatch(/flex-shrink|(?:^|[\s;])flex:|min-width|min-inline-size/);
   });
+
+  it('caps the label at a length, so a long word gives a holder sized by its content a floor that fits a phone', () => {
+    // A percentage max-width counts for nothing in the min-content width a holder takes from its content, so
+    // only a length caps that floor, and on the label, since the badge's own max-width stays 100%.
+    const label = closeUp(blockAfter(source(), '.badge-label {'));
+    expect(label).toContain('display: block;');
+    expect(label).toMatch(/max-width: \d+(?:\.\d+)?em;/);
+    expect(label).not.toContain('%');
+  });
 });
 
 describe('src/components/input.css', () => {

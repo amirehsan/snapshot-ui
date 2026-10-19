@@ -1790,7 +1790,8 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
  */
 const LONG_TARGETS: Record<string, string[]> = {
   'app-shell': ['.stage .app-shell-main p'],
-  badge: ['.stage .badge'],
+  // A badge's text is its label, which caps the floor a long word gives a holder sized by its content.
+  badge: ['.stage .badge-label'],
   // A row's name is the app's and wraps at any character in its column, or above its bar under 24rem.
   'bar-chart': ['.stage .bar-chart-category'],
   // A crumb's text is the app's and ellipsizes past 16rem on one line, so a long one never pushes the page.

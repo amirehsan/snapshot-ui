@@ -46,8 +46,8 @@ export const Counts: Story = {
 };
 
 /**
- * A long label wraps between its words inside its outline, and an unbroken run longer than the outline breaks
- * inside it, instead of pushing a narrow screen sideways.
+ * A long label wraps between its words inside its outline, at 16em at the most, and an unbroken run longer
+ * than that breaks inside it, instead of pushing a narrow screen sideways.
  */
 export const LongText: Story = {
   args: {
@@ -57,15 +57,38 @@ export const LongText: Story = {
   },
 };
 
-/** The lines a run of text is set on, from the tops of its client rects. */
+/** The lines a range of text is set on, from the tops of its client rects. */
 function linesOf(range: Range): number {
   return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size;
 }
 
-function linesOfElement(element: Element): number {
+/** The text of a badge's label, the one run a badge draws. */
+function labelText(badge: Element): Text {
+  const text = badge.querySelector('.badge-label')?.firstChild;
+  if (!(text instanceof Text)) throw new Error('No label drawn');
+  return text;
+}
+
+/** The lines the whole label is set on. */
+function linesOfLabel(badge: Element): number {
   const range = document.createRange();
-  range.selectNodeContents(element);
+  range.selectNodeContents(labelText(badge));
   return linesOf(range);
+}
+
+/** The words of the label set on more than one line, so that a line starts or ends inside them. */
+function brokenWords(badge: Element): string[] {
+  const text = labelText(badge);
+  const broken: string[] = [];
+  let at = 0;
+  for (const word of text.data.split(' ')) {
+    const range = document.createRange();
+    range.setStart(text, at);
+    range.setEnd(text, at + word.length);
+    if (linesOf(range) > 1) broken.push(word);
+    at += word.length + 1;
+  }
+  return broken;
 }
 
 function byTestId(scope: HTMLElement, id: string): HTMLElement {
@@ -79,7 +102,13 @@ const spills = (element: Element, holder: Element): boolean =>
   element.getBoundingClientRect().right > holder.getBoundingClientRect().right + 0.5 ||
   holder.scrollWidth > holder.clientWidth;
 
+const pageScrollsSideways = (): boolean =>
+  document.documentElement.scrollWidth > document.documentElement.clientWidth;
+
 const TITLE = 'Quarterly spending by category, every account and every card in one place';
+
+/** A web address with no break in it: nothing for the browser to wrap at. */
+const ADDRESS = `https://example.com/${'segment'.repeat(12)}end`;
 
 /**
  * Beside a title in a flex row on a 390px phone, inside its 16px gutters, a badge keeps its word whole: "New"
@@ -116,8 +145,10 @@ export const BesideAWrappingTitle: Story = {
       const title = holder.querySelector('h3');
       if (!title) throw new Error('No title drawn');
       // The title wraps, so the row is as tight as it gets.
-      await expect(linesOfElement(title)).toBeGreaterThan(1);
-      await expect(linesOfElement(badge)).toBe(1);
+      const heading = document.createRange();
+      heading.selectNodeContents(title);
+      await expect(linesOf(heading)).toBeGreaterThan(1);
+      await expect(linesOfLabel(badge)).toBe(1);
       await expect(spills(badge, holder)).toBe(false);
     }
   },
@@ -125,14 +156,19 @@ export const BesideAWrappingTitle: Story = {
 
 /**
  * A label of several words in a holder narrower than the whole label wraps between its words, never inside
- * one, and stays inside the holder, in a block and beside a name in a flex row. An unbroken run longer than a
- * tiny holder breaks inside the outline, so it never pushes the page sideways either.
+ * one, and stays inside the holder, in a block and beside a name in a flex row. A word wider than a tiny
+ * holder breaks inside the outline, and so does a web address in a holder sized by its content, a grid
+ * column that grows to what it holds, so neither pushes the page sideways. A word of twenty letters there
+ * stays whole.
  */
 export const NarrowHolder: Story = {
   // A check of where the lines break: LongText already shoots a wrapped badge.
   tags: ['no-visual', 'webkit', 'firefox'],
   render: () => (
-    <div style={{ width: 390, paddingInline: 16, boxSizing: 'border-box', display: 'grid', gap: 24 }}>
+    <div
+      data-testid="phone"
+      style={{ width: 390, paddingInline: 16, boxSizing: 'border-box', display: 'grid', gap: 24 }}
+    >
       <div data-testid="block" style={{ width: 96 }}>
         <Badge tone="warning" data-testid="words-block">
           Needs a careful review
@@ -147,6 +183,12 @@ export const NarrowHolder: Story = {
       <div data-testid="tiny" style={{ width: 64 }}>
         <Badge data-testid="run">Supercalifragilisticexpialidocious</Badge>
       </div>
+      <div data-testid="sized" style={{ display: 'grid', gridTemplateColumns: 'auto' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          <Badge data-testid="address">{ADDRESS}</Badge>
+          <Badge data-testid="long-word">Internationalization</Badge>
+        </div>
+      </div>
     </div>
   ),
   play: async ({ canvasElement }) => {
@@ -155,25 +197,21 @@ export const NarrowHolder: Story = {
       ['row', 'words-row'],
     ] as const) {
       const badge = byTestId(canvasElement, id);
-      await expect(linesOfElement(badge)).toBeGreaterThan(1);
+      await expect(linesOfLabel(badge)).toBeGreaterThan(1);
+      await expect(brokenWords(badge)).toEqual([]);
       await expect(spills(badge, byTestId(canvasElement, holder))).toBe(false);
-      // Each word is set on one line: no line starts or ends inside a word.
-      const text = badge.firstChild;
-      if (!text?.textContent) throw new Error('No label drawn');
-      let at = 0;
-      for (const word of text.textContent.split(' ')) {
-        const range = document.createRange();
-        range.setStart(text, at);
-        range.setEnd(text, at + word.length);
-        await expect(linesOf(range), word).toBe(1);
-        at += word.length + 1;
-      }
     }
     const run = byTestId(canvasElement, 'run');
-    await expect(linesOfElement(run)).toBeGreaterThan(1);
+    await expect(linesOfLabel(run)).toBeGreaterThan(1);
     await expect(spills(run, byTestId(canvasElement, 'tiny'))).toBe(false);
-    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
-      document.documentElement.clientWidth,
-    );
+
+    // The grid column grows to the badge's longest word, which the label caps at 16em.
+    const phone = byTestId(canvasElement, 'phone');
+    const address = byTestId(canvasElement, 'address');
+    await expect(linesOfLabel(address)).toBeGreaterThan(1);
+    await expect(spills(address, phone)).toBe(false);
+    await expect(spills(byTestId(canvasElement, 'sized'), phone)).toBe(false);
+    await expect(linesOfLabel(byTestId(canvasElement, 'long-word'))).toBe(1);
+    await expect(pageScrollsSideways()).toBe(false);
   },
 };

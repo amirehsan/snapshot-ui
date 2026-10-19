@@ -1616,15 +1616,21 @@ hover, no focus ring and no touch target.
   badge given straight to the row, not one in a holder. A `min-inline-size` of
   `min-content` outranks `max-width`, so a long word would push the page
   sideways. The automatic minimum of a flex item is already the longest word,
-  capped by `max-width`, so the badge declares neither. One limit stays, the
-  cost of the floor: a holder sized by its content, such as a grid column of
-  `auto` or `1fr` or a flex item left at its automatic minimum, takes the
-  badge's longest word as its own floor, so a single word wider than the
-  screen widens it, as any word set with break-word does. A holder of a set
-  width, or one with `min-width: 0` or `minmax(0, 1fr)`, breaks such a word
-  inside the outline. Storybook's centered canvas is such a holder, so the
-  `LongText` story's run of 70 letters widens the canvas at 375px; a status
-  word is never that long.
+  capped by `max-width`, so the badge declares neither.
+- **The label caps the floor at 16em.** A holder sized by its content, such as
+  a grid column of `auto` or `1fr` or a flex item left at its automatic
+  minimum, takes the badge's min-content width as its own floor, so with
+  break-word alone one long web address widened the docs preview at 320px to
+  838px and pushed the page sideways. A percentage max-width counts for
+  nothing in that floor (CSS Sizing treats it as `none` there), so only a
+  length caps it, and the badge's own `max-width` has to stay 100% to keep it
+  inside a narrow holder. So the label is a part of its own, `.badge-label`,
+  a block with `max-width: 16em`, about twenty letters at the badge's 12px: a
+  word up to that stays whole, a longer run breaks at it, and a holder sized
+  by its content never takes more than 16em and the badge's padding from a
+  badge, which fits a 320px phone inside a card. A label of several words
+  wraps at 16em too, which a label that should be a word or a number never
+  reaches. Markup without the label part keeps the word floor but not the cap.
   Where the library itself sets a badge nothing moves: a tab and the docs
   rail's version keep theirs on one line with `nowrap`, FilterBar's count is a
   number, and a DataTable's fixed columns cap the badge at the cell. StatTile,
