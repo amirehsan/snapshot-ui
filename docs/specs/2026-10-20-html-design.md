@@ -1,6 +1,6 @@
 # HTML: @snapshot-ui/html, and the 1.0 release: design
 
-Status: draft for the owner's review
+Status: approved on 2026-10-20. Written for the owner's review with a recommended answer to each open question of section 16; the owner took every recommendation, all 27, including the dependency-free behaviors script in place of the parent spec's Alpine plugin (recorded as an amendment in the parent spec, section 7), and approved the 1.0 batch of section 15 as written. Section 20 records the rulings.
 Date: 2026-10-20
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document takes phase 7 of the parent spec's catalog, "HTML version" (`@snapshot-ui/html`: "the Alpine plugin and copy-paste HTML for every component from phases 1 to 5", and section 7: "the source app's Alpine.js behaviors, generalized and shipped as an Alpine plugin, plus copy-paste HTML for every component on the docs site. It uses `@snapshot-ui/core` unchanged"). It then specifies the final "1.0" batch, which the owner moved to after phase 7 on 2026-10-20 (templates spec, ruling 1.0): the API review across every package, the stability promise of the templates spec's ruling 19, the deprecation policy, the docs' versions and the release steps. The design authority remains `docs/design-system.md`.
 Released before this, if the roadmap holds: phases 1 to 4 through batch 10b (0.16.0); phase 5's batch 11a (0.17.0) and 11b (the docs shell, no release); phase 6's batch 12 (core and react 0.18.0, charts 0.3.0); the editor at 0.1.x from batch 9c. Everything is 0.x. This phase is batches 13a, 13b and 13c; the 1.0 batch is 14.
@@ -493,9 +493,43 @@ No new visual baselines: the parity harness compares each HTML fixture to the Re
 - **14:** section 15.6. Core and react 1.0.0 (fixed group); charts 1.0.0 (independent, peer `^1.0.0`); editor and html patches moving their peers to `^1.0.0` and staying 0.x.
 - **Release notes for 1.0:** the promise in five lines, the link to "Upgrading from 0.x" and "Deprecations", the browser and React floors, the docs' new addresses, and which packages are 1.0 and which stay 0.x.
 
+## 20. Owner rulings (owner, 2026-10-20)
+
+The owner approved this spec on 2026-10-20 and took every recommendation of section 16, all 27, as written, and approved the 1.0 batch of section 15 as written. Each ruling names the open question it settles.
+
+**Alpine.** Ruling 2 reverses the parent spec's choice of an Alpine plugin: `@snapshot-ui/html` ships dependency-free behaviors attached by `data-behavior`, and Alpine apps use the documented adapter recipe. The parent spec records this as an amendment in its section 7.
+
+1. **The split and the order** (question 1). 13a, 13b, 13c, then 14.
+2. **Alpine or no dependency** (question 2). A dependency-free behaviors script, with an Alpine adapter recipe; this changes the parent spec's decision, recorded there as an amendment.
+3. **Web components** (question 3). No; `data-behavior` on the recipe's own markup.
+4. **Where markup comes from** (question 4). Generated from the React parts and checked.
+5. **Ids** (question 5). `{{id.<name>}}` placeholders, with generation and a warning for internal relations left unreplaced.
+6. **Template-language helpers** (question 6). None in the package; the guide shows four as examples.
+7. **Distribution** (question 7). Npm only, with a pinned and integrity-checked public CDN script tag in the docs.
+8. **Without the script** (question 8). Every recipe has a usable native face.
+9. **Select's fallback** (question 9). A native `select` replaced by the listbox.
+10. **Date and time fallbacks** (question 10). The native date and time inputs posting the same ISO values.
+11. **Strings** (question 11). `data-labels` JSON with English defaults.
+12. **Events** (question 12). `snapshot:*` DOM events, public API.
+13. **Toasts from the server** (question 13). A server-rendered toast in the region, dismissed by link without script, auto-timed with it.
+14. **Parity testing** (question 14). Compare to the React baselines, no second set.
+15. **Charts in HTML** (question 15). Not in this phase.
+16. **The docs' HTML tab** (question 16). On every component page, with the Preview tab able to render the HTML version.
+17. **Swap libraries** (question 17). One mutation observer, no per-library integration.
+18. **A static chart recipe later** (question 18). Decide after 1.0, when a consumer without React asks.
+19. **The promise's scope** (question 19). The templates spec's ruling 19, extended to every package and to the html package's behavior names, options and events.
+20. **The deprecation window** (question 20). At least one minor and at least 90 days.
+21. **Codemods** (question 21). Only for renames that touch many call sites in the first consumer.
+22. **The editor at 1.0** (question 22). Stays 0.x until a consumer has shipped it for a cycle.
+23. **html at 1.0** (question 23). Stays 0.x for one cycle after 0.3.0; core's promise already covers the classes it depends on.
+24. **Charts at 1.0** (question 24). 1.0.0 at batch 14, independent of the fixed group, after the screen reader pass.
+25. **A release candidate** (question 25). One or more `1.0.0-rc` releases under `next` with the first consumer before 1.0.0.
+26. **The docs' versions** (question 26). Latest release at the root, `next.` for `main`, `v0.` frozen.
+27. **Removing deprecated aliases at 1.0** (question 27). Deprecate in the last 0.x minor, remove in 1.0.0.
+
 ## Owner actions
 
-1. Rule on open question 2 (Alpine or no dependency) before 13a's plan is written: it changes a parent spec decision.
+1. Done: open question 2 ruled on 2026-10-20 (no dependency, with an Alpine adapter recipe).
 2. A VoiceOver, NVDA and TalkBack pass over 13b's and 13c's behaviors, beside their React twins.
 3. Ask the first consumer to run the 1.0 release candidate for one cycle and report.
 4. Add `next.snapshotui.com` and `v0.snapshotui.com` to the Vercel project before batch 14.

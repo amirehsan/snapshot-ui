@@ -360,6 +360,10 @@ now:
 - **@snapshot-ui/html:** the source app's Alpine.js behaviors, generalized and
   shipped as an Alpine plugin, plus copy-paste HTML for every component on the
   docs site. It uses `@snapshot-ui/core` unchanged.
+  Amended 2026-10-20 (owner ruling 2 of
+  `docs/specs/2026-10-20-html-design.md`): the behaviors ship as dependency-free
+  ES modules attached by `data-behavior`, not as an Alpine plugin; Alpine is no
+  dependency, and Alpine apps use a documented adapter recipe.
 
 ## 8. Apps
 
