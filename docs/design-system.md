@@ -11365,8 +11365,10 @@ secondary look with the glyph and the word (`look="button"`).
 and `span.copy-button-status`, a polite `role="status"` host, in the
 server's HTML and empty, so a screen reader is listening before the words
 arrive. The root is a part of its own so the status sits beside the button,
-never inside it, where it would join the button's name. `className` goes on
-the root; `ref` and the rest of the Button props go on the button. The root
+never inside it, where it would join the button's name. `className` and
+`style` go on the root, so what places the part moves the button and its
+status together; `ref` and the rest of the Button props go on the button,
+the element a ref is taken to focus (settings plan, spec correction 18). The root
 is `inline-flex`, not a grid, so its absolutely placed status needs no grid
 lines (lesson 9). Prose's generated guard of component roots (batch 6) is
 not on `main` yet; `copy-button` extends no other class in its file, so the

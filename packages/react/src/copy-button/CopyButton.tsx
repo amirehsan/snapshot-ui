@@ -1,7 +1,15 @@
 'use client';
 
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type FocusEvent, type ReactElement } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FocusEvent,
+  type ReactElement,
+} from 'react';
 import { TooltipTriggerStateContext, type TooltipTriggerState } from 'react-aria-components';
 import { Button, type ButtonProps } from '../button/Button';
 import { IconButton } from '../icon-button/IconButton';
@@ -21,7 +29,7 @@ export interface CopyButtonLabels {
 
 export interface CopyButtonProps extends Omit<
   ButtonProps,
-  'onPress' | 'children' | 'variant' | 'className' | 'aria-label' | 'isPending' | 'pendingLabel'
+  'onPress' | 'children' | 'variant' | 'className' | 'style' | 'aria-label' | 'isPending' | 'pendingLabel'
 > {
   /** The text to copy. In the page's HTML and its server payload: never a value the page may not hold. */
   value: string;
@@ -30,8 +38,10 @@ export interface CopyButtonProps extends Omit<
   /** Called after each copy, with whether it worked. */
   onCopy?: (copied: boolean) => void;
   labels?: Partial<CopyButtonLabels>;
-  /** Goes on the root `span.copy-button`. */
+  /** Goes on the root `span.copy-button`, which holds the button and its status. */
   className?: string;
+  /** Goes on the root with `className`, so a style that places the part moves the button and its status. */
+  style?: CSSProperties;
 }
 
 const LABELS: CopyButtonLabels = { copy: 'Copy', copied: 'Copied', failed: 'Copy failed' };
@@ -116,6 +126,7 @@ export function CopyButton({
   onCopy,
   labels: given,
   className,
+  style,
   ref,
   onBlur,
   ...props
@@ -256,6 +267,7 @@ export function CopyButton({
     <span
       ref={rootRef}
       className={cx('copy-button', className)}
+      style={style}
       data-look={look}
       data-outcome={held?.outcome}
     >

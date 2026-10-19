@@ -82,9 +82,9 @@ import { CopyButton } from '@snapshot-ui/react';
 
 ## Props
 
-Every Button prop is accepted but `onPress`, `children`, `variant`, `aria-label` and the pending state: the press is the copy, and the name is `labels.copy`. `ref` and the rest go on the button; `className` goes on the root, `span.copy-button`, which holds the button and its status.
+Every Button prop is accepted but `onPress`, `children`, `variant`, `aria-label` and the pending state: the press is the copy, and the name is `labels.copy`. `className` and `style` go on the root, `span.copy-button`, which holds the button and its status, so what places the part moves both; `ref` and the rest go on the button, so `ref.current.focus()` focuses it.
 
-<PropsTable label="CopyButton props" path="../../packages/react/src/copy-button/CopyButton.tsx" type="Pick<CopyButtonProps, 'value' | 'look' | 'onCopy' | 'labels' | 'isDisabled' | 'className'>" />
+<PropsTable label="CopyButton props" path="../../packages/react/src/copy-button/CopyButton.tsx" type="Pick<CopyButtonProps, 'value' | 'look' | 'onCopy' | 'labels' | 'isDisabled' | 'className' | 'style'>" />
 
 <PropsTable label="CopyButtonLabels" path="../../packages/react/src/copy-button/CopyButton.tsx" type="CopyButtonLabels" />
 

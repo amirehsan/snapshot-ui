@@ -151,10 +151,22 @@ describe('CopyButton', () => {
     },
   );
 
-  it('puts className on the root and ref and the rest on the button', () => {
+  it('puts className and style on the root, and ref and the rest on the button', () => {
     const ref = createRef<HTMLButtonElement>();
-    const { container } = render(<Webhook className="mine" ref={ref} data-testid="copy" isDisabled />);
+    const { container } = render(
+      <Webhook
+        className="mine"
+        style={{ marginInlineStart: 'auto' }}
+        ref={ref}
+        data-testid="copy"
+        isDisabled
+      />,
+    );
     expect(root(container)).toHaveClass('copy-button', 'mine');
+    // The two that place the part go on the element that is placed, so a style moves the whole part, its status
+    // with it.
+    expect(root(container)).toHaveStyle({ marginInlineStart: 'auto' });
+    expect(button()).not.toHaveAttribute('style');
     expect(ref.current).toBe(button());
     expect(button()).toHaveAttribute('data-testid', 'copy');
     expect(button()).toBeDisabled();
