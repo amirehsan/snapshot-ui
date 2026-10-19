@@ -2769,6 +2769,28 @@ names each button ("Edit details"). It is static. Seven things were derived
   the app. DescriptionList, MonthGrid, and from 0.8.0 StatTile and DataTable,
   which named stand-ins of 16rem and 12rem, follow the same rule (spec
   correction 63).
+- **Docs examples give a holder its width.** The docs stage centres its
+  example (`display: grid; place-items: center`), so an example's root is a
+  holder that takes the width of its content, and the rule above applies to
+  it. MonthGrid's three examples put the grid straight in a Card with no
+  width: the card drew at its padding, 66px wide at 1280px and 42px at
+  375px, the grid 0, its title broken letter by letter. The fix is in the
+  docs, not in the ruling: each card takes `width: 100%` up to `40rem`, the
+  40rem card the MonthGrid record measures, and the stage centres it, as the
+  fields' 24rem and Card's 560px examples already did. Measured after: the
+  card 640px and the grid 574px at 1280px, 267px and 225px at 375px. A
+  stage rule that stretches a root with no width of its own was the other
+  way, and was not taken: CSS cannot tell such a root from a button sized by
+  its content, and the Code tab would hide the width an app has to write.
+  The width in the example's own code is the contract, taught where it is
+  read. The audit of every example, the recipes included, found no other:
+  StatTile, DataTable, DescriptionList, the card header, Pagination, SaveBar,
+  FileDropZone and Sidebar examples were already given a width, and Gauge,
+  Sparkline and LineChart are not size containers. The docs e2e
+  `previews.spec.ts` guards it on every page with a Preview at 1280px and
+  375px: it fails when a size container on a stage is under 8rem and widens
+  once the stage stretches its example, or when a word of up to 15 letters
+  breaks across lines.
 - **CollapsibleCard is not matched.** Every rule names `.card > .card-header`,
   and CollapsibleCard's header sits in `.card-disclosure`, so its header, its
   flex row and its baselines are unchanged (plan open question 2). Its header

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page } from '@playwright/test';
@@ -32,6 +32,21 @@ export const COMPONENT_PAGES: SectionPage[] = pagesOf('components');
 
 /** The pages of the Charts section, in the rail's order: the charts of `@snapshot-ui/charts`. */
 export const CHART_PAGES: SectionPage[] = pagesOf('charts');
+
+/**
+ * The address of every docs page that shows an example in a Preview, read from the content, so a page that gains
+ * one is covered by every test that loops over this list without anyone remembering to add it.
+ */
+export const PREVIEW_PAGES: string[] = readdirSync(
+  fileURLToPath(new URL('../content/docs', import.meta.url)),
+  {
+    recursive: true,
+    encoding: 'utf8',
+  },
+)
+  .filter((path) => path.endsWith('.mdx') && content(path).includes('<Preview '))
+  .map((path) => `/docs/${path.replace(/\\/g, '/').replace(/(\/?index)?\.mdx$/, '')}`)
+  .sort();
 
 /** How far the page overflows the window sideways. Zero means it fits. */
 export const sideways = (page: Page): Promise<number> =>
