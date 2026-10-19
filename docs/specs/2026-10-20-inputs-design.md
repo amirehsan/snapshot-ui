@@ -1,6 +1,6 @@
 # Inputs: TimeField, TimeRangeField, DateTimePicker, Slider, ColorField, PhoneField, IconPicker, MediaInput and RichTextEditor: design
 
-Status: draft for the owner's review. Written with a recommended answer to each open question of section 22; nothing here is approved. Everything else is decided here and listed in section 18.
+Status: approved on 2026-10-20. Written for the owner's review with a recommended answer to each open question of section 22; the owner took every recommendation, all 35, and section 26 records the rulings. Everything else is decided here and listed in section 18. The plan for batch 9a is `docs/plans/2026-10-20-time.md`; 9b and 9c get their own plans when they start.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document completes phase 3 of the parent spec's catalog, "Specialised inputs", by taking its nine rows not yet built: DateTimePicker, TimeField, TimeRangeField, PhoneField, ColorField, IconPicker, MediaInput, Slider and RichTextEditor. The phase's other six rows have shipped: NumberField and SearchField (batch 3a), Calendar and DateRangePicker (batch 3b), DatePicker and FileDropZone (batch 4, "Documents"). The design authority remains `docs/design-system.md`.
 Released before this: `main` is at 0.8.0 (batch 5, "Accounts") as this is written. In flight: batch 6 ("Insights", 0.9.0 and `@snapshot-ui/charts` 0.2.0), batch 7 ("Settings", 0.10.0) and the choices batch (`docs/specs/2026-10-19-choices-design.md`, 0.11.0). This phase takes nothing from the choices batch, one part from Insights (`Prose`, for the editor's content) and the corner helpers every batch since 0.6.1 uses. It is too large for one release, so section 2 splits it into three batches, 9a, 9b and 9c, each a minor release.
 
@@ -28,7 +28,7 @@ What this phase adds, in plain words, in the order recommended:
 
 Why: these are the nine rows of phase 3 not yet built. The first consumer's batch 4 named DateTimePicker, TimeField, MediaInput and Slider as later needs (documents spec, section 1), so 9a and 9b serve it first.
 
-Decisions the owner is asked to approve, in short (section 22 has each with its alternative): three batches in the order Time, Pickers, Rich text; no phone number library shipped, with an adapter prop; Tiptap kept for the editor, in its own package; Lucide passed in by the app rather than bundled, with a virtualized grid above 200 icons; MediaInput built on FileDropZone's checks and UploadList's row, holding one value; and the time field's sliders from the source dropped in favor of a list of times.
+Decisions the owner approved on 2026-10-20, in short (section 22 has each with its alternative): three batches in the order Time, Pickers, Rich text; no phone number library shipped, with an adapter prop; Tiptap kept for the editor, in its own package; Lucide passed in by the app rather than bundled, with a virtualized grid above 200 icons; MediaInput built on FileDropZone's checks and UploadList's row, holding one value; and the time field's sliders from the source dropped in favor of a list of times.
 
 What it does not add: a time zone chooser, a duration field, vertical sliders, an eyedropper, colors other than sRGB hex, a country list for phone numbers, several files in MediaInput (FileDropZone with UploadList does that), image cropping, tables, images, mentions or collaboration in the editor, and Markdown in or out. Section 1 lists where each is deferred.
 
@@ -1855,9 +1855,49 @@ Existing baselines: none should change. DatePicker's are the proof that the shar
   - 9c: `@snapshot-ui/editor` minor from 0.0.0 (its first release, 0.1.0, unless open question 27 is taken the other way); core minor for `rich-text-editor.css`; a charts patch. The release workflow gains the new package as a trusted publisher (owner action 4).
 - **Release notes,** short, per batch: what each part is for, its value's format, the one prop most apps need (`step`, `allowsOvernight`, `timeZone`, `formatValue`, `contrastWith`, `patterns` and `rules`, `icons`, `onFiles` and `upload`, `tools`), and "Upgrade `@snapshot-ui/core` and `@snapshot-ui/react` together".
 
+## 26. Owner rulings (owner, 2026-10-20)
+
+The owner approved this spec on 2026-10-20 and took every recommendation of section 22, all 35 open questions, as written. Each ruling names the open question it settles; each batch's plan names the task that builds it (9a: `docs/plans/2026-10-20-time.md`).
+
+1. **The split and the order** (open question 1). Three batches, each a minor release: 9a Time, then 9b Pickers, then 9c Rich text.
+2. **A typed minute off the step** (open question 2). Kept as typed; the field is invalid with `labels.offStep` once the value is committed. Arrows and the list always land on the step.
+3. **The source's time sliders** (open question 3). Not ported. The clock button opens a list of times at `listStep`; Slider stays in 9b.
+4. **The list's default step** (open question 4). The field's step when it is 15, 20 or 30 minutes, else 30.
+5. **An end equal to the start** (open question 5). Invalid with `labels.same`; "open all day" is the app's own control.
+6. **Emptying a day to closed** (open question 6). No button; Backspace through the segments, and the recipe's Switch "Open" per day through ConditionalFields.
+7. **Overnight ranges** (open question 7). Off by default; `allowsOvernight` turns them on and draws `labels.overnight`.
+8. **DateTimePicker's value** (open question 8). A wall time, 'YYYY-MM-DDTHH:mm', by default; with `timeZone`, a UTC instant.
+9. **A time zone chooser** (open question 9). Not in this phase; the zone is the app's and is shown in the field.
+10. **DateTimePicker's popover after a day** (open question 10). It stays open for the time, with no Done button; Escape, a press outside or Tab past the time field closes it.
+11. **Sharing DatePicker's body** (open question 11). An internal `PickerField` both render; DatePicker's tests and baselines unchanged are the proof.
+12. **Slider and RangeSlider** (open question 12). Two parts.
+13. **Vertical sliders and a number box** (open question 13). Neither in this phase.
+14. **The slider's rail** (open question 14). ProgressBar's 12% ink rail; the thumb and the fill carry the value.
+15. **Phone formatting** (open question 15). Free typing, formatted on blur, paste and autofill; no mask as typed.
+16. **A phone number library** (open question 16). None in the box; patterns and the `rules` adapter, with a `libphonenumber-js` recipe in the docs.
+17. **Which patterns ship** (open question 17). Only `northAmericanPattern`.
+18. **A hex box in the color picker** (open question 18). No.
+19. **A Lucide set from the library** (open question 19). No; the app passes its own set, and the docs show the curated and the full Lucide recipes.
+20. **When to virtualize** (open question 20). Above 200 names, with `isVirtualized` to force either way.
+21. **MediaInput's relation to FileDropZone and UploadList** (open question 21). One value, on FileDropZone's hooks and box and UploadList's row.
+22. **The contrast chip** (open question 22). The ratio rounded down to one decimal, the level in words, and a warning badge below `minContrast` (4.5 by default); never error or success.
+23. **The editor's engine** (open question 23). Tiptap 3, subject to 9c's spike (risk R10), which reports to the owner before any other 9c work if the engine is over 150 kB compressed or its server story fails.
+24. **A separate package** (open question 24). Yes, `@snapshot-ui/editor`.
+25. **The editor's CSS** (open question 25). In core, in `styles.css`.
+26. **The editor's scope** (open question 26). Section 15.2's toolbar and section 15.3's schema; no tables, images, embeds, mentions, collaboration or Markdown.
+27. **The editor's version** (open question 27). Its own versions from 0.1.0, with caret peers on core and react, as `@snapshot-ui/charts` does.
+28. **The source view's highlighting** (open question 28). The source app's highlighter, ported as an overlay.
+29. **When the engine loads** (open question 29). Right after hydration.
+30. **The editor's value** (open question 30). HTML in the fixed schema.
+31. **Tab in the editor** (open question 31). Tab always leaves; lists nest with Mod+] and Mod+[.
+32. **Alt text in MediaInput** (open question 32). Shown by default in image mode, never required, with the hint that empty is right for decoration.
+33. **Fit or fill** (open question 33). Offered by `hasFitChoice`, off by default, as part of the value the app applies.
+34. **IconPicker's basis** (open question 34). React Aria's `Select` with `SelectPopover` and a grid `ListBox`, not ComboBox.
+35. **A stale icon** (open question 35). Kept, submitted, described in slate, not invalid.
+
 ## Owner actions
 
-1. **Approve this spec,** or answer the open questions of section 22 that should go another way.
+1. **Approve this spec.** Done on 2026-10-20: section 26.
 2. **Merge Insights, Settings and the choices batch first,** each with its Version Packages pull request, so 9a starts from their release and the baseline count is known.
 3. **Devices and screen readers before each release:** VoiceOver on macOS and iOS, NVDA on Windows and TalkBack on Android for the questions marked "to verify" in sections 7 to 15, the time segments typed on a phone, a slider and the color area by touch, a phone number autofilled on iOS and Android, and the editor with a Persian keyboard; Windows' contrast themes for every part. Recorded in each Appendix B section; until then "not yet verified".
 4. **npm, for 9c:** add the GitHub repo as a trusted publisher for `@snapshot-ui/editor` before its first release (parent spec, section 10).
