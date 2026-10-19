@@ -1174,7 +1174,7 @@ test.describe('forced colors', () => {
   }) => {
     await page.setViewportSize({ width: 768, height: 900 });
     await visit(page, '/docs/components/page-header');
-    const header = page.locator('header.header > .page-header');
+    const header = page.locator('.header[role="banner"] > .page-header');
     expect((await paint(header)).fill).toBe(await systemColor(page, 'canvas'));
     expect(await header.evaluate((element) => getComputedStyle(element).backdropFilter)).toBe('none');
     // The button stands on that fill, inside the header's box.

@@ -29,7 +29,7 @@ export default function DescriptionListCard(): ReactElement {
     >
       <CardHeader>
         <CardTitle id="description-list-card-title" level={3}>
-          Details
+          Account information
         </CardTitle>
         <CardActions>
           <Button variant="secondary" aria-label="Edit details">

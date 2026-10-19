@@ -3789,13 +3789,17 @@ for (const [url, title] of [
     await page.emulateMedia({ colorScheme: 'light' });
     await visit(page, url);
     // The library's PageHeader draws the trail, the title and the switches, inside the shell's banner.
-    const header = page.locator('header.header > .page-header');
+    const header = page.locator('.header[role="banner"] > .page-header');
     await expect(header).toHaveCount(1);
     await expect(header.locator('h1')).toHaveText(title);
     await expect(page.locator('h1')).toHaveCount(1);
     await expect(header.locator('.page-header-titles .eyebrow')).toContainText('Docs');
     await expect(page.getByRole('banner')).toHaveCount(1);
     await expect(page.getByRole('banner').locator('h1')).toHaveText(title);
+    // Valid nesting: no header element holds another, and the banner is no header element of its own.
+    await expect(page.locator('header header')).toHaveCount(0);
+    await expect(page.locator('[role="banner"]')).toHaveCount(1);
+    await expect(page.locator('[role="banner"]')).toHaveJSProperty('tagName', 'DIV');
     const actions = header.locator('.page-header-actions');
     // The switches set the color mode and the corners on the root, as before.
     await actions
@@ -3855,11 +3859,25 @@ for (const width of [375, 768]) {
   });
 }
 
+for (const width of [1024, 1067, 1440]) {
+  test(`the docs header keeps its switches beside a short title at ${String(width)}px`, async ({ page }) => {
+    // Beside the open rail the column is 640px at 1024; the docs' titles keep 16rem there (spec correction 76).
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    const title = await page.locator('.header .page-header h1').boundingBox();
+    const actions = await page.locator('.header .page-header-actions').boundingBox();
+    if (!title || !actions) throw new Error('No title or switches');
+    expect(actions.x).toBeGreaterThan(title.x + title.width);
+    expect(actions.y).toBeLessThan(title.y + title.height);
+    expect(await sideways(page)).toBe(0);
+  });
+}
+
 test('the docs header sticks and writes --page-sticky-top, its height, at every width', async ({ page }) => {
   for (const width of [375, 768, 1440]) {
     await page.setViewportSize({ width, height: 700 });
     await visit(page, '/docs/components/data-table');
-    const header = page.locator('header.header');
+    const header = page.locator('.header[role="banner"]');
     await page.evaluate(() => {
       window.scrollTo(0, 1200);
     });
@@ -4940,5 +4958,76 @@ for (const url of [
       ),
     );
     expect(furthest).toBeLessThanOrEqual((stage?.x ?? 0) + (stage?.width ?? 0) + 1);
+    // Each view passes axe on a phone, in light and in dark.
+    expect(await axeViolations(page)).toEqual([]);
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    expect(await axeViolations(page)).toEqual([]);
+  });
+
+  test(`the recipe has no axe violations at 1440 in light and dark, in each view: ${url}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const theme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await visit(page, url);
+      await expect(accountsRecipe(page).locator('.page-header-title')).toBeVisible();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      expect(await axeViolations(page), theme).toEqual([]);
+    }
   });
 }
+
+test('"Add a nickname" opens Edit\'s form, and once a nickname is saved focus goes to Edit, never the body', async ({
+  page,
+}) => {
+  await visit(page, `${ACCOUNTS_PAGE}?account=everyday-visa`);
+  const details = accountsRecipe(page).getByRole('region', { name: 'Details' });
+  const nickname = valueOf(details, 'Nickname');
+  const edit = details.getByRole('button', { name: 'Edit details' });
+  // Cancel from the link gives focus back to the link, which is still there.
+  const add = nickname.getByRole('link', { name: 'Add a nickname' });
+  await add.click();
+  await page.getByRole('dialog', { name: 'Edit details' }).getByRole('button', { name: 'Cancel' }).click();
+  await expect(add).toBeFocused();
+  // Saved, the link gives way to the nickname, and focus goes to Edit.
+  await add.click();
+  const dialog = page.getByRole('dialog', { name: 'Edit details' });
+  await dialog.getByRole('textbox', { name: 'Nickname' }).fill('Groceries card');
+  await dialog.getByRole('button', { name: 'Save details' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(nickname).toHaveText('Groceries card');
+  await expect(edit).toBeFocused();
+  expect(await focusOnBody(page)).toBe(false);
+});
+
+test('opening another page of the recipe gives its heading focus, and a tab keeps focus on the tab', async ({
+  page,
+}) => {
+  await visit(page, ACCOUNTS_PAGE);
+  const recipe = accountsRecipe(page);
+  const credit = recipe.locator('section').filter({
+    has: page.getByRole('heading', { level: 3, name: 'Credit cards', exact: true }),
+  });
+  // A row opens its account, and the account's heading takes focus.
+  await credit.getByRole('link', { name: /^Everyday Visa ending 4821/ }).click();
+  const visa = recipe.getByRole('heading', { level: 2, name: 'Everyday Visa', exact: true });
+  await expect(visa).toBeFocused();
+  // A tab keeps focus on the tab.
+  const tab = recipe.getByRole('tab', { name: 'Credit' });
+  await tab.click();
+  await expect(page).toHaveURL(/&tab=credit$/);
+  await expect(tab).toBeFocused();
+  // The trail goes back to the list, and the list's heading takes focus.
+  await recipe.getByRole('link', { name: 'Accounts', exact: true }).click();
+  const list = recipe.getByRole('heading', { level: 2, name: 'Accounts', exact: true });
+  await expect(list).toBeFocused();
+  // Reconnect opens the account whose feed failed, with its heading focused.
+  await credit.getByRole('link', { name: 'Reconnect Travel Mastercard' }).click();
+  await expect(page).toHaveURL(/\?account=travel-mastercard#reconnect$/);
+  await expect(
+    recipe.getByRole('heading', { level: 2, name: 'Travel Mastercard (Trips)', exact: true }),
+  ).toBeFocused();
+  expect(await focusOnBody(page)).toBe(false);
+});

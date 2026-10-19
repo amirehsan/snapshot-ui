@@ -57,9 +57,10 @@ const SHAPES = [
 
 /**
  * The docs site's header: the library's PageHeader, with the trail as its eyebrow, the page's title as its one
- * `h1` and the two switches as its actions, and under 1024px the drawer's menu button in the shell's own cell
- * before it, since PageHeader has no leading slot (plan open question 3). The shell's `header` is the page's
- * banner and sticks; the PageHeader inside it takes `role="none"`, so the page keeps one banner.
+ * `h1` and the two switches as its actions, and under 1024px the drawer's menu button over its start corner,
+ * since PageHeader has no leading slot (plan open question 3). The shell's row is a `div` with the banner role
+ * and sticks; the PageHeader inside it takes `role="none"`, so the page keeps one banner and no `header`
+ * element holds another (spec corrections 62 and 71).
  */
 export function DocsHeader({ group, title }: { group: string; title: string }): ReactElement {
   const { drawerOpen, openDrawer } = useShell();
@@ -70,7 +71,7 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
   // The header sticks at the top with no fixed height, so its height is the page's sticky offset: every sticky
   // part of a page, such as a data table's header row, sticks under it, never behind it. The docs shell is not
   // AppShell, so nothing else writes it.
-  const headerRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const header = headerRef.current;
     if (header === null || typeof ResizeObserver !== 'function') return;
@@ -88,8 +89,9 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
   }, []);
 
   return (
-    <header className="header" ref={headerRef}>
-      {/* The drawer's button, drawn under 1024px in the shell's own cell before the page's header. */}
+    // A div with the banner role, not a header, so PageHeader's own header element is never nested in one.
+    <div className="header" role="banner" ref={headerRef}>
+      {/* The drawer's button, drawn under 1024px over the page header's start corner. */}
       <div className="header-lead">
         <IconButton
           className="header-menu"
@@ -132,6 +134,6 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
           </>
         }
       />
-    </header>
+    </div>
   );
 }

@@ -277,10 +277,29 @@ function Details({
   const id = useId();
   const [open, setOpen] = useState<'edit' | 'merge' | 'remove' | null>(null);
   const [nickname, setNickname] = useState(account.nickname);
+  const editRef = useRef<HTMLButtonElement>(null);
+  // Which control opened Edit's form. "Add a nickname" leaves once a nickname is saved, so the Dialog cannot give
+  // focus back to it; Edit takes it instead, once the Dialog has closed and let focus go.
+  const openerRef = useRef<'button' | 'link'>('button');
+  const [refocus, setRefocus] = useState(false);
+  useEffect(() => {
+    if (!refocus || open !== null) return undefined;
+    // After the Dialog's own return of focus, which runs on the next frame.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        setRefocus(false);
+        editRef.current?.focus();
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [refocus, open]);
   const close = (isOpen: boolean): void => {
     if (!isOpen) setOpen(null);
   };
-  const edit = (): void => {
+  const edit = (opener: 'button' | 'link'): void => {
+    openerRef.current = opener;
     setNickname(account.nickname);
     setOpen('edit');
   };
@@ -292,7 +311,14 @@ function Details({
         </CardTitle>
         {/* At most two visible actions: Edit, and the rest in More. */}
         <CardActions>
-          <Button variant="secondary" aria-label="Edit details" onPress={edit}>
+          <Button
+            ref={editRef}
+            variant="secondary"
+            aria-label="Edit details"
+            onPress={() => {
+              edit('button');
+            }}
+          >
             Edit
           </Button>
           <MenuTrigger>
@@ -338,7 +364,13 @@ function Details({
             term="Nickname"
             emptyValue={
               // With no address it is a button to assistive technology, and opens Edit's form.
-              <Link onPress={edit}>Add a nickname</Link>
+              <Link
+                onPress={() => {
+                  edit('link');
+                }}
+              >
+                Add a nickname
+              </Link>
             }
           >
             {account.nickname}
@@ -357,7 +389,10 @@ function Details({
             </Button>
             <Button
               onPress={() => {
-                rename(account.id, nickname.trim());
+                const saved = nickname.trim();
+                rename(account.id, saved);
+                // The add link gives way to the nickname, so focus goes to Edit, never the page's body.
+                if (openerRef.current === 'link' && saved !== '') setRefocus(true);
                 done();
               }}
             >
@@ -419,11 +454,12 @@ const SMALL: CSSProperties = {
 
 /** The score: an lg semicircle on 300 to 850 with the bands' four edges as marks, its ends, and the bands in words. */
 function Score(): ReactElement {
+  const id = useId();
   const { caption, tone } = scoreBand(SCORE);
   return (
-    <Card as="section" aria-labelledby="accounts-score-title">
+    <Card as="section" aria-labelledby={id}>
       <CardHeader>
-        <CardTitle id="accounts-score-title" level={3}>
+        <CardTitle id={id} level={3}>
           Credit score
         </CardTitle>
         <CardNote>From your bureau on Oct 1</CardNote>
@@ -432,7 +468,7 @@ function Score(): ReactElement {
         <div className="stack" style={{ justifyItems: 'center' }}>
           <div style={{ position: 'relative', display: 'inline-grid' }}>
             <Gauge
-              aria-labelledby="accounts-score-title"
+              aria-labelledby={id}
               form="semicircle"
               size="lg"
               minValue={300}
@@ -480,12 +516,13 @@ function Score(): ReactElement {
 
 /** Utilization: the cards' total as an md ring with its two thresholds and their words. */
 function Utilization({ accounts }: { accounts: readonly Account[] }): ReactElement {
+  const id = useId();
   const overall = utilizationOf(accounts.filter((account) => account.type === 'credit'));
   const over = overall > 30;
   return (
-    <Card as="section" aria-labelledby="accounts-utilization-title">
+    <Card as="section" aria-labelledby={id}>
       <CardHeader>
-        <CardTitle id="accounts-utilization-title" level={3}>
+        <CardTitle id={id} level={3}>
           Utilization
         </CardTitle>
         <CardNote>How much of your cards' limits you use</CardNote>
@@ -512,7 +549,8 @@ function Utilization({ accounts }: { accounts: readonly Account[] }): ReactEleme
 function Cards({ accounts }: { accounts: readonly Account[] }): ReactElement {
   const id = useId();
   const columns: readonly DataTableColumn<Account>[] = [
-    { id: 'card', header: 'Card', cell: nameOf, isRowHeader: true },
+    // A card's name wraps to two lines rather than lose its last four digits to an ellipsis on a phone.
+    { id: 'card', header: 'Card', cell: nameOf, isRowHeader: true, overflow: 'wrap' },
     {
       id: 'utilization',
       header: 'Utilization',
@@ -557,12 +595,18 @@ function Cards({ accounts }: { accounts: readonly Account[] }): ReactElement {
 
 /** Which statements the app holds for the card, a month to a cell, with the sentence and the hidden table. */
 function Coverage({ account }: { account: Account }): ReactElement | null {
+  const id = useId();
   const years = COVERAGE[account.id];
   if (years === undefined) return null;
   return (
-    <Card>
+    <Card as="section" aria-labelledby={id}>
+      <CardHeader>
+        <CardTitle id={id} level={3}>
+          Statement coverage
+        </CardTitle>
+      </CardHeader>
       <MonthGrid
-        label="Statement coverage"
+        aria-labelledby={id}
         states={COVERAGE_STATES}
         years={years}
         monthLabels={MONTH_LABELS}
@@ -588,7 +632,10 @@ function AccountView({
   accounts,
   rename,
   remove,
+  focusHeadingRef,
 }: ViewProps & { account: Account; tab: 'overview' | 'credit' }): ReactElement {
+  const header = useRef<HTMLElement>(null);
+  useHeadingFocus(header, focusHeadingRef);
   const overview = (
     <div className="stack" style={{ gap: 'var(--spacing-separate)' }}>
       <Balance account={account} />
@@ -603,6 +650,7 @@ function AccountView({
   return (
     <>
       <PageHeader
+        ref={header}
         headingLevel={2}
         breadcrumbs={
           <Breadcrumbs>
@@ -696,6 +744,12 @@ export default function AccountsRecipe(): ReactElement {
     // An app wraps its whole tree once; the example wraps only itself.
     <RouterProvider
       navigate={(href) => {
+        // A link to another page, an account from the list, the list from its trail or another account, gives
+        // that page's heading focus once it is drawn; a tab, on the same account, keeps focus on the tab.
+        const account = (search: string): string | null => new URLSearchParams(search).get('account');
+        if (account(new URL(href, window.location.href).search) !== account(window.location.search)) {
+          focusHeadingRef.current = true;
+        }
         router.push(href, { scroll: false });
       }}
     >

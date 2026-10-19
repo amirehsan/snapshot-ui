@@ -190,6 +190,16 @@
     padding-inline-start: calc(var(--spacing-separate) - 8px);
   }
 
+  /* Beside the open rail, from 1024px, the column is 640px at its narrowest. PageHeader keeps its titles 20rem
+     beside the switches, which would drop the switches under a short title up to 1068px, where the old header
+     always kept them beside it; the docs' titles keep 16rem instead, so the switches stay on the title's line
+     (spec correction 76). A long title still wraps beside them. */
+  @media (width >= 1024px) {
+    .header-page .page-header-titles {
+      flex-basis: 16rem;
+    }
+  }
+
   /* Past its cap the column stays centered in the workspace, so the room left
      beside the rail is shared out evenly on both sides, as on the homepage. */
   .content {
@@ -231,6 +241,10 @@
   /* The stage resets the wrapping the docs section's Card sets, so each example wraps a long word by
      its own component's rules, the ones an app gets, and not by the card it is shown in. */
   .stage {
+    /* The stage paints the canvas inside the docs section's card, so a table on it draws its sticky header and a
+       meter's cuts in the canvas again, not in the card's fill it would inherit. */
+    --data-table-surface: var(--color-canvas);
+
     display: grid;
     place-items: center;
     min-height: 220px;
