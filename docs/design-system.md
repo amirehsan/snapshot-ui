@@ -11250,7 +11250,9 @@ the rule's 9 kB limit (correction 70, amended). Corrections 96 to 101
 record the links: the anchor bar and its API, the targets over the
 band and the nearer bar of a pair, tap and hold, the table and the
 router, and the sizes: `{ BarChart }` 7.15 kB, so 8 kB by the rule, and
-`{ LineChart, BarChart }` 8.78 kB, inside its 9 kB.
+`{ LineChart, BarChart }` 8.78 kB, inside its 9 kB. Corrections 102 to
+107 record the review's fixes, after which they are 7.37 kB and 8.98 kB,
+inside the same limits.
 
 **Screen readers and devices.** Not yet verified (owner action 3): Tab
 onto one bar and the arrows bar by bar in VoiceOver and NVDA, each bar's
