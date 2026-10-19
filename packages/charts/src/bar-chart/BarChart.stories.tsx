@@ -1332,3 +1332,449 @@ export const HatchedThin: Story = {
     }
   },
 };
+
+/* Stacked: the category mix by month, the top four categories and "Other" end to end. */
+
+/** The month's top four categories, the same four all half year, and the rest summed as "Other", last. */
+const MIX: BarSeries[] = [
+  { label: 'Groceries', values: [612.4, 640, 598.3, 655.1, 621.75, 640].map(money) },
+  { label: 'Dining', values: [312.45, 280.1, 355, 298.6, 330.2, 312.45].map(money) },
+  { label: 'Transport', values: [188.1, 201.75, 176.4, 215.3, 190, 188.1].map(money) },
+  { label: 'Bills', values: [150, 150, 150, 165.2, 150, 150].map(money) },
+  { label: 'Other', values: [243.6, 210.4, 265.15, 198.9, 230.35, 226.8].map(money) },
+];
+
+/** Each band's total, as the app sums and formats it: the chart never adds a figure it must say. */
+const totalsOf = (series: readonly BarSeries[], count: number): string[] =>
+  Array.from({ length: count }, (_, band) => {
+    const sum = series.reduce((total, line) => total + (line.values[band]?.value ?? 0), 0);
+    return money(Math.round(sum * 100) / 100).valueLabel;
+  });
+
+const MIX_TOTALS = totalsOf(MIX, HALF_YEAR.length);
+
+const MIX_TICKS = [
+  { value: 0, label: '$0' },
+  { value: 500, label: '$500' },
+  { value: 1000, label: '$1,000' },
+  { value: 1500, label: '$1,500' },
+];
+
+/** Net change by account: a card's spending below zero every month, savings drawn on in July. */
+const BY_ACCOUNT: BarSeries[] = [
+  { label: 'Checking', values: [820, -340, 410, 150, -220, 560].map(money) },
+  { label: 'Savings', values: [300, 300, -500, 300, 300, 300].map(money) },
+  { label: 'Credit card', values: [-640, -410, -720, -380, -560, -490].map(money) },
+  { label: 'Brokerage', values: [250, -120, 180, 90, -60, 210].map(money) },
+  { label: 'Other', values: [140, 95, -130, 155, 120, 135].map(money) },
+];
+
+const ACCOUNT_TICKS = [
+  { value: -1000, label: '-$1,000' },
+  { value: 0, label: '$0' },
+  { value: 1000, label: '$1,000' },
+];
+
+/**
+ * The category mix by month: teal, violet, olive and magenta in that order and slate "Other" on top, 2px of
+ * the card between segments, only the top segment rounded, and each month's total over its stack.
+ */
+export const Stacked: Story = {
+  args: {
+    'aria-label': 'Spending by category and month',
+    orientation: 'vertical',
+    bands: 'time',
+    categories: HALF_YEAR,
+    categoryTicks: [0, 1, 2, 3, 4, 5],
+    layout: 'stacked',
+    series: MIX,
+    totals: MIX_TOTALS,
+    valueLabels: 'all',
+    valueTicks: MIX_TICKS,
+  },
+  render: Default.render,
+};
+
+/**
+ * A stack across zero: positives up from the boundary-colored zero line and negatives down, each sign in
+ * series order, the outermost segment of each sign rounded, and each net total at the end of its side.
+ */
+export const StackedNegatives: Story = {
+  args: {
+    'aria-label': 'Net change by account and month',
+    orientation: 'vertical',
+    bands: 'time',
+    categories: HALF_YEAR,
+    categoryTicks: [0, 1, 2, 3, 4, 5],
+    layout: 'stacked',
+    series: BY_ACCOUNT,
+    totals: totalsOf(BY_ACCOUNT, HALF_YEAR.length),
+    valueLabels: 'all',
+    valueTicks: ACCOUNT_TICKS,
+  },
+  render: Default.render,
+};
+
+/**
+ * The textures on request: the first slot solid, the second striped at 45 degrees, the third at 135, the fourth
+ * both, and "Other" solid slate, each inside a 1px border of its color, the legend's keys with them.
+ */
+export const Textures: Story = {
+  args: { ...Stacked.args, 'aria-label': 'Spending by category and month, textured', hasTexture: true },
+  render: Default.render,
+};
+
+/** The vertical middle of a band's stack, its top and its foot, each a segment's box. */
+const stackOf = (chart: HTMLElement, band: number): HTMLElement[] => [
+  ...(chart.querySelectorAll('.bar-chart-band')[band]?.querySelectorAll<HTMLElement>('.bar-chart-bar') ?? []),
+];
+
+/**
+ * Checks one stacked chart standing up: the first segment of each sign stands on the zero line, each segment
+ * on another starts where that one ends, with its 2px gap inside its own length; the stack's far ends are
+ * where the gridlines put its sums; and only the outermost segment of each sign has rounded corners.
+ */
+const expectStackInPlace = async (chart: HTMLElement, series: readonly BarSeries[]): Promise<void> => {
+  const zero = middleOf(part(chart, '.bar-chart-baseline').getBoundingClientRect());
+  const lines = [...chart.querySelectorAll('.bar-chart-grid')].map((line) =>
+    middleOf(line.getBoundingClientRect()),
+  );
+  const [low, high] = [lines[0], lines.at(-1)];
+  if (low === undefined || high === undefined) throw new Error('No gridlines');
+  // Px per dollar, from the gridlines at -1,000 and 1,000.
+  const perUnit = (low - high) / 2000;
+  const bands = chart.querySelectorAll('.bar-chart-band').length;
+  for (let band = 0; band < bands; band++) {
+    const segments = stackOf(chart, band);
+    let [up, down, top, foot] = [0, 0, zero, zero];
+    for (const [at, segment] of segments.entries()) {
+      const box = segment.getBoundingClientRect();
+      const value = series[at]?.values[band]?.value ?? 0;
+      const style = getComputedStyle(segment);
+      const label = segment.getAttribute('aria-labelledby') ?? '';
+      if (value >= 0) {
+        // Its foot on the line or on the segment under it, its gap at its foot.
+        await expect(Math.abs(box.bottom - top), label).toBeLessThanOrEqual(1);
+        await expect(style.borderBottomWidth, label).toBe(up > 0 ? '2px' : '0px');
+        up += value;
+        top = box.top;
+      } else {
+        await expect(Math.abs(box.top - foot), label).toBeLessThanOrEqual(1);
+        await expect(style.borderTopWidth, label).toBe(down < 0 ? '2px' : '0px');
+        down += value;
+        foot = box.bottom;
+      }
+      // Inner joins are square; the zero end of every segment is square.
+      const corners = [
+        style.borderTopLeftRadius,
+        style.borderTopRightRadius,
+        style.borderBottomLeftRadius,
+        style.borderBottomRightRadius,
+      ];
+      const atZeroEnd = value >= 0 ? corners.slice(2) : corners.slice(0, 2);
+      await expect(atZeroEnd, label).toEqual(['0px', '0px']);
+      if (!segment.hasAttribute('data-outer'))
+        await expect(corners, label).toEqual(['0px', '0px', '0px', '0px']);
+    }
+    // The stack's ends are its sums, on the gridlines' scale.
+    await expect(Math.abs(top - (zero - up * perUnit)), `band ${String(band)} top`).toBeLessThanOrEqual(1);
+    await expect(Math.abs(foot - (zero - down * perUnit)), `band ${String(band)} foot`).toBeLessThanOrEqual(
+      1,
+    );
+  }
+};
+
+/** A stack across zero, left to right, right to left and narrow: every segment on the line or on another. */
+export const StackInPlace: Story = {
+  ...StackedNegatives,
+  tags: ['no-visual', 'webkit', 'firefox'],
+  args: { ...StackedNegatives.args, valueLabels: 'none' },
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <Wide>
+        <BarChart {...args} />
+      </Wide>
+      <div dir="rtl">
+        <Wide>
+          <BarChart {...args} aria-label="Net change by account and month, right to left" />
+        </Wide>
+      </div>
+      <Panel width="20rem">
+        <BarChart {...args} aria-label="Net change by account and month, narrow" />
+      </Panel>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const charts = [...canvasElement.querySelectorAll<HTMLElement>('.bar-chart')];
+    await expect(charts).toHaveLength(3);
+    for (const chart of charts) await expectStackInPlace(chart, BY_ACCOUNT);
+  },
+};
+
+/**
+ * Lying down, the gaps run along the row: each segment after the first of its sign starts where the one before
+ * it ends, its 2px gap on its edge toward zero, which is its left edge left to right and its right edge right
+ * to left for a positive one.
+ */
+export const StackGaps: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      {(['ltr', 'rtl'] as const).map((dir) => (
+        <div key={dir} dir={dir}>
+          <Panel>
+            <BarChart
+              aria-label={`Net change by account, ${dir}`}
+              orientation="horizontal"
+              categories={HALF_YEAR}
+              layout="stacked"
+              series={BY_ACCOUNT}
+              valueLabels="none"
+            />
+          </Panel>
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    for (const chart of canvasElement.querySelectorAll<HTMLElement>('.bar-chart')) {
+      const rtl = chart.closest('[dir]')?.getAttribute('dir') === 'rtl';
+      for (const row of chart.querySelectorAll('.bar-chart-row')) {
+        const segments = [...row.querySelectorAll<HTMLElement>('.bar-chart-bar')];
+        // The far end each sign has reached, in px along the row, from the zero edge of its first segment.
+        const reached = new Map<string, number>();
+        for (const segment of segments) {
+          const sign = segment.dataset.sign ?? '';
+          if (sign === 'zero') continue;
+          const box = segment.getBoundingClientRect();
+          const style = getComputedStyle(segment);
+          // A positive segment grows toward the inline end, a negative one toward the start.
+          const toRight = (sign === 'positive') !== rtl;
+          const [near, far] = toRight ? [box.left, box.right] : [box.right, box.left];
+          const gap = toRight ? style.borderLeftWidth : style.borderRightWidth;
+          const label = segment.getAttribute('aria-labelledby') ?? '';
+          const before = reached.get(sign);
+          if (before !== undefined) await expect(Math.abs(near - before), label).toBeLessThanOrEqual(1);
+          await expect(gap, label).toBe(segment.hasAttribute('data-joined') ? '2px' : '0px');
+          await expect(segment.hasAttribute('data-joined'), label).toBe(before !== undefined);
+          reached.set(sign, far);
+        }
+      }
+    }
+  },
+};
+
+/**
+ * The readout over a stack: it lists every segment of the band and the total, above the stack's top where its
+ * lines fit and below its foot otherwise, never over a segment and close to the stack.
+ */
+export const ReadoutStacked: Story = {
+  ...StackedNegatives,
+  tags: ['no-visual', 'webkit', 'firefox'],
+  args: { ...StackedNegatives.args, valueLabels: 'none', height: 360 },
+  play: async ({ canvasElement }) => {
+    await interactive(canvasElement);
+    for (const band of [0, 2, 5]) {
+      const segments = stackOf(canvasElement, band);
+      const [first] = segments;
+      if (!first) throw new Error('No stack');
+      await focusOn(first);
+      await waitFor(() => expect(readoutX(canvasElement)).toBe(HALF_YEAR[band]));
+      const panel = part(canvasElement, '.bar-chart-readout');
+      await expect(panel.querySelectorAll('li')).toHaveLength(segments.length + 1);
+      const box = panel.getBoundingClientRect();
+      const boxes = segments.map((segment) => segment.getBoundingClientRect());
+      const [top, foot] = [Math.min(...boxes.map((b) => b.top)), Math.max(...boxes.map((b) => b.bottom))];
+      const month = HALF_YEAR[band] ?? '';
+      if (panel.dataset.place === 'above') {
+        await expect(box.bottom, month).toBeLessThanOrEqual(top + 1);
+        await expect(top - box.bottom, month).toBeLessThanOrEqual(24);
+      } else {
+        await expect(box.top, month).toBeGreaterThanOrEqual(foot - 1);
+        await expect(box.top - foot, month).toBeLessThanOrEqual(24);
+      }
+    }
+  },
+};
+
+/**
+ * The keys through a stack: standing up, Up and Down move segment by segment along the stack, by what is drawn
+ * above and below, and Left and Right to the same category in the band beside, mirrored in right to left; lying
+ * down, Left and Right move along the bar and Up and Down across the rows.
+ */
+export const KeysStacked: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <Wide>
+        <BarChart
+          aria-label="Net change by account and month"
+          bands="time"
+          categories={HALF_YEAR}
+          layout="stacked"
+          series={BY_ACCOUNT}
+        />
+      </Wide>
+      <div dir="rtl">
+        <Wide>
+          <BarChart
+            aria-label="Net change by account and month, right to left"
+            bands="time"
+            categories={HALF_YEAR}
+            layout="stacked"
+            series={BY_ACCOUNT}
+          />
+        </Wide>
+      </div>
+      <Panel>
+        <BarChart
+          aria-label="Spending by category and month, lying down"
+          orientation="horizontal"
+          categories={HALF_YEAR}
+          layout="stacked"
+          series={MIX}
+          totals={MIX_TOTALS}
+        />
+      </Panel>
+    </div>
+  ),
+  play: async ({ canvasElement, userEvent }) => {
+    await interactive(canvasElement);
+    const [standing, mirrored, lying] = [...canvasElement.querySelectorAll<HTMLElement>('.bar-chart')];
+    if (!standing || !mirrored || !lying) throw new Error('No charts');
+    const doc = canvasElement.ownerDocument;
+    const seen = new Map<string, KeyboardEvent>();
+    const record = (event: KeyboardEvent): void => {
+      seen.set(event.key, event);
+    };
+    /** The focused segment, as [its band, its series], from its place in its band. */
+    const at = (chart: HTMLElement): [number, string | null] => {
+      const bar = doc.activeElement;
+      const band = bar?.closest('.bar-chart-band, .bar-chart-row');
+      const bands = [...chart.querySelectorAll('.bar-chart-band, .bar-chart-row')];
+      const name = bar?.getAttribute('aria-labelledby')?.split(' ')[1] ?? '';
+      return [band ? bands.indexOf(band) : -1, doc.getElementById(name)?.textContent ?? null];
+    };
+    const view = doc.defaultView ?? window;
+    view.addEventListener('keydown', record, true);
+    try {
+      // Tab lands on the newest month's first account: Checking in October, 560 above zero.
+      await userEvent.tab();
+      await waitFor(() => expect(at(standing)).toEqual([5, 'Checking']));
+      // October from the foot: Credit card below zero, then Checking, Savings, Brokerage and Other above.
+      await userEvent.keyboard('{ArrowUp}');
+      await waitFor(() => expect(at(standing)).toEqual([5, 'Savings']));
+      await expect(seen.get('ArrowUp')?.defaultPrevented).toBe(true);
+      await userEvent.keyboard('{ArrowDown}{ArrowDown}');
+      await waitFor(() => expect(at(standing)).toEqual([5, 'Credit card']));
+      await userEvent.keyboard('{ArrowDown}');
+      await expect(seen.get('ArrowDown')?.defaultPrevented).toBe(true);
+      await expect(at(standing)).toEqual([5, 'Credit card']);
+      await userEvent.keyboard('{ArrowLeft}');
+      await waitFor(() => expect(at(standing)).toEqual([4, 'Credit card']));
+      await userEvent.keyboard('{Home}');
+      await waitFor(() => expect(at(standing)).toEqual([0, 'Credit card']));
+      // Right to left, Left goes on to the band after, drawn to the left.
+      const [october] = stackOf(mirrored, 0);
+      if (!october) throw new Error('No segment');
+      await focusOn(october);
+      await userEvent.keyboard('{ArrowLeft}');
+      await waitFor(() => expect(at(mirrored)).toEqual([1, 'Checking']));
+      // Up is along the stack in either direction: from Checking, below zero in June, to Savings above it.
+      await userEvent.keyboard('{ArrowUp}');
+      await waitFor(() => expect(at(mirrored)).toEqual([1, 'Savings']));
+      // Lying down, along the bar and across the rows.
+      const [may] = [...lying.querySelectorAll<HTMLElement>('.bar-chart-bar')];
+      if (!may) throw new Error('No segment');
+      await focusOn(may);
+      await userEvent.keyboard('{ArrowRight}');
+      await waitFor(() => expect(at(lying)).toEqual([0, 'Dining']));
+      await userEvent.keyboard('{ArrowDown}');
+      await waitFor(() => expect(at(lying)).toEqual([1, 'Dining']));
+      await userEvent.keyboard('{ArrowLeft}');
+      await waitFor(() => expect(at(lying)).toEqual([1, 'Groceries']));
+      await expect(seen.get('ArrowLeft')?.defaultPrevented).toBe(true);
+      await expect(lying.querySelectorAll('.bar-chart-bar[tabindex="0"]')).toHaveLength(1);
+    } finally {
+      view.removeEventListener('keydown', record, true);
+    }
+  },
+};
+
+/** The steps an app's data takes a stack through: a segment's value gone, a fetch, the data back. */
+const STACK_STEPS = ['ready', 'fewer', 'loading', 'ready'] as const;
+
+/** A stack whose data and status one control moves on, a step at a time. */
+const StackChanges = (): ReactElement => {
+  const [step, setStep] = useState(0);
+  const now = STACK_STEPS[step % STACK_STEPS.length] ?? 'ready';
+  // October's Dining goes, as a filter or a correction would take it.
+  const series =
+    now === 'fewer'
+      ? MIX.map((line, at) => (at === 1 ? { ...line, values: line.values.slice(0, 5) } : line))
+      : MIX;
+  return (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <button
+        type="button"
+        className="button button-tertiary"
+        onClick={() => {
+          setStep((shown) => shown + 1);
+        }}
+      >
+        Next step, now {now}
+      </button>
+      <Wide>
+        <BarChart
+          aria-label="Spending by category and month"
+          bands="time"
+          categories={HALF_YEAR}
+          layout="stacked"
+          series={series}
+          status={now === 'loading' ? 'loading' : 'ready'}
+        />
+      </Wide>
+    </div>
+  );
+};
+
+/**
+ * Focus on a stack's segment through the data and the status: the segment's value gone, then loading, then the
+ * data back. Focus waits on the chart's group, never a tab stop, and goes to the tab stop whenever the chart is
+ * ready, and no element ever loses focus to nothing.
+ */
+export const StackFocus: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <StackChanges />,
+  play: async ({ canvasElement }) => {
+    await interactive(canvasElement);
+    const doc = canvasElement.ownerDocument;
+    const toNothing: string[] = [];
+    const record = (event: FocusEvent): void => {
+      if (event.relatedTarget === null && event.target instanceof Element)
+        toNothing.push(event.target.className);
+    };
+    doc.addEventListener('focusout', record);
+    try {
+      const control = part(canvasElement, '.button');
+      const group = part(canvasElement, '[role="group"]');
+      const [, dining] = stackOf(canvasElement, 5);
+      if (!dining) throw new Error('No segment');
+      await focusOn(dining);
+      for (const next of ['fewer', 'loading', 'ready'] as const) {
+        // A press that does not move focus, as a fetch's answer would not.
+        control.click();
+        await waitFor(() => expect(control).toHaveTextContent(`now ${next}`));
+        await expect(doc.activeElement).not.toBe(doc.body);
+        if (next === 'loading') await waitFor(() => expect(doc.activeElement).toBe(group));
+        else
+          await waitFor(() =>
+            expect(doc.activeElement).toBe(group.querySelector('.bar-chart-bar[tabindex="0"]')),
+          );
+      }
+      await expect(toNothing).toEqual([]);
+    } finally {
+      doc.removeEventListener('focusout', record);
+    }
+  },
+};

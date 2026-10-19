@@ -6,9 +6,11 @@ import {
   barExtent,
   barMark,
   firstStop,
+  moveAlong,
   moveBar,
   nonzero,
   seriesColors,
+  stackBySign,
   type BarStop,
 } from './geometry';
 
@@ -38,6 +40,13 @@ describe('barExtent', () => {
     expect(start).toBe(33.1);
     expect(size).toBe(0.233);
     for (const number of [start, size]) expect(String(number)).toMatch(/^-?\d+(?:\.\d{1,3})?$/);
+  });
+
+  it("places a stack's segment from the running sum before it, its base", () => {
+    // A segment of 30 on 100 of [0, 200]: from 50% to 65% of the track.
+    expect(barExtent(30, track([0, 200]), 100)).toEqual({ start: 50, size: 15 });
+    // A negative of -20 under -40 of [-100, 100]: from 30% back to 20%.
+    expect(barExtent(-20, track([-100, 100]), -40)).toEqual({ start: 20, size: 10 });
   });
 
   it('keeps a value far outside the domain a number, a million past the track at most', () => {
@@ -100,6 +109,99 @@ describe('seriesColors', () => {
     // A hatched series that pins a color keeps it; with no filled series, it is ink.
     expect(seriesColors([{}, { look: 'hatched', color: 'slate' }])).toEqual(['ink', 'slate']);
     expect(seriesColors([{ look: 'hatched' }])).toEqual(['ink']);
+  });
+});
+
+describe('seriesColors, stacked', () => {
+  it('takes the palette in order and slate for the fifth and every one after', () => {
+    expect(
+      seriesColors(
+        Array.from({ length: 6 }, () => ({})),
+        true,
+      ),
+    ).toEqual(['chart-1', 'chart-2', 'chart-3', 'chart-4', 'slate', 'slate']);
+  });
+
+  it('keeps a pinned color to the fifth, draws a hatched series as its slot, and the sixth slate whatever it pins', () => {
+    expect(
+      seriesColors(
+        [{ color: 'chart-3' }, {}, { look: 'hatched' }, {}, { color: 'ink' }, { color: 'chart-1' }],
+        true,
+      ),
+    ).toEqual(['chart-3', 'chart-2', 'chart-3', 'chart-4', 'ink', 'slate']);
+  });
+});
+
+describe('stackBySign', () => {
+  it('stacks positives up from zero and negatives down, each sign in series order, the outermost of each marked', () => {
+    // values[series][band]: the first band mixes signs, the second starts below zero.
+    expect(
+      stackBySign([
+        [40, -10],
+        [30, 20],
+        [-15, -5],
+      ]),
+    ).toEqual([
+      [
+        { from: 0, to: 40, outer: false },
+        { from: 0, to: -10, outer: false },
+      ],
+      [
+        { from: 40, to: 70, outer: true },
+        { from: 0, to: 20, outer: true },
+      ],
+      [
+        { from: 0, to: -15, outer: true },
+        { from: -10, to: -15, outer: true },
+      ],
+    ]);
+  });
+
+  it('leaves no segment for a null, and skips it in the running sum', () => {
+    const stack = stackBySign([
+      [10, null],
+      [null, 5],
+      [20, 7],
+    ]);
+    expect(stack[0]?.[0]).toEqual({ from: 0, to: 10, outer: false });
+    expect(stack[0]?.[1]).toBeUndefined();
+    expect(stack[1]?.[0]).toBeUndefined();
+    expect(stack[1]?.[1]).toEqual({ from: 0, to: 5, outer: false });
+    expect(stack[2]?.[0]).toEqual({ from: 10, to: 30, outer: true });
+    expect(stack[2]?.[1]).toEqual({ from: 5, to: 12, outer: true });
+  });
+
+  it('places a zero where its sign has reached, never as the outermost, and moves nothing', () => {
+    expect(stackBySign([[10], [0], [5]])).toEqual([
+      [{ from: 0, to: 10, outer: false }],
+      [{ from: 10, to: 10, outer: false }],
+      [{ from: 10, to: 15, outer: true }],
+    ]);
+    expect(stackBySign([[0], [-5]])).toEqual([
+      [{ from: 0, to: 0, outer: false }],
+      [{ from: 0, to: -5, outer: true }],
+    ]);
+  });
+
+  it('makes one series each its own outermost segment', () => {
+    expect(stackBySign([[10, -5, 0]])).toEqual([
+      [
+        { from: 0, to: 10, outer: true },
+        { from: 0, to: -5, outer: true },
+        { from: 0, to: 0, outer: false },
+      ],
+    ]);
+  });
+
+  it('leaves an empty band empty, and takes a value that is not finite as none', () => {
+    const stack = stackBySign([
+      [null, 4],
+      [Number.NaN, 2],
+    ]);
+    expect(stack[0]?.[0]).toBeUndefined();
+    expect(stack[1]?.[0]).toBeUndefined();
+    expect(stack[1]?.[1]).toEqual({ from: 4, to: 6, outer: true });
+    expect(stackBySign([])).toEqual([]);
   });
 });
 
@@ -188,7 +290,7 @@ describe('moveBar', () => {
     expect(moveBar(TWO, { band: 2, series: 0 }, 'previous')).toEqual({ band: 1, series: 1 });
   });
 
-  it("keeps the series on Home, End and Page where the band has one, else the band's first with a value", () => {
+  it('keeps the series on Home, End and Page where the band has one, else the nearest with a value', () => {
     expect(moveBar(TWO, { band: 2, series: 1 }, 'first')).toEqual({ band: 0, series: 1 });
     expect(moveBar(TWO, { band: 0, series: 0 }, 'last')).toEqual({ band: 2, series: 0 });
     expect(moveBar(TWO, { band: 2, series: 0 }, 'page-back')).toEqual({ band: 0, series: 0 });
@@ -198,5 +300,59 @@ describe('moveBar', () => {
 
   it('stays where it is with nowhere to go', () => {
     expect(moveBar([], { band: 0, series: 0 }, 'next')).toEqual({ band: 0, series: 0 });
+  });
+
+  // Three series stacked over three bands: the second band has no third series, the third only the third.
+  const STACKED: BarStop[] = [
+    { band: 0, series: 0 },
+    { band: 0, series: 1 },
+    { band: 0, series: 2 },
+    { band: 1, series: 0 },
+    { band: 1, series: 1 },
+    { band: 2, series: 2 },
+  ];
+
+  it.each([
+    ['next', { band: 0, series: 1 }, { band: 1, series: 1 }],
+    // The band beside has no third series: the nearest series with a value, the second.
+    ['next', { band: 0, series: 2 }, { band: 1, series: 1 }],
+    ['next', { band: 1, series: 0 }, { band: 2, series: 2 }],
+    ['previous', { band: 2, series: 2 }, { band: 1, series: 1 }],
+    ['previous', { band: 0, series: 1 }, { band: 0, series: 1 }],
+    ['next', { band: 2, series: 2 }, { band: 2, series: 2 }],
+    ['first', { band: 2, series: 2 }, { band: 0, series: 2 }],
+    ['last', { band: 0, series: 0 }, { band: 2, series: 2 }],
+  ] as const)('moves %s from %j to %j across stacks, by band', (move, from, to) => {
+    expect(moveBar(STACKED, from, move, true)).toEqual(to);
+  });
+});
+
+describe('moveAlong', () => {
+  // One band's stack: the first series 0 to 40, the second 0 to -10, the third 40 to 60 and the fourth -10 to
+  // -30, by level (from plus to): from the bottom, the fourth, the second, the first and the third.
+  const LEVELS = [40, -10, 100, -40];
+  const level = (stop: BarStop): number => (stop.band === 0 ? (LEVELS[stop.series] ?? 0) : 0);
+  const STOPS: BarStop[] = [0, 1, 2, 3].map((series) => ({ band: 0, series }));
+  const BESIDE = [...STOPS, { band: 1, series: 0 }];
+
+  it.each([
+    [{ band: 0, series: 0 }, 1, { band: 0, series: 2 }],
+    [{ band: 0, series: 0 }, -1, { band: 0, series: 1 }],
+    [{ band: 0, series: 1 }, -1, { band: 0, series: 3 }],
+    [{ band: 0, series: 3 }, 1, { band: 0, series: 1 }],
+  ] as const)('moves from %j by %d along its stack to %j', (from, step, to) => {
+    expect(moveAlong(BESIDE, from, step, level)).toEqual(to);
+  });
+
+  it('stays at either end of its stack, never leaving its band', () => {
+    expect(moveAlong(BESIDE, { band: 0, series: 3 }, -1, level)).toEqual({ band: 0, series: 3 });
+    expect(moveAlong(BESIDE, { band: 0, series: 2 }, 1, level)).toEqual({ band: 0, series: 2 });
+    expect(moveAlong(BESIDE, { band: 1, series: 0 }, 1, level)).toEqual({ band: 1, series: 0 });
+  });
+
+  it('keeps series order between segments at one level, such as a zero on the line', () => {
+    const flat = (): number => 0;
+    expect(moveAlong(STOPS, { band: 0, series: 1 }, 1, flat)).toEqual({ band: 0, series: 2 });
+    expect(moveAlong(STOPS, { band: 0, series: 1 }, -1, flat)).toEqual({ band: 0, series: 0 });
   });
 });

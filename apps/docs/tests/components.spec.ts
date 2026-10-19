@@ -737,6 +737,48 @@ test.describe('forced colors', () => {
     expect((await look(key)).image).toContain('repeating-linear-gradient');
   });
 
+  test('a stack keeps its four textures and its fifth in GrayText', async ({ page }) => {
+    // A system palette has one text color, so a stack's slots are told apart by their textures, asked or not: the
+    // first solid, the second and third striped each way, the fourth both, and Other solid GrayText, with the
+    // page's own color in the gap under each segment that stands on another.
+    await visit(page, '/docs/charts/bar-chart');
+    const chart = page.getByRole('figure', {
+      name: 'Spending by category, the last six months',
+      exact: true,
+    });
+    await expect(chart).toHaveCount(1);
+    await expect(chart).not.toHaveAttribute('data-texture');
+    const system = await systemColors(page);
+    const look = (bar: Locator): Promise<{ fill: string; image: string; edge: string; gap: string }> =>
+      bar.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          fill: style.backgroundColor,
+          image: style.backgroundImage,
+          edge: style.borderTopColor,
+          gap: style.borderBottomColor,
+        };
+      });
+    const may = chart.locator('.bar-chart-band').first().locator('.bar-chart-bar');
+    await expect(may).toHaveCount(5);
+    const drawn = await Promise.all([0, 1, 2, 3, 4].map((at) => look(may.nth(at))));
+    const [first, second, third, fourth, fifth] = drawn;
+    expect(first?.fill).toBe(system.canvasText);
+    expect(first?.image).toBe('none');
+    for (const textured of [second, third, fourth]) {
+      expect(textured?.image).toContain('repeating-linear-gradient');
+      expect(textured?.edge).toBe(system.canvasText);
+    }
+    expect(second?.image).not.toBe(third?.image);
+    expect(fourth?.image.match(/repeating-linear-gradient/g)).toHaveLength(2);
+    expect(fifth?.fill).toBe(system.grayText);
+    expect(fifth?.image).toBe('none');
+    for (const joined of drawn.slice(1)) expect(joined.gap).toBe(system.canvas);
+    // The legend's keys follow their segments.
+    const key = chart.locator('.bar-chart-legend-item[data-series="4"] .bar-chart-key');
+    expect((await look(key)).image.match(/repeating-linear-gradient/g)).toHaveLength(2);
+  });
+
   test('a tooltip keeps a border and loses its arrow', async ({ page }) => {
     // The arrow is an svg fill, which the repaint would turn into a shape of the wrong color or none, so it
     // goes. The tip's transparent border is repainted in the reader's text color, so the tip keeps its shape.

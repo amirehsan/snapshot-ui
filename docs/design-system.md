@@ -10548,7 +10548,7 @@ from the insights spec (section 7) and the owner's rulings in its section
 19. This section records the horizontal face, the consumer's ranked list
 of categories, merchants and accounts, then the vertical face, the
 consumer's month view, two series side by side in either orientation and
-the previous period; the stacks join it in a later commit of the batch.
+the previous period, and last the stacks, the category mix by month.
 
 **Bars are HTML.** A bar keeps its shape: its data end is rounded by a
 radius token, its thickness is capped in pixels, and the focus ring
@@ -10941,6 +10941,107 @@ the orientation too, gives it to the new tab stop, the bar last active for
 the same categories. `TurnWhileFocused` holds that no element loses focus
 to nothing, in three engines.
 
+**Stacks** (spec 7.3, owner rulings 4 and 11). `layout: 'stacked'` puts
+up to five series end to end in one bar's place, the consumer's month of
+its top four categories and the "Other" it sums. `stackBySign`, pure,
+runs each band's positives from zero up and its negatives from zero
+down, each sign in series order, the diverging stack of Recharts'
+`stackOffset="sign"` and Observable Plot's default; each segment is
+placed from the running sum of its sign before it (`barExtent` with a
+base), so a stack's two ends are its sums and the value domain is taken
+from them, not from the values. A stack is one bar across: the render
+writes `--bar-chart-group: 1` and every segment's index 0, so its
+thickness is a lone bar's, 24px at most and 60% of its band. One series
+ignores the layout and draws as one series (correction 53).
+
+**A segment's corners and its gap.** Only the outermost segment of each
+sign keeps the data end's `--radius-micro` (`data-outer`, the last
+nonzero segment of its sign); every inner join is square
+(`.bar-chart[data-layout='stacked'] .bar-chart-bar:not([data-outer])`,
+after both faces' radius rules), and the end at zero stays square as a
+bar's does. A segment that stands on another (`data-joined`) starts with
+2px of the surface, Meter's spacer, as a border on its edge toward zero:
+the block end above zero and the block start below it standing up, the
+inline start and end lying down, so right to left moves it with the bar.
+The bar is a border box, so the gap is inside the segment's own length
+and the stack's total stays exact; a segment thinner than its gap draws
+the gap alone, 2px. A zero is a segment of no length where its sign has
+reached, never the outermost and never gapped, and the keys still reach
+it (correction 54). `StackInPlace` holds every segment on the zero line
+or on the one before within 1px, its gap at its foot, inner joins and
+zero ends square, and each stack's ends where the gridlines put its
+sums, left to right, right to left and narrow; `StackGaps` holds the same
+along a row in both directions, in three engines.
+
+**A stack's colors.** Without `color` the series take the palette's slots
+in order, `chart-1` to `chart-4` (teal, violet, olive, magenta), and the
+fifth slate, the remainder; a pinned `color` is kept to the fifth, so a
+category keeps its color when a filter takes another away, and the docs
+pin them. A sixth and later series draw slate whatever they pin, with a
+development warning once: the legend and the table still tell them apart.
+A hatched series in a stack warns and draws as a fill in its slot, since
+stripes there are a texture, never a previous period. Text stays ink and
+slate; the legend's swatches carry the slots.
+
+**Totals.** The chart never sums: `totals` is one string per band, the
+app's. Standing up, `valueLabels` labels each stack once with its total,
+at the far end of the side its band nets to (above the positives' top
+when the band's two sums net to zero or more, below the negatives' foot
+otherwise); lying down the total fills the amount column, one line to a
+row. The readout lists every segment of the band in legend order, then
+the total with `labels.total`, and the table gains a Total column. A
+stack asked for figures without `totals` warns once and labels nothing,
+and since a horizontal chart's amounts are on by default, a horizontal
+stack wants `totals` or `valueLabels="none"` (correction 52). The
+readout is placed from the stack's ends, both of them, as a band's bars
+are, and lying down it stands at the stack's far end from zero;
+`ReadoutStacked` holds it clear of the stack and within 24px of it.
+
+**Keys along a stack** (spec 7.6). Standing up, Up and Down move along the
+stack segment by segment by what is drawn, from the foot below zero to
+the top above it whatever the series order, by each segment's level (the
+sum of its two ends); Left and Right go to the same category in the band
+beside, or the nearest category it has by series order, mirrored in
+right to left. Lying down the pairs swap: Left and Right along the bar,
+mirrored in right to left, and Up and Down across the rows. At either end
+of its stack a key is prevented and stays, as Right at the last band
+does. Home, End and the pages keep the category, else the nearest
+(correction 56). `KeysStacked` runs both orientations and right to left
+in three engines; the pointer reads a stack's segment along its band.
+
+**Textures** (spec 7.11, owner ruling 11). `hasTexture`, off by default,
+draws each slot's texture as well as its color, for a reader who cannot
+tell the colors apart and for a printout without color: the first solid,
+the second Meter's stripes at 45 degrees, the third at 135, the fourth
+both, the fifth solid slate, the method's two directions only, stripes
+2px every 6px in the series' color over the surface. Each textured bar
+and each legend and readout key has a 1px border of its color, so it
+keeps its outline where stripes do not print. A slot is `data-series` on
+the segment and on its legend and readout items; the texture is two
+custom properties set on the slot (`--bar-chart-texture` and
+`--bar-chart-fill`) and drawn by one rule for bars and keys. Grouped
+charts write no slot, so a pair's second series is never a texture.
+
+**A stack in forced colors.** Always textured, asked or not, since a
+system palette has one text color and a stack needs five looks: the four
+slots in `CanvasText`, the fifth solid `GrayText`, and the active band's
+in `Highlight`, by setting `--bar-chart-color` on the slot. The gaps are
+the page's own color: bars are out of the repaint, so a gap drawn in
+`--chart-surface` would show the surface's token on a forced canvas, and
+the library never sets the app's surface variable, so the gap reads
+`--bar-chart-gap`, which only the forced-colors block sets, to `canvas`
+(correction 55). The docs' forced-colors run holds the four looks, the
+fifth's `GrayText` and the gaps.
+
+**Focus through data and status.** A segment that leaves while it holds
+focus, its value gone or its band loading, parks focus on the group as a
+bar does; the layout effect that hands it on runs after every commit and
+gives it to the tab stop whenever the chart is ready and focus is on its
+group, for new data as well as new categories, an orientation or a
+status (correction 57). `StackFocus` takes a stack through a segment's
+value gone, loading and ready again with a segment focused and finds no
+focus lost to nothing.
+
 **Where the build departs from the plan.** The plan's spec corrections
 13 to 20 record them: the horizontal face drawn for any `orientation`
 until the vertical one lands, with a warning; the figure as the container
@@ -10955,6 +11056,13 @@ lead accepted; Task 6 reports against both. Corrections 29 to 34 record
 the review's fixes: the group focusable by script in every status, the
 readout's lines, busy on the chart's view, the figures' room, the thin
 hatched bar's outline and every third label only past eight bands.
+Corrections 52 to 59 record the stacks': one total per band at the end of
+the side it nets to, one series ignoring the layout, the zero never
+outermost and the attributes the CSS reads, the gap's own variable and
+the fifth slot's `GrayText` in forced colors, the keys and the nearest
+series, focus handed on after new data, the plays, and the sizes:
+`{ BarChart }` 6.36 kB against the spec's 5.5 kB budget and inside its
+6.5 kB limit, `{ LineChart, BarChart }` 7.99 kB inside its 8 kB limit.
 
 **Screen readers and devices.** Not yet verified (owner action 3): Tab
 onto one bar and the arrows bar by bar in VoiceOver and NVDA, each bar's
@@ -10963,7 +11071,10 @@ Windows contrast theme, and the list with its names above its bars on a
 phone at 320px to 430px; standing up, the bars in both orientations and
 in a comparison read with their period, the hatched previous period
 against the current bars in a contrast theme, and twelve monthly bars and
-grouped pairs on a phone.
+grouped pairs on a phone; stacked, each segment read with its month, its
+category and its value and the keys along and across a stack, the four
+textures and the `GrayText` fifth told apart in a Windows contrast
+theme, and a month's stack of five on a phone.
 
 ## Prose
 
@@ -11295,7 +11406,8 @@ link and like the info tone.
 
 **No visual change yet.** Nothing draws a slot until the stacks: no story
 passes one, so no baseline moved. `ChartColor` named the four since the
-foundations (spec correction 4), and `charts.css` now draws them.
+foundations (spec correction 4), and `charts.css` now draws them. The
+stacks draw them since ("BarChart", "A stack's colors" and "Textures").
 
 **Where the build departs from the plan.** Corrections 49 to 51: taupe
 joins the reserved colors, with the hue check reading only colors that

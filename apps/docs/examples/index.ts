@@ -12,6 +12,7 @@ import BarChartIncomeSpending from './bar-chart-income-spending';
 import BarChartMonths from './bar-chart-months';
 import BarChartRanked from './bar-chart-ranked';
 import BarChartRefunds from './bar-chart-refunds';
+import BarChartStacked from './bar-chart-stacked';
 import BarChartStates from './bar-chart-states';
 import BottomTabBarBasic from './bottom-tab-bar-basic';
 import BottomTabBarMore from './bottom-tab-bar-more';
@@ -201,6 +202,7 @@ export const examples = {
   'bar-chart-months': BarChartMonths,
   'bar-chart-ranked': BarChartRanked,
   'bar-chart-refunds': BarChartRefunds,
+  'bar-chart-stacked': BarChartStacked,
   'bar-chart-states': BarChartStates,
   'bottom-tab-bar-basic': BottomTabBarBasic,
   'bottom-tab-bar-more': BottomTabBarMore,

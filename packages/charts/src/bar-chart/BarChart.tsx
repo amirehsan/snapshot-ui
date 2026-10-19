@@ -36,9 +36,11 @@ import {
   barExtent,
   barMark,
   firstStop,
+  moveAlong,
   moveBar,
   nonzero,
   seriesColors,
+  stackBySign,
   type BarStop,
 } from './geometry';
 
@@ -57,13 +59,13 @@ export interface BarSeries {
   label: string;
   /** One per category, aligned with `categories`. `null` is no value: no bar, skipped by the keys, an empty cell. */
   values: readonly (BarValue | null)[];
-  /** Pins the series to a color, so it keeps it when another series is filtered out. @default ink, then slate */
+  /** Pins the series to a color, so it keeps it when another series is filtered out. @default ink, then slate; stacked, chart-1 to chart-4, then slate */
   color?: ChartColor;
-  /** 'hatched' draws the series as the previous period: the color of the first filled series, striped, with its amounts in slate. Grouped charts only. @default 'fill' */
+  /** 'hatched' draws the series as the previous period: the color of the first filled series, striped, with its amounts in slate. Grouped charts only: a stack draws it as a fill, with a warning. @default 'fill' */
   look?: 'fill' | 'hatched';
 }
 
-/** Grouped bars hold one or two series; stacked bars up to five. */
+/** Grouped bars hold one or two series side by side; stacked bars up to five end to end, the fifth the app's "Other". */
 export type BarChartSeries =
   | { layout?: 'grouped'; series: readonly [BarSeries] | readonly [BarSeries, BarSeries] }
   | { layout: 'stacked'; series: readonly BarSeries[] };
@@ -97,15 +99,15 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLElement>, 'children' | 'aria
     valueTicks?: readonly { value: number; label: string }[];
     /** The value domain. Always widened to include zero. @default from the least to the greatest value, zero included, rounded out */
     valueDomain?: readonly [number, number];
-    /** Amounts: none, every bar, or the bands at these indexes. @default 'all' for horizontal, 'none' for vertical */
+    /** Amounts: none, every bar, or the bands at these indexes. A stack shows its band's total from `totals`. @default 'all' for horizontal, 'none' for vertical */
     valueLabels?: 'none' | 'all' | readonly number[];
-    /** Each band's total, formatted by the app, for the readout and a Total column in the table. */
+    /** Each band's total, formatted by the app, for the readout, a Total column in the table and a stack's labels. The chart never sums. */
     totals?: readonly (string | null)[];
     /** @default 'ready' */
     status?: ChartStatus;
     /** Drawn in the bars' place for 'empty' and 'error', such as an EmptyState with a Retry button. */
     statusContent?: ReactNode;
-    /** Draws each series' texture as well as its color. Always on in forced colors. @default false */
+    /** Draws each stacked series' texture as well as its color: solid, stripes at 45 and 135 degrees, both, then solid slate. Always on in forced colors. @default false */
     hasTexture?: boolean;
     /** @default { showTable: 'Show as table', showChart: 'Show as chart', noScript: "Scripts are off, so the chart's data is in the table below.", roleDescription: 'chart', bar: 'bar', total: 'Total' } */
     labels?: BarChartLabels;
@@ -220,12 +222,31 @@ export function BarChart(props: BarChartProps): ReactElement {
       return value && Number.isFinite(value.value) ? value : null;
     }),
   }));
-  const colors = seriesColors(drawn);
-  const lookOf = (at: number): 'fill' | 'hatched' => drawn[at]?.look ?? 'fill';
+  // A stack of two or more: end to end by sign, in the palette; one series ignores the layout.
+  const isStacked = layout === 'stacked' && drawn.length > 1;
+  const group = isStacked ? 1 : drawn.length;
+  const colors = seriesColors(drawn, isStacked);
+  const lookOf = (at: number): 'fill' | 'hatched' => (isStacked ? undefined : drawn[at]?.look) ?? 'fill';
+  // Each segment from the running sum of its sign before it, so the stacks diverge at zero.
+  const stack = isStacked
+    ? stackBySign(drawn.map((line) => line.values.map((value) => value?.value ?? null)))
+    : [];
+  /** The texture's slot, by place: the fifth and every one after share slate's. */
+  const slotOf = (at: number): number | undefined => (isStacked ? Math.min(at + 1, 5) : undefined);
+  useWarnOnce(
+    isStacked && drawn.length > 5 ? 'BarChart: a stack holds five series; any more draw in slate.' : null,
+  );
+  useWarnOnce(
+    isStacked && drawn.some((line) => line.look === 'hatched')
+      ? "BarChart: a stack draws look 'hatched' as a fill."
+      : null,
+  );
 
-  // The domain always holds zero: a bar that starts anywhere else misstates its value.
+  // The domain always holds zero: a bar that starts anywhere else misstates its value. A stack's is its sums'.
   const domain = domainOf(
-    drawn.flatMap((line) => line.values.flatMap((value) => (value ? [value.value] : []))),
+    isStacked
+      ? stack.flat().map((segment) => segment.to)
+      : drawn.flatMap((line) => line.values.flatMap((value) => (value ? [value.value] : []))),
     valueDomain,
     { includeZero: true },
   );
@@ -298,23 +319,21 @@ export function BarChart(props: BarChartProps): ReactElement {
     };
   }, []);
 
-  // New categories, a new orientation or a status while a bar holds focus: once the chart is ready, focus goes
-  // to its tab stop, the new first bar for new categories, never the body. A layout effect, so it moves before
-  // the page paints.
-  const shown = useRef({ key, status, orientation });
+  // Focus parked on the group by a bar that left, for new categories, a new orientation, a status or new data,
+  // or held by a bar that new categories made another's: once the chart is ready, it goes to the tab stop, the
+  // new first bar for new categories, never the body. The group is never a tab stop and a press never focuses
+  // it, so focus on it while ready is always parked. A layout effect after every commit, so focus moves before
+  // the page paints, whatever changed.
+  const shownKey = useRef(key);
   useLayoutEffect(() => {
-    const before = shown.current;
-    shown.current = { key, status, orientation };
-    const group = groupRef.current;
-    if (!group || (before.key === key && before.status === status && before.orientation === orientation))
-      return;
-    const focused = group.ownerDocument.activeElement;
-    // A bar kept by new categories is the same element, now another category's.
-    const isStale =
-      before.key !== key && focused instanceof HTMLElement && focused.classList.contains('bar-chart-bar');
-    if (status !== 'ready' || !(isStale || focused === group)) return;
-    group.querySelector<HTMLElement>('.bar-chart-bar[tabindex="0"]')?.focus();
-  }, [key, status, orientation]);
+    const before = shownKey.current;
+    shownKey.current = key;
+    const element = groupRef.current;
+    const focused = element?.ownerDocument.activeElement ?? null;
+    // Focus in the chart moves for new categories, since a bar they kept is now another category's.
+    if (status === 'ready' && element?.contains(focused) && (before !== key || focused === element))
+      element.querySelector<HTMLElement>('.bar-chart-bar[tabindex="0"]')?.focus();
+  });
 
   /** The chart's bars, in the order of `stops`. */
   const barsOf = (group: HTMLElement): HTMLElement[] => [
@@ -333,16 +352,21 @@ export function BarChart(props: BarChartProps): ReactElement {
       }
       return;
     }
-    const key = KEYS[event.key] ?? (isVertical ? ACROSS : DOWN)[event.key];
+    // Across the bands, and in a stack also along it: Up and Down standing up, Left and Right lying down.
+    const across = KEYS[event.key] ?? (isVertical ? ACROSS : DOWN)[event.key];
+    const key = across ?? (isStacked ? (isVertical ? DOWN : ACROSS)[event.key] : undefined);
     const bars = barsOf(event.currentTarget);
     const from = stops[bars.indexOf(event.target as HTMLElement)];
     if (key === undefined || from === undefined) return;
     event.preventDefault();
-    const to = moveBar(
-      stops,
-      from,
-      typeof key === 'function' ? key(isRightToLeft(event.currentTarget)) : key,
-    );
+    const move = typeof key === 'function' ? key(isRightToLeft(event.currentTarget)) : key;
+    // Along a stack toward greater values: Up standing up, toward the drawn end lying down.
+    const to = across
+      ? moveBar(stops, from, move, isStacked)
+      : moveAlong(stops, from, (move === 'next') !== isVertical ? 1 : -1, (at) => {
+          const segment = stack[at.series]?.[at.band];
+          return segment ? segment.from + segment.to : 0;
+        });
     activate(to, 'key');
     bars[stops.indexOf(to)]?.focus();
   };
@@ -361,17 +385,25 @@ export function BarChart(props: BarChartProps): ReactElement {
       event.preventDefault();
   };
 
-  /** Activates `band`'s bar under the pointer, read along `along` from each bar's box, or the band's first. */
+  /**
+   * Activates `band`'s bar under the pointer, or the band's first: read across the band where its bars stand
+   * side by side, and along it where they lie one under the other or stack.
+   */
   const snapTo = (
     band: number,
     bars: readonly Element[],
-    under: (box: DOMRect) => boolean,
+    event: PointerEvent<HTMLDivElement>,
     from: ChartSource,
   ): void => {
     const inBand = stops.filter((stop) => stop.band === band);
     const stop = inBand.find((_, at) => {
       const box = bars[at]?.getBoundingClientRect();
-      return box !== undefined && under(box);
+      return (
+        box !== undefined &&
+        (isVertical === isStacked
+          ? event.clientY >= box.top && event.clientY <= box.bottom
+          : event.clientX >= box.left && event.clientX <= box.right)
+      );
     });
     const found = stop ?? inBand[0];
     if (found) activate(found, from);
@@ -393,12 +425,7 @@ export function BarChart(props: BarChartProps): ReactElement {
         band = at;
       }
     });
-    snapTo(
-      band,
-      [...(rows[band]?.querySelectorAll('.bar-chart-bar') ?? [])],
-      (box) => y >= box.top && y <= box.bottom,
-      from,
-    );
+    snapTo(band, [...(rows[band]?.querySelectorAll('.bar-chart-bar') ?? [])], event, from);
   };
 
   /** A vertical chart: the band under the pointer, from the inline start, or the nearest with a bar. */
@@ -419,7 +446,7 @@ export function BarChart(props: BarChartProps): ReactElement {
           .querySelectorAll('.bar-chart-band')
           [band]?.querySelectorAll('.bar-chart-bar') ?? []),
       ],
-      (bar) => x >= bar.left && x <= bar.right,
+      event,
       from,
     );
   };
@@ -459,6 +486,30 @@ export function BarChart(props: BarChartProps): ReactElement {
   const shownLabels = valueLabels ?? (isVertical ? 'none' : 'all');
   const showsAmount = (band: number): boolean =>
     shownLabels === 'all' || (shownLabels !== 'none' && shownLabels.includes(band));
+  // A stack's figures are its totals, since the chart never sums one.
+  useWarnOnce(
+    isStacked && !totals && shownLabels !== 'none'
+      ? "BarChart: a stack is labelled by its totals; pass totals, or valueLabels 'none'."
+      : null,
+  );
+  /**
+   * The figures a band shows, where its amounts show: each bar's, at its end or in the amount column, or a
+   * stack's total, at the far end of the side its band nets to.
+   */
+  const figuresOf = (band: number): { band: number; series: number; value: BarValue }[] => {
+    if (!showsAmount(band)) return [];
+    if (!isStacked)
+      return drawn.flatMap((line, series) => {
+        const value = line.values[band];
+        return value ? [{ band, series, value }] : [];
+      });
+    const total = totals?.[band];
+    const ends = stack.map((line) => line[band]?.to ?? 0);
+    const [up, down] = [Math.max(0, ...ends), Math.min(0, ...ends)];
+    return total == null
+      ? []
+      : [{ band, series: 0, value: { value: up + down < 0 ? down : up, valueLabel: total } }];
+  };
   const rowCount = isReady || count > 0 ? count : LOADING.length;
   const labelled = bandTicks(count, isVertical ? bands : 'category', categoryTicks);
 
@@ -486,9 +537,17 @@ export function BarChart(props: BarChartProps): ReactElement {
   let along = 0;
   let readout: ReturnType<typeof placeReadout> | null = null;
   if (activeStop !== undefined) {
-    const extents = drawn.flatMap((line) => {
+    const extents = drawn.flatMap((line, at) => {
       const value = line.values[activeStop.band];
-      return value ? [{ ...barExtent(value.value, scale), isNegative: value.value < 0 }] : [];
+      return value
+        ? [
+            {
+              // A stack's segment from the sum before it; a bar from zero.
+              ...barExtent(value.value, scale, stack[at]?.[activeStop.band]?.from),
+              isNegative: value.value < 0,
+            },
+          ]
+        : [];
     });
     if (isVertical) {
       along = bandCentre(activeStop.band, count);
@@ -502,12 +561,15 @@ export function BarChart(props: BarChartProps): ReactElement {
         gap: READOUT_GAP,
       });
     } else {
-      // At the far end of the row's longest bar, along the track.
-      let longest = -1;
+      // At the end farthest from zero of the row's bars, a stack's far end, along the track.
+      let farthest = -1;
       for (const { start, size, isNegative } of extents) {
-        if (size <= longest) continue;
-        longest = size;
-        along = Math.min(Math.max(isNegative ? start : start + size, 0), 100);
+        const end = isNegative ? start : start + size;
+        const far = Math.abs(end - scale(0));
+        if (far > farthest) {
+          farthest = far;
+          along = Math.min(Math.max(end, 0), 100);
+        }
       }
       readout = placeReadout({
         marks: [(activeStop.band / count) * 100, ((activeStop.band + 1) / count) * 100],
@@ -541,6 +603,7 @@ export function BarChart(props: BarChartProps): ReactElement {
             <li
               key={reading.at}
               className="bar-chart-readout-item"
+              data-series={slotOf(reading.at)}
               data-color={reading.color}
               data-look={reading.look}
             >
@@ -562,7 +625,9 @@ export function BarChart(props: BarChartProps): ReactElement {
   /** One bar, its name from its table cells and its place from zero, in percent, in either orientation. */
   const bar = (band: number, at: number, value: BarValue): ReactElement => {
     const mark = barMark({ band, series: at });
-    const { start, size } = barExtent(value.value, scale);
+    // A stack's segment from the sum before it; a bar from zero.
+    const segment = stack[at]?.[band];
+    const { start, size } = barExtent(value.value, scale, segment?.from);
     const isNegative = value.value < 0;
     // Each bar stands on zero: a negative one from its far end's side, so its least 1px runs from zero.
     const place = isVertical
@@ -572,14 +637,14 @@ export function BarChart(props: BarChartProps): ReactElement {
             : { insetBlockEnd: percent(100 - start - size) }),
           blockSize: percent(size),
           '--bar-chart-centre': percent(bandCentre(band, count)),
-          '--bar-chart-index': at,
+          '--bar-chart-index': isStacked ? 0 : at,
         }
       : {
           ...(isNegative
             ? { insetInlineEnd: percent(100 - start - size) }
             : { insetInlineStart: percent(start) }),
           inlineSize: percent(size),
-          '--bar-chart-index': drawn.length > 1 ? at : undefined,
+          '--bar-chart-index': group > 1 ? at : undefined,
         };
     return (
       // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a bar is a stop of the roving tab index, and taking focus makes it the active bar
@@ -596,6 +661,10 @@ export function BarChart(props: BarChartProps): ReactElement {
         data-look={lookOf(at)}
         data-sign={signOf(value.value)}
         data-nonzero={nonzero(value.value) ? '' : undefined}
+        data-series={slotOf(at)}
+        // A stack's outermost segment of its sign keeps the data end's corners, and one on another takes a gap.
+        data-outer={segment?.outer ? '' : undefined}
+        data-joined={segment?.from && value.value ? '' : undefined}
         data-active={active === mark ? '' : undefined}
         tabIndex={chart.isInteractive ? (mark === stop ? 0 : -1) : undefined}
         style={place}
@@ -637,11 +706,7 @@ export function BarChart(props: BarChartProps): ReactElement {
   );
 
   // The vertical plot keeps room outside the bars' ends for the labels it shows, and for the top gridline's.
-  const shownValues = isReady
-    ? stops
-        .filter((at) => showsAmount(at.band))
-        .map((at) => ({ ...at, value: drawn[at.series]?.values[at.band] }))
-    : [];
+  const shownValues = isReady ? categories.flatMap((_, band) => figuresOf(band)) : [];
   const bandCount = isReady || count > 0 ? count : LOADING_BANDS.length;
 
   // Standing up, the plot is a grid: the gridlines' labels in a column at the start as wide as the widest, the
@@ -695,7 +760,6 @@ export function BarChart(props: BarChartProps): ReactElement {
         {shownValues.length > 0 ? (
           <div className="bar-chart-values" aria-hidden="true">
             {shownValues.map(({ band, series: at, value }) => {
-              if (!value) return null;
               const { start, size } = barExtent(value.value, scale);
               const isNegative = value.value < 0;
               // Outside the data end: above a positive bar's top, below a negative bar's bottom.
@@ -785,16 +849,11 @@ export function BarChart(props: BarChartProps): ReactElement {
                   })}
                 </div>
                 <span className="bar-chart-amounts" aria-hidden="true">
-                  {showsAmount(band)
-                    ? drawn.map((line, at) => {
-                        const value = line.values[band];
-                        return value ? (
-                          <span key={at} className="bar-chart-amount" data-look={lookOf(at)}>
-                            {value.valueLabel}
-                          </span>
-                        ) : null;
-                      })
-                    : null}
+                  {figuresOf(band).map(({ series: at, value }) => (
+                    <span key={at} className="bar-chart-amount" data-look={lookOf(at)}>
+                      {value.valueLabel}
+                    </span>
+                  ))}
                 </span>
               </div>
             ))
@@ -821,11 +880,11 @@ export function BarChart(props: BarChartProps): ReactElement {
   );
 
   const groupStyle = isVertical
-    ? ({ '--bar-chart-bands': bandCount, '--bar-chart-group': drawn.length } as CSSProperties)
+    ? ({ '--bar-chart-bands': bandCount, '--bar-chart-group': group } as CSSProperties)
     : ({
         '--bar-chart-rows': rowCount,
         '--bar-chart-rows-narrow': rowCount * 2,
-        '--bar-chart-group': drawn.length,
+        '--bar-chart-group': group,
       } as CSSProperties);
 
   return (
@@ -835,7 +894,7 @@ export function BarChart(props: BarChartProps): ReactElement {
       aria-labelledby={name.labelledBy}
       className={cx('bar-chart', className)}
       data-orientation={orientation}
-      data-layout={layout}
+      data-layout={isStacked ? 'stacked' : 'grouped'}
       data-view={shownView}
       data-status={status}
       data-texture={hasTexture ? '' : undefined}
@@ -851,8 +910,9 @@ export function BarChart(props: BarChartProps): ReactElement {
             block="bar-chart"
             items={drawn.map((line, at) => ({
               label: line.label,
+              series: slotOf(at),
               color: colors[at],
-              look: line.look === 'hatched' ? 'hatched' : 'swatch',
+              look: lookOf(at) === 'hatched' ? 'hatched' : 'swatch',
             }))}
           />
         ) : null}
@@ -868,13 +928,11 @@ export function BarChart(props: BarChartProps): ReactElement {
           // status was taken away in the commit before the effect that moves focus on, and blurred the group.
           tabIndex={chart.isInteractive ? -1 : undefined}
           data-room-start={
-            isVertical && (ticks.length > 0 || shownValues.some(({ value }) => value && value.value >= 0))
+            isVertical && (ticks.length > 0 || shownValues.some(({ value }) => value.value >= 0))
               ? ''
               : undefined
           }
-          data-room-end={
-            isVertical && shownValues.some(({ value }) => value && value.value < 0) ? '' : undefined
-          }
+          data-room-end={isVertical && shownValues.some(({ value }) => value.value < 0) ? '' : undefined}
           data-pointer={isPointer && active !== null ? '' : undefined}
           style={groupStyle}
           onKeyDown={isReady ? onKeyDown : undefined}

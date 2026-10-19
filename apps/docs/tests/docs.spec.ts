@@ -3222,6 +3222,51 @@ test("the bar chart page's comparison draws the previous period hatched and name
   await expect(chart.getByRole('img', { name: 'Dining October $312.45', exact: true })).toBeFocused();
 });
 
+test("the bar chart page's stack draws the palette in order and slate on top, and moves along the stack", async ({
+  page,
+}) => {
+  await visit(page, '/docs/charts/bar-chart');
+  const chart = page.getByRole('figure', { name: 'Spending by category, the last six months', exact: true });
+  await expect(chart).toHaveCount(1);
+  await expect(chart).toHaveAttribute('data-layout', 'stacked');
+  const may = chart.locator('.bar-chart-band').first().locator('.bar-chart-bar');
+  await expect(may).toHaveCount(5);
+  expect(await may.evaluateAll((bars) => bars.map((bar) => bar.getAttribute('data-color')))).toEqual([
+    'chart-1',
+    'chart-2',
+    'chart-3',
+    'chart-4',
+    'slate',
+  ]);
+  // Only the top segment keeps the rounded end; each segment above the first stands on a 2px gap of the card.
+  const drawn = await may.evaluateAll((bars) =>
+    bars.map((bar) => {
+      const style = getComputedStyle(bar);
+      return {
+        corner: style.borderTopLeftRadius,
+        gap: style.borderBottomWidth,
+        outer: bar.hasAttribute('data-outer'),
+      };
+    }),
+  );
+  expect(drawn.map(({ outer }) => outer)).toEqual([false, false, false, false, true]);
+  expect(drawn.slice(0, 4).map(({ corner }) => corner)).toEqual(['0px', '0px', '0px', '0px']);
+  expect(drawn.map(({ gap }) => gap)).toEqual(['0px', '2px', '2px', '2px', '2px']);
+  // Each month's total, the app's string, stands over its stack.
+  await expect(chart.locator('.bar-chart-value').first()).toHaveText('$1,506.55');
+  // Tab lands on the newest month's first category; Up climbs the stack and Left goes to the month before.
+  const groceries = chart.getByRole('img', { name: 'Oct Groceries $640.00', exact: true });
+  await expect(groceries).toHaveAttribute('tabindex', '0');
+  await groceries.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(chart.getByRole('img', { name: 'Oct Dining $312.45', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(chart.getByRole('img', { name: 'Sep Dining $330.20', exact: true })).toBeFocused();
+  // The readout lists the month's segments and its total.
+  await expect(chart.locator('.bar-chart-readout li')).toHaveCount(6);
+  await expect(chart.locator('.bar-chart-readout li').last()).toHaveText('$1,522.30Total');
+});
+
 test.describe('a line chart without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 

@@ -5379,6 +5379,98 @@ describe('src/components/charts.css, the bar chart standing up, grouped and hatc
   });
 });
 
+describe('src/components/charts.css, the stacked bar chart', () => {
+  const rules = () => closeUp(stripComments(read('src/components/charts.css')));
+  const FORCED = '@media (forced-colors: active)';
+  const look = () => outsideForcedColors(rules());
+  const SURFACE = '2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));';
+  const COLOR = 'var(--bar-chart-color, var(--color-ink))';
+  const stripes = (angle) => `repeating-linear-gradient(${angle}deg, ${COLOR} 0 2px, transparent 2px 6px)`;
+  const TEXTURED =
+    ":is(.bar-chart-bar[data-series]:not([data-sign='zero']), [data-series] > .bar-chart-key) {";
+  const expectAll = (body, declarations, label) => {
+    for (const declaration of declarations) expect(body, `${label}: ${declaration}`).toContain(declaration);
+  };
+
+  it('rounds only outer segments and gaps the rest by 2px of the surface', () => {
+    const css = look();
+    // Inner joins are square: only the outermost segment of each sign keeps the data end's micro radius. Written
+    // after the radius rules of both faces, which it meets at the same specificity.
+    const square = ".bar-chart[data-layout='stacked'] .bar-chart-bar:not([data-outer]) {";
+    expect(blockAfter(css, square)).toContain('border-radius: 0;');
+    for (const rounded of [
+      ".bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-sign='negative'] {",
+      ".bar-chart[data-orientation='vertical'] .bar-chart-bar[data-sign='negative'] {",
+    ])
+      expect(css.indexOf(square), rounded).toBeGreaterThan(css.indexOf(rounded));
+    // Each segment that stands on another has a 2px border of the surface on its edge toward zero, inside its
+    // own length, so the stack's total stays exact; in the stacking direction of its sign and its face.
+    const gaps = [
+      ['vertical', 'positive', 'border-block-end'],
+      ['vertical', 'negative', 'border-block-start'],
+      ['horizontal', 'positive', 'border-inline-start'],
+      ['horizontal', 'negative', 'border-inline-end'],
+    ];
+    for (const [face, sign, side] of gaps) {
+      const selector = `.bar-chart[data-orientation='${face}'] .bar-chart-bar[data-joined][data-sign='${sign}'] {`;
+      expect(blockAfter(css, selector), selector).toContain(`${side}: ${SURFACE}`);
+      // After the textures' outline, so the gap takes its edge at the same specificity.
+      expect(css.indexOf(selector), selector).toBeGreaterThan(
+        css.indexOf(`.bar-chart[data-texture] ${TEXTURED}`),
+      );
+    }
+    // The bar is a border box, so the gap is inside the length the render writes.
+    expect(blockAfter(css, '.bar-chart-bar {')).toContain('box-sizing: border-box;');
+  });
+
+  it('draws the four textures and slate, and turns them on in forced colors', () => {
+    const css = look();
+    // The method's two directions: the first solid, the second 45 degrees, the third 135, the fourth both, and
+    // the fifth solid, in slate. Stripes 2px every 6px, Meter's hatch, in the series' own color.
+    expectAll(
+      blockAfter(css, ".bar-chart [data-series='2'] {"),
+      [`--bar-chart-texture: ${stripes(45)};`, '--bar-chart-fill: transparent;'],
+      'second',
+    );
+    expectAll(
+      blockAfter(css, ".bar-chart [data-series='3'] {"),
+      [`--bar-chart-texture: ${stripes(135)};`, '--bar-chart-fill: transparent;'],
+      'third',
+    );
+    expectAll(
+      blockAfter(css, ".bar-chart [data-series='4'] {"),
+      [`--bar-chart-texture: ${stripes(45)}, ${stripes(135)};`, '--bar-chart-fill: transparent;'],
+      'fourth',
+    );
+    expect(css).not.toContain(".bar-chart [data-series='1']");
+    expect(css).not.toContain(".bar-chart [data-series='5']");
+    // On request: a 1px border in the series' color, so a textured bar keeps its outline where stripes do not
+    // print, and the keys of the legend and the readout with it. A zero draws nothing.
+    const textured = [
+      'border: 1px solid var(--bar-chart-color, var(--color-ink));',
+      'background-color: var(--bar-chart-fill, var(--bar-chart-color, var(--color-ink)));',
+      'background-image: var(--bar-chart-texture, none);',
+    ];
+    expectAll(blockAfter(css, `.bar-chart[data-texture] ${TEXTURED}`), textured, 'on request');
+    // Always in forced colors: one text color and four looks, the fifth GrayText, the active band Highlight,
+    // and the gaps the page's own color through the surface variable.
+    const forced = blockAfter(rules(), FORCED);
+    expectAll(blockAfter(forced, `.bar-chart ${TEXTURED}`), textured, 'forced');
+    expect(blockAfter(forced, '.bar-chart [data-series] {')).toContain('--bar-chart-color: CanvasText;');
+    expect(blockAfter(forced, ".bar-chart [data-series='5'] {")).toContain('--bar-chart-color: GrayText;');
+    expect(
+      blockAfter(forced, ':is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar[data-series] {'),
+    ).toContain('--bar-chart-color: Highlight;');
+    expect(blockAfter(forced, ".bar-chart[data-layout='stacked'] {")).toContain('--bar-chart-gap: canvas;');
+    // Never outside forced colors: there the gap is the surface the app sets.
+    expect(css).not.toMatch(/--bar-chart-gap\s*:/);
+    // After the bars' CanvasText fill and the active band's Highlight, which it outranks.
+    expect(forced.indexOf(`.bar-chart ${TEXTURED}`)).toBeGreaterThan(
+      forced.indexOf(':is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar {'),
+    );
+  });
+});
+
 describe('src/components/charts.css, the line chart states', () => {
   const rules = () => closeUp(stripComments(read('src/components/charts.css')));
   const look = () => outsideForcedColors(rules());

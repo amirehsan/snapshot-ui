@@ -85,6 +85,22 @@ Why stripes and not a lighter shade: a lighter fill must clear 3:1 against the c
 
 <Section>
 
+## Stacked
+
+Give `layout="stacked"` to put up to five series end to end in each band, such as a month's top four categories and the "Other" you sum. Positives stack up from the zero line and negatives down, each sign in your series' order, so a category whose refunds net it below zero hangs under the line while the rest stand over it.
+
+- Colors: without `color`, the series take the chart palette in order, teal, violet, olive and magenta, and the fifth is slate, the remainder. Pin each series to its slot, such as `color: 'chart-2'`, so a category keeps its color when a filter takes another away. A sixth series warns in development and draws slate too: fold it into "Other". A series with `look: 'hatched'` warns and draws as a fill, since stripes in a stack are a texture, not a previous period.
+- Segments: 2px of the card between segments, and only the outermost segment of each sign keeps the rounded end; the joins are square. The gap is inside each segment's length, so a stack is as tall as its total.
+- Totals: pass `totals`, one string per band, summed and formatted by you, since the chart never adds a figure it must say. With `valueLabels` each total stands at the end of the side its band nets to; lying down it fills the amount column. The readout lists every segment of the band and the total, and the table gains a Total column. Asked for figures without `totals`, the chart warns and labels nothing.
+- Textures: `hasTexture` draws each series' texture as well as its color, for readers who cannot tell the colors apart and for a printout without color: the first solid, the second striped at 45 degrees, the third at 135, the fourth both, and the fifth solid slate, each inside a 1px border of its color, the legend's keys with them. Forced colors always show them.
+- Keys: along a stack, Up and Down standing up, or Left and Right lying down, move segment by segment by what is drawn; the other pair moves to the same category in the band beside, or the nearest category it has.
+
+<Preview name="bar-chart-stacked" />
+
+</Section>
+
+<Section>
+
 ## Color
 
 A series' color says what it is, by meaning first and then by identity. `color` takes `'ink'`, `'slate'`, `'gain'` or one of the [chart palette](/docs/theming#chart-palette)'s four, `'chart-1'` to `'chart-4'`, and pins the series to it.
@@ -193,14 +209,14 @@ A BarChart accepts every HTML attribute, applied to its root `figure`.
 The chart is a `figure` named by `aria-label` or `aria-labelledby`, which the types require. Its bars are a group named like the figure, with the role description "chart" (`labels.roleDescription`), and the table is the full alternative.
 
 - One stop: the chart is a single tab stop, the active bar, so eleven rows are never eleven stops. It becomes focusable once scripts run, and Tab comes back to the bar last active: first the newest band for time bands, the first band otherwise.
-- Names: each bar is an image named by its table cells, the band's category and its value, and its series when there are two, such as "Groceries September $598.30". A screen reader says it on every move, with no live region, and with your strings only.
-- Keys: the arrows move to the bar drawn in their direction, through a pair bar by bar. Standing up, Left and Right move and follow the page's direction; lying down, Up and Down do. The other pair is left to the page.
+- Names: each bar is an image named by its table cells, the band's category and its value, and its series when there are two or more, such as "Groceries September $598.30", or a stack's segment, "Oct Dining $312.45". A screen reader says it on every move, with no live region, and with your strings only.
+- Keys: the arrows move to the bar drawn in their direction, through a pair bar by bar. Standing up, Left and Right move and follow the page's direction; lying down, Up and Down do. The other pair is left to the page, except in a stack, where it moves along the stack, segment by segment.
 - Readout: standing up it sits above the band's highest bar when it fits and below its lowest otherwise; lying down, above or below the active row. It never covers a bar of its band, and it repeats the bar's name, so it is hidden from assistive technology.
 - Pointer: the whole band or row is the target, not only the bar, and the others step back to 40% while a pointer holds one. A pointer never moves focus.
 - Table: the Show as table toggle under the chart swaps in a table of the same strings, for everyone who would rather read the numbers. With scripts off it is shown under the chart.
-- Forced colors: the bars take the reader's text color and the active band Highlight, and a previous period stays striped against them; the zero line between the signs is the text color, and the gridlines GrayText.
+- Forced colors: the bars take the reader's text color and the active band Highlight, and a previous period stays striped against them; a stack keeps its textures, four looks in the text color and the fifth in GrayText, with the page's own color between segments; the zero line between the signs is the text color, and the gridlines GrayText.
 
-<Keys rows={[['Tab', 'Moves to the active bar, one stop for the whole chart, then to the table toggle.'], ['Left Right', 'Standing up: the bar beside, through a pair bar by bar, then the next band, skipping bands with no value. Mirrored in right to left.'], ['Up Down', 'Lying down: the bar above or below, through a pair bar by bar, then the next row, skipping rows with no value.'], ['Home End', 'The first or last band with a value, in the same series where it has one.'], ['PageUp PageDown', 'Seven bands back or forward.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter Space', 'On the toggle, swaps the chart and the table.']]} />
+<Keys rows={[['Tab', 'Moves to the active bar, one stop for the whole chart, then to the table toggle.'], ['Left Right', 'Standing up: the bar beside, through a pair bar by bar, then the next band, skipping bands with no value; in a stack, the same category in the band beside. Lying down, in a stack: the segment beside along the bar. Mirrored in right to left.'], ['Up Down', 'Lying down: the bar above or below, through a pair bar by bar, then the next row, skipping rows with no value; in a stack, the same category in the row beside. Standing up, in a stack: the segment above or below.'], ['Home End', 'The first or last band with a value, in the same series where it has one, else the nearest.'], ['PageUp PageDown', 'Seven bands back or forward.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter Space', 'On the toggle, swaps the chart and the table.']]} />
 
 </Section>
 
@@ -210,6 +226,6 @@ The chart is a `figure` named by `aria-label` or `aria-labelledby`, which the ty
 
 What keeps bar charts in the system.
 
-<Rules dos={['Sort a ranked list by amount, and put Other last.', 'Keep every amount in your own format, the one the rest of the page uses.', 'Lay the bars down when the names are long or there are more than eight.', "Draw the previous period hatched in the current series' color, named by its period."]} donts={['Never draw a direction in red or green. A refund below zero is ink, like the rest.', 'Never pass a domain without zero. A bar that starts anywhere else misstates its value.', 'Never rotate a label. Let it wrap, or lay the chart down.', 'Never give money out a color of its own. Spending is ink; only money that arrived is gain.']} />
+<Rules dos={['Sort a ranked list by amount, and put Other last.', 'Keep every amount in your own format, the one the rest of the page uses.', 'Lay the bars down when the names are long or there are more than eight.', "Draw the previous period hatched in the current series' color, named by its period.", 'Stack five series at most, the fifth your Other, and pass the totals you sum.']} donts={['Never draw a direction in red or green. A refund below zero is ink, like the rest.', 'Never pass a domain without zero. A bar that starts anywhere else misstates its value.', 'Never rotate a label. Let it wrap, or lay the chart down.', 'Never give money out a color of its own. Spending is ink; only money that arrived is gain.']} />
 
 </Section>

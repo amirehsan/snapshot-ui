@@ -130,6 +130,33 @@ const CHARTS: [name: string, element: ReactElement, after: (container: HTMLEleme
     },
   ],
   [
+    'BarChart, stacked, lying down, with textures',
+    <BarChart
+      aria-label="Spending by category and month"
+      orientation="horizontal"
+      categories={['Sep', 'Oct']}
+      layout="stacked"
+      series={[
+        MERCHANTS,
+        { ...MERCHANTS, label: 'Shopping' },
+        { ...MERCHANTS, label: 'Travel' },
+        { ...MERCHANTS, label: 'Bills' },
+        { ...MERCHANTS, label: 'Other' },
+      ]}
+      totals={['$2,100.00', '$1,300.00']}
+      hasTexture
+    />,
+    (container) => {
+      const bars = [...container.querySelectorAll('.bar-chart-bar')];
+      expect(bars).toHaveLength(10);
+      expect(bars.map((bar) => bar.getAttribute('tabindex'))).toEqual([
+        '0',
+        ...Array.from({ length: 9 }, () => '-1'),
+      ]);
+      expect(container.querySelectorAll('.bar-chart-bar[data-outer]')).toHaveLength(2);
+    },
+  ],
+  [
     'LineChart loading',
     <LineChart aria-label="Spending in October" series={[THIS_MONTH]} xLabels={DAYS} status="loading" />,
     (container) => {

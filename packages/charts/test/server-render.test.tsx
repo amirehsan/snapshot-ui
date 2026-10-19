@@ -45,6 +45,12 @@ const MERCHANTS: BarSeries = {
   ],
 };
 
+/** An amount as the app formats it. */
+const money = (value: number): { value: number; valueLabel: string } => ({
+  value,
+  valueLabel: `${value < 0 ? '-' : ''}$${Math.abs(value).toFixed(2)}`,
+});
+
 const TICKS = [
   { value: 0, label: '$0' },
   { value: 50, label: '$50' },
@@ -173,6 +179,38 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '--bar-chart-group:2',
     ],
     ['data-color="slate"', 'tabindex'],
+  ],
+  [
+    // A stack across zero: each segment from the running sum of its sign, in the palette by slot, the outermost
+    // of each sign marked for its corners and every segment on another marked for its gap; each total at the
+    // end of the side its band nets to. All the server's, with nothing measured.
+    'BarChart, stacked across zero',
+    <BarChart
+      aria-label="Spending by category and month"
+      categories={['Sep', 'Oct']}
+      layout="stacked"
+      series={[
+        { label: 'Groceries', values: [money(100), money(-50)] },
+        { label: 'Shopping', values: [money(-40), money(60)] },
+        { label: 'Travel', values: [money(30), money(-20)] },
+      ]}
+      valueDomain={[-100, 300]}
+      totals={['$90.00', '-$10.00']}
+      valueLabels="all"
+      hasTexture
+    />,
+    [
+      'data-layout="stacked"',
+      'data-texture=""',
+      'style="--bar-chart-bands:2;--bar-chart-group:1"',
+      'class="bar-chart-legend-item" data-series="3" data-color="chart-3" data-look="swatch"',
+      'data-color="chart-1" data-look="fill" data-sign="positive" data-nonzero="" data-series="1"',
+      'data-color="chart-3" data-look="fill" data-sign="positive" data-nonzero="" data-series="3" data-outer="" data-joined=""',
+      'inset-block-end:50%;block-size:7.5%;--bar-chart-centre:25%;--bar-chart-index:0',
+      'class="bar-chart-value-text">-$10.00<',
+      '>Total<',
+    ],
+    ['tabindex', 'data-look="hatched"', 'bar-chart-readout'],
   ],
   [
     // Loading in the plot's own space: a still placeholder at the plot's height, the region empty until mount.

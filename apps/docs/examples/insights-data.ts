@@ -129,3 +129,33 @@ export const COMPARE_TICKS: { value: number; label: string }[] = [
   { value: 250, label: '$250' },
   { value: 500, label: '$500' },
 ];
+
+/**
+ * The category mix by month: the top four categories, the same four all half year, and the rest summed as
+ * "Other", last, for the stacked month view. Pinned to their slots, so a category keeps its color when a filter
+ * takes another away.
+ */
+export const CATEGORY_MIX: BarSeries[] = [
+  { label: 'Groceries', color: 'chart-1', values: [612.4, 640, 598.3, 655.1, 621.75, 640].map(money) },
+  { label: 'Dining', color: 'chart-2', values: [312.45, 280.1, 355, 298.6, 330.2, 312.45].map(money) },
+  { label: 'Transport', color: 'chart-3', values: [188.1, 201.75, 176.4, 215.3, 190, 188.1].map(money) },
+  { label: 'Bills', color: 'chart-4', values: [150, 150, 150, 165.2, 150, 150].map(money) },
+  { label: 'Other', color: 'slate', values: [243.6, 210.4, 265.15, 198.9, 230.35, 226.8].map(money) },
+];
+
+/** Each month's total, summed and formatted by the app: the chart never adds a figure it must say. */
+export const MIX_TOTALS: string[] = [
+  '$1,506.55',
+  '$1,482.25',
+  '$1,544.85',
+  '$1,533.10',
+  '$1,522.30',
+  '$1,517.35',
+];
+
+export const MIX_TICKS: { value: number; label: string }[] = [
+  { value: 0, label: '$0' },
+  { value: 500, label: '$500' },
+  { value: 1000, label: '$1,000' },
+  { value: 1500, label: '$1,500' },
+];

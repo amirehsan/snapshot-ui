@@ -7,9 +7,10 @@
  * is, because :dir() is past the browser floor; the svg is mirrored by it and the HTML follows by its logical
  * insets. The HTML over a drawing takes its direction from --chart-direction, set by the same attribute, so a
  * dir="auto" or a CSS direction can never mirror the marks without the svg. The first series is ink and the
- * second slate; there is no palette. Rings are borders in the surface the chart sits on, --chart-surface, read
- * with Lifted as its fallback. The rules every chart shares (the legend, the readout panel, the gridlines and
- * the baseline, the y labels, the table, its toolbar and the noscript note) are written once, as :is() lists of
+ * second slate; the chart palette is a stack's alone. Rings are borders in the surface the chart sits on,
+ * --chart-surface, read with Lifted as its fallback. The rules every chart shares (the legend, the readout
+ * panel, the gridlines and the baseline, the y labels, the table, its toolbar and the noscript note) are
+ * written once, as :is() lists of
  * each chart's own class, so a chart joins a rule by adding its class to the list and keeps its own class names.
  * A bar chart's bars are HTML, not svg, since a bar keeps its shape: a span placed by percentages and logical
  * insets, its data end rounded by --radius-micro and its thickness capped in a calc(), so nothing is measured
@@ -731,6 +732,78 @@
     border-width: 0;
   }
 
+  /*
+   * A stack: up to five segments end to end in one bar's place, positives from zero up and negatives from zero
+   * down, each sign in series order, each segment placed from the running sum before it in render. Only the
+   * outermost segment of each sign keeps the data end's corners; every inner join is square.
+   */
+  .bar-chart[data-layout='stacked'] .bar-chart-bar:not([data-outer]) {
+    border-radius: 0;
+  }
+
+  /*
+   * A stack's textures, by the series' slot: the method's two directions, Meter's stripes 2px every 6px in the
+   * series' own color over the surface. The first and the fifth are solid, the fifth in slate; the second is
+   * 45 degrees, the third 135 and the fourth both. Set on the slot's element and read by its bar or its key.
+   */
+  .bar-chart [data-series='2'] {
+    --bar-chart-texture: repeating-linear-gradient(
+      45deg,
+      var(--bar-chart-color, var(--color-ink)) 0 2px,
+      transparent 2px 6px
+    );
+    --bar-chart-fill: transparent;
+  }
+
+  .bar-chart [data-series='3'] {
+    --bar-chart-texture: repeating-linear-gradient(
+      135deg,
+      var(--bar-chart-color, var(--color-ink)) 0 2px,
+      transparent 2px 6px
+    );
+    --bar-chart-fill: transparent;
+  }
+
+  .bar-chart [data-series='4'] {
+    --bar-chart-texture:
+      repeating-linear-gradient(45deg, var(--bar-chart-color, var(--color-ink)) 0 2px, transparent 2px 6px),
+      repeating-linear-gradient(135deg, var(--bar-chart-color, var(--color-ink)) 0 2px, transparent 2px 6px);
+    --bar-chart-fill: transparent;
+  }
+
+  /*
+   * Textures on request: each segment and its legend and readout keys in its slot's look, inside a 1px border of
+   * its color, so a textured bar keeps its outline where stripes do not print. A zero draws nothing.
+   */
+  .bar-chart[data-texture]
+    :is(.bar-chart-bar[data-series]:not([data-sign='zero']), [data-series] > .bar-chart-key) {
+    border: 1px solid var(--bar-chart-color, var(--color-ink));
+    background-color: var(--bar-chart-fill, var(--bar-chart-color, var(--color-ink)));
+    background-image: var(--bar-chart-texture, none);
+  }
+
+  /*
+   * A segment that stands on another starts with a 2px gap of the surface, Meter's spacer, on its edge toward
+   * zero in its sign's direction: a border inside its own length, since the bar is a border box, so the stack's
+   * total stays exact. After the textures' outline, which it meets at the same specificity. The gap's color is
+   * the surface the chart sits on, and the page's own in forced colors (--bar-chart-gap, set there alone).
+   */
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-joined][data-sign='positive'] {
+    border-block-end: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-joined][data-sign='negative'] {
+    border-block-start: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
+  }
+
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-joined][data-sign='positive'] {
+    border-inline-start: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
+  }
+
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-joined][data-sign='negative'] {
+    border-inline-end: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
+  }
+
   /* The token ring, which follows the bar's corners at its offset: concentric by construction. */
   .bar-chart-bar:focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
@@ -1151,6 +1224,34 @@
 
     .bar-chart-baseline[data-crosses] {
       stroke: CanvasText;
+    }
+
+    /*
+     * A stack keeps its textures in forced colors, asked or not: a system palette has one text color, so the
+     * four slots are its four looks in CanvasText and the fifth is solid GrayText, the active band's in
+     * Highlight. The gaps between segments are the page's own color, since a bar out of the repaint would
+     * otherwise draw them in the surface's token.
+     */
+    .bar-chart[data-layout='stacked'] {
+      --bar-chart-gap: canvas;
+    }
+
+    .bar-chart [data-series] {
+      --bar-chart-color: CanvasText;
+    }
+
+    .bar-chart [data-series='5'] {
+      --bar-chart-color: GrayText;
+    }
+
+    :is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar[data-series] {
+      --bar-chart-color: Highlight;
+    }
+
+    .bar-chart :is(.bar-chart-bar[data-series]:not([data-sign='zero']), [data-series] > .bar-chart-key) {
+      border: 1px solid var(--bar-chart-color, var(--color-ink));
+      background-color: var(--bar-chart-fill, var(--bar-chart-color, var(--color-ink)));
+      background-image: var(--bar-chart-texture, none);
     }
   }
 }
