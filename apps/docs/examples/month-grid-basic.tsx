@@ -21,7 +21,8 @@ const YEARS: MonthGridYear[] = [
 
 export default function MonthGridBasic(): ReactElement {
   return (
-    <Card>
+    // The grid takes no width from its months, so a holder sized by its content, as this card is here, gives it one.
+    <Card style={{ width: '100%', maxWidth: '40rem' }}>
       <MonthGrid
         label="Statement coverage"
         states={STATES}
