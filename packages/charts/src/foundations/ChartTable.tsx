@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import type { ChartName } from './naming';
 
 /** The class prefix of the chart a part belongs to. */
@@ -19,10 +19,10 @@ export interface ChartTableProps {
    * total, which is a column like any other. LineChart passes its series only.
    */
   columns: readonly string[];
-  /** The row headers: one per x label or category. */
-  rows: readonly string[];
-  /** The text of the cell at a row and a column, the app's string; undefined leaves the cell empty. */
-  cell: (row: number, column: number) => string | undefined;
+  /** The row headers: one per x label or category, the app's string, or a link with it. */
+  rows: readonly ReactNode[];
+  /** The cell at a row and a column, the app's string or a link with it; undefined leaves the cell empty. */
+  cell: (row: number, column: number) => ReactNode;
   /**
    * The id the shown table writes on a cell, so a mark can be named by its cells: a column's header is row -1,
    * a row's header column -1. The noscript copy writes none. @default none

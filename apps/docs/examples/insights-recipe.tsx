@@ -154,14 +154,23 @@ function monthView(show: Show, compare: boolean): Drawn {
   };
 }
 
-/** A ranked view: rows lying down, amounts at their end, refunds below zero and "Other" last. */
+/**
+ * A ranked view: rows lying down, amounts at their end, refunds below zero and "Other" last. Each bar links to
+ * its transactions for the period it shows, October's or, compared, September's: the page's drill-down.
+ */
 function rankedView(by: Exclude<Grouping, 'month'>, compare: boolean): Drawn {
   const rows = RANKED[by];
-  const october: BarSeries = { label: 'October', values: rows.map(({ october: value }) => money(value)) };
+  const october: BarSeries = {
+    label: 'October',
+    values: rows.map(({ key, october: value }) => ({ ...money(value), href: `#transactions?${by}=${key}` })),
+  };
   const september: BarSeries = {
     label: 'September',
     look: 'hatched',
-    values: rows.map(({ september: value }) => money(value)),
+    values: rows.map(({ key, september: value }) => ({
+      ...money(value),
+      href: `#transactions?${by}=${key}&period=2026-09`,
+    })),
   };
   const name = by.charAt(0).toUpperCase() + by.slice(1);
   return {
@@ -203,10 +212,12 @@ const columnsOf = (names: string[]): DataTableColumn<Row>[] =>
 interface InsightsProps {
   view: View;
   onView?: (view: View) => void;
+  /** The router's navigate, the RouterProvider's own, for the chart's links: the charts cannot read the provider. */
+  navigate?: (href: string) => void;
 }
 
 /** The page above the report: header, tiles, filters, the chart card and the table under it. */
-function Insights({ view, onView }: InsightsProps): ReactElement {
+function Insights({ view, onView, navigate }: InsightsProps): ReactElement {
   const titleId = useId();
   const noteId = useId();
   // The period is your query's; the fixtures hold October against September, so the chip only keeps its choice.
@@ -302,7 +313,7 @@ function Insights({ view, onView }: InsightsProps): ReactElement {
           </Switch>
         </CardHeader>
         {/* One chart for every grouping: new props, never a new chart, so a focused bar hands focus on. */}
-        <BarChart {...drawn.chart} aria-labelledby={`${titleId} ${noteId}`} />
+        <BarChart {...drawn.chart} aria-labelledby={`${titleId} ${noteId}`} navigate={navigate} />
       </Card>
       <DataTable
         aria-label={`Transactions by ${view.by}`}
@@ -316,7 +327,7 @@ function Insights({ view, onView }: InsightsProps): ReactElement {
 }
 
 /** The view the URL names, kept in state so a control answers at once while the URL catches up. */
-function InsightsFromUrl(): ReactElement {
+function InsightsFromUrl({ navigate }: Pick<InsightsProps, 'navigate'>): ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -331,6 +342,7 @@ function InsightsFromUrl(): ReactElement {
   return (
     <Insights
       view={view}
+      navigate={navigate}
       onView={(next) => {
         const query = queryOf(next);
         setView(next);
@@ -350,15 +362,14 @@ const FIRST = viewOf(new URLSearchParams());
  */
 export default function InsightsRecipe(): ReactElement {
   const router = useRouter();
+  const navigate = (href: string): void => {
+    router.push(href, { scroll: false });
+  };
   return (
-    // An app wraps its whole tree once; the example wraps only itself.
-    <RouterProvider
-      navigate={(href) => {
-        router.push(href, { scroll: false });
-      }}
-    >
-      <Suspense fallback={<Insights view={FIRST} />}>
-        <InsightsFromUrl />
+    // An app wraps its whole tree once; the example wraps only itself. The chart takes the same navigate.
+    <RouterProvider navigate={navigate}>
+      <Suspense fallback={<Insights view={FIRST} navigate={navigate} />}>
+        <InsightsFromUrl navigate={navigate} />
       </Suspense>
     </RouterProvider>
   );

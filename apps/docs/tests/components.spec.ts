@@ -1880,8 +1880,15 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'app-shell': ['.stage .app-shell'],
   avatar: ['.stage .avatar', '.stage .avatar-initials'],
   badge: ['.stage .badge'],
-  // Every bar, its place and its size, the table and its toggle are the server's: the final picture.
-  'bar-chart': ['.stage .bar-chart .bar-chart-bar', '.stage .bar-chart-table', '.stage .bar-chart-toggle'],
+  // Every bar, its place and its size, the table and its toggle are the server's: the final picture. A bar
+  // with an href is a real link there, with its target over its band, so the drill-down works before hydration.
+  'bar-chart': [
+    '.stage .bar-chart .bar-chart-bar',
+    '.stage .bar-chart-table',
+    '.stage .bar-chart-toggle',
+    '.stage .bar-chart a.bar-chart-bar[href]',
+    '.stage .bar-chart a.bar-chart-hit[href]',
+  ],
   'bottom-tab-bar': ['.stage .tab-bar'],
   // Real links in the server's HTML, both faces: the trail works before hydration and with scripts off.
   breadcrumbs: ['.stage .breadcrumbs a[href]'],

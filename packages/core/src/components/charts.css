@@ -843,6 +843,49 @@
     outline-offset: var(--focus-ring-offset);
   }
 
+  /*
+   * A linked bar's target in its band: an anchor to the bar's href that assistive technology never meets, since
+   * the bar is the link it reads, and never a stop. A press anywhere on it is the browser's own on a link, so a
+   * modifier key or the middle button opens a new tab and the context menu offers one; a touch's hold shows the
+   * readout rather than the platform's link menu. It draws nothing. Standing up it runs through the bars' box and
+   * its room, across the band's column or the half the render writes; a segment on another takes its own run,
+   * written in render too.
+   */
+  .bar-chart-hit {
+    position: absolute;
+    cursor: pointer;
+    -webkit-touch-callout: none;
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-hit {
+    inset-block: calc(-1 * var(--bar-chart-room-start, 0px)) calc(-1 * var(--bar-chart-room-end, 0px));
+  }
+
+  /*
+   * Lying down, the row's grid area: its name, its track and its amounts for the row's first bar, and the half
+   * under the middle for a second, which lies under the first. A segment on another takes its run along the
+   * track, the render's insets. Both ends of each area are given, as the readout's are.
+   */
+  .bar-chart[data-orientation='horizontal'] .bar-chart-hit {
+    grid-column: 1 / -1;
+    grid-row: var(--bar-chart-row, 1) / span 1;
+    inset: 50% 0 0;
+  }
+
+  .bar-chart[data-orientation='horizontal'] .bar-chart-hit[data-whole] {
+    inset: 0;
+  }
+
+  .bar-chart[data-layout='stacked'][data-orientation='horizontal'] .bar-chart-hit:not([data-whole]) {
+    grid-column: 2 / span 1;
+    inset: 0;
+  }
+
+  /* Bars that are buttons take a press anywhere in their band, so the whole plot shows it. */
+  :is(.bar-chart-rows, .bar-chart-plot)[data-press] {
+    cursor: pointer;
+  }
+
   /* The group holds focus for a status with no bars, never as a tab stop, and shows it with the same ring. */
   :is(.bar-chart-rows, .bar-chart-plot):focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
@@ -1139,6 +1182,19 @@
     .bar-chart-readout[data-place] {
       grid-column: 1 / span 1;
       grid-row: var(--bar-chart-row-narrow, 2) / span 1;
+    }
+
+    /* A row's first target takes its name's line and its bars' line; a second the half of the bars' line under it. */
+    .bar-chart[data-orientation='horizontal'] .bar-chart-hit {
+      grid-row: var(--bar-chart-row-narrow, 2) / span 1;
+    }
+
+    .bar-chart[data-orientation='horizontal'] .bar-chart-hit[data-whole] {
+      grid-row-end: span 2;
+    }
+
+    .bar-chart[data-layout='stacked'][data-orientation='horizontal'] .bar-chart-hit:not([data-whole]) {
+      grid-column: 1 / span 1;
     }
 
     /*

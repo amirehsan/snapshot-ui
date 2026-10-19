@@ -4990,6 +4990,44 @@ describe('src/components/charts.css, the bar chart', () => {
     expect(css).not.toMatch(/@media[^{]*width/);
   });
 
+  it("places a linked bar's target over its band, drawing nothing, its hold kept from the link menu", () => {
+    const css = look();
+    expectAll(
+      blockAfter(css, '.bar-chart-hit {'),
+      ['position: absolute;', 'cursor: pointer;', '-webkit-touch-callout: none;'],
+      'target',
+    );
+    // It draws nothing in any mode: no fill, border, outline or shadow of its own.
+    for (const [selector, body] of blocks(rules()).filter(([selector]) => selector.includes('bar-chart-hit')))
+      expect(body, selector).not.toMatch(
+        /(?<![\w-])(?:background|border|outline|box-shadow|color)(?:-[\w-]+)?\s*:/,
+      );
+    // Standing up, through the bars' box and the room above and below it.
+    expect(blockAfter(css, ".bar-chart[data-orientation='vertical'] .bar-chart-hit {")).toContain(
+      'inset-block: calc(-1 * var(--bar-chart-room-start, 0px)) calc(-1 * var(--bar-chart-room-end, 0px));',
+    );
+    // Lying down, the row's grid area from the name to the amounts, both ends given: the whole for its first
+    // bar, the half under the middle for a second, and the track for a segment on another.
+    const lying = ".bar-chart[data-orientation='horizontal'] .bar-chart-hit";
+    expectAll(
+      blockAfter(css, `${lying} {`),
+      ['grid-column: 1 / -1;', 'grid-row: var(--bar-chart-row, 1) / span 1;', 'inset: 50% 0 0;'],
+      'second',
+    );
+    expect(blockAfter(css, `${lying}[data-whole] {`)).toContain('inset: 0;');
+    const run =
+      ".bar-chart[data-layout='stacked'][data-orientation='horizontal'] .bar-chart-hit:not([data-whole]) {";
+    expectAll(blockAfter(css, run), ['grid-column: 2 / span 1;', 'inset: 0;'], 'run');
+    const narrow = blockAfter(css, NARROW);
+    expect(blockAfter(narrow, `${lying} {`)).toContain('grid-row: var(--bar-chart-row-narrow, 2) / span 1;');
+    expect(blockAfter(narrow, `${lying}[data-whole] {`)).toContain('grid-row-end: span 2;');
+    expect(blockAfter(narrow, run)).toContain('grid-column: 1 / span 1;');
+    // Bars that are buttons show their press over the whole plot.
+    expect(blockAfter(css, ':is(.bar-chart-rows, .bar-chart-plot)[data-press] {')).toContain(
+      'cursor: pointer;',
+    );
+  });
+
   it('keeps amounts left to right and isolated', () => {
     const amount = blockAfter(look(), '.bar-chart-amount {');
     expectAll(
@@ -7823,8 +7861,9 @@ describe('src/components/data-table.css', () => {
       expect(selector, control).toMatch(new RegExp(`[(,] ?${control.replace(/[[\]().*'=-]/g, '\\$&')}[,)]`));
     }
     // The row's own link is never raised: positioned, it would hold its ::after to its own box. Nor is a
-    // BarChart's bar, placed absolutely in its track, which a relative position collapses when it takes focus.
-    expect(selector).toContain(':not(.data-table-link, .bar-chart-bar)');
+    // BarChart's bar, placed absolutely in its track, which a relative position collapses when it takes focus,
+    // or a linked bar's target, placed absolutely in its band (insights spec correction 96).
+    expect(selector).toContain(':not(.data-table-link, .bar-chart-bar, .bar-chart-hit)');
     expect(body).toContain('position: relative;');
     expect(body).toContain('z-index: calc(var(--z-header) - 2);');
   });

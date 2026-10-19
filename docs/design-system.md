@@ -11080,6 +11080,109 @@ the bars wraps the chart in `data-table-control`, which raises the whole
 chart. `Compositions/BarChart in a DataTable` (three engines) focuses a
 bar in a linked row and finds its box unchanged (correction 90).
 
+**Bars that link** (the consumer's drill-down, which the spec left as a
+later candidate in its open question 13; corrections 96 to 101). On the
+consumer's Insights and Reports pages every category or merchant bar
+opens the transactions it stands for, for the period shown. A
+`BarValue` takes an `href`, one per bar of every series, a stack's
+segments included, so a comparison's September bar opens September.
+It is data rather than a function of the band and the series, because
+a function cannot cross from a server component, and the consumer's
+page passes its figures from one.
+
+*The bar is the anchor.* A bar with an `href` is drawn as
+`a.bar-chart-bar` in place of the `span`, with the same class, states,
+place and name from its table cells, and no role or role description of
+its own, so a screen reader says "Groceries $640.00, link": a role
+description of "bar" over a link would hide that Enter follows it, which
+ARIA asks an author never to do to a widget's role. The other way, a
+link inside a roving item, puts the name on one element and the stop on
+another, and the stop would still have to be a link for Enter. With
+`onBarPress` and no `href` the bar is `role="button"`, which Enter and
+Space press. The roving tab index is unchanged: one stop among the
+links, moved by the arrows. Enter is the link's own: the browser clicks
+it, and the chart's click handler routes the press. Space on a link is
+prevented, since a link answers Enter alone (APG's link pattern) and a
+page that scrolled from under the chart would lose the reader's place.
+A key with Alt, Control or Meta is left alone, so Control with Enter
+opens the link in a new tab as it does anywhere.
+
+*A real anchor over the band.* A press anywhere in the band follows its
+bar's link, as the pointer already took the whole band. Each linked bar
+draws `a.bar-chart-hit` after the band's bars, an anchor to the same
+href, `aria-hidden` and `tabIndex={-1}` from the server on, so a reader
+meets each link once, on the bar, and it is never a stop. Because the
+target is a link, everything a browser does with a link works on the
+whole band in every engine with no script: a click with Command,
+Control or Shift opens a new tab or window, a middle click a new tab,
+the context menu offers both, and the status bar shows the address.
+Highcharts, Polaris Viz and Carbon take a bar's click in script on an
+svg mark, which gives none of that; forwarding a click from the band to
+the bar in script would give it back only for a plain click. A
+`::before` stretched from the bar cannot reach its band, since its
+percentages resolve against the bar and the band's place is the plot's.
+The targets are placed as the bars are, in percent and grid areas,
+with nothing measured: standing up, the band's first bar takes the
+band's column through the bars' box and the room above and below it,
+and a second the half of the band nearer it, from the band's middle;
+lying down, the row's first bar takes its whole grid area, the name,
+the track and the amount, and a second the half under the row's middle,
+where it lies; on a narrow chart the first takes the name's line and
+the bars' line and the second the half of the bars' line under the
+middle; in a stack, the band's first segment takes the band and every
+other its own run along it, the outermost of each sign on to the plot's
+edge, room included, so a press past a stack's end takes its outermost
+segment. The pointer reads the target under it, so the readout names
+the bar a press opens, wherever the two would otherwise differ by a
+segment's least 3px; off every target, the band's rule stands. In a
+pair without links the pointer between or beside the bars now takes
+the nearer, the targets' rule, where spec 7.7 took the band's first
+(correction 97). The targets draw nothing in any mode; the link cursor
+shows over them.
+
+*Touch.* A tap follows the link. A touch held half a second or more,
+the platforms' long press, is a reading: the readout shows, as a hold
+always did, its click follows nothing, the context menu Android opens
+on a held link is prevented while a touch is down, and
+`-webkit-touch-callout: none` keeps Safari's link preview away, so the
+readout can be read. A mouse's context menu stays (correction 98).
+
+*Before hydration.* The server writes the links with no `tabindex`, so
+before the chart hydrates, and with scripts off, every bar is a link of
+its own, a stop in drawn order, and the targets already follow a press:
+the drill-down works from the HTML a server page sends. Once mounted
+the links take the roving tab index. A reader who tabbed to a link
+before then keeps focus on it: a layout effect on mount finds focus on
+one of the chart's bars and makes it active, so that bar is the stop,
+its readout shows, and Shift Tab does not jump back to the first bar.
+No bar moves when the chart hydrates.
+
+*The table and the router.* With one series each category cell links
+to its bar's href, once a row, as DataTable links its row header; with
+two or more each figure's cell links, named by its row header, its
+column header and itself as its bar is, and the category cells stay
+text, since no one bar stands for a band of several series. The
+noscript copy links too. The charts import no React Aria, so they cannot
+read the app's `RouterProvider`: `navigate`, the same function the app
+gives the provider, routes a plain click or Enter on a bar, a target or
+a table link, with React Aria's rule for which clicks a router takes, a
+primary click with no modifier key; any other click stays the browser's.
+`onBarPress(category, series)` hears every press, a link's before it is
+followed (corrections 99 and 100).
+
+*Dimming, the readout, focus and forced colors* are unchanged: the
+targets take no opacity and draw nothing, a press focuses nothing as
+before, and the link bars keep the bar's focus ring and its forced
+colors. `data-table.css` leaves the target out of the cell controls it
+raises, as it leaves the bar. `Links`, `LinksServerFace` and
+`LinkTargets` (no-visual, three engines) hold the keys, Enter, Space,
+the modified clicks left to the browser, the targets in every face, the
+readout over each, the server's links, hydration with a link focused
+and the bars drawn as without links; the docs' end-to-end run opens a
+new tab by Control and by the middle button on a row's name, follows a
+row with scripts off, and follows the recipe's Category bars through
+its router.
+
 **Where the build departs from the plan.** The plan's spec corrections
 13 to 20 record them: the horizontal face drawn for any `orientation`
 until the vertical one lands, with a warning; the figure as the container
@@ -11107,7 +11210,11 @@ past a stack, the second chart in `StackFocus`, the docs' order and
 slate "Other", and which stacked baselines change. After them
 `{ BarChart }` is 6.46 kB, over the spec's 5.5 kB budget and accepted by
 the rule with a 7 kB limit, and `{ LineChart, BarChart }` 8.06 kB, with
-the rule's 9 kB limit (correction 70, amended).
+the rule's 9 kB limit (correction 70, amended). Corrections 96 to 101
+record the links: the anchor bar and its API, the targets over the
+band and the nearer bar of a pair, tap and hold, the table and the
+router, and the sizes: `{ BarChart }` 7.15 kB, so 8 kB by the rule, and
+`{ LineChart, BarChart }` 8.78 kB, inside its 9 kB.
 
 **Screen readers and devices.** Not yet verified (owner action 3): Tab
 onto one bar and the arrows bar by bar in VoiceOver and NVDA, each bar's
@@ -11119,7 +11226,11 @@ against the current bars in a contrast theme, and twelve monthly bars and
 grouped pairs on a phone; stacked, each segment read with its month, its
 category and its value and the keys along and across a stack, the four
 textures and the `GrayText` fifth told apart in a Windows contrast
-theme, and a month's stack of five on a phone.
+theme, and a month's stack of five on a phone; linked, each bar read as a
+link with its name, Enter following it and the links list naming each
+once, Safari's Option Tab through the server's links before hydration,
+and on a phone a tap that follows a row and a hold that shows its
+readout with no link menu.
 
 ## Prose
 

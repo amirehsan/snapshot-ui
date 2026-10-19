@@ -164,6 +164,37 @@ The chart is a size container, so it takes its width from what holds it and none
 
 <Section>
 
+## Links
+
+Give a bar an `href` to open what it stands for, such as its transactions for the period shown. Each bar of each series takes its own, so a comparison's previous period opens its own month. The bar becomes a link, and so does its cell in the table: the category's when the chart has one series, each figure's when it has two or more. The hrefs are data, so a server page passes them with the figures, and the links work before the page hydrates and with scripts off.
+
+- Pointer: a press anywhere in the bar's band follows its link, not only a press on the bar: lying down the whole row from its name to its amount, standing up the band's column. In a band of two each bar takes the half nearer it, and in a stack each segment takes its own run, the outermost on to the plot's edge. The readout names the bar under the pointer, so it says what a press opens, and the band shows the link cursor.
+- A new tab: the band is a real link, so a click with Command, Control or Shift, a middle click and the context menu open it in a new tab or window as any link does. The chart routes none of them.
+- Touch: a tap follows the link. A hold of half a second or more shows the readout and follows nothing, and the platform's link menu stays away so the readout can be read.
+- Keys: the chart stays one tab stop, moved by the arrows. Enter follows the focused bar's link, and Space does nothing, so it never scrolls the page from under the chart.
+- Your router: the charts carry no React Aria, so they cannot read your `RouterProvider`. In a client component, pass its `navigate` to the chart as well, and a plain click or Enter on a bar or a table link goes through it; a modified click stays the browser's.
+- A press: `onBarPress(category, series)` is called with the band's and the series' index on every press, a link's before it is followed. A bar with no `href` in a chart with `onBarPress` is a button, which Enter and Space press, and a press anywhere in its band presses it.
+
+<Preview name="bar-chart-links" />
+
+On a client page, the chart takes the router's `navigate`, the function your `RouterProvider` has:
+
+```tsx
+'use client';
+
+import { BarChart, type BarChartProps } from '@snapshot-ui/charts';
+import { useRouter } from 'next/navigation';
+
+export function LinkedChart(props: BarChartProps) {
+  const router = useRouter();
+  return <BarChart {...props} navigate={(href) => router.push(href)} />;
+}
+```
+
+</Section>
+
+<Section>
+
 ## The Insights recipe
 
 An insights page in the Next.js App Router: the month's figures, one chart card that regroups, a table that links to the transactions, and the month's report. The page is a server component. What changes with the URL is one client component, and the report is rendered on the server beside it.
@@ -172,7 +203,7 @@ An insights page in the Next.js App Router: the month's figures, one chart card 
 - Filters: a [filter bar](/docs/components/filter-bar) with the period.
 - The card: its header holds a [segmented control](/docs/components/segmented-control) for the grouping and a [switch](/docs/components/switch) to compare; its body is one BarChart, the card's last child, so the table toggle stands clear of the card's curve.
 - Month: twelve months standing up, newest last: Income in `gain` beside Spending in ink, one of them alone, net cash flow with its months below zero, or the category mix stacked. A second control picks which.
-- Category, Merchant and Account: lying down, the top ten and "Other", with a refund below zero.
+- Category, Merchant and Account: lying down, the top ten and "Other", with a refund below zero. Each bar opens its transactions for the period it shows, such as `#transactions?category=rent`, and a compared bar September's, through the same `navigate` the page's `RouterProvider` has.
 - Compare: the previous period, hatched, beside each bar: September for October, the twelve months before for the months. A band holds two bars, so the switch is off while income and spending stand together, or the mix is stacked.
 - One chart: the card keeps the same BarChart and gives it new props, so a bar that held focus hands it to the new first bar, never to the page. Changing the grouping with the control keeps focus on the control.
 - The URL: `?by=category&compare=1`, read with `useSearchParams()` inside a `Suspense` whose fallback draws the first view, and written with `router.replace`, so a reload or a shared link keeps the view.
@@ -258,9 +289,11 @@ import { BarChart } from '@snapshot-ui/charts';
 
 A BarChart accepts every HTML attribute, applied to its root `figure`.
 
-<PropsTable label="BarChart props" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="Pick<BarChartProps, 'series' | 'layout' | 'categories' | 'orientation' | 'bands' | 'categoryTicks' | 'valueTicks' | 'valueDomain' | 'valueLabels' | 'totals' | 'status' | 'statusContent' | 'hasTexture' | 'labels' | 'statusLabels' | 'height' | 'aria-label' | 'aria-labelledby' | 'className'>" />
+<PropsTable label="BarChart props" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="Pick<BarChartProps, 'series' | 'layout' | 'categories' | 'orientation' | 'bands' | 'categoryTicks' | 'valueTicks' | 'valueDomain' | 'valueLabels' | 'totals' | 'status' | 'statusContent' | 'hasTexture' | 'labels' | 'statusLabels' | 'height' | 'onBarPress' | 'navigate' | 'aria-label' | 'aria-labelledby' | 'className'>" />
 
 <PropsTable label="BarSeries" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="BarSeries" />
+
+<PropsTable label="BarValue" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="BarValue" />
 
 <PropsTable label="BarChartLabels" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="BarChartLabels" />
 
@@ -276,13 +309,14 @@ The chart is a `figure` named by `aria-label` or `aria-labelledby`, which the ty
 
 - One stop: the chart is a single tab stop, the active bar, so eleven rows are never eleven stops. It becomes focusable once scripts run, and Tab comes back to the bar last active: first the newest band for time bands, the first band otherwise.
 - Names: each bar is an image named by its table cells, the band's category and its value, and its series when there are two or more, such as "Groceries September $598.30", or a stack's segment, "Oct Dining $312.45". A screen reader says it on every move, with no live region, and with your strings only.
+- Links: a bar with an `href` is a link named the same way, and says it is a link rather than a bar; with `onBarPress` and no `href`, a button. Its target over the band is hidden from assistive technology and is never a stop, so a reader meets each link once, on the bar. Before the page hydrates every link is a stop of its own, in drawn order; once it hydrates they are one stop, and a link focused before then keeps focus and becomes the stop.
 - Keys: the arrows move to the bar drawn in their direction, through a pair bar by bar. Standing up, Left and Right move and follow the page's direction; lying down, Up and Down do. The other pair is left to the page, except in a stack, where it moves along the stack, segment by segment.
 - Readout: standing up it sits above the band's highest bar when it fits and below its lowest otherwise; lying down, above or below the active row. It never covers a bar of its band, and it repeats the bar's name, so it is hidden from assistive technology.
-- Pointer: the whole band or row is the target, not only the bar, and the others step back to 40% while a pointer holds one. A pointer never moves focus.
+- Pointer: the whole band or row is the target, not only the bar, and in a band of two the bar nearer the pointer; the others step back to 40% while a pointer holds one. A pointer never moves focus.
 - Table: the Show as table toggle under the chart swaps in a table of the same strings, for everyone who would rather read the numbers. With scripts off it is shown under the chart.
 - Forced colors: the bars take the reader's text color and the active band Highlight, and a previous period stays striped against them; a stack keeps its textures, four looks in the text color and the fifth in GrayText, with the page's own color between segments; the zero line between the signs is the text color, and the gridlines GrayText.
 
-<Keys rows={[['Tab', 'Moves to the active bar, one stop for the whole chart, then to the table toggle.'], ['Left Right', 'Standing up: the bar beside, through a pair bar by bar, then the next band, skipping bands with no value; in a stack, the same category in the band beside. Lying down, in a stack: the segment beside along the bar. Mirrored in right to left.'], ['Up Down', 'Lying down: the bar above or below, through a pair bar by bar, then the next row, skipping rows with no value; in a stack, the same category in the row beside. Standing up, in a stack: the segment above or below.'], ['Home End', 'The first or last band with a value, in the same series where it has one, else the nearest.'], ['PageUp PageDown', 'Seven bands back or forward.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter Space', 'On the toggle, swaps the chart and the table.']]} />
+<Keys rows={[['Tab', 'Moves to the active bar, one stop for the whole chart, then to the table toggle.'], ['Left Right', 'Standing up: the bar beside, through a pair bar by bar, then the next band, skipping bands with no value; in a stack, the same category in the band beside. Lying down, in a stack: the segment beside along the bar. Mirrored in right to left.'], ['Up Down', 'Lying down: the bar above or below, through a pair bar by bar, then the next row, skipping rows with no value; in a stack, the same category in the row beside. Standing up, in a stack: the segment above or below.'], ['Home End', 'The first or last band with a value, in the same series where it has one, else the nearest.'], ['PageUp PageDown', 'Seven bands back or forward.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter', 'On a bar with an href, follows its link; on a bar that is a button, presses it.'], ['Space', 'On a bar that is a button, presses it; on a link, nothing, so the page does not scroll.'], ['Enter Space', 'On the toggle, swaps the chart and the table.']]} />
 
 </Section>
 
@@ -292,6 +326,6 @@ The chart is a `figure` named by `aria-label` or `aria-labelledby`, which the ty
 
 What keeps bar charts in the system.
 
-<Rules dos={['Sort a ranked list by amount, and put Other last.', 'Keep every amount in your own format, the one the rest of the page uses.', 'Lay the bars down when the names are long or there are more than eight.', "Draw the previous period hatched in the current series' color, named by its period.", 'Stack five series at most, the fifth your Other, and pass the totals you sum.']} donts={['Never draw a direction in red or green. A refund below zero is ink, like the rest.', 'Never pass a domain without zero. A bar that starts anywhere else misstates its value.', 'Never rotate a label. Let it wrap, or lay the chart down.', 'Never give money out a color of its own. Spending is ink; only money that arrived is gain.']} />
+<Rules dos={['Sort a ranked list by amount, and put Other last.', 'Keep every amount in your own format, the one the rest of the page uses.', 'Lay the bars down when the names are long or there are more than eight.', "Draw the previous period hatched in the current series' color, named by its period.", 'Stack five series at most, the fifth your Other, and pass the totals you sum.', "Link a bar to what it stands for with its href, as data, and pass your router's navigate on a client page."]} donts={['Never draw a direction in red or green. A refund below zero is ink, like the rest.', 'Never pass a domain without zero. A bar that starts anywhere else misstates its value.', 'Never rotate a label. Let it wrap, or lay the chart down.', 'Never give money out a color of its own. Spending is ink; only money that arrived is gain.']} />
 
 </Section>

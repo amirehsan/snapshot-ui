@@ -53,6 +53,12 @@ export interface BarValue {
   value: number;
   /** Formatted: "$420.00", "-$1,240.00", "۴۲۰ دلار". */
   valueLabel: string;
+  /**
+   * Makes the bar a link to what it stands for, such as its transactions for the period shown: an anchor that
+   * works before hydration, from a server page and with a modifier key, and its table cell links too. Data, so a
+   * server component can pass it.
+   */
+  href?: string;
 }
 
 export interface BarSeries {
@@ -116,6 +122,18 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLElement>, 'children' | 'aria
     statusLabels?: ChartStatusLabels;
     /** The plot's height in px, vertical only; a horizontal chart is as tall as its rows. @default 240 */
     height?: number;
+    /**
+     * Called with a bar's band and series index when it is pressed: a click or a tap anywhere in its band, or
+     * Enter, or Space on a bar with no `href`, which makes that bar a button. A linked bar's press goes on to its
+     * link. A click with a modifier key or the middle button is the browser's, a new tab or window, never a press.
+     */
+    onBarPress?: (category: number, series: number) => void;
+    /**
+     * Opens a link's href through your router, as RouterProvider's `navigate` does: a plain click or Enter on a bar
+     * or a table link calls it in place of the browser's navigation, and a click with a modifier key stays the
+     * browser's. The charts import no React Aria, so they cannot read RouterProvider; pass it the same function.
+     */
+    navigate?: (href: string) => void;
     ref?: Ref<HTMLElement>;
   };
 
@@ -161,6 +179,9 @@ const LOADING_BANDS = [60, 85, 45, 70];
 /** A row's least height in px, `--size-target`, which the readout's place is reckoned in. */
 const ROW = 40;
 
+/** A touch this long or longer is a hold, which shows the readout and follows no link: the platforms' long press. */
+const HOLD = 500;
+
 /** A bar's sign, which its data end's corners and its figure's side are drawn by. */
 const signOf = (value: number): 'positive' | 'negative' | 'zero' =>
   value > 0 ? 'positive' : value < 0 ? 'negative' : 'zero';
@@ -201,6 +222,9 @@ export function BarChart(props: BarChartProps): ReactElement {
     labels = DEFAULT_LABELS,
     statusLabels = DEFAULT_STATUS_LABELS,
     height = 240,
+    onBarPress,
+    navigate,
+    onClick,
     className,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
@@ -285,6 +309,9 @@ export function BarChart(props: BarChartProps): ReactElement {
       )
     : [];
   const marks = stops.map(barMark);
+  const hrefOf = (stop?: BarStop): string | undefined => stop && drawn[stop.series]?.values[stop.band]?.href;
+  // The bars that link, each with a target in its band, in drawn order: the targets' order in the DOM.
+  const linked = stops.filter((stop) => hrefOf(stop) !== undefined);
   const first = firstStop(isReady ? drawn.map((line) => line.values) : [], bands);
 
   // The categories by their strings, not by the array's identity: a mark made under other categories is gone.
@@ -346,13 +373,43 @@ export function BarChart(props: BarChartProps): ReactElement {
   });
 
   /** The chart's bars, in the order of `stops`. */
-  const barsOf = (group: HTMLElement): HTMLElement[] => [
+  const barsOf = (group: Element): HTMLElement[] => [
     ...group.querySelectorAll<HTMLElement>('.bar-chart-bar'),
   ];
+
+  /** The bar at `target`: a bar, or the bar a link's target in its band stands for. */
+  const stopAt = (group: Element, target: EventTarget): BarStop | undefined => {
+    const hit = (target as Element).closest('.bar-chart-hit');
+    return hit
+      ? linked[[...group.querySelectorAll('.bar-chart-hit')].indexOf(hit)]
+      : stops[barsOf(group).indexOf(target as HTMLElement)];
+  };
+
+  // A touch's press: when it began, whether it is down, and whether it was held long enough to be a reading.
+  const touch = useRef({ at: 0, down: false, held: false });
+
+  // Focus a reader gave a link before the chart hydrated stays there, and that bar becomes the tab stop, so Tab
+  // does not jump back to the first bar.
+  useLayoutEffect(() => {
+    const group = groupRef.current;
+    const at = group ? barsOf(group).indexOf(group.ownerDocument.activeElement as HTMLElement) : -1;
+    const found = stops[at];
+    if (found) activate(found, 'key');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- on mount only
+  }, []);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     // A key with Alt, Control or Meta is the browser's or the page's shortcut, never a move.
     if (hasModifier(event)) return;
+    // Enter on a link is the browser's click, which presses it; Space on a link scrolls nothing. A bar that
+    // presses and does not link is a button, which both keys press.
+    const pressed = stops[barsOf(event.currentTarget).indexOf(event.target as HTMLElement)];
+    if (pressed && (event.key === ' ' || event.key === 'Enter')) {
+      const isLink = hrefOf(pressed) !== undefined;
+      if (isLink ? event.key === ' ' : onBarPress) event.preventDefault();
+      if (!isLink) onBarPress?.(pressed.band, pressed.series);
+      return;
+    }
     if (event.key === 'Escape') {
       // Stopped as well as prevented, so a Dialog around the chart closes on the next Escape, not this one.
       if (chart.current !== null && !chart.isReadoutHidden) {
@@ -406,8 +463,9 @@ export function BarChart(props: BarChartProps): ReactElement {
     from: ChartSource,
   ): void => {
     const inBand = stops.filter((stop) => stop.band === band);
-    // How far the pointer is from each bar's box: in a stack the nearest segment is taken, so past a stack's
-    // end it is the outermost on that side of zero; side by side, only the bar under it, else the first.
+    // How far the pointer is from each bar's box, along the band in a stack and across it side by side: the
+    // nearest is taken, so past a stack's end it is the outermost on that side of zero, and a pair is split at
+    // its middle, as a linked band's targets are.
     let found = inBand[0];
     let nearest = Infinity;
     inBand.forEach((stop, at) => {
@@ -417,7 +475,7 @@ export function BarChart(props: BarChartProps): ReactElement {
         isVertical === isStacked
           ? Math.max(box.top - event.clientY, event.clientY - box.bottom, 0)
           : Math.max(box.left - event.clientX, event.clientX - box.right, 0);
-      if (apart < nearest && (isStacked || apart === 0)) {
+      if (apart < nearest) {
         nearest = apart;
         found = stop;
       }
@@ -467,14 +525,32 @@ export function BarChart(props: BarChartProps): ReactElement {
     );
   };
 
-  const snap = isVertical ? snapBand : snapRow;
+  /** The bar a link's target under the pointer stands for, so the readout says what a press opens; else the band's. */
+  const snap = (event: PointerEvent<HTMLDivElement>, from: ChartSource): void => {
+    const found = stopAt(event.currentTarget, event.target);
+    if (found) activate(found, from);
+    else (isVertical ? snapBand : snapRow)(event, from);
+  };
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>): void => {
     if (event.pointerType !== 'touch') snap(event, 'pointer');
   };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
-    if (event.pointerType === 'touch') snap(event, 'touch');
+    if (event.pointerType !== 'touch') return;
+    touch.current = { at: event.timeStamp, down: true, held: false };
+    snap(event, 'touch');
+  };
+
+  // A touch held past HOLD is a reading: its click follows nothing. A tap is a press.
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>): void => {
+    if (event.pointerType === 'touch')
+      touch.current = { at: 0, down: false, held: event.timeStamp - touch.current.at >= HOLD };
+  };
+
+  // A hold keeps the readout in view, not the platform's link menu; a mouse's menu, with its new tab, stays.
+  const onContextMenu = (event: MouseEvent<HTMLDivElement>): void => {
+    if (touch.current.down) event.preventDefault();
   };
 
   const onPointerLeave = (event: PointerEvent<HTMLDivElement>): void => {
@@ -486,6 +562,35 @@ export function BarChart(props: BarChartProps): ReactElement {
       ];
     if (focused) activate(focused, 'key');
     else chart.clear();
+  };
+
+  /**
+   * A press: a bar's, a link's target's, or with no link under it the band the pointer holds; then a link's
+   * href through `navigate`. A click with a modifier key or another button is the browser's, a new tab or window;
+   * a held touch is a reading.
+   */
+  const onFigureClick = (event: MouseEvent<HTMLElement>): void => {
+    onClick?.(event);
+    const group = groupRef.current;
+    const isInGroup = group?.contains(event.target as Node);
+    const held = touch.current.held;
+    touch.current.held = false;
+    if (held && isInGroup) {
+      event.preventDefault();
+      return;
+    }
+    if (event.defaultPrevented || event.button !== 0 || hasModifier(event) || event.shiftKey) return;
+    const pressed =
+      group &&
+      isInGroup &&
+      (stopAt(group, event.target) ??
+        (isPointer && hrefOf(activeStop) === undefined ? activeStop : undefined));
+    if (pressed) onBarPress?.(pressed.band, pressed.series);
+    const link = (event.target as Element).closest('a[href]');
+    if (navigate && link) {
+      event.preventDefault();
+      navigate(link.getAttribute('href') ?? '');
+    }
   };
 
   const onToggle = (): void => {
@@ -638,8 +743,11 @@ export function BarChart(props: BarChartProps): ReactElement {
       </div>
     );
 
-  /** One bar, its name from its table cells and its place from zero, in percent, in either orientation. */
-  const bar = (band: number, at: number, value: BarValue): ReactElement => {
+  /**
+   * One bar, its name from its table cells and its place from zero, in percent, in either orientation, and with
+   * an href its target in its band.
+   */
+  const bar = (band: number, at: number, value: BarValue): [ReactElement, ReactElement | null] => {
     const mark = barMark({ band, series: at });
     // A stack's segment from the sum before it; a bar from zero.
     const segment = stack[at]?.[band];
@@ -667,14 +775,37 @@ export function BarChart(props: BarChartProps): ReactElement {
           inlineSize: percent(size),
           '--bar-chart-index': group > 1 ? at : undefined,
         };
-    return (
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a bar is a stop of the roving tab index, and taking focus makes it the active bar
-      <span
+    const href = value.href;
+    // A bar that links is an anchor, which says it is a link; one that only presses is a button; else an image.
+    const Bar = href === undefined ? 'span' : 'a';
+    const isFirst = stops.find((stop) => stop.band === band)?.series === at;
+    // Its target in its band: the whole band for the band's first bar; for a second side by side the half
+    // nearer it; for a segment on another its own run, the outermost of its sign on to the plot's edge. Each
+    // written in the same percent as the bars, so nothing is measured.
+    const farAtStart = isVertical !== isNegative;
+    const run = isStacked && !isFirst;
+    const across = isVertical
+      ? {
+          insetInlineStart: percent(isFirst || run ? (band / count) * 100 : bandCentre(band, count)),
+          inlineSize: percent((isFirst || run ? 100 : 50) / count),
+        }
+      : { '--bar-chart-row': band + 1, '--bar-chart-row-narrow': band * 2 + (isFirst ? 1 : 2) };
+    const along = run
+      ? {
+          [isVertical ? 'insetBlockStart' : 'insetInlineStart']:
+            segment?.outer && farAtStart ? undefined : percent(start),
+          [isVertical ? 'insetBlockEnd' : 'insetInlineEnd']:
+            segment?.outer && !farAtStart ? undefined : percent(100 - start - size),
+        }
+      : {};
+    return [
+      <Bar
         key={at}
         ref={holdFocus}
         className="bar-chart-bar"
-        role="img"
-        aria-roledescription={labels.bar}
+        href={href}
+        role={href === undefined ? (onBarPress ? 'button' : 'img') : undefined}
+        aria-roledescription={href === undefined && !onBarPress ? labels.bar : undefined}
         aria-labelledby={[cellId(band, -1), drawn.length > 1 ? cellId(-1, at) : '', cellId(band, at)]
           .filter(Boolean)
           .join(' ')}
@@ -692,8 +823,52 @@ export function BarChart(props: BarChartProps): ReactElement {
         onFocus={() => {
           activate({ band, series: at }, 'key');
         }}
-      />
+      />,
+      href === undefined ? null : (
+        // The pointer's way to the link, hidden from assistive technology, which reads the bar: never a stop.
+        // eslint-disable-next-line jsx-a11y/anchor-has-content -- a press target over the band, aria-hidden: the bar beside it is the link a reader meets, named by its cells
+        <a
+          key={`${String(at)}-hit`}
+          className="bar-chart-hit"
+          href={href}
+          aria-hidden="true"
+          tabIndex={-1}
+          data-whole={isFirst ? '' : undefined}
+          style={{ ...across, ...along }}
+        />
+      ),
+    ];
+  };
+
+  /**
+   * A table cell's text, linked to its bar's href: one series links its category cells, as a row's link does,
+   * and two or more link each value's cell, named as its bar is, by the row's header, the column's and itself.
+   */
+  const linkIn = (text: string | undefined, row: number, column: number): ReactNode => {
+    const href =
+      column < 0 === drawn.length < 2 ? hrefOf({ band: row, series: Math.max(column, 0) }) : undefined;
+    return href === undefined ? (
+      text
+    ) : (
+      <a
+        className="link"
+        href={href}
+        aria-labelledby={
+          column < 0 ? undefined : `${cellId(row, -1)} ${cellId(-1, column)} ${cellId(row, column)}`
+        }
+      >
+        {text}
+      </a>
     );
+  };
+
+  /** A band's bars, and its links' targets after them, series by series. */
+  const barsIn = (band: number): [(ReactElement | null)[], (ReactElement | null)[]] => {
+    const drawnBars = drawn.map((line, at) => {
+      const value = line.values[band];
+      return value ? bar(band, at, value) : [null, null];
+    });
+    return [drawnBars.map(([shown]) => shown), drawnBars.map(([, hit]) => hit)];
   };
 
   const message = (
@@ -771,10 +946,7 @@ export function BarChart(props: BarChartProps): ReactElement {
                   className="bar-chart-band"
                   data-active={activeStop?.band === band ? '' : undefined}
                 >
-                  {drawn.map((line, at) => {
-                    const value = line.values[band];
-                    return value ? bar(band, at, value) : null;
-                  })}
+                  {barsIn(band).flat()}
                 </div>
               ))
             : message}
@@ -854,30 +1026,30 @@ export function BarChart(props: BarChartProps): ReactElement {
             </div>
           ))
         : isReady
-          ? categories.map((category, band) => (
-              <div
-                key={band}
-                className="bar-chart-row"
-                data-active={activeStop?.band === band ? '' : undefined}
-              >
-                <span className="bar-chart-category" aria-hidden="true">
-                  {labelled.includes(band) ? category : null}
-                </span>
-                <div className="bar-chart-track">
-                  {drawn.map((line, at) => {
-                    const value = line.values[band];
-                    return value ? bar(band, at, value) : null;
-                  })}
+          ? categories.map((category, band) => {
+              const [shown, hits] = barsIn(band);
+              return (
+                <div
+                  key={band}
+                  className="bar-chart-row"
+                  data-active={activeStop?.band === band ? '' : undefined}
+                >
+                  <span className="bar-chart-category" aria-hidden="true">
+                    {labelled.includes(band) ? category : null}
+                  </span>
+                  <div className="bar-chart-track">{shown}</div>
+                  <span className="bar-chart-amounts" aria-hidden="true">
+                    {figuresOf(band).map(({ series: at, value }) => (
+                      <span key={at} className="bar-chart-amount" data-look={lookOf(at)}>
+                        {value.valueLabel}
+                      </span>
+                    ))}
+                  </span>
+                  {/* After the row's parts, so a target is the row's grid child and lies over its bars. */}
+                  {hits}
                 </div>
-                <span className="bar-chart-amounts" aria-hidden="true">
-                  {figuresOf(band).map(({ series: at, value }) => (
-                    <span key={at} className="bar-chart-amount" data-look={lookOf(at)}>
-                      {value.valueLabel}
-                    </span>
-                  ))}
-                </span>
-              </div>
-            ))
+              );
+            })
           : message}
       {valueTicks !== undefined && valueTicks.length > 0 ? (
         <div className="bar-chart-ticks" aria-hidden="true">
@@ -909,6 +1081,7 @@ export function BarChart(props: BarChartProps): ReactElement {
       } as CSSProperties);
 
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- the figure hears its links' clicks as they bubble, a bar's, a target's or a table link's, Enter's included, to press a bar and route a link
     <figure
       {...rest}
       aria-label={name.label}
@@ -919,6 +1092,7 @@ export function BarChart(props: BarChartProps): ReactElement {
       data-view={shownView}
       data-status={status}
       data-texture={hasTexture ? '' : undefined}
+      onClick={onFigureClick}
     >
       {/* Busy while loading, the chart's view only: the polite status after it stays outside, so it is heard. */}
       <div
@@ -955,6 +1129,8 @@ export function BarChart(props: BarChartProps): ReactElement {
           }
           data-room-end={isVertical && shownValues.some(({ value }) => value.value < 0) ? '' : undefined}
           data-pointer={isPointer && active !== null ? '' : undefined}
+          // Bars that are buttons take a press anywhere in their band; links take theirs on their targets.
+          data-press={onBarPress && linked.length === 0 ? '' : undefined}
           style={groupStyle}
           onKeyDown={isReady ? onKeyDown : undefined}
           onBlur={isReady ? onBlur : undefined}
@@ -962,6 +1138,9 @@ export function BarChart(props: BarChartProps): ReactElement {
           onPointerMove={isReady ? onPointerMove : undefined}
           onPointerLeave={isReady ? onPointerLeave : undefined}
           onPointerDown={isReady ? onPointerDown : undefined}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onContextMenu={onContextMenu}
         >
           {isVertical ? plot : rows}
         </div>
@@ -970,9 +1149,11 @@ export function BarChart(props: BarChartProps): ReactElement {
         <ChartTable
           block="bar-chart"
           columns={[...drawn.map((line) => line.label), ...(totals ? [labels.total] : [])]}
-          rows={categories}
+          rows={categories.map((category, row) => linkIn(category, row, -1))}
           cell={(row, column) =>
-            column < drawn.length ? drawn[column]?.values[row]?.valueLabel : (totals?.[row] ?? undefined)
+            column < drawn.length
+              ? linkIn(drawn[column]?.values[row]?.valueLabel, row, column)
+              : (totals?.[row] ?? undefined)
           }
           id={cellId}
           name={name}

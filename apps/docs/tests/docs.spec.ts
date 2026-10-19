@@ -3285,6 +3285,102 @@ test("the bar chart page's stack draws the palette in order and slate on top, an
   await expect(chart.locator('.bar-chart-readout li').last()).toHaveText('$1,522.30Total');
 });
 
+/** The bar chart page's linked example, by its name. */
+const linkedChart = (page: Page): Locator =>
+  page.getByRole('figure', { name: "October's spending by category", exact: true });
+
+/** The middle of a row's name, in view, where a press lands on the row's target and not on the bar. */
+const rowName = async (chart: Locator, name: string): Promise<{ x: number; y: number }> => {
+  const label = chart.locator('.bar-chart-category', { hasText: name });
+  await label.scrollIntoViewIfNeeded();
+  const box = await label.boundingBox();
+  if (!box) throw new Error(`No row ${name}`);
+  return { x: box.x + 4, y: box.y + box.height / 2 };
+};
+
+test("the bar chart page's links open each category's transactions by the keys, a press anywhere in its row and a new tab", async ({
+  page,
+}) => {
+  await visit(page, '/docs/charts/bar-chart');
+  const chart = linkedChart(page);
+  await expect(chart).toHaveCount(1);
+  const href = (category: string): string => `#transactions?category=${category}&month=2026-10`;
+  // One stop: the first bar, a link named by its cells.
+  const groceries = chart.getByRole('link', { name: 'Groceries $640.00', exact: true });
+  await expect(groceries).toHaveAttribute('href', href('groceries'));
+  await expect(groceries).toHaveAttribute('tabindex', '0');
+  await expect(chart.locator('.bar-chart-bar[tabindex="0"]')).toHaveCount(1);
+  await groceries.focus();
+  await page.keyboard.press('ArrowDown');
+  const dining = chart.getByRole('link', { name: 'Dining $312.45', exact: true });
+  await expect(dining).toBeFocused();
+  // Space scrolls nothing and opens nothing; Enter follows the link.
+  const scrolled = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press('Space');
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  await expect(page).not.toHaveURL(/#transactions/);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new RegExp(`${href('dining').replace(/[?]/g, '[?]')}$`));
+  // A press on a row's name, off its bar, follows the row's link, and the link cursor shows there.
+  const bills = await rowName(chart, 'Bills');
+  await page.mouse.move(bills.x, bills.y);
+  await expect(chart.locator('.bar-chart-readout .bar-chart-readout-x')).toHaveText('Bills');
+  expect(
+    await page.evaluate(({ x, y }) => {
+      const under = document.elementFromPoint(x, y);
+      return [under?.className, under && getComputedStyle(under).cursor];
+    }, bills),
+  ).toEqual(['bar-chart-hit', 'pointer']);
+  await page.mouse.click(bills.x, bills.y);
+  await expect(page).toHaveURL(new RegExp(`${href('bills').replace(/[?]/g, '[?]')}$`));
+  // A modified press and a middle press are the browser's own: each opens the link in a new tab.
+  const target = chart.locator('.bar-chart-hit[data-whole]').nth(2);
+  const presses: Parameters<Locator['click']>[0][] = [{ modifiers: ['ControlOrMeta'] }, { button: 'middle' }];
+  for (const press of presses) {
+    const [tab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      target.click({ ...press, position: { x: 4, y: 4 } }),
+    ]);
+    await tab.waitForURL(new RegExp(`${href('transport').replace(/[?]/g, '[?]')}$`));
+    await tab.close();
+  }
+  await expect(page).toHaveURL(new RegExp(`${href('bills').replace(/[?]/g, '[?]')}$`));
+  // The table's category cells link too.
+  await chart.getByRole('button', { name: 'Show as table' }).click();
+  await expect(chart.locator('table').getByRole('link', { name: 'Travel', exact: true })).toHaveAttribute(
+    'href',
+    href('travel'),
+  );
+});
+
+test.describe('bar chart links without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("with scripts off the bar chart page's bars are links of their own that a key or a press follows", async ({
+    page,
+  }) => {
+    await page.goto('/docs/charts/bar-chart');
+    const chart = linkedChart(page);
+    const bars = chart.locator('a.bar-chart-bar');
+    await expect(bars).toHaveCount(6);
+    // No tabindex: each link is a stop of its own, in drawn order, as plain links are.
+    expect(await bars.evaluateAll((links) => links.map((link) => link.getAttribute('tabindex')))).toEqual(
+      Array.from({ length: 6 }, () => null),
+    );
+    await bars.nth(1).focus();
+    await page.keyboard.press('Tab');
+    await expect(bars.nth(2)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/#transactions[?]category=transport&month=2026-10$/);
+    // A press anywhere in a row follows its link with no script at all.
+    const shopping = await rowName(chart, 'Shopping');
+    await page.mouse.click(shopping.x, shopping.y);
+    await expect(page).toHaveURL(/#transactions[?]category=shopping&month=2026-10$/);
+    // The copy of the table shown with scripts off links each category too.
+    await expect(chart.locator('table:not([hidden])').getByRole('link')).toHaveCount(6);
+  });
+});
+
 // ---- The Insights recipe ------------------------------------------------------------------------------------
 
 const INSIGHTS = '/docs/charts/bar-chart';
@@ -3372,11 +3468,11 @@ test('comparing draws a hatched previous period named in each bar', async ({ pag
   await expect(hatched).toHaveCount(11);
   for (const bar of await hatched.all()) await expect(bar).toHaveAttribute('data-color', 'ink');
   await expect(chart.locator('.bar-chart-legend-item[data-look="hatched"]')).toHaveText('September');
-  await expect(chart.getByRole('img', { name: 'Groceries September $698.15', exact: true })).toHaveAttribute(
-    'data-look',
-    'hatched',
-  );
-  await expect(chart.getByRole('img', { name: 'Travel October -$310.00', exact: true })).toHaveAttribute(
+  // A ranked view's bars are links to their transactions, September's to September's.
+  const september = chart.getByRole('link', { name: 'Groceries September $698.15', exact: true });
+  await expect(september).toHaveAttribute('data-look', 'hatched');
+  await expect(september).toHaveAttribute('href', '#transactions?category=groceries&period=2026-09');
+  await expect(chart.getByRole('link', { name: 'Travel October -$310.00', exact: true })).toHaveAttribute(
     'data-sign',
     'negative',
   );
@@ -3399,6 +3495,29 @@ test('comparing draws a hatched previous period named in each bar', async ({ pag
   await expect(chart.getByRole('img', { name: 'Oct A year before $4,900.00', exact: true })).toHaveCount(1);
 });
 
+test("the insights recipe's ranked bars open their transactions through the page's router", async ({
+  page,
+}) => {
+  await visit(page, `${INSIGHTS}?by=category`);
+  const chart = insightsChart(page);
+  const rent = chart.getByRole('link', { name: 'Rent $1,450.00', exact: true });
+  await expect(rent).toHaveAttribute('href', '#transactions?category=rent');
+  await expect(rent).toHaveAttribute('tabindex', '0');
+  // A press on the row's empty track follows the link, and the URL keeps the view.
+  const groceries = chart.locator('.bar-chart-track').nth(1);
+  await groceries.scrollIntoViewIfNeeded();
+  const box = await groceries.boundingBox();
+  if (!box) throw new Error('No track');
+  await page.mouse.click(box.x + box.width - 4, box.y + box.height / 2);
+  await expect(page).toHaveURL(/[?]by=category#transactions[?]category=groceries$/);
+  // The keys: Enter on the focused bar follows its link.
+  await rent.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/[?]by=category#transactions[?]category=dining$/);
+});
+
 test("a focused bar's grouping change moves focus to the chart, never the body", async ({ page }) => {
   await visit(page, INSIGHTS);
   const chart = insightsChart(page);
@@ -3412,7 +3531,7 @@ test("a focused bar's grouping change moves focus to the chart, never the body",
     (input as HTMLInputElement).click();
   });
   await expect(chart).toHaveAttribute('data-orientation', 'horizontal');
-  await expect(chart.getByRole('img', { name: 'Rent $1,450.00', exact: true })).toBeFocused();
+  await expect(chart.getByRole('link', { name: 'Rent $1,450.00', exact: true })).toBeFocused();
   await insightsRadio(page, 'Group by', 'Month').evaluate((input) => {
     (input as HTMLInputElement).click();
   });

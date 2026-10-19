@@ -157,6 +157,34 @@ const CHARTS: [name: string, element: ReactElement, after: (container: HTMLEleme
     },
   ],
   [
+    'BarChart, linked',
+    <BarChart
+      aria-label="Spending by merchant"
+      orientation="horizontal"
+      categories={['Whole Foods Market', 'Shell', 'Netflix', 'Apple Store']}
+      series={[
+        {
+          ...MERCHANTS,
+          values: MERCHANTS.values.map((value, at) =>
+            value ? { ...value, href: `#transactions?merchant=${String(at)}` } : null,
+          ),
+        },
+      ]}
+    />,
+    (container) => {
+      // The links the server wrote, each a stop until now, are one stop; their targets never were one.
+      const bars = [...container.querySelectorAll('.bar-chart-bar')];
+      expect(bars.map((bar) => [bar.tagName, bar.getAttribute('tabindex')])).toEqual([
+        ['A', '0'],
+        ['A', '-1'],
+        ['A', '-1'],
+      ]);
+      expect(
+        [...container.querySelectorAll('.bar-chart-hit')].map((hit) => hit.getAttribute('tabindex')),
+      ).toEqual(['-1', '-1', '-1']);
+    },
+  ],
+  [
     'LineChart loading',
     <LineChart aria-label="Spending in October" series={[THIS_MONTH]} xLabels={DAYS} status="loading" />,
     (container) => {

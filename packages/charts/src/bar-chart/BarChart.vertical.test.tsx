@@ -577,7 +577,7 @@ describe('BarChart, vertical', () => {
       expect(readoutX(container)).toBe('Oct');
     });
 
-    it('takes the bar under it in a group, and the first between them', () => {
+    it('takes the bar under it in a group, and between or beside them the nearer', () => {
       const { container } = render(<Grouped />);
       stubBands(container, 3);
       const plot = part(container, '.bar-chart-plot');
@@ -587,6 +587,12 @@ describe('BarChart, vertical', () => {
       fireEvent.pointerMove(plot, { clientX: 410, pointerType: 'mouse' });
       expect(barAt(container, 4)).toHaveAttribute('data-active', '');
       expect(readoutX(container)).toBe('Oct');
+      // Past the second bar's far side the second is nearer, as a linked band's target is (correction 96).
+      fireEvent.pointerMove(plot, { clientX: 560, pointerType: 'mouse' });
+      expect(barAt(container, 5)).toHaveAttribute('data-active', '');
+      // In the gap, the nearer: 500.5 is nearer the first bar's end at 500 than the second's start at 502.
+      fireEvent.pointerMove(plot, { clientX: 500.5, pointerType: 'mouse' });
+      expect(barAt(container, 4)).toHaveAttribute('data-active', '');
     });
   });
 

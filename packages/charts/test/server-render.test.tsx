@@ -214,6 +214,34 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     ['tabindex', 'data-look="hatched"', 'bar-chart-readout'],
   ],
   [
+    // Bars that link: each bar an anchor to its href with no tabindex, so before hydration and with scripts off
+    // every link is a stop in drawn order; each with a target over its band that is never one; and the table's
+    // category cells linked too. The server's HTML follows a link with no script at all.
+    'BarChart, linked',
+    <BarChart
+      aria-label="Spending by merchant"
+      orientation="horizontal"
+      categories={['Whole Foods Market', 'Shell', 'Netflix', 'Apple Store']}
+      series={[
+        {
+          ...MERCHANTS,
+          values: MERCHANTS.values.map((value, at) =>
+            value ? { ...value, href: `#transactions?merchant=${String(at)}` } : null,
+          ),
+        },
+      ]}
+    />,
+    [
+      '<a class="bar-chart-bar" href="#transactions?merchant=0" aria-labelledby="',
+      '<a class="bar-chart-hit" href="#transactions?merchant=0" aria-hidden="true" tabindex="-1" data-whole="" style="--bar-chart-row:1;--bar-chart-row-narrow:1"></a>',
+      '<th scope="row" id="',
+      '<a class="link" href="#transactions?merchant=1">Shell</a>',
+      'class="bar-chart-rows" role="group" aria-roledescription="chart"',
+    ],
+    // No bar writes a tabindex, a role over its link's or a role description; only the targets are out of Tab.
+    ['tabindex="0"', 'role="img"', 'aria-roledescription="bar"', 'data-press', 'bar-chart-readout'],
+  ],
+  [
     // Loading in the plot's own space: a still placeholder at the plot's height, the region empty until mount.
     'LineChart, loading',
     <LineChart aria-label="Spending in October" series={[THIS_MONTH]} xLabels={DAYS} status="loading" />,

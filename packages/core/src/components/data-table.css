@@ -277,7 +277,8 @@
      native control and control role, anything in the tab order, a field, and the opt-in data-table-control for
      anything else an app draws; never the row's own link, whose ::after a position would hold to its own box,
      and never a BarChart's bar, a tab stop placed absolutely in its track, which a relative position would
-     collapse to nothing the moment it takes focus (insights spec correction 90). */
+     collapse to nothing the moment it takes focus (insights spec correction 90), nor a linked bar's target,
+     placed absolutely in its band (correction 96). */
   :is(.data-table-cell, .data-table-item)
     :is(
       a,
@@ -295,7 +296,7 @@
       [role='slider'],
       [role='switch'],
       [tabindex]:not([tabindex='-1'])
-    ):not(.data-table-link, .bar-chart-bar),
+    ):not(.data-table-link, .bar-chart-bar, .bar-chart-hit),
   :is(.data-table-cell, .data-table-item) :is(.checkbox-field, .field, .data-table-control) {
     position: relative;
     z-index: calc(var(--z-header) - 2);

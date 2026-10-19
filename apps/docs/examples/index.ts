@@ -9,6 +9,7 @@ import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
 import BarChartCompare from './bar-chart-compare';
 import BarChartIncomeSpending from './bar-chart-income-spending';
+import BarChartLinks from './bar-chart-links';
 import BarChartMonths from './bar-chart-months';
 import BarChartRanked from './bar-chart-ranked';
 import BarChartRefunds from './bar-chart-refunds';
@@ -202,6 +203,7 @@ export const examples = {
   'badge-tones': BadgeTones,
   'bar-chart-compare': BarChartCompare,
   'bar-chart-income-spending': BarChartIncomeSpending,
+  'bar-chart-links': BarChartLinks,
   'bar-chart-months': BarChartMonths,
   'bar-chart-ranked': BarChartRanked,
   'bar-chart-refunds': BarChartRefunds,

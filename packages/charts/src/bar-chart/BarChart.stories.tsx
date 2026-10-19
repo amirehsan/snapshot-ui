@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState, type ReactElement, type ReactNode } from 'react';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 import { expect, waitFor } from 'storybook/test';
 import { focusOn } from '../stories/focus';
 import { BarChart, type BarChartProps, type BarSeries, type BarValue } from './BarChart';
@@ -1901,6 +1903,392 @@ export const StackFocus: Story = {
       await expect(toNothing).toEqual([]);
     } finally {
       doc.removeEventListener('focusout', record);
+    }
+  },
+};
+
+/* Links: an href per bar, a target over its band, and the table's cells. */
+
+/** Each merchant's transactions for October, the drill-down the consumer opens from a bar. */
+const merchantHref = (name: string): string =>
+  `#transactions?merchant=${name.toLowerCase().replace(/[^a-z]+/g, '-')}`;
+
+const LINKED_MERCHANT: BarSeries = {
+  ...BY_MERCHANT,
+  values: BY_MERCHANT.values.map((value, at) =>
+    value ? { ...value, href: merchantHref(MERCHANTS[at] ?? '') } : null,
+  ),
+};
+
+/** A series whose every bar links to its band and series by index, so a play can tell the targets apart. */
+const linkedBy = (series: BarSeries, at: number): BarSeries => ({
+  ...series,
+  values: series.values.map((value, band) =>
+    value ? { ...value, href: `#bar?band=${String(band)}&series=${String(at)}` } : null,
+  ),
+});
+
+/** The ranked list with every bar a link, routed through `navigate` as an app's router would take it. */
+const Linked = (args: BarChartProps): ReactElement => {
+  const [opened, setOpened] = useState('Nothing opened yet');
+  return (
+    <Panel>
+      <BarChart {...args} navigate={setOpened} />
+      <p className="text" data-opened="">
+        {opened}
+      </p>
+    </Panel>
+  );
+};
+
+/** The page's line that says what the chart last opened through `navigate`. */
+const openedOf = (canvasElement: HTMLElement): string | null =>
+  part(canvasElement, '[data-opened]').textContent;
+
+/**
+ * Every bar a link to its merchant's transactions. One stop, moved by the arrows; Enter is the link's own click,
+ * which the chart routes through `navigate`; Space scrolls nothing; a press anywhere in a row is a press on a
+ * real anchor, so a modifier key's click is left to the browser, a new tab, and the chart neither prevents it
+ * nor routes it. A pointer never moves focus.
+ */
+export const Links: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  args: { series: [LINKED_MERCHANT] },
+  render: (args) => <Linked {...args} />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await interactive(canvasElement);
+    const doc = canvasElement.ownerDocument;
+    const view = doc.defaultView ?? window;
+    // Each bar is a link named by its cells, the row's name and its amount.
+    const shell = canvas.getByRole('link', { name: 'Shell $284.15' });
+    await expect(shell).toHaveAttribute('href', merchantHref('Shell'));
+    await expect(shell).toHaveClass('bar-chart-bar');
+    // Each key's last event, caught on its way down and read once the chart has handled it.
+    const seen = new Map<string, KeyboardEvent>();
+    const record = (event: KeyboardEvent): void => {
+      seen.set(event.key, event);
+    };
+    view.addEventListener('keydown', record, true);
+    try {
+      await userEvent.tab();
+      await waitFor(() => expect(focusedCategory(canvasElement)).toBe('Whole Foods Market'));
+      await userEvent.keyboard('{ArrowDown}');
+      await waitFor(() => expect(doc.activeElement).toBe(shell));
+      await expect(barsOf(canvasElement).filter((bar) => bar.tabIndex === 0)).toEqual([shell]);
+      // Space is no press on a link, and the page stays where it is.
+      const scrolled = view.scrollY;
+      await userEvent.keyboard(' ');
+      await expect(seen.get(' ')?.defaultPrevented).toBe(true);
+      await expect(view.scrollY).toBe(scrolled);
+      await expect(openedOf(canvasElement)).toBe('Nothing opened yet');
+      // Enter follows the link: the browser clicks it, and the chart routes the click.
+      await userEvent.keyboard('{Enter}');
+      await waitFor(() => expect(openedOf(canvasElement)).toBe(merchantHref('Shell')));
+      await expect(doc.activeElement).toBe(shell);
+    } finally {
+      view.removeEventListener('keydown', record, true);
+    }
+    // Past Amazon's bar end, over its empty track, over its name and over its amount: a real anchor to its link.
+    const row = (name: string): Element => {
+      const found = [...canvasElement.querySelectorAll('.bar-chart-category')].find(
+        (category) => category.textContent === name,
+      );
+      if (!found) throw new Error(`No row ${name}`);
+      return found;
+    };
+    const amazon = row('Amazon');
+    const track = amazon.nextElementSibling?.getBoundingClientRect();
+    const name = amazon.getBoundingClientRect();
+    const amount = amazon.nextElementSibling?.nextElementSibling?.getBoundingClientRect();
+    if (!track || !amount) throw new Error('No row parts');
+    const middle = track.top + track.height / 2;
+    for (const [x, y] of [
+      [track.right - 2, middle],
+      [name.left + 2, name.top + name.height / 2],
+      [amount.right - 2, middle],
+    ] as const) {
+      const under = doc.elementFromPoint(x, y);
+      await expect(under).toHaveClass('bar-chart-hit');
+      await expect(under).toHaveAttribute('href', merchantHref('Amazon'));
+      await expect(under && getComputedStyle(under).cursor).toBe('pointer');
+    }
+    // A click with a modifier key is the browser's: the chart neither prevents it nor routes it. The page's own
+    // listener, which hears it last, then keeps this test page where it is.
+    const clicks: boolean[] = [];
+    const keep = (event: MouseEvent): void => {
+      clicks.push(event.defaultPrevented);
+      event.preventDefault();
+    };
+    view.addEventListener('click', keep);
+    try {
+      const target = doc.elementFromPoint(track.right - 2, middle);
+      for (const init of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { button: 1 }])
+        target?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view, ...init }));
+      shell.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view, metaKey: true }));
+      await expect(clicks).toEqual([false, false, false, false, false]);
+      await expect(openedOf(canvasElement)).toBe(merchantHref('Shell'));
+    } finally {
+      view.removeEventListener('click', keep);
+    }
+    // A plain press anywhere in the row follows its link, through the chart's router, and moves no focus.
+    const uber = row('Uber').getBoundingClientRect();
+    const uberTarget = doc.elementFromPoint(uber.left + 2, uber.top + uber.height / 2);
+    if (!(uberTarget instanceof HTMLElement)) throw new Error('No target');
+    await userEvent.click(uberTarget);
+    await waitFor(() => expect(openedOf(canvasElement)).toBe(merchantHref('Uber')));
+    await expect(readoutX(canvasElement)).toBe('Uber');
+    await expect(doc.activeElement).toBe(shell);
+    // The table's category cells link too.
+    await userEvent.click(canvas.getByRole('button', { name: 'Show as table' }));
+    const cell = canvas.getByRole('link', { name: 'Walgreens' });
+    await expect(cell).toHaveAttribute('href', merchantHref('Walgreens'));
+    await expect(cell.closest('th')).toHaveAttribute('scope', 'row');
+    await userEvent.click(cell);
+    await waitFor(() => expect(openedOf(canvasElement)).toBe(merchantHref('Walgreens')));
+  },
+};
+
+/**
+ * The server's face: the HTML a server page sends, before any script. Every bar is a link of its own, a stop in
+ * drawn order, and a press anywhere in a row lands on a real anchor, so the drill-down works before hydration.
+ * Hydrated, the links become one stop: a link a reader focused before then is that stop, still focused, and no
+ * bar moves.
+ */
+export const LinksServerFace: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <Panel>
+      <div data-server="" />
+    </Panel>
+  ),
+  play: async ({ canvasElement }) => {
+    const doc = canvasElement.ownerDocument;
+    const holder = part(canvasElement, '[data-server]');
+    const element = (
+      <BarChart
+        aria-label="Spending by merchant, October"
+        orientation="horizontal"
+        categories={MERCHANTS}
+        series={[LINKED_MERCHANT]}
+        valueTicks={MERCHANT_TICKS}
+      />
+    );
+    holder.innerHTML = renderToString(element);
+    const bars = barsOf(holder);
+    await expect(bars).toHaveLength(MERCHANTS.length);
+    for (const [at, bar] of bars.entries()) {
+      await expect(bar.tagName).toBe('A');
+      await expect(bar).toHaveAttribute('href', merchantHref(MERCHANTS[at] ?? ''));
+      await expect(bar).not.toHaveAttribute('tabindex');
+      await expect(bar.tabIndex).toBe(0);
+    }
+    for (const hit of holder.querySelectorAll<HTMLElement>('.bar-chart-hit'))
+      await expect(hit.tabIndex).toBe(-1);
+    const track = holder.querySelectorAll('.bar-chart-track')[4]?.getBoundingClientRect();
+    if (!track) throw new Error('No track');
+    const under = doc.elementFromPoint(track.right - 2, track.top + track.height / 2);
+    await expect(under).toHaveClass('bar-chart-hit');
+    await expect(under).toHaveAttribute('href', merchantHref('Comcast'));
+    // A reader tabbed to the fourth link before the scripts ran.
+    const fourth = bars[3];
+    if (!fourth) throw new Error('No bar');
+    await focusOn(fourth);
+    const boxes = (): DOMRect[] => barsOf(holder).map((bar) => bar.getBoundingClientRect());
+    const before = boxes();
+    const errors: unknown[] = [];
+    const root = hydrateRoot(holder, element, {
+      onRecoverableError: (error) => {
+        errors.push(error);
+      },
+    });
+    try {
+      await waitFor(() => expect(barsOf(holder).filter((bar) => bar.tabIndex === 0)).toEqual([fourth]));
+      await expect(barsOf(holder)).toEqual(bars);
+      await expect(doc.activeElement).toBe(fourth);
+      await expect(errors).toEqual([]);
+      for (const [at, box] of boxes().entries()) {
+        await expect(Math.abs(box.top - (before[at]?.top ?? 0))).toBeLessThanOrEqual(1);
+        await expect(Math.abs(box.left - (before[at]?.left ?? 0))).toBeLessThanOrEqual(1);
+        await expect(Math.abs(box.width - (before[at]?.width ?? 0))).toBeLessThanOrEqual(1);
+      }
+    } finally {
+      root.unmount();
+    }
+  },
+};
+
+/** The same charts with and without links, standing and lying, grouped, stacked, narrow and right to left. */
+const LinkTargetCharts = (): ReactElement => (
+  <div style={{ display: 'grid', gap: 24 }}>
+    <Panel>
+      <BarChart
+        aria-label="Linked, lying down"
+        data-case="lying"
+        orientation="horizontal"
+        categories={COMPARE_CATEGORIES}
+        series={[linkedBy(OCTOBER, 0), linkedBy(SEPTEMBER, 1)]}
+      />
+    </Panel>
+    <Panel>
+      <BarChart
+        aria-label="Not linked, lying down"
+        data-case="plain"
+        orientation="horizontal"
+        categories={COMPARE_CATEGORIES}
+        series={[OCTOBER, SEPTEMBER]}
+      />
+    </Panel>
+    <Panel width="320px">
+      <BarChart
+        aria-label="Linked, narrow"
+        data-case="narrow"
+        orientation="horizontal"
+        categories={COMPARE_CATEGORIES}
+        series={[linkedBy(OCTOBER, 0), linkedBy(SEPTEMBER, 1)]}
+      />
+    </Panel>
+    <Panel>
+      <BarChart
+        aria-label="Linked, standing up"
+        data-case="standing"
+        categories={COMPARE_CATEGORIES}
+        series={[linkedBy(OCTOBER, 0), linkedBy(SEPTEMBER, 1)]}
+        valueTicks={COMPARE_TICKS}
+      />
+    </Panel>
+    <Panel>
+      <div dir="rtl">
+        <BarChart
+          aria-label="Linked, standing up, right to left"
+          data-case="rtl"
+          categories={COMPARE_CATEGORIES}
+          series={[linkedBy(OCTOBER, 0), linkedBy(SEPTEMBER, 1)]}
+        />
+      </div>
+    </Panel>
+    <Panel>
+      <BarChart
+        aria-label="Linked, stacked across zero"
+        data-case="stacked"
+        categories={['May', 'Jun']}
+        layout="stacked"
+        valueDomain={[-100, 300]}
+        series={[
+          linkedBy({ label: 'Groceries', values: [money(100), money(-50)] }, 0),
+          linkedBy({ label: 'Shopping', values: [money(-40), money(60)] }, 1),
+          linkedBy({ label: 'Travel', values: [money(30), money(-20)] }, 2),
+        ]}
+      />
+    </Panel>
+  </div>
+);
+
+/**
+ * Where a press lands, and what the readout says there, in every face: in a band of two, the half nearer each
+ * bar; lying down, the whole row from the name to the amount for the first and the half under the middle for
+ * the second, on a narrow chart the name's line too; in a stack, each segment's own run and the outermost on to
+ * the plot's edge. A pointer over a target shows that bar's readout, so it says what a press opens. A chart
+ * with links draws its bars exactly where one without them does.
+ */
+export const LinkTargets: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <LinkTargetCharts />,
+  play: async ({ canvasElement }) => {
+    await interactive(canvasElement);
+    const doc = canvasElement.ownerDocument;
+    const view = doc.defaultView ?? window;
+    const scrolled = view.scrollY;
+    /** The chart of a case, scrolled to the top of the viewport, since a point off screen hits nothing. */
+    const chartOf = (name: string): HTMLElement => {
+      const chart = part(canvasElement, `[data-case="${name}"]`);
+      chart.scrollIntoView({ block: 'start' });
+      return chart;
+    };
+    /** The href of the target under a point, and the bar the pointer there makes active. */
+    const probe = (chart: HTMLElement, x: number, y: number): [string | null, string | null] => {
+      const under = doc.elementFromPoint(x, y);
+      under?.dispatchEvent(
+        new PointerEvent('pointermove', { bubbles: true, clientX: x, clientY: y, pointerType: 'mouse' }),
+      );
+      return [
+        under?.classList.contains('bar-chart-hit') ? under.getAttribute('href') : null,
+        chart.querySelector('.bar-chart-bar[data-active]')?.getAttribute('href') ?? null,
+      ];
+    };
+    const href = (band: number, series: number): string =>
+      `#bar?band=${String(band)}&series=${String(series)}`;
+    const expectProbe = async (chart: HTMLElement, x: number, y: number, expected: string): Promise<void> => {
+      await waitFor(() =>
+        expect(probe(chart, x, y), `${chart.dataset.case ?? ''} at ${String(x)}, ${String(y)}`).toEqual([
+          expected,
+          expected,
+        ]),
+      );
+    };
+
+    try {
+      // Lying down: the first bar's target is the row, name and amount included; the second's the half under it.
+      for (const name of ['lying', 'narrow']) {
+        const chart = chartOf(name);
+        const tracks = [...chart.querySelectorAll('.bar-chart-track')].map((track) =>
+          track.getBoundingClientRect(),
+        );
+        const labels = [...chart.querySelectorAll('.bar-chart-category')].map((label) =>
+          label.getBoundingClientRect(),
+        );
+        for (const [band, track] of tracks.entries()) {
+          const label = labels[band];
+          if (!label) throw new Error('No label');
+          await expectProbe(chart, label.left + 2, label.top + 2, href(band, 0));
+          await expectProbe(chart, track.right - 2, track.top + 2, href(band, 0));
+          await expectProbe(chart, track.right - 2, track.bottom - 2, href(band, 1));
+        }
+      }
+
+      // Standing up: a band's two halves, from the inline start, mirrored in right to left.
+      for (const name of ['standing', 'rtl']) {
+        const chart = chartOf(name);
+        const box = part(chart, '.bar-chart-bars').getBoundingClientRect();
+        const band = box.width / COMPARE_CATEGORIES.length;
+        const isMirrored = name === 'rtl';
+        for (let at = 0; at < COMPARE_CATEGORIES.length; at++) {
+          const start = isMirrored ? box.right - at * band : box.left + at * band;
+          const step = isMirrored ? -band : band;
+          for (const [along, series] of [
+            [0.1, 0],
+            [0.4, 0],
+            [0.6, 1],
+            [0.9, 1],
+          ] as const) {
+            await expectProbe(chart, start + step * along, box.top + 2, href(at, series));
+            await expectProbe(chart, start + step * along, box.bottom - 2, href(at, series));
+          }
+        }
+      }
+
+      // A stack: each segment's own run, the outermost of each sign on to the plot's edge, the first the rest.
+      const stacked = chartOf('stacked');
+      const box = part(stacked, '.bar-chart-bars').getBoundingClientRect();
+      for (const bar of barsOf(stacked)) {
+        const drawn = bar.getBoundingClientRect();
+        const x = drawn.left + drawn.width / 2;
+        await expectProbe(stacked, x, drawn.top + drawn.height / 2, bar.getAttribute('href') ?? '');
+      }
+      const may = box.left + box.width / 4;
+      // May: Travel stands on top of Groceries, Shopping hangs below zero.
+      await expectProbe(stacked, may, box.top + 2, href(0, 2));
+      await expectProbe(stacked, may, box.bottom - 2, href(0, 1));
+
+      // Links change nothing drawn: every bar's box is the one a chart without links draws.
+      const linked = barsOf(chartOf('lying')).map((bar) => bar.getBoundingClientRect());
+      const plain = barsOf(chartOf('plain')).map((bar) => bar.getBoundingClientRect());
+      await expect(linked).toHaveLength(plain.length);
+      for (const [at, box] of linked.entries()) {
+        await expect(Math.abs(box.width - (plain[at]?.width ?? 0))).toBeLessThanOrEqual(0.5);
+        await expect(Math.abs(box.height - (plain[at]?.height ?? 0))).toBeLessThanOrEqual(0.5);
+      }
+    } finally {
+      view.scrollTo(0, scrolled);
     }
   },
 };

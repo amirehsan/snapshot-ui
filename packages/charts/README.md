@@ -23,7 +23,7 @@ export function Trend({ spending }: { spending: number[] }) {
 }
 ```
 
-`BarChart` and `LineChart` are client components for their keys, their pointer and their readout, and their drawing, legend and table still render on the server.
+`BarChart` and `LineChart` are client components for their keys, their pointer and their readout, and their drawing, legend and table still render on the server. A bar given an `href` is a real link in that HTML, so a server page's drill-down works before the chart hydrates.
 
 Every figure a chart shows is a string from your app, and nothing is measured, so the server's HTML is final in any locale.
 
