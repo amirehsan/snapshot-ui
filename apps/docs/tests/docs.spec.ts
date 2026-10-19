@@ -4559,3 +4559,32 @@ test('closing the page while files upload asks first', async ({ page }) => {
   await page.close({ runBeforeUnload: true });
   expect(await shown).toBe('beforeunload');
 });
+
+test("the card page's header actions give focus back to the button that opened each dialog, never the body", async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/card');
+  const card = page.locator('.stage .card').filter({ hasText: 'Account details' });
+  const edit = card.getByRole('button', { name: 'Edit details' });
+  const more = card.getByRole('button', { name: 'More actions' });
+
+  await edit.click();
+  await expect(page.getByRole('dialog', { name: 'Edit details' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(edit).toBeFocused();
+
+  for (const [item, name, leave] of [
+    ['Merge', 'Merge Everyday Visa', 'Escape'],
+    ['Remove', 'Remove Everyday Visa?', 'Cancel'],
+  ] as const) {
+    await more.click();
+    await page.getByRole('menuitem', { name: item }).click();
+    const dialog = page.getByRole(item === 'Remove' ? 'alertdialog' : 'dialog', { name });
+    await expect(dialog).toBeVisible();
+    if (leave === 'Escape') await page.keyboard.press('Escape');
+    else await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(more).toBeFocused();
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  }
+});
