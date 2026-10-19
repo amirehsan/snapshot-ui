@@ -611,7 +611,7 @@ test('the installation page explains the server face and the date library', asyn
 test('the chart pages name the core version charts needs', async ({ page }) => {
   for (const slug of ['bar-chart', 'line-chart', 'sparkline']) {
     await visit(page, `/docs/charts/${slug}`);
-    await expect(page.locator('main'), slug).toContainText('0.7 for charts 0.1.4');
+    await expect(page.locator('main'), slug).toContainText('0.9 for charts 0.2.0');
   }
 });
 
@@ -646,6 +646,24 @@ test('the installation page names EmptyState and Skeleton among the static parts
   await expect(section).toHaveCount(1);
   for (const text of ['EmptyState', 'Skeleton', 'DataTable', 'getRowHref', 'SidePanel']) {
     await expect(section, text).toContainText(text);
+  }
+});
+
+test('the installation page names Prose and ProseScroll among the static parts, the charts among the client ones, and remark-gfm', async ({
+  page,
+}) => {
+  await visit(page, '/docs/installation');
+  const section = guideSection(page, 'Next.js server components');
+  await expect(section).toHaveCount(1);
+  await expect(section).toContainText('PageColumn, and Prose and ProseScroll.');
+  for (const text of ['BarChart and LineChart are client components', 'remark-gfm', 'skipHtml']) {
+    await expect(section, text).toContainText(text);
+  }
+  await expect(section.locator('a[href="/docs/components/prose#rendering-markdown-safely"]')).toHaveCount(1);
+  // The fonts a report needs: Sofia Sans's italic, and Vazirmatn first under lang="fa".
+  const fonts = guideSection(page, 'Load the font');
+  for (const text of ["style: ['normal', 'italic']", 'wght-italic.css', 'Vazirmatn', '--font-persian']) {
+    await expect(fonts, text).toContainText(text);
   }
 });
 
@@ -3267,6 +3285,234 @@ test("the bar chart page's stack draws the palette in order and slate on top, an
   await expect(chart.locator('.bar-chart-readout li').last()).toHaveText('$1,522.30Total');
 });
 
+// ---- The Insights recipe ------------------------------------------------------------------------------------
+
+const INSIGHTS = '/docs/charts/bar-chart';
+
+/** The recipe's stage: the one that holds the Insights page header. */
+const insights = (page: Page): Locator =>
+  page.locator('.stage').filter({ has: page.locator('.page-header', { hasText: 'Insights' }) });
+
+/** The recipe's one chart. */
+const insightsChart = (page: Page): Locator => insights(page).locator('figure.bar-chart');
+
+/** An option of one of the card's segmented controls, `Group by` or `Show`, by its visible label. */
+const insightsOption = (page: Page, control: string, name: string): Locator =>
+  insights(page)
+    .getByRole('radiogroup', { name: control, exact: true })
+    .locator('.segmented-option', { hasText: new RegExp(`^${name}$`) });
+
+const insightsRadio = (page: Page, control: string, name: string): Locator =>
+  insights(page)
+    .getByRole('radiogroup', { name: control, exact: true })
+    .getByRole('radio', { name, exact: true });
+
+/** Records every element that loses focus to nothing from here on, read back by `lostFocus`. */
+const watchFocusLoss = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    const lost: string[] = [];
+    (window as unknown as { lostFocus: string[] }).lostFocus = lost;
+    document.addEventListener('focusout', (event) => {
+      if (event.relatedTarget === null && event.target instanceof Element) lost.push(event.target.className);
+    });
+  });
+
+const lostFocus = (page: Page): Promise<string[]> =>
+  page.evaluate(() => (window as unknown as { lostFocus: string[] }).lostFocus);
+
+test('the insights recipe switches its grouping and redraws the chart in the right orientation', async ({
+  page,
+}) => {
+  await visit(page, INSIGHTS);
+  const chart = insightsChart(page);
+  // Months stand up: income in gain beside spending in ink, twelve bands.
+  await expect(chart).toHaveAttribute('data-orientation', 'vertical');
+  await expect(chart.locator('.bar-chart-band')).toHaveCount(12);
+  await expect(insights(page).locator('.card-title')).toHaveText('Income and spending');
+  for (const [name, orientation, rows, first, last] of [
+    ['Category', 'horizontal', 11, 'Rent', 'Other'],
+    ['Merchant', 'horizontal', 11, 'Northside Rent', 'Other'],
+    ['Account', 'horizontal', 5, 'Joint checking', 'Travel card'],
+    ['Month', 'vertical', 12, 'Nov', 'Oct'],
+  ] as const) {
+    await insightsOption(page, 'Group by', name).click();
+    await expect(chart, name).toHaveAttribute('data-orientation', orientation);
+    // The control keeps focus, and the URL names the grouping, the first one writing nothing.
+    await expect(insightsRadio(page, 'Group by', name)).toBeFocused();
+    await expect(page).toHaveURL(
+      name === 'Month' ? /bar-chart$/ : new RegExp(`[?]by=${name.toLowerCase()}$`),
+    );
+    const names = chart.locator('table th[scope="row"]');
+    await expect(names, name).toHaveCount(rows);
+    await expect(names.first()).toHaveText(first);
+    await expect(names.last()).toHaveText(last);
+    // The table under the chart lists the same bands, each a link to its transactions.
+    await expect(insights(page).locator('.data-table-link').first()).toHaveAttribute(
+      'href',
+      new RegExp(`#transactions[?]${name === 'Month' ? 'month=2025-11' : `${name.toLowerCase()}=`}`),
+    );
+  }
+  // The URL brings the view back after a reload.
+  await visit(page, `${INSIGHTS}?by=merchant`);
+  await expect(chart).toHaveAttribute('data-orientation', 'horizontal');
+  await expect(insightsRadio(page, 'Group by', 'Merchant')).toBeChecked();
+  await expect(insights(page).locator('.card-title')).toHaveText('Spending by merchant');
+});
+
+test('comparing draws a hatched previous period named in each bar', async ({ page }) => {
+  await visit(page, `${INSIGHTS}?by=category`);
+  const chart = insightsChart(page);
+  const compare = insights(page).getByRole('switch', { name: 'Compare to previous period' });
+  await expect(chart.locator('.bar-chart-bar[data-look="hatched"]')).toHaveCount(0);
+  await insights(page).locator('.switch', { hasText: 'Compare to previous period' }).click();
+  await expect(compare).toBeChecked();
+  await expect(page).toHaveURL(/[?]by=category&compare=1$/);
+  // September stands beside October in October's ink, striped, and each bar's name says its period.
+  const hatched = chart.locator('.bar-chart-bar[data-look="hatched"]');
+  await expect(hatched).toHaveCount(11);
+  for (const bar of await hatched.all()) await expect(bar).toHaveAttribute('data-color', 'ink');
+  await expect(chart.locator('.bar-chart-legend-item[data-look="hatched"]')).toHaveText('September');
+  await expect(chart.getByRole('img', { name: 'Groceries September $698.15', exact: true })).toHaveAttribute(
+    'data-look',
+    'hatched',
+  );
+  await expect(chart.getByRole('img', { name: 'Travel October -$310.00', exact: true })).toHaveAttribute(
+    'data-sign',
+    'negative',
+  );
+  await expect(insights(page).locator('.card-note')).toHaveText('October, against September');
+  // The figures above draw their change against September while the page compares.
+  await expect(insights(page).locator('.stat-tile-change').first()).toHaveText('Up $415 vs September');
+
+  // Income and spending together already fill a band, so the comparison is off there, and the URL keeps it.
+  await insightsOption(page, 'Group by', 'Month').click();
+  await expect(compare).toBeDisabled();
+  await expect(compare).not.toBeChecked();
+  await expect(hatched).toHaveCount(0);
+  await expect(insights(page).locator('.stat-tile-change')).toHaveCount(0);
+  await insightsOption(page, 'Show', 'Income').click();
+  await expect(page).toHaveURL(/[?]show=income&compare=1$/);
+  await expect(compare).toBeChecked();
+  // The previous period takes the current series' color, gain for income.
+  await expect(hatched).toHaveCount(12);
+  for (const bar of await hatched.all()) await expect(bar).toHaveAttribute('data-color', 'gain');
+  await expect(chart.getByRole('img', { name: 'Oct A year before $4,900.00', exact: true })).toHaveCount(1);
+});
+
+test("a focused bar's grouping change moves focus to the chart, never the body", async ({ page }) => {
+  await visit(page, INSIGHTS);
+  const chart = insightsChart(page);
+  await watchFocusLoss(page);
+  // Tab lands on the newest month first.
+  const october = chart.getByRole('img', { name: 'Oct Income $5,200.00', exact: true });
+  await expect(october).toHaveAttribute('tabindex', '0');
+  await october.focus();
+  // A change that leaves focus where it is, as Back or a shortcut would: the radio is pressed by script.
+  await insightsRadio(page, 'Group by', 'Category').evaluate((input) => {
+    (input as HTMLInputElement).click();
+  });
+  await expect(chart).toHaveAttribute('data-orientation', 'horizontal');
+  await expect(chart.getByRole('img', { name: 'Rent $1,450.00', exact: true })).toBeFocused();
+  await insightsRadio(page, 'Group by', 'Month').evaluate((input) => {
+    (input as HTMLInputElement).click();
+  });
+  await expect(chart).toHaveAttribute('data-orientation', 'vertical');
+  await expect(october).toBeFocused();
+  expect(await lostFocus(page)).toEqual([]);
+});
+
+test("the month view's net bars go below zero and income is drawn in gain", async ({ page }) => {
+  await visit(page, INSIGHTS);
+  const chart = insightsChart(page);
+  // Money that arrived is gain, and money that went out is ink, never a color of its own.
+  const income = chart.locator('.bar-chart-bar[data-color="gain"]');
+  await expect(income).toHaveCount(12);
+  await expect(chart.locator('.bar-chart-bar[data-color="ink"]')).toHaveCount(12);
+  await expect(chart.locator('.bar-chart-legend-item').first()).toHaveText('Income');
+  await insightsOption(page, 'Show', 'Net').click();
+  await expect(page).toHaveURL(/[?]show=net$/);
+  await expect(insights(page).locator('.card-title')).toHaveText('Net cash flow');
+  const negative = chart.locator('.bar-chart-bar[data-sign="negative"]');
+  await expect(negative).toHaveCount(2);
+  await expect(chart.getByRole('img', { name: 'Dec -$820.00', exact: true })).toHaveAttribute(
+    'data-sign',
+    'negative',
+  );
+  // A negative bar hangs from the zero line that a positive one stands on.
+  const below = await negative.first().boundingBox();
+  const above = await chart.locator('.bar-chart-bar[data-sign="positive"]').first().boundingBox();
+  expect(Math.abs((below?.y ?? 0) - ((above?.y ?? 0) + (above?.height ?? 0)))).toBeLessThanOrEqual(1);
+  await expect(chart.locator('.bar-chart-bar[data-color="gain"]')).toHaveCount(0);
+  // The category mix stacks the palette and slate, each month's total from the app.
+  await insightsOption(page, 'Show', 'Mix').click();
+  await expect(chart).toHaveAttribute('data-layout', 'stacked');
+  await expect(chart.locator('.bar-chart-band').last().locator('.bar-chart-bar')).toHaveCount(5);
+  await expect(chart.getByRole('img', { name: 'Oct Groceries $742.60', exact: true })).toHaveAttribute(
+    'data-color',
+    'chart-2',
+  );
+});
+
+test('the report renders on the server with no links or images, and its wide table scrolls at 375', async ({
+  page,
+}) => {
+  // The page's HTML as the server sends it: the report is in it, its link and image already text.
+  const html = await (await page.request.get(INSIGHTS)).text();
+  expect(html).toContain('Your October');
+  expect(html).toContain('<span class="prose-unlinked">every transaction</span>');
+  expect(html).not.toContain('example.com');
+  // skipHtml dropped the HTML the model wrote.
+  expect(html).not.toContain('Open the full report in the app');
+
+  await page.setViewportSize({ width: 375, height: 800 });
+  await visit(page, INSIGHTS);
+  const report = page.locator('.stage article.prose', { hasText: 'Your October' });
+  await expect(report).toHaveCount(1);
+  await expect(report.locator('a')).toHaveCount(0);
+  await expect(report.locator('img')).toHaveCount(0);
+  await expect(report.locator('.prose-image')).toContainText('Spending by category in October, rent first');
+  const region = report.getByRole('region', {
+    name: 'Table: Category, September, October, Change, Share, Budget',
+  });
+  await expect(region).toHaveAttribute('tabindex', '0');
+  const widths = await region.evaluate((element) => ({
+    scroll: element.scrollWidth,
+    client: element.clientWidth,
+  }));
+  expect(widths.scroll).toBeGreaterThan(widths.client);
+  expect(await sideways(page)).toBe(0);
+});
+
+test('the recipe fits a phone at 375 with no sideways scroll, in each grouping', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await visit(page, `${INSIGHTS}?compare=1`);
+  for (const name of ['Category', 'Merchant', 'Account', 'Month']) {
+    await insightsOption(page, 'Group by', name).click();
+    await expect(insightsRadio(page, 'Group by', name)).toBeChecked();
+    await expect.poll(() => sideways(page), { message: name }).toBe(0);
+  }
+  for (const name of ['Spending', 'Income', 'Net', 'Mix', 'Both']) {
+    await insightsOption(page, 'Show', name).click();
+    await expect(insightsRadio(page, 'Show', name)).toBeChecked();
+    await expect.poll(() => sideways(page), { message: name }).toBe(0);
+  }
+  // Each row of the table under the chart is an item with its amount at the end.
+  await insightsOption(page, 'Group by', 'Category').click();
+  await expect(
+    insights(page)
+      .locator('.data-table-figure:visible')
+      .filter({ hasText: /^\$742\.60$/ }),
+  ).toHaveCount(1);
+});
+
+test('the stat tile page writes a change against a period as a line', async ({ page }) => {
+  await visit(page, '/docs/components/stat-tile');
+  const section = guideSection(page, 'A change against a period');
+  await expect(section).toHaveCount(1);
+  await expect(section).toContainText("change={{ direction: 'up', label: 'Up $120 vs September' }}");
+  await expect(section).toContainText('It is a line and not a chip.');
+});
+
 test.describe('a line chart without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 
@@ -3295,7 +3541,11 @@ test('the installation page installs the charts package and names the core versi
   const section = page
     .locator('.docs-section')
     .filter({ has: page.getByRole('heading', { name: 'Charts', exact: true }) });
-  await expect(section).toContainText('0.7 for charts 0.1.4');
+  await expect(section).toContainText('0.9 for charts 0.2.0');
+  await expect(section.getByRole('link', { name: 'Bar chart', exact: true })).toHaveAttribute(
+    'href',
+    '/docs/charts/bar-chart',
+  );
   await expect(section.getByRole('link', { name: 'Line chart', exact: true })).toHaveAttribute(
     'href',
     '/docs/charts/line-chart',

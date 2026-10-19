@@ -88,6 +88,8 @@ import HeadingSizes from './heading-sizes';
 import IconButtonLink from './icon-button-link';
 import IconButtonStates from './icon-button-states';
 import IconButtonVariants from './icon-button-variants';
+import InsightsRecipe from './insights-recipe';
+import InsightsReport from './insights-report';
 import KbdKeys from './kbd-keys';
 import LineChartBasic from './line-chart-basic';
 import LineChartCompare from './line-chart-compare';
@@ -279,6 +281,8 @@ export const examples = {
   'icon-button-link': IconButtonLink,
   'icon-button-states': IconButtonStates,
   'icon-button-variants': IconButtonVariants,
+  'insights-recipe': InsightsRecipe,
+  'insights-report': InsightsReport,
   'kbd-keys': KbdKeys,
   'line-chart-basic': LineChartBasic,
   'line-chart-compare': LineChartCompare,

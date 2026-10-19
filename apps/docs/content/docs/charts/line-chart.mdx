@@ -78,7 +78,7 @@ The plot is no tab stop while it shows a state, and its keys do nothing; focus t
 pnpm add @snapshot-ui/charts @snapshot-ui/core
 ```
 
-It needs the same 0.x minor of `@snapshot-ui/core` (0.7 for charts 0.1.4), whose `styles.css` styles it. The svg, axis labels, legend and table render on the server, and the client adds the keys, pointer and readout. A server component can render it with plain data.
+It needs the same 0.x minor of `@snapshot-ui/core` (0.9 for charts 0.2.0), whose `styles.css` styles it. The svg, axis labels, legend and table render on the server, and the client adds the keys, pointer and readout. A server component can render it with plain data.
 
 - Formatting: every label and value is your formatted string. `valueLabel` is what the reader sees, and `value` only places the point. Currency, compact figures and Persian digits are yours, and the server's HTML is final.
 - `yTicks`: gridlines with labels. Without them, the chart draws only its baseline and relies on the readout and the table.

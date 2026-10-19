@@ -144,13 +144,59 @@ The chart is a size container, so it takes its width from what holds it and none
 
 <Section>
 
+## The Insights recipe
+
+An insights page in the Next.js App Router: the month's figures, one chart card that regroups, a table that links to the transactions, and the month's report. The page is a server component. What changes with the URL is one client component, and the report is rendered on the server beside it.
+
+- Figures: a row of [stat tiles](/docs/components/stat-tile), spent, income and net. While the page compares, each draws its change against September as its change line, in words: "Up $415 vs September".
+- Filters: a [filter bar](/docs/components/filter-bar) with the period.
+- The card: its header holds a [segmented control](/docs/components/segmented-control) for the grouping and a [switch](/docs/components/switch) to compare; its body is one BarChart, the card's last child, so the table toggle stands clear of the card's curve.
+- Month: twelve months standing up, newest last: Income in `gain` beside Spending in ink, one of them alone, net cash flow with its months below zero, or the category mix stacked. A second control picks which.
+- Category, Merchant and Account: lying down, the top ten and "Other", with a refund below zero.
+- Compare: the previous period, hatched, beside each bar: September for October, the twelve months before for the months. A band holds two bars, so the switch is off while income and spending stand together, or the mix is stacked.
+- One chart: the card keeps the same BarChart and gives it new props, so a bar that held focus hands it to the new first bar, never to the page. Changing the grouping with the control keeps focus on the control.
+- The URL: `?by=category&compare=1`, read with `useSearchParams()` inside a `Suspense` whose fallback draws the first view, and written with `router.replace`, so a reload or a shared link keeps the view.
+- Under the chart: a [data table](/docs/components/data-table) of the same bands, each row a link to its transactions through `RouterProvider`.
+
+<Preview name="insights-recipe" />
+
+The month's report is what a model wrote, so it is rendered as [Prose](/docs/components/prose) on the server with `skipHtml`: its link becomes text, its image its alt text, the HTML it wrote is dropped, and its table scrolls in a named region on a phone. [Rendering Markdown safely](/docs/components/prose#rendering-markdown-safely) has the map.
+
+<Preview name="insights-report" />
+
+The page puts the two together. The docs make no request, so here the figures and the report are fixtures.
+
+```tsx
+// app/insights/page.tsx, a server component
+import { Prose } from '@snapshot-ui/react';
+import { InsightsBoard } from './insights-board'; // 'use client': the figures, filters, chart card and table
+import { ModelMarkdown } from './markdown'; // react-markdown with skipHtml and the map
+import { monthlyReport } from './queries';
+
+export default async function InsightsPage() {
+  const report = await monthlyReport();
+  return (
+    <>
+      <InsightsBoard />
+      <Prose as="article">
+        <ModelMarkdown>{report}</ModelMarkdown>
+      </Prose>
+    </>
+  );
+}
+```
+
+</Section>
+
+<Section>
+
 ## Usage
 
 ```bash
 pnpm add @snapshot-ui/charts @snapshot-ui/core
 ```
 
-It needs the same 0.x minor of `@snapshot-ui/core` (0.7 for charts 0.1.4), whose `styles.css` styles it. BarChart is a client part, and its server HTML is the final picture: every bar's place and size, the labels, the amounts, the legend and the table. The client adds the tab stop, the keys, the pointer and the readout. Nothing is measured, so the page does not move when it hydrates.
+It needs the same 0.x minor of `@snapshot-ui/core` (0.9 for charts 0.2.0), whose `styles.css` styles it. BarChart is a client part, and its server HTML is the final picture: every bar's place and size, the labels, the amounts, the legend and the table. The client adds the tab stop, the keys, the pointer and the readout. Nothing is measured, so the page does not move when it hydrates.
 
 - Formatting: every figure is your string. `valueLabel` is what the reader sees, and `value` only places the bar. Currency, compact figures and Persian digits are yours, and the chart never sums, sorts or formats.
 - `labels` and `statusLabels`: in another language, pass all six strings the chart writes itself and all three of its states, so no English is left on the page.
