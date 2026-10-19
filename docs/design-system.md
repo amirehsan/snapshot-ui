@@ -2759,7 +2759,9 @@ names each button ("Edit details"). It is static. Seven things were derived
   320px page 82px sideways from a `flex: 1` wrapper, and 484px with two cards
   side by side. So a card that holds only a header with actions and sits
   where it takes the width of its content, in a flex row, is given a width by
-  the app.
+  the app. DescriptionList, MonthGrid, and from 0.8.0 StatTile and DataTable,
+  which named stand-ins of 16rem and 12rem, follow the same rule (spec
+  correction 63).
 - **CollapsibleCard is not matched.** Every rule names `.card > .card-header`,
   and CollapsibleCard's header sits in `.card-disclosure`, so its header, its
   flex row and its baselines are unchanged (plan open question 2). Its header
@@ -5538,15 +5540,30 @@ a caption and a small trend, on the Card's surface. The document's token
 table names the overline step for "Uppercase column headers in tables and
 stat tiles", and has no tile of its own, so this one is derived.
 
-**A width of its own** (patch 0.6.1). The tile is a size container, so a
-flex row or an `auto` grid column gave it no content width and drew it
-its padding wide. It names `contain-intrinsic-inline-size: calc(16rem -
-2 * var(--spacing-card) - 2px)`, a whole tile of 16rem, at which its
-narrow layout draws a figure of nine characters whole and which never
-pushes a 320px phone's page sideways; in a block or a sized grid column
-it fills as before. It takes no `flex`: tiles in a grid row stretch to
-one height, which a height cap would break. The `InAFlexRow` story holds
-three tiles 16rem wide in a wrapping flex row.
+**A width from its holder** (0.8.0, spec correction 63; it was a stand-in
+of its own from patch 0.6.1). The tile is a size container, so it takes no
+width from its content. 0.6.1 named `contain-intrinsic-inline-size:
+calc(16rem - 2 * var(--spacing-card) - 2px)`, a whole tile of 16rem, so a
+tile in a flex row or an `auto` grid column was not its padding wide. A
+stand-in width is also the tile's min-content width, which a `flex: 1`
+item or a `1fr` track keeps as its narrowest: two tiles two up in their
+own wrappers made a 288px column 512px wide and scrolled a 320px page
+200px sideways. So the tile follows the library's rule for every size
+container (CardActions, "An intrinsic inline size of 0"): its intrinsic
+inline size is 0. A block, a `flex: 1` item or a `1fr` track gives it its
+width, as before; a holder that sizes it from its content, a flex item
+with no `flex` or an `auto` column, gives it one, such as
+`flex: 1 1 16rem`. It takes no `flex` of its own: tiles in a grid row
+stretch to one height, which a height cap would break. A figure is never
+broken, so a figure wider than its tile runs past it; two up at 320px a
+tile holds about 74px of content, a figure of three or four characters.
+The `InAFlexRow` story gives three tiles `flex: 1 1 16rem` in a wrapping
+row and checks each is at least 16rem; `OnANarrowPhone` (three engines)
+puts tiles in a `flex: 1` wrapper, a `1fr` grid and two up at 320px in
+every shape and density and finds no sideways scroll and each tile filling
+its holder, where the stand-in scrolled 200px. Measured at CI's tolerance
+on a local build before and after, no existing baseline moves: every
+StatTile story gives its tile a width.
 
 **Surface.** The Card's: Lifted, the 1px hairline, `--radius-stadium` and
 `--spacing-card`, so a tile follows density with no token of its own: 32px
@@ -5718,7 +5735,8 @@ the padding box; and the pace marker's 2px ring is its border. Both are in
 `var(--meter-surface, var(--color-lifted))`: read with a fallback and never
 declared by the meter, so an app sets `--meter-surface` once on any ancestor
 (a canvas section) and every meter inside follows, where a value declared on
-the meter would beat it.
+the meter would beat it. DataTable sets it for its rows, each to its own
+fill, hovered and selected included (DataTable, "A meter in a row").
 
 **Held, printed.** A printed page drops backgrounds, which loses the fill as
 well as the hatch, so `.meter` sets `print-color-adjust: exact` and its
@@ -8969,18 +8987,41 @@ item matches it.
 `--size-field`, as Primer's `cellPadding` would; a third, roomier step
 would be a token change for every part, not a table option.
 
-**A width of its own** (patch 0.6.1). The root is a size container, so
-in a flex row, or an `auto` grid column, it had no content width and drew
-the list face at none. It has no text to size itself by, as
-Pagination's range does, so it names a width: `contain-intrinsic-inline-size:
-12rem`, the list face with an item's title, second line and amount
-still readable, and small enough never to push a phone's page sideways
-(18rem pushed the docs' 320px page 22px). `flex: 1 1 0; min-inline-size:
-0` takes the room its siblings leave in a flex row, and `max-block-size:
-max-content` keeps it no taller than its content in a flex column, in
-Chromium and WebKit (Firefox grows it there, as Pagination's record
-says). The
-`InAFlexRow` story holds the table face beside a 12rem column.
+**A width from its holder** (0.8.0, spec correction 63; it was a stand-in
+of its own from patch 0.6.1). The root is a size container, so it has no
+content width. 0.6.1 named `contain-intrinsic-inline-size: 12rem`, the
+list face with an item's title, second line and amount still readable,
+since in an `auto` grid column it drew the list face at none (18rem
+pushed the docs' 320px page 22px). A stand-in width is also the root's
+min-content width, which a `flex: 1` item or a `1fr` track keeps as its
+narrowest: two tables two up in their own wrappers scrolled a 320px page
+72px sideways. So it follows the library's rule for every size container
+(CardActions, "An intrinsic inline size of 0"): its intrinsic inline size
+is 0. `flex: 1 1 0; min-inline-size: 0` still takes the room its siblings
+leave in a flex row, from a zero basis, so a sibling never shrinks for
+it, and `max-block-size: max-content` keeps it no taller than its content
+in a flex column, in Chromium and WebKit (Firefox grows it there, as
+Pagination's record says). A block, a `1fr` track or a flex row gives it
+its width; a holder that sizes it from its content, an `auto` column or
+`width: max-content`, gives it one. The `InAFlexRow` story holds the
+table face beside a 12rem column; `OnANarrowPhone` (three engines) puts
+tables in a `flex: 1` wrapper, a `1fr` grid and two up at 320px in every
+shape and density and finds no sideways scroll, each table filling its
+holder with its list face. Measured at CI's tolerance on a local build
+before and after, no existing baseline moves.
+
+**A meter in a row** (spec correction 64). Meter cuts its segments apart and
+rings its pace marker in `--meter-surface`, Lifted unless an ancestor sets
+it, so a meter on a canvas row, and on any hovered or selected row, drew
+pale blocks there. The root sets `--meter-surface: var(--data-table-fill)`,
+and each rule that washes a row or a list item, hovered at 5% and selected
+at 8%, sets it to the same `color-mix` as its fill, so the cuts are always
+the row's own color. Meter's segments are backgrounds in a clipping flex
+track, where a transparent cut would show the track's frame color rather
+than the row, so the surface is set, not masked as Gauge's gaps are. The
+`OnTableRows` play (Meter, three engines) reads the cut and the ring on a
+plain, a hovered and a selected row as the fill behind the meter. In forced
+colors the meter keeps its own `canvas` surface, as before.
 
 **The list face** (ruling 8, spec 8). Both faces are in the server's
 HTML, and a container query on DataTable's own box shows one: under
@@ -10396,13 +10437,26 @@ since forced colors keep an author color's alpha.
 **Size.** `{ PageHeader, PageColumn }` measures 460 B, so the rule sets
 1 kB, spec 16's budget.
 
-**The docs site's own header** moves to PageHeader in the next batch
-(section 13.3 item 7). Its CSS is left as it is here; its 1320px cap and
-32px padding equal the page column's. It draws no sentence, only the
-eyebrow and the title with its controls on the title's bottom, so the
-sentence's line under the title's changes nothing it keeps. The next batch
-also has to place the shell's menu button, which the docs header draws
-before its titles and PageHeader has no slot for.
+**The docs site's own header** is a PageHeader from batch 5 (accounts plan,
+spec correction 62): the trail "Docs › Components" as its eyebrow, the
+page's title as its `h1` and the color mode and corner switches as its
+actions, in the docs shell's own sticky `header`, which is the page's
+banner and writes `--page-sticky-top` from its height, as AppShell's slot
+would. PageHeader takes `role="none"` there, so the page keeps one banner.
+Its 1320px cap and 32px padding were the page column's already. PageHeader
+has no leading slot, and none was added (plan open question 3): under
+1024px the shell draws the drawer's 48px button over PageHeader's fill at
+the column's start corner, 8px out from the column's edge as before, with
+its middle on the title's first line, and the titles alone make room for
+it, so the switches, on a line of their own under 768px, still start at
+the column's edge. A cell beside PageHeader was tried first and indented
+the switches under the titles, on two lines at 375px where the old header
+had one. What the reader sees change is PageHeader's own and kept: 24px
+under the row where the docs wrote 20px, 8px between the eyebrow and the
+title (6px), 8px between the switches (12px), 32px over the row between
+768px and 1024px (20px), and there the switches at the title's end while
+it keeps 20rem, where they always took a line. None is a defect, so
+PageHeader does not change (parent spec risk R8).
 
 **Screen readers.** Not yet verified (owner action 4): the header and its
 `h1` as the start of the main landmark, where the skip link lands.

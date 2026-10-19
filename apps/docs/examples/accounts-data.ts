@@ -136,20 +136,7 @@ export const ACCOUNTS: readonly Account[] = [
   },
 ];
 
-/** The summary over the list, as the app's server totals it: the duplicate is counted once. */
-export const SUMMARY = [
-  { label: 'Cash', value: '$16,612.56', caption: 'Checking and savings' },
-  { label: 'Investments', value: '$18,925.30', caption: 'One fund' },
-  { label: 'Owed', value: '$3,500.00', caption: 'Across your cards' },
-  {
-    label: 'Net worth',
-    value: '$32,037.86',
-    change: { direction: 'up', label: 'Up $1,204.50 since September' },
-    caption: 'Cash and investments, less what you owe',
-  },
-] as const;
-
-/** The day labels of a balance chart: the last thirty days, as the app formats them. */
+/** The day labels of a balance chart, Sep 20 to Oct 18, as the app formats them. */
 export const BALANCE_DAYS: string[] = [
   ...Array.from({ length: 11 }, (_, index) => `Sep ${String(index + 20)}`),
   ...Array.from({ length: 18 }, (_, index) => `Oct ${String(index + 1)}`),
@@ -162,7 +149,7 @@ export function dollars(value: number): string {
   return `$${whole}.${String(cents % 100).padStart(2, '0')}`;
 }
 
-/** A balance over the last thirty days, rising toward `end` with a payment's dip, written as the app writes it. */
+/** A balance over those days, rising toward `end` with a payment's dip, written as the app writes it. */
 export function balanceSeries(end: number): LineSeries {
   const values = BALANCE_DAYS.map((_, index) => {
     const step = index / (BALANCE_DAYS.length - 1);

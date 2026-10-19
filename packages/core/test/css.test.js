@@ -4471,7 +4471,7 @@ describe('src/components/stat-tile.css', () => {
   it('is a size container with an intrinsic inline size of 0, never a stand-in width', () => {
     const tile = blockAfter(rules(), '.stat-tile {');
     expect(tile).toContain('container: stat-tile / inline-size;');
-    // The library's rule (spec corrections 30, 34 and 51): a stand-in width is also the tile's min-content width,
+    // The library's rule (spec corrections 30, 34 and 63): a stand-in width is also the tile's min-content width,
     // which a flex: 1 item or a 1fr track keeps as its narrowest, so two tiles scrolled a 320px page sideways.
     expect(tile).toContain('contain-intrinsic-inline-size: 0;');
   });
@@ -7512,7 +7512,7 @@ describe('src/components/data-table.css', () => {
       ),
     ).toContain('--color-slate: var(--color-granite);');
     // Outside hover, only a selected row's and a selected list item's 8% wash mixes a color, as the fill and as the
-    // surface a meter in the row cuts its segments with (spec correction 52).
+    // surface a meter in the row cuts its segments with (spec correction 64).
     expect(
       outsideForcedColors(css)
         .replace(hover, '')
@@ -8114,7 +8114,7 @@ describe('src/components/data-table.css', () => {
 
   it('is a size container with an intrinsic inline size of 0 that takes the room its siblings leave', () => {
     const root = blockAfter(rules(), '.data-table {');
-    // The library's rule (spec corrections 30, 34 and 51): a stand-in width is also the table's min-content
+    // The library's rule (spec corrections 30, 34 and 63): a stand-in width is also the table's min-content
     // width, which a flex: 1 item or a 1fr track keeps as its narrowest, so two tables scrolled a 320px page.
     for (const declaration of [
       'container: data-table / inline-size;',
@@ -8127,7 +8127,7 @@ describe('src/components/data-table.css', () => {
     }
   });
 
-  it("gives a meter in a row the row's own fill for its cuts, plain, hovered and selected (spec correction 52)", () => {
+  it("gives a meter in a row the row's own fill for its cuts, plain, hovered and selected (spec correction 64)", () => {
     // Meter cuts its segments apart and rings its pace marker in --meter-surface, Lifted unless set, which drew a
     // pale block on a canvas row and on every hovered or selected one. Each fill that paints a row sets it too.
     expect(blockAfter(rules(), '.data-table {')).toContain('--meter-surface: var(--data-table-fill);');

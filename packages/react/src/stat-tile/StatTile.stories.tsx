@@ -220,10 +220,11 @@ const NARROW = {
 } as const;
 
 /**
- * On a 320px phone a tile takes its width from its holder, never from a stand-in (spec corrections 34 and 51): in
+ * On a 320px phone a tile takes its width from its holder, never from a stand-in (spec corrections 34 and 63): in
  * a `flex: 1` wrapper, in a `1fr` grid and two up in a `1fr 1fr` grid, each in a wrapper as an app's section is,
- * the page never scrolls sideways, and each tile fills its holder, in every shape and density. A stand-in of 16rem made two tiles 512px wide in a 288px
- * column. A figure is never broken, so one wider than its tile still runs past it: two up, each figure is short.
+ * the page never scrolls sideways, and each tile fills its holder, in every shape and density. A stand-in of 16rem
+ * made two tiles 512px wide in a 288px column. A figure is never broken, so one wider than its tile still runs
+ * past it: two up, each figure is short.
  */
 export const OnANarrowPhone: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],

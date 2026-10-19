@@ -58,7 +58,7 @@ A 32px [Gauge](/docs/components/gauge) fits the trend's slot, for a share rather
 
 ## In a row
 
-A tile is a size container, so it takes its width from its column, never from its content. Lay tiles in a grid such as `repeat(auto-fit, minmax(16rem, 1fr))`, not in a row that sizes them by content. Cap the minimum at the row's width, as below, so a column narrower than 16rem holds one tile and nothing scrolls sideways.
+A tile is a size container, so it takes its width from its column, never from its content, and has no width of its own. Lay tiles in a grid such as `repeat(auto-fit, minmax(16rem, 1fr))`, not in a row that sizes them by content. Cap the minimum at the row's width, as below, so a column narrower than 16rem holds one tile and nothing scrolls sideways. In a flex row give each tile its width, such as `flex: 1 1 16rem`; a flex item with no `flex` collapses to its padding.
 
 ```css
 .tiles {

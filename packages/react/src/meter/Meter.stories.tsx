@@ -207,7 +207,7 @@ const fillBehind = (element: Element): string => {
 /**
  * The cut between two segments and the ring round the pace marker are drawn in `--meter-surface`, and a DataTable
  * sets it to each row's own fill, so a meter on a plain row, a hovered row and a selected one draws its cuts in
- * that row's color, where a fixed Lifted drew a pale block (spec correction 52). In three engines.
+ * that row's color, where a fixed Lifted drew a pale block (spec correction 64). In three engines.
  */
 export const OnTableRows: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],

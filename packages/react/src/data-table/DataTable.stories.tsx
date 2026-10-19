@@ -1609,10 +1609,10 @@ const PHONE_320 = {
 } as const;
 
 /**
- * On a 320px phone the table takes its width from its holder, never from a stand-in (spec corrections 34 and 51):
+ * On a 320px phone the table takes its width from its holder, never from a stand-in (spec corrections 34 and 63):
  * in a `flex: 1` wrapper, in a `1fr` grid and two up in a `1fr 1fr` grid, each in a wrapper as an app's section is,
- * the page never scrolls sideways, and each table fills its holder with its list face, in every shape and density. A stand-in of 12rem made two tables 384px
- * wide in a 288px column.
+ * the page never scrolls sideways, and each table fills its holder with its list face, in every shape and density.
+ * A stand-in of 12rem made two tables 384px wide in a 288px column.
  */
 export const OnANarrowPhone: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],

@@ -1844,6 +1844,30 @@ test('a description list in a flex: 1 wrapper, a 1fr grid and two up keeps a 320
   expect(await sideways(page)).toBe(0);
 });
 
+test('every stat tile and data table on a docs page takes its width from its holder, never collapsing', async ({
+  page,
+}) => {
+  // A size container's intrinsic inline size is 0 (spec correction 63): one whose holder sized it from its
+  // content would draw its padding wide. Every example gives each its width, so none is narrower than 12rem.
+  test.setTimeout(120_000);
+  let seen = 0;
+  for (const { slug, url } of PAGES) {
+    await visit(page, url);
+    const widths = await page
+      .locator('.stage')
+      .evaluateAll((stages) =>
+        stages.flatMap((stage) =>
+          [...stage.querySelectorAll('.stat-tile, .data-table')]
+            .filter((part) => part.getClientRects().length > 0)
+            .map((part) => ({ part: part.className, width: part.getBoundingClientRect().width })),
+        ),
+      );
+    seen += widths.length;
+    for (const { part, width } of widths) expect(width, `${slug}: ${part}`).toBeGreaterThanOrEqual(12 * 16);
+  }
+  expect(seen).toBeGreaterThan(0);
+});
+
 test('a month grid in a flex: 1, a 1fr or a two-up wrapper keeps a 320px page from scrolling sideways', async ({
   page,
 }) => {
