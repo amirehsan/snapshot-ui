@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import AccountsRecipe from './accounts-recipe';
 import AppShellBasic from './app-shell-basic';
 import AppShellCollapsed from './app-shell-collapsed';
 import AppShellPhone from './app-shell-phone';
@@ -188,6 +189,7 @@ import UploadListStatuses from './upload-list-statuses';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
+  'accounts-recipe': AccountsRecipe,
   'app-shell-basic': AppShellBasic,
   'app-shell-collapsed': AppShellCollapsed,
   'app-shell-phone': AppShellPhone,

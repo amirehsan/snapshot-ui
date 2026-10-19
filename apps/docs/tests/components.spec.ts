@@ -1981,10 +1981,13 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'date-picker': ['.stage .date-picker-control', '.stage .date-picker-button'],
   'date-range-picker': ['.stage .date-range-control', '.stage .date-range-button'],
   // A static part: the whole list, its empty words and its numeric values are in the server's HTML.
+  // The Accounts recipe is a client example: the server renders its first view, the list with its summary.
   'description-list': [
     '.stage dl.description-list',
     '.stage .description-list-value[data-empty]',
     '.stage .description-list-value[data-numeric]',
+    '.stage .page-header-title',
+    '.stage .stat-tile-value',
   ],
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],

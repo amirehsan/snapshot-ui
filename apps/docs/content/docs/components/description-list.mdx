@@ -62,6 +62,49 @@ Make the list a card's body for an account's details. A row whose controls would
 
 <Section>
 
+## The Accounts recipe
+
+An app's account pages, from the list to a card's credit tab, built from the library's parts. The example below is one client component, since this site is static: the three pages are `?account=` and `&tab=credit` on this page's URL, read with `useSearchParams` inside a `Suspense` and opened through a [RouterProvider](/docs/routing) whose `navigate` is `router.push(href, { scroll: false })`.
+
+- **Accounts.** Four [StatTiles](/docs/components/stat-tile) sum up cash, investments, what is owed and net worth, with its change in words. Under them a [DataTable](/docs/components/data-table) per type lists each account: the bank's [Avatar](/docs/components/avatar), its name and last four digits, which statements you hold, the bank feed as a neutral Badge, or an error Badge and a Reconnect link when it failed, a warning Badge for a possible duplicate, and the balance with its date. Each row opens its account.
+- **An account.** A [PageHeader](/docs/components/page-header) with its trail, the balance as a [LineChart](/docs/charts/line-chart), and the Details card: the list as its body and, in its header, Edit and a More menu ([CardActions](/docs/components/card#actions-in-the-header), at most two visible). Edit opens a [Dialog](/docs/components/dialog) to set a nickname; the empty Nickname row's "Add a nickname" opens the same form. More holds Merge, a Dialog, and Remove, a [ConfirmDialog](/docs/components/confirm-dialog) in the danger tone. Closing a dialog gives focus back to the button that opened it; removing the account opens the list with focus on its heading, never the page's body.
+- **Credit**, a card's second tab. The score is a [Gauge](/docs/components/gauge): an `lg` semicircle on 300 to 850, its figure and its word, and marks at 580, 670, 740 and 800. The range's ends and the bands' legend under it are the app's text, hidden from assistive technology where the meter already says them. Fair and Poor are both `warning`, never `error`, which means something failed: the word under the figure and the arc's place between the marks tell them apart. Utilization is an `md` ring over a table of the cards with a 32px ring on each row, whose marks carry no words, so the thresholds are said once above the table. Statement coverage is a [MonthGrid](/docs/components/month-grid) in a card, with its sentence and its hidden table.
+
+In an app the account's page is a server component: the header, the chart's data, the Details card and its list, the gauges and the month grid render there with no client JavaScript, and only the leaves that hold state are client components, Edit's Dialog, the More menu and its dialogs. The server formats every figure, date and word, in the reader's language, before it reaches a part.
+
+```tsx
+// app/accounts/[id]/page.tsx, a server component.
+<Card as="section" aria-labelledby="details-title">
+  <CardHeader>
+    <CardTitle id="details-title" level={2}>
+      Details
+    </CardTitle>
+    <CardActions>
+      {/* 'use client' leaves: each opens its own Dialog. */}
+      <EditDetails account={account} />
+      <MoreActions account={account} />
+    </CardActions>
+  </CardHeader>
+  <CardBody>
+    <DescriptionList>
+      <DescriptionListItem term="Name">{account.name}</DescriptionListItem>
+      <DescriptionListItem term="Last four" isNumeric>
+        {account.lastFour}
+      </DescriptionListItem>
+      <DescriptionListItem term="Credit limit" isNumeric>
+        {format.money(account.creditLimit)}
+      </DescriptionListItem>
+    </DescriptionList>
+  </CardBody>
+</Card>
+```
+
+<Preview name="accounts-recipe" />
+
+</Section>
+
+<Section>
+
 ## Usage
 
 The list is static: a server component renders it with no client JavaScript. It is composed, so a value can be any node, such as a Badge or a link, and each row takes its own props. A `DescriptionListItem` belongs in a `DescriptionList`: on its own it is a `div` of a `dt` and `dd` with no list around them, which is invalid HTML. The library writes "Not set" in English, so a page in another language passes its own `emptyValue`, or wraps `DescriptionListItem` in a component that does.
