@@ -338,7 +338,7 @@ const HYDRATED: [
       expect(container.querySelector('figure')).toHaveAccessibleName('Statement coverage');
       expect(container.querySelectorAll('.month-grid-cell')).toHaveLength(24);
       expect(container.querySelector('.month-grid-summary')).toHaveTextContent(
-        'Partial: June 2025. Missing: March, April 2025.',
+        'Missing: March and April 2025. Partial: June 2025.',
       );
       expect(container.querySelectorAll('.month-grid-table th[scope="row"]')).toHaveLength(2);
     },

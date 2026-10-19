@@ -64,9 +64,10 @@ export type MonthGridBaseProps = Omit<
   /** The full month names, for the summary and the table: "January", or "فروردین". Same count as `monthLabels`. */
   monthNames: readonly string[];
   /**
-   * The sentence under the grid. A string or node replaces the library's English default, which names the months
-   * in every state whose look is not `filled`, grouped by year: "Missing: March, April 2025. Partial: June 2025."
-   * Pass your own in any other language. `false` draws none.
+   * The sentence under the grid, which also describes the figure. A string or node replaces the library's English
+   * default, which names the months of every state whose look is not `filled`, the empty looks first, oldest
+   * first: "Missing: November 2024, March and April 2025. Partial: June 2025." Pass your own in any other
+   * language. `false` draws none.
    */
   summary?: ReactNode | false;
   /** The legend of the states under the grid, each state some month holds. @default true */
@@ -112,10 +113,12 @@ export function MonthGrid(props: MonthGridProps): ReactElement {
     className,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
+    'aria-describedby': ariaDescribedBy,
     ...rest
   }: MonthGridBaseProps & { 'aria-label'?: string; 'aria-labelledby'?: string } = props;
   const id = useId();
   const labelId = `${id}-label`;
+  const summaryId = `${id}-summary`;
   const words = { ...DEFAULT_LABELS, ...labels };
   // A label of only spaces names nothing, so it counts as absent, as a blank aria-label does.
   const hasLabel = shows(label);
@@ -146,17 +149,33 @@ export function MonthGrid(props: MonthGridProps): ReactElement {
   const held = new Set(years.flatMap((year) => year.months.map((month) => stateOf(month)?.id)));
   const legend = [...byId.values()].filter((state) => held.has(state.id));
 
+  // The summary describes the figure, after the caller's own description, so the gist is heard with the name.
+  const hasSummary = shows(sentence);
+  const describedBy =
+    [named(ariaDescribedBy) ? ariaDescribedBy : undefined, hasSummary ? summaryId : undefined]
+      .filter(Boolean)
+      .join(' ') || undefined;
+
+  // In reading order: the name, the picture (hidden), the gist, the table, the key (hidden). The legend follows the
+  // table in the markup and the summary on screen, since the table is clipped out of the flow.
   return (
-    <figure {...rest} {...name} className={cx('month-grid', className)}>
+    <figure {...rest} {...name} aria-describedby={describedBy} className={cx('month-grid', className)}>
       {hasLabel ? (
-        <span className="month-grid-label" id={labelId}>
+        // Hidden, since the figure's name already says it: it names the figure, and is not read a second time.
+        <span className="month-grid-label" id={labelId} aria-hidden="true">
           {label}
         </span>
       ) : null}
       <div
         className="month-grid-grid"
         aria-hidden="true"
-        style={{ '--month-grid-columns': String(monthLabels.length) } as CSSProperties}
+        style={
+          {
+            '--month-grid-columns': String(monthLabels.length),
+            // Half the months, rounded up: a row each for the two halves of a year under 12rem of the grid's width.
+            '--month-grid-half': String(Math.ceil(monthLabels.length / 2)),
+          } as CSSProperties
+        }
       >
         <span className="month-grid-corner" />
         {monthLabels.map((short, index) => (
@@ -178,6 +197,11 @@ export function MonthGrid(props: MonthGridProps): ReactElement {
           )),
         ])}
       </div>
+      {hasSummary ? (
+        <p className="month-grid-summary" id={summaryId}>
+          {sentence}
+        </p>
+      ) : null}
       {/* Clipped from sight inside its own box, so its width never scrolls the page; read in browse mode and by
           table navigation, row by column: "March 2025?" */}
       <div className="month-grid-alternative">
@@ -205,7 +229,6 @@ export function MonthGrid(props: MonthGridProps): ReactElement {
           </tbody>
         </table>
       </div>
-      {shows(sentence) ? <p className="month-grid-summary">{sentence}</p> : null}
       {hasLegend && legend.length > 0 ? (
         <ul className="month-grid-legend" aria-hidden="true">
           {legend.map((state) => (

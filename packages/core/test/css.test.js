@@ -2032,7 +2032,23 @@ describe('src/components/month-grid.css', () => {
     expect(rule(narrow, '.month-grid-month:not([data-quarter])')).toContain('visibility: hidden;');
     // A quarter's label may run on over the hidden ones after it, rather than be clipped by its column.
     expect(rule(narrow, '.month-grid-month[data-quarter]')).toContain('overflow: visible;');
-    expect(css.match(/@container/g)).toHaveLength(1);
+    expect(css.match(/@container/g)).toHaveLength(2);
+  });
+
+  it('wraps under 12rem instead of shrinking: a year on its own line, then half-years, and no header', () => {
+    const css = rules();
+    const narrow = blockAfter(css, '@container month-grid (inline-size < 12rem)');
+    // The half count is the component's --month-grid-half, never a calc() inside repeat().
+    expect(rule(narrow, '.month-grid-grid')).toContain(
+      'grid-template-columns: repeat(var(--month-grid-half, 6), minmax(0, 1fr));',
+    );
+    expect(css).not.toMatch(/repeat\(\s*calc/);
+    expect(rule(narrow, '.month-grid-corner, .month-grid-month')).toContain('display: none;');
+    const year = rule(narrow, '.month-grid-year');
+    expect(year).toContain('grid-column: 1 / -1;');
+    expect(year).toContain('padding-inline-end: 0;');
+    // It follows the 28rem query, so it wins where both apply.
+    expect(css.indexOf('(inline-size < 12rem)')).toBeGreaterThan(css.indexOf('(inline-size < 28rem)'));
   });
 
   it('lays the grid out as a year column and --month-grid-columns columns 2px apart', () => {

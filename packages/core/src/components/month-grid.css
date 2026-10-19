@@ -153,6 +153,26 @@
     }
   }
 
+  /* Under 12rem, two up in cards on a phone, twelve cells across would shrink to a few pixels. The grid wraps
+     instead of shrinking: the year label takes a line of its own and its months follow in half-years, six to a
+     row, --month-grid-half columns that the component writes, since a calc() inside repeat() is not a count every
+     engine takes. No header: a column is no longer one month. */
+  @container month-grid (inline-size < 12rem) {
+    .month-grid-grid {
+      grid-template-columns: repeat(var(--month-grid-half, 6), minmax(0, 1fr));
+    }
+
+    .month-grid-corner,
+    .month-grid-month {
+      display: none;
+    }
+
+    .month-grid-year {
+      grid-column: 1 / -1;
+      padding-inline-end: 0;
+    }
+  }
+
   /* A fill is a background, which the repaint drops, so filled is drawn in the reader's text color; the stripes
      opt out of the repaint and are drawn again in the reader's colors with their edge, Meter's rule; the outline
      is a border and stays. The three looks stay three shapes: solid, striped, outlined. */

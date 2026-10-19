@@ -1848,7 +1848,8 @@ test('a month grid in a flex: 1, a 1fr or a two-up wrapper keeps a 320px page fr
   page,
 }) => {
   // A size container's stand-in width is its min-content width too, so the grid's is 0 (spec corrections 34 and
-  // 45): a flex: 1 item, a 1fr track and two 1fr tracks each give it their width, and its cells stretch to fill it.
+  // 45): a flex: 1 item, a 1fr track and two 1fr tracks, bare or in cards, each give it their width. Its cells
+  // stretch to fill it and are never under 6px: under 12rem of its width the grid wraps into half-years.
   await page.setViewportSize({ width: 320, height: 800 });
   await visit(page, '/docs/components/month-grid');
   const column = page.locator('.panel-main').first();
@@ -1857,29 +1858,35 @@ test('a month grid in a flex: 1, a 1fr or a two-up wrapper keeps a 320px page fr
     .first()
     .evaluate((element) => element.outerHTML);
   await column.evaluate((element, grid) => {
+    const card = `<div class="card"><div class="card-body">${grid}</div></div>`;
     element.insertAdjacentHTML(
       'afterbegin',
       `<div data-wrapper="flex" style="display: flex"><div style="flex: 1">${grid}</div></div>` +
         `<div data-wrapper="grid" style="display: grid; grid-template-columns: 1fr"><div>${grid}</div></div>` +
         `<div data-wrapper="two-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">` +
-        `<div>${grid}</div><div>${grid}</div></div>`,
+        `<div>${grid}</div><div>${grid}</div></div>` +
+        `<div data-wrapper="two-up-cards" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">` +
+        `${card}${card}</div>`,
     );
   }, markup);
   const columnBox = await column.boundingBox();
   if (!columnBox) throw new Error('No column');
-  for (const wrapper of ['flex', 'grid', 'two-up']) {
+  for (const wrapper of ['flex', 'grid', 'two-up', 'two-up-cards']) {
     const grids = page.locator(`[data-wrapper="${wrapper}"] .month-grid`);
-    for (const index of wrapper === 'two-up' ? [0, 1] : [0]) {
+    for (const index of wrapper.startsWith('two-up') ? [0, 1] : [0]) {
       const box = await grids.nth(index).boundingBox();
       if (!box) throw new Error(`No grid in the ${wrapper} wrapper`);
       expect(box.x + box.width, wrapper).toBeLessThanOrEqual(columnBox.x + columnBox.width + 0.5);
-      // Not collapsed: the grid fills its holder, and its cells are drawn.
+      // Not collapsed: the grid fills its holder, and no cell is under 6px.
       const holder = await grids
         .nth(index)
         .evaluate((element) => element.parentElement?.getBoundingClientRect().width ?? 0);
       expect(box.width, wrapper).toBeGreaterThanOrEqual(holder - 1);
-      const cell = await grids.nth(index).locator('.month-grid-cell').first().boundingBox();
-      expect(cell?.width ?? 0, wrapper).toBeGreaterThan(0);
+      const narrowest = await grids
+        .nth(index)
+        .locator('.month-grid-cell')
+        .evaluateAll((cells) => Math.min(...cells.map((cell) => cell.getBoundingClientRect().width)));
+      expect(narrowest, wrapper).toBeGreaterThanOrEqual(6);
     }
   }
   expect(await sideways(page)).toBe(0);
@@ -1894,10 +1901,11 @@ test("the month grid's basic example reads as a table: Year and twelve months, a
   await expect(table.getByRole('columnheader').first()).toHaveText('Year');
   await expect(table.getByRole('rowheader')).toHaveText(['2026', '2025', '2024']);
   await expect(table.getByRole('row').nth(2).getByRole('cell').nth(2)).toHaveText('Missing');
-  // The figure is named, its visible grid is hidden, and its summary leads with what is missing.
+  // The figure is named, its visible grid is hidden, and its summary says what is missing, oldest first, before
+  // what is partial.
   await expect(page.getByRole('figure', { name: 'Statement coverage' })).toHaveCount(1);
   await expect(page.locator('.stage .month-grid-summary').first()).toHaveText(
-    'Partial: June 2025. Missing: March, April 2025; November 2024.',
+    'Missing: November 2024, March and April 2025. Partial: June 2025.',
   );
 });
 

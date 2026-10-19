@@ -755,12 +755,12 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     [
       '<figure aria-labelledby=',
       'class="month-grid"',
-      '<div class="month-grid-grid" aria-hidden="true" style="--month-grid-columns:12">',
+      '<div class="month-grid-grid" aria-hidden="true" style="--month-grid-columns:12;--month-grid-half:6">',
       '<span class="month-grid-cell" data-look="empty"></span>',
       '<span class="month-grid-cell" data-look="none"></span>',
       '<caption>Statement coverage</caption>',
       '<th scope="row">2025</th>',
-      '<p class="month-grid-summary">Partial: June 2025. Missing: March, April 2025.</p>',
+      '-summary">Missing: March and April 2025. Partial: June 2025.</p><div class="month-grid-alternative">',
     ],
   ],
   [
@@ -781,7 +781,7 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '<span class="month-grid-year">۱۴۰۴</span>',
       '<th scope="col">سال</th>',
       '<td>خارج از بازه</td>',
-      `<p class="month-grid-summary">${PERSIAN_SUMMARY}</p>`,
+      `-summary">${PERSIAN_SUMMARY}</p>`,
     ],
     ['Missing', 'every month'],
   ],
