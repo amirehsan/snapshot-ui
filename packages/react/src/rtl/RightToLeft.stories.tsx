@@ -25,6 +25,7 @@ import { FilterChip } from '../filter-chip';
 import { Gauge } from '../gauge';
 import { Link, RouterProvider } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
+import { MonthGrid } from '../month-grid';
 import { MultiSelect } from '../multi-select';
 import { NumberField } from '../number-field';
 import { PageColumn, PageHeader } from '../page-header';
@@ -40,6 +41,14 @@ import { Select } from '../select';
 import { Sheet, SheetTrigger } from '../sheet';
 import { SidePanel, SidePanelLayout } from '../side-panel';
 import { MENU_ROW_A11Y } from '../stories/a11y';
+import {
+  PERSIAN_LABELS,
+  PERSIAN_MONTH_NAMES,
+  PERSIAN_SHORT_MONTHS,
+  PERSIAN_STATES,
+  PERSIAN_SUMMARY,
+  PERSIAN_YEARS,
+} from '../stories/coverage';
 import { filesTransfer, fireDrag, pdf } from '../stories/drag';
 import { DemoHeader, DemoNav } from '../stories/shell-fixture';
 import { DESKTOP, VIEWPORT_OPTIONS } from '../stories/viewports';
@@ -1566,6 +1575,53 @@ export const GaugeMirrored: Story = {
       // The label starts at the right of its text block, the start of a right-to-left line.
       await expect(getComputedStyle(find(scope, '.gauge-text')).direction).toBe('rtl');
     }
+  },
+};
+
+/**
+ * A month grid on a Persian page follows the page (owner ruling 7): the grid's columns run from the right, so
+ * the year label is at the right and Farvardin, the first month, is the rightmost cell of its row and the
+ * rightmost label of the header, by the grid's own logical flow. In three engines, since each lays the grid out.
+ */
+export const MonthGridMirrored: Story = {
+  tags: ['webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(36rem, calc(100vw - 2rem))' }}>
+        <MonthGrid
+          label="صورت‌حساب‌ها"
+          states={PERSIAN_STATES}
+          years={PERSIAN_YEARS}
+          monthLabels={PERSIAN_SHORT_MONTHS}
+          monthNames={PERSIAN_MONTH_NAMES}
+          summary={PERSIAN_SUMMARY}
+          labels={PERSIAN_LABELS}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const grid = find(canvasElement, '.month-grid-grid');
+    await expect(getComputedStyle(grid).direction).toBe('rtl');
+    const years = [...grid.querySelectorAll('.month-grid-year')];
+    const cells = [...grid.querySelectorAll('.month-grid-cell')].map(rect);
+    await expect(years).toHaveLength(2);
+    for (const [row, year] of years.entries()) {
+      const rowCells = cells.slice(row * 12, row * 12 + 12);
+      const [first] = rowCells;
+      if (!first) throw new Error('No cell');
+      // The first month is the rightmost cell, and each later month is left of the one before.
+      await expectSameEdge(first.right, Math.max(...rowCells.map((cell) => cell.right)));
+      for (const [index, cell] of rowCells.slice(1).entries())
+        await expect(cell.right).toBeLessThanOrEqual((rowCells[index]?.left ?? 0) + 1);
+      // The year label is right of its first month, in the grid's first column at the right.
+      await expect(rect(year).left).toBeGreaterThanOrEqual(first.right - 1);
+      await expectSameEdge(rect(year).right, rect(grid).right);
+    }
+    // The header's first label, Farvardin's, is over the first month's column.
+    const label = rect(find(grid, '.month-grid-month'));
+    const column = rect(find(grid, '.month-grid-cell'));
+    await expectSameEdge(label.left + label.width / 2, column.left + column.width / 2);
   },
 };
 

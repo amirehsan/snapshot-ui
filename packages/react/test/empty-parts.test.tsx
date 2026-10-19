@@ -19,6 +19,8 @@ import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
+import { MonthGrid } from '../src/month-grid';
+import { COVERAGE_STATES, COVERAGE_YEARS, MONTH_NAMES, SHORT_MONTHS } from '../src/stories/coverage';
 import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
 import { PageHeader } from '../src/page-header';
@@ -367,6 +369,30 @@ describe('an empty accounts part slot', () => {
       // The text block holds the value text alone.
       expect(container.querySelector('.gauge-text')?.children).toHaveLength(1);
       expect(screen.getByRole('meter', { name: 'Utilization' })).not.toHaveAttribute('aria-labelledby');
+      unmount();
+    }
+  });
+
+  it('draws no label span and no summary paragraph for an empty label and an empty summary', () => {
+    for (const empty of [false, null, '', '  ']) {
+      const { container, unmount } = render(
+        <MonthGrid
+          // An empty label passes the types with an aria-label beside it, which then names the figure.
+          label={empty}
+          aria-label="Statement coverage"
+          states={COVERAGE_STATES}
+          years={COVERAGE_YEARS}
+          monthLabels={SHORT_MONTHS}
+          monthNames={MONTH_NAMES}
+          summary={empty}
+        />,
+      );
+      expect(container.querySelector('.month-grid-label')).toBeNull();
+      expect(container.querySelector('.month-grid-summary')).toBeNull();
+      const figure = screen.getByRole('figure', { name: 'Statement coverage' });
+      expect(figure).not.toHaveAttribute('aria-labelledby');
+      // The table's caption is the aria-label, since no label shows.
+      expect(figure.querySelector('caption')).toHaveTextContent('Statement coverage');
       unmount();
     }
   });

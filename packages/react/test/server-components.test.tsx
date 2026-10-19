@@ -87,12 +87,28 @@ import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
 import { Gauge } from '../src/gauge';
 import { Meter } from '../src/meter';
+import { MonthGrid } from '../src/month-grid';
 import { PageColumn, PageHeader } from '../src/page-header';
 import { Pagination } from '../src/pagination';
 import { ProgressBar } from '../src/progress-bar';
 import { Skeleton } from '../src/skeleton';
 import { StatTile } from '../src/stat-tile';
+import { COVERAGE_STATES, COVERAGE_YEARS, MONTH_NAMES, SHORT_MONTHS } from '../src/stories/coverage';
 import { Eyebrow, Heading, Text } from '../src/typography';
+
+/** The look each of the coverage's months draws, and its word in the table. */
+const COVERAGE_LOOKS: Record<string, string> = {
+  held: 'filled',
+  partial: 'partial',
+  missing: 'empty',
+  none: 'none',
+};
+const COVERAGE_WORDS: Record<string, string> = {
+  held: 'Held',
+  partial: 'Partial',
+  missing: 'Missing',
+  none: 'Not in range',
+};
 
 /** The static components: the ones that carry no `'use client'`, so a server component may use them directly. */
 const STATIC: [name: string, element: ReactElement, markup: string][] = [
@@ -214,6 +230,55 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
       '<div class="gauge-text"><span class="gauge-label" id="_R_0_-label">Credit score</span>' +
       '<span class="gauge-value-label" aria-hidden="true">742 of 850, Very good</span></div>' +
       '<span class="gauge-marks-label" id="_R_0_-marks" hidden="">Fair from 580. Good from 670.</span></div>',
+  ],
+  [
+    // Two years of the consumer's coverage: the visible grid hidden, the table, the English summary and the
+    // legend of the three states the data holds, with useId's id on the label.
+    'MonthGrid',
+    <MonthGrid
+      label="Statement coverage"
+      states={COVERAGE_STATES}
+      years={COVERAGE_YEARS}
+      monthLabels={SHORT_MONTHS}
+      monthNames={MONTH_NAMES}
+    />,
+    '<figure aria-labelledby="_R_0_-label" class="month-grid">' +
+      '<span class="month-grid-label" id="_R_0_-label">Statement coverage</span>' +
+      '<div class="month-grid-grid" aria-hidden="true" style="--month-grid-columns:12">' +
+      '<span class="month-grid-corner"></span>' +
+      SHORT_MONTHS.map(
+        (short, index) =>
+          `<span class="month-grid-month"${index % 3 === 0 ? ' data-quarter=""' : ''}>${short}</span>`,
+      ).join('') +
+      COVERAGE_YEARS.map(
+        (year) =>
+          `<span class="month-grid-year">${year.label}</span>` +
+          year.months
+            .map(
+              (month) =>
+                `<span class="month-grid-cell" data-look="${COVERAGE_LOOKS[month ?? 'none']}"></span>`,
+            )
+            .join(''),
+      ).join('') +
+      '</div><div class="month-grid-alternative"><table class="month-grid-table">' +
+      '<caption>Statement coverage</caption><thead><tr><th scope="col">Year</th>' +
+      MONTH_NAMES.map((name) => `<th scope="col">${name}</th>`).join('') +
+      '</tr></thead><tbody>' +
+      COVERAGE_YEARS.map(
+        (year) =>
+          `<tr><th scope="row">${year.label}</th>` +
+          year.months.map((month) => `<td>${COVERAGE_WORDS[month ?? 'none']}</td>`).join('') +
+          '</tr>',
+      ).join('') +
+      '</tbody></table></div>' +
+      '<p class="month-grid-summary">Partial: June 2025. Missing: March, April 2025.</p>' +
+      '<ul class="month-grid-legend" aria-hidden="true">' +
+      '<li class="month-grid-legend-item"><span class="month-grid-swatch" data-look="filled"></span>' +
+      '<span class="month-grid-legend-label">Held</span></li>' +
+      '<li class="month-grid-legend-item"><span class="month-grid-swatch" data-look="partial"></span>' +
+      '<span class="month-grid-legend-label">Partial</span></li>' +
+      '<li class="month-grid-legend-item"><span class="month-grid-swatch" data-look="empty"></span>' +
+      '<span class="month-grid-legend-label">Missing</span></li></ul></figure>',
   ],
   [
     'FieldCounter',
@@ -439,6 +504,7 @@ const STATIC_MODULES = [
   'stat-tile/StatTile.tsx',
   'meter/Meter.tsx',
   'gauge/Gauge.tsx',
+  'month-grid/MonthGrid.tsx',
   'pagination/Pagination.tsx',
   'empty-state/EmptyState.tsx',
   'skeleton/Skeleton.tsx',

@@ -25,6 +25,19 @@ import { Card, CardActions, CardHeader, CardTitle } from '../src/card';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
+import { MonthGrid } from '../src/month-grid';
+import {
+  COVERAGE_STATES,
+  COVERAGE_YEARS,
+  MONTH_NAMES,
+  PERSIAN_LABELS,
+  PERSIAN_MONTH_NAMES,
+  PERSIAN_SHORT_MONTHS,
+  PERSIAN_STATES,
+  PERSIAN_SUMMARY,
+  PERSIAN_YEARS,
+  SHORT_MONTHS,
+} from '../src/stories/coverage';
 
 /** The consumer's score bands on 300 to 850. */
 const SCORE_BANDS = [
@@ -196,6 +209,33 @@ const FACES: [name: string, element: ReactElement][] = [
       figureCaption="Very good"
       marks={SCORE_BANDS}
     />,
+  ],
+  [
+    // A static part that reads no locale: the cells, the table and the English summary are the app's words joined
+    // as strings, one HTML in every locale and zone.
+    'MonthGrid',
+    <MonthGrid
+      label="Statement coverage"
+      states={COVERAGE_STATES}
+      years={COVERAGE_YEARS}
+      monthLabels={SHORT_MONTHS}
+      monthNames={MONTH_NAMES}
+    />,
+  ],
+  [
+    // Persian years and months the app placed, its own summary and table words, on a right-to-left page.
+    'MonthGrid Persian',
+    <div dir="rtl" lang="fa">
+      <MonthGrid
+        label="صورت‌حساب‌ها"
+        states={PERSIAN_STATES}
+        years={PERSIAN_YEARS}
+        monthLabels={PERSIAN_SHORT_MONTHS}
+        monthNames={PERSIAN_MONTH_NAMES}
+        summary={PERSIAN_SUMMARY}
+        labels={PERSIAN_LABELS}
+      />
+    </div>,
   ],
   [
     // The count in the Filters button's Badge, More and Clear all; no panel and no sheet.

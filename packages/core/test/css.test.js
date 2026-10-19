@@ -1987,6 +1987,127 @@ describe('src/components/gauge.css', () => {
   });
 });
 
+describe('src/components/month-grid.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/month-grid.css')));
+  const NARROW = '@container month-grid (inline-size < 28rem)';
+  /** The block of the rule whose whole selector is `selector`, not one that lists it among others. */
+  const rule = (css, selector) => {
+    const found = [...css.matchAll(/(?<=^|[{}])\s*([^{}]+?)\s*\{/g)].find((match) => match[1] === selector);
+    return found ? blockAfter(css.slice(found.index), `${selector} {`) : '';
+  };
+  /** The block for a look, written once for the cell and its legend swatch. */
+  const look = (css, name) =>
+    rule(css, `.month-grid-cell[data-look='${name}'], .month-grid-swatch[data-look='${name}']`);
+
+  it('is a size container with a 0 intrinsic width, hiding all but quarter labels under 28rem', () => {
+    const css = rules();
+    const grid = rule(css, '.month-grid');
+    expect(grid).toContain('container: month-grid / inline-size;');
+    // The library-wide ruling (spec corrections 34 and 37): a stand-in width is the holder's min-content, which
+    // scrolls a 320px page sideways from a flex: 1 wrapper or a 1fr track, so it is 0 and a content-sized holder
+    // gives the grid a width.
+    expect(grid).toContain('contain-intrinsic-inline-size: 0;');
+    expect(grid).toContain('min-width: 0;');
+    expect(grid).toContain('margin: 0;');
+    const narrow = blockAfter(css, NARROW);
+    expect(rule(narrow, '.month-grid-month:not([data-quarter])')).toContain('visibility: hidden;');
+    // A quarter's label may run on over the hidden ones after it, rather than be clipped by its column.
+    expect(rule(narrow, '.month-grid-month[data-quarter]')).toContain('overflow: visible;');
+    expect(css.match(/@container/g)).toHaveLength(1);
+  });
+
+  it('lays the grid out as a year column and --month-grid-columns columns 2px apart', () => {
+    const css = rules();
+    const grid = rule(css, '.month-grid-grid');
+    expect(grid).toContain('display: grid;');
+    expect(grid).toContain(
+      'grid-template-columns: auto repeat(var(--month-grid-columns, 12), minmax(0, 1fr));',
+    );
+    expect(grid).toContain('gap: 2px;');
+    const year = rule(css, '.month-grid-year');
+    // Each year starts a row of its own, so a row of the wrong length cannot move the years under it.
+    expect(year).toContain('grid-column: 1;');
+    expect(year).toContain('padding-inline-end: calc(var(--spacing-part) - 2px);');
+    expect(year).toContain('font-weight: 500;');
+    expect(year).toContain('font-variant-numeric: tabular-nums;');
+    expect(year).toContain('unicode-bidi: isolate;');
+    const month = rule(css, '.month-grid-month');
+    expect(month).toContain('font-weight: 450;');
+    expect(month).toContain('color: var(--color-slate);');
+    expect(month).toContain('text-align: center;');
+    expect(month).toContain('white-space: nowrap;');
+    expect(rule(css, '.month-grid-cell')).toContain('block-size: 1rem;');
+    // Logical properties throughout, so the year column and January are at the right on a right-to-left page.
+    expect(css).not.toMatch(
+      /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|top|bottom|width|height):/,
+    );
+  });
+
+  it("draws filled, partial and empty as ink, Meter's hatch with its edge, and a boundary outline", () => {
+    const css = rules();
+    expect(look(css, 'filled')).toContain('background-color: var(--color-ink);');
+    const partial = look(css, 'partial');
+    expect(partial).toContain('border: 1px solid var(--color-ink);');
+    expect(partial).toContain(
+      'background-image: repeating-linear-gradient(45deg, var(--color-ink) 0 2px, transparent 2px 6px);',
+    );
+    expect(look(css, 'empty')).toContain('border: 1px solid var(--color-boundary);');
+    // A month outside the range is blank, and no look is a meaning: no reserved color anywhere.
+    expect(css).not.toContain("[data-look='none']");
+    expect(css).not.toMatch(/--color-(?:error|warning|success|gain|signal|clay|taupe)/);
+    // The summary and the legend's labels are slate; the swatch is Meter's 12px, on the cell's corner, since the
+    // micro step on 12px is a circle and a key looks like what it stands for (spec correction 38).
+    expect(rule(css, '.month-grid-summary')).toContain('color: var(--color-slate);');
+    expect(rule(css, '.month-grid-legend-label')).toContain('color: var(--color-slate);');
+    const swatch = rule(css, '.month-grid-swatch');
+    expect(swatch).toContain('inline-size: 0.75rem;');
+    expect(swatch).toContain('block-size: 0.75rem;');
+    expect(swatch).toContain('border-radius: calc(var(--radius-micro) * 2 / 3);');
+    for (const weight of css.matchAll(/font-weight:\s*([^;]+);/g))
+      expect(weight[1]).toMatch(/^(?:450|500|var\(--text-small--font-weight\))$/);
+  });
+
+  it('rounds a cell at two thirds of the micro step', () => {
+    // 4px in Rounded and Soft and 0 in Square: a text-sized part, under every holder's formula.
+    expect(rule(rules(), '.month-grid-cell')).toContain('border-radius: calc(var(--radius-micro) * 2 / 3);');
+  });
+
+  it('clips the table from sight inside its own 1px box, as the status host is', () => {
+    const host = rule(rules(), '.month-grid-alternative');
+    for (const declaration of [
+      'position: absolute;',
+      'inline-size: 1px;',
+      'block-size: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+      'white-space: nowrap;',
+    ])
+      expect(host, declaration).toContain(declaration);
+    expect(rule(rules(), '.month-grid')).toContain('position: relative;');
+  });
+
+  it('keeps three shapes in forced colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(look(forced, 'filled')).toContain('background-color: canvastext;');
+    const partial = look(forced, 'partial');
+    expect(partial).toContain('forced-color-adjust: none;');
+    expect(partial).toContain('border-color: canvastext;');
+    expect(partial).toContain('background-color: canvas;');
+    expect(partial).toContain(
+      'background-image: repeating-linear-gradient(45deg, canvastext 0 2px, canvas 2px 6px);',
+    );
+    expect(look(forced, 'empty')).toContain('border-color: canvastext;');
+  });
+
+  it('keeps print colors exact', () => {
+    const root = rule(rules(), '.month-grid');
+    expect(root).toContain('-webkit-print-color-adjust: exact;');
+    expect(root).toContain('print-color-adjust: exact;');
+  });
+});
+
 describe('src/components/segmented.css', () => {
   // The rules without their comments, which quote selectors of their own.
   // Closed up, so a selector Prettier breaks over lines is found as one.
@@ -3380,6 +3501,7 @@ describe('src/components/tooltip.css', () => {
         'meter.css',
         'charts.css',
         'gauge.css',
+        'month-grid.css',
         'search-field.css',
         'select.css',
         'combo-box.css',

@@ -66,6 +66,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Link](https://snapshotui.com/docs/components/link)
 - [Menu](https://snapshotui.com/docs/components/menu)
 - [Meter](https://snapshotui.com/docs/components/meter)
+- [Month grid](https://snapshotui.com/docs/components/month-grid)
 - [Multi-select](https://snapshotui.com/docs/components/multi-select)
 - [Number field](https://snapshotui.com/docs/components/number-field)
 - [Page header](https://snapshotui.com/docs/components/page-header)

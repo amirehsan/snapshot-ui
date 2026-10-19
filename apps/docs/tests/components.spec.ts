@@ -582,6 +582,42 @@ test.describe('forced colors', () => {
     expect(new Set([drawn.track, drawn.arc, drawn.mark]).size).toBe(3);
   });
 
+  test('a month grid keeps three looks as three shapes', async ({ page }) => {
+    // A fill is a background, which the repaint would drop: filled is drawn in the reader's text color, partial
+    // opts out of the repaint and draws its stripes again in the reader's colors, and empty keeps its edge. A
+    // solid, a striped and an outlined cell, and a month outside the range stays blank.
+    await visit(page, '/docs/components/month-grid');
+    const { canvas, canvasText } = await systemColors(page);
+    const grid = page.locator('.stage .month-grid').first();
+    const look = (name: string) =>
+      grid
+        .locator(`.month-grid-cell[data-look='${name}']`)
+        .first()
+        .evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            fill: style.backgroundColor,
+            image: style.backgroundImage,
+            edge: style.borderTopWidth === '0px' ? 'none' : style.borderTopColor,
+          };
+        });
+    const filled = await look('filled');
+    const partial = await look('partial');
+    const empty = await look('empty');
+    const none = await look('none');
+    expect(filled).toEqual({ fill: canvasText, image: 'none', edge: 'none' });
+    expect(partial.fill).toBe(canvas);
+    expect(partial.image).toContain('repeating-linear-gradient');
+    expect(partial.image).toContain(canvasText);
+    expect(partial.edge).toBe(canvasText);
+    expect(empty.image).toBe('none');
+    expect(empty.edge).toBe(canvasText);
+    expect(empty.fill).not.toBe(canvasText);
+    expect(none.edge).toBe('none');
+    expect(none.image).toBe('none');
+    expect(none.fill).not.toBe(canvasText);
+  });
+
   test('a progress bar keeps its track outline and fill', async ({ page }) => {
     // The fill is a background, which the repaint would drop: it is drawn in the reader's text color, and the
     // track is outlined so its end shows, as Meter's are.
@@ -1629,6 +1665,9 @@ const LONG_TARGETS: Record<string, string[]> = {
   'line-chart': ['.stage .line-chart-legend-label'],
   link: ['.stage .link'],
   meter: ['.stage .meter-label', '.stage .meter-value', '.stage .meter-legend-label'],
+  // The name, the summary and the legend's state words are the app's, and wrap at any character; the month and
+  // year labels are short by the docs' rule, and the table is clipped inside its own 1px box.
+  'month-grid': ['.stage .month-grid-label', '.stage .month-grid-summary', '.stage .month-grid-legend-label'],
   'multi-select': ['.stage .field-label', '.stage .field-description', '.stage .multi-select-tag-text'],
   'number-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // The title wraps at any character and is never cut; the sentence wraps inside its measure.
@@ -1770,6 +1809,59 @@ test('a description list in a flex: 1 or a 1fr wrapper keeps a 320px page from s
   expect(await sideways(page)).toBe(0);
 });
 
+test('a month grid in a flex: 1, a 1fr or a two-up wrapper keeps a 320px page from scrolling sideways', async ({
+  page,
+}) => {
+  // A size container's stand-in width is its min-content width too, so the grid's is 0 (spec corrections 34 and
+  // 37): a flex: 1 item, a 1fr track and two 1fr tracks each give it their width, and its cells stretch to fill it.
+  await page.setViewportSize({ width: 320, height: 800 });
+  await visit(page, '/docs/components/month-grid');
+  const column = page.locator('.panel-main').first();
+  const markup = await page
+    .locator('.stage .month-grid')
+    .first()
+    .evaluate((element) => element.outerHTML);
+  await column.evaluate((element, grid) => {
+    element.insertAdjacentHTML(
+      'afterbegin',
+      `<div data-wrapper="flex" style="display: flex"><div style="flex: 1">${grid}</div></div>` +
+        `<div data-wrapper="grid" style="display: grid; grid-template-columns: 1fr"><div>${grid}</div></div>` +
+        `<div data-wrapper="two-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">` +
+        `<div>${grid}</div><div>${grid}</div></div>`,
+    );
+  }, markup);
+  const columnBox = await column.boundingBox();
+  if (!columnBox) throw new Error('No column');
+  for (const wrapper of ['flex', 'grid', 'two-up']) {
+    const grids = page.locator(`[data-wrapper="${wrapper}"] .month-grid`);
+    for (const index of wrapper === 'two-up' ? [0, 1] : [0]) {
+      const box = await grids.nth(index).boundingBox();
+      if (!box) throw new Error(`No grid in the ${wrapper} wrapper`);
+      expect(box.x + box.width, wrapper).toBeLessThanOrEqual(columnBox.x + columnBox.width + 0.5);
+      // Its cells are drawn, not collapsed to nothing.
+      const cell = await grids.nth(index).locator('.month-grid-cell').first().boundingBox();
+      expect(cell?.width ?? 0, wrapper).toBeGreaterThan(2);
+    }
+  }
+  expect(await sideways(page)).toBe(0);
+});
+
+test("the month grid's basic example reads as a table: Year and twelve months, and a row header per year", async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/month-grid');
+  const table = page.locator('.stage').first().getByRole('table', { name: 'Statement coverage' });
+  await expect(table.getByRole('columnheader')).toHaveCount(13);
+  await expect(table.getByRole('columnheader').first()).toHaveText('Year');
+  await expect(table.getByRole('rowheader')).toHaveText(['2026', '2025', '2024']);
+  await expect(table.getByRole('row').nth(2).getByRole('cell').nth(2)).toHaveText('Missing');
+  // The figure is named, its visible grid is hidden, and its summary leads with what is missing.
+  await expect(page.getByRole('figure', { name: 'Statement coverage' })).toHaveCount(1);
+  await expect(page.locator('.stage .month-grid-summary').first()).toHaveText(
+    'Partial: June 2025. Missing: March, April 2025; November 2024.',
+  );
+});
+
 // ---- Accessibility ------------------------------------------------------------------------------
 
 /**
@@ -1871,6 +1963,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   link: ['.stage .link'],
   menu: ['.stage .button, .stage .icon-button'],
   meter: ['.stage .meter [role="meter"]', '.stage .meter-segment'],
+  // A static part: the cells, the table and the summary are in the server's HTML.
+  'month-grid': ['.stage figure.month-grid', '.stage .month-grid-table', '.stage .month-grid-summary'],
   'multi-select': ['.stage .multi-select-control', '.stage .multi-select-tag'],
   // The figure is the server face's plain text, and the symbol is drawn beside it.
   'number-field': ['.stage .number-field-input', '.stage .number-field-symbol'],

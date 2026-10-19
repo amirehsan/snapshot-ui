@@ -1,0 +1,178 @@
+/*
+ * MonthGrid: which months the reader has, derived in docs/design-system.md ("MonthGrid"). A header row of the
+ * app's short month labels, then one row per year: its label at the inline start and one cell per month, 2px
+ * apart, the Meter spacer's width, so a year reads as a strip that stretches with its box. A cell is one of three
+ * looks, which are shapes and not meanings: filled is ink, partial Meter's hatch with its 1px ink edge, empty a
+ * 1px boundary outline, the edge of a control, so its extent shows at 3:1; a month outside the range is blank.
+ * None is error, warning or success. The figure is a size container, so its own width decides whether every
+ * month label shows; its stand-in width is 0, so a holder that takes the width of its content gives it one.
+ */
+@layer components {
+  .month-grid {
+    container: month-grid / inline-size;
+    contain-intrinsic-inline-size: 0;
+    position: relative;
+    display: grid;
+    gap: var(--spacing-part);
+    min-width: 0;
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .month-grid-label {
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+
+  .month-grid-grid {
+    display: grid;
+    grid-template-columns: auto repeat(var(--month-grid-columns, 12), minmax(0, 1fr));
+    gap: 2px;
+    align-items: center;
+  }
+
+  .month-grid-month {
+    overflow: hidden;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 450;
+    color: var(--color-slate);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* Each year starts its own row in the first column, so a row the app gave too few or too many months cannot
+     move the years under it. */
+  .month-grid-year {
+    grid-column: 1;
+    padding-inline-end: calc(var(--spacing-part) - 2px);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+    white-space: nowrap;
+    unicode-bidi: isolate;
+  }
+
+  /* A cell is a text-sized part: the micro step at two thirds, 4px in Rounded and Soft, 0 in Square, sharper
+     than any holder's formula, so it keeps its corner wherever it sits (design record, "Nested radii, derived"). */
+  .month-grid-cell {
+    box-sizing: border-box;
+    block-size: 1rem;
+    border-radius: calc(var(--radius-micro) * 2 / 3);
+  }
+
+  .month-grid-cell[data-look='filled'],
+  .month-grid-swatch[data-look='filled'] {
+    background-color: var(--color-ink);
+  }
+
+  .month-grid-cell[data-look='partial'],
+  .month-grid-swatch[data-look='partial'] {
+    border: 1px solid var(--color-ink);
+    background-image: repeating-linear-gradient(45deg, var(--color-ink) 0 2px, transparent 2px 6px);
+  }
+
+  .month-grid-cell[data-look='empty'],
+  .month-grid-swatch[data-look='empty'] {
+    border: 1px solid var(--color-boundary);
+  }
+
+  /* The alternative: a table clipped from sight inside its own 1px box, as the toast's status host is, so a
+     reader's table navigation finds it and its width never scrolls the page. */
+  .month-grid-alternative {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .month-grid-summary {
+    margin: 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+    overflow-wrap: anywhere;
+  }
+
+  /* Meter's legend: a 12px swatch in each state's look, its label in slate. The swatch takes the cell's corner,
+     not Meter's micro step, which is a circle on 12px: a key looks like what it stands for. */
+  .month-grid-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-part) var(--spacing-peer);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    overflow-wrap: anywhere;
+  }
+
+  .month-grid-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  .month-grid-legend-label {
+    min-width: 0;
+    color: var(--color-slate);
+  }
+
+  .month-grid-swatch {
+    flex: none;
+    box-sizing: border-box;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    border-radius: calc(var(--radius-micro) * 2 / 3);
+  }
+
+  /* Under 28rem of the grid's own width only the first month of each quarter is labelled, so short labels never
+     collide; a quarter's label may run on over the hidden labels after it rather than be clipped. */
+  @container month-grid (inline-size < 28rem) {
+    .month-grid-month:not([data-quarter]) {
+      visibility: hidden;
+    }
+
+    .month-grid-month[data-quarter] {
+      overflow: visible;
+    }
+  }
+
+  /* A fill is a background, which the repaint drops, so filled is drawn in the reader's text color; the stripes
+     opt out of the repaint and are drawn again in the reader's colors with their edge, Meter's rule; the outline
+     is a border and stays. The three looks stay three shapes: solid, striped, outlined. */
+  @media (forced-colors: active) {
+    .month-grid-cell[data-look='filled'],
+    .month-grid-swatch[data-look='filled'] {
+      background-color: canvastext;
+    }
+
+    .month-grid-cell[data-look='partial'],
+    .month-grid-swatch[data-look='partial'] {
+      forced-color-adjust: none;
+      border-color: canvastext;
+      background-color: canvas;
+      background-image: repeating-linear-gradient(45deg, canvastext 0 2px, canvas 2px 6px);
+    }
+
+    .month-grid-cell[data-look='empty'],
+    .month-grid-swatch[data-look='empty'] {
+      border-color: canvastext;
+    }
+  }
+}

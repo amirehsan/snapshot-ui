@@ -620,6 +620,53 @@ describe('the description list', () => {
   });
 });
 
+describe('the month grid', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A filled cell and the partial hatch are ink, an empty cell's outline the boundary, on the canvas or in a card
+  // on lifted; the labels and the summary are ink and slate. The gate holds every pair already, so the grid adds
+  // none: ink as text, which a fill of the same color passes too, and the boundary painted on the surface.
+  it('cites ink on canvas and lifted, and the boundary against canvas and lifted, which the gate holds', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      for (const text of ['ink', 'slate'])
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      expect(
+        CONTRAST_PAIRS.some(
+          (pair) =>
+            pair.text === 'boundary' &&
+            pair.ground === ground &&
+            pair.fill === undefined &&
+            pair.minimum === NON_TEXT,
+        ),
+        `boundary against ${ground}`,
+      ).toBe(true);
+    }
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      // An empty cell has no fill, so its edge is the boundary painted on the surface itself, the switch's off
+      // track pair, and not a control's edge around a Raised fill, spec 8.5's 3.36 and 3.06 (spec correction 35).
+      { name: 'boundary', ground: 'lifted', light: 3.45, dark: 5.21 },
+      { name: 'boundary', ground: 'canvas', light: 3.38, dark: 5.34 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+      expect(measured('light', name, ground)).toBeGreaterThanOrEqual(NON_TEXT);
+      expect(measured('dark', name, ground)).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+});
+
 describe('the gauge', () => {
   /** A token color over the track, the frame composited over `surface`, and measured against the track. */
   const onTrack = (mode, name, surface) => {

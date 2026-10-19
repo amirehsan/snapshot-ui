@@ -104,6 +104,9 @@ import MenuSelection from './menu-selection';
 import MeterBasic from './meter-basic';
 import MeterOver from './meter-over';
 import MeterPace from './meter-pace';
+import MonthGridBasic from './month-grid-basic';
+import MonthGridLooks from './month-grid-looks';
+import MonthGridPersian from './month-grid-persian';
 import MultiSelectBasic from './multi-select-basic';
 import MultiSelectMany from './multi-select-many';
 import MultiSelectStates from './multi-select-states';
@@ -290,6 +293,9 @@ export const examples = {
   'meter-basic': MeterBasic,
   'meter-over': MeterOver,
   'meter-pace': MeterPace,
+  'month-grid-basic': MonthGridBasic,
+  'month-grid-looks': MonthGridLooks,
+  'month-grid-persian': MonthGridPersian,
   'multi-select-basic': MultiSelectBasic,
   'multi-select-many': MultiSelectMany,
   'multi-select-states': MultiSelectStates,

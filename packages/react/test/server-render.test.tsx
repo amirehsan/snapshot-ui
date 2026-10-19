@@ -50,6 +50,19 @@ import {
 import { Spinner } from '../src/spinner';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Gauge } from '../src/gauge';
+import { MonthGrid } from '../src/month-grid';
+import {
+  COVERAGE_STATES,
+  COVERAGE_YEARS,
+  MONTH_NAMES,
+  PERSIAN_LABELS,
+  PERSIAN_MONTH_NAMES,
+  PERSIAN_SHORT_MONTHS,
+  PERSIAN_STATES,
+  PERSIAN_SUMMARY,
+  PERSIAN_YEARS,
+  SHORT_MONTHS,
+} from '../src/stories/coverage';
 import { COLUMNS, columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Switch } from '../src/switch';
 import { Tab, TabList, TabPanel, Tabs } from '../src/tabs';
@@ -719,6 +732,58 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '<dd class="description-list-value" data-numeric="">$5,000.00</dd>',
     ],
     ['role='],
+  ],
+  [
+    // Two years of coverage in a client Tabs panel, as the credit tab holds it: the grid, the table and the
+    // English summary render in Node with no browser, and nothing reads a locale or a date.
+    'MonthGrid in a Tabs panel',
+    <Tabs defaultSelectedKey="credit">
+      <TabList aria-label="Account">
+        <Tab id="details">Details</Tab>
+        <Tab id="credit">Credit</Tab>
+      </TabList>
+      <TabPanel id="credit">
+        <MonthGrid
+          label="Statement coverage"
+          states={COVERAGE_STATES}
+          years={COVERAGE_YEARS}
+          monthLabels={SHORT_MONTHS}
+          monthNames={MONTH_NAMES}
+        />
+      </TabPanel>
+    </Tabs>,
+    [
+      '<figure aria-labelledby=',
+      'class="month-grid"',
+      '<div class="month-grid-grid" aria-hidden="true" style="--month-grid-columns:12">',
+      '<span class="month-grid-cell" data-look="empty"></span>',
+      '<span class="month-grid-cell" data-look="none"></span>',
+      '<caption>Statement coverage</caption>',
+      '<th scope="row">2025</th>',
+      '<p class="month-grid-summary">Partial: June 2025. Missing: March, April 2025.</p>',
+    ],
+  ],
+  [
+    // The Persian guide's grid: the app's years, months, words and summary, written as given.
+    'MonthGrid in Persian',
+    <div dir="rtl" lang="fa">
+      <MonthGrid
+        label="صورت‌حساب‌ها"
+        states={PERSIAN_STATES}
+        years={PERSIAN_YEARS}
+        monthLabels={PERSIAN_SHORT_MONTHS}
+        monthNames={PERSIAN_MONTH_NAMES}
+        summary={PERSIAN_SUMMARY}
+        labels={PERSIAN_LABELS}
+      />
+    </div>,
+    [
+      '<span class="month-grid-year">۱۴۰۴</span>',
+      '<th scope="col">سال</th>',
+      '<td>خارج از بازه</td>',
+      `<p class="month-grid-summary">${PERSIAN_SUMMARY}</p>`,
+    ],
+    ['Missing', 'every month'],
   ],
   [
     // The selected tab and its panel are in the HTML; the panel of a tab not selected is not mounted. The scroll

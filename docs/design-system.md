@@ -942,7 +942,8 @@ corner of its own.
 a checkbox and a title's focus ring keep `--radius-micro`, which is under the
 formula almost everywhere. Where the formula is smaller, they take it, so a
 key chip in a 15px row is 3px, `min(var(--radius-micro), ...)`, and an inner
-corner is never rounder than the corner around it.
+corner is never rounder than the corner around it. A month grid's cell is one:
+two thirds of the micro step, under the formula of every holder it can sit in.
 
 **Dots and circles keep their shape.** A dot, on `--radius-dot`, is round by
 meaning, and a pill drawn on a square box is a circle by its size: a field
@@ -10953,3 +10954,173 @@ it, with its name, its value text and its marks' description, and never its
 figure twice. Not yet verified in Windows' contrast themes (the track, the
 arc and the marks each distinct) or on a real iPhone and an Android phone
 at 320px to 430px (an `lg` semicircle and its caption legible).
+
+## MonthGrid
+
+Which months the reader has of something that comes monthly: `MonthGrid`,
+a header of short month labels, one row per year with its label and one
+cell per month, a sentence under it, a legend, and a table clipped from
+sight (accounts spec, section 8; owner rulings 1, 7 and 10). The first
+consumer draws an account's statement coverage on its credit tab. The
+document has no such part, so this one is derived from Meter's looks.
+
+**The name** (spec open question 17). It says what it draws, months in a
+grid, and was the consumer's suggestion. A calendar's grid of days is
+sometimes called a month grid, but the library's are `Calendar` and
+`CalendarDays`, and React Aria's is `CalendarGrid`, so nothing collides,
+and the docs page opens with a picture. `CoverageGrid` named one use and
+`YearGrid` named the rows rather than the cells.
+
+**States are the app's; looks are the library's.** The app names its
+states in its own words, held, partial, missing, closed, pending, and maps
+each to one of three looks. The looks are shapes, not meanings: `filled` is
+a solid ink cell, `partial` Meter's held look, ink stripes 2px wide every
+6px at 45 degrees inside a 1px ink edge, and `empty` a 1px
+`--color-boundary` outline with no fill. None is error, warning or success:
+a missing statement is the reader's fact, not the library's verdict, and an
+app that wants the reader's eye on it says so in its summary or with a
+Badge beside the grid. Signal orange, clay and taupe appear nowhere. The
+empty look takes a control's edge, not a divider, because an empty month
+carries information and its extent must show at 3:1. Two states may share
+a look, but then only the table and the summary tell them apart, so the
+docs ask for a look per state.
+
+**Outside months are blank.** A `null` month, before the account opened or
+not yet come, draws `data-look="none"`: no fill and no edge, the slot left
+empty, so it never reads as missing. A month whose id no state has is drawn
+the same way and reads "Not in range" in the table; it is in neither the
+summary nor the legend.
+
+**The grid.** `grid-template-columns: auto repeat(var(--month-grid-columns,
+12), minmax(0, 1fr))` with 2px gaps, the Meter spacer's width, so a year
+reads as a strip. `--month-grid-columns` is written on the grid's `style`
+from the count of `monthLabels`, so a calendar of another count draws its
+own columns. The year label is at the inline start, `--text-small` 500 in
+ink with tabular figures and isolated, 8px from the first cell (a padding
+of 6px and the 2px gap); each takes `grid-column: 1`, so every year starts
+its own row and a row of the wrong length cannot move the years under it
+(accounts plan, spec correction 38). Month labels are `--text-small` 450
+in slate, centred over their column on one line and clipped. Cells stretch
+with the box, `block-size: 1rem` and the column's share across: measured in
+a card on a 320px phone, about 13px wide (15px compact) by 16px; in a 40rem
+card about 42px. A strip that stretches, never a chart that scrolls.
+
+**Its own width, and none of its own.** The figure is a size container,
+`container: month-grid / inline-size`, so its own width decides the
+header: every label from 28rem of the grid's box, and under it only every
+third from the first, the first month of each quarter, so one-letter or
+two-letter labels never collide. A quarter's label may run on over the
+hidden labels after it rather than be clipped. The server's HTML holds all
+twelve; nothing is measured. Its `contain-intrinsic-inline-size` is 0, the
+library's ruling for every size container (accounts plan, spec corrections
+34 and 37): a stand-in width is also the holder's min-content width, which
+a `flex: 1` item or a `1fr` track keeps as its narrowest and which scrolled
+a 320px page sideways. A block, a `flex: 1` item or a `1fr` track gives the
+grid its width; a holder sized to its content must give it one, or it draws
+nothing, which the docs say. At 320px a grid in a `flex: 1` wrapper, a `1fr`
+grid and two up in a `1fr 1fr` grid each stay inside the page with every
+cell drawn (`OnANarrowPhone`, three engines, and a docs test).
+
+**The cell's corner is a text-sized part's.** A cell is a line tall, so it
+keeps the micro step and is never rounder: `calc(var(--radius-micro) * 2 /
+3)`, 4px in Rounded and Soft and 0 in Square, the spec's
+`min(var(--radius-micro), 0.25rem)` written as a calc on the token so the
+token rule reads it. 6px on a 16px cell reads as a pill and loses the grid.
+A grid that ends a card puts its last year's last cell in the card's bottom
+end corner: measured in Rounded, 33px from the end edge and 35px from the
+bottom, inside the 40px curve (21px and 23px compact). The formula there
+is 7px comfortable and 19px compact, so the cell's 4px is under it and it
+keeps its corner; a cell is never a control, so nothing moves, and the
+corner audit, which skips text-sized parts sharper than the formula,
+passes. `CellsInTheCorner` reads it in Rounded comfortable and compact,
+Soft and Square. The legend's 12px swatch takes the same corner, not
+Meter's micro step, which is a circle on 12px: a key looks like what it
+stands for (spec correction 38).
+
+**The summary** (ruling 10). With no `summary` the grid writes English from
+the app's words: for each state whose look is not `filled`, in the order of
+`states`, the state's label, a colon, and its months grouped by year in the
+order drawn, each year's months joined by commas with the year once at the
+end, years joined by semicolons, each state a sentence: "Partial: June
+2025. Missing: March, April 2025; November 2024." Nothing missing or
+partial says "Held: every month.", in the first filled state's words, and a
+grid with no month in any state says nothing and draws no paragraph. The
+sentence is string joining of the app's own words, so the server and the
+browser write the same one; `Intl.ListFormat` is not used. Only English,
+because list joining and word order are each language's own: any other
+language passes `summary`, a string or a node, and `false` draws none. It
+is `--text-small` at 450 in slate, 8px under the grid, visible: a sighted
+reader scanning the page reads it as fast as the grid.
+
+**The table is the alternative** (spec, decided item 21). A `table` with a
+caption, the grid's name; a header row of `labels.year` ("Year") and the
+full `monthNames` as `th scope="col"`; and per year a `th scope="row"` and
+a `td` per month holding the state's label, or `labels.outside` ("Not in
+range"). A screen reader user moves to March 2025 by row and column, which
+a list of every month in turn cannot offer, and the summary gives the gist
+first. The visible grid is `aria-hidden`, since a grid of empty boxes reads
+as nothing, and the legend too, since the table names every state. The
+table is clipped inside its own box, `div.month-grid-alternative`, placed at
+the figure's start corner, 1px square, `overflow: hidden` and `clip-path:
+inset(50%)`, as the toast's status host is: a table's box takes its
+content's width whatever its own width says, and on one line twelve month
+names would otherwise scroll the page (spec correction 36). It is clipped,
+not hidden, so browse mode and table navigation find it. LineChart's table
+view is the precedent, visible there by a toggle.
+
+**The name.** A `figure`, named by a non-blank `aria-labelledby`, else a
+non-blank `aria-label`, else its visible label, Gauge's chain. The table's
+caption is the label when one shows, else the `aria-label`; with only
+`aria-labelledby` the table points at the same element and has no caption.
+
+**No keys.** No cell is a stop and none has a tooltip: the grid is a
+picture with its words beside it. An app that opens a month links to it
+from its own list.
+
+**Calendars** (spec 8.3). The grid knows rows and columns, not dates. A
+Persian page passes Persian years ("۱۴۰۴"), the twelve Persian month names
+and their short labels, and its data already placed in Persian months; the
+docs show the app placing each statement with `@internationalized/date`'s
+`toCalendar(date, new PersianCalendar())`, which the library does not
+import. The Persian calendar, like the Gregorian, has twelve months every
+year; a calendar whose years differ in their count, the Hebrew calendar's
+thirteen-month leap years, cannot share one column count across rows and is
+not supported.
+
+**Direction** (ruling 7). The grid follows the page by its own logical
+flow: on a right-to-left page the year column is at the right and the first
+month, Farvardin, the rightmost column. The hatch keeps its 45 degrees: it
+is a texture, not an arrow. `MonthGridMirrored` measures the order in three
+engines.
+
+**Contrast**, measured with `contrast.js` and gated already, so nothing is
+added. The ink fill and hatch against lifted, light then dark, 17.84 and
+17.42, and against the canvas 16.25 and 19.31. An empty cell has no fill,
+so its edge is the boundary painted on the surface, the switch's off-track
+pair: 3.45 and 5.21 on lifted and 3.38 and 5.34 on the canvas, each over
+3:1 (spec correction 35; the spec's 3.36 and 3.06 are the boundary around a
+Raised fill). The labels are slate and ink and the summary slate, gated as
+text.
+
+**Forced colors.** A fill is a background, which the repaint drops, so
+`filled` is drawn in `canvastext`; `partial`'s stripes opt out of the
+repaint, `forced-color-adjust: none`, and are drawn again in `canvastext`
+on `canvas` with a `canvastext` edge, Meter's rule; `empty`'s edge is a
+border and stays, in `canvastext`; `none` stays blank. The three looks stay
+three shapes: solid, striped, outlined. A docs test reads all four.
+
+**Print.** `print-color-adjust: exact`, and its `-webkit-` form, as
+`.meter` sets, so fills and stripes print.
+
+**The size.** The entry `{ MonthGrid }` measures 1050 B without React Aria,
+Lucide and `@internationalized/date`, and 1044 B with React Aria not
+ignored; it imports none of them, and the bytes are size-limit's own drift
+(spec correction 42). Under the spec's 2 kB budget; the rule rounds up to
+1.5 kB and adds 0.5 kB: a 2 kB limit.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): that a month grid reads its name, its summary, and its
+table by row and column headers. Not yet verified in Windows' contrast
+themes (the three looks still distinct) or on a real iPhone and an Android
+phone at 320px to 430px (cells about 12px to 15px wide, and the quarter
+labels, legible).

@@ -25,6 +25,19 @@ import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '..
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
+import { MonthGrid } from '../src/month-grid';
+import {
+  COVERAGE_STATES,
+  COVERAGE_YEARS,
+  MONTH_NAMES,
+  PERSIAN_LABELS,
+  PERSIAN_MONTH_NAMES,
+  PERSIAN_SHORT_MONTHS,
+  PERSIAN_STATES,
+  PERSIAN_SUMMARY,
+  PERSIAN_YEARS,
+  SHORT_MONTHS,
+} from '../src/stories/coverage';
 
 /**
  * Each part's server HTML, hydrated in the browser on a mocked iPhone (plan, spec corrections 1 and 2). The HTML
@@ -309,6 +322,44 @@ const HYDRATED: [
         '174.828 232.478',
       );
       expect(container.querySelector('.gauge-figure-caption')).toHaveTextContent('Very good');
+    },
+  ],
+  [
+    // Static: the summary is string joining of the app's words, so the browser writes the server's sentence.
+    'MonthGrid',
+    <MonthGrid
+      label="Statement coverage"
+      states={COVERAGE_STATES}
+      years={COVERAGE_YEARS}
+      monthLabels={SHORT_MONTHS}
+      monthNames={MONTH_NAMES}
+    />,
+    (container) => {
+      expect(container.querySelector('figure')).toHaveAccessibleName('Statement coverage');
+      expect(container.querySelectorAll('.month-grid-cell')).toHaveLength(24);
+      expect(container.querySelector('.month-grid-summary')).toHaveTextContent(
+        'Partial: June 2025. Missing: March, April 2025.',
+      );
+      expect(container.querySelectorAll('.month-grid-table th[scope="row"]')).toHaveLength(2);
+    },
+  ],
+  [
+    'MonthGrid Persian',
+    <div dir="rtl" lang="fa">
+      <MonthGrid
+        label="صورت‌حساب‌ها"
+        states={PERSIAN_STATES}
+        years={PERSIAN_YEARS}
+        monthLabels={PERSIAN_SHORT_MONTHS}
+        monthNames={PERSIAN_MONTH_NAMES}
+        summary={PERSIAN_SUMMARY}
+        labels={PERSIAN_LABELS}
+      />
+    </div>,
+    (container) => {
+      expect(container.querySelector('.month-grid-summary')).toHaveTextContent(PERSIAN_SUMMARY);
+      expect(container.querySelector('.month-grid-year')).toHaveTextContent('۱۴۰۴');
+      expect(container.querySelector('.month-grid-table th[scope="col"]')).toHaveTextContent('سال');
     },
   ],
   [
