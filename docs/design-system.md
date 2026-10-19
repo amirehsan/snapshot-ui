@@ -7431,7 +7431,8 @@ rule rounds up to 2.5 kB and adds 0.5 kB. The guards calling the app's
 handlers, the sign's clamp and validation and the precision warning
 bring it to 2.66 kB, still under the limit, which is unchanged. The
 deferred blur commit of the settings batch takes the entry from 2.76 kB
-to 2.94 kB, still under the limit, and 26.43 kB with React Aria counted.
+to 2.97 kB, still under the limit, and 25.09 kB with React Aria counted
+(settings plan, spec correction 6).
 
 **React Aria's blur commit, deferred** (patch 0.6.1, fixed in the settings
 batch). React Aria's `useNumberField` commits the typed text on blur inside
@@ -7452,8 +7453,12 @@ commit and its announcement are kept. A disabled field is the second path:
 React Aria commits from a `focusout` listener of its own on the input
 (`useSyntheticBlurEvent`, `interactions/utils.mjs:41-105`), which the
 deferred `onBlur` does not reach, so the field stops the browser's own
-`focusout` on a disabled input at the input, in the capture phase, and
-sends it again a microtask later (settings plan, spec correction 2). An
+`focusout` on a disabled input at the input, in the capture phase. React
+Aria's MutationObserver, its stand-in for Firefox, which sends no focusout
+there, has seen the input disabled while focused and sends one once the
+commit is done; the field sends the stopped event again a microtask later
+only when nothing has replaced it, so listeners hear one focusout (settings
+plan, spec corrections 2 and 6). An
 app's `onBlur` and `onFocusChange(false)` run a microtask later too, and a
 `requestSubmit()` from script in the same task as a blur reads the form
 before the commit, which the page and the changeset say.

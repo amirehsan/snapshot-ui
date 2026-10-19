@@ -231,17 +231,29 @@ const deferBlur = (
  * A focused input that React disables while it draws loses focus inside React's commit, and React Aria then
  * commits from a focusout listener of its own on the input (useSyntheticBlurEvent, interactions/utils.mjs:41-105),
  * which the deferred onBlur does not reach. The browser's own focusout on a disabled input is stopped at the input,
- * before that listener and React's, and sent again one microtask later, after the commit.
+ * before that listener and React's. React Aria's MutationObserver, its stand-in for Firefox, which sends no
+ * focusout here, then sends one after the commit, having seen the input disabled while focused; only when nothing
+ * has replaced the stopped event by the next microtask does the field send it again itself.
  */
 function useDeferredDisabledBlur(input: HTMLInputElement | null): void {
   useEffect(() => {
     if (!input) return;
+    let held = false;
     const hold = (event: globalThis.FocusEvent): void => {
-      if (!event.isTrusted || event.target !== input || !input.disabled) return;
+      if (event.target !== input) return;
+      if (!event.isTrusted) {
+        held = false;
+        return;
+      }
+      if (!input.disabled) return;
       event.stopImmediatePropagation();
+      held = true;
       const relatedTarget = event.relatedTarget;
       queueMicrotask(() => {
-        input.dispatchEvent(new globalThis.FocusEvent('focusout', { bubbles: true, relatedTarget }));
+        if (!held) return;
+        input.dispatchEvent(
+          new globalThis.FocusEvent('focusout', { bubbles: true, composed: true, relatedTarget }),
+        );
       });
     };
     input.addEventListener('focusout', hold, true);

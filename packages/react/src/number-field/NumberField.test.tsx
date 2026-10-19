@@ -1,6 +1,14 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, useId, useLayoutEffect, useRef, useState, type ReactElement } from 'react';
+import {
+  createRef,
+  useId,
+  useInsertionEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { root } from '../../test/dom';
@@ -756,6 +764,116 @@ function SavesOnEnter(): ReactElement {
     </>
   );
 }
+
+/**
+ * Enter disables the field while the app saves, and the app moves focus to Done from a layout effect, so the
+ * browser's focusout leaves a disabled field inside React's commit. React Aria commits a disabled field's text
+ * from a focusout listener of its own (useSyntheticBlurEvent, interactions/utils.mjs:41-105), which flushed there.
+ */
+function DisablesOnEnter({ onBlur }: { onBlur?: () => void }): ReactElement {
+  const [saving, setSaving] = useState(false);
+  const done = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (saving) done.current?.focus();
+  }, [saving]);
+  return (
+    <>
+      <NumberField
+        label="Guests"
+        defaultValue={0}
+        minValue={0}
+        isDisabled={saving}
+        onBlur={onBlur}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') setSaving(true);
+        }}
+      />
+      <button ref={done} type="button">
+        Done
+      </button>
+    </>
+  );
+}
+
+describe('NumberField disabled while it holds focus', () => {
+  /** Saves from the field, which disables it, and returns the focusouts the document heard from it. */
+  const saveAndDisable = async (onBlur?: () => void): Promise<FocusEvent[]> => {
+    const heard: FocusEvent[] = [];
+    const listen = (event: FocusEvent): void => {
+      if (event.target === amount('Guests')) heard.push(event);
+    };
+    document.addEventListener('focusout', listen);
+    try {
+      const user = userEvent.setup();
+      render(<DisablesOnEnter onBlur={onBlur} />);
+      await user.click(amount('Guests'));
+      await user.keyboard('{Enter}');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    } finally {
+      document.removeEventListener('focusout', listen);
+    }
+    return heard;
+  };
+
+  it('logs nothing when it loses focus inside a commit', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await saveAndDisable();
+    expect(amount('Guests')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus();
+    expect(error.mock.calls.map((call) => String(call[0]))).toEqual([]);
+  });
+
+  it("sends one focusout and runs the app's onBlur once", async () => {
+    const onBlur = vi.fn();
+    const heard = await saveAndDisable(onBlur);
+    expect(heard).toHaveLength(1);
+    expect(heard[0]?.relatedTarget).toBe(screen.getByRole('button', { name: 'Done' }));
+    expect(onBlur).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends the stopped focusout itself when React Aria sends none', async () => {
+    // Focused while React ignores events, from an insertion effect, so React Aria never heard the focus and holds
+    // no listener of its own to replace the browser's focusout.
+    function FocusedInACommit({ step }: { step: 'idle' | 'focus' | 'disable' }): ReactElement {
+      const done = useRef<HTMLButtonElement>(null);
+      useInsertionEffect(() => {
+        if (step === 'focus') document.querySelector<HTMLInputElement>('.number-field-input')?.focus();
+      }, [step]);
+      useLayoutEffect(() => {
+        if (step === 'disable') done.current?.focus();
+      }, [step]);
+      return (
+        <>
+          <NumberField label="Guests" isDisabled={step === 'disable'} />
+          <button ref={done} type="button">
+            Done
+          </button>
+        </>
+      );
+    }
+    const heard: FocusEvent[] = [];
+    const listen = (event: FocusEvent): void => {
+      heard.push(event);
+    };
+    const { rerender } = render(<FocusedInACommit step="idle" />);
+    rerender(<FocusedInACommit step="focus" />);
+    expect(amount('Guests')).toHaveFocus();
+    document.addEventListener('focusout', listen);
+    try {
+      await act(async () => {
+        rerender(<FocusedInACommit step="disable" />);
+        await Promise.resolve();
+      });
+    } finally {
+      document.removeEventListener('focusout', listen);
+    }
+    expect(heard).toHaveLength(1);
+    expect(heard[0]?.target).toBe(amount('Guests'));
+    expect(heard[0]?.relatedTarget).toBe(screen.getByRole('button', { name: 'Done' }));
+  });
+});
 
 describe('NumberField and React Aria', () => {
   /** Saves the field from the keyboard, as the app above does, and returns what React logged as errors. */
