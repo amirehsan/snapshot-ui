@@ -1654,17 +1654,18 @@ test('the page size example puts its picker above the steps at 320 with nothing 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
 
-test('every props table on a component or chart page has a name of its own', async ({ page }) => {
-  // A page with several tables names each one, so a screen reader's list of tables tells them apart.
-  for (const { slug, url } of PAGES) {
+// A page with several tables names each one, so a screen reader's list of tables tells them apart. One test per
+// page, so a slow runner's time limit covers one page's load and not some ninety (insights spec correction 94).
+for (const { slug, url } of PAGES) {
+  test(`every props table on the ${slug} page has a name of its own`, async ({ page }) => {
     await page.goto(url);
     const names = await page
       .locator('.props table')
       .evaluateAll((tables) => tables.map((table) => table.getAttribute('aria-label')));
     expect(names.length, slug).toBeGreaterThan(0);
     expect(new Set(names).size, `${slug}: ${names.join(', ')}`).toBe(names.length);
-  }
-});
+  });
+}
 
 // ---- Narrow screens -----------------------------------------------------------------------------
 
