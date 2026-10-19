@@ -286,14 +286,14 @@ export function BarChart(props: BarChartProps): ReactElement {
   /**
    * A bar's ref: one function for the chart's life, so React lets go of it only when the bar leaves the page. A
    * bar that leaves while it holds focus, to new categories, a new orientation or a status, first parks focus
-   * on the group, before React removes it, so focus never passes through the body.
+   * on the group, focusable by script and never a tab stop, before React removes it, so focus never passes
+   * through the body.
    */
   const holdFocus = useCallback((bar: HTMLElement | null) => {
     if (!bar) return;
     return () => {
       const group = groupRef.current;
       if (!group || bar.ownerDocument.activeElement !== bar) return;
-      group.tabIndex = -1;
       group.focus({ preventScroll: true });
     };
   }, []);
@@ -314,8 +314,6 @@ export function BarChart(props: BarChartProps): ReactElement {
       before.key !== key && focused instanceof HTMLElement && focused.classList.contains('bar-chart-bar');
     if (status !== 'ready' || !(isStale || focused === group)) return;
     group.querySelector<HTMLElement>('.bar-chart-bar[tabindex="0"]')?.focus();
-    // The group is focusable only while it holds focus for a state with no bars.
-    group.removeAttribute('tabindex');
   }, [key, status, orientation]);
 
   /** The chart's bars, in the order of `stops`. */
@@ -355,10 +353,12 @@ export function BarChart(props: BarChartProps): ReactElement {
     chart.clear();
   };
 
-  // A press on a bar does not focus it, so a touch's hold and a pointer's band stay the pointer's: the keys own
-  // focus, and a pointer never moves it.
+  // A press in the group focuses neither a bar nor the group, so a touch's hold and a pointer's band stay the
+  // pointer's: the keys own focus, and a pointer never moves it. A state's own content, such as a Retry
+  // button, keeps its press.
   const onMouseDown = (event: MouseEvent<HTMLDivElement>): void => {
-    if (event.target instanceof Element && event.target.closest('.bar-chart-bar')) event.preventDefault();
+    if (!(event.target instanceof Element && event.target.closest('.bar-chart-state')))
+      event.preventDefault();
   };
 
   /** Activates `band`'s bar under the pointer, read along `along` from each bar's box, or the band's first. */
@@ -723,7 +723,13 @@ export function BarChart(props: BarChartProps): ReactElement {
         ) : null}
         {readoutPanel}
       </div>
-      <div className="bar-chart-categories" aria-hidden="true" data-bands={bands}>
+      {/* Past eight bands a narrow chart shows every third category label; eight or fewer keep them all. */}
+      <div
+        className="bar-chart-categories"
+        aria-hidden="true"
+        data-bands={bands}
+        data-dense={bandCount > 8 ? '' : undefined}
+      >
         {bands === 'time'
           ? labelled.map((band) => (
               <span
@@ -827,7 +833,6 @@ export function BarChart(props: BarChartProps): ReactElement {
       {...rest}
       aria-label={name.label}
       aria-labelledby={name.labelledBy}
-      aria-busy={status === 'loading' ? true : undefined}
       className={cx('bar-chart', className)}
       data-orientation={orientation}
       data-layout={layout}
@@ -835,7 +840,12 @@ export function BarChart(props: BarChartProps): ReactElement {
       data-status={status}
       data-texture={hasTexture ? '' : undefined}
     >
-      <div className="bar-chart-chart" hidden={shownView === 'table'}>
+      {/* Busy while loading, the chart's view only: the polite status after it stays outside, so it is heard. */}
+      <div
+        className="bar-chart-chart"
+        hidden={shownView === 'table'}
+        aria-busy={status === 'loading' ? true : undefined}
+      >
         {isReady && drawn.length > 1 ? (
           <ChartLegend
             block="bar-chart"
@@ -853,8 +863,10 @@ export function BarChart(props: BarChartProps): ReactElement {
           role="group"
           aria-roledescription={labels.roleDescription}
           {...name.stop}
-          // Never a tab stop: it holds focus for a state with no bars, so a status never drops focus to the body.
-          tabIndex={chart.isInteractive && !isReady ? -1 : undefined}
+          // Focusable by script and never a tab stop, in every status: it holds focus while a focused bar is gone,
+          // so a status or new categories never drop focus to the body. An attribute that came and went with the
+          // status was taken away in the commit before the effect that moves focus on, and blurred the group.
+          tabIndex={chart.isInteractive ? -1 : undefined}
           data-room-start={
             isVertical && (ticks.length > 0 || shownValues.some(({ value }) => value && value.value >= 0))
               ? ''
@@ -867,7 +879,7 @@ export function BarChart(props: BarChartProps): ReactElement {
           style={groupStyle}
           onKeyDown={isReady ? onKeyDown : undefined}
           onBlur={isReady ? onBlur : undefined}
-          onMouseDown={isReady ? onMouseDown : undefined}
+          onMouseDown={onMouseDown}
           onPointerMove={isReady ? onPointerMove : undefined}
           onPointerLeave={isReady ? onPointerLeave : undefined}
           onPointerDown={isReady ? onPointerDown : undefined}

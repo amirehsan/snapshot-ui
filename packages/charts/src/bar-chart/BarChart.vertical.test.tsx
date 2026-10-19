@@ -263,6 +263,17 @@ describe('BarChart, vertical', () => {
     const row = part(container, '.bar-chart-categories');
     expect(row).toHaveAttribute('aria-hidden', 'true');
     expect(row).toHaveAttribute('data-bands', 'category');
+    // Eight bands or fewer keep every label at any width; past eight a narrow chart shows every third.
+    expect(row).not.toHaveAttribute('data-dense');
+    const TWELVE = [...MONTHS, ...MONTHS];
+    const { container: many } = render(
+      <BarChart
+        aria-label="Twelve"
+        categories={TWELVE}
+        series={[{ label: 'Net', values: TWELVE.map(() => money(10)) }]}
+      />,
+    );
+    expect(part(many, '.bar-chart-categories')).toHaveAttribute('data-dense', '');
     const labels = [...row.querySelectorAll<HTMLElement>('.bar-chart-band-label')];
     expect(labels.map((label) => label.textContent)).toEqual(MONTHS);
     // Under 24rem only every third shows, so the render marks them.
@@ -605,7 +616,8 @@ describe('BarChart, vertical', () => {
 
   it('draws the loading state as still bands of the plot height, and the empty and error states in its place', () => {
     const { container } = render(<Chart status="loading" />);
-    expect(part(container, 'figure')).toHaveAttribute('aria-busy', 'true');
+    expect(part(container, '.bar-chart-chart')).toHaveAttribute('aria-busy', 'true');
+    expect(part(container, '.bar-chart-status').closest('[aria-busy]')).toBeNull();
     expect(part(container, '.bar-chart-bars').style.blockSize).toBe('240px');
     const skeletons = [...container.querySelectorAll<HTMLElement>('.bar-chart-bars > .skeleton')];
     expect(skeletons.map((skeleton) => skeleton.style.blockSize)).toEqual([
@@ -646,8 +658,31 @@ describe('BarChart, vertical', () => {
     expect(part(container, '.bar-chart-plot')).toHaveAttribute('tabindex', '-1');
     rerender(<Chart />);
     expect(document.activeElement).toBe(barAt(container, 3));
-    expect(part(container, '.bar-chart-plot')).not.toHaveAttribute('tabindex');
+    // Never a tab stop, and focusable by script in every status.
+    expect(part(container, '.bar-chart-plot')).toHaveAttribute('tabindex', '-1');
+    rerender(<Chart status="error" />);
+    expect(document.activeElement).toBe(part(container, '.bar-chart-plot'));
+    rerender(<Chart />);
+    expect(document.activeElement).toBe(barAt(container, 3));
     expect(toNothing).not.toHaveBeenCalled();
+  });
+
+  it('keeps a press in the plot from focusing it, and leaves a state content its press', () => {
+    const { container, rerender } = render(<Chart />);
+    expect(fireEvent.mouseDown(part(container, '.bar-chart-bars'))).toBe(false);
+    expect(fireEvent.mouseDown(barAt(container, 0))).toBe(false);
+    rerender(
+      <Chart
+        status="error"
+        statusContent={
+          <button type="button" className="button">
+            Try again
+          </button>
+        }
+      />,
+    );
+    expect(fireEvent.mouseDown(part(container, '.bar-chart-state button'))).toBe(true);
+    expect(fireEvent.mouseDown(part(container, '.bar-chart-gridlines'))).toBe(false);
   });
 
   it('keeps focus off the body when the grouping turns the chart on its side and back', () => {

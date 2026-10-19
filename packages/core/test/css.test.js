@@ -5150,6 +5150,9 @@ describe('src/components/charts.css, the bar chart standing up, grouped and hatc
       ],
       'hatched',
     );
+    // Under 4px across, the stripes are noise: their tile is the box scaled from what it has past 4px, nothing
+    // at 4px or less, so the bar is its outline alone.
+    expect(hatched).toContain('background-size: max(0px, (100% - 4px) * 100) max(0px, (100% - 4px) * 100);');
     // A zero is a bar of no length, so a hatched one draws no border either.
     expect(blockAfter(css, ".bar-chart-bar[data-sign='zero'] {")).toContain('border-width: 0;');
     // Meter's hatch, 2px every 6px at 45 degrees, in the same words.
@@ -5203,10 +5206,12 @@ describe('src/components/charts.css, the bar chart standing up, grouped and hatc
 
   it('reserves room for value labels by line height only when shown', () => {
     const css = look();
+    // A line of the small step and the 4px gap, the room a figure outside a bar's end takes.
+    const line = 'calc(0.25rem + var(--text-small) * var(--text-small--line-height));';
     expect(blockAfter(css, '.bar-chart-plot[data-room-start] {')).toContain(
-      '--bar-chart-room-start: 1.25rem;',
+      `--bar-chart-room-start: ${line}`,
     );
-    expect(blockAfter(css, '.bar-chart-plot[data-room-end] {')).toContain('--bar-chart-room-end: 1.25rem;');
+    expect(blockAfter(css, '.bar-chart-plot[data-room-end] {')).toContain(`--bar-chart-room-end: ${line}`);
     // The room is outside the bars' box, and the gridlines and their labels keep to the bars' height.
     const room = 'var(--bar-chart-room-start, 0) var(--bar-chart-room-end, 0);';
     expect(blockAfter(css, '.bar-chart-bars {')).toContain(`margin-block: ${room}`);
@@ -5313,13 +5318,24 @@ describe('src/components/charts.css, the bar chart standing up, grouped and hatc
     expect(under30).not.toBe('');
     expect(blockAfter(under30, '.bar-chart-band-label {')).toContain('-webkit-line-clamp: 1;');
     expect(blockAfter(under30, '.bar-chart-value:not([data-keep]) {')).toContain('display: none;');
+    // A centred readout takes three quarters of a narrow plot, so a figure keeps to one line.
+    expect(blockAfter(under30, ".bar-chart-plot .bar-chart-readout[data-align='center'] {")).toContain(
+      'max-width: min(16rem, 75% - var(--spacing-part));',
+    );
     const under24 = atRule(css, '@container bar-chart (inline-size < 24rem)');
+    // Every third label only past eight bands, which the render marks.
     expect(
       blockAfter(
         under24,
-        ".bar-chart-categories[data-bands='category'] .bar-chart-band-label:not([data-third]) {",
+        ".bar-chart-categories[data-dense][data-bands='category'] .bar-chart-band-label:not([data-third]) {",
       ),
     ).toContain('visibility: hidden;');
+  });
+
+  it('keeps a readout figure on one line, and breaks a series name only between words', () => {
+    const css = look();
+    expect(blockAfter(css, '.bar-chart-readout-item > strong {')).toContain('white-space: nowrap;');
+    expect(blockAfter(css, '.bar-chart-readout-item > strong + span {')).toContain('overflow-wrap: normal;');
   });
 
   it('dims other bands under a pointer and lights the active band in forced colors', () => {

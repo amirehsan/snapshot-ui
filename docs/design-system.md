@@ -6073,8 +6073,10 @@ its gridlines, their labels and the x labels the app passes, so the page
 does not move when the data arrives. Loading draws one still placeholder,
 `span.skeleton.line-chart-skeleton`, over the plot's whole box under the
 gridlines' labels, in Skeleton's fill and pulse, hidden from assistive
-technology, with `aria-busy` on the figure and no legend, toggle or
-table. Empty and error draw `statusContent` or `p.line-chart-message`,
+technology, with no legend, toggle or table, and nothing marked busy:
+the region that says the state is inside the plot, and a reader may hold
+back a busy subtree's changes until it is no longer busy (the plan's spec
+correction 31). Empty and error draw `statusContent` or `p.line-chart-message`,
 the message the bar chart shares (`:is(.line-chart-message,
 .bar-chart-message)`), slate for empty and `--color-error` for a load
 that failed, the one meaning that color has, and keep the hidden table
@@ -6088,8 +6090,8 @@ heard too. The plot is no tab stop while it shows a state
 (`tabIndex={-1}` after mount), so focus on it stays there and never falls
 to the body, and its keys and pointer do nothing; a status change lets go
 of the position active and announced before it. The ready face is the
-same byte for byte (`same-markup.test.tsx`, unchanged): `data-status` and
-`aria-busy` are written only for a state (the plan's spec correction 21).
+same byte for byte (`same-markup.test.tsx`, unchanged): `data-status` is
+written only for a state (the plan's spec corrections 21 and 31).
 The entry measures 4.06 kB with the states, and its limit is 5 kB by the
 rule (correction 9).
 
@@ -10680,14 +10682,21 @@ bar, and a bar that held focus hands it to the new first bar, never to
 the body, whether its row is gone or still there. A bar's ref is one
 function for the chart's life, and its cleanup runs before React removes
 the bar: a bar that leaves while it holds focus parks focus on the rows
-group (`tabIndex={-1}`, never a tab stop, ringed with the token ring)
-first, so no element ever loses focus to nothing. A status with no bars
-keeps it there; when the chart is ready again, a layout effect gives it to
-the tab stop, the bar last active for the same categories and the first
-bar for new ones, before the page paints (the plan's spec correction 20).
-A press on a bar does not focus it (`preventDefault` on its
-`mousedown`), so a touch's hold and a pointer's row stay the pointer's,
-and a tap on another row's empty track takes the hold.
+group first, so no element ever loses focus to nothing. The group is
+`tabIndex={-1}` after mount in every status, focusable by script, never
+a tab stop, ringed with the token ring: when its attribute came and went
+with the status, the commit that made the chart ready again took it away
+before the layout effect could move focus on, and Chromium blurred the
+group to the body (the plan's spec corrections 20 and 29). A status with
+no bars keeps focus there; when the chart is ready again, a layout effect
+gives it to the tab stop, the bar last active for the same categories and
+the first bar for new ones, before the page paints. A press anywhere in
+the group but a state's own content focuses nothing (`preventDefault` on
+its `mousedown`), so a touch's hold and a pointer's row stay the
+pointer's, a tap on another row's empty track takes the hold, and a
+state's Retry button keeps its press. `StatusWhileFocused` takes both
+orientations through ready, loading, ready, error and ready with a bar
+focused and finds no focus lost to nothing, in three engines.
 
 **The pointer's dimming.** A mouse or a pen over the rows activates the
 row under it, read from each row's parts' boxes in the handler, and its
@@ -10725,7 +10734,9 @@ categories it expects, and four otherwise
 (`calc(var(--bar-chart-rows) * var(--size-target))`). Loading draws a row
 per category of still bars in Skeleton's fill and pulse (70%, 50%, 85%,
 40%, repeating), square at zero, hidden from assistive technology, with
-`aria-busy` on the figure, and the status says `statusLabels.loading`
+`aria-busy` on `div.bar-chart-chart`, the chart's view, and not on the
+figure, so the polite status after it is outside the busy subtree and is
+heard (correction 31); the status says `statusLabels.loading`
 once after mount; no legend, toggle or table. Empty draws `statusContent`
 or `p.bar-chart-message` with `statusLabels.empty` in slate; error the
 same with `statusLabels.error` in `--color-error`, the one meaning that
@@ -10779,7 +10790,9 @@ in flow in one cell of its column, so the column takes its width, and is
 moved down by its line's place, a percentage of the cell, which is the
 bars' height. The bars, the gridlines, the labels, the value labels and
 the readout share one scale, the bars' box, and the room the labels
-outside the bars' ends take is outside it: 1.25rem above when the
+outside the bars' ends take is outside it: a line of the small step and
+the 4px gap (`calc(0.25rem + var(--text-small) *
+var(--text-small--line-height))`, 24px at the default size; correction 32) above when the
 gridlines are labelled or a positive figure shows, and below when a
 negative figure shows, written as `--bar-chart-room-start` and
 `--bar-chart-room-end` under `[data-room-start]` and `[data-room-end]` and
@@ -10829,8 +10842,9 @@ chart's width `'all'` keeps only the first and the last band's figures
 `repeat(bands, minmax(0, 1fr))`, so each `span.bar-chart-band-label` is
 its band's width, centred, in slate, an axis's labels, and clamped at two
 lines with an ellipsis (`-webkit-line-clamp`, in all three engines), never
-rotated; under 30rem one line, and under 24rem only every third
-(`[data-third]`). The whole name is always in the readout, the bar's name
+rotated; under 30rem one line, and under 24rem, in a chart of more than
+eight bands (`[data-dense]`), only every third (`[data-third]`); eight or
+fewer bands keep every label at any width (correction 34). The whole name is always in the readout, the bar's name
 and the table. `bands="time"` shows the first, the middle and the last
 band (`categoryTicks` names others), on one line, each on its band's
 centre and the first and the last kept inside the plot by `data-edge`, a
@@ -10872,7 +10886,13 @@ none in either mode, which is why the previous period is striped
 In forced colors the current bars are solid `CanvasText` and the previous
 period `CanvasText` stripes on `canvas` in a `CanvasText` border, Meter's
 block, `Highlight` stripes and border for the active band's: solid
-against striped in every palette.
+against striped in every palette. A hatched bar under 4px across, such as
+a month of days compared in a phone's card, is its outline alone, since
+stripes that thin are noise: the stripes' tile is the box scaled from what
+it has past 4px (`background-size: max(0px, (100% - 4px) * 100)` on each
+axis), nothing at 4px or less, with nothing measured; the docs say a
+comparison of more than about fifteen bands reads better lying down
+(correction 33, the `HatchedThin` story).
 
 **Keys standing up and in groups.** Left and Right move to the bar drawn
 beside, through a pair bar by bar and on to the next band's first,
@@ -10893,8 +10913,15 @@ box: above the band's highest bar end when its lines fit
 (`placeReadout` with both ends of every bar of the band and the plot's
 height), else below the lowest, so it covers no bar of its band, a
 negative one's included; along the plot it is at the band's centre,
-aligned by quarter. `ReadoutStanding` holds it clear of the bar and within
-24px of it.
+aligned by quarter. Its place counts its lines, so no line may break
+where the count does not: a figure is one line (`white-space: nowrap` on
+the value) and a series' name breaks only between words
+(`overflow-wrap: normal`), and under 30rem a centred panel takes three
+quarters of the plot (`max-width: min(16rem, 75% - var(--spacing-part))`)
+where it took half, so on a phone it never rises over the legend
+(correction 30). `ReadoutStanding` holds it clear of the bar and within
+24px of it, and in a 280px chart finds every figure one line high and
+the panel's top at or below the figure's top.
 
 **States standing up.** Loading draws a still band per category (four
 when none is given) of 60%, 85%, 45% and 70% repeating, from the bottom,
@@ -10918,7 +10945,11 @@ by the rule; the intrinsic size of 0; and the review's fixes. Corrections
 21 to 28 record the vertical face's, the previous period's and LineChart's
 states': the labels' column, the figures' isolate, the series' order and
 colors, the measured mixes, and the sizes, 5.84 kB for `{ BarChart }`,
-over the spec's 5.5 kB budget, with a 6.5 kB limit by the rule.
+over the spec's 5.5 kB budget, with a 6.5 kB limit by the rule, which the
+lead accepted; Task 6 reports against both. Corrections 29 to 34 record
+the review's fixes: the group focusable by script in every status, the
+readout's lines, busy on the chart's view, the figures' room, the thin
+hatched bar's outline and every third label only past eight bands.
 
 **Screen readers and devices.** Not yet verified (owner action 3): Tab
 onto one bar and the arrows bar by bar in VoiceOver and NVDA, each bar's

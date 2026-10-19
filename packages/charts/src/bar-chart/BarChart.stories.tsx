@@ -1101,14 +1101,33 @@ export const LinesInPlaceStanding: Story = {
 export const ReadoutStanding: Story = {
   ...Negatives,
   tags: ['no-visual', 'webkit', 'firefox'],
+  render: (args) => (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <Wide>
+        <BarChart {...args} />
+      </Wide>
+      {/* A phone's card: a 280px chart with a legend over its plot. */}
+      <div style={{ width: 280 }}>
+        <BarChart
+          aria-label="Income and spending by month, on a phone"
+          bands="time"
+          categories={HALF_YEAR}
+          series={[INCOME, SPENDING]}
+          valueTicks={INCOME_TICKS}
+        />
+      </div>
+    </div>
+  ),
   play: async ({ canvasElement }) => {
     await interactive(canvasElement);
+    const [wide, phone] = [...canvasElement.querySelectorAll<HTMLElement>('.bar-chart')];
+    if (!wide || !phone) throw new Error('No charts');
     // A bar with room above it, two bars below zero, whose readout goes above the line, and the tallest.
     for (const at of [0, 1, 7, 3]) {
-      const bar = barAt(canvasElement, at);
+      const bar = barAt(wide, at);
       await focusOn(bar);
-      await waitFor(() => expect(readoutX(canvasElement)).toBe(MONTHS[at]));
-      const panel = part(canvasElement, '.bar-chart-readout');
+      await waitFor(() => expect(readoutX(wide)).toBe(MONTHS[at]));
+      const panel = part(wide, '.bar-chart-readout');
       const box = panel.getBoundingClientRect();
       const end = bar.getBoundingClientRect();
       const month = MONTHS[at] ?? '';
@@ -1119,6 +1138,21 @@ export const ReadoutStanding: Story = {
         await expect(box.top, month).toBeGreaterThanOrEqual(end.bottom - 1);
         await expect(box.top - end.bottom, month).toBeLessThanOrEqual(24);
       }
+    }
+    // On a phone every figure keeps to one line, so the panel stays the height its place counted, and it never
+    // rises over the legend and out of the chart.
+    const figure = phone.getBoundingClientRect();
+    for (const bar of barsOf(phone)) {
+      await focusOn(bar);
+      await waitFor(() => expect(phone.querySelector('.bar-chart-readout')).not.toBeNull());
+      for (const value of phone.querySelectorAll<HTMLElement>('.bar-chart-readout-value')) {
+        const line = parseFloat(getComputedStyle(value).lineHeight);
+        await expect(value.getBoundingClientRect().height, value.textContent).toBeLessThanOrEqual(line + 1);
+      }
+      const panel = part(phone, '.bar-chart-readout').getBoundingClientRect();
+      await expect(panel.top, bar.getAttribute('aria-labelledby') ?? '').toBeGreaterThanOrEqual(
+        figure.top - 1,
+      );
     }
   },
 };
@@ -1189,6 +1223,112 @@ export const TurnWhileFocused: Story = {
       await expect(toNothing).toEqual([]);
     } finally {
       doc.removeEventListener('focusout', record);
+    }
+  },
+};
+
+/** The statuses an app's fetch takes the chart through, in turn: loading, ready, a failure, ready again. */
+const STATUSES = ['ready', 'loading', 'ready', 'error'] as const;
+
+/** A chart standing up and one lying down, both taken through the same statuses by one control. */
+const Statuses = (): ReactElement => {
+  const [at, setAt] = useState(0);
+  const status = STATUSES[at % STATUSES.length] ?? 'ready';
+  return (
+    <div style={{ display: 'grid', gap: 24 }}>
+      <button
+        type="button"
+        className="button button-tertiary"
+        onClick={() => {
+          setAt((shown) => shown + 1);
+        }}
+      >
+        Next status, now {status}
+      </button>
+      <Wide>
+        <BarChart
+          aria-label="Spending by month"
+          bands="time"
+          categories={MONTHS}
+          series={[SPENDING_BY_MONTH]}
+          status={status}
+        />
+      </Wide>
+      <Panel>
+        <BarChart
+          aria-label="Spending by category"
+          orientation="horizontal"
+          categories={CATEGORIES}
+          series={[BY_CATEGORY]}
+          status={status}
+        />
+      </Panel>
+    </div>
+  );
+};
+
+/**
+ * A status while a bar holds focus, in both orientations: ready, loading, ready, a failure, ready. Focus waits on
+ * the chart's group, which is never a tab stop, and goes back to the bar when the chart is ready, and no element
+ * ever loses focus to nothing, which a status that took the group's focusability away in its commit did.
+ */
+export const StatusWhileFocused: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <Statuses />,
+  play: async ({ canvasElement }) => {
+    await interactive(canvasElement);
+    const doc = canvasElement.ownerDocument;
+    const toNothing: string[] = [];
+    const record = (event: FocusEvent): void => {
+      if (event.relatedTarget === null && event.target instanceof Element)
+        toNothing.push(event.target.className);
+    };
+    doc.addEventListener('focusout', record);
+    try {
+      const control = part(canvasElement, '.button');
+      for (const chart of canvasElement.querySelectorAll<HTMLElement>('.bar-chart')) {
+        const group = part(chart, '[role="group"]');
+        const bar = barAt(chart, 2);
+        await focusOn(bar);
+        for (const next of ['loading', 'ready', 'error', 'ready'] as const) {
+          // A press that does not move focus, as a fetch's answer would not.
+          control.click();
+          await waitFor(() => expect(chart).toHaveAttribute('data-status', next));
+          await expect(doc.activeElement).not.toBe(doc.body);
+          if (next === 'ready') await waitFor(() => expect(doc.activeElement).toBe(barAt(chart, 2)));
+          else await waitFor(() => expect(doc.activeElement).toBe(group));
+          await expect(group).toHaveAttribute('tabindex', '-1');
+        }
+      }
+      await expect(toNothing).toEqual([]);
+    } finally {
+      doc.removeEventListener('focusout', record);
+    }
+  },
+};
+
+/**
+ * A month of days against the last month in a phone's card: each bar thinner than 4px, where stripes would be
+ * noise, so the previous period's bars are their outline alone, a 1px border in the series' color.
+ */
+export const HatchedThin: Story = {
+  tags: ['no-visual'],
+  render: () => (
+    <div style={{ width: 320 }}>
+      <BarChart
+        aria-label="Spending by day, October against September"
+        bands="time"
+        categories={DAYS}
+        series={[BY_DAY, { ...BY_DAY, label: 'September', look: 'hatched' }]}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const hatched = [...canvasElement.querySelectorAll<HTMLElement>('.bar-chart-bar[data-look="hatched"]')];
+    await expect(hatched).toHaveLength(31);
+    for (const bar of hatched) {
+      await expect(bar.getBoundingClientRect().width).toBeLessThan(4);
+      await expect(getComputedStyle(bar).borderTopWidth).toBe('1px');
     }
   },
 };

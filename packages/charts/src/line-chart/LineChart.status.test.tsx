@@ -80,14 +80,14 @@ describe('LineChart states', () => {
     expect(container.querySelectorAll('.line-chart-x-label')).toHaveLength(3);
     // The plot's own polite region, there from the first render, says the state once.
     expect(part(container, '.line-chart-live').textContent).toBe(said);
+    // Nothing is marked busy, since the region that says the state is inside the plot.
+    expect(container.querySelector('[aria-busy]')).toBeNull();
     if (status === 'loading') {
-      expect(figure).toHaveAttribute('aria-busy', 'true');
       const skeleton = part(container, '.line-chart-plot > .skeleton');
       expect(skeleton).toHaveClass('line-chart-skeleton');
       expect(skeleton).toHaveAttribute('aria-hidden', 'true');
       expect(container.querySelector('table')).toBeNull();
     } else {
-      expect(figure).not.toHaveAttribute('aria-busy');
       const message = part(container, '.line-chart-plot > .line-chart-state > p.line-chart-message');
       expect(message).toHaveTextContent(
         status === 'error' ? 'The chart could not be loaded' : 'Nothing to show for this period',

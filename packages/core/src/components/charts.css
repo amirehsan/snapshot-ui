@@ -594,11 +594,11 @@
 
   /* Room by line height for the labels outside the bars' ends, and for the top gridline's label. */
   .bar-chart-plot[data-room-start] {
-    --bar-chart-room-start: 1.25rem;
+    --bar-chart-room-start: calc(0.25rem + var(--text-small) * var(--text-small--line-height));
   }
 
   .bar-chart-plot[data-room-end] {
-    --bar-chart-room-end: 1.25rem;
+    --bar-chart-room-end: calc(0.25rem + var(--text-small) * var(--text-small--line-height));
   }
 
   .bar-chart-bars {
@@ -702,6 +702,11 @@
       var(--bar-chart-color, var(--color-ink)) 0 2px,
       transparent 2px 6px
     );
+    /*
+     * Under 4px across, the stripes are noise, so the bar is its outline alone: the stripes' tile is the box
+     * scaled from what it has past 4px, which is nothing at 4px or less and far more than the box past it.
+     */
+    background-size: max(0px, (100% - 4px) * 100) max(0px, (100% - 4px) * 100);
   }
 
   /* A zero is a bar of no length, whatever its look. */
@@ -872,6 +877,20 @@
     margin-inline-end: 0.375rem;
   }
 
+  /*
+   * A figure in the readout is one line, never broken mid-number, and a series' name breaks only between
+   * words: the readout's place counts its lines, so a line that breaks would push the panel over what it
+   * must clear. (The value and the series are the strong and the span after it; their own classes are the
+   * line chart's shared rules.)
+   */
+  .bar-chart-readout-item > strong {
+    white-space: nowrap;
+  }
+
+  .bar-chart-readout-item > strong + span {
+    overflow-wrap: normal;
+  }
+
   /* A previous period's key is Meter's hatched swatch, in the series' color. */
   :is(.bar-chart-legend-item, .bar-chart-readout-item)[data-look='hatched'] .bar-chart-key {
     border: 1px solid var(--bar-chart-color, var(--color-ink));
@@ -999,8 +1018,11 @@
       grid-row: var(--bar-chart-row-narrow, 2) / span 1;
     }
 
-    /* Standing up: every third category label shows; time ticks stay first, middle and last. */
-    .bar-chart-categories[data-bands='category'] .bar-chart-band-label:not([data-third]) {
+    /*
+     * Standing up, past eight bands: every third category label shows, since a band is then too narrow for
+     * one. Eight or fewer keep every label; time ticks stay first, middle and last.
+     */
+    .bar-chart-categories[data-dense][data-bands='category'] .bar-chart-band-label:not([data-third]) {
       visibility: hidden;
     }
   }
@@ -1016,6 +1038,11 @@
 
     .bar-chart-value:not([data-keep]) {
       display: none;
+    }
+
+    /* A centred readout standing up takes three quarters of the plot, so its lines stay the lines it counts. */
+    .bar-chart-plot .bar-chart-readout[data-align='center'] {
+      max-width: min(16rem, 75% - var(--spacing-part));
     }
   }
 
