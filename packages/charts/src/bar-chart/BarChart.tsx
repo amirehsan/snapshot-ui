@@ -420,12 +420,14 @@ export function BarChart(props: BarChartProps): ReactElement {
   const touch = useRef({ at: 0, down: false, held: 0 });
 
   // Focus a reader gave a link before the chart hydrated stays there, and that bar becomes the tab stop, so Tab
-  // does not jump back to the first bar.
+  // does not jump back to the first bar. Focus a press left on a target, as an engine focuses a pressed link to
+  // the same page, goes to its bar, since the target is hidden from assistive technology.
   useLayoutEffect(() => {
     const group = groupRef.current;
-    const at = group ? barsOf(group).indexOf(group.ownerDocument.activeElement as HTMLElement) : -1;
-    const found = stops[at];
-    if (found) activate(found, 'key');
+    const found = group ? stopAt(group, group.ownerDocument.activeElement ?? group) : undefined;
+    if (!group || !found) return;
+    activate(found, 'key');
+    barsOf(group)[stops.indexOf(found)]?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- on mount only
   }, []);
 

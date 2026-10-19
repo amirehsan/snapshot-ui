@@ -11166,7 +11166,11 @@ the links take the roving tab index. A reader who tabbed to a link
 before then keeps focus on it: a layout effect on mount finds focus on
 one of the chart's bars and makes it active, so that bar is the stop,
 its readout shows, and Shift Tab does not jump back to the first bar.
-No bar moves when the chart hydrates.
+No bar moves when the chart hydrates. A press on a row before then
+focuses its target, as Chromium focuses a pressed link, and a link to the
+same page leaves the page and focus there, on an element hidden from
+assistive technology: the same effect gives that focus to the target's
+bar (the review of e137645, correction 106).
 
 *The table and the router.* With one series each category cell links
 to its bar's href, once a row, as DataTable links its row header; with

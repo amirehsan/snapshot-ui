@@ -641,6 +641,22 @@ describe('BarChart links', () => {
     holder.remove();
   });
 
+  it('gives focus a press left on a target before hydration to its bar, never a hidden link', () => {
+    const html = renderToString(<Chart />);
+    const holder = document.createElement('div');
+    holder.innerHTML = html;
+    document.body.append(holder);
+    // A press on a row before the scripts ran focuses its target, as an engine focuses a pressed link, and a
+    // link to this page leaves the page where it is.
+    const target = holder.querySelectorAll<HTMLElement>('.bar-chart-hit')[1];
+    if (!target) throw new Error('No target');
+    target.focus();
+    const { container } = render(<Chart />, { container: holder, hydrate: true });
+    expect(document.activeElement).toBe(barAt(container, 1));
+    expect(barAt(container, 1).tabIndex).toBe(0);
+    holder.remove();
+  });
+
   const AXE_CASES: [string, ReactElement, ((container: HTMLElement) => void)?][] = [
     ['lying down', <Chart key="one" />],
     ['lying down, two series', <Chart key="two" series={[OCTOBER, SEPTEMBER]} />],
