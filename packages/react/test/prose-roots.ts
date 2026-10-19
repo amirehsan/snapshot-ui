@@ -20,9 +20,10 @@ export function proseRoots(): Set<string> {
  * `template` (its hidden pass, never drawn); `null` for markup that draws nothing, such as a closed overlay.
  */
 export function outermostClasses(markup: string): string[] | null {
-  // Comments, React Aria's hidden pass, React's image preloads and a test's own `div.host` wrapper.
+  // Comments, React Aria's hidden pass, React's image preloads and a test's own wrapper: `div.host`, or a `div`
+  // that sets only the direction and the language, as a Persian row's does.
   const drawn = markup.replace(
-    /^\s*(?:(?:<!--[\s\S]*?-->|<template>[\s\S]*?<\/template>|<link\b[^>]*>|<div class="host">)\s*)*/,
+    /^\s*(?:(?:<!--[\s\S]*?-->|<template>[\s\S]*?<\/template>|<link\b[^>]*>|<div(?: class="host"| (?:dir|lang)="[^"]*")+>)\s*)*/,
     '',
   );
   const tag = /^<[a-zA-Z][a-zA-Z0-9-]*\b([^>]*)>/.exec(drawn);
