@@ -26,6 +26,11 @@
       (var(--data-table-row) - var(--text-small) * var(--text-small--line-height) - 1px) / 2
     );
     --data-table-fill: var(--data-table-surface, var(--color-canvas));
+    /* A Meter in a row cuts its segments apart and rings its pace marker in --meter-surface, so the cuts take the
+       row's own fill: here the table's, and on a hovered or a selected row that row's wash, set beside it below.
+       A cut in a fixed surface drew a pale block on every row that was not Lifted (accounts plan, spec
+       correction 64). In a Card the fill is the card's, which the card names as --data-table-surface. */
+    --meter-surface: var(--data-table-fill);
     /* What covers a row that focus scrolls to (WCAG 2.4.11): the page's sticky offset and the 40px header row
        above it, and, while the bar shows, the bar and its inset from the viewport's bottom below it: its
        buttons, a part step of padding either side and its 1px edges. Rows and list items keep clear of both.
@@ -33,13 +38,15 @@
     --data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--size-target));
     --data-table-scroll-end: 0px;
 
-    /* A size container has no content width to give a parent that sizes it from its content, a flex row or an
-       auto grid column, which drew the list face at no width. It names 12rem as its width there, the list face
-       with an item's title, second line and amount still readable, and small enough never to push a phone's page
-       sideways; it takes the room its siblings leave in a flex row, from a zero basis so a sibling never shrinks
-       for it; and it never grows taller than its content in a flex column. */
+    /* A size container takes no width from its content, and its intrinsic inline size is 0, the library's rule
+       (docs/design-system.md, DataTable, "A width of its own"): a stand-in width is also its min-content width,
+       which a flex: 1 item or a 1fr track keeps as its narrowest, so two tables side by side scrolled a 320px
+       phone sideways. A block, a 1fr track or a flex row gives it its width: in a flex row it takes the room its
+       siblings leave, from a zero basis so a sibling never shrinks for it; a holder that sizes it from its
+       content, an auto grid column or width: max-content, gives it one. It never grows taller than its content
+       in a flex column. */
     container: data-table / inline-size;
-    contain-intrinsic-inline-size: 12rem;
+    contain-intrinsic-inline-size: 0;
     flex: 1 1 0;
     min-inline-size: 0;
     max-block-size: max-content;
@@ -324,6 +331,7 @@
         [aria-selected='true']
       ) {
       --color-slate: var(--color-granite);
+      --meter-surface: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
 
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
     }
@@ -335,6 +343,7 @@
         [aria-selected='true']
       ) {
       --color-slate: var(--color-granite);
+      --meter-surface: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
 
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
     }
@@ -489,6 +498,7 @@
   .data-table-row:is([data-selected], [aria-selected='true']),
   .data-table-row:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
     --color-slate: var(--color-granite);
+    --meter-surface: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
 
     background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
   }
@@ -616,7 +626,7 @@
      nothing is measured and a table beside an open panel on a small laptop is a list too. */
   .data-table-list {
     /* The head's height: its tallest control, a target tall at least, and its rule. On a coarse pointer its
-       controls are 44px (spec correction 64). */
+       controls are 44px (data table plan, spec correction 64). */
     --data-table-list-head: calc(max(var(--size-target), var(--size-control)) + 1px);
     /* What covers an item that focus scrolls to: the page's sticky offset and, in Select mode, the head. */
     --data-table-scroll-start: calc(var(--page-sticky-top, 0px) + var(--data-table-list-offset, 0px));
@@ -850,6 +860,7 @@
   .data-table-item:is([data-selected], [aria-selected='true']),
   .data-table-item:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
     --color-slate: var(--color-granite);
+    --meter-surface: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
 
     background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
   }
@@ -937,7 +948,7 @@
 
   /* Items already shown that load again: one quiet line at the top of the list, at the foot of the first day's
      heading or, ungrouped, along the list's top, sticky there and out of the flow, so nothing moves as it comes
-     and goes (spec correction 63). */
+     and goes (data table plan, spec correction 63). */
   .data-table-list[data-reloading]
     .data-table-grid-list
     > .data-table-section:not(.data-table-section ~ .data-table-section)

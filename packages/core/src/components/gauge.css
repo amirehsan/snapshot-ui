@@ -1,0 +1,251 @@
+/*
+ * Gauge: one figure on a range at a glance, derived in docs/design-system.md ("Gauge"). A meter bent round, one
+ * family with Meter: the track is Meter's frame color, the arc --gauge-ink, ink on the root and the tone's color
+ * for warning, over the limit and error. The svg's viewBox is the box in pixels (32, 96 or 160 with a 4, 8 or
+ * 12px stroke), so at its own size one user unit is one pixel, and it scales uniformly when an app sets
+ * --gauge-size. --gauge-band is the stroke's share of the box, so the figure's inner circle, S less two
+ * strokes, follows the size. Round caps in every shape, the spinner's rule, and the dial is round in every shape.
+ * Marks are 2px of ink in a 6px gap the svg's mask cuts out of the track and the arc, so whatever is behind
+ * the gauge shows there: a card, the page, a hovered or a selected table row. The arc moves over 200ms when the
+ * value changes, from and to 0 too, never on its first style, and not under reduced motion. The svg mirrors with the page's direction through --gauge-flip,
+ * the charts' pattern; the figure and the text are HTML and do not.
+ */
+@layer components {
+  :where([dir='ltr' i]) {
+    --gauge-flip: 1;
+  }
+
+  :where([dir='rtl' i]) {
+    --gauge-flip: -1;
+  }
+
+  .gauge {
+    --gauge-ink: var(--color-ink);
+    --gauge-size: 6rem;
+    --gauge-band: calc(var(--gauge-size) / 12);
+
+    display: inline-grid;
+    justify-items: center;
+    gap: var(--spacing-part);
+    min-width: 0;
+    max-inline-size: 100%;
+    vertical-align: top;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .gauge[data-size='sm'] {
+    --gauge-size: 2rem;
+    --gauge-band: calc(var(--gauge-size) / 8);
+
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
+  }
+
+  .gauge[data-size='lg'] {
+    --gauge-size: 10rem;
+    --gauge-band: calc(var(--gauge-size) * 3 / 40);
+  }
+
+  .gauge:is([data-tone='warning'], [data-over]) {
+    --gauge-ink: var(--color-warning);
+  }
+
+  .gauge[data-tone='error'] {
+    --gauge-ink: var(--color-error);
+  }
+
+  /* The svg and the figure share one cell: the figure is drawn over the dial, and a semicircle's caption, under
+     its chord, gives the dial its height. */
+  .gauge-dial {
+    display: grid;
+    inline-size: var(--gauge-size);
+  }
+
+  .gauge-svg,
+  .gauge-figure {
+    grid-area: 1 / 1;
+  }
+
+  .gauge-svg {
+    display: block;
+    align-self: start;
+    inline-size: 100%;
+    block-size: auto;
+    overflow: visible;
+    scale: var(--gauge-flip, 1) 1;
+  }
+
+  .gauge-track,
+  .gauge-value {
+    fill: none;
+    stroke-linecap: round;
+  }
+
+  .gauge-track {
+    stroke: var(--color-frame);
+  }
+
+  .gauge-value {
+    stroke: var(--gauge-ink);
+    transition:
+      stroke-dasharray 200ms ease,
+      stroke-dashoffset 200ms ease,
+      stroke 200ms ease;
+  }
+
+  /* A share of 0: a zero-length dash, which butt caps leave unpainted, so the path is there to move from. */
+  .gauge-value[data-empty] {
+    stroke-linecap: butt;
+  }
+
+  .gauge-mark {
+    stroke: var(--color-ink);
+    stroke-width: 2px;
+  }
+
+  /* In a ring, the figure and its caption are one block centred in the inner circle, S less two strokes across. */
+  .gauge-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-inline-size: 0;
+    padding: var(--gauge-band);
+    text-align: center;
+  }
+
+  /* In a semicircle, the figure's baseline is on the chord and the caption under it, between the arc's ends. The
+     strut is half the box tall and has no text, so its baseline is its foot: the figure's baseline lines up with
+     it, on the chord, in any font. */
+  .gauge[data-form='semicircle'] .gauge-figure {
+    flex-flow: row wrap;
+    align-self: start;
+    align-items: baseline;
+    align-content: flex-start;
+    padding: 0 var(--gauge-band);
+  }
+
+  .gauge[data-form='semicircle'] .gauge-figure::before {
+    content: '';
+    inline-size: 0;
+    block-size: calc(var(--gauge-size) / 2);
+  }
+
+  .gauge[data-form='semicircle'] .gauge-figure-caption {
+    flex-basis: 100%;
+  }
+
+  /* The figure never wraps and is never shrunk: a longer one is the app's to shorten. */
+  .gauge-figure-value {
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: var(--text-h3--font-weight);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    direction: ltr;
+    unicode-bidi: isolate;
+    color: var(--color-ink);
+  }
+
+  .gauge[data-size='lg'] .gauge-figure-value {
+    font-size: var(--text-numeral-sm);
+    line-height: var(--text-numeral-sm--line-height);
+    letter-spacing: var(--text-numeral-sm--letter-spacing);
+    font-weight: var(--text-numeral-sm--font-weight);
+  }
+
+  /* Two lines at most, then an ellipsis: the value text carries the words whole. */
+  .gauge-figure-caption {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    max-inline-size: 100%;
+    overflow: hidden;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+    overflow-wrap: anywhere;
+  }
+
+  /* In a ring the figure and the caption are one block centred in the inner circle, which narrows above and below:
+     the figure's line is its own size, with no leading, so the widest figure's corners stay inside it, and the
+     caption is one line at md, 60px of the 80px circle, and two at lg, 104px of 136. */
+  .gauge[data-form='ring'] .gauge-figure-value {
+    line-height: 1;
+  }
+
+  .gauge[data-form='ring'] .gauge-figure-caption {
+    -webkit-line-clamp: 1;
+    max-inline-size: calc(var(--gauge-size) * 5 / 8);
+  }
+
+  .gauge[data-form='ring'][data-size='lg'] .gauge-figure-caption {
+    -webkit-line-clamp: 2;
+    max-inline-size: calc(var(--gauge-size) * 13 / 20);
+  }
+
+  /* Under the dial at md and lg, centred, as wide as the dial or 12rem; beside it at sm. */
+  .gauge-text {
+    display: grid;
+    justify-items: center;
+    min-inline-size: 0;
+    max-inline-size: max(var(--gauge-size), 12rem);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .gauge[data-size='sm'] .gauge-text {
+    justify-items: start;
+    max-inline-size: none;
+    text-align: start;
+  }
+
+  .gauge-label {
+    min-inline-size: 0;
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+
+  .gauge-value-label {
+    min-inline-size: 0;
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-slate);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gauge-value {
+      transition: none;
+    }
+  }
+
+  /* An svg keeps the colors its author set, so the block names them: the track graytext, the arc canvastext in
+     every tone, the marks highlight in their cut gaps, where the page's own background shows. The mask is
+     luminance, white keeps and black cuts, so its colors are kept out of the repaint. The words carry the tone. */
+  @media (forced-colors: active) {
+    .gauge-track {
+      stroke: graytext;
+    }
+
+    .gauge-value {
+      stroke: canvastext;
+    }
+
+    .gauge-mark {
+      stroke: highlight;
+    }
+
+    .gauge-mask {
+      forced-color-adjust: none;
+    }
+  }
+}

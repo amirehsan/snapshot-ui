@@ -52,7 +52,7 @@ for (const width of [375, 768, 1024, 1440]) {
 const workspaceGutters = (page: Page): Promise<number[][]> =>
   page.locator('.workspace').evaluate((workspace) => {
     const outer = workspace.getBoundingClientRect();
-    return ['.header-inner', '.content'].map((selector) => {
+    return ['.header .page-header-row', '.content'].map((selector) => {
       const inner = workspace.querySelector(selector)?.getBoundingClientRect();
       return inner ? [inner.left - outer.left, outer.right - inner.right] : [];
     });
@@ -655,7 +655,7 @@ test('the installation page names Prose and ProseScroll among the static parts, 
   await visit(page, '/docs/installation');
   const section = guideSection(page, 'Next.js server components');
   await expect(section).toHaveCount(1);
-  await expect(section).toContainText('PageColumn, and Prose and ProseScroll.');
+  await expect(section).toContainText('MonthGrid, and Prose and ProseScroll.');
   for (const text of ['BarChart and LineChart are client components', 'remark-gfm', 'skipHtml']) {
     await expect(section, text).toContainText(text);
   }
@@ -665,6 +665,18 @@ test('the installation page names Prose and ProseScroll among the static parts, 
   for (const text of ["style: ['normal', 'italic']", 'wght-italic.css', 'Vazirmatn', '--font-persian']) {
     await expect(fonts, text).toContainText(text);
   }
+});
+
+test('the installation page names the account parts among the static ones, and the status lists them', async ({
+  page,
+}) => {
+  await visit(page, '/docs/installation');
+  const section = guideSection(page, 'Next.js server components');
+  await expect(section).toContainText('PageColumn, DescriptionList, CardActions, Gauge, MonthGrid');
+  await visit(page, '/docs');
+  await expect(guideSection(page, 'Status')).toContainText(
+    "An account's pages: a description list for its details, actions in a card's header, a gauge for a score or a limit, and a month grid for which statements you have.",
+  );
 });
 
 test('a docs card pads 20px on a phone through --spacing-card', async ({ page }) => {
@@ -3045,7 +3057,7 @@ test('a chart page is in the Charts group and shows its own package version', as
     .filter({ has: page.locator('.rail-group', { hasText: /^Charts$/ }) });
   await expect(group).toHaveCount(1);
   await expect(group.locator('a[href="/docs/charts/sparkline"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.header-titles .eyebrow')).toHaveText('Docs \u203a Charts');
+  await expect(page.locator('.header .page-header .eyebrow')).toHaveText('Docs \u203a Charts');
 
   // The package card reads @snapshot-ui/charts, which is not built on React Aria.
   const { version } = JSON.parse(
@@ -3057,7 +3069,7 @@ test('a chart page is in the Charts group and shows its own package version', as
 
   // A component page keeps its group, its own package's version and the React Aria row.
   await visit(page, '/docs/components/meter');
-  await expect(page.locator('.header-titles .eyebrow')).toHaveText('Docs \u203a Components');
+  await expect(page.locator('.header .page-header .eyebrow')).toHaveText('Docs \u203a Components');
   const { version: react } = JSON.parse(
     readFileSync(new URL('../../../packages/react/package.json', import.meta.url), 'utf8'),
   ) as { version: string };
@@ -4216,6 +4228,125 @@ test('the columns example draws its header row at the top of its table at every 
   ).toBe('0px');
 });
 
+for (const [url, title] of [
+  ['/docs', 'Introduction'],
+  ['/docs/components/button', 'Button'],
+  ['/docs/charts/sparkline', 'Sparkline'],
+] as const) {
+  test(`the docs header is a PageHeader with the page's one h1 and its switches, on ${url}`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await visit(page, url);
+    // The library's PageHeader draws the trail, the title and the switches, inside the shell's banner.
+    const header = page.locator('.header[role="banner"] > .page-header');
+    await expect(header).toHaveCount(1);
+    await expect(header.locator('h1')).toHaveText(title);
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(header.locator('.page-header-titles .eyebrow')).toContainText('Docs');
+    await expect(page.getByRole('banner')).toHaveCount(1);
+    await expect(page.getByRole('banner').locator('h1')).toHaveText(title);
+    // Valid nesting: no header element holds another, and the banner is no header element of its own.
+    await expect(page.locator('header header')).toHaveCount(0);
+    await expect(page.locator('[role="banner"]')).toHaveCount(1);
+    await expect(page.locator('[role="banner"]')).toHaveJSProperty('tagName', 'DIV');
+    const actions = header.locator('.page-header-actions');
+    // The switches set the color mode and the corners on the root, as before.
+    await actions
+      .getByRole('radiogroup', { name: 'Color mode' })
+      .locator('.segmented-option', { hasText: 'Dark' })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await actions
+      .getByRole('radiogroup', { name: 'Corners' })
+      .locator('.segmented-option', { hasText: 'Square' })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('data-shape', 'square');
+    await actions
+      .getByRole('radiogroup', { name: 'Corners' })
+      .locator('.segmented-option', { hasText: 'Rounded' })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('data-shape', 'rounded');
+  });
+}
+
+for (const width of [375, 768]) {
+  test(`under 1024px the drawer's button stands before the docs header's titles, level with the title, at ${String(width)}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    const button = page.locator('.header > .header-lead').getByRole('button', { name: 'Open the menu' });
+    await expect(button).toBeVisible();
+    const box = await button.boundingBox();
+    const title = await page.locator('.header .page-header h1').boundingBox();
+    if (!box || !title) throw new Error('No button or title');
+    // Before the titles, and its middle on the middle of the title's first line, give or take a pixel.
+    expect(box.x + box.width).toBeLessThan(title.x);
+    const line = await page
+      .locator('.header .page-header h1')
+      .evaluate((element) => parseFloat(getComputedStyle(element).lineHeight));
+    expect(Math.abs(box.y + box.height / 2 - (title.y + line / 2))).toBeLessThanOrEqual(1);
+    // Drawn over the header's fill, not under it: its middle is the button's own.
+    expect(
+      await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('.header-menu') != null, {
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+      }),
+    ).toBe(true);
+    // The switches start at the column's edge, under the button, as before: the titles alone make room for it.
+    const actions = await page.locator('.header .page-header-actions').boundingBox();
+    const column = await page.locator('.header .page-header-row').boundingBox();
+    if (!actions || !column) throw new Error('No actions or column');
+    if (width < 768) expect(actions.y).toBeGreaterThan(box.y + box.height);
+    expect(actions.x).toBeGreaterThanOrEqual(column.x);
+    // The button opens the drawer, as before.
+    await button.click();
+    await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expectDrawerClosed(page);
+    await expect(button).toBeFocused();
+  });
+}
+
+for (const width of [1024, 1067, 1440]) {
+  test(`the docs header keeps its switches beside a short title at ${String(width)}px`, async ({ page }) => {
+    // Beside the open rail the column is 640px at 1024; the docs' titles keep 16rem there (spec correction 76).
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    const title = await page.locator('.header .page-header h1').boundingBox();
+    const actions = await page.locator('.header .page-header-actions').boundingBox();
+    if (!title || !actions) throw new Error('No title or switches');
+    expect(actions.x).toBeGreaterThan(title.x + title.width);
+    expect(actions.y).toBeLessThan(title.y + title.height);
+    expect(await sideways(page)).toBe(0);
+  });
+}
+
+test('the docs header sticks and writes --page-sticky-top, its height, at every width', async ({ page }) => {
+  for (const width of [375, 768, 1440]) {
+    await page.setViewportSize({ width, height: 700 });
+    await visit(page, '/docs/components/data-table');
+    const header = page.locator('.header[role="banner"]');
+    await page.evaluate(() => {
+      window.scrollTo(0, 1200);
+    });
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
+    // Stuck at the top of the viewport, and its height is the page's sticky offset.
+    await expect.poll(async () => Math.round((await header.boundingBox())?.y ?? -1)).toBe(0);
+    const height = (await header.boundingBox())?.height ?? 0;
+    expect(height).toBeGreaterThan(0);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-sticky-top')),
+        ),
+      )
+      .toBeCloseTo(height, 0);
+    expect(await sideways(page)).toBe(0);
+  }
+});
+
 test('the docs header sets --page-sticky-top, so a data table header sticks under it, and amounts use a real minus sign', async ({
   page,
 }) => {
@@ -5008,4 +5139,345 @@ test('closing the page while files upload asks first', async ({ page }) => {
   });
   await page.close({ runBeforeUnload: true });
   expect(await shown).toBe('beforeunload');
+});
+
+test("the card page's header actions give focus back to the button that opened each dialog, never the body", async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/card');
+  const card = page.locator('.stage .card').filter({ hasText: 'Account details' });
+  const edit = card.getByRole('button', { name: 'Edit details' });
+  const more = card.getByRole('button', { name: 'More actions' });
+
+  await edit.click();
+  await expect(page.getByRole('dialog', { name: 'Edit details' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(edit).toBeFocused();
+
+  for (const [item, name, leave] of [
+    ['Merge', 'Merge Everyday Visa', 'Escape'],
+    ['Remove', 'Remove Everyday Visa?', 'Cancel'],
+  ] as const) {
+    await more.click();
+    await page.getByRole('menuitem', { name: item }).click();
+    const dialog = page.getByRole(item === 'Remove' ? 'alertdialog' : 'dialog', { name });
+    await expect(dialog).toBeVisible();
+    if (leave === 'Escape') await page.keyboard.press('Escape');
+    else await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(more).toBeFocused();
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  }
+});
+
+// ---- The Accounts recipe ------------------------------------------------------------------------
+
+const ACCOUNTS_PAGE = '/docs/components/description-list';
+
+/** The recipe's stage: the only example on the description list page with a page header. */
+const accountsRecipe = (page: Page): Locator =>
+  page.locator('.stage').filter({ has: page.locator('.page-header') });
+
+/** Whether focus is on the page's body, where it must never fall. */
+const focusOnBody = (page: Page): Promise<boolean> =>
+  page.evaluate(() => document.activeElement === null || document.activeElement === document.body);
+
+/** The value cell of the description list's row named `term`. */
+const valueOf = (scope: Locator, term: string): Locator =>
+  scope
+    .locator('.description-list-item')
+    .filter({ has: scope.page().locator('dt', { hasText: new RegExp(`^${term}$`) }) })
+    .locator('dd')
+    .first();
+
+test('the accounts recipe lists accounts by type with their feed status, and opens one', async ({ page }) => {
+  await visit(page, ACCOUNTS_PAGE);
+  const recipe = accountsRecipe(page);
+  await expect(recipe.getByRole('heading', { level: 2, name: 'Accounts', exact: true })).toBeVisible();
+  // The summary: four tiles, net worth with its change in words.
+  for (const label of ['Cash', 'Investments', 'Owed', 'Net worth']) {
+    await expect(recipe.locator('.stat-tile').filter({ hasText: label }).first(), label).toBeVisible();
+  }
+  const worth = recipe.locator('.stat-tile').filter({ hasText: 'Net worth' });
+  await expect(worth).toContainText('$32,037.86');
+  await expect(worth).toContainText('Up $1,204.50 since September');
+  // A table per type, each named by its heading.
+  for (const type of ['Credit cards', 'Checking', 'Savings', 'Investments']) {
+    await expect(recipe.getByRole('heading', { level: 3, name: type, exact: true }), type).toBeVisible();
+  }
+  // The bank feed in words: neutral when it syncs, an error and its fix when it failed, never success.
+  const credit = recipe.locator('section').filter({
+    has: page.getByRole('heading', { level: 3, name: 'Credit cards', exact: true }),
+  });
+  await expect(credit.locator('.badge-error:visible', { hasText: 'Failed' })).toHaveCount(1);
+  await expect(credit.getByRole('link', { name: 'Reconnect Travel Mastercard' })).toBeVisible();
+  await expect(credit.locator('.badge:not([class*="badge-"]):visible', { hasText: 'Connected' })).toHaveCount(
+    1,
+  );
+  const checking = recipe.locator('section').filter({
+    has: page.getByRole('heading', { level: 3, name: 'Checking', exact: true }),
+  });
+  await expect(checking.locator('.badge-warning:visible', { hasText: 'Possible duplicate' })).toHaveCount(1);
+  await expect(recipe.locator('.badge-success')).toHaveCount(0);
+  // Each row: its bank's logo, its name and last four, its coverage, and its balance with its date.
+  const visa = credit.getByRole('link', { name: /^Everyday Visa ending 4821/ });
+  await expect(visa).toContainText('Statements from March 2024, 3 missing');
+  await expect(credit.getByRole('img', { name: 'Northwind Bank' }).first()).toBeVisible();
+  await expect(credit).toContainText('$1,150.00');
+  await expect(credit).toContainText('Oct 18');
+  // A row opens its account.
+  await visa.click();
+  await expect(page).toHaveURL(/\?account=everyday-visa$/);
+  await expect(recipe.getByRole('heading', { level: 2, name: 'Everyday Visa', exact: true })).toBeVisible();
+  const details = recipe.getByRole('region', { name: 'Details' });
+  for (const [term, value] of [
+    ['Name', 'Everyday Visa'],
+    ['Type', 'Credit card'],
+    ['Institution', 'Northwind Bank'],
+    ['Last four', '4821'],
+    ['Bank feed', 'Connected'],
+    ['Credit limit', '$5,000.00'],
+    ['APR', '24.9%'],
+  ] as const) {
+    await expect(valueOf(details, term), term).toHaveText(value);
+  }
+  for (const term of ['Last four', 'Credit limit', 'APR']) {
+    await expect(valueOf(details, term), term).toHaveAttribute('data-numeric', '');
+  }
+  // A failed feed in the details is an error Badge with its fix.
+  await visit(page, `${ACCOUNTS_PAGE}?account=travel-mastercard`);
+  const failed = accountsRecipe(page).getByRole('region', { name: 'Details' });
+  await expect(failed.locator('.badge-error', { hasText: 'Failed' })).toHaveCount(1);
+  await expect(failed.getByRole('link', { name: 'Reconnect Travel Mastercard' })).toBeVisible();
+});
+
+test("the details card's Edit opens a dialog, saves the nickname, and returns focus to Edit", async ({
+  page,
+}) => {
+  await visit(page, `${ACCOUNTS_PAGE}?account=everyday-visa`);
+  const details = accountsRecipe(page).getByRole('region', { name: 'Details' });
+  const nickname = valueOf(details, 'Nickname');
+  // Empty, it offers a link to add one.
+  await expect(nickname.getByRole('link', { name: 'Add a nickname' })).toBeVisible();
+  const edit = details.getByRole('button', { name: 'Edit details' });
+  await edit.click();
+  const dialog = page.getByRole('dialog', { name: 'Edit details' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('textbox', { name: 'Nickname' }).fill('Groceries card');
+  await dialog.getByRole('button', { name: 'Save details' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(nickname).toHaveText('Groceries card');
+  await expect(edit).toBeFocused();
+  expect(await focusOnBody(page)).toBe(false);
+  // Cancel keeps what was saved, and gives focus back too.
+  await edit.click();
+  await page.getByRole('dialog', { name: 'Edit details' }).getByRole('button', { name: 'Cancel' }).click();
+  await expect(nickname).toHaveText('Groceries card');
+  await expect(edit).toBeFocused();
+});
+
+test('Remove asks first, then returns to the list with focus on its heading', async ({ page }) => {
+  await visit(page, `${ACCOUNTS_PAGE}?account=everyday-visa`);
+  const recipe = accountsRecipe(page);
+  const more = recipe.getByRole('region', { name: 'Details' }).getByRole('button', { name: 'More actions' });
+  // Merge opens its dialog, and closing it gives focus back to More.
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Merge' }).click();
+  const merge = page.getByRole('dialog', { name: 'Merge Everyday Visa' });
+  await expect(merge).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(merge).toBeHidden();
+  await expect(more).toBeFocused();
+  // Remove asks first; Cancel keeps the account.
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Remove' }).click();
+  const ask = page.getByRole('alertdialog', { name: 'Remove Everyday Visa?' });
+  await expect(ask).toBeVisible();
+  await ask.getByRole('button', { name: 'Cancel' }).click();
+  await expect(ask).toBeHidden();
+  await expect(more).toBeFocused();
+  // Yes removes it, opens the list and gives its heading focus, never the body.
+  await more.click();
+  await page.getByRole('menuitem', { name: 'Remove' }).click();
+  await page
+    .getByRole('alertdialog', { name: 'Remove Everyday Visa?' })
+    .getByRole('button', { name: 'Remove Everyday Visa' })
+    .click();
+  const heading = recipe.getByRole('heading', { level: 2, name: 'Accounts', exact: true });
+  await expect(heading).toBeVisible();
+  await expect(page).not.toHaveURL(/account=/);
+  await expect(heading).toBeFocused();
+  expect(await focusOnBody(page)).toBe(false);
+  await expect(recipe.getByRole('link', { name: /^Everyday Visa ending 4821/ })).toHaveCount(0);
+  await expect(recipe.getByRole('link', { name: /^Travel Mastercard ending 0937/ })).toBeVisible();
+});
+
+test("the credit tab's score gauge is a meter on 300 to 850 with its words and marks, and draws no error tone", async ({
+  page,
+}) => {
+  await visit(page, `${ACCOUNTS_PAGE}?account=everyday-visa`);
+  const recipe = accountsRecipe(page);
+  // The tabs follow the URL, and focus stays on the tab chosen.
+  const tab = recipe.getByRole('tab', { name: 'Credit' });
+  await tab.click();
+  await expect(page).toHaveURL(/\?account=everyday-visa&tab=credit$/);
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+  await expect(tab).toBeFocused();
+  const score = recipe.getByRole('meter', { name: 'Credit score' });
+  await expect(score).toHaveAttribute('aria-valuemin', '300');
+  await expect(score).toHaveAttribute('aria-valuemax', '850');
+  await expect(score).toHaveAttribute('aria-valuenow', '742');
+  await expect(score).toHaveAttribute('aria-valuetext', '742 of 850, Very good');
+  const description = await score.evaluate((element) =>
+    (element.getAttribute('aria-describedby') ?? '')
+      .split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .join(' '),
+  );
+  for (const mark of ['Fair from 580', 'Good from 670', 'Very good from 740', 'Excellent from 800']) {
+    expect(description, mark).toContain(mark);
+  }
+  // An lg semicircle with its figure and its word, and the range's ends and the bands for the eye.
+  const gauge = recipe.locator('.gauge').filter({ has: page.getByRole('meter', { name: 'Credit score' }) });
+  await expect(gauge).toHaveAttribute('data-form', 'semicircle');
+  await expect(gauge).toHaveAttribute('data-size', 'lg');
+  await expect(gauge).toContainText('742');
+  await expect(gauge).toContainText('Very good');
+  const card = recipe.getByRole('region', { name: 'Credit score' });
+  for (const text of ['300', '850', 'Poor', '300 to 579', 'Fair', '580 to 669', 'Excellent', '800 to 850']) {
+    await expect(card, text).toContainText(text);
+  }
+  // Warning below 670, never error: no part of the tab draws the error tone.
+  await expect(recipe.locator('[data-tone="error"]')).toHaveCount(0);
+  await expect(recipe.locator('.badge-error')).toHaveCount(0);
+  await expect(recipe.getByRole('meter', { name: 'Across your cards' })).toHaveAttribute(
+    'aria-valuetext',
+    '35% of your limits, above 30%',
+  );
+});
+
+test('each utilization ring in the table is named by its row', async ({ page }) => {
+  await visit(page, `${ACCOUNTS_PAGE}?account=everyday-visa&tab=credit`);
+  const card = accountsRecipe(page).getByRole('region', { name: 'Your cards' });
+  // The thresholds are said once, above the table; the rings' marks carry no words.
+  await expect(card).toContainText('Utilization marks: best under 10%, and keep it under 30%.');
+  for (const [name, text] of [
+    ['Everyday Visa ending 4821', '23%'],
+    ['Travel Mastercard ending 0937', '47%, above 30%'],
+  ] as const) {
+    const ring = card.getByRole('meter', { name: `Utilization, ${name}` });
+    await expect(ring, name).toHaveAttribute('aria-valuetext', text);
+    await expect(ring, name).not.toHaveAttribute('aria-describedby', /./);
+    expect((await ring.boundingBox())?.width, name).toBeCloseTo(32, 0);
+  }
+});
+
+test("the statement coverage grid's summary and table say what is missing", async ({ page }) => {
+  await visit(page, `${ACCOUNTS_PAGE}?account=everyday-visa&tab=credit`);
+  const grid = accountsRecipe(page).getByRole('figure', { name: 'Statement coverage' });
+  await expect(grid).toBeVisible();
+  await expect(grid).toContainText('Missing: November 2024, March and April 2025.');
+  await expect(grid).toContainText('June 2025');
+  const table = grid.getByRole('table');
+  await expect(table.getByRole('rowheader', { name: '2025', exact: true })).toHaveCount(1);
+  const cells = table.getByRole('row').filter({ has: page.getByRole('rowheader', { name: '2025' }) });
+  await expect(cells.getByRole('cell').nth(2)).toHaveText('Missing');
+  await expect(cells.getByRole('cell').nth(5)).toHaveText('Partial');
+});
+
+for (const url of [
+  ACCOUNTS_PAGE,
+  `${ACCOUNTS_PAGE}?account=everyday-visa`,
+  `${ACCOUNTS_PAGE}?account=everyday-visa&tab=credit`,
+]) {
+  test(`the recipe fits a phone at 375 with no sideways scroll, in each view: ${url}`, async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await visit(page, url);
+    const recipe = accountsRecipe(page);
+    await expect(recipe.locator('.page-header-title')).toBeVisible();
+    await expect.poll(() => sideways(page)).toBe(0);
+    // Nothing in the recipe runs past its stage's edge.
+    const stage = await recipe.boundingBox();
+    const furthest = await recipe.evaluate((element) =>
+      Math.max(
+        ...[...element.querySelectorAll('*')]
+          .filter(
+            (each) => each.getClientRects().length > 0 && each.closest('.month-grid-alternative') === null,
+          )
+          .map((each) => each.getBoundingClientRect().right),
+      ),
+    );
+    expect(furthest).toBeLessThanOrEqual((stage?.x ?? 0) + (stage?.width ?? 0) + 1);
+    // Each view passes axe on a phone, in light and in dark.
+    expect(await axeViolations(page)).toEqual([]);
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    expect(await axeViolations(page)).toEqual([]);
+  });
+
+  test(`the recipe has no axe violations at 1440 in light and dark, in each view: ${url}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const theme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await visit(page, url);
+      await expect(accountsRecipe(page).locator('.page-header-title')).toBeVisible();
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      expect(await axeViolations(page), theme).toEqual([]);
+    }
+  });
+}
+
+test('"Add a nickname" opens Edit\'s form, and once a nickname is saved focus goes to Edit, never the body', async ({
+  page,
+}) => {
+  await visit(page, `${ACCOUNTS_PAGE}?account=everyday-visa`);
+  const details = accountsRecipe(page).getByRole('region', { name: 'Details' });
+  const nickname = valueOf(details, 'Nickname');
+  const edit = details.getByRole('button', { name: 'Edit details' });
+  // Cancel from the link gives focus back to the link, which is still there.
+  const add = nickname.getByRole('link', { name: 'Add a nickname' });
+  await add.click();
+  await page.getByRole('dialog', { name: 'Edit details' }).getByRole('button', { name: 'Cancel' }).click();
+  await expect(add).toBeFocused();
+  // Saved, the link gives way to the nickname, and focus goes to Edit.
+  await add.click();
+  const dialog = page.getByRole('dialog', { name: 'Edit details' });
+  await dialog.getByRole('textbox', { name: 'Nickname' }).fill('Groceries card');
+  await dialog.getByRole('button', { name: 'Save details' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(nickname).toHaveText('Groceries card');
+  await expect(edit).toBeFocused();
+  expect(await focusOnBody(page)).toBe(false);
+});
+
+test('opening another page of the recipe gives its heading focus, and a tab keeps focus on the tab', async ({
+  page,
+}) => {
+  await visit(page, ACCOUNTS_PAGE);
+  const recipe = accountsRecipe(page);
+  const credit = recipe.locator('section').filter({
+    has: page.getByRole('heading', { level: 3, name: 'Credit cards', exact: true }),
+  });
+  // A row opens its account, and the account's heading takes focus.
+  await credit.getByRole('link', { name: /^Everyday Visa ending 4821/ }).click();
+  const visa = recipe.getByRole('heading', { level: 2, name: 'Everyday Visa', exact: true });
+  await expect(visa).toBeFocused();
+  // A tab keeps focus on the tab.
+  const tab = recipe.getByRole('tab', { name: 'Credit' });
+  await tab.click();
+  await expect(page).toHaveURL(/&tab=credit$/);
+  await expect(tab).toBeFocused();
+  // The trail goes back to the list, and the list's heading takes focus.
+  await recipe.getByRole('link', { name: 'Accounts', exact: true }).click();
+  const list = recipe.getByRole('heading', { level: 2, name: 'Accounts', exact: true });
+  await expect(list).toBeFocused();
+  // Reconnect opens the account whose feed failed, with its heading focused.
+  await credit.getByRole('link', { name: 'Reconnect Travel Mastercard' }).click();
+  await expect(page).toHaveURL(/\?account=travel-mastercard#reconnect$/);
+  await expect(
+    recipe.getByRole('heading', { level: 2, name: 'Travel Mastercard (Trips)', exact: true }),
+  ).toBeFocused();
+  expect(await focusOnBody(page)).toBe(false);
 });

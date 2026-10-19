@@ -147,6 +147,13 @@
     "limit": "1 kB"
   },
   {
+    "name": "import { CardActions } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ CardActions }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "1 kB"
+  },
+  {
     "name": "import { CollapsibleCard } from \"@snapshot-ui/react\"",
     "path": "dist/index.js",
     "import": "{ CollapsibleCard }",
@@ -257,6 +264,27 @@
     "import": "{ Meter }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
     "limit": "1.5 kB"
+  },
+  {
+    "name": "import { Gauge } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Gauge }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "2.5 kB"
+  },
+  {
+    "name": "import { MonthGrid } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ MonthGrid }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "2 kB"
+  },
+  {
+    "name": "import { DescriptionList, DescriptionListItem } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ DescriptionList, DescriptionListItem }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "1 kB"
   },
   {
     "name": "import { SearchField } from \"@snapshot-ui/react\"",

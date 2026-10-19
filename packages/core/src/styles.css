@@ -28,6 +28,7 @@
 @import './components/switch.css';
 @import './components/segmented.css';
 @import './components/card.css';
+@import './components/description-list.css';
 @import './components/overlay.css';
 @import './components/dialog.css';
 @import './components/drawer.css';
@@ -44,6 +45,8 @@
 @import './components/stat-tile.css';
 @import './components/meter.css';
 @import './components/charts.css';
+@import './components/gauge.css';
+@import './components/month-grid.css';
 @import './components/search-field.css';
 @import './components/select.css';
 @import './components/combo-box.css';

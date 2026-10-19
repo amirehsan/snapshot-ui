@@ -1,0 +1,172 @@
+---
+title: Month grid
+description: "Which months you have: one row per year, each month held, partial or missing, said in words too."
+icon: Grid3x3
+---
+
+<Section>
+
+## Your states, three looks
+
+<Preview name="month-grid-basic" />
+
+A month grid shows which months you have of something that comes monthly, such as an account's statements: one row per year, one cell per month. The states are yours, in your words, such as Held, Partial and Missing. Each maps to one of three looks: `filled` is a solid cell, `partial` a striped one and `empty` an outline. A month outside the range, before the account opened or not yet come, is `null` and stays blank, so it never reads as missing.
+
+The looks are shapes, not meanings. None of them is a color of error, warning or success: a missing statement is the reader's fact, not a failure of the page. Under the grid a sentence says what is missing or partial, and a legend names your states.
+
+</Section>
+
+<Section>
+
+## The looks
+
+Any words map onto the three looks. Here a statement reconciled is filled, one uploaded and not yet checked is partial, and one not received is an outline; the account opened in May 2025, so the months before it are blank. Two states may share a look, but the reader then tells them apart only in the table and the summary, so keep to a few states with a look each.
+
+<Preview name="month-grid-looks" />
+
+</Section>
+
+<Section>
+
+## Summary and table
+
+With no `summary`, the grid writes an English sentence from your words. Each state whose look is `empty` comes first, then each whose look is `partial`, in the order of `states`: its label, then its months oldest first, whatever order your rows are drawn in, "Missing: November 2024, March and April 2025. Partial: June 2025." Three or more months in a row are a range, "March to May 2025", and a whole year is "every month of 2025". With nothing missing or partial it names your filled states: "Held: every month." when only one is held, and when another is held too, such as Closed, "Closed: January to March 2025. Held: all other months." Years are put oldest first by their `id`s when every `id` is a number; give each year its number as its `id`, or the summary reads them in the order drawn. In any other language, pass your own `summary`: list joining and word order are the language's. `summary={false}` draws none, when the sentence is said elsewhere on the page.
+
+The visible grid is hidden from screen readers. They read the summary, and a table clipped from sight: a caption with the grid's name, a column header per month, a row header per year and your state's word in each cell, so a reader can move to March 2025 by row and column. `labels` gives the table's words for its first column, "Year", and for a month outside the range, "Not in range".
+
+</Section>
+
+<Section>
+
+## Calendars
+
+The grid knows rows and columns, not dates. On a Persian page, pass Persian years, the twelve Persian month names and their short labels, and your data already placed in Persian months, with your own summary and table words. The columns follow the page's direction: the year column and Farvardin are at the right.
+
+<Preview name="month-grid-persian" />
+
+Your app places each statement in its Persian year and month with `@internationalized/date`, which the library does not need:
+
+```tsx
+import { PersianCalendar, toCalendar, type CalendarDate } from '@internationalized/date';
+import type { MonthGridYear } from '@snapshot-ui/react';
+
+const persian = new PersianCalendar();
+const DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+const persianDigits = (value: number): string =>
+  String(value).replace(/\d/g, (digit) => DIGITS[Number(digit)] ?? digit);
+const blankYear = (): (string | null)[] => Array.from({ length: 12 }, () => null);
+
+/**
+ * Every month from the account's opening to today is missing until a statement says otherwise; the months
+ * outside that range stay null. Each statement is placed by its date in its Persian year and month.
+ */
+export function placeInPersian(
+  statements: readonly { date: CalendarDate; state: string }[],
+  opened: CalendarDate,
+  today: CalendarDate,
+): MonthGridYear[] {
+  const years = new Map<number, (string | null)[]>();
+  const end = toCalendar(today, persian);
+  for (
+    let month = toCalendar(opened, persian).set({ day: 1 });
+    month.compare(end) <= 0;
+    month = month.add({ months: 1 })
+  ) {
+    const row = years.get(month.year) ?? blankYear();
+    row[month.month - 1] = 'missing';
+    years.set(month.year, row);
+  }
+  for (const { date, state } of statements) {
+    const { year, month } = toCalendar(date, persian);
+    const row = years.get(year);
+    if (row) row[month - 1] = state;
+  }
+  // Newest first.
+  return [...years.entries()]
+    .sort(([a], [b]) => b - a)
+    .map(([year, months]) => ({ id: year, label: persianDigits(year), months }));
+}
+```
+
+The Persian calendar, like the Gregorian, has twelve months every year, so every row has the same columns. A calendar whose years differ in their count of months, such as the Hebrew calendar's leap years of thirteen, is not supported.
+
+</Section>
+
+<Section>
+
+## Usage
+
+The grid is static: a server component renders it with no client JavaScript, and nothing in it computes a date, reads the locale or formats a number. Every year, month name and word is yours.
+
+- `states` names your states and maps each to `filled`, `partial` or `empty`.
+- `years` are the rows in the order drawn, newest first or oldest first; each holds `months`, a state's id per month or `null` outside the range.
+- `monthLabels` head the columns and set their count; `monthNames` are read in the summary and the table. Give both the same count, twelve in most calendars. Under 28rem of the grid's own width only every third label shows, the first month of each quarter, so keep them to three letters or fewer: "Jan", "Apr", "Jul", "Oct".
+- Never draw a state in a color. To put a missing month in front of the reader, say so in your `summary`, or with a [Badge](/docs/components/badge) beside the grid.
+- The grid takes the width of its box, and its cells stretch with it, about 13px wide in a card on a 320px phone. Under 12rem of its width, such as two cards side by side on a phone, it wraps rather than shrinks: each year's label takes its own line and its months follow in two rows of six, with no month labels. It has no width of its own: in a flex row or a grid column sized to its content, give it a width, or it collapses. In a `flex: 1` item or a `1fr` track it fits.
+
+```tsx
+import { MonthGrid } from '@snapshot-ui/react';
+
+<MonthGrid
+  label="Statement coverage"
+  states={[
+    { id: 'held', label: 'Held', look: 'filled' },
+    { id: 'partial', label: 'Partial', look: 'partial' },
+    { id: 'missing', label: 'Missing', look: 'empty' },
+  ]}
+  years={[
+    {
+      id: 2025,
+      label: '2025',
+      months: ['held', 'held', 'missing', 'missing', 'held', 'partial', 'held', 'held', 'held', 'held', null, null],
+    },
+  ]}
+  monthLabels={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']}
+  monthNames={[
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ]}
+/>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+MonthGrid accepts every HTML element attribute, on its `figure`.
+
+<PropsTable label="MonthGrid props" path="../../packages/react/src/month-grid/MonthGrid.tsx" type="Pick<MonthGridBaseProps, 'label' | 'states' | 'years' | 'monthLabels' | 'monthNames' | 'summary' | 'hasLegend' | 'labels' | 'className'>" />
+
+<PropsTable label="MonthGridState" path="../../packages/react/src/month-grid/MonthGrid.tsx" type="MonthGridState" />
+
+<PropsTable label="MonthGridYear" path="../../packages/react/src/month-grid/MonthGrid.tsx" type="MonthGridYear" />
+
+<PropsTable label="MonthGridLabels" path="../../packages/react/src/month-grid/MonthGrid.tsx" type="MonthGridLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The grid is a `figure` named by its label, `aria-label` or `aria-labelledby`, and described by its summary. The visible label is hidden from screen readers, since the figure's name says it.
+
+- In reading order the summary comes before the table: the gist first, then the detail.
+- The table is clipped from sight, not hidden: a screen reader finds it in browse mode and by table navigation, and reads each month by its row and column headers. Its caption is the grid's name.
+- The visible grid and the legend are hidden from screen readers, since the table names every month and every state, and the same said twice is noise.
+- It takes no focus and has no keys: no cell is a stop and none has a tooltip. To open a month, link to it from your own list.
+- A month's state is never color alone: it has a shape, a word in the table and, if it is not filled, a place in the summary. In forced colors the three looks stay a solid, a striped and an outlined cell.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps month grids in the system.
+
+<Rules dos={['Keep the month labels short: a letter, or three.', 'Lead the summary with what is missing.', 'Map each state to its own look.']} donts={['Never draw a missing month in a warning or error color. Say it in words.', 'Never use more than a few states. Two states with one look read as one.', 'Never mark a month outside the range as missing. Pass null.']} />
+
+</Section>

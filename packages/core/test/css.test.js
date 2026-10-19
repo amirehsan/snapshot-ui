@@ -166,6 +166,22 @@ describe('src/styles.css', () => {
     }
   });
 
+  it('imports the accounts files after the files they read from, in order', () => {
+    // The list reads the card's holder properties, so it follows card.css; the gauge and the month grid read the
+    // meter's track and looks, so they follow meter.css, after charts.css, which keeps its place right after the
+    // meter (spec correction 22). Each is checked once it exists.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    expect(at('card.css')).toBeGreaterThanOrEqual(0);
+    expect(at('description-list.css')).toBeGreaterThan(at('card.css'));
+    expect(at('charts.css')).toBeGreaterThan(at('meter.css'));
+    let previous = at('charts.css');
+    for (const file of ['gauge.css', 'month-grid.css']) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
+
   it('imports the shell files after the last overlay file, in order', () => {
     // app-shell.css is required; the sidebar and the tab bar are checked once they exist.
     const at = (file) => entry.indexOf(`'./components/${file}'`);
@@ -1240,6 +1256,11 @@ describe('src/components/card.css', () => {
     expect(blockAfter(source, '.card-note {')).not.toContain('overflow-wrap');
   });
 
+  it("names its lifted fill as a table's surface, so a table in a card draws its header and cuts in it", () => {
+    // Spec correction 74: a DataTable's sticky header and a meter's cuts in its rows take the card's fill.
+    expect(blockAfter(rules(), '.card {')).toContain('--data-table-surface: var(--color-lifted);');
+  });
+
   it('makes a card concentric only when it sits in a card or in its body, never for any descendant', () => {
     const source = rules();
     const nested = blockAfter(source, '.card > .card,');
@@ -1251,6 +1272,112 @@ describe('src/components/card.css', () => {
     expect(nested).toContain('border-color: var(--color-frame);');
     // A card on a well of its own, such as the docs preview stage, keeps its stadium corner.
     expect(source).not.toMatch(/\.card \.card/);
+  });
+});
+
+describe('src/components/card.css, CardActions in a plain card header', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/card.css')));
+  const HEADER = '.card > .card-header:has(> .card-actions) {';
+  const TITLE = '.card > .card-header:has(> .card-actions) > .card-title {';
+  const ACTIONS = '.card > .card-header > .card-actions {';
+  const ALONE = '.card > .card-header > .card-actions:first-child {';
+  const SPAN = '.card > .card-header:has(> .card-note) > .card-actions {';
+  const BUTTON = '.card > .card-header > .card-actions > .button {';
+  const WIDE = '@container card-header (inline-size >= 24rem)';
+  const EXTRA = 'calc(var(--holder-corner-inset) - var(--holder-pad))';
+  /** Every rule that holds declarations, as its selector and its declarations, media blocks included. */
+  const all = (css = rules()) =>
+    [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector = '', body = '']) => ({
+      selector: selector.trim(),
+      body: body.trim(),
+    }));
+  /** The CSS with the container query's block taken out, so the narrow layout is read on its own. */
+  const narrow = () => {
+    const css = rules();
+    const start = css.indexOf(WIDE);
+    const end = css.indexOf('{', start) + 1 + blockAfter(css, WIDE).length + 1;
+    return css.slice(0, start) + css.slice(end);
+  };
+
+  it('makes a header holding actions a one-column grid and a size container with no stand-in width', () => {
+    const header = blockAfter(rules(), HEADER);
+    expect(header).toContain('container: card-header / inline-size;');
+    // Any stand-in width becomes the card's min-content and scrolls a phone's page sideways from a 1fr track.
+    expect(header).toContain('contain-intrinsic-inline-size: 0;');
+    expect(header).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(header).toContain('column-gap: var(--spacing-peer);');
+  });
+
+  it('draws a narrow header as a header without actions draws: no row, padding or margin of its own', () => {
+    const header = blockAfter(narrow(), HEADER);
+    expect(header).not.toMatch(/grid-template-rows|padding|margin|align-items/);
+    expect(blockAfter(narrow(), TITLE)).toBe('');
+    for (const { selector, body } of all(narrow())) {
+      if (!selector.includes('card-actions')) continue;
+      // Nothing places the actions, so they follow the note at the inline start.
+      expect(body, selector).not.toMatch(/grid-(?:row|column)\s*:|justify-content/);
+      // Only actions that start the header, with nothing above them, move down at every width.
+      if (body.includes('margin')) expect(selector).toBe(ALONE.slice(0, -2));
+    }
+    expect(blockAfter(narrow(), ALONE).trim()).toBe(`margin-block-start: ${EXTRA};`);
+  });
+
+  it('wraps a long label inside its button rather than widening the card', () => {
+    expect(blockAfter(rules(), BUTTON).trim()).toBe('white-space: normal;');
+  });
+
+  it('sets the actions beside the title from 24rem, keeping the title 12rem beside them', () => {
+    const wide = blockAfter(rules(), WIDE);
+    expect(
+      blockAfter(wide, '.card > .card-header:has(> .card-actions) > :is(.card-title, .card-note) {'),
+    ).toContain('grid-column: 1;');
+    const beside = blockAfter(wide, ACTIONS);
+    expect(beside).toContain('grid-column: 2;');
+    expect(beside).toContain('grid-row: 1;');
+    expect(beside).toContain('align-self: start;');
+    expect(beside).toContain('justify-content: flex-end;');
+    expect(beside).toContain('min-block-size: var(--size-control);');
+    // The title keeps 12rem beside them, and a lone button wider than what is left still never overlaps it.
+    expect(beside).toContain('max-inline-size: calc(100cqi - 12rem - var(--spacing-peer));');
+    expect(beside).toContain('min-inline-size: min-content;');
+    // With a note they span its row too, so a second line of actions never parts the note from the title.
+    expect(blockAfter(wide, SPAN).trim()).toBe('grid-row: 1 / span 2;');
+  });
+
+  it('moves the actions and the title down by the corner inset less the padding beside the title alone', () => {
+    const wide = blockAfter(rules(), WIDE);
+    expect(blockAfter(wide, ACTIONS)).toContain(`margin-block-start: ${EXTRA};`);
+    // The title moves with them, its first line centred on a control's height, level with their first line.
+    expect(blockAfter(wide, TITLE).trim()).toBe(
+      'margin-block-start: calc(var(--holder-corner-inset) - var(--holder-pad) + max(0px, calc((var(--size-control) - 1lh) / 2)));',
+    );
+    // Down, never in: the actions end on the body's column edge.
+    for (const { selector, body } of all().filter((rule) => rule.selector.includes('card-actions'))) {
+      expect(body, selector).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);
+    }
+  });
+
+  it("matches only a header that is a card's own child, so a collapsible card's header is untouched", () => {
+    const placed = all().filter(
+      ({ selector }) => selector.includes('card-header') && selector.includes('card-actions'),
+    );
+    expect(placed).toHaveLength(7);
+    for (const { selector } of placed) {
+      // A collapsible card's header sits in .card-disclosure, never directly in the card.
+      expect(selector).toMatch(/^\.card > \.card-header/);
+      expect(selector).not.toContain('card-disclosure');
+    }
+  });
+
+  it('uses logical properties only', () => {
+    for (const { selector, body } of all().filter((rule) =>
+      rule.selector.startsWith('.card > .card-header'),
+    )) {
+      expect(body, selector).not.toMatch(
+        /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|width|height)\s*:/,
+      );
+    }
   });
 });
 
@@ -1439,12 +1566,18 @@ describe('src/components/card.css, the collapsible card', () => {
   });
 
   it('sizes the header from what it holds: no size container, so a card that fits its content fits the title', () => {
-    const css = rules();
-    // A size container takes no width from its content, which let a folded card shrink to its padding, and
-    // it also made the header a containing block and a stacking context.
-    expect(css).not.toMatch(/container(?:-type|-name)?\s*:/);
-    expect(css).not.toContain('@container');
-    expect(css).not.toMatch(/grid-(?:row|column)\s*:/);
+    // A size container takes no width from its content. Here the header is all a folded card shows, so a
+    // folded card that takes the width of its content shrank to its padding; it also made the header a
+    // containing block and a stacking context. A plain card's header holding CardActions is a size container
+    // with a stand-in width of 0 (the CardActions describe), so a card that sizes to its content takes its
+    // width from its body or from its place, never from that header; none of its rules reaches this header.
+    const collapsible = all().filter(({ selector }) => !selector.startsWith('.card > .card-header'));
+    for (const { selector, body } of collapsible) {
+      expect(body, selector).not.toMatch(/container(?:-type|-name)?\s*:/);
+      expect(body, selector).not.toMatch(/grid-(?:row|column)\s*:/);
+    }
+    expect(rules().match(/@container/g)).toEqual(['@container']);
+    expect(rules()).toContain('@container card-header (inline-size >= 24rem)');
   });
 
   it('sets the chevron level with the first line of a title that wraps', () => {
@@ -1507,6 +1640,525 @@ describe('src/components/card.css, the collapsible card', () => {
       expect(css.indexOf(`${selector} {`)).toBeLessThan(start);
     }
     expect(reduced).toContain('transition: none;');
+  });
+});
+
+describe('src/components/description-list.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/description-list.css')));
+  const CONTAINER = '@container description-list (inline-size >= 30rem)';
+  const ROW = '.description-list-item {';
+  const PAD = 'calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad))';
+  /** The holders a list ends: a card, a card's last body, and a collapsible card's body. */
+  const FOOT =
+    ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)';
+  const LAST = (layout) =>
+    `${FOOT} > .description-list[data-layout='${layout}']:last-child > .description-list-item:last-child:has(> .description-list-actions) {`;
+  const FIRST =
+    ':is(.card, .card > .card-body:first-child) > .description-list:first-child > .description-list-item:first-child:has(> .description-list-actions) {';
+  const HORIZONTAL = ".description-list[data-layout='horizontal'] > .description-list-item {";
+  const AUTO = ".description-list[data-layout='auto'] > .description-list-item {";
+
+  /** The CSS with the container query's block taken out, so the narrow layout is read on its own. */
+  const outsideContainer = (css) => {
+    const start = css.indexOf(CONTAINER);
+    if (start === -1) return css;
+    const end = css.indexOf('{', start) + 1 + blockAfter(css, CONTAINER).length + 1;
+    return css.slice(0, start) + css.slice(end);
+  };
+
+  it('is a size container switching at 30rem, with an intrinsic width of 0', () => {
+    const css = rules();
+    const list = blockAfter(css, '.description-list {');
+    expect(list).toContain('container: description-list / inline-size;');
+    // The library's rule: a stand-in width is also the min-content width, which scrolled a phone page sideways.
+    expect(list).toContain('contain-intrinsic-inline-size: 0;');
+    expect(list).toContain('margin: 0;');
+    expect(list).toContain('padding: 0;');
+    // Stacked under 30rem: the term and the actions share the first line, the value spans the second.
+    const stacked = blockAfter(outsideContainer(css), ROW);
+    expect(stacked).toContain('grid-template-columns: minmax(0, 1fr) auto;');
+    expect(stacked).toContain("grid-template-areas: 'term actions' 'value value';");
+    expect(stacked).toContain('row-gap: calc(var(--spacing-part) / 2);');
+    // Side by side from 30rem, and only for the auto layout; horizontal holds it at every width.
+    const wide = blockAfter(css, CONTAINER);
+    const side = blockAfter(wide, AUTO);
+    expect(side).toContain("grid-template-areas: 'term value actions';");
+    expect(side).toContain('row-gap: 0;');
+    const horizontal = blockAfter(outsideContainer(css), HORIZONTAL);
+    expect(horizontal).toContain("grid-template-areas: 'term value actions';");
+    expect(horizontal).toContain('row-gap: 0;');
+    expect(css).not.toContain("[data-layout='stacked']");
+    // A row with no actions gives their column to the term or the value.
+    expect(
+      blockAfter(outsideContainer(css), '.description-list-item:not(:has(> .description-list-actions)) {'),
+    ).toContain("grid-template-areas: 'term term' 'value value';");
+    expect(
+      blockAfter(
+        wide,
+        ".description-list[data-layout='auto'] > .description-list-item:not(:has(> .description-list-actions)) {",
+      ),
+    ).toContain("grid-template-areas: 'term value value';");
+  });
+
+  it('draws the Dense data row against the body line, and a divider rule between rows only', () => {
+    const css = rules();
+    const row = blockAfter(outsideContainer(css), ROW);
+    expect(row).toContain('--description-list-row: max(var(--size-target), var(--size-field));');
+    expect(row).toContain(
+      '--description-list-pad: max(0px, calc((var(--description-list-row) - 1lh - 1px) / 2));',
+    );
+    expect(row).toContain('min-block-size: var(--description-list-row);');
+    expect(row).toContain('padding-block: var(--description-list-pad);');
+    expect(row).toContain('box-sizing: border-box;');
+    expect(row).toContain('align-items: baseline;');
+    expect(row).toContain('column-gap: var(--spacing-peer);');
+    // The rule is drawn on a row that follows another, so never above the first or under the last.
+    expect(
+      blockAfter(css, '.description-list[data-dividers] > .description-list-item + .description-list-item {'),
+    ).toContain('border-block-start: 1px solid var(--color-divider);');
+    expect(css).not.toMatch(/border(?:-block-end)?:/);
+    // The actions take back what a control has over the line, so the row does not grow for its button.
+    const actions = blockAfter(css, '.description-list-actions {');
+    expect(actions).toContain('margin-block: min(0px, calc((1lh - var(--size-control)) / 2));');
+    expect(actions).toContain('gap: var(--spacing-part);');
+    expect(actions).toContain('justify-content: flex-end;');
+  });
+
+  it('sets terms at the small step 500 in slate and values at the body step 450 in ink, empty values slate', () => {
+    const css = rules();
+    const row = blockAfter(outsideContainer(css), ROW);
+    expect(row).toContain('font-size: var(--text-body);');
+    expect(row).toContain('line-height: var(--text-body--line-height);');
+    const term = blockAfter(css, '.description-list-term {');
+    for (const declaration of [
+      'grid-area: term;',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: 500;',
+      'color: var(--color-slate);',
+    ]) {
+      expect(term, declaration).toContain(declaration);
+    }
+    const value = blockAfter(css, '.description-list-value {');
+    for (const declaration of [
+      'grid-area: value;',
+      'font-weight: var(--text-body--font-weight);',
+      'color: var(--color-ink);',
+      // Wraps, and breaks a long word anywhere: nothing truncates.
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(value, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.description-list-value[data-empty] {')).toContain('color: var(--color-slate);');
+    expect(css).not.toMatch(/text-overflow|line-clamp|--color-taupe|font-weight:\s*600/);
+  });
+
+  it('keeps numeric values left to right, isolated and at the line start', () => {
+    const numeric = blockAfter(rules(), '.description-list-value[data-numeric] {');
+    for (const declaration of [
+      'font-variant-numeric: tabular-nums;',
+      'direction: ltr;',
+      'unicode-bidi: isolate;',
+      'text-align: -webkit-match-parent;',
+      'text-align: match-parent;',
+    ]) {
+      expect(numeric, declaration).toContain(declaration);
+    }
+    // The standard name last, so a browser that knows it uses it.
+    expect(numeric.indexOf('text-align: match-parent;')).toBeGreaterThan(
+      numeric.indexOf('text-align: -webkit-match-parent;'),
+    );
+  });
+
+  it('takes the term column from --description-list-term-size, 30% by default', () => {
+    const css = rules();
+    const template =
+      'grid-template-columns: minmax(0, var(--description-list-term-size, 30%)) minmax(0, 1fr) auto;';
+    expect(blockAfter(outsideContainer(css), HORIZONTAL)).toContain(template);
+    expect(blockAfter(blockAfter(css, CONTAINER), AUTO)).toContain(template);
+  });
+
+  it("moves a first or last row's controls by the holder's corner inset less its padding, in a card only", () => {
+    const css = rules();
+    // The foot: side by side only, horizontal at every width and auto from 30rem, where the controls stand on
+    // the last row's first line. Stacked, they are on the term's line at the row's top, clear of the curve.
+    expect(blockAfter(outsideContainer(css), LAST('horizontal'))).toContain(`padding-block-end: ${PAD};`);
+    const corner = css.slice(css.lastIndexOf(CONTAINER));
+    expect(corner).not.toBe(css.slice(css.indexOf(CONTAINER)));
+    expect(blockAfter(blockAfter(corner, CONTAINER), LAST('auto'))).toContain(`padding-block-end: ${PAD};`);
+    // The head: the first row's controls in every layout, since they stand on its first line either way.
+    expect(blockAfter(css, FIRST)).toContain(`padding-block-start: ${PAD};`);
+    // Down, never in, so a trailing action keeps the column's end edge; and only in a card.
+    expect(css).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);
+    const moved = [...css.matchAll(/([^{}]+)\{([^{}]*--holder-corner-inset[^{}]*)\}/g)].map((match) => ({
+      selector: match[1].trim(),
+      declaration: match[2].trim(),
+    }));
+    expect(moved).toHaveLength(3);
+    for (const { selector, declaration } of moved) {
+      expect(selector).toMatch(/^:is\(\.card, \.card > \.card-body/);
+      // Every block-end move names a side-by-side layout.
+      if (declaration.startsWith('padding-block-end')) expect(selector).toContain('[data-layout=');
+    }
+    // Logical properties throughout, so the layout mirrors in right to left.
+    expect(css).not.toMatch(/(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right):/);
+  });
+
+  it("hides the actions in print and names the rule's color in forced colors", () => {
+    const css = rules();
+    expect(blockAfter(blockAfter(css, '@media print'), '.description-list-actions {')).toContain(
+      'display: none;',
+    );
+    const forced = blockAfter(css, '@media (forced-colors: active)');
+    expect(
+      blockAfter(
+        forced,
+        '.description-list[data-dividers] > .description-list-item + .description-list-item {',
+      ),
+    ).toContain('border-block-start-color: canvastext;');
+  });
+});
+
+describe('src/components/gauge.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/gauge.css')));
+  const SEMICIRCLE = ".gauge[data-form='semicircle']";
+  /** The block of the rule whose whole selector is `selector`, not one that lists it among others. */
+  const rule = (css, selector) => {
+    const found = [...css.matchAll(/(?<=^|[{}])\s*([^{}]+?)\s*\{/g)].find((match) => match[1] === selector);
+    return found ? blockAfter(css.slice(found.index), `${selector} {`) : '';
+  };
+
+  it('sizes the dial at 2, 6 and 10rem', () => {
+    const css = rules();
+    expect(rule(css, '.gauge')).toContain('--gauge-size: 6rem;');
+    expect(rule(css, ".gauge[data-size='sm']")).toContain('--gauge-size: 2rem;');
+    expect(rule(css, ".gauge[data-size='lg']")).toContain('--gauge-size: 10rem;');
+    expect(rule(css, '.gauge-dial')).toContain('inline-size: var(--gauge-size);');
+    // The stroke's share of each box, 8 of 96, 4 of 32 and 12 of 160, so the figure's inner circle follows an
+    // app's own --gauge-size.
+    expect(rule(css, '.gauge')).toContain('--gauge-band: calc(var(--gauge-size) / 12);');
+    expect(rule(css, ".gauge[data-size='sm']")).toContain('--gauge-band: calc(var(--gauge-size) / 8);');
+    expect(rule(css, ".gauge[data-size='lg']")).toContain('--gauge-band: calc(var(--gauge-size) * 3 / 40);');
+    // The svg scales uniformly from its viewBox, so a circle stays a circle at any size.
+    const svg = rule(css, '.gauge-svg');
+    expect(svg).toContain('inline-size: 100%;');
+    expect(svg).toContain('block-size: auto;');
+    expect(svg).toContain('overflow: visible;');
+  });
+
+  it('strokes the track in the frame color and the value in --gauge-ink, round caps on both', () => {
+    const css = rules();
+    const both = blockAfter(css, '.gauge-track, .gauge-value {');
+    expect(both).toContain('fill: none;');
+    expect(both).toContain('stroke-linecap: round;');
+    expect(rule(css, '.gauge-track')).toContain('stroke: var(--color-frame);');
+    expect(rule(css, '.gauge-value')).toContain('stroke: var(--gauge-ink);');
+    expect(rule(css, '.gauge')).toContain('--gauge-ink: var(--color-ink);');
+    // Round in every shape: nothing here reads the shape axis.
+    expect(css).not.toMatch(/data-shape|--radius-|stroke-linecap: square/);
+    // Butt caps only where nothing is drawn: an empty arc's zero-length dash.
+    expect(css.match(/stroke-linecap: butt/g)).toHaveLength(1);
+    expect(rule(css, '.gauge-value[data-empty]')).toContain('stroke-linecap: butt;');
+  });
+
+  it('turns --gauge-ink warning for warning and over the limit, and error for error, error last', () => {
+    const css = rules();
+    const warning = ".gauge:is([data-tone='warning'], [data-over]) {";
+    const error = ".gauge[data-tone='error'] {";
+    expect(blockAfter(css, warning)).toContain('--gauge-ink: var(--color-warning);');
+    expect(blockAfter(css, error)).toContain('--gauge-ink: var(--color-error);');
+    // Equal weight, so the later rule wins: an error over the limit stays error.
+    expect(css.indexOf(error)).toBeGreaterThan(css.indexOf(warning));
+    expect(css).not.toMatch(/--color-(?:success|gain|signal|clay|taupe)/);
+  });
+
+  it('moves the value over 200ms and stops under reduced motion', () => {
+    const css = rules();
+    const value = rule(css, '.gauge-value');
+    expect(value).toContain(
+      'transition: stroke-dasharray 200ms ease, stroke-dashoffset 200ms ease, stroke 200ms ease;',
+    );
+    expect(rule(blockAfter(css, '@media (prefers-reduced-motion: reduce)'), '.gauge-value')).toContain(
+      'transition: none;',
+    );
+    // Nothing else moves, and nothing sweeps in: a transition never runs on the first style.
+    expect(css.match(/transition:/g)).toHaveLength(2);
+    // A share of 0 keeps its path to move from and to: a zero-length dash that butt caps leave unpainted.
+    expect(rule(css, '.gauge-value[data-empty]')).toContain('stroke-linecap: butt;');
+    expect(css).not.toMatch(/animation|@keyframes/);
+  });
+
+  it('mirrors the svg by --gauge-flip from the dir attribute', () => {
+    const css = rules();
+    expect(rule(css, ":where([dir='ltr' i])")).toContain('--gauge-flip: 1;');
+    expect(rule(css, ":where([dir='rtl' i])")).toContain('--gauge-flip: -1;');
+    expect(rule(css, '.gauge-svg')).toContain('scale: var(--gauge-flip, 1) 1;');
+    // Only the svg mirrors: the figure and the text are HTML and keep their reading order.
+    expect(css.match(/--gauge-flip,/g)).toHaveLength(1);
+    expect(css).not.toContain(':dir(');
+  });
+
+  it('draws marks in ink over gaps the svg cuts, reading no surface color', () => {
+    const css = rules();
+    // The 6px gap is a mask in the svg, so the real background shows through it on any surface: nothing here
+    // names the surface a gauge sits on.
+    expect(css).not.toMatch(/--meter-surface|--color-(?:lifted|canvas|float)|gauge-mark-ring/);
+    const mark = rule(css, '.gauge-mark');
+    expect(mark).toContain('stroke: var(--color-ink);');
+    expect(mark).toContain('stroke-width: 2px;');
+  });
+
+  it('sets the figure at the h3 step at md and the numeral step at lg, 500, tabular, left to right', () => {
+    const css = rules();
+    const figure = rule(css, '.gauge-figure-value');
+    for (const declaration of [
+      'font-size: var(--text-h3);',
+      'line-height: var(--text-h3--line-height);',
+      'letter-spacing: var(--text-h3--letter-spacing);',
+      'font-weight: var(--text-h3--font-weight);',
+      'font-variant-numeric: tabular-nums;',
+      'white-space: nowrap;',
+      'direction: ltr;',
+      'unicode-bidi: isolate;',
+      'color: var(--color-ink);',
+    ]) {
+      expect(figure, declaration).toContain(declaration);
+    }
+    const large = rule(css, ".gauge[data-size='lg'] .gauge-figure-value");
+    for (const declaration of [
+      'font-size: var(--text-numeral-sm);',
+      'line-height: var(--text-numeral-sm--line-height);',
+      'letter-spacing: var(--text-numeral-sm--letter-spacing);',
+      'font-weight: var(--text-numeral-sm--font-weight);',
+    ]) {
+      expect(large, declaration).toContain(declaration);
+    }
+    // The caption is slate, at the small step, never toned, and two lines at most.
+    const caption = rule(css, '.gauge-figure-caption');
+    for (const declaration of [
+      'font-size: var(--text-small);',
+      'font-weight: var(--text-small--font-weight);',
+      'color: var(--color-slate);',
+      '-webkit-line-clamp: 2;',
+      'overflow: hidden;',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(caption, declaration).toContain(declaration);
+    }
+    // Weights 500 and the steps' own tokens only: 500 for the figure and the label, 450 for the caption and the
+    // value text.
+    for (const weight of css.matchAll(/font-weight:\s*([^;]+);/g))
+      expect(weight[1]).toMatch(/^(?:500|var\(--text-(?:h3|numeral-sm|small)--font-weight\))$/);
+  });
+
+  it("centres the figure in a ring's inner circle and sets a semicircle's on its chord", () => {
+    const css = rules();
+    // The dial stacks the svg and the figure in one cell, so a semicircle's caption under the chord gives the dial
+    // its height.
+    expect(rule(css, '.gauge-dial')).toContain('display: grid;');
+    expect(blockAfter(css, '.gauge-svg, .gauge-figure {')).toContain('grid-area: 1 / 1;');
+    const ring = rule(css, '.gauge-figure');
+    expect(ring).toContain('padding: var(--gauge-band);');
+    expect(ring).toContain('justify-content: center;');
+    // A semicircle: a strut half the box tall, whose baseline is its foot, holds the figure's baseline on the chord.
+    const semicircle = rule(css, `${SEMICIRCLE} .gauge-figure`);
+    expect(semicircle).toContain('flex-flow: row wrap;');
+    expect(semicircle).toContain('align-items: baseline;');
+    expect(semicircle).toContain('padding: 0 var(--gauge-band);');
+    expect(rule(css, `${SEMICIRCLE} .gauge-figure::before`)).toContain(
+      'block-size: calc(var(--gauge-size) / 2);',
+    );
+    expect(rule(css, `${SEMICIRCLE} .gauge-figure-caption`)).toContain('flex-basis: 100%;');
+  });
+
+  it('puts the text under the dial at md and lg, at least the dial or 12rem wide, and beside it at sm', () => {
+    const css = rules();
+    const text = rule(css, '.gauge-text');
+    expect(text).toContain('max-inline-size: max(var(--gauge-size), 12rem);');
+    expect(text).toContain('text-align: center;');
+    expect(text).toContain('overflow-wrap: anywhere;');
+    const small = rule(css, ".gauge[data-size='sm']");
+    expect(small).toContain('grid-template-columns: auto minmax(0, 1fr);');
+    expect(small).toContain('align-items: center;');
+    expect(rule(css, ".gauge[data-size='sm'] .gauge-text")).toContain('text-align: start;');
+    const label = rule(css, '.gauge-label');
+    expect(label).toContain('font-weight: 500;');
+    expect(label).toContain('color: var(--color-ink);');
+    const value = rule(css, '.gauge-value-label');
+    expect(value).toContain('font-weight: var(--text-small--font-weight);');
+    expect(value).toContain('font-variant-numeric: tabular-nums;');
+    expect(value).toContain('color: var(--color-slate);');
+    // Logical properties throughout.
+    expect(css).not.toMatch(
+      /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|top|bottom):/,
+    );
+  });
+
+  it('sizes a ring caption to the inner circle at its line: one line at md and two at lg', () => {
+    const css = rules();
+    // The figure's line is its own size in a ring, so the block is as short as it can be.
+    expect(rule(css, ".gauge[data-form='ring'] .gauge-figure-value")).toContain('line-height: 1;');
+    const ring = rule(css, ".gauge[data-form='ring'] .gauge-figure-caption");
+    expect(ring).toContain('-webkit-line-clamp: 1;');
+    expect(ring).toContain('max-inline-size: calc(var(--gauge-size) * 5 / 8);');
+    const large = rule(css, ".gauge[data-form='ring'][data-size='lg'] .gauge-figure-caption");
+    expect(large).toContain('-webkit-line-clamp: 2;');
+    expect(large).toContain('max-inline-size: calc(var(--gauge-size) * 13 / 20);');
+  });
+
+  it('names graytext, canvastext and highlight in forced colors, and keeps the mask out of the repaint', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(rule(forced, '.gauge-track')).toContain('stroke: graytext;');
+    expect(rule(forced, '.gauge-value')).toContain('stroke: canvastext;');
+    expect(rule(forced, '.gauge-mark')).toContain('stroke: highlight;');
+    expect(rule(forced, '.gauge-mask')).toContain('forced-color-adjust: none;');
+  });
+
+  it('keeps print colors exact', () => {
+    const root = rule(rules(), '.gauge');
+    expect(root).toContain('-webkit-print-color-adjust: exact;');
+    expect(root).toContain('print-color-adjust: exact;');
+  });
+});
+
+describe('src/components/month-grid.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/month-grid.css')));
+  const NARROW = '@container month-grid (inline-size < 28rem)';
+  /** The block of the rule whose whole selector is `selector`, not one that lists it among others. */
+  const rule = (css, selector) => {
+    const found = [...css.matchAll(/(?<=^|[{}])\s*([^{}]+?)\s*\{/g)].find((match) => match[1] === selector);
+    return found ? blockAfter(css.slice(found.index), `${selector} {`) : '';
+  };
+  /** The block for a look, written once for the cell and its legend swatch. */
+  const look = (css, name) =>
+    rule(css, `.month-grid-cell[data-look='${name}'], .month-grid-swatch[data-look='${name}']`);
+
+  it('is a size container with a 0 intrinsic width, hiding all but quarter labels under 28rem', () => {
+    const css = rules();
+    const grid = rule(css, '.month-grid');
+    expect(grid).toContain('container: month-grid / inline-size;');
+    // The library-wide ruling (spec corrections 34 and 45): a stand-in width is the holder's min-content, which
+    // scrolls a 320px page sideways from a flex: 1 wrapper or a 1fr track, so it is 0 and a content-sized holder
+    // gives the grid a width.
+    expect(grid).toContain('contain-intrinsic-inline-size: 0;');
+    expect(grid).toContain('min-width: 0;');
+    expect(grid).toContain('margin: 0;');
+    const narrow = blockAfter(css, NARROW);
+    expect(rule(narrow, '.month-grid-month:not([data-quarter])')).toContain('visibility: hidden;');
+    // A quarter's label may run on over the hidden ones after it, rather than be clipped by its column.
+    expect(rule(narrow, '.month-grid-month[data-quarter]')).toContain('overflow: visible;');
+    expect(css.match(/@container/g)).toHaveLength(2);
+  });
+
+  it('wraps under 12rem instead of shrinking: a year on its own line, then half-years, and no header', () => {
+    const css = rules();
+    const narrow = blockAfter(css, '@container month-grid (inline-size < 12rem)');
+    // The half count is the component's --month-grid-half, never a calc() inside repeat().
+    expect(rule(narrow, '.month-grid-grid')).toContain(
+      'grid-template-columns: repeat(var(--month-grid-half, 6), minmax(0, 1fr));',
+    );
+    expect(css).not.toMatch(/repeat\(\s*calc/);
+    expect(rule(narrow, '.month-grid-corner, .month-grid-month')).toContain('display: none;');
+    const year = rule(narrow, '.month-grid-year');
+    expect(year).toContain('grid-column: 1 / -1;');
+    expect(year).toContain('padding-inline-end: 0;');
+    // It follows the 28rem query, so it wins where both apply.
+    expect(css.indexOf('(inline-size < 12rem)')).toBeGreaterThan(css.indexOf('(inline-size < 28rem)'));
+  });
+
+  it('lays the grid out as a year column and --month-grid-columns columns 2px apart', () => {
+    const css = rules();
+    const grid = rule(css, '.month-grid-grid');
+    expect(grid).toContain('display: grid;');
+    expect(grid).toContain(
+      'grid-template-columns: auto repeat(var(--month-grid-columns, 12), minmax(0, 1fr));',
+    );
+    expect(grid).toContain('gap: 2px;');
+    const year = rule(css, '.month-grid-year');
+    // Each year starts a row of its own, so a row of the wrong length cannot move the years under it.
+    expect(year).toContain('grid-column: 1;');
+    expect(year).toContain('padding-inline-end: calc(var(--spacing-part) - 2px);');
+    expect(year).toContain('font-weight: 500;');
+    expect(year).toContain('font-variant-numeric: tabular-nums;');
+    expect(year).toContain('unicode-bidi: isolate;');
+    const month = rule(css, '.month-grid-month');
+    expect(month).toContain('font-weight: 450;');
+    expect(month).toContain('color: var(--color-slate);');
+    expect(month).toContain('text-align: center;');
+    expect(month).toContain('white-space: nowrap;');
+    expect(rule(css, '.month-grid-cell')).toContain('block-size: 1rem;');
+    // Logical properties throughout, so the year column and January are at the right on a right-to-left page.
+    expect(css).not.toMatch(
+      /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|top|bottom|width|height):/,
+    );
+  });
+
+  it("draws filled, partial and empty as ink, Meter's hatch with its edge, and a boundary outline", () => {
+    const css = rules();
+    expect(look(css, 'filled')).toContain('background-color: var(--color-ink);');
+    const partial = look(css, 'partial');
+    expect(partial).toContain('border: 1px solid var(--color-ink);');
+    expect(partial).toContain(
+      'background-image: repeating-linear-gradient(45deg, var(--color-ink) 0 2px, transparent 2px 6px);',
+    );
+    expect(look(css, 'empty')).toContain('border: 1px solid var(--color-boundary);');
+    // A month outside the range is blank, and no look is a meaning: no reserved color anywhere.
+    expect(css).not.toContain("[data-look='none']");
+    expect(css).not.toMatch(/--color-(?:error|warning|success|gain|signal|clay|taupe)/);
+    // The summary and the legend's labels are slate; the swatch is Meter's 12px, on the cell's corner, since the
+    // micro step on 12px is a circle and a key looks like what it stands for (spec correction 46).
+    expect(rule(css, '.month-grid-summary')).toContain('color: var(--color-slate);');
+    expect(rule(css, '.month-grid-legend-label')).toContain('color: var(--color-slate);');
+    const swatch = rule(css, '.month-grid-swatch');
+    expect(swatch).toContain('inline-size: 0.75rem;');
+    expect(swatch).toContain('block-size: 0.75rem;');
+    expect(swatch).toContain('border-radius: calc(var(--radius-micro) * 2 / 3);');
+    for (const weight of css.matchAll(/font-weight:\s*([^;]+);/g))
+      expect(weight[1]).toMatch(/^(?:450|500|var\(--text-small--font-weight\))$/);
+  });
+
+  it('rounds a cell at two thirds of the micro step', () => {
+    // 4px in Rounded and Soft and 0 in Square: a text-sized part, under every holder's formula.
+    expect(rule(rules(), '.month-grid-cell')).toContain('border-radius: calc(var(--radius-micro) * 2 / 3);');
+  });
+
+  it('clips the table from sight inside its own 1px box, as the status host is', () => {
+    const host = rule(rules(), '.month-grid-alternative');
+    for (const declaration of [
+      'position: absolute;',
+      'inline-size: 1px;',
+      'block-size: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+      'white-space: nowrap;',
+    ])
+      expect(host, declaration).toContain(declaration);
+    expect(rule(rules(), '.month-grid')).toContain('position: relative;');
+  });
+
+  it('keeps three shapes in forced colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(look(forced, 'filled')).toContain('background-color: canvastext;');
+    const partial = look(forced, 'partial');
+    expect(partial).toContain('forced-color-adjust: none;');
+    expect(partial).toContain('border-color: canvastext;');
+    expect(partial).toContain('background-color: canvas;');
+    expect(partial).toContain(
+      'background-image: repeating-linear-gradient(45deg, canvastext 0 2px, canvas 2px 6px);',
+    );
+    expect(look(forced, 'empty')).toContain('border-color: canvastext;');
+  });
+
+  it('keeps print colors exact', () => {
+    const root = rule(rules(), '.month-grid');
+    expect(root).toContain('-webkit-print-color-adjust: exact;');
+    expect(root).toContain('print-color-adjust: exact;');
   });
 });
 
@@ -2902,6 +3554,8 @@ describe('src/components/tooltip.css', () => {
         'stat-tile.css',
         'meter.css',
         'charts.css',
+        'gauge.css',
+        'month-grid.css',
         'search-field.css',
         'select.css',
         'combo-box.css',
@@ -3835,10 +4489,14 @@ describe('src/components/stat-tile.css', () => {
     expect(rules()).not.toContain('box-shadow');
   });
 
-  it('names a 16rem tile as its width in a parent that sizes it from its content', () => {
-    expect(blockAfter(rules(), '.stat-tile {')).toContain(
-      'contain-intrinsic-inline-size: calc(16rem - 2 * var(--spacing-card) - 2px);',
-    );
+  it('is a size container with an intrinsic inline size of 0, never a stand-in width', () => {
+    const tile = blockAfter(rules(), '.stat-tile {');
+    expect(tile).toContain('container: stat-tile / inline-size;');
+    // The library's rule (spec corrections 30, 34 and 63): a stand-in width is also the tile's min-content width,
+    // which a flex: 1 item or a 1fr track keeps as its narrowest, so two tiles scrolled a 320px page sideways.
+    expect(tile).toContain('contain-intrinsic-inline-size: 0;');
+    // A tile straight in a flex row is a whole 16rem tile, as 0.6.1 drew it, and shrinks from there (correction 69).
+    expect(tile).toContain('flex: 0 1 16rem;');
   });
 
   it('makes a tile in a card concentric with it, with the frame edge', () => {
@@ -7888,15 +8546,13 @@ describe('src/components/data-table.css', () => {
         ".data-table-body > .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) {",
       ),
     ).toContain('--color-slate: var(--color-granite);');
-    // Outside hover, only a selected row's and a selected list item's 8% wash mixes a color.
+    // Outside hover, only a selected row's and a selected list item's 8% wash mixes a color, as the fill and as the
+    // surface a meter in the row cuts its segments with (spec correction 64).
     expect(
       outsideForcedColors(css)
         .replace(hover, '')
         .match(/color-mix\([^;]*/g),
-    ).toEqual([
-      'color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))',
-      'color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))',
-    ]);
+    ).toEqual(Array(4).fill('color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))'));
   });
 
   it('makes the checkbox column 3.5rem with a part step of padding', () => {
@@ -8491,16 +9147,37 @@ describe('src/components/data-table.css', () => {
     ).toContain('color: inherit;');
   });
 
-  it('gives the table a width in a parent that sizes it from its content', () => {
+  it('is a size container with an intrinsic inline size of 0 that takes the room its siblings leave', () => {
     const root = blockAfter(rules(), '.data-table {');
+    // The library's rule (spec corrections 30, 34 and 63): a stand-in width is also the table's min-content
+    // width, which a flex: 1 item or a 1fr track keeps as its narrowest, so two tables scrolled a 320px page.
     for (const declaration of [
       'container: data-table / inline-size;',
-      'contain-intrinsic-inline-size: 12rem;',
+      'contain-intrinsic-inline-size: 0;',
       'flex: 1 1 0;',
       'min-inline-size: 0;',
       'max-block-size: max-content;',
     ]) {
       expect(root, declaration).toContain(declaration);
+    }
+  });
+
+  it("gives a meter in a row the row's own fill for its cuts, plain, hovered and selected (spec correction 64)", () => {
+    // Meter cuts its segments apart and rings its pace marker in --meter-surface, Lifted unless set, which drew a
+    // pale block on a canvas row and on every hovered or selected one. Each fill that paints a row sets it too.
+    expect(blockAfter(rules(), '.data-table {')).toContain('--meter-surface: var(--data-table-fill);');
+    const painted = blocks().filter(
+      ([selector, body]) =>
+        /\.data-table-(?:row|item)/.test(selector) &&
+        /background-color: color-mix\(in srgb, var\(--color-ink\) \d+%, var\(--data-table-fill\)\);/.test(
+          body,
+        ),
+    );
+    // The hovered row and item, and the selected row and item.
+    expect(painted).toHaveLength(4);
+    for (const [selector, body] of painted) {
+      const wash = /background-color: (color-mix\([^;]+\));/.exec(body)?.[1];
+      expect(body, selector).toContain(`--meter-surface: ${wash};`);
     }
   });
 
@@ -10135,6 +10812,18 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       `:is(.card, .card > .card-body:last-child) > ${chartList('')}:last-child ${chartList('toolbar')} {`,
       `margin-block-end: ${EXTRA};`,
     ],
+    [
+      'description-list.css',
+      ":is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .description-list[data-layout='horizontal']:last-child > .description-list-item:last-child:has(> .description-list-actions) {",
+      'padding-block-end: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));',
+    ],
+    [
+      'description-list.css',
+      ':is(.card, .card > .card-body:first-child) > .description-list:first-child > .description-list-item:first-child:has(> .description-list-actions) {',
+      'padding-block-start: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));',
+    ],
+    ['card.css', '.card > .card-header > .card-actions {', `margin-block-start: ${EXTRA};`],
+    ['card.css', '.card > .card-header > .card-actions:first-child {', `margin-block-start: ${EXTRA};`],
   ];
 
   it('moves no control inward where a content column stands above it, so a trailing action keeps its edge', () => {
@@ -10144,6 +10833,10 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       [
         'charts.css',
         `:is(.card, .card > .card-body:last-child) > ${chartList('')}:last-child ${chartList('toolbar')} {`,
+      ],
+      [
+        'description-list.css',
+        ":is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .description-list[data-layout='horizontal']:last-child > .description-list-item:last-child:has(> .description-list-actions) {",
       ],
     ]) {
       expect(blockAfter(css(file), header), header).not.toMatch(/(?:padding|margin)-inline[^;]*corner-inset/);

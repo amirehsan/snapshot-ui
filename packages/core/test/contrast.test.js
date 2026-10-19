@@ -585,6 +585,137 @@ describe('the meter', () => {
   });
 });
 
+describe('the description list', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The values are ink and the terms and "Not set" slate, on the canvas, in a card on lifted, or in a panel on
+  // float. The gate already holds each as text there, so the list adds no pair, and its divider is a cue.
+  it('cites ink and slate on canvas, lifted and float, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'ink', ground: 'float', light: 18.43, dark: 17.42 },
+      { name: 'slate', ground: 'float', light: 5.49, dark: 6.94 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
+describe('the month grid', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A filled cell and the partial hatch are ink, an empty cell's outline the boundary, on the canvas or in a card
+  // on lifted; the labels and the summary are ink and slate. The gate holds every pair already, so the grid adds
+  // none: ink as text, which a fill of the same color passes too, and the boundary painted on the surface.
+  it('cites ink on canvas and lifted, and the boundary against canvas and lifted, which the gate holds', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      for (const text of ['ink', 'slate'])
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      expect(
+        CONTRAST_PAIRS.some(
+          (pair) =>
+            pair.text === 'boundary' &&
+            pair.ground === ground &&
+            pair.fill === undefined &&
+            pair.minimum === NON_TEXT,
+        ),
+        `boundary against ${ground}`,
+      ).toBe(true);
+    }
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      // An empty cell has no fill, so its edge is the boundary painted on the surface itself, the switch's off
+      // track pair, and not a control's edge around a Raised fill, spec 8.5's 3.36 and 3.06 (spec correction 43).
+      { name: 'boundary', ground: 'lifted', light: 3.45, dark: 5.21 },
+      { name: 'boundary', ground: 'canvas', light: 3.38, dark: 5.34 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+      expect(measured('light', name, ground)).toBeGreaterThanOrEqual(NON_TEXT);
+      expect(measured('dark', name, ground)).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+});
+
+describe('the gauge', () => {
+  /** A token color over the track, the frame composited over `surface`, and measured against the track. */
+  const onTrack = (mode, name, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const track = composite(parseColor(palette.frame), parseColor(palette[surface]));
+    return contrastRatio(composite(parseColor(palette[name]), track), track);
+  };
+  /** The track, the frame composited over `surface`, against that surface. */
+  const track = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[surface]);
+    return contrastRatio(composite(parseColor(palette.frame), ground), ground);
+  };
+
+  // The figure and the label are ink, and the caption and the value text slate, on a card, the canvas or a panel.
+  // The gate already holds each as text there, so the gauge adds no pair.
+  it('cites ink and slate as text, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // The track is the frame, ink at 12%, over the surface: a mix and not a token, so the arcs are measured against
+  // it here and recorded, not gated. Each arc passes the 3:1 a graphic needs in both modes; the track against the
+  // surface is a cue, since the value text, which is required, carries the extent (Meter's record).
+  it('measures the ink, warning and error arcs against the track over lifted, the canvas and float, recorded and not gated', () => {
+    for (const { surface, mode, ink, warning, error, edge } of [
+      { surface: 'lifted', mode: 'light', ink: 13.88, warning: 4.77, error: 5.62, edge: 1.28 },
+      { surface: 'lifted', mode: 'dark', ink: 12.19, warning: 6.24, error: 4.01, edge: 1.43 },
+      { surface: 'canvas', mode: 'light', ink: 12.69, warning: 4.36, error: 5.14, edge: 1.28 },
+      { surface: 'canvas', mode: 'dark', ink: 14.19, warning: 7.27, error: 4.67, edge: 1.36 },
+      { surface: 'float', mode: 'light', ink: 14.34, warning: 4.92, error: 5.8, edge: 1.29 },
+      { surface: 'float', mode: 'dark', ink: 12.19, warning: 6.24, error: 4.01, edge: 1.43 },
+    ]) {
+      const where = `on the track over ${surface}, ${mode}`;
+      expect(onTrack(mode, 'ink', surface), `ink ${where}`).toBeCloseTo(ink, 2);
+      expect(onTrack(mode, 'warning', surface), `warning ${where}`).toBeCloseTo(warning, 2);
+      expect(onTrack(mode, 'error', surface), `error ${where}`).toBeCloseTo(error, 2);
+      expect(track(mode, surface), `the track over ${surface}, ${mode}`).toBeCloseTo(edge, 2);
+      for (const name of ['ink', 'warning', 'error'])
+        expect(onTrack(mode, name, surface), `${name} ${where}`).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+});
+
 describe('the charts', () => {
   /** A token color painted over `ground` and measured against it, as a reader sees it. */
   const measured = (mode, name, groundName) => {

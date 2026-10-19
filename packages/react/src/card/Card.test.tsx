@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
-import { Card, CardBody, CardHeader, CardNote, CardTitle } from './Card';
+import { Button } from '../button';
+import { IconButton } from '../icon-button';
+import { Menu, MenuItem, MenuTrigger } from '../menu';
+import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from './Card';
 
 interface PartProps {
   className?: string;
@@ -20,6 +23,7 @@ const parts: [name: string, tag: string, baseClass: string, part: (props: PartPr
   ['CardTitle', 'H2', 'card-title', (props) => <CardTitle {...props}>Text</CardTitle>],
   ['CardNote', 'P', 'card-note', (props) => <CardNote {...props}>Text</CardNote>],
   ['CardBody', 'DIV', 'card-body', (props) => <CardBody {...props}>Text</CardBody>],
+  ['CardActions', 'DIV', 'card-actions', (props) => <CardActions {...props}>Text</CardActions>],
 ];
 
 describe.each(parts)('%s', (_name, tag, baseClass, part) => {
@@ -201,6 +205,92 @@ describe('a composed card', () => {
         <Card>Just content</Card>
       </>,
     );
+    await expectNoA11yViolations(container);
+  });
+});
+
+describe('CardActions', () => {
+  it('draws CardActions as div.card-actions with its children, className and ref', () => {
+    let received: HTMLDivElement | null = null;
+    render(
+      <Card>
+        <CardHeader>
+          <CardTitle>Details</CardTitle>
+          <CardNote>Updated from your bank feed</CardNote>
+          <CardActions
+            className="extra"
+            data-testid="actions"
+            ref={(node) => {
+              received = node;
+            }}
+          >
+            <button type="button">Edit details</button>
+          </CardActions>
+        </CardHeader>
+      </Card>,
+    );
+    const actions = screen.getByTestId('actions');
+    expect(actions.tagName).toBe('DIV');
+    expect(actions).toHaveAttribute('class', 'card-actions extra');
+    expect(received).toBe(actions);
+    expect(actions).toContainElement(screen.getByRole('button', { name: 'Edit details' }));
+    // No role of its own: the buttons inside are named by the app.
+    expect(actions).not.toHaveAttribute('role');
+    // The reading order is the markup's: the title, the note, then the actions.
+    const header = actions.parentElement;
+    expect([...(header?.children ?? [])].map((child) => child.className)).toEqual([
+      'card-title',
+      'card-note',
+      'card-actions extra',
+    ]);
+  });
+
+  const AXE_CASES: [name: string, element: ReactElement][] = [
+    [
+      'a Button and a Menu trigger beside a title and a note',
+      <Card as="section" aria-labelledby="details-title" key="menu">
+        <CardHeader>
+          <CardTitle id="details-title">Details</CardTitle>
+          <CardNote>Updated from your bank feed</CardNote>
+          <CardActions>
+            <Button variant="secondary" aria-label="Edit details">
+              Edit
+            </Button>
+            <MenuTrigger>
+              <IconButton aria-label="More actions" variant="outline">
+                <svg aria-hidden="true" width="20" height="20" />
+              </IconButton>
+              <Menu>
+                <MenuItem id="merge">Merge</MenuItem>
+                <MenuItem id="remove">Remove</MenuItem>
+              </Menu>
+            </MenuTrigger>
+          </CardActions>
+        </CardHeader>
+        <CardBody>
+          <p>Everyday Visa</p>
+        </CardBody>
+      </Card>,
+    ],
+    [
+      'three Buttons beside a title alone',
+      <Card as="section" aria-labelledby="account-title" key="buttons">
+        <CardHeader>
+          <CardTitle id="account-title">Details</CardTitle>
+          <CardActions>
+            <Button variant="secondary" aria-label="Edit details">
+              Edit
+            </Button>
+            <Button variant="secondary">Merge</Button>
+            <Button variant="secondary">Remove</Button>
+          </CardActions>
+        </CardHeader>
+      </Card>,
+    ],
+  ];
+
+  it.each(AXE_CASES)('has no axe violations with %s', async (_name, element) => {
+    const { container } = render(element);
     await expectNoA11yViolations(container);
   });
 });

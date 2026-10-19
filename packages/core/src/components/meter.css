@@ -4,6 +4,8 @@
  * both warning over the limit, where the app's words say so too. Touching segments are cut apart by a 2px
  * border in the surface the meter sits on, and the pace marker is 2px of ink 16px tall in a 2px ring of that
  * surface; the surface is --meter-surface, read with Lifted as its fallback so an ancestor can set it once.
+ * DataTable sets it to each row's own fill, hovered and selected rows included, so a meter in a row cuts in the
+ * row's color; an app that puts a meter on any other surface sets it to that surface.
  * Borders, not shadows, because a shadow is not a token. The held segment keeps a 1px ink edge drawn inside
  * the spacer, so it still shows where backgrounds are not painted.
  */

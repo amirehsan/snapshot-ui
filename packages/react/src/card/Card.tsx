@@ -56,6 +56,21 @@ export function CardNote({ className, ...props }: CardNoteProps): ReactElement {
   return <p {...props} className={cx('card-note', className)} />;
 }
 
+export interface CardActionsProps extends HTMLAttributes<HTMLDivElement> {
+  ref?: Ref<HTMLDivElement>;
+}
+
+/**
+ * Buttons in a plain card's header, such as Edit and a More menu on a Details card. Place it in `CardHeader`
+ * after `CardTitle` and `CardNote`, so the reading order is the title, the note, then the actions. They sit at
+ * the end of the title's line, clear of the card's rounded corner, and move under the note in a header
+ * narrower than 24rem. Show at most two; put the rest in a More menu. No role: each button is named by the
+ * app, such as "Edit details".
+ */
+export function CardActions({ className, ...props }: CardActionsProps): ReactElement {
+  return <div {...props} className={cx('card-actions', className)} />;
+}
+
 export interface CardBodyProps extends HTMLAttributes<HTMLDivElement> {
   ref?: Ref<HTMLDivElement>;
 }

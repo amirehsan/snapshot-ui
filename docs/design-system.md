@@ -880,6 +880,8 @@ And the controls that move, by the corner inset (below):
 | SidePanel | a field or button at the body's foot | down | the body ends at the corner inset | 39px under it, not 24px | as before | as before |
 | Drawer | the footer's content | down | the footer ends at the corner inset | 39px under it, not 24px | as before | as before |
 | a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
+| Card | the list's first or last row's controls | down | the row's block padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
+| Card | CardActions beside the title | down | the actions and the title take a top margin of the corner inset less the card's padding; under 24rem nothing moves | 7px, 19px compact | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
 | SaveBar | its buttons | in | each end pads to the corner inset, as the bulk bar's | 23px each side | 16px and 11px | 16px and 8px |
 | Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
@@ -940,7 +942,8 @@ corner of its own.
 a checkbox and a title's focus ring keep `--radius-micro`, which is under the
 formula almost everywhere. Where the formula is smaller, they take it, so a
 key chip in a 15px row is 3px, `min(var(--radius-micro), ...)`, and an inner
-corner is never rounder than the corner around it.
+corner is never rounder than the corner around it. A month grid's cell is one:
+two thirds of the micro step, under the formula of every holder it can sit in.
 
 **Dots and circles keep their shape.** A dot, on `--radius-dot`, is round by
 meaning, and a pill drawn on a square box is a circle by its size: a field
@@ -2647,6 +2650,13 @@ from the document. Seven things were derived.
   media query, as the docs site does; the under-title padding is
   `min(var(--spacing-peer), var(--spacing-card))`, so the rule inside a compact
   card is 20px everywhere.
+- **It names its fill for a table.** The card sets `--data-table-surface:
+  var(--color-lifted)` (accounts plan, spec correction 74), so a DataTable in
+  it draws its sticky header row, and a Meter in its rows its cuts, in the
+  card's own fill with no wrapper from the app. Anything inside the card that
+  paints a fill of its own, as the docs site's canvas stage does, sets it
+  again. No baseline moved: the one story with a table in a card set the same
+  value by hand, and now does not.
 - **The header is a div.** A `<header>` outside sectioning content is the
   page's banner. A card is a div unless it is told otherwise, so every card
   header at page level would add a banner, and axe fails two of them as
@@ -2689,6 +2699,92 @@ The title is ink and the note is slate, both on Lifted, and both pairings are
 in the contrast gate. Ink measures 17.84 in light and 17.42 in dark, and slate
 5.31 and 6.94. The app's collapse toggle is not part of Card. It arrives with
 the collapsible card.
+
+**Actions in a plain card's header.** The first consumer's Details card puts
+Edit in its header, with Merge and Remove in a More menu beside it, as GOV.UK's
+summary card puts its card-level actions there. `CardActions` is a
+`div.card-actions` placed after `CardTitle` and `CardNote`, so the reading
+order is the title, the note, then the actions; it adds no role, and the app
+names each button ("Edit details"). It is static. Seven things were derived
+(accounts plan, spec corrections 8 to 13 and 30 to 33).
+
+- **At most two visible actions.** Polaris, Primer and Atlassian keep a card
+  or a page header to one or two visible actions and put the rest in a menu.
+  Three buttons did not fit beside a 12rem title in a card under 566px, so
+  they wrapped among themselves and parted the note from its title. For three
+  or more, show the first and a More menu.
+- **A grid, not CollapsibleCard's flex row.** CollapsibleCard wraps its title
+  and note in a heading block and lets a flex row wrap the actions under it.
+  A plain header holds the title and the note as siblings, and a flex row of
+  three siblings cannot put the actions beside the title and the note under
+  it, then the actions under the note, without reordering them. So a header
+  holding actions is a one-column grid and a size container, `card-header`:
+  from 24rem of its content box the actions take a second column at the end,
+  spanning the title's row and, when there is one, the note's, so a second
+  line of actions never pushes the note down; under it nothing places them
+  and they follow the note at the inline start, the reading order. A
+  container query cannot style the container it measures, so the header's
+  own columns never change: the second column is an implicit one that exists
+  only while the actions are in it, so a narrow header keeps no gap for it.
+  24rem is the width at which a 12rem title, the peer step and an Edit and a
+  More button fit side by side.
+- **The title keeps 12rem beside them.** CollapsibleCard's heading never goes
+  under 12rem (192px holds a typical title on one line). Here the actions'
+  column is capped at `calc(100cqi - 12rem - var(--spacing-peer))`, so two
+  buttons that do not fit wrap among themselves at the end, as Edit and
+  Remove do in a 450px card, and the note still follows the title by the
+  header's 8px gap. A single button wider than what is left takes its own
+  width (`min-inline-size: min-content`) and narrows the title rather than
+  overlapping it. A button's label wraps inside it (`white-space: normal`),
+  so a long one never widens the card.
+- **Level with the title's first line.** Beside the title the actions are
+  start-aligned and at least a control high, and the title's first line is
+  centred on a control's height by a top margin of
+  `(var(--size-control) - 1lh) / 2`, 5.6px and 3.6px compact. So the actions
+  are level with the title's first line, within a pixel, however many lines
+  it takes. No row has a fixed height: a row fixed at 40px let a title that
+  wraps to two lines (57.6px) run over the note.
+- **The corner, down, and only where the corner is.** Beside the title the
+  actions sit at the card's top end: 1 + 32px from the top and the end in
+  Rounded comfortable, inside the 40px curve on both axes. The record's rule
+  moves a control down where a column stands under it, and the actions end on
+  the body's column edge, so inside the 24rem query the actions take a top
+  margin of `calc(var(--holder-corner-inset) - var(--holder-pad))` and the
+  title the same plus its centring margin: 7px in Rounded and 19px compact, 0
+  in Soft and Square, as UploadTray's panel moves its header's trailing
+  button. The first control's top is then 1 + 32 + 7 = 40px from the card's
+  outer edge in Rounded comfortable and 1 + 20 + 19 = 40px compact, at or past
+  the 39px corner inset. Under 24rem the actions follow the note, far from
+  the corner, so nothing moves: the title and the note sit where a header
+  without actions draws them. Actions with no title or note above them, the
+  header's first child, take the same top margin at every width.
+- **An intrinsic inline size of 0.** The library's rule for every size
+  container: its `contain-intrinsic-inline-size` is 0, and a holder that takes
+  the width of its content gives the part a width. A size container takes no
+  width from what it holds, and any stand-in it names becomes its holder's
+  min-content: 20rem on this header made the card 386px, which scrolled a
+  320px page 82px sideways from a `flex: 1` wrapper, and 484px with two cards
+  side by side. So a card that holds only a header with actions and sits
+  where it takes the width of its content, in a flex row, is given a width by
+  the app. DescriptionList, MonthGrid, and from 0.8.0 StatTile and DataTable,
+  which named stand-ins of 16rem and 12rem, follow the same rule (spec
+  correction 63).
+- **CollapsibleCard is not matched.** Every rule names `.card > .card-header`,
+  and CollapsibleCard's header sits in `.card-disclosure`, so its header, its
+  flex row and its baselines are unchanged (plan open question 2). Its header
+  takes no size container for the reason its own record gives: a folded card
+  whose header gave no width would shrink to its padding.
+
+Measured in Chromium, WebKit and Firefox by the stories `ActionsWrap` (a long
+title on a phone, every shape and density: the title and the note where a card
+without actions has them, the actions under the note at the start, nothing
+overlapped, one radius on each control, none in a corner curve),
+`ActionsClearOfCorner` (a 40rem card, every shape and density: one line level
+with the title's first line, on the body's end edge, 40px from the edge in
+Rounded by their margins), `ActionsInTheMiddle` (cards 450px to 566px: the
+note follows the title by the header's gap), `ActionsAlone` and
+`ActionsOnANarrowPhone` (320px: no sideways scroll, a long label wrapped in its
+button). Screen readers are not yet verified (owner action 3).
 
 ## CollapsibleCard
 
@@ -5451,15 +5547,36 @@ a caption and a small trend, on the Card's surface. The document's token
 table names the overline step for "Uppercase column headers in tables and
 stat tiles", and has no tile of its own, so this one is derived.
 
-**A width of its own** (patch 0.6.1). The tile is a size container, so a
-flex row or an `auto` grid column gave it no content width and drew it
-its padding wide. It names `contain-intrinsic-inline-size: calc(16rem -
-2 * var(--spacing-card) - 2px)`, a whole tile of 16rem, at which its
-narrow layout draws a figure of nine characters whole and which never
-pushes a 320px phone's page sideways; in a block or a sized grid column
-it fills as before. It takes no `flex`: tiles in a grid row stretch to
-one height, which a height cap would break. The `InAFlexRow` story holds
-three tiles 16rem wide in a wrapping flex row.
+**A width from its holder** (0.8.0, spec correction 63; it was a stand-in
+of its own from patch 0.6.1). The tile is a size container, so it takes no
+width from its content. 0.6.1 named `contain-intrinsic-inline-size:
+calc(16rem - 2 * var(--spacing-card) - 2px)`, a whole tile of 16rem, so a
+tile in a flex row or an `auto` grid column was not its padding wide. A
+stand-in width is also the tile's min-content width, which a `flex: 1`
+item or a `1fr` track keeps as its narrowest: two tiles two up in their
+own wrappers made a 288px column 512px wide and scrolled a 320px page
+200px sideways. So the tile follows the library's rule for every size
+container (CardActions, "An intrinsic inline size of 0"): its intrinsic
+inline size is 0. A block, a `flex: 1` item or a `1fr` track gives it its
+width, as before. Placed straight in a flex row, a tile was 16rem from
+0.6.1's stand-in, and with an intrinsic width of 0 it would be its padding
+wide, 66px, which undid that fix; so the tile takes `flex: 0 1 16rem`
+(spec correction 69): in a flex row it is a whole 16rem tile and shrinks
+from there in a narrower row, and its min-content stays 0, so nothing is
+pushed sideways. The basis does nothing in a block or a grid, where tiles in
+a row still stretch to one height. In a flex column the basis is a height,
+so a tile there takes `flex: none` from the app, which the docs and the
+changeset say; an `auto` grid column gives it no width, so the app gives it
+one. A figure is never
+broken, so a figure wider than its tile runs past it; two up at 320px a
+tile holds about 74px of content, a figure of three or four characters.
+The `InAFlexRow` story puts three tiles straight in a wrapping flex row and
+checks each is exactly 16rem; `OnANarrowPhone` (three engines)
+puts tiles in a `flex: 1` wrapper, a `1fr` grid and two up at 320px in
+every shape and density and finds no sideways scroll and each tile filling
+its holder, where the stand-in scrolled 200px. Measured at CI's tolerance
+on a local build before and after, no existing baseline moves: every
+StatTile story gives its tile a width.
 
 **Surface.** The Card's: Lifted, the 1px hairline, `--radius-stadium` and
 `--spacing-card`, so a tile follows density with no token of its own: 32px
@@ -5634,7 +5751,8 @@ the padding box; and the pace marker's 2px ring is its border. Both are in
 `var(--meter-surface, var(--color-lifted))`: read with a fallback and never
 declared by the meter, so an app sets `--meter-surface` once on any ancestor
 (a canvas section) and every meter inside follows, where a value declared on
-the meter would beat it.
+the meter would beat it. DataTable sets it for its rows, each to its own
+fill, hovered and selected included (DataTable, "A meter in a row").
 
 **Held, printed.** A printed page drops backgrounds, which loses the fill as
 well as the hatch, so `.meter` sets `print-color-adjust: exact` and its
@@ -8936,18 +9054,48 @@ item matches it.
 `--size-field`, as Primer's `cellPadding` would; a third, roomier step
 would be a token change for every part, not a table option.
 
-**A width of its own** (patch 0.6.1). The root is a size container, so
-in a flex row, or an `auto` grid column, it had no content width and drew
-the list face at none. It has no text to size itself by, as
-Pagination's range does, so it names a width: `contain-intrinsic-inline-size:
-12rem`, the list face with an item's title, second line and amount
-still readable, and small enough never to push a phone's page sideways
-(18rem pushed the docs' 320px page 22px). `flex: 1 1 0; min-inline-size:
-0` takes the room its siblings leave in a flex row, and `max-block-size:
-max-content` keeps it no taller than its content in a flex column, in
-Chromium and WebKit (Firefox grows it there, as Pagination's record
-says). The
-`InAFlexRow` story holds the table face beside a 12rem column.
+**A width from its holder** (0.8.0, spec correction 63; it was a stand-in
+of its own from patch 0.6.1). The root is a size container, so it has no
+content width. 0.6.1 named `contain-intrinsic-inline-size: 12rem`, the
+list face with an item's title, second line and amount still readable,
+since in an `auto` grid column it drew the list face at none (18rem
+pushed the docs' 320px page 22px). A stand-in width is also the root's
+min-content width, which a `flex: 1` item or a `1fr` track keeps as its
+narrowest: two tables two up in their own wrappers scrolled a 320px page
+72px sideways. So it follows the library's rule for every size container
+(CardActions, "An intrinsic inline size of 0"): its intrinsic inline size
+is 0. `flex: 1 1 0; min-inline-size: 0` still takes the room its siblings
+leave in a flex row, from a zero basis, so a sibling never shrinks for
+it, and `max-block-size: max-content` keeps it no taller than its content
+in a flex column, in Chromium and WebKit (Firefox grows it there, as
+Pagination's record says). A block, a `1fr` track or a flex row gives it
+its width; a holder that sizes it from its content, an `auto` column, a
+flex column with `align-items: flex-start`, an `inline-block` or
+`width: max-content`, draws it 0 wide and gives it one, which the changeset
+tells upgraders (spec correction 69). The `InAFlexRow` story holds the
+table face beside a 12rem column; `OnANarrowPhone` (three engines) puts
+tables in a `flex: 1` wrapper, a `1fr` grid and two up at 320px in every
+shape and density and finds no sideways scroll, each table filling its
+holder with its list face. Measured at CI's tolerance on a local build
+before and after, no existing baseline moves.
+
+**A meter in a row** (spec correction 64). Meter cuts its segments apart and
+rings its pace marker in `--meter-surface`, Lifted unless an ancestor sets
+it, so a meter on a canvas row, and on any hovered or selected row, drew
+pale blocks there. The root sets `--meter-surface: var(--data-table-fill)`,
+and each rule that washes a row or a list item, hovered at 5% and selected
+at 8%, sets it to the same `color-mix` as its fill, so the cuts are always
+the row's own color. In a Card the fill is the card's, which the card names as
+`--data-table-surface` (spec correction 74). The root's value is set from
+the table's fill rather than read from an ancestor's `--meter-surface`: a
+property cannot fall back to its own inherited value, and the table's fill,
+not an outer surface, is what a plain row shows, so an app sets
+`--data-table-surface` for a table on a fill of its own. Meter's segments
+are backgrounds in a clipping flex track, where a transparent cut would show the track's frame color rather
+than the row, so the surface is set, not masked as Gauge's gaps are. The
+`OnTableRows` play (Meter, three engines) reads the cut and the ring on a
+plain, a hovered and a selected row as the fill behind the meter. In forced
+colors the meter keeps its own `canvas` surface, as before.
 
 **The list face** (ruling 8, spec 8). Both faces are in the server's
 HTML, and a container query on DataTable's own box shows one: under
@@ -10363,13 +10511,31 @@ since forced colors keep an author color's alpha.
 **Size.** `{ PageHeader, PageColumn }` measures 460 B, so the rule sets
 1 kB, spec 16's budget.
 
-**The docs site's own header** moves to PageHeader in the next batch
-(section 13.3 item 7). Its CSS is left as it is here; its 1320px cap and
-32px padding equal the page column's. It draws no sentence, only the
-eyebrow and the title with its controls on the title's bottom, so the
-sentence's line under the title's changes nothing it keeps. The next batch
-also has to place the shell's menu button, which the docs header draws
-before its titles and PageHeader has no slot for.
+**The docs site's own header** is a PageHeader from batch 5 (accounts plan,
+spec correction 62): the trail "Docs › Components" as its eyebrow, the
+page's title as its `h1` and the color mode and corner switches as its
+actions, in the docs shell's own sticky row, a `div` with the banner role,
+which writes `--page-sticky-top` from its height, as AppShell's slot would.
+PageHeader takes `role="none"` there, so the page keeps one banner, and no
+`header` element holds another (spec correction 71).
+Its 1320px cap and 32px padding were the page column's already. PageHeader
+has no leading slot, and none was added (plan open question 3): under
+1024px the shell draws the drawer's 48px button over PageHeader's fill at
+the column's start corner, 8px out from the column's edge as before, with
+its middle on the title's first line, and the titles alone make room for
+it, so the switches, on a line of their own under 768px, still start at
+the column's edge. A cell beside PageHeader was tried first and indented
+the switches under the titles, on two lines at 375px where the old header
+had one. What the reader sees change is PageHeader's own and kept: 24px
+under the row where the docs wrote 20px, 8px between the eyebrow and the
+title (6px), 8px between the switches (12px), 32px over the row between
+768px and 1024px (20px), and there the switches at the title's end while
+it keeps 20rem, where they always took a line. None is a defect, so
+PageHeader does not change (parent spec risk R8). From 1024px, beside the
+open rail, the column is 640px at its narrowest, where 20rem titles drop the
+switches under a short title up to 1068px; the docs' titles keep 16rem
+there, so the switches stay on the title's line as they always did (spec
+correction 76).
 
 **Screen readers.** Not yet verified (owner action 4): the header and its
 `h1` as the start of the main landmark, where the skip link lands.
@@ -10540,6 +10706,632 @@ review page on a phone.
 **Screen readers and devices.** Not yet verified (owner action 4): on a
 real phone, the tray's bar above the tab bar and above a save bar, and a
 focused field scrolled clear of both.
+
+## DescriptionList
+
+Named values, such as an account's name, type, institution, last four
+digits, bank feed, credit limit and APR: `DescriptionList` holding
+`DescriptionListItem`s (accounts spec, section 5; owner rulings 7, 8 and
+9). The document has no list of names and values, so this one is derived
+from the Dense data row, the numeral rule and the corner rule.
+
+**A `dl` of `div` rows, and no role.** The list is a `dl`; each row is a
+`div` holding a `dt` (the term), a `dd` (the value) and, when the row has
+actions, a second `dd` holding them, the grouping the HTML standard allows
+inside a `dl` and GOV.UK's summary list row. The `div` keeps a row one box
+for the layout and the rule, and axe's `definition-list` and `dlitem` rules
+pass with it. No ARIA role is added: `role="list"` on the `dl` would drop
+the term and definition semantics VoiceOver announces. A
+`DescriptionListItem` outside a `DescriptionList` draws the same markup,
+which axe's `dlitem` rule fails, and the docs say so. Both parts are static,
+with no hook, context or id, so a server component renders them with no
+client JavaScript.
+
+**Layout by its own width.** The list is a size container
+(`container: description-list / inline-size`). From 30rem of its content
+box, `layout="auto"` draws a row as three columns: the term at
+`--description-list-term-size`, 30% by default, the value, and the actions;
+under it the term and the actions share the first line and the value spans
+the second, 4px under the term (half the part step, StatTile's caption
+gap). 30rem is chosen so the term column is at least 9rem (144px), which
+holds "Routing number", about 105px at 14px and 500, on one line; under it
+most terms would wrap. `horizontal` and `stacked` hold one layout at every
+width. Every row has the same template, so the term column lines up down
+the list with and without actions, with no subgrid. A row without actions
+gives their column to the value side by side and to the term stacked. A
+viewport breakpoint was rejected: a list in a 24rem side panel on a wide
+screen would draw a 7rem name column.
+
+**No width of its own** (risk R1; spec corrections 14 and 34). A size
+container takes no width from its content, and the library's rule is that
+its intrinsic inline size is 0: the list declares
+`contain-intrinsic-inline-size: 0`. A stand-in width is also the
+container's min-content width, which a `flex: 1` item or a `1fr` track
+keeps as its narrowest. The first value, 20rem, pushed a 320px page 16px
+sideways from a `flex: 1` wrapper in its 288px column, and 16rem still
+scrolled the page with two lists side by side, 512px in 288px; the same
+trap showed in the CardActions header and BarChart's figure. At 0 a block,
+a `flex: 1` item or a `1fr` track gives the list its width, and a holder
+that sizes it from its content (a content-sized flex item,
+`width: max-content`, an `auto` grid track) must give it one, or it draws
+nothing wide; the docs say so. A docs test puts a list in a `flex: 1`
+wrapper, a `1fr` grid and a `1fr 1fr` grid two up at 320px with no
+sideways scroll, and the `InAFlexRow` story gives the list a width in a
+flex row and checks that it fills it.
+
+**The row** (Dense data, against the value's line). `min-block-size:
+max(var(--size-target), var(--size-field))`, 48px, 40px in compact and 44px
+compact on a coarse pointer, and block padding
+`max(0px, calc((row - 1lh - 1px) / 2))` against the body line, 22.4px: 12.3px
+in comfortable, 8.3px in compact and 10.3px on a coarse pointer. Dense data
+pads against the small step's line, 13.5px; a list's values are body text,
+so it pads against theirs. The padding is `--description-list-pad`, which
+the corner rule below reads. One 1px `--color-divider` rule on a row that
+follows another, so none above the first row and none under the last, and
+a list in a card ends at the card's padding. `hasDividers={false}` draws
+none.
+
+**Term and value.** A term is `--text-small` at 500 in slate: a name, read
+before its value, so not ink, and set apart from a hint's 450. A value is
+`--text-body` at its token weight, 450, in ink. The list draws no frame,
+fill or radius of its own, so no part of it is a surface in a holder's
+corner.
+
+**Empty values** (ruling 9). A value that is absent, `null`, `false`, `true`
+or `''` is empty, `present()`'s definition, and so is an array that holds
+only those, as a list mapped from data with no entries gives (spec
+correction 18); `0` is a value. The value's
+`dd` carries `data-empty` and shows `emptyValue`, "Not set" by default, in
+slate. It is words the reader has to read, so by the test in "Where each
+text color may go" it is slate and never taupe; that table's "unset
+indicator" in taupe is a mark, such as an empty swatch, not words (spec
+correction 6). It is never a dash, which a screen reader reads as "dash" or
+as nothing. `emptyValue` may be a link to add the value, GOV.UK's guidance
+for a missing answer: the link stands where the value would, and the row has
+no action of its own beside "Not set" (spec correction 19). The library
+writes "Not set" in English, so a page in another language passes its own.
+
+**Long values.** A value wraps, and a long unbroken word, an IBAN or an
+email address, breaks anywhere (`overflow-wrap: anywhere`, the Card's rule,
+set on the value so a list outside a card has it too). Nothing truncates: an
+ellipsis on a value hides data. A long term wraps in its column.
+
+**Numeric values.** `isNumeric` writes `data-numeric` and gives the value
+`copy.css`'s numeral rules at the body size: tabular figures,
+`direction: ltr`, `unicode-bidi: isolate` and
+`text-align: match-parent` (with `-webkit-match-parent` before it for
+Chromium), so "$5,000.00", "24.9%" or "4821" keeps its order and starts at
+the line's start on a Persian page. A numeric value does not take the
+numerals' `nowrap`; it is a value in a column, and breaks rather than push
+a 320px page sideways. An empty numeric value drops `data-numeric`, since
+"Not set" is words.
+
+**Actions.** The app's nodes, in their own `dd` after the value, as
+GOV.UK's summary list puts its "Change" link: the row's last column side by
+side, and the end of the term's line stacked, as the gear stands beside each
+heading in GitHub's pull request sidebar. `display: flex` with the part
+step between, at the end. A 40px control sits level with the line beside it
+through `margin-block: min(0px, calc((1lh - var(--size-control)) / 2))`, the
+collapsible card toggle's technique, so the row does not grow for its
+button. Each control names its row: "Edit" shown and "Edit Nickname" as its
+name, through `aria-label` or visually hidden words, so WCAG 2.5.3 holds.
+
+**The corner** ("Nested radii, derived"). A control in the last row of a
+list that ends a card sits in the card's corner curve: in Rounded
+comfortable a 40px button on a 22.4px line overhangs it by 8.8px, which
+leaves the button 1 + 32 + 3.5 = 36.5px from the card's bottom edge (36.7px
+as Chromium draws it, by baseline alignment) and 33px from its side, both
+under the 40px radius. The rule for a control at a holder's foot applies: it
+moves down, not in, so it stays on the column's end edge. The last row of a
+list that is the last child of a card, of a card's body that is the card's
+last child, or of a collapsible card's body (spec correction 16), adds
+`calc(var(--holder-corner-inset) - var(--holder-pad))` to its block-end
+padding while it holds actions and the list sits side by side: 7px in
+Rounded, 19px in Rounded compact, nothing in Soft and Square, where the
+padding already clears the 16px curve and Square has none. Stacked, the
+last row's controls stand on the term's line at the row's top, a value's
+line and more above the curve, so the row keeps its padding: the rule is
+written for `[data-layout='horizontal']` and, inside the list's 30rem
+container query, for `auto`, and a stacked list in a card ends at the
+Dense data padding with no dead space under its last value (spec correction
+15). The first row of a list that starts a card with no header takes the same
+at its block start in every layout, since its controls stand on its first
+line either way; a collapsible card always has its header above the body, so
+it has no first-row form. Only the controls' row grows; a row without
+actions keeps the Dense data padding. The button then ends 43.5px over the
+card's bottom edge in comfortable and 41.5px in compact, past the 39px
+corner inset. The selector is the LineChart toolbar's,
+`:is(.card, .card > .card-body:last-child)`, with the collapsible card's
+`.card > .card-disclosure > .card-fold > .card-body:last-child`, so a list in
+a body followed by something else is not at the card's foot and does not
+move (spec correction 4). The `CornerClear` story measures six places in
+Chromium, WebKit and Firefox: a list ending a card's body, starting a card
+with no header, directly in a card, ending a collapsible card's body,
+stacked, and followed by a paragraph; the concentric audit runs every story
+in the three shapes.
+
+**Right to left** (ruling 7). Logical properties throughout: on a Persian
+page the term column is on the right and the actions on the left. A numeric
+value stays left to right and starts at the line's start, the right edge of
+its column. `match-parent` is the standard name in Firefox and the prefixed
+one in WebKit and Chromium, so the `DescriptionListMirrored` play runs in all
+three engines (spec correction 17).
+
+**Print.** Rules and text print; the actions are hidden under
+`@media print`, since a printed page cannot press them.
+
+**Forced colors.** The rules are borders, which the repaint keeps; the
+block names their color, `canvastext`, so the CSS test's forced-colors
+block holds something. Text takes the reader's colors.
+
+**Contrast.** Gated already as text and cited by the contrast test, not
+added: ink on canvas 16.25 in light and 19.31 in dark, on lifted 17.84 and
+17.42, on float 18.43 and 17.42; slate on canvas 4.84 and 7.26, on lifted
+5.31 and 6.94, on float 5.49 and 6.94. The divider is a cue, not a boundary.
+
+**The size.** The entry `{ DescriptionList, DescriptionListItem }` measures
+360 B without React Aria, Lucide and `@internationalized/date`, and 360 B
+with them, since it imports none (328 B before the empty-array test of spec
+correction 18); the rule rounds up to 0.5 kB and adds 0.5 kB: 1 kB, the
+spec's budget.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): the terms and values read in order, and how each reader
+announces the list; on a real iPhone and an Android phone at 320px to 430px,
+the stacked list legible.
+
+## Gauge
+
+One figure on a range at a glance: `Gauge`, a ring or a semicircle with
+an arc for the value, a centre numeral and a word under it, up to five
+marks, and the label and the value text under or beside the dial
+(accounts spec, section 7; owner rulings 2, 3, 5, 6 and 7). The first
+consumer draws a credit score on 300 to 850 and a utilization per card.
+The document has no gauge, so this one is derived from Meter.
+
+**In react, not charts** (ruling 3). A gauge is a meter: one value on a
+known range, the WAI-ARIA `meter` role. `@snapshot-ui/charts` holds data
+series on scales, with axes, readouts and a table view, and is versioned
+apart; a gauge has no series, no axis, no palette and no table. Meter and
+ProgressBar live in react, so an app that draws a meter in a row and a
+gauge in a tile imports both from one package. SwiftUI keeps its `Gauge` in
+SwiftUI itself, Ant Design makes its dashboard a `type` of `Progress`, and
+only Carbon puts a gauge with its charts. The arithmetic is two arcs and a
+dash, in `gauge/geometry.ts`, small enough for a later donut to copy.
+
+**One family with Meter.** The role is on the dial, `div.gauge-dial`, and
+not the root, since a meter's children are presentational and the text
+beside it would be lost. The naming chain is Meter's: a non-blank
+`aria-labelledby`, else a non-blank `aria-label`, else the visible label,
+else the value text, so the dial is never unnamed. `aria-valuemin` is
+`minValue`, `aria-valuemax` `maxValue`, `aria-valuenow` the value clamped
+to them, and `aria-valuetext` the app's `valueLabel`. A range whose end is
+not above its start reports `minValue` for all three and draws an empty
+track, ProgressBar's rule. The prop names are React Aria's, as
+ProgressBar's are, with `minValue` first class: 742 on 300 to 850 is 80.4%
+of the arc and reports `aria-valuemin="300"`. The track is Meter's frame
+color, and the arc `--gauge-ink`, as Meter's fill is `--meter-ink`.
+Static: `useId` is its one hook.
+
+**Sizes and strokes.** `sm` 32px with a 4px stroke, `md` 96px with 8px,
+Meter's track, and `lg` 160px with 12px, each stroke a twelfth of the box
+or near it, so a ring reads as the same object at every size. The text sits
+beside a 32px dial, which has no room for a figure, and under the 96 and
+160px ones. No token is added: the sizes and strokes are literals in
+`geometry.ts` and `gauge.css`, as Meter's 8px track is.
+
+**The viewBox is the box in pixels.** `0 0 S S` for a ring and
+`0 0 S (S / 2 + w / 2)` for a semicircle, where `S` is the box and `w` the
+stroke, so at its own size one user unit is one pixel, and an app that sets
+`--gauge-size` scales the svg uniformly by the default
+`preserveAspectRatio`: a circle stays a circle. The charts'
+`preserveAspectRatio="none"` stretch is not used. The track is a circle of
+radius `r = (S - w) / 2` about the centre: a ring is two half arcs from the
+top, clockwise, since one arc command cannot draw a whole circle, and a
+semicircle one arc from the inline start over the top. Its length `L` is
+`2 pi r` or `pi r`. Every number is written with at most three decimals,
+Meter's rounding, so the server and the browser write the same string, and
+the server face writes one HTML in three locales and two zones.
+
+**The arc, caps included, is exactly the value.** Round caps add half a
+stroke at each end of a dash, so a share `s` is a dash of
+`max(0, s L - w)`, offset by `-w / 2` so it starts half a stroke in: the
+arc from the outer edge of its first cap to the outer edge of its last
+spans exactly `s L`. Half the value is half the track. The dash is written
+in user units, as inline `stroke-dasharray` and `stroke-dashoffset`, so no
+`pathLength` is needed (risk R3) and the stylesheet's transition runs on a
+change. A semicircle's track is dashed the same way at a share of 1, so its
+caps end exactly at the arc's ends and a full value covers it.
+
+**Zero, the dot and the whole ring.** A share of 0 paints nothing, since a
+zero-length dash with round caps would draw a dot, but it keeps its value
+path, a zero-length dash marked `data-empty`, which the stylesheet gives
+butt caps, so the path is there to move from and to (accounts plan, spec
+correction 39). A share whose
+arc is shorter than the stroke is a zero-length dash, which its caps draw
+as a dot of the stroke's width at the start: the least a reader can see,
+so 0.5% never reads as nothing. A whole ring has no ends: two caps meeting
+at the top touch at one point and leave a notch in the stroke's outer and
+inner edges as deep as half the stroke, which reads as a cut. So a ring at
+its whole share is one dash of `L` and no gap, drawn solid (accounts plan,
+spec correction 21); at 99% the caps leave the share's gap at the top, so
+99% and 100% differ. The `ArcLength` play draws each value path again
+through the engine's own svg renderer onto a canvas and reads the dot, the
+empty start, the solid top and a semicircle's ends, in Chromium, WebKit
+and Firefox.
+
+**Marks.** Up to five, sorted by value, each clamped to the range: a radial
+line across the track at the mark's share, `s * 360` degrees clockwise from
+the top on a ring and `s * 180` degrees from the inline start on a
+semicircle, reaching 2px past the track on both sides. Each is a 2px line in
+ink standing in a 6px gap cut out of the track and the arc: Meter's pace
+marker turned radial, so a mark reads over the arc and over the track
+alike. The gap is not painted in a surface color. It is a luminance `mask`
+in the svg, named by `useId`: a white box keeps, and a black 6px line per
+mark cuts, so whatever is behind the gauge shows there, a card, the page,
+or a hovered or selected table row. A gap painted in `--meter-surface` drew
+a pale block wherever the surface was not the one named, which a DataTable
+row's own fill, hovered or selected, always is (spec correction 35). The
+mask's region is the box and a box around it, so the marks' overhang and the
+caps are inside it. Marks are never toned: a band's edge is not over
+anything. Their labels, in order of value, joined by full stops, form a
+hidden span that describes the dial after the caller's own
+`aria-describedby`; a mark with an empty label is drawn and not read, for
+thresholds that repeat on every row of a table and are said once beside it
+(spec correction 37). The `MarksOnRows` play draws a dial on a plain, a
+hovered and a selected DataTable row through the engine's own renderer over
+the fill behind it and reads the gap as that fill, in three engines. A
+sixth mark is not drawn or described; a static part
+cannot warn. On the consumer's score, 580, 670, 740 and 800 fall at 50.9%,
+67.3%, 80.0% and 90.9% of the arc. Two marks closer than the stroke's
+width overlap, so the docs say a 32px gauge holds two or three.
+
+**The figure and its word.** `figure` is the app's numeral and
+`figureCaption` a word under it, drawn at `md` and `lg` and never at `sm`.
+Neither has a default: on a 300 to 850 score a percentage would be wrong, so
+the library never invents a figure. Both are `aria-hidden`, since the value
+text says the value and the word, and the same said twice is noise. The
+figure is `--text-h3` at `md` (24px) and the `numeral-sm` step at `lg`
+(32px), 500, tabular, in ink, left to right and isolated, and never wraps or
+shrinks: the docs give the budget, 4 characters at `md` and 6 at `lg`
+("100%", "$12.3K"), and `LongestFigure` holds each within the inner circle.
+The caption is `--text-small` at 450 in slate, never toned, and ends in an
+ellipsis past its lines, since the value text carries it whole. In a ring
+the figure and its caption are one block centred in the inner circle,
+which narrows above and below the centre, so the block is kept short and
+the caption narrow (spec correction 36): the figure's line is its own size
+(`line-height: 1`), and the caption is one line at most `S * 5 / 8` wide at
+`md`, 60px of the 80px circle, a word or two, and two lines at most
+`S * 13 / 20` at `lg`, 104px of 136. Then every line box's corners are
+inside the circle: at `md` the widest figure, "100%", 66px, reaches 39.7px
+from the centre of a 40px circle. In a semicircle the caption is two lines
+under the chord, between the arc's ends. `LongestFigure` and
+`FigureInsideRing` measure every line box's corners against the circle in
+three engines.
+
+**The concentric construction inside the dial.** The figure is HTML in the
+dial's one grid cell, over the svg. In a ring it is centred as one block in
+the inner circle, `S - 2w` across, through a padding of `--gauge-band`, the
+stroke's share of the box (a twelfth at `md`, an eighth at `sm`, three
+fortieths at `lg`), so it follows an app's own `--gauge-size`. In a
+semicircle the figure's baseline is on the chord, in the bowl, and the
+caption under the chord between the arc's ends. The baseline is set by a
+strut, a `::before` half the box tall with no text: a flex item with no
+baseline takes its foot as its baseline, so the row's baseline lines up
+the figure's with the chord in any font. Since the figure is in flow, the
+caption under the chord gives the dial its height, and nothing overlaps
+the text under it. `SemicircleFigure` measures the baseline within 1px of
+the chord in three engines.
+
+**The corner rule leaves the dial alone.** The dial is a circle, whose
+radius is half its side and not a choice, so it is not stepped, and the
+corner audit skips it. In a Card, a StatTile or a table cell the gauge keeps
+its size and shape.
+
+**The text.** Under the dial at `md` and `lg`, centred, 8px
+(`--spacing-part`) below it, as wide as the dial or 12rem, whichever is
+more, and wrapping: the label at `--text-small` 500 in ink and the value
+text at `--text-small` 450 in slate with tabular figures, Meter's head
+turned to a column. At `sm` the text is beside the dial, 8px from it, its
+lines centred on the dial. The value text is `aria-hidden`, since the dial
+reads it. In a DataTable row the column header names the cell, so the
+gauge takes `aria-label` with the row's name and shows only its value text;
+the row is 48px, 40px compact, so a 32px dial fits every density. A 32px
+gauge fits StatTile's 96 by 32 trend slot.
+
+**Tones** (ruling 2). The app chooses; the gauge never decides that a value
+is good or bad, since a high score is good and a high utilization is not.
+`neutral` is ink. `warning` is "a state that needs the reader's eye soon
+and is not a failure": a fair or a poor score, a utilization above 30%.
+`error` is a failure only, such as a limit that stopped a payment. Both low
+score bands are warning, and Fair and Poor are told apart by the word under
+the figure and by where the arc stops between the 580 and 670 marks, never
+by color. There is no success tone: a good score is not a save, and the
+words say "Very good" over an ink arc; there is no gain, which is money
+that arrived. Above `maxValue` the root takes `data-over`, the arc fills
+the track, and a neutral gauge resolves to warning, Meter's rule; an error
+gauge stays error, its rule last in the file at equal weight. Exactly
+`maxValue` is not over, and `aria-valuenow` stays at `maxValue`. The value
+text must say "over" in words. Signal orange, clay and taupe appear nowhere.
+The tone always comes with words: `valueLabel` is required.
+
+**The range's ends are the app's.** The gauge draws no numbers at its ends:
+a range's ends are figures in the app's digits, and many gauges, a
+utilization among them, need none. Where a reader has to place the arc on
+an unfamiliar scale, the app draws them. The docs' credit score example
+puts 300 and 850 under the semicircle's ends and a legend of the five
+bands, each word with its range, under the scores, and the Accounts recipe
+does the same in its credit tab (spec correction 41). They repeat for the
+eye what the meter already reports, so the ends are `aria-hidden`.
+
+**Round in every shape** (ruling 5). The caps are round and the dial is
+round in Rounded, Soft and Square, the spinner's rule: the ends of a stroke
+are dots, and dots stay round in every shape. `stroke-linecap` cannot read a
+radius token, and a gauge drawn square would be a different chart. Meter
+and ProgressBar square their ends under Square because their ends are a
+box's corners; a gauge's are not.
+
+**Motion** (ruling 6). When the value changes in the browser the arc moves
+over 200ms, ProgressBar's timing: `stroke-dasharray`, `stroke-dashoffset`
+and `stroke` transition together, so a tone change moves with it. A
+transition never runs on the first style, so a gauge drawn on the server,
+hydrated, or mounted with its value does not sweep in; a sweep would delay
+the reading and need a client part. Under reduced motion nothing moves. A
+change to or from 0 moves too, since a share of 0 keeps its path; its caps
+turn from round to butt at once, which a transition cannot ease, so the
+dot at the arc's start comes and goes at the start and the end of the move.
+The `Motion` play reads no animation on first appearance, a 200ms
+transition after a change down, to 0 and up from 0 on the same path, and
+the reduced-motion rule in the page's own stylesheet.
+
+**Direction** (ruling 7). The gauge follows the page, as Meter's fill and
+LineChart's time do: `--gauge-flip` is `1` under `:where([dir='ltr' i])` and
+`-1` under `:where([dir='rtl' i])`, the charts' pattern, since `:dir()` is
+above the floor, and the svg takes `scale: var(--gauge-flip, 1) 1`. The
+nearest `dir` attribute wins. On a Persian page a ring runs counter-clockwise
+from the top and a semicircle fills from the right, and the marks move with
+the svg. The figure, its caption and the text are HTML and are not
+mirrored: "60%" reads left to right.
+
+**Contrast**, measured with `contrast.js` and recorded, not gated, since
+the track is a mix (accounts plan, spec correction 23). The arc against the
+track, light then dark: over lifted, ink 13.88 and 12.19, warning 4.77 and
+6.24, error 5.62 and 4.01; over the canvas, ink 12.69 and 14.19, warning
+4.36 and 7.27, error 5.14 and 4.67; over float, ink 14.34 and 12.19,
+warning 4.92 and 6.24, error 5.80 and 4.01. Each clears the 3:1 a graphic
+needs, the lowest the error arc in dark over lifted and float. The track
+against its surface is 1.28 and 1.43 on lifted, 1.28 and 1.36 on the
+canvas and 1.29 and 1.43 on float: a cue, not a boundary, since the value
+text, which is required, carries the extent, as Meter's record says. The
+figure and the label are ink and the caption and the value text slate,
+each gated already as text on those surfaces.
+
+**Forced colors.** Strokes are not backgrounds, but an svg keeps the colors
+its author set, so the block names them: the track `graytext`, the arc
+`canvastext` in every tone, and the marks `highlight`, in their cut gaps,
+where the reader's own background shows. The three stay apart, the mark
+stays apart from the arc, and the words carry the tone, as Meter's over
+state keeps its words. The mask is luminance, white keeps and black cuts,
+so it takes `forced-color-adjust: none`: repainted in the reader's colors,
+a dark theme's background would turn the keeping white black and hide the
+track and the arc. A docs test reads the three strokes and the mask.
+
+**Print.** `print-color-adjust: exact`, and its `-webkit-` form, as
+`.meter` sets, so a printed track keeps its tint.
+
+**The size.** The entry `{ Gauge }` measures 1520 B without React Aria,
+Lucide and `@internationalized/date`, and 1516 B with React Aria not
+ignored; it imports none, and the bytes are size-limit's own drift, as
+CardActions' three were (spec corrections 13, 28 and 42). The mask and the
+empty arc took it 20 B over the spec's 1.5 kB budget; the rule rounds up to
+2 kB and adds 0.5 kB: a 2.5 kB limit.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): that a gauge reads as a meter, or what each reader calls
+it, with its name, its value text and its marks' description, and never its
+figure twice. Not yet verified in Windows' contrast themes (the track, the
+arc and the marks each distinct) or on a real iPhone and an Android phone
+at 320px to 430px (an `lg` semicircle and its caption legible).
+
+## MonthGrid
+
+Which months the reader has of something that comes monthly: `MonthGrid`,
+a header of short month labels, one row per year with its label and one
+cell per month, a sentence under it, a legend, and a table clipped from
+sight (accounts spec, section 8; owner rulings 1, 7 and 10). The first
+consumer draws an account's statement coverage on its credit tab. The
+document has no such part, so this one is derived from Meter's looks.
+
+**The name** (spec open question 17). It says what it draws, months in a
+grid, and was the consumer's suggestion. A calendar's grid of days is
+sometimes called a month grid, but the library's are `Calendar` and
+`CalendarDays`, and React Aria's is `CalendarGrid`, so nothing collides,
+and the docs page opens with a picture. `CoverageGrid` named one use and
+`YearGrid` named the rows rather than the cells.
+
+**States are the app's; looks are the library's.** The app names its
+states in its own words, held, partial, missing, closed, pending, and maps
+each to one of three looks. The looks are shapes, not meanings: `filled` is
+a solid ink cell, `partial` Meter's held look, ink stripes 2px wide every
+6px at 45 degrees inside a 1px ink edge, and `empty` a 1px
+`--color-boundary` outline with no fill. None is error, warning or success:
+a missing statement is the reader's fact, not the library's verdict, and an
+app that wants the reader's eye on it says so in its summary or with a
+Badge beside the grid. Signal orange, clay and taupe appear nowhere. The
+empty look takes a control's edge, not a divider, because an empty month
+carries information and its extent must show at 3:1. Two states may share
+a look, but then only the table and the summary tell them apart, so the
+docs ask for a look per state.
+
+**Outside months are blank.** A `null` month, before the account opened or
+not yet come, draws `data-look="none"`: no fill and no edge, the slot left
+empty, so it never reads as missing. A month whose id no state has is drawn
+the same way and reads "Not in range" in the table; it is in neither the
+summary nor the legend.
+
+**The grid.** `grid-template-columns: auto repeat(var(--month-grid-columns,
+12), minmax(0, 1fr))` with 2px gaps, the Meter spacer's width, so a year
+reads as a strip. `--month-grid-columns` is written on the grid's `style`
+from the count of `monthLabels`, so a calendar of another count draws its
+own columns. The year label is at the inline start, `--text-small` 500 in
+ink with tabular figures and isolated, 8px from the first cell (a padding
+of 6px and the 2px gap); each takes `grid-column: 1`, so every year starts
+its own row and a row of the wrong length cannot move the years under it
+(accounts plan, spec correction 46). Month labels are `--text-small` 450
+in slate, centred over their column on one line and clipped. Cells stretch
+with the box, `block-size: 1rem` and the column's share across: measured in
+a card on a 320px phone, about 13px wide (15px compact) by 16px; in a 40rem
+card about 42px. A strip that stretches, never a chart that scrolls.
+
+**Its own width, and none of its own.** The figure is a size container,
+`container: month-grid / inline-size`, so its own width decides the
+header: every label from 28rem of the grid's box, and under it only every
+third from the first, the first month of each quarter, so one-letter or
+two-letter labels never collide. A quarter's label may run on over the
+hidden labels after it rather than be clipped. The server's HTML holds all
+twelve; nothing is measured. Its `contain-intrinsic-inline-size` is 0, the
+library's ruling for every size container (accounts plan, spec corrections
+34 and 45): a stand-in width is also the holder's min-content width, which
+a `flex: 1` item or a `1fr` track keeps as its narrowest and which scrolled
+a 320px page sideways. A block, a `flex: 1` item or a `1fr` track gives the
+grid its width; a holder sized to its content must give it one, or it
+collapses, which the docs say.
+
+**Under 12rem it wraps, never shrinks** (spec correction 53). Twelve cells
+across a narrow box, two cards side by side on a 320px phone, were 2px
+wide. Under 12rem of the grid's own width the year label takes a line of
+its own (`grid-column: 1 / -1`), its months follow in half-years,
+`repeat(var(--month-grid-half, 6), minmax(0, 1fr))`, and the header is not
+drawn, since a column is no longer one month. `--month-grid-half` is
+`Math.ceil(monthLabels.length / 2)`, written on the grid's `style` by the
+component, because a `calc()` inside `repeat()` is not a count every
+engine takes. Measured two up in cards padded 32px at 320px: a 74px grid
+with cells about 10.7px wide. At 320px a grid in a `flex: 1` wrapper, a
+`1fr` grid and two up in a `1fr 1fr` grid, bare and in cards, each stay
+inside the page with no cell under 6px (`OnANarrowPhone`, three engines,
+and a docs test), and `QuarterLabels` reads the wrap at 11rem.
+
+**The cell's corner is a text-sized part's.** A cell is a line tall, so it
+keeps the micro step and is never rounder: `calc(var(--radius-micro) * 2 /
+3)`, 4px in Rounded and Soft and 0 in Square, the spec's
+`min(var(--radius-micro), 0.25rem)` written as a calc on the token so the
+token rule reads it. 6px on a 16px cell reads as a pill and loses the grid.
+A grid that ends a card puts its last year's last cell in the card's bottom
+end corner: measured in Rounded, 33px from the end edge and 35px from the
+bottom, inside the 40px curve (21px and 23px compact). The formula there
+is 7px comfortable and 19px compact, so the cell's 4px is under it and it
+keeps its corner; a cell is never a control, so nothing moves, and the
+corner audit, which skips text-sized parts sharper than the formula,
+passes. `CellsInTheCorner` reads it in Rounded comfortable and compact,
+Soft and Square. The legend's 12px swatch takes the same corner, not
+Meter's micro step, which is a circle on 12px: a key looks like what it
+stands for (spec correction 46).
+
+**The summary** (ruling 10; spec corrections 52, 54, 55 and 59). With no
+`summary` the grid writes English from the app's words, a sentence per
+state some month holds whose look is not `filled`: every `empty` state
+first, then every `partial` one, each group in the order of `states`, so it
+leads with what is missing. Each is the state's label, a colon, and its
+months oldest first, whatever order the rows are drawn in: per year, three
+or more consecutive months as a range ("March to May"), shorter runs month
+by month, a whole year as "every month of 2025", and the year written once
+after the last item of its year; the items are joined by commas with "and"
+before the last. "Missing: November 2024, March and April 2025. Partial:
+June 2025." Years are put oldest first by their ids when every id is a
+number (2025, or 1404 on a Persian page); other ids keep the order drawn.
+States are read once by id. With nothing missing or partial, the first
+filled state that some month holds says "every month" when it is the only
+filled state held; otherwise each other filled state held names its months
+and the first says "all other months": "Closed: January to March 2025.
+Held: all other months." A grid with no month in any state says nothing and
+draws no paragraph. The sentence is string joining of the app's own words, so the server and the
+browser write the same one; `Intl.ListFormat` is not used. Only English,
+because list joining and word order are each language's own: any other
+language passes `summary`, a string or a node, and `false` draws none. It
+is `--text-small` at 450 in slate, 8px under the grid, visible: a sighted
+reader scanning the page reads it as fast as the grid.
+
+**The table is the alternative** (spec, decided item 21). A `table` with a
+caption, the grid's name; a header row of `labels.year` ("Year") and the
+full `monthNames` as `th scope="col"`; and per year a `th scope="row"` and
+a `td` per month holding the state's label, or `labels.outside` ("Not in
+range"). A screen reader user moves to March 2025 by row and column, which
+a list of every month in turn cannot offer, and the summary gives the gist
+first: in the markup the summary comes before the table, so in browse mode
+the gist is heard before the detail, and the legend comes last (spec
+correction 51). The visible grid is `aria-hidden`, since a grid of empty boxes reads
+as nothing, and the legend too, since the table names every state. The
+table is clipped inside its own box, `div.month-grid-alternative`, placed at
+the figure's start corner, 1px square, `overflow: hidden` and `clip-path:
+inset(50%)`, as the toast's status host is: a table's box takes its
+content's width whatever its own width says, and on one line twelve month
+names would otherwise scroll the page (spec correction 44). It is clipped,
+not hidden, so browse mode and table navigation find it. LineChart's table
+view is the precedent, visible there by a toggle.
+
+**The name.** A `figure`, named by a non-blank `aria-labelledby`, else a
+non-blank `aria-label`, else its visible label, Gauge's chain, and
+described by its summary after any description of the caller's. The
+visible label is `aria-hidden`: it still names the figure, since a name may
+be read from hidden text, and is not read a second time (spec correction
+56). The table's
+caption is the label when one shows, else the `aria-label`; with only
+`aria-labelledby` the table points at the same element and has no caption.
+
+**No keys.** No cell is a stop and none has a tooltip: the grid is a
+picture with its words beside it. An app that opens a month links to it
+from its own list.
+
+**Calendars** (spec 8.3). The grid knows rows and columns, not dates. A
+Persian page passes Persian years ("۱۴۰۴"), the twelve Persian month names
+and their short labels, and its data already placed in Persian months; the
+docs show the app placing each statement with `@internationalized/date`'s
+`toCalendar(date, new PersianCalendar())`, which the library does not
+import. The Persian calendar, like the Gregorian, has twelve months every
+year; a calendar whose years differ in their count, the Hebrew calendar's
+thirteen-month leap years, cannot share one column count across rows and is
+not supported.
+
+**Direction** (ruling 7). The grid follows the page by its own logical
+flow: on a right-to-left page the year column is at the right and the first
+month, Farvardin, the rightmost column. The hatch keeps its 45 degrees: it
+is a texture, not an arrow. `MonthGridMirrored` measures the order in three
+engines.
+
+**Contrast**, measured with `contrast.js` and gated already, so nothing is
+added. The ink fill and hatch against lifted, light then dark, 17.84 and
+17.42, and against the canvas 16.25 and 19.31. An empty cell has no fill,
+so its edge is the boundary painted on the surface, the switch's off-track
+pair: 3.45 and 5.21 on lifted and 3.38 and 5.34 on the canvas, each over
+3:1 (spec correction 43; the spec's 3.36 and 3.06 are the boundary around a
+Raised fill). The labels are slate and ink and the summary slate, gated as
+text.
+
+**Forced colors.** A fill is a background, which the repaint drops, so
+`filled` is drawn in `canvastext`; `partial`'s stripes opt out of the
+repaint, `forced-color-adjust: none`, and are drawn again in `canvastext`
+on `canvas` with a `canvastext` edge, Meter's rule; `empty`'s edge is a
+border and stays, in `canvastext`; `none` stays blank. The three looks stay
+three shapes: solid, striped, outlined. A docs test reads all four.
+
+**Print.** `print-color-adjust: exact`, and its `-webkit-` form, as
+`.meter` sets, so fills and stripes print.
+
+**The size.** The entry `{ MonthGrid }` measures 1491 B without React Aria,
+Lucide and `@internationalized/date`, and 1478 B with React Aria not
+ignored; it imports none of them, and the bytes are size-limit's own drift
+(spec corrections 50 and 61). Under the spec's 2 kB budget; the rule rounds up to
+1.5 kB and adds 0.5 kB: a 2 kB limit.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): that a month grid reads its name, its summary as its
+description and then before its table, and its table by row and column
+headers; and, with touch exploration on iOS and Android, that a finger over
+the visible grid finds no cell or stray label and that swiping reaches the
+summary and then the table (spec correction 57). Not yet verified in
+Windows' contrast themes (the three looks still distinct) or on a real
+iPhone and an Android phone at 320px to 430px (cells about 13px to 15px
+wide in a card, about 10px two up, and the quarter labels, legible).
 
 ## BarChart
 
