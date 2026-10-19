@@ -46,7 +46,7 @@ import {
 } from './geometry';
 
 export type { ChartColor } from '../foundations/color';
-export type { ChartStatusLabels } from '../foundations/status';
+export type { ChartStatus, ChartStatusLabels } from '../foundations/status';
 
 /** One bar: the number places it, the string says it. */
 export interface BarValue {

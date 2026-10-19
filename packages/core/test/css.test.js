@@ -7822,8 +7822,9 @@ describe('src/components/data-table.css', () => {
     ]) {
       expect(selector, control).toMatch(new RegExp(`[(,] ?${control.replace(/[[\]().*'=-]/g, '\\$&')}[,)]`));
     }
-    // The row's own link is never raised: positioned, it would hold its ::after to its own box.
-    expect(selector).toContain(':not(.data-table-link)');
+    // The row's own link is never raised: positioned, it would hold its ::after to its own box. Nor is a
+    // BarChart's bar, placed absolutely in its track, which a relative position collapses when it takes focus.
+    expect(selector).toContain(':not(.data-table-link, .bar-chart-bar)');
     expect(body).toContain('position: relative;');
     expect(body).toContain('z-index: calc(var(--z-header) - 2);');
   });

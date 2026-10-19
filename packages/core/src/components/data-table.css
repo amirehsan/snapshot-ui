@@ -275,7 +275,9 @@
 
   /* What a cell holds that takes its own press: above the stretched link and under the sticky header. Every
      native control and control role, anything in the tab order, a field, and the opt-in data-table-control for
-     anything else an app draws; never the row's own link, whose ::after a position would hold to its own box. */
+     anything else an app draws; never the row's own link, whose ::after a position would hold to its own box,
+     and never a BarChart's bar, a tab stop placed absolutely in its track, which a relative position would
+     collapse to nothing the moment it takes focus (insights spec correction 90). */
   :is(.data-table-cell, .data-table-item)
     :is(
       a,
@@ -293,7 +295,7 @@
       [role='slider'],
       [role='switch'],
       [tabindex]:not([tabindex='-1'])
-    ):not(.data-table-link),
+    ):not(.data-table-link, .bar-chart-bar),
   :is(.data-table-cell, .data-table-item) :is(.checkbox-field, .field, .data-table-control) {
     position: relative;
     z-index: calc(var(--z-header) - 2);

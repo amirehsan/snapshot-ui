@@ -6,6 +6,7 @@ export {
   type BarSeries,
   type BarValue,
   type ChartColor,
+  type ChartStatus,
   type ChartStatusLabels,
 } from './bar-chart';
 export {
