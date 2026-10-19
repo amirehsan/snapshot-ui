@@ -70,6 +70,8 @@ export default function RootLayout({ children }) {
 }
 ```
 
+Both styles in one call preload the italic on every page. To load it only where a page draws it, as this site does, make it a call of its own with `style: ['italic']`, `preload: false` and `variable: '--font-sans-italic'`, add its variable to the html element's classes, and set it first for emphasis: `:where(em, i):not(:lang(fa), :lang(ar)) { font-family: var(--font-sans-italic), var(--font-sans); }`.
+
 Anywhere else, install `@fontsource-variable/sofia-sans` and import it once, with its italic, `@fontsource-variable/sofia-sans/wght-italic.css`. The font stack already includes its family name.
 
 Sofia Sans has no Persian or Arabic letters. For a Persian page, load Vazirmatn, which has a weight axis, so 450 and 500 draw, and put it first in the stack under `lang="fa"`, on the element that names the language:

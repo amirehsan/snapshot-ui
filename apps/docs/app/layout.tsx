@@ -8,13 +8,17 @@ import './site.css';
 import { PREPAINT } from '@/lib/prepaint';
 
 // Self-hosted by Next at build time, as a variable font so the 450 body weight
-// exists, with a metric-matched fallback so nothing shifts while it loads. The
-// italic too, which emphasis in prose draws in: base.css turns synthesis off.
-const sofia = Sofia_Sans({
+// exists, with a metric-matched fallback so nothing shifts while it loads.
+const sofia = Sofia_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-sans' });
+
+// The italic, which emphasis in prose draws in, since base.css turns synthesis
+// off. Few pages draw it, so it is not preloaded; site.css puts it first for em.
+const sofiaItalic = Sofia_Sans({
   subsets: ['latin'],
-  style: ['normal', 'italic'],
+  style: ['italic'],
   display: 'swap',
-  variable: '--font-sans',
+  variable: '--font-sans-italic',
+  preload: false,
 });
 
 // The Persian face, first in the sans stack under lang="fa" (site.css), as an app
@@ -34,7 +38,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }): ReactElement {
   return (
-    <html lang="en" className={`${sofia.variable} ${persian.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${sofia.variable} ${sofiaItalic.variable} ${persian.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: PREPAINT }} />
       </head>

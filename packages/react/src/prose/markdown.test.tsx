@@ -31,7 +31,16 @@ import { Prose, ProseScroll } from './Prose';
 
 /** The map the docs' recipe gives react-markdown for model output, inlined as an app writes it. */
 const components: Components = {
-  a: ({ children }) => <span className="prose-unlinked">{children}</span>,
+  // A link within the page, such as a footnote's, stays a link; any other becomes its text.
+  a: ({ children, ...link }) => {
+    // react-markdown's tree node is not an attribute of the link.
+    delete link.node;
+    return link.href?.startsWith('#') ? (
+      <a {...link}>{children}</a>
+    ) : (
+      <span className="prose-unlinked">{children}</span>
+    );
+  },
   img: ({ alt }) => <span className="prose-image">{alt}</span>,
   table: ({ children }) => (
     <ProseScroll aria-label="October by category, table">
@@ -61,13 +70,26 @@ describe('model output through react-markdown', () => {
     expect(Object.keys(react)).not.toContain('useEffect');
   });
 
-  it('writes no link and no image', () => {
+  it('writes no link that leaves the page, and no image', () => {
     const output = html();
-    expect(output).not.toMatch(/<a[\s>]/);
+    // The only links are the footnote's, to its note and back, within the page.
+    const hrefs = [...output.matchAll(/href="([^"]*)"/g)].map((match) => match[1]);
+    expect(hrefs).toEqual(['#user-content-fn-refunds', '#user-content-fnref-refunds']);
     expect(output).not.toMatch(/<img[\s>]/);
-    expect(output).not.toContain('href=');
     expect(output).not.toContain('src=');
     expect(output).not.toContain('example.com/charts');
+  });
+
+  it('writes GFM footnotes: a mark that links to its note, the note, and a label for screen readers alone', () => {
+    const output = html();
+    expect(output).toMatch(
+      /<sup><a href="#user-content-fn-refunds" id="user-content-fnref-refunds" data-footnote-ref="true"/,
+    );
+    expect(output).toContain(
+      '<section data-footnotes="true" class="footnotes"><h2 class="sr-only" id="footnote-label">Footnotes</h2>',
+    );
+    expect(output).toContain('Refunds are counted in the month they arrive.');
+    expect(output).toMatch(/<a href="#user-content-fnref-refunds" data-footnote-backref=""/);
   });
 
   it('writes none of the HTML the model sent, inline or as a block', () => {

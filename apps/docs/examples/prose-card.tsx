@@ -11,7 +11,7 @@ export default function ProseCard(): ReactElement {
   return (
     <Card style={{ maxWidth: 560, marginInline: 'auto', width: '100%' }}>
       <Prose>
-        <ModelMarkdown tableLabel="Your week, table">{COACHING_NOTE}</ModelMarkdown>
+        <ModelMarkdown>{COACHING_NOTE}</ModelMarkdown>
       </Prose>
     </Card>
   );

@@ -7,7 +7,7 @@ import { OwnMarkdown } from './prose-markdown';
 export default function ProseReport(): ReactElement {
   return (
     <Prose as="article" style={{ width: '100%' }}>
-      <OwnMarkdown tableLabel="October, table">{REPORT}</OwnMarkdown>
+      <OwnMarkdown>{REPORT}</OwnMarkdown>
     </Prose>
   );
 }

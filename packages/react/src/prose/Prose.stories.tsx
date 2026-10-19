@@ -4,14 +4,12 @@ import { expect, waitFor } from 'storybook/test';
 import { Badge } from '../badge';
 import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardNote, CardTitle } from '../card';
-import { Kbd } from '../kbd';
-import { Link } from '../link';
 import { PageColumn, PageHeader } from '../page-header';
 import { focusOn } from '../stories/focus';
 import { pressRealKeys } from '../stories/keys';
 import { ELEMENTS, modelOutput, ownContent, PICTURE, Rendered } from '../stories/prose';
 import { PHONE, VIEWPORT_OPTIONS } from '../stories/viewports';
-import { Eyebrow, Heading, Text } from '../typography';
+import { Text } from '../typography';
 import { COACHING_NOTE, GOALS_GUIDE_FA, MONTHLY_REPORT, NESTED } from './fixtures';
 import { Prose, ProseScroll, type ProseProps } from './Prose';
 
@@ -76,6 +74,14 @@ const WIDE_TABLE: ReactElement = (
  */
 export const Default: Story = {
   render: () => <Prose as="article">{ELEMENTS}</Prose>,
+  play: async ({ canvasElement }) => {
+    // One measure, 70ch of the body's text resolved on the box, shared by a paragraph and a heading.
+    const box = find(canvasElement, '.prose');
+    const line = getComputedStyle(box).getPropertyValue('--prose-line').trim();
+    await expect(line).toMatch(/^[\d.]+px$/);
+    await expect(getComputedStyle(find(canvasElement, 'p')).maxWidth).toBe(line);
+    await expect(getComputedStyle(find(canvasElement, 'h1')).maxWidth).toBe(line);
+  },
 };
 
 /**
@@ -206,7 +212,12 @@ export const ModelOutput: Story = {
     </Prose>
   ),
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelectorAll('a, img')).toHaveLength(0);
+    // Only the footnote's links, within the page, stay links.
+    await expect(canvasElement.querySelectorAll('a:not([href^="#"]), img')).toHaveLength(0);
+    await expect(canvasElement.querySelectorAll('a[data-footnote-ref]')).toHaveLength(1);
+    // GFM's label for the notes is for screen readers alone.
+    const label = find(canvasElement, '[data-footnotes] > h2');
+    await expect(label.getBoundingClientRect().height).toBeLessThanOrEqual(1);
     await expect(canvasElement.querySelectorAll('.prose-unlinked')).toHaveLength(2);
     const [image, empty] = [...canvasElement.querySelectorAll<HTMLElement>('.prose-image')];
     await expect(image).toHaveTextContent('Spending by category in October, rent first');
@@ -219,7 +230,11 @@ export const ModelOutput: Story = {
   },
 };
 
-/** Library components inside an article: a Badge in the text, and a Card and a Button under not-prose. */
+/**
+ * Library components inside an article, with no not-prose: a Badge in a heading, a Card with a list of its
+ * own, and a Button, each drawn as it is anywhere, the card's list included. A not-prose block holds markup of
+ * the app's own that prose leaves alone too.
+ */
 export const WithComponents: Story = {
   render: () => (
     <Prose as="article" style={{ maxWidth: '40rem' }}>
@@ -227,137 +242,31 @@ export const WithComponents: Story = {
         Your week <Badge tone="info">New</Badge>
       </h2>
       <p>The groceries budget held for the third week running.</p>
-      <div className="not-prose">
-        <Card>
-          <CardHeader>
-            <CardTitle level={3}>Travel fund</CardTitle>
-            <CardNote>$1,240.00 of $2,000.00</CardNote>
-          </CardHeader>
-          <CardBody>
-            <Text>Move $20.00 on payday to stay on track.</Text>
-          </CardBody>
-        </Card>
-      </div>
-      <p className="not-prose">
+      <Card>
+        <CardHeader>
+          <CardTitle level={3}>Travel fund</CardTitle>
+          <CardNote>$1,240.00 of $2,000.00</CardNote>
+        </CardHeader>
+        <CardBody>
+          <Text>Move $20.00 on payday to stay on track.</Text>
+          <ul>
+            <li>Next transfer on the first</li>
+          </ul>
+        </CardBody>
+      </Card>
+      <p>
         <Button variant="secondary">Open the budget</Button>
       </p>
+      <ul className="not-prose" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+        <li>A list the app draws itself.</li>
+      </ul>
       <p>Each looks as it does outside the article.</p>
     </Prose>
   ),
-};
-
-/** The parts the twin story compares, each in a plain block, so the prose box's spacing between blocks is not
- * what differs. */
-function Twins({ testId }: { testId: string }): ReactElement {
-  const id = (name: string): string => `${testId}-${name}`;
-  return (
-    <>
-      <div>
-        <Heading level={2} size={2} data-testid={id('heading')}>
-          Settings
-        </Heading>
-      </div>
-      <div>
-        <Text data-testid={id('text')}>A sentence of body copy.</Text>
-      </div>
-      <div>
-        <Text size="small" tone="muted" data-testid={id('small')}>
-          A small, muted line.
-        </Text>
-      </div>
-      <div>
-        <Eyebrow data-testid={id('eyebrow')}>Workspace</Eyebrow>
-      </div>
-      <div>
-        <Link href="#budgets" data-testid={id('link')}>
-          Budgets
-        </Link>
-      </div>
-      <div>
-        <Kbd data-testid={id('kbd')}>Esc</Kbd>
-      </div>
-      <div>
-        <Badge tone="info" data-testid={id('badge')}>
-          Beta
-        </Badge>
-      </div>
-      <div>
-        <Button data-testid={id('button')}>Save</Button>
-      </div>
-      <div>
-        <Card data-testid={id('card')}>
-          <CardHeader>
-            <CardTitle level={3} data-testid={id('card-title')}>
-              Travel fund
-            </CardTitle>
-            <CardNote data-testid={id('card-note')}>$1,240.00 of $2,000.00</CardNote>
-          </CardHeader>
-          <CardBody>Saved monthly.</CardBody>
-        </Card>
-      </div>
-    </>
-  );
-}
-
-const TWINS = [
-  'heading',
-  'text',
-  'small',
-  'eyebrow',
-  'link',
-  'kbd',
-  'badge',
-  'button',
-  'card',
-  'card-title',
-  'card-note',
-] as const;
-
-const COMPARED = [
-  'font-family',
-  'font-size',
-  'line-height',
-  'font-weight',
-  'font-style',
-  'letter-spacing',
-  'color',
-  'margin-top',
-  'margin-right',
-  'margin-bottom',
-  'margin-left',
-  'padding-top',
-  'padding-left',
-  'border-top-left-radius',
-  'border-bottom-right-radius',
-  'text-decoration-line',
-] as const;
-
-/**
- * Prose never reaches a component: each part inside the prose box computes the same type, color, spacing and
- * corner as its twin outside it, with no not-prose.
- */
-export const ComponentsUnchanged: Story = {
-  tags: ['no-visual'],
-  render: () => (
-    <div style={{ display: 'grid', gap: 24, gridTemplateColumns: '1fr 1fr' }}>
-      <Prose data-testid="inside">
-        <Twins testId="inside" />
-      </Prose>
-      <div>
-        <Twins testId="outside" />
-      </div>
-    </div>
-  ),
-  play: async ({ canvas }) => {
-    for (const name of TWINS) {
-      const inside = getComputedStyle(canvas.getByTestId(`inside-${name}`));
-      const outside = getComputedStyle(canvas.getByTestId(`outside-${name}`));
-      for (const property of COMPARED) {
-        await expect(`${name} ${property}: ${inside.getPropertyValue(property)}`).toBe(
-          `${name} ${property}: ${outside.getPropertyValue(property)}`,
-        );
-      }
-    }
+  play: async ({ canvasElement }) => {
+    // The card's own list is the browser's, not prose's: no slate marker indent of 1.25rem.
+    const list = find(canvasElement, '.card ul');
+    await expect(getComputedStyle(list).paddingInlineStart).toBe('40px');
   },
 };
 

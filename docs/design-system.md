@@ -10952,7 +10952,7 @@ base), so a stack's two ends are its sums and the value domain is taken
 from them, not from the values. A stack is one bar across: the render
 writes `--bar-chart-group: 1` and every segment's index 0, so its
 thickness is a lone bar's, 24px at most and 60% of its band. One series
-ignores the layout and draws as one series (correction 53).
+ignores the layout and draws as one series (correction 64).
 
 **A segment's corners and its gap.** Only the outermost segment of each
 sign keeps the data end's `--radius-micro` (`data-outer`, the last
@@ -10967,7 +10967,7 @@ The bar is a border box, so the gap is inside the segment's own length
 and the stack's total stays exact; a segment thinner than its gap draws
 the gap alone, 2px. A zero is a segment of no length where its sign has
 reached, never the outermost and never gapped, and the keys still reach
-it (correction 54). `StackInPlace` holds every segment on the zero line
+it (correction 65). `StackInPlace` holds every segment on the zero line
 or on the one before within 1px, its gap at its foot, inner joins and
 zero ends square, and each stack's ends where the gridlines put its
 sums, left to right, right to left and narrow; `StackGaps` holds the same
@@ -10992,7 +10992,7 @@ row. The readout lists every segment of the band in legend order, then
 the total with `labels.total`, and the table gains a Total column. A
 stack asked for figures without `totals` warns once and labels nothing,
 and since a horizontal chart's amounts are on by default, a horizontal
-stack wants `totals` or `valueLabels="none"` (correction 52). The
+stack wants `totals` or `valueLabels="none"` (correction 63). The
 readout is placed from the stack's ends, both of them, as a band's bars
 are, and lying down it stands at the stack's far end from zero;
 `ReadoutStacked` holds it clear of the stack and within 24px of it.
@@ -11006,7 +11006,7 @@ right to left. Lying down the pairs swap: Left and Right along the bar,
 mirrored in right to left, and Up and Down across the rows. At either end
 of its stack a key is prevented and stays, as Right at the last band
 does. Home, End and the pages keep the category, else the nearest
-(correction 56). `KeysStacked` runs both orientations and right to left
+(correction 67). `KeysStacked` runs both orientations and right to left
 in three engines; the pointer reads a stack's segment along its band.
 
 **Textures** (spec 7.11, owner ruling 11). `hasTexture`, off by default,
@@ -11030,7 +11030,7 @@ the page's own color: bars are out of the repaint, so a gap drawn in
 `--chart-surface` would show the surface's token on a forced canvas, and
 the library never sets the app's surface variable, so the gap reads
 `--bar-chart-gap`, which only the forced-colors block sets, to `canvas`
-(correction 55). The docs' forced-colors run holds the four looks, the
+(correction 66). The docs' forced-colors run holds the four looks, the
 fifth's `GrayText` and the gaps.
 
 **Focus through data and status.** A segment that leaves while it holds
@@ -11038,7 +11038,7 @@ focus, its value gone or its band loading, parks focus on the group as a
 bar does; the layout effect that hands it on runs after every commit and
 gives it to the tab stop whenever the chart is ready and focus is on its
 group, for new data as well as new categories, an orientation or a
-status (correction 57). `StackFocus` takes a stack through a segment's
+status (correction 68). `StackFocus` takes a stack through a segment's
 value gone, loading and ready again with a segment focused and finds no
 focus lost to nothing.
 
@@ -11056,7 +11056,7 @@ lead accepted; Task 6 reports against both. Corrections 29 to 34 record
 the review's fixes: the group focusable by script in every status, the
 readout's lines, busy on the chart's view, the figures' room, the thin
 hatched bar's outline and every third label only past eight bands.
-Corrections 52 to 59 record the stacks': one total per band at the end of
+Corrections 63 to 70 record the stacks': one total per band at the end of
 the side it nets to, one series ignoring the layout, the zero never
 outermost and the attributes the CSS reads, the gap's own variable and
 the fifth slot's `GrayText` in forced colors, the keys and the nearest
@@ -11093,16 +11093,37 @@ client-only.
 class's specificity, a component's own, and nothing under `not-prose`. A
 pseudo-element stands after the guard (`::marker`), since `:where()` takes
 none, and a language rule is written on the element, `:where(ol:lang(fa))`,
-so it keeps the same specificity. `prose.css` is imported right after the
-tokens, before every component file, so a component inside an article wins
-on order even without `not-prose` (spec correction 35): a Heading, a Text,
-an Eyebrow, a Link, a Kbd, a Badge, a Button and a Card with its title and
-note compute the same type, color, spacing, corners and decoration inside
-the prose box as outside it (`ComponentsUnchanged`). What reaches a
-component is what it leaves unset: the 70ch measure on its text element,
-and the rhythm's top margin when it is a direct child of the box (spec
-correction 44). The root sets ink and the sans face, so a page without
-`base.css` reads the same.
+so it keeps the same specificity. The root sets ink and the sans face, so
+a page without `base.css` reads the same.
+
+**Components inside prose** (spec 8.5, the review's fix, spec correction
+52). One class's specificity and the import order kept a component's own
+declarations, but not what it leaves unset: Breadcrumbs, PageHeader's
+trail, Pagination, Calendar, DataTable, UploadList, BottomTabBar and the
+charts took prose's list, table, figure and link rules, and an unclassed
+link inside a component took the link look. So the element rules sit in
+a layer of their own, `components.prose`, under every component's rules
+whatever their specificity, and that layer's last rule,
+`.prose :is(<roots>), .prose :is(<roots>) * { all: revert-layer; }`,
+with the same for markers, hands a component's root and everything in it
+back to the layer below, so each property takes what it would outside
+prose. The roots are every component's root class, written into that one
+rule by the build (`scripts/component-roots.js`, from the component
+stylesheets: a class that extends no other class of its file), never by
+hand; `css.test.js` checks the built rule against the stylesheets and
+names the compound parts. Lightning CSS has no custom selectors, and the
+list in each of some sixty rules' guards would have added about 150 kB to
+`styles.css`; in one rule it costs `prose.css` 5 kB before compression.
+The root must sit inside the prose box, so a Prose in a Card or a
+PageColumn is styled; the gaps between the box's own children stay
+outside the layer, so a chart in an article is spaced as a block is.
+`ComponentsUnchanged` (Compositions/Components in Prose, three engines)
+renders seventeen parts bare, each a direct child of a prose box, the
+compound ones included, and compares every element's type, color,
+spacing, edges, corners, list style and measure with its twin outside.
+Prose does not nest inside what it leaves alone: a Prose inside a
+`not-prose` subtree, or inside a component inside another prose box, is
+unstyled, which the page says.
 
 **Type.** Body text is `--text-body`, 16px at 450, with a line height of
 1.6, which leaves WCAG 1.4.12's spacing met by default and room for
@@ -11113,8 +11134,10 @@ the subhead (14px, 700, no tracking), `h5` and `h6` in slate; no new step
 (ruling 16). `strong` is 700 (ruling 17): 500 against 450 is a step a
 reader barely sees at 16px. `em` is the italic face, which the app loads,
 since `base.css` turns synthesis off (risk R9): the docs site loads Sofia
-Sans with `style: ['normal', 'italic']` and Storybook imports the
-fontsource package's `wght-italic.css`. Headings take
+Sans's italic as a call of its own, not preloaded, set first for `em`
+and `i` outside Persian and Arabic (spec correction 62), and Storybook
+imports the fontsource package's `wght-italic.css`. Persian emphasis
+inside `strong`, `b` or a 700 heading keeps 700 (spec correction 56). Headings take
 `scroll-margin-block-start: var(--prose-scroll-margin, 0px)`, a sticky
 header's height for an app to set. A long word or address breaks anywhere
 in every text block and table cell, so a phone is never pushed sideways.
@@ -11128,8 +11151,12 @@ one thing), 8px between list items, under an item's text for a nested
 list, between paragraphs in an item and under a figure for its caption,
 24px between blocks in a quote and between a definition and the next
 term. Text blocks (`p`, `li`, headings, `blockquote`, `dl`, `figcaption`,
-footnotes) stop at `--prose-measure`, 70ch (ruling 18); tables, code,
-figures and rules take the box's width. `--prose-measure: none` lifts it.
+each footnote) stop at one line length (ruling 18): `--prose-line`, a
+registered `<length> | none` that inherits, set once on the box from
+`--prose-measure`, 70ch, so the ch is the body's and a heading or a caption
+shares the paragraph's measure (spec correction 55); tables, code, figures
+and rules take the box's width. `--prose-measure: none` on the box or
+above lifts it.
 
 **Lists, quotes and definitions.** `padding-inline-start: 1.25rem`; `ul`
 disc, circle, square and `ol` decimal, lower-alpha, lower-roman by depth;
@@ -11197,7 +11224,11 @@ in a flex or grid item never widens it (spec correction 41). The table
 keeps `display: table`, so its rows and columns are read. At 375px the
 monthly report's table scrolls inside its region and the page does not;
 the region takes focus and the arrow keys scroll it (`WideTableScrolls`,
-three engines, and the docs end to end).
+three engines, and the docs end to end). It is a tab stop whether its
+table overflows or not, since it cannot know without measuring, so the
+docs wrap only tables wider than three columns; the docs' map names each
+region from its column headers, and makes a code block a region named
+"Code", its language and its first line (spec correction 61).
 
 **Neutralized links and images** (ruling 27, spec 8.10). Nothing in
 `prose.css` lays anything out by `a` or `img`: every rule on them is
@@ -11207,11 +11238,25 @@ the page as `span.prose-unlinked`, the text's own look (`color: inherit`,
 no decoration, anywhere breaks), since a thing that looks like a link and
 goes nowhere breaks the reader's trust; its image as `span.prose-image`,
 its alt text at the small step in slate, inline in the inline code's bone
-box, and not drawn when empty. The docs' recipe writes both through
+box with a 1px transparent edge that forced colors draw, and not drawn
+when empty. The docs' map starts the span with a visually hidden
+"Image:" and renders nothing for an image with no alt text (spec
+correction 58). A link within the page, a footnote's mark and its way
+back, stays a link. The docs' recipe writes both through
 react-markdown's `components` map with `skipHtml`; react-markdown and
 remark-gfm are a devDependency of `@snapshot-ui/react`, for one server
 render test, and dependencies of the docs site, never of a published
 runtime (spec correction 38).
+
+**Footnotes and task lists** (spec corrections 53, 59 and 60). GFM's
+footnotes are small and slate under a divider rule, each note at the
+measure; the "Footnotes" heading GFM writes for screen readers alone
+(`h2.sr-only`, which react-markdown leaves unstyled) is hidden as
+visually hidden text, read through `[class~='sr-only']` since the class
+pattern refuses an `sr-` class, and the list under it takes no gap for
+it. A Persian page passes its label through react-markdown's
+`remarkRehypeOptions` (`footnoteLabel`, `footnoteBackLabel`). GFM's task
+lists draw their own boxes: no markers and no indent.
 
 **Right to left and Persian.** Logical properties throughout, so markers,
 indents, quote rules and `dd` move to the right; `pre` and inline code do
@@ -11221,7 +11266,11 @@ owed to `Heading`, risk R11), and `em` is 500 and upright, the emphasis a
 Persian text uses, since Vazirmatn has no italic. Under `:lang(fa)` every
 ordered list counts in Persian digits (`list-style-type: persian`, ruling
 22). Prose sets no direction; a renderer writes `dir="auto"` on mixed
-paragraphs (ruling 23). Vazirmatn, the face an app puts first in
+paragraphs (ruling 23). An amount in a Persian sentence is wrapped in a
+left-to-right isolate, U+2066 to U+2069: after Persian letters the
+bidirectional algorithm reads a leading currency sign with them and draws
+"1,250.00$" (spec correction 54; `ProseMirrored` holds the sign left of the
+figures). Vazirmatn, the face an app puts first in
 `--font-sans` under `lang="fa"`, is served to Storybook from
 `apps/storybook/public/fonts/vazirmatn/` (33.003, its OFL and its sha256
 in the folder's README, spec correction 37), so the baselines draw it
@@ -11238,7 +11287,8 @@ dimmed. In forced colors inline code's edge is `CanvasText`, `mark` takes
 the reader's `Mark` and `MarkText` where the engine names them and
 `Highlight` and `HighlightText` where not (under `@supports`, since
 Lightning CSS folds a repeated declaration), the quote's rule, the `hr`
-and the footnotes' rule take `CanvasText`, and the rings of a scrolling
+and the footnotes' rule take `CanvasText`, so does the alt text box's
+edge, and the rings of a scrolling
 `pre` and a `ProseScroll` are `Highlight`.
 
 **Contrast.** Gated already: ink, slate and link blue as text on the
@@ -11259,7 +11309,8 @@ column's start edge, under the title (`InPageColumn`), never centred.
 **Size.** `{ Prose, ProseScroll }` measures 169 B, and 167 B with React
 Aria not ignored, a difference of compression alone, since neither part
 imports it; the rule sets 1 kB, over the spec's 0.5 kB budget (spec
-correction 45). `prose.css` builds to 11.9 kB before compression.
+correction 45). `prose.css` builds to 16.9 kB before compression, 5 kB of
+it the component roots in the one rule that hands them back.
 
 **Screen readers and devices.** Not yet verified (owner action 3): a
 report's headings, lists and table read in VoiceOver and NVDA, a
