@@ -268,3 +268,4 @@ export {
   type DataTableShared,
 } from './data-table';
 export { CopyButton, type CopyButtonLabels, type CopyButtonProps } from './copy-button';
+export { FieldExtras, type FieldExtrasLabels, type FieldExtrasProps, type FieldOffer } from './field-extras';

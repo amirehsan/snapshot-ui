@@ -49,6 +49,7 @@ import {
 } from '../src/sidebar';
 import { Spinner } from '../src/spinner';
 import { CopyButton } from '../src/copy-button';
+import { FieldExtras } from '../src/field-extras';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
@@ -91,6 +92,8 @@ const UPLOADS: UploadItem[] = [
   { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
   { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
 ];
+
+const noop = (): void => undefined;
 
 const CLIENT: [name: string, element: ReactElement, contains: string[], excludes?: string[]][] = [
   ['Button', <Button>Save</Button>, ['<button', 'class="button button-primary', '>Save<']],
@@ -1154,6 +1157,43 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '<span class="copy-button-status" role="status" aria-live="polite" aria-atomic="true"></span>',
     ],
     ['data-outcome', 'role="tooltip"', 'aria-label='],
+  ],
+  [
+    // Both offers drawn from the props, the suggestion first, each button named by its word and the field's label
+    // and described by its words; the status host is in the HTML and empty, so a reader is listening before a take.
+    'FieldExtras with a suggestion and a default',
+    <FieldExtras
+      fieldLabel="Cushion"
+      suggestion={{ value: '$2,340', reason: 'a month of your fixed bills', isCurrent: false, onTake: noop }}
+      defaultOffer={{ value: '$1,000', isCurrent: false, onTake: noop }}
+    >
+      <TextField label="Cushion" defaultValue="$500" />
+    </FieldExtras>,
+    [
+      '<div class="field-extras" data-scope="field">',
+      '<p class="field-offer" data-kind="suggestion">',
+      'class="field-offer-text">Suggested: $2,340<!-- -->, <!-- -->a month of your fixed bills</span>',
+      'class="button button-tertiary field-offer-button"',
+      'aria-label="Use, Cushion"',
+      '<p class="field-offer" data-kind="default">',
+      'Default: $1,000</span>',
+      'aria-label="Reset to default, Cushion"',
+      '<span class="field-extras-status" role="status" aria-live="polite" aria-atomic="true"></span>',
+    ],
+    ['placeholder=', 'data-changed'],
+  ],
+  [
+    // A current offer is not drawn: only the field and the empty status.
+    'FieldExtras at its default',
+    <FieldExtras
+      fieldLabel="Wait"
+      scope="group"
+      defaultOffer={{ value: '3 days', isCurrent: true, onTake: noop }}
+    >
+      <TextField label="Wait" defaultValue="3 days" />
+    </FieldExtras>,
+    ['<div class="field-extras" data-scope="group">', 'class="field-extras-status"'],
+    ['field-offer'],
   ],
 ];
 

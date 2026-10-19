@@ -23,6 +23,8 @@ import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Card, CardActions, CardHeader, CardTitle } from '../src/card';
 import { CopyButton } from '../src/copy-button';
+import { FieldExtras } from '../src/field-extras';
+import { TextField } from '../src/text-field';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -370,6 +372,17 @@ const FACES: [name: string, element: ReactElement][] = [
   [
     'CopyButton button',
     <CopyButton value="Setup details" look="button" labels={{ copy: 'Copy setup details' }} />,
+  ],
+  [
+    // Every offered value and word is the app's or a label, so every locale writes the same field and offers.
+    'FieldExtras with both offers',
+    <FieldExtras
+      fieldLabel="Cushion"
+      suggestion={{ value: '$2,340', reason: 'a month of your fixed bills', isCurrent: false, onTake: noop }}
+      defaultOffer={{ value: '$1,000', isCurrent: false, onTake: noop }}
+    >
+      <TextField label="Cushion" defaultValue="$500" />
+    </FieldExtras>,
   ],
 ];
 

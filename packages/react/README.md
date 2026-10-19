@@ -58,6 +58,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Drawer](https://snapshotui.com/docs/components/drawer)
 - [Empty state](https://snapshotui.com/docs/components/empty-state)
 - [Field parts](https://snapshotui.com/docs/components/field)
+- [Field extras](https://snapshotui.com/docs/components/field-extras)
 - [File drop zone](https://snapshotui.com/docs/components/file-drop-zone)
 - [Filter bar](https://snapshotui.com/docs/components/filter-bar)
 - [Filter chip](https://snapshotui.com/docs/components/filter-chip)

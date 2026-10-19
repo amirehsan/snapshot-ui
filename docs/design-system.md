@@ -882,6 +882,7 @@ And the controls that move, by the corner inset (below):
 | a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
 | Card | the list's first or last row's controls | down | the row's block padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
 | Card | CardActions beside the title | down | the actions and the title take a top margin of the corner inset less the card's padding; under 24rem nothing moves | 7px, 19px compact | as before | as before |
+| Card | a field's last offer | down | the offer's block-end padding grows by the corner inset less the card's padding, plus what the button's box hangs under the line | 17px, 27px compact | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
 | SaveBar | its buttons | in | each end pads to the corner inset, as the bulk bar's | 23px each side | 16px and 11px | 16px and 8px |
 | Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
@@ -11500,3 +11501,143 @@ second copy during the hold; the name unchanged; the tip not read as a
 description. Not yet verified on a real iPhone and an Android phone at
 320px to 430px (the outcome's tip after a tap, and the status), or in
 Windows' contrast themes (the check in the button's text color).
+
+## FieldExtras
+
+A line under a field, or under a group, that offers the field's default
+("Default: 3 days", Reset to default) or a value worked out for this
+reader ("Suggested: $2,340, a month of your fixed bills", Use):
+`FieldExtras` (settings spec, section 8; decided items 16 and 17; open
+questions 13 to 15; ruling 2.6). It wraps any field and composes what
+exists: a tertiary Button at the end of a slate line.
+
+**An offer is an edit.** Taking one calls the offer's `onTake`, the app's
+setter, the one the field's `onChange` calls, and nothing else: the
+wrapper reads no value, writes none, prefills nothing and draws no
+Changed chip. So the field's Changed chip, its checks and a SaveBar follow
+the app's own comparisons, as they do for typing: a field saved at its
+default shows no offer and no chip; edited away, the chip and the offer
+show; reset, both leave; saved away from its default, the offer shows and
+no chip, and after a reset the chip shows and no offer. The SaveBar counts
+a take as one change, by the app's message, and its Cancel brings the
+saved values back and the offers with them. A suggestion is never put in
+the field and never shown as its placeholder: taupe is for placeholders,
+and a suggestion is words to read.
+
+**Drawn only when useful.** An offer whose `isCurrent` is true is not
+drawn, so a page of fields at their defaults shows no offers. When both
+are given, neither is current and their values are equal, only the default
+is drawn, the plainer reason. When both show, the suggestion comes first:
+it is about this reader, the default about everyone. Two offers are two
+lines.
+
+**The markup.** `div.field-extras[data-scope]` holds the field, then a
+`p.field-offer[data-kind]` per offer drawn, `span.field-offer-text` with
+the words and, for a suggestion, ", " and its reason, and a tertiary
+`Button.field-offer-button` with its word, then the polite status host,
+`span.field-extras-status`. `className`, `ref` and the rest go on the root.
+The button is `type="button"`, so a press never submits the form or runs
+the browser's checks; it has no name or value of its own, so it adds
+nothing to the form's data; and nothing joins the field's description, so
+the field keeps its own words and its own error, which the app's
+validation clears. Helpers never fight the field's checks.
+
+**Names.** Each button is named by its word and the field's label, "Reset
+to default, Wait", through `aria-label`, and described by the offer's
+words, "Default: 3 days" (settings plan, spec correction 23). The name
+starts with the word the button shows, so voice control finds it by what
+is seen (WCAG 2.5.3). A list of offers then reads as a list of fields, not
+a list of Resets.
+
+**Focus after a take.** A taken offer leaves, since the field now holds
+it, so the button that held focus goes. In the frame after React's commit
+(`afterCommit`, never a layout effect, spec 12.4), focus goes to
+`controlRef`'s element when it takes focus, else the first control of the
+field or the group, not of the offers, else an offer still drawn, else
+`<main>`, never the body. It moves after a pointer press too, since Safari
+leaves a pressed button unfocused, so focus is not read first. It moves
+only when focus is the pressed button's, inside the wrapper or lost: an
+app whose setter moved focus itself, into a dialog that asks first, keeps
+it (spec correction 26). A NumberField with `allowsNegative` draws its
+sign button before its text box, so it passes `controlRef`.
+
+**Said politely** (settings plan, spec correction 25, a choice). The spec
+said the field read with its new value was the confirmation and needed no
+live region. The owner's instruction for this task asks for a polite
+announcement of an applied suggestion: a screen reader does not always
+read a field focused by script (VoiceOver on iOS often does not), and
+voice control and switch users hear nothing of a focus move. So a polite
+status in the server's HTML, empty until then, says what a take set,
+"Cushion set to $2,340" or "Wait reset to its default, 3 days", as a new
+node per take, so the same offer taken again is said again, and empties
+after five seconds, so a reader browsing later meets no stale news. Its
+words are `labels.usedStatus` and `labels.resetStatus`. A status that
+speaks inside `aria-busy="true"` warns once in development (lesson 11).
+
+**The group scope** (ruling 2.6). `scope="group"` lifts the measure, so
+the line sits under the whole group, and the first control of the group
+takes focus after a take: a pair of fields' first, a reset Repeater's new
+first row's first field, or its Add with no rows (Task 5). One offer line
+serves a field and a set alike, and the Repeater stays ignorant of values
+(open question 3).
+
+**The colors, and why.** The words are slate at the small step, 450; the
+button is a tertiary Button in ink. Never clay, since an offer is not
+unsaved work; never signal orange, since it is not consent; never success
+or gain, since a suggestion is not a good outcome; never info, since
+nothing is being reported; never taupe, since it is not a placeholder.
+
+**The line.** It sits a part step under the field's last part, its hint or
+error, and wraps. The button's 40px box is level with the line by
+`margin-block: min(0px, calc((1lh - var(--size-control)) / 2))`, so the line
+does not grow for its target, the DescriptionList actions' technique. A
+field's extras stop at `--container-field`, as a field does, so an offer
+ends under the control's end; a group's span the group.
+
+**The corner** (settings plan, spec correction 24). The last offer of a
+field that ends a card is a control at the card's foot. Its button's box
+hangs under the line by half the control's height less half the line's,
+10px comfortable and 8px compact, so the plan's padding of the corner
+inset less the card's padding left the box 30px from the card's edge in
+Rounded, measured, inside the 39px inset. The line's block-end padding is
+the corner inset less the card's padding plus that overhang: 17px in
+Rounded and 27px compact. In Soft and Square the inset is the card's
+padding, which already clears their curve, so the line keeps no padding:
+the rule takes the smaller of the move and the inset less the padding
+scaled up, which is 0 there. `OfferClearOfCorner` measures it in three
+engines.
+
+**Forced colors, motion, direction.** The words are text and the button
+draws its own forced colors, so the file adds nothing of its own; a docs
+test reads the words in CanvasText, the button in ButtonText and its focus
+ring. Nothing moves: an offer leaves at once. Every property is logical:
+on a Persian page the words start at the right and the button ends the
+line on the left, and a figure in another script keeps its order inside
+the app's `bdi` (`RightToLeft`).
+
+**Server rendering.** A client part for its focus move and its status; the
+offers are in the server's HTML from the props, and the status host is
+there empty. Nothing reads the locale, so en-US, de-DE and fa-IR write one
+HTML. Prose's generated guard of component roots (batch 6) is not on
+`main` yet; `field-extras` and `field-offer` extend no other class in
+their file, which names no `.field` selector, so the guard will find them
+as roots when it arrives (settings plan, spec correction 9).
+
+**Contrast**, measured with `contrast.js` and gated already, so nothing is
+added. The words are slate: against the canvas 4.84 in light and 7.26 in
+dark, against lifted 5.31 and 6.94. The button is ink: against the canvas
+16.25 and 19.31, against lifted 17.84 and 17.42.
+
+**The size** (spec correction 27). The entry `{ FieldExtras }` measures
+2.09 kB without React Aria, Lucide and `@internationalized/date`, over the
+spec's 1.5 kB budget: Button is 771 B of it, with its kept announcement
+(spec correction 21), and the status the spec did not have adds its timer
+and its node. The rule rounds up to 2.5 kB and adds 0.5 kB: a 3 kB limit.
+With React Aria not ignored it measures 14.41 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): an offer's button read with its name and description;
+the field read with its new value after a take, and the status after it;
+nothing said twice in a way that confuses. Not yet verified on a real
+iPhone and an Android phone at 320px to 430px (an offer's line wrapping,
+the button at its end), or in Windows' contrast themes.

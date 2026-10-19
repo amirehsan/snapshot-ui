@@ -9774,6 +9774,79 @@ describe('src/components/copy-button.css', () => {
   });
 });
 
+describe('src/components/field-extras.css, the offers', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/field-extras.css')));
+
+  it("caps a field's extras at the field's measure and lifts it for a group", () => {
+    const css = rules();
+    const extras = blockAfter(css, '.field-extras {');
+    expect(extras).toContain('display: grid;');
+    expect(extras).toContain('gap: var(--spacing-part);');
+    expect(extras).toContain('max-inline-size: var(--container-field);');
+    // A grid item's min-content width never pushes a 320px page sideways.
+    expect(extras).toContain('min-inline-size: 0;');
+    expect(blockAfter(css, ".field-extras[data-scope='group'] {")).toContain('max-inline-size: none;');
+  });
+
+  it('draws the offer at the small step in slate, never clay, taupe or signal', () => {
+    const css = rules();
+    const line = blockAfter(css, '.field-offer {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'align-items: baseline;',
+      'column-gap: var(--spacing-part);',
+      'margin: 0;',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: var(--text-small--font-weight);',
+      'color: var(--color-slate);',
+    ]) {
+      expect(line, declaration).toContain(declaration);
+    }
+    // An offer is not unsaved work, not consent, not a good outcome, not an error and not a placeholder.
+    expect(css).not.toMatch(/--color-(clay|signal|success|gain|error|info|taupe)/);
+  });
+
+  it("wraps the offer's words anywhere they must, so a long value never pushes the page", () => {
+    const text = blockAfter(rules(), '.field-offer-text {');
+    expect(text).toContain('min-inline-size: 0;');
+    expect(text).toContain('overflow-wrap: anywhere;');
+  });
+
+  it('levels the button with the line', () => {
+    expect(blockAfter(rules(), '.field-offer-button {')).toContain(
+      'margin-block: min(0px, calc((1lh - var(--size-control)) / 2));',
+    );
+  });
+
+  it('clips the status host, out of the flow and out of sight', () => {
+    const css = rules();
+    const clip = blockAfter(css, '.field-extras-status {');
+    for (const declaration of [
+      'position: absolute;',
+      'inline-size: 1px;',
+      'block-size: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+      'white-space: nowrap;',
+    ]) {
+      expect(clip, declaration).toContain(declaration);
+    }
+    expect(css).not.toMatch(/\.field-extras-status[^{]*\{[^}]*(display: none|visibility: hidden)/);
+    // The status is placed absolutely in the wrapper's grid, so it names both its lines on both axes (lesson 9).
+    expect(clip).toContain('grid-area: 1 / 1 / span 1 / span 1;');
+  });
+
+  it('has a forced-colors block, no transition and no physical side', () => {
+    const source = stripComments(read('src/components/field-extras.css'));
+    expect(source).toContain(FORCED_COLORS);
+    expect(source).not.toMatch(/\b(transition|animation)\s*:/);
+    expect(source).not.toMatch(/\b(left|right|top|bottom)\s*:|(margin|padding)-(left|right|top|bottom)/);
+  });
+});
+
 describe('concentric corners (docs/design-system.md, "Nested radii, derived")', () => {
   const css = (file) => closeUp(stripComments(read(`src/components/${file}`)));
   // The start of the formula: a part may take a further gap of its own after it, as a toast's row does.
@@ -9867,6 +9940,11 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     ],
     ['card.css', '.card > .card-header > .card-actions {', `margin-block-start: ${EXTRA};`],
     ['card.css', '.card > .card-header > .card-actions:first-child {', `margin-block-start: ${EXTRA};`],
+    [
+      'field-extras.css',
+      ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .field-extras:last-child > .field-offer:last-of-type {',
+      'padding-block-end: min(calc((var(--holder-corner-inset) - var(--holder-pad)) * 1000), calc(var(--holder-corner-inset) - var(--holder-pad) + max(0px, calc((var(--size-control) - 1lh) / 2))));',
+    ],
   ];
 
   it('moves no control inward where a content column stands above it, so a trailing action keeps its edge', () => {

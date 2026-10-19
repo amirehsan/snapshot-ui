@@ -823,6 +823,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/drawer">Drawer</Link>
                 <Link href="/docs/components/empty-state">Empty state</Link>
                 <Link href="/docs/components/field">Field parts</Link>
+                <Link href="/docs/components/field-extras">Field extras</Link>
                 <Link href="/docs/components/file-drop-zone">File drop zone</Link>
                 <Link href="/docs/components/filter-bar">Filter bar</Link>
                 <Link href="/docs/components/filter-chip">Filter chip</Link>

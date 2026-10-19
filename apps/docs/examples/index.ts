@@ -77,6 +77,10 @@ import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
 import FieldStates from './field-states';
 import FileButtonBasic from './file-button-basic';
+import FieldExtrasBoth from './field-extras-both';
+import FieldExtrasDefault from './field-extras-default';
+import FieldExtrasPair from './field-extras-pair';
+import FieldExtrasSuggestion from './field-extras-suggestion';
 import FileDropZoneErrors from './file-drop-zone-errors';
 import FileDropZonePage from './file-drop-zone-page';
 import FileDropZoneReceipt from './file-drop-zone-receipt';
@@ -271,6 +275,10 @@ export const examples = {
   'field-parts': FieldParts,
   'field-states': FieldStates,
   'file-button-basic': FileButtonBasic,
+  'field-extras-both': FieldExtrasBoth,
+  'field-extras-default': FieldExtrasDefault,
+  'field-extras-pair': FieldExtrasPair,
+  'field-extras-suggestion': FieldExtrasSuggestion,
   'file-drop-zone-errors': FileDropZoneErrors,
   'file-drop-zone-page': FileDropZonePage,
   'file-drop-zone-receipt': FileDropZoneReceipt,

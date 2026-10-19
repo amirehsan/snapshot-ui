@@ -23,6 +23,7 @@ import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { CopyButton } from '../src/copy-button';
+import { FieldExtras } from '../src/field-extras';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -658,6 +659,26 @@ const HYDRATED: [
     (container) => {
       expect(container.querySelector('footer .copy-button button')).toHaveTextContent('Copy answer');
       expect(container.querySelector('.copy-button-status')).toBeEmptyDOMElement();
+    },
+  ],
+  [
+    // The server's offers and empty status, kept as they were: nothing is read before a take.
+    'FieldExtras on a money field',
+    <FieldExtras
+      fieldLabel="Cushion"
+      suggestion={{ value: '$2,340', reason: 'a month of your fixed bills', isCurrent: false, onTake: noop }}
+      defaultOffer={{ value: '$1,000', isCurrent: false, onTake: noop }}
+    >
+      <NumberField label="Cushion" money={{ symbol: '$' }} value={50000} />
+    </FieldExtras>,
+    (container) => {
+      expect(
+        [...container.querySelectorAll('.field-offer')].map((line) => line.getAttribute('data-kind')),
+      ).toEqual(['suggestion', 'default']);
+      const use = container.querySelector('.field-offer[data-kind="suggestion"] button');
+      expect(use).toHaveAccessibleName('Use, Cushion');
+      expect(use).toHaveAccessibleDescription('Suggested: $2,340, a month of your fixed bills');
+      expect(container.querySelector('.field-extras-status')).toBeEmptyDOMElement();
     },
   ],
 ];

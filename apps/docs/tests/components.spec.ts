@@ -1203,6 +1203,24 @@ test.describe('forced colors', () => {
     const box = await part.locator('.copy-button-status').boundingBox();
     expect(box?.width ?? 0).toBeLessThanOrEqual(1);
   });
+
+  test("an offer's words are the reader's text color and its button the reader's button text", async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/field-extras');
+    const line = page.locator('.stage .field-offer').first();
+    const button = line.getByRole('button', { name: 'Reset to default, Wait' });
+    expect((await paint(line.locator('.field-offer-text'))).text).toBe(await systemColor(page, 'CanvasText'));
+    expect((await paint(button)).text).toBe(await systemColor(page, 'ButtonText'));
+    // A focused offer shows its ring in the reader's palette, and the status stays out of sight.
+    await button.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(button).toBeFocused();
+    await expectVisibleRing(button);
+    const box = await page.locator('.stage .field-extras-status').first().boundingBox();
+    expect(box?.width ?? 0).toBeLessThanOrEqual(1);
+  });
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------
@@ -1697,6 +1715,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   // The title and the line are the app's sentences, and both wrap at any character inside the column.
   'empty-state': ['.stage .empty-state-title', '.stage .empty-state-description'],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
+  // An offer's words are the app's value and reason, and wrap before its button, which wraps to its own line.
+  'field-extras': ['.stage .field-offer-text'],
   // The label and the rules are the app's; the hint and the button are the library's short words.
   'file-drop-zone': ['.stage .file-drop-zone .field-label', '.stage .file-drop-zone .field-description'],
   // A chip's value stays on one line and ellipsizes past 16rem, so the pill stays inside 320px.
@@ -2047,6 +2067,12 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // A static part: the whole column is in the server's HTML.
   'empty-state': ['.stage .empty-state', '.stage .empty-state-title'],
   field: ['.stage .field-counter', '.stage .field-changed'],
+  // The offers come from the props and the polite status host is mounted empty: nothing waits for a script.
+  'field-extras': [
+    '.stage .field-offer',
+    '.stage .field-offer-button',
+    '.stage .field-extras-status[role="status"]',
+  ],
   // The box with both lines and the zone's button; drag and drop and paste wait for hydration.
   'file-drop-zone': ['.stage .file-drop-zone-box', '.stage .file-drop-zone button'],
   // The row with its chips, and the Filters button a phone shows; More's panel and the sheet wait for a press.
@@ -2208,5 +2234,51 @@ test.describe('the copy button', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       'https://hooks.example.com/ledger/7Fq2',
     );
+  });
+});
+
+// ---- Field extras -----------------------------------------------------------------------------
+
+test.describe('field extras', () => {
+  /** The `index`th example's wrapper on the page. */
+  const example = (page: Page, index: number): Locator => page.locator('.stage .field-extras').nth(index);
+
+  test('an offer taken gives focus to its field', async ({ page }) => {
+    await visit(page, '/docs/components/field-extras');
+    // The default, by a key: the Select's button holds focus and 3 days, and the offer has gone.
+    const wait = example(page, 0);
+    const reset = wait.getByRole('button', { name: 'Reset to default, Wait' });
+    await expect(reset).toHaveAccessibleDescription('Default: 3 days');
+    await reset.focus();
+    await page.keyboard.press('Enter');
+    const trigger = wait.locator('.select button').first();
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toContainText('3 days');
+    await expect(reset).toHaveCount(0);
+    await expect(wait.getByRole('status')).toHaveText('Wait reset to its default, 3 days');
+    // The suggestion, by a pointer: the money field holds focus and the value.
+    const cushion = example(page, 1);
+    await cushion.getByRole('button', { name: 'Use, Cushion' }).click();
+    const input = cushion.getByRole('textbox', { name: 'Cushion' });
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue('2,340.00');
+    await expect(cushion.getByRole('status')).toHaveText('Cushion set to $2,340');
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  });
+
+  test('both offers draw the suggestion first, and a group reset focuses its first field', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/field-extras');
+    const both = example(page, 2);
+    await expect(both.locator('.field-offer')).toHaveCount(2);
+    await expect(both.locator('.field-offer').first()).toHaveAttribute('data-kind', 'suggestion');
+    const pair = example(page, 3);
+    await expect(pair).toHaveAttribute('data-scope', 'group');
+    await pair.getByRole('button', { name: 'Reset to default, Quiet hours' }).click();
+    const from = pair.getByRole('textbox', { name: 'From' });
+    await expect(from).toBeFocused();
+    await expect(from).toHaveValue('10 PM');
+    await expect(pair.getByRole('textbox', { name: 'To' })).toHaveValue('7 AM');
   });
 });
