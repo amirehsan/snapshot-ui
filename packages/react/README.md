@@ -60,6 +60,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [File drop zone](https://snapshotui.com/docs/components/file-drop-zone)
 - [Filter bar](https://snapshotui.com/docs/components/filter-bar)
 - [Filter chip](https://snapshotui.com/docs/components/filter-chip)
+- [Gauge](https://snapshotui.com/docs/components/gauge)
 - [Icon button](https://snapshotui.com/docs/components/icon-button)
 - [Kbd](https://snapshotui.com/docs/components/kbd)
 - [Link](https://snapshotui.com/docs/components/link)

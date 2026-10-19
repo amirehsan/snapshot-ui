@@ -9,6 +9,7 @@ import { ComboBox } from '../src/combo-box';
 import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
+import { Gauge } from '../src/gauge';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { EmptyState } from '../src/empty-state';
@@ -344,6 +345,28 @@ describe('an empty accounts part slot', () => {
       // The term and the value, and nothing after them.
       expect(container.querySelector('.description-list-item')?.children).toHaveLength(2);
       expect(container.querySelector('.description-list-actions')).toBeNull();
+      unmount();
+    }
+  });
+
+  it('draws no gauge label span and no figure for an empty label, figure and caption', () => {
+    for (const empty of [false, null, '', '  ']) {
+      const { container, unmount } = render(
+        <Gauge
+          // An empty label passes the types with an aria-label beside it, which then names the dial.
+          label={empty}
+          aria-label="Utilization"
+          value={23}
+          valueLabel="23%"
+          figure={typeof empty === 'string' ? empty : undefined}
+          figureCaption={typeof empty === 'string' ? empty : undefined}
+        />,
+      );
+      expect(container.querySelector('.gauge-label')).toBeNull();
+      expect(container.querySelector('.gauge-figure')).toBeNull();
+      // The text block holds the value text alone.
+      expect(container.querySelector('.gauge-text')?.children).toHaveLength(1);
+      expect(screen.getByRole('meter', { name: 'Utilization' })).not.toHaveAttribute('aria-labelledby');
       unmount();
     }
   });

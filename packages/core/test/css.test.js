@@ -158,11 +158,13 @@ describe('src/styles.css', () => {
 
   it('imports the accounts files after the files they read from, in order', () => {
     // The list reads the card's holder properties, so it follows card.css; the gauge and the month grid read the
-    // meter's track and looks, so they follow meter.css. Each is checked once it exists.
+    // meter's track and looks, so they follow meter.css, after charts.css, which keeps its place right after the
+    // meter (spec correction 22). Each is checked once it exists.
     const at = (file) => entry.indexOf(`'./components/${file}'`);
     expect(at('card.css')).toBeGreaterThanOrEqual(0);
     expect(at('description-list.css')).toBeGreaterThan(at('card.css'));
-    let previous = at('meter.css');
+    expect(at('charts.css')).toBeGreaterThan(at('meter.css'));
+    let previous = at('charts.css');
     for (const file of ['gauge.css', 'month-grid.css']) {
       if (!components.includes(file)) continue;
       expect(at(file), file).toBeGreaterThan(previous);
@@ -1777,6 +1779,193 @@ describe('src/components/description-list.css', () => {
   });
 });
 
+describe('src/components/gauge.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over
+  // lines reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/gauge.css')));
+  const SEMICIRCLE = ".gauge[data-form='semicircle']";
+  /** The block of the rule whose whole selector is `selector`, not one that lists it among others. */
+  const rule = (css, selector) => {
+    const found = [...css.matchAll(/(?<=^|[{}])\s*([^{}]+?)\s*\{/g)].find((match) => match[1] === selector);
+    return found ? blockAfter(css.slice(found.index), `${selector} {`) : '';
+  };
+
+  it('sizes the dial at 2, 6 and 10rem', () => {
+    const css = rules();
+    expect(rule(css, '.gauge')).toContain('--gauge-size: 6rem;');
+    expect(rule(css, ".gauge[data-size='sm']")).toContain('--gauge-size: 2rem;');
+    expect(rule(css, ".gauge[data-size='lg']")).toContain('--gauge-size: 10rem;');
+    expect(rule(css, '.gauge-dial')).toContain('inline-size: var(--gauge-size);');
+    // The stroke's share of each box, 8 of 96, 4 of 32 and 12 of 160, so the figure's inner circle follows an
+    // app's own --gauge-size.
+    expect(rule(css, '.gauge')).toContain('--gauge-band: calc(var(--gauge-size) / 12);');
+    expect(rule(css, ".gauge[data-size='sm']")).toContain('--gauge-band: calc(var(--gauge-size) / 8);');
+    expect(rule(css, ".gauge[data-size='lg']")).toContain('--gauge-band: calc(var(--gauge-size) * 3 / 40);');
+    // The svg scales uniformly from its viewBox, so a circle stays a circle at any size.
+    const svg = rule(css, '.gauge-svg');
+    expect(svg).toContain('inline-size: 100%;');
+    expect(svg).toContain('block-size: auto;');
+    expect(svg).toContain('overflow: visible;');
+  });
+
+  it('strokes the track in the frame color and the value in --gauge-ink, round caps on both', () => {
+    const css = rules();
+    const both = blockAfter(css, '.gauge-track, .gauge-value {');
+    expect(both).toContain('fill: none;');
+    expect(both).toContain('stroke-linecap: round;');
+    expect(rule(css, '.gauge-track')).toContain('stroke: var(--color-frame);');
+    expect(rule(css, '.gauge-value')).toContain('stroke: var(--gauge-ink);');
+    expect(rule(css, '.gauge')).toContain('--gauge-ink: var(--color-ink);');
+    // Round in every shape: nothing here reads the shape axis.
+    expect(css).not.toMatch(/data-shape|--radius-|stroke-linecap: (?:butt|square)/);
+  });
+
+  it('turns --gauge-ink warning for warning and over the limit, and error for error, error last', () => {
+    const css = rules();
+    const warning = ".gauge:is([data-tone='warning'], [data-over]) {";
+    const error = ".gauge[data-tone='error'] {";
+    expect(blockAfter(css, warning)).toContain('--gauge-ink: var(--color-warning);');
+    expect(blockAfter(css, error)).toContain('--gauge-ink: var(--color-error);');
+    // Equal weight, so the later rule wins: an error over the limit stays error.
+    expect(css.indexOf(error)).toBeGreaterThan(css.indexOf(warning));
+    expect(css).not.toMatch(/--color-(?:success|gain|signal|clay|taupe)/);
+  });
+
+  it('moves the value over 200ms and stops under reduced motion', () => {
+    const css = rules();
+    const value = rule(css, '.gauge-value');
+    expect(value).toContain(
+      'transition: stroke-dasharray 200ms ease, stroke-dashoffset 200ms ease, stroke 200ms ease;',
+    );
+    expect(rule(blockAfter(css, '@media (prefers-reduced-motion: reduce)'), '.gauge-value')).toContain(
+      'transition: none;',
+    );
+    // Nothing else moves, and nothing sweeps in: a transition never runs on the first style.
+    expect(css.match(/transition:/g)).toHaveLength(2);
+    expect(css).not.toMatch(/animation|@keyframes/);
+  });
+
+  it('mirrors the svg by --gauge-flip from the dir attribute', () => {
+    const css = rules();
+    expect(rule(css, ":where([dir='ltr' i])")).toContain('--gauge-flip: 1;');
+    expect(rule(css, ":where([dir='rtl' i])")).toContain('--gauge-flip: -1;');
+    expect(rule(css, '.gauge-svg')).toContain('scale: var(--gauge-flip, 1) 1;');
+    // Only the svg mirrors: the figure and the text are HTML and keep their reading order.
+    expect(css.match(/--gauge-flip,/g)).toHaveLength(1);
+    expect(css).not.toContain(':dir(');
+  });
+
+  it('rings marks in --meter-surface, falling back to lifted', () => {
+    const css = rules();
+    const ring = rule(css, '.gauge-mark-ring');
+    expect(ring).toContain('stroke: var(--meter-surface, var(--color-lifted));');
+    expect(ring).toContain('stroke-width: 6px;');
+    const mark = rule(css, '.gauge-mark');
+    expect(mark).toContain('stroke: var(--color-ink);');
+    expect(mark).toContain('stroke-width: 2px;');
+  });
+
+  it('sets the figure at the h3 step at md and the numeral step at lg, 500, tabular, left to right', () => {
+    const css = rules();
+    const figure = rule(css, '.gauge-figure-value');
+    for (const declaration of [
+      'font-size: var(--text-h3);',
+      'line-height: var(--text-h3--line-height);',
+      'letter-spacing: var(--text-h3--letter-spacing);',
+      'font-weight: var(--text-h3--font-weight);',
+      'font-variant-numeric: tabular-nums;',
+      'white-space: nowrap;',
+      'direction: ltr;',
+      'unicode-bidi: isolate;',
+      'color: var(--color-ink);',
+    ]) {
+      expect(figure, declaration).toContain(declaration);
+    }
+    const large = rule(css, ".gauge[data-size='lg'] .gauge-figure-value");
+    for (const declaration of [
+      'font-size: var(--text-numeral-sm);',
+      'line-height: var(--text-numeral-sm--line-height);',
+      'letter-spacing: var(--text-numeral-sm--letter-spacing);',
+      'font-weight: var(--text-numeral-sm--font-weight);',
+    ]) {
+      expect(large, declaration).toContain(declaration);
+    }
+    // The caption is slate, at the small step, never toned, and two lines at most.
+    const caption = rule(css, '.gauge-figure-caption');
+    for (const declaration of [
+      'font-size: var(--text-small);',
+      'font-weight: var(--text-small--font-weight);',
+      'color: var(--color-slate);',
+      '-webkit-line-clamp: 2;',
+      'overflow: hidden;',
+      'overflow-wrap: anywhere;',
+    ]) {
+      expect(caption, declaration).toContain(declaration);
+    }
+    // Weights 500 and the steps' own tokens only: 500 for the figure and the label, 450 for the caption and the
+    // value text.
+    for (const weight of css.matchAll(/font-weight:\s*([^;]+);/g))
+      expect(weight[1]).toMatch(/^(?:500|var\(--text-(?:h3|numeral-sm|small)--font-weight\))$/);
+  });
+
+  it("centres the figure in a ring's inner circle and sets a semicircle's on its chord", () => {
+    const css = rules();
+    // The dial stacks the svg and the figure in one cell, so a semicircle's caption under the chord gives the dial
+    // its height.
+    expect(rule(css, '.gauge-dial')).toContain('display: grid;');
+    expect(blockAfter(css, '.gauge-svg, .gauge-figure {')).toContain('grid-area: 1 / 1;');
+    const ring = rule(css, '.gauge-figure');
+    expect(ring).toContain('padding: var(--gauge-band);');
+    expect(ring).toContain('justify-content: center;');
+    // A semicircle: a strut half the box tall, whose baseline is its foot, holds the figure's baseline on the chord.
+    const semicircle = rule(css, `${SEMICIRCLE} .gauge-figure`);
+    expect(semicircle).toContain('flex-flow: row wrap;');
+    expect(semicircle).toContain('align-items: baseline;');
+    expect(semicircle).toContain('padding: 0 var(--gauge-band);');
+    expect(rule(css, `${SEMICIRCLE} .gauge-figure::before`)).toContain(
+      'block-size: calc(var(--gauge-size) / 2);',
+    );
+    expect(rule(css, `${SEMICIRCLE} .gauge-figure-caption`)).toContain('flex-basis: 100%;');
+  });
+
+  it('puts the text under the dial at md and lg, at least the dial or 12rem wide, and beside it at sm', () => {
+    const css = rules();
+    const text = rule(css, '.gauge-text');
+    expect(text).toContain('max-inline-size: max(var(--gauge-size), 12rem);');
+    expect(text).toContain('text-align: center;');
+    expect(text).toContain('overflow-wrap: anywhere;');
+    const small = rule(css, ".gauge[data-size='sm']");
+    expect(small).toContain('grid-template-columns: auto minmax(0, 1fr);');
+    expect(small).toContain('align-items: center;');
+    expect(rule(css, ".gauge[data-size='sm'] .gauge-text")).toContain('text-align: start;');
+    const label = rule(css, '.gauge-label');
+    expect(label).toContain('font-weight: 500;');
+    expect(label).toContain('color: var(--color-ink);');
+    const value = rule(css, '.gauge-value-label');
+    expect(value).toContain('font-weight: var(--text-small--font-weight);');
+    expect(value).toContain('font-variant-numeric: tabular-nums;');
+    expect(value).toContain('color: var(--color-slate);');
+    // Logical properties throughout.
+    expect(css).not.toMatch(
+      /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|top|bottom):/,
+    );
+  });
+
+  it('names graytext, canvastext, highlight and canvas in forced colors', () => {
+    const forced = blockAfter(rules(), '@media (forced-colors: active)');
+    expect(rule(forced, '.gauge-track')).toContain('stroke: graytext;');
+    expect(rule(forced, '.gauge-value')).toContain('stroke: canvastext;');
+    expect(rule(forced, '.gauge-mark')).toContain('stroke: highlight;');
+    expect(rule(forced, '.gauge-mark-ring')).toContain('stroke: canvas;');
+  });
+
+  it('keeps print colors exact', () => {
+    const root = rule(rules(), '.gauge');
+    expect(root).toContain('-webkit-print-color-adjust: exact;');
+    expect(root).toContain('print-color-adjust: exact;');
+  });
+});
+
 describe('src/components/segmented.css', () => {
   // The rules without their comments, which quote selectors of their own.
   // Closed up, so a selector Prettier breaks over lines is found as one.
@@ -3169,6 +3358,7 @@ describe('src/components/tooltip.css', () => {
         'stat-tile.css',
         'meter.css',
         'charts.css',
+        'gauge.css',
         'search-field.css',
         'select.css',
         'combo-box.css',

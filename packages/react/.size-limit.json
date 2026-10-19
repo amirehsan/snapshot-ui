@@ -266,6 +266,13 @@
     "limit": "1.5 kB"
   },
   {
+    "name": "import { Gauge } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Gauge }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "2 kB"
+  },
+  {
     "name": "import { DescriptionList, DescriptionListItem } from \"@snapshot-ui/react\"",
     "path": "dist/index.js",
     "import": "{ DescriptionList, DescriptionListItem }",

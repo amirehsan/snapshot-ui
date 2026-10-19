@@ -50,6 +50,14 @@ The cut between segments and the ring around the pace marker use `--meter-surfac
 
 <Section>
 
+## Meter or Gauge
+
+Both are meters: a measurement of the reader's state on a known range. Meter is a bar for a row or a list, with segments that stack, such as spent and held, and a pace marker. [Gauge](/docs/components/gauge) is one value drawn as a ring or a semicircle, for a glance: a credit score with its word under it, a utilization in a table row. Meter's range starts at 0 and ends at `max`, since its segments stack; Gauge's runs from `minValue` to `maxValue`, so a score can run from 300 to 850. Both read `--meter-surface`, so one setting serves a page of each. Work getting done is neither: that is a [ProgressBar](/docs/components/progress-bar).
+
+</Section>
+
+<Section>
+
 ## Usage
 
 Pass every figure as a formatted string. The library formats no numbers, so the server's HTML is final in any locale. The meter is static, so a server component renders it with no client JavaScript.

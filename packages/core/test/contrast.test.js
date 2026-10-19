@@ -620,6 +620,55 @@ describe('the description list', () => {
   });
 });
 
+describe('the gauge', () => {
+  /** A token color over the track, the frame composited over `surface`, and measured against the track. */
+  const onTrack = (mode, name, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const track = composite(parseColor(palette.frame), parseColor(palette[surface]));
+    return contrastRatio(composite(parseColor(palette[name]), track), track);
+  };
+  /** The track, the frame composited over `surface`, against that surface. */
+  const track = (mode, surface) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[surface]);
+    return contrastRatio(composite(parseColor(palette.frame), ground), ground);
+  };
+
+  // The figure and the label are ink, and the caption and the value text slate, on a card, the canvas or a panel.
+  // The gate already holds each as text there, so the gauge adds no pair.
+  it('cites ink and slate as text, which the gate holds', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // The track is the frame, ink at 12%, over the surface: a mix and not a token, so the arcs are measured against
+  // it here and recorded, not gated. Each arc passes the 3:1 a graphic needs in both modes; the track against the
+  // surface is a cue, since the value text, which is required, carries the extent (Meter's record).
+  it('measures the ink, warning and error arcs against the track over lifted, the canvas and float, recorded and not gated', () => {
+    for (const { surface, mode, ink, warning, error, edge } of [
+      { surface: 'lifted', mode: 'light', ink: 13.88, warning: 4.77, error: 5.62, edge: 1.28 },
+      { surface: 'lifted', mode: 'dark', ink: 12.19, warning: 6.24, error: 4.01, edge: 1.43 },
+      { surface: 'canvas', mode: 'light', ink: 12.69, warning: 4.36, error: 5.14, edge: 1.28 },
+      { surface: 'canvas', mode: 'dark', ink: 14.19, warning: 7.27, error: 4.67, edge: 1.36 },
+      { surface: 'float', mode: 'light', ink: 14.34, warning: 4.92, error: 5.8, edge: 1.29 },
+      { surface: 'float', mode: 'dark', ink: 12.19, warning: 6.24, error: 4.01, edge: 1.43 },
+    ]) {
+      const where = `on the track over ${surface}, ${mode}`;
+      expect(onTrack(mode, 'ink', surface), `ink ${where}`).toBeCloseTo(ink, 2);
+      expect(onTrack(mode, 'warning', surface), `warning ${where}`).toBeCloseTo(warning, 2);
+      expect(onTrack(mode, 'error', surface), `error ${where}`).toBeCloseTo(error, 2);
+      expect(track(mode, surface), `the track over ${surface}, ${mode}`).toBeCloseTo(edge, 2);
+      for (const name of ['ink', 'warning', 'error'])
+        expect(onTrack(mode, name, surface), `${name} ${where}`).toBeGreaterThanOrEqual(NON_TEXT);
+    }
+  });
+});
+
 describe('the charts', () => {
   /** A token color painted over `ground` and measured against it, as a reader sees it. */
   const measured = (mode, name, groundName) => {
