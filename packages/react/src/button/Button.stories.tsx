@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fn } from 'storybook/test';
+import { useState, type ReactElement } from 'react';
+import { expect, fn, waitFor } from 'storybook/test';
+import { focusOn } from '../stories/focus';
 import { Button } from './Button';
 
 const meta = {
@@ -56,4 +58,50 @@ export const NestedThemes: Story = {
       </div>
     </div>
   ),
+};
+
+/** A Save that goes pending on a press and leaves when its save settles, as a dialog's Save does as it closes. */
+function SavesAndLeaves(): ReactElement {
+  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  if (state === 'saved') return <p style={{ margin: 0 }}>Saved</p>;
+  return (
+    <Button
+      isPending={state === 'saving'}
+      pendingLabel="Saving"
+      onPress={() => {
+        setState('saving');
+        setTimeout(() => {
+          setState('saved');
+        }, 300);
+      }}
+    >
+      Add plan
+    </Button>
+  );
+}
+
+/**
+ * A focused Save goes pending and then leaves. React Aria says the pending start by ids in the button and keeps
+ * the sentence for seconds; once the button has gone, the sentence still says "Add plan Saving" and names no id
+ * that has gone, so the axe check after the play finds nothing.
+ */
+export const PendingWhenItLeaves: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <SavesAndLeaves />,
+  play: async ({ canvas, userEvent }) => {
+    const button = canvas.getByRole('button', { name: 'Add plan' });
+    await focusOn(button);
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(canvas.getByText('Saved')).toBeVisible(), { timeout: 5000 });
+    const sentences = (): Element[] => [...document.querySelectorAll('[data-live-announcer] [role="img"]')];
+    await waitFor(
+      () => expect(sentences().map((said) => said.getAttribute('aria-label'))).toContain('Add plan Saving'),
+      { timeout: 5000 },
+    );
+    // No sentence names an id that has gone with the button.
+    const gone = sentences()
+      .flatMap((said) => (said.getAttribute('aria-labelledby') ?? '').split(' ').filter(Boolean))
+      .filter((id) => document.getElementById(id) === null);
+    await expect(gone).toEqual([]);
+  },
 };

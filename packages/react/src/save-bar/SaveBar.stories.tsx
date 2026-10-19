@@ -672,7 +672,6 @@ export const PendingStatus: Story = {
       );
     } finally {
       watch.disconnect();
-      for (const said of document.querySelectorAll('[data-live-announcer] [role="img"]')) said.remove();
     }
   },
 };

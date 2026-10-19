@@ -1354,6 +1354,23 @@ announces it as the wait starts. In dark the primary hover fill is
 translucent, so the fill is clipped to the padding box: painted under the
 border as well, the border band would read brighter than the pill.
 
+**A pending button that leaves.** React Aria's live announcer says a
+focused button's pending start and end by ids in the button, its label's
+and its spinner's or its own, and keeps each sentence on the page for
+seconds (`dist/private/live-announcer/LiveAnnouncer.mjs`). A button that
+unmounts in that time, as a dialog's Save does when its save settles and
+closes the dialog, left a sentence naming ids that had gone: it named
+nothing, and axe flagged it (`role-img-alt`). So a button that has been
+pending, as it unmounts and while its nodes are still in the page, gives
+each sentence naming its ids the words those ids hold, as the sentence's
+own `aria-label`, and looks once more 100ms later, since React Aria waits
+that long before a page's first sentence. The log reads only what is
+added, so the words are not said again. A button that was never pending
+looks for nothing (settings plan, spec correction 21). It adds 268 B to
+`{ Button }` (771 B) and to every part that draws one, which takes
+`{ UploadTray }` to 9.07 kB and `{ SaveBar }` to 5.57 kB, so the rule sets
+their limits at 10 kB and 6.5 kB.
+
 A plain anchor or span that wears the `button` class and carries
 `aria-disabled="true"` is drawn disabled, as a `button` element with `disabled`
 is, and the one exception is a pending button, which React Aria marks

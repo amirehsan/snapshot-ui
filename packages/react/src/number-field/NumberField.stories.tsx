@@ -827,10 +827,6 @@ async function saveTheConsumersPlan(
     await expect(heard.logged()).toEqual([]);
   } finally {
     heard.restore();
-    // A pending Add plan that held focus is said by React Aria's announcer through the button's ids, which the
-    // Dialog's unmount took away; the announcer keeps the sentence for seconds, so it goes before the axe check,
-    // as SaveBar's plays do.
-    for (const said of document.querySelectorAll('[data-live-announcer] [role="img"]')) said.remove();
   }
 }
 
