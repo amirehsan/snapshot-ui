@@ -22,6 +22,7 @@ import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { CopyButton } from '../src/copy-button';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -616,6 +617,47 @@ const HYDRATED: [
       ]);
       expect(container.querySelector('.breadcrumbs-current')).toHaveAttribute('aria-current', 'page');
       expect(container.querySelector('h1')).toHaveTextContent('Receipts, 2026');
+    },
+  ],
+  [
+    // The server's button and empty status, kept as they were: nothing differs before a press.
+    'CopyButton in a DescriptionList row',
+    <DescriptionList>
+      <DescriptionListItem
+        term="Setup address"
+        actions={
+          <CopyButton value="https://hooks.example.com/ledger" labels={{ copy: 'Copy Setup address' }} />
+        }
+      >
+        https://hooks.example.com/ledger
+      </DescriptionListItem>
+    </DescriptionList>,
+    (container) => {
+      expect(container.querySelector('.copy-button button')).toHaveAttribute(
+        'aria-label',
+        'Copy Setup address',
+      );
+      expect(container.querySelector('.copy-button-status')).toBeEmptyDOMElement();
+      expect(container.querySelector('.copy-button')).not.toHaveAttribute('data-outcome');
+    },
+  ],
+  [
+    'CopyButton under an answer',
+    <article>
+      <div aria-busy="false">
+        <p>Spending on food is down 12% this month.</p>
+      </div>
+      <footer>
+        <CopyButton
+          value="Spending on food is down 12% this month."
+          look="button"
+          labels={{ copy: 'Copy answer' }}
+        />
+      </footer>
+    </article>,
+    (container) => {
+      expect(container.querySelector('footer .copy-button button')).toHaveTextContent('Copy answer');
+      expect(container.querySelector('.copy-button-status')).toBeEmptyDOMElement();
     },
   ],
 ];

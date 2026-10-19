@@ -38,6 +38,16 @@ A status is a value too. Put its word in a [Badge](/docs/components/badge) and t
 
 <Section>
 
+## A value to copy
+
+A value the reader pastes elsewhere, such as a setup address, takes a [copy button](/docs/components/copy-button) in its row's `actions`, named "Copy" and the term. It copies the string you pass it, which is in the page's HTML, so copy only what the row shows: never the whole digits behind a masked number. The list stays static; only the button is a client component.
+
+<Preview name="copy-button-description-list" />
+
+</Section>
+
+<Section>
+
 ## Empty, long and numeric values
 
 A value that is absent, `null`, `false`, `true`, an empty string, or an array of nothing but those shows "Not set" in slate. Pass `emptyValue` for your own words, or a link to add the value, as GOV.UK's summary list does: the link stands where the value would, and the row has no action of its own. `0` is a value.

@@ -37,6 +37,10 @@ import CommandPaletteBasic from './command-palette-basic';
 import ConfirmDialogBasic from './confirm-dialog-basic';
 import ConfirmDialogDanger from './confirm-dialog-danger';
 import ConfirmDialogHook from './confirm-dialog-hook';
+import CopyButtonAnswer from './copy-button-answer';
+import CopyButtonBasic from './copy-button-basic';
+import CopyButtonDescriptionList from './copy-button-description-list';
+import CopyButtonWord from './copy-button-word';
 import DataTableBasic from './data-table-basic';
 import DataTableBulkActions from './data-table-bulk-actions';
 import DataTableColumnOptions from './data-table-column-options';
@@ -227,6 +231,10 @@ export const examples = {
   'confirm-dialog-basic': ConfirmDialogBasic,
   'confirm-dialog-danger': ConfirmDialogDanger,
   'confirm-dialog-hook': ConfirmDialogHook,
+  'copy-button-answer': CopyButtonAnswer,
+  'copy-button-basic': CopyButtonBasic,
+  'copy-button-description-list': CopyButtonDescriptionList,
+  'copy-button-word': CopyButtonWord,
   'data-table-basic': DataTableBasic,
   'data-table-bulk-actions': DataTableBulkActions,
   'data-table-column-options': DataTableColumnOptions,

@@ -1,0 +1,111 @@
+---
+title: Copy button
+description: "Copies a value the page shows, and says it did, without moving the reader."
+icon: Copy
+---
+
+<Section>
+
+## What it copies
+
+A button beside a value the reader pastes somewhere else: a webhook address, a set of setup details, an answer. It copies `value`, a string your page already holds. `value` is in the page's HTML and in the server's payload to the browser, so never pass one the page should not hold: a masked account number that copies its whole digits would put the digits in the page.
+
+The default look is a ghost [icon button](/docs/components/icon-button) with a [tooltip](/docs/components/tooltip) that shows its name. Name it for what it copies, `labels={{ copy: 'Copy webhook address' }}`, so a list of copy buttons reads as a list of things, not a list of Copies.
+
+<Preview name="copy-button-basic" />
+
+</Section>
+
+<Section>
+
+## Saying it worked
+
+A press copies at once, inside the press, as Safari asks. For two seconds the copy glyph turns to a check, a tip over the button shows "Copied", and a polite status beside the button says it to a screen reader, once for each copy. Then the glyph, the tip and the status go back to rest. Escape, or focus leaving, closes the tip early.
+
+The button's name never changes: a name that changes under focus is read again by some screen readers and not by others. The check is ink, never success's color, since a copy is not a save. A copy that fails keeps the copy glyph and says "Copy failed" in the tip and the status, and `onCopy(false)` tells your app, which can show the value selected for the reader to copy by hand.
+
+Where the Clipboard API is missing, on a page served over plain http, or refuses, in a frame whose permissions policy blocks it, the part copies with the browser's own copy command instead. Focus stays on the button either way, and a selection the reader had made is put back.
+
+</Section>
+
+<Section>
+
+## With its word
+
+`look="button"` draws a secondary [button](/docs/components/button) with the glyph and its name, for a copy that needs saying in words, such as several lines of setup details. Its tip appears only after a copy, with the outcome.
+
+<Preview name="copy-button-word" />
+
+</Section>
+
+<Section>
+
+## In a description list
+
+Put it in a row's `actions`, named "Copy" and the term, as every action in a [description list](/docs/components/description-list) is named. The list stays a static part a server component renders; only the button is a client component.
+
+<Preview name="copy-button-description-list" />
+
+</Section>
+
+<Section>
+
+## Under an answer
+
+While an answer streams in, an app marks its body `aria-busy="true"`, and a screen reader may hold back what changes inside a busy part. So put the copy button in the answer's footer, outside the busy part, where its status is always heard. In development, a copy button that speaks inside `aria-busy="true"` warns once in the console.
+
+<Preview name="copy-button-answer" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+A client component: it renders the button and its empty status on the server, and reads nothing from the clipboard or `navigator` until a press. The words "Copy", "Copied" and "Copy failed" are the library's, in English, so a page in another language passes its own `labels`.
+
+```tsx
+import { CopyButton } from '@snapshot-ui/react';
+
+<CopyButton
+  value={webhook.address}
+  labels={{ copy: 'Copy webhook address' }}
+  onCopy={(copied) => {
+    if (!copied) selectAddress();
+  }}
+/>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+Every Button prop is accepted but `onPress`, `children`, `variant`, `aria-label` and the pending state: the press is the copy, and the name is `labels.copy`. `ref` and the rest go on the button; `className` goes on the root, `span.copy-button`, which holds the button and its status.
+
+<PropsTable label="CopyButton props" path="../../packages/react/src/copy-button/CopyButton.tsx" type="Pick<CopyButtonProps, 'value' | 'look' | 'onCopy' | 'labels' | 'isDisabled' | 'className'>" />
+
+<PropsTable label="CopyButtonLabels" path="../../packages/react/src/copy-button/CopyButton.tsx" type="CopyButtonLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+A native button named by `labels.copy`, which says what it copies, with React Aria handling press across mouse, touch and keyboard. The outcome is said once by a polite status, `role="status"`, that is in the server's HTML and empty, so a screen reader is listening before the words arrive; a second copy is said again. The outcome's tip is for the eye and is never the button's description, so nothing says it twice. Focus stays on the button through the copy and after it.
+
+<Keys rows={[['Tab', 'Moves focus to the button. The icon look shows its name in a tip.'], ['Enter Space', 'Copies; "Copied" is said politely and shown in a tip for two seconds.'], ['Escape', 'Closes the tip.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps copy buttons in the system.
+
+<Rules dos={['Name it for what it copies, such as Copy answer or Copy Setup address.', 'Put it beside the value it copies, or in the row that shows it.', 'Copy only a value the page already shows.']} donts={["Never copy a masked value's whole digits.", 'Never show a toast for a copy. The button says it.', "Never draw the check in success's color. A copy is not a save."]} />
+
+</Section>

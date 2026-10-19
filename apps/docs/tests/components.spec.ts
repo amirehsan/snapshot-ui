@@ -12,6 +12,7 @@ import {
   settled,
   sideways,
   systemColor,
+  withoutClipboard,
 } from './support';
 
 /**
@@ -1183,6 +1184,25 @@ test.describe('forced colors', () => {
     if (!button || !box) throw new Error('No button or header');
     expect(button.y + button.height).toBeLessThanOrEqual(box.y + box.height);
   });
+
+  test("a copy button's check is drawn in the button's text color, and its status stays out of sight", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await visit(page, '/docs/components/copy-button');
+    const part = page.locator('.stage .copy-button').first();
+    const button = part.getByRole('button', { name: 'Copy webhook address' });
+    await button.click();
+    await expect(part).toHaveAttribute('data-outcome', 'copied');
+    const check = part.locator('.copy-button-glyph[data-glyph="check"]');
+    await expect(check).toBeVisible();
+    await expect(part.locator('.copy-button-glyph[data-glyph="copy"]')).toBeHidden();
+    expect((await paint(check)).text).toBe(await systemColor(page, 'ButtonText'));
+    // The status is clipped to nothing, as it is out of forced colors.
+    const box = await part.locator('.copy-button-status').boundingBox();
+    expect(box?.width ?? 0).toBeLessThanOrEqual(1);
+  });
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------
@@ -1736,6 +1756,8 @@ const NO_LONG_TEXT: Record<string, string> = {
     "its text is in a portal that opens on a press or a key; the Narrow story's 375px baseline pins its wrapping",
   'confirm-dialog':
     "its text is in a portal that opens on a press; its stories' 375px baselines pin its wrapping",
+  'copy-button':
+    "its words are the app's short name for what it copies, on one line in a button; the values beside it are the examples' own",
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   drawer: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   'filter-bar': 'its words are the chips and the app search, which the filter chip page tests long',
@@ -1994,6 +2016,13 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'combo-box': ['.stage .combo-box-input', '.stage .combo-box-button'],
   'command-palette': ['.stage .button'],
   'confirm-dialog': ['.stage .button'],
+  // The button, both glyphs and the polite status host, mounted empty before any copy: nothing waits for a script.
+  'copy-button': [
+    '.stage .copy-button .icon-button',
+    '.stage .copy-button .button-secondary',
+    '.stage .copy-button-glyph[data-glyph="check"]',
+    '.stage .copy-button-status[role="status"]',
+  ],
   // The header and the row links: every row is in the server's HTML; the loading status waits for a pause.
   // The list face's items are in it too: both faces are, and the box shows one.
   'data-table': [
@@ -2100,4 +2129,84 @@ test.describe('without JavaScript', () => {
       await expect(page.locator('.panel-side .link').first()).toHaveAttribute('href', /^https:\/\//);
     });
   }
+});
+
+// ---- The copy button -----------------------------------------------------------------------------
+
+test.describe('the copy button', () => {
+  /** The first copy button on the page whose button has this name, and its parts. */
+  const copyButton = (page: Page, name: string) => {
+    const part = page.locator('.stage .copy-button').filter({ has: page.getByRole('button', { name }) });
+    return { part, button: part.getByRole('button', { name }), status: part.getByRole('status') };
+  };
+
+  test('says Copied in its status and keeps focus', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await visit(page, '/docs/components/copy-button');
+    const { part, button, status } = copyButton(page, 'Copy webhook address');
+    await expect(status).toBeEmpty();
+    await button.focus();
+    await page.keyboard.press('Enter');
+    await expect(status).toHaveText('Copied');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      'https://hooks.example.com/ledger/7Fq2',
+    );
+    await expect(part).toHaveAttribute('data-outcome', 'copied');
+    await expect(page.getByRole('tooltip')).toHaveText('Copied');
+    // The name never changes, and the tip is not its description, so nothing is said twice.
+    await expect(button).toHaveAccessibleName('Copy webhook address');
+    await expect(button).toHaveAccessibleDescription('');
+    await expect(button).toBeFocused();
+    // Two seconds later the outcome has gone and focus is still on the button, never on the body.
+    await expect(status).toBeEmpty({ timeout: 5000 });
+    await expect(part).not.toHaveAttribute('data-outcome');
+    await expect(button).toBeFocused();
+  });
+
+  test('copies with the copy command where the Clipboard API is missing', async ({ page }) => {
+    await withoutClipboard(page, 'missing');
+    await visit(page, '/docs/components/copy-button');
+    // What the copy put on the clipboard, read from the copy event the browser sends after the part's own listener.
+    await page.evaluate(() => {
+      document.addEventListener('copy', (event) => {
+        document.body.dataset.copied = event.clipboardData?.getData('text/plain') ?? '';
+      });
+    });
+    const { button, status } = copyButton(page, 'Copy setup details');
+    await button.click();
+    await expect(status).toHaveText('Copied');
+    await expect(page.locator('body')).toHaveAttribute(
+      'data-copied',
+      'Webhook address: https://hooks.example.com/ledger/7Fq2\nEvents: transactions, balances',
+    );
+    await expect(page.locator('.copy-button-source')).toHaveCount(0);
+    await expect(button).toBeFocused();
+  });
+
+  test('says Copy failed when the clipboard refuses and the copy command cannot copy', async ({ page }) => {
+    await withoutClipboard(page, 'refusing');
+    await visit(page, '/docs/components/copy-button');
+    // A copy command that copies nothing, as in a frame that allows neither.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'execCommand', { value: () => false, configurable: true });
+    });
+    const { part, button, status } = copyButton(page, 'Copy webhook address');
+    await button.click();
+    await expect(status).toHaveText('Copy failed');
+    await expect(page.getByRole('tooltip')).toHaveText('Copy failed');
+    await expect(part).toHaveAttribute('data-outcome', 'failed');
+    await expect(part.locator('.copy-button-glyph[data-glyph="copy"]')).toBeVisible();
+    await expect(button).toBeFocused();
+  });
+
+  test('the description list page copies a value from its row', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await visit(page, '/docs/components/description-list');
+    const { button, status } = copyButton(page, 'Copy Setup address');
+    await button.click();
+    await expect(status).toHaveText('Copied');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      'https://hooks.example.com/ledger/7Fq2',
+    );
+  });
 });

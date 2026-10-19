@@ -11350,3 +11350,122 @@ summary and then the table (spec correction 57). Not yet verified in
 Windows' contrast themes (the three looks still distinct) or on a real
 iPhone and an Android phone at 320px to 430px (cells about 13px to 15px
 wide in a card, about 10px two up, and the quarter labels, legible).
+
+## CopyButton
+
+A button that copies a string the page holds and says it did, without
+moving the reader: `CopyButton` (settings spec, section 11; decided item
+23; rulings 5 and 7, questions 21 and 22). It is the design the accounts
+spec worked out and deferred (its section 5.6), taken as written, with the
+API the settings spec gives it and the changes below. It composes what
+exists: IconButton's ghost look with a Tooltip by default, or Button's
+secondary look with the glyph and the word (`look="button"`).
+
+**The root and its parts.** `span.copy-button[data-look]` holds the button
+and `span.copy-button-status`, a polite `role="status"` host, in the
+server's HTML and empty, so a screen reader is listening before the words
+arrive. The root is a part of its own so the status sits beside the button,
+never inside it, where it would join the button's name. `className` goes on
+the root; `ref` and the rest of the Button props go on the button. The root
+is `inline-flex`, not a grid, so its absolutely placed status needs no grid
+lines (lesson 9). Prose's generated guard of component roots (batch 6) is
+not on `main` yet; `copy-button` extends no other class in its file, so the
+guard will find it as a root when it arrives (settings plan, spec
+correction 9).
+
+**The copy, inside the press.** The press handler calls
+`navigator.clipboard.writeText(value)` synchronously, so the call is made
+inside the user activation Safari requires; a call after an `await` or a
+timer would be refused there. Nothing reads `navigator` or the clipboard
+until a press, so the server and the first render read nothing.
+
+**A fallback, the document's copy command** (settings plan, spec correction
+10, a choice). The accounts and settings specs ruled out `execCommand`. It
+is back as a fallback only, because the Clipboard API is missing on a page
+served over plain http and refused in a frame whose permissions policy does
+not allow `clipboard-write`, the case of an app embedded in another site,
+and in both the command still copies on a press, as the clipboard-copy and
+copy-to-clipboard libraries do. Where `writeText` is missing, the command
+runs in the press; where it rejects, it runs in the rejection, still inside
+Chromium's transient activation. The value goes into a clipped
+`span.copy-button-source` inside the root, which is selected and copied,
+and a capturing `copy` listener puts the value on the event as
+`text/plain`, so no markup or style is copied with it. The span leaves in
+the same task, the reader's own selection is put back, and focus, which a
+selection does not move, is put back if an engine moved it. Only when the
+command also fails, or does not exist, is the outcome a failure. A docs
+test removes the Clipboard API and copies with a real click in Chromium,
+reading the value from the copy event.
+
+**The two-second hold.** The outcome, `copied` or `failed`, is written to
+`data-outcome` and held 2000ms, the docs site's `useCopy` and Carbon's
+copy button feedback timeout; a second press restarts the hold. The timer
+is cleared on unmount, and a copy that settles after the part has left, or
+after a later copy, starts no timer and changes nothing on screen;
+`onCopy(copied)` still runs once for every copy.
+
+**Said once, by the status.** The status writes the outcome's words,
+"Copied" or "Copy failed", as a new node for each copy (keyed by the
+copy's number), so a second copy during the hold is said again, and each
+copy is said once. The tip shows the same words for the eye but is not
+the button's description: the outcome's tip has a state of its own that no
+trigger shares, so React Aria never points `aria-describedby` at it, and a
+screen reader does not hear the outcome twice. The resting tip, the icon
+look's name on hover and focus, stays shut while the outcome's tip holds
+its place. Escape anywhere, focus leaving the button, a scroll or a resize
+closes the outcome's tip, as any tip closes (WCAG 1.4.13).
+
+**The name never changes.** The button is named `labels.copy`, which says
+what it copies ("Copy webhook address"), through every outcome: a name
+that changes under focus is read again by some screen readers and not by
+others. Only the tip and the status change.
+
+**Not only the glyph.** On a copy the `Copy` glyph turns to `Check`; both
+are drawn, `aria-hidden`, and the stylesheet shows one by `data-outcome`,
+so the server's HTML is the rest state and the swap needs no render of its
+own. The glyph is never the only signal: the tip shows the words, for a
+touch reader too, and the status says them. A failure keeps the copy glyph
+and shows "Copy failed".
+
+**The check in ink.** The check is `--color-ink`, never success's color:
+a copy is not a save. A failure says its words and is not drawn in the
+error color, which marks invalid values. The word look's glyph is 16px
+before the word, as the filter bar's sheet button draws its icon.
+
+**Focus** stays on the button: the button is never disabled, hidden or
+replaced by a copy, and the fallback's selection is put back without
+moving focus. `CopyStatus`, `CopyFailed` and `CopyByCommand` read focus on
+the button in Chromium, WebKit and Firefox, and the docs test reads it
+after the hold.
+
+**`aria-busy`.** A status inside an `aria-busy="true"` part may go
+unheard, so the status is never put under one: an answer that streams
+with `aria-busy` on its body puts its CopyButton in the footer. When the
+status speaks inside `aria-busy="true"`, the part warns once in
+development (lesson 11).
+
+**Forced colors, motion, direction.** The buttons draw their own forced
+colors; the check is `buttontext`, the button's text color in the reader's
+palette, so it shows where the copy glyph did. Nothing moves: the file has
+no transition or animation, and the glyph swaps at once. The glyphs are not
+mirrored on a right-to-left page, since a copy has no direction;
+`RightToLeft` checks the button at the row's inline end and no transform on
+the glyphs.
+
+**Contrast**, measured with `contrast.js` and gated already, so nothing is
+added. The check and the word look's glyph and word are ink: against the
+canvas 16.25 in light and 19.31 in dark, against lifted 17.84 and 17.42.
+The tip is canvas text on ink, 16.25 and 19.31.
+
+**The size.** The entry `{ CopyButton }` measures 2.52 kB without React
+Aria, Lucide and `@internationalized/date`, over the spec's 2 kB budget:
+it draws IconButton or Button, both tips, the status, the timer and the
+copy command's fallback. The rule rounds up to 3 kB and adds 0.5 kB: a
+3.5 kB limit. With React Aria not ignored it measures 20.62 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): "Copied" said once after a copy, and again after a
+second copy during the hold; the name unchanged; the tip not read as a
+description. Not yet verified on a real iPhone and an Android phone at
+320px to 430px (the outcome's tip after a tap, and the status), or in
+Windows' contrast themes (the check in the button's text color).

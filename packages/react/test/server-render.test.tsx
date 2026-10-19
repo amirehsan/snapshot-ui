@@ -48,6 +48,7 @@ import {
   SidebarTrigger,
 } from '../src/sidebar';
 import { Spinner } from '../src/spinner';
+import { CopyButton } from '../src/copy-button';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
@@ -1106,6 +1107,53 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '<span class="breadcrumbs-text" title="Documents">Documents</span>',
     ],
     ['role="link"', 'aria-disabled', 'data-collection'],
+  ],
+  [
+    // The button and its empty polite status, both glyphs drawn for the stylesheet to choose; no outcome, no tip,
+    // and nothing read from the clipboard.
+    'CopyButton in a DescriptionList row',
+    <DescriptionList>
+      <DescriptionListItem
+        term="Setup address"
+        actions={
+          <CopyButton value="https://hooks.example.com/ledger" labels={{ copy: 'Copy Setup address' }} />
+        }
+      >
+        https://hooks.example.com/ledger
+      </DescriptionListItem>
+    </DescriptionList>,
+    [
+      '<dd class="description-list-actions"><span class="copy-button" data-look="icon">',
+      'class="icon-button"',
+      'aria-label="Copy Setup address"',
+      '<span class="copy-button-glyph" data-glyph="copy" aria-hidden="true">',
+      '<span class="copy-button-glyph" data-glyph="check" aria-hidden="true">',
+      '<span class="copy-button-status" role="status" aria-live="polite" aria-atomic="true"></span>',
+    ],
+    ['data-outcome', 'role="tooltip"', 'Copied'],
+  ],
+  [
+    // An answer's footer, outside the answer's busy part, with the word look.
+    'CopyButton under an answer',
+    <article>
+      <div aria-busy="false">
+        <p>Spending on food is down 12% this month.</p>
+      </div>
+      <footer>
+        <CopyButton
+          value="Spending on food is down 12% this month."
+          look="button"
+          labels={{ copy: 'Copy answer' }}
+        />
+      </footer>
+    </article>,
+    [
+      '<footer><span class="copy-button" data-look="button">',
+      'class="button button-secondary"',
+      'Copy answer</span></button>',
+      '<span class="copy-button-status" role="status" aria-live="polite" aria-atomic="true"></span>',
+    ],
+    ['data-outcome', 'role="tooltip"', 'aria-label='],
   ],
 ];
 

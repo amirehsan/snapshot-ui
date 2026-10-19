@@ -262,6 +262,20 @@ describe('src/styles.css', () => {
       previous = at(file);
     }
   });
+
+  it("imports the settings files after the last batch's last, in order", () => {
+    // The copy button is required; the field extras, the repeater, the panel layout and the account menu are
+    // checked once they exist, each after the one before, all after the last file of the batches before.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    const before = ['breadcrumbs.css', 'month-grid.css', 'description-list.css'].map(at);
+    expect(at('copy-button.css')).toBeGreaterThan(Math.max(...before));
+    let previous = at('copy-button.css');
+    for (const file of ['field-extras.css', 'repeater.css', 'panel-layout.css', 'account-menu.css']) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -3524,7 +3538,7 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter, data and documents files after it', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter, data, documents and settings files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     const tooltip = imported.indexOf('tooltip.css');
@@ -3562,6 +3576,11 @@ describe('src/components/tooltip.css', () => {
         'save-bar.css',
         'page-header.css',
         'breadcrumbs.css',
+        'copy-button.css',
+        'field-extras.css',
+        'repeater.css',
+        'panel-layout.css',
+        'account-menu.css',
       ]).toContain(file);
     }
   });
@@ -9697,6 +9716,61 @@ describe('src/components/breadcrumbs.css', () => {
     const forced = blockAfter(rules(), FORCED);
     expect(blockAfter(forced, '.breadcrumbs-link {')).toContain('color: linktext;');
     expect(blockAfter(forced, `${CURRENT}, .breadcrumbs-separator {`)).toContain('color: canvastext;');
+  });
+});
+
+describe('src/components/copy-button.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/copy-button.css')));
+  const CHECK = ".copy-button[data-outcome='copied'] .copy-button-glyph[data-glyph='check']";
+  const HIDDEN =
+    ".copy-button-glyph[data-glyph='check'], .copy-button[data-outcome='copied'] .copy-button-glyph[data-glyph='copy'] {";
+
+  it('clips the status host and the copy command source, out of the flow and out of sight', () => {
+    const css = rules();
+    const clip = blockAfter(css, '.copy-button-status, .copy-button-source {');
+    for (const declaration of [
+      'position: absolute;',
+      'inline-size: 1px;',
+      'block-size: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+    ]) {
+      expect(clip, declaration).toContain(declaration);
+    }
+    // Never display: none or visibility: hidden, which would hide the status from a screen reader too.
+    expect(css).not.toMatch(/\.copy-button-status[^{]*\{[^}]*(display: none|visibility: hidden)/);
+    // The root holds the status, so the clipped box is placed against it.
+    expect(blockAfter(css, '.copy-button {')).toContain('position: relative;');
+    // The source is selectable whatever the page says, and keeps the value's spaces and lines.
+    const source = blockAfter(css, '} .copy-button-source {');
+    expect(source).toContain('user-select: text;');
+    expect(source).toContain('white-space: pre;');
+  });
+
+  it('shows the check only while copied, in ink', () => {
+    const css = rules();
+    expect(blockAfter(css, HIDDEN)).toContain('display: none;');
+    const check = blockAfter(outsideForcedColors(css), `${CHECK} {`);
+    expect(check).toContain('display: inline-flex;');
+    expect(check).toContain('color: var(--color-ink);');
+    // A copy is not a save: no success or gain color anywhere, and no error color for a failure, which says its
+    // words instead.
+    expect(css).not.toMatch(/--color-(success|gain|error|signal|clay)/);
+  });
+
+  it('has a forced-colors block and no transition', () => {
+    const source = read('src/components/copy-button.css');
+    expect(blockAfter(closeUp(stripComments(source)), FORCED_COLORS)).toContain(
+      `${CHECK} { color: buttontext; }`,
+    );
+    expect(stripComments(source)).not.toMatch(/\b(transition|animation)\s*:/);
+  });
+
+  it('draws the word look glyph at 16px, as the filter bar draws its button icon', () => {
+    const glyph = blockAfter(rules(), ".copy-button[data-look='button'] .copy-button-glyph svg {");
+    expect(glyph).toContain('inline-size: 16px;');
+    expect(glyph).toContain('block-size: 16px;');
   });
 });
 

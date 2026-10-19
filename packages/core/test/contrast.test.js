@@ -1860,6 +1860,39 @@ describe('the page header', () => {
   );
 });
 
+describe('the copy button', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The check is ink, and the word look's glyph and word are ink, on the canvas or in a card on lifted; the
+  // tip is canvas text on ink. The gate already holds each, so the copy button adds no pair.
+  it('cites ink on canvas and lifted, which the gate holds', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      expect(CONTRAST_PAIRS, `ink on ${ground}`).toContainEqual(
+        expect.objectContaining({ text: 'ink', ground, minimum: TEXT }),
+      );
+    }
+    expect(CONTRAST_PAIRS, 'canvas on ink').toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'canvas', ground: 'ink', light: 16.25, dark: 19.31 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

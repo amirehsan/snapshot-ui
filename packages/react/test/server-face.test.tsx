@@ -22,6 +22,7 @@ import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Card, CardActions, CardHeader, CardTitle } from '../src/card';
+import { CopyButton } from '../src/copy-button';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -360,6 +361,15 @@ const FACES: [name: string, element: ReactElement][] = [
     <AppShell mainId="main" header={<PageHeader title="Receipts, 2026" />}>
       page
     </AppShell>,
+  ],
+  [
+    // Every word is a label or the app's, and nothing reads the clipboard, so every locale writes the same button.
+    'CopyButton icon',
+    <CopyButton value="https://hooks.example.com/ledger" labels={{ copy: 'Copy webhook address' }} />,
+  ],
+  [
+    'CopyButton button',
+    <CopyButton value="Setup details" look="button" labels={{ copy: 'Copy setup details' }} />,
   ],
 ];
 

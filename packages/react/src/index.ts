@@ -267,3 +267,4 @@ export {
   type DataTableSelectable,
   type DataTableShared,
 } from './data-table';
+export { CopyButton, type CopyButtonLabels, type CopyButtonProps } from './copy-button';
