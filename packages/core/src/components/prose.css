@@ -16,8 +16,8 @@
  *
  * The gaps are the system's steps, top margins only, so collapsing never decides one: 24px between blocks
  * (peers), 32px before an h1 or h2 and around an hr (separate), 8px after a heading, between list items and
- * inside an item (parts). The gaps between the box's own children sit outside the layer, so a component that
- * is one of them is spaced as a block is. Text blocks stop at one measure, --prose-measure, 70ch of the body's
+ * inside an item (parts). The gaps between the box's own children sit outside the layer, two classes deep, so a
+ * component that is one of them is spaced as a block is, its own `margin: 0` notwithstanding. Text blocks stop at one measure, --prose-measure, 70ch of the body's
  * text; tables, code, figures and rules take the whole box. The code block is the docs site's, moved here with
  * its Shiki mapping.
  */
@@ -38,20 +38,23 @@
 
   /* ---- The gaps between the box's own children, a component among them. -------------------------------- */
 
-  .prose > :where(* + *):not(:where(.not-prose, .not-prose *)) {
+  /* Two classes deep, through the last :not(), so a gap beats a component root's own `margin: 0`, one class
+     that loads later: a chart, a Heading or a Text placed in the box takes the gap before it, whatever the
+     order the files are imported in. */
+  .prose > :where(* + *):not(:where(.not-prose, .not-prose *)):not(.not-prose) {
     margin-block-start: var(--spacing-peer);
   }
 
-  .prose > :where(* + :is(h1, h2)):not(:where(.not-prose, .not-prose *)) {
+  .prose > :where(* + :is(h1, h2)):not(:where(.not-prose, .not-prose *)):not(.not-prose) {
     margin-block-start: var(--spacing-separate);
   }
 
   /* A heading and what follows it are parts of one thing, a heading after a heading too. */
-  .prose > :where(:is(h1, h2, h3, h4, h5, h6) + *):not(:where(.not-prose, .not-prose *)) {
+  .prose > :where(:is(h1, h2, h3, h4, h5, h6) + *):not(:where(.not-prose, .not-prose *)):not(.not-prose) {
     margin-block-start: var(--spacing-part);
   }
 
-  .prose > :where(* + hr, hr + *):not(:where(.not-prose, .not-prose *)) {
+  .prose > :where(* + hr, hr + *):not(:where(.not-prose, .not-prose *)):not(.not-prose) {
     margin-block-start: var(--spacing-separate);
   }
 

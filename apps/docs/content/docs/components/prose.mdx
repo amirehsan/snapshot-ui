@@ -86,7 +86,13 @@ Under `lang="fa"` a list's markers, a quote's rule and an indent sit on the righ
 - Text stops at `--prose-measure`, 70ch of the body's text, one line length for every block, headings included. Set it on the prose element or above it: `none` for a narrow column, or a smaller length. Headings take `--prose-scroll-margin` above them when a link jumps to one; set it to your sticky header's height.
 - A Markdown `#` is an `h1`, and a page has one. Shift the headings down one level in your renderer, such as react-markdown's `components` mapping `h1` to `h2`, and the look follows the element.
 - Load Sofia Sans's italic as well as its roman, as the installation page shows; without it, emphasis is upright.
-- Tailwind Typography also names its class `prose`. Use one or the other on an element: with both, Tailwind's unlayered rules win over the library's, which sit in the components layer.
+- Tailwind Typography also names its class `prose`, and its rules sit in Tailwind's `utilities` layer, which comes after the components layer. So they match every `prose` element, the library's `Prose` included, and win over the library's rules. In an app that uses both, give Typography a class of its own:
+
+```css
+@plugin "@tailwindcss/typography" {
+  className: "tw-prose";
+}
+```
 
 ```tsx
 import { Prose, ProseScroll } from '@snapshot-ui/react';

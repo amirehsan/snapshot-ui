@@ -314,3 +314,41 @@ export const ComponentsUnchanged: Story = {
     await expect(differences).toEqual([]);
   },
 };
+
+/**
+ * Components placed directly in the box take the box's gaps, though each root sets `margin: 0` in a file that
+ * loads after prose's: the gaps are two classes deep (insights spec correction 89). A chart after a paragraph
+ * stands a peer step below it, a Heading of level 2 the separate step, and a Text after that heading a part step.
+ */
+export const GapsBeforeComponents: Story = {
+  tags: ['webkit', 'firefox'],
+  render: () => (
+    <Prose as="article" style={{ maxWidth: '40rem' }}>
+      <p>Rent was most of the month, as it is every month.</p>
+      <BarChart
+        aria-label="Spending by category, October"
+        orientation="horizontal"
+        categories={['Rent', 'Groceries']}
+        series={[{ label: 'October', values: [money(1450), money(742.6)] }]}
+      />
+      <Heading level={2} size={3}>
+        What changed
+      </Heading>
+      <Text>Groceries rose a little.</Text>
+    </Prose>
+  ),
+  play: async ({ canvas }) => {
+    /** The space between an element and the box's child before it, in whole pixels. */
+    const gap = (element: HTMLElement): number => {
+      const previous = element.previousElementSibling;
+      if (!previous) throw new Error('Nothing before it');
+      return Math.round(element.getBoundingClientRect().top - previous.getBoundingClientRect().bottom);
+    };
+    const chart = canvas.getByRole('figure', { name: 'Spending by category, October' });
+    const heading = canvas.getByRole('heading', { name: 'What changed' });
+    const text = canvas.getByText('Groceries rose a little.');
+    await waitFor(() => expect(gap(chart)).toBe(24));
+    await expect(gap(heading)).toBe(32);
+    await expect(gap(text)).toBe(8);
+  },
+};

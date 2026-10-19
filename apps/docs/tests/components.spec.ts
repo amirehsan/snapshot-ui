@@ -2014,6 +2014,19 @@ test("the prose page's wide table scrolls inside its region at 375 and the page 
   expect(await sideways(page)).toBe(0);
 });
 
+test('a chart placed in an article stands a peer step below the paragraph before it', async ({ page }) => {
+  // The chart's root sets margin: 0 in a file that loads after prose's, and the box's gaps are two classes
+  // deep, so they win (insights spec correction 89).
+  await visit(page, '/docs/components/prose');
+  const article = page.locator('.stage article.prose', { has: page.locator('.bar-chart') });
+  await expect(article).toHaveCount(1);
+  const gap = await article.locator('> .bar-chart').evaluate((chart) => {
+    const before = chart.previousElementSibling?.getBoundingClientRect().bottom ?? 0;
+    return Math.round(chart.getBoundingClientRect().top - before);
+  });
+  expect(gap).toBe(24);
+});
+
 test('model output on the prose page has no links or images', async ({ page }) => {
   await visit(page, '/docs/components/prose');
   // The snippet under Rendering Markdown safely, and the monthly report under Model output.

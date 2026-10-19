@@ -236,12 +236,10 @@ describe('src/styles.css', () => {
     }
   });
 
-  it('imports prose.css right after the tokens and before every component file', () => {
-    // First, so a component's own declarations follow prose's (insights spec 8.1; spec correction 35); what keeps
-    // a component whole is the components.prose layer and its last rule (spec correction 52).
-    const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
-    expect(imported[0]).toBe('prose.css');
-    expect(entry.indexOf("'./components/prose.css'")).toBeGreaterThan(entry.indexOf("'../dist/tokens.css'"));
+  it('imports prose.css with the other component files, which no rule of it depends on', () => {
+    // Kept first, though order decides nothing: prose's element rules sit in components.prose under every
+    // component's own (spec correction 52), and its gaps are two classes deep (spec correction 89).
+    expect(entry).toContain("@import './components/prose.css';");
   });
 
   it('imports the documents files after the data files, in order', () => {
@@ -10171,8 +10169,11 @@ describe('src/components/prose.css', () => {
   const GUARD = ':not(:where(.not-prose, .not-prose *))';
   /** An element rule's header: `.prose :where(<inner>)` and the guard. */
   const at = (inner) => `.prose :where(${inner})${GUARD} {`;
-  /** A rule on the direct children of the prose box. */
-  const child = (inner) => `.prose > :where(${inner})${GUARD} {`;
+  /**
+   * A rule on the direct children of the prose box, two classes deep through its last `:not()`, so a gap beats a
+   * component root's own `margin: 0` (spec correction 89).
+   */
+  const child = (inner) => `.prose > :where(${inner})${GUARD}:not(.not-prose) {`;
   /** Every rule block that holds no nested block, as [selector, body]. */
   const blocks = (source) => [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => [m[1].trim(), m[2]]);
   /** A selector list split at its top-level commas. */
@@ -10192,7 +10193,12 @@ describe('src/components/prose.css', () => {
     parts.push(list.slice(start).trim());
     return parts;
   };
-  const SHAPE = /^\.prose (?:> )?:where\((.+)\):not\(:where\(\.not-prose, \.not-prose \*\)\)(?:::marker)?$/;
+  /**
+   * An element rule's shape, and a gap's: a gap between the box's own children ends in `:not(.not-prose)` as well,
+   * which matches nothing new and makes it two classes deep (spec correction 89).
+   */
+  const SHAPE =
+    /^\.prose (?::where\((.+)\):not\(:where\(\.not-prose, \.not-prose \*\)\)(?:::marker)?|> :where\((.+)\):not\(:where\(\.not-prose, \.not-prose \*\)\):not\(\.not-prose\))$/;
   const expectAll = (body, declarations, label) => {
     for (const declaration of declarations) expect(body, `${label}: ${declaration}`).toContain(declaration);
   };
@@ -10222,7 +10228,8 @@ describe('src/components/prose.css', () => {
     let checked = 0;
     for (const [selector, body] of blocks(css())) {
       for (const one of splitTop(selector)) {
-        const inner = SHAPE.exec(one)?.[1];
+        const shaped = SHAPE.exec(one);
+        const inner = shaped?.[1] ?? shaped?.[2];
         if (!inner || !splitTop(inner).some((item) => subjects.test(item))) continue;
         checked += 1;
         const properties = body
