@@ -817,6 +817,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/data-table">Data table</Link>
                 <Link href="/docs/components/date-picker">Date picker</Link>
                 <Link href="/docs/components/date-range-picker">Date range picker</Link>
+                <Link href="/docs/components/description-list">Description list</Link>
                 <Link href="/docs/components/dialog">Dialog</Link>
                 <Link href="/docs/components/drawer">Drawer</Link>
                 <Link href="/docs/components/empty-state">Empty state</Link>
@@ -824,11 +825,13 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/file-drop-zone">File drop zone</Link>
                 <Link href="/docs/components/filter-bar">Filter bar</Link>
                 <Link href="/docs/components/filter-chip">Filter chip</Link>
+                <Link href="/docs/components/gauge">Gauge</Link>
                 <Link href="/docs/components/icon-button">Icon button</Link>
                 <Link href="/docs/components/kbd">Kbd</Link>
                 <Link href="/docs/components/link">Link</Link>
                 <Link href="/docs/components/menu">Menu</Link>
                 <Link href="/docs/components/meter">Meter</Link>
+                <Link href="/docs/components/month-grid">Month grid</Link>
                 <Link href="/docs/components/multi-select">Multi-select</Link>
                 <Link href="/docs/components/number-field">Number field</Link>
                 <Link href="/docs/components/page-header">Page header</Link>

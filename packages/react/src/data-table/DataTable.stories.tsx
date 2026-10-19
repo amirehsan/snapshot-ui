@@ -245,7 +245,10 @@ export const Loading: Story = {
   ),
 };
 
-/** In a card: the sticky header takes the card's lifted fill through --data-table-surface. */
+/**
+ * In a card: the sticky header takes the card's lifted fill, since the card names it as --data-table-surface
+ * (spec correction 74), and the table needs no wrapper to say so.
+ */
 export const InCard: Story = {
   render: () => (
     <Box>
@@ -254,13 +257,15 @@ export const InCard: Story = {
           <CardTitle id="in-card-title">October</CardTitle>
         </CardHeader>
         <CardBody>
-          <div style={{ '--data-table-surface': 'var(--color-lifted)' } as CSSProperties}>
-            <Sorted aria-label={undefined} aria-labelledby="in-card-title" items={TRANSACTIONS.slice(0, 5)} />
-          </div>
+          <Sorted aria-label={undefined} aria-labelledby="in-card-title" items={TRANSACTIONS.slice(0, 5)} />
         </CardBody>
       </Card>
     </Box>
   ),
+  play: async ({ canvasElement }) => {
+    const header = only(canvasElement, '.data-table-column');
+    await expect(getComputedStyle(header).backgroundColor).toBe(tokenColor('--color-lifted', header));
+  },
 };
 
 /** In a 44rem box Category (md) has left and Account (sm) stays. */
@@ -1594,6 +1599,89 @@ export const InAFlexRow: Story = {
     await expect(table.getBoundingClientRect().width).toBeGreaterThan(40 * 16);
     await expect(only(table, '.data-table-grid')).toBeVisible();
     await expect(getComputedStyle(only(table, '.data-table-list')).display).toBe('none');
+  },
+};
+
+/** The page scrolls sideways by this many px: 0 when everything fits the screen. */
+const sideways = (): number => document.documentElement.scrollWidth - document.documentElement.clientWidth;
+
+/** A screen 320px wide, the narrowest the consumer supports, for the play that looks for sideways scroll. */
+const PHONE_320 = {
+  globals: { viewport: { value: 'narrow' } },
+  parameters: {
+    viewport: { options: { narrow: { name: 'Narrow phone', styles: { width: '320px', height: '640px' } } } },
+  },
+} as const;
+
+/**
+ * On a 320px phone the table takes its width from its holder, never from a stand-in (spec corrections 34 and 63):
+ * in a `flex: 1` wrapper, in a `1fr` grid and two up in a `1fr 1fr` grid, each in a wrapper as an app's section is,
+ * the page never scrolls sideways, and each table fills its holder with its list face, in every shape and density.
+ * A stand-in of 12rem made two tables 384px wide in a 288px column.
+ */
+export const OnANarrowPhone: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  globals: PHONE_320.globals,
+  parameters: { ...PHONE_320.parameters, layout: 'padded' },
+  render: () => (
+    <RouterProvider navigate={noop}>
+      <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
+        <div data-wrapper="flex" style={{ display: 'flex' }}>
+          <div style={{ flex: 1 }}>
+            <Sorted items={EIGHT.slice(0, 2)} aria-label="Transactions in a flex wrapper" />
+          </div>
+        </div>
+        <div data-wrapper="grid" style={{ display: 'grid', gridTemplateColumns: '1fr' }}>
+          <div>
+            <Sorted items={EIGHT.slice(0, 2)} aria-label="Transactions in a grid" />
+          </div>
+        </div>
+        <div
+          data-wrapper="two-up"
+          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-part)' }}
+        >
+          <div>
+            <Sorted items={EIGHT.slice(0, 2)} aria-label="Transactions, first of two" />
+          </div>
+          <div>
+            <Sorted items={EIGHT.slice(2, 4)} aria-label="Transactions, second of two" />
+          </div>
+        </div>
+      </div>
+    </RouterProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(window.innerWidth).toBe(320);
+    const root = document.documentElement;
+    const { shape, density } = root.dataset;
+    try {
+      for (const [nextShape, nextDensity] of [
+        ['rounded', 'comfortable'],
+        ['rounded', 'compact'],
+        ['soft', 'comfortable'],
+        ['square', 'comfortable'],
+      ] as const) {
+        root.dataset.shape = nextShape;
+        root.dataset.density = nextDensity;
+        await waitFor(() => expect(sideways()).toBeLessThanOrEqual(0), { timeout: 5000 });
+        const tables = [...canvasElement.querySelectorAll<HTMLElement>('.data-table')];
+        await expect(tables).toHaveLength(4);
+        for (const table of tables) {
+          const holder = table.parentElement;
+          if (!holder) throw new Error('No holder');
+          const box = table.getBoundingClientRect();
+          // Inside the page, and filling its holder: never collapsed to nothing.
+          await expect(box.right).toBeLessThanOrEqual(root.clientWidth);
+          await expect(box.width).toBeGreaterThanOrEqual(holder.getBoundingClientRect().width - 1);
+          // Under 40rem of its box the list face is drawn, with its items.
+          await expect(getComputedStyle(only(table, '.data-table-list')).display).not.toBe('none');
+          await expect(table.querySelectorAll('.data-table-item').length).toBeGreaterThan(0);
+        }
+      }
+    } finally {
+      root.dataset.shape = shape ?? 'rounded';
+      root.dataset.density = density ?? 'comfortable';
+    }
   },
 };
 

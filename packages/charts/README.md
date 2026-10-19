@@ -8,7 +8,7 @@ Charts for Snapshot UI, drawn on the server in SVG. Needs React 19 or later.
 pnpm add @snapshot-ui/charts @snapshot-ui/core
 ```
 
-The charts carry no CSS of their own. They need the same 0.x minor of `@snapshot-ui/core` (0.7 for charts 0.1.4) for `charts.css`, which its `styles.css` imports, so an app still loads one stylesheet.
+The charts carry no CSS of their own. They need the same 0.x minor of `@snapshot-ui/core` (0.8 for charts 0.1.5) for `charts.css`, which its `styles.css` imports, so an app still loads one stylesheet.
 
 ## Use
 

@@ -18,7 +18,7 @@ Pass the rows as `items`, the columns as definitions and a key for each row. Eac
 
 ## Figures and totals
 
-A column with `align: 'end'` sets figures: tabular digits, never broken, at the line's end in either direction, so a column of amounts lines up at its last digit. Your strings carry the sign, the currency and the unit; write a negative amount with a real minus sign, U+2212, which is as wide as a digit, as these examples do, not a hyphen. A column's `total` adds one totals row under the rows, its header cell saying "Total". When the table shows one page of many, the sum is of this page only: name it with `labels={{ total: 'Page total' }}`, so a reader never takes it for the whole. In a card, set `--data-table-surface` to the card's fill so the sticky header matches it.
+A column with `align: 'end'` sets figures: tabular digits, never broken, at the line's end in either direction, so a column of amounts lines up at its last digit. Your strings carry the sign, the currency and the unit; write a negative amount with a real minus sign, U+2212, which is as wide as a digit, as these examples do, not a hyphen. A column's `total` adds one totals row under the rows, its header cell saying "Total". When the table shows one page of many, the sum is of this page only: name it with `labels={{ total: 'Page total' }}`, so a reader never takes it for the whole. In a [Card](/docs/components/card) the sticky header takes the card's fill by itself; on any other fill, set `--data-table-surface` to it on an ancestor.
 
 <Preview name="data-table-figures" />
 
@@ -43,6 +43,16 @@ Where the table's own box is narrower than 40rem, on a phone or beside an open p
 With selection on, the list draws no checkboxes until the reader presses Select above it: then every item has its box, Select all leads that row and the button reads Done, and that row sticks under your header while the list scrolls, so Select all and Done stay in reach. In Select mode a tap anywhere on an item selects or clears it, as a phone's mail and photos do; Enter, or Right to the item's link and Enter there, still opens it. Done hides the boxes and keeps the selection, and a tap opens an item again and never selects it. While anything is selected every item keeps room for a check mark, drawn beside the shade of each selected one, so nothing moves as items are selected, after Done or when they were selected in the table before the box narrowed. Space and X select an item whether the boxes show or not, and the bar is the table's. With more than one end column, the totals line names each figure by its column.
 
 <Preview name="data-table-phone" />
+
+</Section>
+
+<Section>
+
+## A gauge in a cell
+
+A 32px [Gauge](/docs/components/gauge) fits a row in every density, for a share per row such as each card's utilization. The column header names the cell, so name each gauge with its row, "Utilization, Everyday Visa ending 4821", with `aria-label`, and let its value text show beside it. Give the column a `textValue` with the figure, and `listSlot: 'meta'` to keep the ring on a phone's list. Marks that repeat on every row take an empty `label`, so they are drawn and not read again per row; say the thresholds once by the table.
+
+<Preview name="gauge-table" />
 
 </Section>
 
@@ -305,6 +315,8 @@ The example below is the same page in a client component, since this site is sta
 ## Usage
 
 Render DataTable from a client component: its columns, keys and links are functions, which a server component cannot pass. Load the rows in a server page and pass them as data; a node a server rendered can reach a cell as a field of its row. Wrap the app in a `RouterProvider` once, so the row links go through your router. `currentKey` is compared with each row's key by strict equality, so a key read from the URL, which is a string, never matches a numeric key: convert it first, as `Number(params.get('open'))`. The row's link is stretched over the whole row, so text in a row cannot be selected by dragging across it; put text a reader copies in the detail the row opens. A control in a cell takes its own press above the row's link: a button, a link, an input, a label, a field, anything with a control role such as `checkbox`, `switch` or `menuitem`, and anything in the tab order. Give anything else that takes a press the class `data-table-control`. The table's header sticks at `--page-sticky-top`, which AppShell's `header` slot writes from the header's measured height once the page has loaded; set it yourself, on an ancestor, only for a header outside the shell. This site sets it from its own header, which is why the examples' headers stop under it. A row that focus reaches keeps clear of the sticky header and of the bulk-action bar. The bulk-action bar sticks above `--app-shell-inset-block-end`, which AppShell sets for its bottom tab bar. A table inside an element of yours that scrolls, a frame, a panel or a pane, sticks its header inside that element: set `--page-sticky-top` to `0px` on it, unless your header scrolls inside it too, which DataTable cannot tell. Every string in the table is yours: the library formats no date, amount or count.
+
+The table is a size container, so it takes its width from its holder, never from its content, and has no width of its own. A block, a `1fr` grid track or a flex row gives it one: in a flex row it takes the room its siblings leave. A holder that sizes it from its content, such as an `auto` grid track, a flex column with `align-items: flex-start`, an `inline-block` or `width: max-content`, must give it a width, such as `inline-size: 100%`, or it draws 0 wide. A [Meter](/docs/components/meter) in a row cuts its segments in that row's own fill, hovered and selected too: the table sets `--meter-surface` for you, from `--data-table-surface`, which a Card sets to its fill.
 
 Both faces are in the page's HTML, so a page's weight grows with its rows: show about 50 rows a page, with [Pagination](/docs/components/pagination) under the table. Fifty rows of five columns, grouped by day, are about 130 kB of HTML for both faces, about 7 kB once compressed, as servers send it; 200 rows are about 480 kB, 20 kB compressed, and with selection on about 700 kB.
 

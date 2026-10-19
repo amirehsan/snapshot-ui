@@ -126,10 +126,12 @@ export { Pagination, type PaginationLabels, type PaginationProps } from './pagin
 export type { AccessibleName, AriaName } from './utils/accessible-name';
 export {
   Card,
+  CardActions,
   CardBody,
   CardHeader,
   CardNote,
   CardTitle,
+  type CardActionsProps,
   type CardBodyProps,
   type CardHeaderProps,
   type CardNoteProps,
@@ -137,6 +139,13 @@ export {
   type CardTitleProps,
 } from './card';
 export { CollapsibleCard, type CollapsibleCardProps } from './collapsible-card';
+export {
+  DescriptionList,
+  DescriptionListItem,
+  type DescriptionListItemProps,
+  type DescriptionListLayout,
+  type DescriptionListProps,
+} from './description-list';
 export {
   ConfirmDialog,
   Dialog,
@@ -208,6 +217,16 @@ export {
 export { Avatar, type AvatarProps } from './avatar';
 export { StatTile, type StatTileChange, type StatTileProps } from './stat-tile';
 export { Meter, type MeterBaseProps, type MeterProps, type MeterSegment } from './meter';
+export { Gauge, type GaugeBaseProps, type GaugeMark, type GaugeProps } from './gauge';
+export {
+  MonthGrid,
+  type MonthGridBaseProps,
+  type MonthGridLabels,
+  type MonthGridLook,
+  type MonthGridProps,
+  type MonthGridState,
+  type MonthGridYear,
+} from './month-grid';
 export { ProgressBar, type ProgressBarBaseProps, type ProgressBarProps } from './progress-bar';
 export {
   FileButton,

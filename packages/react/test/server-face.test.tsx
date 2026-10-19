@@ -21,6 +21,31 @@ import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
+import { Card, CardActions, CardHeader, CardTitle } from '../src/card';
+import { DescriptionList, DescriptionListItem } from '../src/description-list';
+import { Link } from '../src/link';
+import { Gauge } from '../src/gauge';
+import { MonthGrid } from '../src/month-grid';
+import {
+  COVERAGE_STATES,
+  COVERAGE_YEARS,
+  MONTH_NAMES,
+  PERSIAN_LABELS,
+  PERSIAN_MONTH_NAMES,
+  PERSIAN_SHORT_MONTHS,
+  PERSIAN_STATES,
+  PERSIAN_SUMMARY,
+  PERSIAN_YEARS,
+  SHORT_MONTHS,
+} from '../src/stories/coverage';
+
+/** The consumer's score bands on 300 to 850. */
+const SCORE_BANDS = [
+  { value: 580, label: 'Fair from 580' },
+  { value: 670, label: 'Good from 670' },
+  { value: 740, label: 'Very good from 740' },
+  { value: 800, label: 'Excellent from 800' },
+];
 
 /**
  * The server face (ruling 1): every date and number part writes one HTML, byte for byte, under en-US, de-DE and
@@ -126,6 +151,91 @@ const FACES: [name: string, element: ReactElement][] = [
     <FilterChip label="Amount" valueLabel="Over $100" onClear={noop}>
       <p>Two amounts</p>
     </FilterChip>,
+  ],
+  [
+    // A static header's actions read no locale and no zone either: a Button and a Link write one HTML everywhere.
+    'Card with CardActions',
+    <Card>
+      <CardHeader>
+        <CardTitle level={3}>Details</CardTitle>
+        <CardActions>
+          <Button variant="secondary">Edit</Button>
+          <Link href="/accounts/visa/merge">Merge</Link>
+        </CardActions>
+      </CardHeader>
+    </Card>,
+  ],
+  [
+    // A static part reads no locale and no zone: four rows, one empty, two numeric and one with a Link as its
+    // action, write one HTML everywhere.
+    'DescriptionList',
+    <DescriptionList>
+      <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+      <DescriptionListItem term="Nickname" actions={<Link href="/accounts/visa/nickname">Add</Link>} />
+      <DescriptionListItem term="Credit limit" isNumeric>
+        $5,000.00
+      </DescriptionListItem>
+      <DescriptionListItem term="APR" isNumeric>
+        24.9%
+      </DescriptionListItem>
+    </DescriptionList>,
+  ],
+  [
+    // A static part whose numbers are arithmetic on its props, written with three decimals at most: the paths,
+    // the dash and the marks are one string in every locale and zone.
+    'Gauge',
+    <Gauge
+      label="Utilization"
+      value={23}
+      valueLabel="23% of your limit"
+      figure="23%"
+      marks={[
+        { value: 10, label: 'Best under 10%' },
+        { value: 30, label: 'Keep it under 30%' },
+      ]}
+    />,
+  ],
+  [
+    'Gauge score',
+    <Gauge
+      label="Credit score"
+      form="semicircle"
+      size="lg"
+      minValue={300}
+      maxValue={850}
+      value={742}
+      valueLabel="742 of 850, Very good"
+      figure="742"
+      figureCaption="Very good"
+      marks={SCORE_BANDS}
+    />,
+  ],
+  [
+    // A static part that reads no locale: the cells, the table and the English summary are the app's words joined
+    // as strings, one HTML in every locale and zone.
+    'MonthGrid',
+    <MonthGrid
+      label="Statement coverage"
+      states={COVERAGE_STATES}
+      years={COVERAGE_YEARS}
+      monthLabels={SHORT_MONTHS}
+      monthNames={MONTH_NAMES}
+    />,
+  ],
+  [
+    // Persian years and months the app placed, its own summary and table words, on a right-to-left page.
+    'MonthGrid Persian',
+    <div dir="rtl" lang="fa">
+      <MonthGrid
+        label="صورت‌حساب‌ها"
+        states={PERSIAN_STATES}
+        years={PERSIAN_YEARS}
+        monthLabels={PERSIAN_SHORT_MONTHS}
+        monthNames={PERSIAN_MONTH_NAMES}
+        summary={PERSIAN_SUMMARY}
+        labels={PERSIAN_LABELS}
+      />
+    </div>,
   ],
   [
     // The count in the Filters button's Badge, More and Clear all; no panel and no sheet.

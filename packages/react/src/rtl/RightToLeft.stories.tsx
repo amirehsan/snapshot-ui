@@ -7,6 +7,7 @@ import { AppShell } from '../app-shell';
 import { Breadcrumb, Breadcrumbs } from '../breadcrumbs';
 import { Button } from '../button';
 import { RangeCalendar } from '../calendar';
+import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../card';
 import { Checkbox, CheckboxGroup } from '../checkbox';
 import { CollapsibleCard } from '../collapsible-card';
 import { ComboBox } from '../combo-box';
@@ -14,14 +15,17 @@ import { CommandPalette } from '../command-palette';
 import { DataTable } from '../data-table';
 import { DatePicker } from '../date-picker';
 import { DateRangePicker } from '../date-range-picker';
+import { DescriptionList, DescriptionListItem } from '../description-list';
 import { Dialog, DialogTrigger } from '../dialog';
 import { Drawer } from '../drawer';
 import { EmptyState } from '../empty-state';
 import { FileDropZone, PageDropZone } from '../file-drop-zone';
 import { FilterBar } from '../filter-bar';
 import { FilterChip } from '../filter-chip';
+import { Gauge } from '../gauge';
 import { Link, RouterProvider } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
+import { MonthGrid } from '../month-grid';
 import { MultiSelect } from '../multi-select';
 import { NumberField } from '../number-field';
 import { PageColumn, PageHeader } from '../page-header';
@@ -37,6 +41,14 @@ import { Select } from '../select';
 import { Sheet, SheetTrigger } from '../sheet';
 import { SidePanel, SidePanelLayout } from '../side-panel';
 import { MENU_ROW_A11Y } from '../stories/a11y';
+import {
+  PERSIAN_LABELS,
+  PERSIAN_MONTH_NAMES,
+  PERSIAN_SHORT_MONTHS,
+  PERSIAN_STATES,
+  PERSIAN_SUMMARY,
+  PERSIAN_YEARS,
+} from '../stories/coverage';
 import { filesTransfer, fireDrag, pdf } from '../stories/drag';
 import { DemoHeader, DemoNav } from '../stories/shell-fixture';
 import { DESKTOP, VIEWPORT_OPTIONS } from '../stories/viewports';
@@ -1399,6 +1411,217 @@ export const EmptyStateMirrored: Story = {
     const description = find(canvasElement, '.empty-state-description');
     await expect(getComputedStyle(description).direction).toBe('rtl');
     await expectInside(rect(description), box);
+  },
+};
+
+/**
+ * A description list on a Persian page, terms beside values: each term starts at the row's right edge, the
+ * row's actions end it at the left, and a limit reads "$5,000.00" left to right while it starts at the value
+ * column's right edge, the start of a right-to-left line (`match-parent`).
+ */
+export const DescriptionListMirrored: Story = {
+  // match-parent is the standard name in Firefox and the prefixed one in WebKit and Chromium: all three engines.
+  tags: ['webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
+        <DescriptionList layout="horizontal">
+          <DescriptionListItem term="نام">ویزای روزمره</DescriptionListItem>
+          <DescriptionListItem term="سقف اعتبار" isNumeric>
+            $5,000.00
+          </DescriptionListItem>
+          <DescriptionListItem
+            term="نام مستعار"
+            actions={
+              <Button variant="secondary" aria-label="ویرایش نام مستعار">
+                ویرایش
+              </Button>
+            }
+          >
+            کارت سفر
+          </DescriptionListItem>
+        </DescriptionList>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const rows = [...canvasElement.querySelectorAll('.description-list-item')];
+    await expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      await expectSameEdge(rect(find(row, '.description-list-term')).right, rect(row).right);
+    }
+    const [, limit, nickname] = rows;
+    if (!limit || !nickname) throw new Error('No rows');
+    // The actions end the row at its left, after the value.
+    const actions = rect(find(nickname, '.description-list-actions'));
+    await expectSameEdge(actions.left, rect(nickname).left);
+    await expect(actions.right).toBeLessThanOrEqual(rect(find(nickname, '.description-list-value')).left + 1);
+    // The figure keeps its order and starts at the value column's right edge.
+    const value = find(limit, '.description-list-value');
+    await expect(value).toHaveTextContent('$5,000.00');
+    await expect(getComputedStyle(value).direction).toBe('ltr');
+    await expectSameEdge(lastText(value).right, rect(value).right);
+    // 1px for an engine's rounding: WebKit's glyph boxes for "$" and "5" overlap by a pixel.
+    await expect(characterBox(value, 0).right).toBeLessThanOrEqual(characterBox(value, 1).left + 1);
+  },
+};
+
+/**
+ * A card's header actions on a Persian page: the title starts at the header's right edge, and the actions end
+ * the title's line at its left, on the body's column edge. In a frame under 24rem they follow the note and
+ * start at the right.
+ */
+export const CardActionsMirrored: Story = {
+  tags: ['webkit', 'firefox'],
+  render: () => {
+    const card = (width: string) => (
+      <div style={{ width }}>
+        <Card>
+          <CardHeader>
+            <CardTitle level={3}>جزئیات</CardTitle>
+            <CardNote>به‌روزشده از حساب بانکی</CardNote>
+            <CardActions>
+              <Button variant="secondary" aria-label="ویرایش جزئیات">
+                ویرایش
+              </Button>
+            </CardActions>
+          </CardHeader>
+          <CardBody>
+            <p>ویزای روزمره</p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+    return (
+      <I18nProvider locale="fa-IR">
+        <div dir="rtl" lang="fa" style={{ display: 'grid', gap: 24 }}>
+          {card('min(36rem, calc(100vw - 2rem))')}
+          {card('20rem')}
+        </div>
+      </I18nProvider>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const [wide, narrow] = [...canvasElement.querySelectorAll('.card')];
+    if (!wide || !narrow) throw new Error('No cards');
+    const body = rect(find(wide, '.card-body'));
+    await expectSameEdge(rect(find(wide, '.card-title')).right, body.right);
+    const actions = rect(find(wide, '.card-actions .button'));
+    await expectSameEdge(actions.left, body.left);
+    await expect(actions.bottom).toBeLessThanOrEqual(rect(find(wide, '.card-note')).top + 0.5);
+    // Under the note, at the inline start, which is the right.
+    const under = rect(find(narrow, '.card-actions .button'));
+    await expect(under.top).toBeGreaterThanOrEqual(rect(find(narrow, '.card-note')).bottom);
+    await expectSameEdge(under.right, rect(find(narrow, '.card-body')).right);
+  },
+};
+
+/**
+ * A gauge on a Persian page follows the page (owner ruling 7): the svg mirrors, so a semicircle fills from the
+ * right and a ring runs counter-clockwise from the top, and the marks move with it. The figure and the text are
+ * HTML and do not mirror: "60%" still reads left to right. A mark at the value's own share stands where the arc
+ * ends, since a dash has no box of its own to measure. In three engines, since each mirrors the svg itself.
+ */
+export const GaugeMirrored: Story = {
+  tags: ['webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ display: 'flex', flexWrap: 'wrap', gap: 32 }}>
+        <Gauge
+          data-testid="semicircle"
+          label="بودجه"
+          form="semicircle"
+          size="lg"
+          value={25}
+          valueLabel="۲۵٪ از بودجه ماه"
+          figure="25%"
+          marks={[{ value: 25, label: 'یک چهارم' }]}
+        />
+        <Gauge
+          data-testid="ring"
+          label="میزان استفاده"
+          value={60}
+          valueLabel="۶۰٪ از سقف اعتبار"
+          figure="60%"
+          marks={[{ value: 25, label: 'یک چهارم' }]}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    for (const svg of canvasElement.querySelectorAll('.gauge-svg'))
+      await expect(getComputedStyle(svg).scale).toBe('-1 1');
+    const semicircle = find(canvasElement, '[data-testid="semicircle"]');
+    const dial = rect(find(semicircle, '.gauge-dial'));
+    const middle = dial.left + dial.width / 2;
+    // A quarter of the way from the inline start, the right: the mark is in the dial's right half, and up.
+    const mark = rect(find(semicircle, '.gauge-mark'));
+    await expect(mark.left).toBeGreaterThanOrEqual(middle - 0.5);
+    await expect(mark.bottom).toBeLessThan(dial.top + dial.width / 2);
+    // The ring's quarter mark is a quarter turn counter-clockwise from the top: at the left, level with the centre.
+    const ring = find(canvasElement, '[data-testid="ring"]');
+    const ringDial = rect(find(ring, '.gauge-dial'));
+    const quarter = rect(find(ring, '.gauge-mark'));
+    await expect(quarter.right).toBeLessThanOrEqual(ringDial.left + 16);
+    await expect(
+      Math.abs(quarter.top + quarter.height / 2 - (ringDial.top + ringDial.height / 2)),
+    ).toBeLessThan(1);
+    // The figure is unmirrored: its first character is left of its second.
+    for (const scope of [semicircle, ring]) {
+      const value = find(scope, '.gauge-figure-value');
+      await expect(getComputedStyle(value).direction).toBe('ltr');
+      // The figure is set tight, so its glyph boxes overlap; the first starts left of the second.
+      await expect(characterBox(value, 0).left).toBeLessThan(characterBox(value, 1).left);
+      // The label starts at the right of its text block, the start of a right-to-left line.
+      await expect(getComputedStyle(find(scope, '.gauge-text')).direction).toBe('rtl');
+    }
+  },
+};
+
+/**
+ * A month grid on a Persian page follows the page (owner ruling 7): the grid's columns run from the right, so
+ * the year label is at the right and Farvardin, the first month, is the rightmost cell of its row and the
+ * rightmost label of the header, by the grid's own logical flow. In three engines, since each lays the grid out.
+ */
+export const MonthGridMirrored: Story = {
+  tags: ['webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ width: 'min(36rem, calc(100vw - 2rem))' }}>
+        <MonthGrid
+          label="صورت‌حساب‌ها"
+          states={PERSIAN_STATES}
+          years={PERSIAN_YEARS}
+          monthLabels={PERSIAN_SHORT_MONTHS}
+          monthNames={PERSIAN_MONTH_NAMES}
+          summary={PERSIAN_SUMMARY}
+          labels={PERSIAN_LABELS}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const grid = find(canvasElement, '.month-grid-grid');
+    await expect(getComputedStyle(grid).direction).toBe('rtl');
+    const years = [...grid.querySelectorAll('.month-grid-year')];
+    const cells = [...grid.querySelectorAll('.month-grid-cell')].map(rect);
+    await expect(years).toHaveLength(2);
+    for (const [row, year] of years.entries()) {
+      const rowCells = cells.slice(row * 12, row * 12 + 12);
+      const [first] = rowCells;
+      if (!first) throw new Error('No cell');
+      // The first month is the rightmost cell, and each later month is left of the one before.
+      await expectSameEdge(first.right, Math.max(...rowCells.map((cell) => cell.right)));
+      for (const [index, cell] of rowCells.slice(1).entries())
+        await expect(cell.right).toBeLessThanOrEqual((rowCells[index]?.left ?? 0) + 1);
+      // The year label is right of its first month, in the grid's first column at the right.
+      await expect(rect(year).left).toBeGreaterThanOrEqual(first.right - 1);
+      await expectSameEdge(rect(year).right, rect(grid).right);
+    }
+    // The header's first label, Farvardin's, is over the first month's column.
+    const label = rect(find(grid, '.month-grid-month'));
+    const column = rect(find(grid, '.month-grid-cell'));
+    await expectSameEdge(label.left + label.width / 2, column.left + column.width / 2);
   },
 };
 
