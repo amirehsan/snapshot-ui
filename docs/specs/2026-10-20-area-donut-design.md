@@ -1,9 +1,9 @@
 # Charts: AreaChart and DonutChart: design
 
-Status: draft for the owner's review
+Status: approved on 2026-10-20. Written for the owner's review with a recommended answer to each open question of section 15; the owner took every recommendation, all 27, as written. Because 1.0 now ships after phase 7 (the templates spec's ruling 1.0), every version here is a 0.x minor; section 19 records the rulings and the versions.
 Date: 2026-10-20
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document finishes phase 6 of the parent spec's catalog, "Charts" (`@snapshot-ui/charts`: line, bar, area and donut, plus the chart palette derivation). Line shipped in batch 2 ("Home"), bar and the palette in batch 6 ("Insights", `docs/specs/2026-10-18-insights-design.md`); this document takes the last two, **area** and **donut**, in the order the insights spec's ruling 24 set ("area before donut"). The design authority remains `docs/design-system.md`.
-Released before this: `main` is at 0.8.0 as this is written, with `@snapshot-ui/charts` 0.1.5. Batch 6 (core and react 0.9.0, charts 0.2.0) is on `feat/insights` and brings the shared chart foundations, BarChart and the four palette tokens this document builds on. The batches in flight after it are listed in the lists spec (`docs/specs/2026-10-20-lists-design.md`), and phase 5 (`docs/specs/2026-10-20-templates-design.md`) ends with the 1.0.0 release of core and react. This phase is recommended as one batch, 12, after 1.0 (section 2).
+Released before this: `main` is at 0.8.0 as this is written, with `@snapshot-ui/charts` 0.1.5. Batch 6 (core and react 0.9.0, charts 0.2.0) is on `feat/insights` and brings the shared chart foundations, BarChart and the four palette tokens this document builds on. The batches in flight after it are listed in the lists spec (`docs/specs/2026-10-20-lists-design.md`), and phase 5 (`docs/specs/2026-10-20-templates-design.md`) ends with batch 11b, a docs-only change; 1.0 comes after phase 7, in the final batch of `docs/specs/2026-10-20-html-design.md`. This phase is one batch, 12, after phase 5 (section 2).
 
 ## Summary for the owner
 
@@ -63,7 +63,7 @@ Two charts on one set of foundations, one palette and one keyboard model. AreaCh
 | **12, Parts of a whole** | AreaChart, DonutChart, the foundations' additions, the ring check | `@snapshot-ui/charts` minor; core and react minor for `charts.css` | Both draw a whole and its parts in the palette with "Other" in slate, share the textures, the table, the states, the roving focus and the links, and finish phase 6 together |
 
 - **If it must shrink.** AreaChart ships first in build order and alone if DonutChart's focus ring (risk R3) or the ring check slips; DonutChart follows in the next charts minor, with no change to this spec.
-- **Versions.** The changesets name no number. If nothing else releases between, after 1.0.0 (phase 5, batch 11b), core and react are 1.1.0 and charts 0.3.0 with its core peer at `^1.1.0`, since the area and donut rules are in core 1.1's `charts.css`. If this batch ships before 11a, core and react are 0.17.0 and charts 0.3.0 with its peer at `^0.17.0`. Whether charts then becomes 1.0.0 is open question 26.
+- **Versions.** The changesets name no number. If nothing else releases between, after 11a (0.17.0) and 11b (no release), core and react are 0.18.0 and charts 0.3.0 with its core peer at `^0.18.0`, since the area and donut rules are in core 0.18's `charts.css`. If this batch ships before 11a, core and react are 0.17.0 and charts 0.3.0 with its peer at `^0.17.0`. Every version is 0.x: 1.0 comes after phase 7 (section 19).
 
 ## 3. What it takes from earlier batches
 
@@ -739,10 +739,10 @@ Existing baselines: none should change. LineChart's and BarChart's are the found
 ## 18. Release
 
 - **Changesets.** `@snapshot-ui/charts`, minor: `area-chart.md` (AreaChart and its types: `AreaChartProps`, `AreaSeries`, `AreaValue`, `AreaColor`, `AreaChartLabels`), `donut-chart.md` (DonutChart and its types: `DonutChartProps`, `DonutSlice`, `DonutTotal`, `DonutColor`, `DonutChartLabels`). `@snapshot-ui/core` and `@snapshot-ui/react`, minor (fixed group): `charts-area-donut.md` (the `charts.css` rules); `palette.js`'s ring check is a test script and ships nothing.
-- **Versions,** if nothing else releases between: after 1.0.0, core and react 1.1.0 and charts 0.3.0 with its core peer at `^1.1.0`; before 11a, core and react 0.17.0 and charts 0.3.0 with its peer at `^0.17.0`. Charts 1.0.0 per open question 26.
-- **The core peer.** Charts' peer is `workspace:^`, a caret on core's version at release. Once core is 1.x a caret accepts every later 1.x minor, so a core minor no longer forces a charts release unless charts reads that minor's CSS, as this one does.
+- **Versions,** if nothing else releases between: core and react 0.18.0 and charts 0.3.0 with its core peer at `^0.18.0`; before 11a, core and react 0.17.0 and charts 0.3.0 with its peer at `^0.17.0`. All 0.x (section 19); charts 1.0.0 is taken up in the final 1.0 batch.
+- **The core peer.** Charts' peer is `workspace:^`, a caret on core's version at release. While core is 0.x a caret accepts only its own minor, so every core minor until 1.0 still needs a charts patch moving the peer, as since batch 3a. Once core is 1.x a caret accepts every later 1.x minor, and that chore ends.
 - **Release note, short:**
-  - Upgrade `@snapshot-ui/charts` with core; charts 0.3.0 needs core 1.1 (or 0.17) for its CSS.
+  - Upgrade `@snapshot-ui/charts` with core; charts 0.3.0 needs core 0.18 (or 0.17) for its CSS.
   - AreaChart: a total and its parts over time, stacked, up to five series, the fifth your "Other"; values zero or more; every figure and total your string.
   - DonutChart: at most four shares and your "Other" (`isOther`), a required `total` written in the hole, `shareLabel` your percentage string; the chart never sums, sorts or formats.
   - Pin `color` when the same categories appear in a stack and a donut, so each keeps one color; the donut's default order differs from the stack's on purpose (section 6.2).
@@ -750,9 +750,43 @@ Existing baselines: none should change. LineChart's and BarChart's are the found
   - `href` on a value or slice, and `navigate` from your router.
   - Pass `labels` (all of them) and `statusLabels` on a Persian page, with Persian digits in every string.
 
+## 19. Owner rulings (owner, 2026-10-20)
+
+The owner approved this spec on 2026-10-20 and took every recommendation of section 15, all 27, as written. Each ruling names the open question it settles.
+
+**Versions.** 1.0 ships after phase 7 (the templates spec's ruling 1.0), so this batch's releases are 0.x minors: if nothing else releases between, core and react 0.18.0 and `@snapshot-ui/charts` 0.3.0 with its core peer at `^0.18.0` (0.17.0 and `^0.17.0` if it ships before 11a). Sections 2 and 18 are written to match.
+
+1. **The split** (question 1). One batch, 12, AreaChart then DonutChart; AreaChart may ship alone if the donut slips.
+2. **Stacked only** (question 2). AreaChart always stacks; no overlapping areas.
+3. **One series** (question 3). Unpinned, LineChart's ink line and wash; pinned, a one-layer stack in its color.
+4. **A 100% stack** (question 4). Not now; a later `layout="expand"` when a consumer asks.
+5. **How fills are drawn** (question 5). HTML clipped by `polygon()`, so textures keep their exact stripes.
+6. **Negatives in an area** (question 6). Drawn as zero with a warning; signed series belong to LineChart or BarChart.
+7. **A partial null** (question 7). A gap across the whole stack, with a warning.
+8. **AreaChart's focus model** (question 8). BarChart's per-value roving focus.
+9. **Dimming under the pointer** (question 9). None for areas.
+10. **The donut's colors** (question 10). The four slots and slate only, in the type.
+11. **Who makes "Other"** (question 11). The app folds and labels it; `isOther` pins slate.
+12. **The donut's slot order** (question 12). Violet, teal, olive, magenta, then slate.
+13. **The centre while active** (question 13). The active slice's figures replace the total until Escape.
+14. **Textures by default** (question 14). Off, and always on in forced colors.
+15. **Slice corners** (question 15). Square in every shape.
+16. **A pie** (question 16). Never.
+17. **A half donut** (question 17). Not now.
+18. **Labels on the arcs** (question 18). Never; the legend list.
+19. **Fixed sizes** (question 19). `md` 160px and `lg` 224px.
+20. **The legend for assistive technology** (question 20). Hidden; each slice's name and the table say the same.
+21. **Percentages** (question 21). The app's `shareLabel`.
+22. **The least slice** (question 22). The gap plus 1px of arc, taken from the largest; a warning under 1%.
+23. **Five peers or more** (question 23). Slate past four, with a warning.
+24. **Keys in the donut** (question 24). Right and Down next, Left and Up previous, Left and Right mirrored in right to left.
+25. **The ring's direction in right to left** (question 25). Counter-clockwise, Gauge's rule.
+26. **Charts' version** (question 26). 0.3.0 in this batch, outside core's fixed group. Charts 1.0.0 follows the screen reader pass with no API change; since 1.0 now comes after phase 7, that step is taken up in the final 1.0 batch (`docs/specs/2026-10-20-html-design.md`), and the core peer stays a 0.x caret until then.
+27. **The parent spec's "on Recharts"** (question 27). Amend the parent spec's sections 4 and 7 to "drawn in SVG and HTML by the library, no chart dependency", in batch 12's plan's first commit.
+
 ## Owner actions
 
-1. A VoiceOver, NVDA and TalkBack pass over both charts before charts 1.0.0.
+1. A VoiceOver, NVDA and TalkBack pass over both charts before charts 1.0.0, in or before the final 1.0 batch.
 2. Ask the first consumer whether its later Insights views want an area over time, a donut of the month, or both, and which first.
 3. Approve the amendment to the parent spec's "on Recharts" (open question 27).
 4. Review the ring order's colors in the `DonutChart` stories in light and dark before the release.

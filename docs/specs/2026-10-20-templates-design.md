@@ -1,6 +1,6 @@
 # Templates: Preview, page templates, the docs shell and 1.0: design
 
-Status: draft for the owner's review
+Status: approved on 2026-10-20. Written for the owner's review with a recommended answer to each open question of section 18; the owner took every recommendation, all 21, with one change: 1.0 ships after phase 7, not at the end of phase 5. Batch 11b is therefore the docs shell move alone and stays 0.x, and the API review, the stability promise and the 1.0.0 release move to the final "1.0" batch of `docs/specs/2026-10-20-html-design.md`. Section 22 records the rulings, which supersede the sections they name where they differ.
 Date: 2026-10-20
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document takes the phase 5 rows of the parent spec's catalog, "App shell and page layouts", that are not yet built or taken: **Preview** and **Page templates**. It also takes the two duties the parent spec puts at the end of phase 5: replacing the docs site's hand-built shell with the library's own parts (risk R8 and section 8, "Dogfooding"), and the 1.0 release (section 10, "Versions stay at 0.x until the end of phase 5, then 1.0"). The design authority remains `docs/design-system.md`.
 Released before this: `main` is at 0.8.0 (batch 5, "Accounts") as this is written. In flight, in order: batch 6 ("Insights", 0.9.0, charts 0.2.0), batch 7 ("Settings", 0.10.0), the choices batch (0.11.0), the inputs phase (9a, 9b and 9c, 0.12.0 to 0.14.0) and the lists phase (10a and 10b, 0.15.0 and 0.16.0, `docs/specs/2026-10-20-lists-design.md`). This phase starts after 10b merges. It takes the shell parts from batches 1 and 4, PanelLayout, ThemeSwitch and the field extras from batch 7, and parts from every batch since for the templates. Section 2 recommends two batches, 11a and 11b.
@@ -16,10 +16,10 @@ What this phase adds, in plain words, in the order recommended:
 - **Stack, Cluster and TileGrid**: three small layout parts that put the system's spacing rhythm (8, 24 and 32px) between things: a column, a wrapping row, and a grid of tiles. The docs site has had these as private classes since phase 1; the templates need them, so they move into the library and the docs use the library's.
 - **Three page templates**: a settings page, a list page and a detail page, for an imaginary "Projects" workspace. Each is a set of files for the Next App Router that a developer copies into their app from the docs site: the page, its layout, its loading, empty, error and not-found states, a server action, and a data file to replace with their own. They are built only from library parts, with no CSS of their own and no inline styles, and a test enforces that. The docs show each running at phone and desktop widths, in every color mode and corner shape.
 
-**Batch 11b, "1.0"** (the 1.0.0 release of core and react):
+**Batch 11b, "Docs shell"** (no package release; ruling 1.0 in section 22):
 
 - **The docs site on the library's own shell**: the rail, drawer and header the docs site has drawn by hand since phase 1 are replaced by AppShell, Sidebar, PageHeader and Breadcrumbs, as the parent spec requires before phase 5 is done.
-- **The 1.0 review and release**: every export, prop, class, data attribute and token is checked against one written stability promise, the few names that need to change change now, and core and react are released as 1.0.0. Charts and the editor stay at 0.x until their own phases finish.
+- **The 1.0 review and release** were planned here and moved by the owner's ruling to the final "1.0" batch after phase 7 (`docs/specs/2026-10-20-html-design.md`). Section 11 stays as the input to that batch.
 
 Why: these are the parent spec's last phase 5 rows and its two end-of-phase duties. The first consumer has asked for none of them directly; its settings, list and detail pages are what the templates are drawn from, so it can tell us where they differ from what it built (owner action 2).
 
@@ -63,7 +63,7 @@ The phase is two new parts with a third small family (the layout parts), three t
 | Batch | Contents | Package releases | Why together |
 | --- | --- | --- | --- |
 | **11a, Templates** | Stack, Cluster, TileGrid; Preview; FontPreview; the settings, list and detail templates; the docs' Templates section; the recipes moved onto the layout parts | core and react, minor | The templates need the layout parts and use Preview on their settings page; all are new public API reviewed once in 11b |
-| **11b, 1.0** | The docs site on AppShell, Sidebar, PageHeader and Breadcrumbs; the API review; the stability promise; the 1.0.0 release | core and react, major (1.0.0) | No new part; the docs change proves the shell parts, and the review needs every part, 11a's included, in place |
+| **11b, Docs shell** (as ruled) | The docs site on AppShell, Sidebar, PageHeader and Breadcrumbs; the review, the promise and 1.0.0 moved to the final 1.0 batch | none: a docs-only change, 0.x unchanged | No new part; the docs change proves the shell parts, and the review needs every part, 11a's included, in place |
 
 **Recommended order: 11a, then 11b** (open question 1).
 
@@ -71,7 +71,7 @@ The phase is two new parts with a third small family (the layout parts), three t
 - **11b second.** The 1.0 review covers 11a's new names, so they ship once as 0.x and can still be renamed in the review if the first consumer's use shows a problem.
 - **Or 11b's docs shell first,** as a docs-only change with no release, if the owner wants the docs on the library's shell sooner; it has no dependency on 11a.
 
-**Versions.** The changesets name no number, as every batch does. If nothing else releases between, after 10b (0.16.0), 11a is 0.17.0 and 11b is 1.0.0. `@snapshot-ui/charts` takes a patch for its core peer with 11a, as every batch since 3a has done, and a patch with 11b that moves its peer to `^1.0.0` (section 21). If phase 6 (`docs/specs/2026-10-20-area-donut-design.md`) ships before 11a, every number here moves up by one minor and 1.0.0 is unchanged.
+**Versions.** The changesets name no number, as every batch does. If nothing else releases between, after 10b (0.16.0), 11a is 0.17.0 and 11b releases nothing. `@snapshot-ui/charts` takes a patch for its core peer with 11a, as every batch since 3a has done. As ruled (section 22), 1.0.0 comes after phase 7, in the final 1.0 batch; phase 6 (batch 12) is then core and react 0.18.0. If phase 6 ships before 11a, 11a moves up by one minor.
 
 **If a batch must shrink.** The detail template is the largest and depends on the most batches (AvatarGroup from 10b); it can follow in a minor after 11a. FontPreview is independent of the templates and can ship without them. 11b cannot shrink: the docs shell and the review are what 1.0 means here.
 
@@ -629,7 +629,9 @@ The parent spec's R8 and the app-shell spec's section 13.5, done.
 - **The tests move.** `apps/docs/tests/docs.spec.ts`'s rail tests (collapse and memory, the closed rail out of the tree, the drawer's focus and Escape, search's Escape, widening, the close button, the current page closing the drawer, Back and Forward) are rewritten against the library's parts and keep every assertion; the 320px and 375px no-sideways-scroll checks run on every page.
 - **The docs' private CSS shrinks.** `shell.css` loses its rail, drawer and header rules; what remains is the docs' own (the stage, the code block's Shiki mapping until Prose's move, the table of contents).
 
-## 11. The 1.0 review and the stability promise (11b)
+## 11. The 1.0 review and the stability promise (moved to the final 1.0 batch)
+
+As ruled (section 22), this section is carried out after phase 7, in the final "1.0" batch of `docs/specs/2026-10-20-html-design.md`, which takes it as its input and covers all five packages. Its content stands as written, with "11b" read as that batch and charts' peer moved there.
 
 **The promise,** written on a new docs page, "Versioning," and in each package's README (open question 19):
 
@@ -669,7 +671,7 @@ The parent spec's R8 and the app-shell spec's section 13.5, done.
 
 ## 14. Decided here
 
-1. Phase 5's remaining rows and duties ship as two batches: 11a (Templates: layout parts, Preview, FontPreview, three templates) and 11b (1.0: the docs shell, the review, the release), in that order.
+1. Phase 5's remaining rows and duties ship as two batches: 11a (Templates: layout parts, Preview, FontPreview, three templates) and 11b (the docs shell, no release), in that order; the review and 1.0.0 follow phase 7 (ruling 1.0).
 2. "Preview" is the record's settings preview: a frame part, `Preview`, and the source's font preview, `FontPreview`. The docs' example frame is not it and takes the names `docs-preview` and `docs-preview-head`.
 3. Preview's stage is `inert` by default, `isInteractive` turns it into a named group; `theme` and `shape` pin the stage's axes with the existing attributes.
 4. Preview's frame takes the surface step, and the holder formula with the micro floor at any corner within a Card's curve.
@@ -776,9 +778,37 @@ Existing baselines: none should change in 11a, since the layout parts are new cl
 
 ## 21. Release
 
-- **Changesets.** 11a, minor for `@snapshot-ui/core` and `@snapshot-ui/react` (fixed group), naming no number: `layout.md` (Stack, Cluster, TileGrid, `layout.css`), `preview.md` (Preview, FontPreview, `preview.css`); a patch for `@snapshot-ui/charts` moving its core peer. 11b, major for core and react: `one-point-oh.md` (the stability promise, the removed aliases, each with its replacement); a patch for charts moving its peer to `^1.0.0`.
-- **Versions,** if nothing else releases between: 11a is 0.17.0, 11b is 1.0.0; charts is 0.2.x through both (0.3.0 if phase 6 ships first).
+- **Changesets.** 11a, minor for `@snapshot-ui/core` and `@snapshot-ui/react` (fixed group), naming no number: `layout.md` (Stack, Cluster, TileGrid, `layout.css`), `preview.md` (Preview, FontPreview, `preview.css`); a patch for `@snapshot-ui/charts` moving its core peer. 11b: no changeset; it changes only the docs app. The `one-point-oh.md` changeset moves to the final 1.0 batch.
+- **Versions,** if nothing else releases between: 11a is 0.17.0; 11b releases nothing; charts is 0.2.x (0.3.0 if phase 6 ships first). Everything stays 0.x until the final 1.0 batch after phase 7.
 - **Release notes, short.** 11a: what Preview and FontPreview are for, that a preview never shows the fallback face, the three layout parts and their steps, where the templates are and what to copy, "Upgrade `@snapshot-ui/core` and `@snapshot-ui/react` together". 11b: the promise in five lines, the removed aliases, the browser floor, and that charts and the editor stay 0.x.
+
+## 22. Owner rulings (owner, 2026-10-20)
+
+The owner approved this spec on 2026-10-20 and took every recommendation of section 18, all 21, with one change to the 1.0 timing. Each ruling names the open question it settles.
+
+**1.0. The timing (changes questions 1, 18 and 21).** 1.0 ships after phase 7, not at the end of phase 5. Batch 11b is the docs shell move alone (section 10) and releases nothing, so core and react stay 0.x. The API review, the stability promise (section 11) and the 1.0.0 release move to a final "1.0" batch after phase 7, specified in `docs/specs/2026-10-20-html-design.md`. Every version in this spec is read accordingly: 11a is 0.17.0, 11b has no release, and charts' peer stays a 0.x caret until that batch.
+
+1. **The split and the order** (question 1). 11a Templates, then 11b, with 11b now the docs shell only.
+2. **What Preview is** (question 2). The record's settings preview, as two parts: `Preview` and `FontPreview`.
+3. **The class name** (question 3). `preview`; the docs' own classes become `docs-preview` and `docs-preview-head`.
+4. **An inert stage** (question 4). Inert by default; `isInteractive` allows use.
+5. **Pinning the stage** (question 5). `theme` and `shape` props writing the existing attributes.
+6. **How FontPreview loads** (question 6). The app's `load` function; the library holds no URL.
+7. **Before the face loads** (question 7). The sample hidden at its height, "Loading" in words; never the fallback face.
+8. **How templates ship** (question 8). Copyable source on the docs site, tested in CI.
+9. **Which templates** (question 9). Settings, list and detail.
+10. **The framework** (question 10). The Next App Router with server actions.
+11. **Layout parts** (question 11). Stack, Cluster and TileGrid in the library.
+12. **Their names** (question 12). `Stack`, `Cluster`, `TileGrid`; classes `stack`, `cluster`, `tile-grid`.
+13. **The sample app** (question 13). One invented workspace, "Larkspur" projects.
+14. **Unsaved changes on navigation** (question 14). No guard in the template; the docs show an optional one.
+15. **Template states** (question 15). Loading, empty, no matches, error and not found.
+16. **Showing templates** (question 16). An iframe on a run route outside the docs shell.
+17. **Baselines for templates** (question 17). Page stories in Storybook, as section 20.
+18. **The docs shell** (question 18). In 11b, as a docs-only batch, before 1.0, which now comes after phase 7.
+19. **What 1.0 promises** (question 19). Semantic versioning over exports, props, tokens, documented classes and data attributes, the component roots list and `labels` keys; written and applied in the final 1.0 batch.
+20. **Charts and the editor at 1.0** (question 20). Outside the fixed group until their phases finish; the final 1.0 batch decides each package's version (html spec).
+21. **When 1.0 ships** (question 21). Changed: after phase 7, in the final 1.0 batch, not at the end of 11b.
 
 ## Owner actions
 
@@ -786,4 +816,4 @@ Existing baselines: none should change in 11a, since the layout parts are new cl
 2. Ask the first consumer to compare its settings, list and detail pages with the templates and report differences.
 3. A VoiceOver, NVDA and TalkBack pass over Preview, FontPreview and one template, before 1.0.
 4. Decide whether a sign-in template belongs in the library at all, and if so with what sample content.
-5. Sign off the 1.0 review's lists before the release pull request merges.
+5. Sign off the 1.0 review's lists before the release pull request merges (now in the final 1.0 batch).
