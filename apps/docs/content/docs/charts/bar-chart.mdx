@@ -77,7 +77,7 @@ The types take two grouped series at most, so a third is a type error rather tha
 
 Give the previous period's series `look: 'hatched'` and its period's name as its `label`. Without a `color` it takes the first series' color, drawn as stripes inside a border of that color at full strength, and its amounts are slate: the same thing, last time, never a second category. Each bar's name says its period, so the stripes are never the only cue, and the keys step from this period's bar to the last one's in each band. Put the previous period second, so it stands after the current bar, or under it when the bars lie down.
 
-Why stripes and not a lighter shade: a lighter fill must clear 3:1 against the card to be seen and stay apart from the solid bar beside it. Ink has a band that does (half strength measures 3.45 against the card and 5.17 against solid ink in light), but `gain` has none in either mode: at 50% it is 2.33 and 3.09 in light. The hatched bar's border is the color at full strength, 17.84 for ink and 7.20 for `gain` in light, and its stripes are a texture. In forced colors the previous period stays striped against the solid current bars.
+Why stripes and not a lighter shade: a lighter fill must clear 3:1 against the card to be seen and stay apart from the solid bar beside it. Ink has a band that does (half strength measures 3.45 against the card and 5.17 against solid ink in light), but `gain` has none in either mode: at 50% it is 2.33 and 3.09 in light. The hatched bar's border is the color at full strength, 17.84 for ink and 7.20 for `gain` in light, and its stripes are a texture. In forced colors the previous period stays striped against the solid current bars. A bar under 4px across, such as a month of days compared in a phone's card, is its outline alone, since stripes that thin are noise; a comparison of more than about fifteen bands reads better lying down.
 
 <Preview name="bar-chart-compare" />
 
@@ -91,7 +91,7 @@ A long name wraps in the label column, which takes the longest name's width up t
 
 When the chart is narrower than 24rem, each name moves to a line of its own above its bar, and the bar and its amount share the line below. The chart reads its own width, not the viewport's, so it behaves the same in a narrow card on a wide screen.
 
-Standing up, a category label is as wide as its band and wraps to two lines, then ends with an ellipsis; under 30rem it keeps to one line, and under 24rem every third label shows. The whole name is always in the readout, the bar's name and the table. Names longer than about twelve characters, or more than eight categories, read better lying down.
+Standing up, a category label is as wide as its band and wraps to two lines, then ends with an ellipsis; under 30rem it keeps to one line, and under 24rem a chart of more than eight bands shows every third label. The whole name is always in the readout, the bar's name and the table. Names longer than about twelve characters, or more than eight categories, read better lying down.
 
 The chart is a size container, so it takes its width from what holds it and none from its content: a block gives it the whole line, and in a flex row its item needs a basis, such as `flex: 1 1 20rem`, or a grid column a size. Given none, it is no wider than nothing.
 

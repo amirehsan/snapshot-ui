@@ -180,12 +180,11 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     <LineChart aria-label="Spending in October" series={[THIS_MONTH]} xLabels={DAYS} status="loading" />,
     [
       'data-status="loading"',
-      'aria-busy="true"',
       'class="skeleton line-chart-skeleton" aria-hidden="true"',
       'aria-live="polite" aria-atomic="true"></span>',
       'style="block-size:240px"',
     ],
-    ['line-chart-line', 'line-chart-toggle', '<table', 'tabindex'],
+    ['line-chart-line', 'line-chart-toggle', '<table', 'tabindex', 'aria-busy'],
   ],
 ];
 

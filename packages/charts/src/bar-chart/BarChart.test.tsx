@@ -373,8 +373,8 @@ describe('BarChart', () => {
     expect(document.activeElement).not.toBe(document.body);
     expect(focusedCategory()).toBe('Groceries');
     expect(toNothing).not.toHaveBeenCalled();
-    // The group held focus only for the moment the bar was gone.
-    expect(rowsOf(container)).not.toHaveAttribute('tabindex');
+    // The group held focus only for the moment the bar was gone, and is never a tab stop.
+    expect(rowsOf(container)).toHaveAttribute('tabindex', '-1');
     expect(barsOf(container).filter((bar) => bar.tabIndex === 0)).toEqual([barsOf(container)[0]]);
     // A focused bar whose row stays: the same element, now another category's, hands focus to the first stop.
     focus(barsOf(container)[1]);
@@ -393,7 +393,8 @@ describe('BarChart', () => {
     // The same categories: the bar last active, which is the tab stop.
     rerender(<Chart />);
     expect(focusedCategory()).toBe('Netflix');
-    expect(rowsOf(container)).not.toHaveAttribute('tabindex');
+    // Focusable by script in every status, so no commit takes its focusability away while it holds focus.
+    expect(rowsOf(container)).toHaveAttribute('tabindex', '-1');
     // New categories after an error: their first bar.
     rerender(<Chart status="error" />);
     expect(document.activeElement).toBe(rowsOf(container));
@@ -654,8 +655,11 @@ describe('BarChart', () => {
       const host = container.querySelector('.bar-chart-status');
       expect(host).toHaveAttribute('role', 'status');
       expect(host?.textContent).toBe(said);
+      // Busy is the chart's view while loading, never the figure, so the status outside it is heard.
+      expect(figure).not.toHaveAttribute('aria-busy');
+      expect(host?.closest('[aria-busy]')).toBeNull();
       if (status === 'loading') {
-        expect(figure).toHaveAttribute('aria-busy', 'true');
+        expect(container.querySelector('.bar-chart-chart')).toHaveAttribute('aria-busy', 'true');
         const skeletons = [...container.querySelectorAll<HTMLElement>('.bar-chart-track > .skeleton')];
         expect(skeletons.map((skeleton) => skeleton.style.inlineSize)).toEqual([
           '70%',
@@ -669,7 +673,7 @@ describe('BarChart', () => {
         for (const row of container.querySelectorAll('.bar-chart-row'))
           expect(row).toHaveAttribute('aria-hidden', 'true');
       } else {
-        expect(figure).not.toHaveAttribute('aria-busy');
+        expect(container.querySelector('.bar-chart-chart')).not.toHaveAttribute('aria-busy');
         const message = container.querySelector('.bar-chart-state > p.bar-chart-message');
         expect(message).toHaveTextContent(
           status === 'error' ? 'The chart could not be loaded' : 'Nothing to show for this period',

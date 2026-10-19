@@ -308,9 +308,9 @@ export function LineChart({
       aria-labelledby={labelledBy}
       className={cx('line-chart', className)}
       data-view={shownView}
-      // Written only for a state, so the ready figure's markup is what it was before the states.
+      // Written only for a state, so the ready figure's markup is what it was before the states. No aria-busy:
+      // its polite region is inside the plot, and a busy subtree's changes may go unheard.
       data-status={isReady ? undefined : status}
-      aria-busy={status === 'loading' ? true : undefined}
     >
       <div className="line-chart-chart" hidden={shownView === 'table'}>
         {isReady && drawn.length > 1 ? (
