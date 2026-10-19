@@ -11071,6 +11071,15 @@ value gone, loading and ready again with a segment focused and finds no
 focus lost to nothing, and then takes it through the same steps while a
 second chart holds focus, which stays where it is (correction 78).
 
+**In a DataTable cell.** DataTable raises what takes focus in a cell
+above the row's link with `position: relative`, and a bar is a tab stop
+placed absolutely in its track, so the rule would collapse the bar the
+moment it took focus. `data-table.css` leaves `.bar-chart-bar` out of
+that rule beside the row's own link, and an app that wants a pointer on
+the bars wraps the chart in `data-table-control`, which raises the whole
+chart. `Compositions/BarChart in a DataTable` (three engines) focuses a
+bar in a linked row and finds its box unchanged (correction 90).
+
 **Where the build departs from the plan.** The plan's spec corrections
 13 to 20 record them: the horizontal face drawn for any `orientation`
 until the vertical one lands, with a warning; the figure as the container
@@ -11145,14 +11154,24 @@ with the same for markers, hands a component's root and everything in it
 back to the layer below, so each property takes what it would outside
 prose. The roots are every component's root class, written into that one
 rule by the build (`scripts/component-roots.js`, from the component
-stylesheets: a class that extends no other class of its file), never by
-hand; `css.test.js` checks the built rule against the stylesheets and
-names the compound parts. Lightning CSS has no custom selectors, and the
+stylesheets: a class that extends no other class of its file, and the few
+parts a component renders as its own outermost element, such as a
+standalone `field-label` or ToastRegion's `toast-status-host`). The react
+and charts packages' server tests render every component and fail one
+whose outermost element carries no class of the built list (spec
+correction 93). Lightning CSS has no custom selectors, and the
 list in each of some sixty rules' guards would have added about 150 kB to
 `styles.css`; in one rule it costs `prose.css` 5 kB before compression.
 The root must sit inside the prose box, so a Prose in a Card or a
 PageColumn is styled; the gaps between the box's own children stay
-outside the layer, so a chart in an article is spaced as a block is.
+outside the layer, two classes deep through a last `:not(.not-prose)`, so
+they win over a component root's own `margin: 0`, one class in a file that
+loads later: a chart in an article stands 24px under the paragraph before
+it and a Heading of level 2 32px, whatever order the files load in (spec
+correction 89). Tailwind Typography's `prose` sits in Tailwind's
+`utilities` layer, after the components layer, and matches the library's
+boxes too; an app that uses both renames Typography's class with the
+plugin's `className` option (spec correction 91).
 `ComponentsUnchanged` (Compositions/Components in Prose, three engines)
 renders seventeen parts bare, each a direct child of a prose box, the
 compound ones included, and compares every element's type, color,
