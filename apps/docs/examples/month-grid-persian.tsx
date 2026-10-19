@@ -22,7 +22,8 @@ const YEARS: MonthGridYear[] = [
 
 export default function MonthGridPersian(): ReactElement {
   return (
-    <Card dir="rtl" lang="fa">
+    // The grid takes no width from its months, so a holder sized by its content, as this card is here, gives it one.
+    <Card dir="rtl" lang="fa" style={{ width: '100%', maxWidth: '40rem' }}>
       <MonthGrid
         label="صورت‌حساب‌ها"
         states={STATES}
