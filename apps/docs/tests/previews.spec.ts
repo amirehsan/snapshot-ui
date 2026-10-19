@@ -60,9 +60,10 @@ const collapses = (page: Page): Promise<string[]> =>
             element && element !== stage;
             element = element.parentElement
           ) {
-            const { clip, clipPath, overflow } = getComputedStyle(element);
+            // Visually hidden text, the library's and React Aria's, is clipped by clip-path.
+            const { clipPath, overflow } = getComputedStyle(element);
             const box = element.getBoundingClientRect();
-            if (clipPath !== 'none' || (clip !== 'auto' && clip !== '')) return true;
+            if (clipPath !== 'none') return true;
             if (overflow !== 'visible' && (box.width <= 1 || box.height <= 1)) return true;
           }
           return false;
