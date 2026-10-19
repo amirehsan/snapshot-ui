@@ -120,6 +120,10 @@ describe('tokens.css', () => {
         'scrim',
         'scrollbar',
         'scrollbar-hover',
+        'chart-1',
+        'chart-2',
+        'chart-3',
+        'chart-4',
       ].map((name) => `--color-${name}`),
       '--opacity-scrim',
       '--font-sans',
@@ -316,6 +320,26 @@ describe('tokens.css', () => {
 
   it('follows the system when no theme is set', () => {
     expect(css).toMatch(/@media \(prefers-color-scheme: dark\) \{\s*:root:not\(\[data-theme="light"\]\) \{/);
+  });
+
+  it('builds the four chart tokens with dark values', () => {
+    // Spec 5.2's values: teal, violet, olive and magenta, each chosen for its mode. Teal keeps its value in dark,
+    // written there all the same, so each mode's value is the one the palette test measured.
+    const values = [
+      { name: 'chart-1', token: tokens.color['chart-1'], light: '#029393', dark: '#029393' },
+      { name: 'chart-2', token: tokens.color['chart-2'], light: '#7024ab', dark: '#af6af2' },
+      { name: 'chart-3', token: tokens.color['chart-3'], light: '#697805', dark: '#7a8a06' },
+      { name: 'chart-4', token: tokens.color['chart-4'], light: '#910080', dark: '#c344ae' },
+    ];
+    for (const { name, token, light, dark } of values) {
+      expect(block(':root'), name).toContain(`--color-${name}: ${light};`);
+      expect(block('[data-theme="light"]'), name).toContain(`--color-${name}: ${light};`);
+      expect(block('[data-theme="dark"]'), name).toContain(`--color-${name}: ${dark};`);
+      expect(block(':root:not([data-theme="light"])'), name).toContain(`--color-${name}: ${dark};`);
+      expect(token.var, name).toBe(`var(--color-${name})`);
+      expect(token.value, name).toBe(light);
+      expect(token.modes.theme.dark, name).toBe(dark);
+    }
   });
 
   it('leaves the reserved accents alone in dark', () => {

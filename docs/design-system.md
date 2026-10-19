@@ -5738,11 +5738,11 @@ and every box that holds HTML over a drawing (`.sparkline-plot`,
 attribute and always agree. The domain and the path are the same in both
 directions.
 
-**Series colors.** At most two series: the first ink, the second slate in a
-thinner stroke. There is no palette, so the categorical validator of the
-data-visualization method is not run; phase 6 runs it when it adds one. The
-stroke widths are literals in `charts.css`, since two size tokens are not
-worth adding.
+**Series colors.** A line chart draws at most two series: the first ink,
+the second slate in a thinner stroke. The categorical palette, for a chart
+of more peers, is the four chart tokens, whose derivation and checks are
+"Chart palette" below. The stroke widths are literals in `charts.css`,
+since two size tokens are not worth adding.
 
 **Which color a series gets** (the insights spec, section 5.4). Color goes
 by meaning first, then by identity:
@@ -5751,10 +5751,15 @@ by meaning first, then by identity:
 | --- | --- |
 | One series | ink |
 | Two series, grouped | ink, slate: the story and its context, LineChart's emphasis form |
+| Two to five, stacked | `chart-1`, `chart-2`, `chart-3`, `chart-4`, then slate |
 | A series with `look: 'hatched'` | the color of the first series with `look: 'fill'`, striped |
 
 A bar chart's `color` pins a series to its color, so it keeps it when
-another series is filtered out. `gain` is for a series that is money that
+another series is filtered out. `color` takes `'ink'`, `'slate'`, `'gain'`
+and the four slots, `'chart-1'` to `'chart-4'`, each drawn by a
+`[data-color]` rule in `charts.css` that sets `--bar-chart-color`; the
+stacks that give a series a slot without being asked come with the
+stacked layout. `gain` is for a series that is money that
 arrived, labelled so ("Income"), drawn beside an ink "Spending" and never
 beside a palette color. There is no color for money out: spending is ink,
 and a negative is its series' color below the zero line, never error,
@@ -11151,3 +11156,150 @@ report's headings, lists and table read in VoiceOver and NVDA, a
 link read as plain text, inline code's edge and the mark in a Windows
 contrast theme, and a report with a wide table and the Persian guide in
 Vazirmatn on a phone at 320px to 430px.
+
+## Chart palette
+
+The parent spec asks for "a categorical chart palette, which the design
+system lacks, derived and measured for contrast in both themes before any
+chart is built". Batch 6 adds it, from the insights spec (section 5) and
+the owner's ruling 4 there: four tokens, `chart-1` to `chart-4`, teal,
+violet, olive and magenta, for a chart of several peers, such as a stack
+of a month's top categories, with slate for "Other". A stack of
+categories is the first chart with more than two series; the line chart,
+the grouped bars and the previous period need none of it.
+
+**The tokens.** Each has a value chosen for its mode, not an inverted one,
+and the description "A chart series that is one of several peers. Never a
+state, never text." Teal keeps its value in dark, written there all the
+same, so each mode's value is the one the test measured (spec correction
+50).
+
+| Token | Hue | Light | Dark | OKLCH light (L, C, H) | OKLCH dark |
+| --- | --- | --- | --- | --- | --- |
+| `--color-chart-1` | teal | `#029393` | `#029393` | 0.601, 0.102, 195 | 0.601, 0.102, 195 |
+| `--color-chart-2` | violet | `#7024ab` | `#af6af2` | 0.450, 0.199, 305 | 0.659, 0.200, 305 |
+| `--color-chart-3` | olive | `#697805` | `#7a8a06` | 0.541, 0.124, 118 | 0.600, 0.137, 118 |
+| `--color-chart-4` | magenta | `#910080` | `#c344ae` | 0.450, 0.200, 335 | 0.599, 0.200, 335 |
+
+The build writes `--color-chart-1` and the rest, light on `:root` and
+dark in the dark scopes, `tokens.js` entries with their modes, and the
+Tailwind names `bg-chart-1` to `bg-chart-4`.
+
+**How they were found.** The colors that carry a meaning sit on OKLCH
+hues 29 to 79 (error, clay, both signal oranges, warning), about 160
+(success and gain) and about 265 (link blue). A series must not be read
+as one of them, so the hues sit at least 30 degrees from each, in the arcs
+left free: olive about 110 to 128, teal to sky 192 to 233, violet to
+raspberry 297 to 359. Every order of the candidate hues was scored by its
+worst neighbouring pair in both modes, each mode's lightness chosen per
+slot from a grid, and the best order kept; the order was enumerated, not
+chosen by eye.
+
+**The checks**, the data-visualization method's, ported into
+`packages/core/scripts/palette.js` as pure functions and run by
+`test/palette.test.js` on the values in `tokens.json`:
+
+- OKLCH lightness in the mode's band, 0.43 to 0.77 in light and 0.48 to
+  0.67 in dark, and chroma at least 0.10, under which a hue reads as gray.
+- Neighbours at least 8 apart under simulated protanopia and
+  deuteranopia, by OKLab distance times 100, simulated with Machado,
+  Oliveira and Fernandes (2009) at full severity in linear RGB, the model
+  the method's thresholds are set for; and at least 15 apart for full
+  color vision.
+- At least 10 from every reserved color for full color vision, and 30
+  degrees of hue from each one that has a hue: error, success, gain,
+  warning, clay, signal orange, light signal orange, link blue and taupe.
+- At least 3:1 against lifted, the canvas and float in both modes, so no
+  slot needs the method's relief rule of visible labels; the table is
+  there anyway.
+
+`paletteFailures(palette, mode)` returns each check a slot fails as a
+sentence, as `contrastFailures` does, so the test asks for an empty list
+and its own fixtures show that a slot turned toward amber, a slot given
+its neighbour's value, a dark slot too dim and a reserved color moved
+onto a slot each fail. The test also recomputes the figures below at
+their precision, so a changed token or a changed method fails it.
+
+**Contrast as a graphic** (3:1 needed), gated: the twenty-four pairs, four
+slots on three surfaces in two modes, are in `CONTRAST_PAIRS`.
+
+| Token | Light: lifted, canvas, float | Dark: lifted, canvas, float |
+| --- | --- | --- |
+| `chart-1` | 3.63, 3.31, 3.75 | 4.64, 5.15, 4.64 |
+| `chart-2` | 8.03, 7.32, 8.30 | 5.11, 5.67, 5.11 |
+| `chart-3` | 4.74, 4.32, 4.90 | 4.53, 5.03, 4.53 |
+| `chart-4` | 8.08, 7.36, 8.35 | 3.95, 4.38, 3.95 |
+
+**Separation**, neighbours in slot order, OKLab distance times 100; the
+color-blind figure is the lesser of protanopia and deuteranopia:
+
+| Pair | Light, normal | Light, color-blind | Dark, normal | Dark, color-blind |
+| --- | --- | --- | --- | --- |
+| 1 and 2 | 29.5 | 20.0 | 26.1 | 13.8 |
+| 2 and 3 | 33.6 | 28.1 | 34.2 | 27.8 |
+| 3 and 4 | 32.2 | 20.0 | 32.0 | 18.7 |
+
+The neighbours are the pairs bars use: only neighbours in a stack or a
+group touch.
+
+**Kept from the meanings.** The nearest reserved color to each slot, for
+full color vision: in light, teal to success 17.0, violet to link 14.4,
+olive to warning 11.2, magenta to error 17.0; in dark, teal to success
+10.2, violet to link 12.9, olive to success 12.1, magenta to error 18.7.
+The least hue apart is teal from success in light, 34 degrees. Two
+reserved colors are close under color-vision deficiency, olive to warning
+4.4 in light and violet to link blue 2.9 in dark, both under
+deuteranopia; that would matter only if a chart drew a status or a link
+beside a series, which the meaning rules forbid and the `ChartColor` type
+cannot say (risk R7).
+
+**Taupe has no hue.** It is a warm gray in light (chroma 0.009) and white
+at 40% in dark, measured painted over the canvas (0.001), so its hue
+angle is noise: 106 degrees in dark, 11 from olive. The hue check reads
+only reserved colors of chroma 0.03 or more, the least of the others
+being success in light at 0.071, and taupe is held by distance: its
+nearest slot is teal in dark, 11.9 apart (spec correction 49).
+
+**Not for scatter or small multiples.** On every pair rather than
+neighbours, the four do not all pass: the worst pair for full color
+vision is violet and magenta, 10.3 in light and 12.0 in dark, and for a
+color-blind reader teal and magenta in dark, 3.7. A chart form where any
+two series can sit side by side takes three slots at most. No such form
+exists yet; this is for the next.
+
+**The fifth series is slate.** A stack of more than four peers folds the
+rest into an "Other" that the app sums and labels, since the library
+never sums a figure it must say. It is drawn in slate, achromatic, so it
+reads as the remainder and never as a fifth hue; slate is gated already
+as text, 5.31 and 6.94 on lifted. A sixth series draws nothing new.
+
+**Never text, and only in charts.** Values, labels, legend names and
+readouts stay ink and slate; the colored mark beside them carries the
+series, the method's rule. `css.test.js` fails any `color` declaration
+in core that reads a chart token or the bar's color variable, and finds
+the four tokens read only by `charts.css`'s `[data-color]` rules, which
+set `--bar-chart-color`. Avatar's record declined a color per name, and
+it stays declined: a person's color would be a color carrying a meaning
+the name already carries. A series keeps its slot when a filter removes
+another only if the app pins it with `color`; without `color` slots go
+in series order.
+
+**Considered and rejected**, as the spec measured them. Six slots with a
+sky blue (225) and a raspberry (355) pass the neighbour checks, worst
+9.5, but put teal and sky 5.7 apart for full color vision, under any
+reader's threshold for two things, and raspberry 10.4 from error in
+light. An ink ramp (ink at 100%, 70%, 45%, 25%) is an ordinal ramp, and a
+stack of categories is nominal: lightness steps would say "more" where
+there is no order. Link blue as a slot would make a series look like a
+link and like the info tone.
+
+**No visual change yet.** Nothing draws a slot until the stacks: no story
+passes one, so no baseline moved. `ChartColor` named the four since the
+foundations (spec correction 4), and `charts.css` now draws them.
+
+**Where the build departs from the plan.** Corrections 49 to 51: taupe
+joins the reserved colors, with the hue check reading only colors that
+have a hue; teal's dark value is written, the checks are one
+`paletteFailures` list, and every figure of spec 5.2 recomputes as the
+spec states it; the docs' swatches and the bar chart page's Color
+section.

@@ -1910,6 +1910,61 @@ describe('prose', () => {
   });
 });
 
+describe('the chart palette', () => {
+  const SLOTS = ['chart-1', 'chart-2', 'chart-3', 'chart-4'];
+  const GROUNDS = ['lifted', 'canvas', 'float'];
+
+  // A slot is a graphic, a bar or a legend key, on the surface a chart sits on: a card, the page or a panel. The gate
+  // holds each at 3:1 on the three, and contrastFailures runs the list in both modes: twenty-four pairs (spec 5.1).
+  it('gates the four slots as graphics on lifted, canvas and float, in both modes', () => {
+    for (const text of SLOTS) {
+      for (const ground of GROUNDS) {
+        const pairs = CONTRAST_PAIRS.filter((pair) => pair.text === text && pair.ground === ground);
+        // Opaque on the surface itself: no composite over another surface and no fill under it.
+        expect(
+          pairs.map(({ minimum, over, fill }) => ({ minimum, over, fill })),
+          `${text} on ${ground}`,
+        ).toEqual([{ minimum: NON_TEXT, over: undefined, fill: undefined }]);
+      }
+    }
+    // Never as text: no slot is held to the text minimum anywhere.
+    expect(CONTRAST_PAIRS.filter((pair) => SLOTS.includes(pair.text) && pair.minimum === TEXT)).toEqual([]);
+    expect(CONTRAST_PAIRS.filter((pair) => SLOTS.includes(pair.text))).toHaveLength(12);
+  });
+
+  // Spec 5.2's table, recomputed to two decimals: lifted, canvas and float, light then dark.
+  it.each([
+    { slot: 'chart-1', light: [3.63, 3.31, 3.75], dark: [4.64, 5.15, 4.64] },
+    { slot: 'chart-2', light: [8.03, 7.32, 8.3], dark: [5.11, 5.67, 5.11] },
+    { slot: 'chart-3', light: [4.74, 4.32, 4.9], dark: [4.53, 5.03, 4.53] },
+    { slot: 'chart-4', light: [8.08, 7.36, 8.35], dark: [3.95, 4.38, 3.95] },
+  ])('measures $slot at $light in light and $dark in dark', ({ slot, light, dark }) => {
+    /**
+     * @param {'light' | 'dark'} mode
+     * @param {number[]} expected
+     */
+    const check = (mode, expected) => {
+      const palette = paletteFor(tokens, mode);
+      const measured = GROUNDS.map((ground) => ratio(palette[slot], palette[ground]));
+      expect(
+        measured.map((value) => value.toFixed(2)),
+        `${slot} on ${GROUNDS.join(', ')}, ${mode}`,
+      ).toEqual(expected.map((value) => value.toFixed(2)));
+      for (const value of measured) expect(value).toBeGreaterThanOrEqual(NON_TEXT);
+    };
+    check('light', light);
+    check('dark', dark);
+  });
+
+  // A teal a step lighter, as a hand tuning by eye might pick, falls under 3:1 on the canvas and the gate says so.
+  it('catches a slot under 3:1', () => {
+    const failures = contrastFailures({ ...paletteFor(tokens, 'light'), 'chart-1': '#2ab5b5' }, 'light');
+    expect(failures.map((failure) => `${failure.text} on ${failure.ground}`)).toEqual(
+      expect.arrayContaining(['chart-1 on canvas', 'chart-1 on lifted', 'chart-1 on float']),
+    );
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

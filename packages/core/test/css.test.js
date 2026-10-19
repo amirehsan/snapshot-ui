@@ -4850,6 +4850,10 @@ describe('src/components/charts.css, the bar chart', () => {
       ['ink', '--color-ink'],
       ['slate', '--color-slate'],
       ['gain', '--color-gain'],
+      ['chart-1', '--color-chart-1'],
+      ['chart-2', '--color-chart-2'],
+      ['chart-3', '--color-chart-3'],
+      ['chart-4', '--color-chart-4'],
     ])
       expect(blockAfter(css, `.bar-chart [data-color='${name}'] {`), name).toContain(
         `--bar-chart-color: var(${token});`,
@@ -4860,6 +4864,27 @@ describe('src/components/charts.css, the bar chart', () => {
     expect(uses.map(([selector]) => selector).filter((selector) => selector.includes('bar-chart'))).toEqual([
       `${chartList('message')}[data-tone='error']`,
     ]);
+  });
+
+  // The chart palette is a fill, a legend key or a swatch, never text (spec 5.3): values, labels and legends stay
+  // ink and slate, and the mark beside them carries the series. Nothing in core sets a color from a slot.
+  it('never sets a text color from the chart palette, anywhere in core', () => {
+    const sources = [
+      ['src/base.css', read('src/base.css')],
+      ...components.map((file) => [file, read(`src/components/${file}`)]),
+    ];
+    for (const [file, source] of sources) {
+      const text = closeUp(stripComments(source));
+      expect(text, file).not.toMatch(
+        /(?<![\w-])(?:-webkit-text-fill-|caret-|text-decoration-)?color\s*:[^;{}]*--color-chart-/,
+      );
+      // Nor through the bar's own variable, which holds a slot.
+      expect(text, file).not.toMatch(/(?<![\w-])color\s*:[^;{}]*--bar-chart-color/);
+    }
+    // The slots are read by the series' variable alone, in charts.css and nowhere else.
+    const readers = sources.filter(([, source]) => stripComments(source).includes('--color-chart-'));
+    expect(readers.map(([file]) => file)).toEqual(['charts.css']);
+    expect(closeUp(stripComments(look())).match(/var\(--color-chart-\d\)/g)).toHaveLength(4);
   });
 
   it('rounds only the data end, with the micro radius, logically', () => {
