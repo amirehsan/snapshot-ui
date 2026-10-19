@@ -11061,10 +11061,22 @@ library's ruling for every size container (accounts plan, spec corrections
 34 and 45): a stand-in width is also the holder's min-content width, which
 a `flex: 1` item or a `1fr` track keeps as its narrowest and which scrolled
 a 320px page sideways. A block, a `flex: 1` item or a `1fr` track gives the
-grid its width; a holder sized to its content must give it one, or it draws
-nothing, which the docs say. At 320px a grid in a `flex: 1` wrapper, a `1fr`
-grid and two up in a `1fr 1fr` grid each stay inside the page with every
-cell drawn (`OnANarrowPhone`, three engines, and a docs test).
+grid its width; a holder sized to its content must give it one, or it
+collapses, which the docs say.
+
+**Under 12rem it wraps, never shrinks** (spec correction 53). Twelve cells
+across a narrow box, two cards side by side on a 320px phone, were 2px
+wide. Under 12rem of the grid's own width the year label takes a line of
+its own (`grid-column: 1 / -1`), its months follow in half-years,
+`repeat(var(--month-grid-half, 6), minmax(0, 1fr))`, and the header is not
+drawn, since a column is no longer one month. `--month-grid-half` is
+`Math.ceil(monthLabels.length / 2)`, written on the grid's `style` by the
+component, because a `calc()` inside `repeat()` is not a count every
+engine takes. Measured two up in cards padded 32px at 320px: a 74px grid
+with cells about 10.7px wide. At 320px a grid in a `flex: 1` wrapper, a
+`1fr` grid and two up in a `1fr 1fr` grid, bare and in cards, each stay
+inside the page with no cell under 6px (`OnANarrowPhone`, three engines,
+and a docs test), and `QuarterLabels` reads the wrap at 11rem.
 
 **The cell's corner is a text-sized part's.** A cell is a line tall, so it
 keeps the micro step and is never rounder: `calc(var(--radius-micro) * 2 /
@@ -11082,15 +11094,24 @@ Soft and Square. The legend's 12px swatch takes the same corner, not
 Meter's micro step, which is a circle on 12px: a key looks like what it
 stands for (spec correction 46).
 
-**The summary** (ruling 10). With no `summary` the grid writes English from
-the app's words: for each state whose look is not `filled`, in the order of
-`states`, the state's label, a colon, and its months grouped by year in the
-order drawn, each year's months joined by commas with the year once at the
-end, years joined by semicolons, each state a sentence: "Partial: June
-2025. Missing: March, April 2025; November 2024." Nothing missing or
-partial says "Held: every month.", in the first filled state's words, and a
-grid with no month in any state says nothing and draws no paragraph. The
-sentence is string joining of the app's own words, so the server and the
+**The summary** (ruling 10; spec corrections 52, 54, 55 and 59). With no
+`summary` the grid writes English from the app's words, a sentence per
+state some month holds whose look is not `filled`: every `empty` state
+first, then every `partial` one, each group in the order of `states`, so it
+leads with what is missing. Each is the state's label, a colon, and its
+months oldest first, whatever order the rows are drawn in: per year, three
+or more consecutive months as a range ("March to May"), shorter runs month
+by month, a whole year as "every month of 2025", and the year written once
+after the last item of its year; the items are joined by commas with "and"
+before the last. "Missing: November 2024, March and April 2025. Partial:
+June 2025." Years are put oldest first by their ids when every id is a
+number (2025, or 1404 on a Persian page); other ids keep the order drawn.
+States are read once by id. With nothing missing or partial, the first
+filled state that some month holds says "every month" when it is the only
+filled state held; otherwise each other filled state held names its months
+and the first says "all other months": "Closed: January to March 2025.
+Held: all other months." A grid with no month in any state says nothing and
+draws no paragraph. The sentence is string joining of the app's own words, so the server and the
 browser write the same one; `Intl.ListFormat` is not used. Only English,
 because list joining and word order are each language's own: any other
 language passes `summary`, a string or a node, and `false` draws none. It
@@ -11103,7 +11124,9 @@ full `monthNames` as `th scope="col"`; and per year a `th scope="row"` and
 a `td` per month holding the state's label, or `labels.outside` ("Not in
 range"). A screen reader user moves to March 2025 by row and column, which
 a list of every month in turn cannot offer, and the summary gives the gist
-first. The visible grid is `aria-hidden`, since a grid of empty boxes reads
+first: in the markup the summary comes before the table, so in browse mode
+the gist is heard before the detail, and the legend comes last (spec
+correction 51). The visible grid is `aria-hidden`, since a grid of empty boxes reads
 as nothing, and the legend too, since the table names every state. The
 table is clipped inside its own box, `div.month-grid-alternative`, placed at
 the figure's start corner, 1px square, `overflow: hidden` and `clip-path:
@@ -11114,7 +11137,11 @@ not hidden, so browse mode and table navigation find it. LineChart's table
 view is the precedent, visible there by a toggle.
 
 **The name.** A `figure`, named by a non-blank `aria-labelledby`, else a
-non-blank `aria-label`, else its visible label, Gauge's chain. The table's
+non-blank `aria-label`, else its visible label, Gauge's chain, and
+described by its summary after any description of the caller's. The
+visible label is `aria-hidden`: it still names the figure, since a name may
+be read from hidden text, and is not read a second time (spec correction
+56). The table's
 caption is the label when one shows, else the `aria-label`; with only
 `aria-labelledby` the table points at the same element and has no caption.
 
@@ -11157,15 +11184,18 @@ three shapes: solid, striped, outlined. A docs test reads all four.
 **Print.** `print-color-adjust: exact`, and its `-webkit-` form, as
 `.meter` sets, so fills and stripes print.
 
-**The size.** The entry `{ MonthGrid }` measures 1050 B without React Aria,
-Lucide and `@internationalized/date`, and 1044 B with React Aria not
+**The size.** The entry `{ MonthGrid }` measures 1491 B without React Aria,
+Lucide and `@internationalized/date`, and 1478 B with React Aria not
 ignored; it imports none of them, and the bytes are size-limit's own drift
-(spec correction 50). Under the spec's 2 kB budget; the rule rounds up to
+(spec corrections 50 and 61). Under the spec's 2 kB budget; the rule rounds up to
 1.5 kB and adds 0.5 kB: a 2 kB limit.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
-(owner action 3): that a month grid reads its name, its summary, and its
-table by row and column headers. Not yet verified in Windows' contrast
-themes (the three looks still distinct) or on a real iPhone and an Android
-phone at 320px to 430px (cells about 12px to 15px wide, and the quarter
-labels, legible).
+(owner action 3): that a month grid reads its name, its summary as its
+description and then before its table, and its table by row and column
+headers; and, with touch exploration on iOS and Android, that a finger over
+the visible grid finds no cell or stray label and that swiping reaches the
+summary and then the table (spec correction 57). Not yet verified in
+Windows' contrast themes (the three looks still distinct) or on a real
+iPhone and an Android phone at 320px to 430px (cells about 13px to 15px
+wide in a card, about 10px two up, and the quarter labels, legible).

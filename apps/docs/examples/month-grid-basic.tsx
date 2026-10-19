@@ -26,7 +26,7 @@ export default function MonthGridBasic(): ReactElement {
         label="Statement coverage"
         states={STATES}
         years={YEARS}
-        monthLabels={['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']}
+        monthLabels={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']}
         monthNames={[
           'January',
           'February',

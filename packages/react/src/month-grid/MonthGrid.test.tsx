@@ -107,7 +107,7 @@ const persian = (
 );
 
 describe('MonthGrid', () => {
-  it('draws its parts in DOM order: the label, the grid, the table, the summary and the legend', () => {
+  it('draws its parts in reading order: the label, the grid, the summary, the table and the legend', () => {
     const { container } = render(coverage());
     const figure = root(container);
     expect(figure.tagName).toBe('FIGURE');
@@ -115,8 +115,8 @@ describe('MonthGrid', () => {
     expect(children(figure)).toEqual([
       'span.month-grid-label',
       'div.month-grid-grid',
-      'div.month-grid-alternative',
       'p.month-grid-summary',
+      'div.month-grid-alternative',
       'ul.month-grid-legend',
     ]);
     expect(children(part(container, 'month-grid-alternative'))).toEqual(['table.month-grid-table']);
@@ -186,8 +186,11 @@ describe('MonthGrid', () => {
   it('writes --month-grid-columns from the label count', () => {
     const { container, rerender } = render(coverage());
     expect(part(container, 'month-grid-grid')).toHaveStyle({ '--month-grid-columns': '12' });
-    rerender(coverage({ monthLabels: SHORT.slice(0, 6), monthNames: NAMES.slice(0, 6) }));
-    expect(part(container, 'month-grid-grid')).toHaveStyle({ '--month-grid-columns': '6' });
+    // Half of them, rounded up, for the narrow layout's two rows a year.
+    expect(part(container, 'month-grid-grid')).toHaveStyle({ '--month-grid-half': '6' });
+    rerender(coverage({ monthLabels: SHORT.slice(0, 7), monthNames: NAMES.slice(0, 7) }));
+    expect(part(container, 'month-grid-grid')).toHaveStyle({ '--month-grid-columns': '7' });
+    expect(part(container, 'month-grid-grid')).toHaveStyle({ '--month-grid-half': '4' });
   });
 
   it('builds the hidden table: caption, Year and month names as column headers, years as row headers, state words in cells', () => {
@@ -241,6 +244,8 @@ describe('MonthGrid', () => {
     const { container, unmount } = render(coverage());
     const figure = screen.getByRole('figure', { name: 'Statement coverage' });
     expect(figure).toHaveAttribute('aria-labelledby', part(container, 'month-grid-label').id);
+    // The visible label is hidden, since it names the figure; it is not read a second time.
+    expect(part(container, 'month-grid-label')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByRole('table')).toHaveAccessibleName('Statement coverage');
     unmount();
 
@@ -272,7 +277,7 @@ describe('MonthGrid', () => {
   it("draws the English summary by default, the app's summary when given, and none for false", () => {
     const { container, rerender } = render(coverage());
     expect(part(container, 'month-grid-summary')).toHaveTextContent(
-      'Partial: June 2025. Missing: March, April 2025.',
+      'Missing: March and April 2025. Partial: June 2025.',
     );
     rerender(
       coverage({
@@ -331,6 +336,28 @@ describe('MonthGrid', () => {
     expect(part(container, 'month-grid-summary')).not.toHaveAttribute('aria-hidden');
     expect(part(container, 'month-grid-alternative')).not.toHaveAttribute('aria-hidden');
     expect(screen.getAllByRole('table')).toHaveLength(1);
+  });
+
+  it("is described by its summary, after the caller's own description, and by nothing when there is none", () => {
+    const { container, rerender } = render(coverage());
+    const figure = root(container);
+    const summary = part(container, 'month-grid-summary');
+    expect(figure).toHaveAttribute('aria-describedby', summary.id);
+    expect(screen.getByRole('figure')).toHaveAccessibleDescription(
+      'Missing: March and April 2025. Partial: June 2025.',
+    );
+    rerender(
+      <>
+        <p id="coverage-note">From your bank feed.</p>
+        {coverage({ 'aria-describedby': 'coverage-note' })}
+      </>,
+    );
+    expect(screen.getByRole('figure')).toHaveAttribute(
+      'aria-describedby',
+      `coverage-note ${part(container, 'month-grid-summary').id}`,
+    );
+    rerender(coverage({ summary: false }));
+    expect(screen.getByRole('figure')).not.toHaveAttribute('aria-describedby');
   });
 
   it('passes className, ref and the rest props to the figure', () => {

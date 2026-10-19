@@ -235,8 +235,9 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
       '<span class="gauge-marks-label" id="_R_0_-marks" hidden="">Fair from 580. Good from 670.</span></div>',
   ],
   [
-    // Two years of the consumer's coverage: the visible grid hidden, the table, the English summary and the
-    // legend of the three states the data holds, with useId's id on the label.
+    // Two years of the consumer's coverage in reading order: the label (hidden, since it names the figure), the
+    // visible grid hidden, the English summary that describes the figure, the table and the legend of the three
+    // states the data holds, with useId's ids.
     'MonthGrid',
     <MonthGrid
       label="Statement coverage"
@@ -245,9 +246,9 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
       monthLabels={SHORT_MONTHS}
       monthNames={MONTH_NAMES}
     />,
-    '<figure aria-labelledby="_R_0_-label" class="month-grid">' +
-      '<span class="month-grid-label" id="_R_0_-label">Statement coverage</span>' +
-      '<div class="month-grid-grid" aria-hidden="true" style="--month-grid-columns:12">' +
+    '<figure aria-labelledby="_R_0_-label" aria-describedby="_R_0_-summary" class="month-grid">' +
+      '<span class="month-grid-label" id="_R_0_-label" aria-hidden="true">Statement coverage</span>' +
+      '<div class="month-grid-grid" aria-hidden="true" style="--month-grid-columns:12;--month-grid-half:6">' +
       '<span class="month-grid-corner"></span>' +
       SHORT_MONTHS.map(
         (short, index) =>
@@ -263,7 +264,8 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
             )
             .join(''),
       ).join('') +
-      '</div><div class="month-grid-alternative"><table class="month-grid-table">' +
+      '</div><p class="month-grid-summary" id="_R_0_-summary">Missing: March and April 2025. Partial: June 2025.</p>' +
+      '<div class="month-grid-alternative"><table class="month-grid-table">' +
       '<caption>Statement coverage</caption><thead><tr><th scope="col">Year</th>' +
       MONTH_NAMES.map((name) => `<th scope="col">${name}</th>`).join('') +
       '</tr></thead><tbody>' +
@@ -274,7 +276,6 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
           '</tr>',
       ).join('') +
       '</tbody></table></div>' +
-      '<p class="month-grid-summary">Partial: June 2025. Missing: March, April 2025.</p>' +
       '<ul class="month-grid-legend" aria-hidden="true">' +
       '<li class="month-grid-legend-item"><span class="month-grid-swatch" data-look="filled"></span>' +
       '<span class="month-grid-legend-label">Held</span></li>' +

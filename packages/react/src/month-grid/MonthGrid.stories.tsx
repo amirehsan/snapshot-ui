@@ -155,7 +155,7 @@ export const InCard: Story = {
         <CardTitle id="coverage-title" level={3}>
           Statement coverage
         </CardTitle>
-        <CardNote>Missing: March, April 2025; November 2024. Partial: June 2025.</CardNote>
+        <CardNote>Missing: November 2024, March and April 2025. Partial: June 2025.</CardNote>
       </CardHeader>
       <CardBody>
         <MonthGrid {...args} />
@@ -196,7 +196,8 @@ export const RightToLeft: Story = {
 
 /**
  * The header shows every label from 28rem of the grid's own width and only the quarters under it, whatever the
- * viewport: in a frame 29rem wide all twelve show, and at 27rem only the first of each quarter. In three engines,
+ * viewport: in a frame 29rem wide all twelve show, and at 27rem only the first of each quarter. At 11rem, under
+ * 12rem, the grid wraps: no header, and each year's months in two rows of six under its label. In three engines,
  * since each runs its own container queries.
  */
 export const QuarterLabels: Story = {
@@ -236,6 +237,29 @@ export const QuarterLabels: Story = {
       );
       // The server's HTML holds all twelve: the query hides them, nothing removes them.
       await expect(parts(canvasElement, 'month-grid-month')).toHaveLength(12);
+      // Under 12rem the grid wraps rather than shrinks: no header, the year on its own line, and its months in
+      // half-years, six to a row, each cell at least 6px wide.
+      frame.style.width = '11rem';
+      await waitFor(
+        () =>
+          expect(
+            parts(canvasElement, 'month-grid-month').map((label) => getComputedStyle(label).display),
+          ).toEqual(SHORT_MONTHS.map(() => 'none')),
+        { timeout: 5000 },
+      );
+      const year = part(canvasElement, 'month-grid-year').getBoundingClientRect();
+      const tops = parts(canvasElement, 'month-grid-cell')
+        .slice(0, 12)
+        .map((cell) => cell.getBoundingClientRect());
+      for (const cell of tops) {
+        await expect(cell.top).toBeGreaterThanOrEqual(year.bottom - 1);
+        await expect(cell.width).toBeGreaterThanOrEqual(6);
+      }
+      const [first, , , , , sixth, seventh] = tops;
+      if (!first || !sixth || !seventh) throw new Error('Too few cells');
+      await expect(Math.abs(sixth.top - first.top)).toBeLessThan(1);
+      await expect(seventh.top).toBeGreaterThan(first.bottom - 1);
+      await expect(Math.abs(seventh.left - first.left)).toBeLessThan(1);
       frame.style.width = '29rem';
       await waitFor(() => expect(shown()).toEqual(SHORT_MONTHS.map(() => true)), { timeout: 5000 });
     } finally {
@@ -290,8 +314,9 @@ export const CellsInTheCorner: Story = {
 
 /**
  * On a 320px phone a size container takes its width from its holder, never from a stand-in (spec corrections 34
- * and 45): in a `flex: 1` wrapper, in a `1fr` grid and two up in a `1fr 1fr` grid, every grid fills its holder,
- * stays inside the page and draws its cells, and nothing scrolls sideways, in every shape. In three engines.
+ * and 45): in a `flex: 1` wrapper, in a `1fr` grid, and two up in a `1fr 1fr` grid, bare and in cards, every grid
+ * fills its holder, stays inside the page and draws no cell under 6px, and nothing scrolls sideways, in every
+ * shape. Two up in a card the grid is under 12rem and wraps into half-years. In three engines.
  */
 export const OnANarrowPhone: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -311,12 +336,23 @@ export const OnANarrowPhone: Story = {
         data-wrapper="two-up"
         style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-part)' }}
       >
-        <div>
-          <MonthGrid {...args} aria-label="Everyday Visa" label={undefined} hasLegend={false} />
-        </div>
-        <div>
-          <MonthGrid {...args} aria-label="Travel Mastercard" label={undefined} hasLegend={false} />
-        </div>
+        {['Everyday Visa', 'Travel Mastercard'].map((name) => (
+          <div key={name}>
+            <MonthGrid {...args} aria-label={name} label={undefined} hasLegend={false} />
+          </div>
+        ))}
+      </div>
+      <div
+        data-wrapper="two-up-cards"
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-part)' }}
+      >
+        {['Savings', 'Checking'].map((name) => (
+          <Card key={name} aria-label={name}>
+            <CardBody>
+              <MonthGrid {...args} aria-label={name} label={undefined} hasLegend={false} />
+            </CardBody>
+          </Card>
+        ))}
       </div>
     </div>
   ),
@@ -338,10 +374,11 @@ export const OnANarrowPhone: Story = {
           const holder = wrapper.getBoundingClientRect();
           await expect(box.right).toBeLessThanOrEqual(holder.right + 1);
           await expect(box.left).toBeGreaterThanOrEqual(holder.left - 1);
-          // Not collapsed: the grid fills its holder, and every cell is drawn.
+          // Not collapsed: the grid fills its holder, and no cell is under 6px, since under 12rem the grid wraps
+          // its months into half-years rather than shrinking them.
           await expect(box.width).toBeGreaterThanOrEqual(holder.width - 1);
           for (const cell of parts(grid, 'month-grid-cell'))
-            await expect(cell.getBoundingClientRect().width).toBeGreaterThan(0);
+            await expect(cell.getBoundingClientRect().width).toBeGreaterThanOrEqual(6);
           await expect(box.right).toBeLessThanOrEqual(document.documentElement.clientWidth);
         }
       },
