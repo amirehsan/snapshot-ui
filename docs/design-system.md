@@ -2650,6 +2650,13 @@ from the document. Seven things were derived.
   media query, as the docs site does; the under-title padding is
   `min(var(--spacing-peer), var(--spacing-card))`, so the rule inside a compact
   card is 20px everywhere.
+- **It names its fill for a table.** The card sets `--data-table-surface:
+  var(--color-lifted)` (accounts plan, spec correction 74), so a DataTable in
+  it draws its sticky header row, and a Meter in its rows its cuts, in the
+  card's own fill with no wrapper from the app. Anything inside the card that
+  paints a fill of its own, as the docs site's canvas stage does, sets it
+  again. No baseline moved: the one story with a table in a card set the same
+  value by hand, and now does not.
 - **The header is a div.** A `<header>` outside sectioning content is the
   page's banner. A card is a div unless it is told otherwise, so every card
   header at page level would add a banner, and axe fails two of them as
@@ -5551,14 +5558,20 @@ own wrappers made a 288px column 512px wide and scrolled a 320px page
 200px sideways. So the tile follows the library's rule for every size
 container (CardActions, "An intrinsic inline size of 0"): its intrinsic
 inline size is 0. A block, a `flex: 1` item or a `1fr` track gives it its
-width, as before; a holder that sizes it from its content, a flex item
-with no `flex` or an `auto` column, gives it one, such as
-`flex: 1 1 16rem`. It takes no `flex` of its own: tiles in a grid row
-stretch to one height, which a height cap would break. A figure is never
+width, as before. Placed straight in a flex row, a tile was 16rem from
+0.6.1's stand-in, and with an intrinsic width of 0 it would be its padding
+wide, 66px, which undid that fix; so the tile takes `flex: 0 1 16rem`
+(spec correction 69): in a flex row it is a whole 16rem tile and shrinks
+from there in a narrower row, and its min-content stays 0, so nothing is
+pushed sideways. The basis does nothing in a block or a grid, where tiles in
+a row still stretch to one height. In a flex column the basis is a height,
+so a tile there takes `flex: none` from the app, which the docs and the
+changeset say; an `auto` grid column gives it no width, so the app gives it
+one. A figure is never
 broken, so a figure wider than its tile runs past it; two up at 320px a
 tile holds about 74px of content, a figure of three or four characters.
-The `InAFlexRow` story gives three tiles `flex: 1 1 16rem` in a wrapping
-row and checks each is at least 16rem; `OnANarrowPhone` (three engines)
+The `InAFlexRow` story puts three tiles straight in a wrapping flex row and
+checks each is exactly 16rem; `OnANarrowPhone` (three engines)
 puts tiles in a `flex: 1` wrapper, a `1fr` grid and two up at 320px in
 every shape and density and finds no sideways scroll and each tile filling
 its holder, where the stand-in scrolled 200px. Measured at CI's tolerance
@@ -9002,8 +9015,10 @@ leave in a flex row, from a zero basis, so a sibling never shrinks for
 it, and `max-block-size: max-content` keeps it no taller than its content
 in a flex column, in Chromium and WebKit (Firefox grows it there, as
 Pagination's record says). A block, a `1fr` track or a flex row gives it
-its width; a holder that sizes it from its content, an `auto` column or
-`width: max-content`, gives it one. The `InAFlexRow` story holds the
+its width; a holder that sizes it from its content, an `auto` column, a
+flex column with `align-items: flex-start`, an `inline-block` or
+`width: max-content`, draws it 0 wide and gives it one, which the changeset
+tells upgraders (spec correction 69). The `InAFlexRow` story holds the
 table face beside a 12rem column; `OnANarrowPhone` (three engines) puts
 tables in a `flex: 1` wrapper, a `1fr` grid and two up at 320px in every
 shape and density and finds no sideways scroll, each table filling its
@@ -9016,8 +9031,13 @@ it, so a meter on a canvas row, and on any hovered or selected row, drew
 pale blocks there. The root sets `--meter-surface: var(--data-table-fill)`,
 and each rule that washes a row or a list item, hovered at 5% and selected
 at 8%, sets it to the same `color-mix` as its fill, so the cuts are always
-the row's own color. Meter's segments are backgrounds in a clipping flex
-track, where a transparent cut would show the track's frame color rather
+the row's own color. In a Card the fill is the card's, which the card names as
+`--data-table-surface` (spec correction 74). The root's value is set from
+the table's fill rather than read from an ancestor's `--meter-surface`: a
+property cannot fall back to its own inherited value, and the table's fill,
+not an outer surface, is what a plain row shows, so an app sets
+`--data-table-surface` for a table on a fill of its own. Meter's segments
+are backgrounds in a clipping flex track, where a transparent cut would show the track's frame color rather
 than the row, so the surface is set, not masked as Gauge's gaps are. The
 `OnTableRows` play (Meter, three engines) reads the cut and the ring on a
 plain, a hovered and a selected row as the fill behind the meter. In forced
@@ -10440,9 +10460,10 @@ since forced colors keep an author color's alpha.
 **The docs site's own header** is a PageHeader from batch 5 (accounts plan,
 spec correction 62): the trail "Docs › Components" as its eyebrow, the
 page's title as its `h1` and the color mode and corner switches as its
-actions, in the docs shell's own sticky `header`, which is the page's
-banner and writes `--page-sticky-top` from its height, as AppShell's slot
-would. PageHeader takes `role="none"` there, so the page keeps one banner.
+actions, in the docs shell's own sticky row, a `div` with the banner role,
+which writes `--page-sticky-top` from its height, as AppShell's slot would.
+PageHeader takes `role="none"` there, so the page keeps one banner, and no
+`header` element holds another (spec correction 71).
 Its 1320px cap and 32px padding were the page column's already. PageHeader
 has no leading slot, and none was added (plan open question 3): under
 1024px the shell draws the drawer's 48px button over PageHeader's fill at
@@ -10456,7 +10477,11 @@ under the row where the docs wrote 20px, 8px between the eyebrow and the
 title (6px), 8px between the switches (12px), 32px over the row between
 768px and 1024px (20px), and there the switches at the title's end while
 it keeps 20rem, where they always took a line. None is a defect, so
-PageHeader does not change (parent spec risk R8).
+PageHeader does not change (parent spec risk R8). From 1024px, beside the
+open rail, the column is 640px at its narrowest, where 20rem titles drop the
+switches under a short title up to 1068px; the docs' titles keep 16rem
+there, so the switches stay on the title's line as they always did (spec
+correction 76).
 
 **Screen readers.** Not yet verified (owner action 4): the header and its
 `h1` as the start of the main landmark, where the skip link lands.
