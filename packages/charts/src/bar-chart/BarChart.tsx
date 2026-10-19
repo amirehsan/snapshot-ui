@@ -21,16 +21,26 @@ import { ChartTable } from '../foundations/ChartTable';
 import type { ChartColor } from '../foundations/color';
 import { valueDomain as domainOf } from '../foundations/domain';
 import { coordinate, percent } from '../foundations/format';
-import { hasModifier, type Move } from '../foundations/keys';
+import { hasModifier, isRightToLeft, type Move } from '../foundations/keys';
 import { chartName } from '../foundations/naming';
 import { placeReadout, READOUT_GAP, readoutAlign } from '../foundations/readout';
 import { linearScale } from '../foundations/scale';
-import type { ChartStatus, ChartStatusLabels } from '../foundations/status';
+import { DEFAULT_STATUS_LABELS, type ChartStatus, type ChartStatusLabels } from '../foundations/status';
 import { useChartActive, type ChartSource } from '../foundations/useChartActive';
 import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
 import { useWarnOnce } from '../utils/warn-once';
-import { barExtent, barMark, firstStop, moveBar, nonzero, type BarStop } from './geometry';
+import {
+  bandCentre,
+  bandTicks,
+  barExtent,
+  barMark,
+  firstStop,
+  moveBar,
+  nonzero,
+  seriesColors,
+  type BarStop,
+} from './geometry';
 
 export type { ChartColor } from '../foundations/color';
 export type { ChartStatusLabels } from '../foundations/status';
@@ -49,7 +59,7 @@ export interface BarSeries {
   values: readonly (BarValue | null)[];
   /** Pins the series to a color, so it keeps it when another series is filtered out. @default ink, then slate */
   color?: ChartColor;
-  /** 'hatched' draws the series as the previous period: the color of the first filled series, striped. Grouped charts only. @default 'fill' */
+  /** 'hatched' draws the series as the previous period: the color of the first filled series, striped, with its amounts in slate. Grouped charts only. @default 'fill' */
   look?: 'fill' | 'hatched';
 }
 
@@ -75,25 +85,25 @@ export interface BarChartLabels {
 export type BarChartProps = Omit<HTMLAttributes<HTMLElement>, 'children' | 'aria-label' | 'aria-labelledby'> &
   AriaName &
   BarChartSeries & {
-    /** The bands' labels, formatted: "Groceries", "Whole Foods Market", "Other". In the app's order: a ranked list is sorted by the app. */
+    /** The bands' labels, formatted: "Oct", "Groceries", "Whole Foods Market", "Other". In the app's order: a ranked list is sorted by the app. */
     categories: readonly string[];
     /** @default 'vertical' */
     orientation?: 'vertical' | 'horizontal';
     /** Whether the bands are periods in order or peers. Time bands start the keys at the newest. @default 'category' */
     bands?: 'category' | 'time';
-    /** Which category labels show, by index. @default every one */
+    /** Which category labels show, by index. @default every one for 'category'; first, middle and last for 'time' in a vertical chart */
     categoryTicks?: readonly number[];
-    /** The value gridlines and their labels, formatted. Absent, no gridlines but the zero line and no value labels under the bars. */
+    /** The value gridlines and their labels, formatted. Absent, no gridlines but the zero line and no value axis labels. */
     valueTicks?: readonly { value: number; label: string }[];
     /** The value domain. Always widened to include zero. @default from the least to the greatest value, zero included, rounded out */
     valueDomain?: readonly [number, number];
-    /** Amounts in the end column: none, every row, or the rows at these indexes. @default 'all' */
+    /** Amounts: none, every bar, or the bands at these indexes. @default 'all' for horizontal, 'none' for vertical */
     valueLabels?: 'none' | 'all' | readonly number[];
     /** Each band's total, formatted by the app, for the readout and a Total column in the table. */
     totals?: readonly (string | null)[];
     /** @default 'ready' */
     status?: ChartStatus;
-    /** Drawn in the rows' place for 'empty' and 'error', such as an EmptyState with a Retry button. */
+    /** Drawn in the bars' place for 'empty' and 'error', such as an EmptyState with a Retry button. */
     statusContent?: ReactNode;
     /** Draws each series' texture as well as its color. Always on in forced colors. @default false */
     hasTexture?: boolean;
@@ -121,27 +131,36 @@ const DEFAULT_LABELS: BarChartLabels = {
   total: 'Total',
 };
 
-const DEFAULT_STATUS_LABELS: ChartStatusLabels = {
-  loading: 'Loading',
-  empty: 'Nothing to show for this period',
-  error: 'The chart could not be loaded',
-};
-
-/** The keys a horizontal chart moves by: Up and Down through the rows as drawn. Left and Right are not moves. */
-const KEYS: Record<string, Move> = {
-  ArrowDown: 'next',
-  ArrowUp: 'previous',
+/**
+ * The keys a chart moves by, toward the bar drawn in that direction: Up and Down through a horizontal chart's
+ * rows, Left and Right across a vertical chart's bands, mirrored in right to left. The other pair is no move.
+ */
+const KEYS: Record<string, Move | ((rtl: boolean) => Move)> = {
   Home: 'first',
   End: 'last',
   PageUp: 'page-back',
   PageDown: 'page-forward',
 };
 
+const ACROSS: Record<string, (rtl: boolean) => Move> = {
+  ArrowRight: (rtl) => (rtl ? 'previous' : 'next'),
+  ArrowLeft: (rtl) => (rtl ? 'next' : 'previous'),
+};
+
+const DOWN: Record<string, Move> = { ArrowDown: 'next', ArrowUp: 'previous' };
+
 /** The loading rows' widths, in percent of the track, repeating: a list's shape, not a chart's. */
 const LOADING = [70, 50, 85, 40];
 
+/** The loading bands' heights, in percent of the plot, repeating: a bar chart's shape, not a list's. */
+const LOADING_BANDS = [60, 85, 45, 70];
+
 /** A row's least height in px, `--size-target`, which the readout's place is reckoned in. */
 const ROW = 40;
+
+/** A bar's sign, which its data end's corners and its figure's side are drawn by. */
+const signOf = (value: number): 'positive' | 'negative' | 'zero' =>
+  value > 0 ? 'positive' : value < 0 ? 'negative' : 'zero';
 
 /** One series' value at the active band, as the readout says it. */
 interface Reading {
@@ -149,14 +168,17 @@ interface Reading {
   label: string;
   valueLabel: string;
   color: ChartColor;
+  look: 'fill' | 'hatched';
 }
 
 /**
- * Amounts as bars, drawn on the server as HTML: a row per category with its label at the start, its bars from a
- * zero line, and its amounts in a column at the end, over gridlines in a stretched svg. Each bar is a stop of a
- * roving tab index, named by its table cells, and the arrow keys move bar to bar; a pointer activates the row
- * under it. A toggle swaps the chart for a table of the same strings. Loading, empty and error draw in the
- * rows' place. Every figure is the app's string; `value` only places a bar, and the value axis always holds zero.
+ * Amounts as bars, drawn on the server as HTML. Standing up, a band per category or period with its bars from a
+ * zero line, negatives below it, and its label under the plot; lying down, a row per category with its label at
+ * the start, its bars from a zero line and its amounts in a column at the end. Two series sit side by side, and a
+ * hatched one is the previous period in the same color. Each bar is a stop of a roving tab index, named by its
+ * table cells, and the arrow keys move to the bar drawn in their direction; a pointer activates the band under
+ * it. A toggle swaps the chart for a table of the same strings. Loading, empty and error draw in the bars'
+ * place. Every figure is the app's string; `value` only places a bar, and the value axis always holds zero.
  */
 export function BarChart(props: BarChartProps): ReactElement {
   const {
@@ -168,15 +190,14 @@ export function BarChart(props: BarChartProps): ReactElement {
     categoryTicks,
     valueTicks,
     valueDomain,
-    valueLabels = 'all',
+    valueLabels,
     totals,
     status = 'ready',
     statusContent,
     hasTexture = false,
     labels = DEFAULT_LABELS,
     statusLabels = DEFAULT_STATUS_LABELS,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- a vertical plot's: taken out of the figure's attributes, since a horizontal chart is as tall as its rows
-    height,
+    height = 240,
     className,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
@@ -184,9 +205,10 @@ export function BarChart(props: BarChartProps): ReactElement {
     ...rest
   } = props as DrawnProps;
   const id = useId();
-  const rowsRef = useRef<HTMLDivElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<'chart' | 'table'>('chart');
 
+  const isVertical = orientation === 'vertical';
   const count = categories.length;
   const isReady = status === 'ready';
   const shownView = isReady ? view : 'chart';
@@ -198,7 +220,8 @@ export function BarChart(props: BarChartProps): ReactElement {
       return value && Number.isFinite(value.value) ? value : null;
     }),
   }));
-  const colors: ChartColor[] = drawn.map((line, at) => line.color ?? (at === 0 ? 'ink' : 'slate'));
+  const colors = seriesColors(drawn);
+  const lookOf = (at: number): 'fill' | 'hatched' => drawn[at]?.look ?? 'fill';
 
   // The domain always holds zero: a bar that starts anywhere else misstates its value.
   const domain = domainOf(
@@ -216,12 +239,8 @@ export function BarChart(props: BarChartProps): ReactElement {
       ? `BarChart: valueDomain must include 0; widened to [${String(domain[0])}, ${String(domain[1])}].`
       : null,
   );
-  useWarnOnce(
-    orientation === 'horizontal'
-      ? null
-      : 'BarChart: this version draws horizontal bars only; pass orientation="horizontal".',
-  );
-  const scale = linearScale(domain, [0, 100]);
+  // A vertical plot's y runs down, 100 at the bottom; a horizontal track's x from the inline start.
+  const scale = linearScale(domain, isVertical ? [100, 0] : [0, 100]);
   const [low, high] = [Math.min(...domain), Math.max(...domain)];
   const zero = coordinate(scale(0));
   // The gridlines and their labels in every status, so the figure keeps its height when the data arrives.
@@ -229,7 +248,7 @@ export function BarChart(props: BarChartProps): ReactElement {
     ({ value }) => Number.isFinite(value) && value >= low && value <= high,
   );
 
-  // The bars with a value, in drawn order: row by row, and in a row series by series. The DOM's order too.
+  // The bars with a value, in drawn order: band by band, and in a band series by series. The DOM's order too.
   const stops: BarStop[] = isReady
     ? categories.flatMap((_, band) =>
         drawn.flatMap((line, at) => (line.values[band] ? [{ band, series: at }] : [])),
@@ -244,7 +263,7 @@ export function BarChart(props: BarChartProps): ReactElement {
   const chart = useChartActive<string>({
     onFirstFocus: () => (first === null ? null : barMark(first)),
     isAvailable: (mark) => markedFor === key && marks.includes(mark),
-    within: rowsRef,
+    within: groupRef,
   });
   const activate = (stop: BarStop, from: ChartSource): void => {
     setMarkedFor(key);
@@ -266,40 +285,42 @@ export function BarChart(props: BarChartProps): ReactElement {
 
   /**
    * A bar's ref: one function for the chart's life, so React lets go of it only when the bar leaves the page. A
-   * bar that leaves while it holds focus, to new categories or to a status, first parks focus on the group,
-   * before React removes it, so focus never passes through the body.
+   * bar that leaves while it holds focus, to new categories, a new orientation or a status, first parks focus
+   * on the group, before React removes it, so focus never passes through the body.
    */
   const holdFocus = useCallback((bar: HTMLElement | null) => {
     if (!bar) return;
     return () => {
-      const rows = rowsRef.current;
-      if (!rows || bar.ownerDocument.activeElement !== bar) return;
-      rows.tabIndex = -1;
-      rows.focus({ preventScroll: true });
+      const group = groupRef.current;
+      if (!group || bar.ownerDocument.activeElement !== bar) return;
+      group.tabIndex = -1;
+      group.focus({ preventScroll: true });
     };
   }, []);
 
-  // New categories or a status while a bar holds focus: once the chart is ready, focus goes to its tab stop,
-  // the new first bar for new categories, never the body. A layout effect, so it moves before the page paints.
-  const shown = useRef({ key, status });
+  // New categories, a new orientation or a status while a bar holds focus: once the chart is ready, focus goes
+  // to its tab stop, the new first bar for new categories, never the body. A layout effect, so it moves before
+  // the page paints.
+  const shown = useRef({ key, status, orientation });
   useLayoutEffect(() => {
     const before = shown.current;
-    shown.current = { key, status };
-    const rows = rowsRef.current;
-    if (!rows || (before.key === key && before.status === status)) return;
-    const focused = rows.ownerDocument.activeElement;
+    shown.current = { key, status, orientation };
+    const group = groupRef.current;
+    if (!group || (before.key === key && before.status === status && before.orientation === orientation))
+      return;
+    const focused = group.ownerDocument.activeElement;
     // A bar kept by new categories is the same element, now another category's.
     const isStale =
       before.key !== key && focused instanceof HTMLElement && focused.classList.contains('bar-chart-bar');
-    if (status !== 'ready' || !(isStale || focused === rows)) return;
-    rows.querySelector<HTMLElement>('.bar-chart-bar[tabindex="0"]')?.focus();
+    if (status !== 'ready' || !(isStale || focused === group)) return;
+    group.querySelector<HTMLElement>('.bar-chart-bar[tabindex="0"]')?.focus();
     // The group is focusable only while it holds focus for a state with no bars.
-    rows.removeAttribute('tabindex');
-  }, [key, status]);
+    group.removeAttribute('tabindex');
+  }, [key, status, orientation]);
 
   /** The chart's bars, in the order of `stops`. */
-  const barsOf = (rows: HTMLElement): HTMLElement[] => [
-    ...rows.querySelectorAll<HTMLElement>('.bar-chart-bar'),
+  const barsOf = (group: HTMLElement): HTMLElement[] => [
+    ...group.querySelectorAll<HTMLElement>('.bar-chart-bar'),
   ];
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -314,12 +335,16 @@ export function BarChart(props: BarChartProps): ReactElement {
       }
       return;
     }
-    const move = KEYS[event.key];
+    const key = KEYS[event.key] ?? (isVertical ? ACROSS : DOWN)[event.key];
     const bars = barsOf(event.currentTarget);
     const from = stops[bars.indexOf(event.target as HTMLElement)];
-    if (move === undefined || from === undefined) return;
+    if (key === undefined || from === undefined) return;
     event.preventDefault();
-    const to = moveBar(stops, from, move);
+    const to = moveBar(
+      stops,
+      from,
+      typeof key === 'function' ? key(isRightToLeft(event.currentTarget)) : key,
+    );
     activate(to, 'key');
     bars[stops.indexOf(to)]?.focus();
   };
@@ -330,14 +355,30 @@ export function BarChart(props: BarChartProps): ReactElement {
     chart.clear();
   };
 
-  // A press on a bar does not focus it, so a touch's hold and a pointer's row stay the pointer's: the keys own
+  // A press on a bar does not focus it, so a touch's hold and a pointer's band stay the pointer's: the keys own
   // focus, and a pointer never moves it.
   const onMouseDown = (event: MouseEvent<HTMLDivElement>): void => {
     if (event.target instanceof Element && event.target.closest('.bar-chart-bar')) event.preventDefault();
   };
 
-  /** Activates the row under the pointer, read from each row's parts, and the bar under it or the row's first. */
-  const snap = (event: PointerEvent<HTMLDivElement>, from: ChartSource): void => {
+  /** Activates `band`'s bar under the pointer, read along `along` from each bar's box, or the band's first. */
+  const snapTo = (
+    band: number,
+    bars: readonly Element[],
+    under: (box: DOMRect) => boolean,
+    from: ChartSource,
+  ): void => {
+    const inBand = stops.filter((stop) => stop.band === band);
+    const stop = inBand.find((_, at) => {
+      const box = bars[at]?.getBoundingClientRect();
+      return box !== undefined && under(box);
+    });
+    const found = stop ?? inBand[0];
+    if (found) activate(found, from);
+  };
+
+  /** A horizontal chart: the row under the pointer, read from each row's parts. */
+  const snapRow = (event: PointerEvent<HTMLDivElement>, from: ChartSource): void => {
     const y = event.clientY;
     const rows = [...event.currentTarget.querySelectorAll('.bar-chart-row')];
     let band = -1;
@@ -352,15 +393,38 @@ export function BarChart(props: BarChartProps): ReactElement {
         band = at;
       }
     });
-    const inBand = stops.filter((stop) => stop.band === band);
-    const bars = [...(rows[band]?.querySelectorAll('.bar-chart-bar') ?? [])];
-    const under = inBand.find((_, at) => {
-      const box = bars[at]?.getBoundingClientRect();
-      return box !== undefined && y >= box.top && y <= box.bottom;
-    });
-    const stop = under ?? inBand[0];
-    if (stop) activate(stop, from);
+    snapTo(
+      band,
+      [...(rows[band]?.querySelectorAll('.bar-chart-bar') ?? [])],
+      (box) => y >= box.top && y <= box.bottom,
+      from,
+    );
   };
+
+  /** A vertical chart: the band under the pointer, from the inline start, or the nearest with a bar. */
+  const snapBand = (event: PointerEvent<HTMLDivElement>, from: ChartSource): void => {
+    const x = event.clientX;
+    const box = event.currentTarget.querySelector('.bar-chart-bars')?.getBoundingClientRect();
+    if (!box) return;
+    const across = box.width > 0 ? (x - box.left) / box.width : 0;
+    const fraction = isRightToLeft(event.currentTarget) ? 1 - across : across;
+    const target = Math.min(Math.max(Math.floor(fraction * count), 0), count - 1);
+    let band = -1;
+    for (const stop of stops)
+      if (band === -1 || Math.abs(stop.band - target) < Math.abs(band - target)) band = stop.band;
+    snapTo(
+      band,
+      [
+        ...(event.currentTarget
+          .querySelectorAll('.bar-chart-band')
+          [band]?.querySelectorAll('.bar-chart-bar') ?? []),
+      ],
+      (bar) => x >= bar.left && x <= bar.right,
+      from,
+    );
+  };
+
+  const snap = isVertical ? snapBand : snapRow;
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>): void => {
     if (event.pointerType !== 'touch') snap(event, 'pointer');
@@ -392,50 +456,371 @@ export function BarChart(props: BarChartProps): ReactElement {
     { 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy },
     drawn.map((_, at) => cellId(-1, at)),
   );
+  const shownLabels = valueLabels ?? (isVertical ? 'none' : 'all');
   const showsAmount = (band: number): boolean =>
-    valueLabels === 'all' || (valueLabels !== 'none' && valueLabels.includes(band));
+    shownLabels === 'all' || (shownLabels !== 'none' && shownLabels.includes(band));
   const rowCount = isReady || count > 0 ? count : LOADING.length;
+  const labelled = bandTicks(count, isVertical ? bands : 'category', categoryTicks);
 
-  // The readout, above the active row when its lines fit there and below it otherwise, at the end of the row's
-  // longest bar along the track. Every number is known, so nothing is measured.
+  // The readout, from known values: above the active band's highest bar end when its lines fit and below its
+  // lowest otherwise (vertical), or above or below the active row (horizontal), never over a bar.
   const readings: Reading[] =
     activeStop === undefined
       ? []
       : drawn.flatMap((line, at) => {
           const value = line.values[activeStop.band];
           return value
-            ? [{ at, label: line.label, valueLabel: value.valueLabel, color: colors[at] ?? 'ink' }]
+            ? [
+                {
+                  at,
+                  label: line.label,
+                  valueLabel: value.valueLabel,
+                  color: colors[at] ?? 'ink',
+                  look: lookOf(at),
+                },
+              ]
             : [];
         });
   const total = activeStop === undefined ? null : (totals?.[activeStop.band] ?? null);
+  const lines = readings.length + 1 + (total === null ? 0 : 1);
   let along = 0;
+  let readout: ReturnType<typeof placeReadout> | null = null;
   if (activeStop !== undefined) {
-    let longest = -1;
-    for (const line of drawn) {
+    const extents = drawn.flatMap((line) => {
       const value = line.values[activeStop.band];
-      if (!value) continue;
-      const { start, size } = barExtent(value.value, scale);
-      if (size > longest) {
+      return value ? [{ ...barExtent(value.value, scale), isNegative: value.value < 0 }] : [];
+    });
+    if (isVertical) {
+      along = bandCentre(activeStop.band, count);
+      // Both ends of every bar in the band, so the panel clears them all, a negative bar's included.
+      readout = placeReadout({
+        marks: extents.flatMap(({ start, size }) =>
+          [start, start + size].map((y) => Math.min(Math.max(y, 0), 100)),
+        ),
+        height,
+        lines,
+        gap: READOUT_GAP,
+      });
+    } else {
+      // At the far end of the row's longest bar, along the track.
+      let longest = -1;
+      for (const { start, size, isNegative } of extents) {
+        if (size <= longest) continue;
         longest = size;
-        along = Math.min(Math.max(value.value < 0 ? start : start + size, 0), 100);
+        along = Math.min(Math.max(isNegative ? start : start + size, 0), 100);
       }
+      readout = placeReadout({
+        marks: [(activeStop.band / count) * 100, ((activeStop.band + 1) / count) * 100],
+        height: count * ROW,
+        lines,
+        gap: READOUT_GAP,
+      });
     }
   }
-  const readout =
-    activeStop === undefined
-      ? null
-      : placeReadout({
-          marks: [(activeStop.band / count) * 100, ((activeStop.band + 1) / count) * 100],
-          height: count * ROW,
-          lines: readings.length + 1 + (total === null ? 0 : 1),
-          gap: READOUT_GAP,
-        });
 
-  const rowsStyle = {
-    '--bar-chart-rows': rowCount,
-    '--bar-chart-rows-narrow': rowCount * 2,
-    '--bar-chart-group': drawn.length,
-  } as CSSProperties;
+  const readoutPanel =
+    activeStop === undefined || readout === null || chart.isReadoutHidden ? null : (
+      <div
+        className="bar-chart-readout"
+        aria-hidden="true"
+        data-align={readoutAlign(along)}
+        data-place={readout.place}
+        style={{
+          ...(isVertical
+            ? {}
+            : { '--bar-chart-row': activeStop.band + 1, '--bar-chart-row-narrow': activeStop.band * 2 + 2 }),
+          insetInlineStart: percent(along),
+          [readout.place === 'above' ? 'insetBlockEnd' : 'insetBlockStart']: isVertical
+            ? percent(readout.inset)
+            : '100%',
+        }}
+      >
+        <p className="bar-chart-readout-x">{categories[activeStop.band]}</p>
+        <ul className="bar-chart-readout-list">
+          {readings.map((reading) => (
+            <li
+              key={reading.at}
+              className="bar-chart-readout-item"
+              data-color={reading.color}
+              data-look={reading.look}
+            >
+              <span className="bar-chart-key" />
+              <strong className="bar-chart-readout-value">{reading.valueLabel}</strong>
+              <span className="bar-chart-readout-series">{reading.label}</span>
+            </li>
+          ))}
+          {total === null ? null : (
+            <li className="bar-chart-readout-item">
+              <strong className="bar-chart-readout-value">{total}</strong>
+              <span className="bar-chart-readout-series">{labels.total}</span>
+            </li>
+          )}
+        </ul>
+      </div>
+    );
+
+  /** One bar, its name from its table cells and its place from zero, in percent, in either orientation. */
+  const bar = (band: number, at: number, value: BarValue): ReactElement => {
+    const mark = barMark({ band, series: at });
+    const { start, size } = barExtent(value.value, scale);
+    const isNegative = value.value < 0;
+    // Each bar stands on zero: a negative one from its far end's side, so its least 1px runs from zero.
+    const place = isVertical
+      ? {
+          ...(isNegative
+            ? { insetBlockStart: percent(start) }
+            : { insetBlockEnd: percent(100 - start - size) }),
+          blockSize: percent(size),
+          '--bar-chart-centre': percent(bandCentre(band, count)),
+          '--bar-chart-index': at,
+        }
+      : {
+          ...(isNegative
+            ? { insetInlineEnd: percent(100 - start - size) }
+            : { insetInlineStart: percent(start) }),
+          inlineSize: percent(size),
+          '--bar-chart-index': drawn.length > 1 ? at : undefined,
+        };
+    return (
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a bar is a stop of the roving tab index, and taking focus makes it the active bar
+      <span
+        key={at}
+        ref={holdFocus}
+        className="bar-chart-bar"
+        role="img"
+        aria-roledescription={labels.bar}
+        aria-labelledby={[cellId(band, -1), drawn.length > 1 ? cellId(-1, at) : '', cellId(band, at)]
+          .filter(Boolean)
+          .join(' ')}
+        data-color={colors[at]}
+        data-look={lookOf(at)}
+        data-sign={signOf(value.value)}
+        data-nonzero={nonzero(value.value) ? '' : undefined}
+        data-active={active === mark ? '' : undefined}
+        tabIndex={chart.isInteractive ? (mark === stop ? 0 : -1) : undefined}
+        style={place}
+        onFocus={() => {
+          activate({ band, series: at }, 'key');
+        }}
+      />
+    );
+  };
+
+  const message = (
+    <div className="bar-chart-state">
+      {statusContent ?? (
+        <p className="bar-chart-message" data-tone={status === 'error' ? 'error' : undefined}>
+          {status === 'error' ? statusLabels.error : statusLabels.empty}
+        </p>
+      )}
+    </div>
+  );
+
+  /** A line at a value: across the plot standing up, along every row's track lying down. */
+  const lineAt = (at: string): Record<'x1' | 'x2' | 'y1' | 'y2', string> =>
+    isVertical ? { x1: '0', x2: '100', y1: at, y2: at } : { x1: at, x2: at, y1: '0', y2: '100' };
+
+  // The gridlines and the zero line.
+  const gridlines = (
+    <div className="bar-chart-gridlines" aria-hidden="true">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
+        {ticks.map((tick, at) => (
+          <line key={at} className="bar-chart-grid" {...lineAt(coordinate(scale(tick.value)))} />
+        ))}
+        <line
+          className="bar-chart-baseline"
+          data-crosses={low < 0 && high > 0 ? '' : undefined}
+          {...lineAt(zero)}
+        />
+      </svg>
+    </div>
+  );
+
+  // The vertical plot keeps room outside the bars' ends for the labels it shows, and for the top gridline's.
+  const shownValues = isReady
+    ? stops
+        .filter((at) => showsAmount(at.band))
+        .map((at) => ({ ...at, value: drawn[at.series]?.values[at.band] }))
+    : [];
+  const bandCount = isReady || count > 0 ? count : LOADING_BANDS.length;
+
+  // Standing up, the plot is a grid: the gridlines' labels in a column at the start as wide as the widest, the
+  // bars' box beside them at the plot's height, and the category labels under the bars. The gridlines run
+  // under both columns, so each label sits above its line as a line chart's does and no bar crosses a label.
+  const plot = (
+    <>
+      {gridlines}
+      {ticks.length > 0 ? (
+        <div className="bar-chart-y-labels" aria-hidden="true">
+          {ticks.map((tick, at) => (
+            <span
+              key={at}
+              className="bar-chart-y-label"
+              style={{ insetBlockStart: percent(scale(tick.value)) }}
+            >
+              {tick.label}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div className="bar-chart-bars" style={{ blockSize: height }}>
+        {status === 'loading'
+          ? Array.from({ length: bandCount }, (_, at) => (
+              <span
+                key={at}
+                className="skeleton bar-chart-skeleton"
+                aria-hidden="true"
+                style={
+                  {
+                    blockSize: `${String(LOADING_BANDS[at % LOADING_BANDS.length])}%`,
+                    '--bar-chart-centre': percent(bandCentre(at, bandCount)),
+                  } as CSSProperties
+                }
+              />
+            ))
+          : isReady
+            ? categories.map((_, band) => (
+                <div
+                  key={band}
+                  className="bar-chart-band"
+                  data-active={activeStop?.band === band ? '' : undefined}
+                >
+                  {drawn.map((line, at) => {
+                    const value = line.values[band];
+                    return value ? bar(band, at, value) : null;
+                  })}
+                </div>
+              ))
+            : message}
+        {shownValues.length > 0 ? (
+          <div className="bar-chart-values" aria-hidden="true">
+            {shownValues.map(({ band, series: at, value }) => {
+              if (!value) return null;
+              const { start, size } = barExtent(value.value, scale);
+              const isNegative = value.value < 0;
+              // Outside the data end: above a positive bar's top, below a negative bar's bottom.
+              const place = {
+                ...(isNegative
+                  ? { insetBlockStart: percent(start + size) }
+                  : { insetBlockEnd: percent(100 - start) }),
+                '--bar-chart-centre': percent(bandCentre(band, count)),
+                '--bar-chart-index': at,
+              };
+              return (
+                <span
+                  key={`${String(band)}:${String(at)}`}
+                  className="bar-chart-value"
+                  data-sign={signOf(value.value)}
+                  data-look={lookOf(at)}
+                  data-keep={shownLabels !== 'all' || band === 0 || band === count - 1 ? '' : undefined}
+                  style={place}
+                >
+                  <span className="bar-chart-value-text">{value.valueLabel}</span>
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
+        {readoutPanel}
+      </div>
+      <div className="bar-chart-categories" aria-hidden="true" data-bands={bands}>
+        {bands === 'time'
+          ? labelled.map((band) => (
+              <span
+                key={band}
+                className="bar-chart-band-label"
+                data-edge={
+                  count > 1 ? (band === 0 ? 'start' : band === count - 1 ? 'end' : undefined) : undefined
+                }
+                style={{ insetInlineStart: percent(bandCentre(band, count)) }}
+              >
+                {categories[band]}
+              </span>
+            ))
+          : categories.map((category, band) => (
+              <span key={band} className="bar-chart-band-label" data-third={band % 3 === 0 ? '' : undefined}>
+                {labelled.includes(band) ? category : null}
+              </span>
+            ))}
+      </div>
+    </>
+  );
+
+  const rows = (
+    <>
+      {gridlines}
+      {status === 'loading'
+        ? Array.from({ length: rowCount }, (_, at) => (
+            <div key={at} className="bar-chart-row" aria-hidden="true">
+              <span className="bar-chart-category" />
+              <div className="bar-chart-track">
+                <span
+                  className="skeleton bar-chart-skeleton"
+                  style={{ inlineSize: `${String(LOADING[at % LOADING.length])}%` }}
+                />
+              </div>
+              <span className="bar-chart-amounts" />
+            </div>
+          ))
+        : isReady
+          ? categories.map((category, band) => (
+              <div
+                key={band}
+                className="bar-chart-row"
+                data-active={activeStop?.band === band ? '' : undefined}
+              >
+                <span className="bar-chart-category" aria-hidden="true">
+                  {labelled.includes(band) ? category : null}
+                </span>
+                <div className="bar-chart-track">
+                  {drawn.map((line, at) => {
+                    const value = line.values[band];
+                    return value ? bar(band, at, value) : null;
+                  })}
+                </div>
+                <span className="bar-chart-amounts" aria-hidden="true">
+                  {showsAmount(band)
+                    ? drawn.map((line, at) => {
+                        const value = line.values[band];
+                        return value ? (
+                          <span key={at} className="bar-chart-amount" data-look={lookOf(at)}>
+                            {value.valueLabel}
+                          </span>
+                        ) : null;
+                      })
+                    : null}
+                </span>
+              </div>
+            ))
+          : message}
+      {valueTicks !== undefined && valueTicks.length > 0 ? (
+        <div className="bar-chart-ticks" aria-hidden="true">
+          {ticks.map((tick, at) => {
+            const x = scale(tick.value);
+            return (
+              <span
+                key={at}
+                className="bar-chart-tick"
+                data-edge={x <= 0 ? 'start' : x >= 100 ? 'end' : undefined}
+                style={{ insetInlineStart: percent(x) }}
+              >
+                {tick.label}
+              </span>
+            );
+          })}
+        </div>
+      ) : null}
+      {readoutPanel}
+    </>
+  );
+
+  const groupStyle = isVertical
+    ? ({ '--bar-chart-bands': bandCount, '--bar-chart-group': drawn.length } as CSSProperties)
+    : ({
+        '--bar-chart-rows': rowCount,
+        '--bar-chart-rows-narrow': rowCount * 2,
+        '--bar-chart-group': drawn.length,
+      } as CSSProperties);
 
   return (
     <figure
@@ -444,7 +829,7 @@ export function BarChart(props: BarChartProps): ReactElement {
       aria-labelledby={name.labelledBy}
       aria-busy={status === 'loading' ? true : undefined}
       className={cx('bar-chart', className)}
-      data-orientation="horizontal"
+      data-orientation={orientation}
       data-layout={layout}
       data-view={shownView}
       data-status={status}
@@ -463,15 +848,23 @@ export function BarChart(props: BarChartProps): ReactElement {
         ) : null}
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the bars are one roving tab stop that the arrow keys move through (spec 7.6); the group takes their keys as they bubble */}
         <div
-          ref={rowsRef}
-          className="bar-chart-rows"
+          ref={groupRef}
+          className={isVertical ? 'bar-chart-plot' : 'bar-chart-rows'}
           role="group"
           aria-roledescription={labels.roleDescription}
           {...name.stop}
           // Never a tab stop: it holds focus for a state with no bars, so a status never drops focus to the body.
           tabIndex={chart.isInteractive && !isReady ? -1 : undefined}
+          data-room-start={
+            isVertical && (ticks.length > 0 || shownValues.some(({ value }) => value && value.value >= 0))
+              ? ''
+              : undefined
+          }
+          data-room-end={
+            isVertical && shownValues.some(({ value }) => value && value.value < 0) ? '' : undefined
+          }
           data-pointer={isPointer && active !== null ? '' : undefined}
-          style={rowsStyle}
+          style={groupStyle}
           onKeyDown={isReady ? onKeyDown : undefined}
           onBlur={isReady ? onBlur : undefined}
           onMouseDown={isReady ? onMouseDown : undefined}
@@ -479,167 +872,7 @@ export function BarChart(props: BarChartProps): ReactElement {
           onPointerLeave={isReady ? onPointerLeave : undefined}
           onPointerDown={isReady ? onPointerDown : undefined}
         >
-          <div className="bar-chart-gridlines" aria-hidden="true">
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false">
-              {ticks.map((tick, at) => (
-                <line
-                  key={at}
-                  className="bar-chart-grid"
-                  x1={coordinate(scale(tick.value))}
-                  x2={coordinate(scale(tick.value))}
-                  y1="0"
-                  y2="100"
-                />
-              ))}
-              <line
-                className="bar-chart-baseline"
-                data-crosses={low < 0 && high > 0 ? '' : undefined}
-                x1={zero}
-                x2={zero}
-                y1="0"
-                y2="100"
-              />
-            </svg>
-          </div>
-          {status === 'loading' ? (
-            Array.from({ length: rowCount }, (_, at) => (
-              <div key={at} className="bar-chart-row" aria-hidden="true">
-                <span className="bar-chart-category" />
-                <div className="bar-chart-track">
-                  <span
-                    className="skeleton bar-chart-skeleton"
-                    style={{ inlineSize: `${String(LOADING[at % LOADING.length])}%` }}
-                  />
-                </div>
-                <span className="bar-chart-amounts" />
-              </div>
-            ))
-          ) : isReady ? (
-            categories.map((category, band) => (
-              <div
-                key={band}
-                className="bar-chart-row"
-                data-active={activeStop?.band === band ? '' : undefined}
-              >
-                <span className="bar-chart-category" aria-hidden="true">
-                  {categoryTicks === undefined || categoryTicks.includes(band) ? category : null}
-                </span>
-                <div className="bar-chart-track">
-                  {drawn.map((line, at) => {
-                    const value = line.values[band];
-                    if (!value) return null;
-                    const mark = barMark({ band, series: at });
-                    const { start, size } = barExtent(value.value, scale);
-                    return (
-                      // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a bar is a stop of the roving tab index, and taking focus makes it the active bar
-                      <span
-                        key={at}
-                        ref={holdFocus}
-                        className="bar-chart-bar"
-                        role="img"
-                        aria-roledescription={labels.bar}
-                        aria-labelledby={[
-                          cellId(band, -1),
-                          drawn.length > 1 ? cellId(-1, at) : '',
-                          cellId(band, at),
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                        data-color={colors[at]}
-                        data-look={line.look ?? 'fill'}
-                        data-sign={value.value > 0 ? 'positive' : value.value < 0 ? 'negative' : 'zero'}
-                        data-nonzero={nonzero(value.value) ? '' : undefined}
-                        data-active={active === mark ? '' : undefined}
-                        tabIndex={chart.isInteractive ? (mark === stop ? 0 : -1) : undefined}
-                        style={{
-                          // Each bar stands on zero: a negative one from its end, so its least 1px runs
-                          // toward the start, as the bar does.
-                          ...(value.value < 0
-                            ? { insetInlineEnd: percent(100 - start - size) }
-                            : { insetInlineStart: percent(start) }),
-                          inlineSize: percent(size),
-                          ...({ '--bar-chart-place': drawn.length > 1 ? at : undefined } as CSSProperties),
-                        }}
-                        onFocus={() => {
-                          activate({ band, series: at }, 'key');
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-                <span className="bar-chart-amounts" aria-hidden="true">
-                  {showsAmount(band)
-                    ? drawn.map((line, at) => {
-                        const value = line.values[band];
-                        return value ? (
-                          <span key={at} className="bar-chart-amount">
-                            {value.valueLabel}
-                          </span>
-                        ) : null;
-                      })
-                    : null}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="bar-chart-state">
-              {statusContent ?? (
-                <p className="bar-chart-message" data-tone={status === 'error' ? 'error' : undefined}>
-                  {status === 'error' ? statusLabels.error : statusLabels.empty}
-                </p>
-              )}
-            </div>
-          )}
-          {valueTicks !== undefined && valueTicks.length > 0 ? (
-            <div className="bar-chart-ticks" aria-hidden="true">
-              {ticks.map((tick, at) => {
-                const x = scale(tick.value);
-                return (
-                  <span
-                    key={at}
-                    className="bar-chart-tick"
-                    data-edge={x <= 0 ? 'start' : x >= 100 ? 'end' : undefined}
-                    style={{ insetInlineStart: percent(x) }}
-                  >
-                    {tick.label}
-                  </span>
-                );
-              })}
-            </div>
-          ) : null}
-          {activeStop === undefined || readout === null || chart.isReadoutHidden ? null : (
-            <div
-              className="bar-chart-readout"
-              aria-hidden="true"
-              data-align={readoutAlign(along)}
-              data-place={readout.place}
-              style={
-                {
-                  '--bar-chart-row': activeStop.band + 1,
-                  '--bar-chart-row-narrow': activeStop.band * 2 + 2,
-                  insetInlineStart: percent(along),
-                  [readout.place === 'above' ? 'insetBlockEnd' : 'insetBlockStart']: '100%',
-                } as CSSProperties
-              }
-            >
-              <p className="bar-chart-readout-x">{categories[activeStop.band]}</p>
-              <ul className="bar-chart-readout-list">
-                {readings.map((reading) => (
-                  <li key={reading.at} className="bar-chart-readout-item" data-color={reading.color}>
-                    <span className="bar-chart-key" />
-                    <strong className="bar-chart-readout-value">{reading.valueLabel}</strong>
-                    <span className="bar-chart-readout-series">{reading.label}</span>
-                  </li>
-                ))}
-                {total === null ? null : (
-                  <li className="bar-chart-readout-item">
-                    <strong className="bar-chart-readout-value">{total}</strong>
-                    <span className="bar-chart-readout-series">{labels.total}</span>
-                  </li>
-                )}
-              </ul>
-            </div>
-          )}
+          {isVertical ? plot : rows}
         </div>
       </div>
       {status === 'loading' ? null : (

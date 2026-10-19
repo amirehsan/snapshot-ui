@@ -319,3 +319,56 @@ export const RightToLeftKeys: Story = {
     await expect(readoutX(canvasElement)).toBe('Oct 31');
   },
 };
+
+/**
+ * A state draws no line and no toggle, so nothing in it gives a shrink-to-fit panel a width: the story gives
+ * it a card's, as a page does.
+ */
+const InWidth: Story['render'] = (args) => (
+  <div style={{ width: '40rem', maxWidth: '100%' }}>
+    <Panel>
+      <LineChart {...args} />
+    </Panel>
+  </div>
+);
+
+/** Loading: a still placeholder in the plot's space at its height, the gridlines' labels over it, "Loading" said once. */
+export const Loading: Story = {
+  args: { status: 'loading' },
+  render: InWidth,
+  play: async ({ canvasElement }) => {
+    const plot = part(canvasElement, '.line-chart-plot').getBoundingClientRect();
+    const skeleton = part(canvasElement, '.line-chart-skeleton').getBoundingClientRect();
+    await expect(Math.abs(skeleton.height - plot.height)).toBeLessThanOrEqual(1);
+    await expect(Math.abs(plot.height - 240)).toBeLessThanOrEqual(1);
+    await waitFor(() => expect(part(canvasElement, '.line-chart-live')).toHaveTextContent('Loading'));
+  },
+};
+
+/** Nothing to show: the sentence in slate in the plot's place, over its gridlines, with no table toggle. */
+export const Empty: Story = {
+  args: { status: 'empty' },
+  render: InWidth,
+};
+
+/** A load that failed: the app's own content in the plot's place, here an EmptyState's markup with a retry. */
+const ErrorStory: Story = {
+  args: {
+    status: 'error',
+    statusContent: (
+      <div className="empty-state">
+        <p className="empty-state-title">The chart could not be loaded</p>
+        <p className="empty-state-description">Check your connection, then try again.</p>
+        <div className="empty-state-action">
+          <button type="button" className="button button-secondary">
+            Try again
+          </button>
+        </div>
+      </div>
+    ),
+  },
+  render: InWidth,
+};
+
+// Exported by name, so the module's own `Error` stays the global one.
+export { ErrorStory as Error };

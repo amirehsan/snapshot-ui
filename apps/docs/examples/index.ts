@@ -7,6 +7,9 @@ import AvatarFallback from './avatar-fallback';
 import AvatarSizes from './avatar-sizes';
 import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
+import BarChartCompare from './bar-chart-compare';
+import BarChartIncomeSpending from './bar-chart-income-spending';
+import BarChartMonths from './bar-chart-months';
 import BarChartRanked from './bar-chart-ranked';
 import BarChartRefunds from './bar-chart-refunds';
 import BarChartStates from './bar-chart-states';
@@ -89,6 +92,7 @@ import LineChartBasic from './line-chart-basic';
 import LineChartCompare from './line-chart-compare';
 import LineChartGaps from './line-chart-gaps';
 import LineChartRtl from './line-chart-rtl';
+import LineChartStates from './line-chart-states';
 import LinkInline from './link-inline';
 import LinkStates from './link-states';
 import MenuBasic from './menu-basic';
@@ -186,6 +190,9 @@ export const examples = {
   'avatar-sizes': AvatarSizes,
   'badge-counts': BadgeCounts,
   'badge-tones': BadgeTones,
+  'bar-chart-compare': BarChartCompare,
+  'bar-chart-income-spending': BarChartIncomeSpending,
+  'bar-chart-months': BarChartMonths,
   'bar-chart-ranked': BarChartRanked,
   'bar-chart-refunds': BarChartRefunds,
   'bar-chart-states': BarChartStates,
@@ -268,6 +275,7 @@ export const examples = {
   'line-chart-compare': LineChartCompare,
   'line-chart-gaps': LineChartGaps,
   'line-chart-rtl': LineChartRtl,
+  'line-chart-states': LineChartStates,
   'link-inline': LinkInline,
   'link-states': LinkStates,
   'menu-basic': MenuBasic,

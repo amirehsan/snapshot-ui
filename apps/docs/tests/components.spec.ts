@@ -702,6 +702,41 @@ test.describe('forced colors', () => {
     await expectVisibleRing(first);
   });
 
+  test('a comparison keeps stripes against solid bars', async ({ page }) => {
+    // The current period is solid in the reader's text color; the previous one keeps its stripes, the text
+    // color on the page's own color, inside a border of the text color, so the two never merge.
+    await visit(page, '/docs/charts/bar-chart');
+    const chart = page.getByRole('figure', {
+      name: 'Spending by category, October against September',
+      exact: true,
+    });
+    await expect(chart).toHaveCount(1);
+    const system = await systemColors(page);
+    const look = (bar: Locator): Promise<{ fill: string; edge: string; image: string }> =>
+      bar.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { fill: style.backgroundColor, edge: style.borderTopColor, image: style.backgroundImage };
+      });
+    const solid = chart.locator('.bar-chart-bar[data-look="fill"]');
+    const hatched = chart.locator('.bar-chart-bar[data-look="hatched"]');
+    await expect(solid).toHaveCount(5);
+    await expect(hatched).toHaveCount(5);
+    for (const bar of await solid.all()) {
+      const drawn = await look(bar);
+      expect(drawn.fill).toBe(system.canvasText);
+      expect(drawn.image).toBe('none');
+    }
+    for (const bar of await hatched.all()) {
+      const drawn = await look(bar);
+      expect(drawn.fill).toBe(system.canvas);
+      expect(drawn.edge).toBe(system.canvasText);
+      expect(drawn.image).toContain('repeating-linear-gradient');
+    }
+    // The legend's key for the previous period is striped too.
+    const key = chart.locator('.bar-chart-legend-item[data-look="hatched"] .bar-chart-key');
+    expect((await look(key)).image).toContain('repeating-linear-gradient');
+  });
+
   test('a tooltip keeps a border and loses its arrow', async ({ page }) => {
     // The arrow is an svg fill, which the repaint would turn into a shape of the wrong color or none, so it
     // goes. The tip's transparent border is repainted in the reader's text color, so the tip keeps its shape.

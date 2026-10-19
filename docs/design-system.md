@@ -5615,7 +5615,10 @@ the root and `--color-warning` under `[data-over]`, so one property turns
 both looks warning over the limit. Exactly `max` is not over. Over the limit
 the words are the app's, and `valueLabel` must say "over"; the docs and the
 changeset say so, since the color is never the only signal. Error, success,
-signal orange, clay and taupe appear nowhere.
+signal orange, clay and taupe appear nowhere. The hatch also means a
+previous period in a bar chart (`look: 'hatched'`, "BarChart"): the same
+stripes in the series' color, the same meaning, the same thing and not the
+main amount.
 
 **The geometry.** Each segment's width is its share of `max`, stacked from
 the inline start, written as a percentage with at most three decimals in
@@ -6062,6 +6065,33 @@ first key in a plot focused before its data came takes the newest day,
 and a pointer clears the last announcement. The tab stop is set after
 mount, so the server's HTML has none. The entry measures 3.25 kB now,
 inside the same 4 kB.
+
+**States** (the insights spec, section 7.9, and the owner's ruling 10).
+`status` is `'ready'`, `'loading'`, `'empty'` or `'error'`, BarChart's
+frame through the shared pieces: the plot keeps its place and its height,
+its gridlines, their labels and the x labels the app passes, so the page
+does not move when the data arrives. Loading draws one still placeholder,
+`span.skeleton.line-chart-skeleton`, over the plot's whole box under the
+gridlines' labels, in Skeleton's fill and pulse, hidden from assistive
+technology, with `aria-busy` on the figure and no legend, toggle or
+table. Empty and error draw `statusContent` or `p.line-chart-message`,
+the message the bar chart shares (`:is(.line-chart-message,
+.bar-chart-message)`), slate for empty and `--color-error` for a load
+that failed, the one meaning that color has, and keep the hidden table
+with no toggle. The three strings are `statusLabels`, `ChartStatusLabels`
+with English defaults, a prop of their own, since `LineChartLabels` is
+required whole and growing it would break every app that passes it. The
+state is said once through the plot's own polite region, the one that
+announces positions, which is in the page from the first render, so the
+word is heard when it arrives and a change from ready to an error is
+heard too. The plot is no tab stop while it shows a state
+(`tabIndex={-1}` after mount), so focus on it stays there and never falls
+to the body, and its keys and pointer do nothing; a status change lets go
+of the position active and announced before it. The ready face is the
+same byte for byte (`same-markup.test.tsx`, unchanged): `data-status` and
+`aria-busy` are written only for a state (the plan's spec correction 21).
+The entry measures 4.06 kB with the states, and its limit is 5 kB by the
+rule (correction 9).
 
 ## SearchField
 
@@ -10509,9 +10539,9 @@ focused field scrolled clear of both.
 Amounts as bars: `BarChart`, the third chart of `@snapshot-ui/charts`,
 from the insights spec (section 7) and the owner's rulings in its section
 19. This section records the horizontal face, the consumer's ranked list
-of categories, merchants and accounts; the vertical face, two series side
-by side, the previous period and the stacks join it in later commits of
-the batch.
+of categories, merchants and accounts, then the vertical face, the
+consumer's month view, two series side by side in either orientation and
+the previous period; the stacks join it in a later commit of the batch.
 
 **Bars are HTML.** A bar keeps its shape: its data end is rounded by a
 radius token, its thickness is capped in pixels, and the focus ring
@@ -10732,15 +10762,169 @@ corners are logical, so they move with the bar. The amounts stay left to
 right inside their isolates. Up and Down do not change with the
 direction.
 
+**Standing up, the default.** `orientation` is `'vertical'` unless the app
+says otherwise, the consumer's month view. `div.bar-chart-plot` is the
+group, named as the figure, and a grid of two columns and two rows: the
+gridlines' labels in a column at the start, `max-content`, as wide as the
+widest label, which the grid finds from the labels themselves;
+`div.bar-chart-bars`, the bars' box, beside it at the plot's height
+(`height`, 240 by default, written in render as its block size); and
+`div.bar-chart-categories` under the bars' box. The gridlines' layer runs
+under both columns (`grid-column: 1 / span 2; grid-row: 1 / span 1`, both
+ends given), so each label sits above its line at the start, a line
+chart's rule, and no bar ever crosses a label: drawn inside the bars' box,
+as the plan had them, the labels were covered by the first band's bars
+wherever it crossed a line (the plan's spec correction 23). Each label is
+in flow in one cell of its column, so the column takes its width, and is
+moved down by its line's place, a percentage of the cell, which is the
+bars' height. The bars, the gridlines, the labels, the value labels and
+the readout share one scale, the bars' box, and the room the labels
+outside the bars' ends take is outside it: 1.25rem above when the
+gridlines are labelled or a positive figure shows, and below when a
+negative figure shows, written as `--bar-chart-room-start` and
+`--bar-chart-room-end` under `[data-room-start]` and `[data-room-end]` and
+read by the box's margins, the labels' padding and the gridlines' insets.
+
+**Bands, thickness and groups, with nothing measured.** `n` categories
+are `n` equal bands from the inline start; the render writes
+`--bar-chart-bands` and `--bar-chart-group` on the plot and each bar's
+band centre (`--bar-chart-centre`, a percent with three decimals) and its
+place in its group (`--bar-chart-index`). The CSS computes the thickness,
+`min(1.5rem, calc((100% / bands * 0.6 - (group - 1) * 2px) / group))`, and
+the inline start, the band's centre less half the group plus the bar's
+place, `calc(centre - (group * t + (group - 1) * 2px) / 2 + index * (t +
+2px))`. A percentage inside a custom property resolves where it is used,
+so `100%` is the bars' box's width on each bar. So a bar is at most 24px
+and 60% of its band, a pair sits 2px apart centred on its band, and the
+bars thin as the box narrows: twelve grouped months in a 248px plot are
+5.2px each, which the `GroupThickness` play measures within 1px in three
+engines, and thirty-one days about 5px. The horizontal row's offset in a
+pair reads the same `--bar-chart-index`.
+
+**Negatives split at zero.** `linearScale(domain, [100, 0])`, so a bar
+runs from zero to its value: a positive one stands on the zero line from
+below (`inset-block-end`), a negative one hangs from it
+(`inset-block-start`), each with its size in percent, so a bar's least
+1px (`min-block-size` under `[data-nonzero]`) also grows from zero. The
+data end takes `--radius-micro` on its two corners only, the top ones
+above zero and the bottom ones below, and the end at zero stays square.
+The zero line is the horizontal line at zero, in the boundary color where
+the domain crosses zero, the horizontal chart's rule; `LinesInPlaceStanding`
+holds every bar on it within 1px, left to right, right to left and narrow.
+
+**Figures standing up.** Off by default (`valueLabels` is `'none'`
+standing up and `'all'` lying down): the table, the readout and each
+bar's name carry every figure, and the method's rule is never a number on
+every point. `'all'` or a list of bands draws `span.bar-chart-value`
+outside the bar's data end with a 4px gap, above a positive bar and below
+a negative one, centred on its bar by the same centre and place, in ink,
+tabular, `--text-small`. Its box is placed in the chart's direction, so
+its figure is an inner `span.bar-chart-value-text` with `direction: ltr`
+and `unicode-bidi: isolate`, the numeral rule, since a logical inset
+follows the element's own direction (correction 24). Under 30rem of the
+chart's width `'all'` keeps only the first and the last band's figures
+(`[data-keep]`); the bands an app names always show.
+
+**Category labels standing up.** `div.bar-chart-categories` is a grid of
+`repeat(bands, minmax(0, 1fr))`, so each `span.bar-chart-band-label` is
+its band's width, centred, in slate, an axis's labels, and clamped at two
+lines with an ellipsis (`-webkit-line-clamp`, in all three engines), never
+rotated; under 30rem one line, and under 24rem only every third
+(`[data-third]`). The whole name is always in the readout, the bar's name
+and the table. `bands="time"` shows the first, the middle and the last
+band (`categoryTicks` names others), on one line, each on its band's
+centre and the first and the last kept inside the plot by `data-edge`, a
+line chart's x labels' rule. Lying down, a category is the row's name,
+ink, every one by default.
+
+**Two series.** Grouped bars hold one or two series, in the types: a
+third is a type error, and a stack takes more in its own layout. Without
+`color`, filled series take ink and then slate by their place among the
+filled series; `color` pins a series, so the consumer's month view draws
+Income in `gain` beside Spending in ink, and each keeps its color when the
+app shows it alone. Money out has no color of its own. A legend of swatch
+keys names both, and each bar's name adds its column header: "Aug Income
+$5,200.00".
+
+**The previous period** (spec 5.5, the owner's ruling 25). `look:
+'hatched'` draws a series as stripes of its color, 2px every 6px at 45
+degrees, Meter's hatch on `--bar-chart-color`, inside a 1px border of the
+color at full strength, with no fill. Without `color` it takes the first
+filled series' color, so October beside September is ink beside striped
+ink, and Income beside last period's Income is `gain` beside striped
+`gain`. Its amount (lying down) and its figure (standing up) are slate,
+its legend key and its readout swatch are the hatched swatch, and each
+bar's name says its period, so the stripes are never the only cue. It is
+drawn in the app's order, so the docs say to pass it second, where it
+stands after the current bar standing up and under it lying down
+(correction 25). A zero draws no border, a bar of no length. Measured as
+the browser composites, against Lifted: the border is the color itself,
+ink 17.84 and 17.42, `gain` 7.20 and 8.04, light then dark; the stripes,
+a third of the box, average ink 2.14 and 3.05 and `gain` 1.71 and 2.02, a
+texture and not an edge. A lighter fill would have to clear 3:1 against
+Lifted and against the solid bar: ink at 40%, 50% and 60% measures 2.57,
+3.45 and 4.76 against Lifted and 6.94, 5.17 and 3.74 against solid ink in
+light, and 3.81, 5.21 and 6.94 and 4.57, 3.34 and 2.51 in dark, so ink has
+a band; `gain` measures 1.93, 2.33 and 2.85 and 3.74, 3.09 and 2.52 in
+light and 2.36, 2.97 and 3.71 and 3.41, 2.71 and 2.17 in dark, and has
+none in either mode, which is why the previous period is striped
+(`contrast.test.js` recomputes each, recorded not gated; correction 22).
+In forced colors the current bars are solid `CanvasText` and the previous
+period `CanvasText` stripes on `canvas` in a `CanvasText` border, Meter's
+block, `Highlight` stripes and border for the active band's: solid
+against striped in every palette.
+
+**Keys standing up and in groups.** Left and Right move to the bar drawn
+beside, through a pair bar by bar and on to the next band's first,
+skipping bands with no value, mirrored in right to left by the nearest
+`dir` attribute at the key press; Up and Down are no move and are not
+prevented. Lying down, Up and Down step through a row's pair the same way
+and Left and Right are left alone. Home, End and the pages move by band,
+keeping the series where the band has one. Time bands start Tab at the
+newest band. The `Keys`, `KeysCompare` and `Mirrored` plays run in three
+engines.
+
+**Pointer and readout standing up.** The band under the pointer is read
+across the bars' box from the inline start in the handler, the nearest
+band with a bar when the one under it has none, and within it the bar
+under the pointer or the band's first; the other bands' bars step back to
+40%, as rows do. The readout is placed from known values in the bars'
+box: above the band's highest bar end when its lines fit
+(`placeReadout` with both ends of every bar of the band and the plot's
+height), else below the lowest, so it covers no bar of its band, a
+negative one's included; along the plot it is at the band's centre,
+aligned by quarter. `ReadoutStanding` holds it clear of the bar and within
+24px of it.
+
+**States standing up.** Loading draws a still band per category (four
+when none is given) of 60%, 85%, 45% and 70% repeating, from the bottom,
+in a bar's place and thickness, square at zero; empty and error draw
+their content over the bars' box at the plot's height, with the
+gridlines, their labels and the category labels kept.
+
+**Turning on its side.** The consumer's control swaps `orientation` with
+the categories; the group is the same element in both faces, so a focused
+bar that leaves parks focus on it and a layout effect, which now watches
+the orientation too, gives it to the new tab stop, the bar last active for
+the same categories. `TurnWhileFocused` holds that no element loses focus
+to nothing, in three engines.
+
 **Where the build departs from the plan.** The plan's spec corrections
 13 to 20 record them: the horizontal face drawn for any `orientation`
 until the vertical one lands, with a warning; the figure as the container
 and the gridlines' layer as its own class; the zero line's and the dimmed
 bar's measured contrast; the plays' engines; the combined size limit set
-by the rule; the intrinsic size of 0; and the review's fixes.
+by the rule; the intrinsic size of 0; and the review's fixes. Corrections
+21 to 28 record the vertical face's, the previous period's and LineChart's
+states': the labels' column, the figures' isolate, the series' order and
+colors, the measured mixes, and the sizes, 5.84 kB for `{ BarChart }`,
+over the spec's 5.5 kB budget, with a 6.5 kB limit by the rule.
 
 **Screen readers and devices.** Not yet verified (owner action 3): Tab
 onto one bar and the arrows bar by bar in VoiceOver and NVDA, each bar's
 name from its hidden cells in WebKit, the bars and the zero line in a
 Windows contrast theme, and the list with its names above its bars on a
-phone at 320px to 430px.
+phone at 320px to 430px; standing up, the bars in both orientations and
+in a comparison read with their period, the hatched previous period
+against the current bars in a contrast theme, and twelve monthly bars and
+grouped pairs on a phone.

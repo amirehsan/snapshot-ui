@@ -1,6 +1,7 @@
 /*
- * The three states a chart draws in its own space, and their strings: types only, shared by the charts. Private
- * to the package; each chart exports the strings' type as its own.
+ * The three states a chart draws in its own space, and their strings, shared by the charts: types and the
+ * English defaults, written once so a page with both charts carries one copy. Private to the package; each chart
+ * exports the strings' type as its own.
  */
 
 /** Which face a chart draws: its data, or a state in the data's place. */
@@ -15,3 +16,10 @@ export interface ChartStatusLabels {
   /** Drawn in the chart when `status` is 'error' and no `statusContent` is given: "The chart could not be loaded". */
   error: string;
 }
+
+/** The three strings in English, for a chart given no `statusLabels`. */
+export const DEFAULT_STATUS_LABELS: ChartStatusLabels = {
+  loading: 'Loading',
+  empty: 'Nothing to show for this period',
+  error: 'The chart could not be loaded',
+};

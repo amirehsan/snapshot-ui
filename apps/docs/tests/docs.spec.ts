@@ -3186,6 +3186,42 @@ test.describe('a date range picker without JavaScript', () => {
   });
 });
 
+test("the bar chart page's comparison draws the previous period hatched and names it", async ({ page }) => {
+  await visit(page, '/docs/charts/bar-chart');
+  const chart = page.getByRole('figure', {
+    name: 'Spending by category, October against September',
+    exact: true,
+  });
+  await expect(chart).toHaveCount(1);
+  await expect(chart).toHaveAttribute('data-orientation', 'vertical');
+  // The previous period takes the current period's ink, striped, and its key says so.
+  const hatched = chart.locator('.bar-chart-bar[data-look="hatched"]');
+  await expect(hatched).toHaveCount(5);
+  for (const bar of await hatched.all()) await expect(bar).toHaveAttribute('data-color', 'ink');
+  const stripes = await hatched
+    .first()
+    .evaluate((element) => [
+      getComputedStyle(element).backgroundImage,
+      getComputedStyle(element).borderTopWidth,
+    ]);
+  expect(stripes[0]).toContain('repeating-linear-gradient');
+  expect(stripes[1]).toBe('1px');
+  await expect(chart.locator('.bar-chart-legend-item[data-look="hatched"]')).toHaveText('September');
+  // Each bar's name says its period, from the table's cells, so the stripes are never the only cue.
+  const september = chart.getByRole('img', { name: 'Groceries September $598.30', exact: true });
+  await expect(september).toHaveCount(1);
+  await expect(september).toHaveAttribute('data-look', 'hatched');
+  // The keys step from this period's bar to the last one's in the same band, then on to the next band.
+  const first = chart.getByRole('img', { name: 'Groceries October $640.00', exact: true });
+  await expect(first).toHaveAttribute('tabindex', '0');
+  await first.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(september).toBeFocused();
+  await expect(chart.locator('.bar-chart-readout .bar-chart-readout-x')).toHaveText('Groceries');
+  await page.keyboard.press('ArrowRight');
+  await expect(chart.getByRole('img', { name: 'Dining October $312.45', exact: true })).toBeFocused();
+});
+
 test.describe('a line chart without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 

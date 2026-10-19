@@ -236,7 +236,7 @@ describe('BarChart', () => {
     // Shell has no September bar, so its row has one.
     expect(pair[2]).toHaveAccessibleName('Shell October $260.00');
     expect(rowsOf(two).style.getPropertyValue('--bar-chart-group')).toBe('2');
-    expect(pair[1]?.style.getPropertyValue('--bar-chart-place')).toBe('1');
+    expect(pair[1]?.style.getPropertyValue('--bar-chart-index')).toBe('1');
     // Two series have a legend that names both, each key in its series' color.
     const items = [...two.querySelectorAll('.bar-chart-legend-item')];
     expect(items.map((item) => item.textContent)).toEqual(['October', 'September']);
@@ -622,11 +622,13 @@ describe('BarChart', () => {
     expect(container.querySelector('.bar-chart-ticks')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('warns once when asked for vertical bars, which this version draws lying down', () => {
+  it('stands its bars up by default, with no warning', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { container } = render(<BarChart aria-label={NAME} categories={MERCHANTS} series={[OCTOBER]} />);
-    expect(container.querySelector('figure')).toHaveAttribute('data-orientation', 'horizontal');
-    expect(warn).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('figure')).toHaveAttribute('data-orientation', 'vertical');
+    expect(container.querySelector('.bar-chart-plot')).not.toBeNull();
+    expect(container.querySelector('.bar-chart-rows')).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
   });
 
   const STATES = [

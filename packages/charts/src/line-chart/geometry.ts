@@ -5,8 +5,10 @@
 import { valueDomain } from '../foundations/domain';
 import type { LineSeries } from './LineChart';
 
-// The moves live with the keys every chart shares; re-exported so the line chart's geometry still reads whole.
+// The moves live with the keys every chart shares, and the default ticks with the bar chart's time bands;
+// re-exported so the line chart's geometry still reads whole.
 export { moveFrom, type Move } from '../foundations/keys';
+export { defaultTicks } from '../foundations/ticks';
 
 /** Where position `index` of `count` sits across the plot, 0 to 100, oldest at 0; one position sits at 50. */
 export function xPosition(index: number, count: number): number {
@@ -47,12 +49,6 @@ export function nearestWithData(
     if (nearest === undefined || Math.abs(index - target) < Math.abs(nearest - target)) nearest = index;
   }
   return nearest;
-}
-
-/** The first, the middle (Math.floor((count - 1) / 2)) and the last index, without repeats. */
-export function defaultTicks(count: number): number[] {
-  if (count < 1) return [];
-  return [...new Set([0, Math.floor((count - 1) / 2), count - 1])];
 }
 
 /** What one series says at a position: which series, its label and its value, both the app's strings. */

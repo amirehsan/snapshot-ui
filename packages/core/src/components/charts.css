@@ -550,7 +550,7 @@
       calc((2rem - (var(--bar-chart-group, 1) - 1) * 2px) / var(--bar-chart-group, 1))
     );
     --bar-chart-offset: calc(
-      (var(--bar-chart-place, 0) - (var(--bar-chart-group, 1) - 1) / 2) * (var(--bar-chart-thickness) + 2px)
+      (var(--bar-chart-index, 0) - (var(--bar-chart-group, 1) - 1) / 2) * (var(--bar-chart-thickness) + 2px)
     );
     position: absolute;
     inset-block-start: 50%;
@@ -574,6 +574,141 @@
     min-inline-size: 1px;
   }
 
+  /*
+   * BarChart, vertical: a plot of equal bands from the inline start, each band's bars standing on the zero line
+   * or hanging from it. The plot is a grid: the gridlines' labels in a column at the start as wide as the widest
+   * label, which the grid finds from the labels themselves, the bars' box beside it at the height the render
+   * writes, and the category labels under the bars' box. The gridlines run under both columns, so each label
+   * sits above its line, a line chart's rule, and no bar ever crosses a label. The bars, the gridlines, the
+   * labels, the value labels and the readout share one scale, the bars' box, with any room outside it.
+   */
+  .bar-chart-plot {
+    position: relative;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    row-gap: var(--spacing-part);
+    min-width: 0;
+    direction: var(--chart-direction, ltr);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Room by line height for the labels outside the bars' ends, and for the top gridline's label. */
+  .bar-chart-plot[data-room-start] {
+    --bar-chart-room-start: 1.25rem;
+  }
+
+  .bar-chart-plot[data-room-end] {
+    --bar-chart-room-end: 1.25rem;
+  }
+
+  .bar-chart-bars {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    margin-block: var(--bar-chart-room-start, 0) var(--bar-chart-room-end, 0);
+  }
+
+  /*
+   * The gridlines under the labels' column and the bars' box, at the bars' height. An absolutely placed grid
+   * child reaches the grid's padding edge on a side whose line is auto, so both ends are given.
+   */
+  .bar-chart-plot > .bar-chart-gridlines {
+    grid-column: 1 / span 2;
+    grid-row: 1 / span 1;
+    inset-block: var(--bar-chart-room-start, 0) var(--bar-chart-room-end, 0);
+  }
+
+  /*
+   * The gridlines' labels, a line chart's y labels: each above its line at the start, stacked in one cell and
+   * moved down by its line's place, a percentage of the cell, which is the bars' height.
+   */
+  .bar-chart-y-labels {
+    display: grid;
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-rows: minmax(0, 1fr);
+    padding-block: var(--bar-chart-room-start, 0) var(--bar-chart-room-end, 0);
+    padding-inline-end: var(--spacing-part);
+    pointer-events: none;
+  }
+
+  .bar-chart-y-labels > span {
+    position: relative;
+    grid-area: 1 / 1;
+    align-self: start;
+  }
+
+  .bar-chart-plot > .bar-chart-categories {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  /* A band holds its bars and takes no box of its own, so they are placed in the bars' box. */
+  .bar-chart-band {
+    display: contents;
+  }
+
+  /*
+   * A vertical bar, its value label and a loading band: at most 24px thick and 60% of the band, shared by a
+   * group with 2px between its bars, the group centred on its band. 100% resolves where it is used, against the
+   * bars' box, and the render writes the band's centre and the bar's place in its group.
+   */
+  .bar-chart[data-orientation='vertical'] :is(.bar-chart-bar, .bar-chart-value, .bar-chart-skeleton) {
+    --bar-chart-thickness: min(
+      1.5rem,
+      calc(
+        (100% / var(--bar-chart-bands, 1) * 0.6 - (var(--bar-chart-group, 1) - 1) * 2px) /
+          var(--bar-chart-group, 1)
+      )
+    );
+    --bar-chart-start: calc(
+      var(--bar-chart-centre, 50%) -
+        (var(--bar-chart-group, 1) * var(--bar-chart-thickness) + (var(--bar-chart-group, 1) - 1) * 2px) / 2 +
+        var(--bar-chart-index, 0) * (var(--bar-chart-thickness) + 2px)
+    );
+    position: absolute;
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar {
+    inline-size: var(--bar-chart-thickness);
+    inset-inline-start: var(--bar-chart-start);
+  }
+
+  /* The data end at the top above zero and at the bottom below it; the end at zero is square. */
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-sign='positive'] {
+    border-start-start-radius: var(--radius-micro);
+    border-start-end-radius: var(--radius-micro);
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-sign='negative'] {
+    border-end-start-radius: var(--radius-micro);
+    border-end-end-radius: var(--radius-micro);
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-nonzero] {
+    min-block-size: 1px;
+  }
+
+  /*
+   * The previous period: the series' color in Meter's stripes, 2px every 6px at 45 degrees, inside a 1px border
+   * of the color at full strength, which draws the bar's extent. The stripes keep their angle in right to left,
+   * a texture and not an arrow.
+   */
+  .bar-chart-bar[data-look='hatched'] {
+    border: 1px solid var(--bar-chart-color, var(--color-ink));
+    background-color: transparent;
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--bar-chart-color, var(--color-ink)) 0 2px,
+      transparent 2px 6px
+    );
+  }
+
+  /* A zero is a bar of no length, whatever its look. */
+  .bar-chart-bar[data-sign='zero'] {
+    border-width: 0;
+  }
+
   /* The token ring, which follows the bar's corners at its offset: concentric by construction. */
   .bar-chart-bar:focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
@@ -581,14 +716,102 @@
   }
 
   /* The group holds focus for a status with no bars, never as a tab stop, and shows it with the same ring. */
-  .bar-chart-rows:focus-visible {
+  :is(.bar-chart-rows, .bar-chart-plot):focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
 
-  /* Under a pointer only, the other rows step back to 40%, with no new shape and no motion. */
-  .bar-chart-rows[data-pointer] .bar-chart-row:not([data-active]) .bar-chart-bar {
+  /* Under a pointer only, the other rows or bands step back to 40%, with no new shape and no motion. */
+  :is(.bar-chart-rows, .bar-chart-plot)[data-pointer]
+    :is(.bar-chart-row, .bar-chart-band):not([data-active])
+    .bar-chart-bar {
     opacity: 0.4;
+  }
+
+  /*
+   * A vertical bar's figure, outside its data end with a 4px gap: above a positive bar, below a negative one,
+   * centred on the bar. Its box is placed in the chart's direction and its figure reads left to right inside.
+   */
+  .bar-chart-values {
+    display: contents;
+  }
+
+  .bar-chart-value {
+    position: absolute;
+    inset-inline-start: calc(var(--bar-chart-start) + var(--bar-chart-thickness) / 2);
+    margin-block-end: 0.25rem;
+    translate: calc(var(--chart-flip, 1) * -50%) 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--color-ink);
+    pointer-events: none;
+  }
+
+  .bar-chart-value[data-sign='negative'] {
+    margin-block: 0.25rem 0;
+  }
+
+  .bar-chart-value-text {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /* The previous period's figures are slate, the current period's ink: never a chart color. */
+  :is(.bar-chart-amount, .bar-chart-value)[data-look='hatched'] {
+    color: var(--color-slate);
+  }
+
+  /*
+   * The category labels under the plot: a grid of one cell per band, so each label is its band's width, centred,
+   * on two lines at most with an ellipsis, never rotated. Time bands show their ticks on one line, each on its
+   * band's centre, the first and the last kept inside the plot.
+   */
+  .bar-chart-categories {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--bar-chart-bands, 1), minmax(0, 1fr));
+    min-block-size: calc(var(--text-small) * var(--text-small--line-height));
+    direction: var(--chart-direction, ltr);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+  }
+
+  .bar-chart-band-label {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    padding-inline: 0.125rem;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .bar-chart-categories[data-bands='time'] {
+    display: block;
+  }
+
+  .bar-chart-categories[data-bands='time'] .bar-chart-band-label {
+    position: absolute;
+    inset-block-start: 0;
+    display: block;
+    padding-inline: 0;
+    overflow: visible;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    translate: calc(var(--chart-flip, 1) * -50%) 0;
+  }
+
+  .bar-chart-categories[data-bands='time'] .bar-chart-band-label[data-edge='start'] {
+    translate: none;
+  }
+
+  .bar-chart-categories[data-bands='time'] .bar-chart-band-label[data-edge='end'] {
+    translate: calc(var(--chart-flip, 1) * -100%) 0;
   }
 
   /* The value labels under the last row, each centred on its gridline and kept inside the track at its ends. */
@@ -638,6 +861,7 @@
   .bar-chart-key {
     flex: none;
     display: inline-block;
+    box-sizing: border-box;
     width: 0.75rem;
     height: 0.75rem;
     border-radius: var(--radius-micro);
@@ -646,6 +870,17 @@
 
   .bar-chart-readout-item .bar-chart-key {
     margin-inline-end: 0.375rem;
+  }
+
+  /* A previous period's key is Meter's hatched swatch, in the series' color. */
+  :is(.bar-chart-legend-item, .bar-chart-readout-item)[data-look='hatched'] .bar-chart-key {
+    border: 1px solid var(--bar-chart-color, var(--color-ink));
+    background-color: transparent;
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--bar-chart-color, var(--color-ink)) 0 2px,
+      transparent 2px 6px
+    );
   }
 
   /* Loading: still bars from the start, square at zero, in Skeleton's fill and pulse. */
@@ -659,6 +894,17 @@
     border-end-start-radius: 0;
   }
 
+  /* Loading, standing up: a still band where each band's bar will be, from the bottom, square there. */
+  .bar-chart-bars > .bar-chart-skeleton {
+    --bar-chart-group: 1;
+    --bar-chart-index: 0;
+    inset-block-end: 0;
+    inline-size: var(--bar-chart-thickness);
+    inset-inline-start: var(--bar-chart-start);
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+
   /* Empty and error: the rows' place, as tall as the rows it expects, with the gridlines still behind it. */
   .bar-chart-state {
     position: relative;
@@ -668,7 +914,32 @@
     min-block-size: calc(var(--bar-chart-rows, 4) * var(--size-target));
   }
 
-  .bar-chart-message {
+  /* Standing up, the plot's place at its height. */
+  .bar-chart-bars > .bar-chart-state {
+    position: absolute;
+    inset: 0;
+    min-block-size: 0;
+  }
+
+  /*
+   * LineChart's states, in the plot's own space at its height: a still placeholder in Skeleton's fill and pulse
+   * while loading, under the gridlines' labels, and the app's content or a sentence when empty or failed.
+   */
+  .line-chart-plot > .line-chart-skeleton {
+    position: absolute;
+    inset: 0;
+    inline-size: auto;
+    block-size: auto;
+  }
+
+  .line-chart-state {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  :is(.line-chart-message, .bar-chart-message) {
     max-inline-size: 32rem;
     margin: 0;
     padding: var(--spacing-part);
@@ -681,7 +952,7 @@
   }
 
   /* A load that failed is a failure, the one meaning the error color has; the words say it too. */
-  .bar-chart-message[data-tone='error'] {
+  :is(.line-chart-message, .bar-chart-message)[data-tone='error'] {
     color: var(--color-error);
   }
 
@@ -726,6 +997,25 @@
     .bar-chart-readout[data-place] {
       grid-column: 1 / span 1;
       grid-row: var(--bar-chart-row-narrow, 2) / span 1;
+    }
+
+    /* Standing up: every third category label shows; time ticks stay first, middle and last. */
+    .bar-chart-categories[data-bands='category'] .bar-chart-band-label:not([data-third]) {
+      visibility: hidden;
+    }
+  }
+
+  /*
+   * Under 30rem of the chart's own width, standing up: category labels drop to one line with an ellipsis, and
+   * the value labels of 'all' keep only the first and the last band's, besides the bands an app names.
+   */
+  @container bar-chart (inline-size < 30rem) {
+    .bar-chart-band-label {
+      -webkit-line-clamp: 1;
+    }
+
+    .bar-chart-value:not([data-keep]) {
+      display: none;
     }
   }
 
@@ -789,12 +1079,29 @@
       background-color: CanvasText;
     }
 
-    .bar-chart-row[data-active] .bar-chart-bar {
+    :is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar {
       background-color: Highlight;
     }
 
+    /*
+     * The previous period stays striped against the solid current bar, Meter's block: CanvasText stripes on
+     * canvas in a CanvasText border, its swatches with it, and Highlight for the active band's.
+     */
+    .bar-chart-bar[data-look='hatched'],
+    :is(.bar-chart-legend-item, .bar-chart-readout-item)[data-look='hatched'] .bar-chart-key {
+      border-color: CanvasText;
+      background-color: canvas;
+      background-image: repeating-linear-gradient(45deg, CanvasText 0 2px, canvas 2px 6px);
+    }
+
+    :is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar[data-look='hatched'] {
+      border-color: Highlight;
+      background-color: canvas;
+      background-image: repeating-linear-gradient(45deg, Highlight 0 2px, canvas 2px 6px);
+    }
+
     .bar-chart-bar:focus-visible,
-    .bar-chart-rows:focus-visible {
+    :is(.bar-chart-rows, .bar-chart-plot):focus-visible {
       outline-color: Highlight;
     }
 

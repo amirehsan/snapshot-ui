@@ -2,7 +2,9 @@
  * The bar chart's geometry and its moves: pure, with no React and no DOM, so the server draws every bar from the
  * props alone and the keys are tested without a browser. Private to the package.
  */
+import type { ChartColor } from '../foundations/color';
 import { moveFrom, type Move } from '../foundations/keys';
+import { defaultTicks } from '../foundations/ticks';
 
 /** A coordinate far past the track, for a value far outside the domain: drawn off the track, never at an infinity. */
 const FAR = 1e6;
@@ -25,6 +27,36 @@ export function barExtent(value: number, scale: (value: number) => number): { st
 /** Band `index` of `count` is centred at (index + 0.5) / count of the category axis, in percent. */
 export function bandCentre(index: number, count: number): number {
   return round(((index + 0.5) / count) * 100);
+}
+
+/**
+ * The bands whose labels show, in order and once each: the ones asked for that are bands, else every one for
+ * category bands and the first, the middle and the last for time bands.
+ */
+export function bandTicks(count: number, bands: 'category' | 'time', given?: readonly number[]): number[] {
+  if (given === undefined)
+    return bands === 'time' ? defaultTicks(count) : Array.from({ length: count }, (_, at) => at);
+  return [...new Set(given)]
+    .filter((index) => Number.isInteger(index) && index >= 0 && index < count)
+    .sort((a, b) => a - b);
+}
+
+/**
+ * Each series' color, by meaning and then by place: a pinned `color` stays; filled series take ink, then slate;
+ * a hatched series, the previous period, takes the first filled series' color, so it never reads as a second
+ * category.
+ */
+export function seriesColors(
+  series: readonly { color?: ChartColor; look?: 'fill' | 'hatched' }[],
+): ChartColor[] {
+  let filled = 0;
+  const byPlace = series.map((line) => {
+    if (line.look === 'hatched') return null;
+    const place = filled++;
+    return line.color ?? (place === 0 ? 'ink' : 'slate');
+  });
+  const first = byPlace.find((color) => color !== null) ?? 'ink';
+  return series.map((line, at) => byPlace[at] ?? line.color ?? first);
 }
 
 /** Whether a value draws a bar of some length, which is then at least 1px. A zero is a bar of none. */

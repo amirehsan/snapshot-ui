@@ -46,11 +46,52 @@ A row can net below zero, such as a category whose refunds outweigh its spending
 
 <Section>
 
+## Months
+
+Bars stand up by default: one band per month, oldest at the start, each bar from the zero line. A bad month hangs below the line by itself, since the value axis always includes zero.
+
+- Time bands: `bands="time"` labels the first, middle and last month, on one line, and Tab lands on the newest month first. `categoryTicks` names the months to label instead.
+- Thickness: a bar takes 60% of its band at most and is never thicker than 24px, so twelve months in a phone's card are 12px each and thirty-one days about 5px, with nothing measured.
+- Value labels: off by default, since the table, the readout and each bar's name carry every figure. `valueLabels` with band indexes labels the months the story is about, outside each bar's end: above a bar above zero, below one below it. Under 30rem `valueLabels="all"` keeps only the first and the last band's.
+- Gridline labels: `valueTicks` labels each line at the start of the plot, in a column of its own as wide as the widest label, so no bar ever covers one.
+
+<Preview name="bar-chart-months" />
+
+</Section>
+
+<Section>
+
+## Two series
+
+Two series sit side by side in each band, 2px apart, with a legend that names both. Without `color` the first is ink and the second slate, a story and its context. The month view pins its colors by meaning instead: Income is `color: 'gain'`, money that arrived, and Spending is `color: 'ink'`. Spending has no color of its own, red or otherwise, since nothing went wrong. Pinned colors also keep each series' color when your control shows one of them alone.
+
+The types take two grouped series at most, so a third is a type error rather than a crowded band.
+
+<Preview name="bar-chart-income-spending" />
+
+</Section>
+
+<Section>
+
+## Against the previous period
+
+Give the previous period's series `look: 'hatched'` and its period's name as its `label`. Without a `color` it takes the first series' color, drawn as stripes inside a border of that color at full strength, and its amounts are slate: the same thing, last time, never a second category. Each bar's name says its period, so the stripes are never the only cue, and the keys step from this period's bar to the last one's in each band. Put the previous period second, so it stands after the current bar, or under it when the bars lie down.
+
+Why stripes and not a lighter shade: a lighter fill must clear 3:1 against the card to be seen and stay apart from the solid bar beside it. Ink has a band that does (half strength measures 3.45 against the card and 5.17 against solid ink in light), but `gain` has none in either mode: at 50% it is 2.33 and 3.09 in light. The hatched bar's border is the color at full strength, 17.84 for ink and 7.20 for `gain` in light, and its stripes are a texture. In forced colors the previous period stays striped against the solid current bars.
+
+<Preview name="bar-chart-compare" />
+
+</Section>
+
+<Section>
+
 ## Long names
 
 A long name wraps in the label column, which takes the longest name's width up to 40% of the chart. Names are never cut short or rotated. Set `--bar-chart-label-size` on the chart to give the column another share.
 
 When the chart is narrower than 24rem, each name moves to a line of its own above its bar, and the bar and its amount share the line below. The chart reads its own width, not the viewport's, so it behaves the same in a narrow card on a wide screen.
+
+Standing up, a category label is as wide as its band and wraps to two lines, then ends with an ellipsis; under 30rem it keeps to one line, and under 24rem every third label shows. The whole name is always in the readout, the bar's name and the table. Names longer than about twelve characters, or more than eight categories, read better lying down.
 
 The chart is a size container, so it takes its width from what holds it and none from its content: a block gives it the whole line, and in a flex row its item needs a basis, such as `flex: 1 1 20rem`, or a grid column a size. Given none, it is no wider than nothing.
 
@@ -120,7 +161,7 @@ import { BarChart } from '@snapshot-ui/charts';
 
 A BarChart accepts every HTML attribute, applied to its root `figure`.
 
-<PropsTable label="BarChart props" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="Pick<BarChartProps, 'series' | 'layout' | 'categories' | 'orientation' | 'bands' | 'categoryTicks' | 'valueTicks' | 'valueDomain' | 'valueLabels' | 'totals' | 'status' | 'statusContent' | 'hasTexture' | 'labels' | 'statusLabels' | 'aria-label' | 'aria-labelledby' | 'className'>" />
+<PropsTable label="BarChart props" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="Pick<BarChartProps, 'series' | 'layout' | 'categories' | 'orientation' | 'bands' | 'categoryTicks' | 'valueTicks' | 'valueDomain' | 'valueLabels' | 'totals' | 'status' | 'statusContent' | 'hasTexture' | 'labels' | 'statusLabels' | 'height' | 'aria-label' | 'aria-labelledby' | 'className'>" />
 
 <PropsTable label="BarSeries" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="BarSeries" />
 
@@ -136,14 +177,15 @@ A BarChart accepts every HTML attribute, applied to its root `figure`.
 
 The chart is a `figure` named by `aria-label` or `aria-labelledby`, which the types require. Its bars are a group named like the figure, with the role description "chart" (`labels.roleDescription`), and the table is the full alternative.
 
-- One stop: the chart is a single tab stop, the active bar, so eleven rows are never eleven stops. It becomes focusable once scripts run, and Tab comes back to the bar last active.
-- Names: each bar is an image named by its table cells, the row's category and its value, and its series when there are two. A screen reader says it on every move, with no live region, and with your strings only.
-- Readout: it sits above the active row, or below it near the top, so it never covers the bar. It repeats the bar's name, so it is hidden from assistive technology.
-- Pointer: the whole row is the target, not only the bar, and the other rows step back to 40% while a pointer holds one. A pointer never moves focus.
+- One stop: the chart is a single tab stop, the active bar, so eleven rows are never eleven stops. It becomes focusable once scripts run, and Tab comes back to the bar last active: first the newest band for time bands, the first band otherwise.
+- Names: each bar is an image named by its table cells, the band's category and its value, and its series when there are two, such as "Groceries September $598.30". A screen reader says it on every move, with no live region, and with your strings only.
+- Keys: the arrows move to the bar drawn in their direction, through a pair bar by bar. Standing up, Left and Right move and follow the page's direction; lying down, Up and Down do. The other pair is left to the page.
+- Readout: standing up it sits above the band's highest bar when it fits and below its lowest otherwise; lying down, above or below the active row. It never covers a bar of its band, and it repeats the bar's name, so it is hidden from assistive technology.
+- Pointer: the whole band or row is the target, not only the bar, and the others step back to 40% while a pointer holds one. A pointer never moves focus.
 - Table: the Show as table toggle under the chart swaps in a table of the same strings, for everyone who would rather read the numbers. With scripts off it is shown under the chart.
-- Forced colors: the bars take the reader's text color and the active row Highlight; the zero line between the signs is the text color, and the gridlines GrayText.
+- Forced colors: the bars take the reader's text color and the active band Highlight, and a previous period stays striped against them; the zero line between the signs is the text color, and the gridlines GrayText.
 
-<Keys rows={[['Tab', 'Moves to the active bar, one stop for the whole chart, then to the table toggle.'], ['Up Down', 'The bar above or below, skipping rows with no value.'], ['Home End', 'The first or last row with a value.'], ['PageUp PageDown', 'Seven rows up or down.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter Space', 'On the toggle, swaps the chart and the table.']]} />
+<Keys rows={[['Tab', 'Moves to the active bar, one stop for the whole chart, then to the table toggle.'], ['Left Right', 'Standing up: the bar beside, through a pair bar by bar, then the next band, skipping bands with no value. Mirrored in right to left.'], ['Up Down', 'Lying down: the bar above or below, through a pair bar by bar, then the next row, skipping rows with no value.'], ['Home End', 'The first or last band with a value, in the same series where it has one.'], ['PageUp PageDown', 'Seven bands back or forward.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter Space', 'On the toggle, swaps the chart and the table.']]} />
 
 </Section>
 
@@ -153,6 +195,6 @@ The chart is a `figure` named by `aria-label` or `aria-labelledby`, which the ty
 
 What keeps bar charts in the system.
 
-<Rules dos={['Sort a ranked list by amount, and put Other last.', 'Keep every amount in your own format, the one the rest of the page uses.', 'Lay the bars down when the names are long or there are more than eight.']} donts={['Never draw a direction in red or green. A refund below zero is ink, like the rest.', 'Never pass a domain without zero. A bar that starts anywhere else misstates its value.', 'Never rotate a label. Let it wrap, or lay the chart down.']} />
+<Rules dos={['Sort a ranked list by amount, and put Other last.', 'Keep every amount in your own format, the one the rest of the page uses.', 'Lay the bars down when the names are long or there are more than eight.', "Draw the previous period hatched in the current series' color, named by its period."]} donts={['Never draw a direction in red or green. A refund below zero is ink, like the rest.', 'Never pass a domain without zero. A bar that starts anywhere else misstates its value.', 'Never rotate a label. Let it wrap, or lay the chart down.', 'Never give money out a color of its own. Spending is ink; only money that arrived is gain.']} />
 
 </Section>

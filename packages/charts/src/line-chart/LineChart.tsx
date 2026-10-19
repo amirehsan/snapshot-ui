@@ -9,6 +9,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
   type ReactElement,
+  type ReactNode,
   type Ref,
 } from 'react';
 import { ChartLegend } from '../foundations/ChartLegend';
@@ -19,6 +20,7 @@ import { chartName } from '../foundations/naming';
 import { areaPath, linePath, type PlotPoint } from '../foundations/path';
 import { placeReadout, READOUT_GAP, readoutAlign } from '../foundations/readout';
 import { linearScale } from '../foundations/scale';
+import { DEFAULT_STATUS_LABELS, type ChartStatus, type ChartStatusLabels } from '../foundations/status';
 import { useChartActive, type ChartSource } from '../foundations/useChartActive';
 import type { AriaName } from '../utils/accessible-name';
 import { cx } from '../utils/cx';
@@ -76,6 +78,12 @@ export type LineChartProps = Omit<
     labels?: LineChartLabels;
     /** Height of the plot in px. @default 240 */
     height?: number;
+    /** Loading, empty or failed, drawn in the plot's own space at its height. @default 'ready' */
+    status?: ChartStatus;
+    /** Drawn in the plot's place for 'empty' and 'error', such as an EmptyState with a Retry button. */
+    statusContent?: ReactNode;
+    /** The three states' strings, apart from `labels`, so the four `labels` stay as they were. @default { loading: 'Loading', empty: 'Nothing to show for this period', error: 'The chart could not be loaded' } */
+    statusLabels?: ChartStatusLabels;
     ref?: Ref<HTMLElement>;
   };
 
@@ -118,6 +126,9 @@ export function LineChart({
   hasArea = false,
   labels = DEFAULT_LABELS,
   height = 240,
+  status = 'ready',
+  statusContent,
+  statusLabels = DEFAULT_STATUS_LABELS,
   className,
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
@@ -127,6 +138,9 @@ export function LineChart({
   const plotRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<'chart' | 'table'>('chart');
   const [announced, setAnnounced] = useState<number | null>(null);
+  // A state draws in the plot's own space: no line, no legend, no toggle, no keys. The ready face is as it was.
+  const isReady = status === 'ready';
+  const shownView = isReady ? view : 'chart';
 
   const count = xLabels.length;
   // The series as drawn: points past the x labels are dropped, and a value that is not a finite number is a
@@ -144,8 +158,8 @@ export function LineChart({
       point ? { x: xPosition(index, count), y: yOf(point.value) } : null,
     ),
   );
-  const lines = plotted.map((points) => linePath(points));
-  const area = hasArea && plotted[0] ? areaPath(plotted[0], 100) : '';
+  const lines = isReady ? plotted.map((points) => linePath(points)) : [];
+  const area = isReady && hasArea && plotted[0] ? areaPath(plotted[0], 100) : '';
   const [low, high] = [Math.min(...domain), Math.max(...domain)];
   const ticks = (yTicks ?? []).filter(({ value }) => Number.isFinite(value) && value >= low && value <= high);
   const xTicksShown = [...new Set(xTicks ?? defaultTicks(count))].filter(
@@ -167,7 +181,7 @@ export function LineChart({
   // focus lands on the newest day with data.
   const {
     active,
-    current,
+    current: held,
     source,
     isReadoutHidden,
     isInteractive,
@@ -180,6 +194,15 @@ export function LineChart({
     isAvailable: (index) => withData.includes(index),
     within: plotRef,
   });
+  // A state shows no position, and lets go of the one active and announced before it, so the ready face comes
+  // back with none and says nothing stale.
+  const current = isReady ? held : null;
+  const [drawnStatus, setDrawnStatus] = useState(status);
+  if (drawnStatus !== status) {
+    setDrawnStatus(status);
+    setAnnounced(null);
+    clear();
+  }
 
   const activate = (index: number, from: ChartSource): void => {
     // A pointer's position is not announced, so the region lets go of the last one: a key that lands back on
@@ -284,10 +307,13 @@ export function LineChart({
       aria-label={label}
       aria-labelledby={labelledBy}
       className={cx('line-chart', className)}
-      data-view={view}
+      data-view={shownView}
+      // Written only for a state, so the ready figure's markup is what it was before the states.
+      data-status={isReady ? undefined : status}
+      aria-busy={status === 'loading' ? true : undefined}
     >
-      <div className="line-chart-chart" hidden={view === 'table'}>
-        {drawn.length > 1 ? (
+      <div className="line-chart-chart" hidden={shownView === 'table'}>
+        {isReady && drawn.length > 1 ? (
           <ChartLegend
             block="line-chart"
             items={drawn.map((line, at) => ({ label: line.label, series: at + 1 }))}
@@ -301,18 +327,18 @@ export function LineChart({
           aria-roledescription={labels.roleDescription}
           {...name.stop}
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the same one tab stop: the rule reports the attribute's line
-          tabIndex={isInteractive ? 0 : undefined}
+          tabIndex={isInteractive ? (isReady ? 0 : -1) : undefined}
           data-has-y-labels={ticks.length > 0 ? '' : undefined}
           data-active={current === null ? undefined : ''}
           style={{ blockSize: height }}
-          onKeyDown={onKeyDown}
+          onKeyDown={isReady ? onKeyDown : undefined}
           onFocus={() => {
-            onFocus();
+            if (isReady) onFocus();
           }}
           onBlur={onBlur}
-          onPointerMove={onPointerMove}
-          onPointerLeave={onPointerLeave}
-          onPointerDown={onPointerDown}
+          onPointerMove={isReady ? onPointerMove : undefined}
+          onPointerLeave={isReady ? onPointerLeave : undefined}
+          onPointerDown={isReady ? onPointerDown : undefined}
         >
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
             {ticks.map((tick, at) => (
@@ -341,6 +367,19 @@ export function LineChart({
                 d === '' ? null : <path key={at} className="line-chart-line" data-series={at + 1} d={d} />,
               )}
           </svg>
+          {/* A state in the plot's space, under the gridlines' labels: a still placeholder while loading, the
+              app's content or a sentence when empty or failed. Nothing in the ready face. */}
+          {status === 'loading' ? (
+            <span className="skeleton line-chart-skeleton" aria-hidden="true" />
+          ) : isReady ? null : (
+            <div className="line-chart-state">
+              {statusContent ?? (
+                <p className="line-chart-message" data-tone={status === 'error' ? 'error' : undefined}>
+                  {status === 'error' ? statusLabels.error : statusLabels.empty}
+                </p>
+              )}
+            </div>
+          )}
           <div className="line-chart-overlay" aria-hidden="true">
             {ticks.map((tick, at) => (
               <span key={at} className="line-chart-y-label" style={{ top: percent(yOf(tick.value)) }}>
@@ -385,8 +424,15 @@ export function LineChart({
           {/* Each part is an element of its own, read as a line of its own, so no punctuation of the library's
               comes between the app's words. With `labels.roleDescription` given too, a Persian page hears no
               English from the chart. */}
+          {/* The same region says a state once, in the page from the first render so the word is heard. */}
           <span className="line-chart-live" aria-live="polite" aria-atomic="true">
-            {announced === null ? null : (
+            {!isReady ? (
+              isInteractive && status === 'loading' ? (
+                statusLabels.loading
+              ) : isInteractive && status === 'error' ? (
+                statusLabels.error
+              ) : null
+            ) : announced === null ? null : (
               <>
                 <span className="line-chart-live-part">{xLabels[announced]}</span>
                 {spoken.map((reading) => (
@@ -413,18 +459,22 @@ export function LineChart({
           ))}
         </div>
       </div>
-      {/* The table of the same strings, its toggle, and with scripts off a shown copy that carries no ids. */}
-      <ChartTable
-        block="line-chart"
-        columns={drawn.map((line) => line.label)}
-        rows={xLabels}
-        cell={(row, column) => drawn[column]?.points[row]?.valueLabel}
-        id={(row, column) => (row < 0 ? headerId(column) : undefined)}
-        name={name}
-        view={view}
-        labels={labels}
-        onToggle={onToggle}
-      />
+      {/* The table of the same strings, its toggle, and with scripts off a shown copy that carries no ids. A
+          state has no toggle, and loading no table. */}
+      {status === 'loading' ? null : (
+        <ChartTable
+          block="line-chart"
+          columns={drawn.map((line) => line.label)}
+          rows={xLabels}
+          cell={(row, column) => drawn[column]?.points[row]?.valueLabel}
+          id={(row, column) => (row < 0 ? headerId(column) : undefined)}
+          name={name}
+          view={shownView}
+          labels={labels}
+          onToggle={onToggle}
+          hasToggle={isReady}
+        />
+      )}
     </figure>
   );
 }

@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { linearScale } from '../foundations/scale';
-import { bandCentre, barExtent, barMark, firstStop, moveBar, nonzero, type BarStop } from './geometry';
+import {
+  bandCentre,
+  bandTicks,
+  barExtent,
+  barMark,
+  firstStop,
+  moveBar,
+  nonzero,
+  seriesColors,
+  type BarStop,
+} from './geometry';
 
 /** A horizontal track's scale: the domain onto 0 to 100 from the inline start. */
 const track = (domain: readonly [number, number]): ((value: number) => number) =>
@@ -34,6 +44,62 @@ describe('barExtent', () => {
     const { start, size } = barExtent(1e300, track([0, 100]));
     expect(start).toBe(0);
     expect(size).toBe(1e6);
+  });
+});
+
+describe('barExtent, vertical', () => {
+  /** A vertical plot's scale: the domain onto 100 at the bottom to 0 at the top. */
+  const plot = (domain: readonly [number, number]): ((value: number) => number) =>
+    linearScale(domain, [100, 0]);
+
+  it.each([
+    // [domain, value, start from the top, size]
+    [[0, 100], 40, 60, 40],
+    [[0, 100], 0, 100, 0],
+    // Zero sits 75% down [-50, 150]: a positive bar ends there from above, a negative one starts there.
+    [[-50, 150], 100, 25, 50],
+    [[-50, 150], -50, 75, 25],
+    [[-50, 150], 0, 75, 0],
+  ] as const)('places %j %d from zero: top %d, size %d', (domain, value, start, size) => {
+    expect(barExtent(value, plot(domain))).toEqual({ start, size });
+  });
+});
+
+describe('bandTicks', () => {
+  it('shows every category band and the first, middle and last time band by default', () => {
+    expect(bandTicks(5, 'category')).toEqual([0, 1, 2, 3, 4]);
+    expect(bandTicks(31, 'time')).toEqual([0, 15, 30]);
+    expect(bandTicks(1, 'time')).toEqual([0]);
+    expect(bandTicks(0, 'category')).toEqual([]);
+  });
+
+  it('takes the bands asked for once each, in order, and drops any that is not a band', () => {
+    expect(bandTicks(12, 'time', [11, 0, 5, 5, -1, 12, 2.5])).toEqual([0, 5, 11]);
+    expect(bandTicks(3, 'category', [])).toEqual([]);
+  });
+});
+
+describe('seriesColors', () => {
+  it('draws one series ink and two filled series ink and slate, by place', () => {
+    expect(seriesColors([{}])).toEqual(['ink']);
+    expect(seriesColors([{}, {}])).toEqual(['ink', 'slate']);
+  });
+
+  it('keeps a pinned color, such as gain for money that arrived', () => {
+    expect(seriesColors([{ color: 'gain' }, { color: 'ink' }])).toEqual(['gain', 'ink']);
+    expect(seriesColors([{}, { color: 'gain' }])).toEqual(['ink', 'gain']);
+    // The place is the series' own, pinned or not: a second series is slate beside a pinned first.
+    expect(seriesColors([{ color: 'gain' }, {}])).toEqual(['gain', 'slate']);
+  });
+
+  it("draws a hatched series in the first filled series' color, never as a second color", () => {
+    expect(seriesColors([{}, { look: 'hatched' }])).toEqual(['ink', 'ink']);
+    expect(seriesColors([{ color: 'gain' }, { look: 'hatched' }])).toEqual(['gain', 'gain']);
+    // The previous period first: still the filled series' color, and the filled series is the one series.
+    expect(seriesColors([{ look: 'hatched' }, {}])).toEqual(['ink', 'ink']);
+    // A hatched series that pins a color keeps it; with no filled series, it is ink.
+    expect(seriesColors([{}, { look: 'hatched', color: 'slate' }])).toEqual(['ink', 'slate']);
+    expect(seriesColors([{ look: 'hatched' }])).toEqual(['ink']);
   });
 });
 

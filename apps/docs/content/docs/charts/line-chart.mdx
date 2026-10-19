@@ -56,6 +56,22 @@ Time follows the page's direction. Under `dir="rtl"` the newest day is at the le
 
 <Section>
 
+## States
+
+`status` draws a state in the plot's own space, at its height, as a bar chart does, so the page does not move when the data arrives. The gridlines' labels and the day labels you pass stay.
+
+- Loading: a still placeholder in Skeleton's fill where the line will be, with no legend, toggle or table. The chart says "Loading" once, politely.
+- Empty: a sentence in slate in the plot, or your `statusContent`, such as an EmptyState. No table toggle.
+- Error: a sentence in the error color, which means a load failed, or your `statusContent` with a way to try again. The chart says it once.
+
+The plot is no tab stop while it shows a state, and its keys do nothing; focus that was on it stays there. The three strings are `statusLabels`, a prop of their own with English defaults, so the four `labels` you already pass are unchanged.
+
+<Preview name="line-chart-states" />
+
+</Section>
+
+<Section>
+
 ## Usage
 
 ```bash
@@ -68,6 +84,7 @@ It needs the same 0.x minor of `@snapshot-ui/core` (0.7 for charts 0.1.4), whose
 - `yTicks`: gridlines with labels. Without them, the chart draws only its baseline and relies on the readout and the table.
 - `yDomain`: pass the same one to charts read side by side, so their scales match.
 - `labels`: in another language, pass all four strings the chart writes itself: the toggle's two, the note shown with scripts off, and the role description a screen reader says in place of "chart".
+- `statusLabels`: and all three of its states' strings, so no English is left on the page while it loads, is empty or fails.
 
 ```tsx
 import { LineChart } from '@snapshot-ui/charts';
@@ -100,13 +117,15 @@ import { LineChart } from '@snapshot-ui/charts';
 
 A LineChart accepts every HTML attribute, applied to its root `figure`.
 
-<PropsTable label="LineChart props" path="../../packages/charts/src/line-chart/LineChart.tsx" type="Pick<LineChartProps, 'series' | 'xLabels' | 'xTicks' | 'yTicks' | 'yDomain' | 'hasArea' | 'labels' | 'height' | 'aria-label' | 'aria-labelledby' | 'className'>" />
+<PropsTable label="LineChart props" path="../../packages/charts/src/line-chart/LineChart.tsx" type="Pick<LineChartProps, 'series' | 'xLabels' | 'xTicks' | 'yTicks' | 'yDomain' | 'hasArea' | 'labels' | 'height' | 'status' | 'statusContent' | 'statusLabels' | 'aria-label' | 'aria-labelledby' | 'className'>" />
 
 <PropsTable label="LineSeries" path="../../packages/charts/src/line-chart/LineChart.tsx" type="LineSeries" />
 
 <PropsTable label="LinePoint" path="../../packages/charts/src/line-chart/LineChart.tsx" type="LinePoint" />
 
 <PropsTable label="LineChartLabels" path="../../packages/charts/src/line-chart/LineChart.tsx" type="LineChartLabels" />
+
+<PropsTable label="ChartStatusLabels" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="ChartStatusLabels" />
 
 </Section>
 

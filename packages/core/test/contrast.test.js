@@ -739,6 +739,66 @@ describe('the bar chart', () => {
   });
 });
 
+describe('the previous period, hatched', () => {
+  /** A series color at `share` of its strength over Lifted, against Lifted and against the solid color there. */
+  const mixed = (mode, name, share) => {
+    const palette = paletteFor(tokens, mode);
+    const lifted = parseColor(palette.lifted);
+    const color = parseColor(palette[name]);
+    const solid = composite(color, lifted);
+    const mix = composite({ ...color, a: color.a * share }, lifted);
+    return { surface: contrastRatio(mix, lifted), solid: contrastRatio(solid, mix) };
+  };
+
+  // Spec 5.5's table: a lighter fill of the same color, mixed with Lifted as the browser composites it, must
+  // clear 3:1 against Lifted to be seen and stay apart from the solid bar beside it. Ink has a band that does
+  // in each mode; gain has none in either, which is why the previous period is striped. Measured and recorded,
+  // not gated (spec correction 22: the spec's figures differ by 0.04 at most).
+  it('measures the lighter fills the record states, against Lifted and against the solid color', () => {
+    for (const { mode, name, share, surface, solid } of [
+      { mode: 'light', name: 'ink', share: 0.4, surface: 2.57, solid: 6.94 },
+      { mode: 'light', name: 'ink', share: 0.5, surface: 3.45, solid: 5.17 },
+      { mode: 'light', name: 'ink', share: 0.6, surface: 4.76, solid: 3.74 },
+      { mode: 'dark', name: 'ink', share: 0.4, surface: 3.81, solid: 4.57 },
+      { mode: 'dark', name: 'ink', share: 0.5, surface: 5.21, solid: 3.34 },
+      { mode: 'dark', name: 'ink', share: 0.6, surface: 6.94, solid: 2.51 },
+      { mode: 'light', name: 'gain', share: 0.4, surface: 1.93, solid: 3.74 },
+      { mode: 'light', name: 'gain', share: 0.5, surface: 2.33, solid: 3.09 },
+      { mode: 'light', name: 'gain', share: 0.6, surface: 2.85, solid: 2.52 },
+      { mode: 'dark', name: 'gain', share: 0.4, surface: 2.36, solid: 3.41 },
+      { mode: 'dark', name: 'gain', share: 0.5, surface: 2.97, solid: 2.71 },
+      { mode: 'dark', name: 'gain', share: 0.6, surface: 3.71, solid: 2.17 },
+    ]) {
+      const label = `${name} at ${String(share)}, ${mode}`;
+      const measured = mixed(mode, name, share);
+      expect(measured.surface, `${label}, on lifted`).toBeCloseTo(surface, 2);
+      expect(measured.solid, `${label}, against solid`).toBeCloseTo(solid, 2);
+      // Ink at half strength clears both in each mode; no share of gain does in either.
+      const clears = measured.surface >= NON_TEXT && measured.solid >= NON_TEXT;
+      if (name === 'gain') expect(clears, label).toBe(false);
+      if (name === 'ink' && share === 0.5) expect(clears, label).toBe(true);
+    }
+  });
+
+  // The hatched bar's extent is its 1px border, the color at full strength, which the gate holds as text on
+  // Lifted; its stripes, 2px every 6px, cover a third of it, a texture whose average is the color at a third.
+  it('measures the border and the stripes the record states, in both modes', () => {
+    for (const name of ['ink', 'gain'])
+      expect(CONTRAST_PAIRS).toContainEqual(
+        expect.objectContaining({ text: name, ground: 'lifted', minimum: TEXT }),
+      );
+    for (const { mode, name, border, stripes } of [
+      { mode: 'light', name: 'ink', border: 17.84, stripes: 2.14 },
+      { mode: 'dark', name: 'ink', border: 17.42, stripes: 3.05 },
+      { mode: 'light', name: 'gain', border: 7.2, stripes: 1.71 },
+      { mode: 'dark', name: 'gain', border: 8.04, stripes: 2.02 },
+    ]) {
+      expect(mixed(mode, name, 1).surface, `${name} border, ${mode}`).toBeCloseTo(border, 2);
+      expect(mixed(mode, name, 2 / 6).surface, `${name} stripes, ${mode}`).toBeCloseTo(stripes, 2);
+    }
+  });
+});
+
 describe('the search field', () => {
   /** A token color painted over `ground` and measured against it, as a reader sees it. */
   const measured = (mode, name, groundName) => {

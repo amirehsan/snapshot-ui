@@ -113,7 +113,7 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'inset-inline-start:16.667%;inline-size:70%',
       'data-sign="negative"',
       'inset-inline-end:83.333%;inline-size:10%',
-      'class="bar-chart-amount">-$60.00<',
+      'class="bar-chart-amount" data-look="fill">-$60.00<',
       'class="bar-chart-tick" data-edge="end"',
       '<caption>Spending by merchant</caption>',
       'hidden=""',
@@ -123,6 +123,69 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'class="bar-chart-status" role="status"></span>',
     ],
     ['bar-chart-readout', 'data-active', 'data-pointer', 'tabindex', 'aria-busy'],
+  ],
+  [
+    // Months standing up, income beside spending, a bad month below zero: every bar's band, place in its pair,
+    // end and corner are the server's, and the thickness is the CSS's, from the band and group counts.
+    'BarChart, vertical and grouped, with negatives',
+    <BarChart
+      aria-label="Income and spending by month"
+      categories={['Aug', 'Sep', 'Oct', 'Nov']}
+      series={[
+        { label: 'Income', color: 'gain', values: [{ value: 420, valueLabel: '$420.00' }, null, null, null] },
+        { ...MERCHANTS, label: 'Net', color: 'ink' },
+      ]}
+      valueDomain={[-100, 500]}
+      valueLabels="all"
+    />,
+    [
+      'data-orientation="vertical"',
+      'class="bar-chart-plot" role="group" aria-roledescription="chart"',
+      'data-room-start="" data-room-end=""',
+      'style="--bar-chart-bands:4;--bar-chart-group:2"',
+      'class="bar-chart-bars" style="block-size:240px"',
+      'class="bar-chart-gridlines" aria-hidden="true"',
+      'class="bar-chart-baseline" data-crosses="" x1="0" x2="100" y1="83.333" y2="83.333"',
+      'data-color="gain" data-look="fill" data-sign="positive" data-nonzero=""',
+      'inset-block-end:16.667%;block-size:70%;--bar-chart-centre:12.5%;--bar-chart-index:0',
+      'inset-block-start:83.333%;block-size:10%;--bar-chart-centre:87.5%;--bar-chart-index:1',
+      'class="bar-chart-values" aria-hidden="true"',
+      'class="bar-chart-categories" aria-hidden="true" data-bands="category"',
+      'class="bar-chart-band-label" data-third="">Aug<',
+      '<caption>Income and spending by month</caption>',
+    ],
+    ['bar-chart-readout', 'data-active', 'data-pointer', 'tabindex', 'bar-chart-rows', 'bar-chart-amount'],
+  ],
+  [
+    // This period beside the last, lying down: the previous period is hatched in the first series' color, its
+    // amount slate by its look, and its legend key Meter's hatched swatch.
+    'BarChart, horizontal, against the previous period',
+    <BarChart
+      aria-label="Spending by merchant, October against September"
+      orientation="horizontal"
+      categories={['Whole Foods Market', 'Shell', 'Netflix', 'Apple Store']}
+      series={[MERCHANTS, { ...MERCHANTS, label: 'September', look: 'hatched' }]}
+    />,
+    [
+      'class="bar-chart-legend-item" data-color="ink" data-look="hatched"',
+      'data-color="ink" data-look="hatched" data-sign="positive"',
+      'class="bar-chart-amount" data-look="hatched">$420.00<',
+      '--bar-chart-group:2',
+    ],
+    ['data-color="slate"', 'tabindex'],
+  ],
+  [
+    // Loading in the plot's own space: a still placeholder at the plot's height, the region empty until mount.
+    'LineChart, loading',
+    <LineChart aria-label="Spending in October" series={[THIS_MONTH]} xLabels={DAYS} status="loading" />,
+    [
+      'data-status="loading"',
+      'aria-busy="true"',
+      'class="skeleton line-chart-skeleton" aria-hidden="true"',
+      'aria-live="polite" aria-atomic="true"></span>',
+      'style="block-size:240px"',
+    ],
+    ['line-chart-line', 'line-chart-toggle', '<table', 'tabindex'],
   ],
 ];
 
