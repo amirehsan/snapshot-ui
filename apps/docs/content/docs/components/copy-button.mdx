@@ -20,7 +20,7 @@ The default look is a ghost [icon button](/docs/components/icon-button) with a [
 
 ## Saying it worked
 
-A press copies at once, inside the press, as Safari asks. For two seconds the copy glyph turns to a check, a tip over the button shows "Copied", and a polite status beside the button says it to a screen reader, once for each copy. Then the glyph, the tip and the status go back to rest. Escape, or focus leaving, closes the tip early.
+A press copies at once, inside the press, as Safari asks. For two seconds the copy glyph turns to a check, a tip over the button shows "Copied", and a polite status beside the button says it to a screen reader, once for each copy. Then the glyph, the tip and the status go back to rest. Escape, or focus leaving, closes the tip early. Escape closes only the tip, as any tip takes it: in a dialog, the next Escape closes the dialog.
 
 The button's name never changes: a name that changes under focus is read again by some screen readers and not by others. The check is ink, never success's color, since a copy is not a save. A copy that fails keeps the copy glyph and says "Copy failed" in the tip and the status, and `onCopy(false)` tells your app, which can show the value selected for the reader to copy by hand.
 
@@ -96,7 +96,7 @@ Every Button prop is accepted but `onPress`, `children`, `variant`, `aria-label`
 
 A native button named by `labels.copy`, which says what it copies, with React Aria handling press across mouse, touch and keyboard. The outcome is said once by a polite status, `role="status"`, that is in the server's HTML and empty, so a screen reader is listening before the words arrive; a second copy is said again. The outcome's tip is for the eye and is never the button's description, so nothing says it twice. Focus stays on the button through the copy and after it.
 
-<Keys rows={[['Tab', 'Moves focus to the button. The icon look shows its name in a tip.'], ['Enter Space', 'Copies; "Copied" is said politely and shown in a tip for two seconds.'], ['Escape', 'Closes the tip.']]} />
+<Keys rows={[['Tab', 'Moves focus to the button. The icon look shows its name in a tip.'], ['Enter Space', 'Copies; "Copied" is said politely and shown in a tip for two seconds.'], ['Escape', 'Closes the tip, and only the tip: in a dialog, the next Escape closes the dialog.']]} />
 
 </Section>
 

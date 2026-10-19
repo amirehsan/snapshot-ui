@@ -145,11 +145,14 @@ export function CopyButton({
 
   useWarnOnce(busy ? BUSY_WARNING : null);
 
-  // Escape anywhere dismisses the outcome's tip, as it does any tip, wherever focus or the pointer is.
+  // Escape anywhere dismisses the outcome's tip, as it does any tip, wherever focus or the pointer is. It takes
+  // the key, as React Aria's own tips do, so one Escape closes the tip and not a dialog or popover around it too.
   useEffect(() => {
     if (!outcomeTip) return;
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOutcomeTip(false);
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      setOutcomeTip(false);
     };
     document.addEventListener('keydown', onKeyDown, true);
     return () => {

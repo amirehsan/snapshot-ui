@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { root } from '../../test/dom';
 import { DescriptionList, DescriptionListItem } from '../description-list';
+import { Dialog } from '../dialog';
 import * as library from '../index';
 import { CopyButton } from './CopyButton';
 
@@ -417,6 +418,34 @@ describe('CopyButton', () => {
     expect(tip()).toBeNull();
     expect(status(container)).toHaveTextContent('Copied');
     expect(named).toHaveFocus();
+  });
+
+  it('takes the Escape that closes its outcome tip, so a dialog around it stays open until the next', async () => {
+    clipboard(() => Promise.resolve());
+    const onOpenChange = vi.fn();
+    render(
+      <Dialog title="Webhook" isOpen onOpenChange={onOpenChange}>
+        <Webhook />
+      </Dialog>,
+    );
+    // The modal Dialog hides the tip's portal from the accessibility tree, so the tip is found by its role in the
+    // DOM: it is for the eye, and the status says the outcome.
+    const shownTip = (): Element | null => document.querySelector('[role="tooltip"]');
+    const named = button();
+    press(named);
+    await settle();
+    expect(shownTip()).toHaveTextContent('Copied');
+    act(() => {
+      fireEvent.keyDown(named, { key: 'Escape' });
+    });
+    // One Escape closes one thing, the tip, as React Aria's own tips take it.
+    expect(shownTip()).toBeNull();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(named).toHaveFocus();
+    act(() => {
+      fireEvent.keyDown(named, { key: 'Escape' });
+    });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('closes the outcome tip when focus leaves the button', async () => {

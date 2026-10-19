@@ -11413,7 +11413,10 @@ trigger shares, so React Aria never points `aria-describedby` at it, and a
 screen reader does not hear the outcome twice. The resting tip, the icon
 look's name on hover and focus, stays shut while the outcome's tip holds
 its place. Escape anywhere, focus leaving the button, a scroll or a resize
-closes the outcome's tip, as any tip closes (WCAG 1.4.13).
+closes the outcome's tip, as any tip closes (WCAG 1.4.13). The tip takes
+the Escape that closes it, as React Aria's own tips do, so in a Dialog the
+first Escape closes the tip and the next the Dialog (settings plan, spec
+correction 17).
 
 **The name never changes.** The button is named `labels.copy`, which says
 what it copies ("Copy webhook address"), through every outcome: a name
