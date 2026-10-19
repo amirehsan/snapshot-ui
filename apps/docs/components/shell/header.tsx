@@ -1,6 +1,6 @@
 'use client';
 
-import { Eyebrow, Heading, IconButton, SegmentedControl, SegmentedControlItem } from '@snapshot-ui/react';
+import { IconButton, PageHeader, SegmentedControl, SegmentedControlItem } from '@snapshot-ui/react';
 import { useTheme } from 'next-themes';
 import { useEffect, useRef, type ReactElement } from 'react';
 import { useMounted, useShape } from '@/lib/document-state';
@@ -55,6 +55,12 @@ const SHAPES = [
   ['square', 'Square'],
 ] as const;
 
+/**
+ * The docs site's header: the library's PageHeader, with the trail as its eyebrow, the page's title as its one
+ * `h1` and the two switches as its actions, and under 1024px the drawer's menu button in the shell's own cell
+ * before it, since PageHeader has no leading slot (plan open question 3). The shell's `header` is the page's
+ * banner and sticks; the PageHeader inside it takes `role="none"`, so the page keeps one banner.
+ */
 export function DocsHeader({ group, title }: { group: string; title: string }): ReactElement {
   const { drawerOpen, openDrawer } = useShell();
   const { resolvedTheme, setTheme } = useTheme();
@@ -62,7 +68,8 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
   const mounted = useMounted();
   const shape = useShape();
   // The header sticks at the top with no fixed height, so its height is the page's sticky offset: every sticky
-  // part of a page, such as a data table's header row, sticks under it, never behind it.
+  // part of a page, such as a data table's header row, sticks under it, never behind it. The docs shell is not
+  // AppShell, so nothing else writes it.
   const headerRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const header = headerRef.current;
@@ -82,7 +89,8 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
 
   return (
     <header className="header" ref={headerRef}>
-      <div className="header-inner">
+      {/* The drawer's button, drawn under 1024px in the shell's own cell before the page's header. */}
+      <div className="header-lead">
         <IconButton
           className="header-menu"
           variant="outline"
@@ -95,31 +103,35 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </IconButton>
-        <div className="header-titles">
-          <Eyebrow>
-            Docs <span className="eyebrow-sep">&#8250;</span> {group}
-          </Eyebrow>
-          <Heading level={1} size={2}>
-            {title}
-          </Heading>
-        </div>
-        <div className="header-controls">
-          <Choice
-            label="Color mode"
-            name="theme"
-            options={THEMES}
-            value={mounted ? (resolvedTheme as 'light' | 'dark' | undefined) : undefined}
-            onChange={setTheme}
-          />
-          <Choice
-            label="Corners"
-            name="shape"
-            options={SHAPES}
-            value={mounted ? shape : undefined}
-            onChange={writeShape}
-          />
-        </div>
       </div>
+      <PageHeader
+        role="none"
+        className="header-page"
+        eyebrow={
+          <>
+            Docs <span className="eyebrow-sep">&#8250;</span> {group}
+          </>
+        }
+        title={title}
+        actions={
+          <>
+            <Choice
+              label="Color mode"
+              name="theme"
+              options={THEMES}
+              value={mounted ? (resolvedTheme as 'light' | 'dark' | undefined) : undefined}
+              onChange={setTheme}
+            />
+            <Choice
+              label="Corners"
+              name="shape"
+              options={SHAPES}
+              value={mounted ? shape : undefined}
+              onChange={writeShape}
+            />
+          </>
+        }
+      />
     </header>
   );
 }

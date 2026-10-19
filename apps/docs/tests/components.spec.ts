@@ -1168,6 +1168,21 @@ test.describe('forced colors', () => {
     expect((await paint(header)).fill).toBe(await systemColor(page, 'canvas'));
     expect(await header.evaluate((element) => getComputedStyle(element).backdropFilter)).toBe('none');
   });
+
+  test("the docs header, a PageHeader, draws the system's background color whole under its menu button", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 900 });
+    await visit(page, '/docs/components/page-header');
+    const header = page.locator('header.header > .page-header');
+    expect((await paint(header)).fill).toBe(await systemColor(page, 'canvas'));
+    expect(await header.evaluate((element) => getComputedStyle(element).backdropFilter)).toBe('none');
+    // The button stands on that fill, inside the header's box.
+    const button = await page.getByRole('button', { name: 'Open the menu' }).boundingBox();
+    const box = await header.boundingBox();
+    if (!button || !box) throw new Error('No button or header');
+    expect(button.y + button.height).toBeLessThanOrEqual(box.y + box.height);
+  });
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------

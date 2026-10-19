@@ -52,7 +52,7 @@ for (const width of [375, 768, 1024, 1440]) {
 const workspaceGutters = (page: Page): Promise<number[][]> =>
   page.locator('.workspace').evaluate((workspace) => {
     const outer = workspace.getBoundingClientRect();
-    return ['.header-inner', '.content'].map((selector) => {
+    return ['.header .page-header-row', '.content'].map((selector) => {
       const inner = workspace.querySelector(selector)?.getBoundingClientRect();
       return inner ? [inner.left - outer.left, outer.right - inner.right] : [];
     });
@@ -3027,7 +3027,7 @@ test('a chart page is in the Charts group and shows its own package version', as
     .filter({ has: page.locator('.rail-group', { hasText: /^Charts$/ }) });
   await expect(group).toHaveCount(1);
   await expect(group.locator('a[href="/docs/charts/sparkline"]')).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.header-titles .eyebrow')).toHaveText('Docs \u203a Charts');
+  await expect(page.locator('.header .page-header .eyebrow')).toHaveText('Docs \u203a Charts');
 
   // The package card reads @snapshot-ui/charts, which is not built on React Aria.
   const { version } = JSON.parse(
@@ -3039,7 +3039,7 @@ test('a chart page is in the Charts group and shows its own package version', as
 
   // A component page keeps its group, its own package's version and the React Aria row.
   await visit(page, '/docs/components/meter');
-  await expect(page.locator('.header-titles .eyebrow')).toHaveText('Docs \u203a Components');
+  await expect(page.locator('.header .page-header .eyebrow')).toHaveText('Docs \u203a Components');
   const { version: react } = JSON.parse(
     readFileSync(new URL('../../../packages/react/package.json', import.meta.url), 'utf8'),
   ) as { version: string };
@@ -3764,6 +3764,107 @@ test('the columns example draws its header row at the top of its table at every 
   expect(
     await frame.evaluate((element) => getComputedStyle(element).getPropertyValue('--page-sticky-top').trim()),
   ).toBe('0px');
+});
+
+for (const [url, title] of [
+  ['/docs', 'Introduction'],
+  ['/docs/components/button', 'Button'],
+  ['/docs/charts/sparkline', 'Sparkline'],
+] as const) {
+  test(`the docs header is a PageHeader with the page's one h1 and its switches, on ${url}`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await visit(page, url);
+    // The library's PageHeader draws the trail, the title and the switches, inside the shell's banner.
+    const header = page.locator('header.header > .page-header');
+    await expect(header).toHaveCount(1);
+    await expect(header.locator('h1')).toHaveText(title);
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(header.locator('.page-header-titles .eyebrow')).toContainText('Docs');
+    await expect(page.getByRole('banner')).toHaveCount(1);
+    await expect(page.getByRole('banner').locator('h1')).toHaveText(title);
+    const actions = header.locator('.page-header-actions');
+    // The switches set the color mode and the corners on the root, as before.
+    await actions
+      .getByRole('radiogroup', { name: 'Color mode' })
+      .locator('.segmented-option', { hasText: 'Dark' })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await actions
+      .getByRole('radiogroup', { name: 'Corners' })
+      .locator('.segmented-option', { hasText: 'Square' })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('data-shape', 'square');
+    await actions
+      .getByRole('radiogroup', { name: 'Corners' })
+      .locator('.segmented-option', { hasText: 'Rounded' })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('data-shape', 'rounded');
+  });
+}
+
+for (const width of [375, 768]) {
+  test(`under 1024px the drawer's button stands before the docs header's titles, level with the title, at ${String(width)}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    const button = page.locator('.header > .header-lead').getByRole('button', { name: 'Open the menu' });
+    await expect(button).toBeVisible();
+    const box = await button.boundingBox();
+    const title = await page.locator('.header .page-header h1').boundingBox();
+    if (!box || !title) throw new Error('No button or title');
+    // Before the titles, and its middle on the middle of the title's first line, give or take a pixel.
+    expect(box.x + box.width).toBeLessThan(title.x);
+    const line = await page
+      .locator('.header .page-header h1')
+      .evaluate((element) => parseFloat(getComputedStyle(element).lineHeight));
+    expect(Math.abs(box.y + box.height / 2 - (title.y + line / 2))).toBeLessThanOrEqual(1);
+    // Drawn over the header's fill, not under it: its middle is the button's own.
+    expect(
+      await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('.header-menu') != null, {
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+      }),
+    ).toBe(true);
+    // The switches start at the column's edge, under the button, as before: the titles alone make room for it.
+    const actions = await page.locator('.header .page-header-actions').boundingBox();
+    const column = await page.locator('.header .page-header-row').boundingBox();
+    if (!actions || !column) throw new Error('No actions or column');
+    if (width < 768) expect(actions.y).toBeGreaterThan(box.y + box.height);
+    expect(actions.x).toBeGreaterThanOrEqual(column.x);
+    // The button opens the drawer, as before.
+    await button.click();
+    await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expectDrawerClosed(page);
+    await expect(button).toBeFocused();
+  });
+}
+
+test('the docs header sticks and writes --page-sticky-top, its height, at every width', async ({ page }) => {
+  for (const width of [375, 768, 1440]) {
+    await page.setViewportSize({ width, height: 700 });
+    await visit(page, '/docs/components/data-table');
+    const header = page.locator('header.header');
+    await page.evaluate(() => {
+      window.scrollTo(0, 1200);
+    });
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
+    // Stuck at the top of the viewport, and its height is the page's sticky offset.
+    await expect.poll(async () => Math.round((await header.boundingBox())?.y ?? -1)).toBe(0);
+    const height = (await header.boundingBox())?.height ?? 0;
+    expect(height).toBeGreaterThan(0);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--page-sticky-top')),
+        ),
+      )
+      .toBeCloseTo(height, 0);
+    expect(await sideways(page)).toBe(0);
+  }
 });
 
 test('the docs header sets --page-sticky-top, so a data table header sticks under it, and amounts use a real minus sign', async ({
