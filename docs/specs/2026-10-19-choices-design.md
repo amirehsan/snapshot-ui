@@ -1,6 +1,6 @@
 # Choices: Accordion, TagInput, ChoiceCards and PositionPad: design
 
-Status: draft for the owner's review, 2026-10-19. Section 15 holds the open questions, each with a recommended answer; everything else is decided here and listed in section 11.
+Status: approved on 2026-10-19. Written for the owner's review with a recommended answer to each open question of section 15; the owner took every recommendation, and section 19 records the rulings. Everything else is decided here and listed in section 11.
 Parent spec: `docs/specs/2026-10-10-snapshot-ui-design.md`. This document completes phase 2 of the parent spec's catalog, "Choice controls and overlays", by taking its last four rows: TagInput, ChoiceCards, PositionPad and Accordion. Every other phase 2 row has shipped. It answers no consumer request: it is the library's own roadmap, so the parent spec's rows and the source app's behaviors they name are the input (section 3). The design authority remains `docs/design-system.md`.
 Released before this: batch 4 ("Documents"), `@snapshot-ui/core` and `@snapshot-ui/react` 0.7.0. In flight at the time of writing: batch 5 ("Accounts", 0.8.0, `docs/specs/2026-10-18-accounts-design.md`) and batch 6 ("Insights", 0.9.0 and `@snapshot-ui/charts` 0.2.0, `docs/specs/2026-10-18-insights-design.md`). This batch takes nothing from either and builds on whichever has merged when its plan starts. It is the next minor release of core and react after those two: 0.10.0 if they release as 0.8.0 and 0.9.0.
 
@@ -809,3 +809,32 @@ Existing baselines: none should change. MultiSelect's are the proof that the sha
   - **PositionPad.** New. A 3 by 3 choice of position, submitted as `top-start` through `bottom-end`. Left and Right follow the row; Up and Down follow the column. Values are logical and mirror in right to left; set `dir="ltr"` on the pad for an image's focal point. On a right-to-left page, pass `labels` in your language.
   - **MultiSelect.** No change to how it looks or behaves; its frame and tag rules now also serve TagInput.
   - **Upgrade.** Upgrade `@snapshot-ui/core` and `@snapshot-ui/react` together, and `@snapshot-ui/charts` to the patch that admits the new core.
+
+## 19. Owner rulings (owner, 2026-10-19)
+
+The owner approved this spec on 2026-10-19 and took every recommendation of section 15. Each ruling names the open question it settles; the plan, `docs/plans/2026-10-19-choices.md`, names the task that builds it.
+
+1. **Several open by default** (open question 1). `allowsMultipleExpanded` is true by default; `allowsMultipleExpanded={false}` gives one item at a time, React Aria's own default.
+2. **Arrow keys between toggles** (open question 2). Arrow Up, Arrow Down, Home and End move between the enabled toggles of one accordion, with no wrap, the pattern's optional keys and Radix's.
+3. **"Show all sections"** (open question 3). Offered as `hasExpandAll`, off by default, in GOV.UK's words, drawn only while several items may be open.
+4. **Remembering open sections** (open question 4). Not in this batch; an app that needs it holds `expandedKeys` in its own state or its URL.
+5. **Accordion items as cards** (open question 5). Rows only; a page whose sections are cards keeps a column of CollapsibleCards.
+6. **Printing** (open question 6). Folded panels print open, as Polaris' `expandOnPrint` offers (to verify).
+7. **Heading level** (open question 7). 3 by default, Radix's, and any level from 2 to 6 by `level`.
+8. **Refused values** (open question 8). They stay in the text box with the error line, so `value` only ever holds values the preset accepts.
+9. **Commit on blur** (open question 9). Text that passes is added when focus leaves the field; `commitsOnBlur` is true by default.
+10. **TagInput's form value** (open question 10). One hidden input per value under `name`, and one empty value when there are none, MultiSelect's shape.
+11. **Presets** (open question 11). Exported objects, `emailPreset`, `domainPreset` and `pathPreset`, in a module without `'use client'`, so a server action checks with the same rules.
+12. **Suggestions** (open question 12). Not in this batch; choosing from a list stays MultiSelect's.
+13. **Enter on a tag** (open question 13). Takes the tag back into the text box, as Backspace does for the last one.
+14. **"Clear all"** (open question 14). No button; a form's reset or the app's own button clears the list.
+15. **Several choices in ChoiceCards** (open question 15). Later, as a CheckboxGroup twin on the same CSS, when a consumer asks.
+16. **The chosen card** (open question 16). A 2px ink edge and a filled ink check, the card's content unchanged.
+17. **ChoiceCards' default layout** (open question 17). `list`; `grid` by `layout`.
+18. **Content under a chosen card** (open question 18). Not in ChoiceCards. ConditionalFields shows fields under a choice; batch 7 ("Settings") brings it forward from phase 5, so the `choice-cards` page points to it.
+19. **A choice card's corner in a holder** (open question 19). The holder formula for every card of a group in a holder, wherever it falls, as StatTile and a card in a card take it.
+20. **PositionPad's role** (open question 20). A radio group of nine named radios, not a grid.
+21. **PositionPad's arrows** (open question 21). Left and Right through all nine in reading order with wrap, mirrored in right to left; Up and Down by column, stopping at the edges.
+22. **PositionPad's values** (open question 22). Logical, `top-start` to `bottom-end`, mirrored in right to left; `dir="ltr"` on the pad for a placement that does not mirror.
+23. **PositionPad's glyph** (open question 23). A dot in every cell, with the position's name as its meaning.
+24. **One release** (open question 24). All four parts in one minor release of `@snapshot-ui/core` and `@snapshot-ui/react`, with the charts patch section 18 describes. Batch 7 ("Settings", 0.10.0) now releases before this batch, so the release is the minor after it, 0.11.0 if nothing else releases between; the changesets say "minor" and name no number, as section 18 asks. TagInput in the minor after the other three stays a fallback, taken only if its spike fails.
