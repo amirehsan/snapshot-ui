@@ -21,6 +21,23 @@ import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
+import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { DescriptionList, DescriptionListItem } from '../src/description-list';
+import { Link } from '../src/link';
+import { Gauge } from '../src/gauge';
+import { MonthGrid } from '../src/month-grid';
+import {
+  COVERAGE_STATES,
+  COVERAGE_YEARS,
+  MONTH_NAMES,
+  PERSIAN_LABELS,
+  PERSIAN_MONTH_NAMES,
+  PERSIAN_SHORT_MONTHS,
+  PERSIAN_STATES,
+  PERSIAN_SUMMARY,
+  PERSIAN_YEARS,
+  SHORT_MONTHS,
+} from '../src/stories/coverage';
 
 /**
  * Each part's server HTML, hydrated in the browser on a mocked iPhone (plan, spec corrections 1 and 2). The HTML
@@ -198,6 +215,151 @@ const HYDRATED: [
       expect(container.querySelector('.filter-chip-trigger')).toHaveAccessibleName(
         'Category Food, Rent and 2 more',
       );
+    },
+  ],
+  [
+    // A static card with client leaves in its header's actions and a static list as its body.
+    'Card with CardActions',
+    <Card as="section" aria-labelledby="details-title">
+      <CardHeader>
+        <CardTitle id="details-title" level={3}>
+          Details
+        </CardTitle>
+        <CardNote>Updated from your bank feed</CardNote>
+        <CardActions>
+          <Button variant="secondary" aria-label="Edit details">
+            Edit
+          </Button>
+          <Link href="/accounts/visa/merge">Merge</Link>
+        </CardActions>
+      </CardHeader>
+      <CardBody>
+        <DescriptionList>
+          <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+        </DescriptionList>
+      </CardBody>
+    </Card>,
+    (container) => {
+      const actions = container.querySelector('.card-header > .card-actions');
+      expect(actions?.previousElementSibling).toHaveClass('card-note');
+      expect(actions?.querySelector('button')).toHaveAccessibleName('Edit details');
+      expect(actions?.querySelector('a')).toHaveAttribute('href', '/accounts/visa/merge');
+    },
+  ],
+  [
+    // Static, with a client leaf as a row's action: the server's HTML is what the browser keeps.
+    'DescriptionList',
+    <DescriptionList>
+      <DescriptionListItem term="Name">Everyday Visa</DescriptionListItem>
+      <DescriptionListItem term="Nickname" actions={<Link href="/accounts/visa/nickname">Add</Link>} />
+      <DescriptionListItem term="Credit limit" isNumeric>
+        $5,000.00
+      </DescriptionListItem>
+      <DescriptionListItem term="APR" isNumeric>
+        24.9%
+      </DescriptionListItem>
+    </DescriptionList>,
+    (container) => {
+      expect(container.querySelector('[data-empty]')).toHaveTextContent(/^Not set$/);
+      expect([...container.querySelectorAll('[data-numeric]')].map((value) => value.textContent)).toEqual([
+        '$5,000.00',
+        '24.9%',
+      ]);
+      expect(container.querySelector('.description-list-actions a')).toHaveAttribute(
+        'href',
+        '/accounts/visa/nickname',
+      );
+    },
+  ],
+  [
+    // Static: the dash is inline style the server writes, so hydration changes nothing and nothing sweeps in.
+    'Gauge',
+    <Gauge
+      label="Utilization"
+      value={23}
+      valueLabel="23% of your limit"
+      figure="23%"
+      marks={[
+        { value: 10, label: 'Best under 10%' },
+        { value: 30, label: 'Keep it under 30%' },
+      ]}
+    />,
+    (container) => {
+      const dial = container.querySelector('[role="meter"]');
+      expect(dial).toHaveAccessibleName('Utilization');
+      expect(dial).toHaveAccessibleDescription('Best under 10%. Keep it under 30%.');
+      expect(container.querySelector<SVGElement>('.gauge-value')?.style.strokeDasharray).toBe(
+        '55.586 276.46',
+      );
+      expect(container.querySelectorAll('.gauge-mark')).toHaveLength(2);
+    },
+  ],
+  [
+    'Gauge score',
+    <Gauge
+      label="Credit score"
+      form="semicircle"
+      size="lg"
+      minValue={300}
+      maxValue={850}
+      value={742}
+      valueLabel="742 of 850, Very good"
+      figure="742"
+      figureCaption="Very good"
+      marks={[
+        { value: 580, label: 'Fair from 580' },
+        { value: 670, label: 'Good from 670' },
+        { value: 740, label: 'Very good from 740' },
+        { value: 800, label: 'Excellent from 800' },
+      ]}
+    />,
+    (container) => {
+      const dial = container.querySelector('[role="meter"]');
+      expect(dial).toHaveAttribute('aria-valuenow', '742');
+      expect(dial).toHaveAttribute('aria-valuetext', '742 of 850, Very good');
+      expect(container.querySelector('.gauge-track')).toHaveAttribute('d', 'M6 80A74 74 0 0 1 154 80');
+      expect(container.querySelector<SVGElement>('.gauge-value')?.style.strokeDasharray).toBe(
+        '174.828 232.478',
+      );
+      expect(container.querySelector('.gauge-figure-caption')).toHaveTextContent('Very good');
+    },
+  ],
+  [
+    // Static: the summary is string joining of the app's words, so the browser writes the server's sentence.
+    'MonthGrid',
+    <MonthGrid
+      label="Statement coverage"
+      states={COVERAGE_STATES}
+      years={COVERAGE_YEARS}
+      monthLabels={SHORT_MONTHS}
+      monthNames={MONTH_NAMES}
+    />,
+    (container) => {
+      expect(container.querySelector('figure')).toHaveAccessibleName('Statement coverage');
+      expect(container.querySelectorAll('.month-grid-cell')).toHaveLength(24);
+      expect(container.querySelector('.month-grid-summary')).toHaveTextContent(
+        'Missing: March and April 2025. Partial: June 2025.',
+      );
+      expect(container.querySelectorAll('.month-grid-table th[scope="row"]')).toHaveLength(2);
+    },
+  ],
+  [
+    'MonthGrid Persian',
+    <div dir="rtl" lang="fa">
+      <MonthGrid
+        label="صورت‌حساب‌ها"
+        states={PERSIAN_STATES}
+        years={PERSIAN_YEARS}
+        monthLabels={PERSIAN_SHORT_MONTHS}
+        monthNames={PERSIAN_MONTH_NAMES}
+        summary={PERSIAN_SUMMARY}
+        labels={PERSIAN_LABELS}
+      />
+    </div>,
+    (container) => {
+      expect(container.querySelector('.month-grid-summary')).toHaveTextContent(PERSIAN_SUMMARY);
+      expect(container.querySelector('.month-grid-year')).toHaveTextContent('۱۴۰۴');
+      expect(container.querySelector('.month-grid-table th[scope="col"]')).toHaveTextContent('سال');
     },
   ],
   [

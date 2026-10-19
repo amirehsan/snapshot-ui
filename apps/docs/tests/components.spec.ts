@@ -556,6 +556,77 @@ test.describe('forced colors', () => {
     expect((await paint(meter.locator('.meter-pace'))).fill).toBe(await systemColor(page, 'Highlight'));
   });
 
+  test('a gauge keeps its track, arc and marks apart', async ({ page }) => {
+    // An svg keeps the colors its author set, so the stylesheet names system colors: the track in the disabled
+    // text color, the arc in the text color in every tone, and the marks in the selection color, each in a gap
+    // the mask cuts out of the track and the arc, so the three stay apart and a warning arc is not lost. The mask
+    // is luminance, white keeps and black cuts, so it stays out of the repaint and still cuts.
+    await visit(page, '/docs/components/gauge');
+    const { canvasText, grayText, highlight } = await systemColors(page);
+    const gauge = page
+      .locator('.stage .gauge')
+      .filter({ has: page.getByRole('meter', { name: 'Travel Mastercard', exact: true }) });
+    await expect(gauge).toHaveCount(1);
+    await expect(gauge).toHaveAttribute('data-tone', 'warning');
+    const stroke = (selector: string): Promise<string> =>
+      gauge
+        .locator(selector)
+        .first()
+        .evaluate((element) => getComputedStyle(element).stroke);
+    const drawn = {
+      track: await stroke('.gauge-track'),
+      arc: await stroke('.gauge-value'),
+      mark: await stroke('.gauge-mark'),
+    };
+    expect(drawn).toEqual({ track: grayText, arc: canvasText, mark: highlight });
+    expect(new Set(Object.values(drawn)).size).toBe(3);
+    const mask = await gauge.locator('mask').evaluate((element) => ({
+      adjust: getComputedStyle(element).forcedColorAdjust,
+      keep: getComputedStyle(element.querySelector('rect') ?? element).fill,
+      cut: getComputedStyle(element.querySelector('line') ?? element).stroke,
+      id: element.id,
+    }));
+    expect(mask).toEqual({ adjust: 'none', keep: 'rgb(255, 255, 255)', cut: 'rgb(0, 0, 0)', id: mask.id });
+    for (const name of ['.gauge-track', '.gauge-value'])
+      await expect(gauge.locator(name)).toHaveAttribute('mask', `url(#${mask.id})`);
+  });
+
+  test('a month grid keeps three looks as three shapes', async ({ page }) => {
+    // A fill is a background, which the repaint would drop: filled is drawn in the reader's text color, partial
+    // opts out of the repaint and draws its stripes again in the reader's colors, and empty keeps its edge. A
+    // solid, a striped and an outlined cell, and a month outside the range stays blank.
+    await visit(page, '/docs/components/month-grid');
+    const { canvas, canvasText } = await systemColors(page);
+    const grid = page.locator('.stage .month-grid').first();
+    const look = (name: string) =>
+      grid
+        .locator(`.month-grid-cell[data-look='${name}']`)
+        .first()
+        .evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            fill: style.backgroundColor,
+            image: style.backgroundImage,
+            edge: style.borderTopWidth === '0px' ? 'none' : style.borderTopColor,
+          };
+        });
+    const filled = await look('filled');
+    const partial = await look('partial');
+    const empty = await look('empty');
+    const none = await look('none');
+    expect(filled).toEqual({ fill: canvasText, image: 'none', edge: 'none' });
+    expect(partial.fill).toBe(canvas);
+    expect(partial.image).toContain('repeating-linear-gradient');
+    expect(partial.image).toContain(canvasText);
+    expect(partial.edge).toBe(canvasText);
+    expect(empty.image).toBe('none');
+    expect(empty.edge).toBe(canvasText);
+    expect(empty.fill).not.toBe(canvasText);
+    expect(none.edge).toBe('none');
+    expect(none.image).toBe('none');
+    expect(none.fill).not.toBe(canvasText);
+  });
+
   test('a progress bar keeps its track outline and fill', async ({ page }) => {
     // The fill is a background, which the repaint would drop: it is drawn in the reader's text color, and the
     // track is outlined so its end shows, as Meter's are.
@@ -683,6 +754,27 @@ test.describe('forced colors', () => {
     await expect(tip).toHaveText('Edit');
     expect((await paint(tip)).edge).toBe(system.canvasText);
     await expect(tip.locator('.tooltip-arrow')).toBeHidden();
+  });
+
+  test('a description list keeps its rules between rows', async ({ page }) => {
+    await visit(page, '/docs/components/description-list');
+    const { canvasText } = await systemColors(page);
+    const rows = page
+      .locator('.stage .description-list[data-dividers]')
+      .first()
+      .locator('.description-list-item');
+    expect(await rows.count()).toBeGreaterThan(1);
+    // The rule is on every row after the first, drawn in the reader's text color; none above the first.
+    const edges = await rows.evaluateAll((items) =>
+      items.map((item) => {
+        const style = getComputedStyle(item);
+        return { width: style.borderTopWidth, style: style.borderTopStyle, color: style.borderTopColor };
+      }),
+    );
+    expect(edges[0]?.style).toBe('none');
+    for (const edge of edges.slice(1)) {
+      expect(edge).toEqual({ width: '1px', style: 'solid', color: canvasText });
+    }
   });
 
   test('a select chevron is CanvasText', async ({ page }) => {
@@ -1075,6 +1167,21 @@ test.describe('forced colors', () => {
     const header = page.locator('.stage .page-header').first();
     expect((await paint(header)).fill).toBe(await systemColor(page, 'canvas'));
     expect(await header.evaluate((element) => getComputedStyle(element).backdropFilter)).toBe('none');
+  });
+
+  test("the docs header, a PageHeader, draws the system's background color whole under its menu button", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 900 });
+    await visit(page, '/docs/components/page-header');
+    const header = page.locator('.header[role="banner"] > .page-header');
+    expect((await paint(header)).fill).toBe(await systemColor(page, 'canvas'));
+    expect(await header.evaluate((element) => getComputedStyle(element).backdropFilter)).toBe('none');
+    // The button stands on that fill, inside the header's box.
+    const button = await page.getByRole('button', { name: 'Open the menu' }).boundingBox();
+    const box = await header.boundingBox();
+    if (!button || !box) throw new Error('No button or header');
+    expect(button.y + button.height).toBeLessThanOrEqual(box.y + box.height);
   });
 });
 
@@ -1565,6 +1672,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   'data-table': ['.stage .data-table-cell', '.stage .data-table-item-title', '.stage .data-table-item-meta'],
   'date-picker': ['.stage .date-picker .field-label'],
   'date-range-picker': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
+  // A value wraps and breaks a long word anywhere inside its column, in both layouts; nothing truncates.
+  'description-list': ['.stage .description-list-value'],
   // The title and the line are the app's sentences, and both wrap at any character inside the column.
   'empty-state': ['.stage .empty-state-title', '.stage .empty-state-description'],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
@@ -1572,11 +1681,17 @@ const LONG_TARGETS: Record<string, string[]> = {
   'file-drop-zone': ['.stage .file-drop-zone .field-label', '.stage .file-drop-zone .field-description'],
   // A chip's value stays on one line and ellipsizes past 16rem, so the pill stays inside 320px.
   'filter-chip': ['.stage .filter-chip-value'],
+  // The label and the value text wrap and break anywhere under the dial, or beside it at 32px; the caption wraps
+  // to two lines inside the dial and ends in an ellipsis, since the value text carries its words whole.
+  gauge: ['.stage .gauge-label', '.stage .gauge-value-label', '.stage .gauge-figure-caption'],
   kbd: ['.stage .kbd'],
   // The legend names the series in the app's words, and wraps at any character, as the meter's legend does.
   'line-chart': ['.stage .line-chart-legend-label'],
   link: ['.stage .link'],
   meter: ['.stage .meter-label', '.stage .meter-value', '.stage .meter-legend-label'],
+  // The name, the summary and the legend's state words are the app's, and wrap at any character; the month and
+  // year labels are short by the docs' rule, and the table is clipped inside its own 1px box.
+  'month-grid': ['.stage .month-grid-label', '.stage .month-grid-summary', '.stage .month-grid-legend-label'],
   'multi-select': ['.stage .field-label', '.stage .field-description', '.stage .multi-select-tag-text'],
   'number-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
   // The title wraps at any character and is never cut; the sentence wraps inside its measure.
@@ -1689,6 +1804,135 @@ for (const { slug, url } of PAGES) {
   });
 }
 
+test('a description list in a flex: 1 wrapper, a 1fr grid and two up keeps a 320px page from scrolling sideways', async ({
+  page,
+}) => {
+  // A size container's intrinsic inline size is 0: a stand-in width would be its min-content width too, which a
+  // flex: 1 item or a 1fr track keeps as its narrowest. 20rem scrolled one list sideways and 16rem two.
+  await page.setViewportSize({ width: 320, height: 800 });
+  await visit(page, '/docs/components/description-list');
+  const column = page.locator('.panel-main').first();
+  const list =
+    '<dl class="description-list" data-layout="auto" data-dividers="">' +
+    '<div class="description-list-item"><dt class="description-list-term">Name</dt>' +
+    '<dd class="description-list-value">Everyday Visa</dd></div></dl>';
+  await column.evaluate((element, markup) => {
+    element.insertAdjacentHTML(
+      'afterbegin',
+      `<div data-wrapper="flex" style="display: flex"><div style="flex: 1">${markup}</div></div>` +
+        `<div data-wrapper="grid" style="display: grid; grid-template-columns: 1fr"><div>${markup}</div></div>` +
+        `<div data-wrapper="two-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">` +
+        `<div>${markup}</div><div>${markup}</div></div>`,
+    );
+  }, list);
+  const columnBox = await column.boundingBox();
+  if (!columnBox) throw new Error('No column');
+  for (const wrapper of ['flex', 'grid', 'two-up']) {
+    const lists = page.locator(`[data-wrapper="${wrapper}"] .description-list`);
+    expect(await lists.count(), wrapper).toBeGreaterThan(0);
+    for (const box of await lists.evaluateAll((elements) =>
+      elements.map((element) => {
+        const { x, width } = element.getBoundingClientRect();
+        return { x, width };
+      }),
+    )) {
+      // Drawn, and inside the column.
+      expect(box.width, wrapper).toBeGreaterThan(0);
+      expect(box.x + box.width, wrapper).toBeLessThanOrEqual(columnBox.x + columnBox.width + 0.5);
+    }
+  }
+  expect(await sideways(page)).toBe(0);
+});
+
+test('every stat tile and data table on a docs page takes its width from its holder, never collapsing', async ({
+  page,
+}) => {
+  // A size container's intrinsic inline size is 0 (spec correction 63): one whose holder sized it from its
+  // content would draw its padding wide. Every example gives each its width, so none is narrower than 12rem.
+  test.setTimeout(120_000);
+  let seen = 0;
+  for (const { slug, url } of PAGES) {
+    await visit(page, url);
+    const widths = await page
+      .locator('.stage')
+      .evaluateAll((stages) =>
+        stages.flatMap((stage) =>
+          [...stage.querySelectorAll('.stat-tile, .data-table')]
+            .filter((part) => part.getClientRects().length > 0)
+            .map((part) => ({ part: part.className, width: part.getBoundingClientRect().width })),
+        ),
+      );
+    seen += widths.length;
+    for (const { part, width } of widths) expect(width, `${slug}: ${part}`).toBeGreaterThanOrEqual(12 * 16);
+  }
+  expect(seen).toBeGreaterThan(0);
+});
+
+test('a month grid in a flex: 1, a 1fr or a two-up wrapper keeps a 320px page from scrolling sideways', async ({
+  page,
+}) => {
+  // A size container's stand-in width is its min-content width too, so the grid's is 0 (spec corrections 34 and
+  // 45): a flex: 1 item, a 1fr track and two 1fr tracks, bare or in cards, each give it their width. Its cells
+  // stretch to fill it and are never under 6px: under 12rem of its width the grid wraps into half-years.
+  await page.setViewportSize({ width: 320, height: 800 });
+  await visit(page, '/docs/components/month-grid');
+  const column = page.locator('.panel-main').first();
+  const markup = await page
+    .locator('.stage .month-grid')
+    .first()
+    .evaluate((element) => element.outerHTML);
+  await column.evaluate((element, grid) => {
+    const card = `<div class="card"><div class="card-body">${grid}</div></div>`;
+    element.insertAdjacentHTML(
+      'afterbegin',
+      `<div data-wrapper="flex" style="display: flex"><div style="flex: 1">${grid}</div></div>` +
+        `<div data-wrapper="grid" style="display: grid; grid-template-columns: 1fr"><div>${grid}</div></div>` +
+        `<div data-wrapper="two-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">` +
+        `<div>${grid}</div><div>${grid}</div></div>` +
+        `<div data-wrapper="two-up-cards" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">` +
+        `${card}${card}</div>`,
+    );
+  }, markup);
+  const columnBox = await column.boundingBox();
+  if (!columnBox) throw new Error('No column');
+  for (const wrapper of ['flex', 'grid', 'two-up', 'two-up-cards']) {
+    const grids = page.locator(`[data-wrapper="${wrapper}"] .month-grid`);
+    for (const index of wrapper.startsWith('two-up') ? [0, 1] : [0]) {
+      const box = await grids.nth(index).boundingBox();
+      if (!box) throw new Error(`No grid in the ${wrapper} wrapper`);
+      expect(box.x + box.width, wrapper).toBeLessThanOrEqual(columnBox.x + columnBox.width + 0.5);
+      // Not collapsed: the grid fills its holder, and no cell is under 6px.
+      const holder = await grids
+        .nth(index)
+        .evaluate((element) => element.parentElement?.getBoundingClientRect().width ?? 0);
+      expect(box.width, wrapper).toBeGreaterThanOrEqual(holder - 1);
+      const narrowest = await grids
+        .nth(index)
+        .locator('.month-grid-cell')
+        .evaluateAll((cells) => Math.min(...cells.map((cell) => cell.getBoundingClientRect().width)));
+      expect(narrowest, wrapper).toBeGreaterThanOrEqual(6);
+    }
+  }
+  expect(await sideways(page)).toBe(0);
+});
+
+test("the month grid's basic example reads as a table: Year and twelve months, and a row header per year", async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/month-grid');
+  const table = page.locator('.stage').first().getByRole('table', { name: 'Statement coverage' });
+  await expect(table.getByRole('columnheader')).toHaveCount(13);
+  await expect(table.getByRole('columnheader').first()).toHaveText('Year');
+  await expect(table.getByRole('rowheader')).toHaveText(['2026', '2025', '2024']);
+  await expect(table.getByRole('row').nth(2).getByRole('cell').nth(2)).toHaveText('Missing');
+  // The figure is named, its visible grid is hidden, and its summary says what is missing, oldest first, before
+  // what is partial.
+  await expect(page.getByRole('figure', { name: 'Statement coverage' })).toHaveCount(1);
+  await expect(page.locator('.stage .month-grid-summary').first()).toHaveText(
+    'Missing: November 2024, March and April 2025. Partial: June 2025.',
+  );
+});
+
 // ---- Accessibility ------------------------------------------------------------------------------
 
 /**
@@ -1743,7 +1987,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   button: ['.stage .button'],
   // With scripts off an inline calendar is its face: an empty frame of its final size.
   calendar: ['.stage .calendar[data-face]'],
-  card: ['.stage .card', '.stage .card-title', '.stage .card-note'],
+  card: ['.stage .card', '.stage .card-title', '.stage .card-note', '.stage .card-actions'],
   checkbox: ['.stage .checkbox-box'],
   'collapsible-card': ['.stage .card-collapsible', '.stage .card-toggle', '.stage .card-chevron'],
   // The input and its button; the list renders nothing until it opens.
@@ -1760,6 +2004,15 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The frame and its button, with the app's valueLabel where the segments go; the calendar waits for a press.
   'date-picker': ['.stage .date-picker-control', '.stage .date-picker-button'],
   'date-range-picker': ['.stage .date-range-control', '.stage .date-range-button'],
+  // A static part: the whole list, its empty words and its numeric values are in the server's HTML.
+  // The Accounts recipe is a client example: the server renders its first view, the list with its summary.
+  'description-list': [
+    '.stage dl.description-list',
+    '.stage .description-list-value[data-empty]',
+    '.stage .description-list-value[data-numeric]',
+    '.stage .page-header-title',
+    '.stage .stat-tile-value',
+  ],
   dialog: ['.stage .button'],
   drawer: ['.stage .button'],
   // A static part: the whole column is in the server's HTML.
@@ -1771,6 +2024,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'filter-bar': ['.stage .filter-bar-row', '.stage .filter-bar-sheet-button'],
   // The pill and an active chip's summary, from React Aria's hidden pass; the list renders nothing until it opens.
   'filter-chip': ['.stage .filter-chip-trigger', '.stage .filter-chip-value'],
+  // A static part: the dial with its role and the arc's dash are in the server's HTML, so nothing sweeps in.
+  gauge: ['.stage .gauge-dial[role="meter"]', '.stage .gauge-value'],
   'icon-button': ['.stage .icon-button'],
   kbd: ['.stage .kbd'],
   // The drawing, the table the toggle shows and the toggle itself; the readout waits for a key or a pointer.
@@ -1782,6 +2037,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   link: ['.stage .link'],
   menu: ['.stage .button, .stage .icon-button'],
   meter: ['.stage .meter [role="meter"]', '.stage .meter-segment'],
+  // A static part: the cells, the table and the summary are in the server's HTML.
+  'month-grid': ['.stage figure.month-grid', '.stage .month-grid-table', '.stage .month-grid-summary'],
   'multi-select': ['.stage .multi-select-control', '.stage .multi-select-tag'],
   // The figure is the server face's plain text, and the symbol is drawn beside it.
   'number-field': ['.stage .number-field-input', '.stage .number-field-symbol'],

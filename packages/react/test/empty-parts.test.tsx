@@ -8,6 +8,8 @@ import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { ComboBox } from '../src/combo-box';
 import { DataTable } from '../src/data-table';
 import { DateRangePicker } from '../src/date-range-picker';
+import { DescriptionList, DescriptionListItem } from '../src/description-list';
+import { Gauge } from '../src/gauge';
 import { Dialog } from '../src/dialog';
 import { Drawer } from '../src/drawer';
 import { EmptyState } from '../src/empty-state';
@@ -17,6 +19,8 @@ import { FilterBar } from '../src/filter-bar';
 import { FilterChip } from '../src/filter-chip';
 import { Menu, MenuItem, MenuTrigger } from '../src/menu';
 import { Meter } from '../src/meter';
+import { MonthGrid } from '../src/month-grid';
+import { COVERAGE_STATES, COVERAGE_YEARS, MONTH_NAMES, SHORT_MONTHS } from '../src/stories/coverage';
 import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
 import { PageHeader } from '../src/page-header';
@@ -327,6 +331,70 @@ describe('an empty meter label', () => {
     expect(container.querySelector('.meter')).not.toBeNull();
     expect(container.querySelector('.meter-label')).toBeNull();
     expect(screen.getByRole('meter', { name: 'Groceries' })).not.toHaveAttribute('aria-labelledby');
+  });
+});
+
+describe('an empty accounts part slot', () => {
+  it('draws no actions dd for an actions node of false, null or an empty string', () => {
+    for (const actions of [false, null, '']) {
+      const { container, unmount } = render(
+        <DescriptionList>
+          <DescriptionListItem term="Nickname" actions={actions}>
+            Travel card
+          </DescriptionListItem>
+        </DescriptionList>,
+      );
+      // The term and the value, and nothing after them.
+      expect(container.querySelector('.description-list-item')?.children).toHaveLength(2);
+      expect(container.querySelector('.description-list-actions')).toBeNull();
+      unmount();
+    }
+  });
+
+  it('draws no gauge label span and no figure for an empty label, figure and caption', () => {
+    for (const empty of [false, null, '', '  ']) {
+      const { container, unmount } = render(
+        <Gauge
+          // An empty label passes the types with an aria-label beside it, which then names the dial.
+          label={empty}
+          aria-label="Utilization"
+          value={23}
+          valueLabel="23%"
+          figure={typeof empty === 'string' ? empty : undefined}
+          figureCaption={typeof empty === 'string' ? empty : undefined}
+        />,
+      );
+      expect(container.querySelector('.gauge-label')).toBeNull();
+      expect(container.querySelector('.gauge-figure')).toBeNull();
+      // The text block holds the value text alone.
+      expect(container.querySelector('.gauge-text')?.children).toHaveLength(1);
+      expect(screen.getByRole('meter', { name: 'Utilization' })).not.toHaveAttribute('aria-labelledby');
+      unmount();
+    }
+  });
+
+  it('draws no label span and no summary paragraph for an empty label and an empty summary', () => {
+    for (const empty of [false, null, '', '  ']) {
+      const { container, unmount } = render(
+        <MonthGrid
+          // An empty label passes the types with an aria-label beside it, which then names the figure.
+          label={empty}
+          aria-label="Statement coverage"
+          states={COVERAGE_STATES}
+          years={COVERAGE_YEARS}
+          monthLabels={SHORT_MONTHS}
+          monthNames={MONTH_NAMES}
+          summary={empty}
+        />,
+      );
+      expect(container.querySelector('.month-grid-label')).toBeNull();
+      expect(container.querySelector('.month-grid-summary')).toBeNull();
+      const figure = screen.getByRole('figure', { name: 'Statement coverage' });
+      expect(figure).not.toHaveAttribute('aria-labelledby');
+      // The table's caption is the aria-label, since no label shows.
+      expect(figure.querySelector('caption')).toHaveTextContent('Statement coverage');
+      unmount();
+    }
   });
 });
 

@@ -1,5 +1,30 @@
 # @snapshot-ui/react
 
+## 0.8.0
+
+### Minor Changes
+
+- 3e05863: Add CardActions: a card's own actions in a plain card's header, after its CardTitle and CardNote, such as Edit and a More menu holding Merge and Remove on a Details card. Show at most two; put the rest in a More menu. From 24rem of the header they sit at the end of the title's line, level with its first line, and move down by the card's corner inset with the title, so they stand clear of the rounded corner. In a narrower header they follow the note and nothing else moves. A long label wraps inside its button, and the header takes no width from its actions, so a card never scrolls a phone's page sideways. A card without CardActions is unchanged, and so is CollapsibleCard. It is static, so a server component renders it.
+- 3e05863: Add DescriptionList and DescriptionListItem: an account's details as a real `dl`. Each item is a `term`, its value as children, and optional `actions`, named with the term ("Edit Nickname"). Terms sit beside values from 30rem of the list's own width and above them under it, or hold one `layout`; `--description-list-term-size` sets the name column. An empty value shows "Not set" in slate, or your `emptyValue`, such as a link to add it. Long values wrap and break anywhere. `isNumeric` keeps amounts, limits and percentages left to right on a Persian page. A row's controls at a card's foot stand clear of its rounded corner. It is static, so a server component renders it. `description-list.css` in `styles.css`.
+- 3e05863: Add Gauge: one figure on a range at a glance, a ring or a semicircle, `sm` (32px), `md` (96px) or `lg` (160px). `value` from `minValue` to `maxValue`, such as a credit score from 300 to 850; `valueLabel` says it in your words and is what a screen reader hears; `figure` and `figureCaption` draw the centre numeral and a word under it ("742", "Very good"), with no default; up to five `marks` show band edges or thresholds. `tone` is yours: `warning` for a state that needs a look, such as a fair or a poor credit score, `error` only where a limit stopped something; above `maxValue` a neutral gauge draws warning. At a warning or an error tone, or over the limit, `valueLabel` must say so in words, as a Meter's `valueLabel` must over its limit, and `figureCaption` repeats it. The gauge writes no numbers at the range's ends: where a reader needs them, put them under a semicircle's ends yourself, as the Accounts recipe does for 300 and 850. It is a meter, not a progress bar: use ProgressBar for work getting done. The arc moves over 200ms when the value changes, mirrors on a right-to-left page, and is round in every shape. It is static, so a server component renders it. `gauge.css` in `styles.css`.
+- 3e05863: Add MonthGrid: which months you have, one row per year. Name your `states` ("Held", "Partial", "Missing") and map each to a look, `filled`, `partial` or `empty`; give each year's `months` as state ids, or null for a month outside the range, which stays blank. `monthLabels` head the columns and `monthNames` are read in the summary and the table, in your calendar and your digits: the grid computes no date, so place your data in Persian months yourself on a Persian page. Under the grid a sentence says what is missing or partial ("Missing: November 2024, March and April 2025."), in English unless you pass `summary`, which a page in another language does, in its own words; a legend names your states; a hidden table gives screen readers every month by row and column, after the summary, which also describes the grid. Only quarter labels show under 28rem of its width, and under 12rem each year wraps into two rows of six. The looks are shapes, never a warning or error color: say what needs attention in your summary. It takes the width of its box and has none of its own, so give it a width in a holder sized to its content. It is static, so a server component renders it. `month-grid.css` in `styles.css`.
+
+### Patch Changes
+
+- 3e05863: A Meter in a DataTable row cuts its segments apart and rings its pace marker in the row's own fill, on a plain, a hovered and a selected row, where it drew pale Lifted blocks. DataTable sets `--meter-surface` from its fill, and each washed row from its wash. A table in a Card takes the card's fill for its sticky header and its rows, so a meter there cuts in the card's color too. A meter on any other surface still reads `--meter-surface`, with Lifted as its fallback, so set it to that surface where it is not Lifted.
+- 3e05863: StatTile and DataTable now declare `contain-intrinsic-inline-size: 0`, as DescriptionList, MonthGrid and a card header with actions do. The stand-in widths they named, a 16rem tile and a 12rem table, were also their narrowest widths, so two tiles or two tables side by side, each in its own wrapper in `1fr` tracks or `flex: 1` wrappers, pushed a 320px page sideways. A block, a `flex: 1` item, a `1fr` track or a flex row gives each its width, as before.
+  
+  A StatTile placed straight in a flex row is unchanged: it now takes `flex: 0 1 16rem`, so it is still a whole 16rem tile there, and shrinks from it in a narrower row. In a flex column that basis is a height, so give a tile there `flex: none`. In an `auto` grid column, give a tile a width.
+  
+  A DataTable whose holder sizes it from its content, such as an `auto` grid track, a flex column with `align-items: flex-start`, an `inline-block` or `width: max-content`, now draws 0 wide: give it a width there, such as `inline-size: 100%`.
+- Updated dependencies [3e05863]
+- Updated dependencies [3e05863]
+- Updated dependencies [3e05863]
+- Updated dependencies [3e05863]
+- Updated dependencies [3e05863]
+- Updated dependencies [3e05863]
+  - @snapshot-ui/core@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes

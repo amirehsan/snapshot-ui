@@ -36,6 +36,16 @@ Pass a small drawing, up to 96 by 32, in `trend`. The [Sparkline](/docs/charts/s
 
 <Section>
 
+## A gauge as the trend
+
+A 32px [Gauge](/docs/components/gauge) fits the trend's slot, for a share rather than a change over time: credit used of a limit, a goal saved. A gauge is a meter that names itself, so it is read in the tile; give it an `aria-label` that says what share it is, and its value text beside it.
+
+<Preview name="gauge-tile" />
+
+</Section>
+
+<Section>
+
 ## As a link
 
 `href` makes the whole tile one link, routed through `RouterProvider` as [Routing](/docs/routing) sets up. Its name is everything it shows, in order. Put nothing focusable inside it: a link cannot hold a link or a button, and the console warns when one does.
@@ -48,7 +58,7 @@ Pass a small drawing, up to 96 by 32, in `trend`. The [Sparkline](/docs/charts/s
 
 ## In a row
 
-A tile is a size container, so it takes its width from its column, never from its content. Lay tiles in a grid such as `repeat(auto-fit, minmax(16rem, 1fr))`, not in a row that sizes them by content. Cap the minimum at the row's width, as below, so a column narrower than 16rem holds one tile and nothing scrolls sideways.
+A tile is a size container, so it takes its width from its column, never from its content, and has no width of its own. Lay tiles in a grid such as `repeat(auto-fit, minmax(16rem, 1fr))`, not in a row that sizes them by content. Cap the minimum at the row's width, as below, so a column narrower than 16rem holds one tile and nothing scrolls sideways. Placed straight in a flex row a tile is 16rem wide and shrinks from there, since it takes `flex: 0 1 16rem`; give it `flex: 1 1 16rem` to share the row's room. In a flex column that basis would be its height, so give a tile there `flex: none`. In an `auto` grid column, give it a width.
 
 ```css
 .tiles {

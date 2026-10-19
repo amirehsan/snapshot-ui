@@ -1,0 +1,176 @@
+/*
+ * DescriptionList: an account's details, derived in docs/design-system.md ("DescriptionList"). A dl of rows,
+ * each a div of a term, a value and the row's actions. The list is its own size container: from 30rem of its
+ * content box a row is three columns, the term at 30% (--description-list-term-size), the value and the
+ * actions; under it the term and the actions share a line and the value takes the next. The row is the Dense
+ * data row, 48px or the field's height in compact, its text padded what one line leaves around it, and a rule
+ * between rows. A row with actions that ends or starts a card stands its controls the card's corner inset from
+ * its edge, as the record's rule for a control at a holder's foot asks.
+ */
+@layer components {
+  /* A size container takes no width from its content, and its intrinsic inline size is 0, the library's rule:
+     a stand-in width would be its min-content width too, which a flex: 1 item or a 1fr track keeps as its
+     narrowest, and two lists side by side scrolled a phone's page sideways. A block, a flex: 1 item or a 1fr
+     track gives it its width; a holder that sizes it from its content (a content-sized flex item,
+     width: max-content, an auto grid track) must give it one. */
+  .description-list {
+    container: description-list / inline-size;
+    contain-intrinsic-inline-size: 0;
+    display: grid;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+  }
+
+  /* The Dense data row: the target or the field's height, whichever is more, 48px and 40px in compact, with
+     the text padded what one body line leaves of it, 12.3px and 8.3px, less the 1px rule. */
+  .description-list-item {
+    --description-list-row: max(var(--size-target), var(--size-field));
+    --description-list-pad: max(0px, calc((var(--description-list-row) - 1lh - 1px) / 2));
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'term actions'
+      'value value';
+    row-gap: calc(var(--spacing-part) / 2);
+    column-gap: var(--spacing-peer);
+    align-items: baseline;
+    box-sizing: border-box;
+    min-block-size: var(--description-list-row);
+    padding-block: var(--description-list-pad);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+
+  /* One rule between two rows, never above the first or under the last, so a list in a card ends at the card's
+     padding. */
+  .description-list[data-dividers] > .description-list-item + .description-list-item {
+    border-block-start: 1px solid var(--color-divider);
+  }
+
+  /* A name, read before its value: slate, at the small step, and 500 to set it apart from a hint's 450. */
+  .description-list-term {
+    grid-area: term;
+    min-width: 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    color: var(--color-slate);
+  }
+
+  /* A value wraps, and a long unbroken word, an IBAN or an address, breaks anywhere: nothing truncates. */
+  .description-list-value {
+    grid-area: value;
+    min-width: 0;
+    margin: 0;
+    font-weight: var(--text-body--font-weight);
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+
+  /* "Not set" is words the reader has to read, so slate, never taupe. */
+  .description-list-value[data-empty] {
+    color: var(--color-slate);
+  }
+
+  /* A figure reads left to right in every direction, as copy.css's numerals do: direction and isolate keep a
+     sign and a percent sign in their written order, and match-parent starts the figure at the line's start of
+     a right-to-left row. Chromium knows only the prefixed name and Firefox only the standard one, so both are
+     written, the standard name last. */
+  .description-list-value[data-numeric] {
+    font-variant-numeric: tabular-nums;
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: -webkit-match-parent;
+    text-align: match-parent;
+  }
+
+  /* A 40px control sits level with the line beside it, and its negative margins give back what it has over
+     that line, so the row does not grow for its button: the collapsible card toggle's technique. */
+  .description-list-actions {
+    grid-area: actions;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--spacing-part);
+    margin: 0;
+    margin-block: min(0px, calc((1lh - var(--size-control)) / 2));
+  }
+
+  /* A row without actions lets its term, stacked, or its value, side by side, take the actions' column. */
+  .description-list-item:not(:has(> .description-list-actions)) {
+    grid-template-areas:
+      'term term'
+      'value value';
+  }
+
+  /* Side by side: every row has the same template, so the term column lines up down the list. */
+  .description-list[data-layout='horizontal'] > .description-list-item {
+    grid-template-columns: minmax(0, var(--description-list-term-size, 30%)) minmax(0, 1fr) auto;
+    grid-template-areas: 'term value actions';
+    row-gap: 0;
+  }
+
+  .description-list[data-layout='horizontal']
+    > .description-list-item:not(:has(> .description-list-actions)) {
+    grid-template-areas: 'term value value';
+  }
+
+  /* From 30rem of the list's own box, the term column is at least 9rem, which holds "Routing number". */
+  @container description-list (inline-size >= 30rem) {
+    .description-list[data-layout='auto'] > .description-list-item {
+      grid-template-columns: minmax(0, var(--description-list-term-size, 30%)) minmax(0, 1fr) auto;
+      grid-template-areas: 'term value actions';
+      row-gap: 0;
+    }
+
+    .description-list[data-layout='auto'] > .description-list-item:not(:has(> .description-list-actions)) {
+      grid-template-areas: 'term value value';
+    }
+  }
+
+  /* The corner (design record, "Nested radii, derived"): a row whose controls would sit in a card's corner
+     curve stands them the corner inset from the card's edge, down, not in, so they stay on the column's end
+     edge. 7px more in Rounded, 19px in compact, nothing in Soft and Square, where the padding already clears
+     the curve. Only a list that ends or starts the card: directly, as its body's last or first child, or as the
+     last child of a collapsible card's body. At the foot, only side by side, where the controls stand on the
+     last row's first line; stacked they share the term's line at the row's top, clear of the curve, and the row
+     keeps its padding. */
+  :is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)
+    > .description-list[data-layout='horizontal']:last-child
+    > .description-list-item:last-child:has(> .description-list-actions) {
+    padding-block-end: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));
+  }
+
+  @container description-list (inline-size >= 30rem) {
+    :is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)
+      > .description-list[data-layout='auto']:last-child
+      > .description-list-item:last-child:has(> .description-list-actions) {
+      padding-block-end: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));
+    }
+  }
+
+  :is(.card, .card > .card-body:first-child)
+    > .description-list:first-child
+    > .description-list-item:first-child:has(> .description-list-actions) {
+    padding-block-start: calc(var(--description-list-pad) + var(--holder-corner-inset) - var(--holder-pad));
+  }
+
+  /* A printed page cannot press a button. */
+  @media print {
+    .description-list-actions {
+      display: none;
+    }
+  }
+
+  /* The rules are borders, which the repaint keeps; named here so they take the reader's text color. */
+  @media (forced-colors: active) {
+    .description-list[data-dividers] > .description-list-item + .description-list-item {
+      border-block-start-color: canvastext;
+    }
+  }
+}

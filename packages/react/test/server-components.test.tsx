@@ -80,17 +80,35 @@ vi.mock('../src/pagination/PaginationStatus', async () => {
 
 import * as react from 'react';
 import { Badge } from '../src/badge';
-import { Card, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { EmptyState } from '../src/empty-state';
 import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
+import { Gauge } from '../src/gauge';
 import { Meter } from '../src/meter';
+import { MonthGrid } from '../src/month-grid';
 import { PageColumn, PageHeader } from '../src/page-header';
 import { Pagination } from '../src/pagination';
 import { ProgressBar } from '../src/progress-bar';
 import { Skeleton } from '../src/skeleton';
 import { StatTile } from '../src/stat-tile';
+import { COVERAGE_STATES, COVERAGE_YEARS, MONTH_NAMES, SHORT_MONTHS } from '../src/stories/coverage';
 import { Eyebrow, Heading, Text } from '../src/typography';
+
+/** The look each of the coverage's months draws, and its word in the table. */
+const COVERAGE_LOOKS: Record<string, string> = {
+  held: 'filled',
+  partial: 'partial',
+  missing: 'empty',
+  none: 'none',
+};
+const COVERAGE_WORDS: Record<string, string> = {
+  held: 'Held',
+  partial: 'Partial',
+  missing: 'Missing',
+  none: 'Not in range',
+};
 
 /** The static components: the ones that carry no `'use client'`, so a server component may use them directly. */
 const STATIC: [name: string, element: ReactElement, markup: string][] = [
@@ -129,6 +147,142 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     </Card>,
     '<section aria-label="Danger zone" class="card"><div class="card-header"><h3 class="card-title">Delete the workspace</h3>' +
       '<p class="card-note">This cannot be undone.</p></div><div class="card-body">Everything goes.</div></section>',
+  ],
+  [
+    // A place for the app's buttons in a plain card's header: one div, its children as given.
+    'CardActions',
+    <CardActions>
+      <a href="/edit">Edit</a>
+    </CardActions>,
+    '<div class="card-actions"><a href="/edit">Edit</a></div>',
+  ],
+  [
+    'DescriptionList',
+    <DescriptionList>
+      <DescriptionListItem term="Type">Credit card</DescriptionListItem>
+    </DescriptionList>,
+    '<dl class="description-list" data-layout="auto" data-dividers=""><div class="description-list-item">' +
+      '<dt class="description-list-term">Type</dt><dd class="description-list-value">Credit card</dd></div></dl>',
+  ],
+  [
+    // An empty value shows the library's words and is never a figure; a row's actions follow in a dd of their own.
+    'DescriptionList empty and numeric',
+    <DescriptionList layout="horizontal" hasDividers={false}>
+      <DescriptionListItem term="Nickname" isNumeric actions={<a href="/edit">Edit</a>} />
+      <DescriptionListItem term="Credit limit" isNumeric>
+        $5,000.00
+      </DescriptionListItem>
+    </DescriptionList>,
+    '<dl class="description-list" data-layout="horizontal"><div class="description-list-item">' +
+      '<dt class="description-list-term">Nickname</dt><dd class="description-list-value" data-empty="">Not set</dd>' +
+      '<dd class="description-list-actions"><a href="/edit">Edit</a></dd></div><div class="description-list-item">' +
+      '<dt class="description-list-term">Credit limit</dt>' +
+      '<dd class="description-list-value" data-numeric="">$5,000.00</dd></div></dl>',
+  ],
+  [
+    // A ring from the top: the track, the value's dash as inline style, the figure and the text, with useId's ids.
+    'Gauge',
+    <Gauge label="Utilization" value={23} valueLabel="23% of your limit" figure="23%" />,
+    '<div class="gauge" data-size="md" data-form="ring" data-tone="neutral">' +
+      '<div class="gauge-dial" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="23" ' +
+      'aria-valuetext="23% of your limit" aria-labelledby="_R_0_-label">' +
+      '<svg class="gauge-svg" viewBox="0 0 96 96" aria-hidden="true" focusable="false">' +
+      '<path class="gauge-track" d="M48 4A44 44 0 1 1 48 92A44 44 0 1 1 48 4" stroke-width="8"></path>' +
+      '<path class="gauge-value" d="M48 4A44 44 0 1 1 48 92A44 44 0 1 1 48 4" stroke-width="8" ' +
+      'style="stroke-dasharray:55.586 276.46;stroke-dashoffset:-4"></path></svg>' +
+      '<span class="gauge-figure" aria-hidden="true"><span class="gauge-figure-value">23%</span></span></div>' +
+      '<div class="gauge-text"><span class="gauge-label" id="_R_0_-label">Utilization</span>' +
+      '<span class="gauge-value-label" aria-hidden="true">23% of your limit</span></div></div>',
+  ],
+  [
+    // The consumer's score: a 300 to 850 semicircle whose track is dashed to its ends, four marks in order of
+    // value with their description, and the figure with its word.
+    'Gauge score',
+    <Gauge
+      label="Credit score"
+      form="semicircle"
+      size="lg"
+      minValue={300}
+      maxValue={850}
+      value={742}
+      valueLabel="742 of 850, Very good"
+      figure="742"
+      figureCaption="Very good"
+      marks={[
+        { value: 670, label: 'Good from 670' },
+        { value: 580, label: 'Fair from 580' },
+      ]}
+    />,
+    '<div class="gauge" data-size="lg" data-form="semicircle" data-tone="neutral">' +
+      '<div class="gauge-dial" role="meter" aria-valuemin="300" aria-valuemax="850" aria-valuenow="742" ' +
+      'aria-valuetext="742 of 850, Very good" aria-describedby="_R_0_-marks" aria-labelledby="_R_0_-label">' +
+      '<svg class="gauge-svg" viewBox="0 0 160 86" aria-hidden="true" focusable="false">' +
+      '<defs><mask id="_R_0_-gaps" class="gauge-mask" maskUnits="userSpaceOnUse" x="-160" y="-160" width="480" ' +
+      'height="480"><rect x="-160" y="-160" width="480" height="480" fill="white"></rect>' +
+      '<line class="gauge-mark-gap" x1="81.885" y1="14.027" x2="82.342" y2="-1.967" stroke="black" ' +
+      'stroke-width="6"></line><line class="gauge-mark-gap" x1="114.082" y1="23.481" x2="122.345" y2="9.779" ' +
+      'stroke="black" stroke-width="6"></line></mask></defs>' +
+      '<path class="gauge-track" d="M6 80A74 74 0 0 1 154 80" stroke-width="12" mask="url(#_R_0_-gaps)" ' +
+      'style="stroke-dasharray:220.478 232.478;stroke-dashoffset:-6"></path>' +
+      '<path class="gauge-value" d="M6 80A74 74 0 0 1 154 80" stroke-width="12" mask="url(#_R_0_-gaps)" ' +
+      'style="stroke-dasharray:174.828 232.478;stroke-dashoffset:-6"></path>' +
+      '<line class="gauge-mark" x1="81.885" y1="14.027" x2="82.342" y2="-1.967"></line>' +
+      '<line class="gauge-mark" x1="114.082" y1="23.481" x2="122.345" y2="9.779"></line></svg>' +
+      '<span class="gauge-figure" aria-hidden="true"><span class="gauge-figure-value">742</span>' +
+      '<span class="gauge-figure-caption">Very good</span></span></div>' +
+      '<div class="gauge-text"><span class="gauge-label" id="_R_0_-label">Credit score</span>' +
+      '<span class="gauge-value-label" aria-hidden="true">742 of 850, Very good</span></div>' +
+      '<span class="gauge-marks-label" id="_R_0_-marks" hidden="">Fair from 580. Good from 670.</span></div>',
+  ],
+  [
+    // Two years of the consumer's coverage in reading order: the label (hidden, since it names the figure), the
+    // visible grid hidden, the English summary that describes the figure, the table and the legend of the three
+    // states the data holds, with useId's ids.
+    'MonthGrid',
+    <MonthGrid
+      label="Statement coverage"
+      states={COVERAGE_STATES}
+      years={COVERAGE_YEARS}
+      monthLabels={SHORT_MONTHS}
+      monthNames={MONTH_NAMES}
+    />,
+    '<figure aria-labelledby="_R_0_-label" aria-describedby="_R_0_-summary" class="month-grid">' +
+      '<span class="month-grid-label" id="_R_0_-label" aria-hidden="true">Statement coverage</span>' +
+      '<div class="month-grid-grid" aria-hidden="true" style="--month-grid-columns:12;--month-grid-half:6">' +
+      '<span class="month-grid-corner"></span>' +
+      SHORT_MONTHS.map(
+        (short, index) =>
+          `<span class="month-grid-month"${index % 3 === 0 ? ' data-quarter=""' : ''}>${short}</span>`,
+      ).join('') +
+      COVERAGE_YEARS.map(
+        (year) =>
+          `<span class="month-grid-year">${year.label}</span>` +
+          year.months
+            .map(
+              (month) =>
+                `<span class="month-grid-cell" data-look="${COVERAGE_LOOKS[month ?? 'none']}"></span>`,
+            )
+            .join(''),
+      ).join('') +
+      '</div><p class="month-grid-summary" id="_R_0_-summary">Missing: March and April 2025. Partial: June 2025.</p>' +
+      '<div class="month-grid-alternative"><table class="month-grid-table">' +
+      '<caption>Statement coverage</caption><thead><tr><th scope="col">Year</th>' +
+      MONTH_NAMES.map((name) => `<th scope="col">${name}</th>`).join('') +
+      '</tr></thead><tbody>' +
+      COVERAGE_YEARS.map(
+        (year) =>
+          `<tr><th scope="row">${year.label}</th>` +
+          year.months.map((month) => `<td>${COVERAGE_WORDS[month ?? 'none']}</td>`).join('') +
+          '</tr>',
+      ).join('') +
+      '</tbody></table></div>' +
+      '<ul class="month-grid-legend" aria-hidden="true">' +
+      '<li class="month-grid-legend-item"><span class="month-grid-swatch" data-look="filled"></span>' +
+      '<span class="month-grid-legend-label">Held</span></li>' +
+      '<li class="month-grid-legend-item"><span class="month-grid-swatch" data-look="partial"></span>' +
+      '<span class="month-grid-legend-label">Partial</span></li>' +
+      '<li class="month-grid-legend-item"><span class="month-grid-swatch" data-look="empty"></span>' +
+      '<span class="month-grid-legend-label">Missing</span></li></ul></figure>',
   ],
   [
     'FieldCounter',
@@ -348,10 +502,13 @@ const STATIC_MODULES = [
   'kbd/Kbd.tsx',
   'badge/Badge.tsx',
   'card/Card.tsx',
+  'description-list/DescriptionList.tsx',
   'field/FieldCounter.tsx',
   'field/FieldChanged.tsx',
   'stat-tile/StatTile.tsx',
   'meter/Meter.tsx',
+  'gauge/Gauge.tsx',
+  'month-grid/MonthGrid.tsx',
   'pagination/Pagination.tsx',
   'empty-state/EmptyState.tsx',
   'skeleton/Skeleton.tsx',

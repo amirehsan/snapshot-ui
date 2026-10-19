@@ -8,13 +8,17 @@
  * tile takes the 5% ink wash on hover and press, and the token ring outside it; no lift, it is a surface.
  */
 @layer components {
-  /* A size container has no content width to give a parent that sizes it from its content, so a tile in a flex
-     row or an auto grid column was its padding wide. It names a stand-in width instead, the whole tile 16rem, at
-     which its narrow layout draws a figure of nine characters whole and a 320px phone is never pushed sideways.
-     A block or a sized grid column still sets its width. */
+  /* A size container takes no width from its content, and its intrinsic inline size is 0, the library's rule
+     (docs/design-system.md, StatTile, "A width from its holder"): a stand-in width is also its min-content width,
+     which a flex: 1 item or a 1fr track keeps as its narrowest, so two tiles side by side scrolled a 320px phone
+     sideways. A block, a flex: 1 item or a 1fr track gives the tile its width. In a flex row its basis is a
+     whole tile of 16rem, which it may shrink from, as 0.6.1's stand-in drew it there, so a tile placed straight
+     in a row is never its padding wide; min-content stays 0. In a flex column the basis is a height: give the
+     tile flex: none there. An auto grid column gives it no width, so give it one. */
   .stat-tile {
     container: stat-tile / inline-size;
-    contain-intrinsic-inline-size: calc(16rem - 2 * var(--spacing-card) - 2px);
+    contain-intrinsic-inline-size: 0;
+    flex: 0 1 16rem;
     box-sizing: border-box;
     display: block;
     min-width: 0;

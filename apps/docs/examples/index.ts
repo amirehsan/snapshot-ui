@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import AccountsRecipe from './accounts-recipe';
 import AppShellBasic from './app-shell-basic';
 import AppShellCollapsed from './app-shell-collapsed';
 import AppShellPhone from './app-shell-phone';
@@ -16,6 +17,7 @@ import CalendarBasic from './calendar-basic';
 import CalendarPersian from './calendar-persian';
 import CalendarRange from './calendar-range';
 import CalendarUnavailable from './calendar-unavailable';
+import CardActions from './card-actions';
 import CardNested from './card-nested';
 import CardParts from './card-parts';
 import CheckboxBasic from './checkbox-basic';
@@ -52,6 +54,10 @@ import DateRangePickerBasic from './date-range-picker-basic';
 import DateRangePickerPresets from './date-range-picker-presets';
 import DateRangePickerStates from './date-range-picker-states';
 import DateRangePickerUrl from './date-range-picker-url';
+import DescriptionListActions from './description-list-actions';
+import DescriptionListBasic from './description-list-basic';
+import DescriptionListCard from './description-list-card';
+import DescriptionListValues from './description-list-values';
 import DensityControls from './density-controls';
 import DialogBasic from './dialog-basic';
 import DialogDanger from './dialog-danger';
@@ -77,6 +83,11 @@ import FilterChipCustom from './filter-chip-custom';
 import FilterChipMultiple from './filter-chip-multiple';
 import FilterChipSingle from './filter-chip-single';
 import FilterChipStates from './filter-chip-states';
+import GaugeBasic from './gauge-basic';
+import GaugeScore from './gauge-score';
+import GaugeTable from './gauge-table';
+import GaugeTile from './gauge-tile';
+import GaugeUtilization from './gauge-utilization';
 import HeadingSizes from './heading-sizes';
 import IconButtonLink from './icon-button-link';
 import IconButtonStates from './icon-button-states';
@@ -94,6 +105,9 @@ import MenuSelection from './menu-selection';
 import MeterBasic from './meter-basic';
 import MeterOver from './meter-over';
 import MeterPace from './meter-pace';
+import MonthGridBasic from './month-grid-basic';
+import MonthGridLooks from './month-grid-looks';
+import MonthGridPersian from './month-grid-persian';
 import MultiSelectBasic from './multi-select-basic';
 import MultiSelectMany from './multi-select-many';
 import MultiSelectStates from './multi-select-states';
@@ -175,6 +189,7 @@ import UploadListStatuses from './upload-list-statuses';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
+  'accounts-recipe': AccountsRecipe,
   'app-shell-basic': AppShellBasic,
   'app-shell-collapsed': AppShellCollapsed,
   'app-shell-phone': AppShellPhone,
@@ -192,6 +207,7 @@ export const examples = {
   'calendar-persian': CalendarPersian,
   'calendar-range': CalendarRange,
   'calendar-unavailable': CalendarUnavailable,
+  'card-actions': CardActions,
   'card-nested': CardNested,
   'card-parts': CardParts,
   'checkbox-basic': CheckboxBasic,
@@ -228,6 +244,10 @@ export const examples = {
   'date-range-picker-presets': DateRangePickerPresets,
   'date-range-picker-states': DateRangePickerStates,
   'date-range-picker-url': DateRangePickerUrl,
+  'description-list-actions': DescriptionListActions,
+  'description-list-basic': DescriptionListBasic,
+  'description-list-card': DescriptionListCard,
+  'description-list-values': DescriptionListValues,
   'density-controls': DensityControls,
   'dialog-basic': DialogBasic,
   'dialog-danger': DialogDanger,
@@ -253,6 +273,11 @@ export const examples = {
   'filter-chip-multiple': FilterChipMultiple,
   'filter-chip-single': FilterChipSingle,
   'filter-chip-states': FilterChipStates,
+  'gauge-basic': GaugeBasic,
+  'gauge-score': GaugeScore,
+  'gauge-table': GaugeTable,
+  'gauge-tile': GaugeTile,
+  'gauge-utilization': GaugeUtilization,
   'heading-sizes': HeadingSizes,
   'icon-button-link': IconButtonLink,
   'icon-button-states': IconButtonStates,
@@ -270,6 +295,9 @@ export const examples = {
   'meter-basic': MeterBasic,
   'meter-over': MeterOver,
   'meter-pace': MeterPace,
+  'month-grid-basic': MonthGridBasic,
+  'month-grid-looks': MonthGridLooks,
+  'month-grid-persian': MonthGridPersian,
   'multi-select-basic': MultiSelectBasic,
   'multi-select-many': MultiSelectMany,
   'multi-select-states': MultiSelectStates,

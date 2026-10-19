@@ -166,33 +166,38 @@
     min-height: 100vh;
   }
 
+  /* The header is the shell's row: the library's PageHeader, which draws the trail, the title, the switches,
+     their layout and the fill, and under 1024px the drawer's button before the titles. The row sticks, and its
+     height is the page's sticky offset (header.tsx). */
   .header {
     position: sticky;
     top: 0;
     z-index: 20;
-    background-color: color-mix(in srgb, var(--color-canvas) 80%, transparent);
-    backdrop-filter: blur(20px) saturate(140%);
   }
 
-  .header-inner {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 24px;
-    max-width: 1320px;
-    margin-inline: auto;
-    padding: 32px 32px 20px;
+  /* The button's place, drawn under 1024px only, over PageHeader's fill at its column's start corner: the
+     button 8px out from the column's edge, as the outline button floated before, with its middle on the middle
+     of the title's first line, under the eyebrow and the part step. The titles make room for it (below), so
+     the switches, which take a line of their own there, still start at the column's edge. */
+  .header-lead {
+    display: none;
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    /* Above PageHeader, whose blur makes it a layer of its own painted after this. */
+    z-index: 1;
+    padding-block-start: var(--spacing-separate);
+    padding-inline-start: calc(var(--spacing-separate) - 8px);
   }
 
-  .header-titles {
-    display: grid;
-    gap: 6px;
-  }
-
-  .header-controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  /* Beside the open rail, from 1024px, the column is 640px at its narrowest. PageHeader keeps its titles 20rem
+     beside the switches, which would drop the switches under a short title up to 1068px, where the old header
+     always kept them beside it; the docs' titles keep 16rem instead, so the switches stay on the title's line
+     (spec correction 76). A long title still wraps beside them. */
+  @media (width >= 1024px) {
+    .header-page .page-header-titles {
+      flex-basis: 16rem;
+    }
   }
 
   /* Past its cap the column stays centered in the workspace, so the room left
@@ -236,6 +241,10 @@
   /* The stage resets the wrapping the docs section's Card sets, so each example wraps a long word by
      its own component's rules, the ones an app gets, and not by the card it is shown in. */
   .stage {
+    /* The stage paints the canvas inside the docs section's card, so a table on it draws its sticky header and a
+       meter's cuts in the canvas again, not in the card's fill it would inherit. */
+    --data-table-surface: var(--color-canvas);
+
     display: grid;
     place-items: center;
     min-height: 220px;
@@ -501,7 +510,10 @@
     display: none;
     width: 48px;
     height: 48px;
-    margin-left: -8px;
+    margin-block-start: calc(
+      var(--text-eyebrow) * var(--text-eyebrow--line-height) + var(--spacing-part) +
+        (var(--text-h2) * var(--text-h2--line-height) - 48px) / 2
+    );
     box-shadow: var(--shadow-lift);
   }
 
@@ -889,6 +901,15 @@
       display: inline-grid;
     }
 
+    .header-lead {
+      display: flex;
+    }
+
+    /* The button, less the 8px it stands out, and the row's gap. */
+    .header-page .page-header-titles {
+      padding-inline-start: calc(48px - 8px + var(--spacing-peer));
+    }
+
     /* Room for the close button, set a little in from the rail's corner. The 40px
        button is taller than the 26px brand, so the padding gives back the 14px:
        the head keeps its height and the brand its place. */
@@ -900,33 +921,25 @@
     .rail-version {
       margin-left: auto;
     }
-
-    .header-inner {
-      flex-wrap: wrap;
-      align-items: center;
-      padding-top: 20px;
-    }
-
-    .header-titles {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .header-controls {
-      width: 100%;
-    }
   }
 
   /* ---- Phone ----------------------------------------------------- */
   @media (width < 768px) {
-    .header-inner {
-      gap: 16px;
-      padding: 16px 16px 16px;
+    .header-lead {
+      padding-block-start: var(--spacing-inset);
+      padding-inline-start: calc(var(--spacing-inset) - 8px);
     }
 
-    .header-controls {
-      flex-wrap: wrap;
-      gap: 8px;
+    .header-page .page-header-titles {
+      padding-inline-start: calc(48px - 8px + var(--spacing-inset));
+    }
+
+    /* The title's step is 28px here (heading.css), so its first line is shorter. */
+    .header-menu {
+      margin-block-start: calc(
+        var(--text-eyebrow) * var(--text-eyebrow--line-height) + var(--spacing-part) +
+          (1.75rem * var(--text-h2--line-height) - 48px) / 2
+      );
     }
 
     .content {

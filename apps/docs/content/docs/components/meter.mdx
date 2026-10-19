@@ -38,13 +38,21 @@ When the segments add up to more than `max`, both looks turn the warning color a
 
 ## On another surface
 
-The cut between segments and the ring around the pace marker use `--meter-surface`, which defaults to Lifted, the card a meter usually sits on. On the page itself, set `--meter-surface: var(--color-canvas)` on the meter or any ancestor, and every meter inside follows.
+The cut between segments and the ring around the pace marker use `--meter-surface`, which defaults to Lifted, the card a meter usually sits on. On the page itself, set `--meter-surface: var(--color-canvas)` on the meter or any ancestor, and every meter inside follows. A [DataTable](/docs/components/data-table) sets it for you, to each row's own fill, hovered and selected included.
 
 ```css
 .budget-section {
   --meter-surface: var(--color-canvas);
 }
 ```
+
+</Section>
+
+<Section>
+
+## Meter or Gauge
+
+Both are meters: a measurement of the reader's state on a known range. Meter is a bar for a row or a list, with segments that stack, such as spent and held, and a pace marker. [Gauge](/docs/components/gauge) is one value drawn as a ring or a semicircle, for a glance: a credit score with its word under it, a utilization in a table row. Meter's range starts at 0 and ends at `max`, since its segments stack; Gauge's runs from `minValue` to `maxValue`, so a score can run from 300 to 850. A meter's cuts and pace ring take `--meter-surface`; a gauge's marks stand in gaps its svg cuts out, so it needs no surface color. Work getting done is neither: that is a [ProgressBar](/docs/components/progress-bar).
 
 </Section>
 
