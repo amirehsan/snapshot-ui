@@ -7468,6 +7468,14 @@ so did focus moved from a layout effect, in jsdom and Chromium (settings
 plan, spec correction 1). The plays are `ZeroInADialogThenSave`,
 `ZeroInADialogThenNextField`, `ZeroInADialogThenEnter`, `SubmitAfterBlur`
 and `FocusMovedInALayoutEffect`; the test once expected to fail now passes.
+The consumer then sent its own path (settings plan, spec correction 5):
+controlled fields in a form saved by an async transition, "Add plan"
+pending outside the form, and a Dialog rendered only while open, which a
+save unmounts. `ConsumerEnterFastSave`, `ConsumerEnterSlowSave`,
+`ConsumerPressFastSave` and `ConsumerPressSlowSave` hold it, by Enter and
+by a press, with a save that settles at once or after 100ms; they read the
+saved 0, no warning, and focus back on the trigger. They logged nothing in
+Chromium before the fix either.
 A focused field disabled before its text commits still drops that text, as
 React Aria's own field does (its listener holds the commit of the render
 that focused it); that is React Aria's, and not changed here. The same

@@ -1,5 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { useId, useLayoutEffect, useRef, useState, type ComponentType, type ReactElement } from 'react';
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ComponentType,
+  type ReactElement,
+} from 'react';
 import { renderToString } from 'react-dom/server';
 import { I18nProvider } from 'react-aria-components';
 import { expect, fn, spyOn, waitFor, within } from 'storybook/test';
@@ -683,5 +691,189 @@ export const FocusMovedInALayoutEffect: Story = {
     } finally {
       heard.restore();
     }
+  },
+};
+
+/** The consumer's server action, settled after a microtask (`fast`) or after 100ms. */
+async function settle(speed: 'fast' | 'slow'): Promise<{ ok: boolean }> {
+  if (speed === 'fast') await Promise.resolve();
+  else await new Promise((resolve) => setTimeout(resolve, 100));
+  return { ok: true };
+}
+
+interface Plan {
+  payments: number | null;
+  name: string;
+}
+
+/**
+ * The consumer's own Dialog, as it sent it (settings plan, spec correction 5): rendered only while open, with
+ * `isOpen` and `onOpenChange`, its controlled fields in a form whose submit saves in an async transition, and
+ * "Add plan" in the actions, outside the form, pending while it saves. A save that settles closes the Dialog,
+ * which unmounts it, and React Aria's FocusScope gives focus back to the trigger.
+ */
+function ConsumerAddPlan({
+  speed,
+  onOpenChange,
+  onSaved,
+}: {
+  speed: 'fast' | 'slow';
+  onOpenChange: (isOpen: boolean) => void;
+  onSaved: (plan: Plan) => void;
+}): ReactElement {
+  const formId = useId();
+  const [values, setValues] = useState<Plan>({ payments: null, name: '' });
+  const [pending, startTransition] = useTransition();
+  const set = (patch: Partial<Plan>): void => {
+    setValues((current) => ({ ...current, ...patch }));
+  };
+  const save = (): void => {
+    startTransition(async () => {
+      const result = await settle(speed);
+      if (!result.ok) return;
+      onSaved(values);
+      onOpenChange(false);
+    });
+  };
+  return (
+    <Dialog
+      isOpen
+      onOpenChange={onOpenChange}
+      size="lg"
+      title="Add a plan"
+      actions={
+        <Button type="submit" form={formId} isPending={pending} pendingLabel="Saving">
+          Add plan
+        </Button>
+      }
+    >
+      <form
+        id={formId}
+        onSubmit={(event) => {
+          event.preventDefault();
+          save();
+        }}
+      >
+        <NumberField
+          label="Payments made"
+          minValue={0}
+          maxValue={99}
+          value={values.payments}
+          onChange={(payments) => {
+            set({ payments });
+          }}
+        />
+        <TextField
+          label="Name"
+          value={values.name}
+          onChange={(name) => {
+            set({ name });
+          }}
+        />
+      </form>
+    </Dialog>
+  );
+}
+
+/** The consumer's page: a trigger that opens the Dialog, rendered only while open, and the saved value. */
+function ConsumerPage({ speed }: { speed: 'fast' | 'slow' }): ReactElement {
+  const [isOpen, setIsOpen] = useState(false);
+  const [saved, setSaved] = useState('nothing');
+  return (
+    <div style={{ display: 'grid', gap: 12, justifyItems: 'start' }}>
+      <Button
+        variant="secondary"
+        onPress={() => {
+          setIsOpen(true);
+        }}
+      >
+        Add a plan
+      </Button>
+      {isOpen ? (
+        <ConsumerAddPlan
+          speed={speed}
+          onOpenChange={setIsOpen}
+          onSaved={(plan) => {
+            setSaved(plan.payments === null ? 'empty' : String(plan.payments));
+          }}
+        />
+      ) : null}
+      <p style={{ margin: 0 }}>{`Saved: ${saved}`}</p>
+    </div>
+  );
+}
+
+/**
+ * Saves the consumer's Dialog with `leave` after typing 0 in Payments made, then checks the saved value, the
+ * console and focus: back on the trigger once the Dialog has gone, and still there two frames later, so not
+ * left on the body after FocusScope's restore.
+ */
+async function saveTheConsumersPlan(
+  canvasElement: HTMLElement,
+  presses: Presses,
+  leave: () => Promise<void>,
+): Promise<void> {
+  const heard = listenToTheConsole();
+  try {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole('button', { name: 'Add a plan' });
+    await typeZeroInTheDialog(canvasElement, presses);
+    await leave();
+    await waitFor(() => expect(within(document.body).queryByRole('dialog')).toBeNull(), LONG);
+    await expect(canvas.getByText('Saved: 0')).toBeVisible();
+    await waitFor(() => expect(trigger).toHaveFocus(), LONG);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await expect(trigger).toHaveFocus();
+    await expect(heard.logged()).toEqual([]);
+  } finally {
+    heard.restore();
+    // A pending Add plan that held focus is said by React Aria's announcer through the button's ids, which the
+    // Dialog's unmount took away; the announcer keeps the sentence for seconds, so it goes before the axe check,
+    // as SaveBar's plays do.
+    for (const said of document.querySelectorAll('[data-live-announcer] [role="img"]')) said.remove();
+  }
+}
+
+/** The consumer's path: 0 typed, then Enter, which commits and submits; the save settles in a microtask. */
+export const ConsumerEnterFastSave: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <ConsumerPage speed="fast" />,
+  play: async ({ canvasElement, userEvent }) => {
+    const presses = await realPresses(userEvent);
+    await saveTheConsumersPlan(canvasElement, presses, () => presses.keyboard('{Enter}'));
+  },
+};
+
+/** The consumer's path by Enter, with a save that settles after 100ms, the field focused while it waits. */
+export const ConsumerEnterSlowSave: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <ConsumerPage speed="slow" />,
+  play: async ({ canvasElement, userEvent }) => {
+    const presses = await realPresses(userEvent);
+    await saveTheConsumersPlan(canvasElement, presses, () => presses.keyboard('{Enter}'));
+  },
+};
+
+/** The consumer's path: 0 typed, then a press on Add plan, whose save settles in a microtask. */
+export const ConsumerPressFastSave: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <ConsumerPage speed="fast" />,
+  play: async ({ canvasElement, userEvent }) => {
+    const presses = await realPresses(userEvent);
+    await saveTheConsumersPlan(canvasElement, presses, () =>
+      presses.click(within(document.body).getByRole('button', { name: 'Add plan' })),
+    );
+  },
+};
+
+/** The consumer's path by a press on Add plan, with a save that settles after 100ms. */
+export const ConsumerPressSlowSave: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => <ConsumerPage speed="slow" />,
+  play: async ({ canvasElement, userEvent }) => {
+    const presses = await realPresses(userEvent);
+    await saveTheConsumersPlan(canvasElement, presses, () =>
+      presses.click(within(document.body).getByRole('button', { name: 'Add plan' })),
+    );
   },
 };
