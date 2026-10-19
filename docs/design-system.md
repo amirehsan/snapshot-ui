@@ -11487,7 +11487,12 @@ The tip is canvas text on ink, 16.25 and 19.31.
 Aria, Lucide and `@internationalized/date`, over the spec's 2 kB budget:
 it draws IconButton or Button, both tips, the status, the timer and the
 copy command's fallback. The rule rounds up to 3 kB and adds 0.5 kB: a
-3.5 kB limit. With React Aria not ignored it measures 20.62 kB.
+3.5 kB limit. With React Aria not ignored it measures 20.62 kB. After the
+review it measures 2.76 kB, Button's kept announcement included (spec
+correction 22): the parts it composes come to about 2 kB on their own
+(`{ Button }` 771 B, `{ IconButton }` 259 B, `{ Tooltip, TooltipTrigger }`
+986 B), so no trim of its own code reaches the budget short of dropping a
+tip, the status or the fallback.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): "Copied" said once after a copy, and again after a
