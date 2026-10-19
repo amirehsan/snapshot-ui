@@ -946,11 +946,13 @@ describe('NumberField and React Aria', () => {
     const user = userEvent.setup();
     render(<NumberField label="Amount" money={{ symbol: '$' }} />);
     await user.type(amount(), '1234.5');
+    // React Aria's announcer, which it keeps on the body across tests, may already hold the same text from an
+    // earlier test; it is emptied, so only this blur can say it.
+    const assertive = '[data-live-announcer] [aria-live="assertive"]';
+    document.querySelector(assertive)?.replaceChildren();
     await user.tab();
     expect(amount()).toHaveValue('1,234.50');
-    // React Aria's announcer, which it keeps on the body across tests: the last message is the corrected text.
-    const said = document.querySelector('[data-live-announcer] [aria-live="assertive"]');
-    expect(said?.lastElementChild).toHaveTextContent('1,234.50');
+    expect(document.querySelector(assertive)?.lastElementChild).toHaveTextContent('1,234.50');
   });
 
   it("runs the app's onBlur and onFocusChange(false) one microtask after the blur", async () => {
