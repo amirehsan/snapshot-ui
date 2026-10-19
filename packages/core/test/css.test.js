@@ -7495,15 +7495,13 @@ describe('src/components/data-table.css', () => {
         ".data-table-body > .data-table-row:is([data-link], [data-selection-mode]):is(:hover, [data-hovered]):not([data-disabled], [data-selected], [aria-selected='true']) {",
       ),
     ).toContain('--color-slate: var(--color-granite);');
-    // Outside hover, only a selected row's and a selected list item's 8% wash mixes a color.
+    // Outside hover, only a selected row's and a selected list item's 8% wash mixes a color, as the fill and as the
+    // surface a meter in the row cuts its segments with (spec correction 52).
     expect(
       outsideForcedColors(css)
         .replace(hover, '')
         .match(/color-mix\([^;]*/g),
-    ).toEqual([
-      'color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))',
-      'color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))',
-    ]);
+    ).toEqual(Array(4).fill('color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill))'));
   });
 
   it('makes the checkbox column 3.5rem with a part step of padding', () => {
@@ -8110,6 +8108,25 @@ describe('src/components/data-table.css', () => {
       'max-block-size: max-content;',
     ]) {
       expect(root, declaration).toContain(declaration);
+    }
+  });
+
+  it("gives a meter in a row the row's own fill for its cuts, plain, hovered and selected (spec correction 52)", () => {
+    // Meter cuts its segments apart and rings its pace marker in --meter-surface, Lifted unless set, which drew a
+    // pale block on a canvas row and on every hovered or selected one. Each fill that paints a row sets it too.
+    expect(blockAfter(rules(), '.data-table {')).toContain('--meter-surface: var(--data-table-fill);');
+    const painted = blocks().filter(
+      ([selector, body]) =>
+        /\.data-table-(?:row|item)/.test(selector) &&
+        /background-color: color-mix\(in srgb, var\(--color-ink\) \d+%, var\(--data-table-fill\)\);/.test(
+          body,
+        ),
+    );
+    // The hovered row and item, and the selected row and item.
+    expect(painted).toHaveLength(4);
+    for (const [selector, body] of painted) {
+      const wash = /background-color: (color-mix\([^;]+\));/.exec(body)?.[1];
+      expect(body, selector).toContain(`--meter-surface: ${wash};`);
     }
   });
 

@@ -26,6 +26,10 @@
       (var(--data-table-row) - var(--text-small) * var(--text-small--line-height) - 1px) / 2
     );
     --data-table-fill: var(--data-table-surface, var(--color-canvas));
+    /* A Meter in a row cuts its segments apart and rings its pace marker in --meter-surface, so the cuts take the
+       row's own fill: here the table's, and on a hovered or a selected row that row's wash, set beside it below.
+       A cut in a fixed surface drew a pale block on every row that was not Lifted (spec correction 52). */
+    --meter-surface: var(--data-table-fill);
     /* What covers a row that focus scrolls to (WCAG 2.4.11): the page's sticky offset and the 40px header row
        above it, and, while the bar shows, the bar and its inset from the viewport's bottom below it: its
        buttons, a part step of padding either side and its 1px edges. Rows and list items keep clear of both.
@@ -323,6 +327,7 @@
         [aria-selected='true']
       ) {
       --color-slate: var(--color-granite);
+      --meter-surface: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
 
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
     }
@@ -334,6 +339,7 @@
         [aria-selected='true']
       ) {
       --color-slate: var(--color-granite);
+      --meter-surface: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
 
       background-color: color-mix(in srgb, var(--color-ink) 5%, var(--data-table-fill));
     }
@@ -488,6 +494,7 @@
   .data-table-row:is([data-selected], [aria-selected='true']),
   .data-table-row:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
     --color-slate: var(--color-granite);
+    --meter-surface: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
 
     background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
   }
@@ -849,6 +856,7 @@
   .data-table-item:is([data-selected], [aria-selected='true']),
   .data-table-item:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]) {
     --color-slate: var(--color-granite);
+    --meter-surface: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
 
     background-color: color-mix(in srgb, var(--color-ink) 8%, var(--data-table-fill));
   }
