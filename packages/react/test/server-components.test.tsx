@@ -85,6 +85,7 @@ import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { EmptyState } from '../src/empty-state';
 import { FieldChanged, FieldCounter } from '../src/field';
 import { Kbd } from '../src/kbd';
+import { Gauge } from '../src/gauge';
 import { Meter } from '../src/meter';
 import { PageColumn, PageHeader } from '../src/page-header';
 import { Pagination } from '../src/pagination';
@@ -161,6 +162,58 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
       '<dd class="description-list-actions"><a href="/edit">Edit</a></dd></div><div class="description-list-item">' +
       '<dt class="description-list-term">Credit limit</dt>' +
       '<dd class="description-list-value" data-numeric="">$5,000.00</dd></div></dl>',
+  ],
+  [
+    // A ring from the top: the track, the value's dash as inline style, the figure and the text, with useId's ids.
+    'Gauge',
+    <Gauge label="Utilization" value={23} valueLabel="23% of your limit" figure="23%" />,
+    '<div class="gauge" data-size="md" data-form="ring" data-tone="neutral">' +
+      '<div class="gauge-dial" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="23" ' +
+      'aria-valuetext="23% of your limit" aria-labelledby="_R_0_-label">' +
+      '<svg class="gauge-svg" viewBox="0 0 96 96" aria-hidden="true" focusable="false">' +
+      '<path class="gauge-track" d="M48 4A44 44 0 1 1 48 92A44 44 0 1 1 48 4" stroke-width="8"></path>' +
+      '<path class="gauge-value" d="M48 4A44 44 0 1 1 48 92A44 44 0 1 1 48 4" stroke-width="8" ' +
+      'style="stroke-dasharray:55.586 276.46;stroke-dashoffset:-4"></path></svg>' +
+      '<span class="gauge-figure" aria-hidden="true"><span class="gauge-figure-value">23%</span></span></div>' +
+      '<div class="gauge-text"><span class="gauge-label" id="_R_0_-label">Utilization</span>' +
+      '<span class="gauge-value-label" aria-hidden="true">23% of your limit</span></div></div>',
+  ],
+  [
+    // The consumer's score: a 300 to 850 semicircle whose track is dashed to its ends, four marks in order of
+    // value with their description, and the figure with its word.
+    'Gauge score',
+    <Gauge
+      label="Credit score"
+      form="semicircle"
+      size="lg"
+      minValue={300}
+      maxValue={850}
+      value={742}
+      valueLabel="742 of 850, Very good"
+      figure="742"
+      figureCaption="Very good"
+      marks={[
+        { value: 670, label: 'Good from 670' },
+        { value: 580, label: 'Fair from 580' },
+      ]}
+    />,
+    '<div class="gauge" data-size="lg" data-form="semicircle" data-tone="neutral">' +
+      '<div class="gauge-dial" role="meter" aria-valuemin="300" aria-valuemax="850" aria-valuenow="742" ' +
+      'aria-valuetext="742 of 850, Very good" aria-describedby="_R_0_-marks" aria-labelledby="_R_0_-label">' +
+      '<svg class="gauge-svg" viewBox="0 0 160 86" aria-hidden="true" focusable="false">' +
+      '<path class="gauge-track" d="M6 80A74 74 0 0 1 154 80" stroke-width="12" ' +
+      'style="stroke-dasharray:220.478 232.478;stroke-dashoffset:-6"></path>' +
+      '<path class="gauge-value" d="M6 80A74 74 0 0 1 154 80" stroke-width="12" ' +
+      'style="stroke-dasharray:174.828 232.478;stroke-dashoffset:-6"></path>' +
+      '<line class="gauge-mark-ring" x1="81.885" y1="14.027" x2="82.342" y2="-1.967"></line>' +
+      '<line class="gauge-mark" x1="81.885" y1="14.027" x2="82.342" y2="-1.967"></line>' +
+      '<line class="gauge-mark-ring" x1="114.082" y1="23.481" x2="122.345" y2="9.779"></line>' +
+      '<line class="gauge-mark" x1="114.082" y1="23.481" x2="122.345" y2="9.779"></line></svg>' +
+      '<span class="gauge-figure" aria-hidden="true"><span class="gauge-figure-value">742</span>' +
+      '<span class="gauge-figure-caption">Very good</span></span></div>' +
+      '<div class="gauge-text"><span class="gauge-label" id="_R_0_-label">Credit score</span>' +
+      '<span class="gauge-value-label" aria-hidden="true">742 of 850, Very good</span></div>' +
+      '<span class="gauge-marks-label" id="_R_0_-marks" hidden="">Fair from 580. Good from 670.</span></div>',
   ],
   [
     'FieldCounter',
@@ -385,6 +438,7 @@ const STATIC_MODULES = [
   'field/FieldChanged.tsx',
   'stat-tile/StatTile.tsx',
   'meter/Meter.tsx',
+  'gauge/Gauge.tsx',
   'pagination/Pagination.tsx',
   'empty-state/EmptyState.tsx',
   'skeleton/Skeleton.tsx',

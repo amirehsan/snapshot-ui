@@ -22,6 +22,7 @@ import { EmptyState } from '../empty-state';
 import { FileDropZone, PageDropZone } from '../file-drop-zone';
 import { FilterBar } from '../filter-bar';
 import { FilterChip } from '../filter-chip';
+import { Gauge } from '../gauge';
 import { Link, RouterProvider } from '../link';
 import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
 import { MultiSelect } from '../multi-select';
@@ -1503,6 +1504,67 @@ export const CardActionsMirrored: Story = {
     const under = rect(find(narrow, '.card-actions .button'));
     await expect(under.top).toBeGreaterThanOrEqual(rect(find(narrow, '.card-note')).bottom);
     await expectSameEdge(under.right, rect(find(narrow, '.card-body')).right);
+  },
+};
+
+/**
+ * A gauge on a Persian page follows the page (owner ruling 7): the svg mirrors, so a semicircle fills from the
+ * right and a ring runs counter-clockwise from the top, and the marks move with it. The figure and the text are
+ * HTML and do not mirror: "60%" still reads left to right. A mark at the value's own share stands where the arc
+ * ends, since a dash has no box of its own to measure. In three engines, since each mirrors the svg itself.
+ */
+export const GaugeMirrored: Story = {
+  tags: ['webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" style={{ display: 'flex', flexWrap: 'wrap', gap: 32 }}>
+        <Gauge
+          data-testid="semicircle"
+          label="بودجه"
+          form="semicircle"
+          size="lg"
+          value={25}
+          valueLabel="۲۵٪ از بودجه ماه"
+          figure="25%"
+          marks={[{ value: 25, label: 'یک چهارم' }]}
+        />
+        <Gauge
+          data-testid="ring"
+          label="میزان استفاده"
+          value={60}
+          valueLabel="۶۰٪ از سقف اعتبار"
+          figure="60%"
+          marks={[{ value: 25, label: 'یک چهارم' }]}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    for (const svg of canvasElement.querySelectorAll('.gauge-svg'))
+      await expect(getComputedStyle(svg).scale).toBe('-1 1');
+    const semicircle = find(canvasElement, '[data-testid="semicircle"]');
+    const dial = rect(find(semicircle, '.gauge-dial'));
+    const middle = dial.left + dial.width / 2;
+    // A quarter of the way from the inline start, the right: the mark is in the dial's right half, and up.
+    const mark = rect(find(semicircle, '.gauge-mark'));
+    await expect(mark.left).toBeGreaterThanOrEqual(middle - 0.5);
+    await expect(mark.bottom).toBeLessThan(dial.top + dial.width / 2);
+    // The ring's quarter mark is a quarter turn counter-clockwise from the top: at the left, level with the centre.
+    const ring = find(canvasElement, '[data-testid="ring"]');
+    const ringDial = rect(find(ring, '.gauge-dial'));
+    const quarter = rect(find(ring, '.gauge-mark'));
+    await expect(quarter.right).toBeLessThanOrEqual(ringDial.left + 16);
+    await expect(
+      Math.abs(quarter.top + quarter.height / 2 - (ringDial.top + ringDial.height / 2)),
+    ).toBeLessThan(1);
+    // The figure is unmirrored: its first character is left of its second.
+    for (const scope of [semicircle, ring]) {
+      const value = find(scope, '.gauge-figure-value');
+      await expect(getComputedStyle(value).direction).toBe('ltr');
+      await expect(characterBox(value, 0).right).toBeLessThanOrEqual(characterBox(value, 1).left + 0.5);
+      // The label starts at the right of its text block, the start of a right-to-left line.
+      await expect(getComputedStyle(find(scope, '.gauge-text')).direction).toBe('rtl');
+    }
   },
 };
 

@@ -217,6 +217,7 @@ export {
 export { Avatar, type AvatarProps } from './avatar';
 export { StatTile, type StatTileChange, type StatTileProps } from './stat-tile';
 export { Meter, type MeterBaseProps, type MeterProps, type MeterSegment } from './meter';
+export { Gauge, type GaugeBaseProps, type GaugeMark, type GaugeProps } from './gauge';
 export { ProgressBar, type ProgressBarBaseProps, type ProgressBarProps } from './progress-bar';
 export {
   FileButton,

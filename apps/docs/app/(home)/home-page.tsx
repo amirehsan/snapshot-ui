@@ -825,6 +825,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/file-drop-zone">File drop zone</Link>
                 <Link href="/docs/components/filter-bar">Filter bar</Link>
                 <Link href="/docs/components/filter-chip">Filter chip</Link>
+                <Link href="/docs/components/gauge">Gauge</Link>
                 <Link href="/docs/components/icon-button">Icon button</Link>
                 <Link href="/docs/components/kbd">Kbd</Link>
                 <Link href="/docs/components/link">Link</Link>

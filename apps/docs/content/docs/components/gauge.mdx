@@ -1,0 +1,132 @@
+---
+title: Gauge
+description: "One figure on a range at a glance: a credit score, a share of a limit."
+icon: CircleGauge
+---
+
+<Section>
+
+## Gauge, Meter or ProgressBar
+
+A gauge is a measurement of the reader's state on a known range, which can go up or down: a credit score, a utilization, a budget spent, a savings goal saved. It is a [Meter](/docs/components/meter) bent round: Meter for a row, Gauge for a glance. Work the system is doing, such as an upload or an import, is a [ProgressBar](/docs/components/progress-bar), or a [Spinner](/docs/components/spinner) while its length is unknown. A screen reader announces a gauge as a meter, and an upload drawn as one would say the wrong thing.
+
+A gauge is a ring, a full circle from the top, or a semicircle, an arc from the inline start over the top. It comes in three sizes: `sm` is 32px with its text beside it, `md` 96px and `lg` 160px with their text under them. The arc's length, its round ends included, is exactly the value's share of the range: nothing at 0, a dot under the stroke's width, half the track at 50% and the whole track at 100%.
+
+<Preview name="gauge-basic" />
+
+</Section>
+
+<Section>
+
+## A score
+
+A credit score runs from 300 to 850, so `minValue` and `maxValue` set the range, and 742 draws 80.4% of the arc, not 74.2%. `figure` is the numeral in the middle and `figureCaption` the word under it; neither has a default, since a percentage would be wrong on a score. Marks at 580, 670, 740 and 800 show the band edges, and their labels are read as the gauge's description.
+
+Your app picks the tone. Fair and Poor are both `warning`: a low score needs a look, and it is not a failure, so it is never `error`. They are told apart by the word under the figure and by where the arc stops between the marks, never by color. A good score is ink, never green: the words say it is good.
+
+<Preview name="gauge-score" />
+
+</Section>
+
+<Section>
+
+## A share of a limit
+
+A utilization runs from 0 to 100, the defaults. Marks at 10% and 30% show where a reader should stay under. `warning` says a state needs a look; above `maxValue` a neutral gauge draws warning by itself, its arc stops at the end, and `valueLabel` must say "over". `error` is only for a limit that stopped something, such as a declined payment.
+
+<Preview name="gauge-utilization" />
+
+</Section>
+
+<Section>
+
+## In a table row
+
+A 32px ring fits a [DataTable](/docs/components/data-table) row in every density. The column header names the cell, so the gauge takes `aria-label` with the row's name, "Utilization, Everyday Visa ending 4821", and shows only its value text beside it. On a phone the ring moves to the item's meta line. A 32px gauge holds two or three marks; marks closer than the stroke's width overlap.
+
+<Preview name="gauge-table" />
+
+</Section>
+
+<Section>
+
+## In a tile
+
+A 32px ring fits a [StatTile](/docs/components/stat-tile)'s trend, its 96 by 32 slot. Name it, since the tile's words do not say the share.
+
+<Preview name="gauge-tile" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+The gauge is static: a server component renders it with no client JavaScript, and its numbers are arithmetic on its props, the same on the server and in the browser. Pass every figure and word as a string; the library formats no numbers.
+
+- `minValue` and `maxValue` set the range, 0 and 100 by default. A value outside it is drawn clamped.
+- `valueLabel` says the state in words and is what a screen reader hears. At a warning or error tone, or over the limit, it says so.
+- `figure` and `figureCaption` draw the numeral and its word at `md` and `lg`; there are none by default and none at `sm`. A figure never wraps or shrinks: keep it to 4 characters at `md` and 6 at `lg`, such as "100%" or "$12.3K". A caption wraps to two lines, then ends in an ellipsis.
+- `tone` is `neutral`, `warning` or `error`, your choice; there is no success tone.
+- `marks` takes up to five; a sixth is not drawn.
+- The arc moves over 200ms when the value changes, never on first appearance, and not at all under reduced motion. It follows the page's direction: on a right-to-left page a ring runs counter-clockwise and a semicircle fills from the right.
+- The marks are ringed in the surface they sit on, `--meter-surface`, Lifted by default, the property Meter reads. On the page itself, set `--meter-surface: var(--color-canvas)` on the gauge or any ancestor. `--gauge-size` on the gauge draws it at another size.
+
+```tsx
+import { Gauge } from '@snapshot-ui/react';
+
+<Gauge
+  label="Credit score"
+  form="semicircle"
+  size="lg"
+  minValue={300}
+  maxValue={850}
+  value={742}
+  valueLabel="742 of 850, Very good"
+  figure="742"
+  figureCaption="Very good"
+  marks={[
+    { value: 580, label: 'Fair from 580' },
+    { value: 670, label: 'Good from 670' },
+    { value: 740, label: 'Very good from 740' },
+    { value: 800, label: 'Excellent from 800' },
+  ]}
+/>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+Gauge accepts every HTML element attribute, on its root. The name (`aria-label` or `aria-labelledby`) and `aria-describedby` go on the dial.
+
+<PropsTable label="Gauge props" path="../../packages/react/src/gauge/Gauge.tsx" type="Pick<GaugeBaseProps, 'label' | 'value' | 'minValue' | 'maxValue' | 'valueLabel' | 'figure' | 'figureCaption' | 'form' | 'size' | 'tone' | 'marks' | 'className'>" />
+
+<PropsTable label="GaugeMark" path="../../packages/react/src/gauge/Gauge.tsx" type="GaugeMark" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The dial is a `role="meter"` from `minValue` to `maxValue`, named by the label, `aria-label` or `aria-labelledby`.
+
+- Its value is read as `valueLabel`, never as a number on its own. The visible value text, the figure and its caption are hidden, since the meter reads the same words, and the same said twice is noise.
+- The marks' labels, in order of value, are read as its description.
+- It takes no focus and has no keys.
+- Screen readers differ on the meter role: some say "meter", some "progress bar", some no role. Every one reads the name and the value text.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps gauges in the system.
+
+<Rules dos={['Say the state in words in the value text, and repeat it under the figure.', 'Mark the edges of the bands the reader cares about.', 'Keep the figure short: 4 characters at md, 6 at lg.']} donts={['Never color a good value success. The words say it is good.', 'Never use a gauge for work getting done. That is a progress bar.', 'Never pass a figure longer than its dial holds. Shorten it.']} />
+
+</Section>
