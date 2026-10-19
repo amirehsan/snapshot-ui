@@ -9,7 +9,8 @@
  * - chips and the large button, which only the homepage uses;
  * - layout helpers (stack, row, spread) and the settings list, which arrange
  *   the library's parts on the docs pages;
- * - code blocks, with the Shiki palette mapped onto the tokens;
+ * - the code block's copy button; the block itself is core's prose code block;
+ * - the Persian face, Vazirmatn, first in the sans stack under lang="fa";
  * - the motion the docs add to the library. Its components never animate their
  *   corners or their color, since the shape and the color mode belong to the
  *   app, but the docs show them changing, so the controls and the card here
@@ -43,6 +44,14 @@
   code,
   pre {
     font-family: var(--font-mono);
+  }
+
+  /* A Persian page sets Vazirmatn first in the sans stack, which every part and the prose box read, and on
+     the element that names the language, so its plain text takes it too (insights spec 8.6). */
+  [lang]:lang(fa) {
+    --font-sans: var(--font-persian), Arial, sans-serif;
+
+    font-family: var(--font-sans);
   }
 }
 
@@ -273,10 +282,10 @@
     border-top: 1px solid var(--color-divider);
   }
 
-  /* A list, a code block or a props table set in a card is concentric with it, as a card in a card is: the
-     card's radius less its edge and padding, or the micro step where that runs out (Nested radii in
-     docs/design-system.md). */
-  .card :is(.settings-list, .code, .props) {
+  /* A list or a props table set in a card is concentric with it, as a card in a card is: the card's radius
+     less its edge and padding, or the micro step where that runs out (Nested radii in docs/design-system.md).
+     A code block is a framed block of core's prose, which does the same. */
+  .card :is(.settings-list, .props) {
     border-radius: max(
       var(--radius-micro),
       calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad))
@@ -324,17 +333,14 @@
     align-self: center;
   }
 
+  /* Code from the Code component is core's prose code block: Shiki's pre inside a prose box, which draws its
+     frame, its fill and its type and maps Shiki's css-variables theme onto the palette. The site keeps only
+     the copy button's place and the ease between shapes. */
   .code {
     position: relative;
-    margin: 0;
-    padding: 1.25rem 1.5rem;
-    overflow-x: auto;
-    border: 1px solid var(--color-frame);
-    border-radius: var(--radius-surface);
-    background-color: var(--color-bone);
-    color: var(--color-charcoal);
-    font-size: 0.875rem;
-    line-height: 1.7;
+  }
+
+  .code pre {
     transition: border-radius 200ms ease;
   }
 
@@ -343,36 +349,6 @@
     position: absolute;
     top: 10px;
     right: 10px;
-  }
-
-  /* Code from the Code component: Shiki's css-variables theme, mapped onto the
-     palette. Clay, error and success carry meaning, so code never uses them. */
-  .code {
-    --shiki-foreground: var(--color-charcoal);
-    --shiki-background: transparent;
-    --shiki-token-keyword: var(--color-link);
-    --shiki-token-string: var(--color-granite);
-    --shiki-token-string-expression: var(--color-granite);
-    --shiki-token-constant: var(--color-ink);
-    --shiki-token-function: var(--color-ink);
-    --shiki-token-parameter: var(--color-charcoal);
-    --shiki-token-comment: var(--color-slate);
-    --shiki-token-punctuation: var(--color-slate);
-    --shiki-token-link: var(--color-link);
-  }
-
-  .code pre {
-    margin: 0;
-    padding: 0;
-    overflow-x: auto;
-    background: transparent;
-    font: inherit;
-    tab-size: 2;
-  }
-
-  .code pre:focus-visible {
-    outline: var(--focus-ring-width) solid var(--focus-ring-color);
-    outline-offset: var(--focus-ring-offset);
   }
 
   /* ---- Density ------------------------------------------------------------ */

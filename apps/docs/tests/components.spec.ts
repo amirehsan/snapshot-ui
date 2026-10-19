@@ -1140,6 +1140,29 @@ test.describe('forced colors', () => {
     expect((await paint(header)).fill).toBe(await systemColor(page, 'canvas'));
     expect(await header.evaluate((element) => getComputedStyle(element).backdropFilter)).toBe('none');
   });
+
+  test("prose keeps inline code's edge and the mark", async ({ page }) => {
+    // Their fills are dropped in the repaint, so inline code keeps a 1px edge in the text color and a mark takes
+    // the reader's own highlight; a wide table's region rings in Highlight.
+    await visit(page, '/docs/components/prose');
+    const system = await systemColors(page);
+    const code = page.locator('.stage .prose p code').first();
+    await expect(code).toHaveCount(1);
+    const edge = await code.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { width: style.borderTopWidth, color: style.borderTopColor };
+    });
+    expect(edge).toEqual({ width: '1px', color: system.canvasText });
+    const mark = page.locator('.stage .prose mark').first();
+    await expect(mark).toHaveCount(1);
+    const drawn = await paint(mark);
+    expect(drawn.fill).not.toBe(system.canvas);
+    expect(drawn.fill).not.toBe('rgba(0, 0, 0, 0)');
+    expect(drawn.text).not.toBe(drawn.fill);
+    const region = page.getByRole('region', { name: 'October by category, table' });
+    await region.focus();
+    await expectVisibleRing(region);
+  });
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------
@@ -1651,6 +1674,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   pagination: ['.stage .pagination-range'],
   // The label is the app's sentence, a file name among it, and wraps at any character, as the meter's does.
   'progress-bar': ['.stage .progress-bar-label'],
+  // A paragraph is the app's text, which breaks anywhere inside its measure.
+  prose: ['.stage .prose p'],
   'radio-group': [
     '.stage .field-label',
     '.stage .field-description',
@@ -1860,6 +1885,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   popover: ['.stage .button'],
   // A static part: the track with its role and values is in the server's HTML.
   'progress-bar': ['.stage .progress-bar-track[role="progressbar"]'],
+  // Rendered from Markdown by react-markdown in a server component, the wide table in its region.
+  prose: ['.stage .prose h2', '.stage .prose-scroll table'],
   'radio-group': ['.stage .radio-indicator'],
   // The bar, its sentence and its buttons, and the polite status host, mounted empty before any status.
   'save-bar': ['.stage .save-bar', '.stage .save-bar-status[role="status"]'],
@@ -1911,4 +1938,77 @@ test.describe('without JavaScript', () => {
       await expect(page.locator('.panel-side .link').first()).toHaveAttribute('href', /^https:\/\//);
     });
   }
+});
+
+// ---- Prose --------------------------------------------------------------------------------------
+
+test("the prose page's wide table scrolls inside its region at 375 and the page does not", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await visit(page, '/docs/components/prose');
+  const region = page.getByRole('region', { name: 'October by category, table' });
+  await expect(region).toHaveAttribute('tabindex', '0');
+  const widths = await region.evaluate((element) => ({
+    scroll: element.scrollWidth,
+    client: element.clientWidth,
+  }));
+  expect(widths.scroll).toBeGreaterThan(widths.client);
+  expect(await sideways(page)).toBe(0);
+  // The arrow keys scroll it once it has focus.
+  await region.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  expect(await sideways(page)).toBe(0);
+});
+
+test('model output on the prose page has no links or images', async ({ page }) => {
+  await visit(page, '/docs/components/prose');
+  // The snippet under Rendering Markdown safely, and the monthly report under Model output.
+  for (const text of ['Read the full report', 'October at a glance']) {
+    const stage = page.locator('.stage').filter({ hasText: text });
+    await expect(stage).toHaveCount(1);
+    await expect(stage.locator('a, img, script, b')).toHaveCount(0);
+    expect(await stage.locator('.prose-unlinked').count(), text).toBeGreaterThan(0);
+    expect(await stage.locator('.prose-image').count(), text).toBeGreaterThan(0);
+  }
+  // The model's block of HTML never reaches the page, and its address is text that breaks anywhere.
+  await expect(page.locator('.stage').getByText('A block of HTML the model wrote')).toHaveCount(0);
+  const address = page.locator('.stage .prose-unlinked', { hasText: 'spending-by-category' });
+  await expect(address).toHaveCSS('overflow-wrap', 'anywhere');
+  await expect(address).toHaveCSS('text-decoration-line', 'none');
+});
+
+test('the Persian guide on the prose page puts its markers at the right and keeps code left to right', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/prose');
+  const guide = page.locator('.stage [lang="fa"] .prose');
+  await expect(guide).toHaveCount(1);
+  const drawn = await guide.evaluate((article) => {
+    const list = article.querySelector('ol');
+    const code = article.querySelector('li code');
+    const heading = article.querySelector('h2');
+    if (!list || !code || !heading) throw new Error('The guide has a list, inline code and a heading');
+    const style = getComputedStyle(list);
+    return {
+      direction: style.direction,
+      start: style.paddingRight,
+      end: style.paddingLeft,
+      counting: style.listStyleType,
+      code: getComputedStyle(code).direction,
+      tracking: getComputedStyle(heading).letterSpacing,
+      face: getComputedStyle(heading).fontFamily,
+    };
+  });
+  expect(drawn).toMatchObject({
+    direction: 'rtl',
+    start: '20px',
+    end: '0px',
+    counting: 'persian',
+    code: 'ltr',
+    tracking: 'normal',
+  });
+  expect(drawn.face).toMatch(/Vazirmatn/);
 });

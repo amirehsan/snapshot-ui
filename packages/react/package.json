@@ -69,6 +69,8 @@
     "publint": "0.3.25",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
     "size-limit": "14.2.0",
     "storybook": "catalog:",
     "tsdown": "0.23.1",

@@ -16,6 +16,7 @@ import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PageHeader } from '../src/page-header';
 import { PickerOption } from '../src/picker';
+import { Prose, ProseScroll } from '../src/prose';
 import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
@@ -250,6 +251,30 @@ const FACES: [name: string, element: ReactElement][] = [
     <AppShell mainId="main" header={<PageHeader title="Receipts, 2026" />}>
       page
     </AppShell>,
+  ],
+  [
+    // Static: it reads no locale and no zone, so a Persian report writes the same HTML in every one.
+    'Prose with a wide table',
+    <Prose as="article" lang="fa" dir="rtl">
+      <h2>گزارش مهر</h2>
+      <p>
+        هزینه‌ها <strong>۱۲٪</strong> کمتر از شهریور بود، و <code>budgets.csv</code> به‌روز شد.
+      </p>
+      <ol>
+        <li>اجاره</li>
+        <li>خرید روزانه</li>
+      </ol>
+      <ProseScroll aria-label="هزینه بر پایه‌ی دسته، جدول">
+        <table>
+          <tbody>
+            <tr>
+              <th scope="row">اجاره</th>
+              <td>$1,450.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </ProseScroll>
+    </Prose>,
   ],
 ];
 

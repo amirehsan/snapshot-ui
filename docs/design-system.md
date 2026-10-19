@@ -10928,3 +10928,195 @@ phone at 320px to 430px; standing up, the bars in both orientations and
 in a comparison read with their period, the hatched previous period
 against the current bars in a contrast theme, and twelve monthly bars and
 grouped pairs on a phone.
+
+## Prose
+
+Long-form text an app renders: the `prose` class in `prose.css`, which
+styles the plain HTML inside it, and the static `Prose` (a `div`, an
+`article` or a `section` through `as`) and `ProseScroll` in
+`@snapshot-ui/react` (insights spec 8, rulings 15 to 23, 27 and 28). The
+first consumer's monthly report, weekly coaching note and Ask answers are
+model output in Markdown; its goals guide is its own, in English and in
+Persian. All of it is rendered on the server by react-markdown in a
+server component, so Prose ships no JavaScript and imports nothing
+client-only.
+
+**The selector.** Every rule is `.prose :where(<element>)` and the guard
+`:not(:where(.not-prose, .not-prose *))`, Tailwind Typography's shape: one
+class's specificity, a component's own, and nothing under `not-prose`. A
+pseudo-element stands after the guard (`::marker`), since `:where()` takes
+none, and a language rule is written on the element, `:where(ol:lang(fa))`,
+so it keeps the same specificity. `prose.css` is imported right after the
+tokens, before every component file, so a component inside an article wins
+on order even without `not-prose` (spec correction 29): a Heading, a Text,
+an Eyebrow, a Link, a Kbd, a Badge, a Button and a Card with its title and
+note compute the same type, color, spacing, corners and decoration inside
+the prose box as outside it (`ComponentsUnchanged`). What reaches a
+component is what it leaves unset: the 70ch measure on its text element,
+and the rhythm's top margin when it is a direct child of the box (spec
+correction 38). The root sets ink and the sans face, so a page without
+`base.css` reads the same.
+
+**Type.** Body text is `--text-body`, 16px at 450, with a line height of
+1.6, which leaves WCAG 1.4.12's spacing met by default and room for
+Persian's taller marks. `h1` takes the section step (36px, 28px under
+768px, 500, -2%), since a page's display `h1` is a hero and not an
+article's title; `h2` the card title's step (24px, 500, -2%); `h3` to `h6`
+the subhead (14px, 700, no tracking), `h5` and `h6` in slate; no new step
+(ruling 16). `strong` is 700 (ruling 17): 500 against 450 is a step a
+reader barely sees at 16px. `em` is the italic face, which the app loads,
+since `base.css` turns synthesis off (risk R9): the docs site loads Sofia
+Sans with `style: ['normal', 'italic']` and Storybook imports the
+fontsource package's `wght-italic.css`. Headings take
+`scroll-margin-block-start: var(--prose-scroll-margin, 0px)`, a sticky
+header's height for an app to set. A long word or address breaks anywhere
+in every text block and table cell, so a phone is never pushed sideways.
+
+**Rhythm and measure** ("Vertical rhythm, derived"). Top margins only, so
+collapsing never decides a gap, and the first and last children carry no
+outer margin, so the holder's padding is the article's inset: 24px between
+blocks (peers), 32px before an `h1` or `h2` and on both sides of an `hr`
+(separate), 8px after a heading and a heading after a heading (parts of
+one thing), 8px between list items, under an item's text for a nested
+list, between paragraphs in an item and under a figure for its caption,
+24px between blocks in a quote and between a definition and the next
+term. Text blocks (`p`, `li`, headings, `blockquote`, `dl`, `figcaption`,
+footnotes) stop at `--prose-measure`, 70ch (ruling 18); tables, code,
+figures and rules take the box's width. `--prose-measure: none` lifts it.
+
+**Lists, quotes and definitions.** `padding-inline-start: 1.25rem`; `ul`
+disc, circle, square and `ol` decimal, lower-alpha, lower-roman by depth;
+markers slate, `ol` markers tabular. A quote is a 2px `--color-frame` rule
+at the start with the list's 1.25rem indent, so a quote's text and a
+list's share an edge, ink, upright and with no quote marks. `dt` is 500
+and `dd` indented 1.25rem.
+
+**Inline.** Links restate the Link record on its tokens, paint only: link
+blue, a 1px underline at 0.25em that thickens to 2px on hover (where hover
+exists) and press, the focus ring, `--radius-micro`, and anywhere breaks;
+the CSS test reads `link.css` and pins each value. Inline code is the
+docs': `--font-mono` at 0.875em on bone with `--radius-micro` and
+`padding: 1px 6px`, plus a 1px transparent edge for forced colors, left to
+right and isolated, so a path in a Persian sentence keeps its order and
+leaves the words around it alone. `kbd` restates the Kbd record. `mark` is
+light signal orange at 20% under ink, the attention cue as a wash, never a
+text color. `sup` and `sub` take `line-height: 0`.
+
+**The code block, moved from the docs** (ruling 21). The docs site's
+`.code` look is `pre`'s now: bone, a 1px `--color-frame` edge, `padding:
+1.25rem 1.5rem`, `--font-mono` at 0.875rem and 1.7, charcoal,
+`overflow-x: auto`, `tab-size: 2`, `white-space: pre` and
+`overflow-wrap: normal` (so code scrolls rather than break mid-token,
+whatever a card above it inherits), left to right with `text-align:
+left`, and the focus ring. Shiki's css-variables theme maps onto the
+palette as the docs did, keywords and links link blue, strings granite,
+constants and functions ink, parameters charcoal, comments and
+punctuation slate, never clay, error or success; its background is bone,
+since Shiki writes it on the `pre` itself. The docs' Code component now
+renders Shiki's `pre` inside a `prose` box and keeps only the copy
+button's place and its 200ms ease between shapes (spec correction 34).
+`pre code` takes `font: inherit`, so no monospace size quirk shrinks it.
+Its intrinsic inline size is 0 (`contain: inline-size`), as a
+`ProseScroll`'s is, so a long line never widens a card's body or any flex
+or grid item the prose sits in: the block takes the width it is given and
+scrolls (spec correction 35). In print, `pre` wraps.
+
+**Framed blocks.** `pre`, `img` and `video` take the holder's radius
+less its edge and padding, or the micro step where that runs out,
+reading the surface step and no edge or padding where nothing holds them:
+`max(var(--radius-micro), calc(var(--holder-radius, var(--radius-surface)) - var(--holder-border, 0px) - var(--holder-pad, 0px)))`.
+They are concentric with a Card, a Dialog or any holder they sit in (7px in a Rounded card, 19px
+compact, the micro step in Soft, 0 in Square), the surface step on a page,
+wherever in the holder the block falls. `img` and `video` stay inline at
+`max-inline-size: 100%` and `block-size: auto`.
+
+**Tables.** A chart table's look: the box's width, collapsed, at the
+small step with tabular figures; `th` 500 in slate, `td` ink; cells
+`padding: 0.5rem 0.75rem` over a 1px `--color-divider` rule; a cell's own
+`align` attribute or GFM's style left alone, else `text-align: start`;
+the caption slate at the start. Outside a `ProseScroll` a table's cells
+break anywhere, so it never pushes the page sideways; inside one they
+break only between words, so the table keeps its figures whole and
+scrolls (spec correction 36).
+
+**`ProseScroll`** (ruling 28, spec 8.11).
+`div.prose-scroll[role="region"][tabindex="0"]` with a required name (`AriaName` in the types; it cannot
+warn, being static): `overflow-x: auto`, `max-inline-size: 100%`,
+`overscroll-behavior-inline: contain`, `--radius-micro` for its ring, the
+focus ring on `:focus-visible`, and no frame of its own. Its intrinsic
+inline size is 0 (`contain: inline-size`), the library's rule for a box
+that must not size its holder (spec correction 19), so a six-column table
+in a flex or grid item never widens it (spec correction 35). The table
+keeps `display: table`, so its rows and columns are read. At 375px the
+monthly report's table scrolls inside its region and the page does not;
+the region takes focus and the arrow keys scroll it (`WideTableScrolls`,
+three engines, and the docs end to end).
+
+**Neutralized links and images** (ruling 27, spec 8.10). Nothing in
+`prose.css` lays anything out by `a` or `img`: every rule on them is
+paint, and the CSS test fails a margin, padding, display, width, position,
+inset, float, flex or grid declaration on either. A model's link reaches
+the page as `span.prose-unlinked`, the text's own look (`color: inherit`,
+no decoration, anywhere breaks), since a thing that looks like a link and
+goes nowhere breaks the reader's trust; its image as `span.prose-image`,
+its alt text at the small step in slate, inline in the inline code's bone
+box, and not drawn when empty. The docs' recipe writes both through
+react-markdown's `components` map with `skipHtml`; react-markdown and
+remark-gfm are a devDependency of `@snapshot-ui/react`, for one server
+render test, and dependencies of the docs site, never of a published
+runtime (spec correction 32).
+
+**Right to left and Persian.** Logical properties throughout, so markers,
+indents, quote rules and `dd` move to the right; `pre` and inline code do
+not. Under `:lang(fa)` and `:lang(ar)` headings take `letter-spacing:
+normal`, since tracking pulls a cursive script apart (the same fix is
+owed to `Heading`, risk R11), and `em` is 500 and upright, the emphasis a
+Persian text uses, since Vazirmatn has no italic. Under `:lang(fa)` every
+ordered list counts in Persian digits (`list-style-type: persian`, ruling
+22). Prose sets no direction; a renderer writes `dir="auto"` on mixed
+paragraphs (ruling 23). Vazirmatn, the face an app puts first in
+`--font-sans` under `lang="fa"`, is served to Storybook from
+`apps/storybook/public/fonts/vazirmatn/` (33.003, its OFL and its sha256
+in the folder's README, spec correction 31), so the baselines draw it
+with no network; a story opts in with `data-font="vazirmatn"`, so the
+right-to-left stories baselined before keep their face (spec correction
+30). The docs site loads it through `next/font/google` as
+`--font-persian`, not preloaded, and sets it first under
+`[lang]:lang(fa)`. `VazirmatnLoaded` holds the face loaded and the
+headings untracked in three engines; `ProseMirrored` is its baseline.
+
+**Dark mode, forced colors and print.** Every color is a token, so dark
+mode is the tokens' dark values, and images are neither inverted nor
+dimmed. In forced colors inline code's edge is `CanvasText`, `mark` takes
+the reader's `Mark` and `MarkText` where the engine names them and
+`Highlight` and `HighlightText` where not (under `@supports`, since
+Lightning CSS folds a repeated declaration), the quote's rule, the `hr`
+and the footnotes' rule take `CanvasText`, and the rings of a scrolling
+`pre` and a `ProseScroll` are `Highlight`.
+
+**Contrast.** Gated already: ink, slate and link blue as text on the
+canvas and lifted. Measured and recorded, light then dark, not gated:
+charcoal on bone, the code's text, 13.75 and 11.44; slate on bone, the
+image's alt text, 4.99 and 6.44; link blue on bone 5.33 and 4.81; granite
+on bone, a string in code, 6.78 and 8.22; ink on the mark's wash 14.62
+and 12.86 over lifted, 13.50 and 14.65 over the canvas (spec correction
+41, where the spec's 11.41, 6.45 and 14.63 were composited a little
+differently).
+
+**Card and PageColumn.** In a Card, Prose is one part of the body and
+the card's padding its inset; an article in a card starts at a paragraph
+or an `h2`, and the card's title stays the Card's. On a page, `Prose
+as="article"` in a PageColumn under a PageHeader keeps its text on the
+column's start edge, under the title (`InPageColumn`), never centred.
+
+**Size.** `{ Prose, ProseScroll }` measures 169 B, and 167 B with React
+Aria not ignored, a difference of compression alone, since neither part
+imports it; the rule sets 1 kB, over the spec's 0.5 kB budget (spec
+correction 39). `prose.css` builds to 11.9 kB before compression.
+
+**Screen readers and devices.** Not yet verified (owner action 3): a
+report's headings, lists and table read in VoiceOver and NVDA, a
+`ProseScroll` read as a named region that scrolls by keys, a neutralized
+link read as plain text, inline code's edge and the mark in a Windows
+contrast theme, and a report with a wide table and the Persian guide in
+Vazirmatn on a phone at 320px to 430px.

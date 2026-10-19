@@ -15,6 +15,7 @@ import { FilterChip } from '../src/filter-chip';
 import { NumberField } from '../src/number-field';
 import { PageHeader } from '../src/page-header';
 import { Pagination } from '../src/pagination';
+import { Prose, ProseScroll } from '../src/prose';
 import { PickerOption } from '../src/picker';
 import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
@@ -454,6 +455,34 @@ const HYDRATED: [
       ]);
       expect(container.querySelector('.breadcrumbs-current')).toHaveAttribute('aria-current', 'page');
       expect(container.querySelector('h1')).toHaveTextContent('Receipts, 2026');
+    },
+  ],
+  [
+    // Static: nothing is drawn again, so the report and its region are the server's elements, as they were.
+    'Prose with a wide table',
+    <Prose as="article">
+      <h2>October</h2>
+      <p>
+        You spent <strong>$3,284.10</strong>, and <span className="prose-unlinked">your transactions</span>{' '}
+        are listed below.
+      </p>
+      <ProseScroll aria-label="Spending by category, table">
+        <table>
+          <tbody>
+            <tr>
+              <th scope="row">Rent</th>
+              <td>$1,450.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </ProseScroll>
+    </Prose>,
+    (container) => {
+      expect(container.querySelector('article')).toHaveClass('prose');
+      const region = container.querySelector('.prose-scroll');
+      expect(region).toHaveAttribute('role', 'region');
+      expect(region).toHaveAttribute('tabindex', '0');
+      expect(region).toHaveAttribute('aria-label', 'Spending by category, table');
     },
   ],
 ];

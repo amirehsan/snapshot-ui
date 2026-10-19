@@ -29,6 +29,8 @@ import { Pagination } from '../pagination';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
 import { ProgressBar } from '../progress-bar';
+import { Prose } from '../prose';
+import { GOALS_GUIDE_FA } from '../prose/fixtures';
 import { Radio, RadioGroup } from '../radio-group';
 import { SaveBar } from '../save-bar';
 import { SearchField } from '../search-field';
@@ -41,6 +43,7 @@ import { filesTransfer, fireDrag, pdf } from '../stories/drag';
 import { DemoHeader, DemoNav } from '../stories/shell-fixture';
 import { DESKTOP, VIEWPORT_OPTIONS } from '../stories/viewports';
 import { firstLineOffset, lineCount } from '../stories/paint';
+import { ownContent, Rendered } from '../stories/prose';
 import { Switch } from '../switch';
 import { Tab, TabList, TabPanel, Tabs } from '../tabs';
 import { TextArea } from '../text-area';
@@ -2099,5 +2102,48 @@ export const BreadcrumbsMirrored: Story = {
     for (const icon of canvasElement.querySelectorAll('.breadcrumbs-separator svg, .breadcrumbs-back-icon')) {
       await expect(getComputedStyle(icon).scale).toBe('-1 1');
     }
+  },
+};
+
+/**
+ * The goals guide in Persian, in Vazirmatn from the static folder: the list markers and the quote's rule at the
+ * right, the ordered list counting in Persian digits, the headings with no tracking, emphasis at 500 and
+ * upright, and code and a figure left to right. Baselined, since its face is served with the stories and no
+ * machine's fallback draws it.
+ */
+export const ProseMirrored: Story = {
+  tags: ['!no-visual'],
+  render: () => (
+    <div dir="rtl" lang="fa" data-font="vazirmatn" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
+      <Prose as="article">
+        <Rendered markdown={GOALS_GUIDE_FA} components={ownContent('پس‌انداز هر ماه، جدول')} />
+      </Prose>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const ordered = find(canvasElement, 'ol');
+    const style = getComputedStyle(ordered);
+    await expect(style.listStyleType).toBe('persian');
+    // The indent is at the right, the start of a right-to-left line, so the items end there.
+    await expect(parseFloat(style.paddingRight)).toBeGreaterThan(0);
+    await expect(parseFloat(style.paddingLeft)).toBe(0);
+    const quote = find(canvasElement, 'blockquote');
+    await expect(parseFloat(getComputedStyle(quote).borderRightWidth)).toBe(2);
+    await expect(parseFloat(getComputedStyle(quote).borderLeftWidth)).toBe(0);
+    for (const heading of canvasElement.querySelectorAll('h2, h3')) {
+      await expect(getComputedStyle(heading).letterSpacing).toBe('normal');
+    }
+    const emphasis = find(canvasElement, 'em');
+    await expect(getComputedStyle(emphasis).fontWeight).toBe('500');
+    await expect(getComputedStyle(emphasis).fontStyle).toBe('normal');
+    // Code reads left to right, its block from the left edge.
+    const code = find(canvasElement, 'li code');
+    await expect(getComputedStyle(code).direction).toBe('ltr');
+    const pre = find(canvasElement, 'pre');
+    await expect(getComputedStyle(pre).direction).toBe('ltr');
+    await expect(getComputedStyle(pre).textAlign).toBe('left');
+    const block = rect(find(canvasElement, 'article'));
+    await expectSameEdge(rect(pre).right, block.right);
+    await expectSameEdge(rect(find(canvasElement, 'p')).right, block.right);
   },
 };

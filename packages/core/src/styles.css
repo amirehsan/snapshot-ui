@@ -8,6 +8,8 @@
 @layer theme, base, components, utilities;
 
 @import '../dist/tokens.css';
+/* Before every component, so a component inside prose wins on order (insights spec 8.1). */
+@import './components/prose.css';
 @import './components/spinner.css';
 @import './components/button.css';
 @import './components/heading.css';

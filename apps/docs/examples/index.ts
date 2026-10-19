@@ -124,6 +124,12 @@ import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
 import ProgressBarBasic from './progress-bar-basic';
 import ProgressBarIndeterminate from './progress-bar-indeterminate';
+import ProseCard from './prose-card';
+import ProseMarkdown from './prose-markdown';
+import ProseModelOutput from './prose-model-output';
+import ProsePersian from './prose-persian';
+import ProseReport from './prose-report';
+import ProseWideTable from './prose-wide-table';
 import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
@@ -307,6 +313,12 @@ export const examples = {
   'popover-match-width': PopoverMatchWidth,
   'progress-bar-basic': ProgressBarBasic,
   'progress-bar-indeterminate': ProgressBarIndeterminate,
+  'prose-card': ProseCard,
+  'prose-markdown': ProseMarkdown,
+  'prose-model-output': ProseModelOutput,
+  'prose-persian': ProsePersian,
+  'prose-report': ProseReport,
+  'prose-wide-table': ProseWideTable,
   'radio-group-basic': RadioGroupBasic,
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,

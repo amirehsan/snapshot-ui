@@ -49,12 +49,17 @@ The CSS sits in cascade layers, so your unlayered CSS always wins, and Tailwind'
 
 ## Load the font
 
-Body text is weight 450, which needs a variable font. In Next.js, `next/font` self-hosts it and sets the family the tokens read:
+Body text is weight 450, which needs a variable font. Load the italic as well: `base.css` turns off the browser's faked italic, so emphasis in [Prose](/docs/components/prose) is upright unless the italic face is there. In Next.js, `next/font` self-hosts both and sets the family the tokens read:
 
 ```tsx
 import { Sofia_Sans } from 'next/font/google';
 
-const sofia = Sofia_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-sans' });
+const sofia = Sofia_Sans({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-sans',
+});
 
 export default function RootLayout({ children }) {
   return (
@@ -65,7 +70,23 @@ export default function RootLayout({ children }) {
 }
 ```
 
-Anywhere else, install `@fontsource-variable/sofia-sans` and import it once. The font stack already includes its family name.
+Anywhere else, install `@fontsource-variable/sofia-sans` and import it once, with its italic, `@fontsource-variable/sofia-sans/wght-italic.css`. The font stack already includes its family name.
+
+Sofia Sans has no Persian or Arabic letters. For a Persian page, load Vazirmatn, which has a weight axis, so 450 and 500 draw, and put it first in the stack under `lang="fa"`, on the element that names the language:
+
+```tsx
+import { Vazirmatn } from 'next/font/google';
+
+// Only Persian pages draw it, so it is not preloaded. Add persian.variable to the html element's classes.
+const persian = Vazirmatn({ subsets: ['arabic'], display: 'swap', variable: '--font-persian', preload: false });
+```
+
+```css
+[lang]:lang(fa) {
+  --font-sans: var(--font-persian), Arial, sans-serif;
+  font-family: var(--font-sans);
+}
+```
 
 </Section>
 

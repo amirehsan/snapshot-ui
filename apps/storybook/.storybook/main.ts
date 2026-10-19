@@ -8,6 +8,8 @@ const config: StorybookConfig = {
     // Stories that need both packages, which neither package's own stories may import together.
     '../stories/**/*.stories.@(ts|tsx)',
   ],
+  // Vazirmatn for the Persian stories, served with no network for the baselines (public/fonts/vazirmatn).
+  staticDirs: ['../public'],
   addons: ['@storybook/addon-docs', '@storybook/addon-a11y', '@storybook/addon-vitest'],
   framework: {
     name: '@storybook/react-vite',

@@ -1861,6 +1861,55 @@ describe('the page header', () => {
   );
 });
 
+describe('prose', () => {
+  /** `text` on `ground`, both laid over the canvas, as a translucent color is drawn. */
+  const on = (text, ground, mode) => {
+    const palette = paletteFor(tokens, mode);
+    const base = composite(parseColor(palette[ground]), parseColor(palette.canvas));
+    return contrastRatio(composite(parseColor(palette[text]), base), base);
+  };
+  /** Ink on the mark's wash, light signal orange at 20% over `under`. */
+  const onWash = (mode, under) => {
+    const palette = paletteFor(tokens, mode);
+    const wash = composite({ ...parseColor(palette['signal-light']), a: 0.2 }, parseColor(palette[under]));
+    return contrastRatio(composite(parseColor(palette.ink), wash), wash);
+  };
+
+  // Body text is ink, h5, h6, markers, table headers, captions and the image's alt text slate, and links link
+  // blue, on the page or in a card: the gate holds all three as text there.
+  it('cites ink, slate and link blue as text on canvas and lifted, which the gate holds', () => {
+    for (const text of ['ink', 'slate', 'link']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // Measured and recorded, light then dark: code's text, the image's alt text and a link in inline code's box, on
+  // bone; slate on bone is gated already, for Kbd.
+  const ON_BONE = [
+    { text: 'charcoal', light: 13.75, dark: 11.44 },
+    { text: 'slate', light: 4.99, dark: 6.44 },
+    { text: 'link', light: 5.33, dark: 4.81 },
+    { text: 'granite', light: 6.78, dark: 8.22 },
+  ];
+
+  it.each(ON_BONE)('measures $text on bone at $light in light and $dark in dark', ({ text, light, dark }) => {
+    expect(on(text, 'bone', 'light')).toBeCloseTo(light, 2);
+    expect(on(text, 'bone', 'dark')).toBeCloseTo(dark, 2);
+  });
+
+  // The mark: ink on light signal orange at 20%, over lifted and over the canvas.
+  it('measures ink on the mark at 14.62 and 12.86 over lifted, 13.50 and 14.65 over the canvas', () => {
+    expect(onWash('light', 'lifted')).toBeCloseTo(14.62, 2);
+    expect(onWash('dark', 'lifted')).toBeCloseTo(12.86, 2);
+    expect(onWash('light', 'canvas')).toBeCloseTo(13.5, 2);
+    expect(onWash('dark', 'canvas')).toBeCloseTo(14.65, 2);
+  });
+});
+
 describe('contrastFailures', () => {
   const palette = (mode) => paletteFor(tokens, mode);
 

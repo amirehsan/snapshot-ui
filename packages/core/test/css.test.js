@@ -236,6 +236,14 @@ describe('src/styles.css', () => {
     }
   });
 
+  it('imports prose.css right after the tokens and before every component file', () => {
+    // Prose's rules have one class's specificity, a component's own, so a component inside prose wins on order
+    // even without not-prose (insights spec 8.1; spec correction 29).
+    const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
+    expect(imported[0]).toBe('prose.css');
+    expect(entry.indexOf("'./components/prose.css'")).toBeGreaterThan(entry.indexOf("'../dist/tokens.css'"));
+  });
+
   it('imports the documents files after the data files, in order', () => {
     // The progress bar is required; the drop zones, the tray, the date picker, the save bar, the page header and
     // the trail are checked once they exist, each after the one before.
@@ -9984,6 +9992,371 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     );
     expect(blockAfter(css('input.css'), '.input-button {')).toContain(
       'border-radius: max(0px, calc(var(--input-radius, var(--radius-pill)) - 0.375rem));',
+    );
+  });
+});
+
+describe('src/components/prose.css', () => {
+  const css = () => closeUp(stripComments(read('src/components/prose.css')));
+  /** The guard every element rule ends with: nothing under not-prose. */
+  const GUARD = ':not(:where(.not-prose, .not-prose *))';
+  /** An element rule's header: `.prose :where(<inner>)` and the guard. */
+  const at = (inner) => `.prose :where(${inner})${GUARD} {`;
+  /** A rule on the direct children of the prose box. */
+  const child = (inner) => `.prose > :where(${inner})${GUARD} {`;
+  /** Every rule block that holds no nested block, as [selector, body]. */
+  const blocks = (source) => [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => [m[1].trim(), m[2]]);
+  /** A selector list split at its top-level commas. */
+  const splitTop = (list) => {
+    const parts = [];
+    let depth = 0;
+    let start = 0;
+    for (let index = 0; index < list.length; index += 1) {
+      const char = list[index];
+      if (char === '(') depth += 1;
+      else if (char === ')') depth -= 1;
+      else if (char === ',' && depth === 0) {
+        parts.push(list.slice(start, index).trim());
+        start = index + 1;
+      }
+    }
+    parts.push(list.slice(start).trim());
+    return parts;
+  };
+  const SHAPE = /^\.prose (?:> )?:where\((.+)\):not\(:where\(\.not-prose, \.not-prose \*\)\)(?:::marker)?$/;
+  const expectAll = (body, declarations, label) => {
+    for (const declaration of declarations) expect(body, `${label}: ${declaration}`).toContain(declaration);
+  };
+
+  it('wraps every element rule in :where() with the not-prose guard', () => {
+    const selectors = blocks(css()).flatMap(([selector]) => splitTop(selector));
+    expect(selectors.length).toBeGreaterThan(40);
+    const roots = ['.prose', '.prose-scroll', '.prose-scroll:focus-visible'];
+    const unshaped = selectors.filter((selector) => !roots.includes(selector) && !SHAPE.test(selector));
+    expect(unshaped).toEqual([]);
+  });
+
+  it('never gives a or img a layout property', () => {
+    // A model's links and images reach the page as spans (spec 8.10), so nothing may depend on their being there.
+    const LAYOUT =
+      /^(?:margin|padding|display|position|float|inset|top|right|bottom|left|width|min-width|inline-size|min-inline-size|flex|grid)/;
+    const subjects = /(?:^|[\s>+~(])(?:a|img)(?=$|[:.[)\s])/;
+    let checked = 0;
+    for (const [selector, body] of blocks(css())) {
+      for (const one of splitTop(selector)) {
+        const inner = SHAPE.exec(one)?.[1];
+        if (!inner || !splitTop(inner).some((item) => subjects.test(item))) continue;
+        checked += 1;
+        const properties = body
+          .split(';')
+          .map((declaration) => declaration.split(':')[0]?.trim() ?? '')
+          .filter(Boolean);
+        expect(
+          properties.filter((property) => LAYOUT.test(property)),
+          one,
+        ).toEqual([]);
+      }
+    }
+    // The link, its hover, press and focus, and the framed and sized image rules.
+    expect(checked).toBeGreaterThanOrEqual(6);
+  });
+
+  it('sets the body at 1.6 and text blocks at --prose-measure', () => {
+    const source = css();
+    expectAll(
+      blockAfter(source, at('p, ul, ol, dl, blockquote')),
+      ['font-size: var(--text-body);', 'line-height: 1.6;', 'font-weight: var(--text-body--font-weight);'],
+      'body',
+    );
+    expect(
+      blockAfter(source, at('p, li, h1, h2, h3, h4, h5, h6, blockquote, dl, figcaption, [data-footnotes]')),
+    ).toBe(' max-inline-size: var(--prose-measure, 70ch); ');
+    // No measure on a table, a code block, a figure or a rule: they take the whole box.
+    for (const [selector, body] of blocks(source)) {
+      if (body.includes('--prose-measure')) expect(selector).not.toMatch(/\b(?:table|pre|figure|hr|img)\b/);
+    }
+    expectAll(
+      blockAfter(source, '.prose {'),
+      ['color: var(--color-ink);', 'font-family: var(--font-sans);'],
+      'root',
+    );
+  });
+
+  it("spaces blocks from the system's steps: 24, 32 before h1 and h2, 8 after a heading", () => {
+    const source = css();
+    expect(
+      blockAfter(source, at('p, h1, h2, h3, h4, h5, h6, ul, ol, dl, dd, blockquote, figure, pre, hr, table')),
+    ).toBe(' margin: 0; ');
+    const rhythm = [
+      [child('* + *'), 'var(--spacing-peer)'],
+      [child('* + :is(h1, h2)'), 'var(--spacing-separate)'],
+      [child(':is(h1, h2, h3, h4, h5, h6) + *'), 'var(--spacing-part)'],
+      [child('* + hr, hr + *'), 'var(--spacing-separate)'],
+    ];
+    let previous = -1;
+    for (const [header, step] of rhythm) {
+      expect(blockAfter(source, header), header).toBe(` margin-block-start: ${step}; `);
+      // Each after the one before, so a heading after a heading takes 8px and a rule keeps 32px.
+      expect(source.indexOf(header), header).toBeGreaterThan(previous);
+      previous = source.indexOf(header);
+    }
+    expect(blockAfter(source, at('li + li, li > * + *, li > :is(ul, ol), dt + dd, figure > * + *'))).toBe(
+      ' margin-block-start: var(--spacing-part); ',
+    );
+    expect(blockAfter(source, at('blockquote > * + *, [data-footnotes] > * + *'))).toBe(
+      ' margin-block-start: var(--spacing-peer); ',
+    );
+    // Top margins only, so collapsing never decides a gap.
+    expect(source).not.toMatch(/margin-block-end|margin-bottom/);
+  });
+
+  it('draws headings by the heading steps, h5 and h6 in slate, the h1 at 28px under 768px', () => {
+    const source = css();
+    for (const [element, step] of [
+      ['h1', 'h2'],
+      ['h2', 'h3'],
+    ]) {
+      expectAll(
+        blockAfter(source, at(element)),
+        [
+          `font-size: var(--text-${step});`,
+          `line-height: var(--text-${step}--line-height);`,
+          `letter-spacing: var(--text-${step}--letter-spacing);`,
+          `font-weight: var(--text-${step}--font-weight);`,
+        ],
+        element,
+      );
+    }
+    expectAll(
+      blockAfter(source, at('h3, h4, h5, h6')),
+      ['font-size: var(--text-h4);', 'letter-spacing: normal;', 'font-weight: var(--text-h4--font-weight);'],
+      'subheads',
+    );
+    expect(blockAfter(source, at('h5, h6'))).toContain('color: var(--color-slate);');
+    expect(blockAfter(blockAfter(source, '@media (width < 768px) {'), at('h1'))).toContain(
+      'font-size: 1.75rem;',
+    );
+    expect(blockAfter(source, at('h1, h2, h3, h4, h5, h6'))).toContain(
+      'scroll-margin-block-start: var(--prose-scroll-margin, 0px);',
+    );
+    expect(blockAfter(source, at('strong, b'))).toContain('font-weight: 700;');
+  });
+
+  it("draws links with link.css's values", () => {
+    const source = css();
+    const link = blockAfter(closeUp(stripComments(read('src/components/link.css'))), '.link {');
+    const prose = blockAfter(source, at('a'));
+    for (const property of [
+      'border-radius',
+      'color',
+      'text-decoration-line',
+      'text-decoration-thickness',
+      'text-underline-offset',
+      'overflow-wrap',
+    ]) {
+      const declaration = new RegExp(`(?<![\\w-])${property}: [^;]+;`).exec(link)?.[0];
+      expect(declaration, property).toBeDefined();
+      expect(prose, property).toContain(declaration);
+    }
+    expect(blockAfter(blockAfter(source, '@media (hover: hover) {'), at('a:hover'))).toContain(
+      'text-decoration-thickness: 2px;',
+    );
+    expect(blockAfter(source, at('a:active'))).toContain('text-decoration-thickness: 2px;');
+    expect(blockAfter(source, at('a:focus-visible'))).toContain(
+      'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
+    );
+  });
+
+  it("draws pre with the docs' code block values and its Shiki mapping", () => {
+    const pre = blockAfter(css(), at('pre'));
+    expectAll(
+      pre,
+      [
+        'contain: inline-size;',
+        'padding: 1.25rem 1.5rem;',
+        'overflow-x: auto;',
+        'border: 1px solid var(--color-frame);',
+        'background-color: var(--color-bone);',
+        'color: var(--color-charcoal);',
+        'font-family: var(--font-mono);',
+        'font-size: 0.875rem;',
+        'line-height: 1.7;',
+        'tab-size: 2;',
+        'white-space: pre;',
+        'overflow-wrap: normal;',
+      ],
+      'pre',
+    );
+    // The docs' palette for Shiki, with the background the block's own fill, since Shiki writes it on the pre.
+    expectAll(
+      pre,
+      [
+        '--shiki-foreground: var(--color-charcoal);',
+        '--shiki-background: var(--color-bone);',
+        '--shiki-token-keyword: var(--color-link);',
+        '--shiki-token-string: var(--color-granite);',
+        '--shiki-token-string-expression: var(--color-granite);',
+        '--shiki-token-constant: var(--color-ink);',
+        '--shiki-token-function: var(--color-ink);',
+        '--shiki-token-parameter: var(--color-charcoal);',
+        '--shiki-token-comment: var(--color-slate);',
+        '--shiki-token-punctuation: var(--color-slate);',
+        '--shiki-token-link: var(--color-link);',
+      ],
+      'shiki',
+    );
+    // Moved, not copied: the docs site draws its code blocks with this rule and keeps no palette of its own.
+    const site = readFileSync(new URL('../../../apps/docs/app/site.css', import.meta.url), 'utf8');
+    expect(stripComments(site)).not.toContain('--shiki-');
+    expect(blockAfter(css(), at('pre code'))).toBe(' font: inherit; ');
+  });
+
+  it('makes framed blocks concentric with a holder, and the surface step outside one', () => {
+    expect(blockAfter(css(), at('pre, img, video'))).toBe(
+      ' border-radius: max(var(--radius-micro), calc(var(--holder-radius, var(--radius-surface)) - var(--holder-border, 0px) - var(--holder-pad, 0px))); ',
+    );
+    expectAll(blockAfter(css(), at('img, video')), ['max-inline-size: 100%;', 'block-size: auto;'], 'media');
+  });
+
+  it('keeps pre and inline code left to right, drops heading tracking and uses Persian list digits under lang fa', () => {
+    const source = css();
+    expectAll(blockAfter(source, at('pre')), ['direction: ltr;', 'text-align: left;'], 'pre');
+    expectAll(
+      blockAfter(source, at('code:not(pre code)')),
+      [
+        'padding: 1px 6px;',
+        'border: 1px solid transparent;',
+        'border-radius: var(--radius-micro);',
+        'background-color: var(--color-bone);',
+        'font-family: var(--font-mono);',
+        'font-size: 0.875em;',
+        'direction: ltr;',
+        'unicode-bidi: isolate;',
+      ],
+      'code',
+    );
+    expect(blockAfter(source, at(':is(h1, h2, h3, h4, h5, h6):is(:lang(fa), :lang(ar))'))).toBe(
+      ' letter-spacing: normal; ',
+    );
+    expectAll(
+      blockAfter(source, at(':is(em, i):is(:lang(fa), :lang(ar))')),
+      ['font-style: normal;', 'font-weight: 500;'],
+      'emphasis',
+    );
+    expect(blockAfter(source, at('ol:lang(fa)'))).toBe(' list-style-type: persian; ');
+    // After every other list style, so it wins on order at every level.
+    expect(source.indexOf(at('ol:lang(fa)'))).toBeGreaterThan(source.indexOf(at('ol ol ol')));
+    // Lists, quotes and definitions indent from the start, whatever the direction.
+    expect(blockAfter(source, at('ul, ol'))).toBe(' padding-inline-start: 1.25rem; ');
+    expectAll(
+      blockAfter(source, at('blockquote')),
+      [
+        'padding-inline-start: 1.25rem;',
+        'border-inline-start: 2px solid var(--color-frame);',
+        'quotes: none;',
+      ],
+      'quote',
+    );
+    expect(blockAfter(source, at('dd'))).toBe(' margin-inline-start: 1.25rem; ');
+  });
+
+  it('draws the neutralized spans: a link as its text, an image as its alt text in a small slate box', () => {
+    const source = css();
+    expectAll(
+      blockAfter(source, at('.prose-unlinked')),
+      ['color: inherit;', 'text-decoration: none;', 'overflow-wrap: anywhere;'],
+      'unlinked',
+    );
+    expectAll(
+      blockAfter(source, at('.prose-image')),
+      [
+        'padding: 1px 6px;',
+        'border-radius: var(--radius-micro);',
+        'background-color: var(--color-bone);',
+        'color: var(--color-slate);',
+        'font-size: var(--text-small);',
+      ],
+      'image',
+    );
+    expect(blockAfter(source, at('.prose-image:empty'))).toBe(' display: none; ');
+  });
+
+  it('draws a table as a chart table: small, tabular, slate headers, a divider under each row', () => {
+    const source = css();
+    expectAll(
+      blockAfter(source, at('table')),
+      [
+        'inline-size: 100%;',
+        'border-collapse: collapse;',
+        'font-size: var(--text-small);',
+        'font-variant-numeric: tabular-nums;',
+      ],
+      'table',
+    );
+    expectAll(
+      blockAfter(source, at('th, td')),
+      ['padding: 0.5rem 0.75rem;', 'border-block-end: 1px solid var(--color-divider);'],
+      'cells',
+    );
+    expect(blockAfter(source, at('th'))).toContain('color: var(--color-slate);');
+    expect(blockAfter(source, at('th'))).toContain('font-weight: 500;');
+    // Cells break anywhere, except in a scrolling box, where the table keeps its words and scrolls.
+    expect(source.indexOf(at('.prose-scroll :is(th, td)'))).toBeGreaterThan(
+      source.indexOf(at('p, li, dt, dd, blockquote, figcaption, caption, h1, h2, h3, h4, h5, h6, th, td')),
+    );
+    expect(blockAfter(source, at('.prose-scroll :is(th, td)'))).toBe(' overflow-wrap: normal; ');
+    // The mark is a 20% wash of light signal orange under ink.
+    expect(blockAfter(source, at('mark'))).toBe(
+      ' background-color: color-mix(in srgb, var(--color-signal-light) 20%, transparent); color: var(--color-ink); ',
+    );
+  });
+
+  it('makes prose-scroll scroll and show the focus ring', () => {
+    const source = css();
+    expectAll(
+      blockAfter(source, '.prose-scroll {'),
+      [
+        'contain: inline-size;',
+        'max-inline-size: 100%;',
+        'overflow-x: auto;',
+        'border-radius: var(--radius-micro);',
+      ],
+      'scroll',
+    );
+    expect(blockAfter(source, '.prose-scroll {')).not.toMatch(/border:|background/);
+    expectAll(
+      blockAfter(source, '.prose-scroll:focus-visible {'),
+      [
+        'outline: var(--focus-ring-width) solid var(--focus-ring-color);',
+        'outline-offset: var(--focus-ring-offset);',
+      ],
+      'ring',
+    );
+  });
+
+  it("names forced colors for inline code, mark, rules and the scroll's ring, and wraps pre in print", () => {
+    const source = css();
+    const forced = blockAfter(source, `${FORCED_COLORS} {`);
+    expect(blockAfter(forced, at('code:not(pre code)'))).toContain('border-color: CanvasText;');
+    expectAll(
+      blockAfter(forced, at('mark')),
+      ['forced-color-adjust: none;', 'background-color: Highlight;', 'color: HighlightText;'],
+      'mark',
+    );
+    expectAll(
+      blockAfter(blockAfter(forced, '@supports (color: Mark) {'), at('mark')),
+      ['background-color: Mark;', 'color: MarkText;'],
+      'mark',
+    );
+    expect(blockAfter(forced, at('blockquote'))).toContain('border-inline-start-color: CanvasText;');
+    expect(blockAfter(forced, at('hr, [data-footnotes]'))).toContain('border-block-start-color: CanvasText;');
+    expect(
+      blockAfter(forced, `${at('pre:focus-visible').slice(0, -2)}, .prose-scroll:focus-visible {`),
+    ).toContain('outline-color: Highlight;');
+    expectAll(
+      blockAfter(blockAfter(source, '@media print {'), at('pre')),
+      ['white-space: pre-wrap;', 'overflow-wrap: anywhere;'],
+      'print',
     );
   });
 });

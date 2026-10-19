@@ -248,3 +248,4 @@ export {
   type DataTableSelectable,
   type DataTableShared,
 } from './data-table';
+export { Prose, ProseScroll, type ProseProps, type ProseScrollProps } from './prose';
