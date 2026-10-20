@@ -306,7 +306,8 @@ export function Repeater<T extends RepeaterRow>({
       next.length,
       (root) => {
         const item = rowOf(root, row.id);
-        return item ? firstField(item) : null;
+        // A row of words has no field: its Remove, since Add may be disabled now.
+        return item ? (firstField(item) ?? firstFocusable(item)) : null;
       },
     );
   };

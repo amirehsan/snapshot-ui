@@ -13078,7 +13078,8 @@ commit (`afterCommit`), never in a layout effect, and lands on a place the
 reader can name through `focusNamedPlace`, never the body:
 
 - After an add, the new row's first field, or its field marked
-  `data-autofocus`; the status says "Tier 3 added", and at the maximum
+  `data-autofocus`, or in a row of words with no field its Remove, since
+  Add may be disabled now (spec correction 58); the status says "Tier 3 added", and at the maximum
   adds the reason: "Tier 3 added. 3 of 3. Remove one to add another."
 - After a remove, Remove in the row now in its place, else in the row
   before it, else Add; at `minRows`, where no Remove is left, that row's

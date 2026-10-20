@@ -518,6 +518,25 @@ describe('Repeater', () => {
     expect(status(container)).toBeEmptyDOMElement();
   });
 
+  it("focuses a new row's Remove when it has no field and Add is disabled", async () => {
+    render(
+      <Repeater<Tier>
+        label="Wait tiers"
+        createRow={createTier}
+        rowLabel={tierLabel}
+        maxRows={2}
+        defaultValue={TWO.slice(0, 1)}
+      >
+        {/* A row of words and its Remove, with no field. */}
+        {(tier) => <span>{tier.wait}</span>}
+      </Repeater>,
+    );
+    press(screen.getByRole('button', { name: 'Add a row' }));
+    await frames();
+    // Add is disabled at the maximum, so the new row's own control takes focus, never the body.
+    expect(screen.getByRole('button', { name: 'Remove, Tier 2' })).toHaveFocus();
+  });
+
   it('focuses a field marked data-autofocus in a new row', async () => {
     render(
       <Repeater<Tier>
