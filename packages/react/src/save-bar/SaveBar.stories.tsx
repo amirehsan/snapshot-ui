@@ -631,8 +631,8 @@ export const FocusClearTall: Story = {
  * A save that takes longer than the pause, pressed by keyboard, focus kept on the action. React Aria's Button says
  * the pending's start and end itself, assertively, while it holds focus, so the status says nothing of it; the
  * `Pending` story, with focus elsewhere, shows "Saving" there. React Aria's live region keeps each sentence 7
- * seconds, and axe, run after this play and after the next story's, would read their names once the story has
- * gone, so the play removes them once the end has been said.
+ * seconds, so axe, run after this play and after the next story's, reads them: once the story has gone, the
+ * Button has written their words onto them in place of its ids.
  */
 export const PendingStatus: Story = {
   tags: ['no-visual'],
@@ -672,7 +672,6 @@ export const PendingStatus: Story = {
       );
     } finally {
       watch.disconnect();
-      for (const said of document.querySelectorAll('[data-live-announcer] [role="img"]')) said.remove();
     }
   },
 };
