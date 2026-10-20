@@ -585,6 +585,10 @@ export const WithSaveBar: Story = {
     });
     await expect(part(canvasElement, 'field')).toHaveAttribute('data-changed');
     await expect(canvas.queryByRole('button', { name: 'Reset to default, Wait' })).toBeNull();
+    await waitFor(
+      () => expect(part(canvasElement, 'field-extras-status')).toHaveTextContent('Set to the default'),
+      { timeout: 5000 },
+    );
     await userEvent.click(canvas.getByRole('button', { name: 'Cancel' }));
     const question = await waitFor(() => body.getByRole('alertdialog', { name: 'Discard changes?' }), {
       timeout: 5000,
@@ -598,6 +602,8 @@ export const WithSaveBar: Story = {
     );
     await expect(canvas.getByRole('group', { name: 'Coach' })).toBeVisible();
     await expect(part(canvasElement, 'field')).not.toHaveAttribute('data-changed');
+    // The reset was undone, so the status no longer says it.
+    await expect(part(canvasElement, 'field-extras-status')).toBeEmptyDOMElement();
     await waitFor(() => expect(document.activeElement).not.toBe(document.body), { timeout: 5000 });
   },
 };

@@ -512,13 +512,16 @@ describe('FieldExtras', () => {
         </>
       );
     }
-    render(<Asks />);
+    const { container } = render(<Asks />);
     press(screen.getByRole('button', { name: 'Reset to default, Wait' }));
     await frames();
     const dialog = await screen.findByRole('dialog');
     expect(dialog.contains(document.activeElement)).toBe(true);
     // The modal hides the page from the accessibility tree, so the field is found by its markup.
     expect(document.querySelector('.field input')).not.toHaveFocus();
+    // Nothing is reset yet, the dialog asks first, so the status says nothing.
+    await frames();
+    expect(status(container)).toBeEmptyDOMElement();
   });
 
   it('lifts the measure for a group', () => {
@@ -574,19 +577,20 @@ describe('FieldExtras', () => {
   });
 
   it('writes each take as a new node, so the same offer taken again is said again', async () => {
+    const user = userEvent.setup();
     function Again(): ReactElement {
-      const [count, setCount] = useState(0);
+      const [wait, setWait] = useState('A week');
       return (
         <FieldExtras
           fieldLabel="Wait"
           defaultOffer={{
-            ...offer('3 days'),
+            ...offer('3 days', wait === '3 days'),
             onTake: () => {
-              setCount(count + 1);
+              setWait('3 days');
             },
           }}
         >
-          <TextField label="Wait" value={String(count)} />
+          <TextField label="Wait" value={wait} onChange={setWait} />
         </FieldExtras>
       );
     }
@@ -596,23 +600,63 @@ describe('FieldExtras', () => {
     await frames();
     const first = host.firstElementChild;
     expect(first).not.toBeNull();
+    // Typed away from the default, the offer is back; taken again, it is said again.
+    await user.type(screen.getByRole('textbox', { name: 'Wait' }), '0');
     press(screen.getByRole('button', { name: 'Reset to default, Wait' }));
     await frames();
+    expect(host.firstElementChild).not.toBeNull();
     expect(host.firstElementChild).not.toBe(first);
     expect(host.childElementCount).toBe(1);
   });
 
+  it('says nothing of a take the field does not hold, and empties when the taken offer comes back', async () => {
+    function Refused(): ReactElement {
+      const [wait, setWait] = useState('A week');
+      return (
+        <FieldExtras
+          fieldLabel="Wait"
+          suggestion={offer('1 day')}
+          defaultOffer={{
+            ...offer('3 days', wait === '3 days'),
+            onTake: () => {
+              setWait('3 days');
+            },
+          }}
+        >
+          <TextField label="Wait" value={wait} onChange={setWait} />
+        </FieldExtras>
+      );
+    }
+    const user = userEvent.setup();
+    const { container } = render(<Refused />);
+    const host = status(container);
+    // The suggestion's setter here sets nothing, so its offer stays drawn: nothing was set, and nothing is said.
+    press(screen.getByRole('button', { name: 'Use, Wait' }));
+    await frames();
+    expect(host).toBeEmptyDOMElement();
+    press(screen.getByRole('button', { name: 'Reset to default, Wait' }));
+    await frames();
+    expect(host).toHaveTextContent('Set to the default');
+    // The field leaves the default, by typing or a Cancel, before the words have gone: they would be stale.
+    await user.type(screen.getByRole('textbox', { name: 'Wait' }), '0');
+    expect(host).toBeEmptyDOMElement();
+  });
+
   it('says a take with its own words from labels', async () => {
-    const { container } = render(
-      <FieldExtras
-        fieldLabel="Cushion"
-        suggestion={offer('$2,340')}
-        defaultOffer={offer('$1,000')}
-        labels={{ usedStatus: 'Vorschlag übernommen', resetStatus: 'Standard gesetzt' }}
-      >
-        <TextField label="Cushion" />
-      </FieldExtras>,
-    );
+    function German(): ReactElement {
+      const [value, setValue] = useState('');
+      return (
+        <FieldExtras
+          fieldLabel="Cushion"
+          suggestion={{ ...offer('$2,340', value === '$2,340'), onTake: () => setValue('$2,340') }}
+          defaultOffer={{ ...offer('$1,000', value === '$1,000'), onTake: () => setValue('$1,000') }}
+          labels={{ usedStatus: 'Vorschlag übernommen', resetStatus: 'Standard gesetzt' }}
+        >
+          <TextField label="Cushion" value={value} onChange={setValue} />
+        </FieldExtras>
+      );
+    }
+    const { container } = render(<German />);
     press(screen.getByRole('button', { name: 'Use, Cushion' }));
     await frames();
     expect(status(container)).toHaveTextContent('Vorschlag übernommen');
@@ -808,6 +852,8 @@ describe('FieldExtras', () => {
       expect(await screen.findByRole('button', { name: 'Reset to default, Wait' })).toBeInTheDocument();
       expect(screen.getByRole('group', { name: 'Coach' })).toBeInTheDocument();
       expect(container.querySelector('[data-changed]')).toBeNull();
+      // The reset was undone, so its words leave the status with it.
+      expect(status(container)).toBeEmptyDOMElement();
     });
 
     it('stays out of the way once saved at the default: no offer and no chip', async () => {

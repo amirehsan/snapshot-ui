@@ -12917,8 +12917,13 @@ reader browsing later meets no stale news. It speaks in the frame after
 the move, once the field holds focus (spec correction 32): a screen reader
 reads a focus move at once, so a status said before it was cut short or
 read first and then repeated by the field, and the field's own words
-already give its label and value, so the status says neither again. Its
-words are `labels.usedStatus` and `labels.resetStatus`. A status that
+already give its label and value, so the status says neither again. It
+speaks only of a take the field holds (spec correction 33): when the
+app's setter took focus elsewhere, into a dialog that asks first, nothing
+is set yet and nothing is said, and the words leave as soon as the taken
+offer is drawn again, refused by the setter, typed away from or undone by
+a Cancel, since they would no longer be true. Its words are
+`labels.usedStatus` and `labels.resetStatus`. A status that
 speaks inside `aria-busy="true"` warns once in development (lesson 11).
 
 **The group scope** (ruling 2.6). `scope="group"` lifts the measure, so

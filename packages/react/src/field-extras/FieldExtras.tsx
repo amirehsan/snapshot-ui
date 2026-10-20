@@ -93,6 +93,7 @@ type Kind = 'suggestion' | 'default';
 /** What the last take said, and which take it was, so each take writes its words as a new node. */
 interface Said {
   words: string;
+  kind: Kind;
   take: number;
 }
 
@@ -171,13 +172,14 @@ export function FieldExtras({
       // or nothing: the take's focus is ours to place. Focus the app moved elsewhere, into a dialog its setter
       // opened, stays there.
       const active = document.activeElement;
-      if (focusIsLost() || active === button || wrapper.contains(active)) {
-        focusNamedPlace(placeAfterTake(wrapper, controlRef?.current ?? null));
-      }
+      // Focus the app took, such as into a dialog that asks before a reset, means nothing is set yet: the app
+      // speaks for itself, so the status says nothing.
+      if (!focusIsLost() && active !== button && !wrapper.contains(active)) return;
+      focusNamedPlace(placeAfterTake(wrapper, controlRef?.current ?? null));
       // Said after the move: a screen reader reads the field focused, its label and new value, at once, and
       // would cut a polite status said before it; this follows with what happened, which those words do not say.
       takes.current += 1;
-      setSaid({ words, take: takes.current });
+      setSaid({ words, kind, take: takes.current });
       clearTimeout(hold.current);
       hold.current = setTimeout(() => {
         setSaid(null);
@@ -213,7 +215,11 @@ export function FieldExtras({
         );
       })}
       <span className="field-extras-status" role="status" aria-live="polite" aria-atomic="true">
-        {said ? <span key={said.take}>{said.words}</span> : null}
+        {/* Only while the field holds what was taken: an offer still or again drawn, refused by the app's
+            setter, typed away from or undone by a Cancel, empties it, since its words would be untrue. */}
+        {said && !drawn.some(([kind]) => kind === said.kind) ? (
+          <span key={said.take}>{said.words}</span>
+        ) : null}
       </span>
     </div>
   );
