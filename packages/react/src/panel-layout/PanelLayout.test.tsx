@@ -41,19 +41,21 @@ const nextFrame = (): Promise<void> =>
     });
   });
 
-/** A settings page: the nav of eight sections and the open one, or Coach beside the index. */
+/** A settings page: the nav of eight sections and the open one, or the default section, Coach, beside the index. */
 function Settings({
   view,
   sectionKey,
   navigate = noop,
   headingLevel,
+  defaultKey = 'coach',
 }: {
   view: PanelLayoutView;
   sectionKey?: string;
   navigate?: (href: string) => void;
   headingLevel?: 2 | 3;
+  defaultKey?: string;
 }): ReactElement {
-  const open = SECTIONS.find(([key]) => key === (sectionKey ?? 'coach')) ?? SECTIONS[0];
+  const open = SECTIONS.find(([key]) => key === (sectionKey ?? defaultKey)) ?? SECTIONS[0];
   return (
     <RouterProvider navigate={navigate}>
       <PanelLayout
@@ -68,7 +70,7 @@ function Settings({
                 key={key}
                 href={`/settings/${key}`}
                 isCurrent={view === 'section' && key === sectionKey}
-                isDefault={view === 'index' && key === 'coach'}
+                isDefault={view === 'index' && key === defaultKey}
                 description={description}
                 end={END[key]}
               >
@@ -398,6 +400,62 @@ describe('PanelLayout', () => {
     expect(document.activeElement).toBe(document.body);
   });
 
+  it('moves focus when the view turns and the section stays, as an index that names its default section does', async () => {
+    const { rerender } = render(<Settings view="index" sectionKey="coach" />);
+    const coach = screen.getByRole('link', { name: 'Coach' });
+    act(() => {
+      coach.focus();
+    });
+    rerender(<Settings view="section" sectionKey="coach" />);
+    await act(nextFrame);
+    expect(screen.getByRole('heading', { name: 'Coach' })).toHaveFocus();
+  });
+
+  it('moves nothing when focus leaves the layout between the commit and the frame', async () => {
+    const outside = document.createElement('button');
+    document.body.append(outside);
+    const { rerender } = render(<Settings view="section" sectionKey="coach" />);
+    act(() => {
+      screen.getByRole('link', { name: 'Logos' }).focus();
+    });
+    rerender(<Settings view="section" sectionKey="logos" />);
+    // The reader moves on before the frame, to the rail or a palette.
+    act(() => {
+      outside.focus();
+    });
+    await act(nextFrame);
+    expect(outside).toHaveFocus();
+    outside.remove();
+  });
+
+  it('counts no change for a layout that mounts beside another, as a page of examples draws them', async () => {
+    render(<Settings view="section" sectionKey="coach" />);
+    await act(nextFrame);
+    // A second layout mounts with another section while the first is mounted: it is not the first's next page.
+    render(<Settings view="section" sectionKey="logos" />);
+    await act(nextFrame);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('moves nothing on hydration, even after another layout committed in the window', async () => {
+    const before = render(<Settings view="section" sectionKey="coach" />);
+    before.unmount();
+    const page = <Settings view="section" sectionKey="logos" />;
+    const container = document.createElement('div');
+    container.innerHTML = renderToString(page);
+    document.body.append(container);
+    let hydrated: Root | undefined;
+    act(() => {
+      hydrated = hydrateRoot(container, page);
+    });
+    await act(nextFrame);
+    expect(document.activeElement).toBe(document.body);
+    act(() => {
+      hydrated?.unmount();
+    });
+    container.remove();
+  });
+
   it('cancels its move when it unmounts before the frame', async () => {
     const { rerender, unmount } = render(<Settings view="section" sectionKey="coach" />);
     rerender(<Settings view="section" sectionKey="logos" />);
@@ -490,15 +548,16 @@ describe('PanelLayout when its face turns', () => {
   });
 
   it("moves focus to the default section's link when the list face hides the section beside the index", async () => {
-    render(<Settings view="index" />);
+    // The default is not the first link, so the move finds it by its mark.
+    render(<Settings view="index" defaultKey="logos" />);
     report();
-    const save = screen.getByRole('button', { name: 'Save Coach' });
+    const save = screen.getByRole('button', { name: 'Save Logos' });
     act(() => {
       save.focus();
     });
     turn({ side: true, main: false }, save);
     await act(nextFrame);
-    expect(screen.getByRole('link', { name: 'Coach' })).toHaveFocus();
+    expect(screen.getByRole('link', { name: 'Logos' })).toHaveFocus();
   });
 
   it('moves nothing on a resize that keeps the face, or when focus was outside the layout', async () => {
@@ -526,6 +585,10 @@ describe('PanelLayout when its face turns', () => {
     report();
     await act(nextFrame);
     expect(outside).toHaveFocus();
+    // Focus went from outside to the body, then the face turns back: the layout never held it, so nothing moves.
+    turn({ side: true, main: true }, outside);
+    await act(nextFrame);
+    expect(document.activeElement).toBe(document.body);
   });
 });
 
