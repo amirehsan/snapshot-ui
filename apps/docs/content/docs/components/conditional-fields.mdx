@@ -22,6 +22,8 @@ The group is a fieldset that is `hidden`, `inert` and `disabled` while the gate 
 
 The gate is your own control, usually a [switch](/docs/components/switch), placed right before the group, with `aria-controls` naming the group's `id`. The fields line up with the switch, with no indent, and appear at once.
 
+A [switch](/docs/components/switch) or a [checkbox](/docs/components/checkbox) passes `aria-controls` to its input. A [radio group](/docs/components/radio-group) or a [select](/docs/components/select) takes no `aria-controls`, so nothing can name the group: it warns once in development, and if it hides while holding focus, focus goes to the control before it, the chosen radio or the select's button. Keep such a gate right before the group so that is the gate.
+
 <Preview name="conditional-fields-basic" />
 
 </Section>

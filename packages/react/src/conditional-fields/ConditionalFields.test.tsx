@@ -8,7 +8,9 @@ import { expectNoA11yViolations } from '../../test/a11y';
 import { formOf, root } from '../../test/dom';
 import { Button } from '../button';
 import * as library from '../index';
+import { Checkbox } from '../checkbox';
 import { PickerOption } from '../picker';
+import { Radio, RadioGroup } from '../radio-group';
 import { Select } from '../select';
 import { Switch } from '../switch';
 import { TextField } from '../text-field';
@@ -445,6 +447,85 @@ describe('ConditionalFields', () => {
     await act(nextFrame);
     expect(screen.getByRole('button', { name: 'Next step' })).toHaveFocus();
   });
+
+  it('gives focus to a Checkbox gate, whose aria-controls reaches its input', async () => {
+    function Page(): ReactElement {
+      const [isOn, setIsOn] = useState(true);
+      return (
+        <>
+          <Checkbox isSelected={isOn} onChange={setIsOn} aria-controls="group">
+            Show bank logos
+          </Checkbox>
+          <ConditionalFields id="group" isShown={isOn}>
+            <TextField
+              label="API key"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setIsOn(false);
+              }}
+            />
+          </ConditionalFields>
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    render(<Page />);
+    const checkbox = screen.getByRole('checkbox', { name: 'Show bank logos' });
+    expect(checkbox).toHaveAttribute('aria-controls', 'group');
+    await user.click(screen.getByLabelText('API key'));
+    await user.keyboard('{Escape}');
+    await act(nextFrame);
+    expect(checkbox).toHaveFocus();
+  });
+
+  it.each(['RadioGroup', 'Select'])(
+    'gives focus to a %s gate as the control before the group, since it takes no aria-controls',
+    async (kind) => {
+      warnings();
+      function Page(): ReactElement {
+        const [mode, setMode] = useState('custom');
+        const off = (event: { key: string }): void => {
+          if (event.key === 'Escape') setMode('none');
+        };
+        return (
+          <>
+            {kind === 'RadioGroup' ? (
+              <RadioGroup label="Logos" value={mode} onChange={setMode} aria-controls="group">
+                <Radio value="none">None</Radio>
+                <Radio value="custom">My own provider</Radio>
+              </RadioGroup>
+            ) : (
+              <Select
+                label="Logos"
+                value={mode}
+                onChange={(key) => {
+                  setMode(String(key));
+                }}
+                aria-controls="group"
+              >
+                <PickerOption id="none">None</PickerOption>
+                <PickerOption id="custom">My own provider</PickerOption>
+              </Select>
+            )}
+            <ConditionalFields id="group" isShown={mode === 'custom'}>
+              <TextField label="API key" onKeyDown={off} />
+            </ConditionalFields>
+          </>
+        );
+      }
+      const user = userEvent.setup();
+      const { container } = render(<Page />);
+      // React Aria's RadioGroup, Radio and Select pass no aria-controls on, so nothing names the group.
+      expect(container.querySelector('[aria-controls="group"]')).toBeNull();
+      await user.click(screen.getByLabelText('API key'));
+      await user.keyboard('{Escape}');
+      await act(nextFrame);
+      const expected =
+        kind === 'RadioGroup'
+          ? screen.getByRole('radio', { name: 'None' })
+          : screen.getByRole('button', { name: /Logos/ });
+      expect(expected).toHaveFocus();
+    },
+  );
 
   it('moves nothing when the group shows, or hides without focus', async () => {
     const user = userEvent.setup();

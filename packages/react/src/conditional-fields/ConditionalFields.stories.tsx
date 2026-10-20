@@ -4,6 +4,7 @@ import { expect, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
 import { Card, CardBody, CardHeader, CardTitle } from '../card';
 import { PickerOption } from '../picker';
+import { Radio, RadioGroup } from '../radio-group';
 import { Select } from '../select';
 import { CLEAR_OF_FOOT } from '../stories/corner';
 import { focusOn } from '../stories/focus';
@@ -341,6 +342,42 @@ export const NestedGroupsHide: Story = {
       canvas.getByRole('switch', { name: 'Show bank logos' }),
       await realPresses(userEvent),
       canvasElement.querySelector('#outer-fields'),
+    );
+  },
+};
+
+/**
+ * A RadioGroup gate: React Aria's RadioGroup and Radio take no `aria-controls`, so no gate names the group, and focus
+ * goes to the control before it, the chosen radio. Three engines.
+ */
+export const RadioGroupGate: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: function Render() {
+    const [mode, setMode] = useState('custom');
+    return (
+      <div style={FORM}>
+        <RadioGroup label="Bank logos" value={mode} onChange={setMode}>
+          <Radio value="none">None</Radio>
+          <Radio value="custom">My own provider</Radio>
+        </RadioGroup>
+        <ConditionalFields id="radio-gate-fields" isShown={mode === 'custom'}>
+          <TextField
+            label="API key"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setMode('none');
+            }}
+          />
+        </ConditionalFields>
+      </div>
+    );
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement);
+    await hideFromInside(
+      canvas.getByLabelText('API key'),
+      canvas.getByRole('radio', { name: 'None' }),
+      await realPresses(userEvent),
+      canvasElement.querySelector('.conditional-fields'),
     );
   },
 };

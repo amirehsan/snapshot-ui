@@ -12803,7 +12803,12 @@ never the body. A gate that cannot take focus, disabled by the app as the
 group hides or hidden with an outer group that hid at the same time, is
 passed over for the element before the group, so nested groups that hide
 together give focus to the outer gate, not to `<main>` (settings plan, spec
-correction 50). A `main` with no tabindex is lent `tabindex="-1"` while it holds
+correction 50). Switch and Checkbox pass `aria-controls` to
+their input; React Aria's RadioGroup, Radio and Select take none, so a
+group gated by one warns once in development and, hiding while it holds
+focus, gives it to the control before it, the chosen radio or the Select's
+button, pinned in Chromium, WebKit and Firefox by `RadioGroupGate`
+(correction 52). A `main` with no tabindex is lent `tabindex="-1"` while it holds
 focus, so a script can focus it and Tab never stops on it. Nothing moves on the
 server's render or on hydration: only a change after the first commit
 does. A group no gate points at warns once in development.
