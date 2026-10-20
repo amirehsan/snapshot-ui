@@ -26,8 +26,12 @@
    * suggestion is not a good outcome), never taupe (it is words to read, not a placeholder). A field's extras stop
    * at the field's measure, so an offer ends under the control's end; a group's span the group.
    */
+  /* One column the wrapper's width: where that width is known, a long word breaks inside it rather than widening
+     the column past the page; where a holder sizes the wrapper from its content, the percentage counts as auto
+     and the column is as wide as the longest word, which then stays whole. */
   .field-extras {
     display: grid;
+    grid-template-columns: 100%;
     gap: var(--spacing-part);
     min-inline-size: 0;
     max-inline-size: var(--container-field);
@@ -49,11 +53,13 @@
     color: var(--color-slate);
   }
 
-  /* The app's value and reason wrap anywhere they must, so a long address or figure never pushes a 320px page
-     sideways: a flex item's min-content is then a letter, not the longest word. */
+  /* The app's value and reason wrap between words, and break a word only when it alone is wider than the line, so
+     a long address never pushes a 320px page sideways. break-word, not anywhere, so the longest word stays the
+     line's min-content and a holder sized by its content, a table's cell, never breaks a figure into what reads
+     as two numbers (the Badge lesson). */
   .field-offer-text {
     min-inline-size: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   /* The button's 40px box sits level with the line and does not grow it: the DescriptionList actions' technique. */

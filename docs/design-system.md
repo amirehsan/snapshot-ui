@@ -12943,7 +12943,15 @@ or gain, since a suggestion is not a good outcome; never info, since
 nothing is being reported; never taupe, since it is not a placeholder.
 
 **The line.** It sits a part step under the field's last part, its hint or
-error, and wraps. The button's 40px box is level with the line by
+error, and wraps between its words, breaking a word only when it alone is
+wider than the line (`overflow-wrap: break-word`, spec correction 35). It
+was `anywhere`, which made a letter the line's narrowest, so a holder that
+sizes the field from its content, a table's cell, squeezed
+"$2,340,000.00" onto two lines, which reads as two numbers: the Badge
+lesson. The wrapper's one column is `100%`, its own width where that is
+known, so a long address still breaks inside a 320px page rather than
+widening the column, and the longest word where a holder sizes it from
+its content. The button's 40px box is level with the line by
 `margin-block: min(0px, calc((1lh - var(--size-control)) / 2))`, so the line
 does not grow for its target, the DescriptionList actions' technique. A
 field's extras stop at `--container-field`, as a field does, so an offer

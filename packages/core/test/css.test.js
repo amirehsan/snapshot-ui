@@ -10866,10 +10866,18 @@ describe('src/components/field-extras.css, the offers', () => {
     expect(css).not.toMatch(/--color-(clay|signal|success|gain|error|info|taupe)/);
   });
 
-  it("wraps the offer's words anywhere they must, so a long value never pushes the page", () => {
-    const text = blockAfter(rules(), '.field-offer-text {');
+  it('breaks only a word wider than the line, so a long value never pushes the page and a figure stays whole', () => {
+    const css = rules();
+    const text = blockAfter(css, '.field-offer-text {');
     expect(text).toContain('min-inline-size: 0;');
-    expect(text).toContain('overflow-wrap: anywhere;');
+    // break-word, unlike anywhere, keeps the longest word as the line's narrowest, so a holder sized by its
+    // content never squeezes a figure into two (the Badge lesson); the wrapper's column is its width where that is
+    // known, so a word wider than the page still breaks inside it. A zero minimum on the line instead would let
+    // a content-sized holder squeeze the whole wrapper to nothing.
+    expect(text).toContain('overflow-wrap: break-word;');
+    expect(css).not.toContain('overflow-wrap: anywhere;');
+    expect(blockAfter(css, '.field-extras {')).toContain('grid-template-columns: 100%;');
+    expect(blockAfter(css, '.field-offer {')).not.toContain('min-inline-size');
   });
 
   it('levels the button with the line', () => {

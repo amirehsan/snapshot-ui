@@ -445,6 +445,82 @@ export const OfferClearOfCorner: Story = {
   },
 };
 
+/** The client rects the first occurrence of `words` draws inside `scope`'s text: one per line it takes. */
+function linesOf(scope: Element, words: string): number {
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const at = node.textContent?.indexOf(words) ?? -1;
+    if (at < 0) continue;
+    const range = document.createRange();
+    range.setStart(node, at);
+    range.setEnd(node, at + words.length);
+    // A rect per line, and none of zero width, which an engine may add at a wrap.
+    return [...range.getClientRects()].filter((rect) => rect.width > 0).length;
+  }
+  throw new Error(`No "${words}"`);
+}
+
+/** A Switch with a suggestion whose reason is `reason`, in a holder of `style`. */
+function SqueezedField({ reason, style }: { reason: string; style: CSSProperties }): ReactElement {
+  const [on, setOn] = useState(true);
+  return (
+    <div style={style} data-holder="">
+      <FieldExtras
+        fieldLabel="Push"
+        suggestion={{
+          value: '$2,340,000.00',
+          reason,
+          isCurrent: !on,
+          onTake: () => {
+            setOn(false);
+          },
+        }}
+      >
+        <Switch isSelected={on} onChange={setOn}>
+          Push
+        </Switch>
+      </FieldExtras>
+    </div>
+  );
+}
+
+/**
+ * A field in a holder that sizes it from its content, a table's cell or a min-content column: the offer's line
+ * wraps between its words and never inside one, so a figure never reads as two numbers. In a 300px holder a
+ * word wider than the line, a long address, still breaks inside it and nothing spills sideways.
+ */
+export const WordsKeptWhole: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <div style={{ display: 'grid', gap: 'var(--spacing-separate)', justifyItems: 'start' }}>
+      <SqueezedField
+        reason="a month of your extraordinarily fixed bills"
+        style={{ inlineSize: 'min-content' }}
+      />
+      <SqueezedField
+        reason={`https://example.com/${'segment'.repeat(12)}end`}
+        style={{ inlineSize: '300px' }}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const [squeezed, narrow] = canvasElement.querySelectorAll<HTMLElement>('[data-holder]');
+    if (!squeezed || !narrow) throw new Error('No holders');
+    const text = part(squeezed, 'field-offer-text');
+    for (const word of ['Suggested:', '$2,340,000.00', 'extraordinarily']) {
+      await waitFor(() => expect(linesOf(text, word), word).toBe(1), { timeout: 5000 });
+    }
+    // The holder is as wide as the longest word, not narrower.
+    await expect(squeezed.getBoundingClientRect().width).toBeGreaterThan(
+      part(squeezed, 'field-offer-button').getBoundingClientRect().width,
+    );
+    await waitFor(() => expect(narrow.scrollWidth).toBeLessThanOrEqual(narrow.clientWidth), {
+      timeout: 5000,
+    });
+    await expect(part(narrow, 'field-extras').scrollWidth).toBeLessThanOrEqual(300);
+  },
+};
+
 /**
  * On a Persian page the line runs right to left: the words at the line's start on the right, the button at its
  * end to their left. The figure keeps its order inside the app's `bdi`, and the reset still focuses the field.
