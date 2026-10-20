@@ -12799,7 +12799,11 @@ hides while it holds focus, because another control or the app turned the
 gate off, focus goes, in the frame after the commit, to the gate (the first
 element outside the group whose `aria-controls` names its id), else to the
 last element before the group that takes focus by Tab, else to `<main>`,
-never the body. A `main` with no tabindex is lent `tabindex="-1"` while it holds
+never the body. A gate that cannot take focus, disabled by the app as the
+group hides or hidden with an outer group that hid at the same time, is
+passed over for the element before the group, so nested groups that hide
+together give focus to the outer gate, not to `<main>` (settings plan, spec
+correction 50). A `main` with no tabindex is lent `tabindex="-1"` while it holds
 focus, so a script can focus it and Tab never stops on it. Nothing moves on the
 server's render or on hydration: only a change after the first commit
 does. A group no gate points at warns once in development.

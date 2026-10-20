@@ -231,3 +231,116 @@ export const FocusToGateWhenHidden: Story = {
     await expect(longest).toBeLessThanOrEqual(1);
   },
 };
+
+/**
+ * Hides the group from inside it by the app's own Escape in `field`, and waits for focus on `place`, never on the
+ * body for more than a frame.
+ */
+async function hideFromInside(
+  field: HTMLElement,
+  place: HTMLElement,
+  presses: Presses,
+  group: Element | null,
+): Promise<void> {
+  await focusOn(field);
+  let run = 0;
+  let longest = 0;
+  let watching = true;
+  const sample = (): void => {
+    const active = document.activeElement;
+    run = active === null || active === document.body ? run + 1 : 0;
+    longest = Math.max(longest, run);
+    if (watching) requestAnimationFrame(sample);
+  };
+  requestAnimationFrame(sample);
+  try {
+    await presses.keyboard('{Escape}');
+    await waitFor(() => expect(group).toHaveAttribute('hidden'));
+    await waitFor(() => expect(place).toHaveFocus(), LONG);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await expect(place).toHaveFocus();
+  } finally {
+    watching = false;
+  }
+  await expect(longest).toBeLessThanOrEqual(1);
+}
+
+/**
+ * A gate the app disables as the group hides, as a form does while it saves, cannot take focus: it is passed over
+ * for the control before the group. Three engines.
+ */
+export const PastADisabledGate: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: function Render() {
+    const [logo, setLogo] = useState(true);
+    return (
+      <main style={FORM}>
+        <TextField label="Display name" />
+        <Switch isSelected={logo} onChange={setLogo} isDisabled={!logo} aria-controls="disabled-gate-fields">
+          Show bank logos
+        </Switch>
+        <ConditionalFields id="disabled-gate-fields" isShown={logo}>
+          <TextField
+            label="API key"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setLogo(false);
+            }}
+          />
+        </ConditionalFields>
+      </main>
+    );
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement);
+    await hideFromInside(
+      canvas.getByLabelText('API key'),
+      canvas.getByLabelText('Display name'),
+      await realPresses(userEvent),
+      canvasElement.querySelector('.conditional-fields'),
+    );
+  },
+};
+
+/**
+ * A group inside another, both hidden at once while the inner one holds focus, in a page with a `main`: the inner
+ * gate hides with the outer group, so focus goes to the outer gate, not to `main`. Three engines.
+ */
+export const NestedGroupsHide: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: function Render() {
+    const [logo, setLogo] = useState(true);
+    const [custom, setCustom] = useState(true);
+    return (
+      <main style={FORM}>
+        <Switch isSelected={logo} onChange={setLogo} aria-controls="outer-fields">
+          Show bank logos
+        </Switch>
+        <ConditionalFields id="outer-fields" isShown={logo}>
+          <Switch isSelected={custom} onChange={setCustom} aria-controls="inner-fields">
+            Use my own provider
+          </Switch>
+          <ConditionalFields id="inner-fields" isShown={custom}>
+            <TextField
+              label="API key"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setLogo(false);
+                  setCustom(false);
+                }
+              }}
+            />
+          </ConditionalFields>
+        </ConditionalFields>
+      </main>
+    );
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement);
+    await hideFromInside(
+      canvas.getByLabelText('API key'),
+      canvas.getByRole('switch', { name: 'Show bank logos' }),
+      await realPresses(userEvent),
+      canvasElement.querySelector('#outer-fields'),
+    );
+  },
+};

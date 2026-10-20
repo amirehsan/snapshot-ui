@@ -17,6 +17,7 @@ import {
   focusableBefore,
   focusIsLost,
   focusNamedPlace,
+  takesFocus,
   useFocusWatch,
 } from '../utils/focus-after-commit';
 import { useWarnOnce } from '../utils/useWarnOnce';
@@ -86,7 +87,10 @@ export function ConditionalFields({
       const group = groupRef.current;
       watch.release();
       if (group === null || !focusIsLost()) return;
-      focusNamedPlace(gateOf(group, id) ?? focusableBefore(group));
+      // A gate that cannot take focus, as one disabled with the form or inside an outer group that hid too, is
+      // passed over for the element before the group.
+      const gate = gateOf(group, id);
+      focusNamedPlace(takesFocus(gate) ? gate : focusableBefore(group));
     });
   }, [isShown, id, watch]);
 

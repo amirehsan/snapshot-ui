@@ -352,6 +352,54 @@ describe('ConditionalFields', () => {
     expect(alone.container.querySelector('main')).toHaveFocus();
   });
 
+  it('passes over a gate that cannot take focus, to the element before the group', async () => {
+    /** A gate the app disables as the group hides, as a form does while it saves. */
+    const Page = ({ isShown }: { isShown: boolean }): ReactElement => (
+      <main>
+        <button type="button">Before</button>
+        <button type="button" aria-controls="group" disabled={!isShown}>
+          Gate
+        </button>
+        <ConditionalFields id="group" isShown={isShown}>
+          <input aria-label="Field" />
+        </ConditionalFields>
+      </main>
+    );
+    const { rerender } = render(<Page isShown />);
+    act(() => {
+      screen.getByRole('textbox', { name: 'Field' }).focus();
+    });
+    rerender(<Page isShown={false} />);
+    await act(nextFrame);
+    expect(screen.getByRole('button', { name: 'Before' })).toHaveFocus();
+  });
+
+  it('gives focus to the outer gate when nested groups hide together', async () => {
+    const Page = ({ isShown }: { isShown: boolean }): ReactElement => (
+      <main>
+        <button type="button" aria-controls="outer">
+          Outer gate
+        </button>
+        <ConditionalFields id="outer" isShown={isShown}>
+          <button type="button" aria-controls="inner">
+            Inner gate
+          </button>
+          <ConditionalFields id="inner" isShown={isShown}>
+            <input aria-label="Field" />
+          </ConditionalFields>
+        </ConditionalFields>
+      </main>
+    );
+    const { rerender } = render(<Page isShown />);
+    act(() => {
+      screen.getByRole('textbox', { name: 'Field' }).focus();
+    });
+    rerender(<Page isShown={false} />);
+    await act(nextFrame);
+    await act(nextFrame);
+    expect(screen.getByRole('button', { name: 'Outer gate' })).toHaveFocus();
+  });
+
   it('moves nothing when the group shows, or hides without focus', async () => {
     const user = userEvent.setup();
     render(<LogoForm after={<button type="button">Elsewhere</button>} />);
