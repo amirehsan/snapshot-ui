@@ -6,6 +6,7 @@ import { Card, CardBody, CardHeader, CardTitle } from '../card';
 import { NumberField } from '../number-field';
 import { PickerOption } from '../picker';
 import { SaveBar } from '../save-bar';
+import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
 import { Select } from '../select';
 import { focusOn } from '../stories/focus';
 import { Switch } from '../switch';
@@ -278,6 +279,117 @@ export const FocusAfterReset: Story = {
     await waitFor(() => expect(input).toHaveFocus(), { timeout: 5000 });
     await expect(stop()).toBeLessThanOrEqual(1);
     await expect(input).toHaveValue('24');
+  },
+};
+
+/** The SegmentedControl "Week starts", on Sunday, with its default of Monday. */
+function WeekStartsField(): ReactElement {
+  const [day, setDay] = useState('sunday');
+  return (
+    <FieldExtras
+      fieldLabel="Week starts"
+      defaultOffer={{
+        value: 'Monday',
+        isCurrent: day === 'monday',
+        onTake: () => {
+          setDay('monday');
+        },
+      }}
+    >
+      <SegmentedControl label="Week starts" value={day} onChange={setDay}>
+        <SegmentedControlItem value="saturday">Saturday</SegmentedControlItem>
+        <SegmentedControlItem value="sunday">Sunday</SegmentedControlItem>
+        <SegmentedControlItem value="monday">Monday</SegmentedControlItem>
+      </SegmentedControl>
+    </FieldExtras>
+  );
+}
+
+/** A signed money field, "Opening balance", below zero, with its default of $0.00. */
+function BalanceField(): ReactElement {
+  const [cents, setCents] = useState<number | null>(-5000);
+  return (
+    <FieldExtras
+      fieldLabel="Opening balance"
+      defaultOffer={{
+        value: '$0.00',
+        isCurrent: cents === 0,
+        onTake: () => {
+          setCents(0);
+        },
+      }}
+    >
+      <NumberField
+        label="Opening balance"
+        money={{ symbol: '$' }}
+        allowsNegative
+        value={cents}
+        onChange={setCents}
+      />
+    </FieldExtras>
+  );
+}
+
+/**
+ * A take by Enter, then by a pointer, on a Switch, a SegmentedControl and a signed money field: focus goes to
+ * the switch, to the segment now chosen, and to the money field's text box, not the sign button drawn before it,
+ * never the body for more than a frame.
+ */
+export const FocusAfterTakeOnEachField: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <div style={COLUMN}>
+      <PushAmountsField />
+      <WeekStartsField />
+      <BalanceField />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const cases: [label: string, control: () => HTMLElement, undo: () => Promise<void>][] = [
+      [
+        'Push amounts',
+        () => canvas.getByRole('switch', { name: 'Push amounts' }),
+        async () => {
+          // The switch's input is clipped; a reader presses its label.
+          const label = canvas.getByRole('switch', { name: 'Push amounts' }).closest('label');
+          if (!label) throw new Error('No label');
+          await userEvent.click(label);
+        },
+      ],
+      [
+        'Week starts',
+        () => canvas.getByRole('radio', { name: 'Monday' }),
+        async () => {
+          const sunday = canvas.getByRole('radio', { name: 'Sunday' }).closest('label');
+          if (!sunday) throw new Error('No segment');
+          await userEvent.click(sunday);
+        },
+      ],
+      [
+        'Opening balance',
+        () => canvas.getByRole('textbox', { name: 'Opening balance' }),
+        async () => {
+          const input = canvas.getByRole('textbox', { name: 'Opening balance' });
+          await userEvent.clear(input);
+          await userEvent.type(input, '-5{Enter}');
+        },
+      ],
+    ];
+    for (const [label, control, undo] of cases) {
+      const reset = () => canvas.getByRole('button', { name: `Reset to default, ${label}` });
+      await focusOn(reset());
+      let stop = watchBody();
+      await userEvent.keyboard('{Enter}');
+      await waitFor(() => expect(control()).toHaveFocus(), { timeout: 5000 });
+      await expect(stop()).toBeLessThanOrEqual(1);
+      await undo();
+      await waitFor(() => expect(reset()).toBeVisible(), { timeout: 5000 });
+      stop = watchBody();
+      await userEvent.click(reset());
+      await waitFor(() => expect(control()).toHaveFocus(), { timeout: 5000 });
+      await expect(stop()).toBeLessThanOrEqual(1);
+    }
   },
 };
 
