@@ -1,5 +1,26 @@
 # @snapshot-ui/react
 
+## 0.9.0
+
+### Minor Changes
+
+- ddd350f: Add the chart palette: `--color-chart-1` to `--color-chart-4` (teal, violet, olive and magenta), with light and dark values, for charts of several peers such as a stack of categories, and slate for "Other". Each is at least 3:1 against the canvas, lifted and float surfaces in both modes, clear of every color that carries a meaning, and checked for color-blind readers on neighbouring slots; a test keeps them so. Never use them for text or for a state. In Tailwind they are `bg-chart-1` to `bg-chart-4`.
+- ddd350f: Add Prose and ProseScroll for long-form text you render, such as a monthly report written in Markdown. The `prose` class, or the `Prose` wrapper (`as` a div, an article or a section), gives headings, paragraphs, lists, links, quotes, code, tables, figures and rules the library's type and spacing, with text at one measure, 70ch of the body's font (`--prose-measure`). Every library component inside it, a chart, a table, a trail or a card included, draws as it does anywhere: prose's element rules sit in a nested layer, `components.prose`, under the components' own, and a component is handed back to what it would draw outside prose; a component placed directly in the box still takes the box's gaps, 24px after a paragraph. `not-prose` exempts a subtree of your own markup. Your unlayered CSS still wins over prose. Tailwind Typography also names its class `prose`, in Tailwind's `utilities` layer, so it would restyle every Prose box: in an app that uses both, rename Typography's with `@plugin "@tailwindcss/typography" { className: "tw-prose"; }`.
+  
+  GFM's footnotes draw small and slate with their label for screen readers alone, and task lists draw no markers. Links and images you turn into plain text have classes of their own: `prose-unlinked` keeps the text's look, and `prose-image` shows the alt text in a small box. `ProseScroll` is a named, focusable region (its `aria-label` or `aria-labelledby` is required) that lets a wide table scroll on a phone. Both are static, so a server component renders a report with no client JavaScript; render Markdown into them with react-markdown and remark-gfm, which the library does not depend on. On a Persian page, code stays left to right, headings drop their tracking, emphasis is upright at 500 and ordered lists count in Persian digits; load Vazirmatn first in the stack under `lang="fa"`. Load Sofia Sans's italic as well, since emphasis draws in it.
+
+### Patch Changes
+
+- ddd350f: A badge's word never breaks, and in a flex row the badge never shrinks below it: beside a title that wraps on a phone, "New" stays on one line, with no `shrink-0` needed on the badge or its holder. A label of several words still wraps between its words when its holder is narrower than the whole label, and a word wider than the badge's holder still breaks inside the outline, so a badge never pushes the page sideways. The badge is now an inline block with `overflow-wrap: break-word`, where it was an inline flex box with `overflow-wrap: anywhere`, and `Badge` sets its children in a `.badge-label` span, a block of 16em at the most: a word up to about twenty letters stays whole and a longer run, such as a web address, breaks there, so a grid column or flex item sized by its content never grows past 16em for a badge. Markup of your own should wrap the label the same way.
+- Updated dependencies [ddd350f]
+- Updated dependencies [ddd350f]
+- Updated dependencies [ddd350f]
+- Updated dependencies [ddd350f]
+- Updated dependencies [ddd350f]
+- Updated dependencies [ddd350f]
+- Updated dependencies [ddd350f]
+  - @snapshot-ui/core@0.9.0
+
 ## 0.8.0
 
 ### Minor Changes
