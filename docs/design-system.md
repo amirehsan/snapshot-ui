@@ -12904,7 +12904,7 @@ app whose setter moved focus itself, into a dialog that asks first, keeps
 it (spec correction 26). A NumberField with `allowsNegative` draws its
 sign button before its text box, so its text box takes focus in the
 sign's place: it reads the value taken, where the sign reads only
-"Negative" (spec correction 34). An app passes `controlRef` when another
+"Negative" (spec correction 45). An app passes `controlRef` when another
 control is the one to focus.
 
 **Said politely** (settings plan, spec correction 25, a choice). The spec
@@ -12917,11 +12917,11 @@ status in the server's HTML, empty until then, says what a take did, "Set
 to the suggestion" or "Set to the default", as a new node per take, so the
 same offer taken again is said again, and empties after five seconds, so a
 reader browsing later meets no stale news. It speaks in the frame after
-the move, once the field holds focus (spec correction 32): a screen reader
+the move, once the field holds focus (spec correction 43): a screen reader
 reads a focus move at once, so a status said before it was cut short or
 read first and then repeated by the field, and the field's own words
 already give its label and value, so the status says neither again. It
-speaks only of a take the field holds (spec correction 33): when the
+speaks only of a take the field holds (spec correction 44): when the
 app's setter took focus elsewhere, into a dialog that asks first, nothing
 is set yet and nothing is said, and the words leave as soon as the taken
 offer is drawn again, refused by the setter, typed away from or undone by
@@ -12944,7 +12944,7 @@ nothing is being reported; never taupe, since it is not a placeholder.
 
 **The line.** It sits a part step under the field's last part, its hint or
 error, and wraps between its words, breaking a word only when it alone is
-wider than the line (`overflow-wrap: break-word`, spec correction 35). It
+wider than the line (`overflow-wrap: break-word`, spec correction 46). It
 was `anywhere`, which made a letter the line's narrowest, so a holder that
 sizes the field from its content, a table's cell, squeezed
 "$2,340,000.00" onto two lines, which reads as two numbers: the Badge
@@ -12978,7 +12978,7 @@ on a Persian page the words start at the right and the button ends the
 line on the left (`RightToLeft`). A figure in another script keeps its
 order inside the app's isolates: `value` is a string, where a `bdi` would
 be drawn as its letters, so the app writes U+2068 and U+2069 around the
-figure, which do what `bdi` does (spec correction 36); a `reason` is a
+figure, which do what `bdi` does (spec correction 47); a `reason` is a
 node and can hold a `bdi`.
 
 **Server rendering.** A client part for its focus move and its status; the
@@ -12994,7 +12994,7 @@ added. The words are slate: against the canvas 4.84 in light and 7.26 in
 dark, against lifted 5.31 and 6.94. The button is ink: against the canvas
 16.25 and 19.31, against lifted 17.84 and 17.42.
 
-**The size** (spec corrections 27 and 37). The entry `{ FieldExtras }`
+**The size** (spec corrections 27 and 48). The entry `{ FieldExtras }`
 measures 1.90 kB without React Aria, Lucide and `@internationalized/date`,
 over the spec's 1.5 kB budget: Button is 771 B of it, with its kept
 announcement (spec correction 21), the shared focus module most of the
