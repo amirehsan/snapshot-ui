@@ -466,7 +466,7 @@
     "path": "dist/index.js",
     "import": "{ FieldExtras }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "3 kB"
+    "limit": "2.5 kB"
   },
   {
     "name": "import { Prose, ProseScroll } from \"@snapshot-ui/react\"",

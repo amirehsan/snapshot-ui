@@ -12994,12 +12994,16 @@ added. The words are slate: against the canvas 4.84 in light and 7.26 in
 dark, against lifted 5.31 and 6.94. The button is ink: against the canvas
 16.25 and 19.31, against lifted 17.84 and 17.42.
 
-**The size** (spec correction 27). The entry `{ FieldExtras }` measures
-2.09 kB without React Aria, Lucide and `@internationalized/date`, over the
-spec's 1.5 kB budget: Button is 771 B of it, with its kept announcement
-(spec correction 21), and the status the spec did not have adds its timer
-and its node. The rule rounds up to 2.5 kB and adds 0.5 kB: a 3 kB limit.
-With React Aria not ignored it measures 14.41 kB.
+**The size** (spec corrections 27 and 37). The entry `{ FieldExtras }`
+measures 1.90 kB without React Aria, Lucide and `@internationalized/date`,
+over the spec's 1.5 kB budget: Button is 771 B of it, with its kept
+announcement (spec correction 21), the shared focus module most of the
+rest, and the status the spec did not have adds its timer and its node.
+The review took it from 2.09 kB: the app's ref through
+`useImperativeHandle` instead of a merged callback ref, as ConditionalFields
+gives its own, and checks that another check already made. The rule rounds
+up to 2 kB and adds 0.5 kB: a 2.5 kB limit. With React Aria not ignored it
+measures 14.29 kB.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): an offer's button read with its name and description;

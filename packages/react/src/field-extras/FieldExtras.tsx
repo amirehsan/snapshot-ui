@@ -3,7 +3,7 @@
 import {
   useEffect,
   useId,
-  useMemo,
+  useImperativeHandle,
   useRef,
   useState,
   type HTMLAttributes,
@@ -21,7 +21,6 @@ import {
   focusNamedPlace,
   takesFocus,
 } from '../utils/focus-after-commit';
-import { mergeRefs } from '../utils/merge-refs';
 import { useWarnOnce } from '../utils/useWarnOnce';
 
 export interface FieldOffer {
@@ -93,11 +92,15 @@ const BUSY_WARNING =
 
 type Kind = 'suggestion' | 'default';
 
-/** What the last take said, and which take it was, so each take writes its words as a new node. */
+/**
+ * What the last take said, of which offer, and whether it spoke inside `aria-busy="true"`. Each take writes its
+ * words as a new node with no key of its own: to be taken again an offer must be drawn again, which empties the
+ * status, and taking the other offer draws the first one again, which empties it too.
+ */
 interface Said {
   words: string;
   kind: Kind;
-  take: number;
+  busy: boolean;
 }
 
 /**
@@ -134,13 +137,12 @@ export function FieldExtras({
 }: FieldExtrasProps): ReactElement {
   const labels: FieldExtrasLabels = { ...LABELS, ...given };
   const wrapperRef = useRef<HTMLDivElement>(null);
-  // Memoized, so React does not detach and attach the root's refs on every render.
-  const refs = useMemo(() => mergeRefs<HTMLDivElement>(ref, wrapperRef), [ref]);
+  // The app's ref is given the wrapper itself.
+  useImperativeHandle<HTMLDivElement | null, HTMLDivElement | null>(ref, () => wrapperRef.current, []);
   const id = useId();
   const [said, setSaid] = useState<Said | null>(null);
-  const [busy, setBusy] = useState(false);
-  const takes = useRef(0);
   const hold = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // A take's move, cancelled with the hold if the part leaves first (the plan's rule for every frame).
   const cancelMove = useRef<(() => void) | undefined>(undefined);
 
   useEffect(
@@ -151,35 +153,30 @@ export function FieldExtras({
     [],
   );
 
-  useWarnOnce(busy ? BUSY_WARNING : null);
+  useWarnOnce(said?.busy ? BUSY_WARNING : null);
 
-  // The suggestion first: it is about this reader, the default about everyone. One line when they say the same.
+  // The suggestion first: it is about this reader, the default about everyone. One line when they say the same,
+  // and none when the field holds the default, which is then the suggestion too.
   const drawn: [Kind, FieldOffer][] = [];
-  const sameAsDefault =
-    defaultOffer !== undefined && !defaultOffer.isCurrent && suggestion?.value === defaultOffer.value;
-  if (suggestion && !suggestion.isCurrent && !sameAsDefault) drawn.push(['suggestion', suggestion]);
+  if (suggestion && !suggestion.isCurrent && suggestion.value !== defaultOffer?.value) {
+    drawn.push(['suggestion', suggestion]);
+  }
   if (defaultOffer && !defaultOffer.isCurrent) drawn.push(['default', defaultOffer]);
 
-  const take = (kind: Kind, taken: FieldOffer, button: Element): void => {
+  const take = (kind: Kind, taken: FieldOffer): void => {
     taken.onTake();
-    const wrapper = wrapperRef.current;
-    if (wrapper?.closest('[aria-busy="true"]')) setBusy(true);
     const words = kind === 'default' ? labels.resetStatus : labels.usedStatus;
-    cancelMove.current?.();
     cancelMove.current = afterCommit(() => {
-      if (!wrapper?.isConnected) return;
-      // The pressed button, the body (Safari leaves a pressed button unfocused, Chromium blurs one that leaves),
-      // or nothing: the take's focus is ours to place. Focus the app moved elsewhere, into a dialog its setter
-      // opened, stays there.
-      const active = document.activeElement;
-      // Focus the app took, such as into a dialog that asks before a reset, means nothing is set yet: the app
-      // speaks for itself, so the status says nothing.
-      if (!focusIsLost() && active !== button && !wrapper.contains(active)) return;
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+      // The pressed button or another part of the wrapper, the body (Safari leaves a pressed button unfocused,
+      // Chromium blurs one that leaves) or nothing: the take's focus is ours to place. Focus the app took, into a
+      // dialog that asks before a reset, means nothing is set yet: it stays there, and the status says nothing.
+      if (!focusIsLost() && !wrapper.contains(document.activeElement)) return;
       focusNamedPlace(placeAfterTake(wrapper, controlRef?.current ?? null));
       // Said after the move: a screen reader reads the field focused, its label and new value, at once, and
       // would cut a polite status said before it; this follows with what happened, which those words do not say.
-      takes.current += 1;
-      setSaid({ words, kind, take: takes.current });
+      setSaid({ words, kind, busy: wrapper.closest('[aria-busy="true"]') !== null });
       clearTimeout(hold.current);
       hold.current = setTimeout(() => {
         setSaid(null);
@@ -188,7 +185,7 @@ export function FieldExtras({
   };
 
   return (
-    <div {...props} ref={refs} className={cx('field-extras', className)} data-scope={scope}>
+    <div {...props} ref={wrapperRef} className={cx('field-extras', className)} data-scope={scope}>
       {children}
       {drawn.map(([kind, each]) => {
         const textId = `${id}-${kind}`;
@@ -205,8 +202,8 @@ export function FieldExtras({
               // Its word, then the field's label: the name starts with what is seen, for voice control.
               aria-label={`${word}, ${fieldLabel}`}
               aria-describedby={textId}
-              onPress={(event) => {
-                take(kind, each, event.target);
+              onPress={() => {
+                take(kind, each);
               }}
             >
               {word}
@@ -217,9 +214,7 @@ export function FieldExtras({
       <span className="field-extras-status" role="status" aria-live="polite" aria-atomic="true">
         {/* Only while the field holds what was taken: an offer still or again drawn, refused by the app's
             setter, typed away from or undone by a Cancel, empties it, since its words would be untrue. */}
-        {said && !drawn.some(([kind]) => kind === said.kind) ? (
-          <span key={said.take}>{said.words}</span>
-        ) : null}
+        {said && !drawn.some(([kind]) => kind === said.kind) ? <span>{said.words}</span> : null}
       </span>
     </div>
   );

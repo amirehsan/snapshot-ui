@@ -652,8 +652,18 @@ describe('FieldExtras', () => {
       return (
         <FieldExtras
           fieldLabel="Cushion"
-          suggestion={{ ...offer('$2,340', value === '$2,340'), onTake: () => setValue('$2,340') }}
-          defaultOffer={{ ...offer('$1,000', value === '$1,000'), onTake: () => setValue('$1,000') }}
+          suggestion={{
+            ...offer('$2,340', value === '$2,340'),
+            onTake: () => {
+              setValue('$2,340');
+            },
+          }}
+          defaultOffer={{
+            ...offer('$1,000', value === '$1,000'),
+            onTake: () => {
+              setValue('$1,000');
+            },
+          }}
         >
           <TextField label="Cushion" value={value} onChange={setValue} />
         </FieldExtras>
@@ -684,8 +694,18 @@ describe('FieldExtras', () => {
       return (
         <FieldExtras
           fieldLabel="Cushion"
-          suggestion={{ ...offer('$2,340', value === '$2,340'), onTake: () => setValue('$2,340') }}
-          defaultOffer={{ ...offer('$1,000', value === '$1,000'), onTake: () => setValue('$1,000') }}
+          suggestion={{
+            ...offer('$2,340', value === '$2,340'),
+            onTake: () => {
+              setValue('$2,340');
+            },
+          }}
+          defaultOffer={{
+            ...offer('$1,000', value === '$1,000'),
+            onTake: () => {
+              setValue('$1,000');
+            },
+          }}
           labels={{ usedStatus: 'Done', resetStatus: 'Done' }}
         >
           <TextField label="Cushion" value={value} onChange={setValue} />
@@ -828,8 +848,18 @@ describe('FieldExtras', () => {
       return (
         <FieldExtras
           fieldLabel="Cushion"
-          suggestion={{ ...offer('$2,340', value === '$2,340'), onTake: () => setValue('$2,340') }}
-          defaultOffer={{ ...offer('$1,000', value === '$1,000'), onTake: () => setValue('$1,000') }}
+          suggestion={{
+            ...offer('$2,340', value === '$2,340'),
+            onTake: () => {
+              setValue('$2,340');
+            },
+          }}
+          defaultOffer={{
+            ...offer('$1,000', value === '$1,000'),
+            onTake: () => {
+              setValue('$1,000');
+            },
+          }}
           labels={{ usedStatus: 'Vorschlag übernommen', resetStatus: 'Standard gesetzt' }}
         >
           <TextField label="Cushion" value={value} onChange={setValue} />
