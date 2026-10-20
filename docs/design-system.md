@@ -12902,7 +12902,10 @@ leaves a pressed button unfocused, so focus is not read first. It moves
 only when focus is the pressed button's, inside the wrapper or lost: an
 app whose setter moved focus itself, into a dialog that asks first, keeps
 it (spec correction 26). A NumberField with `allowsNegative` draws its
-sign button before its text box, so it passes `controlRef`.
+sign button before its text box, so its text box takes focus in the
+sign's place: it reads the value taken, where the sign reads only
+"Negative" (spec correction 34). An app passes `controlRef` when another
+control is the one to focus.
 
 **Said politely** (settings plan, spec correction 25, a choice). The spec
 said the field read with its new value was the confirmation and needed no

@@ -97,7 +97,7 @@ import { FieldExtras, Select, PickerOption } from '@snapshot-ui/react';
 </FieldExtras>;
 ```
 
-After a take focus goes to the first control in the wrapper that takes focus. Pass `controlRef` when that is not the one to focus, such as a NumberField with `allowsNegative`, whose sign button comes before its text box.
+After a take focus goes to the first control in the wrapper that takes focus, and to a NumberField's text box rather than the sign button `allowsNegative` draws before it. Pass `controlRef` when another control is the one to focus.
 
 </Section>
 

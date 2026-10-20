@@ -99,17 +99,14 @@ interface Said {
 
 /**
  * The control a take leaves focused, read in the frame after the commit: `controlRef`'s element when it takes
- * focus, else the first control of the field or the group (not of the offers), else an offer still drawn.
+ * focus, else the first control of the field or the group, else an offer still drawn, the field coming first in
+ * the wrapper. A signed NumberField draws its sign button before its text box, so its text box, which reads the
+ * value taken, stands in for the sign.
  */
 function placeAfterTake(wrapper: HTMLElement, control: HTMLElement | null): HTMLElement | null {
   if (takesFocus(control)) return control;
-  for (const child of wrapper.children) {
-    if (child.matches('.field-offer, .field-extras-status')) continue;
-    if (child instanceof HTMLElement && takesFocus(child)) return child;
-    const found = firstFocusable(child);
-    if (found) return found;
-  }
-  return wrapper.querySelector<HTMLElement>('.field-offer-button');
+  const first = firstFocusable(wrapper);
+  return first?.closest('.number-field')?.querySelector<HTMLElement>('.number-field-input') ?? first;
 }
 
 /**

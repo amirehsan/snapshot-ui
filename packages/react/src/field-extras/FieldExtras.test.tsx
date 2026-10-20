@@ -430,6 +430,40 @@ describe('FieldExtras', () => {
     }
   });
 
+  it("focuses a signed money field's text box, not the sign button drawn before it", async () => {
+    function Balance(): ReactElement {
+      const [cents, setCents] = useState<number | null>(-5000);
+      return (
+        <FieldExtras
+          fieldLabel="Opening balance"
+          defaultOffer={{
+            value: '$0.00',
+            isCurrent: cents === 0,
+            onTake: () => {
+              setCents(0);
+            },
+          }}
+        >
+          <NumberField
+            label="Opening balance"
+            money={{ symbol: '$' }}
+            allowsNegative
+            value={cents}
+            onChange={setCents}
+          />
+        </FieldExtras>
+      );
+    }
+    const { container } = render(<Balance />);
+    // The sign button comes first in the field, and takes focus by Tab.
+    const sign = container.querySelector<HTMLElement>('.number-field-sign');
+    expect(sign).not.toBeNull();
+    expect(sign?.tabIndex).toBe(0);
+    press(screen.getByRole('button', { name: 'Reset to default, Opening balance' }));
+    await frames();
+    expect(screen.getByRole('textbox', { name: 'Opening balance' })).toHaveFocus();
+  });
+
   it("focuses the group's first control after a group take", async () => {
     render(<QuietHours />);
     press(screen.getByRole('button', { name: 'Reset to default, Quiet hours' }));
