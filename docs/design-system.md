@@ -13175,10 +13175,10 @@ lifted 17.84 and 17.42; slate 4.84 and 7.26, and 5.31 and 6.94; the error
 color 6.58 and 6.36, and 7.22 and 5.73. A disabled Add's taupe is disabled
 text, exempt.
 
-**The size** (spec correction 41). The entry `{ Repeater }` measures 2.91
-kB without React Aria, Lucide and `@internationalized/date`, under the
-spec's 3 kB budget; the rule gives a 3.5 kB limit. With React Aria not
-ignored it measures 15.2 kB.
+**The size** (spec corrections 41 and 59). The entry `{ Repeater }`
+measures 3.1 kB without React Aria, Lucide and `@internationalized/date`
+after its review's fixes, over the spec's 3 kB budget by 0.1 kB; the rule
+gives a 4 kB limit. With React Aria not ignored it measures 16.63 kB.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): a row's legend on focus moved by script, the added and
