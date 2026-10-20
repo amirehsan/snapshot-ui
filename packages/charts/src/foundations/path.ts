@@ -3,15 +3,13 @@
  * DOM. Straight segments only: a smoothed line invents values between the points. Private to the package
  * in 0.1.0.
  */
+import { coordinate as num } from './format';
 
 /** A point in the 0 to 100 viewBox, y down. */
 export interface PlotPoint {
   x: number;
   y: number;
 }
-
-/** A coordinate rounded to three decimals with no trailing zeros; String writes -0 as 0. */
-const num = (n: number): string => String(Math.round(n * 1000) / 1000);
 
 /** The unbroken runs of points, in order: a null ends one. */
 function runs(points: readonly (PlotPoint | null)[]): PlotPoint[][] {

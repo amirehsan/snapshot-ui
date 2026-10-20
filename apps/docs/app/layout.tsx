@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Sofia_Sans } from 'next/font/google';
+import { Sofia_Sans, Vazirmatn } from 'next/font/google';
 import { ThemeProvider } from 'next-themes';
 import type { ReactElement, ReactNode } from 'react';
 import '@snapshot-ui/core/styles.css';
@@ -11,6 +11,25 @@ import { PREPAINT } from '@/lib/prepaint';
 // exists, with a metric-matched fallback so nothing shifts while it loads.
 const sofia = Sofia_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-sans' });
 
+// The italic, which emphasis in prose draws in, since base.css turns synthesis
+// off. Few pages draw it, so it is not preloaded; site.css puts it first for em.
+const sofiaItalic = Sofia_Sans({
+  subsets: ['latin'],
+  style: ['italic'],
+  display: 'swap',
+  variable: '--font-sans-italic',
+  preload: false,
+});
+
+// The Persian face, first in the sans stack under lang="fa" (site.css), as an app
+// sets it for its Persian pages. Only those pages draw it, so it is not preloaded.
+const persian = Vazirmatn({
+  subsets: ['arabic'],
+  display: 'swap',
+  variable: '--font-persian',
+  preload: false,
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://snapshotui.com'),
   title: { default: 'Snapshot UI', template: '%s | Snapshot UI' },
@@ -19,7 +38,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }): ReactElement {
   return (
-    <html lang="en" className={sofia.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${sofia.variable} ${sofiaItalic.variable} ${persian.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: PREPAINT }} />
       </head>

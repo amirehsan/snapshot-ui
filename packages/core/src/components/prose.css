@@ -1,0 +1,572 @@
+/*
+ * Prose, long-form text an app renders, such as a monthly report written in Markdown: the prose class styles
+ * the plain HTML inside it, which the library never sees (insights spec 8). Derived in docs/design-system.md
+ * ("Prose").
+ *
+ * Every element rule is `.prose :where(<element>):not(:where(.not-prose, .not-prose *))`, Tailwind
+ * Typography's shape: one class's specificity, and nothing under not-prose. The element rules sit in their own
+ * layer, components.prose, under every component's rules, so a component's own declarations always win; and
+ * the last rule of that layer hands every library component inside the prose box back to the layer below,
+ * `all: revert-layer`, so a property a component leaves unset is not prose's either. The build writes every
+ * component's root class into that rule (scripts/component-roots.js), so the list lives in one place and is
+ * never written by hand; test/css.test.js fails a component missing from it.
+ *
+ * Nothing is laid out by a or img: every rule on them is paint. A model's links and images reach the page as
+ * span.prose-unlinked and span.prose-image, so a paragraph that held a link holds a span and reads the same.
+ *
+ * The gaps are the system's steps, top margins only, so collapsing never decides one: 24px between blocks
+ * (peers), 32px before an h1 or h2 and around an hr (separate), 8px after a heading, between list items and
+ * inside an item (parts). The gaps between the box's own children sit outside the layer, two classes deep, so a
+ * component that is one of them is spaced as a block is, its own `margin: 0` notwithstanding. Text blocks stop at one measure, --prose-measure, 70ch of the body's
+ * text; tables, code, figures and rules take the whole box. The code block is the docs site's, moved here with
+ * its Shiki mapping.
+ */
+@layer components {
+  /* The measure, resolved once on the prose box in the body's ch, so a heading's 70ch is the paragraph's. */
+  @property --prose-line {
+    syntax: '<length> | none';
+    inherits: true;
+    initial-value: none;
+  }
+
+  .prose {
+    --prose-line: var(--prose-measure, 70ch);
+
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  /* ---- The gaps between the box's own children, a component among them. -------------------------------- */
+
+  /* Two classes deep, through the last :not(), so a gap beats a component root's own `margin: 0`, one class
+     that loads later: a chart, a Heading or a Text placed in the box takes the gap before it, whatever the
+     order the files are imported in. */
+  .prose > :where(* + *):not(:where(.not-prose, .not-prose *)):not(.not-prose) {
+    margin-block-start: var(--spacing-peer);
+  }
+
+  .prose > :where(* + :is(h1, h2)):not(:where(.not-prose, .not-prose *)):not(.not-prose) {
+    margin-block-start: var(--spacing-separate);
+  }
+
+  /* A heading and what follows it are parts of one thing, a heading after a heading too. */
+  .prose > :where(:is(h1, h2, h3, h4, h5, h6) + *):not(:where(.not-prose, .not-prose *)):not(.not-prose) {
+    margin-block-start: var(--spacing-part);
+  }
+
+  .prose > :where(* + hr, hr + *):not(:where(.not-prose, .not-prose *)):not(.not-prose) {
+    margin-block-start: var(--spacing-separate);
+  }
+
+  @layer prose {
+    /* ---- Blocks: no margin of their own, then the gaps by sibling. ------------------------------------- */
+
+    .prose
+      :where(p, h1, h2, h3, h4, h5, h6, ul, ol, dl, dd, blockquote, figure, pre, hr, table):not(
+        :where(.not-prose, .not-prose *)
+      ) {
+      margin: 0;
+    }
+
+    .prose :where(p, ul, ol, dl, blockquote):not(:where(.not-prose, .not-prose *)) {
+      font-size: var(--text-body);
+      line-height: 1.6;
+      font-weight: var(--text-body--font-weight);
+    }
+
+    /* A long word or address breaks anywhere instead of pushing a narrow screen sideways, a table's cells too. */
+    .prose
+      :where(p, li, dt, dd, blockquote, figcaption, caption, h1, h2, h3, h4, h5, h6, th, td):not(
+        :where(.not-prose, .not-prose *)
+      ) {
+      overflow-wrap: anywhere;
+    }
+
+    /* The measure: running text stops at the box's one line length; a table, a code block, a figure and a rule
+       take the whole box. */
+    .prose
+      :where(p, li, h1, h2, h3, h4, h5, h6, blockquote, dl, figcaption, [data-footnotes] > *):not(
+        :where(.not-prose, .not-prose *)
+      ) {
+      max-inline-size: var(--prose-line);
+    }
+
+    .prose :where(blockquote > * + *, [data-footnotes] > * + *):not(:where(.not-prose, .not-prose *)) {
+      margin-block-start: var(--spacing-peer);
+    }
+
+    /* Items, a nested list under its item's text, paragraphs and code in an item, a caption under its figure. */
+    .prose
+      :where(li + li, li > * + *, li > :is(ul, ol), dt + dd, figure > * + *):not(
+        :where(.not-prose, .not-prose *)
+      ) {
+      margin-block-start: var(--spacing-part);
+    }
+
+    .prose :where(dd + dt):not(:where(.not-prose, .not-prose *)) {
+      margin-block-start: var(--spacing-peer);
+    }
+
+    /* ---- Headings: the second to fourth heading steps, h5 and h6 in slate. -------------------------------- */
+
+    .prose :where(h1, h2, h3, h4, h5, h6):not(:where(.not-prose, .not-prose *)) {
+      color: var(--color-ink);
+      font-family: var(--font-sans);
+      /* An app sets it to its sticky header's height, so an anchor does not land under the header. */
+      scroll-margin-block-start: var(--prose-scroll-margin, 0px);
+    }
+
+    .prose :where(h1):not(:where(.not-prose, .not-prose *)) {
+      font-size: var(--text-h2);
+      line-height: var(--text-h2--line-height);
+      letter-spacing: var(--text-h2--letter-spacing);
+      font-weight: var(--text-h2--font-weight);
+    }
+
+    .prose :where(h2):not(:where(.not-prose, .not-prose *)) {
+      font-size: var(--text-h3);
+      line-height: var(--text-h3--line-height);
+      letter-spacing: var(--text-h3--letter-spacing);
+      font-weight: var(--text-h3--font-weight);
+    }
+
+    .prose :where(h3, h4, h5, h6):not(:where(.not-prose, .not-prose *)) {
+      font-size: var(--text-h4);
+      line-height: var(--text-h4--line-height);
+      letter-spacing: normal;
+      font-weight: var(--text-h4--font-weight);
+    }
+
+    .prose :where(h5, h6):not(:where(.not-prose, .not-prose *)) {
+      color: var(--color-slate);
+    }
+
+    /* The section step is 28px under 768px, as heading.css writes it. */
+    @media (width < 768px) {
+      .prose :where(h1):not(:where(.not-prose, .not-prose *)) {
+        font-size: 1.75rem;
+      }
+    }
+
+    /* Tracking spaces the letters of a cursive script apart, and Persian and Arabic have no italic: emphasis
+       is weight there, upright. */
+    .prose
+      :where(:is(h1, h2, h3, h4, h5, h6):is(:lang(fa), :lang(ar))):not(:where(.not-prose, .not-prose *)) {
+      letter-spacing: normal;
+    }
+
+    /* ---- Inline text. ------------------------------------------------------------------------------------- */
+
+    /* The Link record, restated on its tokens. Paint only: nothing is laid out by a. */
+    .prose :where(a):not(:where(.not-prose, .not-prose *)) {
+      border-radius: var(--radius-micro);
+      color: var(--color-link);
+      text-decoration-line: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.25em;
+      overflow-wrap: anywhere;
+    }
+
+    @media (hover: hover) {
+      .prose :where(a:hover):not(:where(.not-prose, .not-prose *)) {
+        text-decoration-thickness: 2px;
+      }
+    }
+
+    .prose :where(a:active):not(:where(.not-prose, .not-prose *)) {
+      text-decoration-thickness: 2px;
+    }
+
+    .prose :where(a:focus-visible):not(:where(.not-prose, .not-prose *)) {
+      outline: var(--focus-ring-width) solid var(--focus-ring-color);
+      outline-offset: var(--focus-ring-offset);
+    }
+
+    /* 500 against 450 is a step a reader barely sees at 16px. */
+    .prose :where(strong, b):not(:where(.not-prose, .not-prose *)) {
+      font-weight: 700;
+    }
+
+    /* The italic face, which the app loads: base.css turns synthesis off. */
+    .prose :where(em, i):not(:where(.not-prose, .not-prose *)) {
+      font-style: italic;
+    }
+
+    .prose :where(:is(em, i):is(:lang(fa), :lang(ar))):not(:where(.not-prose, .not-prose *)) {
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    /* Emphasis inside bold, or inside a heading at 700, keeps the weight around it. */
+    .prose
+      :where(:is(strong, b, h3, h4, h5, h6) :is(em, i):is(:lang(fa), :lang(ar))):not(
+        :where(.not-prose, .not-prose *)
+      ) {
+      font-weight: 700;
+    }
+
+    /* Inline code: a path or a key in a Persian sentence keeps its order and leaves the words around it alone.
+       The transparent edge is drawn in the text color in forced colors, where the fill is dropped. */
+    .prose :where(code:not(pre code)):not(:where(.not-prose, .not-prose *)) {
+      padding: 1px 6px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-micro);
+      background-color: var(--color-bone);
+      font-family: var(--font-mono);
+      font-size: 0.875em;
+      direction: ltr;
+      unicode-bidi: isolate;
+      overflow-wrap: anywhere;
+    }
+
+    /* The Kbd record, restated on its tokens. */
+    .prose :where(kbd):not(:where(.not-prose, .not-prose *)) {
+      box-sizing: border-box;
+      display: inline-block;
+      max-width: 100%;
+      padding-block: 0.125rem;
+      padding-inline: 0.375rem;
+      border-radius: var(--radius-micro);
+      background-color: var(--color-bone);
+      color: var(--color-slate);
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      line-height: 1;
+      letter-spacing: var(--text-overline--letter-spacing);
+      font-weight: var(--text-overline--font-weight);
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+
+    /* Light signal orange is the attention cue, which a highlight is: a 20% wash under ink, never text. */
+    .prose :where(mark):not(:where(.not-prose, .not-prose *)) {
+      background-color: color-mix(in srgb, var(--color-signal-light) 20%, transparent);
+      color: var(--color-ink);
+    }
+
+    /* A footnote mark does not open its line. */
+    .prose :where(sup, sub):not(:where(.not-prose, .not-prose *)) {
+      line-height: 0;
+    }
+
+    /* A model's link, kept as its text: no blue and no underline, since it goes nowhere. */
+    .prose :where(.prose-unlinked):not(:where(.not-prose, .not-prose *)) {
+      color: inherit;
+      text-decoration: none;
+      overflow-wrap: anywhere;
+    }
+
+    /* A model's image, kept as its alt text in the inline code's box, in the sans face and slate. */
+    .prose :where(.prose-image):not(:where(.not-prose, .not-prose *)) {
+      padding: 1px 6px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-micro);
+      background-color: var(--color-bone);
+      color: var(--color-slate);
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+      overflow-wrap: anywhere;
+    }
+
+    .prose :where(.prose-image:empty):not(:where(.not-prose, .not-prose *)) {
+      display: none;
+    }
+
+    /* ---- Lists, quotes and definitions. ------------------------------------------------------------------- */
+
+    .prose :where(ul, ol):not(:where(.not-prose, .not-prose *)) {
+      padding-inline-start: 1.25rem;
+    }
+
+    .prose :where(ul):not(:where(.not-prose, .not-prose *)) {
+      list-style-type: disc;
+    }
+
+    .prose :where(ul ul):not(:where(.not-prose, .not-prose *)) {
+      list-style-type: circle;
+    }
+
+    .prose :where(ul ul ul):not(:where(.not-prose, .not-prose *)) {
+      list-style-type: square;
+    }
+
+    .prose :where(ol):not(:where(.not-prose, .not-prose *)) {
+      list-style-type: decimal;
+    }
+
+    .prose :where(ol ol):not(:where(.not-prose, .not-prose *)) {
+      list-style-type: lower-alpha;
+    }
+
+    .prose :where(ol ol ol):not(:where(.not-prose, .not-prose *)) {
+      list-style-type: lower-roman;
+    }
+
+    /* A Persian article counts in Persian digits, at every level. */
+    .prose :where(ol:lang(fa)):not(:where(.not-prose, .not-prose *)) {
+      list-style-type: persian;
+    }
+
+    /* Markers are not what the reader reads first. */
+    .prose :where(li):not(:where(.not-prose, .not-prose *))::marker {
+      color: var(--color-slate);
+    }
+
+    .prose :where(ol > li):not(:where(.not-prose, .not-prose *))::marker {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* GFM's task lists draw their own boxes, so no markers and no indent. */
+    .prose :where(.contains-task-list):not(:where(.not-prose, .not-prose *)) {
+      padding-inline-start: 0;
+      list-style: none;
+    }
+
+    /* A cue, not a voice: no italics and no quote marks. Its indent is a list's, so the texts share an edge. */
+    .prose :where(blockquote):not(:where(.not-prose, .not-prose *)) {
+      padding-inline-start: 1.25rem;
+      border-inline-start: 2px solid var(--color-frame);
+      color: var(--color-ink);
+      font-style: normal;
+      quotes: none;
+    }
+
+    .prose :where(dt):not(:where(.not-prose, .not-prose *)) {
+      font-weight: 500;
+    }
+
+    .prose :where(dd):not(:where(.not-prose, .not-prose *)) {
+      margin-inline-start: 1.25rem;
+    }
+
+    /* ---- Code blocks: the docs site's, with its Shiki palette. -------------------------------------------- */
+
+    .prose :where(pre):not(:where(.not-prose, .not-prose *)) {
+      /* Shiki's css-variables theme, mapped onto the palette. Clay, error and success carry meaning, so code
+         never uses them. Shiki writes its background and foreground on the pre itself. */
+      --shiki-foreground: var(--color-charcoal);
+      --shiki-background: var(--color-bone);
+      --shiki-token-keyword: var(--color-link);
+      --shiki-token-string: var(--color-granite);
+      --shiki-token-string-expression: var(--color-granite);
+      --shiki-token-constant: var(--color-ink);
+      --shiki-token-function: var(--color-ink);
+      --shiki-token-parameter: var(--color-charcoal);
+      --shiki-token-comment: var(--color-slate);
+      --shiki-token-punctuation: var(--color-slate);
+      --shiki-token-link: var(--color-link);
+
+      /* Its intrinsic inline size is 0, as a ProseScroll's is, so a long line never widens a flex or grid item the
+         prose sits in, such as a card's body: the block takes the width it is given and scrolls. */
+      contain: inline-size;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      border: 1px solid var(--color-frame);
+      background-color: var(--color-bone);
+      color: var(--color-charcoal);
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+      line-height: 1.7;
+      tab-size: 2;
+      /* Code scrolls rather than breaking mid-token, whatever a card above it inherits. */
+      white-space: pre;
+      overflow-wrap: normal;
+      /* Code reads left to right on a right-to-left page. */
+      direction: ltr;
+      text-align: left;
+    }
+
+    /* The code inside takes the block's face, so no monospace quirk shrinks it. */
+    .prose :where(pre code):not(:where(.not-prose, .not-prose *)) {
+      font: inherit;
+    }
+
+    .prose :where(pre:focus-visible):not(:where(.not-prose, .not-prose *)) {
+      outline: var(--focus-ring-width) solid var(--focus-ring-color);
+      outline-offset: var(--focus-ring-offset);
+    }
+
+    /* ---- Tables: a chart's table look. -------------------------------------------------------------------- */
+
+    .prose :where(table):not(:where(.not-prose, .not-prose *)) {
+      inline-size: 100%;
+      border-collapse: collapse;
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .prose :where(caption):not(:where(.not-prose, .not-prose *)) {
+      padding-block-end: var(--spacing-part);
+      color: var(--color-slate);
+      text-align: start;
+    }
+
+    .prose :where(th, td):not(:where(.not-prose, .not-prose *)) {
+      padding: 0.5rem 0.75rem;
+      border-block-end: 1px solid var(--color-divider);
+      vertical-align: top;
+    }
+
+    /* GFM writes a cell's alignment in its style, and HTML in its align attribute, which this leaves alone. */
+    .prose :where(th:not([align]), td:not([align])):not(:where(.not-prose, .not-prose *)) {
+      text-align: start;
+    }
+
+    .prose :where(th):not(:where(.not-prose, .not-prose *)) {
+      color: var(--color-slate);
+      font-weight: 500;
+    }
+
+    .prose :where(td):not(:where(.not-prose, .not-prose *)) {
+      color: var(--color-ink);
+    }
+
+    /* In its own scrolling box a table keeps its words whole and scrolls; without one its cells break anywhere,
+       so it never pushes the page sideways. */
+    .prose :where(.prose-scroll :is(th, td)):not(:where(.not-prose, .not-prose *)) {
+      overflow-wrap: normal;
+    }
+
+    /* ---- Figures and rules. ------------------------------------------------------------------------------- */
+
+    /* A framed block is concentric with a holder it sits in, and takes the surface step where none holds it,
+       wherever in the holder it falls. */
+    .prose :where(pre, img, video):not(:where(.not-prose, .not-prose *)) {
+      border-radius: max(
+        var(--radius-micro),
+        calc(var(--holder-radius, var(--radius-surface)) - var(--holder-border, 0px) - var(--holder-pad, 0px))
+      );
+    }
+
+    /* An image stays inline, as the browser draws it, so one that is neutralized changes no layout. */
+    .prose :where(img, video):not(:where(.not-prose, .not-prose *)) {
+      max-inline-size: 100%;
+      block-size: auto;
+    }
+
+    .prose :where(figcaption):not(:where(.not-prose, .not-prose *)) {
+      color: var(--color-slate);
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+    }
+
+    .prose :where(hr):not(:where(.not-prose, .not-prose *)) {
+      block-size: 0;
+      border: 0;
+      border-block-start: 1px solid var(--color-divider);
+    }
+
+    /* GFM's footnotes: small and slate, under a rule. */
+    .prose :where([data-footnotes]):not(:where(.not-prose, .not-prose *)) {
+      padding-block-start: var(--spacing-peer);
+      border-block-start: 1px solid var(--color-divider);
+      color: var(--color-slate);
+      font-size: var(--text-small);
+      line-height: var(--text-small--line-height);
+    }
+
+    /* The label GFM writes is for screen readers alone: react-markdown gives it the sr-only class and no
+       styles. It is hidden as visually hidden text is, and the list under it takes no gap for it. */
+    .prose :where([data-footnotes] > [class~='sr-only']):not(:where(.not-prose, .not-prose *)) {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .prose :where([data-footnotes] > [class~='sr-only'] + *):not(:where(.not-prose, .not-prose *)) {
+      margin-block-start: 0;
+    }
+
+    /* Forced colors repaint every author color, so a fill that marks something is lost: inline code keeps an
+       edge in the text color, a mark takes the reader's highlight, the rules take the text color, and the
+       scrolling boxes ring in Highlight. These are the only colors in this file that are not tokens. */
+    @media (forced-colors: active) {
+      .prose :where(code:not(pre code)):not(:where(.not-prose, .not-prose *)) {
+        border-color: CanvasText;
+      }
+
+      .prose :where(mark):not(:where(.not-prose, .not-prose *)) {
+        forced-color-adjust: none;
+        background-color: Highlight;
+        color: HighlightText;
+      }
+
+      /* The reader's own highlight for marked text, where the engine names it. */
+      @supports (color: Mark) {
+        .prose :where(mark):not(:where(.not-prose, .not-prose *)) {
+          background-color: Mark;
+          color: MarkText;
+        }
+      }
+
+      .prose :where(blockquote):not(:where(.not-prose, .not-prose *)) {
+        border-inline-start-color: CanvasText;
+      }
+
+      .prose :where(hr, [data-footnotes]):not(:where(.not-prose, .not-prose *)) {
+        border-block-start-color: CanvasText;
+      }
+
+      .prose :where(pre:focus-visible):not(:where(.not-prose, .not-prose *)) {
+        outline-color: Highlight;
+      }
+
+      .prose :where(.prose-image):not(:where(.not-prose, .not-prose *)) {
+        border-color: CanvasText;
+      }
+    }
+
+    /* On paper a long line wraps, since nothing scrolls. */
+    @media print {
+      .prose :where(pre):not(:where(.not-prose, .not-prose *)) {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+    }
+
+    /* ---- Library components: as they are anywhere. ------------------------------------------------------ */
+
+    /* Every library component inside the box is handed back to the layer below this one, so a property its
+       own rules leave unset is the browser's, as it is outside prose. The build replaces .prose-parts with
+       every component's root class. */
+    .prose :is(.prose-parts),
+    .prose :is(.prose-parts) * {
+      all: revert-layer;
+    }
+
+    .prose :is(.prose-parts) *::marker {
+      color: revert-layer;
+      font-variant-numeric: revert-layer;
+    }
+  }
+
+  /* ---- The scrolling box a wide table sits in. ---------------------------------------------------------- */
+
+  /* Its intrinsic inline size is 0, so a wide table never widens a flex or grid item the prose sits in: the
+     box takes the width its holder gives and the table scrolls inside it. */
+  .prose-scroll {
+    contain: inline-size;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    /* The ring follows a micro corner in every shape. */
+    border-radius: var(--radius-micro);
+  }
+
+  .prose-scroll:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  @media (forced-colors: active) {
+    .prose-scroll:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+}

@@ -975,7 +975,7 @@
       gap: 4px;
     }
 
-    .code {
+    .code pre {
       padding: 16px;
       font-size: 0.8125rem;
     }
@@ -1066,8 +1066,9 @@
   }
 
   /* A fenced block that bypassed the Code component: monochrome, so a stock
-     syntax theme never brings red or green into the palette. */
-  .docs-section pre:not(.shiki) {
+     syntax theme never brings red or green into the palette. Not in a preview
+     stage, where a code block is an example's own, drawn by core's prose. */
+  .docs-section pre:not(.shiki):where(:not(.stage *)) {
     margin: 0;
     padding: 1.25rem 1.5rem;
     overflow-x: auto;
@@ -1077,7 +1078,7 @@
     font-size: 0.875rem;
   }
 
-  .docs-section pre:not(.shiki) span {
+  .docs-section pre:not(.shiki):where(:not(.stage *)) span {
     color: var(--color-charcoal) !important;
   }
 

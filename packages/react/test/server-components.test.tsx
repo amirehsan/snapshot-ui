@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { outermostClasses, proseRoots } from './prose-roots';
 
 // React as a server component sees it: the react-server build, which has no state, no effects, no refs
 // and no context. A component that calls one of those throws here, as it does in a Next.js server tree.
@@ -91,6 +92,7 @@ import { MonthGrid } from '../src/month-grid';
 import { PageColumn, PageHeader } from '../src/page-header';
 import { Pagination } from '../src/pagination';
 import { ProgressBar } from '../src/progress-bar';
+import { Prose, ProseScroll } from '../src/prose';
 import { Skeleton } from '../src/skeleton';
 import { StatTile } from '../src/stat-tile';
 import { COVERAGE_STATES, COVERAGE_YEARS, MONTH_NAMES, SHORT_MONTHS } from '../src/stories/coverage';
@@ -135,7 +137,11 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
   ],
   ['Eyebrow', <Eyebrow>Workspace</Eyebrow>, '<p class="eyebrow">Workspace</p>'],
   ['Kbd', <Kbd>Esc</Kbd>, '<kbd class="kbd">Esc</kbd>'],
-  ['Badge', <Badge tone="info">Beta</Badge>, '<span class="badge badge-info">Beta</span>'],
+  [
+    'Badge',
+    <Badge tone="info">Beta</Badge>,
+    '<span class="badge badge-info"><span class="badge-label">Beta</span></span>',
+  ],
   [
     'Card and its parts',
     <Card as="section" aria-label="Danger zone">
@@ -346,6 +352,21 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
       '<h2 class="heading heading-2 page-header-title">Notifications</h2></div></div></header>',
   ],
   ['PageColumn', <PageColumn>The receipts.</PageColumn>, '<div class="page-column">The receipts.</div>'],
+  [
+    'Prose',
+    <Prose as="article">
+      <h2>October</h2>
+      <p>You spent less.</p>
+    </Prose>,
+    '<article class="prose"><h2>October</h2><p>You spent less.</p></article>',
+  ],
+  [
+    'ProseScroll',
+    <ProseScroll aria-label="Spending by category, table">
+      <table />
+    </ProseScroll>,
+    '<div aria-label="Spending by category, table" role="region" tabindex="0" class="prose-scroll"><table></table></div>',
+  ],
 ];
 
 describe('the static components in a server component', () => {
@@ -369,6 +390,20 @@ describe('the static components in a server component', () => {
 
   it.each(STATIC)('%s renders to plain markup', (_name, element, markup) => {
     expect(renderToStaticMarkup(element)).toBe(markup);
+  });
+
+  // Its outermost element carries a root prose hands back to the layer below, so it draws as it does anywhere
+  // inside a prose box (insights spec correction 93).
+  const roots = proseRoots();
+  it.each(STATIC)('%s has a component root prose hands back on its outermost element', (_name, element) => {
+    const classes = outermostClasses(renderToStaticMarkup(element));
+    if (classes === null) return;
+    // Prose and ProseScroll are prose's own box and region, which its rules are written for.
+    if (classes.includes('prose') || classes.includes('prose-scroll')) return;
+    expect(
+      classes.filter((name) => roots.has(name)),
+      classes.join(' '),
+    ).not.toEqual([]);
   });
 
   it('passes a class and attributes through, so a server page can shape them', () => {
@@ -515,6 +550,7 @@ const STATIC_MODULES = [
   'progress-bar/ProgressBar.tsx',
   'page-header/PageHeader.tsx',
   'page-header/PageColumn.tsx',
+  'prose/Prose.tsx',
 ];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {

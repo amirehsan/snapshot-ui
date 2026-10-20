@@ -1594,8 +1594,47 @@ hover, no focus ring and no touch target.
   the shape table gives badges, so the shape axis reaches them.
 - **Color is never the only signal.** The label says what the badge means. The
   tone only repeats it.
-- **A long label wraps inside the badge.** It breaks anywhere, so no label can
-  push a narrow screen sideways.
+- **A word stays whole, and so does the badge's width in a row.** The first
+  rule broke a long label anywhere (`overflow-wrap: anywhere`), so a long run
+  of letters could not push a narrow screen sideways. But anywhere also makes
+  one letter the badge's min-content width, the floor a flex row shrinks an
+  item to, so beside a title that wrapped on a 390px phone, "New" was set as
+  "NE" over "W". The badge now breaks with `overflow-wrap: break-word`, which
+  leaves the longest word as its min-content width: a flex row stops shrinking
+  the badge there, and a holder of its own passes the same floor up, so no
+  `shrink-0` is needed at the call site. A label of several words still wraps
+  between them when its holder is narrower than the whole label, and a single
+  word longer than the badge, which `max-width: 100%` keeps to its holder,
+  still breaks inside the outline, so nothing pushes the page sideways.
+- **An inline block, not an inline flex.** The label of an inline flex box is
+  an anonymous flex item whose floor is its own longest word, so a word longer
+  than the box spilled out of the outline instead of breaking. As an inline
+  block the label is set in the badge's own lines and break-word reaches it. A
+  badge holds a word or a number, so it lost nothing to the flex box.
+- **No floor of its own.** `flex-shrink: 0` keeps a label of several words on
+  one line, squeezing the title beside it to a letter a line, and only the
+  badge given straight to the row, not one in a holder. A `min-inline-size` of
+  `min-content` outranks `max-width`, so a long word would push the page
+  sideways. The automatic minimum of a flex item is already the longest word,
+  capped by `max-width`, so the badge declares neither.
+- **The label caps the floor at 16em.** A holder sized by its content, such as
+  a grid column of `auto` or `1fr` or a flex item left at its automatic
+  minimum, takes the badge's min-content width as its own floor, so with
+  break-word alone one long web address widened the docs preview at 320px to
+  838px and pushed the page sideways. A percentage max-width counts for
+  nothing in that floor (CSS Sizing treats it as `none` there), so only a
+  length caps it, and the badge's own `max-width` has to stay 100% to keep it
+  inside a narrow holder. So the label is a part of its own, `.badge-label`,
+  a block with `max-width: 16em`, about twenty letters at the badge's 12px: a
+  word up to that stays whole, a longer run breaks at it, and a holder sized
+  by its content never takes more than 16em and the badge's padding from a
+  badge, which fits a 320px phone inside a card. A label of several words
+  wraps at 16em too, which a label that should be a word or a number never
+  reaches. Markup without the label part keeps the word floor but not the cap.
+  Where the library itself sets a badge nothing moves: a tab and the docs
+  rail's version keep theirs on one line with `nowrap`, FilterBar's count is a
+  number, and a DataTable's fixed columns cap the badge at the cell. StatTile,
+  the Sidebar, CollapsibleCard and FilterChip draw no badge of their own.
 
 Measured as the text color on each surface a badge sits on, light then dark,
 for canvas, lifted, float and raised in that order. The 1px border is the same
@@ -1687,7 +1726,7 @@ everything else here is derived.
   the field lands under the end of the control and a hint wraps at a readable
   measure. Its column may shrink, and the label, hint, error line and count
   break a long unbroken word where they must (`overflow-wrap: anywhere`, as
-  Link, Kbd and Badge do), so one such word wraps inside its part and the page
+  Link and Kbd do), so one such word wraps inside its part and the page
   does not scroll sideways. The label row holds the label and the chip, and the
   chip wraps under a long label instead of overflowing.
 - **Label** is 14/700 in ink, the h4 step. **Description** is 14/450 in slate,
@@ -5754,7 +5793,10 @@ the root and `--color-warning` under `[data-over]`, so one property turns
 both looks warning over the limit. Exactly `max` is not over. Over the limit
 the words are the app's, and `valueLabel` must say "over"; the docs and the
 changeset say so, since the color is never the only signal. Error, success,
-signal orange, clay and taupe appear nowhere.
+signal orange, clay and taupe appear nowhere. The hatch also means a
+previous period in a bar chart (`look: 'hatched'`, "BarChart"): the same
+stripes in the series' color, the same meaning, the same thing and not the
+main amount.
 
 **The geometry.** Each segment's width is its share of `max`, stacked from
 the inline start, written as a percentage with at most three decimals in
@@ -5875,11 +5917,33 @@ and every box that holds HTML over a drawing (`.sparkline-plot`,
 attribute and always agree. The domain and the path are the same in both
 directions.
 
-**Series colors.** At most two series: the first ink, the second slate in a
-thinner stroke. There is no palette, so the categorical validator of the
-data-visualization method is not run; phase 6 runs it when it adds one. The
-stroke widths are literals in `charts.css`, since two size tokens are not
-worth adding.
+**Series colors.** A line chart draws at most two series: the first ink,
+the second slate in a thinner stroke. The categorical palette, for a chart
+of more peers, is the four chart tokens, whose derivation and checks are
+"Chart palette" below. The stroke widths are literals in `charts.css`,
+since two size tokens are not worth adding.
+
+**Which color a series gets** (the insights spec, section 5.4). Color goes
+by meaning first, then by identity:
+
+| The chart | Series colors, in order, unless a series sets `color` |
+| --- | --- |
+| One series | ink |
+| Two series, grouped | ink, slate: the story and its context, LineChart's emphasis form |
+| Two to five, stacked | `chart-1`, `chart-2`, `chart-3`, `chart-4`, then slate |
+| A series with `look: 'hatched'` | the color of the first series with `look: 'fill'`, striped |
+
+A bar chart's `color` pins a series to its color, so it keeps it when
+another series is filtered out. `color` takes `'ink'`, `'slate'`, `'gain'`
+and the four slots, `'chart-1'` to `'chart-4'`, each drawn by a
+`[data-color]` rule in `charts.css` that sets `--bar-chart-color`; the
+stacks that give a series a slot without being asked come with the
+stacked layout. `gain` is for a series that is money that
+arrived, labelled so ("Income"), drawn beside an ink "Spending" and never
+beside a palette color. There is no color for money out: spending is ink,
+and a negative is its series' color below the zero line, never error,
+since nothing failed (NumberField's rule). Error, success, warning, clay,
+the two signal oranges and taupe are not in the `ChartColor` type.
 
 **The surface.** A ring or a spacer is a border in the surface the chart
 sits on, `var(--chart-surface, var(--color-lifted))`: read with a fallback
@@ -6185,6 +6249,35 @@ first key in a plot focused before its data came takes the newest day,
 and a pointer clears the last announcement. The tab stop is set after
 mount, so the server's HTML has none. The entry measures 3.25 kB now,
 inside the same 4 kB.
+
+**States** (the insights spec, section 7.9, and the owner's ruling 10).
+`status` is `'ready'`, `'loading'`, `'empty'` or `'error'`, BarChart's
+frame through the shared pieces: the plot keeps its place and its height,
+its gridlines, their labels and the x labels the app passes, so the page
+does not move when the data arrives. Loading draws one still placeholder,
+`span.skeleton.line-chart-skeleton`, over the plot's whole box under the
+gridlines' labels, in Skeleton's fill and pulse, hidden from assistive
+technology, with no legend, toggle or table, and nothing marked busy:
+the region that says the state is inside the plot, and a reader may hold
+back a busy subtree's changes until it is no longer busy (the plan's spec
+correction 31). Empty and error draw `statusContent` or `p.line-chart-message`,
+the message the bar chart shares (`:is(.line-chart-message,
+.bar-chart-message)`), slate for empty and `--color-error` for a load
+that failed, the one meaning that color has, and keep the hidden table
+with no toggle. The three strings are `statusLabels`, `ChartStatusLabels`
+with English defaults, a prop of their own, since `LineChartLabels` is
+required whole and growing it would break every app that passes it. The
+state is said once through the plot's own polite region, the one that
+announces positions, which is in the page from the first render, so the
+word is heard when it arrives and a change from ready to an error is
+heard too. The plot is no tab stop while it shows a state
+(`tabIndex={-1}` after mount), so focus on it stays there and never falls
+to the body, and its keys and pointer do nothing; a status change lets go
+of the position active and announced before it. The ready face is the
+same byte for byte (`same-markup.test.tsx`, unchanged): `data-status` is
+written only for a state (the plan's spec corrections 21 and 31).
+The entry measures 4.06 kB with the states, and its limit is 5 kB by the
+rule (correction 9).
 
 ## SearchField
 
@@ -11300,3 +11393,1142 @@ summary and then the table (spec correction 57). Not yet verified in
 Windows' contrast themes (the three looks still distinct) or on a real
 iPhone and an Android phone at 320px to 430px (cells about 13px to 15px
 wide in a card, about 10px two up, and the quarter labels, legible).
+
+## BarChart
+
+Amounts as bars: `BarChart`, the third chart of `@snapshot-ui/charts`,
+from the insights spec (section 7) and the owner's rulings in its section
+19. This section records the horizontal face, the consumer's ranked list
+of categories, merchants and accounts, then the vertical face, the
+consumer's month view, two series side by side in either orientation and
+the previous period, and last the stacks, the category mix by month.
+
+**Bars are HTML.** A bar keeps its shape: its data end is rounded by a
+radius token, its thickness is capped in pixels, and the focus ring
+follows its corners. An svg `rect` in a stretched `viewBox` would turn a
+6px corner into an ellipse and could not take a token, so every bar is an
+absolutely placed `span.bar-chart-bar`, its `inset-inline-start` and
+`inline-size` written in render in percent with three decimals. The
+gridlines and the zero line stay in a stretched svg with non-scaling
+strokes, as a line chart's do. Nothing is measured, so the server's HTML
+is the final picture.
+
+**Anatomy.** `figure.bar-chart[data-orientation][data-layout][data-view][data-status]`,
+named by its `aria-label` or `aria-labelledby`, holds `div.bar-chart-chart`
+(the legend, for two series, then the rows), the shared table, toolbar
+and `noscript`, and `span.bar-chart-status`, a polite status mounted from
+the first render. `div.bar-chart-rows` is a `group` with
+`aria-roledescription` from `labels.roleDescription`, named as the figure,
+holding the gridlines' layer, a `div.bar-chart-row` per category, the
+value labels and the readout.
+
+**The row grid, three tracks.** `.bar-chart-rows` is a grid of
+`fit-content(var(--bar-chart-label-size, 40%)) minmax(0, 1fr) max-content`
+with an 8px column gap and no row gap. Each `div.bar-chart-row` is
+`display: contents`, so its three parts are the grid's cells:
+`span.bar-chart-category` at the start, as wide as the longest name up
+to 40% of the chart (an app sets its own share by the property);
+`div.bar-chart-track`, which takes the rest; and `span.bar-chart-amounts`
+at the end, as wide as the widest amount, which the grid finds from the
+amounts themselves with no script. The name and the amounts are hidden
+from assistive technology, since each bar's name says them. The rows run
+in `--chart-direction`, the attribute the svg's flip reads, so the marks
+and the drawing always agree.
+
+**The 2.5rem row and the 24px cap.** A track is at least `--size-target`,
+40px, so a row is a 40px target for the pointer, or as tall as its
+wrapped name. A bar is `min(1.5rem, calc((2rem - (k - 1) * 2px) / k))`
+thick for `k` bars in the row (`--bar-chart-group`, written in render),
+centred in the row and moved to its place in the group
+(`--bar-chart-place`): 24px alone, the method's cap, and two 15px bars
+2px apart in a pair.
+
+**The data end and why micro.** A bar has two ends. The end at zero is
+square in every shape, since the bar stands on its line, and a rounded
+foot would lift it off the line it measures from. The data end takes
+`--radius-micro` (6px in Rounded and Soft, 0 in Square) on its two
+corners only, in logical properties: `border-start-end-radius` and
+`border-end-end-radius` for a positive bar, the start corners for a
+negative one, so right to left moves them with the bar. A bar is a mark,
+not a surface or a control, and the nested-radii record keeps mark-sized
+parts at the micro step; a pill (Meter's end) would hide the value at the
+top of a curve and turn a short bar into a dot (owner ruling 5). A bar
+thinner than 12px has its corners scaled by the browser to fit. Any bar
+that is not zero is at least 1px long (`min-inline-size` under
+`[data-nonzero]`), so a small amount never vanishes; a zero is a bar of no
+length that the keys still reach.
+
+**Zero, always.** A bar's length is its value, so the value axis always
+includes zero: from the values, `niceDomain` over their extent with zero
+included; a given `valueDomain` without zero is widened to it, with a
+development warning once (`useWarnOnce`, the react package's pattern
+copied). Negatives run from zero toward the inline start.
+
+**The zero line's two colors.** Where the domain crosses zero, the zero
+line is 1px of `--color-boundary` (`data-crosses`), the edge color a
+reader must find, since it separates the signs: drawn on the surface, it
+measures 3.45 and 5.21 against Lifted and 3.38 and 5.34 against canvas,
+the switch's off-track pairs the gate holds at 3:1 (the plan's spec
+correction 15). Where zero is the domain's edge, as in a list with no
+refunds, it is the shared baseline in `--color-frame`, a cue, since the
+bars' square ends draw the line. Gridlines are a line chart's, 1px
+`--color-divider` at each `valueTicks` value inside the domain, with
+their labels under the last row in slate, centred on the line and kept
+inside the track at its ends. The layer, `div.bar-chart-gridlines`, is
+one element absolutely placed over the track column across every row
+(`grid-column: 2 / span 1; grid-row: 1 / span var(--bar-chart-rows)`), so
+the lines run unbroken behind the rows and the layer takes no cell from
+them. Both ends of each axis are given: an absolutely placed grid child
+whose end line is `auto` reaches the grid's padding edge, which drew the
+zero line and the gridlines across the amount column at first (the plan's
+spec correction 20). The `LinesInPlace` play holds the zero line on the
+bars' zero edge and each gridline on its label within 1px, left to right,
+right to left and narrow, in all three engines.
+
+**The amount column, on by default here.** A ranked list reads as a list,
+name at the start and amount at the end, the consumer's layout and the
+method's "value at the tip" made a column so the amounts align.
+`valueLabels` is `'all'` by default for a horizontal chart; `'none'`
+leaves the column empty (the track is `max-content` of nothing) and a
+list of row indexes fills only those rows. Each amount is `--text-small`,
+tabular, ink and `white-space: nowrap`, with the numeral rule's
+`direction: ltr`, `unicode-bidi: isolate` and both `text-align`
+spellings, so a figure reads left to right and stands at its column's
+end in either direction. A refund that nets a row below zero keeps its
+amount in the same column, so a sorted list's negatives line up. Value
+labels are never inside a bar (owner ruling 8).
+
+**Long names and the narrow chart.** A name wraps anywhere in its column
+and is never cut short or rotated. The figure is the container
+(`container: bar-chart / inline-size`); a query on a container styles its
+children, never the container itself, so the figure and not the rows is
+the container (the plan's spec correction 14). A size container's
+intrinsic inline size is 0 and never a stand-in width
+(`contain-intrinsic-inline-size: 0`, the library's ruling): a stand-in is
+also the container's least width, so in any holder sized from its
+content it would push a phone's page sideways. The holder gives the width:
+a block its whole line, a flex item a basis such as `flex: 1 1 20rem`, a
+grid a sized column (the plan's spec correction 19; the `InAFlexRow` play
+holds one chart filling its row and two sharing a 320px frame with
+nothing past its edge). Under 24rem of
+its own width the grid is `minmax(0, 1fr) max-content`: each name takes a
+line of its own above its bar (`grid-column: 1 / -1`), and the track and
+the amounts share the line under it. The name then crosses the gridlines'
+layer, so it is drawn over it in `--chart-surface`, as wide as its text;
+the render writes `--bar-chart-rows-narrow` (twice the rows) for the
+layer's span, since nothing measures which face is drawn.
+
+**One stop, on a bar** (owner ruling 6). Each bar is `role="img"` with
+`aria-roledescription` from `labels.bar` and `aria-labelledby` naming its
+row header and its cell in the table, and its column header with two
+series. The table is in the DOM while hidden, and the name computation
+follows `aria-labelledby` into hidden content, so a screen reader hears
+"Whole Foods Market $612.40, bar" from the app's own strings, with no
+punctuation of the library's. The server writes no `tabindex`; after
+mount the active bar is `0` and every other `-1`, the roving tab index.
+Tab lands first on the first row with a value (the newest for
+`bands="time"`) and after that on the bar last active. Down and Up move
+bar by bar in drawn order, skipping a row with no value; Home and End go
+to the first and last row with a value; Page Up and Page Down move seven
+rows, `moveFrom`'s rule; focus moves with the key, so the reader hears
+each bar's name with no live region. Left and Right are not moves in a
+horizontal chart and are not prevented. Escape hides the readout once,
+stopped as well as prevented; a second Escape goes on. A key with Alt,
+Control or Meta is left alone. When `categories` change, by their joined
+strings and not by the array's identity, the stop goes back to the first
+bar, and a bar that held focus hands it to the new first bar, never to
+the body, whether its row is gone or still there. A bar's ref is one
+function for the chart's life, and its cleanup runs before React removes
+the bar: a bar that leaves while it holds focus parks focus on the rows
+group first, so no element ever loses focus to nothing. The group is
+`tabIndex={-1}` after mount in every status, focusable by script, never
+a tab stop, ringed with the token ring: when its attribute came and went
+with the status, the commit that made the chart ready again took it away
+before the layout effect could move focus on, and Chromium blurred the
+group to the body (the plan's spec corrections 20 and 29). A status with
+no bars keeps focus there; when the chart is ready again, a layout effect
+gives it to the tab stop, the bar last active for the same categories and
+the first bar for new ones, before the page paints. A press anywhere in
+the group but a state's own content focuses nothing (`preventDefault` on
+its `mousedown`), so a touch's hold and a pointer's row stay the
+pointer's, a tap on another row's empty track takes the hold, and a
+state's Retry button keeps its press. `StatusWhileFocused` takes both
+orientations through ready, loading, ready, error and ready with a bar
+focused and finds no focus lost to nothing, in three engines.
+
+**The pointer's dimming.** A mouse or a pen over the rows activates the
+row under it, read from each row's parts' boxes in the handler, and its
+bar under the pointer or its first; the whole row is the target. While a
+pointer holds a row the rows container is `[data-pointer]` and the other
+rows' bars are at 40% opacity, with no new shape and no transition.
+Against Lifted, ink so dimmed measures 2.57 in light and 3.81 in dark,
+slate 1.75 and 2.19, and `gain` 1.93 and 2.36, all under 3:1 for as long
+as the pointer rests: a transient emphasis, recorded and not gated, while
+the active row is at full strength and the readout says its values. Under
+the keyboard nothing dims. A mouse passing over moves no tab stop: only a
+key, focus or a touch does. Leaving gives the active mark back to a
+focused bar, or clears it; a touch holds until a press outside.
+
+**The readout.** The shared float panel, hidden from assistive
+technology: the category in slate, then a line per series with a value,
+a 12px swatch in the series' color, the value in 500 and the series'
+label in slate, and with `totals` a last line with the total and
+`labels.total`. It sits over the active row's track, placed in that row's
+grid area by the `--bar-chart-row` the render writes, above the row when
+its lines fit there and below it otherwise (`placeReadout` along the
+block axis from the row's index, the row count and 40px rows), so it
+never covers the bar (the plan's spec correction 12). Along the row it is
+at the far end of the row's longest bar, aligned start, centre or end by
+quarter. Its grid area is the active row's track alone, both ends given
+(`grid-row: var(--bar-chart-row) / span 1`), so a readout below the first
+row sits under that row and not under the whole chart; the `ReadoutBelow`
+play holds it within 24px of the bar. It is the rows' last child, so it
+draws over every bar with no `z-index`, and `pointer-events: none`, so it
+never takes the pointer from the rows under it.
+
+**The states.** `status` draws in the rows' place and keeps the figure's
+size: the height of `categories.length` rows when the app passes the
+categories it expects, and four otherwise
+(`calc(var(--bar-chart-rows) * var(--size-target))`). Loading draws a row
+per category of still bars in Skeleton's fill and pulse (70%, 50%, 85%,
+40%, repeating), square at zero, hidden from assistive technology, with
+`aria-busy` on `div.bar-chart-chart`, the chart's view, and not on the
+figure, so the polite status after it is outside the busy subtree and is
+heard (correction 31); the status says `statusLabels.loading`
+once after mount; no legend, toggle or table. Empty draws `statusContent`
+or `p.bar-chart-message` with `statusLabels.empty` in slate; error the
+same with `statusLabels.error` in `--color-error`, the one meaning that
+color has, a load that failed, and the status says it once. Both keep the
+gridlines and the zero line behind, and draw no toggle. Every state keeps
+the row of value labels when `valueTicks` is given, with the labels and
+gridlines inside its domain, so the figure does not move when the data
+arrives. The three strings
+are `ChartStatusLabels`, shared with LineChart later in the batch. The
+chart composes and does not import: `statusContent` is the app's, such as
+the react package's EmptyState.
+
+**Color.** Section "Charts" assigns each series its color. One series is
+ink; two take ink and slate by place unless a series pins its `color`.
+`data-color` sets `--bar-chart-color`, which the bar, the legend key and
+the readout swatch read; text never takes it. Ink measures 17.84, 16.25
+and 18.43 against Lifted, canvas and Float in light and 17.42, 19.31 and
+17.42 in dark; slate 5.31, 4.84, 5.49 and 6.94, 7.26, 6.94; `gain` 7.20,
+6.55, 7.44 and 8.04, 8.92, 8.04. All are gated as text, so past the 3:1 a
+graphic needs, and the bars add no pair to the gate.
+
+**Forced colors.** The bars and the swatches opt out of the repaint
+(`forced-color-adjust: none`) and draw in `CanvasText`, and the active
+row's bars in `Highlight`, as does the focused bar's ring. The zero line
+between the signs is `CanvasText`; the gridlines and a zero line at the
+domain's edge are `GrayText`, a line chart's rules.
+
+**Right to left.** The rows run from the inline start, so under
+`dir="rtl"` the names are at the right and the bars grow from the right
+toward the left, negatives toward the right of zero. A negative bar is
+placed by `inset-inline-end`, from zero, so its least 1px also runs from
+zero toward the start. The data end's
+corners are logical, so they move with the bar. The amounts stay left to
+right inside their isolates. Up and Down do not change with the
+direction.
+
+**Standing up, the default.** `orientation` is `'vertical'` unless the app
+says otherwise, the consumer's month view. `div.bar-chart-plot` is the
+group, named as the figure, and a grid of two columns and two rows: the
+gridlines' labels in a column at the start, `max-content`, as wide as the
+widest label, which the grid finds from the labels themselves;
+`div.bar-chart-bars`, the bars' box, beside it at the plot's height
+(`height`, 240 by default, written in render as its block size); and
+`div.bar-chart-categories` under the bars' box. The gridlines' layer runs
+under both columns (`grid-column: 1 / span 2; grid-row: 1 / span 1`, both
+ends given), so each label sits above its line at the start, a line
+chart's rule, and no bar ever crosses a label: drawn inside the bars' box,
+as the plan had them, the labels were covered by the first band's bars
+wherever it crossed a line (the plan's spec correction 23). Each label is
+in flow in one cell of its column, so the column takes its width, and is
+moved down by its line's place, a percentage of the cell, which is the
+bars' height. The bars, the gridlines, the labels, the value labels and
+the readout share one scale, the bars' box, and the room the labels
+outside the bars' ends take is outside it: a line of the small step and
+the 4px gap (`calc(0.25rem + var(--text-small) *
+var(--text-small--line-height))`, 24px at the default size; correction 32) above when the
+gridlines are labelled or a positive figure shows, and below when a
+negative figure shows, written as `--bar-chart-room-start` and
+`--bar-chart-room-end` under `[data-room-start]` and `[data-room-end]` and
+read by the box's margins, the labels' padding and the gridlines' insets.
+
+**Bands, thickness and groups, with nothing measured.** `n` categories
+are `n` equal bands from the inline start; the render writes
+`--bar-chart-bands` and `--bar-chart-group` on the plot and each bar's
+band centre (`--bar-chart-centre`, a percent with three decimals) and its
+place in its group (`--bar-chart-index`). The CSS computes the thickness,
+`min(1.5rem, calc((100% / bands * 0.6 - (group - 1) * 2px) / group))`, and
+the inline start, the band's centre less half the group plus the bar's
+place, `calc(centre - (group * t + (group - 1) * 2px) / 2 + index * (t +
+2px))`. A percentage inside a custom property resolves where it is used,
+so `100%` is the bars' box's width on each bar. So a bar is at most 24px
+and 60% of its band, a pair sits 2px apart centred on its band, and the
+bars thin as the box narrows: twelve grouped months in a 248px plot are
+5.2px each, which the `GroupThickness` play measures within 1px in three
+engines, and thirty-one days about 5px. The horizontal row's offset in a
+pair reads the same `--bar-chart-index`.
+
+**Negatives split at zero.** `linearScale(domain, [100, 0])`, so a bar
+runs from zero to its value: a positive one stands on the zero line from
+below (`inset-block-end`), a negative one hangs from it
+(`inset-block-start`), each with its size in percent, so a bar's least
+1px (`min-block-size` under `[data-nonzero]`) also grows from zero. The
+data end takes `--radius-micro` on its two corners only, the top ones
+above zero and the bottom ones below, and the end at zero stays square.
+The zero line is the horizontal line at zero, in the boundary color where
+the domain crosses zero, the horizontal chart's rule; `LinesInPlaceStanding`
+holds every bar on it within 1px, left to right, right to left and narrow.
+
+**Figures standing up.** Off by default (`valueLabels` is `'none'`
+standing up and `'all'` lying down): the table, the readout and each
+bar's name carry every figure, and the method's rule is never a number on
+every point. `'all'` or a list of bands draws `span.bar-chart-value`
+outside the bar's data end with a 4px gap, above a positive bar and below
+a negative one, centred on its bar by the same centre and place, in ink,
+tabular, `--text-small`. Its box is placed in the chart's direction, so
+its figure is an inner `span.bar-chart-value-text` with `direction: ltr`
+and `unicode-bidi: isolate`, the numeral rule, since a logical inset
+follows the element's own direction (correction 24). Under 30rem of the
+chart's width `'all'` keeps only the first and the last band's figures
+(`[data-keep]`); the bands an app names always show.
+
+**Category labels standing up.** `div.bar-chart-categories` is a grid of
+`repeat(bands, minmax(0, 1fr))`, so each `span.bar-chart-band-label` is
+its band's width, centred, in slate, an axis's labels, and clamped at two
+lines with an ellipsis (`-webkit-line-clamp`, in all three engines), never
+rotated; under 30rem one line, and under 24rem, in a chart of more than
+eight bands (`[data-dense]`), only every third (`[data-third]`); eight or
+fewer bands keep every label at any width (correction 34). The whole name is always in the readout, the bar's name
+and the table. `bands="time"` shows the first, the middle and the last
+band (`categoryTicks` names others), on one line, each on its band's
+centre and the first and the last kept inside the plot by `data-edge`, a
+line chart's x labels' rule. Lying down, a category is the row's name,
+ink, every one by default.
+
+**Two series.** Grouped bars hold one or two series, in the types: a
+third is a type error, and a stack takes more in its own layout. Without
+`color`, filled series take ink and then slate by their place among the
+filled series; `color` pins a series, so the consumer's month view draws
+Income in `gain` beside Spending in ink, and each keeps its color when the
+app shows it alone. Money out has no color of its own. A legend of swatch
+keys names both, and each bar's name adds its column header: "Aug Income
+$5,200.00".
+
+**The previous period** (spec 5.5, the owner's ruling 25). `look:
+'hatched'` draws a series as stripes of its color, 2px every 6px at 45
+degrees, Meter's hatch on `--bar-chart-color`, inside a 1px border of the
+color at full strength, with no fill. Without `color` it takes the first
+filled series' color, so October beside September is ink beside striped
+ink, and Income beside last period's Income is `gain` beside striped
+`gain`. Its amount (lying down) and its figure (standing up) are slate,
+its legend key and its readout swatch are the hatched swatch, and each
+bar's name says its period, so the stripes are never the only cue. It is
+drawn in the app's order, so the docs say to pass it second, where it
+stands after the current bar standing up and under it lying down
+(correction 25). A zero draws no border, a bar of no length. Measured as
+the browser composites, against Lifted: the border is the color itself,
+ink 17.84 and 17.42, `gain` 7.20 and 8.04, light then dark; the stripes,
+a third of the box, average ink 2.14 and 3.05 and `gain` 1.71 and 2.02, a
+texture and not an edge. A lighter fill would have to clear 3:1 against
+Lifted and against the solid bar: ink at 40%, 50% and 60% measures 2.57,
+3.45 and 4.76 against Lifted and 6.94, 5.17 and 3.74 against solid ink in
+light, and 3.81, 5.21 and 6.94 and 4.57, 3.34 and 2.51 in dark, so ink has
+a band; `gain` measures 1.93, 2.33 and 2.85 and 3.74, 3.09 and 2.52 in
+light and 2.36, 2.97 and 3.71 and 3.41, 2.71 and 2.17 in dark, and has
+none in either mode, which is why the previous period is striped
+(`contrast.test.js` recomputes each, recorded not gated; correction 22).
+In forced colors the current bars are solid `CanvasText` and the previous
+period `CanvasText` stripes on `canvas` in a `CanvasText` border, Meter's
+block, `Highlight` stripes and border for the active band's: solid
+against striped in every palette. A hatched bar under 4px across, such as
+a month of days compared in a phone's card, is its outline alone, since
+stripes that thin are noise: the stripes' tile is the box scaled from what
+it has past 4px (`background-size: max(0px, (100% - 4px) * 100)` on each
+axis), nothing at 4px or less, with nothing measured; the docs say a
+comparison of more than about fifteen bands reads better lying down
+(correction 33, the `HatchedThin` story).
+
+**Keys standing up and in groups.** Left and Right move to the bar drawn
+beside, through a pair bar by bar and on to the next band's first,
+skipping bands with no value, mirrored in right to left by the nearest
+`dir` attribute at the key press; Up and Down are no move and are not
+prevented. Lying down, Up and Down step through a row's pair the same way
+and Left and Right are left alone. Home, End and the pages move by band,
+keeping the series where the band has one. Time bands start Tab at the
+newest band. The `Keys`, `KeysCompare` and `Mirrored` plays run in three
+engines.
+
+**Pointer and readout standing up.** The band under the pointer is read
+across the bars' box from the inline start in the handler, the nearest
+band with a bar when the one under it has none, and within it the bar
+under the pointer or the band's first; the other bands' bars step back to
+40%, as rows do. The readout is placed from known values in the bars'
+box: above the band's highest bar end when its lines fit
+(`placeReadout` with both ends of every bar of the band and the plot's
+height), else below the lowest, so it covers no bar of its band, a
+negative one's included; along the plot it is at the band's centre,
+aligned by quarter. Its place counts its lines, so no line may break
+where the count does not: a figure is one line (`white-space: nowrap` on
+the value) and a series' name breaks only between words
+(`overflow-wrap: normal`), and under 30rem a centred panel takes three
+quarters of the plot (`max-width: min(16rem, 75% - var(--spacing-part))`)
+where it took half, so on a phone it never rises over the legend
+(correction 30). `ReadoutStanding` holds it clear of the bar and within
+24px of it, and in a 280px chart finds every figure one line high and
+the panel's top at or below the figure's top.
+
+**States standing up.** Loading draws a still band per category (four
+when none is given) of 60%, 85%, 45% and 70% repeating, from the bottom,
+in a bar's place and thickness, square at zero; empty and error draw
+their content over the bars' box at the plot's height, with the
+gridlines, their labels and the category labels kept.
+
+**Turning on its side.** The consumer's control swaps `orientation` with
+the categories; the group is the same element in both faces, so a focused
+bar that leaves parks focus on it and a layout effect, which now watches
+the orientation too, gives it to the new tab stop, the bar last active for
+the same categories. `TurnWhileFocused` holds that no element loses focus
+to nothing, in three engines.
+
+**Stacks** (spec 7.3, owner rulings 4 and 11). `layout: 'stacked'` puts
+up to five series end to end in one bar's place, the consumer's month of
+its top four categories and the "Other" it sums. `stackBySign`, pure,
+runs each band's positives from zero up and its negatives from zero
+down, each sign in series order, the diverging stack of Recharts'
+`stackOffset="sign"` and Observable Plot's default; each segment is
+placed from the running sum of its sign before it (`barExtent` with a
+base), so a stack's two ends are its sums and the value domain is taken
+from them, not from the values. A stack is one bar across: the render
+writes `--bar-chart-group: 1` and every segment's index 0, so its
+thickness is a lone bar's, 24px at most and 60% of its band. One series
+ignores the layout and draws as one series (correction 64).
+
+**A segment's corners and its gap.** Only the outermost segment of each
+sign keeps the data end's `--radius-micro` (`data-outer`, the last
+nonzero segment of its sign); every inner join is square
+(`.bar-chart[data-layout='stacked'] .bar-chart-bar:not([data-outer])`,
+after both faces' radius rules), and the end at zero stays square as a
+bar's does. A segment that stands on another (`data-joined`) starts with
+2px of the surface, Meter's spacer, as a border on its edge toward zero:
+the block end above zero and the block start below it standing up, the
+inline start and end lying down, so right to left moves it with the bar.
+The bar is a border box, so the gap is inside the segment's own length
+and the stack's total stays exact. A segment on another is at least 3px,
+its gap and 1px of its color (`min-block-size`, or `min-inline-size`
+lying down, under `[data-joined][data-nonzero]`), so a small amount
+never draws as a gap alone; it is placed from its far end, so the extra
+grows toward zero over the segment under it, which drew before it, and
+the stack's end stays at its total: what a small segment overshoots is
+its neighbour, by up to 3px less its own size, never the stack
+(correction 72). The first segment of each sign is placed from zero. A
+zero is a segment of no length where its sign has reached, never the
+outermost and never gapped, and the keys still reach it (correction 65).
+`StackInPlace` holds the first segment of each sign on the zero line and
+every other's far end on its sum within 1px, at 3px at least, its gap
+toward zero, inner joins and zero ends square, and each stack's ends
+where the gridlines put its sums, left to right, right to left, narrow
+and with $10 between $600 and $300; `StackGaps` holds the same along a
+row in both directions, in three engines.
+
+**A stack's colors.** Without `color` the series take the palette's slots
+in order, `chart-1` to `chart-4` (teal, violet, olive, magenta), and the
+fifth slate, the remainder; a pinned `color` is kept to the fifth, so a
+category keeps its color when a filter takes another away, and the docs
+pin them, "Other" to slate: a series' texture slot is its color's
+(`chart-k` the slot k, slate the fifth, ink or gain its place), so a
+slate "Other" is the fifth look in a month of fewer series too
+(correction 71). The legend, the readout and the table list the series
+first to last, while a standing stack draws them from the foot up, which
+the docs say. A sixth and later series draw slate whatever they pin, with a
+development warning once: the legend and the table still tell them apart.
+A hatched series in a stack warns and draws as a fill in its slot, since
+stripes there are a texture, never a previous period. Text stays ink and
+slate; the legend's swatches carry the slots.
+
+**Totals.** The chart never sums: `totals` is one string per band, the
+app's. Standing up, `valueLabels` labels each stack once with its total,
+at the far end of the side its band nets to (above the positives' top
+when the band's two sums net to zero or more, below the negatives' foot
+otherwise); lying down the total fills the amount column, one line to a
+row. The readout lists every segment of the band in legend order, then
+the total with `labels.total`, and the table gains a Total column. A
+stack asked for figures without `totals` warns once and labels nothing,
+and since a horizontal chart's amounts are on by default, a horizontal
+stack wants `totals` or `valueLabels="none"` (correction 63). The
+readout is placed from the stack's ends, both of them, as a band's bars
+are, and lying down it stands at the stack's far end from zero;
+`ReadoutStacked` holds it clear of the stack and within 24px of it.
+
+**Keys along a stack** (spec 7.6). Standing up, Up and Down move along the
+stack segment by segment by what is drawn, from the foot below zero to
+the top above it whatever the series order, by each segment's level (the
+sum of its two ends); Left and Right go to the same category in the band
+beside, or the nearest category it has by series order, mirrored in
+right to left. Lying down the pairs swap: Left and Right along the bar,
+mirrored in right to left, and Up and Down across the rows. At either end
+of its stack a key is prevented and stays, as Right at the last band
+does. Home, End and the pages keep the category, else the nearest
+(correction 67). `KeysStacked` runs both orientations and right to left
+in three engines. The pointer takes the band's segment nearest it along
+the band, so past a stack's end the outermost on that side of zero
+(correction 77). When the bar that holds the stop loses its value, the
+stop, and any focus parked by it, go to the nearest series its band
+still has, and to the first stop only when the band has none
+(correction 75).
+
+**Textures** (spec 7.11, owner ruling 11). `hasTexture`, off by default,
+draws each slot's texture as well as its color, for a reader who cannot
+tell the colors apart and for a printout without color: the first solid,
+the second Meter's stripes at 45 degrees, the third at 135, the fourth
+both, the fifth solid slate, the method's two directions only, stripes
+2px every 6px in the series' color over the surface. Each textured bar
+and each legend and readout key has a 1px border of its color, so it
+keeps its outline where stripes do not print. A slot is `data-series` on
+the segment and on its legend and readout items; the texture is two
+custom properties set on the slot (`--bar-chart-texture` and
+`--bar-chart-fill`) and drawn by one rule for bars and keys. Grouped
+charts write no slot, so a pair's second series is never a texture. A
+segment on another has its gap where its border's zero-ward side would
+be, so the rule's first background layer draws that side: 1px of the
+color along the padding box's zero-ward edge, which the gap rules place
+by `--bar-chart-edge-at` and `--bar-chart-edge-size`, the inline start
+or end following the chart's direction by `--chart-flip`; on every
+other bar and key the layer has no size (correction 73). `TexturedEdges`
+reads it on every segment, standing and lying, both directions, in three
+engines.
+
+**A stack in forced colors.** Always textured, asked or not, since a
+system palette has one text color and a stack needs five looks: the four
+slots in `CanvasText`, the fifth solid `GrayText`, and the active band's
+in `Highlight`, by setting `--bar-chart-color` on the slot. The gaps are
+the page's own color: bars are out of the repaint, so a gap drawn in
+`--chart-surface` would show the surface's token on a forced canvas, and
+the library never sets the app's surface variable, so the gap reads
+`--bar-chart-gap`, which only the forced-colors block sets, to `canvas`
+(correction 66). The active band's fifth is a `Highlight` outline over
+`canvas`, so it stays apart from the first's solid `Highlight`
+(correction 74). The docs' forced-colors run holds the four looks, the
+fifth's `GrayText` and the gaps.
+
+**Focus through data and status.** A segment that leaves while it holds
+focus, its value gone or its band loading, parks focus on the group as a
+bar does; the layout effect that hands it on runs after every commit and
+gives it to the tab stop whenever the chart is ready and focus is on its
+group, for new data as well as new categories, an orientation or a
+status (correction 68). `StackFocus` takes a stack through a segment's
+value gone, loading and ready again with a segment focused and finds no
+focus lost to nothing, and then takes it through the same steps while a
+second chart holds focus, which stays where it is (correction 78).
+
+**In a DataTable cell.** DataTable raises what takes focus in a cell
+above the row's link with `position: relative`, and a bar is a tab stop
+placed absolutely in its track, so the rule would collapse the bar the
+moment it took focus. `data-table.css` leaves `.bar-chart-bar` out of
+that rule beside the row's own link, and an app that wants a pointer on
+the bars wraps the chart in `data-table-control`, which raises the whole
+chart. `Compositions/BarChart in a DataTable` (three engines) focuses a
+bar in a linked row and finds its box unchanged (correction 90).
+
+**Bars that link** (the consumer's drill-down, which the spec left as a
+later candidate in its open question 13; corrections 96 to 101). On the
+consumer's Insights and Reports pages every category or merchant bar
+opens the transactions it stands for, for the period shown. A
+`BarValue` takes an `href`, one per bar of every series, a stack's
+segments included, so a comparison's September bar opens September.
+It is data rather than a function of the band and the series, because
+a function cannot cross from a server component, and the consumer's
+page passes its figures from one.
+
+*The bar is the anchor.* A bar with an `href` is drawn as
+`a.bar-chart-bar` in place of the `span`, with the same class, states,
+place and name from its table cells, and no role or role description of
+its own, so a screen reader says "Groceries $640.00, link": a role
+description of "bar" over a link would hide that Enter follows it, which
+ARIA asks an author never to do to a widget's role. The other way, a
+link inside a roving item, puts the name on one element and the stop on
+another, and the stop would still have to be a link for Enter. With
+`onBarPress` and no `href` the bar is `role="button"`, which Enter and
+Space press. The roving tab index is unchanged: one stop among the
+links, moved by the arrows. Enter is the link's own: the browser clicks
+it, and the chart's click handler routes the press. Space on a link is
+prevented, since a link answers Enter alone (APG's link pattern) and a
+page that scrolled from under the chart would lose the reader's place.
+A key with Alt, Control or Meta is left alone, so Control with Enter
+opens the link in a new tab as it does anywhere.
+
+*A real anchor over the band.* A press anywhere in the band follows its
+bar's link, as the pointer already took the whole band. Each linked bar
+draws `a.bar-chart-hit` after the band's bars, an anchor to the same
+href, `aria-hidden` and `tabIndex={-1}` from the server on, so a reader
+meets each link once, on the bar, and it is never a stop. Because the
+target is a link, everything a browser does with a link works on the
+whole band in every engine with no script: a click with Command,
+Control or Shift opens a new tab or window, a middle click a new tab,
+the context menu offers both, and the status bar shows the address.
+Highcharts, Polaris Viz and Carbon take a bar's click in script on an
+svg mark, which gives none of that; forwarding a click from the band to
+the bar in script would give it back only for a plain click. A
+`::before` stretched from the bar cannot reach its band, since its
+percentages resolve against the bar and the band's place is the plot's.
+The targets are placed as the bars are, in percent and grid areas,
+with nothing measured: standing up, the band's first bar takes the
+band's column through the bars' box and the room above and below it,
+and a second the half of the band nearer it, from the band's middle;
+lying down, the row's first bar takes its whole grid area, the name,
+the track and the amount, and a second the half under the row's middle,
+where it lies; on a narrow chart the first takes the name's line and
+the bars' line and the second the half of the bars' line under the
+middle; in a stack, the band's first segment takes the band and every
+other its own run along it, the outermost of each sign on to the plot's
+edge, room included, so a press past a stack's end takes its outermost
+segment. The pointer reads the target under it, so the readout names
+the bar a press opens, wherever the two would otherwise differ by a
+segment's least 3px; off every target, the band's rule stands. In a
+pair without links the pointer between or beside the bars now takes
+the nearer, the targets' rule, where spec 7.7 took the band's first
+(correction 97). The targets draw nothing in any mode; the link cursor
+shows over them. A bar with no `href` in a band with a link takes a
+target of its own, a `span.bar-chart-hit` with no href, placed by the
+same rule: otherwise the band's first link's target lay over it, and a
+press on a stack's "Other" with no link, or on a previous period with
+none, opened the band's first bar's link while the readout named
+another. A press there is that bar's own, `onBarPress` or nothing, and
+it shows the plot's cursor, the press cursor where bars press (the
+review of e137645, correction 103).
+
+*Touch.* A tap follows the link. A touch held half a second or more,
+the platforms' long press, is a reading: the readout shows, as a hold
+always did, its click follows nothing, the context menu Android opens
+on a held link is prevented while a touch is down, and
+`-webkit-touch-callout: none` keeps Safari's link preview away, so the
+readout can be read. A mouse's context menu stays (correction 98). The
+hold covers only the click that ends it, which follows the lifting at
+once: a long press usually sends no click, and the mark it left made the
+next click in the chart, a mouse's, Enter's on a focused link or a
+screen reader's, follow nothing (the review of e137645, correction 105).
+
+*Before hydration.* The server writes the links with no `tabindex`, so
+before the chart hydrates, and with scripts off, every bar is a link of
+its own, a stop in drawn order, and the targets already follow a press:
+the drill-down works from the HTML a server page sends. Once mounted
+the links take the roving tab index. A reader who tabbed to a link
+before then keeps focus on it: a layout effect on mount finds focus on
+one of the chart's bars and makes it active, so that bar is the stop,
+its readout shows, and Shift Tab does not jump back to the first bar.
+No bar moves when the chart hydrates. A press on a row before then
+focuses its target, as Chromium focuses a pressed link, and a link to the
+same page leaves the page and focus there, on an element hidden from
+assistive technology: the same effect gives that focus to the target's
+bar (the review of e137645, correction 106).
+
+*The table and the router.* With one series each category cell links
+to its bar's href, once a row, as DataTable links its row header; with
+two or more each figure's cell links, named by its row header, its
+column header and itself as its bar is, and the category cells stay
+text, since no one bar stands for a band of several series. The
+noscript copy links too. The charts import no React Aria, so they cannot
+read the app's `RouterProvider`: `navigate`, the same function the app
+gives the provider, routes a plain click or Enter on a bar, a target or
+a table link, with React Aria's rule for which clicks a router takes, a
+primary click with no modifier key; any other click stays the browser's.
+It routes the chart's own links only: a link the app passes in
+`statusContent`, such as a help page in a new tab, was routed too,
+which dropped its target, and now opens its own way (the review of
+e137645, correction 104).
+`onBarPress(category, series)` hears every press, a link's before it is
+followed (corrections 99 and 100).
+
+*Focus in the table* (the review of e137645, correction 102). The
+table's links are the first stops in the table view besides the toggle,
+and a status takes them from under focus: loading takes the table and
+its toggle away, and empty and error hide the table, which Chromium
+blurs at its next rendering step, so focus fell to the body and stayed.
+New data takes a link too, a cell that lost its href or a row that went.
+The figure keeps the table's link or the toggle that last took focus,
+and the layout effect that hands a leaving bar's focus on does the same
+for it: one that went or was hidden, with focus on it or on the body,
+hands focus to the group while there are no bars, to the toggle while
+the table shows, else to the tab stop. Focus the reader moved out of the
+chart or to the page's empty space, with the link still shown, is
+theirs, and stays (SaveBar's rule). `LinksTableFocus` (three engines)
+holds it: through loading and through an error the group holds focus
+and no hidden link is blurred to nothing, and ready again the toggle
+does.
+
+*Dimming, the readout, focus and forced colors* are unchanged: the
+targets take no opacity and draw nothing, a press focuses nothing as
+before, and the link bars keep the bar's focus ring and its forced
+colors. `data-table.css` leaves the target out of the cell controls it
+raises, as it leaves the bar. `Links`, `LinksServerFace` and
+`LinkTargets` (no-visual, three engines) hold the keys, Enter, Space,
+the modified clicks left to the browser, the targets in every face, the
+readout over each, the server's links, hydration with a link focused
+and the bars drawn as without links; the docs' end-to-end run opens a
+new tab by Control and by the middle button on a row's name, follows a
+row with scripts off, and follows the recipe's Category bars through
+its router.
+
+**Where the build departs from the plan.** The plan's spec corrections
+13 to 20 record them: the horizontal face drawn for any `orientation`
+until the vertical one lands, with a warning; the figure as the container
+and the gridlines' layer as its own class; the zero line's and the dimmed
+bar's measured contrast; the plays' engines; the combined size limit set
+by the rule; the intrinsic size of 0; and the review's fixes. Corrections
+21 to 28 record the vertical face's, the previous period's and LineChart's
+states': the labels' column, the figures' isolate, the series' order and
+colors, the measured mixes, and the sizes, 5.84 kB for `{ BarChart }`,
+over the spec's 5.5 kB budget, with a 6.5 kB limit by the rule, which the
+lead accepted; Task 6 reports against both. Corrections 29 to 34 record
+the review's fixes: the group focusable by script in every status, the
+readout's lines, busy on the chart's view, the figures' room, the thin
+hatched bar's outline and every third label only past eight bands.
+Corrections 63 to 70 record the stacks': one total per band at the end of
+the side it nets to, one series ignoring the layout, the zero never
+outermost and the attributes the CSS reads, the gap's own variable and
+the fifth slot's `GrayText` in forced colors, the keys and the nearest
+series, focus handed on after new data, the plays, and the sizes.
+Corrections 71 to 80 record the review's fixes: the slot from the color,
+the 3px least segment placed from its far end, the textured outline on
+the gap's side, the active fifth in forced colors, the nearest series
+for a lost stop, slate as the palette's fifth neighbour, the pointer
+past a stack, the second chart in `StackFocus`, the docs' order and
+slate "Other", and which stacked baselines change. After them
+`{ BarChart }` is 6.46 kB, over the spec's 5.5 kB budget and accepted by
+the rule with a 7 kB limit, and `{ LineChart, BarChart }` 8.06 kB, with
+the rule's 9 kB limit (correction 70, amended). Corrections 96 to 101
+record the links: the anchor bar and its API, the targets over the
+band and the nearer bar of a pair, tap and hold, the table and the
+router, and the sizes: `{ BarChart }` 7.15 kB, so 8 kB by the rule, and
+`{ LineChart, BarChart }` 8.78 kB, inside its 9 kB. Corrections 102 to
+107 record the review's fixes, after which they are 7.37 kB and 8.98 kB,
+inside the same limits.
+
+**Screen readers and devices.** Not yet verified (owner action 3): Tab
+onto one bar and the arrows bar by bar in VoiceOver and NVDA, each bar's
+name from its hidden cells in WebKit, the bars and the zero line in a
+Windows contrast theme, and the list with its names above its bars on a
+phone at 320px to 430px; standing up, the bars in both orientations and
+in a comparison read with their period, the hatched previous period
+against the current bars in a contrast theme, and twelve monthly bars and
+grouped pairs on a phone; stacked, each segment read with its month, its
+category and its value and the keys along and across a stack, the four
+textures and the `GrayText` fifth told apart in a Windows contrast
+theme, and a month's stack of five on a phone; linked, each bar read as a
+link with its name, Enter following it and the links list naming each
+once, Safari's Option Tab through the server's links before hydration,
+and on a phone a tap that follows a row and a hold that shows its
+readout with no link menu.
+
+## Prose
+
+Long-form text an app renders: the `prose` class in `prose.css`, which
+styles the plain HTML inside it, and the static `Prose` (a `div`, an
+`article` or a `section` through `as`) and `ProseScroll` in
+`@snapshot-ui/react` (insights spec 8, rulings 15 to 23, 27 and 28). The
+first consumer's monthly report, weekly coaching note and Ask answers are
+model output in Markdown; its goals guide is its own, in English and in
+Persian. All of it is rendered on the server by react-markdown in a
+server component, so Prose ships no JavaScript and imports nothing
+client-only.
+
+**The selector.** Every rule is `.prose :where(<element>)` and the guard
+`:not(:where(.not-prose, .not-prose *))`, Tailwind Typography's shape: one
+class's specificity, a component's own, and nothing under `not-prose`. A
+pseudo-element stands after the guard (`::marker`), since `:where()` takes
+none, and a language rule is written on the element, `:where(ol:lang(fa))`,
+so it keeps the same specificity. The root sets ink and the sans face, so
+a page without `base.css` reads the same.
+
+**Components inside prose** (spec 8.5, the review's fix, spec correction
+52). One class's specificity and the import order kept a component's own
+declarations, but not what it leaves unset: Breadcrumbs, PageHeader's
+trail, Pagination, Calendar, DataTable, UploadList, BottomTabBar and the
+charts took prose's list, table, figure and link rules, and an unclassed
+link inside a component took the link look. So the element rules sit in
+a layer of their own, `components.prose`, under every component's rules
+whatever their specificity, and that layer's last rule,
+`.prose :is(<roots>), .prose :is(<roots>) * { all: revert-layer; }`,
+with the same for markers, hands a component's root and everything in it
+back to the layer below, so each property takes what it would outside
+prose. The roots are every component's root class, written into that one
+rule by the build (`scripts/component-roots.js`, from the component
+stylesheets: a class that extends no other class of its file, and the few
+parts a component renders as its own outermost element, such as a
+standalone `field-label` or ToastRegion's `toast-status-host`). The react
+and charts packages' server tests render every component and fail one
+whose outermost element carries no class of the built list (spec
+correction 93). Lightning CSS has no custom selectors, and the
+list in each of some sixty rules' guards would have added about 150 kB to
+`styles.css`; in one rule it costs `prose.css` 5 kB before compression.
+The root must sit inside the prose box, so a Prose in a Card or a
+PageColumn is styled; the gaps between the box's own children stay
+outside the layer, two classes deep through a last `:not(.not-prose)`, so
+they win over a component root's own `margin: 0`, one class in a file that
+loads later: a chart in an article stands 24px under the paragraph before
+it and a Heading of level 2 32px, whatever order the files load in (spec
+correction 89). Tailwind Typography's `prose` sits in Tailwind's
+`utilities` layer, after the components layer, and matches the library's
+boxes too; an app that uses both renames Typography's class with the
+plugin's `className` option (spec correction 91).
+`ComponentsUnchanged` (Compositions/Components in Prose, three engines)
+renders seventeen parts bare, each a direct child of a prose box, the
+compound ones included, and compares every element's type, color,
+spacing, edges, corners, list style and measure with its twin outside.
+Prose does not nest inside what it leaves alone: a Prose inside a
+`not-prose` subtree, or inside a component inside another prose box, is
+unstyled, which the page says.
+
+**Type.** Body text is `--text-body`, 16px at 450, with a line height of
+1.6, which leaves WCAG 1.4.12's spacing met by default and room for
+Persian's taller marks. `h1` takes the section step (36px, 28px under
+768px, 500, -2%), since a page's display `h1` is a hero and not an
+article's title; `h2` the card title's step (24px, 500, -2%); `h3` to `h6`
+the subhead (14px, 700, no tracking), `h5` and `h6` in slate; no new step
+(ruling 16). `strong` is 700 (ruling 17): 500 against 450 is a step a
+reader barely sees at 16px. `em` is the italic face, which the app loads,
+since `base.css` turns synthesis off (risk R9): the docs site loads Sofia
+Sans's italic as a call of its own, not preloaded, set first for `em`
+and `i` outside Persian and Arabic (spec correction 62), and Storybook
+imports the fontsource package's `wght-italic.css`. Persian emphasis
+inside `strong`, `b` or a 700 heading keeps 700 (spec correction 56). Headings take
+`scroll-margin-block-start: var(--prose-scroll-margin, 0px)`, a sticky
+header's height for an app to set. A long word or address breaks anywhere
+in every text block and table cell, so a phone is never pushed sideways.
+
+**Rhythm and measure** ("Vertical rhythm, derived"). Top margins only, so
+collapsing never decides a gap, and the first and last children carry no
+outer margin, so the holder's padding is the article's inset: 24px between
+blocks (peers), 32px before an `h1` or `h2` and on both sides of an `hr`
+(separate), 8px after a heading and a heading after a heading (parts of
+one thing), 8px between list items, under an item's text for a nested
+list, between paragraphs in an item and under a figure for its caption,
+24px between blocks in a quote and between a definition and the next
+term. Text blocks (`p`, `li`, headings, `blockquote`, `dl`, `figcaption`,
+each footnote) stop at one line length (ruling 18): `--prose-line`, a
+registered `<length> | none` that inherits, set once on the box from
+`--prose-measure`, 70ch, so the ch is the body's and a heading or a caption
+shares the paragraph's measure (spec correction 55); tables, code, figures
+and rules take the box's width. `--prose-measure: none` on the box or
+above lifts it.
+
+**Lists, quotes and definitions.** `padding-inline-start: 1.25rem`; `ul`
+disc, circle, square and `ol` decimal, lower-alpha, lower-roman by depth;
+markers slate, `ol` markers tabular. A quote is a 2px `--color-frame` rule
+at the start with the list's 1.25rem indent, so a quote's text and a
+list's share an edge, ink, upright and with no quote marks. `dt` is 500
+and `dd` indented 1.25rem.
+
+**Inline.** Links restate the Link record on its tokens, paint only: link
+blue, a 1px underline at 0.25em that thickens to 2px on hover (where hover
+exists) and press, the focus ring, `--radius-micro`, and anywhere breaks;
+the CSS test reads `link.css` and pins each value. Inline code is the
+docs': `--font-mono` at 0.875em on bone with `--radius-micro` and
+`padding: 1px 6px`, plus a 1px transparent edge for forced colors, left to
+right and isolated, so a path in a Persian sentence keeps its order and
+leaves the words around it alone. `kbd` restates the Kbd record. `mark` is
+light signal orange at 20% under ink, the attention cue as a wash, never a
+text color. `sup` and `sub` take `line-height: 0`.
+
+**The code block, moved from the docs** (ruling 21). The docs site's
+`.code` look is `pre`'s now: bone, a 1px `--color-frame` edge, `padding:
+1.25rem 1.5rem`, `--font-mono` at 0.875rem and 1.7, charcoal,
+`overflow-x: auto`, `tab-size: 2`, `white-space: pre` and
+`overflow-wrap: normal` (so code scrolls rather than break mid-token,
+whatever a card above it inherits), left to right with `text-align:
+left`, and the focus ring. Shiki's css-variables theme maps onto the
+palette as the docs did, keywords and links link blue, strings granite,
+constants and functions ink, parameters charcoal, comments and
+punctuation slate, never clay, error or success; its background is bone,
+since Shiki writes it on the `pre` itself. The docs' Code component now
+renders Shiki's `pre` inside a `prose` box and keeps only the copy
+button's place and its 200ms ease between shapes (spec correction 40).
+`pre code` takes `font: inherit`, so no monospace size quirk shrinks it.
+Its intrinsic inline size is 0 (`contain: inline-size`), as a
+`ProseScroll`'s is, so a long line never widens a card's body or any flex
+or grid item the prose sits in: the block takes the width it is given and
+scrolls (spec correction 41). In print, `pre` wraps.
+
+**Framed blocks.** `pre`, `img` and `video` take the holder's radius
+less its edge and padding, or the micro step where that runs out,
+reading the surface step and no edge or padding where nothing holds them:
+`max(var(--radius-micro), calc(var(--holder-radius, var(--radius-surface)) - var(--holder-border, 0px) - var(--holder-pad, 0px)))`.
+They are concentric with a Card, a Dialog or any holder they sit in (7px in a Rounded card, 19px
+compact, the micro step in Soft, 0 in Square), the surface step on a page,
+wherever in the holder the block falls. `img` and `video` stay inline at
+`max-inline-size: 100%` and `block-size: auto`.
+
+**Tables.** A chart table's look: the box's width, collapsed, at the
+small step with tabular figures; `th` 500 in slate, `td` ink; cells
+`padding: 0.5rem 0.75rem` over a 1px `--color-divider` rule; a cell's own
+`align` attribute or GFM's style left alone, else `text-align: start`;
+the caption slate at the start. Outside a `ProseScroll` a table's cells
+break anywhere, so it never pushes the page sideways; inside one they
+break only between words, so the table keeps its figures whole and
+scrolls (spec correction 42).
+
+**`ProseScroll`** (ruling 28, spec 8.11).
+`div.prose-scroll[role="region"][tabindex="0"]` with a required name (`AriaName` in the types; it cannot
+warn, being static): `overflow-x: auto`, `max-inline-size: 100%`,
+`overscroll-behavior-inline: contain`, `--radius-micro` for its ring, the
+focus ring on `:focus-visible`, and no frame of its own. Its intrinsic
+inline size is 0 (`contain: inline-size`), the library's rule for a box
+that must not size its holder (spec correction 19), so a six-column table
+in a flex or grid item never widens it (spec correction 41). The table
+keeps `display: table`, so its rows and columns are read. At 375px the
+monthly report's table scrolls inside its region and the page does not;
+the region takes focus and the arrow keys scroll it (`WideTableScrolls`,
+three engines, and the docs end to end). It is a tab stop whether its
+table overflows or not, since it cannot know without measuring, so the
+docs wrap only tables wider than three columns; the docs' map names each
+region from its column headers, and makes a code block a region named
+"Code", its language and its first line (spec correction 61).
+
+**Neutralized links and images** (ruling 27, spec 8.10). Nothing in
+`prose.css` lays anything out by `a` or `img`: every rule on them is
+paint, and the CSS test fails a margin, padding, display, width, position,
+inset, float, flex or grid declaration on either. A model's link reaches
+the page as `span.prose-unlinked`, the text's own look (`color: inherit`,
+no decoration, anywhere breaks), since a thing that looks like a link and
+goes nowhere breaks the reader's trust; its image as `span.prose-image`,
+its alt text at the small step in slate, inline in the inline code's bone
+box with a 1px transparent edge that forced colors draw, and not drawn
+when empty. The docs' map starts the span with a visually hidden
+"Image:" and renders nothing for an image with no alt text (spec
+correction 58). A link within the page, a footnote's mark and its way
+back, stays a link. The docs' recipe writes both through
+react-markdown's `components` map with `skipHtml`; react-markdown and
+remark-gfm are a devDependency of `@snapshot-ui/react`, for one server
+render test, and dependencies of the docs site, never of a published
+runtime (spec correction 38).
+
+**Footnotes and task lists** (spec corrections 53, 59 and 60). GFM's
+footnotes are small and slate under a divider rule, each note at the
+measure; the "Footnotes" heading GFM writes for screen readers alone
+(`h2.sr-only`, which react-markdown leaves unstyled) is hidden as
+visually hidden text, read through `[class~='sr-only']` since the class
+pattern refuses an `sr-` class, and the list under it takes no gap for
+it. A Persian page passes its label through react-markdown's
+`remarkRehypeOptions` (`footnoteLabel`, `footnoteBackLabel`). GFM's task
+lists draw their own boxes: no markers and no indent.
+
+**Right to left and Persian.** Logical properties throughout, so markers,
+indents, quote rules and `dd` move to the right; `pre` and inline code do
+not. Under `:lang(fa)` and `:lang(ar)` headings take `letter-spacing:
+normal`, since tracking pulls a cursive script apart (the same fix is
+owed to `Heading`, risk R11), and `em` is 500 and upright, the emphasis a
+Persian text uses, since Vazirmatn has no italic. Under `:lang(fa)` every
+ordered list counts in Persian digits (`list-style-type: persian`, ruling
+22). Prose sets no direction; a renderer writes `dir="auto"` on mixed
+paragraphs (ruling 23). An amount in a Persian sentence is wrapped in a
+left-to-right isolate, U+2066 to U+2069: after Persian letters the
+bidirectional algorithm reads a leading currency sign with them and draws
+"1,250.00$" (spec correction 54; `ProseMirrored` holds the sign left of the
+figures). Vazirmatn, the face an app puts first in
+`--font-sans` under `lang="fa"`, is served to Storybook from
+`apps/storybook/public/fonts/vazirmatn/` (33.003, its OFL and its sha256
+in the folder's README, spec correction 37), so the baselines draw it
+with no network; a story opts in with `data-font="vazirmatn"`, so the
+right-to-left stories baselined before keep their face (spec correction
+36). The docs site loads it through `next/font/google` as
+`--font-persian`, not preloaded, and sets it first under
+`[lang]:lang(fa)`. `VazirmatnLoaded` holds the face loaded and the
+headings untracked in three engines; `ProseMirrored` is its baseline.
+
+**Dark mode, forced colors and print.** Every color is a token, so dark
+mode is the tokens' dark values, and images are neither inverted nor
+dimmed. In forced colors inline code's edge is `CanvasText`, `mark` takes
+the reader's `Mark` and `MarkText` where the engine names them and
+`Highlight` and `HighlightText` where not (under `@supports`, since
+Lightning CSS folds a repeated declaration), the quote's rule, the `hr`
+and the footnotes' rule take `CanvasText`, so does the alt text box's
+edge, and the rings of a scrolling
+`pre` and a `ProseScroll` are `Highlight`.
+
+**Contrast.** Gated already: ink, slate and link blue as text on the
+canvas and lifted. Measured and recorded, light then dark, not gated:
+charcoal on bone, the code's text, 13.75 and 11.44; slate on bone, the
+image's alt text, 4.99 and 6.44; link blue on bone 5.33 and 4.81; granite
+on bone, a string in code, 6.78 and 8.22; ink on the mark's wash 14.62
+and 12.86 over lifted, 13.50 and 14.65 over the canvas (spec correction
+47, where the spec's 11.41, 6.45 and 14.63 were composited a little
+differently).
+
+**Card and PageColumn.** In a Card, Prose is one part of the body and
+the card's padding its inset; an article in a card starts at a paragraph
+or an `h2`, and the card's title stays the Card's. On a page, `Prose
+as="article"` in a PageColumn under a PageHeader keeps its text on the
+column's start edge, under the title (`InPageColumn`), never centred.
+
+**Size.** `{ Prose, ProseScroll }` measures 169 B, and 167 B with React
+Aria not ignored, a difference of compression alone, since neither part
+imports it; the rule sets 1 kB, over the spec's 0.5 kB budget (spec
+correction 45). `prose.css` builds to 16.9 kB before compression, 5 kB of
+it the component roots in the one rule that hands them back.
+
+**Screen readers and devices.** Not yet verified (owner action 3): a
+report's headings, lists and table read in VoiceOver and NVDA, a
+`ProseScroll` read as a named region that scrolls by keys, a neutralized
+link read as plain text, inline code's edge and the mark in a Windows
+contrast theme, and a report with a wide table and the Persian guide in
+Vazirmatn on a phone at 320px to 430px.
+
+## Chart palette
+
+The parent spec asks for "a categorical chart palette, which the design
+system lacks, derived and measured for contrast in both themes before any
+chart is built". Batch 6 adds it, from the insights spec (section 5) and
+the owner's ruling 4 there: four tokens, `chart-1` to `chart-4`, teal,
+violet, olive and magenta, for a chart of several peers, such as a stack
+of a month's top categories, with slate for "Other". A stack of
+categories is the first chart with more than two series; the line chart,
+the grouped bars and the previous period need none of it.
+
+**The tokens.** Each has a value chosen for its mode, not an inverted one,
+and the description "A chart series that is one of several peers. Never a
+state, never text." Teal keeps its value in dark, written there all the
+same, so each mode's value is the one the test measured (spec correction
+50).
+
+| Token | Hue | Light | Dark | OKLCH light (L, C, H) | OKLCH dark |
+| --- | --- | --- | --- | --- | --- |
+| `--color-chart-1` | teal | `#029393` | `#029393` | 0.601, 0.102, 195 | 0.601, 0.102, 195 |
+| `--color-chart-2` | violet | `#7024ab` | `#af6af2` | 0.450, 0.199, 305 | 0.659, 0.200, 305 |
+| `--color-chart-3` | olive | `#697805` | `#7a8a06` | 0.541, 0.124, 118 | 0.600, 0.137, 118 |
+| `--color-chart-4` | magenta | `#910080` | `#c344ae` | 0.450, 0.200, 335 | 0.599, 0.200, 335 |
+
+The build writes `--color-chart-1` and the rest, light on `:root` and
+dark in the dark scopes, `tokens.js` entries with their modes, and the
+Tailwind names `bg-chart-1` to `bg-chart-4`.
+
+**How they were found.** The colors that carry a meaning sit on OKLCH
+hues 29 to 79 (error, clay, both signal oranges, warning), about 160
+(success and gain) and about 265 (link blue). A series must not be read
+as one of them, so the hues sit at least 30 degrees from each, in the arcs
+left free: olive about 110 to 128, teal to sky 192 to 233, violet to
+raspberry 297 to 359. Every order of the candidate hues was scored by its
+worst neighbouring pair in both modes, each mode's lightness chosen per
+slot from a grid, and the best order kept; the order was enumerated, not
+chosen by eye.
+
+**The checks**, the data-visualization method's, ported into
+`packages/core/scripts/palette.js` as pure functions and run by
+`test/palette.test.js` on the values in `tokens.json`:
+
+- OKLCH lightness in the mode's band, 0.43 to 0.77 in light and 0.48 to
+  0.67 in dark, and chroma at least 0.10, under which a hue reads as gray.
+- Neighbours at least 8 apart under simulated protanopia and
+  deuteranopia, by OKLab distance times 100, simulated with Machado,
+  Oliveira and Fernandes (2009) at full severity in linear RGB, the model
+  the method's thresholds are set for; and at least 15 apart for full
+  color vision.
+- At least 10 from every reserved color for full color vision, and 30
+  degrees of hue from each one that has a hue: error, success, gain,
+  warning, clay, signal orange, light signal orange, link blue and taupe.
+- At least 3:1 against lifted, the canvas and float in both modes, so no
+  slot needs the method's relief rule of visible labels; the table is
+  there anyway.
+
+`paletteFailures(palette, mode)` returns each check a slot fails as a
+sentence, as `contrastFailures` does, so the test asks for an empty list
+and its own fixtures show that a slot turned toward amber, a slot given
+its neighbour's value, a dark slot too dim and a reserved color moved
+onto a slot each fail. The test also recomputes the figures below at
+their precision, so a changed token or a changed method fails it.
+
+**Contrast as a graphic** (3:1 needed), gated: the twenty-four pairs, four
+slots on three surfaces in two modes, are in `CONTRAST_PAIRS`.
+
+| Token | Light: lifted, canvas, float | Dark: lifted, canvas, float |
+| --- | --- | --- |
+| `chart-1` | 3.63, 3.31, 3.75 | 4.64, 5.15, 4.64 |
+| `chart-2` | 8.03, 7.32, 8.30 | 5.11, 5.67, 5.11 |
+| `chart-3` | 4.74, 4.32, 4.90 | 4.53, 5.03, 4.53 |
+| `chart-4` | 8.08, 7.36, 8.35 | 3.95, 4.38, 3.95 |
+
+**Separation**, neighbours in slot order, OKLab distance times 100; the
+color-blind figure is the lesser of protanopia and deuteranopia:
+
+| Pair | Light, normal | Light, color-blind | Dark, normal | Dark, color-blind |
+| --- | --- | --- | --- | --- |
+| 1 and 2 | 29.5 | 20.0 | 26.1 | 13.8 |
+| 2 and 3 | 33.6 | 28.1 | 34.2 | 27.8 |
+| 3 and 4 | 32.2 | 20.0 | 32.0 | 18.7 |
+
+The neighbours are the pairs bars use: only neighbours in a stack or a
+group touch.
+
+**Kept from the meanings.** The nearest reserved color to each slot, for
+full color vision: in light, teal to success 17.0, violet to link 14.4,
+olive to warning 11.2, magenta to error 17.0; in dark, teal to success
+10.2, violet to link 12.9, olive to success 12.1, magenta to error 18.7.
+The least hue apart is teal from success in light, 34 degrees. Two
+reserved colors are close under color-vision deficiency, olive to warning
+4.4 in light and violet to link blue 2.9 in dark, both under
+deuteranopia; that would matter only if a chart drew a status or a link
+beside a series, which the meaning rules forbid and the `ChartColor` type
+cannot say (risk R7).
+
+**Taupe has no hue.** It is a warm gray in light (chroma 0.009) and white
+at 40% in dark, measured painted over the canvas (0.001), so its hue
+angle is noise: 106 degrees in dark, 11 from olive. The hue check reads
+only reserved colors of chroma 0.03 or more, the least of the others
+being success in light at 0.071, and taupe is held by distance: its
+nearest slot is teal in dark, 11.9 apart (spec correction 49).
+
+**Not for scatter or small multiples.** On every pair rather than
+neighbours, the four do not all pass: the worst pair for full color
+vision is violet and magenta, 10.3 in light and 12.0 in dark, and for a
+color-blind reader teal and magenta in dark, 3.7. A chart form where any
+two series can sit side by side takes three slots at most. No such form
+exists yet; this is for the next.
+
+**The fifth series is slate.** A stack of more than four peers folds the
+rest into an "Other" that the app sums and labels, since the library
+never sums a figure it must say. It is drawn in slate, achromatic, so it
+reads as the remainder and never as a fifth hue; slate is gated already
+as text, 5.31 and 6.94 on lifted. A sixth series draws nothing new.
+Drawn on the fourth slot, slate is magenta's neighbour, and the checks
+hold the pair like any other: 21.2 for full color vision and 10.0 for
+the lesser simulation in light, 22.5 and 12.4 in dark. An app pins
+"Other" to slate, so in a month of fewer series it stands on an earlier
+slot; recorded, not gated: teal and slate 13.0 and 8.2 in light, 14.3
+and 6.5 in dark, under the neighbour thresholds, and olive and slate
+12.6 for full color vision in light. The gap, the legend, each
+segment's name and, in forced colors, GrayText against CanvasText tell
+them apart (the plan's spec correction 76).
+
+**Never text, and only in charts.** Values, labels, legend names and
+readouts stay ink and slate; the colored mark beside them carries the
+series, the method's rule. `css.test.js` fails any `color` declaration
+in core that reads a chart token or the bar's color variable, and finds
+the four tokens read only by `charts.css`'s `[data-color]` rules, which
+set `--bar-chart-color`. Avatar's record declined a color per name, and
+it stays declined: a person's color would be a color carrying a meaning
+the name already carries. A series keeps its slot when a filter removes
+another only if the app pins it with `color`; without `color` slots go
+in series order.
+
+**Considered and rejected**, as the spec measured them. Six slots with a
+sky blue (225) and a raspberry (355) pass the neighbour checks, worst
+9.5, but put teal and sky 5.7 apart for full color vision, under any
+reader's threshold for two things, and raspberry 10.4 from error in
+light. An ink ramp (ink at 100%, 70%, 45%, 25%) is an ordinal ramp, and a
+stack of categories is nominal: lightness steps would say "more" where
+there is no order. Link blue as a slot would make a series look like a
+link and like the info tone.
+
+**No visual change yet.** Nothing draws a slot until the stacks: no story
+passes one, so no baseline moved. `ChartColor` named the four since the
+foundations (spec correction 4), and `charts.css` now draws them. The
+stacks draw them since ("BarChart", "A stack's colors" and "Textures").
+
+**Where the build departs from the plan.** Corrections 49 to 51: taupe
+joins the reserved colors, with the hue check reading only colors that
+have a hue; teal's dark value is written, the checks are one
+`paletteFailures` list, and every figure of spec 5.2 recomputes as the
+spec states it; the docs' swatches and the bar chart page's Color
+section.

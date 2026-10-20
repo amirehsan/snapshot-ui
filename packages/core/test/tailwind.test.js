@@ -7,7 +7,7 @@ const dir = path.join(import.meta.dirname, '.tailwind');
 const cli = path.join(import.meta.dirname, '..', 'node_modules', '.bin', 'tailwindcss');
 
 const USED =
-  'bg-canvas text-ink rounded-control text-body p-part max-w-field md:flex shadow-float text-gain bg-warning text-numeral p-card gap-inset max-w-sidebar max-w-page max-w-(--container-page) p-page';
+  'bg-canvas text-ink rounded-control text-body p-part max-w-field md:flex shadow-float text-gain bg-warning text-numeral p-card gap-inset max-w-sidebar max-w-page max-w-(--container-page) p-page bg-chart-1 bg-chart-2 bg-chart-3 bg-chart-4';
 const CLEARED = 'rounded-lg text-sm bg-red-500 shadow-md font-serif xl:flex';
 
 /** Compiles a Tailwind entry that imports the tokens and the theme in `order`. */
@@ -53,6 +53,17 @@ describe.each([
     expect(out).toMatch(/\.max-w-\\\(--container-page\\\) \{\s*max-width: var\(--container-page\);/);
     expect(out).toMatch(/\.p-page \{\s*padding: var\(--spacing-page\);/);
     expect(out).toContain('@media (width >= 1024px)');
+  });
+
+  it('exposes bg-chart-1 to bg-chart-4', () => {
+    // The chart palette, for a chart an app draws itself: a fill, never text (spec 5.3).
+    for (const slot of [1, 2, 3, 4]) {
+      expect(out).toMatch(
+        new RegExp(
+          `\\.bg-chart-${String(slot)} \\{\\s*background-color: var\\(--color-chart-${String(slot)}\\);`,
+        ),
+      );
+    }
   });
 
   it("clears Tailwind's off-system defaults", () => {

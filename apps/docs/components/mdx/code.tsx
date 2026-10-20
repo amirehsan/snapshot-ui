@@ -2,8 +2,8 @@ import { codeToHtml, createCssVariablesTheme } from 'shiki';
 import type { ReactElement } from 'react';
 import { CopyButton } from './copy-button';
 
-// Every token color is a CSS variable, mapped onto the palette in site.css, so
-// code follows the color mode and never borrows a reserved color.
+// Every token color is a CSS variable, mapped onto the palette by core's prose
+// code block, so code follows the color mode and never borrows a reserved color.
 const theme = createCssVariablesTheme({ name: 'snapshot', variablePrefix: '--shiki-' });
 
 /**
@@ -16,8 +16,8 @@ export async function Code({ code, lang = 'tsx' }: { code: string; lang?: string
   const html = await codeToHtml(source, { lang, theme });
   return (
     <div className="code">
-      {/* Shiki's output for our own example source, rendered on the server. */}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      {/* Shiki's output for our own example source, rendered on the server, drawn as a prose code block. */}
+      <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />
       <CopyButton text={source} />
     </div>
   );

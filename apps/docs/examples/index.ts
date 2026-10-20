@@ -8,6 +8,14 @@ import AvatarFallback from './avatar-fallback';
 import AvatarSizes from './avatar-sizes';
 import BadgeCounts from './badge-counts';
 import BadgeTones from './badge-tones';
+import BarChartCompare from './bar-chart-compare';
+import BarChartIncomeSpending from './bar-chart-income-spending';
+import BarChartLinks from './bar-chart-links';
+import BarChartMonths from './bar-chart-months';
+import BarChartRanked from './bar-chart-ranked';
+import BarChartRefunds from './bar-chart-refunds';
+import BarChartStacked from './bar-chart-stacked';
+import BarChartStates from './bar-chart-states';
 import BottomTabBarBasic from './bottom-tab-bar-basic';
 import BottomTabBarMore from './bottom-tab-bar-more';
 import BreadcrumbsBasic from './breadcrumbs-basic';
@@ -92,11 +100,14 @@ import HeadingSizes from './heading-sizes';
 import IconButtonLink from './icon-button-link';
 import IconButtonStates from './icon-button-states';
 import IconButtonVariants from './icon-button-variants';
+import InsightsRecipe from './insights-recipe';
+import InsightsReport from './insights-report';
 import KbdKeys from './kbd-keys';
 import LineChartBasic from './line-chart-basic';
 import LineChartCompare from './line-chart-compare';
 import LineChartGaps from './line-chart-gaps';
 import LineChartRtl from './line-chart-rtl';
+import LineChartStates from './line-chart-states';
 import LinkInline from './link-inline';
 import LinkStates from './link-states';
 import MenuBasic from './menu-basic';
@@ -131,6 +142,13 @@ import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
 import ProgressBarBasic from './progress-bar-basic';
 import ProgressBarIndeterminate from './progress-bar-indeterminate';
+import ProseCard from './prose-card';
+import ProseMarkdown from './prose-markdown';
+import ProseModelOutput from './prose-model-output';
+import ProsePersian from './prose-persian';
+import ProseReport from './prose-report';
+import ProseWideTable from './prose-wide-table';
+import ProseWithChart from './prose-with-chart';
 import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
@@ -198,6 +216,14 @@ export const examples = {
   'avatar-sizes': AvatarSizes,
   'badge-counts': BadgeCounts,
   'badge-tones': BadgeTones,
+  'bar-chart-compare': BarChartCompare,
+  'bar-chart-income-spending': BarChartIncomeSpending,
+  'bar-chart-links': BarChartLinks,
+  'bar-chart-months': BarChartMonths,
+  'bar-chart-ranked': BarChartRanked,
+  'bar-chart-refunds': BarChartRefunds,
+  'bar-chart-stacked': BarChartStacked,
+  'bar-chart-states': BarChartStates,
   'bottom-tab-bar-basic': BottomTabBarBasic,
   'bottom-tab-bar-more': BottomTabBarMore,
   'breadcrumbs-basic': BreadcrumbsBasic,
@@ -282,11 +308,14 @@ export const examples = {
   'icon-button-link': IconButtonLink,
   'icon-button-states': IconButtonStates,
   'icon-button-variants': IconButtonVariants,
+  'insights-recipe': InsightsRecipe,
+  'insights-report': InsightsReport,
   'kbd-keys': KbdKeys,
   'line-chart-basic': LineChartBasic,
   'line-chart-compare': LineChartCompare,
   'line-chart-gaps': LineChartGaps,
   'line-chart-rtl': LineChartRtl,
+  'line-chart-states': LineChartStates,
   'link-inline': LinkInline,
   'link-states': LinkStates,
   'menu-basic': MenuBasic,
@@ -321,6 +350,13 @@ export const examples = {
   'popover-match-width': PopoverMatchWidth,
   'progress-bar-basic': ProgressBarBasic,
   'progress-bar-indeterminate': ProgressBarIndeterminate,
+  'prose-card': ProseCard,
+  'prose-markdown': ProseMarkdown,
+  'prose-model-output': ProseModelOutput,
+  'prose-persian': ProsePersian,
+  'prose-report': ProseReport,
+  'prose-wide-table': ProseWideTable,
+  'prose-with-chart': ProseWithChart,
   'radio-group-basic': RadioGroupBasic,
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,

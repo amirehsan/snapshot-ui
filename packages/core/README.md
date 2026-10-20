@@ -70,6 +70,7 @@ Body text is set at weight 450, which only a variable font has. Load Sofia Sans 
 - [Pagination](https://snapshotui.com/docs/components/pagination)
 - [Popover](https://snapshotui.com/docs/components/popover)
 - [Progress bar](https://snapshotui.com/docs/components/progress-bar)
+- [Prose](https://snapshotui.com/docs/components/prose)
 - [Radio group](https://snapshotui.com/docs/components/radio-group)
 - [Save bar](https://snapshotui.com/docs/components/save-bar)
 - [Search field](https://snapshotui.com/docs/components/search-field)
@@ -92,6 +93,7 @@ Body text is set at weight 450, which only a variable font has. Load Sofia Sans 
 
 `styles.css` also draws the charts of `@snapshot-ui/charts`:
 
+- [Bar chart](https://snapshotui.com/docs/charts/bar-chart)
 - [Line chart](https://snapshotui.com/docs/charts/line-chart)
 - [Sparkline](https://snapshotui.com/docs/charts/sparkline)
 

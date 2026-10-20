@@ -1,9 +1,11 @@
 // Bundles src/styles.css -> dist/styles.css and transforms each standalone
 // stylesheet (base, components/*) with Lightning CSS. Run after build-tokens.js
 // because src/styles.css imports the generated dist/tokens.css.
+import { readFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { bundleAsync, Features, transform } from 'lightningcss';
+import { componentRoots, withParts } from './component-roots.js';
 
 const version = (major, minor = 0) => (major << 16) | (minor << 8);
 // iOS Safari is its own target: without ios_saf, Lightning CSS drops the
@@ -25,7 +27,17 @@ const write = async (file, code) => {
   console.log(`wrote ${file} (${code.length} bytes)`);
 };
 
-const bundled = await bundleAsync({ filename: 'src/styles.css', targets, exclude, minify: false });
+// prose.css names every component's root in one rule, which the build writes from the component stylesheets.
+const roots = componentRoots('src/components');
+const source = (file, code) => (path.basename(file) === 'prose.css' ? withParts(code, roots) : code);
+
+const bundled = await bundleAsync({
+  filename: 'src/styles.css',
+  targets,
+  exclude,
+  minify: false,
+  resolver: { read: (file) => source(file, readFileSync(file, 'utf8')) },
+});
 for (const w of bundled.warnings) console.warn(w.message);
 await write('dist/styles.css', bundled.code);
 
@@ -39,7 +51,7 @@ const standalone = [
 for (const [from, to] of standalone) {
   const { code, warnings } = transform({
     filename: from,
-    code: await readFile(from),
+    code: Buffer.from(source(from, await readFile(from, 'utf8'))),
     targets,
     exclude,
     minify: false,

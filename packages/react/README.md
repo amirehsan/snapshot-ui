@@ -73,6 +73,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Pagination](https://snapshotui.com/docs/components/pagination)
 - [Popover](https://snapshotui.com/docs/components/popover)
 - [Progress bar](https://snapshotui.com/docs/components/progress-bar)
+- [Prose](https://snapshotui.com/docs/components/prose)
 - [Radio group](https://snapshotui.com/docs/components/radio-group)
 - [Save bar](https://snapshotui.com/docs/components/save-bar)
 - [Search field](https://snapshotui.com/docs/components/search-field)

@@ -1,6 +1,6 @@
 # @snapshot-ui/charts
 
-Charts for Snapshot UI, drawn on the server in SVG. Needs React 19 or later.
+Charts for Snapshot UI, drawn on the server in SVG and HTML. Needs React 19 or later.
 
 ## Install
 
@@ -8,7 +8,7 @@ Charts for Snapshot UI, drawn on the server in SVG. Needs React 19 or later.
 pnpm add @snapshot-ui/charts @snapshot-ui/core
 ```
 
-The charts carry no CSS of their own. They need the same 0.x minor of `@snapshot-ui/core` (0.8 for charts 0.1.5) for `charts.css`, which its `styles.css` imports, so an app still loads one stylesheet.
+The charts carry no CSS of their own. They need the same 0.x minor of `@snapshot-ui/core` (0.9 for charts 0.2.0) for `charts.css`, which its `styles.css` imports, so an app still loads one stylesheet.
 
 ## Use
 
@@ -23,7 +23,7 @@ export function Trend({ spending }: { spending: number[] }) {
 }
 ```
 
-`LineChart` is a client component for its keys, its pointer and its readout, and its drawing, legend and table still render on the server.
+`BarChart` and `LineChart` are client components for their keys, their pointer and their readout, and their drawing, legend and table still render on the server. A bar given an `href` is a real link in that HTML, so a server page's drill-down works before the chart hydrates.
 
 Every figure a chart shows is a string from your app, and nothing is measured, so the server's HTML is final in any locale.
 
@@ -31,6 +31,7 @@ Every figure a chart shows is a string from your app, and nothing is measured, s
 
 Every name links to its page in the documentation, with examples, props and design rules.
 
+- [Bar chart](https://snapshotui.com/docs/charts/bar-chart)
 - [Line chart](https://snapshotui.com/docs/charts/line-chart)
 - [Sparkline](https://snapshotui.com/docs/charts/sparkline)
 

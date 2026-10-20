@@ -1,0 +1,23 @@
+/*
+ * Vazirmatn, the Persian face an app loads for its Persian pages (insights spec 8.6), served from the static
+ * folder (public/fonts/vazirmatn, with its license and checksum), so the visual baselines draw it with no
+ * network. Its one weight axis draws 450 and 500. It has no italic, and base.css turns synthesis off.
+ */
+@font-face {
+  font-family: Vazirmatn;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: block;
+  src: url('/fonts/vazirmatn/Vazirmatn[wght].woff2') format('woff2');
+}
+
+/*
+ * What an app writes under lang="fa": Vazirmatn first in the sans stack, which every part and the prose box
+ * read, and on the element that names the language, so its plain text takes it too. Here a story asks for it
+ * with data-font="vazirmatn", so the right-to-left stories that came before it keep the face their
+ * baselines were drawn in.
+ */
+[data-font='vazirmatn']:lang(fa) {
+  --font-sans: Vazirmatn, 'Sofia Sans Variable', Arial, sans-serif;
+  font-family: var(--font-sans);
+}

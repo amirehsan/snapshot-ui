@@ -1,5 +1,8 @@
 import type { Decorator, Preview } from '@storybook/react-vite';
 import '@fontsource-variable/sofia-sans';
+// The italic, which em in Prose draws in: base.css turns synthesis off, so without it emphasis is upright.
+import '@fontsource-variable/sofia-sans/wght-italic.css';
+import './fonts.css';
 import '@snapshot-ui/core/styles.css';
 import '@snapshot-ui/core/base.css';
 

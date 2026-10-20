@@ -8,6 +8,9 @@
 @layer theme, base, components, utilities;
 
 @import '../dist/tokens.css';
+/* First, though nothing depends on it: prose's element rules sit in a layer of their own under the components',
+   and its gaps are two classes deep (insights spec corrections 52 and 89). */
+@import './components/prose.css';
 @import './components/spinner.css';
 @import './components/button.css';
 @import './components/heading.css';
