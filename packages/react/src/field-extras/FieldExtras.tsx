@@ -44,10 +44,16 @@ export interface FieldExtrasLabels {
   suggested: (value: string) => string;
   /** @default 'Use' */
   use: string;
-  /** Said politely after a default is taken. @default (field, value) => `${field} reset to its default, ${value}` */
-  resetStatus: (field: string, value: string) => string;
-  /** Said politely after a suggestion is taken. @default (field, value) => `${field} set to ${value}` */
-  usedStatus: (field: string, value: string) => string;
+  /**
+   * Said politely after a default is taken, once focus is on the field, whose own words give its label and value.
+   * @default 'Set to the default'
+   */
+  resetStatus: string;
+  /**
+   * Said politely after a suggestion is taken, once focus is on the field, whose own words give its label and
+   * value. @default 'Set to the suggestion'
+   */
+  usedStatus: string;
 }
 
 export interface FieldExtrasProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
@@ -72,8 +78,8 @@ const LABELS: FieldExtrasLabels = {
   reset: 'Reset to default',
   suggested: (value) => `Suggested: ${value}`,
   use: 'Use',
-  resetStatus: (field, value) => `${field} reset to its default, ${value}`,
-  usedStatus: (field, value) => `${field} set to ${value}`,
+  resetStatus: 'Set to the default',
+  usedStatus: 'Set to the suggestion',
 };
 
 /** How long a take's words stay in the status: long enough to be read, gone before a reader browses to stale news. */
@@ -155,20 +161,9 @@ export function FieldExtras({
 
   const take = (kind: Kind, taken: FieldOffer, button: Element): void => {
     taken.onTake();
-    takes.current += 1;
     const wrapper = wrapperRef.current;
     if (wrapper?.closest('[aria-busy="true"]')) setBusy(true);
-    setSaid({
-      words:
-        kind === 'default'
-          ? labels.resetStatus(fieldLabel, taken.value)
-          : labels.usedStatus(fieldLabel, taken.value),
-      take: takes.current,
-    });
-    clearTimeout(hold.current);
-    hold.current = setTimeout(() => {
-      setSaid(null);
-    }, HOLD_MS);
+    const words = kind === 'default' ? labels.resetStatus : labels.usedStatus;
     cancelMove.current?.();
     cancelMove.current = afterCommit(() => {
       if (!wrapper?.isConnected) return;
@@ -176,8 +171,17 @@ export function FieldExtras({
       // or nothing: the take's focus is ours to place. Focus the app moved elsewhere, into a dialog its setter
       // opened, stays there.
       const active = document.activeElement;
-      if (!focusIsLost() && active !== button && !wrapper.contains(active)) return;
-      focusNamedPlace(placeAfterTake(wrapper, controlRef?.current ?? null));
+      if (focusIsLost() || active === button || wrapper.contains(active)) {
+        focusNamedPlace(placeAfterTake(wrapper, controlRef?.current ?? null));
+      }
+      // Said after the move: a screen reader reads the field focused, its label and new value, at once, and
+      // would cut a polite status said before it; this follows with what happened, which those words do not say.
+      takes.current += 1;
+      setSaid({ words, take: takes.current });
+      clearTimeout(hold.current);
+      hold.current = setTimeout(() => {
+        setSaid(null);
+      }, HOLD_MS);
     });
   };
 

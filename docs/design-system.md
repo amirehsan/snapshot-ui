@@ -12910,10 +12910,14 @@ live region. The owner's instruction for this task asks for a polite
 announcement of an applied suggestion: a screen reader does not always
 read a field focused by script (VoiceOver on iOS often does not), and
 voice control and switch users hear nothing of a focus move. So a polite
-status in the server's HTML, empty until then, says what a take set,
-"Cushion set to $2,340" or "Wait reset to its default, 3 days", as a new
-node per take, so the same offer taken again is said again, and empties
-after five seconds, so a reader browsing later meets no stale news. Its
+status in the server's HTML, empty until then, says what a take did, "Set
+to the suggestion" or "Set to the default", as a new node per take, so the
+same offer taken again is said again, and empties after five seconds, so a
+reader browsing later meets no stale news. It speaks in the frame after
+the move, once the field holds focus (spec correction 32): a screen reader
+reads a focus move at once, so a status said before it was cut short or
+read first and then repeated by the field, and the field's own words
+already give its label and value, so the status says neither again. Its
 words are `labels.usedStatus` and `labels.resetStatus`. A status that
 speaks inside `aria-busy="true"` warns once in development (lesson 11).
 

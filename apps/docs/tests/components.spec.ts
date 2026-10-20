@@ -2460,14 +2460,14 @@ test.describe('field extras', () => {
     await expect(trigger).toBeFocused();
     await expect(trigger).toContainText('3 days');
     await expect(reset).toHaveCount(0);
-    await expect(wait.getByRole('status')).toHaveText('Wait reset to its default, 3 days');
+    await expect(wait.getByRole('status')).toHaveText('Set to the default');
     // The suggestion, by a pointer: the money field holds focus and the value.
     const cushion = example(page, 1);
     await cushion.getByRole('button', { name: 'Use, Cushion' }).click();
     const input = cushion.getByRole('textbox', { name: 'Cushion' });
     await expect(input).toBeFocused();
     await expect(input).toHaveValue('2,340.00');
-    await expect(cushion.getByRole('status')).toHaveText('Cushion set to $2,340');
+    await expect(cushion.getByRole('status')).toHaveText('Set to the suggestion');
     expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
   });
 

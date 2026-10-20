@@ -282,8 +282,8 @@ export const FocusAfterReset: Story = {
 };
 
 /**
- * The suggestion taken on a money field: the field holds $2,340.00 and focus, and the polite status says what
- * was set, once.
+ * The suggestion taken on a money field: the field holds $2,340.00 and focus, and then, with focus already on
+ * the field, the polite status says what happened, once, in words that do not repeat the field's own.
  */
 export const FocusAfterUse: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],
@@ -299,14 +299,25 @@ export const FocusAfterUse: Story = {
     await expect(status).toBeEmptyDOMElement();
     const use = canvas.getByRole('button', { name: 'Use, Cushion' });
     await expect(use).toHaveAccessibleDescription('Suggested: $2,340, a month of your fixed bills');
-    await focusOn(use);
-    const stop = watchBody();
-    await userEvent.keyboard('{Enter}');
-    await waitFor(() => expect(input).toHaveFocus(), { timeout: 5000 });
-    await expect(stop()).toBeLessThanOrEqual(1);
-    await expect(input).toHaveValue('2,340.00');
-    await expect(status).toHaveTextContent('Cushion set to $2,340');
-    await expect(status.childElementCount).toBe(1);
+    // What held focus each time the status changed: a screen reader would cut a status said before the move.
+    const heldFocus: (Element | null)[] = [];
+    const observer = new MutationObserver(() => {
+      heldFocus.push(document.activeElement);
+    });
+    observer.observe(status, { childList: true, subtree: true, characterData: true });
+    try {
+      await focusOn(use);
+      const stop = watchBody();
+      await userEvent.keyboard('{Enter}');
+      await waitFor(() => expect(input).toHaveFocus(), { timeout: 5000 });
+      await expect(stop()).toBeLessThanOrEqual(1);
+      await expect(input).toHaveValue('2,340.00');
+      await waitFor(() => expect(status).toHaveTextContent('Set to the suggestion'), { timeout: 5000 });
+      await expect(status.childElementCount).toBe(1);
+      await expect(heldFocus).toEqual([input]);
+    } finally {
+      observer.disconnect();
+    }
   },
 };
 
@@ -451,7 +462,7 @@ export const RightToLeft: Story = {
               labels={{
                 default: (value) => `پیش‌فرض: ${value}`,
                 reset: 'بازگشت',
-                resetStatus: (field, value) => `${field} به پیش‌فرض برگشت، ${value}`,
+                resetStatus: 'به پیش‌فرض برگشت',
               }}
               defaultOffer={{
                 value: '۳ روز',

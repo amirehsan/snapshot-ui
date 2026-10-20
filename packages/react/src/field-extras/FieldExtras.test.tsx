@@ -526,7 +526,7 @@ describe('FieldExtras', () => {
     expect(root(container)).toHaveAttribute('data-scope', 'group');
   });
 
-  it('says a take politely, once per take, in a status that is empty until then', () => {
+  it('says a take politely, once per take, in a status that is empty until then', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const { container } = render(
       <>
@@ -542,9 +542,11 @@ describe('FieldExtras', () => {
     expect(host).toHaveAttribute('aria-atomic', 'true');
     expect(host).toBeEmptyDOMElement();
     press(within(cushion).getByRole('button', { name: 'Use, Cushion' }));
-    expect(host).toHaveTextContent('Cushion set to $2,340');
+    await frames();
+    expect(host).toHaveTextContent('Set to the suggestion');
     press(within(wait).getByRole('button', { name: 'Reset to default, Wait' }));
-    expect(status(wait)).toHaveTextContent('Wait reset to its default, 3 days');
+    await frames();
+    expect(status(wait)).toHaveTextContent('Set to the default');
     // The words leave after a while, so a reader browsing later meets no stale news.
     act(() => {
       vi.advanceTimersByTime(5000);
@@ -553,7 +555,25 @@ describe('FieldExtras', () => {
     expect(status(wait)).toBeEmptyDOMElement();
   });
 
-  it('writes each take as a new node, so the same offer taken again is said again', () => {
+  it("speaks after focus has moved, and says only what the field's own words do not", async () => {
+    const { container } = render(<Cushion />);
+    const host = status(container);
+    const input = screen.getByRole('textbox', { name: 'Cushion' });
+    // What held focus each time the status changed. A screen reader reads a focus move at once, cutting a
+    // polite status said before it, so the status speaks once the field holds focus, after the field's words.
+    const heldFocus: (Element | null)[] = [];
+    new MutationObserver(() => {
+      heldFocus.push(document.activeElement);
+    }).observe(host, { childList: true, subtree: true, characterData: true });
+    press(screen.getByRole('button', { name: 'Use, Cushion' }));
+    await frames();
+    expect(heldFocus).toEqual([input]);
+    // The field is read as "Cushion, 2,340.00": the status adds what happened, not the label and value again.
+    expect(host).toHaveTextContent(/\S/);
+    expect(host.textContent).not.toMatch(/Cushion|2,340/);
+  });
+
+  it('writes each take as a new node, so the same offer taken again is said again', async () => {
     function Again(): ReactElement {
       const [count, setCount] = useState(0);
       return (
@@ -573,27 +593,35 @@ describe('FieldExtras', () => {
     const { container } = render(<Again />);
     const host = status(container);
     press(screen.getByRole('button', { name: 'Reset to default, Wait' }));
+    await frames();
     const first = host.firstElementChild;
+    expect(first).not.toBeNull();
     press(screen.getByRole('button', { name: 'Reset to default, Wait' }));
+    await frames();
     expect(host.firstElementChild).not.toBe(first);
     expect(host.childElementCount).toBe(1);
   });
 
-  it('says a take with its own words from labels', () => {
+  it('says a take with its own words from labels', async () => {
     const { container } = render(
       <FieldExtras
         fieldLabel="Cushion"
         suggestion={offer('$2,340')}
-        labels={{ usedStatus: (field, value) => `${field}: ${value}` }}
+        defaultOffer={offer('$1,000')}
+        labels={{ usedStatus: 'Vorschlag übernommen', resetStatus: 'Standard gesetzt' }}
       >
         <TextField label="Cushion" />
       </FieldExtras>,
     );
     press(screen.getByRole('button', { name: 'Use, Cushion' }));
-    expect(status(container)).toHaveTextContent('Cushion: $2,340');
+    await frames();
+    expect(status(container)).toHaveTextContent('Vorschlag übernommen');
+    press(screen.getByRole('button', { name: 'Reset to default, Cushion' }));
+    await frames();
+    expect(status(container)).toHaveTextContent('Standard gesetzt');
   });
 
-  it('warns once when its status speaks inside aria-busy="true"', () => {
+  it('warns once when its status speaks inside aria-busy="true"', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     render(
       <div aria-busy="true">
@@ -604,7 +632,9 @@ describe('FieldExtras', () => {
     );
     expect(warn).not.toHaveBeenCalled();
     press(screen.getByRole('button', { name: 'Use, Cushion' }));
+    await frames();
     press(screen.getByRole('button', { name: 'Reset to default, Cushion' }));
+    await frames();
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0]?.[0]).toMatch(/aria-busy/);
   });
@@ -832,7 +862,7 @@ describe('FieldExtras', () => {
     const { container } = render(<Cushion />);
     press(screen.getByRole('button', { name: 'Use, Cushion' }));
     await frames();
-    expect(status(container)).toHaveTextContent('Cushion set to $2,340');
+    expect(status(container)).toHaveTextContent('Set to the suggestion');
     await expectNoA11yViolations(container);
   });
 
