@@ -558,6 +558,152 @@ describe('FieldExtras', () => {
     expect(status(container)).toBeEmptyDOMElement();
   });
 
+  it('focuses controlRef rather than the first control when it names another', async () => {
+    function Hours(): ReactElement {
+      const toRef = useRef<HTMLInputElement>(null);
+      const [to, setTo] = useState('6 AM');
+      return (
+        <FieldExtras
+          scope="group"
+          fieldLabel="Quiet hours"
+          controlRef={toRef}
+          defaultOffer={{
+            ...offer('7 AM', to === '7 AM'),
+            onTake: () => {
+              setTo('7 AM');
+            },
+          }}
+        >
+          <TextField label="From" defaultValue="10 PM" />
+          <TextField label="To" value={to} onChange={setTo} inputRef={toRef} />
+        </FieldExtras>
+      );
+    }
+    render(<Hours />);
+    press(screen.getByRole('button', { name: 'Reset to default, Quiet hours' }));
+    await frames();
+    expect(screen.getByRole('textbox', { name: 'To' })).toHaveFocus();
+  });
+
+  it('moves focus to the field even when the setter leaves the pressed offer drawn', async () => {
+    // A setter that clamps or refuses leaves the offer in place, and the button that holds focus with it.
+    render(
+      <FieldExtras fieldLabel="Cushion" suggestion={offer('$2,340')}>
+        <TextField label="Cushion" />
+      </FieldExtras>,
+    );
+    const use = screen.getByRole('button', { name: 'Use, Cushion' });
+    press(use);
+    expect(use).toHaveFocus();
+    await frames();
+    expect(screen.getByRole('textbox', { name: 'Cushion' })).toHaveFocus();
+  });
+
+  it("moves focus to the group's first field when a press leaves focus in a field of the group", async () => {
+    const user = userEvent.setup();
+    render(<QuietHours />);
+    await user.click(screen.getByRole('textbox', { name: 'To' }));
+    const reset = screen.getByRole('button', { name: 'Reset to default, Quiet hours' });
+    // Safari does not focus a pressed button, so focus stays in To through the press.
+    reset.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+    });
+    await user.click(reset);
+    await frames();
+    expect(screen.getByRole('textbox', { name: 'From' })).toHaveFocus();
+  });
+
+  it('moves nothing and says nothing once the part has left before its frame', async () => {
+    function Leaves(): ReactElement {
+      const [shown, setShown] = useState(true);
+      return (
+        <main>
+          <button type="button">Elsewhere</button>
+          {shown ? (
+            <FieldExtras
+              fieldLabel="Cushion"
+              suggestion={{
+                ...offer('$2,340'),
+                onTake: () => {
+                  setShown(false);
+                },
+              }}
+            >
+              <TextField label="Cushion" />
+            </FieldExtras>
+          ) : null}
+        </main>
+      );
+    }
+    render(<Leaves />);
+    const elsewhere = screen.getByRole('button', { name: 'Elsewhere' });
+    press(screen.getByRole('button', { name: 'Use, Cushion' }));
+    act(() => {
+      elsewhere.focus();
+    });
+    await frames();
+    expect(elsewhere).toHaveFocus();
+  });
+
+  it('keeps the words of a later take for their whole hold', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    function Both(): ReactElement {
+      const [value, setValue] = useState('');
+      return (
+        <FieldExtras
+          fieldLabel="Cushion"
+          suggestion={{ ...offer('$2,340', value === '$2,340'), onTake: () => setValue('$2,340') }}
+          defaultOffer={{ ...offer('$1,000', value === '$1,000'), onTake: () => setValue('$1,000') }}
+        >
+          <TextField label="Cushion" value={value} onChange={setValue} />
+        </FieldExtras>
+      );
+    }
+    const { container } = render(<Both />);
+    press(screen.getByRole('button', { name: 'Use, Cushion' }));
+    await frames();
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    press(screen.getByRole('button', { name: 'Reset to default, Cushion' }));
+    await frames();
+    // Five seconds after the first take, the second's words have three seconds left.
+    act(() => {
+      vi.advanceTimersByTime(2500);
+    });
+    expect(status(container)).toHaveTextContent('Set to the default');
+    act(() => {
+      vi.advanceTimersByTime(2500);
+    });
+    expect(status(container)).toBeEmptyDOMElement();
+  });
+
+  it('says a second take again, as a new node, when an app gives both takes the same words', async () => {
+    function Same(): ReactElement {
+      const [value, setValue] = useState('');
+      return (
+        <FieldExtras
+          fieldLabel="Cushion"
+          suggestion={{ ...offer('$2,340', value === '$2,340'), onTake: () => setValue('$2,340') }}
+          defaultOffer={{ ...offer('$1,000', value === '$1,000'), onTake: () => setValue('$1,000') }}
+          labels={{ usedStatus: 'Done', resetStatus: 'Done' }}
+        >
+          <TextField label="Cushion" value={value} onChange={setValue} />
+        </FieldExtras>
+      );
+    }
+    const { container } = render(<Same />);
+    const host = status(container);
+    press(screen.getByRole('button', { name: 'Use, Cushion' }));
+    await frames();
+    const first = host.firstElementChild;
+    expect(first).toHaveTextContent('Done');
+    press(screen.getByRole('button', { name: 'Reset to default, Cushion' }));
+    await frames();
+    expect(host.firstElementChild).toHaveTextContent('Done');
+    expect(host.firstElementChild).not.toBe(first);
+  });
+
   it('lifts the measure for a group', () => {
     const { container } = render(<QuietHours />);
     expect(root(container)).toHaveAttribute('data-scope', 'group');
