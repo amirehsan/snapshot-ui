@@ -517,6 +517,50 @@ export const FocusOnSectionChange: Story = {
   },
 };
 
+/**
+ * A resize that turns the face, as a narrowed window or a turned tablet does, hides the column that held focus,
+ * which the engine blurs to the body. Focus goes to the open section's heading when the list face hides the current
+ * link and when the split face hides Back, and at the index to the default section's link when the list face hides
+ * the section beside it; never the body for more than two frames, the observer's and the move's.
+ */
+export const FocusOnFaceTurn: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <div style={{ display: 'grid', gap: 'var(--spacing-separate)' }}>
+      <div data-case="section" style={frame('60rem')}>
+        <Settings start={hrefOf('logos')} navLabel="Sections as the face turns" />
+      </div>
+      <div data-case="index" style={frame('60rem')}>
+        <Settings start={INDEX} navLabel="The index as the face turns" />
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const section = find(canvasElement, '[data-case="section"]');
+    const index = find(canvasElement, '[data-case="index"]');
+    const turn = async (holder: HTMLElement, width: string, target: HTMLElement): Promise<void> => {
+      const stop = watchBody();
+      holder.style.width = width;
+      await waitFor(() => expect(target).toHaveFocus(), { timeout: 5000 });
+      await expect(stop()).toBeLessThanOrEqual(2);
+    };
+    const heading = within(section).getByRole('heading', { name: 'Logos' });
+
+    // The split face: the current link holds focus, then the list face hides it.
+    await waitFor(() => expect(isDrawn(find(section, '.panel-layout-side'))).toBe(true), { timeout: 5000 });
+    await focusOn(within(section).getByRole('link', { name: 'Logos' }));
+    await turn(section, '30rem', heading);
+
+    // The list face's section: Back holds focus, then the split face hides it.
+    await focusOn(within(section).getByRole('link', { name: 'Settings' }));
+    await turn(section, '60rem', heading);
+
+    // The index beside its default section: a switch there holds focus, then the list face hides the section.
+    await focusOn(find(index, '.panel-layout-main button'));
+    await turn(index, '30rem', within(index).getByRole('link', { name: 'Coach' }));
+  },
+};
+
 /** A navigation the reader started outside the layout, as from a command palette: focus stays where it was. */
 export const FocusFromOutside: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],

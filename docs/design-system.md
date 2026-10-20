@@ -13251,7 +13251,14 @@ layout an app mounts per route counts as a change when it mounts with
 another section than the last layout in the window had, while no other
 layout is mounted (settings plan, spec correction 67). The heading takes
 `tabIndex={-1}` and shows no ring when focused by script, as `<main>` does,
-and the shared focus clear keeps it under the sticky header.
+and the shared focus clear keeps it under the sticky header. A resize that
+turns the face, a narrowed window or a turned tablet, hides the column that
+may hold focus, a link, Back or a field of the section beside the index, and
+the engine blurs it to the body; a ResizeObserver on the root notes the face
+from whether both columns have a box, and when it turns while the watch is
+held and focus is lost, focus goes where a change of view would put it: the
+open section's heading, or at the index on the list face the default
+section's link (spec correction 70).
 
 **Back** is the layout's, so every section has it without writing it: a
 link to `backHref` with a 16px chevron and `backLabel`, 40px tall, in ink

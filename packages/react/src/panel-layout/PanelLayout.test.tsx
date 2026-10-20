@@ -411,6 +411,124 @@ describe('PanelLayout', () => {
   });
 });
 
+describe('PanelLayout when its face turns', () => {
+  /** Which columns have a box: both on the split face, one on the list face. */
+  let drawn = { side: true, main: true };
+  let report: () => void = noop;
+
+  beforeEach(() => {
+    drawn = { side: true, main: true };
+    const own = Object.getOwnPropertyDescriptor(Element.prototype, 'getClientRects')?.value as (
+      this: Element,
+    ) => DOMRectList;
+    vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function (this: Element) {
+      const column = this.classList.contains('panel-layout-side')
+        ? 'side'
+        : this.classList.contains('panel-layout-main')
+          ? 'main'
+          : null;
+      if (column === null) return own.call(this);
+      return (drawn[column] ? [new DOMRect(0, 0, 320, 600)] : []) as unknown as DOMRectList;
+    });
+    // A ResizeObserver whose callback the test calls, standing in for the browser's after a resize.
+    const callbacks: ResizeObserverCallback[] = [];
+    class Stub {
+      constructor(callback: ResizeObserverCallback) {
+        callbacks.push(callback);
+      }
+      observe = noop;
+      unobserve = noop;
+      disconnect = (): void => {
+        callbacks.length = 0;
+      };
+    }
+    vi.stubGlobal('ResizeObserver', Stub);
+    report = () => {
+      act(() => {
+        for (const callback of callbacks) callback([], {} as ResizeObserver);
+      });
+    };
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** Turns the face as a resize does: the engine blurs what the hidden column held to the body, then observes. */
+  const turn = (next: { side: boolean; main: boolean }, blurred: HTMLElement): void => {
+    drawn = next;
+    act(() => {
+      blurred.blur();
+    });
+    report();
+  };
+
+  it("moves focus to the open section's heading when the list face hides the link that held it", async () => {
+    render(<Settings view="section" sectionKey="logos" />);
+    report();
+    const logos = screen.getByRole('link', { name: 'Logos' });
+    act(() => {
+      logos.focus();
+    });
+    turn({ side: false, main: true }, logos);
+    expect(document.activeElement).toBe(document.body);
+    await act(nextFrame);
+    expect(screen.getByRole('heading', { name: 'Logos' })).toHaveFocus();
+  });
+
+  it("moves focus to the open section's heading when the split face hides Back", async () => {
+    drawn = { side: false, main: true };
+    render(<Settings view="section" sectionKey="logos" />);
+    report();
+    const back = screen.getByRole('link', { name: 'Settings' });
+    act(() => {
+      back.focus();
+    });
+    turn({ side: true, main: true }, back);
+    await act(nextFrame);
+    expect(screen.getByRole('heading', { name: 'Logos' })).toHaveFocus();
+  });
+
+  it("moves focus to the default section's link when the list face hides the section beside the index", async () => {
+    render(<Settings view="index" />);
+    report();
+    const save = screen.getByRole('button', { name: 'Save Coach' });
+    act(() => {
+      save.focus();
+    });
+    turn({ side: true, main: false }, save);
+    await act(nextFrame);
+    expect(screen.getByRole('link', { name: 'Coach' })).toHaveFocus();
+  });
+
+  it('moves nothing on a resize that keeps the face, or when focus was outside the layout', async () => {
+    const { container } = render(
+      <>
+        <button type="button">Outside</button>
+        <Settings view="section" sectionKey="logos" />
+      </>,
+    );
+    report();
+    const logos = screen.getByRole('link', { name: 'Logos' });
+    act(() => {
+      logos.focus();
+    });
+    // Focus left to the body by a press on the page's background: the face stays, so nothing moves.
+    turn({ side: true, main: true }, logos);
+    await act(nextFrame);
+    expect(document.activeElement).toBe(document.body);
+    // Focus outside the layout, then the face turns: it stays outside.
+    const outside = within(container).getByRole('button', { name: 'Outside' });
+    act(() => {
+      outside.focus();
+    });
+    drawn = { side: false, main: true };
+    report();
+    await act(nextFrame);
+    expect(outside).toHaveFocus();
+  });
+});
+
 describe('PanelSection', () => {
   it('passes the rest, className and ref to the section, and draws no description when none is given', () => {
     const ref = createRef<HTMLElement>();

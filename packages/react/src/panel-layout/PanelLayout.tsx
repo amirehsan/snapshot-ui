@@ -118,6 +118,12 @@ function placeAfterChange(root: HTMLElement, view: PanelLayoutView, left: string
   return links.find((link) => left !== null && link.getAttribute('href') === left) ?? links[0] ?? heading;
 }
 
+/** Whether both columns are drawn, the split face, read when the layout's box changes, never at render. */
+const isSplit = (root: HTMLElement): boolean =>
+  [
+    ...root.querySelectorAll(':scope > .panel-layout-frame > :is(.panel-layout-side, .panel-layout-main)'),
+  ].every((column) => column.getClientRects().length > 0);
+
 /**
  * A settings page's frame: a named list of linked sections beside the open section from 48rem of its own width,
  * and under it a list at the index and a page with Back at a section, both faces in the server's HTML and one
@@ -166,6 +172,39 @@ export function PanelLayout({
       focusNamedPlace(placeAfterChange(element, view, before.href));
     });
   }, [view, sectionKey, mountedAfterHydration, watch]);
+
+  // A resize that turns the face, a window narrowed or a tablet turned, hides the column that may hold focus: the
+  // engine blurs it to the body. Focus then goes where a change of view would put it: the open section's heading,
+  // or at the index on the list face the default section's link.
+  useEffect(() => {
+    const element = rootRef.current;
+    if (element === null || typeof ResizeObserver !== 'function') return;
+    let split: boolean | null = null;
+    let cancel = (): void => undefined;
+    const observer = new ResizeObserver(() => {
+      const now = isSplit(element);
+      const turned = split !== null && split !== now;
+      split = now;
+      if (!turned) return;
+      cancel();
+      cancel = afterCommit(() => {
+        if (!watch.held() || !focusIsLost()) return;
+        const fallback = element.querySelector('.panel-layout-side .panel-nav-link[data-default]');
+        focusNamedPlace(
+          placeAfterChange(
+            element,
+            element.dataset.view === 'index' ? 'index' : 'section',
+            fallback?.getAttribute('href') ?? null,
+          ),
+        );
+      });
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      cancel();
+    };
+  }, [watch]);
 
   return (
     <div {...props} ref={mergeRefs(rootRef, ref)} className={cx('panel-layout', className)} data-view={view}>
