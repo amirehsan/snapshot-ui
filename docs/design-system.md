@@ -13354,11 +13354,12 @@ against the canvas 4.84 and 7.26, against lifted 5.31 and 6.94; canvas on
 the ink pill 16.25 and 19.31. The divider is a cue, as DescriptionList's
 is.
 
-**The size** (spec correction 68). The entry `{ PanelLayout, PanelNav,
-PanelNavItem, PanelSection, PanelRow }` measures 1.67 kB without React Aria,
-Lucide and `@internationalized/date`, under the spec's 2.5 kB budget; the
-rule gives a 2.5 kB limit. With React Aria not ignored it measures 11.35
-kB. The static parts alone measure the same both ways.
+**The size** (spec corrections 68 and 75). The entry `{ PanelLayout,
+PanelNav, PanelNavItem, PanelSection, PanelRow }` measures 1.83 kB without
+React Aria, Lucide and `@internationalized/date` after its review's fixes,
+under the spec's 2.5 kB budget; the rule still gives a 2.5 kB limit. With
+React Aria not ignored it measures 11.5 kB. The static parts alone measure
+the same both ways.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): a section's heading read after a section change on both
