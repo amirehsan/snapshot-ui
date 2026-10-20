@@ -163,9 +163,15 @@ export const HiddenNotSubmitted: Story = {
     const save = canvas.getByRole('button', { name: 'Save' });
     const sent = canvas.getByTestId('sent');
     await presses.click(key);
+    // Firefox can let a press soon after the story draws go unheard (lesson 3), so focus is held before typing,
+    // and the key is read back before the gate turns off: a key never typed is not a key the hide cleared.
+    await focusOn(key);
     await presses.keyboard('sk-live-0042');
+    await waitFor(() => expect(key).toHaveValue('sk-live-0042'), LONG);
     await presses.click(gate);
     await waitFor(() => expect(canvasElement.querySelector('.conditional-fields')).toHaveAttribute('hidden'));
+    // Hidden, the field still holds what was typed.
+    await expect(key).toHaveValue('sk-live-0042');
     await presses.click(save);
     await waitFor(() => expect(sent).toHaveTextContent(/^Sent:/), LONG);
     await expect(sent).not.toHaveTextContent('logoKey');
