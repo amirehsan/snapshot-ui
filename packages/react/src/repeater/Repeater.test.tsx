@@ -518,6 +518,25 @@ describe('Repeater', () => {
     expect(status(container)).toBeEmptyDOMElement();
   });
 
+  it.each([
+    ['an add', 'Add a tier'],
+    ['a remove', 'Remove, Tier 2'],
+  ])('leaves focus where the app moved it outside the set after %s', async (_event, name) => {
+    render(
+      <>
+        <Controlled
+          onRows={() => {
+            screen.getByRole('button', { name: 'Elsewhere' }).focus();
+          }}
+        />
+        <button type="button">Elsewhere</button>
+      </>,
+    );
+    press(screen.getByRole('button', { name }));
+    await frames();
+    expect(screen.getByRole('button', { name: 'Elsewhere' })).toHaveFocus();
+  });
+
   it("focuses a new row's Remove when it has no field and Add is disabled", async () => {
     render(
       <Repeater<Tier>
