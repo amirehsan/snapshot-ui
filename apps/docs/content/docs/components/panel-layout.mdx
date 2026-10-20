@@ -87,7 +87,7 @@ export default async function SectionPage({ params }: { params: Promise<{ sectio
 
 ## On a phone
 
-Under 48rem the index is a list of rows, each with its description, its end state and a chevron, and a section is a page with Back above its heading. The page's title stays in the shell's header on both views, so a reader sees "Settings", then the way back, then the section. The tab bar stays, with Settings current across the index and every section.
+Under 48rem the index is a list of rows, each with its description, its end state and a chevron, and a section is a page with Back above its heading. The page's title stays in the shell's header on both views, so a reader sees "Settings", then the way back, then the section. The tab bar stays, with Settings current across the index and every section. This example keeps its address in the page's hash, so a link to `#settings-logos` opens Logos, and the browser's Back and Forward move between the list and a section with the same focus rules.
 
 <Preview name="panel-layout-phone" />
 

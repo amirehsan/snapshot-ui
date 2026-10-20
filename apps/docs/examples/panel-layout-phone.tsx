@@ -9,13 +9,27 @@ import {
   RouterProvider,
   Switch,
 } from '@snapshot-ui/react';
-import { useState, type ReactElement } from 'react';
+import { useSyncExternalStore, type ReactElement } from 'react';
 import { SETTINGS_SECTIONS, sectionOf } from './panel-layout-data';
 
+/** Listens for the page's hash, which a link, Back and the browser's Back and Forward change. */
+function subscribe(onChange: () => void): () => void {
+  window.addEventListener('hashchange', onChange);
+  return () => {
+    window.removeEventListener('hashchange', onChange);
+  };
+}
+
+const readHash = (): string => window.location.hash;
+
+/** The server sees no hash, so it draws the index; a hash on load opens its section once the page hydrates. */
+const serverHash = (): string => '';
+
 export default function PanelLayoutPhone(): ReactElement {
-  // The example keeps its address in state, so it moves apart from the page's own; an app reads it from its URL.
-  const [href, setHref] = useState('#settings');
-  const open = sectionOf(href.startsWith('#settings-') ? href.slice('#settings-'.length) : null);
+  // The example's address is the page's hash, so it moves apart from the basic example's ?section= and a reload,
+  // a shared link and the browser's Back land on the same view. An app reads its route the same way.
+  const hash = useSyncExternalStore(subscribe, readHash, serverHash);
+  const open = sectionOf(hash.startsWith('#settings-') ? hash.slice('#settings-'.length) : null);
   const view = open === undefined ? 'index' : 'section';
   const shown = open ?? SETTINGS_SECTIONS[0];
   return (
@@ -25,7 +39,11 @@ export default function PanelLayoutPhone(): ReactElement {
       {/* The shell's header holds the page's title on both views; here it is a second-level heading, since the
           docs page has its own h1. */}
       <PageHeader title="Settings" headingLevel={2} />
-      <RouterProvider navigate={setHref}>
+      <RouterProvider
+        navigate={(href) => {
+          window.location.hash = href;
+        }}
+      >
         <PanelLayout
           view={view}
           sectionKey={open?.key}

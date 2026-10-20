@@ -2786,4 +2786,44 @@ test.describe('panel layout', () => {
       expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
     });
   }
+
+  test("the browser's Back and Forward follow the same focus rules on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await visit(page, '/docs/components/panel-layout');
+    const stage = page.locator('.stage').first();
+    const layout = stage.locator('.panel-layout');
+    await stage.getByRole('link', { name: 'Logos' }).click();
+    await expect(stage.getByRole('heading', { name: 'Logos' })).toBeFocused();
+    // Back: the list, and the link of the section left.
+    await page.goBack();
+    await expect(layout).toHaveAttribute('data-view', 'index');
+    await expect(stage.getByRole('link', { name: 'Logos' })).toBeFocused();
+    // Forward: the section again, and its heading.
+    await page.goForward();
+    await expect(layout).toHaveAttribute('data-view', 'section');
+    await expect(stage.getByRole('heading', { name: 'Logos' })).toBeFocused();
+  });
+
+  test("the phone example's address is the page's hash: on load, Back and the browser's Back", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    // A link to a section opens it, and its heading takes focus, never the body.
+    await visit(page, '/docs/components/panel-layout#settings-logos');
+    const phone = page.locator('.stage').nth(1);
+    const layout = phone.locator('.panel-layout');
+    await expect(layout).toHaveAttribute('data-view', 'section');
+    await expect(phone.getByRole('heading', { name: 'Logos' })).toBeFocused();
+    // Back writes the index's hash and focuses the link of the section left.
+    await phone.getByRole('link', { name: 'Settings', exact: true }).click();
+    await expect(page).toHaveURL(/#settings$/);
+    await expect(layout).toHaveAttribute('data-view', 'index');
+    await expect(phone.getByRole('link', { name: 'Logos' })).toBeFocused();
+    // The browser's Back returns to the section, its heading focused.
+    await page.goBack();
+    await expect(page).toHaveURL(/#settings-logos$/);
+    await expect(layout).toHaveAttribute('data-view', 'section');
+    await expect(phone.getByRole('heading', { name: 'Logos' })).toBeFocused();
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  });
 });
