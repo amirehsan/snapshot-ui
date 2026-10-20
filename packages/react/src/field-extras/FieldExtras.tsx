@@ -25,7 +25,10 @@ import { mergeRefs } from '../utils/merge-refs';
 import { useWarnOnce } from '../utils/useWarnOnce';
 
 export interface FieldOffer {
-  /** The offered value as the app writes it: "24 hours", "$40.00". Wrap figures in another script in `bdi`. */
+  /**
+   * The offered value as the app writes it: "24 hours", "$40.00". A string, so a figure among words of another
+   * script is isolated with U+2068 and U+2069, which do in a string what `bdi` does in markup.
+   */
   value: string;
   /** Whether the field already holds it. The offer is drawn only when it does not. */
   isCurrent: boolean;

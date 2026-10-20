@@ -12975,8 +12975,11 @@ draws its own forced colors, so the file adds nothing of its own; a docs
 test reads the words in CanvasText, the button in ButtonText and its focus
 ring. Nothing moves: an offer leaves at once. Every property is logical:
 on a Persian page the words start at the right and the button ends the
-line on the left, and a figure in another script keeps its order inside
-the app's `bdi` (`RightToLeft`).
+line on the left (`RightToLeft`). A figure in another script keeps its
+order inside the app's isolates: `value` is a string, where a `bdi` would
+be drawn as its letters, so the app writes U+2068 and U+2069 around the
+figure, which do what `bdi` does (spec correction 36); a `reason` is a
+node and can hold a `bdi`.
 
 **Server rendering.** A client part for its focus move and its status; the
 offers are in the server's HTML from the props, and the status host is

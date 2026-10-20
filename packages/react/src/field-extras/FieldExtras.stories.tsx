@@ -523,7 +523,7 @@ export const WordsKeptWhole: Story = {
 
 /**
  * On a Persian page the line runs right to left: the words at the line's start on the right, the button at its
- * end to their left. The figure keeps its order inside the app's `bdi`, and the reset still focuses the field.
+ * end to their left, and the reset still focuses the field.
  */
 export const RightToLeft: Story = {
   tags: ['no-visual', 'webkit', 'firefox'],

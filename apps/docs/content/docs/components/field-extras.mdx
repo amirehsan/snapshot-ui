@@ -22,7 +22,7 @@ Wrap a field in `FieldExtras` and pass `defaultOffer`: a slate line under the fi
 
 `suggestion` offers a value your app worked out for this reader, with its reason after it: "Suggested: $2,340, a month of your fixed bills". It is never prefilled into the field and never shown as the field's placeholder: a placeholder is taupe, for a hint about the format, and a suggestion is words the reader reads and takes with one press.
 
-Every figure and word is your string, as the field shows it. Where a figure sits in a sentence of another script, such as a dollar amount on a Persian page, wrap it in `bdi` in your string, so it keeps its order.
+Every figure and word is your string, as the field shows it. Where a figure sits in a sentence of another script, such as a dollar amount on a Persian page, isolate it so it keeps its order. `value` is a string, and a `bdi` written in a string is drawn as its letters, so mark the figure with the Unicode isolates that do what `bdi` does: `value: '⁨-$40.00⁩'`, first strong isolate before it and pop directional isolate after it. A `reason` is a node, so it can hold a `bdi`.
 
 <Preview name="field-extras-suggestion" />
 
