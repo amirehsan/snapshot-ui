@@ -4,6 +4,7 @@ import { I18nProvider } from 'react-aria-components';
 import { expect, spyOn, userEvent, waitFor, within } from 'storybook/test';
 import { DescriptionList, DescriptionListItem } from '../description-list';
 import { focusOn } from '../stories/focus';
+import { Prose } from '../prose';
 import { Text } from '../typography';
 import { CopyButton } from './CopyButton';
 
@@ -94,7 +95,7 @@ export const InDescriptionList: Story = {
 };
 
 /**
- * Under an answer, in its footer: outside the part an app marks `aria-busy` while the answer streams, so the
+ * Under a Prose answer, in its footer: outside the part an app marks `aria-busy` while the answer streams, so the
  * status is heard. Here the answer has finished, so its body says `aria-busy="false"`.
  */
 export const UnderAnAnswer: Story = {
@@ -103,9 +104,9 @@ export const UnderAnAnswer: Story = {
       aria-label="Answer"
       style={{ display: 'grid', gap: 'var(--spacing-part)', maxInlineSize: '40rem' }}
     >
-      <div aria-busy={false}>
-        <Text>{ANSWER}</Text>
-      </div>
+      <Prose aria-busy={false}>
+        <p>{ANSWER}</p>
+      </Prose>
       <footer>
         <CopyButton value={ANSWER} labels={{ copy: 'Copy answer' }} />
       </footer>

@@ -1,6 +1,6 @@
 'use client';
 
-import { CopyButton, Text } from '@snapshot-ui/react';
+import { CopyButton, Prose } from '@snapshot-ui/react';
 import type { ReactElement } from 'react';
 
 const ANSWER =
@@ -11,9 +11,9 @@ export default function CopyButtonAnswer(): ReactElement {
   const isStreaming = false;
   return (
     <article aria-label="Answer" className="stack" style={{ width: '100%', maxWidth: '36rem' }}>
-      <div aria-busy={isStreaming}>
-        <Text>{ANSWER}</Text>
-      </div>
+      <Prose aria-busy={isStreaming}>
+        <p>{ANSWER}</p>
+      </Prose>
       {/* The footer is never busy, so the copy button's status in it is always heard. */}
       <footer className="row">
         <CopyButton value={ANSWER} labels={{ copy: 'Copy answer' }} />

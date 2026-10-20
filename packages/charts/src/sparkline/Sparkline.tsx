@@ -1,4 +1,6 @@
 import type { HTMLAttributes, ReactElement, Ref } from 'react';
+import { percent } from '../foundations/format';
+import { named } from '../foundations/naming';
 import { areaPath, linePath, type PlotPoint } from '../foundations/path';
 import { extent, linearScale } from '../foundations/scale';
 import type { AriaName } from '../utils/accessible-name';
@@ -17,12 +19,6 @@ export type SparklineProps = Omit<
     hasArea?: boolean;
     ref?: Ref<HTMLSpanElement>;
   };
-
-/** A string that names something: given and not only spaces. */
-const named = (text: string | undefined): text is string => text !== undefined && text.trim() !== '';
-
-/** A percentage of the plot, for an HTML mark placed over the svg. */
-const percent = (value: number): string => `${String(Math.round(value * 1000) / 1000)}%`;
 
 /**
  * A tile's trend as a line: the data's shape over their extent, in a 0 to 100 viewBox stretched to the box,

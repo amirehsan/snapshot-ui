@@ -609,9 +609,9 @@ test('the installation page explains the server face and the date library', asyn
 });
 
 test('the chart pages name the core version charts needs', async ({ page }) => {
-  for (const slug of ['line-chart', 'sparkline']) {
+  for (const slug of ['bar-chart', 'line-chart', 'sparkline']) {
     await visit(page, `/docs/charts/${slug}`);
-    await expect(page.locator('main'), slug).toContainText('0.8 for charts 0.1.5');
+    await expect(page.locator('main'), slug).toContainText('0.9 for charts 0.2.0');
   }
 });
 
@@ -649,12 +649,30 @@ test('the installation page names EmptyState and Skeleton among the static parts
   }
 });
 
+test('the installation page names Prose and ProseScroll among the static parts, the charts among the client ones, and remark-gfm', async ({
+  page,
+}) => {
+  await visit(page, '/docs/installation');
+  const section = guideSection(page, 'Next.js server components');
+  await expect(section).toHaveCount(1);
+  await expect(section).toContainText('MonthGrid, and Prose and ProseScroll.');
+  for (const text of ['BarChart and LineChart are client components', 'remark-gfm', 'skipHtml']) {
+    await expect(section, text).toContainText(text);
+  }
+  await expect(section.locator('a[href="/docs/components/prose#rendering-markdown-safely"]')).toHaveCount(1);
+  // The fonts a report needs: Sofia Sans's italic, and Vazirmatn first under lang="fa".
+  const fonts = guideSection(page, 'Load the font');
+  for (const text of ["style: ['normal', 'italic']", 'wght-italic.css', 'Vazirmatn', '--font-persian']) {
+    await expect(fonts, text).toContainText(text);
+  }
+});
+
 test('the installation page names the account parts among the static ones, and the status lists them', async ({
   page,
 }) => {
   await visit(page, '/docs/installation');
   const section = guideSection(page, 'Next.js server components');
-  await expect(section).toContainText('PageColumn, DescriptionList, CardActions, Gauge and MonthGrid');
+  await expect(section).toContainText('PageColumn, DescriptionList, CardActions, Gauge, MonthGrid');
   await visit(page, '/docs');
   await expect(guideSection(page, 'Status')).toContainText(
     "An account's pages: a description list for its details, actions in a card's header, a gauge for a score or a limit, and a month grid for which statements you have.",
@@ -3198,6 +3216,435 @@ test.describe('a date range picker without JavaScript', () => {
   });
 });
 
+test("the bar chart page's comparison draws the previous period hatched and names it", async ({ page }) => {
+  await visit(page, '/docs/charts/bar-chart');
+  // Months against the same months a year before: short labels, whole in their bands on a phone.
+  const chart = page.getByRole('figure', {
+    name: 'Spending by month, this year against last year',
+    exact: true,
+  });
+  await expect(chart).toHaveCount(1);
+  await expect(chart).toHaveAttribute('data-orientation', 'vertical');
+  // The previous period takes the current period's ink, striped, and its key says so.
+  const hatched = chart.locator('.bar-chart-bar[data-look="hatched"]');
+  await expect(hatched).toHaveCount(5);
+  for (const bar of await hatched.all()) await expect(bar).toHaveAttribute('data-color', 'ink');
+  const stripes = await hatched
+    .first()
+    .evaluate((element) => [
+      getComputedStyle(element).backgroundImage,
+      getComputedStyle(element).borderTopWidth,
+    ]);
+  expect(stripes[0]).toContain('repeating-linear-gradient');
+  expect(stripes[1]).toBe('1px');
+  await expect(chart.locator('.bar-chart-legend-item[data-look="hatched"]')).toHaveText('2025');
+  // Each bar's name says its period, from the table's cells, so the stripes are never the only cue.
+  const lastYear = chart.getByRole('img', { name: 'Jun 2025 $1,702.15', exact: true });
+  await expect(lastYear).toHaveCount(1);
+  await expect(lastYear).toHaveAttribute('data-look', 'hatched');
+  // The keys step from this period's bar to the last one's in the same band, then on to the next band.
+  const first = chart.getByRole('img', { name: 'Jun 2026 $1,820.40', exact: true });
+  await expect(first).toHaveAttribute('tabindex', '0');
+  await first.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(lastYear).toBeFocused();
+  await expect(chart.locator('.bar-chart-readout .bar-chart-readout-x')).toHaveText('Jun');
+  await page.keyboard.press('ArrowRight');
+  await expect(chart.getByRole('img', { name: 'Jul 2026 $1,765.10', exact: true })).toBeFocused();
+});
+
+test("the bar chart page's stack draws the palette in order and slate on top, and moves along the stack", async ({
+  page,
+}) => {
+  await visit(page, '/docs/charts/bar-chart');
+  const chart = page.getByRole('figure', { name: 'Spending by category, the last six months', exact: true });
+  await expect(chart).toHaveCount(1);
+  await expect(chart).toHaveAttribute('data-layout', 'stacked');
+  const may = chart.locator('.bar-chart-band').first().locator('.bar-chart-bar');
+  await expect(may).toHaveCount(5);
+  expect(await may.evaluateAll((bars) => bars.map((bar) => bar.getAttribute('data-color')))).toEqual([
+    'chart-1',
+    'chart-2',
+    'chart-3',
+    'chart-4',
+    'slate',
+  ]);
+  // Only the top segment keeps the rounded end; each segment above the first stands on a 2px gap of the card.
+  const drawn = await may.evaluateAll((bars) =>
+    bars.map((bar) => {
+      const style = getComputedStyle(bar);
+      return {
+        corner: style.borderTopLeftRadius,
+        gap: style.borderBottomWidth,
+        outer: bar.hasAttribute('data-outer'),
+      };
+    }),
+  );
+  expect(drawn.map(({ outer }) => outer)).toEqual([false, false, false, false, true]);
+  expect(drawn.slice(0, 4).map(({ corner }) => corner)).toEqual(['0px', '0px', '0px', '0px']);
+  expect(drawn.map(({ gap }) => gap)).toEqual(['0px', '2px', '2px', '2px', '2px']);
+  // Each month's total, the app's string, stands over its stack.
+  await expect(chart.locator('.bar-chart-value').first()).toHaveText('$1,506.55');
+  // Tab lands on the newest month's first category; Up climbs the stack and Left goes to the month before.
+  const groceries = chart.getByRole('img', { name: 'Oct Groceries $640.00', exact: true });
+  await expect(groceries).toHaveAttribute('tabindex', '0');
+  await groceries.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(chart.getByRole('img', { name: 'Oct Dining $312.45', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(chart.getByRole('img', { name: 'Sep Dining $330.20', exact: true })).toBeFocused();
+  // The readout lists the month's segments and its total.
+  await expect(chart.locator('.bar-chart-readout li')).toHaveCount(6);
+  await expect(chart.locator('.bar-chart-readout li').last()).toHaveText('$1,522.30Total');
+});
+
+/** The bar chart page's linked example, by its name. */
+const linkedChart = (page: Page): Locator =>
+  page.getByRole('figure', { name: "October's spending by category", exact: true });
+
+/** The middle of a row's name, in view, where a press lands on the row's target and not on the bar. */
+const rowName = async (chart: Locator, name: string): Promise<{ x: number; y: number }> => {
+  const label = chart.locator('.bar-chart-category', { hasText: name });
+  await label.scrollIntoViewIfNeeded();
+  const box = await label.boundingBox();
+  if (!box) throw new Error(`No row ${name}`);
+  return { x: box.x + 4, y: box.y + box.height / 2 };
+};
+
+test("the bar chart page's links open each category's transactions by the keys, a press anywhere in its row and a new tab", async ({
+  page,
+}) => {
+  await visit(page, '/docs/charts/bar-chart');
+  const chart = linkedChart(page);
+  await expect(chart).toHaveCount(1);
+  const href = (category: string): string => `#transactions?category=${category}&month=2026-10`;
+  // One stop: the first bar, a link named by its cells.
+  const groceries = chart.getByRole('link', { name: 'Groceries $640.00', exact: true });
+  await expect(groceries).toHaveAttribute('href', href('groceries'));
+  await expect(groceries).toHaveAttribute('tabindex', '0');
+  await expect(chart.locator('.bar-chart-bar[tabindex="0"]')).toHaveCount(1);
+  await groceries.focus();
+  await page.keyboard.press('ArrowDown');
+  const dining = chart.getByRole('link', { name: 'Dining $312.45', exact: true });
+  await expect(dining).toBeFocused();
+  // Space scrolls nothing and opens nothing; Enter follows the link.
+  const scrolled = await page.evaluate(() => window.scrollY);
+  await page.keyboard.press('Space');
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  await expect(page).not.toHaveURL(/#transactions/);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new RegExp(`${href('dining').replace(/[?]/g, '[?]')}$`));
+  // A press on a row's name, off its bar, follows the row's link, and the link cursor shows there.
+  const bills = await rowName(chart, 'Bills');
+  await page.mouse.move(bills.x, bills.y);
+  await expect(chart.locator('.bar-chart-readout .bar-chart-readout-x')).toHaveText('Bills');
+  expect(
+    await page.evaluate(({ x, y }) => {
+      const under = document.elementFromPoint(x, y);
+      return [under?.className, under && getComputedStyle(under).cursor];
+    }, bills),
+  ).toEqual(['bar-chart-hit', 'pointer']);
+  await page.mouse.click(bills.x, bills.y);
+  await expect(page).toHaveURL(new RegExp(`${href('bills').replace(/[?]/g, '[?]')}$`));
+  // A modified press and a middle press are the browser's own: each opens the link in a new tab.
+  const target = chart.locator('.bar-chart-hit[data-whole]').nth(2);
+  const presses: Parameters<Locator['click']>[0][] = [{ modifiers: ['ControlOrMeta'] }, { button: 'middle' }];
+  for (const press of presses) {
+    const [tab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      target.click({ ...press, position: { x: 4, y: 4 } }),
+    ]);
+    await tab.waitForURL(new RegExp(`${href('transport').replace(/[?]/g, '[?]')}$`));
+    await tab.close();
+  }
+  await expect(page).toHaveURL(new RegExp(`${href('bills').replace(/[?]/g, '[?]')}$`));
+  // The table's category cells link too.
+  await chart.getByRole('button', { name: 'Show as table' }).click();
+  await expect(chart.locator('table').getByRole('link', { name: 'Travel', exact: true })).toHaveAttribute(
+    'href',
+    href('travel'),
+  );
+});
+
+test.describe('bar chart links without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("with scripts off the bar chart page's bars are links of their own that a key or a press follows", async ({
+    page,
+  }) => {
+    await page.goto('/docs/charts/bar-chart');
+    const chart = linkedChart(page);
+    const bars = chart.locator('a.bar-chart-bar');
+    await expect(bars).toHaveCount(6);
+    // No tabindex: each link is a stop of its own, in drawn order, as plain links are.
+    expect(await bars.evaluateAll((links) => links.map((link) => link.getAttribute('tabindex')))).toEqual(
+      Array.from({ length: 6 }, () => null),
+    );
+    await bars.nth(1).focus();
+    await page.keyboard.press('Tab');
+    await expect(bars.nth(2)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/#transactions[?]category=transport&month=2026-10$/);
+    // A press anywhere in a row follows its link with no script at all.
+    const shopping = await rowName(chart, 'Shopping');
+    await page.mouse.click(shopping.x, shopping.y);
+    await expect(page).toHaveURL(/#transactions[?]category=shopping&month=2026-10$/);
+    // The copy of the table shown with scripts off links each category too.
+    await expect(chart.locator('table:not([hidden])').getByRole('link')).toHaveCount(6);
+  });
+});
+
+// ---- The Insights recipe ------------------------------------------------------------------------------------
+
+const INSIGHTS = '/docs/charts/bar-chart';
+
+/** The recipe's stage: the one that holds the Insights page header. */
+const insights = (page: Page): Locator =>
+  page.locator('.stage').filter({ has: page.locator('.page-header', { hasText: 'Insights' }) });
+
+/** The recipe's one chart. */
+const insightsChart = (page: Page): Locator => insights(page).locator('figure.bar-chart');
+
+/** An option of one of the card's segmented controls, `Group by` or `Show`, by its visible label. */
+const insightsOption = (page: Page, control: string, name: string): Locator =>
+  insights(page)
+    .getByRole('radiogroup', { name: control, exact: true })
+    .locator('.segmented-option', { hasText: new RegExp(`^${name}$`) });
+
+const insightsRadio = (page: Page, control: string, name: string): Locator =>
+  insights(page)
+    .getByRole('radiogroup', { name: control, exact: true })
+    .getByRole('radio', { name, exact: true });
+
+/** Records every element that loses focus to nothing from here on, read back by `lostFocus`. */
+const watchFocusLoss = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    const lost: string[] = [];
+    (window as unknown as { lostFocus: string[] }).lostFocus = lost;
+    document.addEventListener('focusout', (event) => {
+      if (event.relatedTarget === null && event.target instanceof Element) lost.push(event.target.className);
+    });
+  });
+
+const lostFocus = (page: Page): Promise<string[]> =>
+  page.evaluate(() => (window as unknown as { lostFocus: string[] }).lostFocus);
+
+test('the insights recipe switches its grouping and redraws the chart in the right orientation', async ({
+  page,
+}) => {
+  await visit(page, INSIGHTS);
+  const chart = insightsChart(page);
+  // Months stand up: income in gain beside spending in ink, twelve bands.
+  await expect(chart).toHaveAttribute('data-orientation', 'vertical');
+  await expect(chart.locator('.bar-chart-band')).toHaveCount(12);
+  await expect(insights(page).locator('.card-title')).toHaveText('Income and spending');
+  for (const [name, orientation, rows, first, last] of [
+    ['Category', 'horizontal', 11, 'Rent', 'Other'],
+    ['Merchant', 'horizontal', 11, 'Northside Rent', 'Other'],
+    ['Account', 'horizontal', 5, 'Joint checking', 'Travel card'],
+    ['Month', 'vertical', 12, 'Nov', 'Oct'],
+  ] as const) {
+    await insightsOption(page, 'Group by', name).click();
+    await expect(chart, name).toHaveAttribute('data-orientation', orientation);
+    // The control keeps focus, and the URL names the grouping, the first one writing nothing.
+    await expect(insightsRadio(page, 'Group by', name)).toBeFocused();
+    await expect(page).toHaveURL(
+      name === 'Month' ? /bar-chart$/ : new RegExp(`[?]by=${name.toLowerCase()}$`),
+    );
+    const names = chart.locator('table th[scope="row"]');
+    await expect(names, name).toHaveCount(rows);
+    await expect(names.first()).toHaveText(first);
+    await expect(names.last()).toHaveText(last);
+    // The table under the chart lists the same bands, each a link to its transactions.
+    await expect(insights(page).locator('.data-table-link').first()).toHaveAttribute(
+      'href',
+      new RegExp(`#transactions[?]${name === 'Month' ? 'month=2025-11' : `${name.toLowerCase()}=`}`),
+    );
+  }
+  // The URL brings the view back after a reload.
+  await visit(page, `${INSIGHTS}?by=merchant`);
+  await expect(chart).toHaveAttribute('data-orientation', 'horizontal');
+  await expect(insightsRadio(page, 'Group by', 'Merchant')).toBeChecked();
+  await expect(insights(page).locator('.card-title')).toHaveText('Spending by merchant');
+});
+
+test('comparing draws a hatched previous period named in each bar', async ({ page }) => {
+  await visit(page, `${INSIGHTS}?by=category`);
+  const chart = insightsChart(page);
+  const compare = insights(page).getByRole('switch', { name: 'Compare to previous period' });
+  await expect(chart.locator('.bar-chart-bar[data-look="hatched"]')).toHaveCount(0);
+  await insights(page).locator('.switch', { hasText: 'Compare to previous period' }).click();
+  await expect(compare).toBeChecked();
+  await expect(page).toHaveURL(/[?]by=category&compare=1$/);
+  // September stands beside October in October's ink, striped, and each bar's name says its period.
+  const hatched = chart.locator('.bar-chart-bar[data-look="hatched"]');
+  await expect(hatched).toHaveCount(11);
+  for (const bar of await hatched.all()) await expect(bar).toHaveAttribute('data-color', 'ink');
+  await expect(chart.locator('.bar-chart-legend-item[data-look="hatched"]')).toHaveText('September');
+  // A ranked view's bars are links to their transactions, September's to September's.
+  const september = chart.getByRole('link', { name: 'Groceries September $698.15', exact: true });
+  await expect(september).toHaveAttribute('data-look', 'hatched');
+  await expect(september).toHaveAttribute('href', '#transactions?category=groceries&period=2026-09');
+  await expect(chart.getByRole('link', { name: 'Travel October -$310.00', exact: true })).toHaveAttribute(
+    'data-sign',
+    'negative',
+  );
+  await expect(insights(page).locator('.card-note')).toHaveText('October, against September');
+  // The figures above draw their change against September while the page compares.
+  await expect(insights(page).locator('.stat-tile-change').first()).toHaveText('Up $415 vs September');
+
+  // Income and spending together already fill a band, so the comparison is off there, and the URL keeps it.
+  await insightsOption(page, 'Group by', 'Month').click();
+  await expect(compare).toBeDisabled();
+  await expect(compare).not.toBeChecked();
+  await expect(hatched).toHaveCount(0);
+  await expect(insights(page).locator('.stat-tile-change')).toHaveCount(0);
+  await insightsOption(page, 'Show', 'Income').click();
+  await expect(page).toHaveURL(/[?]show=income&compare=1$/);
+  await expect(compare).toBeChecked();
+  // The previous period takes the current series' color, gain for income.
+  await expect(hatched).toHaveCount(12);
+  for (const bar of await hatched.all()) await expect(bar).toHaveAttribute('data-color', 'gain');
+  await expect(chart.getByRole('img', { name: 'Oct A year before $4,900.00', exact: true })).toHaveCount(1);
+});
+
+test("the insights recipe's ranked bars open their transactions through the page's router", async ({
+  page,
+}) => {
+  await visit(page, `${INSIGHTS}?by=category`);
+  const chart = insightsChart(page);
+  const rent = chart.getByRole('link', { name: 'Rent $1,450.00', exact: true });
+  await expect(rent).toHaveAttribute('href', '#transactions?category=rent');
+  await expect(rent).toHaveAttribute('tabindex', '0');
+  // A press on the row's empty track follows the link, and the URL keeps the view.
+  const groceries = chart.locator('.bar-chart-track').nth(1);
+  await groceries.scrollIntoViewIfNeeded();
+  const box = await groceries.boundingBox();
+  if (!box) throw new Error('No track');
+  await page.mouse.click(box.x + box.width - 4, box.y + box.height / 2);
+  await expect(page).toHaveURL(/[?]by=category#transactions[?]category=groceries$/);
+  // The keys: Enter on the focused bar follows its link.
+  await rent.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/[?]by=category#transactions[?]category=dining$/);
+});
+
+test("a focused bar's grouping change moves focus to the chart, never the body", async ({ page }) => {
+  await visit(page, INSIGHTS);
+  const chart = insightsChart(page);
+  await watchFocusLoss(page);
+  // Tab lands on the newest month first.
+  const october = chart.getByRole('img', { name: 'Oct Income $5,200.00', exact: true });
+  await expect(october).toHaveAttribute('tabindex', '0');
+  await october.focus();
+  // A change that leaves focus where it is, as Back or a shortcut would: the radio is pressed by script.
+  await insightsRadio(page, 'Group by', 'Category').evaluate((input) => {
+    (input as HTMLInputElement).click();
+  });
+  await expect(chart).toHaveAttribute('data-orientation', 'horizontal');
+  await expect(chart.getByRole('link', { name: 'Rent $1,450.00', exact: true })).toBeFocused();
+  await insightsRadio(page, 'Group by', 'Month').evaluate((input) => {
+    (input as HTMLInputElement).click();
+  });
+  await expect(chart).toHaveAttribute('data-orientation', 'vertical');
+  await expect(october).toBeFocused();
+  expect(await lostFocus(page)).toEqual([]);
+});
+
+test("the month view's net bars go below zero and income is drawn in gain", async ({ page }) => {
+  await visit(page, INSIGHTS);
+  const chart = insightsChart(page);
+  // Money that arrived is gain, and money that went out is ink, never a color of its own.
+  const income = chart.locator('.bar-chart-bar[data-color="gain"]');
+  await expect(income).toHaveCount(12);
+  await expect(chart.locator('.bar-chart-bar[data-color="ink"]')).toHaveCount(12);
+  await expect(chart.locator('.bar-chart-legend-item').first()).toHaveText('Income');
+  await insightsOption(page, 'Show', 'Net').click();
+  await expect(page).toHaveURL(/[?]show=net$/);
+  await expect(insights(page).locator('.card-title')).toHaveText('Net cash flow');
+  const negative = chart.locator('.bar-chart-bar[data-sign="negative"]');
+  await expect(negative).toHaveCount(2);
+  await expect(chart.getByRole('img', { name: 'Dec -$820.00', exact: true })).toHaveAttribute(
+    'data-sign',
+    'negative',
+  );
+  // A negative bar hangs from the zero line that a positive one stands on.
+  const below = await negative.first().boundingBox();
+  const above = await chart.locator('.bar-chart-bar[data-sign="positive"]').first().boundingBox();
+  expect(Math.abs((below?.y ?? 0) - ((above?.y ?? 0) + (above?.height ?? 0)))).toBeLessThanOrEqual(1);
+  await expect(chart.locator('.bar-chart-bar[data-color="gain"]')).toHaveCount(0);
+  // The category mix stacks the palette and slate, each month's total from the app.
+  await insightsOption(page, 'Show', 'Mix').click();
+  await expect(chart).toHaveAttribute('data-layout', 'stacked');
+  await expect(chart.locator('.bar-chart-band').last().locator('.bar-chart-bar')).toHaveCount(5);
+  await expect(chart.getByRole('img', { name: 'Oct Groceries $742.60', exact: true })).toHaveAttribute(
+    'data-color',
+    'chart-2',
+  );
+});
+
+test('the report renders on the server with no links or images, and its wide table scrolls at 375', async ({
+  page,
+}) => {
+  // The page's HTML as the server sends it: the report is in it, its link and image already text.
+  const html = await (await page.request.get(INSIGHTS)).text();
+  expect(html).toContain('Your October');
+  expect(html).toContain('<span class="prose-unlinked">every transaction</span>');
+  expect(html).not.toContain('example.com');
+  // skipHtml dropped the HTML the model wrote.
+  expect(html).not.toContain('Open the full report in the app');
+
+  await page.setViewportSize({ width: 375, height: 800 });
+  await visit(page, INSIGHTS);
+  const report = page.locator('.stage article.prose', { hasText: 'Your October' });
+  await expect(report).toHaveCount(1);
+  await expect(report.locator('a')).toHaveCount(0);
+  await expect(report.locator('img')).toHaveCount(0);
+  await expect(report.locator('.prose-image')).toContainText('Spending by category in October, rent first');
+  const region = report.getByRole('region', {
+    name: 'Table: Category, September, October, Change, Share, Budget',
+  });
+  await expect(region).toHaveAttribute('tabindex', '0');
+  const widths = await region.evaluate((element) => ({
+    scroll: element.scrollWidth,
+    client: element.clientWidth,
+  }));
+  expect(widths.scroll).toBeGreaterThan(widths.client);
+  expect(await sideways(page)).toBe(0);
+});
+
+test('the recipe fits a phone at 375 with no sideways scroll, in each grouping', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await visit(page, `${INSIGHTS}?compare=1`);
+  for (const name of ['Category', 'Merchant', 'Account', 'Month']) {
+    await insightsOption(page, 'Group by', name).click();
+    await expect(insightsRadio(page, 'Group by', name)).toBeChecked();
+    await expect.poll(() => sideways(page), { message: name }).toBe(0);
+  }
+  for (const name of ['Spending', 'Income', 'Net', 'Mix', 'Both']) {
+    await insightsOption(page, 'Show', name).click();
+    await expect(insightsRadio(page, 'Show', name)).toBeChecked();
+    await expect.poll(() => sideways(page), { message: name }).toBe(0);
+  }
+  // Each row of the table under the chart is an item with its amount at the end.
+  await insightsOption(page, 'Group by', 'Category').click();
+  await expect(
+    insights(page)
+      .locator('.data-table-figure:visible')
+      .filter({ hasText: /^\$742\.60$/ }),
+  ).toHaveCount(1);
+});
+
+test('the stat tile page writes a change against a period as a line', async ({ page }) => {
+  await visit(page, '/docs/components/stat-tile');
+  const section = guideSection(page, 'A change against a period');
+  await expect(section).toHaveCount(1);
+  await expect(section).toContainText("change={{ direction: 'up', label: 'Up $120 vs September' }}");
+  await expect(section).toContainText('It is a line and not a chip.');
+});
+
 test.describe('a line chart without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 
@@ -3226,7 +3673,11 @@ test('the installation page installs the charts package and names the core versi
   const section = page
     .locator('.docs-section')
     .filter({ has: page.getByRole('heading', { name: 'Charts', exact: true }) });
-  await expect(section).toContainText('0.8 for charts 0.1.5');
+  await expect(section).toContainText('0.9 for charts 0.2.0');
+  await expect(section.getByRole('link', { name: 'Bar chart', exact: true })).toHaveAttribute(
+    'href',
+    '/docs/charts/bar-chart',
+  );
   await expect(section.getByRole('link', { name: 'Line chart', exact: true })).toHaveAttribute(
     'href',
     '/docs/charts/line-chart',

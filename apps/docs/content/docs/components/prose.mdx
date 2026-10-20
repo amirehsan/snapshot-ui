@@ -1,0 +1,186 @@
+---
+title: Prose
+description: "Long-form text you render from Markdown: headings, lists, quotes, code and tables in the library's type, at a reading length."
+icon: TextAlignStart
+---
+
+<Section>
+
+## A report
+
+`Prose` gives the HTML inside it the library's type and spacing: headings by the heading steps, paragraphs at the body size with a 1.6 line height, lists, quotes, code, tables, figures and rules. Running text stops at 70 characters, a comfortable line; tables, code and figures take the whole width. Blocks sit 24px apart, a heading 32px under what came before it and 8px over what follows it, so a heading reads with its section. Here a report you write is rendered from Markdown by react-markdown in a server component, so the page sends no JavaScript for it.
+
+<Preview name="prose-report" />
+
+</Section>
+
+<Section>
+
+## Rendering Markdown safely
+
+Render Markdown on the server, with react-markdown and remark-gfm for tables, in a server component. Text a model writes is not yours to trust: it can hold a link to anywhere, a picture from anywhere and HTML. So for model output, pass `skipHtml`, which drops every tag, and give react-markdown a `components` map that turns a link into its text, `span.prose-unlinked`, and an image into its alt text, `span.prose-image`. The reader is never sent to an address and never shown a picture from one; a paragraph that held a link holds its words and reads the same, since Prose lays nothing out by `a` or `img`. A link within the page, such as a footnote's mark and its way back, stays a link, since it sends the reader nowhere new. The image's span starts with a visually hidden "Image:", so a screen reader says what the words are, and an image with no alt text renders nothing. The same map puts a table in a `ProseScroll` named from its column headers, so a page with several tables names each one, and makes a code block a named region with `tabIndex={0}`, so it scrolls by keys in every browser. Your own content, such as a help article, keeps its links: give it the map without `a` and `img`.
+
+<Preview name="prose-markdown" />
+
+HTML from a CMS is not Markdown. Sanitize it first, with a library such as DOMPurify or sanitize-html, then pass it to the element as React's raw HTML attribute, which Prose passes on like any other. Prose never parses or injects HTML, and has no prop that would.
+
+</Section>
+
+<Section>
+
+## Model output
+
+A monthly report as a model wrote it: a link, a bare address, two images, some HTML and a footnote, rendered with `skipHtml` and the map. The link and the address are plain text, the address breaking anywhere so it never pushes a phone sideways; the image's alt text sits in a small slate box; the image with no alt text is not drawn; the HTML is gone; the six-column table scrolls in its own region; and the footnote's mark links to its note, under a rule. GFM writes a "Footnotes" heading over the notes for screen readers alone, which Prose hides as visually hidden text.
+
+<Preview name="prose-model-output" />
+
+</Section>
+
+<Section>
+
+## Copy an answer
+
+A [copy button](/docs/components/copy-button) under an answer, in the answer's footer, outside the Prose box. While an answer streams in, an app marks its body `aria-busy="true"`, and a screen reader may hold back what changes inside a busy part, so the button's polite "Copied" goes in the footer, which is never busy. The button copies the answer's text as your app holds it, not the drawn HTML.
+
+<Preview name="copy-button-answer" />
+
+</Section>
+
+<Section>
+
+## Wide tables
+
+A table with four or more columns of figures is wider than a phone. Put it in a `ProseScroll`: a region that scrolls sideways inside the article, so the page never does, and that takes focus, so a keyboard reader can scroll it with the arrow keys. Its name is required, since a region a screen reader lists needs one: name the table, such as "October by category, table". It is always a tab stop, whether the table overflows or not, since it cannot know without measuring; so wrap only tables wider than three columns, and give each a name of its own. The table keeps its rows and columns. A table outside one keeps to the width it is given by breaking its cells anywhere, which keeps the page whole but makes figures hard to read, so wrap every wide table.
+
+<Preview name="prose-wide-table" />
+
+</Section>
+
+<Section>
+
+## Components in an article
+
+A [Bar chart](/docs/charts/bar-chart) and a [Badge](/docs/components/badge) inside an article, with no `not-prose`. Prose spaces the chart as a block of the article, 24px from the paragraphs around it, and leaves everything inside it, its figure, its rows and its table, as it is anywhere.
+
+<Preview name="prose-with-chart" />
+
+</Section>
+
+<Section>
+
+## In a card and a page column
+
+In a [Card](/docs/components/card), Prose is one part of the body: the card's padding is the article's inset, since the first and last blocks carry no outer margin, and a code block or an image takes the card's concentric corner wherever it falls. Start it at a paragraph or an `h2`, and leave the title to the card. On an article page, put `Prose as="article"` in the [PageColumn](/docs/components/page-header) under a PageHeader: text keeps its measure from the column's start edge, under the title, and tables and figures take the column's width.
+
+<Preview name="prose-card" />
+
+</Section>
+
+<Section>
+
+## Persian
+
+Under `lang="fa"` a list's markers, a quote's rule and an indent sit on the right, ordered lists count in Persian digits, headings drop their tracking, which would pull a cursive script apart, and emphasis is weight 500 and upright, since Vazirmatn has no italic. Code, inline and in blocks, stays left to right, and so do figures. Sofia Sans has no Persian letters, so load Vazirmatn and put it first in the stack under `lang="fa"`, as the [installation](/docs/installation) page shows. A renderer that mixes Persian and English paragraphs writes `dir="auto"` on each; Prose sets no direction. An amount written in a Persian sentence, such as $1,250.00, is drawn with its sign on the right, "1,250.00$", since after Persian letters the bidirectional algorithm reads the sign with them: wrap each amount in a left-to-right isolate, U+2066 before it and U+2069 after it, as the guide's fixture does. GFM labels footnotes in English; pass the label in the page's language through react-markdown's `remarkRehypeOptions`, such as `{ footnoteLabel: 'پانویس‌ها', footnoteBackLabel: 'بازگشت به متن' }`.
+
+<Preview name="prose-persian" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+- Prose and ProseScroll are static. They render in a server component and ship no JavaScript, so a report rendered on the server costs the page nothing. They render inside a client component unchanged, for text that streams in.
+- Put the `prose` class on any element, or use `Prose`, which renders a `div`, an `article` or a `section` through `as`. Prose never reaches a library component: its rules sit in a layer under every component's, and every component inside the box, a chart, a table, a trail or a card with your text in it, takes for whatever its own rules leave unset what it would take outside prose, so it draws as it does anywhere. To leave a subtree of your own markup alone, give it the `not-prose` class.
+- Prose does not nest inside what it leaves alone: a `Prose` inside a `not-prose` subtree, or inside a library component that sits inside another prose box, is unstyled. A `Prose` in a Card or a page column on its own is styled as usual.
+- Text stops at `--prose-measure`, 70ch of the body's text, one line length for every block, headings included. Set it on the prose element or above it: `none` for a narrow column, or a smaller length. Headings take `--prose-scroll-margin` above them when a link jumps to one; set it to your sticky header's height.
+- A Markdown `#` is an `h1`, and a page has one. Shift the headings down one level in your renderer, such as react-markdown's `components` mapping `h1` to `h2`, and the look follows the element.
+- Load Sofia Sans's italic as well as its roman, as the installation page shows; without it, emphasis is upright.
+- Tailwind Typography also names its class `prose`, and its rules sit in Tailwind's `utilities` layer, which comes after the components layer. So they match every `prose` element, the library's `Prose` included, and win over the library's rules. In an app that uses both, give Typography a class of its own:
+
+```css
+@plugin "@tailwindcss/typography" {
+  className: "tw-prose";
+}
+```
+
+```tsx
+import { Prose, ProseScroll } from '@snapshot-ui/react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+export function MonthlyReport({ markdown }: { markdown: string }) {
+  return (
+    <Prose as="article">
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        skipHtml
+        components={{
+          // A footnote's link stays, within the page; any other becomes its text.
+          a: ({ node, children, ...link }) =>
+            link.href?.startsWith('#') ? (
+              <a {...link}>{children}</a>
+            ) : (
+              <span className="prose-unlinked">{children}</span>
+            ),
+          img: ({ alt }) =>
+            alt ? (
+              <span className="prose-image">
+                <span className="visually-hidden">Image: </span>
+                {alt}
+              </span>
+            ) : null,
+          table: ({ children }) => (
+            <ProseScroll aria-label="Spending by category, table">
+              <table>{children}</table>
+            </ProseScroll>
+          ),
+          pre: ({ children }) => (
+            <pre role="region" aria-label="Code" tabIndex={0}>
+              {children}
+            </pre>
+          ),
+        }}
+      >
+        {markdown}
+      </Markdown>
+    </Prose>
+  );
+}
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+Both take `className` (merged after their own class), `ref` and their other HTML attributes.
+
+### Prose
+
+<PropsTable label="Prose props" path="../../packages/react/src/prose/Prose.tsx" type="Pick<ProseProps, 'as' | 'className'>" />
+
+### ProseScroll
+
+<PropsTable label="ProseScroll props" path="../../packages/react/src/prose/Prose.tsx" type="Pick<ProseScrollProps, 'aria-label' | 'aria-labelledby' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The elements are yours, and Prose adds none: a screen reader reads your headings, lists, quotes and tables as they are. `Prose as="article"` is not a landmark; `as="section"` is a region landmark only when you name it. A `ProseScroll` is a named region that takes focus, so a keyboard reader can scroll a wide table, and its focus ring shows where focus is; a code block mapped as a named region with `tabIndex={0}` scrolls the same way. A `ProseScroll` is a tab stop even when its table fits, so wrap only wide tables. A neutralized link is text: no tab stop, no role and no underline, so nothing looks like a link that goes nowhere. Real links are underlined, so they are never told by color alone.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps long-form text in the system.
+
+<Rules dos={['Render Markdown on the server, and pass skipHtml for anything a model wrote.', 'Turn every link and image in model output into its text.', 'Put every table wider than three columns in a ProseScroll, and name it.', 'Start Markdown inside a page at an h2.']} donts={['Never render HTML you have not sanitized.', 'Never center an article: text keeps to the start edge.', 'Never draw a neutralized link as a link.']} />
+
+</Section>

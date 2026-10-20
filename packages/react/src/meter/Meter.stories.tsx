@@ -222,22 +222,30 @@ export const OnTableRows: Story = {
     await userEvent.hover(hovered);
     await waitFor(() => expect(hovered).toHaveAttribute('data-hovered', 'true'));
     await expect(rowOf('Dining out')).toHaveAttribute('aria-selected', 'true');
-    const fills = new Set<string>();
-    for (const [state, row] of [
-      ['plain', rowOf('Groceries')],
-      ['hovered', hovered],
-      ['selected', rowOf('Dining out')],
-    ] as const) {
-      const meter = row.querySelector<HTMLElement>('.meter');
-      const cut = row.querySelector<HTMLElement>('.meter-segment + .meter-segment');
-      const pace = row.querySelector<HTMLElement>('.meter-pace');
-      if (!meter || !cut || !pace) throw new Error(`No meter in the ${state} row`);
-      const fill = pixelOf(fillBehind(meter));
-      fills.add(fill.join());
-      await expect(pixelOf(getComputedStyle(cut).borderInlineStartColor), `${state}: the cut`).toEqual(fill);
-      await expect(pixelOf(getComputedStyle(pace).borderTopColor), `${state}: the pace ring`).toEqual(fill);
-    }
-    // Three fills, so the checks above read three rows that differ.
-    await expect(fills.size).toBe(3);
+    // A hovered row takes its wash only where the page reports a hover, `@media (hover: hover)`, which a
+    // headless engine may not: there the hovered row is a plain one, and the checks read two fills.
+    const hasHover = matchMedia('(hover: hover)').matches;
+    // Read again until the hovered row has drawn its wash, which an engine may paint a frame after its state.
+    await waitFor(async () => {
+      const fills = new Set<string>();
+      for (const [state, row] of [
+        ['plain', rowOf('Groceries')],
+        ['hovered', hovered],
+        ['selected', rowOf('Dining out')],
+      ] as const) {
+        const meter = row.querySelector<HTMLElement>('.meter');
+        const cut = row.querySelector<HTMLElement>('.meter-segment + .meter-segment');
+        const pace = row.querySelector<HTMLElement>('.meter-pace');
+        if (!meter || !cut || !pace) throw new Error(`No meter in the ${state} row`);
+        const fill = pixelOf(fillBehind(meter));
+        fills.add(fill.join());
+        await expect(pixelOf(getComputedStyle(cut).borderInlineStartColor), `${state}: the cut`).toEqual(
+          fill,
+        );
+        await expect(pixelOf(getComputedStyle(pace).borderTopColor), `${state}: the pace ring`).toEqual(fill);
+      }
+      // Three fills where the page hovers, so the checks above read three rows that differ.
+      await expect(fills.size).toBe(hasHover ? 3 : 2);
+    });
   },
 };

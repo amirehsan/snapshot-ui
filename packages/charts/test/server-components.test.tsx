@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import type { ReactElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { outermostClasses, proseRoots } from './prose-roots';
 
 // React as a server component sees it: the react-server build, which has no state, no effects, no refs
 // and no context. A component that calls one of those throws here, as it does in a Next.js server tree.
@@ -78,6 +79,18 @@ const STATIC: [name: string, element: ReactElement, contains: string[], excludes
 ];
 
 describe('the static charts in a server component', () => {
+  // Its outermost element carries a root prose hands back to the layer below, so a chart in an article draws as
+  // it does anywhere (insights spec corrections 52 and 93).
+  const roots = proseRoots();
+  it.each(STATIC)('%s has a component root prose hands back on its outermost element', (_name, element) => {
+    const classes = outermostClasses(renderToStaticMarkup(element));
+    if (classes === null) return;
+    expect(
+      classes.filter((name) => roots.has(name)),
+      classes.join(' '),
+    ).not.toEqual([]);
+  });
+
   it.each(STATIC)('%s renders under the server build', (_name, element, contains, excludes) => {
     const html = renderToStaticMarkup(element);
     for (const text of contains) expect(html).toContain(text);
@@ -85,8 +98,15 @@ describe('the static charts in a server component', () => {
   });
 });
 
-/** The source file of every static chart, relative to `src`. */
-const STATIC_MODULES = ['sparkline/Sparkline.tsx'];
+/**
+ * The source file of every static chart, relative to `src`, and of each part the charts share that holds no
+ * state and so carries no directive.
+ */
+const STATIC_MODULES = [
+  'sparkline/Sparkline.tsx',
+  'foundations/ChartLegend.tsx',
+  'foundations/ChartTable.tsx',
+];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {
   // Rendering above proves the chart runs without client APIs today; this proves it stays a server
@@ -99,6 +119,24 @@ describe.each(STATIC_MODULES)('the source of %s', (file) => {
 
   it('imports no React Aria, which would pull a client module into a server tree', () => {
     expect(source).not.toContain('react-aria-components');
+  });
+});
+
+/** The charts that hold state, which a server component imports as client references. */
+const CLIENT_MODULES = ['line-chart/LineChart.tsx', 'bar-chart/BarChart.tsx'];
+
+describe.each(CLIENT_MODULES)('the source of %s', (file) => {
+  // A Next.js server page imports a client module as a reference and renders it once to HTML, which
+  // server-render.test.tsx proves; this proves the module says what it is and pulls in nothing heavy.
+  const source = readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8');
+
+  it('starts with the client directive', () => {
+    expect(source.startsWith("'use client';")).toBe(true);
+  });
+
+  it('imports neither React Aria nor Lucide', () => {
+    expect(source).not.toContain('react-aria');
+    expect(source).not.toContain('lucide-react');
   });
 });
 

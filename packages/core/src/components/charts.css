@@ -7,8 +7,14 @@
  * is, because :dir() is past the browser floor; the svg is mirrored by it and the HTML follows by its logical
  * insets. The HTML over a drawing takes its direction from --chart-direction, set by the same attribute, so a
  * dir="auto" or a CSS direction can never mirror the marks without the svg. The first series is ink and the
- * second slate; there is no palette. Rings are borders in the surface the chart sits on, --chart-surface, read
- * with Lifted as its fallback.
+ * second slate; the chart palette is a stack's alone. Rings are borders in the surface the chart sits on,
+ * --chart-surface, read with Lifted as its fallback. The rules every chart shares (the legend, the readout
+ * panel, the gridlines and the baseline, the y labels, the table, its toolbar and the noscript note) are
+ * written once, as :is() lists of
+ * each chart's own class, so a chart joins a rule by adding its class to the list and keeps its own class names.
+ * A bar chart's bars are HTML, not svg, since a bar keeps its shape: a span placed by percentages and logical
+ * insets, its data end rounded by --radius-micro and its thickness capped in a calc(), so nothing is measured
+ * ("BarChart").
  */
 @layer components {
   :where([dir='ltr' i]) {
@@ -96,12 +102,12 @@
   }
 
   /* Author CSS outranks the user agent's [hidden], so the two views the toggle hides say so again. */
-  .line-chart-chart[hidden],
-  .line-chart-table[hidden] {
+  :is(.line-chart-chart, .bar-chart-chart)[hidden],
+  :is(.line-chart-table, .bar-chart-table)[hidden] {
     display: none;
   }
 
-  .line-chart-legend {
+  :is(.line-chart-legend, .bar-chart-legend) {
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-part) var(--spacing-peer);
@@ -113,7 +119,7 @@
     overflow-wrap: anywhere;
   }
 
-  .line-chart-legend-item {
+  :is(.line-chart-legend-item, .bar-chart-legend-item) {
     display: inline-flex;
     align-items: center;
     gap: var(--spacing-part);
@@ -131,7 +137,7 @@
     border-block-start: 1.5px solid var(--color-slate);
   }
 
-  .line-chart-legend-label {
+  :is(.line-chart-legend-label, .bar-chart-legend-label) {
     min-width: 0;
     color: var(--color-ink);
   }
@@ -164,13 +170,13 @@
     scale: var(--chart-flip, 1) 1;
   }
 
-  .line-chart-grid {
+  :is(.line-chart-grid, .bar-chart-grid) {
     stroke: var(--color-divider);
     stroke-width: 1px;
     vector-effect: non-scaling-stroke;
   }
 
-  .line-chart-baseline {
+  :is(.line-chart-baseline, .bar-chart-baseline) {
     stroke: var(--color-frame);
     stroke-width: 1px;
     vector-effect: non-scaling-stroke;
@@ -207,7 +213,7 @@
     pointer-events: none;
   }
 
-  .line-chart-y-label {
+  :is(.line-chart-y-label, .bar-chart-y-label) {
     position: absolute;
     inset-inline-start: 0;
     translate: 0 -100%;
@@ -253,7 +259,7 @@
    * side, or from the x inward in the outer quarters, where three quarters do: each width keeps it inside the
    * plot, and its text wraps within that width rather than running past its border.
    */
-  .line-chart-readout {
+  :is(.line-chart-readout, .bar-chart-readout) {
     position: absolute;
     box-sizing: border-box;
     width: max-content;
@@ -270,44 +276,44 @@
     translate: calc(var(--chart-flip, 1) * -50%) 0;
   }
 
-  .line-chart-readout[data-align='start'] {
+  :is(.line-chart-readout, .bar-chart-readout)[data-align='start'] {
     max-width: min(16rem, 75% - var(--spacing-part));
     translate: none;
     margin-inline-start: var(--spacing-part);
   }
 
-  .line-chart-readout[data-align='end'] {
+  :is(.line-chart-readout, .bar-chart-readout)[data-align='end'] {
     max-width: min(16rem, 75% - var(--spacing-part));
     translate: calc(var(--chart-flip, 1) * -100%) 0;
     margin-inline-start: calc(-1 * var(--spacing-part));
   }
 
   /* The dot's 6px radius and 4px of air between the panel and the dots, on the side the panel is on. */
-  .line-chart-readout[data-place='above'] {
+  :is(.line-chart-readout, .bar-chart-readout)[data-place='above'] {
     margin-block-end: 0.625rem;
   }
 
-  .line-chart-readout[data-place='below'] {
+  :is(.line-chart-readout, .bar-chart-readout)[data-place='below'] {
     margin-block-start: 0.625rem;
   }
 
-  .line-chart-readout-x {
+  :is(.line-chart-readout-x, .bar-chart-readout-x) {
     margin: 0;
     color: var(--color-slate);
   }
 
-  .line-chart-readout-list {
+  :is(.line-chart-readout-list, .bar-chart-readout-list) {
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  .line-chart-readout-value {
+  :is(.line-chart-readout-value, .bar-chart-readout-value) {
     font-weight: 500;
     font-variant-numeric: tabular-nums;
   }
 
-  .line-chart-readout-series {
+  :is(.line-chart-readout-series, .bar-chart-readout-series) {
     margin-inline-start: 0.25rem;
     color: var(--color-slate);
   }
@@ -354,7 +360,7 @@
     translate: calc(var(--chart-flip, 1) * -100%) 0;
   }
 
-  .line-chart-table {
+  :is(.line-chart-table, .bar-chart-table) {
     width: 100%;
     border-collapse: collapse;
     font-size: var(--text-small);
@@ -362,13 +368,13 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .line-chart-table caption {
+  :is(.line-chart-table, .bar-chart-table) caption {
     padding-block-end: var(--spacing-part);
     text-align: start;
     color: var(--color-slate);
   }
 
-  .line-chart-table :is(th, td) {
+  :is(.line-chart-table, .bar-chart-table) :is(th, td) {
     padding: 0.5rem 0.75rem;
     border-block-end: 1px solid var(--color-divider);
     text-align: start;
@@ -376,31 +382,851 @@
     overflow-wrap: anywhere;
   }
 
-  .line-chart-table thead th {
+  :is(.line-chart-table, .bar-chart-table) thead th {
     font-weight: 500;
     color: var(--color-slate);
   }
 
-  .line-chart-table tbody td {
+  :is(.line-chart-table, .bar-chart-table) tbody td {
     text-align: end;
   }
 
-  .line-chart-toolbar {
+  :is(.line-chart-toolbar, .bar-chart-toolbar) {
     display: flex;
   }
 
   /* A chart that ends a card puts its toggle in the card's bottom start corner, inside the card's curve, so
      the toolbar keeps the card's corner inset under it and the toggle keeps its own shape and its place on
      the chart's start edge: 7px more in Rounded, nothing more in Soft and Square. */
-  :is(.card, .card > .card-body:last-child) > .line-chart:last-child .line-chart-toolbar {
+  :is(.card, .card > .card-body:last-child)
+    > :is(.line-chart, .bar-chart):last-child
+    :is(.line-chart-toolbar, .bar-chart-toolbar) {
     margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
-  .line-chart-noscript {
+  :is(.line-chart-noscript, .bar-chart-noscript) {
     margin: 0;
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
     color: var(--color-slate);
+  }
+
+  /*
+   * BarChart, horizontal: a grid of rows, each its label at the start, its track of bars from the zero line and
+   * its amounts at the end. The label column is as wide as the longest label up to 40% of the chart, the amount
+   * column as wide as the widest amount, which the grid finds from the amounts themselves, and the track takes
+   * the rest. The figure is the container its queries read; a size container takes no width from its content,
+   * so its holder gives it one, as a block or a sized flex or grid item does.
+   */
+  .bar-chart {
+    container: bar-chart / inline-size;
+    contain-intrinsic-inline-size: 0;
+    display: grid;
+    gap: var(--spacing-part);
+    min-width: 0;
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bar-chart-chart {
+    display: grid;
+    gap: var(--spacing-part);
+    min-width: 0;
+  }
+
+  /* A series' color by name, read by its bars, its legend key and its readout swatch. Never text. */
+  .bar-chart [data-color='ink'] {
+    --bar-chart-color: var(--color-ink);
+  }
+
+  .bar-chart [data-color='slate'] {
+    --bar-chart-color: var(--color-slate);
+  }
+
+  .bar-chart [data-color='gain'] {
+    --bar-chart-color: var(--color-gain);
+  }
+
+  /* The chart palette, for a stack of peers (spec 5.4). Never text: a value, a label or a legend stays ink or slate. */
+  .bar-chart [data-color='chart-1'] {
+    --bar-chart-color: var(--color-chart-1);
+  }
+
+  .bar-chart [data-color='chart-2'] {
+    --bar-chart-color: var(--color-chart-2);
+  }
+
+  .bar-chart [data-color='chart-3'] {
+    --bar-chart-color: var(--color-chart-3);
+  }
+
+  .bar-chart [data-color='chart-4'] {
+    --bar-chart-color: var(--color-chart-4);
+  }
+
+  /*
+   * The rows run in the direction the svg is mirrored by, as a line chart's marks do. No row gap, so the
+   * gridlines behind the rows run unbroken.
+   */
+  .bar-chart-rows {
+    position: relative;
+    display: grid;
+    grid-template-columns: fit-content(var(--bar-chart-label-size, 40%)) minmax(0, 1fr) max-content;
+    column-gap: var(--spacing-part);
+    min-width: 0;
+    direction: var(--chart-direction, ltr);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bar-chart-row {
+    display: contents;
+  }
+
+  /* The row's name, which the reader scans: ink, wrapping anywhere, never cut short. */
+  .bar-chart-category {
+    align-self: center;
+    min-width: 0;
+    padding-block: 0.25rem;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+
+  /* A 40px target for the pointer at least, or as tall as the row's wrapped label. */
+  .bar-chart-track {
+    position: relative;
+    min-width: 0;
+    min-block-size: var(--size-target);
+  }
+
+  /* One amount per bar, in group order, centred on the row and ending at the column's end. */
+  .bar-chart-amounts {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+    text-align: end;
+  }
+
+  /* The numeral rule: a figure reads left to right in any direction, at its parent's end. */
+  .bar-chart-amount {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: -webkit-match-parent;
+    text-align: match-parent;
+    white-space: nowrap;
+  }
+
+  /*
+   * The gridlines and the zero line: one layer over every row's track, under the bars. An absolutely placed
+   * grid child reaches the grid's padding edge on a side whose line is auto, so both ends are given.
+   */
+  .bar-chart-gridlines {
+    position: absolute;
+    inset: 0;
+    grid-column: 2 / span 1;
+    grid-row: 1 / span var(--bar-chart-rows, 1);
+    pointer-events: none;
+  }
+
+  .bar-chart-gridlines svg {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    scale: var(--chart-flip, 1) 1;
+  }
+
+  /* The zero line where the domain crosses zero: the boundary color, which the reader must find. */
+  .bar-chart-baseline[data-crosses] {
+    stroke: var(--color-boundary);
+  }
+
+  .bar-chart-bar {
+    box-sizing: border-box;
+    background-color: var(--bar-chart-color, var(--color-ink));
+  }
+
+  /*
+   * A horizontal bar: at most 24px thick, or its share of a 2rem group with 2px between bars, centred in its
+   * row and moved to its place in the group. Its inline start and size are written in render, in percent.
+   */
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar {
+    --bar-chart-thickness: min(
+      1.5rem,
+      calc((2rem - (var(--bar-chart-group, 1) - 1) * 2px) / var(--bar-chart-group, 1))
+    );
+    --bar-chart-offset: calc(
+      (var(--bar-chart-index, 0) - (var(--bar-chart-group, 1) - 1) / 2) * (var(--bar-chart-thickness) + 2px)
+    );
+    position: absolute;
+    inset-block-start: 50%;
+    block-size: var(--bar-chart-thickness);
+    translate: 0 calc(-50% + var(--bar-chart-offset, 0px));
+  }
+
+  /* Only the data end is rounded, by the micro radius; the end at zero is square, so the bar stands on its line. */
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-sign='positive'] {
+    border-start-end-radius: var(--radius-micro);
+    border-end-end-radius: var(--radius-micro);
+  }
+
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-sign='negative'] {
+    border-start-start-radius: var(--radius-micro);
+    border-end-start-radius: var(--radius-micro);
+  }
+
+  /* A small amount never vanishes: any bar that is not zero is at least 1px long. */
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-nonzero] {
+    min-inline-size: 1px;
+  }
+
+  /*
+   * BarChart, vertical: a plot of equal bands from the inline start, each band's bars standing on the zero line
+   * or hanging from it. The plot is a grid: the gridlines' labels in a column at the start as wide as the widest
+   * label, which the grid finds from the labels themselves, the bars' box beside it at the height the render
+   * writes, and the category labels under the bars' box. The gridlines run under both columns, so each label
+   * sits above its line, a line chart's rule, and no bar ever crosses a label. The bars, the gridlines, the
+   * labels, the value labels and the readout share one scale, the bars' box, with any room outside it.
+   */
+  .bar-chart-plot {
+    position: relative;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    row-gap: var(--spacing-part);
+    min-width: 0;
+    direction: var(--chart-direction, ltr);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Room by line height for the labels outside the bars' ends, and for the top gridline's label. */
+  .bar-chart-plot[data-room-start] {
+    --bar-chart-room-start: calc(0.25rem + var(--text-small) * var(--text-small--line-height));
+  }
+
+  .bar-chart-plot[data-room-end] {
+    --bar-chart-room-end: calc(0.25rem + var(--text-small) * var(--text-small--line-height));
+  }
+
+  .bar-chart-bars {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    margin-block: var(--bar-chart-room-start, 0) var(--bar-chart-room-end, 0);
+  }
+
+  /*
+   * The gridlines under the labels' column and the bars' box, at the bars' height. An absolutely placed grid
+   * child reaches the grid's padding edge on a side whose line is auto, so both ends are given.
+   */
+  .bar-chart-plot > .bar-chart-gridlines {
+    grid-column: 1 / span 2;
+    grid-row: 1 / span 1;
+    inset-block: var(--bar-chart-room-start, 0) var(--bar-chart-room-end, 0);
+  }
+
+  /*
+   * The gridlines' labels, a line chart's y labels: each above its line at the start, stacked in one cell and
+   * moved down by its line's place, a percentage of the cell, which is the bars' height.
+   */
+  .bar-chart-y-labels {
+    display: grid;
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-rows: minmax(0, 1fr);
+    padding-block: var(--bar-chart-room-start, 0) var(--bar-chart-room-end, 0);
+    padding-inline-end: var(--spacing-part);
+    pointer-events: none;
+  }
+
+  .bar-chart-y-labels > span {
+    position: relative;
+    grid-area: 1 / 1;
+    align-self: start;
+  }
+
+  .bar-chart-plot > .bar-chart-categories {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  /* A band holds its bars and takes no box of its own, so they are placed in the bars' box. */
+  .bar-chart-band {
+    display: contents;
+  }
+
+  /*
+   * A vertical bar, its value label and a loading band: at most 24px thick and 60% of the band, shared by a
+   * group with 2px between its bars, the group centred on its band. 100% resolves where it is used, against the
+   * bars' box, and the render writes the band's centre and the bar's place in its group.
+   */
+  .bar-chart[data-orientation='vertical'] :is(.bar-chart-bar, .bar-chart-value, .bar-chart-skeleton) {
+    --bar-chart-thickness: min(
+      1.5rem,
+      calc(
+        (100% / var(--bar-chart-bands, 1) * 0.6 - (var(--bar-chart-group, 1) - 1) * 2px) /
+          var(--bar-chart-group, 1)
+      )
+    );
+    --bar-chart-start: calc(
+      var(--bar-chart-centre, 50%) -
+        (var(--bar-chart-group, 1) * var(--bar-chart-thickness) + (var(--bar-chart-group, 1) - 1) * 2px) / 2 +
+        var(--bar-chart-index, 0) * (var(--bar-chart-thickness) + 2px)
+    );
+    position: absolute;
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar {
+    inline-size: var(--bar-chart-thickness);
+    inset-inline-start: var(--bar-chart-start);
+  }
+
+  /* The data end at the top above zero and at the bottom below it; the end at zero is square. */
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-sign='positive'] {
+    border-start-start-radius: var(--radius-micro);
+    border-start-end-radius: var(--radius-micro);
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-sign='negative'] {
+    border-end-start-radius: var(--radius-micro);
+    border-end-end-radius: var(--radius-micro);
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-nonzero] {
+    min-block-size: 1px;
+  }
+
+  /*
+   * The previous period: the series' color in Meter's stripes, 2px every 6px at 45 degrees, inside a 1px border
+   * of the color at full strength, which draws the bar's extent. The stripes keep their angle in right to left,
+   * a texture and not an arrow.
+   */
+  .bar-chart-bar[data-look='hatched'] {
+    border: 1px solid var(--bar-chart-color, var(--color-ink));
+    background-color: transparent;
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--bar-chart-color, var(--color-ink)) 0 2px,
+      transparent 2px 6px
+    );
+    /*
+     * Under 4px across, the stripes are noise, so the bar is its outline alone: the stripes' tile is the box
+     * scaled from what it has past 4px, which is nothing at 4px or less and far more than the box past it.
+     */
+    background-size: max(0px, (100% - 4px) * 100) max(0px, (100% - 4px) * 100);
+  }
+
+  /* A zero is a bar of no length, whatever its look. */
+  .bar-chart-bar[data-sign='zero'] {
+    border-width: 0;
+  }
+
+  /*
+   * A stack: up to five segments end to end in one bar's place, positives from zero up and negatives from zero
+   * down, each sign in series order, each segment placed from the running sum before it in render. Only the
+   * outermost segment of each sign keeps the data end's corners; every inner join is square.
+   */
+  .bar-chart[data-layout='stacked'] .bar-chart-bar:not([data-outer]) {
+    border-radius: 0;
+  }
+
+  /*
+   * A stack's textures, by the series' slot: the method's two directions, Meter's stripes 2px every 6px in the
+   * series' own color over the surface. The first and the fifth are solid, the fifth in slate; the second is
+   * 45 degrees, the third 135 and the fourth both. Set on the slot's element and read by its bar or its key.
+   */
+  .bar-chart [data-series='2'] {
+    --bar-chart-texture: repeating-linear-gradient(
+      45deg,
+      var(--bar-chart-color, var(--color-ink)) 0 2px,
+      transparent 2px 6px
+    );
+    --bar-chart-fill: transparent;
+  }
+
+  .bar-chart [data-series='3'] {
+    --bar-chart-texture: repeating-linear-gradient(
+      135deg,
+      var(--bar-chart-color, var(--color-ink)) 0 2px,
+      transparent 2px 6px
+    );
+    --bar-chart-fill: transparent;
+  }
+
+  .bar-chart [data-series='4'] {
+    --bar-chart-texture:
+      repeating-linear-gradient(45deg, var(--bar-chart-color, var(--color-ink)) 0 2px, transparent 2px 6px),
+      repeating-linear-gradient(135deg, var(--bar-chart-color, var(--color-ink)) 0 2px, transparent 2px 6px);
+    --bar-chart-fill: transparent;
+  }
+
+  /*
+   * Textures on request: each segment and its legend and readout keys in its slot's look, inside a 1px border of
+   * its color, so a textured bar keeps its outline where stripes do not print. A zero draws nothing. A segment
+   * on another has its gap where that border's zero-ward side would be, so its first background layer draws
+   * the outline's missing side: 1px of its color along that edge of its padding box, which the gap rules
+   * place (--bar-chart-edge-at and --bar-chart-edge-size); every other bar's layer is of no size.
+   */
+  .bar-chart[data-texture]
+    :is(.bar-chart-bar[data-series]:not([data-sign='zero']), [data-series] > .bar-chart-key) {
+    border: 1px solid var(--bar-chart-color, var(--color-ink));
+    background-color: var(--bar-chart-fill, var(--bar-chart-color, var(--color-ink)));
+    background-image:
+      linear-gradient(var(--bar-chart-color, var(--color-ink)), var(--bar-chart-color, var(--color-ink))),
+      var(--bar-chart-texture, none);
+    background-position:
+      var(--bar-chart-edge-at, 0 0),
+      0 0,
+      0 0;
+    background-size: var(--bar-chart-edge-size, 0 0), auto, auto;
+    background-repeat: no-repeat, repeat, repeat;
+  }
+
+  /*
+   * A segment that stands on another starts with a 2px gap of the surface, Meter's spacer, on its edge toward
+   * zero in its sign's direction: a border inside its own length, since the bar is a border box, so the stack's
+   * total stays exact. After the textures' outline, which it meets at the same specificity. The gap's color is
+   * the surface the chart sits on, and the page's own in forced colors (--bar-chart-gap, set there alone).
+   */
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-joined][data-sign='positive'] {
+    --bar-chart-edge-at: 0 100%;
+    --bar-chart-edge-size: 100% 1px;
+    border-block-end: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-joined][data-sign='negative'] {
+    --bar-chart-edge-at: 0 0;
+    --bar-chart-edge-size: 100% 1px;
+    border-block-start: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
+  }
+
+  /* Lying down the zero-ward edge is the inline start or end, so its side follows the chart's direction. */
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-joined][data-sign='positive'] {
+    --bar-chart-edge-at: calc(50% - 50% * var(--chart-flip, 1)) 0;
+    --bar-chart-edge-size: 1px 100%;
+    border-inline-start: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
+  }
+
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-joined][data-sign='negative'] {
+    --bar-chart-edge-at: calc(50% + 50% * var(--chart-flip, 1)) 0;
+    --bar-chart-edge-size: 1px 100%;
+    border-inline-end: 2px solid var(--bar-chart-gap, var(--chart-surface, var(--color-lifted)));
+  }
+
+  /*
+   * A segment on another is at least 3px, its 2px gap and 1px of its color, so a small nonzero amount never
+   * draws as a gap alone. It is placed from its far end, so the extra grows toward zero, over the segment under
+   * it, and the stack's end stays where its total is.
+   */
+  .bar-chart[data-orientation='vertical'] .bar-chart-bar[data-joined][data-nonzero] {
+    min-block-size: 3px;
+  }
+
+  .bar-chart[data-orientation='horizontal'] .bar-chart-bar[data-joined][data-nonzero] {
+    min-inline-size: 3px;
+  }
+
+  /* The token ring, which follows the bar's corners at its offset: concentric by construction. */
+  .bar-chart-bar:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /*
+   * A linked bar's target in its band: an anchor to the bar's href that assistive technology never meets, since
+   * the bar is the link it reads, and never a stop. A press anywhere on it is the browser's own on a link, so a
+   * modifier key or the middle button opens a new tab and the context menu offers one; a touch's hold shows the
+   * readout rather than the platform's link menu. It draws nothing. Standing up it runs through the bars' box and
+   * its room, across the band's column or the half the render writes; a segment on another takes its own run,
+   * written in render too. A bar with no href in a band of links takes a target with no href over its own part,
+   * so a press there is its own; it shows the plot's cursor, the press cursor only where bars press.
+   */
+  .bar-chart-hit {
+    position: absolute;
+    -webkit-touch-callout: none;
+  }
+
+  .bar-chart-hit[href] {
+    cursor: pointer;
+  }
+
+  .bar-chart[data-orientation='vertical'] .bar-chart-hit {
+    inset-block: calc(-1 * var(--bar-chart-room-start, 0px)) calc(-1 * var(--bar-chart-room-end, 0px));
+  }
+
+  /*
+   * Lying down, the row's grid area: its name, its track and its amounts for the row's first bar, and the half
+   * under the middle for a second, which lies under the first. A segment on another takes its run along the
+   * track, the render's insets. Both ends of each area are given, as the readout's are.
+   */
+  .bar-chart[data-orientation='horizontal'] .bar-chart-hit {
+    grid-column: 1 / -1;
+    grid-row: var(--bar-chart-row, 1) / span 1;
+    inset: 50% 0 0;
+  }
+
+  .bar-chart[data-orientation='horizontal'] .bar-chart-hit[data-whole] {
+    inset: 0;
+  }
+
+  .bar-chart[data-layout='stacked'][data-orientation='horizontal'] .bar-chart-hit:not([data-whole]) {
+    grid-column: 2 / span 1;
+    inset: 0;
+  }
+
+  /* Bars that are buttons take a press anywhere in their band, so the whole plot shows it. */
+  :is(.bar-chart-rows, .bar-chart-plot)[data-press] {
+    cursor: pointer;
+  }
+
+  /* The group holds focus for a status with no bars, never as a tab stop, and shows it with the same ring. */
+  :is(.bar-chart-rows, .bar-chart-plot):focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* Under a pointer only, the other rows or bands step back to 40%, with no new shape and no motion. */
+  :is(.bar-chart-rows, .bar-chart-plot)[data-pointer]
+    :is(.bar-chart-row, .bar-chart-band):not([data-active])
+    .bar-chart-bar {
+    opacity: 0.4;
+  }
+
+  /*
+   * A vertical bar's figure, outside its data end with a 4px gap: above a positive bar, below a negative one,
+   * centred on the bar. Its box is placed in the chart's direction and its figure reads left to right inside.
+   */
+  .bar-chart-values {
+    display: contents;
+  }
+
+  .bar-chart-value {
+    position: absolute;
+    inset-inline-start: calc(var(--bar-chart-start) + var(--bar-chart-thickness) / 2);
+    margin-block-end: 0.25rem;
+    translate: calc(var(--chart-flip, 1) * -50%) 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--color-ink);
+    pointer-events: none;
+  }
+
+  .bar-chart-value[data-sign='negative'] {
+    margin-block: 0.25rem 0;
+  }
+
+  .bar-chart-value-text {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /* The previous period's figures are slate, the current period's ink: never a chart color. */
+  :is(.bar-chart-amount, .bar-chart-value)[data-look='hatched'] {
+    color: var(--color-slate);
+  }
+
+  /*
+   * The category labels under the plot: a grid of one cell per band, so each label is its band's width, centred,
+   * on two lines at most with an ellipsis, never rotated. Time bands show their ticks on one line, each on its
+   * band's centre, the first and the last kept inside the plot.
+   */
+  .bar-chart-categories {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--bar-chart-bands, 1), minmax(0, 1fr));
+    min-block-size: calc(var(--text-small) * var(--text-small--line-height));
+    direction: var(--chart-direction, ltr);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+  }
+
+  .bar-chart-band-label {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    padding-inline: 0.125rem;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .bar-chart-categories[data-bands='time'] {
+    display: block;
+  }
+
+  .bar-chart-categories[data-bands='time'] .bar-chart-band-label {
+    position: absolute;
+    inset-block-start: 0;
+    display: block;
+    padding-inline: 0;
+    overflow: visible;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    translate: calc(var(--chart-flip, 1) * -50%) 0;
+  }
+
+  .bar-chart-categories[data-bands='time'] .bar-chart-band-label[data-edge='start'] {
+    translate: none;
+  }
+
+  .bar-chart-categories[data-bands='time'] .bar-chart-band-label[data-edge='end'] {
+    translate: calc(var(--chart-flip, 1) * -100%) 0;
+  }
+
+  /* The value labels under the last row, each centred on its gridline and kept inside the track at its ends. */
+  .bar-chart-ticks {
+    position: relative;
+    grid-column: 2;
+    min-height: calc(var(--text-small) * var(--text-small--line-height));
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-slate);
+  }
+
+  .bar-chart-tick {
+    position: absolute;
+    inset-block-start: 0;
+    white-space: nowrap;
+    translate: calc(var(--chart-flip, 1) * -50%) 0;
+  }
+
+  .bar-chart-tick[data-edge='start'] {
+    translate: none;
+  }
+
+  .bar-chart-tick[data-edge='end'] {
+    translate: calc(var(--chart-flip, 1) * -100%) 0;
+  }
+
+  /*
+   * The readout over the active row's track, above the row or below it as the component writes, so it never
+   * covers the bar: its grid area is that row's track alone, both ends given, since an absolutely placed grid
+   * child with an auto end reaches the grid's edge. It is the rows' last child, so it draws over every bar
+   * with no z-index, and it never takes the pointer from the rows under it.
+   */
+  .bar-chart-readout[data-place] {
+    grid-column: 2 / span 1;
+    grid-row: var(--bar-chart-row, 1) / span 1;
+    pointer-events: none;
+  }
+
+  .bar-chart-readout-item {
+    display: flex;
+    align-items: center;
+  }
+
+  /* A 12px swatch in the series' color: the legend's key and the readout's. */
+  .bar-chart-key {
+    flex: none;
+    display: inline-block;
+    box-sizing: border-box;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: var(--radius-micro);
+    background-color: var(--bar-chart-color, var(--color-ink));
+  }
+
+  .bar-chart-readout-item .bar-chart-key {
+    margin-inline-end: 0.375rem;
+  }
+
+  /*
+   * A figure in the readout is one line, never broken mid-number, and a series' name breaks only between
+   * words: the readout's place counts its lines, so a line that breaks would push the panel over what it
+   * must clear. (The value and the series are the strong and the span after it; their own classes are the
+   * line chart's shared rules.)
+   */
+  .bar-chart-readout-item > strong {
+    white-space: nowrap;
+  }
+
+  .bar-chart-readout-item > strong + span {
+    overflow-wrap: normal;
+  }
+
+  /* A previous period's key is Meter's hatched swatch, in the series' color. */
+  :is(.bar-chart-legend-item, .bar-chart-readout-item)[data-look='hatched'] .bar-chart-key {
+    border: 1px solid var(--bar-chart-color, var(--color-ink));
+    background-color: transparent;
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--bar-chart-color, var(--color-ink)) 0 2px,
+      transparent 2px 6px
+    );
+  }
+
+  /* Loading: still bars from the start, square at zero, in Skeleton's fill and pulse. */
+  .bar-chart-track > .bar-chart-skeleton {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 0;
+    block-size: 1.5rem;
+    translate: 0 -50%;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+  }
+
+  /* Loading, standing up: a still band where each band's bar will be, from the bottom, square there. */
+  .bar-chart-bars > .bar-chart-skeleton {
+    --bar-chart-group: 1;
+    --bar-chart-index: 0;
+    inset-block-end: 0;
+    inline-size: var(--bar-chart-thickness);
+    inset-inline-start: var(--bar-chart-start);
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  /* Empty and error: the rows' place, as tall as the rows it expects, with the gridlines still behind it. */
+  .bar-chart-state {
+    position: relative;
+    grid-column: 1 / -1;
+    display: grid;
+    place-items: center;
+    min-block-size: calc(var(--bar-chart-rows, 4) * var(--size-target));
+  }
+
+  /* Standing up, the plot's place at its height. */
+  .bar-chart-bars > .bar-chart-state {
+    position: absolute;
+    inset: 0;
+    min-block-size: 0;
+  }
+
+  /*
+   * LineChart's states, in the plot's own space at its height: a still placeholder in Skeleton's fill and pulse
+   * while loading, under the gridlines' labels, and the app's content or a sentence when empty or failed.
+   */
+  .line-chart-plot > .line-chart-skeleton {
+    position: absolute;
+    inset: 0;
+    inline-size: auto;
+    block-size: auto;
+  }
+
+  .line-chart-state {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  :is(.line-chart-message, .bar-chart-message) {
+    max-inline-size: 32rem;
+    margin: 0;
+    padding: var(--spacing-part);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  /* A load that failed is a failure, the one meaning the error color has; the words say it too. */
+  :is(.line-chart-message, .bar-chart-message)[data-tone='error'] {
+    color: var(--color-error);
+  }
+
+  .bar-chart-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /*
+   * Under 24rem of the chart's own width, each label takes a line of its own above its bar, and the track and
+   * the amounts share the line under it. The labels then cross the gridlines' layer, so each is drawn over it
+   * in the surface, as wide as its text.
+   */
+  @container bar-chart (inline-size < 24rem) {
+    .bar-chart-rows {
+      grid-template-columns: minmax(0, 1fr) max-content;
+    }
+
+    .bar-chart-category {
+      position: relative;
+      grid-column: 1 / -1;
+      justify-self: start;
+      padding-block: 0.25rem 0;
+      background-color: var(--chart-surface, var(--color-lifted));
+    }
+
+    .bar-chart-gridlines {
+      grid-column: 1 / span 1;
+      grid-row: 1 / span var(--bar-chart-rows-narrow, 2);
+    }
+
+    .bar-chart-ticks {
+      grid-column: 1;
+    }
+
+    .bar-chart-readout[data-place] {
+      grid-column: 1 / span 1;
+      grid-row: var(--bar-chart-row-narrow, 2) / span 1;
+    }
+
+    /* A row's first target takes its name's line and its bars' line; a second the half of the bars' line under it. */
+    .bar-chart[data-orientation='horizontal'] .bar-chart-hit {
+      grid-row: var(--bar-chart-row-narrow, 2) / span 1;
+    }
+
+    .bar-chart[data-orientation='horizontal'] .bar-chart-hit[data-whole] {
+      grid-row-end: span 2;
+    }
+
+    .bar-chart[data-layout='stacked'][data-orientation='horizontal'] .bar-chart-hit:not([data-whole]) {
+      grid-column: 1 / span 1;
+    }
+
+    /*
+     * Standing up, past eight bands: every third category label shows, since a band is then too narrow for
+     * one. Eight or fewer keep every label; time ticks stay first, middle and last.
+     */
+    .bar-chart-categories[data-dense][data-bands='category'] .bar-chart-band-label:not([data-third]) {
+      visibility: hidden;
+    }
+  }
+
+  /*
+   * Under 30rem of the chart's own width, standing up: category labels drop to one line with an ellipsis, and
+   * the value labels of 'all' keep only the first and the last band's, besides the bands an app names.
+   */
+  @container bar-chart (inline-size < 30rem) {
+    .bar-chart-band-label {
+      -webkit-line-clamp: 1;
+    }
+
+    .bar-chart-value:not([data-keep]) {
+      display: none;
+    }
+
+    /* A centred readout standing up takes three quarters of the plot, so its lines stay the lines it counts. */
+    .bar-chart-plot .bar-chart-readout[data-align='center'] {
+      max-width: min(16rem, 75% - var(--spacing-part));
+    }
   }
 
   @media (forced-colors: active) {
@@ -422,8 +1248,8 @@
     }
 
     .line-chart-line[data-series='2'],
-    .line-chart-grid,
-    .line-chart-baseline {
+    :is(.line-chart-grid, .bar-chart-grid),
+    :is(.line-chart-baseline, .bar-chart-baseline) {
       stroke: GrayText;
     }
 
@@ -450,6 +1276,88 @@
 
     .line-chart-plot:focus-visible {
       outline-color: Highlight;
+    }
+
+    /*
+     * Bars keep their own fill rather than the repaint's: the reader's text color, the active row's bars
+     * Highlight, and the swatches with them. The zero line that separates the signs is the text color; the
+     * gridlines and a zero line at the domain's edge are GrayText, a line chart's rules.
+     */
+    .bar-chart-bar,
+    .bar-chart-key {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
+
+    :is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar {
+      background-color: Highlight;
+    }
+
+    /*
+     * The previous period stays striped against the solid current bar, Meter's block: CanvasText stripes on
+     * canvas in a CanvasText border, its swatches with it, and Highlight for the active band's.
+     */
+    .bar-chart-bar[data-look='hatched'],
+    :is(.bar-chart-legend-item, .bar-chart-readout-item)[data-look='hatched'] .bar-chart-key {
+      border-color: CanvasText;
+      background-color: canvas;
+      background-image: repeating-linear-gradient(45deg, CanvasText 0 2px, canvas 2px 6px);
+    }
+
+    :is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar[data-look='hatched'] {
+      border-color: Highlight;
+      background-color: canvas;
+      background-image: repeating-linear-gradient(45deg, Highlight 0 2px, canvas 2px 6px);
+    }
+
+    .bar-chart-bar:focus-visible,
+    :is(.bar-chart-rows, .bar-chart-plot):focus-visible {
+      outline-color: Highlight;
+    }
+
+    .bar-chart-baseline[data-crosses] {
+      stroke: CanvasText;
+    }
+
+    /*
+     * A stack keeps its textures in forced colors, asked or not: a system palette has one text color, so the
+     * four slots are its four looks in CanvasText and the fifth is solid GrayText, the active band's in
+     * Highlight. The gaps between segments are the page's own color, since a bar out of the repaint would
+     * otherwise draw them in the surface's token.
+     */
+    .bar-chart[data-layout='stacked'] {
+      --bar-chart-gap: canvas;
+    }
+
+    .bar-chart [data-series] {
+      --bar-chart-color: CanvasText;
+    }
+
+    .bar-chart [data-series='5'] {
+      --bar-chart-color: GrayText;
+    }
+
+    :is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar[data-series] {
+      --bar-chart-color: Highlight;
+    }
+
+    /* The active band's fifth stays apart from its first: a Highlight outline over the page, not a fill. */
+    :is(.bar-chart-row, .bar-chart-band)[data-active] .bar-chart-bar[data-series='5'] {
+      --bar-chart-fill: canvas;
+    }
+
+    .bar-chart :is(.bar-chart-bar[data-series]:not([data-sign='zero']), [data-series] > .bar-chart-key) {
+      border: 1px solid var(--bar-chart-color, var(--color-ink));
+      background-color: var(--bar-chart-fill, var(--bar-chart-color, var(--color-ink)));
+      background-image:
+        linear-gradient(var(--bar-chart-color, var(--color-ink)), var(--bar-chart-color, var(--color-ink))),
+        var(--bar-chart-texture, none);
+      background-position:
+        var(--bar-chart-edge-at, 0 0),
+        0 0,
+        0 0;
+      background-size: var(--bar-chart-edge-size, 0 0), auto, auto;
+      background-repeat: no-repeat, repeat, repeat;
     }
   }
 }

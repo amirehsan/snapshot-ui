@@ -1,0 +1,331 @@
+---
+title: Bar chart
+description: "Amounts by category or by period: a ranked list lying down, or months standing up, with negatives at a zero line."
+icon: ChartColumn
+---
+
+<Section>
+
+## Bar, line or stat tile
+
+Pick the chart by the question it answers.
+
+- A bar chart compares amounts across categories or periods: where the month's money went, merchant by merchant.
+- A [line chart](/docs/charts/line-chart) shows a change over continuous time: spending day by day.
+- A [stat tile](/docs/components/stat-tile) says one figure, with a sparkline at most.
+
+</Section>
+
+<Section>
+
+## A ranked list
+
+Lay the bars down with `orientation="horizontal"` to rank categories, merchants or accounts. Each row has its name at the start, its bar from the zero line, and its amount at the end, in a column as wide as the widest amount, so the amounts align.
+
+- Order: the chart draws the rows in your order. Sort them by amount, show the top eight to twelve, and sum the rest as "Other", last.
+- Amounts: on by default for a horizontal chart. `valueLabels="none"` drops the column, and a list of row indexes shows only those rows' amounts.
+- Gridlines: `valueTicks` draws a line at each value, with its label under the last row. The zero line is always drawn.
+
+<Preview name="bar-chart-ranked" />
+
+</Section>
+
+<Section>
+
+## Below zero
+
+A row can net below zero, such as a category whose refunds outweigh its spending. Its bar runs from the zero line toward the start, and its amount stays in the end column, so a sorted list's negatives at the bottom still line up.
+
+- Zero line: in the boundary color when the bars cross zero, so the reader finds it. With no negatives it is a quiet edge.
+- Color: a negative bar is drawn in its series' color, ink here. Never red: error means a failure, and a refund is not one. The sign and the figure say which way it went.
+- Domain: the value axis always includes zero, since a bar's length is its value. A `valueDomain` that leaves zero out is widened to include it, with a warning in development.
+
+<Preview name="bar-chart-refunds" />
+
+</Section>
+
+<Section>
+
+## Months
+
+Bars stand up by default: one band per month, oldest at the start, each bar from the zero line. A bad month hangs below the line by itself, since the value axis always includes zero.
+
+- Time bands: `bands="time"` labels the first, middle and last month, on one line, and Tab lands on the newest month first. `categoryTicks` names the months to label instead.
+- Thickness: a bar takes 60% of its band at most and is never thicker than 24px, so twelve months in a phone's card are 12px each and thirty-one days about 5px, with nothing measured.
+- Value labels: off by default, since the table, the readout and each bar's name carry every figure. `valueLabels` with band indexes labels the months the story is about, outside each bar's end: above a bar above zero, below one below it. Under 30rem `valueLabels="all"` keeps only the first and the last band's.
+- Gridline labels: `valueTicks` labels each line at the start of the plot, in a column of its own as wide as the widest label, so no bar ever covers one.
+
+<Preview name="bar-chart-months" />
+
+</Section>
+
+<Section>
+
+## Two series
+
+Two series sit side by side in each band, 2px apart, with a legend that names both. Without `color` the first is ink and the second slate, a story and its context. The month view pins its colors by meaning instead: Income is `color: 'gain'`, money that arrived, and Spending is `color: 'ink'`. Spending has no color of its own, red or otherwise, since nothing went wrong. Pinned colors also keep each series' color when your control shows one of them alone.
+
+The types take two grouped series at most, so a third is a type error rather than a crowded band.
+
+<Preview name="bar-chart-income-spending" />
+
+</Section>
+
+<Section>
+
+## Against the previous period
+
+Give the previous period's series `look: 'hatched'` and its period's name as its `label`. Without a `color` it takes the first series' color, drawn as stripes inside a border of that color at full strength, and its amounts are slate: the same thing, last time, never a second category. Each bar's name says its period, so the stripes are never the only cue, and the keys step from this period's bar to the last one's in each band. Put the previous period second, so it stands after the current bar, or under it when the bars lie down. The example sets five months beside the same months a year before: standing up, a phone gives each band about 2rem, room for a month and not for a category's name, so a comparison of categories lies down, as the Insights recipe's does.
+
+Why stripes and not a lighter shade: a lighter fill must clear 3:1 against the card to be seen and stay apart from the solid bar beside it. Ink has a band that does (half strength measures 3.45 against the card and 5.17 against solid ink in light), but `gain` has none in either mode: at 50% it is 2.33 and 3.09 in light. The hatched bar's border is the color at full strength, 17.84 for ink and 7.20 for `gain` in light, and its stripes are a texture. In forced colors the previous period stays striped against the solid current bars. A bar under 4px across, such as a month of days compared in a phone's card, is its outline alone, since stripes that thin are noise; a comparison of more than about fifteen bands reads better lying down.
+
+<Preview name="bar-chart-compare" />
+
+</Section>
+
+<Section>
+
+## Stacked
+
+Give `layout="stacked"` to put up to five series end to end in each band, such as a month's top four categories and the "Other" you sum. Positives stack up from the zero line and negatives down, each sign in your series' order, so a category whose refunds net it below zero hangs under the line while the rest stand over it.
+
+- Colors: without `color`, the series take the chart palette in order, teal, violet, olive and magenta, and the fifth is slate, the remainder. Pin each series to its slot, such as `color: 'chart-2'`, so a category keeps its color when a filter takes another away. A sixth series warns in development and draws slate too: fold it into "Other". A series with `look: 'hatched'` warns and draws as a fill, since stripes in a stack are a texture, not a previous period.
+- Other: pin it to `color: 'slate'`, as the example does. A series' texture follows its color, so a slate "Other" is always the fifth look, solid slate, even when a month has fewer than five series and "Other" stands fourth or third; unpinned, it would take the next slot's color and texture and read as one more category.
+- Order: the legend, the readout and the table list the series in your order, first to last, while a standing stack draws them from the bottom up, so your first series is at the foot of each stack and "Other" on top.
+- Segments: 2px of the card between segments, and only the outermost segment of each sign keeps the rounded end; the joins are square. The gap is inside each segment's length, so a stack is as tall as its total. A segment on another is at least 3px, its gap and 1px of its color, so a small amount never vanishes; the extra reaches into the segment under it, and the stack's end stays at its total.
+- Totals: pass `totals`, one string per band, summed and formatted by you, since the chart never adds a figure it must say. With `valueLabels` each total stands at the end of the side its band nets to; lying down it fills the amount column. The readout lists every segment of the band and the total, and the table gains a Total column. Asked for figures without `totals`, the chart warns and labels nothing.
+- Textures: `hasTexture` draws each series' texture as well as its color, for readers who cannot tell the colors apart and for a printout without color: the first solid, the second striped at 45 degrees, the third at 135, the fourth both, and the fifth solid slate, each inside a 1px border of its color, the legend's keys with them. Forced colors always show them.
+- Keys: along a stack, Up and Down standing up, or Left and Right lying down, move segment by segment by what is drawn; the other pair moves to the same category in the band beside, or the nearest category it has.
+
+<Preview name="bar-chart-stacked" />
+
+A month with three categories and "Other" keeps "Other" slate and its fifth texture:
+
+```tsx
+<BarChart
+  aria-label="Spending by category, October"
+  layout="stacked"
+  categories={['Oct']}
+  series={[
+    { label: 'Groceries', color: 'chart-1', values: [{ value: 640, valueLabel: '$640.00' }] },
+    { label: 'Dining', color: 'chart-2', values: [{ value: 312.45, valueLabel: '$312.45' }] },
+    { label: 'Transport', color: 'chart-3', values: [{ value: 188.1, valueLabel: '$188.10' }] },
+    { label: 'Other', color: 'slate', values: [{ value: 376.8, valueLabel: '$376.80' }] },
+  ]}
+  totals={['$1,517.35']}
+  valueLabels="all"
+/>
+```
+
+</Section>
+
+<Section>
+
+## Color
+
+A series' color says what it is, by meaning first and then by identity. `color` takes `'ink'`, `'slate'`, `'gain'` or one of the [chart palette](/docs/theming#chart-palette)'s four, `'chart-1'` to `'chart-4'`, and pins the series to it.
+
+- One series: ink.
+- Two series side by side: ink and slate, a story and its context, unless you pin them.
+- Money that arrived: `gain`, labelled so, beside an ink series and never beside a palette color, so a meaning and an identity never share a chart.
+- Peers with no meaning of their own, such as a month's top categories: the palette's teal, violet, olive and magenta in that order, and an "Other" you sum and label in slate. Pin each series to its slot, so it keeps its color when a filter removes another.
+
+No series takes error, success, warning, clay, signal orange or taupe; the type has no name for them. Amounts, labels and the legend's names stay ink and slate whatever a bar's color, and the legend's key beside each name carries the color.
+
+</Section>
+
+<Section>
+
+## Long names
+
+A long name wraps in the label column, which takes the longest name's width up to 40% of the chart. Names are never cut short or rotated. Set `--bar-chart-label-size` on the chart to give the column another share.
+
+When the chart is narrower than 24rem, each name moves to a line of its own above its bar, and the bar and its amount share the line below. The chart reads its own width, not the viewport's, so it behaves the same in a narrow card on a wide screen.
+
+Standing up, a category label is as wide as its band and wraps to two lines, then ends with an ellipsis; under 30rem it keeps to one line, and under 24rem a chart of more than eight bands shows every third label. The whole name is always in the readout, the bar's name and the table. Names longer than about twelve characters, or more than eight categories, read better lying down.
+
+The chart is a size container, so it takes its width from what holds it and none from its content: a block gives it the whole line, and in a flex row its item needs a basis, such as `flex: 1 1 20rem`, or a grid column a size. Given none, it is no wider than nothing.
+
+</Section>
+
+<Section>
+
+## States
+
+`status` draws a state in the rows' place, at the height of the rows the chart expects: pass the categories you will show, or the chart keeps room for four.
+
+- Loading: still bars in Skeleton's fill, with no legend, toggle or table. The chart says "Loading" once, politely.
+- Empty: a sentence in slate over the zero line, or your `statusContent`, such as an EmptyState.
+- Error: a sentence in the error color, which means a load failed, or your `statusContent` with a way to try again. The chart says it once.
+
+<Preview name="bar-chart-states" />
+
+</Section>
+
+<Section>
+
+## Links
+
+Give a bar an `href` to open what it stands for, such as its transactions for the period shown. Each bar of each series takes its own, so a comparison's previous period opens its own month. The bar becomes a link, and so does its cell in the table: the category's when the chart has one series, each figure's when it has two or more. The hrefs are data, so a server page passes them with the figures, and the links work before the page hydrates and with scripts off.
+
+- Pointer: a press anywhere in the bar's band follows its link, not only a press on the bar: lying down the whole row from its name to its amount, standing up the band's column above its label. In a band of two each bar takes the half nearer it, and in a stack each segment takes its own run, the outermost on to the plot's edge. The readout names the bar under the pointer, so it says what a press opens, and the band shows the link cursor. A bar with no `href` beside or on a linked one keeps its own part of the band, where a press opens nothing.
+- A new tab: the band is a real link, so a click with Command, Control or Shift, a middle click and the context menu open it in a new tab or window as any link does. The chart routes none of them.
+- Touch: a tap follows the link. A hold of half a second or more shows the readout and follows nothing, and the platform's link menu stays away so the readout can be read.
+- Keys: the chart stays one tab stop, moved by the arrows. Enter follows the focused bar's link, and Space does nothing, so it never scrolls the page from under the chart.
+- Your router: the charts carry no React Aria, so they cannot read your `RouterProvider`. In a client component, pass its `navigate` to the chart as well, and a plain click or Enter on a bar or a table link goes through it; a modified click stays the browser's, and a link of your own in `statusContent` opens its own way.
+- A press: `onBarPress(category, series)` is called with the band's and the series' index on every press, a link's before it is followed. A bar with no `href` in a chart with `onBarPress` is a button, which Enter and Space press, and a press anywhere in its band presses it.
+
+<Preview name="bar-chart-links" />
+
+On a client page, the chart takes the router's `navigate`, the function your `RouterProvider` has:
+
+```tsx
+'use client';
+
+import { BarChart, type BarChartProps } from '@snapshot-ui/charts';
+import { useRouter } from 'next/navigation';
+
+export function LinkedChart(props: BarChartProps) {
+  const router = useRouter();
+  return <BarChart {...props} navigate={(href) => router.push(href)} />;
+}
+```
+
+</Section>
+
+<Section>
+
+## The Insights recipe
+
+An insights page in the Next.js App Router: the month's figures, one chart card that regroups, a table that links to the transactions, and the month's report. The page is a server component. What changes with the URL is one client component, and the report is rendered on the server beside it.
+
+- Figures: a row of [stat tiles](/docs/components/stat-tile), spent, income and net. While the page compares, each draws its change against September as its change line, in words: "Up $415 vs September".
+- Filters: a [filter bar](/docs/components/filter-bar) with the period.
+- The card: its header holds a [segmented control](/docs/components/segmented-control) for the grouping and a [switch](/docs/components/switch) to compare; its body is one BarChart, the card's last child, so the table toggle stands clear of the card's curve.
+- Month: twelve months standing up, newest last: Income in `gain` beside Spending in ink, one of them alone, net cash flow with its months below zero, or the category mix stacked. A second control picks which.
+- Category, Merchant and Account: lying down, the top ten and "Other", with a refund below zero. Each bar opens its transactions for the period it shows, such as `#transactions?category=rent`, and a compared bar September's, through the same `navigate` the page's `RouterProvider` has.
+- Compare: the previous period, hatched, beside each bar: September for October, the twelve months before for the months. A band holds two bars, so the switch is off while income and spending stand together, or the mix is stacked.
+- One chart: the card keeps the same BarChart and gives it new props, so a bar that held focus hands it to the new first bar, never to the page. Changing the grouping with the control keeps focus on the control.
+- The URL: `?by=category&compare=1`, read with `useSearchParams()` inside a `Suspense` whose fallback draws the first view, and written with `router.replace`, so a reload or a shared link keeps the view.
+- Under the chart: a [data table](/docs/components/data-table) of the same bands, each row a link to its transactions through `RouterProvider`.
+
+<Preview name="insights-recipe" />
+
+The month's report is what a model wrote, so it is rendered as [Prose](/docs/components/prose) on the server with `skipHtml`: its link becomes text, its image its alt text, the HTML it wrote is dropped, and its table scrolls in a named region on a phone. [Rendering Markdown safely](/docs/components/prose#rendering-markdown-safely) has the map.
+
+<Preview name="insights-report" />
+
+The page puts the two together. The docs make no request, so here the figures and the report are fixtures.
+
+```tsx
+// app/insights/page.tsx, a server component
+import { Prose } from '@snapshot-ui/react';
+import { InsightsBoard } from './insights-board'; // 'use client': the figures, filters, chart card and table
+import { ModelMarkdown } from './markdown'; // react-markdown with skipHtml and the map
+import { monthlyReport } from './queries';
+
+export default async function InsightsPage() {
+  const report = await monthlyReport();
+  return (
+    <>
+      <InsightsBoard />
+      <Prose as="article">
+        <ModelMarkdown>{report}</ModelMarkdown>
+      </Prose>
+    </>
+  );
+}
+```
+
+</Section>
+
+<Section>
+
+## Usage
+
+```bash
+pnpm add @snapshot-ui/charts @snapshot-ui/core
+```
+
+It needs the same 0.x minor of `@snapshot-ui/core` (0.9 for charts 0.2.0), whose `styles.css` styles it. BarChart is a client part, and its server HTML is the final picture: every bar's place and size, the labels, the amounts, the legend and the table. The client adds the tab stop, the keys, the pointer and the readout. Nothing is measured, so the page does not move when it hydrates.
+
+- Formatting: every figure is your string. `valueLabel` is what the reader sees, and `value` only places the bar. Currency, compact figures and Persian digits are yours, and the chart never sums, sorts or formats.
+- `labels` and `statusLabels`: in another language, pass all six strings the chart writes itself and all three of its states, so no English is left on the page.
+
+```tsx
+import { BarChart } from '@snapshot-ui/charts';
+
+<BarChart
+  aria-label="هزینه بر اساس فروشگاه، مهر"
+  orientation="horizontal"
+  categories={['هایپراستار', 'اسنپ', 'سایر']}
+  series={[
+    {
+      label: 'مهر',
+      values: [
+        { value: 412.3, valueLabel: '۴۱۲٫۳۰ دلار' },
+        { value: 186.75, valueLabel: '۱۸۶٫۷۵ دلار' },
+        { value: 64.1, valueLabel: '۶۴٫۱۰ دلار' },
+      ],
+    },
+  ]}
+  labels={{
+    showTable: 'نمایش جدول',
+    showChart: 'نمایش نمودار',
+    noScript: 'اسکریپت‌ها خاموش‌اند، پس داده‌های نمودار در جدول زیر است.',
+    roleDescription: 'نمودار',
+    bar: 'میله',
+    total: 'جمع',
+  }}
+  statusLabels={{ loading: 'در حال بارگذاری', empty: 'برای این دوره چیزی نیست', error: 'نمودار بارگذاری نشد' }}
+/>;
+```
+
+</Section>
+
+<Section>
+
+## Props
+
+A BarChart accepts every HTML attribute, applied to its root `figure`.
+
+<PropsTable label="BarChart props" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="Pick<BarChartProps, 'series' | 'layout' | 'categories' | 'orientation' | 'bands' | 'categoryTicks' | 'valueTicks' | 'valueDomain' | 'valueLabels' | 'totals' | 'status' | 'statusContent' | 'hasTexture' | 'labels' | 'statusLabels' | 'height' | 'onBarPress' | 'navigate' | 'aria-label' | 'aria-labelledby' | 'className'>" />
+
+<PropsTable label="BarSeries" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="BarSeries" />
+
+<PropsTable label="BarValue" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="BarValue" />
+
+<PropsTable label="BarChartLabels" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="BarChartLabels" />
+
+<PropsTable label="ChartStatusLabels" path="../../packages/charts/src/bar-chart/BarChart.tsx" type="ChartStatusLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The chart is a `figure` named by `aria-label` or `aria-labelledby`, which the types require. Its bars are a group named like the figure, with the role description "chart" (`labels.roleDescription`), and the table is the full alternative.
+
+- One stop: the chart is a single tab stop, the active bar, so eleven rows are never eleven stops. It becomes focusable once scripts run, and Tab comes back to the bar last active: first the newest band for time bands, the first band otherwise.
+- Names: each bar is an image named by its table cells, the band's category and its value, and its series when there are two or more, such as "Groceries September $598.30", or a stack's segment, "Oct Dining $312.45". A screen reader says it on every move, with no live region, and with your strings only.
+- Links: a bar with an `href` is a link named the same way, and says it is a link rather than a bar; with `onBarPress` and no `href`, a button. Its target over the band is hidden from assistive technology and is never a stop, so a reader meets each link once, on the bar. Before the page hydrates every link is a stop of its own, in drawn order; once it hydrates they are one stop, and a link focused before then keeps focus and becomes the stop. A table link or the toggle that a status or new data takes from under focus hands it to the chart, never the page: to the toggle while the table shows, else to the chart.
+- Keys: the arrows move to the bar drawn in their direction, through a pair bar by bar. Standing up, Left and Right move and follow the page's direction; lying down, Up and Down do. The other pair is left to the page, except in a stack, where it moves along the stack, segment by segment.
+- Readout: standing up it sits above the band's highest bar when it fits and below its lowest otherwise; lying down, above or below the active row. It never covers a bar of its band, and it repeats the bar's name, so it is hidden from assistive technology.
+- Pointer: the whole band or row is the target, not only the bar, and in a band of two the bar nearer the pointer; the others step back to 40% while a pointer holds one. A pointer never moves focus.
+- Table: the Show as table toggle under the chart swaps in a table of the same strings, for everyone who would rather read the numbers. With scripts off it is shown under the chart.
+- Forced colors: the bars take the reader's text color and the active band Highlight, and a previous period stays striped against them; a stack keeps its textures, four looks in the text color and the fifth in GrayText, with the page's own color between segments; the zero line between the signs is the text color, and the gridlines GrayText.
+
+<Keys rows={[['Tab', 'Moves to the active bar, one stop for the whole chart, then to the table toggle.'], ['Left Right', 'Standing up: the bar beside, through a pair bar by bar, then the next band, skipping bands with no value; in a stack, the same category in the band beside. Lying down, in a stack: the segment beside along the bar. Mirrored in right to left.'], ['Up Down', 'Lying down: the bar above or below, through a pair bar by bar, then the next row, skipping rows with no value; in a stack, the same category in the row beside. Standing up, in a stack: the segment above or below.'], ['Home End', 'The first or last band with a value, in the same series where it has one, else the nearest.'], ['PageUp PageDown', 'Seven bands back or forward.'], ['Escape', 'Hides the readout until the next move. A second Escape goes on to the dialog or sheet around the chart.'], ['Enter', 'On a bar with an href, follows its link; on a bar that is a button, presses it.'], ['Space', 'On a bar that is a button, presses it; on a link, nothing, so the page does not scroll.'], ['Enter Space', 'On the toggle, swaps the chart and the table.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps bar charts in the system.
+
+<Rules dos={['Sort a ranked list by amount, and put Other last.', 'Keep every amount in your own format, the one the rest of the page uses.', 'Lay the bars down when the names are long or there are more than eight.', "Draw the previous period hatched in the current series' color, named by its period.", 'Stack five series at most, the fifth your Other, and pass the totals you sum.', "Link a bar to what it stands for with its href, as data, and pass your router's navigate on a client page."]} donts={['Never draw a direction in red or green. A refund below zero is ink, like the rest.', 'Never pass a domain without zero. A bar that starts anywhere else misstates its value.', 'Never rotate a label. Let it wrap, or lay the chart down.', 'Never give money out a color of its own. Spending is ink; only money that arrived is gain.']} />
+
+</Section>

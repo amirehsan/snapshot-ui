@@ -267,6 +267,7 @@ export {
   type DataTableSelectable,
   type DataTableShared,
 } from './data-table';
+export { Prose, ProseScroll, type ProseProps, type ProseScrollProps } from './prose';
 export { CopyButton, type CopyButtonLabels, type CopyButtonProps } from './copy-button';
 export { ConditionalFields, type ConditionalFieldsProps } from './conditional-fields';
 export { FieldExtras, type FieldExtrasLabels, type FieldExtrasProps, type FieldOffer } from './field-extras';

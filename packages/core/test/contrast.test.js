@@ -798,6 +798,138 @@ describe('the charts', () => {
   });
 });
 
+describe('the bar chart', () => {
+  /** A token color painted over `ground` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName, alpha = 1) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    const color = parseColor(palette[name]);
+    return contrastRatio(composite({ ...color, a: color.a * alpha }, ground), ground);
+  };
+
+  // A bar is ink, slate or gain, a graphic on the surface the chart sits on; its label and its amount are ink and
+  // its value labels slate. The gate holds each as text on lifted, float and canvas, past the 3:1 a graphic
+  // needs, so the bars add no pair.
+  it('cites ink, slate and gain on lifted, float and canvas, which the gate holds', () => {
+    for (const text of ['ink', 'slate', 'gain']) {
+      for (const ground of ['lifted', 'float', 'canvas']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // The zero line where the domain crosses zero is the boundary color drawn on the surface itself, which the gate
+  // holds against canvas and lifted as the switch's off track, at the graphic minimum. (A field's edge, the
+  // boundary over a Raised fill, measures 3.36 and 5.59 on lifted; a line on the surface measures as below,
+  // spec correction 15.)
+  it('cites the boundary on canvas and lifted, the zero line between the signs', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      expect(CONTRAST_PAIRS, ground).toContainEqual(
+        expect.objectContaining({ text: 'boundary', ground, minimum: NON_TEXT }),
+      );
+    }
+    expect(measured('light', 'boundary', 'lifted'), 'light').toBeCloseTo(3.45, 2);
+    expect(measured('dark', 'boundary', 'lifted'), 'dark').toBeCloseTo(5.21, 2);
+    expect(measured('light', 'boundary', 'canvas'), 'light').toBeCloseTo(3.38, 2);
+    expect(measured('dark', 'boundary', 'canvas'), 'dark').toBeCloseTo(5.34, 2);
+  });
+
+  // Each bar color against lifted, canvas and float, as the record states them.
+  it('measures the bar colors Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'float', light: 18.43, dark: 17.42 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'float', light: 5.49, dark: 6.94 },
+      { name: 'gain', ground: 'lifted', light: 7.2, dark: 8.04 },
+      { name: 'gain', ground: 'canvas', light: 6.55, dark: 8.92 },
+      { name: 'gain', ground: 'float', light: 7.44, dark: 8.04 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+
+  // Under a pointer the other rows' bars draw at 40% opacity, composited over the surface as the browser does: a
+  // transient emphasis, measured and recorded, not gated. An ink bar so dimmed falls under 3:1 in light while the
+  // pointer rests; the active row is at full strength (spec correction 15).
+  it('measures the dimmed bar the record states, in both modes', () => {
+    for (const { name, light, dark } of [
+      { name: 'ink', light: 2.57, dark: 3.81 },
+      // A second series and money that arrived step back further, and only while the pointer rests.
+      { name: 'slate', light: 1.75, dark: 2.19 },
+      { name: 'gain', light: 1.93, dark: 2.36 },
+    ]) {
+      expect(measured('light', name, 'lifted', 0.4), `${name}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, 'lifted', 0.4), `${name}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
+describe('the previous period, hatched', () => {
+  /** A series color at `share` of its strength over Lifted, against Lifted and against the solid color there. */
+  const mixed = (mode, name, share) => {
+    const palette = paletteFor(tokens, mode);
+    const lifted = parseColor(palette.lifted);
+    const color = parseColor(palette[name]);
+    const solid = composite(color, lifted);
+    const mix = composite({ ...color, a: color.a * share }, lifted);
+    return { surface: contrastRatio(mix, lifted), solid: contrastRatio(solid, mix) };
+  };
+
+  // Spec 5.5's table: a lighter fill of the same color, mixed with Lifted as the browser composites it, must
+  // clear 3:1 against Lifted to be seen and stay apart from the solid bar beside it. Ink has a band that does
+  // in each mode; gain has none in either, which is why the previous period is striped. Measured and recorded,
+  // not gated (spec correction 22: the spec's figures differ by 0.04 at most).
+  it('measures the lighter fills the record states, against Lifted and against the solid color', () => {
+    for (const { mode, name, share, surface, solid } of [
+      { mode: 'light', name: 'ink', share: 0.4, surface: 2.57, solid: 6.94 },
+      { mode: 'light', name: 'ink', share: 0.5, surface: 3.45, solid: 5.17 },
+      { mode: 'light', name: 'ink', share: 0.6, surface: 4.76, solid: 3.74 },
+      { mode: 'dark', name: 'ink', share: 0.4, surface: 3.81, solid: 4.57 },
+      { mode: 'dark', name: 'ink', share: 0.5, surface: 5.21, solid: 3.34 },
+      { mode: 'dark', name: 'ink', share: 0.6, surface: 6.94, solid: 2.51 },
+      { mode: 'light', name: 'gain', share: 0.4, surface: 1.93, solid: 3.74 },
+      { mode: 'light', name: 'gain', share: 0.5, surface: 2.33, solid: 3.09 },
+      { mode: 'light', name: 'gain', share: 0.6, surface: 2.85, solid: 2.52 },
+      { mode: 'dark', name: 'gain', share: 0.4, surface: 2.36, solid: 3.41 },
+      { mode: 'dark', name: 'gain', share: 0.5, surface: 2.97, solid: 2.71 },
+      { mode: 'dark', name: 'gain', share: 0.6, surface: 3.71, solid: 2.17 },
+    ]) {
+      const label = `${name} at ${String(share)}, ${mode}`;
+      const measured = mixed(mode, name, share);
+      expect(measured.surface, `${label}, on lifted`).toBeCloseTo(surface, 2);
+      expect(measured.solid, `${label}, against solid`).toBeCloseTo(solid, 2);
+      // Ink at half strength clears both in each mode; no share of gain does in either.
+      const clears = measured.surface >= NON_TEXT && measured.solid >= NON_TEXT;
+      if (name === 'gain') expect(clears, label).toBe(false);
+      if (name === 'ink' && share === 0.5) expect(clears, label).toBe(true);
+    }
+  });
+
+  // The hatched bar's extent is its 1px border, the color at full strength, which the gate holds as text on
+  // Lifted; its stripes, 2px every 6px, cover a third of it, a texture whose average is the color at a third.
+  it('measures the border and the stripes the record states, in both modes', () => {
+    for (const name of ['ink', 'gain'])
+      expect(CONTRAST_PAIRS).toContainEqual(
+        expect.objectContaining({ text: name, ground: 'lifted', minimum: TEXT }),
+      );
+    for (const { mode, name, border, stripes } of [
+      { mode: 'light', name: 'ink', border: 17.84, stripes: 2.14 },
+      { mode: 'dark', name: 'ink', border: 17.42, stripes: 3.05 },
+      { mode: 'light', name: 'gain', border: 7.2, stripes: 1.71 },
+      { mode: 'dark', name: 'gain', border: 8.04, stripes: 2.02 },
+    ]) {
+      expect(mixed(mode, name, 1).surface, `${name} border, ${mode}`).toBeCloseTo(border, 2);
+      expect(mixed(mode, name, 2 / 6).surface, `${name} stripes, ${mode}`).toBeCloseTo(stripes, 2);
+    }
+  });
+});
+
 describe('the search field', () => {
   /** A token color painted over `ground` and measured against it, as a reader sees it. */
   const measured = (mode, name, groundName) => {
@@ -1890,6 +2022,110 @@ describe('the copy button', () => {
       expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
       expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
     }
+  });
+});
+
+describe('prose', () => {
+  /** `text` on `ground`, both laid over the canvas, as a translucent color is drawn. */
+  const on = (text, ground, mode) => {
+    const palette = paletteFor(tokens, mode);
+    const base = composite(parseColor(palette[ground]), parseColor(palette.canvas));
+    return contrastRatio(composite(parseColor(palette[text]), base), base);
+  };
+  /** Ink on the mark's wash, light signal orange at 20% over `under`. */
+  const onWash = (mode, under) => {
+    const palette = paletteFor(tokens, mode);
+    const wash = composite({ ...parseColor(palette['signal-light']), a: 0.2 }, parseColor(palette[under]));
+    return contrastRatio(composite(parseColor(palette.ink), wash), wash);
+  };
+
+  // Body text is ink, h5, h6, markers, table headers, captions and the image's alt text slate, and links link
+  // blue, on the page or in a card: the gate holds all three as text there.
+  it('cites ink, slate and link blue as text on canvas and lifted, which the gate holds', () => {
+    for (const text of ['ink', 'slate', 'link']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  // Measured and recorded, light then dark: code's text, the image's alt text and a link in inline code's box, on
+  // bone; slate on bone is gated already, for Kbd.
+  const ON_BONE = [
+    { text: 'charcoal', light: 13.75, dark: 11.44 },
+    { text: 'slate', light: 4.99, dark: 6.44 },
+    { text: 'link', light: 5.33, dark: 4.81 },
+    { text: 'granite', light: 6.78, dark: 8.22 },
+  ];
+
+  it.each(ON_BONE)('measures $text on bone at $light in light and $dark in dark', ({ text, light, dark }) => {
+    expect(on(text, 'bone', 'light')).toBeCloseTo(light, 2);
+    expect(on(text, 'bone', 'dark')).toBeCloseTo(dark, 2);
+  });
+
+  // The mark: ink on light signal orange at 20%, over lifted and over the canvas.
+  it('measures ink on the mark at 14.62 and 12.86 over lifted, 13.50 and 14.65 over the canvas', () => {
+    expect(onWash('light', 'lifted')).toBeCloseTo(14.62, 2);
+    expect(onWash('dark', 'lifted')).toBeCloseTo(12.86, 2);
+    expect(onWash('light', 'canvas')).toBeCloseTo(13.5, 2);
+    expect(onWash('dark', 'canvas')).toBeCloseTo(14.65, 2);
+  });
+});
+
+describe('the chart palette', () => {
+  const SLOTS = ['chart-1', 'chart-2', 'chart-3', 'chart-4'];
+  const GROUNDS = ['lifted', 'canvas', 'float'];
+
+  // A slot is a graphic, a bar or a legend key, on the surface a chart sits on: a card, the page or a panel. The gate
+  // holds each at 3:1 on the three, and contrastFailures runs the list in both modes: twenty-four pairs (spec 5.1).
+  it('gates the four slots as graphics on lifted, canvas and float, in both modes', () => {
+    for (const text of SLOTS) {
+      for (const ground of GROUNDS) {
+        const pairs = CONTRAST_PAIRS.filter((pair) => pair.text === text && pair.ground === ground);
+        // Opaque on the surface itself: no composite over another surface and no fill under it.
+        expect(
+          pairs.map(({ minimum, over, fill }) => ({ minimum, over, fill })),
+          `${text} on ${ground}`,
+        ).toEqual([{ minimum: NON_TEXT, over: undefined, fill: undefined }]);
+      }
+    }
+    // Never as text: no slot is held to the text minimum anywhere.
+    expect(CONTRAST_PAIRS.filter((pair) => SLOTS.includes(pair.text) && pair.minimum === TEXT)).toEqual([]);
+    expect(CONTRAST_PAIRS.filter((pair) => SLOTS.includes(pair.text))).toHaveLength(12);
+  });
+
+  // Spec 5.2's table, recomputed to two decimals: lifted, canvas and float, light then dark.
+  it.each([
+    { slot: 'chart-1', light: [3.63, 3.31, 3.75], dark: [4.64, 5.15, 4.64] },
+    { slot: 'chart-2', light: [8.03, 7.32, 8.3], dark: [5.11, 5.67, 5.11] },
+    { slot: 'chart-3', light: [4.74, 4.32, 4.9], dark: [4.53, 5.03, 4.53] },
+    { slot: 'chart-4', light: [8.08, 7.36, 8.35], dark: [3.95, 4.38, 3.95] },
+  ])('measures $slot at $light in light and $dark in dark', ({ slot, light, dark }) => {
+    /**
+     * @param {'light' | 'dark'} mode
+     * @param {number[]} expected
+     */
+    const check = (mode, expected) => {
+      const palette = paletteFor(tokens, mode);
+      const measured = GROUNDS.map((ground) => ratio(palette[slot], palette[ground]));
+      expect(
+        measured.map((value) => value.toFixed(2)),
+        `${slot} on ${GROUNDS.join(', ')}, ${mode}`,
+      ).toEqual(expected.map((value) => value.toFixed(2)));
+      for (const value of measured) expect(value).toBeGreaterThanOrEqual(NON_TEXT);
+    };
+    check('light', light);
+    check('dark', dark);
+  });
+
+  // A teal a step lighter, as a hand tuning by eye might pick, falls under 3:1 on the canvas and the gate says so.
+  it('catches a slot under 3:1', () => {
+    const failures = contrastFailures({ ...paletteFor(tokens, 'light'), 'chart-1': '#2ab5b5' }, 'light');
+    expect(failures.map((failure) => `${failure.text} on ${failure.ground}`)).toEqual(
+      expect.arrayContaining(['chart-1 on canvas', 'chart-1 on lifted', 'chart-1 on float']),
+    );
   });
 });
 

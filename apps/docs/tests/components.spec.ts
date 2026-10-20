@@ -745,6 +745,121 @@ test.describe('forced colors', () => {
     await expectVisibleRing(plot);
   });
 
+  test('a bar chart keeps its bars, its zero line and its focus ring', async ({ page }) => {
+    // The bars keep a fill of their own, out of the repaint: the reader's text color, and Highlight for the active
+    // row. The zero line between the signs is the text color too; the gridlines step back to GrayText.
+    await visit(page, '/docs/charts/bar-chart');
+    const chart = page.getByRole('figure', {
+      name: 'Spending by category, October, with refunds',
+      exact: true,
+    });
+    await expect(chart).toHaveCount(1);
+    const system = await systemColors(page);
+    const bars = chart.locator('.bar-chart-bar');
+    await expect(bars).toHaveCount(6);
+    for (const bar of await bars.all()) expect((await paint(bar)).fill).toBe(system.canvasText);
+    const stroke = (selector: string): Promise<string> =>
+      chart
+        .locator(selector)
+        .first()
+        .evaluate((element) => getComputedStyle(element).stroke);
+    expect(await stroke('.bar-chart-baseline')).toBe(system.canvasText);
+    expect(await stroke('.bar-chart-grid')).toBe(system.grayText);
+
+    const first = bars.first();
+    await expect(first).toHaveAttribute('tabindex', '0');
+    await first.focus();
+    await expect(chart.locator('.bar-chart-row[data-active]')).toHaveCount(1);
+    expect((await paint(first)).fill).toBe(system.highlight);
+    await expectVisibleRing(first);
+  });
+
+  test('a comparison keeps stripes against solid bars', async ({ page }) => {
+    // The current period is solid in the reader's text color; the previous one keeps its stripes, the text
+    // color on the page's own color, inside a border of the text color, so the two never merge.
+    await visit(page, '/docs/charts/bar-chart');
+    const chart = page.getByRole('figure', {
+      name: 'Spending by month, this year against last year',
+      exact: true,
+    });
+    await expect(chart).toHaveCount(1);
+    const system = await systemColors(page);
+    const look = (bar: Locator): Promise<{ fill: string; edge: string; image: string }> =>
+      bar.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { fill: style.backgroundColor, edge: style.borderTopColor, image: style.backgroundImage };
+      });
+    const solid = chart.locator('.bar-chart-bar[data-look="fill"]');
+    const hatched = chart.locator('.bar-chart-bar[data-look="hatched"]');
+    await expect(solid).toHaveCount(5);
+    await expect(hatched).toHaveCount(5);
+    for (const bar of await solid.all()) {
+      const drawn = await look(bar);
+      expect(drawn.fill).toBe(system.canvasText);
+      expect(drawn.image).toBe('none');
+    }
+    for (const bar of await hatched.all()) {
+      const drawn = await look(bar);
+      expect(drawn.fill).toBe(system.canvas);
+      expect(drawn.edge).toBe(system.canvasText);
+      expect(drawn.image).toContain('repeating-linear-gradient');
+    }
+    // The legend's key for the previous period is striped too.
+    const key = chart.locator('.bar-chart-legend-item[data-look="hatched"] .bar-chart-key');
+    expect((await look(key)).image).toContain('repeating-linear-gradient');
+  });
+
+  test('a stack keeps its four textures and its fifth in GrayText', async ({ page }) => {
+    // A system palette has one text color, so a stack's slots are told apart by their textures, asked or not: the
+    // first solid, the second and third striped each way, the fourth both, and Other solid GrayText, with the
+    // page's own color in the gap under each segment that stands on another.
+    await visit(page, '/docs/charts/bar-chart');
+    const chart = page.getByRole('figure', {
+      name: 'Spending by category, the last six months',
+      exact: true,
+    });
+    await expect(chart).toHaveCount(1);
+    await expect(chart).not.toHaveAttribute('data-texture');
+    const system = await systemColors(page);
+    const look = (
+      bar: Locator,
+    ): Promise<{ fill: string; image: string; edge: string; gap: string; layer: string }> =>
+      bar.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          fill: style.backgroundColor,
+          image: style.backgroundImage,
+          edge: style.borderTopColor,
+          gap: style.borderBottomColor,
+          // The first layer's size: the outline's side under the gap on a segment on another.
+          layer: style.backgroundSize.split(',')[0]?.trim() ?? '',
+        };
+      });
+    const may = chart.locator('.bar-chart-band').first().locator('.bar-chart-bar');
+    await expect(may).toHaveCount(5);
+    const drawn = await Promise.all([0, 1, 2, 3, 4].map((at) => look(may.nth(at))));
+    const [first, second, third, fourth, fifth] = drawn;
+    expect(first?.fill).toBe(system.canvasText);
+    expect(first?.image).not.toContain('repeating-linear-gradient');
+    for (const textured of [second, third, fourth]) {
+      expect(textured?.image).toContain('repeating-linear-gradient');
+      expect(textured?.edge).toBe(system.canvasText);
+    }
+    expect(second?.image).not.toBe(third?.image);
+    expect(fourth?.image.match(/repeating-linear-gradient/g)).toHaveLength(2);
+    expect(fifth?.fill).toBe(system.grayText);
+    expect(fifth?.image).not.toContain('repeating-linear-gradient');
+    // Under its gap, in the page's own color, each segment on another draws its outline's missing side.
+    for (const joined of drawn.slice(1)) {
+      expect(joined.gap).toBe(system.canvas);
+      expect(joined.layer).toBe('100% 1px');
+    }
+    expect(first?.layer).toBe('0px 0px');
+    // The legend's keys follow their segments.
+    const key = chart.locator('.bar-chart-legend-item[data-series="4"] .bar-chart-key');
+    expect((await look(key)).image.match(/repeating-linear-gradient/g)).toHaveLength(2);
+  });
+
   test('a tooltip keeps a border and loses its arrow', async ({ page }) => {
     // The arrow is an svg fill, which the repaint would turn into a shape of the wrong color or none, so it
     // goes. The tip's transparent border is repainted in the reader's text color, so the tip keeps its shape.
@@ -1168,6 +1283,29 @@ test.describe('forced colors', () => {
     const header = page.locator('.stage .page-header').first();
     expect((await paint(header)).fill).toBe(await systemColor(page, 'canvas'));
     expect(await header.evaluate((element) => getComputedStyle(element).backdropFilter)).toBe('none');
+  });
+
+  test("prose keeps inline code's edge and the mark", async ({ page }) => {
+    // Their fills are dropped in the repaint, so inline code keeps a 1px edge in the text color and a mark takes
+    // the reader's own highlight; a wide table's region rings in Highlight.
+    await visit(page, '/docs/components/prose');
+    const system = await systemColors(page);
+    const code = page.locator('.stage .prose p code').first();
+    await expect(code).toHaveCount(1);
+    const edge = await code.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { width: style.borderTopWidth, color: style.borderTopColor };
+    });
+    expect(edge).toEqual({ width: '1px', color: system.canvasText });
+    const mark = page.locator('.stage .prose mark').first();
+    await expect(mark).toHaveCount(1);
+    const drawn = await paint(mark);
+    expect(drawn.fill).not.toBe(system.canvas);
+    expect(drawn.fill).not.toBe('rgba(0, 0, 0, 0)');
+    expect(drawn.text).not.toBe(drawn.fill);
+    const region = page.getByRole('region', { name: 'October by category, table' });
+    await region.focus();
+    await expectVisibleRing(region);
   });
 
   test("the docs header, a PageHeader, draws the system's background color whole under its menu button", async ({
@@ -1681,17 +1819,18 @@ test('the page size example puts its picker above the steps at 320 with nothing 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
 
-test('every props table on a component or chart page has a name of its own', async ({ page }) => {
-  // A page with several tables names each one, so a screen reader's list of tables tells them apart.
-  for (const { slug, url } of PAGES) {
+// A page with several tables names each one, so a screen reader's list of tables tells them apart. One test per
+// page, so a slow runner's time limit covers one page's load and not some ninety (insights spec correction 94).
+for (const { slug, url } of PAGES) {
+  test(`every props table on the ${slug} page has a name of its own`, async ({ page }) => {
     await page.goto(url);
     const names = await page
       .locator('.props table')
       .evaluateAll((tables) => tables.map((table) => table.getAttribute('aria-label')));
     expect(names.length, slug).toBeGreaterThan(0);
     expect(new Set(names).size, `${slug}: ${names.join(', ')}`).toBe(names.length);
-  }
-});
+  });
+}
 
 // ---- Narrow screens -----------------------------------------------------------------------------
 
@@ -1709,7 +1848,10 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
  */
 const LONG_TARGETS: Record<string, string[]> = {
   'app-shell': ['.stage .app-shell-main p'],
-  badge: ['.stage .badge'],
+  // A badge's text is its label, which caps the floor a long word gives a holder sized by its content.
+  badge: ['.stage .badge-label'],
+  // A row's name is the app's and wraps at any character in its column, or above its bar under 24rem.
+  'bar-chart': ['.stage .bar-chart-category'],
   // A crumb's text is the app's and ellipsizes past 16rem on one line, so a long one never pushes the page.
   breadcrumbs: ['.stage .breadcrumbs-text'],
   card: ['.stage .card-title', '.stage .card-note'],
@@ -1762,6 +1904,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   pagination: ['.stage .pagination-range'],
   // The label is the app's sentence, a file name among it, and wraps at any character, as the meter's does.
   'progress-bar': ['.stage .progress-bar-label'],
+  // A paragraph is the app's text, which breaks anywhere inside its measure.
+  prose: ['.stage .prose p'],
   'radio-group': [
     '.stage .field-label',
     '.stage .field-description',
@@ -2045,6 +2189,15 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'app-shell': ['.stage .app-shell'],
   avatar: ['.stage .avatar', '.stage .avatar-initials'],
   badge: ['.stage .badge'],
+  // Every bar, its place and its size, the table and its toggle are the server's: the final picture. A bar
+  // with an href is a real link there, with its target over its band, so the drill-down works before hydration.
+  'bar-chart': [
+    '.stage .bar-chart .bar-chart-bar',
+    '.stage .bar-chart-table',
+    '.stage .bar-chart-toggle',
+    '.stage .bar-chart a.bar-chart-bar[href]',
+    '.stage .bar-chart a.bar-chart-hit[href]',
+  ],
   'bottom-tab-bar': ['.stage .tab-bar'],
   // Real links in the server's HTML, both faces: the trail works before hydration and with scripts off.
   breadcrumbs: ['.stage .breadcrumbs a[href]'],
@@ -2128,6 +2281,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   popover: ['.stage .button'],
   // A static part: the track with its role and values is in the server's HTML.
   'progress-bar': ['.stage .progress-bar-track[role="progressbar"]'],
+  // Rendered from Markdown by react-markdown in a server component, the wide table in its region.
+  prose: ['.stage .prose h2', '.stage .prose-scroll table', '.stage .prose .bar-chart .bar-chart-bar'],
   'radio-group': ['.stage .radio-indicator'],
   // The bar, its sentence and its buttons, and the polite status host, mounted empty before any status.
   'save-bar': ['.stage .save-bar', '.stage .save-bar-status[role="status"]'],
@@ -2388,4 +2543,91 @@ test.describe('conditional fields', () => {
     expect(seen.filter((state) => state === 'body').length).toBeLessThanOrEqual(1);
     expect(seen.at(-1)).toBe('gate');
   });
+});
+
+// ---- Prose --------------------------------------------------------------------------------------
+
+test("the prose page's wide table scrolls inside its region at 375 and the page does not", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await visit(page, '/docs/components/prose');
+  const region = page.getByRole('region', { name: 'October by category, table' });
+  await expect(region).toHaveAttribute('tabindex', '0');
+  const widths = await region.evaluate((element) => ({
+    scroll: element.scrollWidth,
+    client: element.clientWidth,
+  }));
+  expect(widths.scroll).toBeGreaterThan(widths.client);
+  expect(await sideways(page)).toBe(0);
+  // The arrow keys scroll it once it has focus.
+  await region.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  expect(await sideways(page)).toBe(0);
+});
+
+test('a chart placed in an article stands a peer step below the paragraph before it', async ({ page }) => {
+  // The chart's root sets margin: 0 in a file that loads after prose's, and the box's gaps are two classes
+  // deep, so they win (insights spec correction 89).
+  await visit(page, '/docs/components/prose');
+  const article = page.locator('.stage article.prose', { has: page.locator('.bar-chart') });
+  await expect(article).toHaveCount(1);
+  const gap = await article.locator('> .bar-chart').evaluate((chart) => {
+    const before = chart.previousElementSibling?.getBoundingClientRect().bottom ?? 0;
+    return Math.round(chart.getBoundingClientRect().top - before);
+  });
+  expect(gap).toBe(24);
+});
+
+test('model output on the prose page has no links or images', async ({ page }) => {
+  await visit(page, '/docs/components/prose');
+  // The snippet under Rendering Markdown safely, and the monthly report under Model output.
+  for (const text of ['Read the full report', 'October at a glance']) {
+    const stage = page.locator('.stage').filter({ hasText: text });
+    await expect(stage).toHaveCount(1);
+    // A footnote's links stay, within the page; nothing else links or loads.
+    await expect(stage.locator('a:not([href^="#"]), img, script, b')).toHaveCount(0);
+    expect(await stage.locator('.prose-unlinked').count(), text).toBeGreaterThan(0);
+    expect(await stage.locator('.prose-image').count(), text).toBeGreaterThan(0);
+  }
+  // The model's block of HTML never reaches the page, and its address is text that breaks anywhere.
+  await expect(page.locator('.stage').getByText('A block of HTML the model wrote')).toHaveCount(0);
+  const address = page.locator('.stage .prose-unlinked', { hasText: 'spending-by-category' });
+  await expect(address).toHaveCSS('overflow-wrap', 'anywhere');
+  await expect(address).toHaveCSS('text-decoration-line', 'none');
+});
+
+test('the Persian guide on the prose page puts its markers at the right and keeps code left to right', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/prose');
+  const guide = page.locator('.stage [lang="fa"] .prose');
+  await expect(guide).toHaveCount(1);
+  const drawn = await guide.evaluate((article) => {
+    const list = article.querySelector('ol');
+    const code = article.querySelector('li code');
+    const heading = article.querySelector('h2');
+    if (!list || !code || !heading) throw new Error('The guide has a list, inline code and a heading');
+    const style = getComputedStyle(list);
+    return {
+      direction: style.direction,
+      start: style.paddingRight,
+      end: style.paddingLeft,
+      counting: style.listStyleType,
+      code: getComputedStyle(code).direction,
+      tracking: getComputedStyle(heading).letterSpacing,
+      face: getComputedStyle(heading).fontFamily,
+    };
+  });
+  expect(drawn).toMatchObject({
+    direction: 'rtl',
+    start: '20px',
+    end: '0px',
+    counting: 'persian',
+    code: 'ltr',
+    tracking: 'normal',
+  });
+  expect(drawn.face).toMatch(/Vazirmatn/);
 });

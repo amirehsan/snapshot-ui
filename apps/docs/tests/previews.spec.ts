@@ -76,6 +76,11 @@ const collapses = (page: Page): Promise<string[]> =>
           for (const match of text.matchAll(/[\p{L}\p{N}\p{M}‌]+/gu)) {
             const word = match[0];
             if (word.length < 2 || word.length > longest) continue;
+            // A word inside a longer run with no space, such as a web address Prose breaks anywhere by design
+            // (insights spec 8.10), is part of that run, which may wrap.
+            const start = text.slice(0, match.index).search(/\S*$/);
+            const end = match.index + word.length + text.slice(match.index + word.length).search(/\s|$/);
+            if (end - start > longest) continue;
             const range = document.createRange();
             range.setStart(node, match.index);
             range.setEnd(node, match.index + word.length);

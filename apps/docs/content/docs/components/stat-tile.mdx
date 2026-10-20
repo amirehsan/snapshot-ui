@@ -26,6 +26,25 @@ The line is slate by default. Set `tone` to `gain` only for money that arrived, 
 
 <Section>
 
+## A change against a period
+
+To say how a figure moved since the last period, write the change as the sentence you would say, with the period in it, and pass it as the change line:
+
+```tsx
+<StatTile
+  label="Spent"
+  value="$4,220.00"
+  caption="October"
+  change={{ direction: 'up', label: 'Up $120 vs September' }}
+/>
+```
+
+It is a line and not a chip. A filled pill draws a delta as a badge, which reads as a state, and its fill would need a color; up and down mean nothing by themselves, since more spending and more income point the same way. The line keeps the tile's weight on its figure, reads as one sentence with the arrow repeating it, and takes a tone only for a meaning. The [Insights recipe](/docs/charts/bar-chart#the-insights-recipe) draws one per tile while its page compares.
+
+</Section>
+
+<Section>
+
 ## A trend
 
 Pass a small drawing, up to 96 by 32, in `trend`. The [Sparkline](/docs/charts/sparkline) is made for it. It sits at the end of the value's row, and moves under the caption when the tile has less than 18rem of content. It is hidden from assistive technology unless it names itself, since the text already says the change.

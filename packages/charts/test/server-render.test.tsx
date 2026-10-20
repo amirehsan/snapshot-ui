@@ -2,6 +2,8 @@
 import type { ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { outermostClasses, proseRoots } from './prose-roots';
+import { BarChart, type BarSeries } from '../src/bar-chart';
 import { LineChart, type LineSeries } from '../src/line-chart';
 
 /**
@@ -32,6 +34,23 @@ const LAST_MONTH: LineSeries = {
     { value: 90, valueLabel: '$90.00' },
   ],
 };
+
+/** A month's spending by merchant, with a refund that nets below zero and a row with no value. */
+const MERCHANTS: BarSeries = {
+  label: 'October',
+  values: [
+    { value: 420, valueLabel: '$420.00' },
+    { value: 260, valueLabel: '$260.00' },
+    null,
+    { value: -60, valueLabel: '-$60.00' },
+  ],
+};
+
+/** An amount as the app formats it. */
+const money = (value: number): { value: number; valueLabel: string } => ({
+  value,
+  valueLabel: `${value < 0 ? '-' : ''}$${Math.abs(value).toFixed(2)}`,
+});
 
 const TICKS = [
   { value: 0, label: '$0' },
@@ -70,6 +89,170 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     // The plot takes its tab stop once scripts run: with them off, its keys would do nothing.
     ['line-chart-readout', 'line-chart-crosshair', 'line-chart-dot', 'data-active', 'tabindex'],
   ],
+  [
+    // Every bar's place and size, the labels, the amounts and the zero line are the server's: the final
+    // picture. Nothing is active, and the bars take their roving tab stop once scripts run.
+    'BarChart',
+    <BarChart
+      aria-label="Spending by merchant"
+      orientation="horizontal"
+      categories={['Whole Foods Market', 'Shell', 'Netflix', 'Apple Store']}
+      series={[MERCHANTS]}
+      valueDomain={[-100, 500]}
+      valueTicks={[
+        { value: 0, label: '$0' },
+        { value: 500, label: '$500' },
+      ]}
+    />,
+    [
+      '<figure',
+      'class="bar-chart"',
+      'data-orientation="horizontal"',
+      'aria-label="Spending by merchant"',
+      'class="bar-chart-rows" role="group" aria-roledescription="chart"',
+      '--bar-chart-rows:4',
+      'class="bar-chart-gridlines" aria-hidden="true"',
+      'preserveAspectRatio="none"',
+      'class="bar-chart-baseline" data-crosses="" x1="16.667" x2="16.667"',
+      'class="bar-chart-category" aria-hidden="true">Whole Foods Market<',
+      'role="img" aria-roledescription="bar"',
+      'data-sign="positive" data-nonzero=""',
+      'inset-inline-start:16.667%;inline-size:70%',
+      'data-sign="negative"',
+      'inset-inline-end:83.333%;inline-size:10%',
+      'class="bar-chart-amount" data-look="fill">-$60.00<',
+      'class="bar-chart-tick" data-edge="end"',
+      '<caption>Spending by merchant</caption>',
+      'hidden=""',
+      '>Show as table<',
+      '<noscript>',
+      'class="bar-chart-noscript"',
+      'class="bar-chart-status" role="status"></span>',
+    ],
+    ['bar-chart-readout', 'data-active', 'data-pointer', 'tabindex', 'aria-busy'],
+  ],
+  [
+    // Months standing up, income beside spending, a bad month below zero: every bar's band, place in its pair,
+    // end and corner are the server's, and the thickness is the CSS's, from the band and group counts.
+    'BarChart, vertical and grouped, with negatives',
+    <BarChart
+      aria-label="Income and spending by month"
+      categories={['Aug', 'Sep', 'Oct', 'Nov']}
+      series={[
+        { label: 'Income', color: 'gain', values: [{ value: 420, valueLabel: '$420.00' }, null, null, null] },
+        { ...MERCHANTS, label: 'Net', color: 'ink' },
+      ]}
+      valueDomain={[-100, 500]}
+      valueLabels="all"
+    />,
+    [
+      'data-orientation="vertical"',
+      'class="bar-chart-plot" role="group" aria-roledescription="chart"',
+      'data-room-start="" data-room-end=""',
+      'style="--bar-chart-bands:4;--bar-chart-group:2"',
+      'class="bar-chart-bars" style="block-size:240px"',
+      'class="bar-chart-gridlines" aria-hidden="true"',
+      'class="bar-chart-baseline" data-crosses="" x1="0" x2="100" y1="83.333" y2="83.333"',
+      'data-color="gain" data-look="fill" data-sign="positive" data-nonzero=""',
+      'inset-block-end:16.667%;block-size:70%;--bar-chart-centre:12.5%;--bar-chart-index:0',
+      'inset-block-start:83.333%;block-size:10%;--bar-chart-centre:87.5%;--bar-chart-index:1',
+      'class="bar-chart-values" aria-hidden="true"',
+      'class="bar-chart-categories" aria-hidden="true" data-bands="category"',
+      'class="bar-chart-band-label" data-third="">Aug<',
+      '<caption>Income and spending by month</caption>',
+    ],
+    ['bar-chart-readout', 'data-active', 'data-pointer', 'tabindex', 'bar-chart-rows', 'bar-chart-amount'],
+  ],
+  [
+    // This period beside the last, lying down: the previous period is hatched in the first series' color, its
+    // amount slate by its look, and its legend key Meter's hatched swatch.
+    'BarChart, horizontal, against the previous period',
+    <BarChart
+      aria-label="Spending by merchant, October against September"
+      orientation="horizontal"
+      categories={['Whole Foods Market', 'Shell', 'Netflix', 'Apple Store']}
+      series={[MERCHANTS, { ...MERCHANTS, label: 'September', look: 'hatched' }]}
+    />,
+    [
+      'class="bar-chart-legend-item" data-color="ink" data-look="hatched"',
+      'data-color="ink" data-look="hatched" data-sign="positive"',
+      'class="bar-chart-amount" data-look="hatched">$420.00<',
+      '--bar-chart-group:2',
+    ],
+    ['data-color="slate"', 'tabindex'],
+  ],
+  [
+    // A stack across zero: each segment from the running sum of its sign, in the palette by slot, the outermost
+    // of each sign marked for its corners and every segment on another marked for its gap; each total at the
+    // end of the side its band nets to. All the server's, with nothing measured.
+    'BarChart, stacked across zero',
+    <BarChart
+      aria-label="Spending by category and month"
+      categories={['Sep', 'Oct']}
+      layout="stacked"
+      series={[
+        { label: 'Groceries', values: [money(100), money(-50)] },
+        { label: 'Shopping', values: [money(-40), money(60)] },
+        { label: 'Travel', values: [money(30), money(-20)] },
+      ]}
+      valueDomain={[-100, 300]}
+      totals={['$90.00', '-$10.00']}
+      valueLabels="all"
+      hasTexture
+    />,
+    [
+      'data-layout="stacked"',
+      'data-texture=""',
+      'style="--bar-chart-bands:2;--bar-chart-group:1"',
+      'class="bar-chart-legend-item" data-series="3" data-color="chart-3" data-look="swatch"',
+      'data-color="chart-1" data-look="fill" data-sign="positive" data-nonzero="" data-series="1"',
+      'data-color="chart-3" data-look="fill" data-sign="positive" data-nonzero="" data-series="3" data-outer="" data-joined=""',
+      'inset-block-start:42.5%;block-size:7.5%;--bar-chart-centre:25%;--bar-chart-index:0',
+      'class="bar-chart-value-text">-$10.00<',
+      '>Total<',
+    ],
+    ['tabindex', 'data-look="hatched"', 'bar-chart-readout'],
+  ],
+  [
+    // Bars that link: each bar an anchor to its href with no tabindex, so before hydration and with scripts off
+    // every link is a stop in drawn order; each with a target over its band that is never one; and the table's
+    // category cells linked too. The server's HTML follows a link with no script at all.
+    'BarChart, linked',
+    <BarChart
+      aria-label="Spending by merchant"
+      orientation="horizontal"
+      categories={['Whole Foods Market', 'Shell', 'Netflix', 'Apple Store']}
+      series={[
+        {
+          ...MERCHANTS,
+          values: MERCHANTS.values.map((value, at) =>
+            value ? { ...value, href: `#transactions?merchant=${String(at)}` } : null,
+          ),
+        },
+      ]}
+    />,
+    [
+      '<a class="bar-chart-bar" href="#transactions?merchant=0" aria-labelledby="',
+      '<a class="bar-chart-hit" href="#transactions?merchant=0" aria-hidden="true" tabindex="-1" data-whole="" style="--bar-chart-row:1;--bar-chart-row-narrow:1"></a>',
+      '<th scope="row" id="',
+      '<a class="link" href="#transactions?merchant=1">Shell</a>',
+      'class="bar-chart-rows" role="group" aria-roledescription="chart"',
+    ],
+    // No bar writes a tabindex, a role over its link's or a role description; only the targets are out of Tab.
+    ['tabindex="0"', 'role="img"', 'aria-roledescription="bar"', 'data-press', 'bar-chart-readout'],
+  ],
+  [
+    // Loading in the plot's own space: a still placeholder at the plot's height, the region empty until mount.
+    'LineChart, loading',
+    <LineChart aria-label="Spending in October" series={[THIS_MONTH]} xLabels={DAYS} status="loading" />,
+    [
+      'data-status="loading"',
+      'class="skeleton line-chart-skeleton" aria-hidden="true"',
+      'aria-live="polite" aria-atomic="true"></span>',
+      'style="block-size:240px"',
+    ],
+    ['line-chart-line', 'line-chart-toggle', '<table', 'tabindex', 'aria-busy'],
+  ],
 ];
 
 describe('the client charts on the server', () => {
@@ -78,10 +261,39 @@ describe('the client charts on the server', () => {
     expect(typeof document).toBe('undefined');
   });
 
+  // Its outermost element carries a root prose hands back to the layer below, so a chart in an article draws as
+  // it does anywhere (insights spec corrections 52 and 93).
+  const roots = proseRoots();
+  it.each(CLIENT)('%s has a component root prose hands back on its outermost element', (_name, element) => {
+    const classes = outermostClasses(renderToString(element));
+    if (classes === null) return;
+    expect(
+      classes.filter((name) => roots.has(name)),
+      classes.join(' '),
+    ).not.toEqual([]);
+  });
+
   it.each(CLIENT)('%s renders to HTML with no browser', (_name, element, contains, excludes) => {
     const html = renderToString(element);
     for (const part of contains) expect(html).toContain(part);
     for (const part of excludes) expect(html).not.toContain(part);
+  });
+
+  it("names each bar on the server by the shown table's ids, which the noscript copy does not repeat", () => {
+    const html = renderToString(
+      <BarChart
+        aria-label="Spending by merchant"
+        orientation="horizontal"
+        categories={['Whole Foods Market', 'Shell']}
+        series={[MERCHANTS]}
+      />,
+    );
+    const names = [...html.matchAll(/aria-labelledby="([^"]+)"/g)].map((match) => match[1] ?? '');
+    expect(names).toHaveLength(2);
+    for (const id of names.flatMap((name) => name.split(' '))) {
+      expect(html.match(new RegExp(` id="${id}"`, 'g'))).toHaveLength(1);
+      expect(html.slice(html.indexOf('<noscript>'))).not.toContain(id);
+    }
   });
 
   it('puts a second, shown table in noscript', () => {

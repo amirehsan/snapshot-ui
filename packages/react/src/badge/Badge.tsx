@@ -26,8 +26,14 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 
 /**
  * A short label for a state or a count, drawn as an outline with no fill.
- * A static `<span>`, safe in a server component.
+ * A static `<span>`, safe in a server component. The label sits in a
+ * `.badge-label` of its own, which keeps a word whole while capping what a
+ * very long one asks of a holder sized by its content.
  */
-export function Badge({ tone = 'neutral', className, ...props }: BadgeProps): ReactElement {
-  return <span {...props} className={cx('badge', tone !== 'neutral' && `badge-${tone}`, className)} />;
+export function Badge({ tone = 'neutral', className, children, ...props }: BadgeProps): ReactElement {
+  return (
+    <span {...props} className={cx('badge', tone !== 'neutral' && `badge-${tone}`, className)}>
+      <span className="badge-label">{children}</span>
+    </span>
+  );
 }

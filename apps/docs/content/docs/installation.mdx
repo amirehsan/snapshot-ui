@@ -26,7 +26,7 @@ Charts are a separate package with their own versions.
 pnpm add @snapshot-ui/charts
 ```
 
-It needs React 19 and the same 0.x minor of `@snapshot-ui/core` (0.8 for charts 0.1.5), whose `styles.css` already draws the charts. It does not need React Aria. See the [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
+It needs React 19 and the same 0.x minor of `@snapshot-ui/core` (0.9 for charts 0.2.0), whose `styles.css` already draws the charts. It does not need React Aria. See the [Bar chart](/docs/charts/bar-chart), [Line chart](/docs/charts/line-chart) and [Sparkline](/docs/charts/sparkline) pages.
 
 </Section>
 
@@ -49,12 +49,17 @@ The CSS sits in cascade layers, so your unlayered CSS always wins, and Tailwind'
 
 ## Load the font
 
-Body text is weight 450, which needs a variable font. In Next.js, `next/font` self-hosts it and sets the family the tokens read:
+Body text is weight 450, which needs a variable font. Load the italic as well: `base.css` turns off the browser's faked italic, so emphasis in [Prose](/docs/components/prose) is upright unless the italic face is there. In Next.js, `next/font` self-hosts both and sets the family the tokens read:
 
 ```tsx
 import { Sofia_Sans } from 'next/font/google';
 
-const sofia = Sofia_Sans({ subsets: ['latin'], display: 'swap', variable: '--font-sans' });
+const sofia = Sofia_Sans({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-sans',
+});
 
 export default function RootLayout({ children }) {
   return (
@@ -65,7 +70,25 @@ export default function RootLayout({ children }) {
 }
 ```
 
-Anywhere else, install `@fontsource-variable/sofia-sans` and import it once. The font stack already includes its family name.
+Both styles in one call preload the italic on every page. To load it only where a page draws it, as this site does, make it a call of its own with `style: ['italic']`, `preload: false` and `variable: '--font-sans-italic'`, add its variable to the html element's classes, and set it first for emphasis: `:where(em, i):not(:lang(fa), :lang(ar)) { font-family: var(--font-sans-italic), var(--font-sans); }`.
+
+Anywhere else, install `@fontsource-variable/sofia-sans` and import it once, with its italic, `@fontsource-variable/sofia-sans/wght-italic.css`. The font stack already includes its family name.
+
+Sofia Sans has no Persian or Arabic letters. For a Persian page, load Vazirmatn, which has a weight axis, so 450 and 500 draw, and put it first in the stack under `lang="fa"`, on the element that names the language:
+
+```tsx
+import { Vazirmatn } from 'next/font/google';
+
+// Only Persian pages draw it, so it is not preloaded. Add persian.variable to the html element's classes.
+const persian = Vazirmatn({ subsets: ['arabic'], display: 'swap', variable: '--font-persian', preload: false });
+```
+
+```css
+[lang]:lang(fa) {
+  --font-sans: var(--font-persian), Arial, sans-serif;
+  font-family: var(--font-sans);
+}
+```
 
 </Section>
 
@@ -119,7 +142,11 @@ export function PersianGuide({ children }) {
 
 ## Next.js server components
 
-Stateful or interactive components carry `'use client'`. Static ones do not, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, EmptyState, Skeleton, the field counter and chip, Meter, a StatTile without `href`, Sparkline, Pagination, ProgressBar, PageHeader, PageColumn, DescriptionList, CardActions, Gauge and MonthGrid. A server page builds Pagination's links with `getPageHref`, and only its controls and status are client components; its page size picker calls a function, so render Pagination from a client component to show it. Never import React Aria into a server component.
+Stateful or interactive components carry `'use client'`. Static ones do not, so a server component renders them with no client JavaScript: Heading, Text, Eyebrow, Kbd, Badge, Card, EmptyState, Skeleton, the field counter and chip, Meter, a StatTile without `href`, Sparkline, Pagination, ProgressBar, PageHeader, PageColumn, DescriptionList, CardActions, Gauge, MonthGrid, and Prose and ProseScroll. A server page builds Pagination's links with `getPageHref`, and only its controls and status are client components; its page size picker calls a function, so render Pagination from a client component to show it. Never import React Aria into a server component.
+
+Render Markdown into Prose in a server component, with `react-markdown` and `remark-gfm`, which add no client JavaScript there. Install both in your app, since the library depends on neither: `pnpm add react-markdown remark-gfm`. `remark-gfm` gives you the tables, footnotes, task lists and bare web addresses that model output and most reports use, which plain CommonMark does not parse. Text a model wrote takes `skipHtml` and a map that turns links and images into text; [Rendering Markdown safely](/docs/components/prose#rendering-markdown-safely) has the map, which also wraps each table in a ProseScroll.
+
+BarChart and LineChart are client components that a server component renders with plain data: their server HTML is the final picture, and the client adds the keys, the pointer and the readout.
 
 DataTable and SidePanel are client components. DataTable takes functions in its props, its columns, `getKey` and `getRowHref`, so render it from a client component and pass it the rows your server page loaded. A SidePanel open in the URL is in the server's HTML beside the table; on a phone it opens as a sheet once scripts run.
 
