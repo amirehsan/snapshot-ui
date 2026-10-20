@@ -570,22 +570,14 @@ export const NavSticks: Story = {
   play: async ({ canvasElement }) => {
     const side = find(canvasElement, '.panel-layout-side');
     const nav = find(canvasElement, '.panel-nav');
-    const pixels = (value: string): number => {
-      const probe = document.createElement('div');
-      probe.style.position = 'absolute';
-      probe.style.blockSize = value;
-      side.append(probe);
-      const { height } = probe.getBoundingClientRect();
-      probe.remove();
-      return height;
-    };
+    // Read from the computed style, never by adding a probe: a waitFor callback that changes the DOM wakes its own
+    // observer, and runs again before the page can draw, for as long as it fails.
+    const length = (name: string): number => parseFloat(getComputedStyle(side).getPropertyValue(name)) || 0;
     try {
-      await waitFor(() => expect(pixels('var(--page-sticky-top, 0px)')).toBeGreaterThan(0), {
-        timeout: 5000,
-      });
+      await waitFor(() => expect(length('--page-sticky-top')).toBeGreaterThan(0), { timeout: 5000 });
       window.scrollTo({ top: 400, behavior: 'instant' });
       await waitFor(() => expect(window.scrollY).toBe(400), { timeout: 5000 });
-      const expected = pixels('calc(var(--page-sticky-top, 0px) + var(--spacing-peer))');
+      const expected = length('--page-sticky-top') + length('--spacing-peer');
       await waitFor(
         () => expect(Math.abs(nav.getBoundingClientRect().top - expected)).toBeLessThanOrEqual(1),
         {
