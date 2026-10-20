@@ -1,7 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
 import { ConditionalFields } from '../src/conditional-fields';
@@ -516,7 +516,7 @@ describe('a native form reset', () => {
     expect(sent(container, 'logoKey')).toEqual(['sk-saved']);
   });
 
-  it("restores an uncontrolled repeater's fields on a form reset, keeping its rows", async () => {
+  it("restores an uncontrolled repeater's fields on a form reset", async () => {
     const user = userEvent.setup();
     const { container } = render(
       <form>
@@ -543,10 +543,71 @@ describe('a native form reset', () => {
     await user.clear(second);
     await user.type(second, '700{Enter}');
     expect(sent(container, 'tierAmount')).toEqual(['10000', '70000']);
-    // A reset is the browser's: the fields go back to what they started with, and the rows stay as they are.
     await user.click(screen.getByRole('button', { name: 'Reset' }));
     expect(second).toHaveValue('500.00');
     expect(sent(container, 'tierAmount')).toEqual(['10000', '50000']);
     expect(container.querySelectorAll('li.repeater-row')).toHaveLength(2);
   });
+
+  it.each([['uncontrolled'], ['controlled']] as const)(
+    'puts a repeater back to its first rows on a form reset after a remove and an add, %s',
+    async (mode) => {
+      interface Tier {
+        id: string;
+        amount: number | null;
+      }
+      const FIRST: Tier[] = [
+        { id: 'a', amount: 10000 },
+        { id: 'b', amount: 50000 },
+      ];
+      const onChange = vi.fn<(rows: Tier[]) => void>();
+      function Tiers(): ReactElement {
+        const [rows, setRows] = useState<Tier[]>(FIRST);
+        const state =
+          mode === 'controlled'
+            ? {
+                value: rows,
+                onChange: (next: Tier[]) => {
+                  onChange(next);
+                  setRows(next);
+                },
+              }
+            : { defaultValue: FIRST, onChange };
+        return (
+          <form>
+            <Repeater<Tier>
+              label="Wait tiers"
+              {...state}
+              createRow={() => ({ id: 'new', amount: null })}
+              rowLabel={(index) => `Tier ${String(index + 1)}`}
+              maxRows={3}
+            >
+              {(tier) => (
+                <NumberField
+                  label="Up to"
+                  name="tierAmount"
+                  money={{ symbol: '$' }}
+                  defaultValue={tier.amount}
+                />
+              )}
+            </Repeater>
+            <ResetButton />
+          </form>
+        );
+      }
+      const user = userEvent.setup();
+      const { container } = render(<Tiers />);
+      await user.click(screen.getByRole('button', { name: 'Remove, Tier 1' }));
+      await user.click(screen.getByRole('button', { name: 'Add a row' }));
+      expect(sent(container, 'tierAmount')).toEqual(['50000', '']);
+      // A reset puts back what the form started with, as it does every control: the removed row returns and the
+      // added one leaves, so the form sends what it first held.
+      await user.click(screen.getByRole('button', { name: 'Reset' }));
+      expect(
+        [...container.querySelectorAll('li.repeater-row')].map((item) => item.getAttribute('data-row-id')),
+      ).toEqual(['a', 'b']);
+      expect(sent(container, 'tierAmount')).toEqual(['10000', '50000']);
+      expect(onChange).toHaveBeenLastCalledWith(FIRST);
+    },
+  );
 });

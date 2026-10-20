@@ -27,6 +27,8 @@ Without `value` the Repeater holds the rows itself, from `defaultValue`, and the
 
 Controlled, send the rows you hold: they are already typed, with their ids, and a server action takes them as they are.
 
+A form reset puts back the rows the Repeater started with, as it puts back every field: a removed row returns with its first values and an added one leaves. Controlled, `onChange` receives those rows.
+
 <Preview name="repeater-form" />
 
 </Section>

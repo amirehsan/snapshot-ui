@@ -13063,7 +13063,10 @@ app names them: by the render function's `index`, `tiers.0.amount`, so
 after a remove every row is named by its new place and what the form sends
 reads back into the same rows (settings plan, spec correction 35), or the
 same name in every row, read with `getAll` in drawn order. The Repeater
-never reads a field. A row's id is React's key, so a removed row's fields
+never reads a field. A form reset puts back the rows the set started
+with, as it puts back every control and as React Aria's fields do: a
+removed row returns with its first values and an added one leaves (spec
+correction 55). A row's id is React's key, so a removed row's fields
 unmount and the rows after it keep theirs and what was typed in them. Two
 rows of one id are both drawn, the second under a key of its own, and warn
 once in development.

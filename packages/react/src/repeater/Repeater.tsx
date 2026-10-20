@@ -200,6 +200,21 @@ export function Repeater<T extends RepeaterRow>({
     [],
   );
 
+  // A form reset puts back the rows the set started with, as it puts back every control and as React Aria's fields
+  // do: a removed row returns with its first values and an added one leaves.
+  const [first] = useState(rows);
+  useEffect(() => {
+    const form = rootRef.current?.form;
+    if (!form) return;
+    const onReset = (): void => {
+      setRows(first);
+    };
+    form.addEventListener('reset', onReset);
+    return () => {
+      form.removeEventListener('reset', onReset);
+    };
+  }, [first, setRows]);
+
   // Two rows of one id: both are drawn, the second under a key of its own, and the app is told once.
   const seen = new Set<string>();
   const keys: string[] = [];
