@@ -12846,7 +12846,9 @@ Aria, Lucide and `@internationalized/date`, and the same with React Aria
 not ignored, since it imports none: over the spec's 1 kB budget, as the
 shared focus module (the frame, the watch, the tab order and the named
 place) is most of it and is counted here first. The rule sets a 2 kB
-limit (settings plan, spec correction 31).
+limit (settings plan, spec correction 31). After the review's check for a
+gate that cannot take focus it measures 1.17 kB, under the same limit
+(correction 53).
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): a hidden group absent from the reading order; the gate
