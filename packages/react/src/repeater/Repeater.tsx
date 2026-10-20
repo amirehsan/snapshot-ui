@@ -113,6 +113,9 @@ const LABELS: RepeaterLabels = {
   removed: (label) => `${label} removed`,
 };
 
+/** The rows the changes of the current event left, by the drawn rows they started from. Written by handlers only. */
+const pending = new WeakMap<object, readonly RepeaterRow[]>();
+
 /** How long an add's or a remove's words stay in the status: read, then gone before a reader browses to them. */
 const HOLD_MS = 5000;
 
@@ -180,11 +183,23 @@ export function Repeater<T extends RepeaterRow>({
   ...props
 }: RepeaterProps<T>): ReactElement {
   const labels: RepeaterLabels = { ...LABELS, ...given };
-  const [rows, setRows] = useControllableState<readonly T[]>(
+  const [rows, change] = useControllableState<readonly T[]>(
     value,
     defaultValue ?? [],
     onChange as ((rows: readonly T[]) => void) | undefined,
   );
+  // The rows as the changes of this event left them, so a second change in one event, two updates or an update and
+  // a remove, builds on the first instead of on the rows drawn before it; a microtask later the drawn rows rule.
+  const current = (): readonly T[] => (pending.get(rows) as readonly T[] | undefined) ?? rows;
+  const setRows = (next: readonly T[]): void => {
+    if (!pending.has(rows)) {
+      queueMicrotask(() => {
+        pending.delete(rows);
+      });
+    }
+    pending.set(rows, next);
+    change(next);
+  };
   const rootRef = useRef<HTMLFieldSetElement>(null);
   const addRef = useRef<HTMLButtonElement>(null);
   // Memoized, so React does not detach and attach the root's refs on every render.
@@ -211,13 +226,13 @@ export function Repeater<T extends RepeaterRow>({
     const form = rootRef.current?.form;
     if (!form) return;
     const onReset = (): void => {
-      setRows(first);
+      change(first);
     };
     form.addEventListener('reset', onReset);
     return () => {
       form.removeEventListener('reset', onReset);
     };
-  }, [first, setRows]);
+  }, [first, change]);
 
   // Two rows of one id: both are drawn, the second under a key of its own, and the app is told once.
   const seen = new Set<string>();
@@ -281,9 +296,10 @@ export function Repeater<T extends RepeaterRow>({
   const addRow = (pressed: Element): void => {
     if (isDisabled || full) return;
     const row = createRow();
-    const next = [...rows, row];
+    const before = current();
+    const next = [...before, row];
     setRows(next);
-    const words = labels.added(rowLabel(rows.length));
+    const words = labels.added(rowLabel(before.length));
     announce(
       next.length >= maxRows ? `${words}. ${labels.full(maxRows)}` : words,
       pressed,
@@ -300,8 +316,11 @@ export function Repeater<T extends RepeaterRow>({
     const gone = rows[index];
     if (!gone) return;
     const stays = rows[index + 1] ?? rows[index - 1];
-    setRows(rows.filter((_, at) => at !== index));
-    announce(labels.removed(rowLabel(index)), pressed, rows.length - 1, (root) => {
+    const before = current();
+    // By its place while nothing changed in this event, so one of two rows of one id leaves alone; else by its id.
+    const next = before.filter((each, at) => (before === rows ? at !== index : each.id !== gone.id));
+    setRows(next);
+    announce(labels.removed(rowLabel(index)), pressed, next.length, (root) => {
       const item = stays ? rowOf(root, stays.id) : null;
       if (!item) return null;
       // The same control in the row that took its place, so a reader removing rows keeps their place; at the
@@ -312,7 +331,7 @@ export function Repeater<T extends RepeaterRow>({
   };
 
   const update = (row: T): void => {
-    setRows(rows.map((each) => (each.id === row.id ? row : each)));
+    setRows(current().map((each) => (each.id === row.id ? row : each)));
   };
 
   const describedBy =

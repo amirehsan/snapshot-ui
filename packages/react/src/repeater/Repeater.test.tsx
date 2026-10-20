@@ -259,6 +259,55 @@ describe('Repeater', () => {
     },
   );
 
+  it.each([['controlled'], ['uncontrolled']] as const)('keeps every update one event makes, %s', (mode) => {
+    const onChange = vi.fn<(rows: Tier[]) => void>();
+    const props = {
+      label: 'Wait tiers',
+      createRow: createTier,
+      rowLabel: tierLabel,
+      maxRows: 3,
+      onChange,
+    };
+    /** A button in the first row that changes both rows' waits in one press, as "A week for all" would. */
+    const draw: RepeaterProps<Tier>['children'] = (tier, { index, update }) =>
+      index === 0 ? (
+        <button
+          type="button"
+          onClick={() => {
+            for (const each of THREE) update({ ...each, wait: 'day' });
+          }}
+        >
+          A day for all
+        </button>
+      ) : null;
+    function Held(): ReactElement {
+      const [rows, setRows] = useState<Tier[]>(THREE);
+      return (
+        <Repeater<Tier>
+          {...props}
+          value={rows}
+          onChange={(next) => {
+            onChange(next);
+            setRows(next);
+          }}
+        >
+          {draw}
+        </Repeater>
+      );
+    }
+    render(
+      mode === 'controlled' ? (
+        <Held />
+      ) : (
+        <Repeater<Tier> {...props} defaultValue={THREE}>
+          {draw}
+        </Repeater>
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'A day for all' }));
+    expect(onChange).toHaveBeenLastCalledWith(THREE.map((tier) => ({ ...tier, wait: 'day' })));
+  });
+
   it('appends the row createRow makes', () => {
     const createRow = vi.fn(() => ({ id: 'made', amount: 70000, wait: 'day' }));
     const { container } = render(<Controlled createRow={createRow} />);

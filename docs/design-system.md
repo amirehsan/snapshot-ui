@@ -13057,7 +13057,9 @@ and take its gap; in a grid nothing floats, so the float is no side.
 
 **Controlled or uncontrolled** (ruling 2.5). `value` and `onChange` hand
 the app typed rows on every add, remove and the render function's
-`update`, which writes a row back by its id. Without `value` the Repeater
+`update`, which writes a row back by its id; several changes in one event,
+two updates or an update and a remove, each build on the last (spec
+correction 57). Without `value` the Repeater
 holds the rows from `defaultValue`, the fields hold what is typed, and the
 app names them: by the render function's `index`, `tiers.0.amount`, so
 after a remove every row is named by its new place and what the form sends
