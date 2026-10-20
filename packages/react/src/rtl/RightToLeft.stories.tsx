@@ -30,6 +30,7 @@ import { MultiSelect } from '../multi-select';
 import { NumberField } from '../number-field';
 import { PageColumn, PageHeader } from '../page-header';
 import { Pagination } from '../pagination';
+import { PanelLayout, PanelNav, PanelNavItem, PanelSection } from '../panel-layout';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
 import { ProgressBar } from '../progress-bar';
@@ -2475,5 +2476,121 @@ export const RepeaterMirrored: Story = {
     }
     // Add starts the foot at the right.
     await expectSameEdge(rect(find(set, '.repeater-add')).right, rect(set).right);
+  },
+};
+
+/** The consumer's eight sections in Persian, with an end state in Persian digits. */
+const PERSIAN_SECTIONS = [
+  ['coach', 'مربی', 'مربی پیش از هر برداشت چقدر صبر می‌کند.', undefined],
+  ['notifications', 'اعلان‌ها', 'چه چیزی و کجا به شما می‌گوییم.', undefined],
+  ['bank-sync', 'همگام‌سازی بانک', 'حساب‌های متصل و هر چند وقت همگام می‌شوند.', '۲ متصل'],
+  ['assistant', 'دستیار هوش مصنوعی', 'دستیار چه چیزی را می‌تواند بخواند.', undefined],
+  ['logos', 'نشان‌ها', 'نشان بانک کنار تراکنش‌ها.', 'خاموش'],
+  ['appearance', 'ظاهر', 'پوسته و تراکم.', undefined],
+  ['data', 'داده‌ها', 'برون‌بری یا درون‌بری داده‌ها.', undefined],
+  ['danger', 'منطقه‌ی خطر', 'حذف حساب.', undefined],
+] as const;
+
+/** The Persian settings page at the index or at a section, in a frame `width` wide. */
+function PersianSettings({
+  sectionKey,
+  width,
+  navLabel,
+}: {
+  sectionKey?: string;
+  width: string;
+  navLabel: string;
+}): ReactElement {
+  const open = PERSIAN_SECTIONS.find(([key]) => key === (sectionKey ?? 'coach')) ?? PERSIAN_SECTIONS[0];
+  const view = sectionKey === undefined ? 'index' : 'section';
+  return (
+    <div style={{ width, maxWidth: '100%' }}>
+      <PanelLayout
+        view={view}
+        sectionKey={sectionKey}
+        backHref="#settings"
+        backLabel="تنظیمات"
+        nav={
+          <PanelNav aria-label={navLabel}>
+            {PERSIAN_SECTIONS.map(([key, name, description, end]) => (
+              <PanelNavItem
+                key={key}
+                href={`#settings/${key}`}
+                isCurrent={key === sectionKey}
+                isDefault={view === 'index' && key === 'coach'}
+                description={description}
+                end={end}
+              >
+                {name}
+              </PanelNavItem>
+            ))}
+          </PanelNav>
+        }
+      >
+        <PanelSection title={open[1]} description={open[2]}>
+          <Text>{open[2]}</Text>
+        </PanelSection>
+      </PanelLayout>
+    </div>
+  );
+}
+
+/**
+ * PanelLayout on a Persian page, in Vazirmatn: on the split face the nav at the right and the section to its
+ * left; on the list face the chevrons pointing left, the way a row opens; Back's chevron pointing right, the way
+ * back. Its play measures each in three engines.
+ */
+export const PanelLayoutMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <RouterProvider navigate={() => undefined}>
+        <div
+          dir="rtl"
+          lang="fa"
+          data-font="vazirmatn"
+          style={{ display: 'grid', gap: 'var(--spacing-separate)', width: '100%' }}
+        >
+          <div data-case="split">
+            <PersianSettings sectionKey="logos" width="56rem" navLabel="بخش‌های تنظیمات" />
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-peer)' }}>
+            <div data-case="list">
+              <PersianSettings width="20rem" navLabel="فهرست تنظیمات" />
+            </div>
+            <div data-case="page">
+              <PersianSettings sectionKey="data" width="20rem" navLabel="فهرست بخش‌ها" />
+            </div>
+          </div>
+        </div>
+      </RouterProvider>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const at = (name: string): HTMLElement => find(canvasElement, `[data-case="${name}"]`);
+    const split = at('split');
+    // At the story's width the split case is the split face, unless the screen is a phone's.
+    if (rect(find(split, '.panel-layout')).width >= 768) {
+      const side = find(split, '.panel-layout-side');
+      const main = find(split, '.panel-layout-main');
+      await waitFor(() => expect(rect(side).left).toBeGreaterThanOrEqual(rect(main).right - 0.5), {
+        timeout: 5000,
+      });
+      // The side column reaches past its track by a focus ring; the nav in it starts on the layout's right edge.
+      await expectSameEdge(rect(find(split, '.panel-nav')).right, rect(find(split, '.panel-layout')).right);
+    }
+    // The list face: the chevron at the row's left end, its drawing mirrored to point left.
+    const row = find(at('list'), '.panel-nav-link');
+    const chevron = find(row, '.panel-nav-chevron');
+    await waitFor(() => expect(rect(chevron).left).toBeLessThan(rect(find(row, '.panel-nav-name')).left), {
+      timeout: 5000,
+    });
+    await expect(getComputedStyle(find(chevron, 'svg')).scale).toBe('-1 1');
+    // Back at the column's right, its chevron first, mirrored to point right.
+    const back = find(at('page'), '.panel-layout-back');
+    await expectSameEdge(rect(back).right, rect(find(at('page'), '.panel-layout-main')).right);
+    const backIcon = find(back, '.panel-layout-back-icon');
+    await expect(rect(backIcon).left).toBeGreaterThan(rect(back).right - rect(backIcon).width - 1);
+    await expect(getComputedStyle(find(back, 'svg')).scale).toBe('-1 1');
   },
 };

@@ -30,6 +30,7 @@ import { ConditionalFields } from '../src/conditional-fields';
 import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
 import { Repeater } from '../src/repeater';
+import { settingsPage } from './panel-layout-fixture';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -454,6 +455,9 @@ const FACES: [name: string, element: ReactElement][] = [
       </ConditionalFields>
     </form>,
   ],
+  // Both faces in one HTML at the index and at a section: nothing reads the locale, the zone or the width.
+  ['PanelLayout at the index', settingsPage('index')],
+  ['PanelLayout at a section', settingsPage('section', 'logos')],
   [
     // Static: it reads no locale and no zone, so a Persian report writes the same HTML in every one.
     'Prose with a wide table',

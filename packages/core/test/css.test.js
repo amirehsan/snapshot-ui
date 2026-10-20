@@ -11061,6 +11061,192 @@ describe('src/components/repeater.css', () => {
   });
 });
 
+describe('src/components/panel-layout.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over lines
+  // reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/panel-layout.css')));
+  const SPLIT = '@container panel-layout (inline-size >= 48rem)';
+  const PAIRS = '@container panel-row (inline-size >= 66rem)';
+  const PILL = ".panel-nav-link:is([aria-current='page'], [data-default])";
+
+  /** The CSS with every block under `header` taken out. */
+  const without = (css, header) => {
+    let rest = css;
+    for (;;) {
+      const start = rest.indexOf(header);
+      if (start === -1) return rest;
+      const end = rest.indexOf('{', start) + 1 + blockAfter(rest, header).length + 1;
+      rest = rest.slice(0, start) + rest.slice(end);
+    }
+  };
+
+  it('is a size container at 48rem with an intrinsic inline size of 0, through a frame', () => {
+    const css = rules();
+    const layout = blockAfter(css, '.panel-layout {');
+    expect(layout).toContain('container: panel-layout / inline-size;');
+    // The library's rule: a stand-in width is also the min-content width, which scrolls a phone page sideways.
+    expect(layout).toContain('contain-intrinsic-inline-size: 0;');
+    expect(layout).toContain('min-inline-size: 0;');
+    // A container query cannot style its own container, so the frame inside it is the grid.
+    expect(layout).not.toContain('display: grid');
+    const frame = blockAfter(css, '.panel-layout-frame {');
+    expect(frame).toContain('display: grid;');
+    expect(frame).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(css).toContain(`${SPLIT} {`);
+  });
+
+  it('hides the main column at the index and the side column at a section under 48rem', () => {
+    const narrow = without(without(outsideForcedColors(rules()), SPLIT), '@media print');
+    expect(
+      blockAfter(
+        narrow,
+        ".panel-layout[data-view='index'] .panel-layout-main, .panel-layout[data-view='section'] .panel-layout-side {",
+      ),
+    ).toContain('display: none;');
+    // Back, the descriptions and the chevrons show on the list face.
+    expect(blockAfter(narrow, '.panel-layout-back {')).toContain('display: flex;');
+    expect(narrow).not.toMatch(/\.panel-layout-back[^{]*\{[^}]*display: none/);
+  });
+
+  it('draws 16rem beside the rest from 48rem and hides Back', () => {
+    const split = blockAfter(rules(), SPLIT);
+    const frame = blockAfter(split, '.panel-layout-frame {');
+    expect(frame).toContain('grid-template-columns: 16rem minmax(0, 1fr);');
+    expect(frame).toContain('column-gap: var(--spacing-peer);');
+    expect(frame).toContain('align-items: start;');
+    // The face rule's specificity, after it: it wins without !important.
+    expect(
+      blockAfter(
+        split,
+        '.panel-layout[data-view] .panel-layout-side, .panel-layout[data-view] .panel-layout-main {',
+      ),
+    ).toContain('display: block;');
+    expect(blockAfter(split, '.panel-layout-back, .panel-nav-description, .panel-nav-chevron {')).toContain(
+      'display: none;',
+    );
+    expect(rules()).not.toContain('!important');
+  });
+
+  it('sticks the nav under --page-sticky-top on the split face', () => {
+    const side = blockAfter(blockAfter(rules(), SPLIT), '.panel-layout-side {');
+    expect(side).toContain('position: sticky;');
+    // A peer step under the sticky header; the side reaches past its column by a focus ring, so its links stand a
+    // peer step under it and its scroll clips no ring.
+    expect(side).toContain('--panel-layout-ring: calc(var(--focus-ring-width) + var(--focus-ring-offset));');
+    expect(side).toContain(
+      'inset-block-start: calc(var(--page-sticky-top, 0px) + var(--spacing-peer) - var(--panel-layout-ring));',
+    );
+    expect(side).toContain('margin: calc(-1 * var(--panel-layout-ring));');
+    expect(side).toContain('padding: var(--panel-layout-ring);');
+    expect(side).toContain(
+      'max-block-size: calc(100dvh - var(--page-sticky-top, 0px) - 2 * var(--spacing-peer) + 2 * var(--panel-layout-ring));',
+    );
+    expect(side).toContain('overflow-y: auto;');
+    // Not sticky on the list face, where the list is the page.
+    expect(without(rules(), SPLIT)).not.toContain('position: sticky');
+  });
+
+  it('draws the current and default pill inside the split query only', () => {
+    const css = outsideForcedColors(rules());
+    const pill = blockAfter(blockAfter(css, SPLIT), `${PILL} {`);
+    expect(pill).toContain('background-color: var(--color-ink);');
+    expect(pill).toContain('color: var(--color-canvas);');
+    // On the list face no row is current: a phone's list is a menu of pages, not a place.
+    expect(without(css, SPLIT)).not.toMatch(/aria-current|data-default/);
+    // The forced-colors pill is inside the split query too.
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(blockAfter(forced, SPLIT), `${PILL}, ${PILL} .panel-nav-end {`)).toContain(
+      'background-color: highlight;',
+    );
+    expect(without(forced, SPLIT)).not.toMatch(/aria-current|data-default/);
+  });
+
+  it('draws the list face rows at the field size with rules between them, and the split rows at the control size', () => {
+    const css = outsideForcedColors(rules());
+    const narrow = without(css, SPLIT);
+    expect(blockAfter(narrow, '.panel-nav-link {')).toContain('min-block-size: var(--size-field);');
+    expect(blockAfter(narrow, '.panel-nav-item + .panel-nav-item {')).toContain(
+      'border-block-start: 1px solid var(--color-divider);',
+    );
+    const name = blockAfter(narrow, '.panel-nav-name {');
+    expect(name).toContain('font-size: var(--text-action);');
+    expect(name).toContain('font-weight: 500;');
+    for (const part of ['.panel-nav-description {', '.panel-nav-end {', '} .panel-nav-chevron {']) {
+      expect(blockAfter(narrow, part), part).toContain('color: var(--color-slate);');
+    }
+    const split = blockAfter(css, SPLIT);
+    expect(blockAfter(split, '.panel-nav-link {')).toContain('min-block-size: var(--size-control);');
+    expect(blockAfter(split, '.panel-nav-item + .panel-nav-item {')).toContain('border-block-start: 0;');
+  });
+
+  it("makes a nav row concentric with a card's corner, and a pill on the canvas", () => {
+    expect(blockAfter(rules(), '.panel-nav-link {')).toContain(
+      'border-radius: min(var(--radius-pill), max(0px, calc(var(--holder-radius, var(--radius-pill)) - var(--holder-border, 0px) - var(--holder-pad, 0px))));',
+    );
+  });
+
+  it('draws the heading at the h3 step at 500, with no ring when focused by script', () => {
+    const css = rules();
+    const heading = blockAfter(css, '.panel-section-heading {');
+    for (const declaration of [
+      'font-size: var(--text-h3);',
+      'letter-spacing: var(--text-h3--letter-spacing);',
+      'font-weight: 500;',
+      'color: var(--color-ink);',
+    ]) {
+      expect(heading, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.panel-section-heading:focus:not(:focus-visible) {')).toContain('outline: none;');
+    expect(blockAfter(css, '.panel-section-description {')).toContain('color: var(--color-slate);');
+    // Weights 400, 450, 500 and 700 only.
+    expect(css).not.toMatch(/font-weight: 600/);
+  });
+
+  it('pairs PanelRow from 66rem through its grid, keeping heights', () => {
+    const css = rules();
+    const row = blockAfter(css, '.panel-row {');
+    expect(row).toContain('container: panel-row / inline-size;');
+    expect(row).toContain('contain-intrinsic-inline-size: 0;');
+    expect(row).toContain('min-inline-size: 0;');
+    const grid = blockAfter(css, '.panel-row-grid {');
+    expect(grid).toContain('display: grid;');
+    expect(grid).toContain('gap: var(--spacing-peer);');
+    // Cards keep their own heights.
+    expect(grid).toContain('align-items: start;');
+    const pairs = blockAfter(css, PAIRS);
+    expect(blockAfter(pairs, ".panel-row[data-layout='halves'] > .panel-row-grid {")).toContain(
+      'grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);',
+    );
+    expect(blockAfter(pairs, ".panel-row[data-layout='third-two-thirds'] > .panel-row-grid {")).toContain(
+      'grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);',
+    );
+    expect(blockAfter(pairs, ".panel-row[data-layout='two-thirds-third'] > .panel-row-grid {")).toContain(
+      'grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);',
+    );
+  });
+
+  it('mirrors the chevrons in right to left', () => {
+    expect(
+      blockAfter(rules(), ":where([dir='rtl' i]) :is(.panel-layout-back, .panel-nav-chevron) svg {"),
+    ).toContain('scale: -1 1;');
+  });
+
+  it('hides the side column and Back in print', () => {
+    expect(
+      blockAfter(blockAfter(rules(), '@media print'), '.panel-layout-side, .panel-layout-back {'),
+    ).toContain('display: none;');
+  });
+
+  it('has a forced-colors block and no transition', () => {
+    const source = stripComments(read('src/components/panel-layout.css'));
+    expect(blockAfter(closeUp(source), FORCED_COLORS)).toContain(
+      '.panel-nav-item + .panel-nav-item { border-block-start-color: canvastext; }',
+    );
+    expect(source).not.toMatch(/\b(transition|animation)\s*:/);
+    expect(source).not.toMatch(/\b(left|right|top|bottom)\s*:|(margin|padding)-(left|right|top|bottom)/);
+  });
+});
+
 describe('concentric corners (docs/design-system.md, "Nested radii, derived")', () => {
   const css = (file) => closeUp(stripComments(read(`src/components/${file}`)));
   // The start of the formula: a part may take a further gap of its own after it, as a toast's row does.
@@ -11163,6 +11349,11 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       'repeater.css',
       ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .repeater:last-child > .repeater-foot,',
       `padding-block-end: ${EXTRA};`,
+    ],
+    [
+      'panel-layout.css',
+      ':is(.card, .card > .card-body:first-child) > .panel-layout:first-child > .panel-layout-frame > .panel-layout-main > .panel-layout-back {',
+      `margin-block-start: ${EXTRA};`,
     ],
   ];
 
@@ -11695,6 +11886,11 @@ describe('src/components/prose.css', () => {
         'field-extras',
         'field-offer',
         'repeater',
+        // A lone PanelNav and a PanelSection are outermost elements of their own, and each is a root.
+        'panel-layout',
+        'panel-nav',
+        'panel-section',
+        'panel-row',
       ]),
     );
     for (const part of [
@@ -11706,6 +11902,11 @@ describe('src/components/prose.css', () => {
       'repeater-row-set',
       'repeater-status',
       'repeater-remove-space',
+      'panel-layout-frame',
+      'panel-layout-back',
+      'panel-nav-link',
+      'panel-section-heading',
+      'panel-row-grid',
     ]) {
       expect(roots, part).not.toContain(part);
     }

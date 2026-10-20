@@ -795,6 +795,11 @@ row reads as a row, and the leftover space under a short card reads as the
 whitespace section 5 asks for. Stretching would make every card in a row end in
 dead space.
 
+**The library pairs by the row's own width.** A component cannot read the
+viewport for "1440px", so `PanelRow` pairs its two cards from 66rem of its own
+box: the page column beside an expanded rail at a 1440px viewport, 1440 - 320 -
+2 x 32 = 1056px. Under it the cards stack in source order (PanelLayout).
+
 ### Previews
 
 A setting gets a preview when its effect is visual and cannot be read off the
@@ -985,7 +990,11 @@ instead of a sharp corner, which is why a card or a tile in a card is
 field frame, a card, a list and a popup are 24px where nothing holds them.
 The rule runs from a holder to the parts in its corners and from a control to
 its own parts. A control never changes size because of where it is placed;
-only the corner that meets a holder's curve changes.
+only the corner that meets a holder's curve changes. A settings nav's row in a
+card takes the card's radius less the gap, a pill where nothing holds it, and
+PanelLayout's Back, at a card's top corner where an app puts the layout in one,
+keeps its shape and moves down by the corner inset less the padding
+(PanelLayout).
 
 **The audit.** `apps/storybook/tests/concentric` renders every story in
 Rounded, Soft and Square and measures every rounded element whose corner lies
@@ -13185,3 +13194,156 @@ gives a 4 kB limit. With React Aria not ignored it measures 16.63 kB.
 removed statuses, a disabled Add read with its reason, the empty line.
 Not yet verified on a real iPhone and an Android phone at 320px to 430px,
 or in Windows' contrast themes (a disabled Add in `graytext`).
+
+## PanelLayout
+
+A settings page's frame: a named list of linked sections beside the open
+section on a wide screen, and on a phone a list and a page with Back
+(settings spec, section 5; decided items 1 to 7; open questions 2 to 5 and
+26; ruling 2.1). `PanelLayout` holds `PanelNav` with its `PanelNavItem`
+links in a side column and the open `PanelSection` in a main column;
+`PanelRow` pairs two cards inside a section.
+
+**The URL is the state.** The layout holds no section. The app reads its
+address, `/settings` or `/settings/coach`, and passes `view` (`index` or
+`section`) and `sectionKey`; it marks the open link `isCurrent`, which sets
+`aria-current="page"`, and at the index the section a wide screen shows
+beside the list `isDefault`. A reload, a shared link and the browser's Back
+and Forward land on the same page, and a client navigation goes through
+`RouterProvider`, where the app's `navigate` can ask first while a section
+holds unsaved changes.
+
+**Two faces, one HTML, by the layout's own width.** The layout is a size
+container with a frame inside it, since a container query cannot style its
+own container. From 48rem of its box the frame is a 16rem list beside the
+section, a peer step apart; under it, one column: the list alone at the
+index, and Back and the section at a section. Both faces are in the
+server's HTML and a container query draws one; `display: none` takes the
+other out of the tab order and the accessibility tree, so nothing is read
+twice. Its own box and not the viewport, because the same page sits beside
+an expanded rail, a folded one or none: a layout in a 40rem frame on a
+1440px screen is the list face. 48rem leaves the section 30rem beside the
+list and its gap, room for a field and its Changed chip; 16rem holds
+"Notifications" and an end state at 16px, weight 500. Its intrinsic inline
+size is 0, as every size container's is: a holder sized to its content
+gives it a width.
+
+**The default section and R8.** The server cannot know the width, so the
+index serves one HTML to both: the list face shows the list; the split face
+shows the list beside the section the app passes as the children, its link
+`isDefault`. It is drawn current there and only there, inside the split
+query, and never `aria-current`: on a phone the same address is the list
+and no section is open, which a screen reader hears.
+
+**Focus** (spec 5.6). The layout watches focus on its root with the shared
+focus watch, set by a focus inside it and cleared only by a focus outside
+it, so Chromium's blur of a link whose column turns `display: none` leaves
+it set. After hydration, when `view` or `sectionKey` changes and focus was
+in the layout, or is on the body or nothing, the open section's heading
+takes focus in the frame after React's commit, on both faces; back at the
+index on the list face, the link of the section left (the layout notes the
+`href` of the current link after each commit, open question 7), else the
+first link; on the split face, the default section's heading. Which face
+is read in that frame, from whether the side column has a box. A change
+the reader started outside the layout, from the rail or a command palette,
+keeps its focus. Nothing moves on the server's render or on hydration. A
+layout an app mounts per route counts as a change when it mounts with
+another section than the last layout in the window had, while no other
+layout is mounted (settings plan, spec correction 67). The heading takes
+`tabIndex={-1}` and shows no ring when focused by script, as `<main>` does,
+and the shared focus clear keeps it under the sticky header.
+
+**Back** is the layout's, so every section has it without writing it: a
+link to `backHref` with a 16px chevron and `backLabel`, 40px tall, in ink
+at the action step, at the main column's top, drawn only on the list
+face's section view. Its name is its label alone, "Settings": a "Back to"
+prefix would be a word the page does not show. Where an app puts the
+layout in a card, Back keeps its shape and moves down out of the card's
+top corner by the corner inset less the padding (Nested radii, derived).
+
+**The rows of both faces.** On the split face a row is Sidebar's item: at
+least `--size-control`, the name at the action step at 500, a 5% ink wash
+on hover and press, the current or default row an ink pill with canvas
+text, its end state in canvas, and the focus ring outside the row in the
+ring's color, which reads on the canvas around the pill as Sidebar's does.
+The description and the chevron are not drawn there. On the list face a
+row is at least `--size-field`, the name at 16px and 500 in ink, the
+description under it at the small step in slate, the end state and a 16px
+chevron in slate at its end, 1px divider rules between rows, and no row
+current: a phone's list is a menu of pages. Slate on the wash measures
+4.37:1, so a washed row draws its slate parts in ink (spec correction 62).
+A row's corner is `min(var(--radius-pill), max(0px, calc(var(--holder-radius,
+var(--radius-pill)) - var(--holder-border, 0px) - var(--holder-pad, 0px))))`:
+a pill on the canvas, concentric with a card's corner in one.
+
+**Names.** Each link is drawn by React Aria's Link, not the library's,
+whose `link` class would draw it in Link Blue and underlined (spec
+correction 60). Its name is the section's name, from its content; the end
+state then the description describe it by id and are hidden from that
+content, so a screen reader says "Bank sync, link, current page, 2
+connected, Connected accounts and how often they sync", the name holds the
+label a voice user says, and nothing is read twice (spec correction 61).
+
+**The sticky nav.** On the split face the side column is sticky a peer step
+under `--page-sticky-top`, SidePanel's rule, as tall as the room under the
+shell's header allows, and scrolls itself when longer. It reaches past its
+track by a focus ring on every side, so its scroll clips no ring, and its
+offset takes that ring back, so the nav's top stands exactly a peer step
+under the header (spec correction 63).
+
+**The section.** A region named by its heading through `aria-labelledby`;
+the heading at the h3 step, 500, -2%, a part step to its description in
+slate, a peer step to the first card. PanelSection is static and renders in
+a server component.
+
+**PanelRow and its 66rem.** A row holds exactly two cards, two halves or a
+third beside two thirds in either order: the types take a tuple of two.
+From 66rem of the row's own box, the page column beside an expanded rail at
+1440px (1440 - 320 - 2 x 32 = 1056px, Page composition, derived), they pair
+as `minmax(0, 1fr)` columns, 1 and 1, 1 and 2, or 2 and 1, a peer step
+apart, each at its own height; under it they stack in source order. Beside
+a 16rem nav a section reaches 66rem only near a 1720px screen, which is
+the record's point: a settings section is one column of cards. Static, with
+an intrinsic inline size of 0.
+
+**Print.** The side column and Back are hidden; the section prints.
+
+**Forced colors.** The current pill is `highlight` with `highlighttext`
+for its name and end state, as Menu's chosen row is, inside the split query
+only, so the list face's default row is never highlighted (spec correction
+64); the list face's rules are `canvastext`; the focus ring stays.
+
+**Right to left.** Every property is logical: the nav stands at the right
+on the split face, the list face's chevrons point left and Back's points
+right, by `scale: -1 1` under `:where([dir='rtl' i])`, the charts'
+direction pattern. An end state in Latin digits keeps its order by the
+numeral rule. `PanelLayoutMirrored` measures it in three engines.
+
+**Motion.** None: a section change is a page.
+
+**Server rendering.** PanelLayout, PanelNav and PanelNavItem are client
+parts, each rendering its whole face on the server; nothing reads `window`
+or measures at render. PanelSection and PanelRow carry no directive and
+join the server components suite. Prose's generated guard lists
+`panel-layout`, `panel-nav`, `panel-section` and `panel-row` as roots with
+no hand-written entry: `.panel-nav` has a rule of its own for a lone
+PanelNav (spec correction 65).
+
+**Contrast**, gated already, so nothing is added: ink against the canvas
+16.25 in light and 19.31 in dark, against lifted 17.84 and 17.42; slate
+against the canvas 4.84 and 7.26, against lifted 5.31 and 6.94; canvas on
+the ink pill 16.25 and 19.31. The divider is a cue, as DescriptionList's
+is.
+
+**The size** (spec correction 68). The entry `{ PanelLayout, PanelNav,
+PanelNavItem, PanelSection, PanelRow }` measures 1.67 kB without React Aria,
+Lucide and `@internationalized/date`, under the spec's 2.5 kB budget; the
+rule gives a 2.5 kB limit. With React Aria not ignored it measures 11.35
+kB. The static parts alone measure the same both ways.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): a section's heading read after a section change on both
+faces, Back read as "Settings, link", a link read with its end state and
+description. Not yet verified on a real iPhone and an Android phone at
+320px to 430px (the list face, a section with Back), or in Windows'
+contrast themes (the current item in `highlight`).

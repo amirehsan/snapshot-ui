@@ -1,0 +1,359 @@
+/*
+ * PanelLayout and PanelRow: a settings page's frame and its card pairs, derived in docs/design-system.md
+ * ("PanelLayout"). The layout is a size container, and a frame inside it is the grid, since a container query
+ * cannot style its own container. Under 48rem of the layout's own box the frame is one column: at the index the
+ * list alone, at a section Back and the section. From 48rem it is a 16rem list beside the open section, the list
+ * sticky a peer step under --page-sticky-top. Both faces are in the server's HTML and one is drawn; display: none
+ * takes the other out of the tab order and the accessibility tree. 48rem leaves the section 30rem beside the list
+ * and its gap, room for a field and its Changed chip; 16rem holds "Notifications" and an end state at 16px. A row
+ * pairs two cards from 66rem of its own box, the page column beside an expanded rail at 1440px (1440 - 320 - 2 x
+ * 32 = 1056px). Every size container's intrinsic inline size is 0, so a holder sized to its content gives it a
+ * width. Nothing moves: a section change is a page.
+ */
+@layer components {
+  .panel-layout {
+    container: panel-layout / inline-size;
+    contain-intrinsic-inline-size: 0;
+    min-inline-size: 0;
+  }
+
+  /* Under 48rem: one column, the index's main column or the section's side column gone. */
+  .panel-layout-frame {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel-layout[data-view='index'] .panel-layout-main,
+  .panel-layout[data-view='section'] .panel-layout-side {
+    display: none;
+  }
+
+  .panel-layout-side,
+  .panel-layout-main {
+    min-inline-size: 0;
+  }
+
+  /* Back: a tertiary button's look as a link, 40px tall, the chevron and the index's name in ink, at the main
+     column's top a part step above the section. */
+  .panel-layout-back {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    inline-size: fit-content;
+    max-inline-size: 100%;
+    min-block-size: var(--size-control);
+    margin-block-end: var(--spacing-part);
+    border-radius: var(--radius-micro);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-action);
+    line-height: var(--text-action--line-height);
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: var(--text-action--font-weight);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .panel-layout-back-icon,
+  .panel-nav-icon,
+  .panel-nav-chevron {
+    display: inline-flex;
+    flex: none;
+  }
+
+  .panel-layout-back-icon svg,
+  .panel-nav-icon svg,
+  .panel-nav-chevron svg {
+    display: block;
+    inline-size: 16px;
+    block-size: 16px;
+  }
+
+  @media (hover: hover) {
+    .panel-layout-back:is(:hover, [data-hovered]) {
+      text-decoration-line: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 0.25em;
+    }
+  }
+
+  .panel-layout-back:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* Back in a card's top corner, where an app puts the whole layout in one: a control keeps its shape and moves
+     down out of the curve, by nothing in Soft and Square. */
+  :is(.card, .card > .card-body:first-child)
+    > .panel-layout:first-child
+    > .panel-layout-frame
+    > .panel-layout-main
+    > .panel-layout-back {
+    margin-block-start: calc(var(--holder-corner-inset) - var(--holder-pad));
+  }
+
+  /* ---- The nav: on the list face, rows of a page's list -------------------------------------- */
+  /* A lone PanelNav is an outermost element, and this rule makes its class a root prose hands back. */
+  .panel-nav {
+    min-inline-size: 0;
+  }
+
+  .panel-nav-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Rules between rows, none above the first or under the last. */
+  .panel-nav-item + .panel-nav-item {
+    border-block-start: 1px solid var(--color-divider);
+  }
+
+  /* A pill on the canvas, and concentric with a card's corner when an app puts the nav in one. */
+  .panel-nav-link {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-part);
+    min-block-size: var(--size-field);
+    padding-block: var(--spacing-part);
+    padding-inline: 0.75rem;
+    border-radius: min(
+      var(--radius-pill),
+      max(
+        0px,
+        calc(var(--holder-radius, var(--radius-pill)) - var(--holder-border, 0px) - var(--holder-pad, 0px))
+      )
+    );
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .panel-nav-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-inline-size: 0;
+  }
+
+  .panel-nav-name {
+    font-size: var(--text-action);
+    line-height: 1.25;
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .panel-nav-description {
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 450;
+    overflow-wrap: anywhere;
+  }
+
+  /* A short state in words at the row's end, never a dot. */
+  .panel-nav-end {
+    flex: none;
+    max-inline-size: 50%;
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 450;
+    text-align: end;
+    overflow-wrap: anywhere;
+  }
+
+  .panel-nav-chevron {
+    color: var(--color-slate);
+  }
+
+  @media (hover: hover) {
+    .panel-nav-link:is(:hover, [data-hovered]) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+  }
+
+  .panel-nav-link:is(:active, [data-pressed]) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  /* Slate on the wash measures 4.37:1, under the text minimum, so a washed row draws its slate parts in ink. */
+  @media (hover: hover) {
+    .panel-nav-link:is(:hover, [data-hovered])
+      :is(.panel-nav-description, .panel-nav-end, .panel-nav-chevron) {
+      color: var(--color-ink);
+    }
+  }
+
+  .panel-nav-link:is(:active, [data-pressed])
+    :is(.panel-nav-description, .panel-nav-end, .panel-nav-chevron) {
+    color: var(--color-ink);
+  }
+
+  /* Outside the row on every link, the current one included: an ink ring outside the ink pill reads on the
+     canvas, as Sidebar's items draw it. */
+  .panel-nav-link:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* ---- The section ------------------------------------------------------------------------------ */
+  .panel-section {
+    display: grid;
+    gap: var(--spacing-peer);
+    min-inline-size: 0;
+  }
+
+  .panel-section-heading {
+    margin: 0;
+    border-radius: var(--radius-micro);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    letter-spacing: var(--text-h3--letter-spacing);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  /* Focused by script when the section opens, as <main> is: no ring unless the keyboard brought it. */
+  .panel-section-heading:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  .panel-section-description {
+    margin: 0;
+    margin-block-start: calc(var(--spacing-part) - var(--spacing-peer));
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 450;
+    overflow-wrap: anywhere;
+  }
+
+  /* ---- The split face: from 48rem of the layout's own box --------------------------------------- */
+  @container panel-layout (inline-size >= 48rem) {
+    .panel-layout-frame {
+      grid-template-columns: 16rem minmax(0, 1fr);
+      column-gap: var(--spacing-peer);
+      align-items: start;
+    }
+
+    .panel-layout[data-view] .panel-layout-side,
+    .panel-layout[data-view] .panel-layout-main {
+      display: block;
+    }
+
+    .panel-layout-back,
+    .panel-nav-description,
+    .panel-nav-chevron {
+      display: none;
+    }
+
+    /* SidePanel's rule: sticky a peer step under the page's sticky header, as tall as the room under it allows,
+       scrolling itself when longer. It reaches past its column by a focus ring, so the scroll clips no ring. */
+    .panel-layout-side {
+      --panel-layout-ring: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+
+      position: sticky;
+      inset-block-start: calc(var(--page-sticky-top, 0px) + var(--spacing-peer) - var(--panel-layout-ring));
+      max-block-size: calc(
+        100dvh - var(--page-sticky-top, 0px) - 2 * var(--spacing-peer) + 2 * var(--panel-layout-ring)
+      );
+      margin: calc(-1 * var(--panel-layout-ring));
+      padding: var(--panel-layout-ring);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .panel-nav-item + .panel-nav-item {
+      border-block-start: 0;
+    }
+
+    /* Sidebar's item: 40px, the label at the action step. */
+    .panel-nav-link {
+      min-block-size: var(--size-control);
+      padding-block: 0.375rem;
+    }
+
+    .panel-nav-link:is([aria-current='page'], [data-default]) {
+      background-color: var(--color-ink);
+      color: var(--color-canvas);
+    }
+
+    .panel-nav-link:is([aria-current='page'], [data-default]) .panel-nav-end {
+      color: inherit;
+    }
+  }
+
+  /* ---- PanelRow: two cards that pair from 66rem of the row's own box ------------------------------ */
+  .panel-row {
+    container: panel-row / inline-size;
+    contain-intrinsic-inline-size: 0;
+    min-inline-size: 0;
+  }
+
+  /* Cards keep their own heights: start, never stretch. */
+  .panel-row-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-peer);
+    align-items: start;
+  }
+
+  .panel-row-cell {
+    min-inline-size: 0;
+  }
+
+  @container panel-row (inline-size >= 66rem) {
+    .panel-row[data-layout='halves'] > .panel-row-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .panel-row[data-layout='third-two-thirds'] > .panel-row-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    }
+
+    .panel-row[data-layout='two-thirds-third'] > .panel-row-grid {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    }
+  }
+
+  /* Right to left: the list face's chevrons point left and Back's points right. */
+  :where([dir='rtl' i]) :is(.panel-layout-back, .panel-nav-chevron) svg {
+    scale: -1 1;
+  }
+
+  @media print {
+    .panel-layout-side,
+    .panel-layout-back {
+      display: none;
+    }
+  }
+
+  /* The current pill in the reader's highlight, as Menu's chosen row is, on the split face only; the rules
+     between the list face's rows in the text color; the focus ring stays. */
+  @media (forced-colors: active) {
+    .panel-nav-item + .panel-nav-item {
+      border-block-start-color: canvastext;
+    }
+
+    @container panel-layout (inline-size >= 48rem) {
+      .panel-nav-link:is([aria-current='page'], [data-default]),
+      .panel-nav-link:is([aria-current='page'], [data-default]) .panel-nav-end {
+        background-color: highlight;
+        color: highlighttext;
+      }
+    }
+  }
+}

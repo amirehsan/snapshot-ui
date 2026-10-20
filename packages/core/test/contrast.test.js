@@ -2288,3 +2288,41 @@ describe('the repeater', () => {
     }
   });
 });
+
+describe('the panel layout', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A name, Back and a heading are ink, a description and an end state slate, on the canvas or in a card on
+  // lifted; the current pill is canvas text on ink. The gate already holds each, so the layout adds no pair. The
+  // rules between the list face's rows are a cue, as DescriptionList's are.
+  it('cites canvas on ink, and ink and slate on canvas and lifted', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+    expect(CONTRAST_PAIRS, 'canvas on ink').toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'canvas', ground: 'ink', light: 16.25, dark: 19.31 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});

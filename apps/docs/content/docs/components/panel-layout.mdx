@@ -1,0 +1,186 @@
+---
+title: Panel layout
+description: "A settings page: a list of sections beside the open one, a list and a page on a phone, one address per section."
+icon: PanelLeft
+---
+
+<Section>
+
+## One address per section
+
+Each section is a page with its own address, `/settings/coach`, and the index is `/settings`. Read the open section from the URL and pass `view` (`index` or `section`) and `sectionKey`; the layout holds no state of its own. Mark the open link `isCurrent`, which sets `aria-current="page"`. At the index, pass the section a wide screen shows beside the list as the children and mark its link `isDefault`: it is drawn as current beside the list and never `aria-current`, since on a phone the index is the list and no section is open.
+
+From 48rem of the layout's own width it draws the list beside the open section; under it, the list alone at the index, and Back and the section at a section. Both faces are in the server's HTML and a container query picks one, so a reload or the browser's Back lands right with no script. After a section change, the section's heading takes focus; back at the index on a phone, the link of the section you left does. A change you start outside the layout, from the rail or a command palette, keeps its own focus.
+
+Every link goes through `RouterProvider`. While a section has unsaved changes, ask in your `navigate` with `useConfirm` before you go.
+
+<Preview name="panel-layout-basic" />
+
+In the App Router, the settings layout reads the open segment and each page renders one section. A layout persists across its pages, so the nav keeps its scroll.
+
+```tsx
+// app/settings/layout.tsx
+import { PageHeader } from '@snapshot-ui/react';
+import { SettingsFrame } from './settings-frame';
+
+export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <PageHeader title="Settings" />
+      <SettingsFrame>{children}</SettingsFrame>
+    </>
+  );
+}
+
+// app/settings/settings-frame.tsx
+'use client';
+
+import { PanelLayout, PanelNav, PanelNavItem } from '@snapshot-ui/react';
+import { useSelectedLayoutSegment } from 'next/navigation';
+import { SECTIONS } from './sections';
+
+export function SettingsFrame({ children }: { children: React.ReactNode }) {
+  const segment = useSelectedLayoutSegment();
+  const view = segment === null ? 'index' : 'section';
+  return (
+    <PanelLayout
+      view={view}
+      sectionKey={segment ?? undefined}
+      backHref="/settings"
+      backLabel="Settings"
+      nav={
+        <PanelNav aria-label="Settings sections">
+          {SECTIONS.map((section, index) => (
+            <PanelNavItem
+              key={section.key}
+              href={`/settings/${section.key}`}
+              isCurrent={section.key === segment}
+              isDefault={view === 'index' && index === 0}
+              description={section.description}
+            >
+              {section.name}
+            </PanelNavItem>
+          ))}
+        </PanelNav>
+      }
+    >
+      {children}
+    </PanelLayout>
+  );
+}
+
+// app/settings/page.tsx: the index shows the first section beside the list on a wide screen.
+export { default } from './coach/page';
+
+// app/settings/[section]/page.tsx
+import { PanelSection } from '@snapshot-ui/react';
+
+export default async function SectionPage({ params }: { params: Promise<{ section: string }> }) {
+  const { section } = await params;
+  return <PanelSection title={titleOf(section)}>{/* the section's cards */}</PanelSection>;
+}
+```
+
+</Section>
+
+<Section>
+
+## On a phone
+
+Under 48rem the index is a list of rows, each with its description, its end state and a chevron, and a section is a page with Back above its heading. The page's title stays in the shell's header on both views, so a reader sees "Settings", then the way back, then the section. The tab bar stays, with Settings current across the index and every section.
+
+<Preview name="panel-layout-phone" />
+
+For iOS's single title, where the section's name is the page's title, render the PageHeader with the section's title and leave Back to your own trail. The default, the page's name above the section's, is recommended: the reader always sees where they are and where Back goes.
+
+</Section>
+
+<Section>
+
+## Card pairs
+
+A section is one column of cards. Where two cards belong side by side, a PanelRow holds exactly two: two halves, or a third beside two thirds in either order. From 66rem of the row's own width they pair, each at its own height; under it they stack in source order. A full card is a Card outside any row.
+
+<Preview name="panel-layout-pairs" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+PanelLayout, PanelNav and PanelNavItem are client components, for their links and the focus move. PanelSection and PanelRow are static and render in a server component.
+
+```tsx
+import { PanelLayout, PanelNav, PanelNavItem, PanelRow, PanelSection } from '@snapshot-ui/react';
+
+<PanelLayout
+  view="section"
+  sectionKey="bank-sync"
+  backHref="/settings"
+  backLabel="Settings"
+  nav={
+    <PanelNav aria-label="Settings sections">
+      <PanelNavItem href="/settings/coach" description="How the coach waits before a charge.">
+        Coach
+      </PanelNavItem>
+      <PanelNavItem href="/settings/bank-sync" end="2 connected" isCurrent>
+        Bank sync
+      </PanelNavItem>
+    </PanelNav>
+  }
+>
+  <PanelSection title="Bank sync" description="Connected accounts and how often they sync.">
+    <PanelRow layout="halves">
+      <Card>...</Card>
+      <Card>...</Card>
+    </PanelRow>
+  </PanelSection>
+</PanelLayout>;
+```
+
+The layout's and a row's intrinsic inline size is 0, as every size container's is. In a holder sized to its content, such as an `auto` grid track, a `max-content` box or a flex item that does not grow, give them a width.
+
+</Section>
+
+<Section>
+
+## Props
+
+The rest of a div's attributes go on the layout's root and on a row, and the rest of a section element's on PanelSection, with `className` merged after the library's class and `ref` on that element. PanelNavItem passes the rest of a link's props to its link.
+
+<PropsTable label="PanelLayout props" path="../../packages/react/src/panel-layout/PanelLayout.tsx" type="Pick<PanelLayoutProps, 'nav' | 'children' | 'view' | 'sectionKey' | 'backHref' | 'backLabel' | 'className'>" />
+
+<PropsTable label="PanelNav props" path="../../packages/react/src/panel-layout/PanelLayout.tsx" type="Pick<PanelNavProps, 'children' | 'aria-label' | 'aria-labelledby'>" />
+
+<PropsTable label="PanelNavItem props" path="../../packages/react/src/panel-layout/PanelLayout.tsx" type="Pick<PanelNavItemProps, 'href' | 'children' | 'description' | 'end' | 'icon' | 'isCurrent' | 'isDefault' | 'className'>" />
+
+<PropsTable label="PanelSection props" path="../../packages/react/src/panel-layout/PanelSection.tsx" type="Pick<PanelSectionProps, 'title' | 'description' | 'headingLevel' | 'children'>" />
+
+<PropsTable label="PanelRow props" path="../../packages/react/src/panel-layout/PanelRow.tsx" type="Pick<PanelRowProps, 'layout' | 'children'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The nav is a navigation landmark you name, with plain links: no menu role and no tabs. The open section's link carries `aria-current="page"`. Each link's name is the section's name; its end state and description describe it, so a screen reader says "Bank sync, link, current page, 2 connected, Connected accounts and how often they sync". The end state is words, never a dot.
+
+The section is a region named by its heading. After a section change the heading takes focus, a frame after the change, on both faces, which brings it into view under the sticky header and tells a screen reader where it landed, as a whole page load does. It moves only when focus was in the layout or was lost, never when you started the change elsewhere, and nothing moves on the first render or on hydration. Back's name is its label alone, "Settings", and back at the index on a phone focus returns to the link of the section you left.
+
+On a wide screen the index shows the default section beside the list, drawn current, while no link is `aria-current`: on a phone the same address is the list and no section is open, and a screen reader hears that.
+
+<Keys rows={[['Tab', 'Moves through the nav\'s links, then the open section. On a phone\'s section, Back comes first.'], ['Shift+Tab', 'Moves back through them.'], ['Enter', 'On a link, opens its section and moves focus to the section\'s heading. On Back, opens the list and moves focus to the link of the section left.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps a settings page in the system.
+
+<Rules dos={['Give every section its own address, and read view and sectionKey from it.', 'Mark the section beside the index isDefault, never isCurrent.', 'Write end states as words, such as On or 2 connected.', 'Keep a section to one column of cards, and pair two only in a PanelRow.']} donts={['Never hold the open section in state the URL does not carry.', 'Never put three cards in a row, or one.', 'Never prefix Back with words the page does not show.', 'Never draw a section red: a danger zone is a plain card with a danger button.']} />
+
+</Section>

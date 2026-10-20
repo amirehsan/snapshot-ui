@@ -150,6 +150,9 @@ import PaginationNarrow from './pagination-narrow';
 import PaginationPageSize from './pagination-page-size';
 import PaginationPersian from './pagination-persian';
 import PaginationSiblings from './pagination-siblings';
+import PanelLayoutBasic from './panel-layout-basic';
+import PanelLayoutPairs from './panel-layout-pairs';
+import PanelLayoutPhone from './panel-layout-phone';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
 import ProgressBarBasic from './progress-bar-basic';
@@ -375,6 +378,9 @@ export const examples = {
   'pagination-page-size': PaginationPageSize,
   'pagination-persian': PaginationPersian,
   'pagination-siblings': PaginationSiblings,
+  'panel-layout-basic': PanelLayoutBasic,
+  'panel-layout-pairs': PanelLayoutPairs,
+  'panel-layout-phone': PanelLayoutPhone,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
   'progress-bar-basic': ProgressBarBasic,

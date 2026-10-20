@@ -53,6 +53,8 @@ import { ConditionalFields } from '../src/conditional-fields';
 import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
 import { Repeater } from '../src/repeater';
+import { PanelNav, PanelNavItem } from '../src/panel-layout';
+import { settingsPage } from './panel-layout-fixture';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
@@ -1290,6 +1292,55 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'class="repeater-count"',
     ],
     ['repeater-rows', 'data-full'],
+  ],
+  [
+    // Both faces in one HTML: the list and Coach beside it at the index, Coach drawn current by data-default and
+    // no link aria-current; the container query picks the face.
+    'PanelLayout at the index',
+    settingsPage('index'),
+    [
+      '<div class="panel-layout" data-view="index"><div class="panel-layout-frame"><div class="panel-layout-side">',
+      '<nav aria-label="Settings sections" class="panel-nav"><ul class="panel-nav-list"><li class="panel-nav-item">',
+      'class="panel-nav-link"',
+      'data-default=""',
+      '<span class="panel-nav-end"',
+      '2 connected',
+      '<div class="panel-layout-main"><a',
+      'class="panel-layout-back"',
+      'href="/settings"',
+      '<section aria-labelledby=',
+      'class="panel-section"',
+      'class="panel-section-heading" tabindex="-1">Coach</h2>',
+    ],
+    ['aria-current'],
+  ],
+  [
+    // At a section: the open link aria-current, Back in the main column, the section's heading focusable by script.
+    'PanelLayout at a section',
+    settingsPage('section', 'logos'),
+    [
+      '<div class="panel-layout" data-view="section">',
+      'aria-current="page"',
+      'href="/settings/logos"',
+      'class="panel-layout-back"',
+      'Settings</a>',
+      'class="panel-section-heading" tabindex="-1">Logos</h2>',
+    ],
+    ['data-default'],
+  ],
+  [
+    // A lone PanelNav, as an app places it outside a layout: its own root is the outermost element.
+    'PanelNav alone',
+    <PanelNav aria-label="Settings sections">
+      <PanelNavItem href="/settings/coach" isCurrent>
+        Coach
+      </PanelNavItem>
+    </PanelNav>,
+    [
+      '<nav aria-label="Settings sections" class="panel-nav">',
+      'aria-current="page"',
+      'class="panel-nav-name"',
+    ],
   ],
 ];
 

@@ -839,6 +839,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/number-field">Number field</Link>
                 <Link href="/docs/components/page-header">Page header</Link>
                 <Link href="/docs/components/pagination">Pagination</Link>
+                <Link href="/docs/components/panel-layout">Panel layout</Link>
                 <Link href="/docs/components/popover">Popover</Link>
                 <Link href="/docs/components/progress-bar">Progress bar</Link>
                 <Link href="/docs/components/prose">Prose</Link>

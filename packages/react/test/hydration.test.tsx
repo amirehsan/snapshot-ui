@@ -30,6 +30,7 @@ import { ConditionalFields } from '../src/conditional-fields';
 import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
 import { Repeater } from '../src/repeater';
+import { settingsPage } from './panel-layout-fixture';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -755,6 +756,32 @@ const HYDRATED: [
       const group = container.querySelector('fieldset.conditional-fields');
       for (const name of ['hidden', 'inert', 'disabled', 'data-hidden'])
         expect(group).not.toHaveAttribute(name);
+    },
+  ],
+  [
+    // The index: both faces as the server drew them, Coach drawn current by data-default, and no focus moved.
+    'PanelLayout at the index',
+    settingsPage('index'),
+    (container) => {
+      expect(container.querySelector('.panel-layout')).toHaveAttribute('data-view', 'index');
+      expect(container.querySelector('[aria-current]')).toBeNull();
+      expect(container.querySelector('.panel-nav-link[data-default]')).toHaveAttribute(
+        'href',
+        '/settings/coach',
+      );
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    // A section: its link current, the region named by its heading, and no focus moved on hydration.
+    'PanelLayout at a section',
+    settingsPage('section', 'logos'),
+    (container) => {
+      expect(container.querySelector('[aria-current="page"]')).toHaveAttribute('href', '/settings/logos');
+      const region = container.querySelector('section.panel-section');
+      const heading = container.querySelector('.panel-section-heading');
+      expect(region).toHaveAttribute('aria-labelledby', heading?.id);
+      expect(document.activeElement).toBe(document.body);
     },
   ],
   [

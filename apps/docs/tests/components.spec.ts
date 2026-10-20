@@ -1401,6 +1401,19 @@ test.describe('forced colors', () => {
     const box = await limits.locator('.repeater-status').boundingBox();
     expect(box?.width ?? 0).toBeLessThanOrEqual(1);
   });
+
+  test("the nav's current item is highlight, on the split face only", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await visit(page, '/docs/components/panel-layout');
+    // The index: Coach is the default section beside the list, drawn current in the reader's highlight.
+    const coach = page.locator('.stage').first().getByRole('link', { name: 'Coach' });
+    const look = await paint(coach);
+    expect(look.fill).toBe(await systemColor(page, 'Highlight'));
+    expect(look.text).toBe(await systemColor(page, 'HighlightText'));
+    // The phone's list draws no row current: its Coach keeps the canvas.
+    const phone = page.locator('.stage').nth(1).getByRole('link', { name: 'Coach' });
+    expect((await paint(phone)).fill).not.toBe(await systemColor(page, 'Highlight'));
+  });
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------
@@ -1924,6 +1937,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   'page-header': ['.stage .page-header-title', '.stage .page-header-description'],
   // The range is the app's sentence; the page numbers and the step words are the library's and never long.
   pagination: ['.stage .pagination-range'],
+  // A section's name in the list and its heading are the app's words, and wrap at any character in their column.
+  'panel-layout': ['.stage .panel-nav-name', '.stage .panel-section-heading'],
   // The label is the app's sentence, a file name among it, and wraps at any character, as the meter's does.
   'progress-bar': ['.stage .progress-bar-label'],
   // A paragraph is the app's text, which breaks anywhere inside its measure.
@@ -2302,6 +2317,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'page-header': ['.stage .page-header .page-header-title'],
   // The row and the current page are in the server's HTML; the shell is a server component.
   pagination: ['.stage .pagination', '.stage .pagination-page[aria-current]'],
+  // Both faces are in the server's HTML, and the pairs are static.
+  'panel-layout': ['.stage .panel-layout[data-view]', '.stage .panel-row'],
   popover: ['.stage .button'],
   // A static part: the track with its role and values is in the server's HTML.
   'progress-bar': ['.stage .progress-bar-track[role="progressbar"]'],
@@ -2733,4 +2750,39 @@ test.describe('the repeater', () => {
     await expect(first).toHaveValue('100.00');
     await expect(rows.locator('.repeater-row')).toHaveCount(3);
   });
+});
+
+// ---- Panel layout -------------------------------------------------------------------------------
+
+test.describe('panel layout', () => {
+  for (const width of [375, 1280]) {
+    test(`a section link opens its section and focuses its heading, and Back focuses the link, at ${String(width)}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await visit(page, '/docs/components/panel-layout');
+      const stage = page.locator('.stage').first();
+      const layout = stage.locator('.panel-layout');
+      await expect(layout).toHaveAttribute('data-view', 'index');
+      await stage.getByRole('link', { name: 'Logos' }).click();
+      await expect(page).toHaveURL(/\?section=logos$/);
+      await expect(layout).toHaveAttribute('data-view', 'section');
+      await expect(stage.getByRole('heading', { name: 'Logos' })).toBeFocused();
+      const back = stage.getByRole('link', { name: 'Settings' });
+      if (width < 800) {
+        // The list face: Back opens the list, and focus goes to the link of the section left.
+        await back.focus();
+        await page.keyboard.press('Enter');
+        await expect(layout).toHaveAttribute('data-view', 'index');
+        await expect(stage.getByRole('link', { name: 'Logos' })).toBeFocused();
+      } else {
+        // The split face: the open link is current, Back is not drawn, and the nav moves focus on.
+        await expect(stage.getByRole('link', { name: 'Logos' })).toHaveAttribute('aria-current', 'page');
+        await expect(back).toBeHidden();
+        await stage.getByRole('link', { name: 'Data' }).click();
+        await expect(stage.getByRole('heading', { name: 'Data' })).toBeFocused();
+      }
+      expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+    });
+  }
 });

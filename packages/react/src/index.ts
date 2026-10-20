@@ -279,3 +279,17 @@ export {
   type RepeaterRow,
   type RepeaterRowRender,
 } from './repeater';
+export {
+  PanelLayout,
+  PanelNav,
+  PanelNavItem,
+  PanelRow,
+  PanelSection,
+  type PanelLayoutProps,
+  type PanelLayoutView,
+  type PanelNavItemProps,
+  type PanelNavProps,
+  type PanelRowLayout,
+  type PanelRowProps,
+  type PanelSectionProps,
+} from './panel-layout';
