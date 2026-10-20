@@ -31,6 +31,8 @@ import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
 import { Repeater } from '../src/repeater';
 import { settingsPage } from './panel-layout-fixture';
+import { accountRail } from './account-menu-fixture';
+import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -458,6 +460,11 @@ const FACES: [name: string, element: ReactElement][] = [
   // Both faces in one HTML at the index and at a section: nothing reads the locale, the zone or the width.
   ['PanelLayout at the index', settingsPage('index')],
   ['PanelLayout at a section', settingsPage('section', 'logos')],
+  // The value the server read from the reader's cookie, drawn as given: nothing reads the locale, the zone or a theme.
+  ['ThemeSwitch at light', <ThemeSwitch value="light" onChange={() => undefined} />],
+  // The rail's state from the server's cookie: the full trigger in an expanded rail, the compact one in a folded rail.
+  ['AccountMenu in an expanded rail', accountRail(false)],
+  ['AccountMenu in a collapsed rail', accountRail(true)],
   [
     // Static: it reads no locale and no zone, so a Persian report writes the same HTML in every one.
     'Prose with a wide table',

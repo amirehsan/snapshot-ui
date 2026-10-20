@@ -1044,6 +1044,13 @@ describe('src/components/radio.css', () => {
   // The rules without their comments, which quote selectors of their own.
   // Closed up, so a selector Prettier breaks over lines is found as one.
   const rules = () => closeUp(read('src/components/radio.css').replace(/\/\*[\s\S]*?\*\//g, ''));
+
+  it("sizes a row's icon by its own class, 16px on the first line, before the words", () => {
+    const icon = blockAfter(rules(), '.radio-icon {');
+    for (const declaration of ['width: 16px;', 'height: 16px;', 'margin-inline-end: 0.5rem;']) {
+      expect(icon, declaration).toContain(declaration);
+    }
+  });
   // Every state also matches the native twin, so plain HTML draws the same row.
   const SELECTED = ':is([data-selected], :where(:has(input:checked)))';
   const FOCUSED = ':is([data-focus-visible], :where(:has(input:focus-visible)))';
@@ -2206,6 +2213,15 @@ describe('src/components/segmented.css', () => {
   // The rules without their comments, which quote selectors of their own.
   // Closed up, so a selector Prettier breaks over lines is found as one.
   const rules = () => closeUp(read('src/components/segmented.css').replace(/\/\*[\s\S]*?\*\//g, ''));
+
+  it("sizes an option's icon by its own class, 16px on the word's line, before the word", () => {
+    const icon = blockAfter(rules(), '.segmented-icon {');
+    for (const declaration of ['width: 16px;', 'height: 16px;', 'margin-inline-end: 0.375rem;']) {
+      expect(icon, declaration).toContain(declaration);
+    }
+    // An icon-only option's svg carries no class and keeps its own size and place.
+    expect(rules()).not.toMatch(/\.segmented-label > svg/);
+  });
   const SELECTED = ':is([data-selected], :where(:has(input:checked)))';
   const FOCUSED = ':is([data-focus-visible], :where(:has(input:focus-visible)))';
 
@@ -3016,6 +3032,34 @@ describe('src/components/menu.css', () => {
   // longer header before the coarse-pointer block, so the first match is the base row.
   const rules = () => closeUp(stripComments(read('src/components/menu.css')));
   const WASH = 'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);';
+
+  it('draws the submenu chevron only under data-has-submenu, mirrored in right to left', () => {
+    const css = rules();
+    const outside = outsideForcedColors(css);
+    const chevron = blockAfter(outside, '.menu-item-submenu {');
+    expect(chevron).toContain('flex: none;');
+    expect(chevron).toContain('color: var(--color-slate);');
+    expect(blockAfter(outside, '.menu-item-submenu svg {')).toContain('width: 16px;');
+    expect(blockAfter(outside, ":where([dir='rtl' i]) .menu-item-submenu svg {")).toContain('scale: -1 1;');
+    // The row's room and its kept wash are for a row that opens a submenu alone, so no other row moves.
+    expect(blockAfter(outside, '.menu-item[data-has-submenu] {')).toContain('padding-inline-end: 0.5rem;');
+    expect(blockAfter(outside, '.menu-item[data-has-submenu][data-open] {')).toContain(WASH);
+    for (const match of outside.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
+      const [, selector = '', body = ''] = match;
+      if (/padding|background-color/.test(body) && /data-open/.test(selector)) {
+        expect(selector, selector).toContain('[data-has-submenu]');
+      }
+    }
+    // Forced colors: the chevron follows its row, and the open row keeps an edge the repaint cannot take.
+    const forced = blockAfter(css, FORCED_COLORS);
+    expect(blockAfter(forced, '.menu-item-submenu {')).toContain('color: canvastext;');
+    expect(blockAfter(forced, '.menu-item[data-disabled] .menu-item-submenu {')).toContain(
+      'color: graytext;',
+    );
+    expect(blockAfter(forced, '.menu-item[data-has-submenu][data-open] {')).toContain(
+      'outline: 1px solid canvastext;',
+    );
+  });
 
   it('is imported after popover.css', () => {
     const entry = read('src/styles.css');
@@ -11247,6 +11291,105 @@ describe('src/components/panel-layout.css', () => {
   });
 });
 
+describe('src/components/account-menu.css', () => {
+  const rules = () => closeUp(stripComments(read('src/components/account-menu.css')));
+  const TRIGGER = '.account-menu-trigger {';
+
+  it("is as tall as its two lines or the field size, padded a part step inside its edge, and fills the footer's row", () => {
+    const trigger = blockAfter(outsideForcedColors(rules()), TRIGGER);
+    for (const declaration of [
+      'min-block-size: var(--size-field);',
+      'padding: calc(var(--spacing-part) - 1px);',
+      'border: 1px solid transparent;',
+      'flex: 1 1 auto;',
+      'min-inline-size: 0;',
+      'color: var(--color-ink);',
+      'text-align: start;',
+    ]) {
+      expect(trigger, declaration).toContain(declaration);
+    }
+    // No fixed height: a long name or detail grows the row.
+    expect(trigger).not.toMatch(/(?:^|[\s;])(?:block-size|height):/);
+  });
+
+  it("takes the rail items' corner formula, so its wash follows the rail's curve, and the control corner elsewhere", () => {
+    expect(blockAfter(rules(), TRIGGER)).toContain(
+      'border-radius: min(var(--radius-control), max(0px, calc(var(--sidebar-corner, var(--radius-control)) - var(--sidebar-nav-inset, 0px))));',
+    );
+    // The same formula as a rail item, read from sidebar.css, the item's pill in the trigger's control corner.
+    const item = blockAfter(closeUp(stripComments(read('src/components/sidebar.css'))), '.sidebar-item {');
+    expect(item).toContain(
+      'border-radius: min(var(--radius-pill), max(0px, calc(var(--sidebar-corner) - var(--sidebar-nav-inset))));',
+    );
+  });
+
+  it('draws the 5% wash on hover, while pressed and while open, and the focus ring', () => {
+    const css = rules();
+    expect(
+      blockAfter(
+        css,
+        ".account-menu-trigger:is(:hover, [data-hovered], [data-pressed], [aria-expanded='true']) {",
+      ),
+    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
+    const ring = blockAfter(css, '.account-menu-trigger:is(:focus-visible, [data-focus-visible]) {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+  });
+
+  it('wraps the name and the detail at any character, the name at the action step and the detail slate', () => {
+    const css = rules();
+    const name = blockAfter(css, '.account-menu-name {');
+    expect(name).toContain('overflow-wrap: anywhere;');
+    expect(name).toContain('font-weight: var(--text-action--font-weight);');
+    const detail = blockAfter(css, '.account-menu-detail {');
+    expect(detail).toContain('overflow-wrap: anywhere;');
+    expect(detail).toContain('color: var(--color-slate);');
+    expect(detail).toContain('font-weight: var(--text-small--font-weight);');
+    expect(blockAfter(css, '.account-menu-text {')).toContain('min-inline-size: 0;');
+    // The up-and-down chevron is symmetric and does not mirror.
+    expect(blockAfter(css, '.account-menu-chevron {')).toContain('color: var(--color-slate);');
+    expect(css).not.toMatch(/account-menu-chevron[^{]*\{[^}]*scale/);
+  });
+
+  it('draws the compact face as a control-sized pill, 44px on a coarse pointer', () => {
+    const css = rules();
+    const compact = blockAfter(outsideForcedColors(css), '.account-menu-trigger[data-compact] {');
+    for (const declaration of [
+      'inline-size: var(--size-control);',
+      'block-size: var(--size-control);',
+      'min-block-size: 0;',
+      'padding: 0;',
+      'border-radius: var(--radius-pill);',
+      'flex: none;',
+    ]) {
+      expect(compact, declaration).toContain(declaration);
+    }
+    const coarse = blockAfter(
+      blockAfter(css, '@media (pointer: coarse)'),
+      '.account-menu-trigger[data-compact] {',
+    );
+    expect(coarse).toContain('inline-size: 44px;');
+    expect(coarse).toContain('block-size: 44px;');
+  });
+
+  it("caps the menu's width at a phone's", () => {
+    expect(blockAfter(rules(), '.account-menu {')).toContain('max-inline-size: min(22rem, 100vw - 2rem);');
+  });
+
+  it('gives the open trigger an edge and the detail and chevron the text color in forced colors, with no transition', () => {
+    const source = stripComments(read('src/components/account-menu.css'));
+    const forced = blockAfter(closeUp(source), FORCED_COLORS);
+    expect(blockAfter(forced, ".account-menu-trigger[aria-expanded='true'] {")).toContain(
+      'border-color: canvastext;',
+    );
+    expect(blockAfter(forced, '.account-menu-detail, .account-menu-chevron {')).toContain(
+      'color: canvastext;',
+    );
+    expect(source).not.toMatch(/\b(transition|animation)\s*:/);
+    expect(source).not.toMatch(/\b(left|right|top|bottom)\s*:|(margin|padding)-(left|right|top|bottom)/);
+  });
+});
+
 describe('concentric corners (docs/design-system.md, "Nested radii, derived")', () => {
   const css = (file) => closeUp(stripComments(read(`src/components/${file}`)));
   // The start of the formula: a part may take a further gap of its own after it, as a toast's row does.
@@ -11891,6 +12034,10 @@ describe('src/components/prose.css', () => {
         'panel-nav',
         'panel-section',
         'panel-row',
+        // The account menu's popover is its stylesheet's root, and its trigger, the part's outermost element, is
+        // listed by hand (OUTERMOST_PARTS).
+        'account-menu',
+        'account-menu-trigger',
       ]),
     );
     for (const part of [
@@ -11907,6 +12054,13 @@ describe('src/components/prose.css', () => {
       'panel-nav-link',
       'panel-section-heading',
       'panel-row-grid',
+      'account-menu-name',
+      'account-menu-detail',
+      'account-menu-chevron',
+      'account-menu-text',
+      'menu-item-submenu',
+      'segmented-icon',
+      'radio-icon',
     ]) {
       expect(roots, part).not.toContain(part);
     }

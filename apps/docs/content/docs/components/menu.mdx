@@ -60,6 +60,18 @@ To render your router's own link, use the item's inherited `render` prop in a cl
 
 <Section>
 
+## Submenus
+
+Put a `MenuItem` and then a `Menu` in a `SubmenuTrigger` for an item that opens a submenu. The item draws a chevron after its end value, in the key hint's place, and keeps its wash while the submenu is open, so you can see where it came from. The submenu opens beside the row at its end, its first row level with the row, and on the other side where there is no room; where neither side has room, as on a narrow phone, it opens under the row, over the rows below it.
+
+Arrow Right opens it, or a press, or a pause of the pointer over the row, 200ms unless `SubmenuTrigger`'s `delay` says otherwise; Arrow Left or Escape closes that level alone, with focus back on the row; a choice in it closes every level and gives focus back to the menu's trigger. React Aria takes the open and close arrows from the locale, so a right-to-left page sets `I18nProvider` with its locale and the two arrows swap. For the reader's theme, [ThemeMenu](/docs/components/theme-switch) is a submenu ready made.
+
+<Preview name="menu-submenu" />
+
+</Section>
+
+<Section>
+
 ## Usage
 
 Put a button and a `Menu` in a `MenuTrigger`. To control it, pass `isOpen`, `defaultOpen` and `onOpenChange` to `MenuTrigger`. Menu is a client component, and a server component can render it, as the selection example does with `defaultSelectedKeys`. A menu that runs a handler or keeps its choice in state needs a client component, as the other two examples do.
@@ -98,7 +110,7 @@ A true `role="menu"`, named by its trigger, which says that it opens a menu and 
 - Opened from the keyboard, focus starts on the first item, or the last with Arrow Up. Opened with a pointer, it starts on the list, or on the chosen item when the menu selects.
 - Focus stays in the open menu until a choice, Escape or a press outside closes it, then returns to the trigger.
 
-<Keys rows={[['Down Up', 'Move between items, stopping at the first and the last.'], ['Home End', 'Jump to the first or last item.'], ['A-Z', 'Jump to an item by its first letters.'], ['Enter Space', 'Activate the item, or choose it.'], ['Escape', 'Closes the menu and returns focus.'], ['Tab', 'Stays in the open menu.']]} />
+<Keys rows={[['Down Up', 'Move between items, stopping at the first and the last.'], ['Home End', 'Jump to the first or last item.'], ['A-Z', 'Jump to an item by its first letters.'], ['Enter Space', 'Activate the item, or choose it.'], ['Right', 'On an item with a submenu, open it with focus on its first item, or its chosen one. Left in right to left.'], ['Left', 'In a submenu, close it and return focus to its item. Right in right to left.'], ['Escape', 'Closes the menu, or a submenu alone, and returns focus.'], ['Tab', 'Stays in the open menu.']]} />
 
 </Section>
 

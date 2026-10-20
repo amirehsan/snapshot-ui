@@ -31,6 +31,8 @@ import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
 import { Repeater } from '../src/repeater';
 import { settingsPage } from './panel-layout-fixture';
+import { accountRail } from './account-menu-fixture';
+import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -782,6 +784,38 @@ const HYDRATED: [
       const heading = container.querySelector('.panel-section-heading');
       expect(region).toHaveAttribute('aria-labelledby', heading?.id);
       expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    // The given choice, as the server drew it, and nothing written to the page.
+    'ThemeSwitch at light',
+    <ThemeSwitch value="light" onChange={() => undefined} />,
+    (container) => {
+      expect(container.querySelector('input[value="light"]')).toBeChecked();
+      expect(container.querySelectorAll('input:checked')).toHaveLength(1);
+      expect(document.documentElement).not.toHaveAttribute('data-theme');
+    },
+  ],
+  [
+    // The full trigger in an expanded rail, named by the visible name and described by the detail.
+    'AccountMenu in an expanded rail',
+    accountRail(false),
+    (container) => {
+      const trigger = container.querySelector('.sidebar:not(.sidebar-drawer) .account-menu-trigger');
+      expect(trigger).not.toHaveAttribute('data-compact');
+      expect(trigger).toHaveAccessibleName('Ada Lovelace');
+      expect(trigger).toHaveAccessibleDescription('ada@example.com');
+      expect(document.querySelector('[role="menu"]')).toBeNull();
+    },
+  ],
+  [
+    // The compact trigger the server drew from the rail's cookie stays compact.
+    'AccountMenu in a collapsed rail',
+    accountRail(true),
+    (container) => {
+      const trigger = container.querySelector('.sidebar:not(.sidebar-drawer) .account-menu-trigger');
+      expect(trigger).toHaveAttribute('data-compact');
+      expect(trigger).toHaveAccessibleName('Ada Lovelace');
     },
   ],
   [

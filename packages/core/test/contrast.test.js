@@ -2326,3 +2326,39 @@ describe('the panel layout', () => {
     }
   });
 });
+
+describe('the account menu and the theme switch', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The trigger's name is ink and its detail and chevron slate, on the rail's float or a header's canvas; a theme
+  // switch in a card is on lifted, and the account menu's rows on its float popup. The gate already holds each,
+  // so neither part adds a pair.
+  it('cites ink and slate on canvas, lifted and float', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'ink', ground: 'float', light: 18.43, dark: 17.42 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'slate', ground: 'float', light: 5.49, dark: 6.94 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});

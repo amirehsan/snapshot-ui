@@ -85,6 +85,14 @@
     overflow-wrap: anywhere;
   }
 
+  /* An icon before a row's words, as ThemeSwitch draws one: 16px, centered on the first line. */
+  .radio-icon {
+    width: 16px;
+    height: 16px;
+    margin-inline-end: 0.5rem;
+    vertical-align: -0.1875em;
+  }
+
   /* The dot. Its ring is the control boundary over the raised fill, and it
      keeps its shape in every corner shape: a square radio reads as a checkbox. */
   .radio-indicator {
