@@ -13303,6 +13303,18 @@ the heading at the h3 step, 500, -2%, a part step to its description in
 slate, a peer step to the first card. PanelSection is static and renders in
 a server component.
 
+**Words stay whole** (spec correction 71; the Badge and FieldExtras
+lesson). The names, descriptions, end states, the heading and its
+description take `overflow-wrap: break-word`, which breaks a word only when
+it alone is wider than the line, so the longest word stays a part's
+narrowest: a holder that sizes a lone PanelNav or PanelSection from its
+content, a squeezed flex row or an `auto` track, stops there and never at a
+letter a line. Neither has a zero minimum; the section is one `100%`
+column, its width where that is known, so a word wider than the page still
+breaks inside it; the end state is `max-content` wide up to half the row,
+so such a holder counts all of it. Back keeps `anywhere`: its label is a
+flex box's anonymous item, and its column always has a width.
+
 **PanelRow and its 66rem.** A row holds exactly two cards, two halves or a
 third beside two thirds in either order: the types take a tuple of two.
 From 66rem of the row's own box, the page column beside an expanded rail at

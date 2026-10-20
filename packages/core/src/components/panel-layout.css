@@ -34,7 +34,9 @@
   }
 
   /* Back: a tertiary button's look as a link, 40px tall, the chevron and the index's name in ink, at the main
-     column's top a part step above the section. */
+     column's top a part step above the section. Its label is the anonymous item of a flex box, whose floor
+     anywhere lowers to a letter so a word longer than the column breaks inside it; Back is never sized by its
+     content, since the column it stands in has a width. */
   .panel-layout-back {
     box-sizing: border-box;
     display: flex;
@@ -96,9 +98,11 @@
   }
 
   /* ---- The nav: on the list face, rows of a page's list -------------------------------------- */
-  /* A lone PanelNav is an outermost element, and this rule makes its class a root prose hands back. */
+  /* A lone PanelNav is an outermost element, and this rule makes its class a root prose hands back. No zero
+     minimum: a holder that sizes a lone nav from its content stops at its longest word, never squeezes it to a
+     letter a line (the Badge lesson). */
   .panel-nav {
-    min-inline-size: 0;
+    display: block;
   }
 
   .panel-nav-list {
@@ -149,7 +153,7 @@
     line-height: 1.25;
     letter-spacing: var(--text-action--letter-spacing);
     font-weight: 500;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   .panel-nav-description {
@@ -157,19 +161,22 @@
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
     font-weight: 450;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
-  /* A short state in words at the row's end, never a dot. */
+  /* A short state in words at the row's end, never a dot, on one line up to half the row. Its width is its
+     max-content, so a holder that sizes a lone nav from its content counts the whole state, and the name and
+     description beside it keep their words whole. */
   .panel-nav-end {
     flex: none;
+    inline-size: max-content;
     max-inline-size: 50%;
     color: var(--color-slate);
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
     font-weight: 450;
     text-align: end;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   .panel-nav-chevron {
@@ -207,10 +214,13 @@
   }
 
   /* ---- The section ------------------------------------------------------------------------------ */
+  /* One column the section's width: where that width is known, a word longer than the line breaks inside it
+     rather than widening the column past the page; where a holder sizes a lone section from its content, the
+     percentage counts as auto and the column is as wide as the longest word, which then stays whole. */
   .panel-section {
     display: grid;
+    grid-template-columns: 100%;
     gap: var(--spacing-peer);
-    min-inline-size: 0;
   }
 
   .panel-section-heading {
@@ -222,7 +232,7 @@
     line-height: var(--text-h3--line-height);
     letter-spacing: var(--text-h3--letter-spacing);
     font-weight: 500;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   /* Focused by script when the section opens, as <main> is: no ring unless the keyboard brought it. */
@@ -238,7 +248,7 @@
     font-size: var(--text-small);
     line-height: var(--text-small--line-height);
     font-weight: 450;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   /* ---- The split face: from 48rem of the layout's own box --------------------------------------- */

@@ -741,3 +741,83 @@ export const OnANarrowPhone: Story = {
     });
   },
 };
+
+/** The words of `scope`'s text that a line break cuts in two: each should lie on one line. */
+function brokenWords(scope: Element): string[] {
+  const broken: string[] = [];
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    for (const match of (node.textContent ?? '').matchAll(/\S+/g)) {
+      const range = document.createRange();
+      range.setStart(node, match.index);
+      range.setEnd(node, match.index + match[0].length);
+      const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+      if (lines.size > 1) broken.push(match[0]);
+    }
+  }
+  return broken;
+}
+
+/** A word longer than a phone's line, as a German compound or a pasted address can be. */
+const LONG_WORD = 'Kontoverbindungsbenachrichtigungseinstellungen';
+
+/**
+ * Words stay whole where a holder sizes a lone PanelNav or PanelSection from its content: a flex row squeezed by
+ * its neighbor and an `auto` grid track stop at the longest word, never a letter (the Badge and FieldExtras
+ * lesson), and the list face at 300px wraps long names and end states between words. A word longer than the line
+ * still breaks inside a 300px layout, so nothing passes its holder.
+ */
+export const WordsKeptWhole: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <RouterProvider navigate={() => undefined}>
+      <div style={{ display: 'grid', gap: 'var(--spacing-separate)', width: '300px' }}>
+        <div data-case="flex" style={{ display: 'flex' }}>
+          <PanelNav aria-label="A nav in a flex row">
+            <PanelNavItem href="/settings/notifications" end="Weekly">
+              Notifications
+            </PanelNavItem>
+            <PanelNavItem href="/settings/bank-sync" description="Connected accounts" end="2 connected">
+              Bank sync
+            </PanelNavItem>
+          </PanelNav>
+          <div style={{ flex: '1 0 240px' }}>The page</div>
+        </div>
+        <div data-case="grid" style={{ display: 'grid', gridTemplateColumns: 'auto minmax(240px, 1fr)' }}>
+          <PanelSection title="Notifications" description="What we tell you, and where.">
+            <Text>Weekly</Text>
+          </PanelSection>
+          <div>The page</div>
+        </div>
+        <div data-case="phone">
+          <Settings start={INDEX} sections={LONG_SECTIONS} navLabel="Sections on a narrow phone" />
+        </div>
+        <div data-case="long">
+          <Settings
+            start={hrefOf('logos')}
+            sections={SECTIONS.map((section) =>
+              section.key === 'logos' ? { ...section, name: LONG_WORD } : section,
+            )}
+            navLabel="Sections with a long word"
+          />
+        </div>
+      </div>
+    </RouterProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const at = (name: string): HTMLElement => find(canvasElement, `[data-case="${name}"]`);
+    await waitFor(() => expect(brokenWords(at('flex'))).toEqual([]), { timeout: 5000 });
+    await expect(brokenWords(at('grid'))).toEqual([]);
+    // The list face at a phone's width wraps names and end states between words.
+    await expect(brokenWords(at('phone'))).toEqual([]);
+    // A word longer than the line breaks inside the layout, and nothing passes its holder.
+    const long = at('long');
+    const room = long.getBoundingClientRect();
+    for (const part of long.querySelectorAll<HTMLElement>(
+      '.panel-layout-main, .panel-section, .panel-section-heading',
+    )) {
+      await expect(part.getBoundingClientRect().right).toBeLessThanOrEqual(room.right + 1);
+      await expect(part.scrollWidth).toBeLessThanOrEqual(part.clientWidth + 1);
+    }
+  },
+};

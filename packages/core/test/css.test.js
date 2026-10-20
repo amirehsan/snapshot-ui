@@ -11179,6 +11179,31 @@ describe('src/components/panel-layout.css', () => {
     expect(blockAfter(split, '.panel-nav-item + .panel-nav-item {')).toContain('border-block-start: 0;');
   });
 
+  it('keeps words whole where a holder sizes a lone nav or section by its content, and breaks only a word wider than the line', () => {
+    const css = rules();
+    // break-word, not anywhere: anywhere lowered the min-content width to one letter, so a flex row or an auto
+    // track squeezed a lone PanelNav or PanelSection to a letter a line (the Badge and FieldExtras lesson).
+    for (const part of [
+      '.panel-nav-name {',
+      '.panel-nav-description {',
+      '.panel-nav-end {',
+      '.panel-section-heading {',
+      '.panel-section-description {',
+    ]) {
+      expect(blockAfter(css, part), part).toContain('overflow-wrap: break-word;');
+    }
+    // No zero floor on a part that stands alone: it is what let such a holder squeeze it to nothing.
+    expect(blockAfter(css, '.panel-nav {')).not.toContain('min-inline-size');
+    const section = blockAfter(css, '.panel-section {');
+    expect(section).not.toContain('min-inline-size');
+    // One column the section's width where that is known, so a word wider than the page still breaks inside it.
+    expect(section).toContain('grid-template-columns: 100%;');
+    // The end state counts at its whole width in a holder sized by content, so the words beside it stay whole.
+    expect(blockAfter(css, '.panel-nav-end {')).toContain('inline-size: max-content;');
+    // The text beside it still shrinks in a row of known width, so a word wider than the row breaks.
+    expect(blockAfter(css, '.panel-nav-text {')).toContain('min-inline-size: 0;');
+  });
+
   it("makes a nav row concentric with a card's corner, and a pill on the canvas", () => {
     expect(blockAfter(rules(), '.panel-nav-link {')).toContain(
       'border-radius: min(var(--radius-pill), max(0px, calc(var(--holder-radius, var(--radius-pill)) - var(--holder-border, 0px) - var(--holder-pad, 0px))));',

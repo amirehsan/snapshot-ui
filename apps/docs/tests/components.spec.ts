@@ -1937,7 +1937,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   'page-header': ['.stage .page-header-title', '.stage .page-header-description'],
   // The range is the app's sentence; the page numbers and the step words are the library's and never long.
   pagination: ['.stage .pagination-range'],
-  // A section's name in the list and its heading are the app's words, and wrap at any character in their column.
+  // A section's name in the list and its heading are the app's words, and break a word only when it alone is wider
+  // than their column.
   'panel-layout': ['.stage .panel-nav-name', '.stage .panel-section-heading'],
   // The label is the app's sentence, a file name among it, and wraps at any character, as the meter's does.
   'progress-bar': ['.stage .progress-bar-label'],
