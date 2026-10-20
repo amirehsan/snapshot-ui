@@ -48,6 +48,7 @@ import {
   SidebarTrigger,
 } from '../src/sidebar';
 import { Spinner } from '../src/spinner';
+import { ConditionalFields } from '../src/conditional-fields';
 import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
@@ -1194,6 +1195,47 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </FieldExtras>,
     ['<div class="field-extras" data-scope="group">', 'class="field-extras-status"'],
     ['field-offer'],
+  ],
+  [
+    // The logo off: the group is in the server's HTML, hidden, inert and disabled, so before any script its key
+    // is out of the tab order, the accessibility tree and the submission. The gate names it.
+    'ConditionalFields hidden',
+    <form>
+      <Switch isSelected={false} aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown={false}>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
+    [
+      'aria-controls="logo-fields"',
+      '<fieldset role="none" id="logo-fields" class="conditional-fields" hidden="" inert="" disabled="" data-hidden="">',
+      'name="logoKey"',
+    ],
+  ],
+  [
+    // The logo on: none of the three, the fields where they were.
+    'ConditionalFields shown',
+    <form>
+      <Switch isSelected aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
+    ['<fieldset role="none" id="logo-fields" class="conditional-fields">', 'name="logoKey"'],
+    ['hidden=""', 'inert=""', 'disabled=""', 'data-hidden'],
+  ],
+  [
+    // Named by the app: the fieldset's own group role, and no role="none".
+    'ConditionalFields named',
+    <ConditionalFields id="logo-fields" isShown aria-label="Logo provider">
+      <TextField label="API key" name="logoKey" />
+    </ConditionalFields>,
+    ['<fieldset aria-label="Logo provider" id="logo-fields" class="conditional-fields">'],
+    ['role="none"'],
   ],
 ];
 

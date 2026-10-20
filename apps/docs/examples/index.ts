@@ -34,6 +34,9 @@ import ComboBoxBasic from './combo-box-basic';
 import ComboBoxStates from './combo-box-states';
 import CommandPaletteAsync from './command-palette-async';
 import CommandPaletteBasic from './command-palette-basic';
+import ConditionalFieldsBasic from './conditional-fields-basic';
+import ConditionalFieldsEmail from './conditional-fields-email';
+import ConditionalFieldsLogo from './conditional-fields-logo';
 import ConfirmDialogBasic from './confirm-dialog-basic';
 import ConfirmDialogDanger from './confirm-dialog-danger';
 import ConfirmDialogHook from './confirm-dialog-hook';
@@ -232,6 +235,9 @@ export const examples = {
   'combo-box-states': ComboBoxStates,
   'command-palette-async': CommandPaletteAsync,
   'command-palette-basic': CommandPaletteBasic,
+  'conditional-fields-basic': ConditionalFieldsBasic,
+  'conditional-fields-email': ConditionalFieldsEmail,
+  'conditional-fields-logo': ConditionalFieldsLogo,
   'confirm-dialog-basic': ConfirmDialogBasic,
   'confirm-dialog-danger': ConfirmDialogDanger,
   'confirm-dialog-hook': ConfirmDialogHook,

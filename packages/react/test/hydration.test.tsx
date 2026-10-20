@@ -18,10 +18,14 @@ import { Pagination } from '../src/pagination';
 import { PickerOption } from '../src/picker';
 import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
+import { Select } from '../src/select';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
+import { Switch } from '../src/switch';
+import { TextField } from '../src/text-field';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { ConditionalFields } from '../src/conditional-fields';
 import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
@@ -679,6 +683,43 @@ const HYDRATED: [
       expect(use).toHaveAccessibleName('Use, Cushion');
       expect(use).toHaveAccessibleDescription('Suggested: $2,340, a month of your fixed bills');
       expect(container.querySelector('.field-extras-status')).toBeEmptyDOMElement();
+    },
+  ],
+  [
+    // Hidden on the server, hidden after hydration, and no focus moved: the group moves focus only on a change.
+    'ConditionalFields hidden',
+    <form>
+      <Switch isSelected={false} aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown={false}>
+        <Select label="Provider" name="logoProvider" defaultValue="northwind">
+          <PickerOption id="northwind">Northwind Logos</PickerOption>
+          <PickerOption id="fabrikam">Fabrikam Marks</PickerOption>
+        </Select>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
+    (container) => {
+      const group = container.querySelector('fieldset.conditional-fields');
+      for (const name of ['hidden', 'inert', 'disabled', 'data-hidden']) expect(group).toHaveAttribute(name);
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    'ConditionalFields shown',
+    <form>
+      <Switch isSelected aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
+    (container) => {
+      const group = container.querySelector('fieldset.conditional-fields');
+      for (const name of ['hidden', 'inert', 'disabled', 'data-hidden'])
+        expect(group).not.toHaveAttribute(name);
     },
   ],
 ];

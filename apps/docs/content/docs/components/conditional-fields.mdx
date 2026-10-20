@@ -1,0 +1,100 @@
+---
+title: Conditional fields
+description: "Fields that appear when a switch turns on, and keep what was typed while they are away."
+icon: ToggleRight
+---
+
+<Section>
+
+## Kept, but not sent
+
+A setting that needs more once it is on, such as bank logos that need a provider and a key, shows those fields under its switch and hides them when the switch turns off. While hidden, the fields keep what the reader typed: nothing clears them, so turning the switch back on brings everything back as it was.
+
+Hidden fields are left out of the form's submission and its checks. A hidden key never overwrites the saved one, and a hidden required field never blocks a save with an error nobody can see. So an absent field means nothing on its own: read the gate on the server to know what it means. With logos off, keep the saved key; with logos on and no key, ask for one.
+
+The group is a fieldset that is `hidden`, `inert` and `disabled` while the gate is off, in the server's HTML too, so before any script runs a hidden field is out of the tab order, the reading order and the submission. Pass `submitsWhenHidden` for the other model, where hidden fields are still sent and checked and your server ignores them by the gate; then make those fields not required yourself.
+
+</Section>
+
+<Section>
+
+## The gate
+
+The gate is your own control, usually a [switch](/docs/components/switch), placed right before the group, with `aria-controls` naming the group's `id`. The fields line up with the switch, with no indent, and appear at once.
+
+<Preview name="conditional-fields-basic" />
+
+</Section>
+
+<Section>
+
+## A logo provider
+
+A provider and its secret key under "Show bank logos". Type a key, turn logos off and save: the form sends the gate's state and neither the provider nor the key. Turn logos on again and the key is still there.
+
+<Preview name="conditional-fields-logo" />
+
+</Section>
+
+<Section>
+
+## A status and a button
+
+The group can hold no field at all. Under "Weekly email", a status line and a button to send a test: while the email is off, the hidden fieldset also disables the button, which nobody sees.
+
+<Preview name="conditional-fields-email" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+A client component, for its focus move. It renders the group shown or hidden from `isShown` on the server, and never reads or writes a value.
+
+```tsx
+import { ConditionalFields, Switch, TextField } from '@snapshot-ui/react';
+
+<>
+  <Switch isSelected={logo} onChange={setLogo} aria-controls="logo-fields" name="logos">
+    Show bank logos
+  </Switch>
+  <ConditionalFields id="logo-fields" isShown={logo}>
+    <TextField label="API key" name="logoKey" type="password" />
+  </ConditionalFields>
+</>;
+```
+
+Space the group as your form spaces its fields with `--conditional-fields-gap`, which defaults to the peer gap. A changed field keeps its Changed chip while hidden; if your SaveBar counts changes, count only what will be saved, which with the default is what shows.
+
+</Section>
+
+<Section>
+
+## Props
+
+The rest of a fieldset's attributes go on the fieldset, with `className` merged after the library's class and `ref` on the fieldset, where it reads the `id`.
+
+<PropsTable label="ConditionalFields props" path="../../packages/react/src/conditional-fields/ConditionalFields.tsx" type="Pick<ConditionalFieldsProps, 'isShown' | 'children' | 'submitsWhenHidden' | 'id' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The gate says its own state, checked or not, and names the group with `aria-controls`; `aria-expanded` is not allowed on a switch. Nothing is announced when the group shows: the reader on the gate hears it turn on, and the fields follow it in the reading and tab order. Turning the gate off keeps focus on the gate. If the group hides while focus is in it, because another control or your app turned the gate off, focus goes to the gate, else to the control before the group, else to `<main>`, never the body. Without a name the group has `role="none"`, since the gate before it says what follows; pass `aria-label` for a named group. In development, a group no gate points at warns once.
+
+<Keys rows={[['Tab', 'From the gate, moves into the fields when they show, and past them when they are hidden.'], ['Space', "On the gate's switch, shows or hides the fields; focus stays on the switch."]]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps conditional fields in the system.
+
+<Rules dos={['Put the gate right before the group, and point its aria-controls at it.', 'Read the gate on the server to know what an absent field means.', 'Line the fields up with the gate.']} donts={['Never indent the fields or draw a line beside them.', 'Never animate the fields in or out.', 'Never dim hidden fields in place. Hide them, or keep them shown.']} />
+
+</Section>

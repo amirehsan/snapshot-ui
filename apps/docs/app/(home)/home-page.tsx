@@ -813,6 +813,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/collapsible-card">Collapsible card</Link>
                 <Link href="/docs/components/combo-box">Combo box</Link>
                 <Link href="/docs/components/command-palette">Command palette</Link>
+                <Link href="/docs/components/conditional-fields">Conditional fields</Link>
                 <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
                 <Link href="/docs/components/copy-button">Copy button</Link>
                 <Link href="/docs/components/data-table">Data table</Link>

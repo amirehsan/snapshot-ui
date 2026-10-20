@@ -11502,6 +11502,116 @@ description. Not yet verified on a real iPhone and an Android phone at
 320px to 430px (the outcome's tip after a tap, and the status), or in
 Windows' contrast themes (the check in the button's text color).
 
+## ConditionalFields
+
+Fields a gate shows and hides, such as a logo provider and its key under
+"Show bank logos": `ConditionalFields` (settings spec, section 7; decided
+items 14 and 15; open questions 11 and 12; ruling 3). The gate is the
+app's own control, placed right before the group, whose `aria-controls`
+names the group's `id`. The part never reads or writes a value.
+
+**A fieldset, for its `disabled`.** The group is
+`fieldset.conditional-fields`, the one element whose `disabled` reaches
+every field inside it, hidden inputs and React Aria's hidden select
+included. Its border, padding, margin and min-content width are reset
+(`min-inline-size: 0`, so a long field never holds a 320px page wider), and
+it is a grid whose gap is `var(--conditional-fields-gap,
+var(--spacing-peer))`, a form's gap between fields, which an app sets to its
+own. Without a name it has `role="none"`: a group with no legend says
+nothing a screen reader can use, and the gate before it names what follows.
+An app that passes `aria-label` or `aria-labelledby` keeps the fieldset's
+group role. `className`, `ref` and the rest of a fieldset's attributes go
+on the fieldset; the `id` comes from the prop or `useId`, and the ref reads
+it.
+
+**The three attributes.** Hidden, the group carries `hidden`, `inert` and,
+unless `submitsWhenHidden`, `disabled`, with `data-hidden`, all written in
+the same render and in the server's HTML (React 19 writes `inert` as a
+boolean attribute), so a page loaded with the gate off has no hidden field
+in its tab order, its reading order or its submission before any script.
+`hidden` takes the group out of the layout and the accessibility tree;
+`inert` keeps focus and find-in-page out in the frame a stylesheet might
+still show it; `disabled` takes its fields out of the submission and the
+browser's checks. Shown, none of them is there. `.conditional-fields` sets
+`display: grid`, which beats the user agent's `[hidden]` rule, so the file
+hides `[hidden]` and `[data-hidden]` by its own rule.
+
+**Kept, not sent, not checked** (ruling 3). The children stay mounted while
+hidden, so React keeps their state and the DOM keeps their values: turning
+the gate on again shows them as they were. A disabled fieldset's fields
+are not submitted, so a hidden key never overwrites the saved one and a
+secret typed and then hidden is never sent; the server reads the gate to
+know what an absent field means. They are also barred from constraint
+validation, which `hidden` and `inert` alone do not do: a hidden required
+field would block a native submit with a bubble pointing at nothing. A
+form reset still resets a hidden field, as a browser resets every control,
+and puts the gate back to its first value. `submitsWhenHidden` keeps
+`hidden` and `inert` and drops `disabled`, for the model where hidden
+answers are posted and the server ignores them by the gate; the app then
+makes hidden fields not required itself.
+
+**"Never cleared or disabled", reconciled.** The parent spec carries the
+rule that hidden conditional fields are made `inert`, never cleared or
+disabled. Its point is the reader's: a field that comes back keeps its
+value and never comes back dimmed. The hidden fieldset's `disabled` is
+never seen, leaves as the group shows, and React Aria's fields inside keep
+their own `isDisabled` false, so no field is ever drawn disabled; nothing
+is cleared. A test turns the gate through every state and finds no shown
+group disabled and no field with `data-disabled`.
+
+**Focus to the gate.** The reader who turns the gate off is on the gate,
+so nothing moves; showing moves nothing either, and the fields follow the
+gate in the tab order, as the disclosure pattern does. When the group
+hides while it holds focus, because another control or the app turned the
+gate off, focus goes, in the frame after the commit, to the gate (the first
+element outside the group whose `aria-controls` names its id), else to the
+last element before the group that takes focus by Tab, else to `<main>`,
+never the body. A `main` with no tabindex is lent `tabindex="-1"` while it holds
+focus, so a script can focus it and Tab never stops on it. Nothing moves on the
+server's render or on hydration: only a change after the first commit
+does. A group no gate points at warns once in development.
+
+**The focus watch** (lesson 10). Chromium blurs a field whose group turns
+`hidden` or `inert` before effects run, so when the group's frame comes
+`document.activeElement` is already the body, and "was focus inside?"
+cannot be asked then. The group asks the shared module,
+`utils/focus-after-commit.ts`, which the later parts of the batch reuse: a
+document `focusin` listener, capturing, sets the watch on a focus inside
+and clears it only on a focus outside, never on a blur to nothing. The
+move then runs only if focus is lost: on the body, on nothing, detached,
+or inside something hidden, inert or disabled, as Firefox leaves it on the
+hidden field. `FocusToGateWhenHidden` turns the gate off from the key by
+the app's own Escape and reads focus on the gate, and on the body for one
+frame at most, in Chromium, WebKit and Firefox; with the watch cleared by a
+blur it fails in Chromium. The docs test does the same on the page.
+
+**The weekly email** (ruling 3). The group may hold no field at all: a
+status line and a "Send a test" Button. Its `disabled` then disables the
+Button while hidden, unseen.
+
+**No indent, no motion, no dimming.** The fields line up with the gate,
+with no indent and no line beside them, since an indent at 320px costs a
+field's width. The group appears and leaves at once: the file has no
+transition or animation, so there is nothing for reduced motion to stop.
+Hidden is hidden, never dimmed in place. Forced colors, right to left and
+density are the fields' own: the group draws nothing and uses logical
+properties only, and its forced-colors block keeps its border at none.
+
+**Contrast.** The group draws no color of its own, so it adds no pair.
+
+**The size.** `{ ConditionalFields }` measures 1.16 kB without React
+Aria, Lucide and `@internationalized/date`, and the same with React Aria
+not ignored, since it imports none: over the spec's 1 kB budget, as the
+shared focus module (the frame, the watch, the tab order and the named
+place) is most of it and is counted here first. The rule sets a 2 kB
+limit (settings plan, spec correction 31).
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): a hidden group absent from the reading order; the gate
+read as a switch, checked or not; focus on the gate read after a group
+hid while holding focus. Not yet verified on a real iPhone and an Android
+phone at 320px to 430px, or in Windows' contrast themes.
+
 ## FieldExtras
 
 A line under a field, or under a group, that offers the field's default

@@ -2,7 +2,8 @@
  * Field extras (docs/design-system.md, "ConditionalFields" and "FieldExtras"). A conditional group is a fieldset
  * for its disabled, which takes hidden fields out of the submission and the browser's checks; its own border,
  * padding, margin and min-content width are reset so a 320px page never scrolls sideways, and it spaces its fields
- * as a form does. [hidden] needs its own rule, since a class that sets display beats the user agent's.
+ * as a form does. [hidden] needs its own rule, since a class that sets display beats the user agent's. Nothing
+ * moves: a group shows and hides at once, so there is nothing for reduced motion to stop.
  */
 @layer components {
   .conditional-fields {
@@ -14,7 +15,8 @@
     border: 0;
   }
 
-  .conditional-fields[hidden] {
+  .conditional-fields[hidden],
+  .conditional-fields[data-hidden] {
     display: none;
   }
 

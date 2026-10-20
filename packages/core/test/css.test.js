@@ -9847,6 +9847,48 @@ describe('src/components/field-extras.css, the offers', () => {
   });
 });
 
+describe('src/components/field-extras.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/field-extras.css')));
+
+  it('resets the conditional fieldset and spaces it from --conditional-fields-gap', () => {
+    const group = blockAfter(outsideForcedColors(rules()), '.conditional-fields {');
+    for (const declaration of [
+      'display: grid;',
+      'gap: var(--conditional-fields-gap, var(--spacing-peer));',
+      // A fieldset's min-content width would otherwise hold a long field wider than a 320px page.
+      'min-inline-size: 0;',
+      'margin: 0;',
+      'padding: 0;',
+      'border: 0;',
+    ]) {
+      expect(group, declaration).toContain(declaration);
+    }
+    // No indent: the fields line up with the gate, and nothing dims them.
+    expect(group).not.toMatch(/padding-inline|margin-inline|opacity/);
+  });
+
+  it('hides [hidden] by its own rule', () => {
+    expect(blockAfter(rules(), '.conditional-fields[hidden], .conditional-fields[data-hidden] {')).toContain(
+      'display: none;',
+    );
+  });
+
+  it('names no .field selector, so its classes are roots', () => {
+    // Prose's generated guard takes a class that extends another class of its file as a sub-part; `field-extras`
+    // and `field-offer` would extend `field` (lesson 12).
+    expect(stripComments(read('src/components/field-extras.css'))).not.toMatch(/\.field(?![-\w])/);
+  });
+
+  it('has a forced-colors block, and no transition or animation', () => {
+    const source = read('src/components/field-extras.css');
+    expect(blockAfter(closeUp(stripComments(source)), FORCED_COLORS)).toContain(
+      '.conditional-fields { border: 0; }',
+    );
+    expect(stripComments(source)).not.toMatch(/\b(transition|animation)\s*:/);
+  });
+});
+
 describe('concentric corners (docs/design-system.md, "Nested radii, derived")', () => {
   const css = (file) => closeUp(stripComments(read(`src/components/${file}`)));
   // The start of the formula: a part may take a further gap of its own after it, as a toast's row does.

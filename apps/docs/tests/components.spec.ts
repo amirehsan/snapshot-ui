@@ -1221,6 +1221,26 @@ test.describe('forced colors', () => {
     const box = await page.locator('.stage .field-extras-status').first().boundingBox();
     expect(box?.width ?? 0).toBeLessThanOrEqual(1);
   });
+
+  test('a conditional group draws no border of its own, shown, and nothing at all, hidden', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/conditional-fields');
+    const shown = page.locator('.stage fieldset.conditional-fields:not([hidden])').first();
+    await expect(shown).toBeVisible();
+    // No border, padding or indent: the fields line up with the gate in the reader's palette too.
+    const box = await shown.evaluate((group) => {
+      const style = getComputedStyle(group);
+      return [
+        style.borderTopStyle,
+        style.borderInlineStartStyle,
+        style.paddingInlineStart,
+        style.marginInlineStart,
+      ];
+    });
+    expect(box).toEqual(['none', 'none', '0px', '0px']);
+    await expect(page.locator('.stage fieldset.conditional-fields[hidden]').first()).toBeHidden();
+  });
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------
@@ -1705,6 +1725,8 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .card-collapsible .card-body p',
   ],
   'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
+  // A hint under a field the group holds wraps as any field's does; the group adds no text of its own.
+  'conditional-fields': ['.stage .field-description'],
   // At 320px and 375px the examples draw the list face, whose title and meta line ellipsize on one line; a table
   // cell, in the columns example's frame, does too, so a long payee leaves either face inside 320px.
   'data-table': ['.stage .data-table-cell', '.stage .data-table-item-title', '.stage .data-table-item-meta'],
@@ -2035,6 +2057,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The input and its button; the list renders nothing until it opens.
   'combo-box': ['.stage .combo-box-input', '.stage .combo-box-button'],
   'command-palette': ['.stage .button'],
+  // The basic example starts with its gate off: the group is in the server's HTML, hidden, inert and disabled.
+  'conditional-fields': ['.stage fieldset.conditional-fields[hidden]'],
   'confirm-dialog': ['.stage .button'],
   // The button, both glyphs and the polite status host, mounted empty before any copy: nothing waits for a script.
   'copy-button': [
@@ -2280,5 +2304,88 @@ test.describe('field extras', () => {
     await expect(from).toBeFocused();
     await expect(from).toHaveValue('10 PM');
     await expect(pair.getByRole('textbox', { name: 'To' })).toHaveValue('7 AM');
+  });
+});
+
+// ---- Conditional fields ---------------------------------------------------------------------------
+
+test.describe('conditional fields', () => {
+  /** The logo example's parts: its gate, the gate's label, its group, its key, its Save and its sent line. */
+  const logo = (page: Page) => {
+    const gate = page.getByRole('switch', { name: 'Show bank logos' });
+    const form = page.locator('.stage form').filter({ has: gate });
+    return {
+      gate,
+      // The switch's input is clipped; a reader presses its label.
+      label: form.locator('.switch'),
+      group: form.locator('fieldset.conditional-fields'),
+      key: form.getByLabel('API key'),
+      save: form.getByRole('button', { name: 'Save' }),
+      sent: form.locator('output'),
+    };
+  };
+
+  test('a key typed and then hidden is kept, and not sent', async ({ page }) => {
+    await visit(page, '/docs/components/conditional-fields');
+    const { label, group, key, save, sent } = logo(page);
+    await key.fill('sk-live-0042');
+    await label.click();
+    await expect(group).toHaveAttribute('hidden', '');
+    await save.click();
+    await expect(sent).toHaveText(/^Sent:/);
+    await expect(sent).not.toContainText('logoKey');
+    await expect(sent).not.toContainText('logoProvider');
+    await label.click();
+    await expect(key).toHaveValue('sk-live-0042');
+    await save.click();
+    await expect(sent).toHaveText('Sent: logos, logoProvider, logoKey');
+  });
+
+  test('Tab from a gate that is off goes past its hidden fields', async ({ page }) => {
+    await visit(page, '/docs/components/conditional-fields');
+    const gate = page.getByRole('switch', { name: 'Round up purchases' });
+    await gate.focus();
+    await page.keyboard.press('Tab');
+    // Focus left the gate for the next control on the page, which is not the hidden savings account.
+    await expect(gate).not.toBeFocused();
+    expect(
+      await page.evaluate(() => {
+        const active = document.activeElement;
+        return active === null || active === document.body
+          ? 'body'
+          : (active.closest('fieldset')?.hidden ?? false);
+      }),
+    ).toBe(false);
+    // Shown, the same Tab reaches the account.
+    await page.locator('.stage .switch', { has: gate }).click();
+    await gate.focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Savings account')).toBeFocused();
+  });
+
+  test('a group that hides while it holds focus gives focus to its gate, never the body', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/conditional-fields');
+    const { gate, group, key } = logo(page);
+    await key.focus();
+    // Hidden by something other than a press on the gate: a click from script moves no focus.
+    const seen = await gate.evaluate(async (input) => {
+      const states: string[] = [];
+      (input as HTMLInputElement).click();
+      for (let frame = 0; frame < 4; frame += 1) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const active = document.activeElement;
+        states.push(
+          active === input ? 'gate' : active === document.body || active === null ? 'body' : 'other',
+        );
+      }
+      return states;
+    });
+    await expect(group).toHaveAttribute('hidden', '');
+    await expect(gate).toBeFocused();
+    // The body at most for the one frame before the group's move.
+    expect(seen.filter((state) => state === 'body').length).toBeLessThanOrEqual(1);
+    expect(seen.at(-1)).toBe('gate');
   });
 });

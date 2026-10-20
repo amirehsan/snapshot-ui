@@ -18,13 +18,16 @@ import { PageHeader } from '../src/page-header';
 import { PickerOption } from '../src/picker';
 import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
+import { Select } from '../src/select';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
+import { Switch } from '../src/switch';
+import { TextField } from '../src/text-field';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Card, CardActions, CardHeader, CardTitle } from '../src/card';
+import { ConditionalFields } from '../src/conditional-fields';
 import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
-import { TextField } from '../src/text-field';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -383,6 +386,38 @@ const FACES: [name: string, element: ReactElement][] = [
     >
       <TextField label="Cushion" defaultValue="$500" />
     </FieldExtras>,
+  ],
+  [
+    // The logo on: the provider and the key under the gate, no hidden, inert or disabled.
+    'ConditionalFields logo shown',
+    <form>
+      <Switch isSelected aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown>
+        <Select label="Provider" name="logoProvider" defaultValue="northwind">
+          <PickerOption id="northwind">Northwind Logos</PickerOption>
+          <PickerOption id="fabrikam">Fabrikam Marks</PickerOption>
+        </Select>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
+  ],
+  [
+    // The logo off: hidden, inert and disabled before any script, so the key is neither reached nor sent.
+    'ConditionalFields logo hidden',
+    <form>
+      <Switch isSelected={false} aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown={false}>
+        <Select label="Provider" name="logoProvider" defaultValue="northwind">
+          <PickerOption id="northwind">Northwind Logos</PickerOption>
+          <PickerOption id="fabrikam">Fabrikam Marks</PickerOption>
+        </Select>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
   ],
 ];
 

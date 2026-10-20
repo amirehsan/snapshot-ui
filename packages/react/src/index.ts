@@ -268,4 +268,5 @@ export {
   type DataTableShared,
 } from './data-table';
 export { CopyButton, type CopyButtonLabels, type CopyButtonProps } from './copy-button';
+export { ConditionalFields, type ConditionalFieldsProps } from './conditional-fields';
 export { FieldExtras, type FieldExtrasLabels, type FieldExtrasProps, type FieldOffer } from './field-extras';

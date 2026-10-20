@@ -4,6 +4,7 @@ import { useState, type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { ConditionalFields } from '../src/conditional-fields';
 import { DateRangePicker } from '../src/date-range-picker';
 import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
@@ -479,5 +480,38 @@ describe('a native form reset', () => {
     expect(tags()).toEqual(['Food', 'Rent']);
     expect(sent(container, 'categories')).toEqual(['food', 'rent']);
     expect(showsChip(container)).toBe(false);
+  });
+
+  it("restores a hidden group's fields on a form reset", async () => {
+    const user = userEvent.setup();
+    function LogoForm(): ReactElement {
+      const [logo, setLogo] = useState(true);
+      return (
+        <form>
+          <Switch isSelected={logo} onChange={setLogo} aria-controls="logo-fields">
+            Show bank logos
+          </Switch>
+          <ConditionalFields id="logo-fields" isShown={logo}>
+            <TextField label="API key" name="logoKey" defaultValue="sk-saved" />
+          </ConditionalFields>
+          <ResetButton />
+        </form>
+      );
+    }
+    const { container } = render(<LogoForm />);
+    const key = screen.getByLabelText('API key');
+    await user.clear(key);
+    await user.type(key, 'sk-typed');
+    const gate = screen.getByRole('switch', { name: 'Show bank logos' });
+    await user.click(gate);
+    expect(container.querySelector('fieldset.conditional-fields')).toHaveAttribute('disabled');
+    // Hidden and disabled, the field is still reset with the rest of the form, as a browser resets every control;
+    // the gate goes back to on, its first value, and shows it.
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(key).toHaveValue('sk-saved');
+    expect(gate).toBeChecked();
+    expect(container.querySelector('fieldset.conditional-fields')).not.toHaveAttribute('hidden');
+    expect(screen.getByLabelText('API key')).toHaveValue('sk-saved');
+    expect(sent(container, 'logoKey')).toEqual(['sk-saved']);
   });
 });
