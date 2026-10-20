@@ -69,15 +69,35 @@ export function SettingsFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
-// app/settings/page.tsx: the index shows the first section beside the list on a wide screen.
-export { default } from './coach/page';
+// app/settings/section.tsx: one section, a server component.
+import { PanelSection } from '@snapshot-ui/react';
+import { notFound } from 'next/navigation';
+import { SECTIONS } from './sections';
+
+export function Section({ sectionKey }: { sectionKey: string }) {
+  const section = SECTIONS.find((each) => each.key === sectionKey);
+  if (section === undefined) notFound();
+  return (
+    <PanelSection title={section.name} description={section.description}>
+      {/* the section's cards */}
+    </PanelSection>
+  );
+}
 
 // app/settings/[section]/page.tsx
-import { PanelSection } from '@snapshot-ui/react';
+import { Section } from '../section';
 
 export default async function SectionPage({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
-  return <PanelSection title={titleOf(section)}>{/* the section's cards */}</PanelSection>;
+  return <Section sectionKey={section} />;
+}
+
+// app/settings/page.tsx: the index shows the first section beside the list on a wide screen.
+import { Section } from './section';
+import { SECTIONS } from './sections';
+
+export default function SettingsIndex() {
+  return <Section sectionKey={SECTIONS[0].key} />;
 }
 ```
 
