@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, useState, type ReactElement, type ReactNode } from 'react';
+import { createRef, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { hydrateRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, onTestFinished, vi, type MockInstance } from 'vitest';
@@ -400,6 +400,52 @@ describe('ConditionalFields', () => {
     expect(screen.getByRole('button', { name: 'Outer gate' })).toHaveFocus();
   });
 
+  it('gives focus to the gate when a group first drawn hidden is shown, then hides holding focus', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<LogoForm defaultShown={false} />);
+    await user.click(gate());
+    await user.click(screen.getByLabelText('API key'));
+    await user.keyboard('{Escape}');
+    expect(group(container)).toHaveAttribute('hidden');
+    await act(nextFrame);
+    expect(gate()).toHaveFocus();
+  });
+
+  it('leaves focus where the app put it after the group hid', async () => {
+    /** An app that, once the group hides, focuses its own next step from an effect of its own. */
+    function Page(): ReactElement {
+      const [isShown, setIsShown] = useState(true);
+      const next = useRef<HTMLButtonElement>(null);
+      useEffect(() => {
+        if (!isShown) next.current?.focus();
+      }, [isShown]);
+      return (
+        <>
+          <button type="button" aria-controls="group">
+            Gate
+          </button>
+          <ConditionalFields id="group" isShown={isShown}>
+            <input
+              aria-label="Field"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setIsShown(false);
+              }}
+            />
+          </ConditionalFields>
+          <button type="button" ref={next}>
+            Next step
+          </button>
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    render(<Page />);
+    await user.click(screen.getByRole('textbox', { name: 'Field' }));
+    await user.keyboard('{Escape}');
+    await act(nextFrame);
+    expect(screen.getByRole('button', { name: 'Next step' })).toHaveFocus();
+  });
+
   it('moves nothing when the group shows, or hides without focus', async () => {
     const user = userEvent.setup();
     render(<LogoForm after={<button type="button">Elsewhere</button>} />);
@@ -526,6 +572,18 @@ describe('ConditionalFields', () => {
     );
     expect(warn).toHaveBeenCalledOnce();
     expect(String(warn.mock.calls[0]?.[0])).toContain('aria-controls="lonely"');
+  });
+
+  it('warns when only a control inside the group points at it, since it hides with the group', () => {
+    const warn = warnings();
+    render(
+      <ConditionalFields id="inside" isShown>
+        <button type="button" aria-controls="inside">
+          Hide these
+        </button>
+      </ConditionalFields>,
+    );
+    expect(warn).toHaveBeenCalledOnce();
   });
 
   it('does not warn when a gate points at the group among other ids', () => {
