@@ -48,8 +48,9 @@ jobs:
     name: Verify
     runs-on: ubuntu-latest
     # The gates, the story tests in three engines, the docs end-to-end run and the concentric audit: a passing
-    # run with batch 4's stories came within minutes of 25, so 35 leaves room for a slow runner.
-    timeout-minutes: 35
+    # run with batch 4's stories came within minutes of 25, and batch 7's Repeater and PanelLayout took it past 35
+    # in the concentric audit (13, 12 and over 8 minutes for the three), so 50 leaves room for a slow runner.
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
