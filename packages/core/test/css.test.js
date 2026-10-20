@@ -10946,6 +10946,113 @@ describe('src/components/field-extras.css', () => {
   });
 });
 
+describe('src/components/repeater.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/repeater.css')));
+  const QUERY = '@container repeater-row-fields (inline-size >= 30rem) {';
+
+  it('resets the fieldsets so a 320px page does not scroll', () => {
+    const sets = blockAfter(rules(), '.repeater, .repeater-row-set {');
+    for (const declaration of [
+      'min-inline-size: 0;',
+      'margin: 0;',
+      'padding: 0;',
+      'border: 0;',
+      'display: grid;',
+    ]) {
+      expect(sets, declaration).toContain(declaration);
+    }
+    // A floated legend is not the fieldset's drawn legend, so it is a grid item and takes the gap.
+    expect(blockAfter(rules(), '.repeater-legend {')).toContain('float: left;');
+    expect(blockAfter(rules(), '.repeater-row-legend {')).toContain('float: left;');
+  });
+
+  it('is a size container switching at 30rem, with an intrinsic inline size of 0, through a frame', () => {
+    const css = rules();
+    const fields = blockAfter(css, '.repeater-row-fields {');
+    expect(fields).toContain('container: repeater-row-fields / inline-size;');
+    expect(fields).toContain('contain-intrinsic-inline-size: 0;');
+    // The query styles the frame inside the container, never the container itself.
+    const query = blockAfter(css, QUERY);
+    expect(query).toContain('.repeater-row-grid { grid-template-columns: minmax(0, 1fr) auto; }');
+    expect(query).not.toContain('.repeater-row-fields');
+    expect(query).toContain('flex: 1 1 10rem;');
+    // Remove sits level with the fields' controls: past the label row, centred on the field.
+    expect(query).toContain(
+      'padding-block-start: calc(1lh + var(--spacing-part) + max(0px, calc((var(--size-field) - var(--size-control)) / 2)));',
+    );
+    expect(blockAfter(css, '.repeater-row-end {')).toContain('line-height: var(--text-h4--line-height);');
+  });
+
+  it("keeps Remove's width at the minimum from 30rem, out of sight, and drops it under", () => {
+    const css = rules();
+    expect(blockAfter(css, '.repeater-remove-space {')).toContain('display: none;');
+    const query = blockAfter(css, QUERY);
+    expect(blockAfter(query, '.repeater-remove-space {')).toContain('visibility: hidden;');
+  });
+
+  it('places the status host absolutely on both axes with span 1', () => {
+    const status = blockAfter(rules(), '.repeater-status {');
+    for (const declaration of [
+      'grid-area: 1 / 1 / span 1 / span 1;',
+      'position: absolute;',
+      'inline-size: 1px;',
+      'block-size: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+      'white-space: nowrap;',
+    ]) {
+      expect(status, declaration).toContain(declaration);
+    }
+    expect(rules()).not.toMatch(/\.repeater-status[^{]*\{[^}]*(display: none|visibility: hidden)/);
+    // The status is placed against the set.
+    expect(blockAfter(rules(), '.repeater {')).toContain('position: relative;');
+  });
+
+  it('rules rows apart with the divider, none above the first or under the last', () => {
+    const css = rules();
+    expect(blockAfter(css, '.repeater-row + .repeater-row {')).toContain(
+      'border-block-start: 1px solid var(--color-divider);',
+    );
+    expect(blockAfter(css, '.repeater-row {')).toContain('padding-block: var(--spacing-peer);');
+    expect(blockAfter(css, '.repeater-row:first-child {')).toContain('padding-block-start: 0;');
+    expect(blockAfter(css, '.repeater-row:last-child {')).toContain('padding-block-end: 0;');
+    expect(blockAfter(css, '.repeater-rows {')).toContain('list-style: none;');
+  });
+
+  it('moves Add by the corner inset in a card, also under a group offer line that is not drawn', () => {
+    const css = rules();
+    expect(css).toContain(
+      ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .repeater:last-child > .repeater-foot,',
+    );
+    expect(css).toContain(
+      '> .field-extras:last-child > .repeater:has(+ .field-extras-status) > .repeater-foot {',
+    );
+  });
+
+  it('draws the count, the full line and the empty line in slate and errors in the error color', () => {
+    const css = rules();
+    expect(
+      blockAfter(css, '.repeater-description, .repeater-empty, .repeater-count, .repeater-full {'),
+    ).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, '.repeater-error, .repeater-row-error {')).toContain('color: var(--color-error);');
+    expect(blockAfter(css, '.repeater-legend {')).toContain('color: var(--color-ink);');
+    expect(blockAfter(css, '.repeater-legend {')).toContain('font-weight: var(--text-h4--font-weight);');
+    expect(blockAfter(css, '.repeater-row-legend {')).toContain('font-weight: 500;');
+    // Never clay (the chip is the field's own), signal, success or taupe.
+    expect(css).not.toMatch(/--color-(clay|signal|success|gain|taupe|info)/);
+  });
+
+  it('has a forced-colors block and no transition', () => {
+    const source = stripComments(read('src/components/repeater.css'));
+    expect(source).toContain(FORCED_COLORS);
+    expect(blockAfter(closeUp(source), FORCED_COLORS)).toContain('border-block-start-color: canvastext;');
+    expect(source).not.toMatch(/\b(transition|animation)\s*:/);
+    // Logical sides only. The legends' float is no side: in a grid nothing floats.
+    expect(source).not.toMatch(/\b(left|right|top|bottom)\s*:|(margin|padding)-(left|right|top|bottom)/);
+  });
+});
+
 describe('concentric corners (docs/design-system.md, "Nested radii, derived")', () => {
   const css = (file) => closeUp(stripComments(read(`src/components/${file}`)));
   // The start of the formula: a part may take a further gap of its own after it, as a toast's row does.
@@ -11043,6 +11150,11 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
       'field-extras.css',
       ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .field-extras:last-child > .field-offer:last-of-type {',
       'padding-block-end: min(calc((var(--holder-corner-inset) - var(--holder-pad)) * 1000), calc(var(--holder-corner-inset) - var(--holder-pad) + max(0px, calc((var(--size-control) - 1lh) / 2))));',
+    ],
+    [
+      'repeater.css',
+      ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .repeater:last-child > .repeater-foot,',
+      `padding-block-end: ${EXTRA};`,
     ],
   ];
 
@@ -11569,13 +11681,23 @@ describe('src/components/prose.css', () => {
     const roots = componentRoots(new URL('../src/components', import.meta.url).pathname);
     // Each extends no other class its file names, so the guard finds it with no hand-written entry (lesson 12).
     expect(roots).toEqual(
-      expect.arrayContaining(['copy-button', 'conditional-fields', 'field-extras', 'field-offer']),
+      expect.arrayContaining([
+        'copy-button',
+        'conditional-fields',
+        'field-extras',
+        'field-offer',
+        'repeater',
+      ]),
     );
     for (const part of [
       'copy-button-status',
       'copy-button-glyph',
       'field-extras-status',
       'field-offer-button',
+      'repeater-row',
+      'repeater-row-set',
+      'repeater-status',
+      'repeater-remove-space',
     ]) {
       expect(roots, part).not.toContain(part);
     }

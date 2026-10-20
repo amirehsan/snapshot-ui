@@ -2251,3 +2251,40 @@ describe('the field extras', () => {
     }
   });
 });
+
+describe('the repeater', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The legend is ink; the hint, a row's legend, the count, the full line and the empty line are slate; the errors
+  // are the error color; on the canvas or in a card on lifted. The gate already holds each, so the repeater adds no
+  // pair. A disabled Add's label is taupe, as Button draws it, which the gate leaves out as disabled text.
+  it('cites ink, slate and the error color on canvas and lifted, and taupe for a disabled Add as exempt', () => {
+    for (const text of ['ink', 'slate', 'error']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+    expect(CONTRAST_PAIRS.filter((pair) => pair.text === 'taupe' && pair.minimum === TEXT)).toEqual([]);
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'error', ground: 'canvas', light: 6.58, dark: 6.36 },
+      { name: 'error', ground: 'lifted', light: 7.22, dark: 5.73 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});

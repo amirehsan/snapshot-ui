@@ -36,6 +36,7 @@ import { ProgressBar } from '../progress-bar';
 import { Prose } from '../prose';
 import { GOALS_GUIDE_FA } from '../prose/fixtures';
 import { Radio, RadioGroup } from '../radio-group';
+import { Repeater } from '../repeater';
 import { SaveBar } from '../save-bar';
 import { SearchField } from '../search-field';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
@@ -2384,5 +2385,95 @@ export const ProseMirrored: Story = {
     };
     await expect(box(at).right).toBeLessThanOrEqual(box(at + 1).left + 0.5);
     await expectSameEdge(rect(find(canvasElement, 'p')).right, block.right);
+  },
+};
+
+/**
+ * Three wait tiers in tomans on a Persian page: the legend and each row's legend at the right, Remove at the row's
+ * left from 30rem, the fields from the right, and every amount still a figure read left to right.
+ */
+export const RepeaterMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => {
+    function Tiers(): ReactElement {
+      const [rows, setRows] = useState([
+        { id: 'a', amount: 1000000, wait: 'three' },
+        { id: 'b', amount: 5000000, wait: 'week' },
+        { id: 'c', amount: 15000000, wait: 'month' },
+      ]);
+      return (
+        <Repeater
+          label="سطح‌های انتظار"
+          value={rows}
+          onChange={setRows}
+          createRow={() => ({ id: 'new', amount: 0, wait: 'three' })}
+          rowLabel={(index) => `سطح ${persianDigits(index + 1)}`}
+          maxRows={4}
+          labels={{
+            add: 'افزودن سطح',
+            remove: 'حذف',
+            count: (count, max) => `${persianDigits(count)} از ${persianDigits(max)}`,
+          }}
+        >
+          {(tier, { update }) => (
+            <>
+              <NumberField
+                label="تا"
+                money={{ symbol: 'تومان', symbolPosition: 'end', fractionDigits: 0 }}
+                value={tier.amount}
+                onChange={(amount) => {
+                  update({ ...tier, amount: amount ?? 0 });
+                }}
+              />
+              <Select
+                label="انتظار"
+                value={tier.wait}
+                onChange={(key) => {
+                  update({ ...tier, wait: String(key) });
+                }}
+              >
+                <PickerOption id="three">۳ روز</PickerOption>
+                <PickerOption id="week">یک هفته</PickerOption>
+                <PickerOption id="month">یک ماه</PickerOption>
+              </Select>
+            </>
+          )}
+        </Repeater>
+      );
+    }
+    return (
+      <I18nProvider locale="fa-IR">
+        <div dir="rtl" lang="fa" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
+          <Tiers />
+        </div>
+      </I18nProvider>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const set = find(canvasElement, '.repeater');
+    // The legend starts at the right edge, as Persian reads.
+    await expectSameEdge(rect(find(set, '.repeater-label')).right, rect(set).right);
+    const wide = rect(find(set, '.repeater-row-fields')).width >= 480;
+    for (const row of canvasElement.querySelectorAll<HTMLElement>('.repeater-row')) {
+      await expectSameEdge(rect(find(row, '.repeater-row-legend')).right, rect(row).right);
+      const main = rect(find(row, '.repeater-row-main'));
+      const remove = rect(find(row, '.repeater-remove'));
+      if (wide) {
+        // Remove at the row's left, the fields to its right, the amount first at the right.
+        await expect(remove.right).toBeLessThanOrEqual(main.left + 0.5);
+        await expectSameEdge(remove.left, rect(row).left);
+        await expect(rect(find(row, '.number-field')).left).toBeGreaterThan(
+          rect(find(row, '.select')).right - 0.5,
+        );
+      } else {
+        // On a phone the fields stack, and Remove follows them from the right.
+        await expect(remove.top).toBeGreaterThanOrEqual(main.bottom - 0.5);
+        await expectSameEdge(remove.right, rect(row).right);
+      }
+      // A figure stays left to right on a right-to-left page.
+      await expect(getComputedStyle(find(row, '.number-field-input')).direction).toBe('ltr');
+    }
+    // Add starts the foot at the right.
+    await expectSameEdge(rect(find(set, '.repeater-add')).right, rect(set).right);
   },
 };

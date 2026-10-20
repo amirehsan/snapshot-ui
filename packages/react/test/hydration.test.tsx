@@ -29,6 +29,7 @@ import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '..
 import { ConditionalFields } from '../src/conditional-fields';
 import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
+import { Repeater } from '../src/repeater';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -104,6 +105,39 @@ const UPLOADS: UploadItem[] = [
   { id: 4, name: 'lease.pdf', status: 'saved', href: '/documents/lease' },
   { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
   { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
+];
+
+/** The consumer's three default wait tiers, as a controlled Repeater draws them, for the server suites. */
+function ServerTiers({ rows }: { rows: { id: string; amount: number; wait: string }[] }): ReactElement {
+  return (
+    <Repeater
+      label="Wait tiers"
+      description="A payment waits by its amount."
+      value={rows}
+      onChange={() => undefined}
+      createRow={() => ({ id: 'new', amount: 0, wait: 'three' })}
+      rowLabel={(index) => `Tier ${String(index + 1)}`}
+      maxRows={3}
+      labels={{ add: 'Add a tier', empty: 'No tiers. The coach never waits.' }}
+    >
+      {(tier) => (
+        <>
+          <NumberField label="Up to" money={{ symbol: '$' }} value={tier.amount} />
+          <Select label="Wait" value={tier.wait}>
+            <PickerOption id="three">3 days</PickerOption>
+            <PickerOption id="week">A week</PickerOption>
+            <PickerOption id="month">A month</PickerOption>
+          </Select>
+        </>
+      )}
+    </Repeater>
+  );
+}
+
+const DEFAULT_TIERS = [
+  { id: 'a', amount: 10000, wait: 'three' },
+  { id: 'b', amount: 50000, wait: 'week' },
+  { id: 'c', amount: 150000, wait: 'month' },
 ];
 
 const HYDRATED: [
@@ -749,6 +783,27 @@ const HYDRATED: [
       expect(region).toHaveAttribute('role', 'region');
       expect(region).toHaveAttribute('tabindex', '0');
       expect(region).toHaveAttribute('aria-label', 'Spending by category, table');
+    },
+  ],
+  [
+    // Every row as the server drew it, and no focus moved and nothing said: the Repeater moves focus only after
+    // an add or a remove.
+    'Repeater three tiers',
+    <ServerTiers rows={DEFAULT_TIERS} />,
+    (container) => {
+      expect(container.querySelectorAll('li.repeater-row')).toHaveLength(3);
+      expect(container.querySelector('.repeater-status')).toBeEmptyDOMElement();
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    'Repeater empty',
+    <ServerTiers rows={[]} />,
+    (container) => {
+      expect(container.querySelector('.repeater-empty')).toHaveTextContent(
+        'No tiers. The coach never waits.',
+      );
+      expect(document.activeElement).toBe(document.body);
     },
   ],
 ];

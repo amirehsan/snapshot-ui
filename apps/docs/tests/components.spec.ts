@@ -1379,6 +1379,28 @@ test.describe('forced colors', () => {
     expect(box).toEqual(['none', 'none', '0px', '0px']);
     await expect(page.locator('.stage fieldset.conditional-fields[hidden]').first()).toBeHidden();
   });
+
+  test('a repeater keeps its rules between rows', async ({ page }) => {
+    await visit(page, '/docs/components/repeater');
+    const second = page.locator('.stage .repeater-row + .repeater-row').first();
+    const look = await second.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { width: style.borderTopWidth, style: style.borderTopStyle, color: style.borderTopColor };
+    });
+    expect(look.width).toBe('1px');
+    expect(look.style).toBe('solid');
+    expect(look.color).toBe(await systemColor(page, 'CanvasText'));
+    // A disabled Add is drawn in the reader's disabled color, its reason in their text color, and the status hidden.
+    const limits = page.locator('.stage .repeater').nth(2);
+    const add = limits.getByRole('button', { name: 'Add an address' });
+    await add.click();
+    await add.click();
+    await expect(add).toBeDisabled();
+    expect((await paint(add)).text).toBe(await systemColor(page, 'GrayText'));
+    expect((await paint(limits.locator('.repeater-full'))).text).toBe(await systemColor(page, 'CanvasText'));
+    const box = await limits.locator('.repeater-status').boundingBox();
+    expect(box?.width ?? 0).toBeLessThanOrEqual(1);
+  });
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------
@@ -1912,6 +1934,8 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .field-error',
     '.stage .radio-text',
   ],
+  // A row's legend is the app's place name, and the empty line its sentence: both wrap at any character.
+  repeater: ['.stage .repeater-row-legend', '.stage .repeater-empty'],
   // The sentence is the app's, clamped to two lines, and wraps at any character inside them.
   'save-bar': ['.stage .save-bar-message'],
   'search-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
@@ -2284,6 +2308,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // Rendered from Markdown by react-markdown in a server component, the wide table in its region.
   prose: ['.stage .prose h2', '.stage .prose-scroll table', '.stage .prose .bar-chart .bar-chart-bar'],
   'radio-group': ['.stage .radio-indicator'],
+  // Every row and the polite status host, mounted empty: nothing waits for a script.
+  repeater: ['.stage ol.repeater-rows', '.stage .repeater-status'],
   // The bar, its sentence and its buttons, and the polite status host, mounted empty before any status.
   'save-bar': ['.stage .save-bar', '.stage .save-bar-status[role="status"]'],
   'search-field': ['.stage .search-field-input', '.stage .search-field-icon'],
@@ -2630,4 +2656,81 @@ test('the Persian guide on the prose page puts its markers at the right and keep
     tracking: 'normal',
   });
   expect(drawn.face).toMatch(/Vazirmatn/);
+});
+
+// ---- Repeater ---------------------------------------------------------------------------------
+
+test.describe('the repeater', () => {
+  /** The `index`th Repeater on the page. */
+  const example = (page: Page, index: number): Locator => page.locator('.stage .repeater').nth(index);
+  const onBody = (page: Page): Promise<boolean> =>
+    page.evaluate(() => document.activeElement === document.body);
+
+  test('adding and removing a row moves focus to a field, never the body', async ({ page }) => {
+    await visit(page, '/docs/components/repeater');
+    const tiers = example(page, 0);
+    const status = tiers.getByRole('status');
+    await expect(status).toBeEmpty();
+    // An add by a key: the new row's first field, and the status says so.
+    await tiers.getByRole('button', { name: 'Add a tier' }).focus();
+    await page.keyboard.press('Enter');
+    const third = tiers.getByRole('group', { name: 'Tier 3' });
+    await expect(third.getByRole('textbox', { name: 'Up to' })).toBeFocused();
+    await expect(status).toHaveText('Tier 3 added');
+    // A middle row by a pointer: Remove in the row now in its place.
+    await tiers.getByRole('button', { name: 'Remove, Tier 2' }).click();
+    await expect(tiers.getByRole('button', { name: 'Remove, Tier 2' })).toBeFocused();
+    await expect(status).toHaveText('Tier 2 removed');
+    expect(await onBody(page)).toBe(false);
+    // The last row by a key: Remove in the new last row; then every row, and Add takes focus.
+    await page.keyboard.press('Enter');
+    await expect(tiers.getByRole('button', { name: 'Remove, Tier 1' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(tiers.getByRole('button', { name: 'Add a tier' })).toBeFocused();
+    await expect(status).toHaveText('Tier 1 removed');
+    await expect(tiers.locator('.repeater-empty')).toBeVisible();
+    expect(await onBody(page)).toBe(false);
+  });
+
+  test('at the maximum Add stays, disabled, described by its reason', async ({ page }) => {
+    await visit(page, '/docs/components/repeater');
+    const limits = example(page, 2);
+    await expect(limits.locator('.repeater-empty')).toHaveText('Only you get the weekly email.');
+    const add = limits.getByRole('button', { name: 'Add an address' });
+    await expect(add).toHaveAccessibleDescription('0 of 2');
+    await add.click();
+    await expect(limits.getByRole('textbox', { name: 'Email' })).toBeFocused();
+    await add.click();
+    await expect(add).toBeDisabled();
+    await expect(add).toHaveAccessibleDescription('2 of 2. Remove an address to add another.');
+    await expect(limits.getByRole('status')).toHaveText(
+      'Address 2 added. 2 of 2. Remove an address to add another.',
+    );
+    await expect(limits.locator('.repeater-full')).toBeVisible();
+  });
+
+  test('a form sends indexed names in drawn order, which read back into the rows', async ({ page }) => {
+    await visit(page, '/docs/components/repeater');
+    const form = page
+      .locator('.stage form')
+      .filter({ has: page.locator('.repeater') })
+      .first();
+    await form.getByRole('button', { name: 'Remove, Tier 1' }).click();
+    await form.getByRole('button', { name: 'Add a tier' }).click();
+    await form.getByRole('group', { name: 'Tier 2' }).getByRole('textbox', { name: 'Up to' }).fill('900');
+    await form.getByRole('button', { name: 'Save' }).click();
+    await expect(form.locator('output')).toHaveText(
+      'Sent: large up to 50000 waits week; tier-1 up to 90000 waits three',
+    );
+  });
+
+  test('a group reset gives the default rows and focuses the first field', async ({ page }) => {
+    await visit(page, '/docs/components/field-extras');
+    const rows = page.locator('.stage .field-extras').filter({ has: page.locator('.repeater') });
+    await rows.getByRole('button', { name: 'Reset to default, Wait tiers' }).click();
+    const first = rows.getByRole('group', { name: 'Tier 1' }).getByRole('textbox', { name: 'Up to' });
+    await expect(first).toBeFocused();
+    await expect(first).toHaveValue('100.00');
+    await expect(rows.locator('.repeater-row')).toHaveCount(3);
+  });
 });

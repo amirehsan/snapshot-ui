@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -10,6 +10,7 @@ import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { Radio, RadioGroup } from '../src/radio-group';
+import { Repeater } from '../src/repeater';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Select } from '../src/select';
@@ -513,5 +514,39 @@ describe('a native form reset', () => {
     expect(container.querySelector('fieldset.conditional-fields')).not.toHaveAttribute('hidden');
     expect(screen.getByLabelText('API key')).toHaveValue('sk-saved');
     expect(sent(container, 'logoKey')).toEqual(['sk-saved']);
+  });
+
+  it("restores an uncontrolled repeater's fields on a form reset, keeping its rows", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <Repeater<{ id: string; amount: number | null }>
+          label="Wait tiers"
+          defaultValue={[
+            { id: 'a', amount: 10000 },
+            { id: 'b', amount: 50000 },
+          ]}
+          createRow={() => ({ id: 'new', amount: null })}
+          rowLabel={(index) => `Tier ${String(index + 1)}`}
+          maxRows={3}
+        >
+          {(tier) => (
+            <NumberField label="Up to" name="tierAmount" money={{ symbol: '$' }} defaultValue={tier.amount} />
+          )}
+        </Repeater>
+        <ResetButton />
+      </form>,
+    );
+    const second = within(screen.getByRole('group', { name: 'Tier 2' })).getByRole('textbox', {
+      name: 'Up to',
+    });
+    await user.clear(second);
+    await user.type(second, '700{Enter}');
+    expect(sent(container, 'tierAmount')).toEqual(['10000', '70000']);
+    // A reset is the browser's: the fields go back to what they started with, and the rows stay as they are.
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(second).toHaveValue('500.00');
+    expect(sent(container, 'tierAmount')).toEqual(['10000', '50000']);
+    expect(container.querySelectorAll('li.repeater-row')).toHaveLength(2);
   });
 });

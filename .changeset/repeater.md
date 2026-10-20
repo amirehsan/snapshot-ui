@@ -1,0 +1,6 @@
+---
+'@snapshot-ui/core': minor
+'@snapshot-ui/react': minor
+---
+
+Add Repeater: a short list of rows the reader adds and removes, such as wait tiers, each row your own fields in a fieldset with a legend by its place ("Tier 2"). Controlled with `value` and `onChange`, which hand you typed rows for a server action, or uncontrolled with `defaultValue`, where you name every row's fields by the render function's `index` (`tiers.0.amount`, so what the form sends reads back into the same rows) or the same in every row, read with `FormData.getAll` in drawn order. `createRow` makes a new row with a stable id. From zero rows, which shows your `labels.empty` line, to `maxRows`, where Add stays visible but disabled and a sentence beside it, also its description and said when the last add reaches it, explains why; at `minRows` no row draws Remove. Focus goes to the new row's first field after an add, and after a remove to Remove in the row now in its place, else in the row before, else Add, never the body, and a polite status says what happened; keep it outside any `aria-busy` region. Each Remove is named with its row, "Remove, Tier 2". Row and set errors are drawn and described. No reordering: sort your rows when you save. `repeater.css` in `styles.css`.

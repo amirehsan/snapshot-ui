@@ -91,6 +91,7 @@ import FileButtonBasic from './file-button-basic';
 import FieldExtrasBoth from './field-extras-both';
 import FieldExtrasDefault from './field-extras-default';
 import FieldExtrasPair from './field-extras-pair';
+import FieldExtrasRows from './field-extras-rows';
 import FieldExtrasSuggestion from './field-extras-suggestion';
 import FileDropZoneErrors from './file-drop-zone-errors';
 import FileDropZonePage from './file-drop-zone-page';
@@ -164,6 +165,11 @@ import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
 import RadioGroupValidation from './radio-group-validation';
+import RepeaterBasic from './repeater-basic';
+import RepeaterCard from './repeater-card';
+import RepeaterErrors from './repeater-errors';
+import RepeaterForm from './repeater-form';
+import RepeaterLimits from './repeater-limits';
 import SaveBarForm from './save-bar-form';
 import SaveBarInSidePanel from './save-bar-in-side-panel';
 import SearchFieldBasic from './search-field-basic';
@@ -310,6 +316,7 @@ export const examples = {
   'field-extras-both': FieldExtrasBoth,
   'field-extras-default': FieldExtrasDefault,
   'field-extras-pair': FieldExtrasPair,
+  'field-extras-rows': FieldExtrasRows,
   'field-extras-suggestion': FieldExtrasSuggestion,
   'file-drop-zone-errors': FileDropZoneErrors,
   'file-drop-zone-page': FileDropZonePage,
@@ -383,6 +390,11 @@ export const examples = {
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,
   'radio-group-validation': RadioGroupValidation,
+  'repeater-basic': RepeaterBasic,
+  'repeater-card': RepeaterCard,
+  'repeater-errors': RepeaterErrors,
+  'repeater-form': RepeaterForm,
+  'repeater-limits': RepeaterLimits,
   'save-bar-form': SaveBarForm,
   'save-bar-in-side-panel': SaveBarInSidePanel,
   'search-field-basic': SearchFieldBasic,

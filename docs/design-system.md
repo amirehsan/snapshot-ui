@@ -883,6 +883,7 @@ And the controls that move, by the corner inset (below):
 | Card | the list's first or last row's controls | down | the row's block padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
 | Card | CardActions beside the title | down | the actions and the title take a top margin of the corner inset less the card's padding; under 24rem nothing moves | 7px, 19px compact | as before | as before |
 | Card | a field's last offer | down | the offer's block-end padding grows by the corner inset less the card's padding, plus what the button's box hangs under the line | 17px, 27px compact | as before | as before |
+| Card | a repeater's Add | down | the foot's block-end padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
 | SaveBar | its buttons | in | each end pads to the corner inset, as the bulk bar's | 23px each side | 16px and 11px | 16px and 8px |
 | Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
@@ -12983,3 +12984,157 @@ the field read with its new value after a take, and the status after it;
 nothing said twice in a way that confuses. Not yet verified on a real
 iPhone and an Android phone at 320px to 430px (an offer's line wrapping,
 the button at its end), or in Windows' contrast themes.
+
+## Repeater
+
+A short ordered list of rows the reader adds and removes, each row the
+app's own fields, such as the consumer's wait tiers: `Repeater` (settings
+spec, section 6; decided items 8 to 13; open questions 6 to 10; rulings
+2.2 to 2.6). It composes what exists: a fieldset per row, the app's
+fields, a tertiary Button for Remove and a secondary Button for Add.
+
+**Fieldsets, not GridList.** A grid's arrow keys move between cells and
+fight a text field's caret, and the APG grid answers that with an edit
+mode, Enter to edit and Escape to leave, which makes a few rows of a form
+harder to fill than rows read with Tab. GOV.UK's "add another" pattern and
+the MOJ Design System's component are fieldsets with a legend per item and
+plain buttons, which every screen reader reads as a form. Reordering, the
+reason a list widget would earn its keys, is not offered (open question
+7): the app sorts at save.
+
+**The markup.** `fieldset.repeater` (`data-full` at the maximum,
+`data-empty` with no rows) holds `legend.repeater-legend` with the label
+and, while `isChanged` and no set error, the Changed chip;
+`p.repeater-description`; `p.repeater-error`; then `ol.repeater-rows` of
+`li.repeater-row[data-row-id]`, each a `fieldset.repeater-row-set` with
+`legend.repeater-row-legend`, `div.repeater-row-fields` (the size
+container) holding `div.repeater-row-grid` with `div.repeater-row-main`
+(the app's fields) and `div.repeater-row-end` (Remove), and
+`p.repeater-row-error`; or, with no rows, `p.repeater-empty` in the list's
+place; then `div.repeater-foot` with Add and `span.repeater-count` or
+`span.repeater-full`; then the polite status, `div.repeater-status`. The
+set's `aria-describedby` names its hint and its error. A floated legend is
+not the fieldset's drawn legend, so both legends join their grid as items
+and take its gap; in a grid nothing floats, so the float is no side.
+
+**Controlled or uncontrolled** (ruling 2.5). `value` and `onChange` hand
+the app typed rows on every add, remove and the render function's
+`update`, which writes a row back by its id. Without `value` the Repeater
+holds the rows from `defaultValue`, the fields hold what is typed, and the
+app names them: by the render function's `index`, `tiers.0.amount`, so
+after a remove every row is named by its new place and what the form sends
+reads back into the same rows (settings plan, spec correction 35), or the
+same name in every row, read with `getAll` in drawn order. The Repeater
+never reads a field. A row's id is React's key, so a removed row's fields
+unmount and the rows after it keep theirs and what was typed in them. Two
+rows of one id are both drawn, the second under a key of its own, and warn
+once in development.
+
+**Focus and the status.** Each move runs in the frame after React's
+commit (`afterCommit`), never in a layout effect, and lands on a place the
+reader can name through `focusNamedPlace`, never the body:
+
+- After an add, the new row's first field, or its field marked
+  `data-autofocus`; the status says "Tier 3 added", and at the maximum
+  adds the reason: "Tier 3 added. 3 of 3. Remove one to add another."
+- After a remove, Remove in the row now in its place, else in the row
+  before it, else Add; at `minRows`, where no Remove is left, that row's
+  first field. The status says "Tier 2 removed", by the old legend, since
+  the rows after it are renumbered (settings plan, spec correction 34, the
+  owner's instruction). A reader removing several rows keeps their place,
+  one press after another. A held Enter removes one row: React Aria
+  starts no press from a repeated keydown (`usePress.mjs`, `!e.repeat`),
+  and the first press fires on the key's release.
+
+The move happens only when focus is on the pressed button, inside the
+set, or lost, so focus the app moved elsewhere stays. The status is in the
+server's HTML, empty, writes each event's words as a new node so a
+repeated sentence is said again, and empties after five seconds, as
+FieldExtras' does. A status that speaks inside `aria-busy="true"` warns
+once (lesson 11); a form that marks itself busy while saving marks its
+fields' container, not the Repeater's root.
+
+**Names.** Remove shows its word and is named "Remove, Tier 2" through
+`aria-label` (spec correction 33): a clipped span would be a block, and
+the name would read "Remove , Tier 2". The name starts with the word
+shown (WCAG 2.5.3). Add is named by its text and described by its count,
+"2 of 3", or at the maximum by the full line.
+
+**From none to the most** (rulings 2.2 and 2.3). With no rows the list is
+not drawn and `labels.empty` stands in its place, in slate. At `maxRows`
+Add stays drawn and natively disabled, in taupe as Button draws it, and
+`labels.full` takes the count's place beside it in slate: visible, its
+description in browse mode, and said by the add that reached it. Button
+has no focusable disabled mode (settings plan, open question 1): React
+Aria's `allowFocusWhenDisabled` is undocumented and gives `tabIndex={-1}`,
+so a focusable Add would be a change to Button's API for every disabled
+button. Rows passed above `maxRows` are all drawn. At `minRows` no row
+draws Remove, and a hidden stand-in the width of Remove keeps the end
+column from 30rem, so the fields do not widen when a row is added (spec
+correction 37). With `isDisabled` Add and Remove are disabled and the count
+stays.
+
+**Errors.** A field's own error is the field's. A row's error,
+`rowErrors[id]`, is a line in the error color under the row's fields,
+names the row's fieldset in its `aria-describedby`, marks it
+`data-invalid`, and is given to the render function so the app marks the
+fields invalid. The set's error sits under the legend and describes the
+set; while it shows the Changed chip steps aside. Never a colored row.
+
+**The row's width.** `div.repeater-row-fields` is a size container with
+an intrinsic inline size of 0 (lesson 8), and the query styles its frame,
+`div.repeater-row-grid` (accounts correction 8). Under 30rem each field
+takes a line and Remove follows them; from 30rem the fields share a
+wrapping line, each `flex: 1 1 10rem` (spec correction 36), and Remove
+stands at the line's end, its block start offset by a field label's line
+and a part step plus half the field's height less the control's, so its
+centre is the first control's. Every fieldset's border, padding, margin
+and min-content width are reset, so a 320px page never scrolls sideways.
+
+**The colors.** The legend is the h4 step in ink; a row's legend the
+small step at 500 in slate; the hint, the count, the full line and the
+empty line slate; the errors the error color. Rows are ruled apart by
+`--color-divider`, a peer step of padding above and under each, none
+above the first or under the last. Never clay but the Changed chip, never
+signal, success or gain.
+
+**The corner.** A Repeater that ends a card puts Add at the card's bottom
+start corner, a control at its foot: the foot's block-end padding grows by
+the corner inset less the card's padding, 7px in Rounded, 19px compact, 0
+in Soft and Square. Under a group's offers in FieldExtras the foot moves
+only while no offer follows the Repeater, when the wrapper's status comes
+straight after it (spec correction 38). The first Remove of a Repeater
+with no legend that starts a card with no header needs no rule: its row's
+legend and its fields' label row stand above it, so it sits lower than the
+corner inset in every shape and density (`RemoveClearOfCorner`).
+
+**Forced colors, motion, direction.** The rules between rows are
+`canvastext`; words and buttons draw their own. Nothing moves: a row
+appears and leaves at once. Every property is logical: on a Persian page
+the legends start at the right, Remove stands at the row's left from
+30rem, and a money figure stays left to right by NumberField's rule
+(`RepeaterMirrored`).
+
+**Server rendering.** A client part for its presses, focus moves and
+status. Every row, its legend, fields, errors and Remove, Add with its
+count or the full line, and the empty status are in the server's HTML;
+nothing reads the locale, so en-US, de-DE and fa-IR write one HTML, and
+nothing moves on hydration. Prose's generated guard lists `repeater` as a
+root, since every other class of its file extends it (spec correction 42).
+
+**Contrast**, measured with `contrast.js` and gated already, so nothing is
+added. Ink against the canvas 16.25 in light and 19.31 in dark, against
+lifted 17.84 and 17.42; slate 4.84 and 7.26, and 5.31 and 6.94; the error
+color 6.58 and 6.36, and 7.22 and 5.73. A disabled Add's taupe is disabled
+text, exempt.
+
+**The size** (spec correction 41). The entry `{ Repeater }` measures 2.91
+kB without React Aria, Lucide and `@internationalized/date`, under the
+spec's 3 kB budget; the rule gives a 3.5 kB limit. With React Aria not
+ignored it measures 15.2 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): a row's legend on focus moved by script, the added and
+removed statuses, a disabled Add read with its reason, the empty line.
+Not yet verified on a real iPhone and an Android phone at 320px to 430px,
+or in Windows' contrast themes (a disabled Add in `graytext`).

@@ -271,3 +271,11 @@ export { Prose, ProseScroll, type ProseProps, type ProseScrollProps } from './pr
 export { CopyButton, type CopyButtonLabels, type CopyButtonProps } from './copy-button';
 export { ConditionalFields, type ConditionalFieldsProps } from './conditional-fields';
 export { FieldExtras, type FieldExtrasLabels, type FieldExtrasProps, type FieldOffer } from './field-extras';
+export {
+  Repeater,
+  type RepeaterBaseProps,
+  type RepeaterLabels,
+  type RepeaterProps,
+  type RepeaterRow,
+  type RepeaterRowRender,
+} from './repeater';

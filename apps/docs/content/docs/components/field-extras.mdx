@@ -50,6 +50,16 @@ With both, the suggestion comes first, since it is about this reader and the def
 
 <Section>
 
+## A set of rows
+
+A [Repeater](/docs/components/repeater)'s rows take one offer for the whole set: wrap it in `FieldExtras` with `scope="group"`, compare its rows with the default set for `isCurrent`, and in `onTake` set the default rows, each with a new id. After a reset focus goes to the first row's first field, or to Add when the default set has no rows. The Repeater knows nothing of the default: the offer is yours, like any other.
+
+<Preview name="field-extras-rows" />
+
+</Section>
+
+<Section>
+
 ## With the changed state and the save bar
 
 Changed and Default are separate questions. Changed means the field differs from what is saved, and draws the clay chip; Default means the product's value. Since an offer taken is an ordinary edit, both follow your comparisons as they do for typing:

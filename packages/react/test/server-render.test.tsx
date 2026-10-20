@@ -52,6 +52,7 @@ import { Spinner } from '../src/spinner';
 import { ConditionalFields } from '../src/conditional-fields';
 import { CopyButton } from '../src/copy-button';
 import { FieldExtras } from '../src/field-extras';
+import { Repeater } from '../src/repeater';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
@@ -97,6 +98,39 @@ const UPLOADS: UploadItem[] = [
 ];
 
 const noop = (): void => undefined;
+
+/** The consumer's three default wait tiers, as a controlled Repeater draws them, for the server suites. */
+function ServerTiers({ rows }: { rows: { id: string; amount: number; wait: string }[] }): ReactElement {
+  return (
+    <Repeater
+      label="Wait tiers"
+      description="A payment waits by its amount."
+      value={rows}
+      onChange={() => undefined}
+      createRow={() => ({ id: 'new', amount: 0, wait: 'three' })}
+      rowLabel={(index) => `Tier ${String(index + 1)}`}
+      maxRows={3}
+      labels={{ add: 'Add a tier', empty: 'No tiers. The coach never waits.' }}
+    >
+      {(tier) => (
+        <>
+          <NumberField label="Up to" money={{ symbol: '$' }} value={tier.amount} />
+          <Select label="Wait" value={tier.wait}>
+            <PickerOption id="three">3 days</PickerOption>
+            <PickerOption id="week">A week</PickerOption>
+            <PickerOption id="month">A month</PickerOption>
+          </Select>
+        </>
+      )}
+    </Repeater>
+  );
+}
+
+const DEFAULT_TIERS = [
+  { id: 'a', amount: 10000, wait: 'three' },
+  { id: 'b', amount: 50000, wait: 'week' },
+  { id: 'c', amount: 150000, wait: 'month' },
+];
 
 const CLIENT: [name: string, element: ReactElement, contains: string[], excludes?: string[]][] = [
   ['Button', <Button>Save</Button>, ['<button', 'class="button button-primary', '>Save<']],
@@ -1227,6 +1261,35 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
     </ConditionalFields>,
     ['<fieldset aria-label="Logo provider" id="logo-fields" class="conditional-fields">'],
     ['role="none"'],
+  ],
+  [
+    // The consumer's three tiers, at the maximum: every row, its legend, its fields and its Remove, the disabled
+    // Add with its reason as its description, and the polite status mounted empty, before any script.
+    'Repeater three tiers',
+    <ServerTiers rows={DEFAULT_TIERS} />,
+    [
+      '<fieldset class="repeater" aria-describedby=',
+      'data-full=""',
+      '<ol class="repeater-rows">',
+      'data-row-id="a"',
+      '<legend class="repeater-row-legend">Tier 3</legend>',
+      'aria-label="Remove, Tier 2"',
+      'class="repeater-full"',
+      '3 of 3. Remove one to add another.',
+      '<div class="repeater-status" role="status" aria-live="polite" aria-atomic="true"></div>',
+    ],
+    ['repeater-count'],
+  ],
+  [
+    // No rows: the empty line in the list's place, Add and its count.
+    'Repeater empty',
+    <ServerTiers rows={[]} />,
+    [
+      'data-empty=""',
+      '<p class="repeater-empty">No tiers. The coach never waits.</p>',
+      'class="repeater-count"',
+    ],
+    ['repeater-rows', 'data-full'],
   ],
 ];
 

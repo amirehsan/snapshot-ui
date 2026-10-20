@@ -1,0 +1,160 @@
+---
+title: Repeater
+description: "A short list of rows the reader adds and removes, each row your own fields."
+icon: ListPlus
+---
+
+<Section>
+
+## Rows the reader adds
+
+A Repeater is a fieldset of rows, each row a fieldset of your own fields with a legend by its place, "Tier 2", Remove at its end and Add after the last. Use it for a short list a person fills in, such as wait tiers, extra email addresses or the people on a shared budget. For a long list, or one the reader sorts by hand, use a table or a list with its own page per item.
+
+Controlled, `value` holds your typed rows and `onChange` receives the new rows on every add, remove and `update`. `createRow` makes the row Add appends, with an id of its own that stays the same across adds, removes and saves. The render function draws a row's fields and gets the row, its `index`, its `label`, its `error` and `update`, which writes the row back by its id.
+
+<Preview name="repeater-basic" />
+
+</Section>
+
+<Section>
+
+## Controlled or not
+
+Without `value` the Repeater holds the rows itself, from `defaultValue`, and the fields hold what is typed: name them, and read them from the form. Two ways to name them, both of which keep the drawn order:
+
+- **Indexed names**, from the `index` the render function passes: `tiers.0.amount`, `tiers.0.wait`. After a remove every row is named by its new place, so no index is stale and none is missing, and what a form sends reads back into the same rows. Form libraries' field arrays name rows this way. Put the id in a hidden input, as below, so a saved row keeps it.
+- **Repeated names**: every row's amount `tierAmount`, read with `formData.getAll('tierAmount')` in drawn order. A money NumberField sends minor units from its own hidden input, which `getAll` reads like any other.
+
+Controlled, send the rows you hold: they are already typed, with their ids, and a server action takes them as they are.
+
+<Preview name="repeater-form" />
+
+</Section>
+
+<Section>
+
+## From none to the most
+
+With no rows the list is not drawn and `labels.empty` says so in its place, "Only you get the weekly email.", above Add. Pass a sentence that tells the reader what no rows means.
+
+`maxRows` is required, since a repeater is a short list. Under it Add is described by its count, "1 of 2". At it Add stays where it was, drawn and disabled, and `labels.full` takes the count's place beside it: "2 of 2. Remove an address to add another." A disabled button leaves the tab order, so the reason is reached three ways: it is visible beside Add, it is Add's description, which a screen reader in browse mode reads with the button, and the add that reached the maximum says it in the status. Rows you pass above `maxRows`, from data saved before a limit changed, are all drawn; nothing is cut.
+
+`minRows`, 0 by default, is where Remove stops: at it no row draws Remove, so nothing invites a press that cannot work, and the column Remove stood in keeps its width.
+
+<Preview name="repeater-limits" />
+
+</Section>
+
+<Section>
+
+## Errors
+
+Three kinds, each where it belongs:
+
+- **A field's own**, a required amount or one out of range, through the field's `errorMessage` or `validate`, under the field.
+- **A row's**, `rowErrors` by row id: a line under the row's fields that describes the row's fieldset, so it is read on entering the row. The render function gets it as `error`, so mark the row's fields invalid with it.
+- **The set's**, `errorMessage`: a line under the legend that describes the set. While it shows, the Changed chip steps aside.
+
+An error is words in the error color and the fields' own invalid edges, never a colored row.
+
+<Preview name="repeater-errors" />
+
+</Section>
+
+<Section>
+
+## Focus and what is said
+
+Focus moves in the frame after React's commit, to a place the reader can name, and never falls to the page's body. A polite status, in the server's HTML and empty until then, says what happened:
+
+- **Add**: the new row's first field. "Tier 3 added".
+- **Add that reaches the maximum**: the new row's first field. "Tier 3 added. 3 of 3. Remove one to add another."
+- **Remove, a row with rows after it**: Remove in the row now in its place. "Tier 2 removed".
+- **Remove, the last of several**: Remove in the new last row. "Tier 3 removed".
+- **Remove, the only row**: Add. "Tier 1 removed".
+
+A remove keeps the reader on the same control, one row on, so removing several rows is one press after another; at `minRows`, where no Remove is left, focus goes to that row's first field instead. A held Enter removes one row: the key's repeat starts no press on the next Remove. The status says which row left by its old legend, since the rows after it are renumbered. A field marked `data-autofocus` in a row takes focus after an add in place of its first field.
+
+Keep the Repeater outside anything you mark `aria-busy="true"` while saving: a screen reader may hold back a busy region's changes, so set `aria-busy` on your fields' container, not around the Repeater. It warns once in development when its status speaks inside one.
+
+</Section>
+
+<Section>
+
+## In a card
+
+A Repeater that ends a card puts Add at the card's bottom corner, and moves it clear of the curve by itself, as every control at a card's foot does: 7px in Rounded, 19px compact, nothing in Soft and Square. Under a group's offer line from [field extras](/docs/components/field-extras), it moves only while no offer follows it.
+
+<Preview name="repeater-card" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+A client component: every row, its fields, its Remove and Add, or the full line, and the empty status are in the server's HTML, and nothing moves on hydration. The words are the library's, in English, so a page in another language passes its own `labels`.
+
+```tsx
+import { NumberField, Repeater } from '@snapshot-ui/react';
+
+<Repeater
+  label="Wait tiers"
+  value={tiers}
+  onChange={setTiers}
+  createRow={() => ({ id: crypto.randomUUID(), amount: null })}
+  rowLabel={(index) => `Tier ${index + 1}`}
+  maxRows={3}
+  labels={{ add: 'Add a tier' }}
+>
+  {(tier, { update, error }) => (
+    <NumberField
+      label="Up to"
+      money={{ symbol: '$' }}
+      value={tier.amount}
+      isInvalid={error !== undefined}
+      onChange={(amount) => update({ ...tier, amount })}
+    />
+  )}
+</Repeater>;
+```
+
+Rows have no reorder. When the order means something, as wait tiers by amount, sort the rows when you save, and say so with a set error before it if you like: sorting while the reader types would move a row under the caret.
+
+</Section>
+
+<Section>
+
+## Props
+
+`className`, `ref` and any other attribute go on the root, `fieldset.repeater`.
+
+<PropsTable label="Repeater props" path="../../packages/react/src/repeater/Repeater.tsx" type="Pick<RepeaterBaseProps<RepeaterRow>, 'label' | 'description' | 'value' | 'defaultValue' | 'onChange' | 'createRow' | 'children' | 'rowLabel' | 'minRows' | 'maxRows' | 'errorMessage' | 'rowErrors' | 'isChanged' | 'changedLabel' | 'isDisabled' | 'labels' | 'className'>" />
+
+<PropsTable label="RepeaterRowRender" path="../../packages/react/src/repeater/Repeater.tsx" type="RepeaterRowRender<RepeaterRow>" />
+
+<PropsTable label="RepeaterLabels" path="../../packages/react/src/repeater/Repeater.tsx" type="RepeaterLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+Fieldsets, legends and buttons, and no composite widget: the set is read in browse mode and filled with Tab, row by row. Each row's fields keep their visible labels, and the row's legend gives them their place, "Tier 2, group, Up to". The list is ordered, since a row's place is its meaning.
+
+Remove shows its word and is named with its row, "Remove, Tier 2", so a list of Removes reads as a list of rows, and voice control finds it by the word it shows. Add is named by its text and described by its count, or at the maximum by its reason.
+
+<Keys rows={[['Tab', "Moves through each row's fields and its Remove, row by row, then to Add."], ['Shift+Tab', 'Moves back the same way.'], ['Enter Space', 'On Add, adds a row and focuses its first field; on Remove, removes the row and focuses the same control one row on.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps a repeater in the system.
+
+<Rules dos={['Give each row a legend by its place, such as Tier 2.', 'Sort the rows when you save, when their order means something.', 'Pair it with a save bar, whose Cancel brings a removed row back.']} donts={['Never reorder rows by drag here.', 'Never color a row in error. Say it in words under its fields.', 'Never remove a row with nothing to undo it: no save bar, no Cancel.']} />
+
+</Section>
