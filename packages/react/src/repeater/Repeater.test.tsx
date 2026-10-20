@@ -441,6 +441,34 @@ describe('Repeater', () => {
     },
   );
 
+  it.each([
+    ['an add', 'Add a tier'],
+    ['a remove', 'Remove, Tier 2'],
+  ])('says nothing and moves nothing after %s the app refuses', async (_event, name) => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <Repeater<Tier>
+        label="Wait tiers"
+        createRow={createTier}
+        rowLabel={tierLabel}
+        maxRows={3}
+        labels={{ add: 'Add a tier' }}
+        value={TWO}
+        onChange={onChange}
+      >
+        {(tier) => <TierFields tier={tier} error={undefined} />}
+      </Repeater>,
+    );
+    const button = screen.getByRole('button', { name });
+    press(button);
+    await frames();
+    // The app's onChange decides, and kept the rows: nothing was added or removed, so nothing says so.
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(legends(container)).toEqual(['Tier 1', 'Tier 2']);
+    expect(button).toHaveFocus();
+    expect(status(container)).toBeEmptyDOMElement();
+  });
+
   it('focuses a field marked data-autofocus in a new row', async () => {
     render(
       <Repeater<Tier>
@@ -748,6 +776,17 @@ describe('Repeater', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('two rows with the id "a"'));
     // React is not asked to draw two children of one key.
     expect(error).not.toHaveBeenCalled();
+  });
+
+  it('says a twin row removed and focuses the row in its place', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const twins = TWO.map((tier) => ({ ...tier, id: 'a' }));
+    const { container } = render(<Controlled start={twins} />);
+    press(screen.getByRole('button', { name: 'Remove, Tier 1' }));
+    await frames();
+    expect(legends(container)).toEqual(['Tier 1']);
+    expect(screen.getByRole('button', { name: 'Remove, Tier 1' })).toHaveFocus();
+    expect(status(container)).toHaveTextContent('Tier 1 removed');
   });
 
   it('warns once when its status speaks inside aria-busy', async () => {

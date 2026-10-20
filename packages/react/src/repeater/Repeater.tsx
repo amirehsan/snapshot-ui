@@ -119,10 +119,14 @@ const HOLD_MS = 5000;
 const BUSY_WARNING =
   'A Repeater is inside aria-busy="true", so a screen reader may not say what an add or a remove did: set aria-busy on the fields\' container, not around the Repeater.';
 
-/** What the last add or remove said, and which it was, so each writes its words as a new node. */
+/**
+ * What the last add or remove said, and which it was, so each writes its words as a new node; and how many rows it
+ * left, since the words are drawn only once the rows show it: controlled, the app's onChange may refuse.
+ */
 interface Said {
   words: string;
   event: number;
+  count: number;
 }
 
 /** The drawn row whose id is `id`, read in the frame after the commit. */
@@ -242,24 +246,30 @@ export function Repeater<T extends RepeaterRow>({
   const errorId = `${id}-error`;
   const footId = `${id}-foot`;
   const hasError = present(errorMessage);
+  // Drawn once the rows show the add or the remove it tells of.
+  const heard = said?.count === rows.length;
 
-  /** Writes `words` to the status as a new node, and moves focus to `place` in the frame after the commit. */
+  /**
+   * Writes `words` to the status as a new node, and moves focus to `place` in the frame after the commit, once
+   * `count` rows are drawn: an add or a remove the app refuses says nothing and moves nothing.
+   */
   const announce = (
     words: string,
     pressed: Element,
+    count: number,
     place: (root: HTMLElement) => HTMLElement | null,
   ): void => {
     events.current += 1;
     const root = rootRef.current;
     if (root?.closest('[aria-busy="true"]')) setBusy(true);
-    setSaid({ words, event: events.current });
+    setSaid({ words, event: events.current, count });
     clearTimeout(hold.current);
     hold.current = setTimeout(() => {
       setSaid(null);
     }, HOLD_MS);
     cancelMove.current?.();
     cancelMove.current = afterCommit(() => {
-      if (!root?.isConnected) return;
+      if (!root?.isConnected || root.querySelectorAll(':scope > ol > li').length !== count) return;
       // The pressed button, the body (Safari leaves a pressed button unfocused, Chromium blurs a Remove that
       // leaves), or nothing: the move is ours. Focus the app moved elsewhere stays there.
       const active = document.activeElement;
@@ -274,10 +284,15 @@ export function Repeater<T extends RepeaterRow>({
     const next = [...rows, row];
     setRows(next);
     const words = labels.added(rowLabel(rows.length));
-    announce(next.length >= maxRows ? `${words}. ${labels.full(maxRows)}` : words, pressed, (root) => {
-      const item = rowOf(root, row.id);
-      return item ? firstField(item) : null;
-    });
+    announce(
+      next.length >= maxRows ? `${words}. ${labels.full(maxRows)}` : words,
+      pressed,
+      next.length,
+      (root) => {
+        const item = rowOf(root, row.id);
+        return item ? firstField(item) : null;
+      },
+    );
   };
 
   const removeRow = (index: number, pressed: Element): void => {
@@ -286,7 +301,7 @@ export function Repeater<T extends RepeaterRow>({
     if (!gone) return;
     const stays = rows[index + 1] ?? rows[index - 1];
     setRows(rows.filter((_, at) => at !== index));
-    announce(labels.removed(rowLabel(index)), pressed, (root) => {
+    announce(labels.removed(rowLabel(index)), pressed, rows.length - 1, (root) => {
       const item = stays ? rowOf(root, stays.id) : null;
       if (!item) return null;
       // The same control in the row that took its place, so a reader removing rows keeps their place; at the
@@ -416,7 +431,7 @@ export function Repeater<T extends RepeaterRow>({
         )}
       </div>
       <div className="repeater-status" role="status" aria-live="polite" aria-atomic="true">
-        {said ? <span key={said.event}>{said.words}</span> : null}
+        {said && heard ? <span key={said.event}>{said.words}</span> : null}
       </div>
     </fieldset>
   );

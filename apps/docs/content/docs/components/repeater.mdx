@@ -75,7 +75,7 @@ Focus moves in the frame after React's commit, to a place the reader can name, a
 - **Remove, the last of several**: Remove in the new last row. "Tier 3 removed".
 - **Remove, the only row**: Add. "Tier 1 removed".
 
-A remove keeps the reader on the same control, one row on, so removing several rows is one press after another; at `minRows`, where no Remove is left, focus goes to that row's first field instead. A held Enter removes one row: the key's repeat starts no press on the next Remove. The status says which row left by its old legend, since the rows after it are renumbered. A field marked `data-autofocus` in a row takes focus after an add in place of its first field.
+A remove keeps the reader on the same control, one row on, so removing several rows is one press after another; at `minRows`, where no Remove is left, focus goes to that row's first field instead. A held Enter removes one row: the key's repeat starts no press on the next Remove. The status says which row left by its old legend, since the rows after it are renumbered. A field marked `data-autofocus` in a row takes focus after an add in place of its first field. Controlled, your `onChange` decides: an add or a remove you refuse, by keeping the rows you hold, says nothing and moves nothing.
 
 Keep the Repeater outside anything you mark `aria-busy="true"` while saving: a screen reader may hold back a busy region's changes, so set `aria-busy` on your fields' container, not around the Repeater. It warns once in development when its status speaks inside one.
 

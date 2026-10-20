@@ -13088,7 +13088,10 @@ reader can name through `focusNamedPlace`, never the body:
   and the first press fires on the key's release.
 
 The move happens only when focus is on the pressed button, inside the
-set, or lost, so focus the app moved elsewhere stays. The status is in the
+set, or lost, so focus the app moved elsewhere stays. Controlled, the
+app's `onChange` decides: the words are drawn and focus moves only once
+the rows show the add or the remove, so one the app refuses says nothing
+and moves nothing (spec correction 56). The status is in the
 server's HTML, empty, writes each event's words as a new node so a
 repeated sentence is said again, and empties after five seconds, as
 FieldExtras' does. A status that speaks inside `aria-busy="true"` warns
