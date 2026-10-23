@@ -55,6 +55,8 @@ import { FieldExtras } from '../src/field-extras';
 import { Repeater } from '../src/repeater';
 import { PanelNav, PanelNavItem } from '../src/panel-layout';
 import { settingsPage } from './panel-layout-fixture';
+import { accountMenu, accountRail } from './account-menu-fixture';
+import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
@@ -1341,6 +1343,64 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       'aria-current="page"',
       'class="panel-nav-name"',
     ],
+  ],
+  [
+    // The three choices, System first, the given one checked, each icon hidden; no Changed chip shown.
+    'ThemeSwitch',
+    <ThemeSwitch value="light" onChange={() => undefined} />,
+    [
+      'aria-label="Theme"',
+      'class="field segmented theme-switch"',
+      'value="system"',
+      'checked="" value="light"',
+      'lucide-monitor',
+      'lucide-sun',
+      'lucide-moon',
+    ],
+    ['data-changed', 'checked="" value="dark"', 'checked="" value="system"'],
+  ],
+  [
+    // Rows of a radio group, none checked before the browser knows the reader's choice.
+    'ThemeSwitch radio at null',
+    <ThemeSwitch look="radio" value={null} onChange={() => undefined} />,
+    ['class="field radio-group theme-switch"', 'class="radio"', 'System', 'Light', 'Dark'],
+    ['checked'],
+  ],
+  [
+    // The trigger alone: the avatar's initials, the name, the detail that describes it and the chevron. The menu
+    // is not in the HTML until it opens.
+    'AccountMenu',
+    accountMenu(),
+    [
+      'class="account-menu-trigger"',
+      'aria-haspopup="true"',
+      'aria-expanded="false"',
+      '<span class="avatar-initials" aria-hidden="true">AL</span>',
+      '<span class="account-menu-name">Ada Lovelace</span>',
+      'class="account-menu-detail" aria-hidden="true">ada@example.com</span>',
+      'class="account-menu-chevron" aria-hidden="true"',
+      'lucide-chevrons-up-down',
+    ],
+    ['role="menu"', 'data-compact', 'aria-label'],
+  ],
+  [
+    // Compact by its prop: the avatar alone, named by a visually hidden copy of the person's name.
+    'AccountMenu compact',
+    accountMenu({ isCompact: true }),
+    ['class="account-menu-trigger"', 'data-compact=""', '>Ada Lovelace</span></button>'],
+    ['account-menu-name', 'account-menu-detail', 'account-menu-chevron', 'aria-label'],
+  ],
+  [
+    // In a rail the server draws collapsed from its cookie: the compact trigger from the first paint.
+    'AccountMenu in a collapsed rail',
+    accountRail(true),
+    [
+      'data-sidebar="collapsed"',
+      'class="sidebar-footer"',
+      'data-compact=""',
+      '>Ada Lovelace</span></button>',
+    ],
+    ['account-menu-name'],
   ],
 ];
 

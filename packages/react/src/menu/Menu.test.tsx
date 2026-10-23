@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
+import axe from 'axe-core';
 import userEvent from '@testing-library/user-event';
 import { LogOut, Settings, User } from 'lucide-react';
 import { createRef, useState, type ReactElement } from 'react';
@@ -9,7 +10,7 @@ import { holdFrames } from '../../test/dom';
 import { Button } from '../button';
 import { Dialog } from '../dialog';
 import * as library from '../index';
-import { Menu, MenuList, MenuTrigger, type MenuProps } from './Menu';
+import { Menu, MenuList, MenuTrigger, SubmenuTrigger, type MenuProps } from './Menu';
 import { MenuItem } from './MenuItem';
 import { MenuSection } from './MenuSection';
 import { MenuSeparator } from './MenuSeparator';
@@ -749,5 +750,129 @@ describe('Menu', () => {
       </MenuTrigger>,
     );
     await expectNoA11yViolations(document.body);
+  });
+});
+
+/** A menu with a Theme row that opens a submenu of three choices, as an account menu holds one. */
+function WithSubmenu({
+  defaultOpen = true,
+  onTheme,
+}: {
+  defaultOpen?: boolean;
+  onTheme?: (keys: Selection) => void;
+}): ReactElement {
+  const [theme, setTheme] = useState<Selection>(new Set(['system']));
+  return (
+    <MenuTrigger defaultOpen={defaultOpen}>
+      <Button variant="secondary">Ada Lovelace</Button>
+      <Menu>
+        <MenuItem id="settings">Settings</MenuItem>
+        <SubmenuTrigger>
+          <MenuItem id="theme" icon={<Settings />} end="System">
+            Theme
+          </MenuItem>
+          <Menu
+            selectionMode="single"
+            selectedKeys={theme}
+            onSelectionChange={(keys) => {
+              setTheme(keys);
+              onTheme?.(keys);
+            }}
+          >
+            <MenuItem id="system">System</MenuItem>
+            <MenuItem id="light">Light</MenuItem>
+            <MenuItem id="dark">Dark</MenuItem>
+          </Menu>
+        </SubmenuTrigger>
+        <MenuItem id="help">Help</MenuItem>
+      </Menu>
+    </MenuTrigger>
+  );
+}
+
+describe('SubmenuTrigger', () => {
+  it('exports SubmenuTrigger', () => {
+    expect(library.SubmenuTrigger).toBe(SubmenuTrigger);
+    // Fails `pnpm typecheck` if the package stops exporting the type.
+    const props: library.SubmenuTriggerProps = { children: [], delay: 100 };
+    expect(props.delay).toBe(100);
+  });
+
+  it('draws a chevron on an item that opens a submenu, after its end', () => {
+    render(<WithSubmenu />);
+    const theme = screen.getByRole('menuitem', { name: 'Theme' });
+    expect(theme).toHaveAttribute('data-has-submenu');
+    expect([...theme.children].map((child) => child.className)).toEqual([
+      'menu-item-icon',
+      'menu-item-text',
+      'menu-item-end',
+      'menu-item-submenu',
+    ]);
+    const chevron = theme.querySelector('.menu-item-submenu');
+    expect(chevron).toHaveAttribute('aria-hidden', 'true');
+    expect(chevron?.querySelector('svg')).toHaveClass('lucide-chevron-right');
+    // An item that opens nothing draws none.
+    const settings = screen.getByRole('menuitem', { name: 'Settings' });
+    expect(settings.querySelector('.menu-item-submenu')).toBeNull();
+    expect(settings).not.toHaveAttribute('data-has-submenu');
+  });
+
+  it("keeps the opening row's wash while its submenu is open", async () => {
+    const user = userEvent.setup();
+    render(<WithSubmenu />);
+    const theme = screen.getByRole('menuitem', { name: 'Theme' });
+    expect(theme).not.toHaveAttribute('data-open');
+    theme.focus();
+    await user.keyboard('{ArrowRight}');
+    const submenu = await screen.findByRole('menu', { name: /^Theme/ });
+    // The row stays marked open while focus is in the submenu: the stylesheet keeps its wash by that.
+    expect(theme).toHaveAttribute('data-open', 'true');
+    expect(within(submenu).getByRole('menuitemradio', { name: 'System' })).toHaveFocus();
+    expect(theme).not.toHaveAttribute('data-focused');
+  });
+
+  it('opens the submenu in a menu popover against the row', async () => {
+    const user = userEvent.setup();
+    render(<WithSubmenu />);
+    screen.getByRole('menuitem', { name: 'Theme' }).focus();
+    await user.keyboard('{ArrowRight}');
+    const submenu = await screen.findByRole('menu', { name: /^Theme/ });
+    const popover = submenu.closest('.popover');
+    expect(popover).toHaveClass('overlay', 'popover', 'menu-popover');
+    expect(popover).toHaveAttribute('data-trigger', 'SubmenuTrigger');
+    expect(submenu).toHaveClass('menu');
+  });
+
+  it('closes every level on a choice and gives focus back to the root trigger', async () => {
+    const user = userEvent.setup();
+    const onTheme = vi.fn();
+    render(<WithSubmenu defaultOpen={false} onTheme={onTheme} />);
+    const button = screen.getByRole('button', { name: 'Ada Lovelace' });
+    button.focus();
+    await user.keyboard('{Enter}{ArrowDown}{ArrowRight}');
+    await screen.findByRole('menu', { name: /^Theme/ });
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(onTheme).toHaveBeenCalledTimes(1);
+    expect([...(onTheme.mock.calls[0]?.[0] as Set<Key>)]).toEqual(['light']);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(button).toHaveFocus();
+    });
+  });
+
+  it('has no axe violations with the submenu open', async () => {
+    const user = userEvent.setup();
+    // The Theme row is named by its label and described by its end value: axe's label-in-name check skips menu
+    // rows alone, as the stories' MENU_ROW_A11Y scopes it.
+    axe.configure({ rules: [{ id: 'label-content-name-mismatch', selector: '*:not(.menu-item)' }] });
+    try {
+      render(<WithSubmenu />);
+      screen.getByRole('menuitem', { name: 'Theme' }).focus();
+      await user.keyboard('{ArrowRight}');
+      await screen.findByRole('menu', { name: /^Theme/ });
+      await expectNoA11yViolations(document.body);
+    } finally {
+      axe.reset();
+    }
   });
 });

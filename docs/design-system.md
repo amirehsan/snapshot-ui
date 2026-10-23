@@ -4407,6 +4407,43 @@ left to right in any direction whatever draws it.
 **Nothing animates inside a menu.** The popover fades and slides in; the rows
 do not move, so `menu.css` has no reduced-motion block.
 
+**Submenus** (settings spec 10.4). `Menu` exports React Aria's
+`SubmenuTrigger`: a `MenuItem` and then a `Menu`. The row React Aria marks
+`data-has-submenu` draws a 16px slate `ChevronRight` in the key hint's place,
+after its end value ("Theme", then "System", then the chevron), with 8px of
+inline end padding rather than 12px, since Lucide's chevron has blank room
+either side of its stroke. The chevron points to the side the submenu opens
+on, so it mirrors in right to left by `scale: -1 1` under
+`:where([dir='rtl' i])`, the charts' pattern. While the submenu is open the
+row keeps the 5% wash under `[data-has-submenu][data-open]`, so the reader
+sees where it came from; in forced colors, where the repaint takes the wash,
+it keeps a 1px `canvastext` outline. No rule matches a row that opens
+nothing, so no existing menu moves.
+
+The submenu is the same `Menu` in the same popover, placed by React Aria's
+`end top` beside its row and 9px up, the list's 8px padding and the
+popover's 1px edge, so its first row is level with the row it came from; it
+flips to the other side where that has more room. Where neither side has
+room, as at 320px, React Aria leaves it past the viewport's edge, measured
+at 249px past it; so in the frame after it is placed the submenu reads its
+own box and, if it overflows, opens under its row at its start instead, over
+the rows below it (settings plan, spec correction 76). Nothing is measured
+before it opens.
+
+The keys are React Aria's: Arrow Right, Enter or Space on the row opens the
+submenu with focus on its first item, or its chosen one; Arrow Left or Escape
+closes that level alone and gives focus back to the row, and the Escape stops
+there, so nothing around the menu hears it and a Dialog holding it stays
+open until the next Escape (settings plan, spec correction 84); a choice closes
+every level and gives focus back to the root trigger. React Aria takes the
+two arrows from the locale, not from `dir`, so a Persian page sets
+`I18nProvider` with its locale and they swap. React Aria names a submenu by
+its row, whose words include the end value, "Theme System"; a part that
+wants the submenu named by its label alone gives it an `aria-label` and
+points its `aria-labelledby` at itself, as ThemeMenu does. The menu's sizes
+entry with `SubmenuTrigger` measures 1.8 kB, from 1.66 kB, under its 2.5 kB
+limit, and 40.54 kB with React Aria not ignored.
+
 ## Toast
 
 The app's toast becomes `toast()` and `ToastRegion`. The app kept events apart
@@ -13367,3 +13404,160 @@ faces, Back read as "Settings, link", a link read with its end state and
 description. Not yet verified on a real iPhone and an Android phone at
 320px to 430px (the list face, a section with Back), or in Windows'
 contrast themes (the current item in `highlight`).
+
+## ThemeSwitch
+
+The reader's theme, System, Light or Dark, as a Settings row and as a menu's
+choice (settings spec, section 9; decided items 18 to 21; open questions 16 to
+20; ruling 4). `ThemeSwitch` is a SegmentedControl, or with `look="radio"` a
+RadioGroup of rows; `ThemeMenu` goes among a Menu's items as a Theme item
+opening a submenu, or with `display="section"` as a section under a Theme
+heading.
+
+**The value.** `ThemeChoice` is `system`, `light` or `dark`. System is no
+attribute: with no `data-theme` on `<html>` the tokens follow
+`prefers-color-scheme` in CSS, and `color-scheme` follows it, so a page whose
+choice is System paints right with no script and no cookie. Light and dark
+are `data-theme` on `<html>`.
+
+**Controlled only** (ruling 4). Both parts draw the `value` they are given
+and call `onChange`; `null` draws no choice, for a value the browser learns
+only after hydration, as the docs header's is. They read nothing from
+`window`, `matchMedia`, storage, `document.cookie` or `data-theme`, at render
+or after, and write nothing: no storage, no cookie and no script, which the
+consumer's nonce-locked policy forbids anyway. The app's root layout reads
+its cookie on the server and writes `data-theme`, so the first paint is
+right; its `onChange` sets the attribute at once and writes the cookie, for
+example through a server action. Reading a cookie renders every route per
+request; a static site, as the docs are, keeps a pre-paint script of its own.
+
+**System first, applied at once.** The default leads, as the reader meets
+the choices. A theme is the reader's device preference, not a saved
+setting: it applies in the same frame, shows no Changed chip (the part
+takes no `isChanged`) and never makes a SaveBar dirty, so the docs put
+Appearance in a card of its own, outside every form. The arrows choose and
+apply, as in any radio group: a theme is cheap to undo.
+
+**The look.** SegmentedControl's and RadioGroup's own. Each choice has a
+16px Lucide icon before its word, `Monitor`, `Sun` and `Moon`, hidden; its
+class, `segmented-icon` or `radio-icon`, sizes it and spaces it from the
+word, so an app's icon-only option, which carries no class, is left as it
+was (settings plan, spec correction 78). Named "Theme" (`labels.label`)
+unless the app gives a `label`, an `aria-label` or an `aria-labelledby`.
+
+**In a menu.** The submenu's Theme item shows the current choice's word as
+its end value, none for `null`, and the chevron (Menu, "Submenus"); the three
+are `menuitemradio` items with the chosen one checked and the ink pill,
+`disallowEmptySelection`, so a second press on the chosen one keeps it. A
+choice calls `onChange` and closes every level, and focus goes back to the
+menu's trigger, which React Aria's root close and its focus restore do: the
+plan's Step 0 found both in react-aria-components 1.22.1, and MenuSection's
+own `selectionMode` (settings plan, spec correction 76). The submenu is named
+"Theme" by its own `aria-label`, not "Theme System" by its row.
+
+**The docs header's switch** is ThemeSwitch at `size="sm"`, named "Color
+mode", its value `next-themes`' `theme` once mounted and `null` before, so
+the docs offer System beside Light and Dark (plan open question 4).
+
+**Server rendering.** A client part; its face is the server's, the given
+value checked, and hydration changes nothing. Its root is `segmented` or
+`radio-group` with `theme-switch` beside it, so Prose's guard already lists
+it.
+
+**Contrast**, gated already, so nothing is added: SegmentedControl's,
+RadioGroup's and Menu's own pairs; the words are ink and slate on the
+canvas, lifted and float, ink 16.25, 17.84 and 18.43 in light and 19.31,
+17.42 and 17.42 in dark, slate 4.84, 5.31 and 5.49 and 7.26, 6.94 and 6.94.
+
+**The size** (settings plan, spec correction 81). `{ ThemeSwitch, ThemeMenu
+}` measures 3.17 kB without React Aria, Lucide and `@internationalized/date`,
+over the spec's 2 kB budget: it composes SegmentedControl with its stacking,
+RadioGroup and Radio, and Menu with its section and submenu. The rule gives a
+4 kB limit. With React Aria not ignored it measures 44.75 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): the group read as "Theme", a choice read with its state,
+the submenu's radio items and their checked state. Not yet verified in
+Windows' contrast themes (the submenu's chosen item in `highlight`).
+
+## AccountMenu
+
+The signed-in person's menu, for a rail's footer or a header (settings spec,
+section 10; decided item 22). A `MenuTrigger` with a React Aria `Button`
+and the library's `Menu`.
+
+**The trigger.** A row as tall as its two lines or `--size-field`, whichever
+is more, padded a part step inside a transparent 1px edge: a 32px `Avatar`,
+hidden, since the name is beside it, from `avatarSrc` or the name's
+initials; the name at the action step, 500, in ink; the detail under it at
+the small step, 450, in slate; and a 16px slate `ChevronsUpDown` at its end,
+symmetric, so it does not mirror. It fills its row (`flex: 1`,
+`min-inline-size: 0`) and the name and detail wrap at any character, so a
+long email never pushes the rail wider. The 5% ink wash shows on hover,
+while pressed and while the menu is open; the focus ring is the ring's own,
+outside.
+
+**Its name** is the visible name, "Ada Lovelace", which a voice user can say
+(WCAG 2.5.3); the detail, hidden inside, describes it by its id. "Account"
+alone would hide whose account it is. The menu is named "Account"
+(`menuLabel`), by its own `aria-label` with its `aria-labelledby` pointed at
+itself, since React Aria names a menu by its trigger.
+
+**Compact.** In a folded rail, from `useSidebar`'s state unless `isCompact`
+is given, or with `isCompact` in a header: the avatar alone, centered in a
+control-sized pill (`--size-control`, 44px on a coarse pointer), with the
+name in a Tooltip at the rail's end side. It is named by a visually hidden
+copy of the name, not an `aria-label`, which would leave the initials the
+avatar draws out of its name, as axe's label-in-name check found (settings
+plan, spec correction 77). Both faces are one button, so a rail that folds
+while its menu is open keeps the trigger, and Escape gives focus back to it.
+A rail the server draws collapsed from its cookie draws the compact face from
+the first paint.
+
+**The rail's corner.** The footer is in the rail's bottom corners and its
+padding already clears them; the trigger's corner is the rail items'
+formula, `min(var(--radius-pill), max(0px, calc(var(--sidebar-corner) -
+var(--sidebar-nav-inset))))`, the rail's inside corner less the footer's
+12px gap, so its wash is concentric with the rail's curve: 27px in Rounded,
+3px in Soft, 0 in Square. It is not capped at the control corner, whose
+20px in Rounded left the wash's corner off the rail's center, which the
+concentric audit found (settings plan, spec correction 83). Outside a rail
+the two rail properties fall back to the control corner and 0, so a
+header's trigger takes `--radius-control`. `TriggerClearOfCorner` measures every point of the
+wash's corners inside the rail's curve in Rounded, comfortable and compact,
+Soft, Square, and folded.
+
+**The menu.** The app's items: Settings, a ThemeMenu, Help, a rule and Sign
+out, which is not danger, since it loses nothing. It opens `top start` in a
+Sidebar, upward from the rail's foot, and `bottom end` elsewhere; its popover
+carries `account-menu`, which caps it at 22rem or the viewport less 2rem. A
+choice closes it and React Aria gives focus back to the trigger; an item that
+navigates leaves focus to its destination's rule.
+
+**Forced colors.** The open trigger draws its edge in `canvastext`, since
+the repaint takes the wash; the detail and the chevron are `canvastext`; the
+avatar keeps its own rules.
+
+**Right to left.** Logical properties throughout: the avatar at the right,
+the chevron at the left, unmirrored. `AccountMenuMirrored` measures it with
+the Theme submenu opened by Arrow Left, in three engines.
+
+**Server rendering.** A client part. The trigger, its avatar and its name are
+in the server's HTML; the menu is not until it opens. Its outermost element
+is the trigger, which Prose's guard lists by hand (`OUTERMOST_PARTS`), since
+its stylesheet's root is the menu's `account-menu`.
+
+**Contrast**, gated already, so nothing is added: ink and slate on the
+rail's float, 18.43 and 5.49 in light and 17.42 and 6.94 in dark, and on the
+canvas of a header, 16.25 and 4.84, and 19.31 and 7.26.
+
+**The size** (settings plan, spec correction 81). `{ AccountMenu }` measures
+2.5 kB without React Aria, Lucide and `@internationalized/date`, over the
+spec's 2 kB budget: Avatar, Tooltip and Menu are most of it. The rule gives a
+3 kB limit. With React Aria not ignored it measures 42.45 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): the trigger read as "Ada Lovelace, menu button" with its
+detail, the folded trigger's name and tip. Not yet verified on a real iPhone
+and an Android phone at 320px to 430px (the AccountMenu in the drawer with
+its submenu), or in Windows' contrast themes (the open trigger's edge).

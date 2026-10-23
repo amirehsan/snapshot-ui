@@ -1,4 +1,6 @@
 import type { ComponentType } from 'react';
+import AccountMenuHeader from './account-menu-header';
+import AccountMenuRail from './account-menu-rail';
 import AccountsRecipe from './accounts-recipe';
 import AppShellBasic from './app-shell-basic';
 import AppShellCollapsed from './app-shell-collapsed';
@@ -125,6 +127,7 @@ import LinkStates from './link-states';
 import MenuBasic from './menu-basic';
 import MenuLinks from './menu-links';
 import MenuSelection from './menu-selection';
+import MenuSubmenu from './menu-submenu';
 import MeterBasic from './meter-basic';
 import MeterOver from './meter-over';
 import MeterPace from './meter-pace';
@@ -210,6 +213,9 @@ import TabsBasic from './tabs-basic';
 import TabsChanged from './tabs-changed';
 import TabsLinks from './tabs-links';
 import TabsOverflow from './tabs-overflow';
+import ThemeSwitchBasic from './theme-switch-basic';
+import ThemeSwitchMenu from './theme-switch-menu';
+import ThemeSwitchRadio from './theme-switch-radio';
 import TextAreaBasic from './text-area-basic';
 import TextAreaCounter from './text-area-counter';
 import TextAreaStates from './text-area-states';
@@ -227,6 +233,8 @@ import UploadListStatuses from './upload-list-statuses';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
+  'account-menu-header': AccountMenuHeader,
+  'account-menu-rail': AccountMenuRail,
   'accounts-recipe': AccountsRecipe,
   'app-shell-basic': AppShellBasic,
   'app-shell-collapsed': AppShellCollapsed,
@@ -353,6 +361,7 @@ export const examples = {
   'menu-basic': MenuBasic,
   'menu-links': MenuLinks,
   'menu-selection': MenuSelection,
+  'menu-submenu': MenuSubmenu,
   'meter-basic': MeterBasic,
   'meter-over': MeterOver,
   'meter-pace': MeterPace,
@@ -438,6 +447,9 @@ export const examples = {
   'tabs-changed': TabsChanged,
   'tabs-links': TabsLinks,
   'tabs-overflow': TabsOverflow,
+  'theme-switch-basic': ThemeSwitchBasic,
+  'theme-switch-menu': ThemeSwitchMenu,
+  'theme-switch-radio': ThemeSwitchRadio,
   'text-area-basic': TextAreaBasic,
   'text-area-counter': TextAreaCounter,
   'text-area-states': TextAreaStates,

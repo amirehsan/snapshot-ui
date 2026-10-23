@@ -24,7 +24,8 @@ import { FilterBar } from '../filter-bar';
 import { FilterChip } from '../filter-chip';
 import { Gauge } from '../gauge';
 import { Link, RouterProvider } from '../link';
-import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
+import { AccountMenu } from '../account-menu';
+import { Menu, MenuItem, MenuSection, MenuSeparator, MenuTrigger } from '../menu';
 import { MonthGrid } from '../month-grid';
 import { MultiSelect } from '../multi-select';
 import { NumberField } from '../number-field';
@@ -60,6 +61,7 @@ import { firstLineOffset, lineCount } from '../stories/paint';
 import { ownContent, Rendered } from '../stories/prose';
 import { Switch } from '../switch';
 import { Tab, TabList, TabPanel, Tabs } from '../tabs';
+import { ThemeMenu, type ThemeChoice } from '../theme-switch';
 import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
 import { toast, ToastRegion } from '../toast';
@@ -2592,5 +2594,90 @@ export const PanelLayoutMirrored: Story = {
     const backIcon = find(back, '.panel-layout-back-icon');
     await expect(rect(backIcon).left).toBeGreaterThan(rect(back).right - rect(backIcon).width - 1);
     await expect(getComputedStyle(find(back, 'svg')).scale).toBe('-1 1');
+  },
+};
+
+/** A Persian account menu at the foot of a column: Settings, the theme as a submenu, Help, a rule and Sign out. */
+function PersianAccount(): ReactElement {
+  const [theme, setTheme] = useState<ThemeChoice>('system');
+  return (
+    <AccountMenu name="آدا لاولیس" detail="حساب خانوادگی" placement="top start">
+      <MenuItem id="settings" icon={<Settings />}>
+        تنظیمات
+      </MenuItem>
+      <ThemeMenu
+        value={theme}
+        onChange={setTheme}
+        labels={{ label: 'پوسته', system: 'سیستم', light: 'روشن', dark: 'تیره' }}
+      />
+      <MenuItem id="help">راهنما</MenuItem>
+      <MenuSeparator />
+      <MenuItem id="sign-out">خروج</MenuItem>
+    </AccountMenu>
+  );
+}
+
+/**
+ * AccountMenu on a Persian page, in Vazirmatn: the avatar at the trigger's right and its up-and-down chevron at its
+ * left, not mirrored; the menu open with its Theme submenu opened by Arrow Left, the right-to-left locale's open
+ * key, at the row's left, and the row's chevron mirrored to point there. Its play opens them and measures each in
+ * three engines.
+ */
+export const AccountMenuMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  parameters: { a11y: MENU_ROW_A11Y },
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div
+        dir="rtl"
+        lang="fa"
+        data-font="vazirmatn"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          alignItems: 'flex-start',
+          minBlockSize: '440px',
+        }}
+      >
+        <div style={{ inlineSize: 'min(18rem, 100%)' }}>
+          <PersianAccount />
+        </div>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const trigger = find(canvasElement, '.account-menu-trigger');
+    // The avatar at the start, the right, and the chevron at the end, the left, drawn as it is.
+    await expect(rect(find(trigger, '.avatar')).left).toBeGreaterThan(
+      rect(find(trigger, '.account-menu-text')).right - 1,
+    );
+    await expect(rect(find(trigger, '.account-menu-chevron')).right).toBeLessThan(
+      rect(find(trigger, '.account-menu-text')).left + 1,
+    );
+    await expect(getComputedStyle(find(trigger, '.account-menu-chevron svg')).scale).toBe('none');
+    trigger.focus();
+    await waitFor(() => expect(trigger).toHaveFocus());
+    await userEvent.keyboard('{Enter}');
+    const body = within(document.body);
+    await waitFor(() => expect(body.getByRole('menuitem', { name: 'تنظیمات' })).toHaveFocus());
+    await userEvent.keyboard('{ArrowDown}{ArrowLeft}');
+    const theme = body.getByRole('menuitem', { name: 'پوسته' });
+    const submenu = await waitFor(() => {
+      const popovers = document.querySelectorAll<HTMLElement>('.menu-popover');
+      const [, found] = popovers;
+      if (popovers.length !== 2 || !found || found.hasAttribute('data-entering')) throw new Error('Not open');
+      return found;
+    });
+    await Promise.all(
+      submenu.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => null)),
+    );
+    await waitFor(() => expect(body.getByRole('menuitemradio', { name: 'سیستم' })).toHaveFocus());
+    // The submenu opens at the row's end, its left, and the row's chevron points there.
+    await expect(rect(submenu).right).toBeLessThanOrEqual(rect(theme).left + 1);
+    await expect(getComputedStyle(find(theme, '.menu-item-submenu svg')).scale).toBe('-1 1');
+    await expect(rect(find(theme, '.menu-item-submenu')).left).toBeLessThan(
+      rect(find(theme, '.menu-item-end')).left,
+    );
   },
 };

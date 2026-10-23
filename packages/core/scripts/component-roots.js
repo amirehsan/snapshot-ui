@@ -45,12 +45,14 @@ export function rootsOf(css) {
 /**
  * Parts that a component renders as its own outermost element, so the hyphen rule above would leave them out:
  * a field's Label, Description, FieldCounter or Changed chip placed alone, a Checkbox's row, a Shortcut,
- * ToastRegion's status host, SidePanelLayout, an empty UploadTray's status, and CardActions, which a card's
- * header holds and an app may place alone. The react package's server tests
+ * ToastRegion's status host, SidePanelLayout, an empty UploadTray's status, CardActions, which a card's
+ * header holds and an app may place alone, and AccountMenu's trigger, which is its outermost element while its
+ * stylesheet's root is the menu's popover. The react package's server tests
  * render every component and fail one whose outermost element carries no class of the built list (insights spec
  * correction 93), so a part missing here is caught there.
  */
 const OUTERMOST_PARTS = [
+  'account-menu-trigger',
   'card-actions',
   'checkbox-field',
   'field-changed',

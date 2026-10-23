@@ -112,6 +112,14 @@
     line-height: 1.25;
   }
 
+  /* An icon before an option's word, as ThemeSwitch draws one: 16px, centered on the word's line. */
+  .segmented-icon {
+    width: 16px;
+    height: 16px;
+    margin-inline-end: 0.375rem;
+    vertical-align: -0.1875em;
+  }
+
   /* The radio stays in the accessibility tree and the tab order. React Aria hides it the same way. */
   .segmented-option input {
     position: absolute;

@@ -1414,6 +1414,94 @@ test.describe('forced colors', () => {
     const phone = page.locator('.stage').nth(1).getByRole('link', { name: 'Coach' });
     expect((await paint(phone)).fill).not.toBe(await systemColor(page, 'Highlight'));
   });
+
+  test("the submenu's chosen item is highlight", async ({ page }) => {
+    await visit(page, '/docs/components/menu');
+    const trigger = page.locator('.stage').getByRole('button', { name: 'Document actions' });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const move = page.getByRole('menuitem', { name: 'Move to' });
+    await expect(move).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    await expect(move).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    const inbox = page.getByRole('menuitemradio', { name: 'Inbox' });
+    await expect(inbox).toBeFocused();
+    const look = await paint(inbox);
+    expect(look.fill).toBe(await systemColor(page, 'Highlight'));
+    expect(look.text).toBe(await systemColor(page, 'HighlightText'));
+    // The row it opened from keeps an edge while the repaint takes its wash away.
+    const edge = await move.evaluate((element) => getComputedStyle(element).outlineStyle);
+    expect(edge).toBe('solid');
+  });
+});
+
+// ---- Menu's submenu -----------------------------------------------------------------------------
+
+test("the menu page's submenu opens by Arrow Right and chooses a theme", async ({ page }) => {
+  await visit(page, '/docs/components/menu');
+  const trigger = page.locator('.stage').getByRole('button', { name: 'Document actions' });
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', { name: 'Duplicate' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  const move = page.getByRole('menuitem', { name: 'Move to' });
+  await expect(move).toBeFocused();
+  await expect(move).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('ArrowRight');
+  await expect(move).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('menuitemradio', { name: 'Inbox' })).toBeFocused();
+  // Arrow Left closes the submenu alone, with focus back on its row.
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('menuitemradio')).toHaveCount(0);
+  await expect(move).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitemradio', { name: 'Receipts' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await expect(page.locator('.stage').getByText('In Receipts')).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+});
+
+test('the theme switch page applies a choice at once and the account menu chooses a theme in its submenu', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/theme-switch');
+  const stage = page.locator('.stage').first();
+  const group = stage.getByRole('radiogroup', { name: 'Theme' });
+  await expect(group.getByRole('radio')).toHaveCount(3);
+  // The arrows choose and apply, as in any radio group: System, then Light, then Dark.
+  await group.getByRole('radio', { name: 'System' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(group.getByRole('radio', { name: 'Dark' })).toBeChecked();
+  await expect(stage.locator('[data-theme="dark"]')).toHaveCount(1);
+  await page.keyboard.press('ArrowRight');
+  await expect(group.getByRole('radio', { name: 'System' })).toBeChecked();
+  await expect(stage.locator('[data-theme]')).toHaveCount(0);
+  // The page's own theme is the docs' and does not move.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/account-menu');
+  const trigger = page.locator('.stage .sidebar:not(.sidebar-drawer) .account-menu-trigger');
+  await expect(trigger).toHaveAccessibleName('Ada Lovelace');
+  await expect(trigger).toHaveAccessibleDescription('ada@example.com');
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu', { name: 'Account' })).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', { name: 'Theme' })).toContainText('Dark');
+  await page.keyboard.press('Escape');
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------
@@ -1882,6 +1970,8 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
  * app, and never by the card the page is drawn in.
  */
 const LONG_TARGETS: Record<string, string[]> = {
+  // The person's name and detail are the app's and wrap at any character in the trigger, never widening the rail.
+  'account-menu': ['.stage .account-menu-name', '.stage .account-menu-detail'],
   'app-shell': ['.stage .app-shell-main p'],
   // A badge's text is its label, which caps the floor a long word gives a holder sized by its content.
   badge: ['.stage .badge-label'],
@@ -1996,6 +2086,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   skeleton: 'a skeleton draws shapes and no text',
   sparkline: 'a drawing with no text; its name, when it has one, is an aria-label nothing draws',
   spinner: 'a progress mark with no text a person writes',
+  'theme-switch': "three choices whose words are the library's or the app's translations, each a short word",
   toast: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   tooltip:
     "its text is in a portal that opens on hover or focus; the Wrapped story's 375px baseline pins its wrapping",
@@ -2190,6 +2281,8 @@ test("the month grid's basic example reads as a table: Year and twelve months, a
  * of its own, and the Storybook a11y run checks a lone shell's landmarks with every rule on.
  */
 const NESTED_SHELL: Record<string, string> = {
+  'account-menu':
+    'its rail example is a Sidebar in an AppShell, which renders its own <main> inside the page',
   'app-shell': 'each example is an AppShell, which renders its own <main> inside the page',
   sidebar: 'each example is a Sidebar in an AppShell, which renders its own <main> inside the page',
 };
@@ -2226,6 +2319,7 @@ for (const { slug, url } of PAGES) {
  * Node; this proves the production build puts them in the page.
  */
 const SERVER_RENDERED: Record<string, string[]> = {
+  'account-menu': ['.stage .account-menu-trigger'],
   'app-shell': ['.stage .app-shell'],
   avatar: ['.stage .avatar', '.stage .avatar-initials'],
   badge: ['.stage .badge'],
@@ -2347,6 +2441,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   switch: ['.stage .switch-thumb'],
   // The row, the selected tab and its panel: the whole selected state is in the server's HTML.
   tabs: ['.stage .tab-list', '.stage .tab[aria-selected="true"]', '.stage .tab-panel'],
+  'theme-switch': ['.stage .segmented', '.stage .theme-switch'],
   'text-area': ['.stage .textarea'],
   'text-field': ['.stage .input'],
   // The buttons that raise the toasts, and the polite status host the docs layout mounts, which is in the page

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Copy, Ellipsis, LogOut, Pencil, Settings, User } from 'lucide-react';
+import { Copy, Ellipsis, LogOut, Palette, Pencil, Settings, User } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from '../button';
@@ -9,7 +9,7 @@ import { IconButton } from '../icon-button';
 import { MENU_ROW_A11Y } from '../stories/a11y';
 import { CLEAR_OF_FOOT, frameAround } from '../stories/corner';
 import { tokenColor, washColor } from '../stories/paint';
-import { Menu, MenuTrigger, type MenuProps } from './Menu';
+import { Menu, MenuTrigger, SubmenuTrigger, type MenuProps } from './Menu';
 import { MenuItem } from './MenuItem';
 import { MenuSection } from './MenuSection';
 import { MenuSeparator } from './MenuSeparator';
@@ -506,5 +506,64 @@ export const FromADialog: Story = {
     await waitFor(() => expect(document.querySelector('.menu-popover')).toBeNull());
     await expect(body.getByRole('button', { name: 'Actions' })).toHaveFocus();
     await expect(dialog).toBeInTheDocument();
+  },
+};
+
+/**
+ * A submenu opened by keys from a menu opened by its default: the Theme row keeps its wash and draws its end value
+ * and its chevron, and the submenu opens at its end with its first row level with Theme, Dark chosen.
+ */
+export const Submenu: Story = {
+  render: (args) => (
+    <Opened {...args}>
+      <MenuItem id="profile" icon={<User />}>
+        Profile
+      </MenuItem>
+      <SubmenuTrigger>
+        <MenuItem id="theme" icon={<Palette />} end="Dark">
+          Theme
+        </MenuItem>
+        <Menu selectionMode="single" defaultSelectedKeys={['dark']}>
+          <MenuItem id="system">System</MenuItem>
+          <MenuItem id="light">Light</MenuItem>
+          <MenuItem id="dark">Dark</MenuItem>
+        </Menu>
+      </SubmenuTrigger>
+      <MenuSeparator />
+      <MenuItem id="logout" icon={<LogOut />}>
+        Log out
+      </MenuItem>
+    </Opened>
+  ),
+  play: async () => {
+    await atRest();
+    const menu = within(document.body).getByRole('menu', { name: 'More' });
+    await waitFor(() => expect(menu).toHaveFocus());
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}');
+    const theme = item('Theme');
+    await waitFor(() => expect(theme).toHaveFocus());
+    await userEvent.keyboard('{ArrowRight}');
+    const popovers = await waitFor(async () => {
+      const found = [...document.querySelectorAll<HTMLElement>('.menu-popover')];
+      await expect(found).toHaveLength(2);
+      for (const popover of found) await expect(popover).not.toHaveAttribute('data-entering');
+      return found;
+    });
+    await Promise.all(
+      popovers.flatMap((popover) =>
+        popover.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => null)),
+      ),
+    );
+    await waitFor(() => expect(item('Dark')).toHaveFocus());
+    await expect(theme).toHaveAttribute('data-open', 'true');
+    await expect(getComputedStyle(theme).backgroundColor).toBe(washColor());
+    // At the row's end, its first row level with Theme.
+    const [, submenu] = popovers;
+    if (!submenu) throw new Error('No submenu');
+    await expect(submenu.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+      theme.getBoundingClientRect().right,
+    );
+    const first = item('System').getBoundingClientRect();
+    await expect(Math.abs(first.top - theme.getBoundingClientRect().top)).toBeLessThanOrEqual(1);
   },
 };

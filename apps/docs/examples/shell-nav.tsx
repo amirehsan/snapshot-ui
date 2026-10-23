@@ -22,7 +22,7 @@ import {
   SlidersHorizontal,
   Target,
 } from 'lucide-react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 /** A stand-in mark: a square in the text color with a canvas cross. */
 function Mark(): ReactElement {
@@ -70,10 +70,12 @@ export interface ShellNavProps {
   label: string;
   /** Two labels long enough to wrap. */
   isLong?: boolean;
+  /** The footer's row: the signed-in person's avatar and name unless given. */
+  footer?: ReactNode;
 }
 
 /** The rail the shell examples share: the brand, the search, three groups and the account row. */
-export function ShellNav({ label, isLong = false }: ShellNavProps): ReactElement {
+export function ShellNav({ label, isLong = false, footer = <FooterRow /> }: ShellNavProps): ReactElement {
   return (
     <Sidebar
       aria-label={label}
@@ -83,7 +85,7 @@ export function ShellNav({ label, isLong = false }: ShellNavProps): ReactElement
         </SidebarBrand>
       }
       search={<SidebarSearch shortcut="Mod K">Search or jump to</SidebarSearch>}
-      footer={<FooterRow />}
+      footer={footer}
     >
       <SidebarGroup label="Overview" isCurrent>
         <SidebarItem href="#home" icon={<House />} isCurrent>

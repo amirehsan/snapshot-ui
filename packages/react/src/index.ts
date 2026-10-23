@@ -167,12 +167,14 @@ export {
   MenuSection,
   MenuSeparator,
   MenuTrigger,
+  SubmenuTrigger,
   type Key,
   type MenuItemProps,
   type MenuProps,
   type MenuSectionProps,
   type MenuSeparatorProps,
   type MenuTriggerProps,
+  type SubmenuTriggerProps,
 } from './menu';
 export {
   toast,
@@ -293,3 +295,12 @@ export {
   type PanelRowProps,
   type PanelSectionProps,
 } from './panel-layout';
+export {
+  ThemeMenu,
+  ThemeSwitch,
+  type ThemeChoice,
+  type ThemeLabels,
+  type ThemeMenuProps,
+  type ThemeSwitchProps,
+} from './theme-switch';
+export { AccountMenu, type AccountMenuProps } from './account-menu';

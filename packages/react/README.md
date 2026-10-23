@@ -36,6 +36,7 @@ Body text is set at weight 450, which only a variable font has. Load Sofia Sans 
 
 Every name links to its page in the documentation, with examples, props, keyboard use and design rules.
 
+- [Account menu](https://snapshotui.com/docs/components/account-menu)
 - [App shell](https://snapshotui.com/docs/components/app-shell)
 - [Avatar](https://snapshotui.com/docs/components/avatar)
 - [Badge](https://snapshotui.com/docs/components/badge)
@@ -92,6 +93,7 @@ Every name links to its page in the documentation, with examples, props, keyboar
 - [Stat tile](https://snapshotui.com/docs/components/stat-tile)
 - [Switch](https://snapshotui.com/docs/components/switch)
 - [Tabs](https://snapshotui.com/docs/components/tabs)
+- [Theme switch](https://snapshotui.com/docs/components/theme-switch)
 - [Text area](https://snapshotui.com/docs/components/text-area)
 - [Text field](https://snapshotui.com/docs/components/text-field)
 - [Toast](https://snapshotui.com/docs/components/toast)
