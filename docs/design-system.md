@@ -13457,7 +13457,10 @@ own `selectionMode` (settings plan, spec correction 76). The submenu is named
 
 **The docs header's switch** is ThemeSwitch at `size="sm"`, named "Color
 mode", its value `next-themes`' `theme` once mounted and `null` before, so
-the docs offer System beside Light and Dark (plan open question 4).
+the docs offer System beside Light and Dark (plan open question 4). With
+System and the icons the header's two switches need 479px, so beside the
+open rail they share a short title's line from 1143px and take a line of
+their own under it below that (settings plan, spec corrections 85 and 86).
 
 **Server rendering.** A client part; its face is the server's, the given
 value checked, and hydration changes nothing. Its root is `segmented` or

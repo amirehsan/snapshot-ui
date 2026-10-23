@@ -485,6 +485,50 @@ test('the color mode switch themes the page and persists', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
+test("the docs header's ThemeSwitch offers System, Light and Dark and sets data-theme", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page);
+  const group = page.getByRole('banner').getByRole('radiogroup', { name: 'Color mode', exact: true });
+  await expect(group).toHaveClass(/theme-switch/);
+  const radios = group.getByRole('radio');
+  await expect(radios).toHaveCount(3);
+  expect(await group.locator('.segmented-option').allTextContents()).toEqual(['System', 'Light', 'Dark']);
+  // Each choice draws its icon, hidden, before its word.
+  await expect(group.locator('.segmented-icon')).toHaveCount(3);
+  for (const icon of await group.locator('.segmented-icon').all()) {
+    await expect(icon).toHaveAttribute('aria-hidden', 'true');
+  }
+  // Nothing chosen yet, the page follows the system, and System is checked once the browser knows.
+  await expect(group.getByRole('radio', { name: 'System' })).toBeChecked();
+  const option = (text: string): Locator => group.locator('.segmented-option', { hasText: text });
+  await option('Light').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(group.getByRole('radio', { name: 'Light' })).toBeChecked();
+  await option('Dark').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(14, 14, 13)');
+  // System follows the emulated preference, and keeps following it.
+  await option('System').click();
+  await expect(group.getByRole('radio', { name: 'System' })).toBeChecked();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(group.getByRole('radio', { name: 'System' })).toBeChecked();
+  // The arrows choose, as in any radio group.
+  await group.getByRole('radio', { name: 'System' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(group.getByRole('radio', { name: 'Light' })).toBeChecked();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(
+    page
+      .getByRole('banner')
+      .getByRole('radiogroup', { name: 'Color mode', exact: true })
+      .getByRole('radio', { name: 'Light' }),
+  ).toBeChecked();
+});
+
 test('the corner switch recuts the page and persists', async ({ page }) => {
   await visit(page);
   await page.locator('label', { hasText: 'Square' }).click();
@@ -2255,7 +2299,7 @@ for (const width of [375, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await visit(page);
     for (const [name, options] of [
-      ['Color mode', ['Light', 'Dark']],
+      ['Color mode', ['System', 'Light', 'Dark']],
       ['Corners', ['Rounded', 'Soft', 'Square']],
     ] as const) {
       const group = page.getByRole('radiogroup', { name, exact: true });
@@ -4310,9 +4354,10 @@ for (const width of [375, 768]) {
   });
 }
 
-for (const width of [1024, 1067, 1440]) {
+for (const width of [1152, 1440]) {
   test(`the docs header keeps its switches beside a short title at ${String(width)}px`, async ({ page }) => {
-    // Beside the open rail the column is 640px at 1024; the docs' titles keep 16rem there (spec correction 76).
+    // Beside the open rail the column is the viewport less 384px; the docs' titles keep 16rem (spec correction
+    // 76), and the switches, with ThemeSwitch's System and its icons, need 479px beside them, so from 1143px.
     await page.setViewportSize({ width, height: 900 });
     await visit(page);
     const title = await page.locator('.header .page-header h1').boundingBox();
@@ -4320,6 +4365,30 @@ for (const width of [1024, 1067, 1440]) {
     if (!title || !actions) throw new Error('No title or switches');
     expect(actions.x).toBeGreaterThan(title.x + title.width);
     expect(actions.y).toBeLessThan(title.y + title.height);
+    expect(await sideways(page)).toBe(0);
+  });
+}
+
+for (const width of [1024, 1067]) {
+  test(`the docs header puts its switches on a line of their own under the title at ${String(width)}px`, async ({
+    page,
+  }) => {
+    // Under 1143px the column beside the open rail cannot hold 16rem of title and the switches, so the switches
+    // wrap whole under the title, at the column's start, and nothing scrolls sideways (settings plan, spec
+    // correction 86).
+    await page.setViewportSize({ width, height: 900 });
+    await visit(page);
+    const title = await page.locator('.header .page-header h1').boundingBox();
+    const actions = await page.locator('.header .page-header-actions').boundingBox();
+    const column = await page.locator('.header .page-header-titles').boundingBox();
+    if (!title || !actions || !column) throw new Error('No title or switches');
+    expect(actions.y).toBeGreaterThanOrEqual(title.y + title.height);
+    expect(Math.abs(actions.x - column.x)).toBeLessThanOrEqual(1);
+    // Both switches on the one line.
+    const boxes = await page
+      .locator('.header .page-header-actions [role="radiogroup"]')
+      .evaluateAll((groups) => groups.map((group) => group.getBoundingClientRect().top));
+    expect(new Set(boxes.map(Math.round)).size).toBe(1);
     expect(await sideways(page)).toBe(0);
   });
 }

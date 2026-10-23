@@ -1,6 +1,13 @@
 'use client';
 
-import { IconButton, PageHeader, SegmentedControl, SegmentedControlItem } from '@snapshot-ui/react';
+import {
+  IconButton,
+  PageHeader,
+  SegmentedControl,
+  SegmentedControlItem,
+  ThemeSwitch,
+  type ThemeChoice,
+} from '@snapshot-ui/react';
 import { useTheme } from 'next-themes';
 import { useEffect, useRef, type ReactElement } from 'react';
 import { useMounted, useShape } from '@/lib/document-state';
@@ -8,7 +15,7 @@ import { writeShape } from '@/lib/prepaint';
 import { useShell } from './context';
 
 /**
- * One of the header's switches: a compact segmented control. Its value is not
+ * The corners switch: a compact segmented control. Its value is not
  * known until the browser has said which option is set, and until then it
  * shows none.
  */
@@ -44,27 +51,26 @@ function Choice<T extends string>({
   );
 }
 
-const THEMES = [
-  ['light', 'Light'],
-  ['dark', 'Dark'],
-] as const;
-
 const SHAPES = [
   ['rounded', 'Rounded'],
   ['soft', 'Soft'],
   ['square', 'Square'],
 ] as const;
 
+/** next-themes' stored theme as a ThemeSwitch value; anything else, or nothing yet, is System. */
+const themeChoice = (theme: string | undefined): ThemeChoice =>
+  theme === 'light' || theme === 'dark' ? theme : 'system';
+
 /**
  * The docs site's header: the library's PageHeader, with the trail as its eyebrow, the page's title as its one
- * `h1` and the two switches as its actions, and under 1024px the drawer's menu button over its start corner,
- * since PageHeader has no leading slot (plan open question 3). The shell's row is a `div` with the banner role
- * and sticks; the PageHeader inside it takes `role="none"`, so the page keeps one banner and no `header`
- * element holds another (spec corrections 62 and 71).
+ * `h1` and the two switches as its actions, the color mode drawn with ThemeSwitch, and under 1024px the drawer's
+ * menu button over its start corner, since PageHeader has no leading slot (plan open question 3). The shell's row
+ * is a `div` with the banner role and sticks; the PageHeader inside it takes `role="none"`, so the page keeps one
+ * banner and no `header` element holds another (spec corrections 62 and 71).
  */
 export function DocsHeader({ group, title }: { group: string; title: string }): ReactElement {
   const { drawerOpen, openDrawer } = useShell();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   // Both switches show values only the browser knows, so they settle after hydration.
   const mounted = useMounted();
   const shape = useShape();
@@ -117,11 +123,13 @@ export function DocsHeader({ group, title }: { group: string; title: string }): 
         title={title}
         actions={
           <>
-            <Choice
-              label="Color mode"
+            {/* The library's own theme switch: System, Light and Dark. next-themes knows the choice only in the
+                browser, so it shows none until then. */}
+            <ThemeSwitch
+              size="sm"
+              aria-label="Color mode"
               name="theme"
-              options={THEMES}
-              value={mounted ? (resolvedTheme as 'light' | 'dark' | undefined) : undefined}
+              value={mounted ? themeChoice(theme) : null}
               onChange={setTheme}
             />
             <Choice

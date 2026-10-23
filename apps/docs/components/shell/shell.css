@@ -191,9 +191,10 @@
   }
 
   /* Beside the open rail, from 1024px, the column is 640px at its narrowest. PageHeader keeps its titles 20rem
-     beside the switches, which would drop the switches under a short title up to 1068px, where the old header
-     always kept them beside it; the docs' titles keep 16rem instead, so the switches stay on the title's line
-     (spec correction 76). A long title still wraps beside them. */
+     beside the switches; the docs' titles keep 16rem instead, so the switches stay on a short title's line
+     wherever they fit (spec correction 76). With the color mode's System and its icons (ThemeSwitch) they need
+     479px, so from 1143px; under it they take a line of their own under the title (settings plan, spec
+     correction 86). A long title still wraps beside them. */
   @media (width >= 1024px) {
     .header-page .page-header-titles {
       flex-basis: 16rem;
