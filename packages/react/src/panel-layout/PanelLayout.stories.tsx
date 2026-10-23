@@ -614,22 +614,28 @@ export const NavSticks: Story = {
   play: async ({ canvasElement }) => {
     const side = find(canvasElement, '.panel-layout-side');
     const nav = find(canvasElement, '.panel-nav');
-    const pixels = (value: string): number => {
+    /*
+     * A probe `value` tall, placed once and only read after: waitFor runs its callback again on every change to
+     * the document, so a callback that placed its own probe would wake itself forever and hold the main thread.
+     */
+    const probeOf = (value: string): HTMLElement => {
       const probe = document.createElement('div');
+      probe.setAttribute('aria-hidden', 'true');
       probe.style.position = 'absolute';
       probe.style.blockSize = value;
       side.append(probe);
-      const { height } = probe.getBoundingClientRect();
-      probe.remove();
-      return height;
+      return probe;
     };
+    const stickyTop = probeOf('var(--page-sticky-top, 0px)');
+    const navTop = probeOf('calc(var(--page-sticky-top, 0px) + var(--spacing-peer))');
+    const pixels = (probe: HTMLElement): number => probe.getBoundingClientRect().height;
     try {
-      await waitFor(() => expect(pixels('var(--page-sticky-top, 0px)')).toBeGreaterThan(0), {
+      await waitFor(() => expect(pixels(stickyTop)).toBeGreaterThan(0), {
         timeout: 5000,
       });
       window.scrollTo({ top: 400, behavior: 'instant' });
       await waitFor(() => expect(window.scrollY).toBe(400), { timeout: 5000 });
-      const expected = pixels('calc(var(--page-sticky-top, 0px) + var(--spacing-peer))');
+      const expected = pixels(navTop);
       await waitFor(
         () => expect(Math.abs(nav.getBoundingClientRect().top - expected)).toBeLessThanOrEqual(1),
         {
@@ -637,6 +643,8 @@ export const NavSticks: Story = {
         },
       );
     } finally {
+      stickyTop.remove();
+      navTop.remove();
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
   },
