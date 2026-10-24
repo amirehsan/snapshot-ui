@@ -8,6 +8,7 @@ import {
   isValidElement,
   useContext,
   useId,
+  useLayoutEffect,
   useRef,
   type HTMLAttributes,
   type KeyboardEvent,
@@ -93,11 +94,12 @@ interface AccordionContextValue {
   /** Whether "Show all sections" is drawn, so an item it cannot see warns. */
   hasExpandAll: boolean;
   /**
-   * Claims the one open a check of the form's validity may make in single mode, and says whether this item got
-   * it, so a second field that fails in the same check does not fold the item the browser is about to focus a
-   * field in. The claim lasts until the next task.
+   * Whether the first field that failed the current check of the form's validity is inside `fold`. The browser
+   * focuses only the first field that fails, so one at a time only its item may open: a later field must
+   * neither open its item nor fold the one the browser is about to focus a field in. The accordion hears every
+   * `invalid` on the document before its items do and keeps the first until the next task.
    */
-  claimInvalidOpen: () => boolean;
+  holdsFirstInvalid: (fold: Element | null) => boolean;
 }
 
 const AccordionContext = createContext<AccordionContextValue | null>(null);
@@ -180,15 +182,23 @@ export function Accordion({
   ...props
 }: AccordionProps): ReactElement {
   const base = useId();
-  const openedForInvalid = useRef(false);
-  const claimInvalidOpen = (): boolean => {
-    if (openedForInvalid.current) return false;
-    openedForInvalid.current = true;
-    setTimeout(() => {
-      openedForInvalid.current = false;
-    });
-    return true;
-  };
+  const firstInvalid = useRef<Node | null>(null);
+  useLayoutEffect(() => {
+    // In the capture phase on the document, so it runs before any item's own listener for the same event.
+    const onInvalid = (event: Event): void => {
+      if (firstInvalid.current !== null || !(event.target instanceof Node)) return;
+      firstInvalid.current = event.target;
+      setTimeout(() => {
+        firstInvalid.current = null;
+      });
+    };
+    document.addEventListener('invalid', onInvalid, true);
+    return () => {
+      document.removeEventListener('invalid', onInvalid, true);
+    };
+  }, []);
+  const holdsFirstInvalid = (fold: Element | null): boolean =>
+    fold !== null && firstInvalid.current !== null && fold.contains(firstInvalid.current);
   const items = knownItems(children);
   const panelIds = new Map(items.map((item, index) => [item.id, `${base}-panel-${String(index)}`]));
   const showsExpandAll = hasExpandAll && allowsMultipleExpanded;
@@ -218,7 +228,7 @@ export function Accordion({
         <div {...group} onKeyDown={onKey} />
       )}
     >
-      <AccordionContext.Provider value={{ level, panelIds, hasExpandAll: showsExpandAll, claimInvalidOpen }}>
+      <AccordionContext.Provider value={{ level, panelIds, hasExpandAll: showsExpandAll, holdsFirstInvalid }}>
         {showsExpandAll ? (
           <ExpandAll items={items} panelIds={panelIds} labels={{ ...DEFAULT_LABELS, ...labels }} />
         ) : null}
@@ -268,7 +278,7 @@ export function AccordionItem({
   useOpenOnInvalid(foldRef, !isExpanded, () => {
     if (!group || group.expandedKeys.has(id)) return;
     // One at a time, the browser focuses only the first field that failed, so only its item opens.
-    if (!group.allowsMultipleExpanded && accordion && !accordion.claimInvalidOpen()) return;
+    if (!group.allowsMultipleExpanded && accordion && !accordion.holdsFirstInvalid(foldRef.current)) return;
     group.toggleKey(id);
   });
   const isMarked = !isExpanded && (isChanged || holdsChange);

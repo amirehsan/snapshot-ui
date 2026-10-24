@@ -186,6 +186,28 @@ describe('the fold hooks under a DisclosureGroup', () => {
     },
   );
 
+  it('keeps the open item open in single mode when the first field that fails is in it', async () => {
+    const user = userEvent.setup();
+    render(
+      <form onSubmit={stay}>
+        <Accordion allowsMultipleExpanded={false} defaultExpandedKeys={['billing']}>
+          <AccordionItem id="billing" title="Billing address">
+            <TextField label="Street" isRequired />
+          </AccordionItem>
+          <AccordionItem id="notifications" title="Notifications">
+            <TextField label="Digest address" isRequired />
+          </AccordionItem>
+        </Accordion>
+        <button type="submit">Save</button>
+      </form>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    // The browser focuses Street, the first field that failed, so its item stays open and no other opens.
+    expect(itemOf('Billing address')).toHaveAttribute('data-expanded', '');
+    expect(itemOf('Notifications')).not.toHaveAttribute('data-expanded');
+    expect(screen.getByRole('textbox', { name: 'Street' })).toHaveFocus();
+  });
+
   it('keeps the panel id the accordion gives and writes it as the toggle aria-controls', () => {
     const { container } = render(
       <Accordion hasExpandAll defaultExpandedKeys={['billing']}>
