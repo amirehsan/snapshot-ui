@@ -845,6 +845,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/pagination">Pagination</Link>
                 <Link href="/docs/components/panel-layout">Panel layout</Link>
                 <Link href="/docs/components/popover">Popover</Link>
+                <Link href="/docs/components/position-pad">Position pad</Link>
                 <Link href="/docs/components/progress-bar">Progress bar</Link>
                 <Link href="/docs/components/prose">Prose</Link>
                 <Link href="/docs/components/radio-group">Radio group</Link>

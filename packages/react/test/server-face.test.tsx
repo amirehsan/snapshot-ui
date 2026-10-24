@@ -37,6 +37,7 @@ import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Accordion, AccordionItem } from '../src/accordion';
 import { TagInput, emailPreset } from '../src/tag-input';
+import { PositionPad } from '../src/position-pad';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
 import {
@@ -543,6 +544,17 @@ const FACES: [name: string, element: ReactElement][] = [
   // Nothing reads the locale: the tags, the hidden inputs, the count and the empty status host.
   ['TagInput', <ServerInvite />],
   ['TagInput empty', <ServerInvite values={[]} />],
+  // The default names never read the direction, so a Persian page's server writes the same English words.
+  ['PositionPad', <PositionPad label="Text position" name="place" defaultValue="center" />],
+  [
+    'PositionPad with disabled positions',
+    <PositionPad
+      label="Text position"
+      name="place"
+      defaultValue="top-start"
+      disabledPositions={['center-start', 'center-end']}
+    />,
+  ],
 ];
 
 describe('the server face', () => {

@@ -162,6 +162,23 @@ test.describe('forced colors', () => {
     expect((await paint(glyph)).text).not.toBe(await systemColor(page, 'canvas'));
   });
 
+  test('a chosen cell keeps highlight and its dot', async ({ page }) => {
+    await visit(page, '/docs/components/position-pad');
+    const pad = page.locator('.stage .position-pad').first();
+    const chosen = pad.locator('.position-pad-cell[data-selected]');
+    await expect(chosen).toHaveCount(1);
+    const text = await systemColor(page, 'CanvasText');
+    // Every fill is repainted, so the chosen cell is drawn out of the repaint in the reader's highlight, with its
+    // dot in highlighttext, and the other dots and the track's edge in the reader's text color.
+    expect((await paint(chosen)).fill).toBe(await systemColor(page, 'Highlight'));
+    expect((await paint(chosen.locator('.position-pad-dot'))).fill).toBe(
+      await systemColor(page, 'HighlightText'),
+    );
+    const other = pad.locator('.position-pad-cell:not([data-selected]) .position-pad-dot').first();
+    expect((await paint(other)).fill).toBe(text);
+    expect((await paint(pad.locator('.position-pad-track'))).edge).toBe(text);
+  });
+
   test('a folded accordion keeps its rules, its chevron and its marker', async ({ page }) => {
     await visit(page, '/docs/components/accordion');
     const form = page.locator('.stage form').filter({ has: page.locator('.accordion') });
@@ -2070,6 +2087,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   // A section's name in the list and its heading are the app's words, and break a word only when it alone is wider
   // than their column.
   'panel-layout': ['.stage .panel-nav-name', '.stage .panel-section-heading'],
+  // The cells are of fixed size and hold no text; the label and the hint are the app's words.
+  'position-pad': ['.stage .field-label', '.stage .field-description'],
   // The label is the app's sentence, a file name among it, and wraps at any character, as the meter's does.
   'progress-bar': ['.stage .progress-bar-label'],
   // A paragraph is the app's text, which breaks anywhere inside its measure.
@@ -2471,6 +2490,8 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // Both faces are in the server's HTML, and the pairs are static.
   'panel-layout': ['.stage .panel-layout[data-view]', '.stage .panel-row'],
   popover: ['.stage .button'],
+  // The track and its nine native radios, the chosen one checked: the pad draws and submits before hydration.
+  'position-pad': ['.stage .position-pad-track', '.stage .position-pad-cell input[type=radio]'],
   // A static part: the track with its role and values is in the server's HTML.
   'progress-bar': ['.stage .progress-bar-track[role="progressbar"]'],
   // Rendered from Markdown by react-markdown in a server component, the wide table in its region.

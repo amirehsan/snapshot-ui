@@ -525,6 +525,13 @@
     "limit": "1.5 kB"
   },
   {
+    "name": "import { PositionPad } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ PositionPad }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "2 kB"
+  },
+  {
     "name": "Button with React Aria (watch only)",
     "path": "dist/index.js",
     "import": "{ Button }",

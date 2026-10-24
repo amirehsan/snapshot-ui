@@ -162,6 +162,9 @@ import PanelLayoutPairs from './panel-layout-pairs';
 import PanelLayoutPhone from './panel-layout-phone';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
+import PositionPadBasic from './position-pad-basic';
+import PositionPadCss from './position-pad-css';
+import PositionPadStates from './position-pad-states';
 import ProgressBarBasic from './progress-bar-basic';
 import ProgressBarIndeterminate from './progress-bar-indeterminate';
 import ProseCard from './prose-card';
@@ -405,6 +408,9 @@ export const examples = {
   'panel-layout-phone': PanelLayoutPhone,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
+  'position-pad-basic': PositionPadBasic,
+  'position-pad-css': PositionPadCss,
+  'position-pad-states': PositionPadStates,
   'progress-bar-basic': ProgressBarBasic,
   'progress-bar-indeterminate': ProgressBarIndeterminate,
   'prose-card': ProseCard,

@@ -35,6 +35,7 @@ import { Pagination } from '../pagination';
 import { PanelLayout, PanelNav, PanelNavItem, PanelSection } from '../panel-layout';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
+import { PositionPad } from '../position-pad';
 import { ProgressBar } from '../progress-bar';
 import { Prose } from '../prose';
 import { GOALS_GUIDE_FA } from '../prose/fixtures';
@@ -2816,5 +2817,68 @@ export const TagInputMirrored: Story = {
     await waitFor(() => expect(second).toHaveFocus());
     // The shot shows the field at rest, with no ring.
     second.blur();
+  },
+};
+
+/** Persian names for the nine cells: on a right-to-left page top-start is the top right. */
+const PERSIAN_POSITIONS = {
+  'top-start': 'بالا راست',
+  'top-center': 'بالا',
+  'top-end': 'بالا چپ',
+  'center-start': 'راست',
+  center: 'وسط',
+  'center-end': 'چپ',
+  'bottom-start': 'پایین راست',
+  'bottom-center': 'پایین',
+  'bottom-end': 'پایین چپ',
+} as const;
+
+/**
+ * A pad on a Persian page, its cells named in Persian through `labels`, top-start chosen: top-start is drawn at
+ * the top right, the start of the row, and Arrow Left moves on to the next cell, drawn to its left, while Arrow
+ * Right moves back toward the start (spec 8.3, Review Focus 9). Three engines.
+ */
+export const PositionPadMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div dir="rtl" lang="fa" data-font="vazirmatn" style={{ width: 'min(32rem, calc(100vw - 2rem))' }}>
+        <PositionPad
+          label="جای متن"
+          description="با کلیدهای جهت میان جاها بروید."
+          defaultValue="top-start"
+          labels={PERSIAN_POSITIONS}
+        />
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await document.fonts.load('500 16px Vazirmatn', 'جای متن');
+    await document.fonts.ready;
+    const canvas = within(canvasElement);
+    const track = find(canvasElement, '.position-pad-track');
+    const start = find(canvasElement, '[data-position="top-start"]');
+    const center = find(canvasElement, '[data-position="top-center"]');
+    const end = find(canvasElement, '[data-position="top-end"]');
+    // The track starts at the right of the field, and top-start at the right of the track, 1px of edge and 3px in.
+    await expectSameEdge(rect(track).right, rect(find(canvasElement, '.position-pad')).right);
+    await expectSameEdge(rect(start).right, rect(track).right - 4);
+    await expectSameEdge(rect(start).top, rect(track).top + 4);
+    await expect(rect(center).right).toBeLessThanOrEqual(rect(start).left + 0.5);
+    await expect(rect(end).right).toBeLessThanOrEqual(rect(center).left + 0.5);
+    const first = canvas.getByRole('radio', { name: 'بالا راست' });
+    await expect(first).toBeChecked();
+    await waitFor(() => {
+      if (document.activeElement !== first) first.focus();
+      return expect(first).toHaveFocus();
+    });
+    // Arrow Left goes on in reading order, to the cell drawn to the left; Arrow Right comes back toward the start.
+    await userEvent.keyboard('{ArrowLeft}');
+    await waitFor(() => expect(canvas.getByRole('radio', { name: 'بالا' })).toBeChecked());
+    await userEvent.keyboard('{ArrowRight}');
+    await waitFor(() => expect(first).toBeChecked());
+    await expect(first).toHaveFocus();
+    // The shot shows the pad at rest, with no ring.
+    first.blur();
   },
 };

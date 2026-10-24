@@ -22,6 +22,7 @@ import {
   Link,
   PageHeader,
   Pagination,
+  PositionPad,
   Prose,
   RouterProvider,
   TagInput,
@@ -126,6 +127,16 @@ const PARTS: [name: string, render: (twin: string) => ReactElement][] = [
         description="Separate addresses with commas."
         preset={emailPreset}
         defaultValue={['ana@example.com', 'bo@example.com']}
+      />
+    ),
+  ],
+  [
+    'PositionPad',
+    () => (
+      <PositionPad
+        label="Text position"
+        description="Use the arrow keys to move between positions."
+        defaultValue="center"
       />
     ),
   ],

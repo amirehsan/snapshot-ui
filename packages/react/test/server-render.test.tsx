@@ -18,6 +18,7 @@ import { DateRangePicker } from '../src/date-range-picker';
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
 import { Accordion, AccordionItem } from '../src/accordion';
 import { TagInput, emailPreset } from '../src/tag-input';
+import { PositionPad } from '../src/position-pad';
 import { CollapsibleCard } from '../src/collapsible-card';
 import { ComboBox } from '../src/combo-box';
 import { CommandPalette } from '../src/command-palette';
@@ -1489,6 +1490,31 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '>Ada Lovelace</span></button>',
     ],
     ['account-menu-name'],
+  ],
+  [
+    // The nine native radios in reading order, each named by its position in English, the fifth checked: the pad
+    // draws and submits before hydration, and no aria-orientation, which means nothing for two axes.
+    'PositionPad',
+    <PositionPad label="Text position" name="place" defaultValue="center" />,
+    [
+      'class="field radio-group position-pad"',
+      'role="radiogroup"',
+      '<div class="position-pad-track">',
+      '<label data-position="top-start"',
+      'class="position-pad-cell"',
+      'aria-label="Top left"',
+      'aria-label="Top"',
+      'aria-label="Top right"',
+      'aria-label="Left"',
+      'aria-label="Center"',
+      'aria-label="Right"',
+      'aria-label="Bottom left"',
+      'aria-label="Bottom"',
+      'aria-label="Bottom right"',
+      'name="place" checked="" value="center"',
+      '<span class="position-pad-dot" aria-hidden="true"></span>',
+    ],
+    ['aria-orientation'],
   ],
 ];
 

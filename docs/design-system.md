@@ -876,6 +876,7 @@ panel folded to its header.
 | a field | pill | 6px | its field button | a circle | 6px | 0 |
 | MultiSelect's frame | half a field | 6px | a tag | 18px | 6px | 0 |
 | TagInput's frame, MultiSelect's by selector | half a field | 6px | a tag | 18px | 6px | 0 |
+| PositionPad's track | surface | 1 + 3px | every cell, wherever it falls | 20px, a circle on 40px | 8px | 0 |
 
 And the controls that move, by the corner inset (below):
 
@@ -13902,3 +13903,140 @@ React Aria's English "Press Delete to remove tag." on a tag. Not yet
 verified on a real Android phone with its own keyboard, on an iPhone, with a Persian
 and a Chinese input method, in Windows' contrast themes, or on phones at
 320px to 430px.
+
+## PositionPad
+
+A 3 by 3 choice of where something sits: a caption on a banner, a logo on
+a page, the part of a picture that stays in view (choices spec, section 8;
+plan Task 4). Nine radios in reading order, each named by its position,
+in a track; the chosen one is an ink circle. Built on React Aria's
+`RadioGroup` and `Radio`, so it is a radio group to a screen reader and to
+a form, and the values, `top-start` through `bottom-end`, are the form
+values.
+
+**Why a radio group and not a grid** (ruling 20; spec 8.5). The APG's
+layout grid fits the shape, but a position is one value in a form, which
+native radios submit and reset with no code of the library's, while a grid
+submits nothing; a radio's `aria-checked` is read by every screen reader,
+while a grid's selection is read unevenly; and each radio's name, "Bottom
+right", carries the second direction in words. From the grid the pad takes
+only Up and Down that stop at the column's ends.
+
+**The keys** (ruling 21). Left and Right run through all nine in reading
+order and wrap from the last to the first, React Aria's own linear order,
+which keeps the radio group pattern's promise that the arrows reach every
+option; in right to left they swap. Up and Down move three on, within the
+column, and stop at its ends, since a wrap from the bottom of a column to
+its top would surprise a sighted keyboard user. A disabled cell is skipped
+in the direction of travel, and with nothing enabled that way focus stays.
+The map is one pure function, `padMove`, in `position-pad/moves.ts`. A
+capture-phase handler on the track, the library's own element and an
+ancestor of every input, runs before React Aria's group handler, which
+listens on the way up, and before the browser's own radio arrows, which are
+the key's default action: it focuses the next cell's native radio, sets the
+value through `RadioGroupStateContext`, so React Aria's state, `onChange`
+and the native radios stay one, and calls `preventDefault()` and
+`stopPropagation()`, so neither of the others runs on the same press
+(risk R4; `keys-spike.test.tsx`, and `TwoDimensionalKeys` and
+`NativeArrowsPrevented` with the engines' own keys in three engines). A key
+with Alt, Ctrl, Meta or Shift is left alone, as React Aria's shortcuts leave
+it. The direction is the track's computed `direction`, read at the press,
+so a pad an app marks `dir="ltr"` on a Persian page keeps left as left.
+Read only, the arrows move focus and choose nothing, React Aria's rule for
+read-only radios. Before hydration the browser's own radio arrows move
+through the nine in tree order, so the keys still reach every cell.
+
+**`aria-orientation`** means nothing for two axes. React Aria writes it on
+its group, and the pad draws the group's element through React Aria's
+`render` without it, so no orientation is claimed (spec 8.4; spec
+correction 40).
+
+**Logical values** (ruling 22). `start` and `end` follow the page's
+direction: the cells flow in reading order on a grid, so a right-to-left
+page draws `top-start` at the top right with no rule of its own. The
+default names, "Top left" through "Bottom right", are for a left-to-right
+page and never read the direction, so the server and the browser write the
+same words; a right-to-left page passes `labels` in its own language, where
+`top-start` is the top right. An app placing something that does not
+mirror, a picture's focal point, sets `dir="ltr"` on the pad.
+
+**The track is a holder** (Nested radii, derived): Raised, the 1px
+boundary edge, the surface step and 3px inside it, declaring
+`--holder-radius`, `--holder-border` and `--holder-pad` of its own, as
+SegmentedControl's stacked track is drawn. Its size is set, not summed, so
+the firmer 1.5px edge a changed or invalid pad draws moves nothing: three
+cells, two 2px gaps, the padding and the edge each side, 132px square with
+40px cells and 144px with 44px cells, the cells centered (spec correction
+41).
+
+**The cells** are `max(var(--size-target), var(--size-control))` square:
+40px in comfortable and compact, 44px compact on a coarse pointer, the
+stacked segmented row's rule, so a compact pad never drops a cell under the
+target. 2px apart, the `sm` segmented track's gap. Every cell takes the
+formula, `max(0px, calc(var(--holder-radius) - var(--holder-border) -
+var(--holder-pad)))`, wherever it falls, so no cell differs from the next:
+20px in Rounded, a circle on a 40px cell and a rounded square on a 44px
+one; 8px in Soft; 0 in Square. `CellsInTrack` measures it in every shape
+and density in three engines.
+
+**The dot** (ruling 23) is 6px, `--radius-dot` in every shape, slate on
+Raised: 5.49 in light, 6.44 in dark. **The chosen cell** is an ink fill
+with an 8px canvas dot: ink on Raised 18.43 and 15.36, canvas on ink 16.25
+and 19.31. Hover, where hover exists, on a cell that can be chosen: the 5%
+ink wash and an ink dot, with its pressed twin outside the query. Focus, disabled, read only, hover
+and press are read from the native input as well as React Aria's
+attribute. The chosen cell is read from its input alone,
+`:has(input:checked)`: React Aria keeps the input in step with its state,
+and before hydration the server's `data-selected` stays on the cell chosen
+at first while a press checks another, which would draw two chosen cells.
+So the server's HTML draws the chosen cell, and a press before hydration
+checks a radio and draws it ink alone (`BeforeHydration`; spec correction
+45). The cells are React Aria's `RadioField` and `RadioButton`, the pair
+the library's `Radio` uses, and the field's wrapper is `display: contents`,
+so each cell is an item of the track's grid (spec correction 46).
+
+**Focus, a recorded deviation** (spec 11 item 15). The library's ring is
+2px outside, which here would draw over the neighbor 2px away. A cell that
+is not chosen takes the ink ring inside it, its outer edge 2px in; the
+chosen cell takes the canvas ring 4px in, SegmentedControl's and
+RadioGroup's ring on ink. Focus without a choice is rare: the arrows move
+focus and the choice together, so it shows after Tab into a pad with
+nothing chosen (`FocusRingInside`).
+
+**Changed and invalid** are SegmentedControl's, on the track, which is the
+control: the 1.5px light signal orange edge with the Changed chip in the
+label row, and the 1.5px error edge with the error line, invalid after
+changed so a pad that is both shows the error edge. Light signal orange
+measures 2.87 on Raised in light and 5.35 in dark, under 3:1 in light as
+on every field, where it is never the only sign: the chip says it in
+words. The error edge measures 7.46 and 5.06. An unlabelled pad has no
+label row, so it shows no chip, and keeps the edge and `data-changed`
+(spec 11 item 16); the docs say a pad whose change should show needs a
+label. **Disabled**: the disabled fill on the track, an ink 15% edge, taupe
+dots, the chosen cell a taupe circle with a canvas dot, and
+`cursor: not-allowed`. A disabled position: its dot taupe, no hover,
+skipped by the arrows. **Read only**: no hover and no pointer cursor.
+
+**Forced colors.** Every fill is repainted, so the track's edge and the
+dots are drawn in `canvastext`; the chosen cell is drawn out of the
+repaint, as SegmentedControl's chosen option is, in `highlight` with a
+`highlighttext` dot under `forced-color-adjust: none`, its focus ring
+`highlighttext`; a disabled position's dot is `graytext`, and a disabled
+chosen cell a `graytext` circle with a `canvas` dot.
+
+**No size container** (spec 9). The track's size is its cells', and the
+field around it fills its column like every field, its label and hint
+breaking only a word wider than its line (`overflow-wrap: break-word` on
+the root, settings lesson 18). The pad holds no children, so nothing of a
+server component's lazy element types reaches it (spec correction 20).
+
+**The size.** `{ PositionPad }` measures 1.29 kB without React Aria,
+Lucide and `@internationalized/date`, inside the spec's 2 kB budget; the
+rule gives a 2 kB limit. With React Aria not ignored it measures 16.18 kB
+(spec correction 43).
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): each cell read as its position's name with its place in
+the set, and whether the arrow keys reach the pad in focus mode in each
+reader. Not yet verified in Windows' contrast themes or on phones at 320px
+to 430px.

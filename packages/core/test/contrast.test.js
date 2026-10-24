@@ -2436,3 +2436,47 @@ describe('the tag input', () => {
     }
   });
 });
+
+describe('the position pad', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A dot is slate on the Raised track, the chosen cell ink on it with a canvas dot, the track's edge the
+  // boundary, and the changed and invalid edges SegmentedControl's: the pad adds no pair (spec 8.7).
+  it('cites slate and ink on Raised, canvas on ink, the boundary, the error edge and light signal orange, which the gate holds or SegmentedControl records', () => {
+    for (const text of ['slate', 'ink']) {
+      expect(CONTRAST_PAIRS, `${text} on raised`).toContainEqual(
+        expect.objectContaining({ text, ground: 'raised', minimum: TEXT }),
+      );
+    }
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: NON_TEXT }),
+    );
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'boundary', fill: 'raised', minimum: NON_TEXT }),
+    );
+    expect(CONTRAST_PAIRS).toContainEqual(
+      expect.objectContaining({ text: 'error', ground: 'raised', minimum: TEXT }),
+    );
+    // The record's values, light then dark: the dot, the chosen cell, its dot, and the two edges on the track.
+    for (const { name, ground, light, dark } of [
+      { name: 'slate', ground: 'raised', light: 5.49, dark: 6.44 },
+      { name: 'ink', ground: 'raised', light: 18.43, dark: 15.36 },
+      { name: 'canvas', ground: 'ink', light: 16.25, dark: 19.31 },
+      { name: 'error', ground: 'raised', light: 7.46, dark: 5.06 },
+      { name: 'signal-light', ground: 'raised', light: 2.87, dark: 5.35 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+    // Light signal orange is an edge beside the Changed chip, never the only sign of a change, as on every field.
+    expect(measured('light', 'signal-light', 'raised')).toBeLessThan(NON_TEXT);
+  });
+});

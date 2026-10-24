@@ -37,6 +37,7 @@ import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Accordion, AccordionItem } from '../src/accordion';
 import { TagInput, emailPreset } from '../src/tag-input';
+import { PositionPad } from '../src/position-pad';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
 import {
@@ -961,6 +962,42 @@ const HYDRATED: [
       expect(container.querySelector('.accordion')).not.toHaveAttribute('data-multiple');
       expect(container.querySelector('.accordion-controls')).toBeNull();
       expect(container.querySelectorAll('.accordion-item[data-expanded]')).toHaveLength(1);
+    },
+  ],
+  [
+    // The radios the server drew, the fifth checked, nothing focused, and no aria-orientation.
+    'PositionPad',
+    <PositionPad label="Text position" name="place" defaultValue="center" />,
+    (container) => {
+      const radios = [...container.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+      expect(radios.map((radio) => radio.value)).toEqual([
+        'top-start',
+        'top-center',
+        'top-end',
+        'center-start',
+        'center',
+        'center-end',
+        'bottom-start',
+        'bottom-center',
+        'bottom-end',
+      ]);
+      expect(radios.filter((radio) => radio.checked).map((radio) => radio.value)).toEqual(['center']);
+      expect(container.querySelector('.position-pad')).not.toHaveAttribute('aria-orientation');
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    'PositionPad with disabled positions',
+    <PositionPad
+      label="Text position"
+      name="place"
+      defaultValue="top-start"
+      disabledPositions={['center-start', 'center-end']}
+    />,
+    (container) => {
+      const disabled = [...container.querySelectorAll<HTMLInputElement>('input[type="radio"]:disabled')];
+      expect(disabled.map((radio) => radio.value)).toEqual(['center-start', 'center-end']);
+      expect(container.querySelectorAll('.position-pad-cell[data-disabled]')).toHaveLength(2);
     },
   ],
 ];

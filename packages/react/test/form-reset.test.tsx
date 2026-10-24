@@ -9,6 +9,7 @@ import { DateRangePicker } from '../src/date-range-picker';
 import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
+import { PositionPad } from '../src/position-pad';
 import { Radio, RadioGroup } from '../src/radio-group';
 import { Repeater } from '../src/repeater';
 import { SearchField } from '../src/search-field';
@@ -177,6 +178,24 @@ function SegmentedControlForm(): ReactElement {
         <SegmentedControlItem value="dark">Dark</SegmentedControlItem>
         <SegmentedControlItem value="system">System</SegmentedControlItem>
       </SegmentedControl>
+      <ResetButton />
+    </form>
+  );
+}
+
+function PositionPadForm(): ReactElement {
+  const [changed, setChanged] = useState(false);
+  return (
+    <form>
+      <PositionPad
+        label="Text position"
+        name="place"
+        defaultValue="center"
+        isChanged={changed}
+        onChange={(value) => {
+          setChanged(value !== 'center');
+        }}
+      />
       <ResetButton />
     </form>
   );
@@ -392,6 +411,24 @@ describe('a native form reset', () => {
     expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'System' })).not.toBeChecked();
     expect(sent(container, 'theme')).toEqual(['dark']);
+    expect(showsChip(container)).toBe(false);
+  });
+
+  it('puts a PositionPad back on its default position, without its chip', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<PositionPadForm />);
+    expect(screen.getByRole('radio', { name: 'Center' })).toBeChecked();
+    expect(showsChip(container)).toBe(false);
+
+    await user.click(screen.getByRole('radio', { name: 'Bottom right' }));
+    expect(screen.getByRole('radio', { name: 'Bottom right' })).toBeChecked();
+    expect(sent(container, 'place')).toEqual(['bottom-end']);
+    expect(showsChip(container)).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(screen.getByRole('radio', { name: 'Center' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Bottom right' })).not.toBeChecked();
+    expect(sent(container, 'place')).toEqual(['center']);
     expect(showsChip(container)).toBe(false);
   });
 

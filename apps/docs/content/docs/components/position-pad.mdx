@@ -1,0 +1,120 @@
+---
+title: Position pad
+description: A 3 by 3 choice of where something sits, with arrow keys in two directions.
+icon: Crosshair
+---
+
+<Section>
+
+## Keys in two directions
+
+A position pad is nine places in a square: where a caption sits on a banner, where a logo sits on a page, which part of a picture stays in view. Each place is a dot, and the chosen one is an ink circle. Press a cell, or move with the arrow keys.
+
+<Preview name="position-pad-basic" />
+
+- Left and Right move along the row and on into the next or previous row, in reading order, so the two keys reach all nine. From the last cell they wrap to the first.
+- Up and Down move within the column and stop at its top and bottom, as a grid's arrows do.
+- A [radio group](/docs/components/radio-group), a group of choice cards or a [segmented control](/docs/components/segmented-control) moves through its options in one order with all four arrows. A pad's Up and Down follow the column instead, since that is where the cell below is drawn.
+- Say so in the hint, as the example does: "Use the arrow keys to move between positions."
+
+</Section>
+
+<Section>
+
+## Positions and CSS
+
+The values are `top-start` through `bottom-end`, row first, then column, and they are the form values. Each maps onto CSS: the row is the block axis and the column the inline axis, so `place-self: end start` puts a badge at `bottom-start`.
+
+<Preview name="position-pad-css" />
+
+| Value | `place-self` | `object-position` and `background-position`, left to right |
+| --- | --- | --- |
+| `top-start` | `start start` | `left top` |
+| `top-center` | `start center` | `center top` |
+| `center` | `center center` | `center center` |
+| `bottom-end` | `end end` | `right bottom` |
+
+`start` and `end` follow the page's direction, as `place-self` does. `object-position` and `background-position` take only `left` and `right`, so map `start` to `right` on a right-to-left page. A picture's focal point does not turn round with the page: for one, set `dir="ltr"` on the pad, so `top-start` is drawn at the top left and the arrows keep left as left on a Persian page too.
+
+</Section>
+
+<Section>
+
+## States
+
+A position can be disabled with `disabledPositions`, and the arrows pass over it. A changed pad shows the Changed chip in its label row and the light signal orange edge on its track; an invalid pad shows the error edge on its track and the error line under it, and an invalid edge outranks a changed one. Press Save with no caption position to see it.
+
+<Preview name="position-pad-states" />
+
+A pad without a visible label still draws the changed edge, but it has no label row to hold the chip, so a reader is never told in words. A pad whose change should show needs a label.
+
+</Section>
+
+<Section>
+
+## Right to left
+
+The cells flow in reading order, so on a right-to-left page `top-start` is drawn at the top right, and Left and Right swap with it: Left moves on in reading order and Right moves back. The direction is read from the pad itself when a key is pressed, so a pad marked `dir="ltr"` keeps left as left on a Persian page.
+
+The default names are English for a left-to-right page, "Top left" through "Bottom right", and never change with the direction, so the server and the browser write the same words. On a right-to-left page pass `labels` in the page's language, where `top-start` is the top right.
+
+</Section>
+
+<Section>
+
+## Usage
+
+```tsx
+import { PositionPad, type PadPosition } from '@snapshot-ui/react';
+
+export function BannerFields({ saved }: { saved: PadPosition }) {
+  return (
+    <PositionPad
+      label="Text position"
+      description="Use the arrow keys to move between positions."
+      name="textPosition"
+      defaultValue={saved}
+      disabledPositions={['center']}
+    />
+  );
+}
+```
+
+A pad is a radio group of nine native radios, so `name`, `isRequired`, `isDisabled`, `isReadOnly`, `validate` and a form's reset work as on a radio group, and it draws and submits before the page hydrates. Read the value on the server with `formData.get(name)`. The pad fills its column like every field, and the track is 132px square, or 144px on a touch screen in compact density.
+
+</Section>
+
+<Section>
+
+## Props
+
+Other HTML attributes, `className` and `ref` go on the pad's root. `className` is merged after the library's classes.
+
+<PropsTable label="PositionPad props" path="../../packages/react/src/position-pad/PositionPad.tsx" type="Pick<PositionPadBaseProps, 'label' | 'aria-label' | 'description' | 'errorMessage' | 'isChanged' | 'changedLabel' | 'value' | 'defaultValue' | 'onChange' | 'disabledPositions' | 'labels' | 'name' | 'isRequired' | 'isDisabled' | 'isReadOnly' | 'isInvalid' | 'validate' | 'className'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The pad is a radio group of nine radios, each named by its position, so a screen reader says where focus is in words: "Bottom right, radio button, 9 of 9, checked". It is not a grid of cells: a position is one value in a form, which native radios submit and reset with no script, and a radio's checked state is read by every screen reader, while a grid's selection is read unevenly. The name of each position carries the second direction.
+
+<Keys rows={[['Tab Shift+Tab', 'Moves into the pad, onto the chosen cell, or with none chosen the first enabled cell (the last with Shift+Tab), and out of it.'], ['Right Left', 'Along the row in the drawn direction, on into the next or previous row; wraps from the last cell to the first. Mirrored in right to left.'], ['Down Up', 'Down or up the column; stops at its end.'], ['Space', 'Chooses the focused cell when nothing is chosen.']]} />
+
+- Every arrow both moves and chooses, as on any radio group. On a read-only pad the arrows move focus and choose nothing.
+- Focus ring: drawn inside the cell, 2px in, so it never covers the next cell 2px away. On the chosen ink cell it is drawn in the canvas color, 4px in.
+- Disabled position: a taupe dot, passed over by the arrows.
+- Screen readers in browse mode keep the arrow keys for themselves. In a form, VoiceOver, NVDA and JAWS pass them to a focused radio; which of them reach the pad in focus mode is not yet verified.
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps position pads in the system.
+
+<Rules dos={['Label the pad with what it places, such as "Text position" or "Logo position".', "Name the positions in the page's language with labels on a right-to-left page.", 'Disable the positions that are taken, rather than leaving them out.']} donts={['Never use a pad for a choice that is not a place. Use a radio group or a segmented control.', "Never ship a pad without names in the page's language.", 'Never hide the label of a pad whose change should show.']} />
+
+</Section>

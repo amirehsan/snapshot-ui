@@ -1,0 +1,228 @@
+/*
+ * PositionPad, derived in docs/design-system.md ("PositionPad"): a field whose control is a 3 by 3 track of nine
+ * radios, one per position, each a dot, the chosen one an ink circle with a canvas dot.
+ *
+ * The root is a field (field.css), so it carries data-changed and data-invalid, and the track draws the edge for
+ * them, as SegmentedControl's track does. React Aria draws each cell as a radio's label, holding its visually
+ * hidden native input. Markup without React Aria is read from that input, named as in :has(input:disabled), so a
+ * cell draws every state before hydration. That test sits in :where(), so it weighs no more than the data
+ * attribute beside it.
+ *
+ * The chosen cell is read from the input alone, :has(input:checked). React Aria keeps the input's checked state
+ * in step with its own, so after hydration the two agree; before it, the server's data-selected stays on the
+ * cell chosen at first while a press checks another radio, and a rule that also read the attribute would draw
+ * two chosen cells (plan, spec correction 45).
+ *
+ * The cells flow in reading order on a grid, so a right-to-left page draws top-start at the top right with no
+ * rule of its own here.
+ */
+@layer components {
+  /* A position, an address or a name in the label or the hint breaks only a word wider than its line (settings
+     lesson 18). */
+  .position-pad {
+    overflow-wrap: break-word;
+  }
+
+  /*
+   * The track is a holder (Nested radii, derived): Raised, the boundary edge, the surface step and 3px inside it.
+   * Its size is set, not left to add up, so the firmer 1.5px edge a changed or invalid pad draws moves nothing:
+   * the cells stay centered and the edge grows inward over the padding. 132px with 40px cells, 144px with 44px.
+   */
+  .position-pad-track {
+    --holder-radius: var(--radius-surface);
+    --holder-border: 1px;
+    --holder-pad: 3px;
+    --position-pad-cell: max(var(--size-target), var(--size-control));
+    --position-pad-gap: 2px;
+    --position-pad-size: calc(
+      3 * var(--position-pad-cell) + 2 * var(--position-pad-gap) + 2 * var(--holder-pad) + 2 *
+        var(--holder-border)
+    );
+
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(3, var(--position-pad-cell));
+    grid-auto-rows: var(--position-pad-cell);
+    place-content: center;
+    gap: var(--position-pad-gap);
+    inline-size: var(--position-pad-size);
+    block-size: var(--position-pad-size);
+    padding: var(--holder-pad);
+    border: var(--holder-border) solid var(--color-boundary);
+    border-radius: var(--holder-radius);
+    background-color: var(--color-raised);
+  }
+
+  /* React Aria's field wrapper around each radio draws no box of its own, so each cell is a grid item. */
+  .position-pad-item {
+    display: contents;
+  }
+
+  /* Every cell takes the formula, so none differs by where it falls: a circle on a 40px cell in Rounded. */
+  .position-pad-cell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* A position: a 6px slate dot, round in every shape. */
+  .position-pad-dot {
+    inline-size: 6px;
+    block-size: 6px;
+    border-radius: var(--radius-dot);
+    background-color: var(--color-slate);
+  }
+
+  /*
+   * A cell that can be chosen takes the 5% ink wash and an ink dot under the pointer. A read-only or disabled cell
+   * cannot change, so it takes none. The exclusion sits in :where() and adds no specificity, so the chosen fill
+   * below, written after this rule at the same weight, still wins under the pointer.
+   */
+  @media (hover: hover) {
+    .position-pad-cell:is(:hover, [data-hovered]):where(
+        :not([data-readonly], [data-disabled], :has(input:disabled))
+      ) {
+      background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+    }
+
+    .position-pad-cell:is(:hover, [data-hovered]):where(
+        :not([data-readonly], [data-disabled], :has(input:disabled))
+      )
+      > .position-pad-dot {
+      background-color: var(--color-ink);
+    }
+  }
+
+  /* The pressed twin, outside the hover query, since touch has no hover to show. */
+  .position-pad-cell:is(:active, [data-pressed]):where(
+      :not([data-readonly], [data-disabled], :has(input:disabled))
+    ) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  .position-pad-cell:is(:active, [data-pressed]):where(
+      :not([data-readonly], [data-disabled], :has(input:disabled))
+    )
+    > .position-pad-dot {
+    background-color: var(--color-ink);
+  }
+
+  /* The chosen position: an ink circle with an 8px canvas dot. It outweighs hover and press, and comes after them,
+     so it keeps its fill under the pointer. */
+  .position-pad-cell:has(input:checked) {
+    background-color: var(--color-ink);
+  }
+
+  .position-pad-cell:has(input:checked) > .position-pad-dot {
+    inline-size: 8px;
+    block-size: 8px;
+    background-color: var(--color-canvas);
+  }
+
+  /* A read-only pad cannot change, so its cells are not offered as buttons. */
+  .position-pad-cell[data-readonly] {
+    cursor: default;
+  }
+
+  /* A position, or the whole pad, that cannot be chosen: a taupe dot. */
+  .position-pad-cell:is([data-disabled], :where(:has(input:disabled))) {
+    cursor: not-allowed;
+  }
+
+  .position-pad-cell:is([data-disabled], :where(:has(input:disabled))) > .position-pad-dot {
+    background-color: var(--color-taupe);
+  }
+
+  /* The chosen position of a disabled pad keeps its place: a taupe circle with a canvas dot. */
+  .position-pad-cell:has(input:checked):is([data-disabled], :where(:has(input:disabled))) {
+    background-color: var(--color-taupe);
+  }
+
+  .position-pad-cell:has(input:checked):is([data-disabled], :where(:has(input:disabled)))
+    > .position-pad-dot {
+    background-color: var(--color-canvas);
+  }
+
+  /*
+   * Focus (spec 11 item 15). The library's ring is 2px outside, which here would draw over the neighbor 2px
+   * away, so a cell that is not chosen takes the ink ring 2px inside its edge. The chosen cell takes the canvas
+   * ring 4px inside, SegmentedControl's and RadioGroup's ring on ink, since an ink ring on ink measures 1:1.
+   */
+  .position-pad-cell:is([data-focus-visible], :where(:has(input:focus-visible))) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: calc(-2px - var(--focus-ring-width));
+  }
+
+  .position-pad-cell:has(input:checked):is([data-focus-visible], :where(:has(input:focus-visible))) {
+    outline-color: var(--color-canvas);
+    outline-offset: calc(-4px - var(--focus-ring-width));
+  }
+
+  /*
+   * The track's edge, keyed on the field's root as the field contract in field.css says, SegmentedControl's rule.
+   * A disabled pad is recessed. A changed one firms to light signal orange and an invalid one to the error color;
+   * both come after the disabled rule, so the chip and the edge always show together, and invalid comes last, so
+   * it outranks changed.
+   */
+  .position-pad[data-disabled] .position-pad-track {
+    border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
+    background-color: var(--color-disabled);
+  }
+
+  .position-pad[data-changed] .position-pad-track {
+    border-width: 1.5px;
+    border-color: var(--color-signal-light);
+  }
+
+  .position-pad[data-invalid] .position-pad-track {
+    border-width: 1.5px;
+    border-color: var(--color-error);
+  }
+
+  /*
+   * Forced colors (Windows high contrast). The browser paints every background canvas, so the track's edge and the
+   * dots are drawn in the reader's text color, and the chosen cell is drawn out of the repaint, as
+   * SegmentedControl's chosen option is: highlight with a highlighttext dot. A disabled position is graytext,
+   * and a disabled chosen one a graytext circle with a canvas dot. These are the only colors in this file that
+   * are not tokens; the reader's own palette is the point there.
+   */
+  @media (forced-colors: active) {
+    .position-pad-track {
+      border-color: canvastext;
+    }
+
+    .position-pad-dot {
+      background-color: canvastext;
+    }
+
+    .position-pad-cell:has(input:checked) {
+      forced-color-adjust: none;
+      background-color: highlight;
+    }
+
+    .position-pad-cell:has(input:checked) > .position-pad-dot {
+      background-color: highlighttext;
+    }
+
+    .position-pad-cell:is([data-disabled], :where(:has(input:disabled))) > .position-pad-dot {
+      background-color: graytext;
+    }
+
+    .position-pad-cell:has(input:checked):is([data-disabled], :where(:has(input:disabled))) {
+      background-color: graytext;
+    }
+
+    .position-pad-cell:has(input:checked):is([data-disabled], :where(:has(input:disabled)))
+      > .position-pad-dot {
+      background-color: canvas;
+    }
+
+    .position-pad-cell:has(input:checked):is([data-focus-visible], :where(:has(input:focus-visible))) {
+      outline-color: highlighttext;
+    }
+  }
+}

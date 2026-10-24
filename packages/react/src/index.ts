@@ -321,3 +321,9 @@ export {
   type TagInputPreset,
   type TagInputProps,
 } from './tag-input';
+export {
+  PositionPad,
+  type PadPosition,
+  type PositionPadBaseProps,
+  type PositionPadProps,
+} from './position-pad';

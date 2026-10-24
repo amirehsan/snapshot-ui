@@ -11511,6 +11511,177 @@ describe('the choices files', () => {
   });
 });
 
+describe('src/components/position-pad.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/position-pad.css')));
+  /** Every rule that holds declarations, as its selector and its declarations, media blocks included. */
+  const all = () =>
+    [...rules().matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector = '', body = '']) => ({
+      selector: selector.trim(),
+      body: body.trim(),
+    }));
+  /** The declarations after `header`, trimmed. */
+  const block = (css, header) => blockAfter(css, header).trim();
+  const CHOSEN = '.position-pad-cell:has(input:checked)';
+  const FOCUSED = ':is([data-focus-visible], :where(:has(input:focus-visible)))';
+  const DISABLED = ':is([data-disabled], :where(:has(input:disabled)))';
+
+  it('declares the track a holder with the surface step, a 1px edge and 3px inside', () => {
+    const track = block(rules(), '.position-pad-track {');
+    for (const declaration of [
+      '--holder-radius: var(--radius-surface);',
+      '--holder-border: 1px;',
+      '--holder-pad: 3px;',
+      'padding: var(--holder-pad);',
+      'border: var(--holder-border) solid var(--color-boundary);',
+      'border-radius: var(--holder-radius);',
+      'background-color: var(--color-raised);',
+    ]) {
+      expect(track, declaration).toContain(declaration);
+    }
+  });
+
+  it('sizes cells max(--size-target, --size-control) with a 2px gap', () => {
+    const track = block(rules(), '.position-pad-track {');
+    for (const declaration of [
+      '--position-pad-cell: max(var(--size-target), var(--size-control));',
+      '--position-pad-gap: 2px;',
+      'grid-template-columns: repeat(3, var(--position-pad-cell));',
+      'grid-auto-rows: var(--position-pad-cell);',
+      'gap: var(--position-pad-gap);',
+      // The size is set, not summed, so a firmer edge moves nothing (spec 8.7): three cells, two gaps, the
+      // padding and the edge each side, with the cells centered.
+      '--position-pad-size: calc(3 * var(--position-pad-cell) + 2 * var(--position-pad-gap) + 2 * var(--holder-pad) + 2 * var(--holder-border));',
+      'box-sizing: border-box;',
+      'inline-size: var(--position-pad-size);',
+      'block-size: var(--position-pad-size);',
+      'place-content: center;',
+    ]) {
+      expect(track, declaration).toContain(declaration);
+    }
+  });
+
+  it('gives every cell the holder formula', () => {
+    const cell = block(rules(), '.position-pad-cell {');
+    expect(cell).toContain(
+      'border-radius: max(0px, calc(var(--holder-radius) - var(--holder-border) - var(--holder-pad)));',
+    );
+    expect(cell).toContain('position: relative;');
+    // No other rule changes a cell's corner, so no cell differs by where it falls.
+    const corners = all().filter(({ body }) => body.includes('border-radius'));
+    expect(corners.map(({ selector }) => selector)).toEqual([
+      '.position-pad-track',
+      '.position-pad-cell',
+      '.position-pad-dot',
+    ]);
+    expect(block(rules(), '.position-pad-dot {')).toContain('border-radius: var(--radius-dot);');
+    // React Aria's field wrapper draws no box, so each cell is an item of the track's grid.
+    expect(block(rules(), '.position-pad-item {')).toBe('display: contents;');
+  });
+
+  it('draws the ring inside a cell, the canvas ring 4px inside on the chosen cell', () => {
+    const ring = block(rules(), `.position-pad-cell${FOCUSED} {`);
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: calc(-2px - var(--focus-ring-width));');
+    const chosen = block(rules(), `${CHOSEN}${FOCUSED} {`);
+    expect(chosen).toContain('outline-color: var(--color-canvas);');
+    expect(chosen).toContain('outline-offset: calc(-4px - var(--focus-ring-width));');
+    // Never the library's ring outside, which would draw over the neighbor 2px away (spec 11 item 15).
+    expect(rules()).not.toContain('outline-offset: var(--focus-ring-offset)');
+  });
+
+  it('draws invalid after changed on the track, as SegmentedControl', () => {
+    const css = rules();
+    const disabled = css.indexOf('.position-pad[data-disabled] .position-pad-track {');
+    const changed = css.indexOf('.position-pad[data-changed] .position-pad-track {');
+    const invalid = css.indexOf('.position-pad[data-invalid] .position-pad-track {');
+    expect(disabled).toBeGreaterThan(-1);
+    expect(changed).toBeGreaterThan(disabled);
+    expect(invalid).toBeGreaterThan(changed);
+    expect(block(css, '.position-pad[data-changed] .position-pad-track {')).toBe(
+      'border-width: 1.5px; border-color: var(--color-signal-light);',
+    );
+    expect(block(css, '.position-pad[data-invalid] .position-pad-track {')).toBe(
+      'border-width: 1.5px; border-color: var(--color-error);',
+    );
+    expect(block(css, '.position-pad[data-disabled] .position-pad-track {')).toBe(
+      'border-color: color-mix(in srgb, var(--color-ink) 15%, transparent); background-color: var(--color-disabled);',
+    );
+  });
+
+  it('reads every state from the native input as well as the data attribute, and the chosen cell from the input alone', () => {
+    const css = rules();
+    expect(block(css, `${CHOSEN} {`)).toBe('background-color: var(--color-ink);');
+    expect(block(css, `${CHOSEN} > .position-pad-dot {`)).toBe(
+      'inline-size: 8px; block-size: 8px; background-color: var(--color-canvas);',
+    );
+    expect(block(css, `.position-pad-cell${DISABLED} > .position-pad-dot {`)).toBe(
+      'background-color: var(--color-taupe);',
+    );
+    expect(block(css, `${CHOSEN}${DISABLED} {`)).toBe('background-color: var(--color-taupe);');
+    for (const { selector } of all()) {
+      // Every other cell state names the native input inside :where(), beside its data attribute.
+      if (selector.includes('[data-focus-visible]'))
+        expect(selector, selector).toContain(':where(:has(input:');
+      if (selector.startsWith('.position-pad-cell') && selector.includes('[data-disabled]'))
+        expect(selector, selector).toContain('input:disabled');
+      // The server's data-selected stays where it was while a press before hydration checks another radio, so
+      // no rule reads it (plan, spec correction 45).
+      expect(selector, selector).not.toContain('data-selected');
+    }
+    // The chosen fill outweighs hover and press, and comes after them, so it keeps its fill under the pointer.
+    expect(weightOf(CHOSEN)).toEqual([0, 2, 1]);
+    expect(weightOf('.position-pad-cell:is(:hover, [data-hovered])')).toEqual([0, 2, 0]);
+    const hover = css.indexOf('@media (hover: hover)');
+    const pressed = css.indexOf('.position-pad-cell:is(:active, [data-pressed])');
+    expect(hover).toBeGreaterThan(-1);
+    expect(pressed).toBeGreaterThan(hover);
+    expect(css.indexOf(`${CHOSEN} {`)).toBeGreaterThan(pressed);
+  });
+
+  it('keeps hover inside a hover media query, off read-only and disabled cells', () => {
+    const css = rules();
+    const hover = blockAfter(css, '@media (hover: hover)');
+    expect(hover).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
+    expect(hover).toContain('> .position-pad-dot { background-color: var(--color-ink); }');
+    const outside = css.replace(`@media (hover: hover) {${hover}}`, '');
+    expect(outside).not.toContain(':hover');
+    for (const { selector } of all()) {
+      if (/:hover|:active/.test(selector))
+        expect(selector, selector).toContain(
+          ':where(:not([data-readonly], [data-disabled], :has(input:disabled)))',
+        );
+    }
+    expect(block(css, '.position-pad-cell[data-readonly] {')).toBe('cursor: default;');
+    expect(block(css, `.position-pad-cell${DISABLED} {`)).toBe('cursor: not-allowed;');
+  });
+
+  it('draws a forced-colors block with highlight for the chosen cell', () => {
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(block(forced, '.position-pad-track {')).toBe('border-color: canvastext;');
+    expect(block(forced, '.position-pad-dot {')).toBe('background-color: canvastext;');
+    expect(block(forced, `${CHOSEN} {`)).toBe('forced-color-adjust: none; background-color: highlight;');
+    expect(block(forced, `${CHOSEN} > .position-pad-dot {`)).toBe('background-color: highlighttext;');
+    expect(block(forced, `.position-pad-cell${DISABLED} > .position-pad-dot {`)).toBe(
+      'background-color: graytext;',
+    );
+    expect(block(forced, `${CHOSEN}${FOCUSED} {`)).toBe('outline-color: highlighttext;');
+  });
+
+  it('uses logical properties only', () => {
+    for (const { selector, body } of all()) {
+      expect(body, selector).not.toMatch(
+        /(?:margin|padding|border)-(?:left|right|top|bottom)|(?<![\w-])(?:left|right|top|bottom|width|height|min-width|min-height)\s*:/,
+      );
+    }
+  });
+
+  it('names a rule of its own for the root, so prose hands the pad back (lesson 22)', () => {
+    expect(block(rules(), '.position-pad {')).toBe('overflow-wrap: break-word;');
+    expect(rules()).not.toContain('anywhere');
+  });
+});
+
 describe('src/components/repeater.css', () => {
   // The rules without their comments, with their whitespace closed up.
   const rules = () => closeUp(stripComments(read('src/components/repeater.css')));
@@ -11972,6 +12143,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     ['tabs.css', '.tab {'],
     ['stat-tile.css', '.card > .stat-tile, .card-body .stat-tile {'],
     ['select.css', '.select-filter {'],
+    ['position-pad.css', '.position-pad-cell {'],
   ];
 
   for (const [file = '', header = ''] of FILLS) {
