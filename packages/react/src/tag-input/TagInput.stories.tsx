@@ -339,6 +339,36 @@ export const TakeBackFocus: Story = {
   },
 };
 
+/**
+ * Delete held on the first tag removes that one tag, and focus goes to the next; the key's repeats remove nothing
+ * more. Then the last tag and the last of all: focus goes to the one before, then to the box. Focus never falls to
+ * the body on the way.
+ */
+export const HeldDeleteOnTag: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  args: { defaultValue: [ANA, BO, CY] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const stop = watchLostFocus(find(canvasElement, '.tag-input'));
+    try {
+      await focusOn(canvas.getByRole('row', { name: ANA }));
+      // One press, then three repeats of the held key, then its release.
+      if (!(await pressRealKeys('{Delete>4/}'))) return;
+      await waitFor(() => expect(canvas.getByRole('row', { name: BO })).toHaveFocus(), SLOW);
+      await expect(tagTexts(canvasElement)).toEqual([BO, CY]);
+      await focusOn(canvas.getByRole('row', { name: CY }));
+      await pressRealKeys('{Delete}');
+      await waitFor(() => expect(canvas.getByRole('row', { name: BO })).toHaveFocus(), SLOW);
+      await pressRealKeys('{Backspace}');
+      const box = canvas.getByRole<HTMLInputElement>('textbox');
+      await waitFor(() => expect(box).toHaveFocus(), SLOW);
+      await expect(tagTexts(canvasElement)).toEqual([]);
+    } finally {
+      await expect(stop()).toBe(0);
+    }
+  },
+};
+
 function DialogField(): ReactElement {
   const [isOpen, setOpen] = useState(true);
   return (

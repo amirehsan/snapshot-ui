@@ -244,6 +244,28 @@ describe('TagInput', () => {
     expect(box()).toHaveFocus();
   });
 
+  it.each([['Delete'], ['Backspace']])(
+    'removes one tag per press of %s held on a tag, never the next',
+    async (key) => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      const { container } = render(<Invite defaultValue={[ANA, BO, CY]} onChange={onChange} />);
+      await user.tab();
+      expect(tag(ANA)).toHaveFocus();
+      fireEvent.keyDown(tag(ANA), { key });
+      expect(tagTexts(container)).toEqual([BO, CY]);
+      expect(tag(BO)).toHaveFocus();
+      // The held key's repeats land on the tag that took focus, and remove nothing more.
+      fireEvent.keyDown(tag(BO), { key, repeat: true });
+      fireEvent.keyDown(tag(BO), { key, repeat: true });
+      expect(tagTexts(container)).toEqual([BO, CY]);
+      expect(onChange).toHaveBeenCalledTimes(1);
+      fireEvent.keyUp(tag(BO), { key });
+      fireEvent.keyDown(tag(BO), { key });
+      expect(tagTexts(container)).toEqual([CY]);
+    },
+  );
+
   it('names each remove button by its tag and removes the tag by a press', async () => {
     const user = userEvent.setup();
     const { container } = render(<Invite defaultValue={[ANA, BO]} />);

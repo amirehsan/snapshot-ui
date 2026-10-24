@@ -544,10 +544,18 @@ export function TagInput({
     }
   };
 
-  /** Enter on a tag takes it back into the box; the tag's own Backspace and Delete remove it. */
+  /**
+   * Enter on a tag takes it back into the box; the tag's own Backspace and Delete remove it, once per press. React
+   * Aria's tags take a held key's repeats too, and focus moves to the next tag, so a held key would empty the list.
+   */
   const onTagKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== 'Enter' || isReadOnly || isDisabled || !(event.target instanceof HTMLElement)) return;
-    if (!event.target.classList.contains('tag-input-tag')) return;
+    if (!(event.target instanceof HTMLElement) || !event.target.classList.contains('tag-input-tag')) return;
+    if (event.repeat && (event.key === 'Backspace' || event.key === 'Delete')) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    if (event.key !== 'Enter' || isReadOnly || isDisabled) return;
     const tags = [...(frameRef.current?.querySelectorAll('.tag-input-tag') ?? [])];
     const index = tags.indexOf(event.target);
     if (index === -1) return;
