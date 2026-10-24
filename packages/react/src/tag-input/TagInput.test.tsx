@@ -333,6 +333,15 @@ describe('TagInput', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  it('leaves Escape to the input method while isComposing or keyCode is 229, and keeps the text', () => {
+    render(<Invite />);
+    fireEvent.compositionStart(box());
+    fireEvent.change(box(), { target: { value: 'ana' } });
+    fireEvent.keyDown(box(), { key: 'Escape', isComposing: true });
+    fireEvent.keyDown(box(), { key: 'Escape', keyCode: 229 });
+    expect(box()).toHaveValue('ana');
+  });
+
   it('writes one hidden input per value, one empty value when there are none, and form on each', async () => {
     const user = userEvent.setup();
     const { container } = render(

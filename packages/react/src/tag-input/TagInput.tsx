@@ -519,16 +519,18 @@ export function TagInput({
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     const current = event.currentTarget.value;
+    // An input method's Enter and Escape are its own: they end or cancel its composition. Safari ends a composition
+    // before its Enter's keydown, which then reports keyCode 229.
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- keyCode 229 is how Safari marks an input method's key; nothing replaces it
+    const composes = event.nativeEvent.isComposing || event.keyCode === 229;
     if (event.key === 'Enter') {
-      // Safari ends a composition before its Enter's keydown, which then reports keyCode 229.
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- keyCode 229 is how Safari marks an input method's Enter; nothing replaces it
-      if (event.nativeEvent.isComposing || event.keyCode === 229 || current === '') return;
+      if (composes || current === '') return;
       event.preventDefault();
       commit(current, 'enter');
       return;
     }
     if (event.key === 'Escape') {
-      if (current === '') return;
+      if (composes || current === '') return;
       // Stopped here, so a Dialog around the field stays open until the next Escape.
       event.preventDefault();
       event.stopPropagation();
