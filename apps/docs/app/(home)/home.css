@@ -64,11 +64,14 @@
   }
 
   /* ---- Hero ------------------------------------------------------ */
+  /* The title block and the description column share a top line: the eyebrow sits level with the
+     lede's first line, and the taller description column runs on below the title. Aligned to the
+     end, the short title block dropped to the foot of the tall column and left dead space over it. */
   .hero {
     display: grid;
     grid-template-columns: 1.25fr 1fr;
     gap: 64px;
-    align-items: end;
+    align-items: start;
     padding: 120px 0 56px;
   }
 
@@ -90,7 +93,17 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 28px;
-    padding-bottom: 10px;
+  }
+
+  /* The lede's box starts at its cap height, as the eyebrow's nearly does, so the two tops meet on
+     the ink and not on the line box. A browser without text-box trim starts it a few pixels lower. */
+  .hero .lede {
+    text-box: trim-start cap alphabetic;
+  }
+
+  /* A block of its own, so no line box sets the eyebrow below the column's top. */
+  .hero .eyebrow {
+    display: flex;
   }
 
   .lede {
