@@ -11056,13 +11056,15 @@ describe('src/components/accordion.css', () => {
 
   it('clips the body only while folded or folding, and moves nothing while data-instant', () => {
     const clipping = all().filter(({ body }) => /(?:^|;\s*)overflow(?:-[xy])?\s*:/.test(body));
-    expect(clipping.map(({ selector }) => selector)).toEqual([
-      '.accordion-item:is(:not([data-expanded]), [data-folding]) > .accordion-disclosure > .accordion-fold > .accordion-body',
-      '.accordion-item > .accordion-disclosure > .accordion-fold > .accordion-body',
+    const clip =
+      '.accordion-item:is(:not([data-expanded]), [data-folding]) > .accordion-disclosure > .accordion-fold > .accordion-body';
+    // The second is the print block's, which shows every panel whole. It names the clip's own selector, so it
+    // meets the clip at the same specificity and wins by coming later: a lighter selector would lose to it.
+    expect(clipping).toEqual([
+      { selector: clip, body: 'overflow: hidden;' },
+      { selector: clip, body: 'overflow: visible;' },
     ]);
-    expect(clipping[0]?.body).toBe('overflow: hidden;');
-    // The second is the print block's, which shows every panel whole.
-    expect(block(rules(), '@media print')).toContain('overflow: visible;');
+    expect(block(block(rules(), '@media print'), `${clip} {`)).toBe('overflow: visible;');
     const instant = all().filter(({ selector }) => selector.includes('[data-instant]'));
     expect(instant).toHaveLength(1);
     expect(instant[0]?.body).toBe('transition: none;');

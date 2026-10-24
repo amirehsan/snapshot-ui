@@ -208,7 +208,11 @@
       grid-template-rows: 1fr;
     }
 
-    .accordion-item > .accordion-disclosure > .accordion-fold > .accordion-body {
+    /* The clip's own selector, so it wins at the same specificity by coming later. */
+    .accordion-item:is(:not([data-expanded]), [data-folding])
+      > .accordion-disclosure
+      > .accordion-fold
+      > .accordion-body {
       overflow: visible;
     }
 
