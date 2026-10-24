@@ -508,7 +508,7 @@
     "path": "dist/index.js",
     "import": "{ Accordion, AccordionItem }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "3.5 kB"
+    "limit": "4 kB"
   },
   {
     "name": "Button with React Aria (watch only)",

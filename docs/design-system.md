@@ -13716,10 +13716,12 @@ until hydration (CollapsibleCard's qualification for find-in-page), Show all
 and the marker of an item given `isChanged` are in the server's HTML, the
 same in every locale and zone.
 
-**The size.** `{ Accordion, AccordionItem }` measures 2.98 kB without React
-Aria, Lucide and `@internationalized/date`, inside the spec's 3 kB budget;
-the rule gives a 3.5 kB limit. With React Aria not ignored it measures
-16.38 kB.
+**The size.** `{ Accordion, AccordionItem }` measures 3.1 kB without React
+Aria, Lucide and `@internationalized/date`, 0.1 kB over the spec's 3 kB
+budget, reported as the spec asks: the review's fixes for the first field
+that fails and for items a server component writes added it (plan, spec
+corrections 18, 20 and 21). The rule gives a 4 kB limit. With React Aria not
+ignored it measures 16.49 kB.
 
 **Screen readers and devices.** Not yet verified with VoiceOver and NVDA
 (owner action 3): a toggle's name, state and "Changed" in that order, its
