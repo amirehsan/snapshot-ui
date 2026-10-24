@@ -11514,7 +11514,7 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     [
       'field-extras.css',
       ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .field-extras:last-child > .field-offer:last-of-type {',
-      'padding-block-end: min(calc((var(--holder-corner-inset) - var(--holder-pad)) * 1000), calc(var(--holder-corner-inset) - var(--holder-pad) + max(0px, calc((var(--size-control) - 1lh) / 2))));',
+      'padding-block-end: min(calc((var(--holder-corner-inset) - var(--holder-pad)) * 1000), calc(var(--holder-corner-inset) - var(--holder-pad) + max(0px, calc((var(--size-control) - var(--text-action) * var(--text-action--line-height)) / 2))));',
     ],
     [
       'repeater.css',

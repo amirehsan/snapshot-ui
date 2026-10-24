@@ -887,7 +887,7 @@ And the controls that move, by the corner inset (below):
 | a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
 | Card | the list's first or last row's controls | down | the row's block padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
 | Card | CardActions beside the title | down | the actions and the title take a top margin of the corner inset less the card's padding; under 24rem nothing moves | 7px, 19px compact | as before | as before |
-| Card | a field's last offer | down | the offer's block-end padding grows by the corner inset less the card's padding, plus what the button's box hangs under the line | 17px, 27px compact | as before | as before |
+| Card | a field's last offer | down | the offer's block-end padding grows by the corner inset less the card's padding, plus what the button's box hangs under its own line | 19px, 29px compact | as before | as before |
 | Card | a repeater's Add | down | the foot's block-end padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
 | SaveBar | its buttons | in | each end pads to the corner inset, as the bulk bar's | 23px each side | 16px and 11px | 16px and 8px |
@@ -13020,12 +13020,24 @@ hangs under the line by half the control's height less half the line's,
 10px comfortable and 8px compact, so the plan's padding of the corner
 inset less the card's padding left the box 30px from the card's edge in
 Rounded, measured, inside the 39px inset. The line's block-end padding is
-the corner inset less the card's padding plus that overhang: 17px in
-Rounded and 27px compact. In Soft and Square the inset is the card's
-padding, which already clears their curve, so the line keeps no padding:
-the rule takes the smaller of the move and the inset less the padding
-scaled up, which is 0 there. `OfferClearOfCorner` measures it in three
-engines.
+the corner inset less the card's padding plus that overhang. In Soft and
+Square the inset is the card's padding, which already clears their curve,
+so the line keeps no padding: the rule takes the smaller of the move and
+the inset less the padding scaled up, which is 0 there.
+`OfferClearOfCorner` measures it in three engines.
+
+**A wrapped last offer** (settings plan, spec correction 93). Where the
+words fill their line, as a group's default does in a narrow card, the
+button wraps to a line of its own at the card's start, in its bottom start
+corner, and hangs under its own 16px action line, not the words' 20px
+one: 12px comfortable and 10px compact, so the overhang above left its box
+38px from a Rounded card's edge, inside the 39px inset, and the docs audit
+failed it. The overhang is now the button's own,
+`(var(--size-control) - var(--text-action) * var(--text-action--line-height)) / 2`,
+the most it hangs on either line: the line's padding is 19px in Rounded
+and 29px compact, and a button beside its words stands 2px further clear.
+`WrappedOfferClearOfCorner` measures the wrapped button in three engines
+and the concentric audit runs it in three shapes.
 
 **Forced colors, motion, direction.** The words are text and the button
 draws its own forced colors, so the file adds nothing of its own; a docs

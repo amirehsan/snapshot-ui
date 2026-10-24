@@ -85,16 +85,21 @@
   /*
    * The corner (design record, "Nested radii, derived"): the last offer of a field that ends a card is a control at
    * its foot, so its button's box stops at the card's corner inset. The line grows at its foot by the corner inset
-   * less the card's padding, plus what the button's 40px box hangs under the line: 17px in Rounded, 27px compact.
-   * Where the card's padding already clears its curve, Soft and Square, the inset less the padding is 0, and the
-   * min() with it scaled up keeps the line as it was.
+   * less the card's padding, plus what the button's 40px box hangs under a line: 19px in Rounded, 29px compact.
+   * The hang is the button's own, under its 16px action line: where the words fill their line the button wraps to
+   * a line of its own at the card's start, in the corner, and hangs that far under it; beside the words it hangs
+   * less, under their taller line. Where the card's padding already clears its curve, Soft and Square, the inset
+   * less the padding is 0, and the min() with it scaled up keeps the line as it was.
    */
   :is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)
     > .field-extras:last-child
     > .field-offer:last-of-type {
     padding-block-end: min(
       calc((var(--holder-corner-inset) - var(--holder-pad)) * 1000),
-      calc(var(--holder-corner-inset) - var(--holder-pad) + max(0px, calc((var(--size-control) - 1lh) / 2)))
+      calc(
+        var(--holder-corner-inset) - var(--holder-pad) +
+          max(0px, calc((var(--size-control) - var(--text-action) * var(--text-action--line-height)) / 2))
+      )
     );
   }
 

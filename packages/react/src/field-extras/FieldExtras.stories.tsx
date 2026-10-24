@@ -557,6 +557,61 @@ export const OfferClearOfCorner: Story = {
   },
 };
 
+/**
+ * The last offer of a narrow card, whose words fill their line, so its button wraps to a line of its own at the
+ * card's start, in the bottom start corner. The button's box hangs under its own 16px line, not under the offer's
+ * 20px one, so the corner's padding counts the larger hang (spec correction 88). The concentric audit runs it in
+ * three shapes.
+ */
+export const WrappedOfferClearOfCorner: Story = {
+  tags: ['no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <div style={{ width: '18rem' }}>
+      <Card as="section" aria-label="Cushion">
+        <CardBody>
+          <CushionField />
+        </CardBody>
+      </Card>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const root = document.documentElement;
+    const { shape, density } = root.dataset;
+    const card = part(canvasElement, 'card');
+    const line = part(card, 'field-offer');
+    const button = part(card, 'field-offer-button');
+    try {
+      for (const nextDensity of ['comfortable', 'compact'] as const) {
+        root.dataset.shape = 'rounded';
+        root.dataset.density = nextDensity;
+        const inset = lengthIn(card, 'var(--holder-corner-inset)');
+        // The case: the words fill their line and the button starts the next one, at the line's start.
+        await waitFor(
+          () => {
+            const words = part(line, 'field-offer-text').getBoundingClientRect();
+            const box = button.getBoundingClientRect();
+            return expect({
+              onALineOfItsOwn: box.top > words.top,
+              atTheLineStart: Math.abs(box.left - line.getBoundingClientRect().left) <= 1,
+            }).toEqual({ onALineOfItsOwn: true, atTheLineStart: true });
+          },
+          { timeout: 5000 },
+        );
+        await waitFor(
+          () =>
+            expect(
+              card.getBoundingClientRect().bottom - button.getBoundingClientRect().bottom,
+            ).toBeGreaterThanOrEqual(inset - 1),
+          { timeout: 5000 },
+        );
+      }
+    } finally {
+      root.dataset.shape = shape ?? 'rounded';
+      root.dataset.density = density ?? 'comfortable';
+    }
+  },
+};
+
 /** The client rects the first occurrence of `words` draws inside `scope`'s text: one per line it takes. */
 function linesOf(scope: Element, words: string): number {
   const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);

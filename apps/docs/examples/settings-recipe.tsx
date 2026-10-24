@@ -200,8 +200,6 @@ function Coach({ saved, save, onDirty }: SectionProps): ReactElement {
                 )}
               </Repeater>
             </FieldExtras>
-            {/* A line under the offer, so its button never wraps into the card's bottom corner on a narrow card. */}
-            <Text>Saved tiers are sorted by amount.</Text>
           </CardBody>
         </Card>
         <Card>
