@@ -646,7 +646,7 @@ The APG's grid pattern (a layout grid of `gridcell`s with roving focus, arrows t
 | System | Part | Shape | Keys | What this spec takes |
 | --- | --- | --- | --- | --- |
 | Figma | Auto layout's alignment control (no public component) | A 3 by 3 grid of dots in a small square; the chosen cell shows bars for the children's alignment; hover previews | Not reachable as a group by keyboard; alignment has its own shortcuts (to verify) | The 3 by 3 of dots in a square, the chosen cell filled; not the bars (open question 23) |
-| Webflow | The background image's position control and flex alignment in the Style panel (no public component) | A 3 by 3 grid of squares beside X and Y fields (to verify) | Unknown (to verify) | The nine positions named in words, with values a CSS position can take |
+| A visual site builder | The background image's position control and flex alignment in the Style panel (no public component) | A 3 by 3 grid of squares beside X and Y fields (to verify) | Unknown (to verify) | The nine positions named in words, with values a CSS position can take |
 | WAI-ARIA APG | Grid pattern (layout grid) and radio group pattern | Any | Grid: arrows by row and column without wrapping, Home, End, Ctrl+Home, Ctrl+End. Radio group: arrows in one order, wrapping | The radio group's semantics and linear Left and Right; the grid's Up and Down that stop at the edge (section 8.5) |
 | CSS | `object-position`, `background-position`, `place-self` | Keywords `top`, `center`, `bottom`, `left`, `right`, `start`, `end` | | The default names and the logical values |
 
