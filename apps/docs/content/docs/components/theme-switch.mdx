@@ -139,7 +139,7 @@ ThemeSwitch takes a segmented control's props but its value: `size`, `label`, `d
 
 ThemeSwitch is a radio group named "Theme", each choice a radio named by its word, its icon hidden. The arrows move to the next choice and apply it, as in any radio group: a theme is cheap to undo. ThemeMenu's choices are `menuitemradio` items with the chosen one checked, in a submenu opened by a Theme item with `aria-haspopup` and `aria-expanded`, or in a section named by its heading. The submenu's open and close arrows follow the locale, so a Persian page sets `I18nProvider` with its locale and the arrows swap.
 
-<Keys rows={[['Tab', 'Into the group, on the chosen choice.'], ['Arrow keys', 'Move to the next or previous choice and apply it.'], ['Enter, Space, Arrow Right', 'On Theme in a menu, open the submenu with focus on the chosen choice. Arrow Left in right to left.'], ['Arrow Up, Arrow Down', 'Move between the three.'], ['Enter, Space', 'Choose, close every level and give focus back to the trigger.'], ['Arrow Left, Escape', 'Close the submenu alone, with focus back on Theme. Arrow Right in right to left.']]} />
+<Keys rows={[['Tab', 'Into the group, on the chosen choice.'], ['Left Right Up Down', 'Move to the next or previous choice and apply it.'], ['Enter Space Right', 'On Theme in a menu, open the submenu with focus on the chosen choice. Left in right to left.'], ['Down Up', 'In the submenu, move between the three.'], ['Enter Space', 'In the submenu, choose, close every level and give focus back to the trigger.'], ['Left Escape', 'Close the submenu alone, with focus back on Theme. Right in right to left.']]} />
 
 </Section>
 
