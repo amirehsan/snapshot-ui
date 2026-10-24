@@ -1,7 +1,8 @@
 /*
  * Moving focus after React's commit, to a place the reader can name, never the body (settings plan, lessons 2 and
  * 10). Every part that hides or removes what may hold focus uses it: ConditionalFields first, then FieldExtras,
- * Repeater, PanelLayout and AccountMenu. It is internal and not exported from the package. Every DOM read is in an
+ * Repeater and PanelLayout. AccountMenu and ThemeMenu leave focus to React Aria's menu, which gives it back to the
+ * trigger. It is internal and not exported from the package. Every DOM read is in an
  * effect, a listener or a frame, never at render, so nothing here runs on the server.
  */
 
