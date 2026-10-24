@@ -91,6 +91,8 @@ import { Meter } from '../src/meter';
 import { MonthGrid } from '../src/month-grid';
 import { PageColumn, PageHeader } from '../src/page-header';
 import { Pagination } from '../src/pagination';
+import { PanelRow } from '../src/panel-layout/PanelRow';
+import { PanelSection } from '../src/panel-layout/PanelSection';
 import { ProgressBar } from '../src/progress-bar';
 import { Prose, ProseScroll } from '../src/prose';
 import { Skeleton } from '../src/skeleton';
@@ -367,6 +369,33 @@ const STATIC: [name: string, element: ReactElement, markup: string][] = [
     </ProseScroll>,
     '<div aria-label="Spending by category, table" role="region" tabindex="0" class="prose-scroll"><table></table></div>',
   ],
+  [
+    // A region named by its heading, which takes focus by script when the section opens.
+    'PanelSection',
+    <PanelSection title="Coach" description="How the coach waits before a charge.">
+      <p>Wait tiers</p>
+    </PanelSection>,
+    '<section aria-labelledby="_R_0_" class="panel-section"><h2 id="_R_0_" class="panel-section-heading" tabindex="-1">' +
+      'Coach</h2><p class="panel-section-description">How the coach waits before a charge.</p><p>Wait tiers</p>' +
+      '</section>',
+  ],
+  [
+    'PanelSection at the third level',
+    <PanelSection title="Danger zone" headingLevel={3}>
+      <p>Delete your account.</p>
+    </PanelSection>,
+    '<section aria-labelledby="_R_0_" class="panel-section"><h3 id="_R_0_" class="panel-section-heading" tabindex="-1">' +
+      'Danger zone</h3><p>Delete your account.</p></section>',
+  ],
+  [
+    'PanelRow',
+    <PanelRow layout="third-two-thirds">
+      <p>Theme</p>
+      <p>Density</p>
+    </PanelRow>,
+    '<div class="panel-row" data-layout="third-two-thirds"><div class="panel-row-grid">' +
+      '<div class="panel-row-cell"><p>Theme</p></div><div class="panel-row-cell"><p>Density</p></div></div></div>',
+  ],
 ];
 
 describe('the static components in a server component', () => {
@@ -551,6 +580,8 @@ const STATIC_MODULES = [
   'page-header/PageHeader.tsx',
   'page-header/PageColumn.tsx',
   'prose/Prose.tsx',
+  'panel-layout/PanelSection.tsx',
+  'panel-layout/PanelRow.tsx',
 ];
 
 describe.each(STATIC_MODULES)('the source of %s', (file) => {

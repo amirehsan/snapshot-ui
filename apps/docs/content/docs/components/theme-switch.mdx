@@ -1,0 +1,154 @@
+---
+title: Theme switch
+description: "System, Light or Dark: the reader's choice, applied at once and kept by your app."
+icon: SunMoon
+---
+
+<Section>
+
+## No flash: your part and ours
+
+**System needs nothing.** With no `data-theme` on `<html>`, the tokens follow the reader's system setting in CSS, and `color-scheme` follows it too, so a page whose choice is System paints right with no script and no cookie.
+
+**The parts read nothing.** ThemeSwitch and ThemeMenu draw the `value` you give them and call `onChange`. They never read `matchMedia`, storage, `document.cookie` or `data-theme`, and they write nothing: no storage, no cookie and no script, which a nonce-locked content security policy forbids anyway. Pass `null` while you do not know the choice yet, and no choice shows.
+
+**Your part: read the cookie on the server.** Your root layout reads the theme cookie and writes `data-theme="light"` or `data-theme="dark"` on `<html>`, or nothing for System. The first paint is right, with no script, no flash and no hydration warning.
+
+```tsx
+// app/layout.tsx
+import { cookies } from 'next/headers';
+import { ThemeProvider } from './theme-provider';
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const saved = (await cookies()).get('theme')?.value;
+  const theme = saved === 'light' || saved === 'dark' ? saved : 'system';
+  return (
+    <html lang="en" data-theme={theme === 'system' ? undefined : theme}>
+      <body>
+        <ThemeProvider initial={theme}>{children}</ThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+**Your part: apply it at once and keep it.** In `onChange`, set the attribute on `<html>` in the same frame, or remove it for System, and write the cookie for the next request, through a server action or `document.cookie`.
+
+```tsx
+// app/theme-actions.ts
+'use server';
+
+import { cookies } from 'next/headers';
+import type { ThemeChoice } from '@snapshot-ui/react';
+
+export async function saveTheme(choice: ThemeChoice) {
+  const jar = await cookies();
+  if (choice === 'system') jar.delete('theme');
+  else jar.set('theme', choice, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
+}
+
+// app/theme-provider.tsx
+'use client';
+
+import { createContext, use, useState } from 'react';
+import type { ThemeChoice } from '@snapshot-ui/react';
+import { saveTheme } from './theme-actions';
+
+const ThemeContext = createContext<[ThemeChoice, (choice: ThemeChoice) => void] | null>(null);
+
+export function ThemeProvider({ initial, children }: { initial: ThemeChoice; children: React.ReactNode }) {
+  const [theme, setTheme] = useState(initial);
+  const choose = (choice: ThemeChoice) => {
+    if (choice === 'system') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = choice;
+    setTheme(choice);
+    void saveTheme(choice);
+  };
+  return <ThemeContext value={[theme, choose]}>{children}</ThemeContext>;
+}
+
+export const useTheme = () => use(ThemeContext)!;
+```
+
+Reading a cookie in the root layout renders every route per request. A site that serves static pages, as these docs do, cannot read it on the server; it uses a pre-paint script of its own instead, as `next-themes` does, with `suppressHydrationWarning` on `<html>`, and passes `null` until the browser knows the choice. That script is the app's, never the library's. Other tabs keep their theme until they reload, unless your app listens for a change of its own.
+
+</Section>
+
+<Section>
+
+## In Settings
+
+Appearance is a card or a section of its own, outside every form and every SaveBar: a choice applies at once and is never part of a save, so it shows no Changed chip. The segmented control fits three short choices; System comes first, since it is the default.
+
+<Preview name="theme-switch-basic" />
+
+With `look="radio"`, the choices are rows of a radio group, for a page with room.
+
+<Preview name="theme-switch-radio" />
+
+</Section>
+
+<Section>
+
+## In a menu
+
+ThemeMenu goes among a Menu's items, as AccountMenu holds them: a Theme item showing the current choice and opening a submenu of the three, or with `display="section"` the three under a Theme heading in the menu itself. A choice closes every level and gives focus back to the menu's trigger.
+
+<Preview name="theme-switch-menu" />
+
+</Section>
+
+<Section>
+
+## Usage
+
+```tsx
+import { ThemeMenu, ThemeSwitch } from '@snapshot-ui/react';
+
+const [theme, choose] = useTheme();
+
+<ThemeSwitch label="Theme" value={theme} onChange={choose} />;
+
+<AccountMenu name="Ada Lovelace" detail="ada@example.com">
+  <MenuItem id="settings" href="/settings">
+    Settings
+  </MenuItem>
+  <ThemeMenu value={theme} onChange={choose} />
+</AccountMenu>;
+```
+
+ThemeSwitch takes a segmented control's props but its value: `size`, `label`, `description`, `aria-label` and the rest go on the control. It is named "Theme" unless you name it.
+
+</Section>
+
+<Section>
+
+## Props
+
+<PropsTable label="ThemeSwitch props" path="../../packages/react/src/theme-switch/ThemeSwitch.tsx" type="Pick<ThemeSwitchProps, 'value' | 'onChange' | 'look' | 'hasIcons' | 'labels' | 'size' | 'label' | 'className'>" />
+
+<PropsTable label="ThemeMenu props" path="../../packages/react/src/theme-switch/ThemeSwitch.tsx" type="Pick<ThemeMenuProps, 'value' | 'onChange' | 'display' | 'labels'>" />
+
+<PropsTable label="ThemeLabels" path="../../packages/react/src/theme-switch/ThemeSwitch.tsx" type="ThemeLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+ThemeSwitch is a radio group named "Theme", each choice a radio named by its word, its icon hidden. The arrows move to the next choice and apply it, as in any radio group: a theme is cheap to undo. ThemeMenu's choices are `menuitemradio` items with the chosen one checked, in a submenu opened by a Theme item with `aria-haspopup` and `aria-expanded`, or in a section named by its heading. The submenu's open and close arrows follow the locale, so a Persian page sets `I18nProvider` with its locale and the arrows swap.
+
+<Keys rows={[['Tab', 'Into the group, on the chosen choice.'], ['Left Right Up Down', 'Move to the next or previous choice and apply it.'], ['Enter Space Right', 'On Theme in a menu, open the submenu with focus on the chosen choice. Left in right to left.'], ['Down Up', 'In the submenu, move between the three.'], ['Enter Space', 'In the submenu, choose, close every level and give focus back to the trigger.'], ['Left Escape', 'Close the submenu alone, with focus back on Theme. Right in right to left.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps the theme a device preference.
+
+<Rules dos={['Put System first: it is the default.', 'Apply a choice at once, in the same frame.', 'Read the cookie on the server, so the first paint is right.', 'Pass null until you know the choice.']} donts={['Never make the theme part of a form or a SaveBar.', 'Never show a Changed chip for it.', 'Never add a script for it to a page with a strict content security policy.']} />
+
+</Section>

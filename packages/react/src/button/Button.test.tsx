@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { createRef, type ReactElement } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { Button } from './Button';
 
@@ -173,5 +173,105 @@ describe('Button', () => {
   it('merges a function-form className with the base classes', () => {
     render(<Button className={({ isPressed }) => (isPressed ? 'is-pressed' : 'extra')}>Save</Button>);
     expect(screen.getByRole('button')).toHaveClass('button', 'button-primary', 'extra');
+  });
+});
+
+/**
+ * React Aria's live announcer says a focused button's pending start and end by ids in the button, and keeps the
+ * sentence on the page for seconds. A button that unmounts in that time, as a dialog's Save does when the save
+ * settles and closes it, must not leave a sentence naming ids that are gone.
+ */
+describe('Button leaving while React Aria says its pending state', () => {
+  /** The sentences React Aria's announcer holds, by their own name or the ids that name them. */
+  const sentences = (): Element[] => [...document.querySelectorAll('[data-live-announcer] [role="img"]')];
+
+  beforeEach(() => {
+    for (const log of document.querySelectorAll('[data-live-announcer] [role="log"]')) log.replaceChildren();
+  });
+
+  function Save({
+    shown = true,
+    pending,
+    name,
+  }: {
+    shown?: boolean;
+    pending: boolean;
+    name?: string;
+  }): ReactElement | null {
+    return shown ? (
+      <Button isPending={pending} pendingLabel="Saving" aria-label={name}>
+        Add plan
+      </Button>
+    ) : null;
+  }
+
+  it.each([
+    ['while pending, named by its text', false, undefined, 'Add plan Saving'],
+    ['after its pending ended, named by its text', true, undefined, 'Add plan'],
+    ['while pending, named by aria-label', false, 'Add the plan', 'Add the plan Saving'],
+  ] as const)(
+    'leaves a sentence that still says its words when it unmounts %s',
+    async (_case, ends, name, words) => {
+      const { rerender } = render(<Save pending={false} name={name} />);
+      act(() => {
+        screen.getByRole('button').focus();
+      });
+      rerender(<Save pending name={name} />);
+      if (ends) rerender(<Save pending={false} name={name} />);
+      // React Aria said it by ids in the button.
+      const said = sentences().at(-1);
+      expect(said?.getAttribute('aria-labelledby')).toBeTruthy();
+      rerender(<Save shown={false} pending={!ends} name={name} />);
+      expect(said).toHaveAttribute('aria-label', words);
+      expect(said).not.toHaveAttribute('aria-labelledby');
+      await expectNoA11yViolations(document.body);
+    },
+  );
+
+  it("gives its words to a sentence that arrives after it has gone, as a page's first sentence can", () => {
+    vi.useFakeTimers();
+    try {
+      const { rerender } = render(<Save pending={false} />);
+      act(() => {
+        screen.getByRole('button').focus();
+      });
+      rerender(<Save pending />);
+      const ids = sentences().at(-1)?.getAttribute('aria-labelledby') ?? '';
+      for (const said of sentences()) said.remove();
+      rerender(<Save shown={false} pending />);
+      // React Aria waits 100ms before a page's first sentence, so it lands once the button has left.
+      const late = document.createElement('div');
+      late.setAttribute('role', 'img');
+      late.setAttribute('aria-labelledby', ids);
+      document.querySelector('[data-live-announcer] [role="log"]')?.append(late);
+      vi.advanceTimersByTime(100);
+      expect(late).toHaveAttribute('aria-label', 'Add plan Saving');
+      expect(late).not.toHaveAttribute('aria-labelledby');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('looks for no sentence as it leaves when it was never pending', () => {
+    const set = vi.spyOn(window, 'setTimeout');
+    try {
+      const { rerender } = render(<Save pending={false} />);
+      rerender(<Save shown={false} pending={false} />);
+      expect(set.mock.calls.filter(([, delay]) => delay === 100)).toEqual([]);
+    } finally {
+      set.mockRestore();
+    }
+  });
+
+  it('leaves the sentences of a button that stays alone', () => {
+    const { rerender } = render(<Save pending={false} />);
+    act(() => {
+      screen.getByRole('button').focus();
+    });
+    rerender(<Save pending />);
+    const said = sentences().at(-1);
+    const ids = said?.getAttribute('aria-labelledby');
+    rerender(<Save pending={false} />);
+    expect(said).toHaveAttribute('aria-labelledby', ids);
   });
 });

@@ -1992,6 +1992,39 @@ describe('the page header', () => {
   );
 });
 
+describe('the copy button', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The check is ink, and the word look's glyph and word are ink, on the canvas or in a card on lifted; the
+  // tip is canvas text on ink. The gate already holds each, so the copy button adds no pair.
+  it('cites ink on canvas and lifted, which the gate holds', () => {
+    for (const ground of ['canvas', 'lifted']) {
+      expect(CONTRAST_PAIRS, `ink on ${ground}`).toContainEqual(
+        expect.objectContaining({ text: 'ink', ground, minimum: TEXT }),
+      );
+    }
+    expect(CONTRAST_PAIRS, 'canvas on ink').toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'canvas', ground: 'ink', light: 16.25, dark: 19.31 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
 describe('prose', () => {
   /** `text` on `ground`, both laid over the canvas, as a translucent color is drawn. */
   const on = (text, ground, mode) => {
@@ -2182,6 +2215,150 @@ describe('the text colors Link and Badge draw', () => {
       for (const ground of ['canvas', 'lifted', 'bone', 'float', 'raised']) {
         expect(measured, `${text} on ${ground}`).toContain(`${text} on ${ground}`);
       }
+    }
+  });
+});
+
+describe('the field extras', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // An offer's words are slate and its tertiary button is ink, on the canvas or in a card on lifted. The gate
+  // already holds each, so the offers add no pair.
+  it('cites slate and ink on canvas and lifted', () => {
+    for (const text of ['slate', 'ink']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
+describe('the repeater', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The legend is ink; the hint, a row's legend, the count, the full line and the empty line are slate; the errors
+  // are the error color; on the canvas or in a card on lifted. The gate already holds each, so the repeater adds no
+  // pair. A disabled Add's label is taupe, as Button draws it, which the gate leaves out as disabled text.
+  it('cites ink, slate and the error color on canvas and lifted, and taupe for a disabled Add as exempt', () => {
+    for (const text of ['ink', 'slate', 'error']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+    expect(CONTRAST_PAIRS.filter((pair) => pair.text === 'taupe' && pair.minimum === TEXT)).toEqual([]);
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'error', ground: 'canvas', light: 6.58, dark: 6.36 },
+      { name: 'error', ground: 'lifted', light: 7.22, dark: 5.73 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
+describe('the panel layout', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // A name, Back and a heading are ink, a description and an end state slate, on the canvas or in a card on
+  // lifted; the current pill is canvas text on ink. The gate already holds each, so the layout adds no pair. The
+  // rules between the list face's rows are a cue, as DescriptionList's are.
+  it('cites canvas on ink, and ink and slate on canvas and lifted', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+    expect(CONTRAST_PAIRS, 'canvas on ink').toContainEqual(
+      expect.objectContaining({ text: 'canvas', ground: 'ink', minimum: TEXT }),
+    );
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'canvas', ground: 'ink', light: 16.25, dark: 19.31 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
+    }
+  });
+});
+
+describe('the account menu and the theme switch', () => {
+  /** A token color painted over `groundName` and measured against it, as a reader sees it. */
+  const measured = (mode, name, groundName) => {
+    const palette = paletteFor(tokens, mode);
+    const ground = parseColor(palette[groundName]);
+    return contrastRatio(composite(parseColor(palette[name]), ground), ground);
+  };
+
+  // The trigger's name is ink and its detail and chevron slate, on the rail's float or a header's canvas; a theme
+  // switch in a card is on lifted, and the account menu's rows on its float popup. The gate already holds each,
+  // so neither part adds a pair.
+  it('cites ink and slate on canvas, lifted and float', () => {
+    for (const text of ['ink', 'slate']) {
+      for (const ground of ['canvas', 'lifted', 'float']) {
+        expect(CONTRAST_PAIRS, `${text} on ${ground}`).toContainEqual(
+          expect.objectContaining({ text, ground, minimum: TEXT }),
+        );
+      }
+    }
+  });
+
+  it('measures the pairs Appendix B records, in both modes', () => {
+    for (const { name, ground, light, dark } of [
+      { name: 'ink', ground: 'canvas', light: 16.25, dark: 19.31 },
+      { name: 'ink', ground: 'lifted', light: 17.84, dark: 17.42 },
+      { name: 'ink', ground: 'float', light: 18.43, dark: 17.42 },
+      { name: 'slate', ground: 'canvas', light: 4.84, dark: 7.26 },
+      { name: 'slate', ground: 'lifted', light: 5.31, dark: 6.94 },
+      { name: 'slate', ground: 'float', light: 5.49, dark: 6.94 },
+    ]) {
+      expect(measured('light', name, ground), `${name} on ${ground}, light`).toBeCloseTo(light, 2);
+      expect(measured('dark', name, ground), `${name} on ${ground}, dark`).toBeCloseTo(dark, 2);
     }
   });
 });

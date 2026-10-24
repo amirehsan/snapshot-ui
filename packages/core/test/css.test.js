@@ -278,6 +278,20 @@ describe('src/styles.css', () => {
       previous = at(file);
     }
   });
+
+  it("imports the settings files after the last batch's last, in order", () => {
+    // The copy button is required; the field extras, the repeater, the panel layout and the account menu are
+    // checked once they exist, each after the one before, all after the last file of the batches before.
+    const at = (file) => entry.indexOf(`'./components/${file}'`);
+    const before = ['breadcrumbs.css', 'month-grid.css', 'description-list.css'].map(at);
+    expect(at('copy-button.css')).toBeGreaterThan(Math.max(...before));
+    let previous = at('copy-button.css');
+    for (const file of ['field-extras.css', 'repeater.css', 'panel-layout.css', 'account-menu.css']) {
+      if (!components.includes(file)) continue;
+      expect(at(file), file).toBeGreaterThan(previous);
+      previous = at(file);
+    }
+  });
 });
 
 describe.each(components)('src/components/%s', (file) => {
@@ -1030,6 +1044,13 @@ describe('src/components/radio.css', () => {
   // The rules without their comments, which quote selectors of their own.
   // Closed up, so a selector Prettier breaks over lines is found as one.
   const rules = () => closeUp(read('src/components/radio.css').replace(/\/\*[\s\S]*?\*\//g, ''));
+
+  it("sizes a row's icon by its own class, 16px on the first line, before the words", () => {
+    const icon = blockAfter(rules(), '.radio-icon {');
+    for (const declaration of ['width: 16px;', 'height: 16px;', 'margin-inline-end: 0.5rem;']) {
+      expect(icon, declaration).toContain(declaration);
+    }
+  });
   // Every state also matches the native twin, so plain HTML draws the same row.
   const SELECTED = ':is([data-selected], :where(:has(input:checked)))';
   const FOCUSED = ':is([data-focus-visible], :where(:has(input:focus-visible)))';
@@ -2192,6 +2213,15 @@ describe('src/components/segmented.css', () => {
   // The rules without their comments, which quote selectors of their own.
   // Closed up, so a selector Prettier breaks over lines is found as one.
   const rules = () => closeUp(read('src/components/segmented.css').replace(/\/\*[\s\S]*?\*\//g, ''));
+
+  it("sizes an option's icon by its own class, 16px on the word's line, before the word", () => {
+    const icon = blockAfter(rules(), '.segmented-icon {');
+    for (const declaration of ['width: 16px;', 'height: 16px;', 'margin-inline-end: 0.375rem;']) {
+      expect(icon, declaration).toContain(declaration);
+    }
+    // An icon-only option's svg carries no class and keeps its own size and place.
+    expect(rules()).not.toMatch(/\.segmented-label > svg/);
+  });
   const SELECTED = ':is([data-selected], :where(:has(input:checked)))';
   const FOCUSED = ':is([data-focus-visible], :where(:has(input:focus-visible)))';
 
@@ -3003,6 +3033,34 @@ describe('src/components/menu.css', () => {
   const rules = () => closeUp(stripComments(read('src/components/menu.css')));
   const WASH = 'background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);';
 
+  it('draws the submenu chevron only under data-has-submenu, mirrored in right to left', () => {
+    const css = rules();
+    const outside = outsideForcedColors(css);
+    const chevron = blockAfter(outside, '.menu-item-submenu {');
+    expect(chevron).toContain('flex: none;');
+    expect(chevron).toContain('color: var(--color-slate);');
+    expect(blockAfter(outside, '.menu-item-submenu svg {')).toContain('width: 16px;');
+    expect(blockAfter(outside, ":where([dir='rtl' i]) .menu-item-submenu svg {")).toContain('scale: -1 1;');
+    // The row's room and its kept wash are for a row that opens a submenu alone, so no other row moves.
+    expect(blockAfter(outside, '.menu-item[data-has-submenu] {')).toContain('padding-inline-end: 0.5rem;');
+    expect(blockAfter(outside, '.menu-item[data-has-submenu][data-open] {')).toContain(WASH);
+    for (const match of outside.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
+      const [, selector = '', body = ''] = match;
+      if (/padding|background-color/.test(body) && /data-open/.test(selector)) {
+        expect(selector, selector).toContain('[data-has-submenu]');
+      }
+    }
+    // Forced colors: the chevron follows its row, and the open row keeps an edge the repaint cannot take.
+    const forced = blockAfter(css, FORCED_COLORS);
+    expect(blockAfter(forced, '.menu-item-submenu {')).toContain('color: canvastext;');
+    expect(blockAfter(forced, '.menu-item[data-disabled] .menu-item-submenu {')).toContain(
+      'color: graytext;',
+    );
+    expect(blockAfter(forced, '.menu-item[data-has-submenu][data-open] {')).toContain(
+      'outline: 1px solid canvastext;',
+    );
+  });
+
   it('is imported after popover.css', () => {
     const entry = read('src/styles.css');
     const at = (file) => entry.indexOf(`'./components/${file}'`);
@@ -3566,7 +3624,7 @@ describe('src/components/tooltip.css', () => {
   // header, so the first match is the tip's own rule, and the later ones sit inside the two media blocks.
   const rules = () => closeUp(stripComments(read('src/components/tooltip.css')));
 
-  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter, data and documents files after it', () => {
+  it('is the last overlay file imported, right after command-palette.css, with only the shell, home, picker, filter, data, documents and settings files after it', () => {
     const entry = read('src/styles.css');
     const imported = [...entry.matchAll(/@import '\.\/components\/([^']+)';/g)].map((m) => m[1]);
     const tooltip = imported.indexOf('tooltip.css');
@@ -3604,6 +3662,11 @@ describe('src/components/tooltip.css', () => {
         'save-bar.css',
         'page-header.css',
         'breadcrumbs.css',
+        'copy-button.css',
+        'field-extras.css',
+        'repeater.css',
+        'panel-layout.css',
+        'account-menu.css',
       ]).toContain(file);
     }
   });
@@ -10757,6 +10820,604 @@ describe('src/components/breadcrumbs.css', () => {
   });
 });
 
+describe('src/components/copy-button.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/copy-button.css')));
+  const CHECK = ".copy-button[data-outcome='copied'] .copy-button-glyph[data-glyph='check']";
+  const HIDDEN =
+    ".copy-button-glyph[data-glyph='check'], .copy-button[data-outcome='copied'] .copy-button-glyph[data-glyph='copy'] {";
+
+  it('clips the status host and the copy command source, out of the flow and out of sight', () => {
+    const css = rules();
+    const clip = blockAfter(css, '.copy-button-status, .copy-button-source {');
+    for (const declaration of [
+      'position: absolute;',
+      'inline-size: 1px;',
+      'block-size: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+    ]) {
+      expect(clip, declaration).toContain(declaration);
+    }
+    // Never display: none or visibility: hidden, which would hide the status from a screen reader too.
+    expect(css).not.toMatch(/\.copy-button-status[^{]*\{[^}]*(display: none|visibility: hidden)/);
+    // The root holds the status, so the clipped box is placed against it.
+    expect(blockAfter(css, '.copy-button {')).toContain('position: relative;');
+    // The source is selectable whatever the page says, and keeps the value's spaces and lines.
+    const source = blockAfter(css, '} .copy-button-source {');
+    expect(source).toContain('user-select: text;');
+    expect(source).toContain('white-space: pre;');
+  });
+
+  it('shows the check only while copied, in ink', () => {
+    const css = rules();
+    expect(blockAfter(css, HIDDEN)).toContain('display: none;');
+    const check = blockAfter(outsideForcedColors(css), `${CHECK} {`);
+    expect(check).toContain('display: inline-flex;');
+    expect(check).toContain('color: var(--color-ink);');
+    // A copy is not a save: no success or gain color anywhere, and no error color for a failure, which says its
+    // words instead.
+    expect(css).not.toMatch(/--color-(success|gain|error|signal|clay)/);
+  });
+
+  it('has a forced-colors block and no transition', () => {
+    const source = read('src/components/copy-button.css');
+    expect(blockAfter(closeUp(stripComments(source)), FORCED_COLORS)).toContain(
+      `${CHECK} { color: buttontext; }`,
+    );
+    expect(stripComments(source)).not.toMatch(/\b(transition|animation)\s*:/);
+  });
+
+  it('draws the word look glyph at 16px, as the filter bar draws its button icon', () => {
+    const glyph = blockAfter(rules(), ".copy-button[data-look='button'] .copy-button-glyph svg {");
+    expect(glyph).toContain('inline-size: 16px;');
+    expect(glyph).toContain('block-size: 16px;');
+  });
+});
+
+describe('src/components/field-extras.css, the offers', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/field-extras.css')));
+
+  it("caps a field's extras at the field's measure and lifts it for a group", () => {
+    const css = rules();
+    const extras = blockAfter(css, '.field-extras {');
+    expect(extras).toContain('display: grid;');
+    expect(extras).toContain('gap: var(--spacing-part);');
+    expect(extras).toContain('max-inline-size: var(--container-field);');
+    // A grid item's min-content width never pushes a 320px page sideways.
+    expect(extras).toContain('min-inline-size: 0;');
+    expect(blockAfter(css, ".field-extras[data-scope='group'] {")).toContain('max-inline-size: none;');
+  });
+
+  it('draws the offer at the small step in slate, never clay, taupe or signal', () => {
+    const css = rules();
+    const line = blockAfter(css, '.field-offer {');
+    for (const declaration of [
+      'display: flex;',
+      'flex-wrap: wrap;',
+      'align-items: baseline;',
+      'column-gap: var(--spacing-part);',
+      'margin: 0;',
+      'font-size: var(--text-small);',
+      'line-height: var(--text-small--line-height);',
+      'font-weight: var(--text-small--font-weight);',
+      'color: var(--color-slate);',
+    ]) {
+      expect(line, declaration).toContain(declaration);
+    }
+    // An offer is not unsaved work, not consent, not a good outcome, not an error and not a placeholder.
+    expect(css).not.toMatch(/--color-(clay|signal|success|gain|error|info|taupe)/);
+  });
+
+  it('breaks only a word wider than the line, so a long value never pushes the page and a figure stays whole', () => {
+    const css = rules();
+    const text = blockAfter(css, '.field-offer-text {');
+    expect(text).toContain('min-inline-size: 0;');
+    // break-word, unlike anywhere, keeps the longest word as the line's narrowest, so a holder sized by its
+    // content never squeezes a figure into two (the Badge lesson); the wrapper's column is its width where that is
+    // known, so a word wider than the page still breaks inside it. A zero minimum on the line instead would let
+    // a content-sized holder squeeze the whole wrapper to nothing.
+    expect(text).toContain('overflow-wrap: break-word;');
+    expect(css).not.toContain('overflow-wrap: anywhere;');
+    expect(blockAfter(css, '.field-extras {')).toContain('grid-template-columns: 100%;');
+    expect(blockAfter(css, '.field-offer {')).not.toContain('min-inline-size');
+  });
+
+  it('levels the button with the line', () => {
+    expect(blockAfter(rules(), '.field-offer-button {')).toContain(
+      'margin-block: min(0px, calc((1lh - var(--size-control)) / 2));',
+    );
+  });
+
+  it('clips the status host, out of the flow and out of sight', () => {
+    const css = rules();
+    const clip = blockAfter(css, '.field-extras-status {');
+    for (const declaration of [
+      'position: absolute;',
+      'inline-size: 1px;',
+      'block-size: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+      'white-space: nowrap;',
+    ]) {
+      expect(clip, declaration).toContain(declaration);
+    }
+    expect(css).not.toMatch(/\.field-extras-status[^{]*\{[^}]*(display: none|visibility: hidden)/);
+    // The status is placed absolutely in the wrapper's grid, so it names both its lines on both axes (lesson 9).
+    expect(clip).toContain('grid-area: 1 / 1 / span 1 / span 1;');
+  });
+
+  it('has a forced-colors block, no transition and no physical side', () => {
+    const source = stripComments(read('src/components/field-extras.css'));
+    expect(source).toContain(FORCED_COLORS);
+    expect(source).not.toMatch(/\b(transition|animation)\s*:/);
+    expect(source).not.toMatch(/\b(left|right|top|bottom)\s*:|(margin|padding)-(left|right|top|bottom)/);
+  });
+});
+
+describe('src/components/field-extras.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/field-extras.css')));
+
+  it('resets the conditional fieldset and spaces it from --conditional-fields-gap', () => {
+    const group = blockAfter(outsideForcedColors(rules()), '.conditional-fields {');
+    for (const declaration of [
+      'display: grid;',
+      'gap: var(--conditional-fields-gap, var(--spacing-peer));',
+      // A fieldset's min-content width would otherwise hold a long field wider than a 320px page.
+      'min-inline-size: 0;',
+      'margin: 0;',
+      'padding: 0;',
+      'border: 0;',
+    ]) {
+      expect(group, declaration).toContain(declaration);
+    }
+    // No indent: the fields line up with the gate, and nothing dims them.
+    expect(group).not.toMatch(/padding-inline|margin-inline|opacity/);
+  });
+
+  it('hides [hidden] by its own rule', () => {
+    expect(blockAfter(rules(), '.conditional-fields[hidden], .conditional-fields[data-hidden] {')).toContain(
+      'display: none;',
+    );
+  });
+
+  it('names no .field selector, so its classes are roots', () => {
+    // Prose's generated guard takes a class that extends another class of its file as a sub-part; `field-extras`
+    // and `field-offer` would extend `field` (lesson 12).
+    expect(stripComments(read('src/components/field-extras.css'))).not.toMatch(/\.field(?![-\w])/);
+  });
+
+  it('has a forced-colors block, and no transition or animation', () => {
+    const source = read('src/components/field-extras.css');
+    expect(blockAfter(closeUp(stripComments(source)), FORCED_COLORS)).toContain(
+      '.conditional-fields { border: 0; }',
+    );
+    expect(stripComments(source)).not.toMatch(/\b(transition|animation)\s*:/);
+  });
+});
+
+describe('src/components/repeater.css', () => {
+  // The rules without their comments, with their whitespace closed up.
+  const rules = () => closeUp(stripComments(read('src/components/repeater.css')));
+  const QUERY = '@container repeater-row-fields (inline-size >= 30rem) {';
+
+  it('resets the fieldsets so a 320px page does not scroll', () => {
+    const sets = blockAfter(rules(), '.repeater, .repeater-row-set {');
+    for (const declaration of [
+      'min-inline-size: 0;',
+      'margin: 0;',
+      'padding: 0;',
+      'border: 0;',
+      'display: grid;',
+    ]) {
+      expect(sets, declaration).toContain(declaration);
+    }
+    // A floated legend is not the fieldset's drawn legend, so it is a grid item and takes the gap.
+    expect(blockAfter(rules(), '.repeater-legend {')).toContain('float: left;');
+    expect(blockAfter(rules(), '.repeater-row-legend {')).toContain('float: left;');
+  });
+
+  it('is a size container switching at 30rem, with an intrinsic inline size of 0, through a frame', () => {
+    const css = rules();
+    const fields = blockAfter(css, '.repeater-row-fields {');
+    expect(fields).toContain('container: repeater-row-fields / inline-size;');
+    expect(fields).toContain('contain-intrinsic-inline-size: 0;');
+    // The query styles the frame inside the container, never the container itself.
+    const query = blockAfter(css, QUERY);
+    expect(query).toContain('.repeater-row-grid { grid-template-columns: minmax(0, 1fr) auto; }');
+    expect(query).not.toContain('.repeater-row-fields');
+    expect(query).toContain('flex: 1 1 10rem;');
+    // Remove sits level with the fields' controls: past the label row, centred on the field.
+    expect(query).toContain(
+      'padding-block-start: calc(1lh + var(--spacing-part) + max(0px, calc((var(--size-field) - var(--size-control)) / 2)));',
+    );
+    expect(blockAfter(css, '.repeater-row-end {')).toContain('line-height: var(--text-h4--line-height);');
+  });
+
+  it("keeps Remove's width at the minimum from 30rem, out of sight, and drops it under", () => {
+    const css = rules();
+    expect(blockAfter(css, '.repeater-remove-space {')).toContain('display: none;');
+    const query = blockAfter(css, QUERY);
+    expect(blockAfter(query, '.repeater-remove-space {')).toContain('visibility: hidden;');
+  });
+
+  it('places the status host absolutely on both axes with span 1', () => {
+    const status = blockAfter(rules(), '.repeater-status {');
+    for (const declaration of [
+      'grid-area: 1 / 1 / span 1 / span 1;',
+      'position: absolute;',
+      'inline-size: 1px;',
+      'block-size: 1px;',
+      'overflow: hidden;',
+      'clip-path: inset(50%);',
+      'white-space: nowrap;',
+    ]) {
+      expect(status, declaration).toContain(declaration);
+    }
+    expect(rules()).not.toMatch(/\.repeater-status[^{]*\{[^}]*(display: none|visibility: hidden)/);
+    // The status is placed against the set.
+    expect(blockAfter(rules(), '.repeater {')).toContain('position: relative;');
+  });
+
+  it('rules rows apart with the divider, none above the first or under the last', () => {
+    const css = rules();
+    expect(blockAfter(css, '.repeater-row + .repeater-row {')).toContain(
+      'border-block-start: 1px solid var(--color-divider);',
+    );
+    expect(blockAfter(css, '.repeater-row {')).toContain('padding-block: var(--spacing-peer);');
+    expect(blockAfter(css, '.repeater-row:first-child {')).toContain('padding-block-start: 0;');
+    expect(blockAfter(css, '.repeater-row:last-child {')).toContain('padding-block-end: 0;');
+    expect(blockAfter(css, '.repeater-rows {')).toContain('list-style: none;');
+  });
+
+  it('moves Add by the corner inset in a card, also under a group offer line that is not drawn', () => {
+    const css = rules();
+    expect(css).toContain(
+      ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .repeater:last-child > .repeater-foot,',
+    );
+    expect(css).toContain(
+      '> .field-extras:last-child > .repeater:has(+ .field-extras-status) > .repeater-foot {',
+    );
+  });
+
+  it('draws the count, the full line and the empty line in slate and errors in the error color', () => {
+    const css = rules();
+    expect(
+      blockAfter(css, '.repeater-description, .repeater-empty, .repeater-count, .repeater-full {'),
+    ).toContain('color: var(--color-slate);');
+    expect(blockAfter(css, '.repeater-error, .repeater-row-error {')).toContain('color: var(--color-error);');
+    expect(blockAfter(css, '.repeater-legend {')).toContain('color: var(--color-ink);');
+    expect(blockAfter(css, '.repeater-legend {')).toContain('font-weight: var(--text-h4--font-weight);');
+    expect(blockAfter(css, '.repeater-row-legend {')).toContain('font-weight: 500;');
+    // Never clay (the chip is the field's own), signal, success or taupe.
+    expect(css).not.toMatch(/--color-(clay|signal|success|gain|taupe|info)/);
+  });
+
+  it('has a forced-colors block and no transition', () => {
+    const source = stripComments(read('src/components/repeater.css'));
+    expect(source).toContain(FORCED_COLORS);
+    expect(blockAfter(closeUp(source), FORCED_COLORS)).toContain('border-block-start-color: canvastext;');
+    expect(source).not.toMatch(/\b(transition|animation)\s*:/);
+    // Logical sides only. The legends' float is no side: in a grid nothing floats.
+    expect(source).not.toMatch(/\b(left|right|top|bottom)\s*:|(margin|padding)-(left|right|top|bottom)/);
+  });
+});
+
+describe('src/components/panel-layout.css', () => {
+  // The rules without their comments, with their whitespace closed up, so a selector Prettier breaks over lines
+  // reads as one line.
+  const rules = () => closeUp(stripComments(read('src/components/panel-layout.css')));
+  const SPLIT = '@container panel-layout (inline-size >= 48rem)';
+  const PAIRS = '@container panel-row (inline-size >= 66rem)';
+  const PILL = ".panel-nav-link:is([aria-current='page'], [data-default])";
+
+  /** The CSS with every block under `header` taken out. */
+  const without = (css, header) => {
+    let rest = css;
+    for (;;) {
+      const start = rest.indexOf(header);
+      if (start === -1) return rest;
+      const end = rest.indexOf('{', start) + 1 + blockAfter(rest, header).length + 1;
+      rest = rest.slice(0, start) + rest.slice(end);
+    }
+  };
+
+  it('is a size container at 48rem with an intrinsic inline size of 0, through a frame', () => {
+    const css = rules();
+    const layout = blockAfter(css, '.panel-layout {');
+    expect(layout).toContain('container: panel-layout / inline-size;');
+    // The library's rule: a stand-in width is also the min-content width, which scrolls a phone page sideways.
+    expect(layout).toContain('contain-intrinsic-inline-size: 0;');
+    expect(layout).toContain('min-inline-size: 0;');
+    // A container query cannot style its own container, so the frame inside it is the grid.
+    expect(layout).not.toContain('display: grid');
+    const frame = blockAfter(css, '.panel-layout-frame {');
+    expect(frame).toContain('display: grid;');
+    expect(frame).toContain('grid-template-columns: minmax(0, 1fr);');
+    expect(css).toContain(`${SPLIT} {`);
+  });
+
+  it('hides the main column at the index and the side column at a section under 48rem', () => {
+    const narrow = without(without(outsideForcedColors(rules()), SPLIT), '@media print');
+    expect(
+      blockAfter(
+        narrow,
+        ".panel-layout[data-view='index'] .panel-layout-main, .panel-layout[data-view='section'] .panel-layout-side {",
+      ),
+    ).toContain('display: none;');
+    // Back, the descriptions and the chevrons show on the list face.
+    expect(blockAfter(narrow, '.panel-layout-back {')).toContain('display: flex;');
+    expect(narrow).not.toMatch(/\.panel-layout-back[^{]*\{[^}]*display: none/);
+  });
+
+  it('draws 16rem beside the rest from 48rem and hides Back', () => {
+    const split = blockAfter(rules(), SPLIT);
+    const frame = blockAfter(split, '.panel-layout-frame {');
+    expect(frame).toContain('grid-template-columns: 16rem minmax(0, 1fr);');
+    expect(frame).toContain('column-gap: var(--spacing-peer);');
+    expect(frame).toContain('align-items: start;');
+    // The face rule's specificity, after it: it wins without !important.
+    expect(
+      blockAfter(
+        split,
+        '.panel-layout[data-view] .panel-layout-side, .panel-layout[data-view] .panel-layout-main {',
+      ),
+    ).toContain('display: block;');
+    expect(blockAfter(split, '.panel-layout-back, .panel-nav-description, .panel-nav-chevron {')).toContain(
+      'display: none;',
+    );
+    expect(rules()).not.toContain('!important');
+  });
+
+  it('sticks the nav under --page-sticky-top on the split face', () => {
+    const side = blockAfter(blockAfter(rules(), SPLIT), '.panel-layout-side {');
+    expect(side).toContain('position: sticky;');
+    // A peer step under the sticky header; the side reaches past its column by a focus ring, so its links stand a
+    // peer step under it and its scroll clips no ring.
+    expect(side).toContain('--panel-layout-ring: calc(var(--focus-ring-width) + var(--focus-ring-offset));');
+    expect(side).toContain(
+      'inset-block-start: calc(var(--page-sticky-top, 0px) + var(--spacing-peer) - var(--panel-layout-ring));',
+    );
+    expect(side).toContain('margin: calc(-1 * var(--panel-layout-ring));');
+    expect(side).toContain('padding: var(--panel-layout-ring);');
+    expect(side).toContain(
+      'max-block-size: calc(100dvh - var(--page-sticky-top, 0px) - 2 * var(--spacing-peer) + 2 * var(--panel-layout-ring));',
+    );
+    expect(side).toContain('overflow-y: auto;');
+    // Not sticky on the list face, where the list is the page.
+    expect(without(rules(), SPLIT)).not.toContain('position: sticky');
+  });
+
+  it('draws the current and default pill inside the split query only', () => {
+    const css = outsideForcedColors(rules());
+    const pill = blockAfter(blockAfter(css, SPLIT), `${PILL} {`);
+    expect(pill).toContain('background-color: var(--color-ink);');
+    expect(pill).toContain('color: var(--color-canvas);');
+    // On the list face no row is current: a phone's list is a menu of pages, not a place.
+    expect(without(css, SPLIT)).not.toMatch(/aria-current|data-default/);
+    // The forced-colors pill is inside the split query too.
+    const forced = blockAfter(rules(), FORCED_COLORS);
+    expect(blockAfter(blockAfter(forced, SPLIT), `${PILL}, ${PILL} .panel-nav-end {`)).toContain(
+      'background-color: highlight;',
+    );
+    expect(without(forced, SPLIT)).not.toMatch(/aria-current|data-default/);
+  });
+
+  it('draws the list face rows at the field size with rules between them, and the split rows at the control size', () => {
+    const css = outsideForcedColors(rules());
+    const narrow = without(css, SPLIT);
+    expect(blockAfter(narrow, '.panel-nav-link {')).toContain('min-block-size: var(--size-field);');
+    expect(blockAfter(narrow, '.panel-nav-item + .panel-nav-item {')).toContain(
+      'border-block-start: 1px solid var(--color-divider);',
+    );
+    const name = blockAfter(narrow, '.panel-nav-name {');
+    expect(name).toContain('font-size: var(--text-action);');
+    expect(name).toContain('font-weight: 500;');
+    for (const part of ['.panel-nav-description {', '.panel-nav-end {', '} .panel-nav-chevron {']) {
+      expect(blockAfter(narrow, part), part).toContain('color: var(--color-slate);');
+    }
+    const split = blockAfter(css, SPLIT);
+    expect(blockAfter(split, '.panel-nav-link {')).toContain('min-block-size: var(--size-control);');
+    expect(blockAfter(split, '.panel-nav-item + .panel-nav-item {')).toContain('border-block-start: 0;');
+  });
+
+  it('keeps words whole where a holder sizes a lone nav or section by its content, and breaks only a word wider than the line', () => {
+    const css = rules();
+    // break-word, not anywhere: anywhere lowered the min-content width to one letter, so a flex row or an auto
+    // track squeezed a lone PanelNav or PanelSection to a letter a line (the Badge and FieldExtras lesson).
+    for (const part of [
+      '.panel-nav-name {',
+      '.panel-nav-description {',
+      '.panel-nav-end {',
+      '.panel-section-heading {',
+      '.panel-section-description {',
+    ]) {
+      expect(blockAfter(css, part), part).toContain('overflow-wrap: break-word;');
+    }
+    // No zero floor on a part that stands alone: it is what let such a holder squeeze it to nothing.
+    expect(blockAfter(css, '.panel-nav {')).not.toContain('min-inline-size');
+    const section = blockAfter(css, '.panel-section {');
+    expect(section).not.toContain('min-inline-size');
+    // One column the section's width where that is known, so a word wider than the page still breaks inside it.
+    expect(section).toContain('grid-template-columns: 100%;');
+    // The end state counts at its whole width in a holder sized by content, so the words beside it stay whole.
+    expect(blockAfter(css, '.panel-nav-end {')).toContain('inline-size: max-content;');
+    // The text beside it still shrinks in a row of known width, so a word wider than the row breaks.
+    expect(blockAfter(css, '.panel-nav-text {')).toContain('min-inline-size: 0;');
+  });
+
+  it("makes a nav row concentric with a card's corner, and a pill on the canvas", () => {
+    expect(blockAfter(rules(), '.panel-nav-link {')).toContain(
+      'border-radius: min(var(--radius-pill), max(0px, calc(var(--holder-radius, var(--radius-pill)) - var(--holder-border, 0px) - var(--holder-pad, 0px))));',
+    );
+  });
+
+  it('draws the heading at the h3 step at 500, with no ring when focused by script', () => {
+    const css = rules();
+    const heading = blockAfter(css, '.panel-section-heading {');
+    for (const declaration of [
+      'font-size: var(--text-h3);',
+      'letter-spacing: var(--text-h3--letter-spacing);',
+      'font-weight: 500;',
+      'color: var(--color-ink);',
+    ]) {
+      expect(heading, declaration).toContain(declaration);
+    }
+    expect(blockAfter(css, '.panel-section-heading:focus:not(:focus-visible) {')).toContain('outline: none;');
+    expect(blockAfter(css, '.panel-section-description {')).toContain('color: var(--color-slate);');
+    // Weights 400, 450, 500 and 700 only.
+    expect(css).not.toMatch(/font-weight: 600/);
+  });
+
+  it('pairs PanelRow from 66rem through its grid, keeping heights', () => {
+    const css = rules();
+    const row = blockAfter(css, '.panel-row {');
+    expect(row).toContain('container: panel-row / inline-size;');
+    expect(row).toContain('contain-intrinsic-inline-size: 0;');
+    expect(row).toContain('min-inline-size: 0;');
+    const grid = blockAfter(css, '.panel-row-grid {');
+    expect(grid).toContain('display: grid;');
+    expect(grid).toContain('gap: var(--spacing-peer);');
+    // Cards keep their own heights.
+    expect(grid).toContain('align-items: start;');
+    const pairs = blockAfter(css, PAIRS);
+    expect(blockAfter(pairs, ".panel-row[data-layout='halves'] > .panel-row-grid {")).toContain(
+      'grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);',
+    );
+    expect(blockAfter(pairs, ".panel-row[data-layout='third-two-thirds'] > .panel-row-grid {")).toContain(
+      'grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);',
+    );
+    expect(blockAfter(pairs, ".panel-row[data-layout='two-thirds-third'] > .panel-row-grid {")).toContain(
+      'grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);',
+    );
+  });
+
+  it('mirrors the chevrons in right to left', () => {
+    expect(
+      blockAfter(rules(), ":where([dir='rtl' i]) :is(.panel-layout-back, .panel-nav-chevron) svg {"),
+    ).toContain('scale: -1 1;');
+  });
+
+  it('hides the side column and Back in print', () => {
+    expect(
+      blockAfter(blockAfter(rules(), '@media print'), '.panel-layout-side, .panel-layout-back {'),
+    ).toContain('display: none;');
+  });
+
+  it('has a forced-colors block and no transition', () => {
+    const source = stripComments(read('src/components/panel-layout.css'));
+    expect(blockAfter(closeUp(source), FORCED_COLORS)).toContain(
+      '.panel-nav-item + .panel-nav-item { border-block-start-color: canvastext; }',
+    );
+    expect(source).not.toMatch(/\b(transition|animation)\s*:/);
+    expect(source).not.toMatch(/\b(left|right|top|bottom)\s*:|(margin|padding)-(left|right|top|bottom)/);
+  });
+});
+
+describe('src/components/account-menu.css', () => {
+  const rules = () => closeUp(stripComments(read('src/components/account-menu.css')));
+  const TRIGGER = '.account-menu-trigger {';
+
+  it("is as tall as its two lines or the field size, padded a part step inside its edge, and fills the footer's row", () => {
+    const trigger = blockAfter(outsideForcedColors(rules()), TRIGGER);
+    for (const declaration of [
+      'min-block-size: var(--size-field);',
+      'padding: calc(var(--spacing-part) - 1px);',
+      'border: 1px solid transparent;',
+      'flex: 1 1 auto;',
+      'min-inline-size: 0;',
+      'color: var(--color-ink);',
+      'text-align: start;',
+    ]) {
+      expect(trigger, declaration).toContain(declaration);
+    }
+    // No fixed height: a long name or detail grows the row.
+    expect(trigger).not.toMatch(/(?:^|[\s;])(?:block-size|height):/);
+  });
+
+  it("takes the rail items' corner formula, so its wash follows the rail's curve, and the control corner elsewhere", () => {
+    // The rail's corner less the footer's gap, uncapped by the control corner, which in Rounded is less than that
+    // and would leave the wash's corner off the rail's center (the concentric audit's finding); outside a rail
+    // the two fallbacks give the control corner.
+    expect(blockAfter(rules(), TRIGGER)).toContain(
+      'border-radius: min(var(--radius-pill), max(0px, calc(var(--sidebar-corner, var(--radius-control)) - var(--sidebar-nav-inset, 0px))));',
+    );
+    // The same formula as a rail item, read from sidebar.css, with fallbacks for a trigger outside a rail.
+    const item = blockAfter(closeUp(stripComments(read('src/components/sidebar.css'))), '.sidebar-item {');
+    expect(item).toContain(
+      'border-radius: min(var(--radius-pill), max(0px, calc(var(--sidebar-corner) - var(--sidebar-nav-inset))));',
+    );
+  });
+
+  it('draws the 5% wash on hover, while pressed and while open, and the focus ring', () => {
+    const css = rules();
+    expect(
+      blockAfter(
+        css,
+        ".account-menu-trigger:is(:hover, [data-hovered], [data-pressed], [aria-expanded='true']) {",
+      ),
+    ).toContain('background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);');
+    const ring = blockAfter(css, '.account-menu-trigger:is(:focus-visible, [data-focus-visible]) {');
+    expect(ring).toContain('outline: var(--focus-ring-width) solid var(--focus-ring-color);');
+    expect(ring).toContain('outline-offset: var(--focus-ring-offset);');
+  });
+
+  it('wraps the name and the detail at any character, the name at the action step and the detail slate', () => {
+    const css = rules();
+    const name = blockAfter(css, '.account-menu-name {');
+    expect(name).toContain('overflow-wrap: anywhere;');
+    expect(name).toContain('font-weight: var(--text-action--font-weight);');
+    const detail = blockAfter(css, '.account-menu-detail {');
+    expect(detail).toContain('overflow-wrap: anywhere;');
+    expect(detail).toContain('color: var(--color-slate);');
+    expect(detail).toContain('font-weight: var(--text-small--font-weight);');
+    expect(blockAfter(css, '.account-menu-text {')).toContain('min-inline-size: 0;');
+    // The up-and-down chevron is symmetric and does not mirror.
+    expect(blockAfter(css, '.account-menu-chevron {')).toContain('color: var(--color-slate);');
+    expect(css).not.toMatch(/account-menu-chevron[^{]*\{[^}]*scale/);
+  });
+
+  it('draws the compact face as a control-sized pill, 44px on a coarse pointer', () => {
+    const css = rules();
+    const compact = blockAfter(outsideForcedColors(css), '.account-menu-trigger[data-compact] {');
+    for (const declaration of [
+      'inline-size: var(--size-control);',
+      'block-size: var(--size-control);',
+      'min-block-size: 0;',
+      'padding: 0;',
+      'border-radius: var(--radius-pill);',
+      'flex: none;',
+    ]) {
+      expect(compact, declaration).toContain(declaration);
+    }
+    const coarse = blockAfter(
+      blockAfter(css, '@media (pointer: coarse)'),
+      '.account-menu-trigger[data-compact] {',
+    );
+    expect(coarse).toContain('inline-size: 44px;');
+    expect(coarse).toContain('block-size: 44px;');
+  });
+
+  it("caps the menu's width at a phone's", () => {
+    expect(blockAfter(rules(), '.account-menu {')).toContain('max-inline-size: min(22rem, 100vw - 2rem);');
+  });
+
+  it('gives the open trigger an edge and the detail and chevron the text color in forced colors, with no transition', () => {
+    const source = stripComments(read('src/components/account-menu.css'));
+    const forced = blockAfter(closeUp(source), FORCED_COLORS);
+    expect(blockAfter(forced, ".account-menu-trigger[aria-expanded='true'] {")).toContain(
+      'border-color: canvastext;',
+    );
+    expect(blockAfter(forced, '.account-menu-detail, .account-menu-chevron {')).toContain(
+      'color: canvastext;',
+    );
+    expect(source).not.toMatch(/\b(transition|animation)\s*:/);
+    expect(source).not.toMatch(/\b(left|right|top|bottom)\s*:|(margin|padding)-(left|right|top|bottom)/);
+  });
+});
+
 describe('concentric corners (docs/design-system.md, "Nested radii, derived")', () => {
   const css = (file) => closeUp(stripComments(read(`src/components/${file}`)));
   // The start of the formula: a part may take a further gap of its own after it, as a toast's row does.
@@ -10850,6 +11511,21 @@ describe('concentric corners (docs/design-system.md, "Nested radii, derived")', 
     ],
     ['card.css', '.card > .card-header > .card-actions {', `margin-block-start: ${EXTRA};`],
     ['card.css', '.card > .card-header > .card-actions:first-child {', `margin-block-start: ${EXTRA};`],
+    [
+      'field-extras.css',
+      ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .field-extras:last-child > .field-offer:last-of-type {',
+      'padding-block-end: min(calc((var(--holder-corner-inset) - var(--holder-pad)) * 1000), calc(var(--holder-corner-inset) - var(--holder-pad) + max(0px, calc((var(--size-control) - var(--text-action) * var(--text-action--line-height)) / 2))));',
+    ],
+    [
+      'repeater.css',
+      ':is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child) > .repeater:last-child > .repeater-foot,',
+      `padding-block-end: ${EXTRA};`,
+    ],
+    [
+      'panel-layout.css',
+      ':is(.card, .card > .card-body:first-child) > .panel-layout:first-child > .panel-layout-frame > .panel-layout-main > .panel-layout-back {',
+      `margin-block-start: ${EXTRA};`,
+    ],
   ];
 
   it('moves no control inward where a content column stands above it, so a trailing action keeps its edge', () => {
@@ -11368,6 +12044,54 @@ describe('src/components/prose.css', () => {
     // correction 93).
     expect(roots).not.toContain('prose');
     expect(roots).not.toContain('not-prose');
+  });
+
+  it("lists the settings batch's roots, and not their sub-parts", async () => {
+    const { componentRoots } = await import('../scripts/component-roots.js');
+    const roots = componentRoots(new URL('../src/components', import.meta.url).pathname);
+    // Each extends no other class its file names, so the guard finds it with no hand-written entry (lesson 12).
+    expect(roots).toEqual(
+      expect.arrayContaining([
+        'copy-button',
+        'conditional-fields',
+        'field-extras',
+        'field-offer',
+        'repeater',
+        // A lone PanelNav and a PanelSection are outermost elements of their own, and each is a root.
+        'panel-layout',
+        'panel-nav',
+        'panel-section',
+        'panel-row',
+        // The account menu's popover is its stylesheet's root, and its trigger, the part's outermost element, is
+        // listed by hand (OUTERMOST_PARTS).
+        'account-menu',
+        'account-menu-trigger',
+      ]),
+    );
+    for (const part of [
+      'copy-button-status',
+      'copy-button-glyph',
+      'field-extras-status',
+      'field-offer-button',
+      'repeater-row',
+      'repeater-row-set',
+      'repeater-status',
+      'repeater-remove-space',
+      'panel-layout-frame',
+      'panel-layout-back',
+      'panel-nav-link',
+      'panel-section-heading',
+      'panel-row-grid',
+      'account-menu-name',
+      'account-menu-detail',
+      'account-menu-chevron',
+      'account-menu-text',
+      'menu-item-submenu',
+      'segmented-icon',
+      'radio-icon',
+    ]) {
+      expect(roots, part).not.toContain(part);
+    }
   });
 
   it("keeps footnotes' label for screen readers alone, task lists unmarked and Persian emphasis in bold at 700", () => {

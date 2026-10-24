@@ -1,9 +1,20 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRef, useLayoutEffect, useRef, useState, type ReactElement } from 'react';
+import {
+  createRef,
+  useId,
+  useInsertionEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectNoA11yViolations } from '../../test/a11y';
 import { root } from '../../test/dom';
+import { Button } from '../button';
+import { Dialog, DialogTrigger } from '../dialog';
+import { TextField } from '../text-field';
 import { NumberField } from './NumberField';
 
 afterEach(() => {
@@ -724,13 +735,12 @@ describe('NumberField', () => {
 });
 
 /**
- * A known React Aria issue, kept as a test that is expected to fail, so it reports when an update fixes it.
- * React Aria's useNumberField commits the typed text on blur inside flushSync (useNumberField.mjs:60-66, in
+ * React Aria's useNumberField commits the typed text on blur inside flushSync (useNumberField.mjs:60-76, in
  * react-aria 3.53.1). A blur the browser sends while React commits, as when an app moves focus from a layout
- * effect or disables or removes the focused field, makes React log "flushSync was called from inside a
- * lifecycle method". It happens in every mode, at any value, with React Aria's own NumberField too, and only in
- * development: the commit still lands, a render later. The library cannot reach the call without taking React
- * Aria's blur from it, which would drop the announcement of the corrected value.
+ * effect or disables or removes the focused field, would make React log "flushSync was called from inside a
+ * lifecycle method", in every mode, at any value, with React Aria's own NumberField too. NumberField defers
+ * React Aria's blur handler one microtask, which runs after React's commit, so nothing is logged and the commit
+ * and its announcement still happen.
  */
 function SavesOnEnter(): ReactElement {
   const [saved, setSaved] = useState(false);
@@ -755,6 +765,143 @@ function SavesOnEnter(): ReactElement {
   );
 }
 
+/**
+ * Enter disables the field while the app saves, and the app moves focus to Done from a layout effect, so the
+ * browser's focusout leaves a disabled field inside React's commit. React Aria commits a disabled field's text
+ * from a focusout listener of its own (useSyntheticBlurEvent, interactions/utils.mjs:41-105), which flushed there.
+ */
+function DisablesOnEnter({
+  onBlur,
+  onChange,
+}: {
+  onBlur?: () => void;
+  onChange?: (value: number | null) => void;
+}): ReactElement {
+  const [saving, setSaving] = useState(false);
+  const done = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (saving) done.current?.focus();
+  }, [saving]);
+  return (
+    <>
+      <NumberField
+        label="Guests"
+        defaultValue={0}
+        minValue={0}
+        isDisabled={saving}
+        onBlur={onBlur}
+        onChange={onChange}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') setSaving(true);
+        }}
+      />
+      <button ref={done} type="button">
+        Done
+      </button>
+    </>
+  );
+}
+
+describe('NumberField disabled while it holds focus', () => {
+  /** Saves from the field, which disables it, and returns the focusouts the document heard from it. */
+  const saveAndDisable = async (onBlur?: () => void): Promise<FocusEvent[]> => {
+    const heard: FocusEvent[] = [];
+    const listen = (event: FocusEvent): void => {
+      if (event.target === amount('Guests')) heard.push(event);
+    };
+    document.addEventListener('focusout', listen);
+    try {
+      const user = userEvent.setup();
+      render(<DisablesOnEnter onBlur={onBlur} />);
+      await user.click(amount('Guests'));
+      await user.keyboard('{Enter}');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    } finally {
+      document.removeEventListener('focusout', listen);
+    }
+    return heard;
+  };
+
+  it('logs nothing when it loses focus inside a commit', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await saveAndDisable();
+    expect(amount('Guests')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus();
+    expect(error.mock.calls.map((call) => String(call[0]))).toEqual([]);
+  });
+
+  it("sends one focusout and runs the app's onBlur once", async () => {
+    const onBlur = vi.fn();
+    const heard = await saveAndDisable(onBlur);
+    expect(heard).toHaveLength(1);
+    expect(heard[0]?.relatedTarget).toBe(screen.getByRole('button', { name: 'Done' }));
+    expect(onBlur).toHaveBeenCalledTimes(1);
+  });
+
+  // React Aria's, and expected to fail until a release fixes it: its listener for a disabled field holds the
+  // commit of the render that focused the field (useSyntheticBlurEvent keeps the blur handler of that render),
+  // so it commits the text the field had then, 0 here, over the 5 that Enter committed. Before the field
+  // deferred it the listener did the same inside React's commit; the upstream issue reports both.
+  it.fails(
+    'keeps the value Enter committed when the save disables the field (React Aria reverts it)',
+    async () => {
+      const onChange = vi.fn();
+      const user = userEvent.setup();
+      render(<DisablesOnEnter onChange={onChange} />);
+      await user.click(amount('Guests'));
+      await user.keyboard('{Backspace}5{Enter}');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(onChange.mock.calls).toEqual([[5]]);
+      expect(amount('Guests')).toHaveValue('5');
+    },
+  );
+
+  it('sends the stopped focusout itself when React Aria sends none', async () => {
+    // Focused while React ignores events, from an insertion effect, so React Aria never heard the focus and holds
+    // no listener of its own to replace the browser's focusout.
+    function FocusedInACommit({ step }: { step: 'idle' | 'focus' | 'disable' }): ReactElement {
+      const done = useRef<HTMLButtonElement>(null);
+      useInsertionEffect(() => {
+        if (step === 'focus') document.querySelector<HTMLInputElement>('.number-field-input')?.focus();
+      }, [step]);
+      useLayoutEffect(() => {
+        if (step === 'disable') done.current?.focus();
+      }, [step]);
+      return (
+        <>
+          <NumberField label="Guests" isDisabled={step === 'disable'} />
+          <button ref={done} type="button">
+            Done
+          </button>
+        </>
+      );
+    }
+    const heard: FocusEvent[] = [];
+    const listen = (event: FocusEvent): void => {
+      heard.push(event);
+    };
+    const { rerender } = render(<FocusedInACommit step="idle" />);
+    rerender(<FocusedInACommit step="focus" />);
+    expect(amount('Guests')).toHaveFocus();
+    document.addEventListener('focusout', listen);
+    try {
+      await act(async () => {
+        rerender(<FocusedInACommit step="disable" />);
+        await Promise.resolve();
+      });
+    } finally {
+      document.removeEventListener('focusout', listen);
+    }
+    expect(heard).toHaveLength(1);
+    expect(heard[0]?.target).toBe(amount('Guests'));
+    expect(heard[0]?.relatedTarget).toBe(screen.getByRole('button', { name: 'Done' }));
+  });
+});
+
 describe('NumberField and React Aria', () => {
   /** Saves the field from the keyboard, as the app above does, and returns what React logged as errors. */
   const saveFromTheField = async (): Promise<string[]> => {
@@ -771,12 +918,212 @@ describe('NumberField and React Aria', () => {
     expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus();
   });
 
-  it.fails(
-    'logs nothing when focus leaves the field during a commit (React Aria flushes on blur)',
-    async () => {
-      expect(await saveFromTheField()).toEqual([]);
-    },
+  // Expected to fail until 0.10: the blur came inside React's commit and React Aria flushed in it. The field now
+  // runs React Aria's blur handler one microtask later, after the commit.
+  it('logs nothing when focus leaves the field during a commit (React Aria flushes on blur)', async () => {
+    expect(await saveFromTheField()).toEqual([]);
+  });
+
+  it('commits the typed value before a click that follows the blur', async () => {
+    const user = userEvent.setup();
+    let committed: number | null = null;
+    const read: (number | null)[] = [];
+    render(
+      <>
+        <NumberField
+          label="Guests"
+          onChange={(next) => {
+            committed = next;
+          }}
+        />
+        <Button
+          onPress={() => {
+            read.push(committed);
+          }}
+        >
+          Read
+        </Button>
+      </>,
+    );
+    await user.type(amount('Guests'), '12');
+    await user.click(screen.getByRole('button', { name: 'Read' }));
+    expect(read).toEqual([12]);
+  });
+
+  it('commits before a following submit and the FormData holds the value', async () => {
+    const user = userEvent.setup();
+    const sent: (FormDataEntryValue | null)[] = [];
+    render(
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          sent.push(new FormData(event.currentTarget).get('amount'));
+        }}
+      >
+        <NumberField label="Amount" money={{ symbol: '$' }} name="amount" />
+        <Button type="submit">Send</Button>
+      </form>,
+    );
+    await user.type(amount(), '12.50');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(sent).toEqual(['1250']);
+  });
+
+  it('still announces a corrected value on blur', async () => {
+    const user = userEvent.setup();
+    render(<NumberField label="Amount" money={{ symbol: '$' }} />);
+    await user.type(amount(), '1234.5');
+    // React Aria's announcer, which it keeps on the body across tests, may already hold the same text from an
+    // earlier test; it is emptied, so only this blur can say it.
+    const assertive = '[data-live-announcer] [aria-live="assertive"]';
+    document.querySelector(assertive)?.replaceChildren();
+    await user.tab();
+    expect(amount()).toHaveValue('1,234.50');
+    expect(document.querySelector(assertive)?.lastElementChild).toHaveTextContent('1,234.50');
+  });
+
+  it("runs the app's onBlur and onFocusChange(false) one microtask after the blur", async () => {
+    const onBlur = vi.fn();
+    const onFocusChange = vi.fn();
+    render(<NumberField label="Guests" onBlur={onBlur} onFocusChange={onFocusChange} />);
+    const input = amount('Guests');
+    act(() => {
+      input.focus();
+    });
+    expect(onFocusChange).toHaveBeenLastCalledWith(true);
+    await act(async () => {
+      input.blur();
+      // The browser's blur has run React's handler, and the deferred one waits for this task to end.
+      expect(onBlur).not.toHaveBeenCalled();
+      expect(onFocusChange).not.toHaveBeenCalledWith(false);
+      await Promise.resolve();
+    });
+    expect(onBlur).toHaveBeenCalledTimes(1);
+    expect(onFocusChange).toHaveBeenLastCalledWith(false);
+    // The event keeps its target and currentTarget, which React clears after dispatch and React Aria compares.
+    const event = onBlur.mock.calls[0]?.[0] as { target: unknown; currentTarget: unknown; type: string };
+    expect(event.target).toBe(input);
+    expect(event.currentTarget).toBe(input);
+    expect(event.type).toBe('blur');
+  });
+});
+
+/**
+ * The consumer's reproduction (spec section 24, ruling 6): a plain NumberField with `minValue={0}` in a Dialog
+ * titled "Add a plan", labelled "Payments made"; 0 typed, then Save or the next field pressed. The field is
+ * controlled, as the consumer's forms are, unless `uncontrolled`; Save submits the form, or with `closeOnPress`
+ * saves and closes the Dialog from its own press.
+ */
+function AddAPlan({
+  uncontrolled = false,
+  closeOnPress = false,
+  onSave,
+}: {
+  uncontrolled?: boolean;
+  closeOnPress?: boolean;
+  onSave: (payments: number | null) => void;
+}): ReactElement {
+  const formId = useId();
+  const [payments, setPayments] = useState<number | null>(null);
+  return (
+    <DialogTrigger>
+      <Button>Add a plan</Button>
+      <Dialog
+        title="Add a plan"
+        actions={({ close }) =>
+          closeOnPress ? (
+            <Button
+              onPress={() => {
+                onSave(payments);
+                close();
+              }}
+            >
+              Save
+            </Button>
+          ) : (
+            <Button type="submit" form={formId}>
+              Save
+            </Button>
+          )
+        }
+      >
+        {({ close }) => (
+          <form
+            id={formId}
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (uncontrolled) {
+                const sent = new FormData(event.currentTarget).get('payments');
+                onSave(sent === null || sent === '' ? null : Number(sent));
+              } else onSave(payments);
+              close();
+            }}
+          >
+            {uncontrolled ? (
+              <NumberField label="Payments made" name="payments" minValue={0} />
+            ) : (
+              <NumberField label="Payments made" minValue={0} value={payments} onChange={setPayments} />
+            )}
+            <TextField label="Name" />
+          </form>
+        )}
+      </Dialog>
+    </DialogTrigger>
   );
+}
+
+describe("NumberField, the consumer's reproduction", () => {
+  /** Opens the Dialog, types 0 in Payments made and returns what React logged as errors and warnings. */
+  const typeZero = async (
+    props: Omit<Parameters<typeof AddAPlan>[0], 'onSave'> = {},
+  ): Promise<{
+    user: ReturnType<typeof userEvent.setup>;
+    saved: (number | null)[];
+    logged: () => string[];
+  }> => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const saved: (number | null)[] = [];
+    render(<AddAPlan {...props} onSave={(next) => saved.push(next)} />);
+    await user.click(screen.getByRole('button', { name: 'Add a plan' }));
+    await user.click(amount('Payments made'));
+    await user.keyboard('0');
+    const logged = (): string[] =>
+      [...error.mock.calls, ...warn.mock.calls].map((call) => call.map(String).join(' '));
+    return { user, saved, logged };
+  };
+
+  it('types 0 and presses Save: saves 0 and logs nothing', async () => {
+    const { user, saved, logged } = await typeZero();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(saved).toEqual([0]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(logged()).toEqual([]);
+  });
+
+  it('types 0 and presses the next field: commits 0 and logs nothing', async () => {
+    const { user, logged } = await typeZero();
+    await user.click(screen.getByRole('textbox', { name: 'Name' }));
+    expect(amount('Payments made')).toHaveValue('0');
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveFocus();
+    expect(logged()).toEqual([]);
+  });
+
+  it('types 0 and presses Save with an uncontrolled field: saves 0 and logs nothing', async () => {
+    const { user, saved, logged } = await typeZero({ uncontrolled: true });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(saved).toEqual([0]);
+    expect(logged()).toEqual([]);
+  });
+
+  it('types 0 and presses a Save that closes the Dialog from onPress: saves 0 and logs nothing', async () => {
+    const { user, saved, logged } = await typeZero({ closeOnPress: true });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(saved).toEqual([0]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(logged()).toEqual([]);
+  });
 });
 
 describe('NumberField, changed with no label', () => {

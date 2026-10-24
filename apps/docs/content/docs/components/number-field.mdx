@@ -77,6 +77,17 @@ Set the symbol's side with `symbolPosition`, in the field's direction. On a Pers
 
 <Section>
 
+## Focus leaving while React draws
+
+React Aria commits the typed text when the field loses focus, inside `flushSync`. When focus leaves while React draws, as when a Save disables the form's fields or an app moves focus from a layout effect, React used to log "flushSync was called from inside a lifecycle method". The field now defers React Aria's commit by one microtask, so nothing is logged. The value still commits before the next click and before a submit, and a corrected value is still announced.
+
+- Your `onBlur` and `onFocusChange(false)` run one microtask after the blur.
+- A script that calls `requestSubmit()` in the same task as a blur reads the form before the commit. Submit from the press instead, or wait a microtask.
+
+</Section>
+
+<Section>
+
 ## Usage
 
 Keep an amount filter in the URL as minor units, `?min=2000`. A client component reads it with `Number()`, treating an absent or malformed value as `null`, and passes it as `value`. It writes the URL in `onChange`, which fires when the value commits (on blur, Enter, a step or the sign button), never on a keystroke. With the Next App Router:

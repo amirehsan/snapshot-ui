@@ -1,14 +1,16 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactElement } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { formOf } from './dom';
 import { Checkbox, CheckboxGroup } from '../src/checkbox';
+import { ConditionalFields } from '../src/conditional-fields';
 import { DateRangePicker } from '../src/date-range-picker';
 import { MultiSelect } from '../src/multi-select';
 import { NumberField } from '../src/number-field';
 import { PickerOption } from '../src/picker';
 import { Radio, RadioGroup } from '../src/radio-group';
+import { Repeater } from '../src/repeater';
 import { SearchField } from '../src/search-field';
 import { SegmentedControl, SegmentedControlItem } from '../src/segmented-control';
 import { Select } from '../src/select';
@@ -480,4 +482,132 @@ describe('a native form reset', () => {
     expect(sent(container, 'categories')).toEqual(['food', 'rent']);
     expect(showsChip(container)).toBe(false);
   });
+
+  it("restores a hidden group's fields on a form reset", async () => {
+    const user = userEvent.setup();
+    function LogoForm(): ReactElement {
+      const [logo, setLogo] = useState(true);
+      return (
+        <form>
+          <Switch isSelected={logo} onChange={setLogo} aria-controls="logo-fields">
+            Show bank logos
+          </Switch>
+          <ConditionalFields id="logo-fields" isShown={logo}>
+            <TextField label="API key" name="logoKey" defaultValue="sk-saved" />
+          </ConditionalFields>
+          <ResetButton />
+        </form>
+      );
+    }
+    const { container } = render(<LogoForm />);
+    const key = screen.getByLabelText('API key');
+    await user.clear(key);
+    await user.type(key, 'sk-typed');
+    const gate = screen.getByRole('switch', { name: 'Show bank logos' });
+    await user.click(gate);
+    expect(container.querySelector('fieldset.conditional-fields')).toHaveAttribute('disabled');
+    // Hidden and disabled, the field is still reset with the rest of the form, as a browser resets every control;
+    // the gate goes back to on, its first value, and shows it.
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(key).toHaveValue('sk-saved');
+    expect(gate).toBeChecked();
+    expect(container.querySelector('fieldset.conditional-fields')).not.toHaveAttribute('hidden');
+    expect(screen.getByLabelText('API key')).toHaveValue('sk-saved');
+    expect(sent(container, 'logoKey')).toEqual(['sk-saved']);
+  });
+
+  it("restores an uncontrolled repeater's fields on a form reset", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <form>
+        <Repeater<{ id: string; amount: number | null }>
+          label="Wait tiers"
+          defaultValue={[
+            { id: 'a', amount: 10000 },
+            { id: 'b', amount: 50000 },
+          ]}
+          createRow={() => ({ id: 'new', amount: null })}
+          rowLabel={(index) => `Tier ${String(index + 1)}`}
+          maxRows={3}
+        >
+          {(tier) => (
+            <NumberField label="Up to" name="tierAmount" money={{ symbol: '$' }} defaultValue={tier.amount} />
+          )}
+        </Repeater>
+        <ResetButton />
+      </form>,
+    );
+    const second = within(screen.getByRole('group', { name: 'Tier 2' })).getByRole('textbox', {
+      name: 'Up to',
+    });
+    await user.clear(second);
+    await user.type(second, '700{Enter}');
+    expect(sent(container, 'tierAmount')).toEqual(['10000', '70000']);
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(second).toHaveValue('500.00');
+    expect(sent(container, 'tierAmount')).toEqual(['10000', '50000']);
+    expect(container.querySelectorAll('li.repeater-row')).toHaveLength(2);
+  });
+
+  it.each([['uncontrolled'], ['controlled']] as const)(
+    'puts a repeater back to its first rows on a form reset after a remove and an add, %s',
+    async (mode) => {
+      interface Tier {
+        id: string;
+        amount: number | null;
+      }
+      const FIRST: Tier[] = [
+        { id: 'a', amount: 10000 },
+        { id: 'b', amount: 50000 },
+      ];
+      const onChange = vi.fn<(rows: Tier[]) => void>();
+      function Tiers(): ReactElement {
+        const [rows, setRows] = useState<Tier[]>(FIRST);
+        const state =
+          mode === 'controlled'
+            ? {
+                value: rows,
+                onChange: (next: Tier[]) => {
+                  onChange(next);
+                  setRows(next);
+                },
+              }
+            : { defaultValue: FIRST, onChange };
+        return (
+          <form>
+            <Repeater<Tier>
+              label="Wait tiers"
+              {...state}
+              createRow={() => ({ id: 'new', amount: null })}
+              rowLabel={(index) => `Tier ${String(index + 1)}`}
+              maxRows={3}
+            >
+              {(tier) => (
+                <NumberField
+                  label="Up to"
+                  name="tierAmount"
+                  money={{ symbol: '$' }}
+                  defaultValue={tier.amount}
+                />
+              )}
+            </Repeater>
+            <ResetButton />
+          </form>
+        );
+      }
+      const user = userEvent.setup();
+      const { container } = render(<Tiers />);
+      await user.click(screen.getByRole('button', { name: 'Remove, Tier 1' }));
+      await user.click(screen.getByRole('button', { name: 'Add a row' }));
+      expect(sent(container, 'tierAmount')).toEqual(['50000', '']);
+      // A reset puts back what the form started with, as it does every control: the removed row returns and the
+      // added one leaves, so the form sends what it first held.
+      await user.click(screen.getByRole('button', { name: 'Reset' }));
+      expect(
+        [...container.querySelectorAll('li.repeater-row')].map((item) => item.getAttribute('data-row-id')),
+      ).toEqual(['a', 'b']);
+      expect(sent(container, 'tierAmount')).toEqual(['10000', '50000']);
+      expect(onChange).toHaveBeenLastCalledWith(FIRST);
+    },
+  );
 });

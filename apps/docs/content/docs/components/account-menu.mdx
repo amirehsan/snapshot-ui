@@ -1,0 +1,94 @@
+---
+title: Account menu
+description: "The person's picture and name in the rail's foot, opening their account's choices."
+icon: CircleUser
+---
+
+<Section>
+
+## In the rail
+
+In a Sidebar's footer the trigger fills the row: the person's avatar, their name and a detail under it, such as an email or a workspace, and a chevron. The name and the detail wrap and never push the rail wider. The menu opens upward from the rail's foot, and its corner follows the rail's, as the rail's items do. On a phone the rail is a drawer and the trigger sits in its footer the same way.
+
+<Preview name="account-menu-rail" />
+
+</Section>
+
+<Section>
+
+## Folded and in a header
+
+When the rail folds, the trigger is the avatar alone, with the name in a tooltip; it is the same element, so a rail that folds while the menu is open still has a trigger to give focus back to. A server that reads the rail's state from a cookie draws the folded face from the first paint. In an app with no rail, pass `isCompact` and put the trigger at the header's end, where its menu opens downward at its end.
+
+<Preview name="account-menu-header" />
+
+</Section>
+
+<Section>
+
+## With the theme
+
+Put a ThemeMenu among the items for a Theme item that opens a submenu of System, Light and Dark, or pass `display="section"` for the three in the menu itself. See [Theme switch](/docs/components/theme-switch) for keeping the choice.
+
+</Section>
+
+<Section>
+
+## Usage
+
+```tsx
+import { AccountMenu, MenuItem, MenuSeparator, Sidebar, ThemeMenu } from '@snapshot-ui/react';
+
+<Sidebar
+  aria-label="Main"
+  footer={
+    <AccountMenu name="Ada Lovelace" detail="ada@example.com" avatarSrc="/ada.png">
+      <MenuItem id="settings" href="/settings">
+        Settings
+      </MenuItem>
+      <ThemeMenu value={theme} onChange={choose} />
+      <MenuItem id="help" href="/help">
+        Help
+      </MenuItem>
+      <MenuSeparator />
+      <MenuItem id="sign-out" onAction={signOut}>
+        Sign out
+      </MenuItem>
+    </AccountMenu>
+  }
+>
+  ...
+</Sidebar>;
+```
+
+Inside a Sidebar it follows the rail's collapsed state unless you pass `isCompact`. `className`, `ref` and a menu's other props, such as `onAction`, go on the menu.
+
+</Section>
+
+<Section>
+
+## Props
+
+<PropsTable label="AccountMenu props" path="../../packages/react/src/account-menu/AccountMenu.tsx" type="Pick<AccountMenuProps, 'name' | 'detail' | 'avatarSrc' | 'isCompact' | 'placement' | 'menuLabel' | 'isOpen' | 'defaultOpen' | 'onOpenChange' | 'children'>" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+The trigger is a button named by the person's name, the words you see, so a voice user can say it; the detail describes it. "Account" alone would hide whose account it is. Folded, the name is still its name and shows in a tooltip. The menu is named "Account" (`menuLabel`). Choosing an item closes the menu and gives focus back to the trigger, unless the item navigates, where the destination's own focus rule applies.
+
+<Keys rows={[['Enter Space Down', 'On the trigger, open the menu with focus on its first item.'], ['Up', 'On the trigger, open the menu with focus on its last item.'], ['Down Up Home End A-Z', 'Move between the items.'], ['Right', 'On Theme, open its submenu. Left in right to left.'], ['Escape', 'Close the open level, with focus back on its trigger.'], ['Tab', 'Close the whole menu and move on from the trigger.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps the account's menu in the system.
+
+<Rules dos={['Show the name the person knows, and a detail that tells two accounts apart.', 'Open it upward from the rail\'s foot.', 'Keep Sign out last, after a rule.']} donts={['Never name the trigger Account alone.', 'Never draw Sign out as danger: it loses nothing.', 'Never put the theme choice inside a form.']} />
+
+</Section>

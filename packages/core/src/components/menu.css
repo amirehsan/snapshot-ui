@@ -154,6 +154,28 @@
     visibility: visible;
   }
 
+  /* A row that opens a submenu draws a 16px slate chevron in the key hint's place, after its end value, pointing
+     to the side the submenu opens on, so it mirrors in right to left. Lucide draws the chevron with blank room
+     either side of its stroke, so the row ends 4px sooner and the stroke stands where the row's text would. */
+  .menu-item[data-has-submenu] {
+    padding-inline-end: 0.5rem;
+  }
+
+  .menu-item-submenu {
+    display: inline-flex;
+    flex: none;
+    color: var(--color-slate);
+  }
+
+  .menu-item-submenu svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  :where([dir='rtl' i]) .menu-item-submenu svg {
+    scale: -1 1;
+  }
+
   @media (hover: hover) {
     .menu-item[data-hovered] {
       background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
@@ -167,6 +189,12 @@
 
   .menu-item[data-focused] .menu-item-icon {
     color: var(--color-ink);
+  }
+
+  /* The row a submenu opened from keeps its wash while focus is in the submenu, so the reader sees where it came
+     from. */
+  .menu-item[data-has-submenu][data-open] {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
   }
 
   /* Inset: a scrolling list clips an outset ring. */
@@ -269,6 +297,21 @@
     .menu-item[data-disabled]
       :is(.menu-item-icon, .menu-item-check, .menu-item-description, .menu-item-end, .menu-item-shortcut) {
       color: GrayText;
+    }
+
+    /* The submenu's chevron follows its row, and the row it opened from, whose wash the repaint takes away,
+       keeps an edge while the submenu is open. */
+    .menu-item-submenu {
+      color: canvastext;
+    }
+
+    .menu-item[data-disabled] .menu-item-submenu {
+      color: graytext;
+    }
+
+    .menu-item[data-has-submenu][data-open] {
+      outline: 1px solid canvastext;
+      outline-offset: -1px;
     }
   }
 }

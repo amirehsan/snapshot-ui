@@ -1,0 +1,113 @@
+/*
+ * Field extras (docs/design-system.md, "ConditionalFields" and "FieldExtras"). A conditional group is a fieldset
+ * for its disabled, which takes hidden fields out of the submission and the browser's checks; its own border,
+ * padding, margin and min-content width are reset so a 320px page never scrolls sideways, and it spaces its fields
+ * as a form does. [hidden] needs its own rule, since a class that sets display beats the user agent's. Nothing
+ * moves: a group shows and hides at once, so there is nothing for reduced motion to stop.
+ */
+@layer components {
+  .conditional-fields {
+    display: grid;
+    gap: var(--conditional-fields-gap, var(--spacing-peer));
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .conditional-fields[hidden],
+  .conditional-fields[data-hidden] {
+    display: none;
+  }
+
+  /*
+   * An offer under a field, or under a group: slate words at the small step and a tertiary button in ink at the
+   * line's end. Never clay (an offer is not unsaved work), never signal (it is not consent), never success (a
+   * suggestion is not a good outcome), never taupe (it is words to read, not a placeholder). A field's extras stop
+   * at the field's measure, so an offer ends under the control's end; a group's span the group.
+   */
+  /* One column the wrapper's width: where that width is known, a long word breaks inside it rather than widening
+     the column past the page; where a holder sizes the wrapper from its content, the percentage counts as auto
+     and the column is as wide as the longest word, which then stays whole. */
+  .field-extras {
+    display: grid;
+    grid-template-columns: 100%;
+    gap: var(--spacing-part);
+    min-inline-size: 0;
+    max-inline-size: var(--container-field);
+  }
+
+  .field-extras[data-scope='group'] {
+    max-inline-size: none;
+  }
+
+  .field-offer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--spacing-part);
+    margin: 0;
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    color: var(--color-slate);
+  }
+
+  /* The app's value and reason wrap between words, and break a word only when it alone is wider than the line, so
+     a long address never pushes a 320px page sideways. break-word, not anywhere, so the longest word stays the
+     line's min-content and a holder sized by its content, a table's cell, never breaks a figure into what reads
+     as two numbers (the Badge lesson). */
+  .field-offer-text {
+    min-inline-size: 0;
+    overflow-wrap: break-word;
+  }
+
+  /* The button's 40px box sits level with the line and does not grow it: the DescriptionList actions' technique. */
+  .field-offer-button {
+    margin-block: min(0px, calc((1lh - var(--size-control)) / 2));
+  }
+
+  /* The polite status that says what a take set: read, not seen, and out of the flow. */
+  .field-extras-status {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    /* Placed absolutely in the wrapper's grid, it names both its lines on both axes, so it never reaches the
+       grid's padding edge (lesson 9). */
+    grid-area: 1 / 1 / span 1 / span 1;
+  }
+
+  /*
+   * The corner (design record, "Nested radii, derived"): the last offer of a field that ends a card is a control at
+   * its foot, so its button's box stops at the card's corner inset. The line grows at its foot by the corner inset
+   * less the card's padding, plus what the button's 40px box hangs under a line: 19px in Rounded, 29px compact.
+   * The hang is the button's own, under its 16px action line: where the words fill their line the button wraps to
+   * a line of its own at the card's start, in the corner, and hangs that far under it; beside the words it hangs
+   * less, under their taller line. Where the card's padding already clears its curve, Soft and Square, the inset
+   * less the padding is 0, and the min() with it scaled up keeps the line as it was.
+   */
+  :is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)
+    > .field-extras:last-child
+    > .field-offer:last-of-type {
+    padding-block-end: min(
+      calc((var(--holder-corner-inset) - var(--holder-pad)) * 1000),
+      calc(
+        var(--holder-corner-inset) - var(--holder-pad) +
+          max(0px, calc((var(--size-control) - var(--text-action) * var(--text-action--line-height)) / 2))
+      )
+    );
+  }
+
+  @media (forced-colors: active) {
+    /* A group draws nothing of its own: its fields keep their own forced-colors rules. An offer is text and a
+       Button, whose own rules draw it. */
+    .conditional-fields {
+      border: 0;
+    }
+  }
+}

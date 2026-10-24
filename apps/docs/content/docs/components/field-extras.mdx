@@ -1,0 +1,138 @@
+---
+title: Field extras
+description: "Offer a field's default or a suggested value under it, as an edit the reader makes."
+icon: RotateCcw
+---
+
+<Section>
+
+## A default
+
+Wrap a field in `FieldExtras` and pass `defaultOffer`: a slate line under the field says the default, "Default: 3 days", and a tertiary button at the line's end, Reset to default, sets it. The line shows only while the field does not hold the default, so a settings page full of fields at their defaults shows no offers at all.
+
+`isCurrent` and `onTake` are yours: `isCurrent` is your comparison of the field's value with the default, and `onTake` is the setter the field's `onChange` calls. The wrapper reads no value and writes none.
+
+<Preview name="field-extras-default" />
+
+</Section>
+
+<Section>
+
+## A suggestion
+
+`suggestion` offers a value your app worked out for this reader, with its reason after it: "Suggested: $2,340, a month of your fixed bills". It is never prefilled into the field and never shown as the field's placeholder: a placeholder is taupe, for a hint about the format, and a suggestion is words the reader reads and takes with one press.
+
+Every figure and word is your string, as the field shows it. Where a figure sits in a sentence of another script, such as a dollar amount on a Persian page, isolate it so it keeps its order. `value` is a string, and a `bdi` written in a string is drawn as its letters, so mark the figure with the Unicode isolates that do what `bdi` does: `value: '⁨-$40.00⁩'`, first strong isolate before it and pop directional isolate after it. A `reason` is a node, so it can hold a `bdi`.
+
+<Preview name="field-extras-suggestion" />
+
+</Section>
+
+<Section>
+
+## Both
+
+With both, the suggestion comes first, since it is about this reader and the default is about everyone, and each has its own line. When the suggestion's value is the default's, only the default is drawn: "the default" is the plainer reason.
+
+<Preview name="field-extras-both" />
+
+</Section>
+
+<Section>
+
+## A pair of fields
+
+`scope="group"` offers one default for a group of fields, such as quiet hours from and to. The line sits under the whole group, the wrapper spans the group instead of stopping at a field's measure, and after a reset focus goes to the group's first field. A set of rows, such as a Repeater, takes the same scope.
+
+<Preview name="field-extras-pair" />
+
+</Section>
+
+<Section>
+
+## A set of rows
+
+A [Repeater](/docs/components/repeater)'s rows take one offer for the whole set: wrap it in `FieldExtras` with `scope="group"`, compare its rows with the default set for `isCurrent`, and in `onTake` set the default rows, each with a new id. After a reset focus goes to the first row's first field, or to Add when the default set has no rows. The Repeater knows nothing of the default: the offer is yours, like any other.
+
+<Preview name="field-extras-rows" />
+
+</Section>
+
+<Section>
+
+## With the changed state and the save bar
+
+Changed and Default are separate questions. Changed means the field differs from what is saved, and draws the clay chip; Default means the product's value. Since an offer taken is an ordinary edit, both follow your comparisons as they do for typing:
+
+- A field saved at its default shows no offer and no chip.
+- Edited away from the default, it shows the chip and Reset to default. Reset, the chip and the offer leave together.
+- Saved away from its default, it shows Reset to default and no chip. Reset, it shows the chip, since it now differs from what is saved, and no offer.
+- A [save bar](/docs/components/save-bar) counts a reset or a use as one change, by your message, and its Cancel puts the saved values back, which brings back the offers they had.
+
+An offer never fights the field's checks. Its button is `type="button"`, so a press never submits the form or runs the browser's checks; it adds nothing to the field's description and nothing to the form's data; and the field's own error stays until your validation says otherwise. Do not offer a value to a field the reader cannot change, such as a disabled or read-only one.
+
+</Section>
+
+<Section>
+
+## Usage
+
+A client component: the offers are in the server's HTML from the props, and nothing is read until a press. The words are the library's, in English, so a page in another language passes its own `labels`.
+
+```tsx
+import { FieldExtras, Select, PickerOption } from '@snapshot-ui/react';
+
+<FieldExtras
+  fieldLabel="Wait"
+  defaultOffer={{
+    value: '3 days',
+    isCurrent: wait === 'three',
+    onTake: () => setWait('three'),
+  }}
+>
+  <Select label="Wait" value={wait} onChange={(key) => setWait(String(key))}>
+    <PickerOption id="three">3 days</PickerOption>
+    <PickerOption id="week">A week</PickerOption>
+  </Select>
+</FieldExtras>;
+```
+
+After a take focus goes to the first control in the wrapper that takes focus, and to a NumberField's text box rather than the sign button `allowsNegative` draws before it. Pass `controlRef` when another control is the one to focus.
+
+</Section>
+
+<Section>
+
+## Props
+
+`className`, `ref` and any other attribute go on the root, `div.field-extras`, which holds the field and its offers.
+
+<PropsTable label="FieldExtras props" path="../../packages/react/src/field-extras/FieldExtras.tsx" type="Pick<FieldExtrasProps, 'fieldLabel' | 'defaultOffer' | 'suggestion' | 'scope' | 'controlRef' | 'labels' | 'className'>" />
+
+<PropsTable label="FieldOffer" path="../../packages/react/src/field-extras/FieldExtras.tsx" type="FieldOffer" />
+
+<PropsTable label="FieldExtrasLabels" path="../../packages/react/src/field-extras/FieldExtras.tsx" type="FieldExtrasLabels" />
+
+</Section>
+
+<Section>
+
+## Accessibility
+
+Each offer's button is a native button named by its word and the field's label, "Reset to default, Wait", so a list of offers reads as a list of fields, and described by the offer's words, "Default: 3 days". The name starts with the word the button shows, so voice control finds it by what is seen.
+
+When an offer is taken it leaves, since the field now holds it, and focus goes to the field's control in the next frame, never the body, after a key or a pointer press alike: the reader hears the field with its new value and can type in it at once. Then a polite status, in the server's HTML and empty until then, says what happened, "Set to the suggestion" or "Set to the default", for a screen reader that does not read a field focused by script. It speaks once focus is on the field, so it follows the field's own words rather than being cut by them, and it does not say the field's label or value again. If your setter moves focus itself, such as into a dialog that asks first, focus stays where you put it and the status says nothing, since nothing is set yet. Its words leave as soon as the field no longer holds what was taken, after a Cancel for one.
+
+<Keys rows={[['Tab', "Moves from the field to its offers' buttons, in order."], ['Enter Space', 'Takes the offer; focus goes to the field, and a status says what was set.']]} />
+
+</Section>
+
+<Section>
+
+## Design rules
+
+What keeps offers in the system.
+
+<Rules dos={['Say the value in the offer, as the field shows it.', 'Give a suggestion its reason.', 'Compare with the saved value for the Changed chip and the save bar, as you do for typing.']} donts={['Never draw an offer in clay. It is not unsaved work.', 'Never in signal orange or success. It is not consent, nor a good outcome.', 'Never prefill a suggestion or show it as a taupe placeholder.']} />
+
+</Section>

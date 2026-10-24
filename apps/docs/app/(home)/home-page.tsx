@@ -801,6 +801,7 @@ export function HomePage(): ReactElement {
             <details className="footer-col" open>
               <summary>Components</summary>
               <div className="footer-links">
+                <Link href="/docs/components/account-menu">Account menu</Link>
                 <Link href="/docs/components/app-shell">App shell</Link>
                 <Link href="/docs/components/avatar">Avatar</Link>
                 <Link href="/docs/components/badge">Badge</Link>
@@ -813,7 +814,9 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/collapsible-card">Collapsible card</Link>
                 <Link href="/docs/components/combo-box">Combo box</Link>
                 <Link href="/docs/components/command-palette">Command palette</Link>
+                <Link href="/docs/components/conditional-fields">Conditional fields</Link>
                 <Link href="/docs/components/confirm-dialog">Confirm dialog</Link>
+                <Link href="/docs/components/copy-button">Copy button</Link>
                 <Link href="/docs/components/data-table">Data table</Link>
                 <Link href="/docs/components/date-picker">Date picker</Link>
                 <Link href="/docs/components/date-range-picker">Date range picker</Link>
@@ -822,6 +825,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/drawer">Drawer</Link>
                 <Link href="/docs/components/empty-state">Empty state</Link>
                 <Link href="/docs/components/field">Field parts</Link>
+                <Link href="/docs/components/field-extras">Field extras</Link>
                 <Link href="/docs/components/file-drop-zone">File drop zone</Link>
                 <Link href="/docs/components/filter-bar">Filter bar</Link>
                 <Link href="/docs/components/filter-chip">Filter chip</Link>
@@ -836,10 +840,12 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/number-field">Number field</Link>
                 <Link href="/docs/components/page-header">Page header</Link>
                 <Link href="/docs/components/pagination">Pagination</Link>
+                <Link href="/docs/components/panel-layout">Panel layout</Link>
                 <Link href="/docs/components/popover">Popover</Link>
                 <Link href="/docs/components/progress-bar">Progress bar</Link>
                 <Link href="/docs/components/prose">Prose</Link>
                 <Link href="/docs/components/radio-group">Radio group</Link>
+                <Link href="/docs/components/repeater">Repeater</Link>
                 <Link href="/docs/components/save-bar">Save bar</Link>
                 <Link href="/docs/components/search-field">Search field</Link>
                 <Link href="/docs/components/segmented-control">Segmented control</Link>
@@ -852,6 +858,7 @@ export function HomePage(): ReactElement {
                 <Link href="/docs/components/stat-tile">Stat tile</Link>
                 <Link href="/docs/components/switch">Switch</Link>
                 <Link href="/docs/components/tabs">Tabs</Link>
+                <Link href="/docs/components/theme-switch">Theme switch</Link>
                 <Link href="/docs/components/text-area">Text area</Link>
                 <Link href="/docs/components/text-field">Text field</Link>
                 <Link href="/docs/components/toast">Toast</Link>

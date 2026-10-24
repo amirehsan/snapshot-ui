@@ -12,6 +12,7 @@ import {
   settled,
   sideways,
   systemColor,
+  withoutClipboard,
 } from './support';
 
 /**
@@ -1321,6 +1322,186 @@ test.describe('forced colors', () => {
     if (!button || !box) throw new Error('No button or header');
     expect(button.y + button.height).toBeLessThanOrEqual(box.y + box.height);
   });
+
+  test("a copy button's check is drawn in the button's text color, and its status stays out of sight", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await visit(page, '/docs/components/copy-button');
+    const part = page.locator('.stage .copy-button').first();
+    const button = part.getByRole('button', { name: 'Copy webhook address' });
+    await button.click();
+    await expect(part).toHaveAttribute('data-outcome', 'copied');
+    const check = part.locator('.copy-button-glyph[data-glyph="check"]');
+    await expect(check).toBeVisible();
+    await expect(part.locator('.copy-button-glyph[data-glyph="copy"]')).toBeHidden();
+    expect((await paint(check)).text).toBe(await systemColor(page, 'ButtonText'));
+    // The status is clipped to nothing, as it is out of forced colors.
+    const box = await part.locator('.copy-button-status').boundingBox();
+    expect(box?.width ?? 0).toBeLessThanOrEqual(1);
+  });
+
+  test("an offer's words are the reader's text color and its button the reader's button text", async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/field-extras');
+    const line = page.locator('.stage .field-offer').first();
+    const button = line.getByRole('button', { name: 'Reset to default, Wait' });
+    expect((await paint(line.locator('.field-offer-text'))).text).toBe(await systemColor(page, 'CanvasText'));
+    expect((await paint(button)).text).toBe(await systemColor(page, 'ButtonText'));
+    // A focused offer shows its ring in the reader's palette, and the status stays out of sight.
+    await button.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(button).toBeFocused();
+    await expectVisibleRing(button);
+    const box = await page.locator('.stage .field-extras-status').first().boundingBox();
+    expect(box?.width ?? 0).toBeLessThanOrEqual(1);
+  });
+
+  test('a conditional group draws no border of its own, shown, and nothing at all, hidden', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/conditional-fields');
+    const shown = page.locator('.stage fieldset.conditional-fields:not([hidden])').first();
+    await expect(shown).toBeVisible();
+    // No border, padding or indent: the fields line up with the gate in the reader's palette too.
+    const box = await shown.evaluate((group) => {
+      const style = getComputedStyle(group);
+      return [
+        style.borderTopStyle,
+        style.borderInlineStartStyle,
+        style.paddingInlineStart,
+        style.marginInlineStart,
+      ];
+    });
+    expect(box).toEqual(['none', 'none', '0px', '0px']);
+    await expect(page.locator('.stage fieldset.conditional-fields[hidden]').first()).toBeHidden();
+  });
+
+  test('a repeater keeps its rules between rows', async ({ page }) => {
+    await visit(page, '/docs/components/repeater');
+    const second = page.locator('.stage .repeater-row + .repeater-row').first();
+    const look = await second.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { width: style.borderTopWidth, style: style.borderTopStyle, color: style.borderTopColor };
+    });
+    expect(look.width).toBe('1px');
+    expect(look.style).toBe('solid');
+    expect(look.color).toBe(await systemColor(page, 'CanvasText'));
+    // A disabled Add is drawn in the reader's disabled color, its reason in their text color, and the status hidden.
+    const limits = page.locator('.stage .repeater').nth(2);
+    const add = limits.getByRole('button', { name: 'Add an address' });
+    await add.click();
+    await add.click();
+    await expect(add).toBeDisabled();
+    expect((await paint(add)).text).toBe(await systemColor(page, 'GrayText'));
+    expect((await paint(limits.locator('.repeater-full'))).text).toBe(await systemColor(page, 'CanvasText'));
+    const box = await limits.locator('.repeater-status').boundingBox();
+    expect(box?.width ?? 0).toBeLessThanOrEqual(1);
+  });
+
+  test("the nav's current item is highlight, on the split face only", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await visit(page, '/docs/components/panel-layout');
+    // The index: Coach is the default section beside the list, drawn current in the reader's highlight.
+    const coach = page.locator('.stage').first().getByRole('link', { name: 'Coach' });
+    const look = await paint(coach);
+    expect(look.fill).toBe(await systemColor(page, 'Highlight'));
+    expect(look.text).toBe(await systemColor(page, 'HighlightText'));
+    // The phone's list draws no row current: its Coach keeps the canvas.
+    const phone = page.locator('.stage').nth(1).getByRole('link', { name: 'Coach' });
+    expect((await paint(phone)).fill).not.toBe(await systemColor(page, 'Highlight'));
+  });
+
+  test("the submenu's chosen item is highlight", async ({ page }) => {
+    await visit(page, '/docs/components/menu');
+    const trigger = page.locator('.stage').getByRole('button', { name: 'Document actions' });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const move = page.getByRole('menuitem', { name: 'Move to' });
+    await expect(move).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    await expect(move).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    const inbox = page.getByRole('menuitemradio', { name: 'Inbox' });
+    await expect(inbox).toBeFocused();
+    const look = await paint(inbox);
+    expect(look.fill).toBe(await systemColor(page, 'Highlight'));
+    expect(look.text).toBe(await systemColor(page, 'HighlightText'));
+    // The row it opened from keeps an edge while the repaint takes its wash away.
+    const edge = await move.evaluate((element) => getComputedStyle(element).outlineStyle);
+    expect(edge).toBe('solid');
+  });
+});
+
+// ---- Menu's submenu -----------------------------------------------------------------------------
+
+test("the menu page's submenu opens by Arrow Right and chooses a theme", async ({ page }) => {
+  await visit(page, '/docs/components/menu');
+  const trigger = page.locator('.stage').getByRole('button', { name: 'Document actions' });
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', { name: 'Duplicate' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  const move = page.getByRole('menuitem', { name: 'Move to' });
+  await expect(move).toBeFocused();
+  await expect(move).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('ArrowRight');
+  await expect(move).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('menuitemradio', { name: 'Inbox' })).toBeFocused();
+  // Arrow Left closes the submenu alone, with focus back on its row.
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('menuitemradio')).toHaveCount(0);
+  await expect(move).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitemradio', { name: 'Receipts' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await expect(page.locator('.stage').getByText('In Receipts')).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+});
+
+test('the theme switch page applies a choice at once and the account menu chooses a theme in its submenu', async ({
+  page,
+}) => {
+  await visit(page, '/docs/components/theme-switch');
+  const stage = page.locator('.stage').first();
+  const group = stage.getByRole('radiogroup', { name: 'Theme' });
+  await expect(group.getByRole('radio')).toHaveCount(3);
+  // The arrows choose and apply, as in any radio group: System, then Light, then Dark.
+  await group.getByRole('radio', { name: 'System' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(group.getByRole('radio', { name: 'Dark' })).toBeChecked();
+  await expect(stage.locator('[data-theme="dark"]')).toHaveCount(1);
+  await page.keyboard.press('ArrowRight');
+  await expect(group.getByRole('radio', { name: 'System' })).toBeChecked();
+  await expect(stage.locator('[data-theme]')).toHaveCount(0);
+  // The page's own theme is the docs' and does not move.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await visit(page, '/docs/components/account-menu');
+  const trigger = page.locator('.stage .sidebar:not(.sidebar-drawer) .account-menu-trigger');
+  await expect(trigger).toHaveAccessibleName('Ada Lovelace');
+  await expect(trigger).toHaveAccessibleDescription('ada@example.com');
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu', { name: 'Account' })).toBeVisible();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('menuitemradio', { name: 'System' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', { name: 'Theme' })).toContainText('Dark');
+  await page.keyboard.press('Escape');
 });
 
 // ---- File drop zone -----------------------------------------------------------------------------
@@ -1789,6 +1970,8 @@ const LONG = `https://example.com/${'segment'.repeat(12)}end`;
  * app, and never by the card the page is drawn in.
  */
 const LONG_TARGETS: Record<string, string[]> = {
+  // The person's name and detail are the app's and wrap at any character in the trigger, never widening the rail.
+  'account-menu': ['.stage .account-menu-name', '.stage .account-menu-detail'],
   'app-shell': ['.stage .app-shell-main p'],
   // A badge's text is its label, which caps the floor a long word gives a holder sized by its content.
   badge: ['.stage .badge-label'],
@@ -1809,6 +1992,8 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .card-collapsible .card-body p',
   ],
   'combo-box': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
+  // A hint under a field the group holds wraps as any field's does; the group adds no text of its own.
+  'conditional-fields': ['.stage .field-description'],
   // At 320px and 375px the examples draw the list face, whose title and meta line ellipsize on one line; a table
   // cell, in the columns example's frame, does too, so a long payee leaves either face inside 320px.
   'data-table': ['.stage .data-table-cell', '.stage .data-table-item-title', '.stage .data-table-item-meta'],
@@ -1819,6 +2004,8 @@ const LONG_TARGETS: Record<string, string[]> = {
   // The title and the line are the app's sentences, and both wrap at any character inside the column.
   'empty-state': ['.stage .empty-state-title', '.stage .empty-state-description'],
   field: ['.stage .field-label', '.stage .field-description', '.stage .field-error', '.stage .field-changed'],
+  // An offer's words are the app's value and reason, and wrap before its button, which wraps to its own line.
+  'field-extras': ['.stage .field-offer-text'],
   // The label and the rules are the app's; the hint and the button are the library's short words.
   'file-drop-zone': ['.stage .file-drop-zone .field-label', '.stage .file-drop-zone .field-description'],
   // A chip's value stays on one line and ellipsizes past 16rem, so the pill stays inside 320px.
@@ -1840,6 +2027,9 @@ const LONG_TARGETS: Record<string, string[]> = {
   'page-header': ['.stage .page-header-title', '.stage .page-header-description'],
   // The range is the app's sentence; the page numbers and the step words are the library's and never long.
   pagination: ['.stage .pagination-range'],
+  // A section's name in the list and its heading are the app's words, and break a word only when it alone is wider
+  // than their column.
+  'panel-layout': ['.stage .panel-nav-name', '.stage .panel-section-heading'],
   // The label is the app's sentence, a file name among it, and wraps at any character, as the meter's does.
   'progress-bar': ['.stage .progress-bar-label'],
   // A paragraph is the app's text, which breaks anywhere inside its measure.
@@ -1850,6 +2040,8 @@ const LONG_TARGETS: Record<string, string[]> = {
     '.stage .field-error',
     '.stage .radio-text',
   ],
+  // A row's legend is the app's place name, and the empty line its sentence: both wrap at any character.
+  repeater: ['.stage .repeater-row-legend', '.stage .repeater-empty'],
   // The sentence is the app's, clamped to two lines, and wraps at any character inside them.
   'save-bar': ['.stage .save-bar-message'],
   'search-field': ['.stage .field-label', '.stage .field-description', '.stage .field-error'],
@@ -1880,6 +2072,8 @@ const NO_LONG_TEXT: Record<string, string> = {
     "its text is in a portal that opens on a press or a key; the Narrow story's 375px baseline pins its wrapping",
   'confirm-dialog':
     "its text is in a portal that opens on a press; its stories' 375px baselines pin its wrapping",
+  'copy-button':
+    "its words are the app's short name for what it copies, on one line in a button; the values beside it are the examples' own",
   dialog: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   drawer: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   'filter-bar': 'its words are the chips and the app search, which the filter chip page tests long',
@@ -1892,6 +2086,7 @@ const NO_LONG_TEXT: Record<string, string> = {
   skeleton: 'a skeleton draws shapes and no text',
   sparkline: 'a drawing with no text; its name, when it has one, is an aria-label nothing draws',
   spinner: 'a progress mark with no text a person writes',
+  'theme-switch': "three choices whose words are the library's or the app's translations, each a short word",
   toast: 'its text is in a portal that opens on a press; the 375px stories pin its wrapping',
   tooltip:
     "its text is in a portal that opens on hover or focus; the Wrapped story's 375px baseline pins its wrapping",
@@ -2086,10 +2281,26 @@ test("the month grid's basic example reads as a table: Year and twelve months, a
  * of its own, and the Storybook a11y run checks a lone shell's landmarks with every rule on.
  */
 const NESTED_SHELL: Record<string, string> = {
+  'account-menu':
+    'its rail example is a Sidebar in an AppShell, which renders its own <main> inside the page',
   'app-shell': 'each example is an AppShell, which renders its own <main> inside the page',
   sidebar: 'each example is a Sidebar in an AppShell, which renders its own <main> inside the page',
 };
 const NESTED_RULES = ['landmark-no-duplicate-main', 'landmark-main-is-top-level', 'landmark-unique'];
+
+/**
+ * The pages whose examples draw one page twice, each with its reason. Two regions of one name, one per example,
+ * break only the rule that landmarks be unique; it is off on these pages alone, and the docs run checks the
+ * example that repeats the other with every rule on.
+ */
+const SAME_PAGE_TWICE: Record<string, string> = {
+  'panel-layout':
+    'the basic example and the Settings recipe each draw the settings page at its index, Coach beside the list, so two regions are named Coach; docs.spec.ts checks the recipe alone',
+};
+
+/** The axe rules a page turns off, from the two lists above. */
+const rulesOff = (slug: string): string[] =>
+  slug in NESTED_SHELL ? NESTED_RULES : slug in SAME_PAGE_TWICE ? ['landmark-unique'] : [];
 
 for (const { slug, url } of PAGES) {
   for (const theme of ['light', 'dark'] as const) {
@@ -2097,9 +2308,7 @@ for (const { slug, url } of PAGES) {
       await page.emulateMedia({ colorScheme: theme });
       await visit(page, url);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
-      expect(await axeViolations(page, { disableRules: slug in NESTED_SHELL ? NESTED_RULES : [] })).toEqual(
-        [],
-      );
+      expect(await axeViolations(page, { disableRules: rulesOff(slug) })).toEqual([]);
     });
   }
 }
@@ -2122,6 +2331,7 @@ for (const { slug, url } of PAGES) {
  * Node; this proves the production build puts them in the page.
  */
 const SERVER_RENDERED: Record<string, string[]> = {
+  'account-menu': ['.stage .account-menu-trigger'],
   'app-shell': ['.stage .app-shell'],
   avatar: ['.stage .avatar', '.stage .avatar-initials'],
   badge: ['.stage .badge'],
@@ -2146,7 +2356,16 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // The input and its button; the list renders nothing until it opens.
   'combo-box': ['.stage .combo-box-input', '.stage .combo-box-button'],
   'command-palette': ['.stage .button'],
+  // The basic example starts with its gate off: the group is in the server's HTML, hidden, inert and disabled.
+  'conditional-fields': ['.stage fieldset.conditional-fields[hidden]'],
   'confirm-dialog': ['.stage .button'],
+  // The button, both glyphs and the polite status host, mounted empty before any copy: nothing waits for a script.
+  'copy-button': [
+    '.stage .copy-button .icon-button',
+    '.stage .copy-button .button-secondary',
+    '.stage .copy-button-glyph[data-glyph="check"]',
+    '.stage .copy-button-status[role="status"]',
+  ],
   // The header and the row links: every row is in the server's HTML; the loading status waits for a pause.
   // The list face's items are in it too: both faces are, and the box shows one.
   'data-table': [
@@ -2171,6 +2390,12 @@ const SERVER_RENDERED: Record<string, string[]> = {
   // A static part: the whole column is in the server's HTML.
   'empty-state': ['.stage .empty-state', '.stage .empty-state-title'],
   field: ['.stage .field-counter', '.stage .field-changed'],
+  // The offers come from the props and the polite status host is mounted empty: nothing waits for a script.
+  'field-extras': [
+    '.stage .field-offer',
+    '.stage .field-offer-button',
+    '.stage .field-extras-status[role="status"]',
+  ],
   // The box with both lines and the zone's button; drag and drop and paste wait for hydration.
   'file-drop-zone': ['.stage .file-drop-zone-box', '.stage .file-drop-zone button'],
   // The row with its chips, and the Filters button a phone shows; More's panel and the sheet wait for a press.
@@ -2199,12 +2424,16 @@ const SERVER_RENDERED: Record<string, string[]> = {
   'page-header': ['.stage .page-header .page-header-title'],
   // The row and the current page are in the server's HTML; the shell is a server component.
   pagination: ['.stage .pagination', '.stage .pagination-page[aria-current]'],
+  // Both faces are in the server's HTML, and the pairs are static.
+  'panel-layout': ['.stage .panel-layout[data-view]', '.stage .panel-row'],
   popover: ['.stage .button'],
   // A static part: the track with its role and values is in the server's HTML.
   'progress-bar': ['.stage .progress-bar-track[role="progressbar"]'],
   // Rendered from Markdown by react-markdown in a server component, the wide table in its region.
   prose: ['.stage .prose h2', '.stage .prose-scroll table', '.stage .prose .bar-chart .bar-chart-bar'],
   'radio-group': ['.stage .radio-indicator'],
+  // Every row and the polite status host, mounted empty: nothing waits for a script.
+  repeater: ['.stage ol.repeater-rows', '.stage .repeater-status'],
   // The bar, its sentence and its buttons, and the polite status host, mounted empty before any status.
   'save-bar': ['.stage .save-bar', '.stage .save-bar-status[role="status"]'],
   'search-field': ['.stage .search-field-input', '.stage .search-field-icon'],
@@ -2224,6 +2453,7 @@ const SERVER_RENDERED: Record<string, string[]> = {
   switch: ['.stage .switch-thumb'],
   // The row, the selected tab and its panel: the whole selected state is in the server's HTML.
   tabs: ['.stage .tab-list', '.stage .tab[aria-selected="true"]', '.stage .tab-panel'],
+  'theme-switch': ['.stage .segmented', '.stage .theme-switch'],
   'text-area': ['.stage .textarea'],
   'text-field': ['.stage .input'],
   // The buttons that raise the toasts, and the polite status host the docs layout mounts, which is in the page
@@ -2255,6 +2485,215 @@ test.describe('without JavaScript', () => {
       await expect(page.locator('.panel-side .link').first()).toHaveAttribute('href', /^https:\/\//);
     });
   }
+});
+
+// ---- The copy button -----------------------------------------------------------------------------
+
+test.describe('the copy button', () => {
+  /** The first copy button on the page whose button has this name, and its parts. */
+  const copyButton = (page: Page, name: string) => {
+    const part = page.locator('.stage .copy-button').filter({ has: page.getByRole('button', { name }) });
+    return { part, button: part.getByRole('button', { name }), status: part.getByRole('status') };
+  };
+
+  test('says Copied in its status and keeps focus', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await visit(page, '/docs/components/copy-button');
+    const { part, button, status } = copyButton(page, 'Copy webhook address');
+    await expect(status).toBeEmpty();
+    await button.focus();
+    await page.keyboard.press('Enter');
+    await expect(status).toHaveText('Copied');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      'https://hooks.example.com/ledger/7Fq2',
+    );
+    await expect(part).toHaveAttribute('data-outcome', 'copied');
+    await expect(page.getByRole('tooltip')).toHaveText('Copied');
+    // The name never changes, and the tip is not its description, so nothing is said twice.
+    await expect(button).toHaveAccessibleName('Copy webhook address');
+    await expect(button).toHaveAccessibleDescription('');
+    await expect(button).toBeFocused();
+    // Two seconds later the outcome has gone and focus is still on the button, never on the body.
+    await expect(status).toBeEmpty({ timeout: 5000 });
+    await expect(part).not.toHaveAttribute('data-outcome');
+    await expect(button).toBeFocused();
+  });
+
+  test('copies with the copy command where the Clipboard API is missing', async ({ page }) => {
+    await withoutClipboard(page, 'missing');
+    await visit(page, '/docs/components/copy-button');
+    // What the copy put on the clipboard, read from the copy event the browser sends after the part's own listener.
+    await page.evaluate(() => {
+      document.addEventListener('copy', (event) => {
+        document.body.dataset.copied = event.clipboardData?.getData('text/plain') ?? '';
+      });
+    });
+    const { button, status } = copyButton(page, 'Copy setup details');
+    await button.click();
+    await expect(status).toHaveText('Copied');
+    await expect(page.locator('body')).toHaveAttribute(
+      'data-copied',
+      'Webhook address: https://hooks.example.com/ledger/7Fq2\nEvents: transactions, balances',
+    );
+    await expect(page.locator('.copy-button-source')).toHaveCount(0);
+    await expect(button).toBeFocused();
+  });
+
+  test('says Copy failed when the clipboard refuses and the copy command cannot copy', async ({ page }) => {
+    await withoutClipboard(page, 'refusing');
+    await visit(page, '/docs/components/copy-button');
+    // A copy command that copies nothing, as in a frame that allows neither.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'execCommand', { value: () => false, configurable: true });
+    });
+    const { part, button, status } = copyButton(page, 'Copy webhook address');
+    await button.click();
+    await expect(status).toHaveText('Copy failed');
+    await expect(page.getByRole('tooltip')).toHaveText('Copy failed');
+    await expect(part).toHaveAttribute('data-outcome', 'failed');
+    await expect(part.locator('.copy-button-glyph[data-glyph="copy"]')).toBeVisible();
+    await expect(button).toBeFocused();
+  });
+
+  test('the description list page copies a value from its row', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await visit(page, '/docs/components/description-list');
+    const { button, status } = copyButton(page, 'Copy Setup address');
+    await button.click();
+    await expect(status).toHaveText('Copied');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      'https://hooks.example.com/ledger/7Fq2',
+    );
+  });
+});
+
+// ---- Field extras -----------------------------------------------------------------------------
+
+test.describe('field extras', () => {
+  /** The `index`th example's wrapper on the page. */
+  const example = (page: Page, index: number): Locator => page.locator('.stage .field-extras').nth(index);
+
+  test('an offer taken gives focus to its field', async ({ page }) => {
+    await visit(page, '/docs/components/field-extras');
+    // The default, by a key: the Select's button holds focus and 3 days, and the offer has gone.
+    const wait = example(page, 0);
+    const reset = wait.getByRole('button', { name: 'Reset to default, Wait' });
+    await expect(reset).toHaveAccessibleDescription('Default: 3 days');
+    await reset.focus();
+    await page.keyboard.press('Enter');
+    const trigger = wait.locator('.select button').first();
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toContainText('3 days');
+    await expect(reset).toHaveCount(0);
+    await expect(wait.getByRole('status')).toHaveText('Set to the default');
+    // The suggestion, by a pointer: the money field holds focus and the value.
+    const cushion = example(page, 1);
+    await cushion.getByRole('button', { name: 'Use, Cushion' }).click();
+    const input = cushion.getByRole('textbox', { name: 'Cushion' });
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue('2,340.00');
+    await expect(cushion.getByRole('status')).toHaveText('Set to the suggestion');
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  });
+
+  test('both offers draw the suggestion first, and a group reset focuses its first field', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/field-extras');
+    const both = example(page, 2);
+    await expect(both.locator('.field-offer')).toHaveCount(2);
+    await expect(both.locator('.field-offer').first()).toHaveAttribute('data-kind', 'suggestion');
+    const pair = example(page, 3);
+    await expect(pair).toHaveAttribute('data-scope', 'group');
+    await pair.getByRole('button', { name: 'Reset to default, Quiet hours' }).click();
+    const from = pair.getByRole('textbox', { name: 'From' });
+    await expect(from).toBeFocused();
+    await expect(from).toHaveValue('10 PM');
+    await expect(pair.getByRole('textbox', { name: 'To' })).toHaveValue('7 AM');
+  });
+});
+
+// ---- Conditional fields ---------------------------------------------------------------------------
+
+test.describe('conditional fields', () => {
+  /** The logo example's parts: its gate, the gate's label, its group, its key, its Save and its sent line. */
+  const logo = (page: Page) => {
+    const gate = page.getByRole('switch', { name: 'Show bank logos' });
+    const form = page.locator('.stage form').filter({ has: gate });
+    return {
+      gate,
+      // The switch's input is clipped; a reader presses its label.
+      label: form.locator('.switch'),
+      group: form.locator('fieldset.conditional-fields'),
+      key: form.getByLabel('API key'),
+      save: form.getByRole('button', { name: 'Save' }),
+      sent: form.locator('output'),
+    };
+  };
+
+  test('a key typed and then hidden is kept, and not sent', async ({ page }) => {
+    await visit(page, '/docs/components/conditional-fields');
+    const { label, group, key, save, sent } = logo(page);
+    await key.fill('sk-live-0042');
+    await label.click();
+    await expect(group).toHaveAttribute('hidden', '');
+    await save.click();
+    await expect(sent).toHaveText(/^Sent:/);
+    await expect(sent).not.toContainText('logoKey');
+    await expect(sent).not.toContainText('logoProvider');
+    await label.click();
+    await expect(key).toHaveValue('sk-live-0042');
+    await save.click();
+    await expect(sent).toHaveText('Sent: logos, logoProvider, logoKey');
+  });
+
+  test('Tab from a gate that is off goes past its hidden fields', async ({ page }) => {
+    await visit(page, '/docs/components/conditional-fields');
+    const gate = page.getByRole('switch', { name: 'Round up purchases' });
+    await gate.focus();
+    await page.keyboard.press('Tab');
+    // Focus left the gate for the next control on the page, which is not the hidden savings account.
+    await expect(gate).not.toBeFocused();
+    expect(
+      await page.evaluate(() => {
+        const active = document.activeElement;
+        return active === null || active === document.body
+          ? 'body'
+          : (active.closest('fieldset')?.hidden ?? false);
+      }),
+    ).toBe(false);
+    // Shown, the same Tab reaches the account.
+    await page.locator('.stage .switch', { has: gate }).click();
+    await gate.focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Savings account')).toBeFocused();
+  });
+
+  test('a group that hides while it holds focus gives focus to its gate, never the body', async ({
+    page,
+  }) => {
+    await visit(page, '/docs/components/conditional-fields');
+    const { gate, group, key } = logo(page);
+    await key.focus();
+    // Hidden by something other than a press on the gate: a click from script moves no focus.
+    const seen = await gate.evaluate(async (input) => {
+      const states: string[] = [];
+      (input as HTMLInputElement).click();
+      for (let frame = 0; frame < 4; frame += 1) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const active = document.activeElement;
+        states.push(
+          active === input ? 'gate' : active === document.body || active === null ? 'body' : 'other',
+        );
+      }
+      return states;
+    });
+    await expect(group).toHaveAttribute('hidden', '');
+    await expect(gate).toBeFocused();
+    // The body at most for the one frame before the group's move.
+    expect(seen.filter((state) => state === 'body').length).toBeLessThanOrEqual(1);
+    expect(seen.at(-1)).toBe('gate');
+  });
 });
 
 // ---- Prose --------------------------------------------------------------------------------------
@@ -2342,4 +2781,156 @@ test('the Persian guide on the prose page puts its markers at the right and keep
     tracking: 'normal',
   });
   expect(drawn.face).toMatch(/Vazirmatn/);
+});
+
+// ---- Repeater ---------------------------------------------------------------------------------
+
+test.describe('the repeater', () => {
+  /** The `index`th Repeater on the page. */
+  const example = (page: Page, index: number): Locator => page.locator('.stage .repeater').nth(index);
+  const onBody = (page: Page): Promise<boolean> =>
+    page.evaluate(() => document.activeElement === document.body);
+
+  test('adding and removing a row moves focus to a field, never the body', async ({ page }) => {
+    await visit(page, '/docs/components/repeater');
+    const tiers = example(page, 0);
+    const status = tiers.getByRole('status');
+    await expect(status).toBeEmpty();
+    // An add by a key: the new row's first field, and the status says so.
+    await tiers.getByRole('button', { name: 'Add a tier' }).focus();
+    await page.keyboard.press('Enter');
+    const third = tiers.getByRole('group', { name: 'Tier 3' });
+    await expect(third.getByRole('textbox', { name: 'Up to' })).toBeFocused();
+    await expect(status).toHaveText('Tier 3 added');
+    // A middle row by a pointer: Remove in the row now in its place.
+    await tiers.getByRole('button', { name: 'Remove, Tier 2' }).click();
+    await expect(tiers.getByRole('button', { name: 'Remove, Tier 2' })).toBeFocused();
+    await expect(status).toHaveText('Tier 2 removed');
+    expect(await onBody(page)).toBe(false);
+    // The last row by a key: Remove in the new last row; then every row, and Add takes focus.
+    await page.keyboard.press('Enter');
+    await expect(tiers.getByRole('button', { name: 'Remove, Tier 1' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(tiers.getByRole('button', { name: 'Add a tier' })).toBeFocused();
+    await expect(status).toHaveText('Tier 1 removed');
+    await expect(tiers.locator('.repeater-empty')).toBeVisible();
+    expect(await onBody(page)).toBe(false);
+  });
+
+  test('at the maximum Add stays, disabled, described by its reason', async ({ page }) => {
+    await visit(page, '/docs/components/repeater');
+    const limits = example(page, 2);
+    await expect(limits.locator('.repeater-empty')).toHaveText('Only you get the weekly email.');
+    const add = limits.getByRole('button', { name: 'Add an address' });
+    await expect(add).toHaveAccessibleDescription('0 of 2');
+    await add.click();
+    await expect(limits.getByRole('textbox', { name: 'Email' })).toBeFocused();
+    await add.click();
+    await expect(add).toBeDisabled();
+    await expect(add).toHaveAccessibleDescription('2 of 2. Remove an address to add another.');
+    await expect(limits.getByRole('status')).toHaveText(
+      'Address 2 added. 2 of 2. Remove an address to add another.',
+    );
+    await expect(limits.locator('.repeater-full')).toBeVisible();
+  });
+
+  test('a form sends indexed names in drawn order, which read back into the rows', async ({ page }) => {
+    await visit(page, '/docs/components/repeater');
+    const form = page
+      .locator('.stage form')
+      .filter({ has: page.locator('.repeater') })
+      .first();
+    await form.getByRole('button', { name: 'Remove, Tier 1' }).click();
+    await form.getByRole('button', { name: 'Add a tier' }).click();
+    await form.getByRole('group', { name: 'Tier 2' }).getByRole('textbox', { name: 'Up to' }).fill('900');
+    await form.getByRole('button', { name: 'Save' }).click();
+    await expect(form.locator('output')).toHaveText(
+      'Sent: large up to 50000 waits week; tier-1 up to 90000 waits three',
+    );
+  });
+
+  test('a group reset gives the default rows and focuses the first field', async ({ page }) => {
+    await visit(page, '/docs/components/field-extras');
+    const rows = page.locator('.stage .field-extras').filter({ has: page.locator('.repeater') });
+    await rows.getByRole('button', { name: 'Reset to default, Wait tiers' }).click();
+    const first = rows.getByRole('group', { name: 'Tier 1' }).getByRole('textbox', { name: 'Up to' });
+    await expect(first).toBeFocused();
+    await expect(first).toHaveValue('100.00');
+    await expect(rows.locator('.repeater-row')).toHaveCount(3);
+  });
+});
+
+// ---- Panel layout -------------------------------------------------------------------------------
+
+test.describe('panel layout', () => {
+  for (const width of [375, 1280]) {
+    test(`a section link opens its section and focuses its heading, and Back focuses the link, at ${String(width)}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await visit(page, '/docs/components/panel-layout');
+      const stage = page.locator('.stage').first();
+      const layout = stage.locator('.panel-layout');
+      await expect(layout).toHaveAttribute('data-view', 'index');
+      await stage.getByRole('link', { name: 'Logos' }).click();
+      await expect(page).toHaveURL(/\?section=logos$/);
+      await expect(layout).toHaveAttribute('data-view', 'section');
+      await expect(stage.getByRole('heading', { name: 'Logos' })).toBeFocused();
+      const back = stage.getByRole('link', { name: 'Settings' });
+      if (width < 800) {
+        // The list face: Back opens the list, and focus goes to the link of the section left.
+        await back.focus();
+        await page.keyboard.press('Enter');
+        await expect(layout).toHaveAttribute('data-view', 'index');
+        await expect(stage.getByRole('link', { name: 'Logos' })).toBeFocused();
+      } else {
+        // The split face: the open link is current, Back is not drawn, and the nav moves focus on.
+        await expect(stage.getByRole('link', { name: 'Logos' })).toHaveAttribute('aria-current', 'page');
+        await expect(back).toBeHidden();
+        await stage.getByRole('link', { name: 'Data' }).click();
+        await expect(stage.getByRole('heading', { name: 'Data' })).toBeFocused();
+      }
+      expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+    });
+  }
+
+  test("the browser's Back and Forward follow the same focus rules on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await visit(page, '/docs/components/panel-layout');
+    const stage = page.locator('.stage').first();
+    const layout = stage.locator('.panel-layout');
+    await stage.getByRole('link', { name: 'Logos' }).click();
+    await expect(stage.getByRole('heading', { name: 'Logos' })).toBeFocused();
+    // Back: the list, and the link of the section left.
+    await page.goBack();
+    await expect(layout).toHaveAttribute('data-view', 'index');
+    await expect(stage.getByRole('link', { name: 'Logos' })).toBeFocused();
+    // Forward: the section again, and its heading.
+    await page.goForward();
+    await expect(layout).toHaveAttribute('data-view', 'section');
+    await expect(stage.getByRole('heading', { name: 'Logos' })).toBeFocused();
+  });
+
+  test("the phone example's address is the page's hash: on load, Back and the browser's Back", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    // A link to a section opens it, and its heading takes focus, never the body.
+    await visit(page, '/docs/components/panel-layout#settings-logos');
+    const phone = page.locator('.stage').nth(1);
+    const layout = phone.locator('.panel-layout');
+    await expect(layout).toHaveAttribute('data-view', 'section');
+    await expect(phone.getByRole('heading', { name: 'Logos' })).toBeFocused();
+    // Back writes the index's hash and focuses the link of the section left.
+    await phone.getByRole('link', { name: 'Settings', exact: true }).click();
+    await expect(page).toHaveURL(/#settings$/);
+    await expect(layout).toHaveAttribute('data-view', 'index');
+    await expect(phone.getByRole('link', { name: 'Logos' })).toBeFocused();
+    // The browser's Back returns to the section, its heading focused.
+    await page.goBack();
+    await expect(page).toHaveURL(/#settings-logos$/);
+    await expect(layout).toHaveAttribute('data-view', 'section');
+    await expect(phone.getByRole('heading', { name: 'Logos' })).toBeFocused();
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  });
 });

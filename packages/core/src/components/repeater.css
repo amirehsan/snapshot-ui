@@ -1,0 +1,224 @@
+/*
+ * Repeater (docs/design-system.md, "Repeater"): a fieldset of row fieldsets, each the app's fields with a legend by
+ * its place, Remove at the row's end and Add after the last. Every fieldset's border, padding, margin and
+ * min-content width are reset, so a 320px page never scrolls sideways. A legend that floats is not the fieldset's
+ * drawn legend, so it joins the grid as an item and takes its gap; in a grid nothing floats, so it is not a side.
+ * The row's fields sit in a size container whose frame the query styles: from 30rem of the row's own width the
+ * fields share a line and Remove stands at its end, level with their controls; under it each field takes a line
+ * and Remove follows them. Nothing moves: a row appears and leaves at once.
+ */
+@layer components {
+  .repeater,
+  .repeater-row-set {
+    display: grid;
+    gap: var(--spacing-part);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .repeater {
+    position: relative;
+  }
+
+  /* The set's legend: the h4 step in ink, as a field's label, with the Changed chip beside it. */
+  .repeater-legend {
+    float: left;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--spacing-part);
+    min-inline-size: 0;
+    padding: 0;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-h4);
+    line-height: var(--text-h4--line-height);
+    font-weight: var(--text-h4--font-weight);
+    overflow-wrap: anywhere;
+  }
+
+  .repeater-description,
+  .repeater-error,
+  .repeater-row-error,
+  .repeater-empty,
+  .repeater-count,
+  .repeater-full {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    overflow-wrap: anywhere;
+  }
+
+  /* Words to read beside the work: slate. Taupe is for placeholders and disabled text, and these are neither. */
+  .repeater-description,
+  .repeater-empty,
+  .repeater-count,
+  .repeater-full {
+    color: var(--color-slate);
+  }
+
+  /* An error is words in the error color, never a colored row. */
+  .repeater-error,
+  .repeater-row-error {
+    color: var(--color-error);
+  }
+
+  /* The rows and the foot stand a peer step from what is above them; the set's own parts a part step. */
+  .repeater-rows,
+  .repeater-foot {
+    margin-block-start: calc(var(--spacing-peer) - var(--spacing-part));
+  }
+
+  .repeater-rows {
+    margin-inline: 0;
+    margin-block-end: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .repeater-row {
+    padding-block: var(--spacing-peer);
+  }
+
+  .repeater-row:first-child {
+    padding-block-start: 0;
+  }
+
+  .repeater-row:last-child {
+    padding-block-end: 0;
+  }
+
+  .repeater-row + .repeater-row {
+    border-block-start: 1px solid var(--color-divider);
+  }
+
+  /* A place, read before its fields, as a DescriptionList term is: the small step at 500, slate. */
+  .repeater-row-legend {
+    float: left;
+    padding: 0;
+    color: var(--color-slate);
+    font-family: var(--font-sans);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .repeater-row-fields {
+    container: repeater-row-fields / inline-size;
+    contain-intrinsic-inline-size: 0;
+    min-inline-size: 0;
+  }
+
+  .repeater-row-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-peer);
+  }
+
+  .repeater-row-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-peer);
+    min-inline-size: 0;
+  }
+
+  /* Remove's end column keeps a field label's line, so the offset below is that label row's height. */
+  .repeater-row-end {
+    font-size: var(--text-h4);
+    line-height: var(--text-h4--line-height);
+  }
+
+  /* At the minimum Remove's width is kept from 30rem, out of sight; under it the column is gone. */
+  .repeater-remove-space {
+    display: none;
+  }
+
+  @container repeater-row-fields (inline-size >= 30rem) {
+    .repeater-row-grid {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .repeater-row-main {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    .repeater-row-main > * {
+      flex: 1 1 10rem;
+      min-inline-size: 0;
+    }
+
+    /* Level with the fields' controls: past the label row, centred on the field. */
+    .repeater-row-end {
+      padding-block-start: calc(
+        1lh + var(--spacing-part) + max(0px, calc((var(--size-field) - var(--size-control)) / 2))
+      );
+    }
+
+    .repeater-remove-space {
+      display: inline-flex;
+      visibility: hidden;
+    }
+  }
+
+  .repeater-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-part) var(--spacing-peer);
+    min-inline-size: 0;
+  }
+
+  /* Add's Plus at 16px before its word, as the filter bar's sheet button draws its icon. */
+  .repeater-add svg {
+    flex: none;
+    inline-size: 16px;
+    block-size: 16px;
+  }
+
+  .repeater-full {
+    min-inline-size: 0;
+  }
+
+  /* The polite status: read, not seen, and out of the flow. Lesson 9: an absolutely placed grid child names both
+     lines on both axes, so it never reaches the grid's padding edge. */
+  .repeater-status {
+    grid-area: 1 / 1 / span 1 / span 1;
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /*
+   * The corner (design record, "Nested radii, derived"): a repeater that ends a card puts Add at the card's bottom
+   * start corner, a control at its foot, so the foot grows by the corner inset less the card's padding: 7px in
+   * Rounded, 19px compact, 0 in Soft and Square. A repeater under a group's offers in FieldExtras ends the card only
+   * when no offer follows it, when the wrapper's status comes straight after it.
+   */
+  :is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)
+    > .repeater:last-child
+    > .repeater-foot,
+  :is(.card, .card > .card-body:last-child, .card > .card-disclosure > .card-fold > .card-body:last-child)
+    > .field-extras:last-child
+    > .repeater:has(+ .field-extras-status)
+    > .repeater-foot {
+    padding-block-end: calc(var(--holder-corner-inset) - var(--holder-pad));
+  }
+
+  @media (forced-colors: active) {
+    /* The rules between rows in the reader's text color; the words and the buttons draw their own. */
+    .repeater-row + .repeater-row {
+      border-block-start-color: canvastext;
+    }
+  }
+}

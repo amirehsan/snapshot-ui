@@ -38,6 +38,16 @@ A monthly report as a model wrote it: a link, a bare address, two images, some H
 
 <Section>
 
+## Copy an answer
+
+A [copy button](/docs/components/copy-button) under an answer, in the answer's footer, outside the Prose box. While an answer streams in, an app marks its body `aria-busy="true"`, and a screen reader may hold back what changes inside a busy part, so the button's polite "Copied" goes in the footer, which is never busy. The button copies the answer's text as your app holds it, not the drawn HTML.
+
+<Preview name="copy-button-answer" />
+
+</Section>
+
+<Section>
+
 ## Wide tables
 
 A table with four or more columns of figures is wider than a phone. Put it in a `ProseScroll`: a region that scrolls sideways inside the article, so the page never does, and that takes focus, so a keyboard reader can scroll it with the arrow keys. Its name is required, since a region a screen reader lists needs one: name the table, such as "October by category, table". It is always a tab stop, whether the table overflows or not, since it cannot know without measuring; so wrap only tables wider than three columns, and give each a name of its own. The table keeps its rows and columns. A table outside one keeps to the width it is given by breaking its cells anywhere, which keeps the page whole but makes figures hard to read, so wrap every wide table.

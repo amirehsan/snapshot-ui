@@ -24,18 +24,21 @@ import { FilterBar } from '../filter-bar';
 import { FilterChip } from '../filter-chip';
 import { Gauge } from '../gauge';
 import { Link, RouterProvider } from '../link';
-import { Menu, MenuItem, MenuSection, MenuTrigger } from '../menu';
+import { AccountMenu } from '../account-menu';
+import { Menu, MenuItem, MenuSection, MenuSeparator, MenuTrigger } from '../menu';
 import { MonthGrid } from '../month-grid';
 import { MultiSelect } from '../multi-select';
 import { NumberField } from '../number-field';
 import { PageColumn, PageHeader } from '../page-header';
 import { Pagination } from '../pagination';
+import { PanelLayout, PanelNav, PanelNavItem, PanelSection } from '../panel-layout';
 import { PickerOption } from '../picker';
 import { Popover } from '../popover';
 import { ProgressBar } from '../progress-bar';
 import { Prose } from '../prose';
 import { GOALS_GUIDE_FA } from '../prose/fixtures';
 import { Radio, RadioGroup } from '../radio-group';
+import { Repeater } from '../repeater';
 import { SaveBar } from '../save-bar';
 import { SearchField } from '../search-field';
 import { SegmentedControl, SegmentedControlItem } from '../segmented-control';
@@ -58,6 +61,7 @@ import { firstLineOffset, lineCount } from '../stories/paint';
 import { ownContent, Rendered } from '../stories/prose';
 import { Switch } from '../switch';
 import { Tab, TabList, TabPanel, Tabs } from '../tabs';
+import { ThemeMenu, type ThemeChoice } from '../theme-switch';
 import { TextArea } from '../text-area';
 import { TextField } from '../text-field';
 import { toast, ToastRegion } from '../toast';
@@ -2384,5 +2388,315 @@ export const ProseMirrored: Story = {
     };
     await expect(box(at).right).toBeLessThanOrEqual(box(at + 1).left + 0.5);
     await expectSameEdge(rect(find(canvasElement, 'p')).right, block.right);
+  },
+};
+
+/**
+ * Three wait tiers in tomans on a Persian page: the legend and each row's legend at the right, Remove at the row's
+ * left from 30rem, the fields from the right, and every amount still a figure read left to right.
+ */
+export const RepeaterMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => {
+    function Tiers(): ReactElement {
+      const [rows, setRows] = useState([
+        { id: 'a', amount: 1000000, wait: 'three' },
+        { id: 'b', amount: 5000000, wait: 'week' },
+        { id: 'c', amount: 15000000, wait: 'month' },
+      ]);
+      return (
+        <Repeater
+          label="سطح‌های انتظار"
+          value={rows}
+          onChange={setRows}
+          createRow={() => ({ id: 'new', amount: 0, wait: 'three' })}
+          rowLabel={(index) => `سطح ${persianDigits(index + 1)}`}
+          maxRows={4}
+          labels={{
+            add: 'افزودن سطح',
+            remove: 'حذف',
+            count: (count, max) => `${persianDigits(count)} از ${persianDigits(max)}`,
+          }}
+        >
+          {(tier, { update }) => (
+            <>
+              <NumberField
+                label="تا"
+                money={{ symbol: 'تومان', symbolPosition: 'end', fractionDigits: 0 }}
+                value={tier.amount}
+                onChange={(amount) => {
+                  update({ ...tier, amount: amount ?? 0 });
+                }}
+              />
+              <Select
+                label="انتظار"
+                value={tier.wait}
+                onChange={(key) => {
+                  update({ ...tier, wait: String(key) });
+                }}
+              >
+                <PickerOption id="three">۳ روز</PickerOption>
+                <PickerOption id="week">یک هفته</PickerOption>
+                <PickerOption id="month">یک ماه</PickerOption>
+              </Select>
+            </>
+          )}
+        </Repeater>
+      );
+    }
+    return (
+      <I18nProvider locale="fa-IR">
+        <div dir="rtl" lang="fa" style={{ width: 'min(40rem, calc(100vw - 2rem))' }}>
+          <Tiers />
+        </div>
+      </I18nProvider>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const set = find(canvasElement, '.repeater');
+    // The legend starts at the right edge, as Persian reads.
+    await expectSameEdge(rect(find(set, '.repeater-label')).right, rect(set).right);
+    const wide = rect(find(set, '.repeater-row-fields')).width >= 480;
+    for (const row of canvasElement.querySelectorAll<HTMLElement>('.repeater-row')) {
+      await expectSameEdge(rect(find(row, '.repeater-row-legend')).right, rect(row).right);
+      const main = rect(find(row, '.repeater-row-main'));
+      const remove = rect(find(row, '.repeater-remove'));
+      if (wide) {
+        // Remove at the row's left, the fields to its right, the amount first at the right.
+        await expect(remove.right).toBeLessThanOrEqual(main.left + 0.5);
+        await expectSameEdge(remove.left, rect(row).left);
+        await expect(rect(find(row, '.number-field')).left).toBeGreaterThan(
+          rect(find(row, '.select')).right - 0.5,
+        );
+      } else {
+        // On a phone the fields stack, and Remove follows them from the right.
+        await expect(remove.top).toBeGreaterThanOrEqual(main.bottom - 0.5);
+        await expectSameEdge(remove.right, rect(row).right);
+      }
+      // A figure stays left to right on a right-to-left page.
+      await expect(getComputedStyle(find(row, '.number-field-input')).direction).toBe('ltr');
+    }
+    // Add starts the foot at the right.
+    await expectSameEdge(rect(find(set, '.repeater-add')).right, rect(set).right);
+  },
+};
+
+/** The consumer's eight sections in Persian, with an end state in Persian digits. */
+const PERSIAN_SECTIONS = [
+  ['coach', 'مربی', 'مربی پیش از هر برداشت چقدر صبر می‌کند.', undefined],
+  ['notifications', 'اعلان‌ها', 'چه چیزی و کجا به شما می‌گوییم.', undefined],
+  ['bank-sync', 'همگام‌سازی بانک', 'حساب‌های متصل و هر چند وقت همگام می‌شوند.', '۲ متصل'],
+  ['assistant', 'دستیار هوش مصنوعی', 'دستیار چه چیزی را می‌تواند بخواند.', undefined],
+  ['logos', 'نشان‌ها', 'نشان بانک کنار تراکنش‌ها.', 'خاموش'],
+  ['appearance', 'ظاهر', 'پوسته و تراکم.', undefined],
+  ['data', 'داده‌ها', 'برون‌بری یا درون‌بری داده‌ها.', undefined],
+  ['danger', 'منطقه‌ی خطر', 'حذف حساب.', undefined],
+] as const;
+
+/** The Persian settings page at the index or at a section, in a frame `width` wide. */
+function PersianSettings({
+  sectionKey,
+  width,
+  navLabel,
+}: {
+  sectionKey?: string;
+  width: string;
+  navLabel: string;
+}): ReactElement {
+  const open = PERSIAN_SECTIONS.find(([key]) => key === (sectionKey ?? 'coach')) ?? PERSIAN_SECTIONS[0];
+  const view = sectionKey === undefined ? 'index' : 'section';
+  return (
+    <div style={{ width, maxWidth: '100%' }}>
+      <PanelLayout
+        view={view}
+        sectionKey={sectionKey}
+        backHref="#settings"
+        backLabel="تنظیمات"
+        nav={
+          <PanelNav aria-label={navLabel}>
+            {PERSIAN_SECTIONS.map(([key, name, description, end]) => (
+              <PanelNavItem
+                key={key}
+                href={`#settings/${key}`}
+                isCurrent={key === sectionKey}
+                isDefault={view === 'index' && key === 'coach'}
+                description={description}
+                end={end}
+              >
+                {name}
+              </PanelNavItem>
+            ))}
+          </PanelNav>
+        }
+      >
+        <PanelSection title={open[1]} description={open[2]}>
+          <Text>{open[2]}</Text>
+        </PanelSection>
+      </PanelLayout>
+    </div>
+  );
+}
+
+/**
+ * PanelLayout on a Persian page, in Vazirmatn: on the split face the nav at the right and the section to its
+ * left; on the list face the chevrons pointing left, the way a row opens; Back's chevron pointing right, the way
+ * back. Its play measures each in three engines.
+ */
+export const PanelLayoutMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <RouterProvider navigate={() => undefined}>
+        <div
+          dir="rtl"
+          lang="fa"
+          data-font="vazirmatn"
+          style={{ display: 'grid', gap: 'var(--spacing-separate)', width: '100%' }}
+        >
+          <div data-case="split">
+            <PersianSettings sectionKey="logos" width="56rem" navLabel="بخش‌های تنظیمات" />
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-peer)' }}>
+            <div data-case="list">
+              <PersianSettings width="20rem" navLabel="فهرست تنظیمات" />
+            </div>
+            <div data-case="page">
+              <PersianSettings sectionKey="data" width="20rem" navLabel="فهرست بخش‌ها" />
+            </div>
+          </div>
+        </div>
+      </RouterProvider>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const at = (name: string): HTMLElement => find(canvasElement, `[data-case="${name}"]`);
+    const split = at('split');
+    // At the story's width the split case is the split face, unless the screen is a phone's.
+    if (rect(find(split, '.panel-layout')).width >= 768) {
+      const side = find(split, '.panel-layout-side');
+      const main = find(split, '.panel-layout-main');
+      await waitFor(() => expect(rect(side).left).toBeGreaterThanOrEqual(rect(main).right - 0.5), {
+        timeout: 5000,
+      });
+      // The side column reaches past its track by a focus ring; the nav in it starts on the layout's right edge.
+      await expectSameEdge(rect(find(split, '.panel-nav')).right, rect(find(split, '.panel-layout')).right);
+    }
+    // The list face: the chevron at the row's left end, its drawing mirrored to point left.
+    const row = find(at('list'), '.panel-nav-link');
+    const chevron = find(row, '.panel-nav-chevron');
+    await waitFor(() => expect(rect(chevron).left).toBeLessThan(rect(find(row, '.panel-nav-name')).left), {
+      timeout: 5000,
+    });
+    await expect(getComputedStyle(find(chevron, 'svg')).scale).toBe('-1 1');
+    // Back at the column's right, its chevron first, mirrored to point right.
+    const back = find(at('page'), '.panel-layout-back');
+    await expectSameEdge(rect(back).right, rect(find(at('page'), '.panel-layout-main')).right);
+    const backIcon = find(back, '.panel-layout-back-icon');
+    await expect(rect(backIcon).left).toBeGreaterThan(rect(back).right - rect(backIcon).width - 1);
+    await expect(getComputedStyle(find(back, 'svg')).scale).toBe('-1 1');
+  },
+};
+
+/** A Persian account menu at the foot of a column: Settings, the theme as a submenu, Help, a rule and Sign out. */
+function PersianAccount(): ReactElement {
+  const [theme, setTheme] = useState<ThemeChoice>('system');
+  return (
+    <AccountMenu name="آدا لاولیس" detail="حساب خانوادگی" placement="top start">
+      <MenuItem id="settings" icon={<Settings />}>
+        تنظیمات
+      </MenuItem>
+      <ThemeMenu
+        value={theme}
+        onChange={setTheme}
+        labels={{ label: 'پوسته', system: 'سیستم', light: 'روشن', dark: 'تیره' }}
+      />
+      <MenuItem id="help">راهنما</MenuItem>
+      <MenuSeparator />
+      <MenuItem id="sign-out">خروج</MenuItem>
+    </AccountMenu>
+  );
+}
+
+/**
+ * AccountMenu on a Persian page, in Vazirmatn: the avatar at the trigger's right and its up-and-down chevron at its
+ * left, not mirrored; the menu open with its Theme submenu opened by Arrow Left, the right-to-left locale's open
+ * key, at the row's left, and the row's chevron mirrored to point there. Its play opens them and measures each in
+ * three engines.
+ */
+export const AccountMenuMirrored: Story = {
+  tags: ['!no-visual', 'webkit', 'firefox'],
+  parameters: { a11y: MENU_ROW_A11Y },
+  render: () => (
+    <I18nProvider locale="fa-IR">
+      <div
+        dir="rtl"
+        lang="fa"
+        data-font="vazirmatn"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          alignItems: 'flex-start',
+          minBlockSize: '440px',
+        }}
+      >
+        <div style={{ inlineSize: 'min(18rem, 100%)' }}>
+          <PersianAccount />
+        </div>
+      </div>
+    </I18nProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    // Vazirmatn loads when the trigger first draws, and its name is narrower in it than in the fallback face, so
+    // the column, as wide as the trigger, moves when it arrives. A submenu placed before then stays put, so
+    // nothing opens until the face is in.
+    await document.fonts.load('500 16px Vazirmatn', 'آدا لاولیس');
+    await document.fonts.ready;
+    await waitFor(() => expect(document.fonts.check('500 16px Vazirmatn', 'آدا لاولیس')).toBe(true));
+    const trigger = find(canvasElement, '.account-menu-trigger');
+    // The avatar at the start, the right, and the chevron at the end, the left, drawn as it is.
+    await expect(rect(find(trigger, '.avatar')).left).toBeGreaterThan(
+      rect(find(trigger, '.account-menu-text')).right - 1,
+    );
+    await expect(rect(find(trigger, '.account-menu-chevron')).right).toBeLessThan(
+      rect(find(trigger, '.account-menu-text')).left + 1,
+    );
+    await expect(getComputedStyle(find(trigger, '.account-menu-chevron svg')).scale).toBe('none');
+    trigger.focus();
+    await waitFor(() => expect(trigger).toHaveFocus());
+    await userEvent.keyboard('{Enter}');
+    const body = within(document.body);
+    // The menu placed and entered before the submenu is placed beside its row.
+    const menu = await waitFor(() => {
+      const found = find(document, '.menu-popover');
+      if (!found.hasAttribute('data-placement') || found.hasAttribute('data-entering'))
+        throw new Error('Not open');
+      return found;
+    });
+    await Promise.all(
+      menu.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => null)),
+    );
+    await waitFor(() => expect(body.getByRole('menuitem', { name: 'تنظیمات' })).toHaveFocus());
+    await userEvent.keyboard('{ArrowDown}{ArrowLeft}');
+    const theme = body.getByRole('menuitem', { name: 'پوسته' });
+    const submenu = await waitFor(() => {
+      const popovers = document.querySelectorAll<HTMLElement>('.menu-popover');
+      const [, found] = popovers;
+      if (popovers.length !== 2 || !found || found.hasAttribute('data-entering')) throw new Error('Not open');
+      return found;
+    });
+    await Promise.all(
+      submenu.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => null)),
+    );
+    await waitFor(() => expect(body.getByRole('menuitemradio', { name: 'سیستم' })).toHaveFocus());
+    // The submenu opens at the row's end, its left, and the row's chevron points there.
+    await expect(rect(submenu).right).toBeLessThanOrEqual(rect(theme).left + 1);
+    // Its first row is level with Theme, which it is only when placed beside a menu at rest.
+    const first = body.getByRole('menuitemradio', { name: 'سیستم' });
+    await expect(Math.abs(rect(first).top - rect(theme).top)).toBeLessThanOrEqual(1);
+    await expect(getComputedStyle(find(theme, '.menu-item-submenu svg')).scale).toBe('-1 1');
+    await expect(rect(find(theme, '.menu-item-submenu')).left).toBeLessThan(
+      rect(find(theme, '.menu-item-end')).left,
+    );
   },
 };

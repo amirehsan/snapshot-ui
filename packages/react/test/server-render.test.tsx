@@ -49,6 +49,14 @@ import {
   SidebarTrigger,
 } from '../src/sidebar';
 import { Spinner } from '../src/spinner';
+import { ConditionalFields } from '../src/conditional-fields';
+import { CopyButton } from '../src/copy-button';
+import { FieldExtras } from '../src/field-extras';
+import { Repeater } from '../src/repeater';
+import { PanelNav, PanelNavItem } from '../src/panel-layout';
+import { settingsPage } from './panel-layout-fixture';
+import { accountMenu, accountRail } from './account-menu-fixture';
+import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Gauge } from '../src/gauge';
 import { MonthGrid } from '../src/month-grid';
@@ -91,6 +99,41 @@ const UPLOADS: UploadItem[] = [
   { id: 4, name: 'lease.pdf', status: 'saved', href: '/documents/lease' },
   { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
   { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
+];
+
+const noop = (): void => undefined;
+
+/** The consumer's three default wait tiers, as a controlled Repeater draws them, for the server suites. */
+function ServerTiers({ rows }: { rows: { id: string; amount: number; wait: string }[] }): ReactElement {
+  return (
+    <Repeater
+      label="Wait tiers"
+      description="A payment waits by its amount."
+      value={rows}
+      onChange={() => undefined}
+      createRow={() => ({ id: 'new', amount: 0, wait: 'three' })}
+      rowLabel={(index) => `Tier ${String(index + 1)}`}
+      maxRows={3}
+      labels={{ add: 'Add a tier', empty: 'No tiers. The coach never waits.' }}
+    >
+      {(tier) => (
+        <>
+          <NumberField label="Up to" money={{ symbol: '$' }} value={tier.amount} />
+          <Select label="Wait" value={tier.wait}>
+            <PickerOption id="three">3 days</PickerOption>
+            <PickerOption id="week">A week</PickerOption>
+            <PickerOption id="month">A month</PickerOption>
+          </Select>
+        </>
+      )}
+    </Repeater>
+  );
+}
+
+const DEFAULT_TIERS = [
+  { id: 'a', amount: 10000, wait: 'three' },
+  { id: 'b', amount: 50000, wait: 'week' },
+  { id: 'c', amount: 150000, wait: 'month' },
 ];
 
 const CLIENT: [name: string, element: ReactElement, contains: string[], excludes?: string[]][] = [
@@ -1113,6 +1156,251 @@ const CLIENT: [name: string, element: ReactElement, contains: string[], excludes
       '<span class="breadcrumbs-text" title="Documents">Documents</span>',
     ],
     ['role="link"', 'aria-disabled', 'data-collection'],
+  ],
+  [
+    // The button and its empty polite status, both glyphs drawn for the stylesheet to choose; no outcome, no tip,
+    // and nothing read from the clipboard.
+    'CopyButton in a DescriptionList row',
+    <DescriptionList>
+      <DescriptionListItem
+        term="Setup address"
+        actions={
+          <CopyButton value="https://hooks.example.com/ledger" labels={{ copy: 'Copy Setup address' }} />
+        }
+      >
+        https://hooks.example.com/ledger
+      </DescriptionListItem>
+    </DescriptionList>,
+    [
+      '<dd class="description-list-actions"><span class="copy-button" data-look="icon">',
+      'class="icon-button"',
+      'aria-label="Copy Setup address"',
+      '<span class="copy-button-glyph" data-glyph="copy" aria-hidden="true">',
+      '<span class="copy-button-glyph" data-glyph="check" aria-hidden="true">',
+      '<span class="copy-button-status" role="status" aria-live="polite" aria-atomic="true"></span>',
+    ],
+    ['data-outcome', 'role="tooltip"', 'Copied'],
+  ],
+  [
+    // The word look, as an answer's footer holds it outside the answer's busy part. Drawn alone, so its own root is
+    // the outermost element prose hands back.
+    'CopyButton under an answer',
+    <CopyButton
+      value="Spending on food is down 12% this month."
+      look="button"
+      labels={{ copy: 'Copy answer' }}
+    />,
+    [
+      '<span class="copy-button" data-look="button">',
+      'class="button button-secondary"',
+      'Copy answer</span></button>',
+      '<span class="copy-button-status" role="status" aria-live="polite" aria-atomic="true"></span>',
+    ],
+    ['data-outcome', 'role="tooltip"', 'aria-label='],
+  ],
+  [
+    // Both offers drawn from the props, the suggestion first, each button named by its word and the field's label
+    // and described by its words; the status host is in the HTML and empty, so a reader is listening before a take.
+    'FieldExtras with a suggestion and a default',
+    <FieldExtras
+      fieldLabel="Cushion"
+      suggestion={{ value: '$2,340', reason: 'a month of your fixed bills', isCurrent: false, onTake: noop }}
+      defaultOffer={{ value: '$1,000', isCurrent: false, onTake: noop }}
+    >
+      <TextField label="Cushion" defaultValue="$500" />
+    </FieldExtras>,
+    [
+      '<div class="field-extras" data-scope="field">',
+      '<p class="field-offer" data-kind="suggestion">',
+      'class="field-offer-text">Suggested: $2,340<!-- -->, <!-- -->a month of your fixed bills</span>',
+      'class="button button-tertiary field-offer-button"',
+      'aria-label="Use, Cushion"',
+      '<p class="field-offer" data-kind="default">',
+      'Default: $1,000</span>',
+      'aria-label="Reset to default, Cushion"',
+      '<span class="field-extras-status" role="status" aria-live="polite" aria-atomic="true"></span>',
+    ],
+    ['placeholder=', 'data-changed'],
+  ],
+  [
+    // A current offer is not drawn: only the field and the empty status.
+    'FieldExtras at its default',
+    <FieldExtras
+      fieldLabel="Wait"
+      scope="group"
+      defaultOffer={{ value: '3 days', isCurrent: true, onTake: noop }}
+    >
+      <TextField label="Wait" defaultValue="3 days" />
+    </FieldExtras>,
+    ['<div class="field-extras" data-scope="group">', 'class="field-extras-status"'],
+    ['field-offer'],
+  ],
+  [
+    // The logo off: the group is in the server's HTML, hidden, inert and disabled, so before any script its key
+    // is out of the tab order, the accessibility tree and the submission. Drawn without its gate, so the fieldset
+    // is the outermost element prose hands back; the server face draws it under its gate.
+    'ConditionalFields hidden',
+    <ConditionalFields id="logo-fields" isShown={false}>
+      <TextField label="API key" name="logoKey" type="password" />
+    </ConditionalFields>,
+    [
+      '<fieldset role="none" id="logo-fields" class="conditional-fields" hidden="" inert="" disabled="" data-hidden="">',
+      'name="logoKey"',
+    ],
+  ],
+  [
+    // The logo on: none of the three, the fields where they were.
+    'ConditionalFields shown',
+    <ConditionalFields id="logo-fields" isShown>
+      <TextField label="API key" name="logoKey" type="password" />
+    </ConditionalFields>,
+    ['<fieldset role="none" id="logo-fields" class="conditional-fields">', 'name="logoKey"'],
+    ['hidden=""', 'inert=""', 'disabled=""', 'data-hidden'],
+  ],
+  [
+    // Named by the app: the fieldset's own group role, and no role="none".
+    'ConditionalFields named',
+    <ConditionalFields id="logo-fields" isShown aria-label="Logo provider">
+      <TextField label="API key" name="logoKey" />
+    </ConditionalFields>,
+    ['<fieldset aria-label="Logo provider" id="logo-fields" class="conditional-fields">'],
+    ['role="none"'],
+  ],
+  [
+    // The consumer's three tiers, at the maximum: every row, its legend, its fields and its Remove, the disabled
+    // Add with its reason as its description, and the polite status mounted empty, before any script.
+    'Repeater three tiers',
+    <ServerTiers rows={DEFAULT_TIERS} />,
+    [
+      '<fieldset class="repeater" aria-describedby=',
+      'data-full=""',
+      '<ol class="repeater-rows">',
+      'data-row-id="a"',
+      '<legend class="repeater-row-legend">Tier 3</legend>',
+      'aria-label="Remove, Tier 2"',
+      'class="repeater-full"',
+      '3 of 3. Remove one to add another.',
+      '<div class="repeater-status" role="status" aria-live="polite" aria-atomic="true"></div>',
+    ],
+    ['repeater-count'],
+  ],
+  [
+    // No rows: the empty line in the list's place, Add and its count.
+    'Repeater empty',
+    <ServerTiers rows={[]} />,
+    [
+      'data-empty=""',
+      '<p class="repeater-empty">No tiers. The coach never waits.</p>',
+      'class="repeater-count"',
+    ],
+    ['repeater-rows', 'data-full'],
+  ],
+  [
+    // Both faces in one HTML: the list and Coach beside it at the index, Coach drawn current by data-default and
+    // no link aria-current; the container query picks the face.
+    'PanelLayout at the index',
+    settingsPage('index'),
+    [
+      '<div class="panel-layout" data-view="index"><div class="panel-layout-frame"><div class="panel-layout-side">',
+      '<nav aria-label="Settings sections" class="panel-nav"><ul class="panel-nav-list"><li class="panel-nav-item">',
+      'class="panel-nav-link"',
+      'data-default=""',
+      '<span class="panel-nav-end"',
+      '2 connected',
+      '<div class="panel-layout-main"><a',
+      'class="panel-layout-back"',
+      'href="/settings"',
+      '<section aria-labelledby=',
+      'class="panel-section"',
+      'class="panel-section-heading" tabindex="-1">Coach</h2>',
+    ],
+    ['aria-current'],
+  ],
+  [
+    // At a section: the open link aria-current, Back in the main column, the section's heading focusable by script.
+    'PanelLayout at a section',
+    settingsPage('section', 'logos'),
+    [
+      '<div class="panel-layout" data-view="section">',
+      'aria-current="page"',
+      'href="/settings/logos"',
+      'class="panel-layout-back"',
+      'Settings</a>',
+      'class="panel-section-heading" tabindex="-1">Logos</h2>',
+    ],
+    ['data-default'],
+  ],
+  [
+    // A lone PanelNav, as an app places it outside a layout: its own root is the outermost element.
+    'PanelNav alone',
+    <PanelNav aria-label="Settings sections">
+      <PanelNavItem href="/settings/coach" isCurrent>
+        Coach
+      </PanelNavItem>
+    </PanelNav>,
+    [
+      '<nav aria-label="Settings sections" class="panel-nav">',
+      'aria-current="page"',
+      'class="panel-nav-name"',
+    ],
+  ],
+  [
+    // The three choices, System first, the given one checked, each icon hidden; no Changed chip shown.
+    'ThemeSwitch',
+    <ThemeSwitch value="light" onChange={() => undefined} />,
+    [
+      'aria-label="Theme"',
+      'class="field segmented theme-switch"',
+      'value="system"',
+      'checked="" value="light"',
+      'lucide-monitor',
+      'lucide-sun',
+      'lucide-moon',
+    ],
+    ['data-changed', 'checked="" value="dark"', 'checked="" value="system"'],
+  ],
+  [
+    // Rows of a radio group, none checked before the browser knows the reader's choice.
+    'ThemeSwitch radio at null',
+    <ThemeSwitch look="radio" value={null} onChange={() => undefined} />,
+    ['class="field radio-group theme-switch"', 'class="radio"', 'System', 'Light', 'Dark'],
+    ['checked'],
+  ],
+  [
+    // The trigger alone: the avatar's initials, the name, the detail that describes it and the chevron. The menu
+    // is not in the HTML until it opens.
+    'AccountMenu',
+    accountMenu(),
+    [
+      'class="account-menu-trigger"',
+      'aria-haspopup="true"',
+      'aria-expanded="false"',
+      '<span class="avatar-initials" aria-hidden="true">AL</span>',
+      '<span class="account-menu-name">Ada Lovelace</span>',
+      'class="account-menu-detail" aria-hidden="true">ada@example.com</span>',
+      'class="account-menu-chevron" aria-hidden="true"',
+      'lucide-chevrons-up-down',
+    ],
+    ['role="menu"', 'data-compact', 'aria-label'],
+  ],
+  [
+    // Compact by its prop: the avatar alone, named by a visually hidden copy of the person's name.
+    'AccountMenu compact',
+    accountMenu({ isCompact: true }),
+    ['class="account-menu-trigger"', 'data-compact=""', '>Ada Lovelace</span></button>'],
+    ['account-menu-name', 'account-menu-detail', 'account-menu-chevron', 'aria-label'],
+  ],
+  [
+    // In a rail the server draws collapsed from its cookie: the compact trigger from the first paint.
+    'AccountMenu in a collapsed rail',
+    accountRail(true),
+    [
+      'data-sidebar="collapsed"',
+      'class="sidebar-footer"',
+      'data-compact=""',
+      '>Ada Lovelace</span></button>',
+    ],
+    ['account-menu-name'],
   ],
 ];
 

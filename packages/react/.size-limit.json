@@ -196,11 +196,11 @@
     "limit": "1.5 kB"
   },
   {
-    "name": "import { Menu, MenuItem, MenuSection, MenuSeparator } from \"@snapshot-ui/react\"",
+    "name": "import { Menu, MenuItem, MenuSection, MenuSeparator, SubmenuTrigger } from \"@snapshot-ui/react\"",
     "path": "dist/index.js",
-    "import": "{ Menu, MenuItem, MenuSection, MenuSeparator }",
+    "import": "{ Menu, MenuItem, MenuSection, MenuSeparator, SubmenuTrigger }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react"],
-    "limit": "2 kB"
+    "limit": "2.5 kB"
   },
   {
     "name": "import { toast, ToastRegion } from \"@snapshot-ui/react\"",
@@ -417,7 +417,7 @@
     "path": "dist/index.js",
     "import": "{ UploadTray }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "9 kB"
+    "limit": "10 kB"
   },
   {
     "name": "import { DatePicker } from \"@snapshot-ui/react\"",
@@ -431,7 +431,7 @@
     "path": "dist/index.js",
     "import": "{ SaveBar }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
-    "limit": "5.5 kB"
+    "limit": "6.5 kB"
   },
   {
     "name": "import { PageHeader, PageColumn } from \"@snapshot-ui/react\"",
@@ -448,11 +448,60 @@
     "limit": "1.5 kB"
   },
   {
+    "name": "import { CopyButton } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ CopyButton }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "3.5 kB"
+  },
+  {
+    "name": "import { ConditionalFields } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ ConditionalFields }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "2 kB"
+  },
+  {
+    "name": "import { FieldExtras } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ FieldExtras }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "2.5 kB"
+  },
+  {
+    "name": "import { PanelLayout, PanelNav, PanelNavItem, PanelSection, PanelRow } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ PanelLayout, PanelNav, PanelNavItem, PanelSection, PanelRow }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "2.5 kB"
+  },
+  {
     "name": "import { Prose, ProseScroll } from \"@snapshot-ui/react\"",
     "path": "dist/index.js",
     "import": "{ Prose, ProseScroll }",
     "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
     "limit": "1 kB"
+  },
+  {
+    "name": "import { Repeater } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ Repeater }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "4 kB"
+  },
+  {
+    "name": "import { ThemeSwitch, ThemeMenu } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ ThemeSwitch, ThemeMenu }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "4 kB"
+  },
+  {
+    "name": "import { AccountMenu } from \"@snapshot-ui/react\"",
+    "path": "dist/index.js",
+    "import": "{ AccountMenu }",
+    "ignore": ["react", "react-dom", "react-aria-components", "lucide-react", "@internationalized/date"],
+    "limit": "3 kB"
   },
   {
     "name": "Button with React Aria (watch only)",

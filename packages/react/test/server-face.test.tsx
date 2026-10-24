@@ -19,10 +19,20 @@ import { PickerOption } from '../src/picker';
 import { Prose, ProseScroll } from '../src/prose';
 import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
+import { Select } from '../src/select';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
+import { Switch } from '../src/switch';
+import { TextField } from '../src/text-field';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Card, CardActions, CardHeader, CardTitle } from '../src/card';
+import { ConditionalFields } from '../src/conditional-fields';
+import { CopyButton } from '../src/copy-button';
+import { FieldExtras } from '../src/field-extras';
+import { Repeater } from '../src/repeater';
+import { settingsPage } from './panel-layout-fixture';
+import { accountRail } from './account-menu-fixture';
+import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -83,6 +93,39 @@ const UPLOADS: UploadItem[] = [
   { id: 4, name: 'lease.pdf', status: 'saved', href: '/documents/lease' },
   { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
   { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
+];
+
+/** The consumer's three default wait tiers, as a controlled Repeater draws them, for the server suites. */
+function ServerTiers({ rows }: { rows: { id: string; amount: number; wait: string }[] }): ReactElement {
+  return (
+    <Repeater
+      label="Wait tiers"
+      description="A payment waits by its amount."
+      value={rows}
+      onChange={() => undefined}
+      createRow={() => ({ id: 'new', amount: 0, wait: 'three' })}
+      rowLabel={(index) => `Tier ${String(index + 1)}`}
+      maxRows={3}
+      labels={{ add: 'Add a tier', empty: 'No tiers. The coach never waits.' }}
+    >
+      {(tier) => (
+        <>
+          <NumberField label="Up to" money={{ symbol: '$' }} value={tier.amount} />
+          <Select label="Wait" value={tier.wait}>
+            <PickerOption id="three">3 days</PickerOption>
+            <PickerOption id="week">A week</PickerOption>
+            <PickerOption id="month">A month</PickerOption>
+          </Select>
+        </>
+      )}
+    </Repeater>
+  );
+}
+
+const DEFAULT_TIERS = [
+  { id: 'a', amount: 10000, wait: 'three' },
+  { id: 'b', amount: 50000, wait: 'week' },
+  { id: 'c', amount: 150000, wait: 'month' },
 ];
 
 const FACES: [name: string, element: ReactElement][] = [
@@ -363,6 +406,66 @@ const FACES: [name: string, element: ReactElement][] = [
     </AppShell>,
   ],
   [
+    // Every word is a label or the app's, and nothing reads the clipboard, so every locale writes the same button.
+    'CopyButton icon',
+    <CopyButton value="https://hooks.example.com/ledger" labels={{ copy: 'Copy webhook address' }} />,
+  ],
+  [
+    'CopyButton button',
+    <CopyButton value="Setup details" look="button" labels={{ copy: 'Copy setup details' }} />,
+  ],
+  [
+    // Every offered value and word is the app's or a label, so every locale writes the same field and offers.
+    'FieldExtras with both offers',
+    <FieldExtras
+      fieldLabel="Cushion"
+      suggestion={{ value: '$2,340', reason: 'a month of your fixed bills', isCurrent: false, onTake: noop }}
+      defaultOffer={{ value: '$1,000', isCurrent: false, onTake: noop }}
+    >
+      <TextField label="Cushion" defaultValue="$500" />
+    </FieldExtras>,
+  ],
+  [
+    // The logo on: the provider and the key under the gate, no hidden, inert or disabled.
+    'ConditionalFields logo shown',
+    <form>
+      <Switch isSelected aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown>
+        <Select label="Provider" name="logoProvider" defaultValue="northwind">
+          <PickerOption id="northwind">Northwind Logos</PickerOption>
+          <PickerOption id="fabrikam">Fabrikam Marks</PickerOption>
+        </Select>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
+  ],
+  [
+    // The logo off: hidden, inert and disabled before any script, so the key is neither reached nor sent.
+    'ConditionalFields logo hidden',
+    <form>
+      <Switch isSelected={false} aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown={false}>
+        <Select label="Provider" name="logoProvider" defaultValue="northwind">
+          <PickerOption id="northwind">Northwind Logos</PickerOption>
+          <PickerOption id="fabrikam">Fabrikam Marks</PickerOption>
+        </Select>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
+  ],
+  // Both faces in one HTML at the index and at a section: nothing reads the locale, the zone or the width.
+  ['PanelLayout at the index', settingsPage('index')],
+  ['PanelLayout at a section', settingsPage('section', 'logos')],
+  // The value the server read from the reader's cookie, drawn as given: nothing reads the locale, the zone or a theme.
+  ['ThemeSwitch at light', <ThemeSwitch value="light" onChange={() => undefined} />],
+  // The rail's state from the server's cookie: the full trigger in an expanded rail, the compact one in a folded rail.
+  ['AccountMenu in an expanded rail', accountRail(false)],
+  ['AccountMenu in a collapsed rail', accountRail(true)],
+  [
     // Static: it reads no locale and no zone, so a Persian report writes the same HTML in every one.
     'Prose with a wide table',
     <Prose as="article" lang="fa" dir="rtl">
@@ -386,6 +489,13 @@ const FACES: [name: string, element: ReactElement][] = [
       </ProseScroll>
     </Prose>,
   ],
+  [
+    // The consumer's three default tiers, controlled.
+    'Repeater three tiers',
+    <ServerTiers rows={DEFAULT_TIERS} />,
+  ],
+  ['Repeater empty', <ServerTiers rows={[]} />],
+  ['Repeater two entries', <ServerTiers rows={DEFAULT_TIERS.slice(0, 2)} />],
 ];
 
 describe('the server face', () => {

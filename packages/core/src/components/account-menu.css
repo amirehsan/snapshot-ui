@@ -1,0 +1,125 @@
+/*
+ * AccountMenu: the signed-in person's menu trigger, for a rail's footer or a header, derived in
+ * docs/design-system.md ("AccountMenu"). A row as tall as its two lines or the field size, whichever is more,
+ * padded a part step: a 32px avatar, the name in ink at the action step and a detail in slate under it, and a
+ * slate up-and-down chevron at the end. It fills the footer's row and wraps its words at any character, so it
+ * never pushes the rail wider. Its corner is the rail items' formula, the rail's corner less the gap, so its
+ * wash follows the rail's curve; outside a rail it is the control corner. Compact, it is the avatar alone in a
+ * pill as tall as a control. The menu it opens is Menu's own, capped in width.
+ */
+@layer components {
+  /* The account menu's popover: a long email in an item wraps rather than widening it past a phone. */
+  .account-menu {
+    max-inline-size: min(22rem, 100vw - 2rem);
+  }
+
+  /* The edge is always there and transparent, so the open trigger's forced-colors edge moves nothing. Relative, so
+     the compact face's visually hidden name is placed inside it. The corner is a rail item's: the rail's inside
+     corner less the footer's gap, which the footer's block padding equals, capped only at the pill; outside a
+     rail the fallbacks give the control corner. */
+  .account-menu-trigger {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-inline-size: 0;
+    min-block-size: var(--size-field);
+    margin: 0;
+    padding: calc(var(--spacing-part) - 1px);
+    border: 1px solid transparent;
+    border-radius: min(
+      var(--radius-pill),
+      max(0px, calc(var(--sidebar-corner, var(--radius-control)) - var(--sidebar-nav-inset, 0px)))
+    );
+    background-color: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    text-align: start;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .account-menu-trigger > .avatar {
+    flex: none;
+  }
+
+  /* The wash a rail item takes, on hover, while pressed and while its menu is open. */
+  .account-menu-trigger:is(:hover, [data-hovered], [data-pressed], [aria-expanded='true']) {
+    background-color: color-mix(in srgb, var(--color-ink) 5%, transparent);
+  }
+
+  .account-menu-trigger:is(:focus-visible, [data-focus-visible]) {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .account-menu-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-inline-size: 0;
+  }
+
+  .account-menu-name {
+    font-size: var(--text-action);
+    line-height: 1.25;
+    letter-spacing: var(--text-action--letter-spacing);
+    font-weight: var(--text-action--font-weight);
+    overflow-wrap: anywhere;
+  }
+
+  .account-menu-detail {
+    color: var(--color-slate);
+    font-size: var(--text-small);
+    line-height: var(--text-small--line-height);
+    font-weight: var(--text-small--font-weight);
+    overflow-wrap: anywhere;
+  }
+
+  /* Up and down is symmetric, so it does not mirror in right to left. */
+  .account-menu-chevron {
+    display: inline-flex;
+    flex: none;
+    color: var(--color-slate);
+  }
+
+  .account-menu-chevron svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* The avatar alone, centered in a control-sized pill, as a folded rail's items are. */
+  .account-menu-trigger[data-compact] {
+    flex: none;
+    justify-content: center;
+    inline-size: var(--size-control);
+    block-size: var(--size-control);
+    min-block-size: 0;
+    padding: 0;
+    border-radius: var(--radius-pill);
+  }
+
+  @media (pointer: coarse) {
+    .account-menu-trigger[data-compact] {
+      inline-size: 44px;
+      block-size: 44px;
+    }
+  }
+
+  /* Forced colors take the wash away: the open trigger keeps an edge, and the detail and the chevron, which are
+     slate, are the text color. */
+  @media (forced-colors: active) {
+    .account-menu-trigger[aria-expanded='true'] {
+      border-color: canvastext;
+    }
+
+    .account-menu-detail,
+    .account-menu-chevron {
+      color: canvastext;
+    }
+  }
+}

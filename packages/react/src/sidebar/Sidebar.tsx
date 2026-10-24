@@ -63,6 +63,16 @@ export function useSidebar(): SidebarState {
   return state;
 }
 
+/**
+ * The rail's state for a part that may sit in a Sidebar or anywhere else, such as AccountMenu: the copy of the
+ * rail it is drawn in, or `null` outside one.
+ *
+ * Internal: not exported from the package.
+ */
+export function useSidebarState(): SidebarState | null {
+  return use(SidebarContext);
+}
+
 /** What both copies of the rail draw: the slots, the names, and the rail root's own attributes. */
 interface RailProps {
   /** Whether this is the drawer copy, which never collapses, has no collapse button and has a close button. */

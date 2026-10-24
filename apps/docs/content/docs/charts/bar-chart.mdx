@@ -247,7 +247,7 @@ export default async function InsightsPage() {
 pnpm add @snapshot-ui/charts @snapshot-ui/core
 ```
 
-It needs the same 0.x minor of `@snapshot-ui/core` (0.9 for charts 0.2.0), whose `styles.css` styles it. BarChart is a client part, and its server HTML is the final picture: every bar's place and size, the labels, the amounts, the legend and the table. The client adds the tab stop, the keys, the pointer and the readout. Nothing is measured, so the page does not move when it hydrates.
+It needs the same 0.x minor of `@snapshot-ui/core` (0.10 for charts 0.2.1), whose `styles.css` styles it. BarChart is a client part, and its server HTML is the final picture: every bar's place and size, the labels, the amounts, the legend and the table. The client adds the tab stop, the keys, the pointer and the readout. Nothing is measured, so the page does not move when it hydrates.
 
 - Formatting: every figure is your string. `valueLabel` is what the reader sees, and `value` only places the bar. Currency, compact figures and Persian digits are yours, and the chart never sums, sorts or formats.
 - `labels` and `statusLabels`: in another language, pass all six strings the chart writes itself and all three of its states, so no English is left on the page.

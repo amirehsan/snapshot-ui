@@ -1,0 +1,60 @@
+/*
+ * CopyButton (docs/design-system.md, "CopyButton"): IconButton's or Button's own look. This file holds only the
+ * root, the status host's clip, the copy command's source and the glyph swap: the check shows while data-outcome is
+ * copied, in ink, never in success's color, since a copy is not a save. Nothing moves: the glyph changes at once.
+ */
+@layer components {
+  .copy-button {
+    display: inline-flex;
+    position: relative;
+    vertical-align: middle;
+  }
+
+  /* The polite status beside the button, and the text the copy command selects where the Clipboard API is
+     missing: both read by the browser, neither seen. The source lives for one copy and is selectable whatever
+     the page's own user-select says, and keeps the value's spaces and lines. */
+  .copy-button-status,
+  .copy-button-source {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .copy-button-source {
+    white-space: pre;
+    user-select: text;
+  }
+
+  .copy-button-glyph {
+    display: inline-flex;
+    flex: none;
+  }
+
+  .copy-button-glyph[data-glyph='check'],
+  .copy-button[data-outcome='copied'] .copy-button-glyph[data-glyph='copy'] {
+    display: none;
+  }
+
+  .copy-button[data-outcome='copied'] .copy-button-glyph[data-glyph='check'] {
+    display: inline-flex;
+    color: var(--color-ink);
+  }
+
+  /* The word look's glyph at 16px before the word, as the filter bar's sheet button draws its icon. */
+  .copy-button[data-look='button'] .copy-button-glyph svg {
+    inline-size: 16px;
+    block-size: 16px;
+  }
+
+  /* The check keeps the button's own text color in the reader's palette, as the copy glyph does. */
+  @media (forced-colors: active) {
+    .copy-button[data-outcome='copied'] .copy-button-glyph[data-glyph='check'] {
+      color: buttontext;
+    }
+  }
+}

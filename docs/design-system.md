@@ -795,6 +795,11 @@ row reads as a row, and the leftover space under a short card reads as the
 whitespace section 5 asks for. Stretching would make every card in a row end in
 dead space.
 
+**The library pairs by the row's own width.** A component cannot read the
+viewport for "1440px", so `PanelRow` pairs its two cards from 66rem of its own
+box: the page column beside an expanded rail at a 1440px viewport, 1440 - 320 -
+2 x 32 = 1056px. Under it the cards stack in source order (PanelLayout).
+
 ### Previews
 
 A setting gets a preview when its effect is visual and cannot be read off the
@@ -882,6 +887,8 @@ And the controls that move, by the corner inset (below):
 | a card a LineChart ends | the table toggle | down | the toolbar keeps the corner inset under it | 39px under it, not 32px | as before | as before |
 | Card | the list's first or last row's controls | down | the row's block padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
 | Card | CardActions beside the title | down | the actions and the title take a top margin of the corner inset less the card's padding; under 24rem nothing moves | 7px, 19px compact | as before | as before |
+| Card | a field's last offer | down | the offer's block-end padding grows by the corner inset less the card's padding, plus what the button's box hangs under its own line | 19px, 29px compact | as before | as before |
+| Card | a repeater's Add | down | the foot's block-end padding grows by the corner inset less the card's padding | 7px, 19px compact | as before | as before |
 | DataTable's bulk bar | its buttons | in | each end pads to the corner inset | 23px, not 8px and 16px | 11px | as before |
 | SaveBar | its buttons | in | each end pads to the corner inset, as the bulk bar's | 23px each side | 16px and 11px | 16px and 8px |
 | Toast | the dismiss | in | the controls stop at the corner inset | 1px past the padding, not 8px | as before | as before |
@@ -983,7 +990,11 @@ instead of a sharp corner, which is why a card or a tile in a card is
 field frame, a card, a list and a popup are 24px where nothing holds them.
 The rule runs from a holder to the parts in its corners and from a control to
 its own parts. A control never changes size because of where it is placed;
-only the corner that meets a holder's curve changes.
+only the corner that meets a holder's curve changes. A settings nav's row in a
+card takes the card's radius less the gap, a pill where nothing holds it, and
+PanelLayout's Back, at a card's top corner where an app puts the layout in one,
+keeps its shape and moves down by the corner inset less the padding
+(PanelLayout).
 
 **The audit.** `apps/storybook/tests/concentric` renders every story in
 Rounded, Soft and Square and measures every rounded element whose corner lies
@@ -1353,6 +1364,23 @@ by its text again. A test holds the name in both states, and React Aria
 announces it as the wait starts. In dark the primary hover fill is
 translucent, so the fill is clipped to the padding box: painted under the
 border as well, the border band would read brighter than the pill.
+
+**A pending button that leaves.** React Aria's live announcer says a
+focused button's pending start and end by ids in the button, its label's
+and its spinner's or its own, and keeps each sentence on the page for
+seconds (`dist/private/live-announcer/LiveAnnouncer.mjs`). A button that
+unmounts in that time, as a dialog's Save does when its save settles and
+closes the dialog, left a sentence naming ids that had gone: it named
+nothing, and axe flagged it (`role-img-alt`). So a button that has been
+pending, as it unmounts and while its nodes are still in the page, gives
+each sentence naming its ids the words those ids hold, as the sentence's
+own `aria-label`, and looks once more 100ms later, since React Aria waits
+that long before a page's first sentence. The log reads only what is
+added, so the words are not said again. A button that was never pending
+looks for nothing (settings plan, spec correction 21). It adds 268 B to
+`{ Button }` (771 B) and to every part that draws one, which takes
+`{ UploadTray }` to 9.07 kB and `{ SaveBar }` to 5.57 kB, so the rule sets
+their limits at 10 kB and 6.5 kB.
 
 A plain anchor or span that wears the `button` class and carries
 `aria-disabled="true"` is drawn disabled, as a `button` element with `disabled`
@@ -4378,6 +4406,43 @@ left to right in any direction whatever draws it.
 
 **Nothing animates inside a menu.** The popover fades and slides in; the rows
 do not move, so `menu.css` has no reduced-motion block.
+
+**Submenus** (settings spec 10.4). `Menu` exports React Aria's
+`SubmenuTrigger`: a `MenuItem` and then a `Menu`. The row React Aria marks
+`data-has-submenu` draws a 16px slate `ChevronRight` in the key hint's place,
+after its end value ("Theme", then "System", then the chevron), with 8px of
+inline end padding rather than 12px, since Lucide's chevron has blank room
+either side of its stroke. The chevron points to the side the submenu opens
+on, so it mirrors in right to left by `scale: -1 1` under
+`:where([dir='rtl' i])`, the charts' pattern. While the submenu is open the
+row keeps the 5% wash under `[data-has-submenu][data-open]`, so the reader
+sees where it came from; in forced colors, where the repaint takes the wash,
+it keeps a 1px `canvastext` outline. No rule matches a row that opens
+nothing, so no existing menu moves.
+
+The submenu is the same `Menu` in the same popover, placed by React Aria's
+`end top` beside its row and 9px up, the list's 8px padding and the
+popover's 1px edge, so its first row is level with the row it came from; it
+flips to the other side where that has more room. Where neither side has
+room, as at 320px, React Aria leaves it past the viewport's edge, measured
+at 249px past it; so in the frame after it is placed the submenu reads its
+own box and, if it overflows, opens under its row at its start instead, over
+the rows below it (settings plan, spec correction 76). Nothing is measured
+before it opens.
+
+The keys are React Aria's: Arrow Right, Enter or Space on the row opens the
+submenu with focus on its first item, or its chosen one; Arrow Left or Escape
+closes that level alone and gives focus back to the row, and the Escape stops
+there, so nothing around the menu hears it and a Dialog holding it stays
+open until the next Escape (settings plan, spec correction 84); a choice closes
+every level and gives focus back to the root trigger. React Aria takes the
+two arrows from the locale, not from `dir`, so a Persian page sets
+`I18nProvider` with its locale and they swap. React Aria names a submenu by
+its row, whose words include the end value, "Theme System"; a part that
+wants the submenu named by its label alone gives it an `aria-label` and
+points its `aria-labelledby` at itself, as ThemeMenu does. The menu's sizes
+entry with `SubmenuTrigger` measures 1.8 kB, from 1.66 kB, under its 2.5 kB
+limit, and 40.54 kB with React Aria not ignored.
 
 ## Toast
 
@@ -7662,18 +7727,68 @@ pulls in, the money arithmetic and its face, the input context, the two
 guards, the sign toggle, the hidden input and the two warnings, and the
 rule rounds up to 2.5 kB and adds 0.5 kB. The guards calling the app's
 handlers, the sign's clamp and validation and the precision warning
-bring it to 2.66 kB, still under the limit, which is unchanged.
+bring it to 2.66 kB, still under the limit, which is unchanged. The
+deferred blur commit of the settings batch takes the entry from 2.76 kB
+to 2.97 kB, still under the limit, and 25.09 kB with React Aria counted
+(settings plan, spec correction 6).
 
-**A known React Aria warning** (patch 0.6.1). React Aria's `useNumberField`
-commits the typed text on blur inside `flushSync`. A blur the browser sends
-while React commits, as when an app moves focus from a layout effect, or
-disables or removes the focused field, makes React log "flushSync was
-called from inside a lifecycle method", in every mode and at any value,
-with React Aria's own NumberField too, in development only: the commit
-still lands a render later. The library cannot reach the call without
-taking React Aria's blur from it, which would drop the announcement of the
-corrected value, so it is left to React Aria and kept as a test expected
-to fail, which reports when an update fixes it.
+**React Aria's blur commit, deferred** (patch 0.6.1, fixed in the settings
+batch). React Aria's `useNumberField` commits the typed text on blur inside
+`flushSync` (react-aria 3.53.1, `useNumberField.mjs:60-76`), so it can read
+the formatted text back and announce it. A blur the browser sends while
+React commits, as when an app moves focus from a layout effect or disables
+the focused field, made React log "flushSync was called from inside a
+lifecycle method", in every mode and at any value, with React Aria's own
+NumberField too, in development only. The library now defers React Aria's
+blur handler one microtask: `NumberFieldInput` replaces the input context's
+`onBlur` with one that holds the event's `target` and `currentTarget` on an
+object whose prototype is the event, and calls React Aria's handler with it
+in `queueMicrotask`. After a browser's own blur the microtask runs at once,
+before the next element's focus and before a following click, so the value
+commits before a press or a submit reads it; after a blur inside React's
+commit it runs once the commit is done, as React's message advises. The
+commit and its announcement are kept. A disabled field is the second path:
+React Aria commits from a `focusout` listener of its own on the input
+(`useSyntheticBlurEvent`, `interactions/utils.mjs:41-105`), which the
+deferred `onBlur` does not reach, so the field stops the browser's own
+`focusout` on a disabled input at the input, in the capture phase. React
+Aria's MutationObserver, its stand-in for Firefox, which sends no focusout
+there, has seen the input disabled while focused and sends one once the
+commit is done; the field sends the stopped event again a microtask later
+only when nothing has replaced it, so listeners hear one focusout (settings
+plan, spec corrections 2 and 6). An
+app's `onBlur` and `onFocusChange(false)` run a microtask later too, and a
+`requestSubmit()` from script in the same task as a blur reads the form
+before the commit, which the page and the changeset say.
+
+The consumer's reproduction (settings spec, ruling 6), a plain field with
+`minValue={0}` in a Dialog titled "Add a plan", 0 typed, then Save or the
+next field pressed, is a unit test and a play in Chromium, WebKit and
+Firefox with Playwright's own pointer and keys. Neither press logged the
+warning on the old code in jsdom or in Chromium; the same Dialog whose Save
+disables its fields while it saves, reached by Enter, did, in Chromium, and
+so did focus moved from a layout effect, in jsdom and Chromium (settings
+plan, spec correction 1). The plays are `ZeroInADialogThenSave`,
+`ZeroInADialogThenNextField`, `ZeroInADialogThenEnter`, `SubmitAfterBlur`
+and `FocusMovedInALayoutEffect`; the test once expected to fail now passes.
+The consumer then sent its own path (settings plan, spec correction 5):
+controlled fields in a form saved by an async transition, "Add plan"
+pending outside the form, and a Dialog rendered only while open, which a
+save unmounts. `ConsumerEnterFastSave`, `ConsumerEnterSlowSave`,
+`ConsumerPressFastSave` and `ConsumerPressSlowSave` hold it, by Enter and
+by a press, with a save that settles at once or after 100ms; they read the
+saved 0, no warning, and focus back on the trigger. They logged nothing in
+Chromium before the fix either.
+A focused field that is disabled goes back to the text it had when it was
+focused, as React Aria's own field does: its listener for a disabled field
+holds the commit of the render that focused it, so it drops text typed
+since and reverts a value Enter committed since, calling `onChange` with
+the old value (settings plan, spec correction 8). That is React Aria's,
+the same before the deferral, kept as a test expected to fail and named in
+the upstream issue. The same
+deferral belongs in React Aria's `commitAndAnnounce`; the owner files the
+issue (settings plan, owner action 4), and the deferral leaves when a React
+Aria release has it.
 
 ## Calendar
 
@@ -12532,3 +12647,935 @@ have a hue; teal's dark value is written, the checks are one
 `paletteFailures` list, and every figure of spec 5.2 recomputes as the
 spec states it; the docs' swatches and the bar chart page's Color
 section.
+
+## CopyButton
+
+A button that copies a string the page holds and says it did, without
+moving the reader: `CopyButton` (settings spec, section 11; decided item
+23; rulings 5 and 7, questions 21 and 22). It is the design the accounts
+spec worked out and deferred (its section 5.6), taken as written, with the
+API the settings spec gives it and the changes below. It composes what
+exists: IconButton's ghost look with a Tooltip by default, or Button's
+secondary look with the glyph and the word (`look="button"`).
+
+**The root and its parts.** `span.copy-button[data-look]` holds the button
+and `span.copy-button-status`, a polite `role="status"` host, in the
+server's HTML and empty, so a screen reader is listening before the words
+arrive. The root is a part of its own so the status sits beside the button,
+never inside it, where it would join the button's name. `className` and
+`style` go on the root, so what places the part moves the button and its
+status together; `ref` and the rest of the Button props go on the button,
+the element a ref is taken to focus (settings plan, spec correction 18). The root
+is `inline-flex`, not a grid, so its absolutely placed status needs no grid
+lines (lesson 9). Prose's generated guard of component roots (batch 6) lists
+`copy-button` as a root, since it extends no other class in its file
+(settings plan, spec corrections 9 and 32); the docs' answer and the
+`UnderAnAnswer` story draw the answer with Prose.
+
+**The copy, inside the press.** The press handler calls
+`navigator.clipboard.writeText(value)` synchronously, so the call is made
+inside the user activation Safari requires; a call after an `await` or a
+timer would be refused there. Nothing reads `navigator` or the clipboard
+until a press, so the server and the first render read nothing.
+
+**A fallback, the document's copy command** (settings plan, spec correction
+10, a choice). The accounts and settings specs ruled out `execCommand`. It
+is back as a fallback only, because the Clipboard API is missing on a page
+served over plain http and refused in a frame whose permissions policy does
+not allow `clipboard-write`, the case of an app embedded in another site,
+and in both the command still copies on a press, as the clipboard-copy and
+copy-to-clipboard libraries do. Where `writeText` is missing, the command
+runs in the press; where it rejects, it runs in the rejection, still inside
+Chromium's transient activation. The value goes into a clipped
+`span.copy-button-source` inside the root, which is selected and copied,
+and a capturing `copy` listener puts the value on the event as
+`text/plain`, so no markup or style is copied with it. The span leaves in
+the same task, the reader's own selection is put back, and focus, which a
+selection does not move, is put back if an engine moved it. Only when the
+command also fails, or does not exist, is the outcome a failure. A refused
+copy that a later copy has superseded, or that settles after the part has
+left, runs no command and reports `onCopy(false)`: its command would write
+its value over the later copy's, or select in a page the part has left
+(settings plan, spec correction 19). A docs
+test removes the Clipboard API and copies with a real click in Chromium,
+reading the value from the copy event.
+
+**The two-second hold.** The outcome, `copied` or `failed`, is written to
+`data-outcome` and held 2000ms, the docs site's `useCopy` and Carbon's
+copy button feedback timeout; a second press restarts the hold. The timer
+is cleared on unmount, and a copy that settles after the part has left, or
+after a later copy, starts no timer and changes nothing on screen;
+`onCopy(copied)` still runs once for every copy.
+
+**Said once, by the status.** The status writes the outcome's words,
+"Copied" or "Copy failed", as a new node for each copy (keyed by the
+copy's number), so a second copy during the hold is said again, and each
+copy is said once. The tip shows the same words for the eye but is not
+the button's description: the outcome's tip has a state of its own that no
+trigger shares, so React Aria never points `aria-describedby` at it, and a
+screen reader does not hear the outcome twice. The resting tip, the icon
+look's name on hover and focus, stays shut while the outcome's tip holds
+its place. Escape anywhere, focus leaving the button, a scroll or a resize
+closes the outcome's tip, as any tip closes (WCAG 1.4.13). The tip takes
+the Escape that closes it, as React Aria's own tips do, so in a Dialog the
+first Escape closes the tip and the next the Dialog (settings plan, spec
+correction 17).
+
+**The name never changes.** The button is named `labels.copy`, which says
+what it copies ("Copy webhook address"), through every outcome: a name
+that changes under focus is read again by some screen readers and not by
+others. Only the tip and the status change.
+
+**Not only the glyph.** On a copy the `Copy` glyph turns to `Check`; both
+are drawn, `aria-hidden`, and the stylesheet shows one by `data-outcome`,
+so the server's HTML is the rest state and the swap needs no render of its
+own. The glyph is never the only signal: the tip shows the words, for a
+touch reader too, and the status says them. A failure keeps the copy glyph
+and shows "Copy failed".
+
+**The check in ink.** The check is `--color-ink`, never success's color:
+a copy is not a save. A failure says its words and is not drawn in the
+error color, which marks invalid values. The word look's glyph is 16px
+before the word, as the filter bar's sheet button draws its icon.
+
+**Focus** stays on the button: the button is never disabled, hidden or
+replaced by a copy, and the fallback's selection is put back without
+moving focus. `CopyStatus`, `CopyFailed` and `CopyByCommand` read focus on
+the button in Chromium, WebKit and Firefox, and the docs test reads it
+after the hold.
+
+**`aria-busy`.** A status inside an `aria-busy="true"` part may go
+unheard, so the status is never put under one: an answer that streams
+with `aria-busy` on its body puts its CopyButton in the footer. When the
+status speaks inside `aria-busy="true"`, the part warns once in
+development (lesson 11).
+
+**Forced colors, motion, direction.** The buttons draw their own forced
+colors; the check is `buttontext`, the button's text color in the reader's
+palette, so it shows where the copy glyph did. Nothing moves: the file has
+no transition or animation, and the glyph swaps at once. The glyphs are not
+mirrored on a right-to-left page, since a copy has no direction;
+`RightToLeft` checks the button at the row's inline end and no transform on
+the glyphs.
+
+**Contrast**, measured with `contrast.js` and gated already, so nothing is
+added. The check and the word look's glyph and word are ink: against the
+canvas 16.25 in light and 19.31 in dark, against lifted 17.84 and 17.42.
+The tip is canvas text on ink, 16.25 and 19.31.
+
+**The size.** The entry `{ CopyButton }` measures 2.52 kB without React
+Aria, Lucide and `@internationalized/date`, over the spec's 2 kB budget:
+it draws IconButton or Button, both tips, the status, the timer and the
+copy command's fallback. The rule rounds up to 3 kB and adds 0.5 kB: a
+3.5 kB limit. With React Aria not ignored it measures 20.62 kB. After the
+review it measures 2.76 kB, Button's kept announcement included (spec
+correction 22): the parts it composes come to about 2 kB on their own
+(`{ Button }` 771 B, `{ IconButton }` 259 B, `{ Tooltip, TooltipTrigger }`
+986 B), so no trim of its own code reaches the budget short of dropping a
+tip, the status or the fallback.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): "Copied" said once after a copy, and again after a
+second copy during the hold; the name unchanged; the tip not read as a
+description. Not yet verified on a real iPhone and an Android phone at
+320px to 430px (the outcome's tip after a tap, and the status), or in
+Windows' contrast themes (the check in the button's text color).
+
+## ConditionalFields
+
+Fields a gate shows and hides, such as a logo provider and its key under
+"Show bank logos": `ConditionalFields` (settings spec, section 7; decided
+items 14 and 15; open questions 11 and 12; ruling 3). The gate is the
+app's own control, placed right before the group, whose `aria-controls`
+names the group's `id`. The part never reads or writes a value.
+
+**A fieldset, for its `disabled`.** The group is
+`fieldset.conditional-fields`, the one element whose `disabled` reaches
+every field inside it, hidden inputs and React Aria's hidden select
+included. Its border, padding, margin and min-content width are reset
+(`min-inline-size: 0`, so a long field never holds a 320px page wider), and
+it is a grid whose gap is `var(--conditional-fields-gap,
+var(--spacing-peer))`, a form's gap between fields, which an app sets to its
+own. Without a name it has `role="none"`: a group with no legend says
+nothing a screen reader can use, and the gate before it names what follows.
+An app that passes `aria-label` or `aria-labelledby` keeps the fieldset's
+group role. `className`, `ref` and the rest of a fieldset's attributes go
+on the fieldset; the `id` comes from the prop or `useId`, and the ref reads
+it.
+
+**The three attributes.** Hidden, the group carries `hidden`, `inert` and,
+unless `submitsWhenHidden`, `disabled`, with `data-hidden`, all written in
+the same render and in the server's HTML (React 19 writes `inert` as a
+boolean attribute), so a page loaded with the gate off has no hidden field
+in its tab order, its reading order or its submission before any script.
+`hidden` takes the group out of the layout and the accessibility tree;
+`inert` keeps focus and find-in-page out in the frame a stylesheet might
+still show it; `disabled` takes its fields out of the submission and the
+browser's checks. Shown, none of them is there. `.conditional-fields` sets
+`display: grid`, which beats the user agent's `[hidden]` rule, so the file
+hides `[hidden]` and `[data-hidden]` by its own rule.
+
+**Kept, not sent, not checked** (ruling 3). The children stay mounted while
+hidden, so React keeps their state and the DOM keeps their values: turning
+the gate on again shows them as they were. A disabled fieldset's fields
+are not submitted, so a hidden key never overwrites the saved one and a
+secret typed and then hidden is never sent; the server reads the gate to
+know what an absent field means. They are also barred from constraint
+validation, which `hidden` and `inert` alone do not do: a hidden required
+field would block a native submit with a bubble pointing at nothing. A
+form reset still resets a hidden field, as a browser resets every control,
+and puts the gate back to its first value. `submitsWhenHidden` keeps
+`hidden` and `inert` and drops `disabled`, for the model where hidden
+answers are posted and the server ignores them by the gate; the app then
+makes hidden fields not required itself.
+
+**"Never cleared or disabled", reconciled.** The parent spec carries the
+rule that hidden conditional fields are made `inert`, never cleared or
+disabled. Its point is the reader's: a field that comes back keeps its
+value and never comes back dimmed. The hidden fieldset's `disabled` is
+never seen, leaves as the group shows, and React Aria's fields inside keep
+their own `isDisabled` false, so no field is ever drawn disabled; nothing
+is cleared. A test turns the gate through every state and finds no shown
+group disabled and no field with `data-disabled`.
+
+**Focus to the gate.** The reader who turns the gate off is on the gate,
+so nothing moves; showing moves nothing either, and the fields follow the
+gate in the tab order, as the disclosure pattern does. When the group
+hides while it holds focus, because another control or the app turned the
+gate off, focus goes, in the frame after the commit, to the gate (the first
+element outside the group whose `aria-controls` names its id), else to the
+last element before the group that takes focus by Tab, else to `<main>`,
+never the body. A gate that cannot take focus, disabled by the app as the
+group hides or hidden with an outer group that hid at the same time, is
+passed over for the element before the group, so nested groups that hide
+together give focus to the outer gate, not to `<main>` (settings plan, spec
+correction 50). Switch and Checkbox pass `aria-controls` to
+their input; React Aria's RadioGroup, Radio and Select take none, so a
+group gated by one warns once in development and, hiding while it holds
+focus, gives it to the control before it, the chosen radio or the Select's
+button, pinned in Chromium, WebKit and Firefox by `RadioGroupGate`
+(correction 52). A `main` with no tabindex is lent `tabindex="-1"` while it holds
+focus, so a script can focus it and Tab never stops on it. Nothing moves on the
+server's render or on hydration: only a change after the first commit
+does. A group no gate points at warns once in development.
+
+**The focus watch** (lesson 10). Chromium blurs a field whose group turns
+`hidden` or `inert` before effects run, so when the group's frame comes
+`document.activeElement` is already the body, and "was focus inside?"
+cannot be asked then. The group asks the shared module,
+`utils/focus-after-commit.ts`, which the later parts of the batch reuse: a
+document `focusin` listener, capturing, sets the watch on a focus inside
+and clears it only on a focus outside, never on a blur to nothing. The
+move then runs only if focus is lost: on the body, on nothing, detached,
+or inside something hidden, inert or disabled, as Firefox leaves it on the
+hidden field. `FocusToGateWhenHidden` turns the gate off from the key by
+the app's own Escape and reads focus on the gate, and on the body for one
+frame at most, in Chromium, WebKit and Firefox; with the watch cleared by a
+blur it fails in Chromium. The docs test does the same on the page.
+
+**The weekly email** (ruling 3). The group may hold no field at all: a
+status line and a "Send a test" Button. Its `disabled` then disables the
+Button while hidden, unseen.
+
+**No indent, no motion, no dimming.** The fields line up with the gate,
+with no indent and no line beside them, since an indent at 320px costs a
+field's width. The group appears and leaves at once: the file has no
+transition or animation, so there is nothing for reduced motion to stop.
+Hidden is hidden, never dimmed in place. Forced colors, right to left and
+density are the fields' own: the group draws nothing and uses logical
+properties only, and its forced-colors block keeps its border at none.
+
+**Contrast.** The group draws no color of its own, so it adds no pair.
+
+**The size.** `{ ConditionalFields }` measures 1.16 kB without React
+Aria, Lucide and `@internationalized/date`, and the same with React Aria
+not ignored, since it imports none: over the spec's 1 kB budget, as the
+shared focus module (the frame, the watch, the tab order and the named
+place) is most of it and is counted here first. The rule sets a 2 kB
+limit (settings plan, spec correction 31). After the review's check for a
+gate that cannot take focus it measures 1.17 kB, under the same limit
+(correction 53).
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): a hidden group absent from the reading order; the gate
+read as a switch, checked or not; focus on the gate read after a group
+hid while holding focus. Not yet verified on a real iPhone and an Android
+phone at 320px to 430px, or in Windows' contrast themes.
+
+## FieldExtras
+
+A line under a field, or under a group, that offers the field's default
+("Default: 3 days", Reset to default) or a value worked out for this
+reader ("Suggested: $2,340, a month of your fixed bills", Use):
+`FieldExtras` (settings spec, section 8; decided items 16 and 17; open
+questions 13 to 15; ruling 2.6). It wraps any field and composes what
+exists: a tertiary Button at the end of a slate line.
+
+**An offer is an edit.** Taking one calls the offer's `onTake`, the app's
+setter, the one the field's `onChange` calls, and nothing else: the
+wrapper reads no value, writes none, prefills nothing and draws no
+Changed chip. So the field's Changed chip, its checks and a SaveBar follow
+the app's own comparisons, as they do for typing: a field saved at its
+default shows no offer and no chip; edited away, the chip and the offer
+show; reset, both leave; saved away from its default, the offer shows and
+no chip, and after a reset the chip shows and no offer. The SaveBar counts
+a take as one change, by the app's message, and its Cancel brings the
+saved values back and the offers with them. A suggestion is never put in
+the field and never shown as its placeholder: taupe is for placeholders,
+and a suggestion is words to read.
+
+**Drawn only when useful.** An offer whose `isCurrent` is true is not
+drawn, so a page of fields at their defaults shows no offers. When both
+are given, neither is current and their values are equal, only the default
+is drawn, the plainer reason. When both show, the suggestion comes first:
+it is about this reader, the default about everyone. Two offers are two
+lines.
+
+**The markup.** `div.field-extras[data-scope]` holds the field, then a
+`p.field-offer[data-kind]` per offer drawn, `span.field-offer-text` with
+the words and, for a suggestion, ", " and its reason, and a tertiary
+`Button.field-offer-button` with its word, then the polite status host,
+`span.field-extras-status`. `className`, `ref` and the rest go on the root.
+The button is `type="button"`, so a press never submits the form or runs
+the browser's checks; it has no name or value of its own, so it adds
+nothing to the form's data; and nothing joins the field's description, so
+the field keeps its own words and its own error, which the app's
+validation clears. Helpers never fight the field's checks.
+
+**Names.** Each button is named by its word and the field's label, "Reset
+to default, Wait", through `aria-label`, and described by the offer's
+words, "Default: 3 days" (settings plan, spec correction 23). The name
+starts with the word the button shows, so voice control finds it by what
+is seen (WCAG 2.5.3). A list of offers then reads as a list of fields, not
+a list of Resets.
+
+**Focus after a take.** A taken offer leaves, since the field now holds
+it, so the button that held focus goes. In the frame after React's commit
+(`afterCommit`, never a layout effect, spec 12.4), focus goes to
+`controlRef`'s element when it takes focus, else the first control of the
+field or the group, not of the offers, else an offer still drawn, else
+`<main>`, never the body. It moves after a pointer press too, since Safari
+leaves a pressed button unfocused, so focus is not read first. It moves
+only when focus is the pressed button's, inside the wrapper or lost: an
+app whose setter moved focus itself, into a dialog that asks first, keeps
+it (spec correction 26). A NumberField with `allowsNegative` draws its
+sign button before its text box, so its text box takes focus in the
+sign's place: it reads the value taken, where the sign reads only
+"Negative" (spec correction 45). An app passes `controlRef` when another
+control is the one to focus.
+
+**Said politely** (settings plan, spec correction 25, a choice). The spec
+said the field read with its new value was the confirmation and needed no
+live region. The owner's instruction for this task asks for a polite
+announcement of an applied suggestion: a screen reader does not always
+read a field focused by script (VoiceOver on iOS often does not), and
+voice control and switch users hear nothing of a focus move. So a polite
+status in the server's HTML, empty until then, says what a take did, "Set
+to the suggestion" or "Set to the default", as a new node per take, so the
+same offer taken again is said again, and empties after five seconds, so a
+reader browsing later meets no stale news. It speaks in the frame after
+the move, once the field holds focus (spec correction 43): a screen reader
+reads a focus move at once, so a status said before it was cut short or
+read first and then repeated by the field, and the field's own words
+already give its label and value, so the status says neither again. It
+speaks only of a take the field holds (spec correction 44): when the
+app's setter took focus elsewhere, into a dialog that asks first, nothing
+is set yet and nothing is said, and the words leave as soon as the taken
+offer is drawn again, refused by the setter, typed away from or undone by
+a Cancel, since they would no longer be true. Its words are
+`labels.usedStatus` and `labels.resetStatus`. A status that
+speaks inside `aria-busy="true"` warns once in development (lesson 11).
+
+**The group scope** (ruling 2.6). `scope="group"` lifts the measure, so
+the line sits under the whole group, and the first control of the group
+takes focus after a take: a pair of fields' first, a reset Repeater's new
+first row's first field, or its Add with no rows (Task 5). One offer line
+serves a field and a set alike, and the Repeater stays ignorant of values
+(open question 3).
+
+**The colors, and why.** The words are slate at the small step, 450; the
+button is a tertiary Button in ink. Never clay, since an offer is not
+unsaved work; never signal orange, since it is not consent; never success
+or gain, since a suggestion is not a good outcome; never info, since
+nothing is being reported; never taupe, since it is not a placeholder.
+
+**The line.** It sits a part step under the field's last part, its hint or
+error, and wraps between its words, breaking a word only when it alone is
+wider than the line (`overflow-wrap: break-word`, spec correction 46). It
+was `anywhere`, which made a letter the line's narrowest, so a holder that
+sizes the field from its content, a table's cell, squeezed
+"$2,340,000.00" onto two lines, which reads as two numbers: the Badge
+lesson. The wrapper's one column is `100%`, its own width where that is
+known, so a long address still breaks inside a 320px page rather than
+widening the column, and the longest word where a holder sizes it from
+its content. The button's 40px box is level with the line by
+`margin-block: min(0px, calc((1lh - var(--size-control)) / 2))`, so the line
+does not grow for its target, the DescriptionList actions' technique. A
+field's extras stop at `--container-field`, as a field does, so an offer
+ends under the control's end; a group's span the group.
+
+**The corner** (settings plan, spec correction 24). The last offer of a
+field that ends a card is a control at the card's foot. Its button's box
+hangs under the line by half the control's height less half the line's,
+10px comfortable and 8px compact, so the plan's padding of the corner
+inset less the card's padding left the box 30px from the card's edge in
+Rounded, measured, inside the 39px inset. The line's block-end padding is
+the corner inset less the card's padding plus that overhang. In Soft and
+Square the inset is the card's padding, which already clears their curve,
+so the line keeps no padding: the rule takes the smaller of the move and
+the inset less the padding scaled up, which is 0 there.
+`OfferClearOfCorner` measures it in three engines.
+
+**A wrapped last offer** (settings plan, spec correction 93). Where the
+words fill their line, as a group's default does in a narrow card, the
+button wraps to a line of its own at the card's start, in its bottom start
+corner, and hangs under its own 16px action line, not the words' 20px
+one: 12px comfortable and 10px compact, so the overhang above left its box
+38px from a Rounded card's edge, inside the 39px inset, and the docs audit
+failed it. The overhang is now the button's own,
+`(var(--size-control) - var(--text-action) * var(--text-action--line-height)) / 2`,
+the most it hangs on either line: the line's padding is 19px in Rounded
+and 29px compact, and a button beside its words stands 2px further clear.
+`WrappedOfferClearOfCorner` measures the wrapped button in three engines
+and the concentric audit runs it in three shapes.
+
+**Forced colors, motion, direction.** The words are text and the button
+draws its own forced colors, so the file adds nothing of its own; a docs
+test reads the words in CanvasText, the button in ButtonText and its focus
+ring. Nothing moves: an offer leaves at once. Every property is logical:
+on a Persian page the words start at the right and the button ends the
+line on the left (`RightToLeft`). A figure in another script keeps its
+order inside the app's isolates: `value` is a string, where a `bdi` would
+be drawn as its letters, so the app writes U+2068 and U+2069 around the
+figure, which do what `bdi` does (spec correction 47); a `reason` is a
+node and can hold a `bdi`.
+
+**Server rendering.** A client part for its focus move and its status; the
+offers are in the server's HTML from the props, and the status host is
+there empty. Nothing reads the locale, so en-US, de-DE and fa-IR write one
+HTML. Prose's generated guard of component roots (batch 6) lists
+`field-extras` and `field-offer` as roots: they extend no other class in
+their file, which names no `.field` selector (settings plan, spec
+corrections 9 and 32).
+
+**Contrast**, measured with `contrast.js` and gated already, so nothing is
+added. The words are slate: against the canvas 4.84 in light and 7.26 in
+dark, against lifted 5.31 and 6.94. The button is ink: against the canvas
+16.25 and 19.31, against lifted 17.84 and 17.42.
+
+**The size** (spec corrections 27 and 48). The entry `{ FieldExtras }`
+measures 1.90 kB without React Aria, Lucide and `@internationalized/date`,
+over the spec's 1.5 kB budget: Button is 771 B of it, with its kept
+announcement (spec correction 21), the shared focus module most of the
+rest, and the status the spec did not have adds its timer and its node.
+The review took it from 2.09 kB: the app's ref through
+`useImperativeHandle` instead of a merged callback ref, as ConditionalFields
+gives its own, and checks that another check already made. The rule rounds
+up to 2 kB and adds 0.5 kB: a 2.5 kB limit. With React Aria not ignored it
+measures 14.29 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): an offer's button read with its name and description;
+the field read with its new value after a take, and the status after it;
+nothing said twice in a way that confuses. Not yet verified on a real
+iPhone and an Android phone at 320px to 430px (an offer's line wrapping,
+the button at its end), or in Windows' contrast themes.
+
+## Repeater
+
+A short ordered list of rows the reader adds and removes, each row the
+app's own fields, such as the consumer's wait tiers: `Repeater` (settings
+spec, section 6; decided items 8 to 13; open questions 6 to 10; rulings
+2.2 to 2.6). It composes what exists: a fieldset per row, the app's
+fields, a tertiary Button for Remove and a secondary Button for Add.
+
+**Fieldsets, not GridList.** A grid's arrow keys move between cells and
+fight a text field's caret, and the APG grid answers that with an edit
+mode, Enter to edit and Escape to leave, which makes a few rows of a form
+harder to fill than rows read with Tab. GOV.UK's "add another" pattern and
+the MOJ Design System's component are fieldsets with a legend per item and
+plain buttons, which every screen reader reads as a form. Reordering, the
+reason a list widget would earn its keys, is not offered (open question
+7): the app sorts at save.
+
+**The markup.** `fieldset.repeater` (`data-full` at the maximum,
+`data-empty` with no rows) holds `legend.repeater-legend` with the label
+and, while `isChanged` and no set error, the Changed chip;
+`p.repeater-description`; `p.repeater-error`; then `ol.repeater-rows` of
+`li.repeater-row[data-row-id]`, each a `fieldset.repeater-row-set` with
+`legend.repeater-row-legend`, `div.repeater-row-fields` (the size
+container) holding `div.repeater-row-grid` with `div.repeater-row-main`
+(the app's fields) and `div.repeater-row-end` (Remove), and
+`p.repeater-row-error`; or, with no rows, `p.repeater-empty` in the list's
+place; then `div.repeater-foot` with Add and `span.repeater-count` or
+`span.repeater-full`; then the polite status, `div.repeater-status`. The
+set's `aria-describedby` names its hint and its error. A floated legend is
+not the fieldset's drawn legend, so both legends join their grid as items
+and take its gap; in a grid nothing floats, so the float is no side.
+
+**Controlled or uncontrolled** (ruling 2.5). `value` and `onChange` hand
+the app typed rows on every add, remove and the render function's
+`update`, which writes a row back by its id; several changes in one event,
+two updates or an update and a remove, each build on the last (spec
+correction 57). Without `value` the Repeater
+holds the rows from `defaultValue`, the fields hold what is typed, and the
+app names them: by the render function's `index`, `tiers.0.amount`, so
+after a remove every row is named by its new place and what the form sends
+reads back into the same rows (settings plan, spec correction 35), or the
+same name in every row, read with `getAll` in drawn order. The Repeater
+never reads a field. A form reset puts back the rows the set started
+with, as it puts back every control and as React Aria's fields do: a
+removed row returns with its first values and an added one leaves (spec
+correction 55). A row's id is React's key, so a removed row's fields
+unmount and the rows after it keep theirs and what was typed in them. Two
+rows of one id are both drawn, the second under a key of its own, and warn
+once in development.
+
+**Focus and the status.** Each move runs in the frame after React's
+commit (`afterCommit`), never in a layout effect, and lands on a place the
+reader can name through `focusNamedPlace`, never the body:
+
+- After an add, the new row's first field, or its field marked
+  `data-autofocus`, or in a row of words with no field its Remove, since
+  Add may be disabled now (spec correction 58); the status says "Tier 3 added", and at the maximum
+  adds the reason: "Tier 3 added. 3 of 3. Remove one to add another."
+- After a remove, Remove in the row now in its place, else in the row
+  before it, else Add; at `minRows`, where no Remove is left, that row's
+  first field. The status says "Tier 2 removed", by the old legend, since
+  the rows after it are renumbered (settings plan, spec correction 34, the
+  owner's instruction). A reader removing several rows keeps their place,
+  one press after another. A held Enter removes one row: React Aria
+  starts no press from a repeated keydown (`usePress.mjs`, `!e.repeat`),
+  and the first press fires on the key's release.
+
+The move happens only when focus is on the pressed button, inside the
+set, or lost, so focus the app moved elsewhere stays. Controlled, the
+app's `onChange` decides: the words are drawn and focus moves only once
+the rows show the add or the remove, so one the app refuses says nothing
+and moves nothing (spec correction 56). The words are written in the
+move's frame, once focus is in its place, since a screen reader reads a
+focus move at once and cuts a polite status said before it, as
+FieldExtras' status waits for its move (spec correction 94). The status is in the
+server's HTML, empty, writes each event's words as a new node so a
+repeated sentence is said again, and empties after five seconds, as
+FieldExtras' does. A status that speaks inside `aria-busy="true"` warns
+once (lesson 11); a form that marks itself busy while saving marks its
+fields' container, not the Repeater's root.
+
+**Names.** Remove shows its word and is named "Remove, Tier 2" through
+`aria-label` (spec correction 33): a clipped span would be a block, and
+the name would read "Remove , Tier 2". The name starts with the word
+shown (WCAG 2.5.3). Add is named by its text and described by its count,
+"2 of 3", or at the maximum by the full line.
+
+**From none to the most** (rulings 2.2 and 2.3). With no rows the list is
+not drawn and `labels.empty` stands in its place, in slate. At `maxRows`
+Add stays drawn and natively disabled, in taupe as Button draws it, and
+`labels.full` takes the count's place beside it in slate: visible, its
+description in browse mode, and said by the add that reached it. Button
+has no focusable disabled mode (settings plan, open question 1): React
+Aria's `allowFocusWhenDisabled` is undocumented and gives `tabIndex={-1}`,
+so a focusable Add would be a change to Button's API for every disabled
+button. Rows passed above `maxRows` are all drawn. At `minRows` no row
+draws Remove, and a hidden stand-in the width of Remove keeps the end
+column from 30rem, so the fields do not widen when a row is added (spec
+correction 37). With `isDisabled` Add and Remove are disabled and the count
+stays.
+
+**Errors.** A field's own error is the field's. A row's error,
+`rowErrors[id]`, is a line in the error color under the row's fields,
+names the row's fieldset in its `aria-describedby`, marks it
+`data-invalid`, and is given to the render function so the app marks the
+fields invalid. The set's error sits under the legend and describes the
+set; while it shows the Changed chip steps aside. Never a colored row.
+
+**The row's width.** `div.repeater-row-fields` is a size container with
+an intrinsic inline size of 0 (lesson 8), and the query styles its frame,
+`div.repeater-row-grid` (accounts correction 8). Under 30rem each field
+takes a line and Remove follows them; from 30rem the fields share a
+wrapping line, each `flex: 1 1 10rem` (spec correction 36), and Remove
+stands at the line's end, its block start offset by a field label's line
+and a part step plus half the field's height less the control's, so its
+centre is the first control's. Every fieldset's border, padding, margin
+and min-content width are reset, so a 320px page never scrolls sideways.
+
+**The colors.** The legend is the h4 step in ink; a row's legend the
+small step at 500 in slate; the hint, the count, the full line and the
+empty line slate; the errors the error color. Rows are ruled apart by
+`--color-divider`, a peer step of padding above and under each, none
+above the first or under the last. Never clay but the Changed chip, never
+signal, success or gain.
+
+**The corner.** A Repeater that ends a card puts Add at the card's bottom
+start corner, a control at its foot: the foot's block-end padding grows by
+the corner inset less the card's padding, 7px in Rounded, 19px compact, 0
+in Soft and Square. Under a group's offers in FieldExtras the foot moves
+only while no offer follows the Repeater, when the wrapper's status comes
+straight after it (spec correction 38). The first Remove of a Repeater
+with no legend that starts a card with no header needs no rule: its row's
+legend and its fields' label row stand above it, so it sits lower than the
+corner inset in every shape and density (`RemoveClearOfCorner`).
+
+**Forced colors, motion, direction.** The rules between rows are
+`canvastext`; words and buttons draw their own. Nothing moves: a row
+appears and leaves at once. Every property is logical: on a Persian page
+the legends start at the right, Remove stands at the row's left from
+30rem, and a money figure stays left to right by NumberField's rule
+(`RepeaterMirrored`).
+
+**Server rendering.** A client part for its presses, focus moves and
+status. Every row, its legend, fields, errors and Remove, Add with its
+count or the full line, and the empty status are in the server's HTML;
+nothing reads the locale, so en-US, de-DE and fa-IR write one HTML, and
+nothing moves on hydration. Prose's generated guard lists `repeater` as a
+root, since every other class of its file extends it (spec correction 42).
+
+**Contrast**, measured with `contrast.js` and gated already, so nothing is
+added. Ink against the canvas 16.25 in light and 19.31 in dark, against
+lifted 17.84 and 17.42; slate 4.84 and 7.26, and 5.31 and 6.94; the error
+color 6.58 and 6.36, and 7.22 and 5.73. A disabled Add's taupe is disabled
+text, exempt.
+
+**The size** (spec corrections 41 and 59). The entry `{ Repeater }`
+measures 3.1 kB without React Aria, Lucide and `@internationalized/date`
+after its review's fixes, over the spec's 3 kB budget by 0.1 kB; the rule
+gives a 4 kB limit. With React Aria not ignored it measures 16.63 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): a row's legend on focus moved by script, the added and
+removed statuses, a disabled Add read with its reason, the empty line.
+Not yet verified on a real iPhone and an Android phone at 320px to 430px,
+or in Windows' contrast themes (a disabled Add in `graytext`).
+
+## PanelLayout
+
+A settings page's frame: a named list of linked sections beside the open
+section on a wide screen, and on a phone a list and a page with Back
+(settings spec, section 5; decided items 1 to 7; open questions 2 to 5 and
+26; ruling 2.1). `PanelLayout` holds `PanelNav` with its `PanelNavItem`
+links in a side column and the open `PanelSection` in a main column;
+`PanelRow` pairs two cards inside a section.
+
+**The URL is the state.** The layout holds no section. The app reads its
+address, `/settings` or `/settings/coach`, and passes `view` (`index` or
+`section`) and `sectionKey`; it marks the open link `isCurrent`, which sets
+`aria-current="page"`, and at the index the section a wide screen shows
+beside the list `isDefault`. A reload, a shared link and the browser's Back
+and Forward land on the same page, and a client navigation goes through
+`RouterProvider`, where the app's `navigate` can ask first while a section
+holds unsaved changes.
+
+**Two faces, one HTML, by the layout's own width.** The layout is a size
+container with a frame inside it, since a container query cannot style its
+own container. From 48rem of its box the frame is a 16rem list beside the
+section, a peer step apart; under it, one column: the list alone at the
+index, and Back and the section at a section. Both faces are in the
+server's HTML and a container query draws one; `display: none` takes the
+other out of the tab order and the accessibility tree, so nothing is read
+twice. Its own box and not the viewport, because the same page sits beside
+an expanded rail, a folded one or none: a layout in a 40rem frame on a
+1440px screen is the list face. 48rem leaves the section 30rem beside the
+list and its gap, room for a field and its Changed chip; 16rem holds
+"Notifications" and an end state at 16px, weight 500. Its intrinsic inline
+size is 0, as every size container's is: a holder sized to its content
+gives it a width.
+
+**The default section and R8.** The server cannot know the width, so the
+index serves one HTML to both: the list face shows the list; the split face
+shows the list beside the section the app passes as the children, its link
+`isDefault`. It is drawn current there and only there, inside the split
+query, and never `aria-current`: on a phone the same address is the list
+and no section is open, which a screen reader hears.
+
+**Focus** (spec 5.6). The layout watches focus on its root with the shared
+focus watch, set by a focus inside it and cleared only by a focus outside
+it, so Chromium's blur of a link whose column turns `display: none` leaves
+it set. After hydration, when `view` or `sectionKey` changes and focus was
+in the layout, or is on the body or nothing, the open section's heading
+takes focus in the frame after React's commit, on both faces; back at the
+index on the list face, the link of the section left (the layout notes the
+`href` of the current link after each commit, open question 7), else the
+first link; on the split face, the default section's heading. Which face
+is read in that frame, from whether the side column has a box. A change
+the reader started outside the layout, from the rail or a command palette,
+keeps its focus. Nothing moves on the server's render or on hydration. A
+layout an app mounts per route counts as a change when it mounts with
+another section than the last layout in the window had, while no other
+layout is mounted (settings plan, spec correction 67). The heading takes
+`tabIndex={-1}` and shows no ring when focused by script, as `<main>` does,
+and the shared focus clear keeps it under the sticky header. A resize that
+turns the face, a narrowed window or a turned tablet, hides the column that
+may hold focus, a link, Back or a field of the section beside the index, and
+the engine blurs it to the body; a ResizeObserver on the root notes the face
+from whether both columns have a box, and when it turns while the watch is
+held and focus is lost, focus goes where a change of view would put it: the
+open section's heading, or at the index on the list face the default
+section's link (spec correction 70).
+
+**Back** is the layout's, so every section has it without writing it: a
+link to `backHref` with a 16px chevron and `backLabel`, 40px tall, in ink
+at the action step, at the main column's top, drawn only on the list
+face's section view. Its name is its label alone, "Settings": a "Back to"
+prefix would be a word the page does not show. Where an app puts the
+layout in a card, Back keeps its shape and moves down out of the card's
+top corner by the corner inset less the padding (Nested radii, derived).
+
+**The rows of both faces.** On the split face a row is Sidebar's item: at
+least `--size-control`, the name at the action step at 500, a 5% ink wash
+on hover and press, the current or default row an ink pill with canvas
+text, its end state in canvas, and the focus ring outside the row in the
+ring's color, which reads on the canvas around the pill as Sidebar's does.
+The description and the chevron are not drawn there. On the list face a
+row is at least `--size-field`, the name at 16px and 500 in ink, the
+description under it at the small step in slate, the end state and a 16px
+chevron in slate at its end, 1px divider rules between rows, and no row
+current: a phone's list is a menu of pages. Slate on the wash measures
+4.37:1, so a washed row draws its slate parts in ink (spec correction 62).
+A row's corner is `min(var(--radius-pill), max(0px, calc(var(--holder-radius,
+var(--radius-pill)) - var(--holder-border, 0px) - var(--holder-pad, 0px))))`:
+a pill on the canvas, concentric with a card's corner in one.
+
+**Names.** Each link is drawn by React Aria's Link, not the library's,
+whose `link` class would draw it in Link Blue and underlined (spec
+correction 60). Its name is the section's name, from its content; the end
+state then the description describe it by id and are hidden from that
+content, so a screen reader says "Bank sync, link, current page, 2
+connected, Connected accounts and how often they sync", the name holds the
+label a voice user says, and nothing is read twice (spec correction 61).
+
+**The sticky nav.** On the split face the side column is sticky a peer step
+under `--page-sticky-top`, SidePanel's rule, as tall as the room under the
+shell's header allows, and scrolls itself when longer. It reaches past its
+track by a focus ring on every side, so its scroll clips no ring, and its
+offset takes that ring back, so the nav's top stands exactly a peer step
+under the header (spec correction 63).
+
+**The section.** A region named by its heading through `aria-labelledby`;
+the heading at the h3 step, 500, -2%, a part step to its description in
+slate, a peer step to the first card. PanelSection is static and renders in
+a server component.
+
+**Words stay whole** (spec correction 71; the Badge and FieldExtras
+lesson). The names, descriptions, end states, the heading and its
+description take `overflow-wrap: break-word`, which breaks a word only when
+it alone is wider than the line, so the longest word stays a part's
+narrowest: a holder that sizes a lone PanelNav or PanelSection from its
+content, a squeezed flex row or an `auto` track, stops there and never at a
+letter a line. Neither has a zero minimum; the section is one `100%`
+column, its width where that is known, so a word wider than the page still
+breaks inside it; the end state is `max-content` wide up to half the row,
+so such a holder counts all of it. Back keeps `anywhere`: its label is a
+flex box's anonymous item, and its column always has a width.
+
+**PanelRow and its 66rem.** A row holds exactly two cards, two halves or a
+third beside two thirds in either order: the types take a tuple of two.
+From 66rem of the row's own box, the page column beside an expanded rail at
+1440px (1440 - 320 - 2 x 32 = 1056px, Page composition, derived), they pair
+as `minmax(0, 1fr)` columns, 1 and 1, 1 and 2, or 2 and 1, a peer step
+apart, each at its own height; under it they stack in source order. Beside
+a 16rem nav a section reaches 66rem only near a 1720px screen, which is
+the record's point: a settings section is one column of cards. Static, with
+an intrinsic inline size of 0.
+
+**Print.** The side column and Back are hidden; the section prints.
+
+**Forced colors.** The current pill is `highlight` with `highlighttext`
+for its name and end state, as Menu's chosen row is, inside the split query
+only, so the list face's default row is never highlighted (spec correction
+64); the list face's rules are `canvastext`; the focus ring stays.
+
+**Right to left.** Every property is logical: the nav stands at the right
+on the split face, the list face's chevrons point left and Back's points
+right, by `scale: -1 1` under `:where([dir='rtl' i])`, the charts'
+direction pattern. An end state in Latin digits keeps its order by the
+numeral rule. `PanelLayoutMirrored` measures it in three engines.
+
+**Motion.** None: a section change is a page.
+
+**Server rendering.** PanelLayout, PanelNav and PanelNavItem are client
+parts, each rendering its whole face on the server; nothing reads `window`
+or measures at render. PanelSection and PanelRow carry no directive and
+join the server components suite. Prose's generated guard lists
+`panel-layout`, `panel-nav`, `panel-section` and `panel-row` as roots with
+no hand-written entry: `.panel-nav` has a rule of its own for a lone
+PanelNav (spec correction 65).
+
+**Contrast**, gated already, so nothing is added: ink against the canvas
+16.25 in light and 19.31 in dark, against lifted 17.84 and 17.42; slate
+against the canvas 4.84 and 7.26, against lifted 5.31 and 6.94; canvas on
+the ink pill 16.25 and 19.31. The divider is a cue, as DescriptionList's
+is.
+
+**The size** (spec corrections 68 and 75). The entry `{ PanelLayout,
+PanelNav, PanelNavItem, PanelSection, PanelRow }` measures 1.83 kB without
+React Aria, Lucide and `@internationalized/date` after its review's fixes,
+under the spec's 2.5 kB budget; the rule still gives a 2.5 kB limit. With
+React Aria not ignored it measures 11.5 kB. The static parts alone measure
+the same both ways.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): a section's heading read after a section change on both
+faces, Back read as "Settings, link", a link read with its end state and
+description. Not yet verified on a real iPhone and an Android phone at
+320px to 430px (the list face, a section with Back), or in Windows'
+contrast themes (the current item in `highlight`).
+
+## ThemeSwitch
+
+The reader's theme, System, Light or Dark, as a Settings row and as a menu's
+choice (settings spec, section 9; decided items 18 to 21; open questions 16 to
+20; ruling 4). `ThemeSwitch` is a SegmentedControl, or with `look="radio"` a
+RadioGroup of rows; `ThemeMenu` goes among a Menu's items as a Theme item
+opening a submenu, or with `display="section"` as a section under a Theme
+heading.
+
+**The value.** `ThemeChoice` is `system`, `light` or `dark`. System is no
+attribute: with no `data-theme` on `<html>` the tokens follow
+`prefers-color-scheme` in CSS, and `color-scheme` follows it, so a page whose
+choice is System paints right with no script and no cookie. Light and dark
+are `data-theme` on `<html>`.
+
+**Controlled only** (ruling 4). Both parts draw the `value` they are given
+and call `onChange`; `null` draws no choice, for a value the browser learns
+only after hydration, as the docs header's is. They read nothing from
+`window`, `matchMedia`, storage, `document.cookie` or `data-theme`, at render
+or after, and write nothing: no storage, no cookie and no script, which the
+consumer's nonce-locked policy forbids anyway. The app's root layout reads
+its cookie on the server and writes `data-theme`, so the first paint is
+right; its `onChange` sets the attribute at once and writes the cookie, for
+example through a server action. Reading a cookie renders every route per
+request; a static site, as the docs are, keeps a pre-paint script of its own.
+
+**System first, applied at once.** The default leads, as the reader meets
+the choices. A theme is the reader's device preference, not a saved
+setting: it applies in the same frame, shows no Changed chip (the part
+takes no `isChanged`) and never makes a SaveBar dirty, so the docs put
+Appearance in a card of its own, outside every form. The arrows choose and
+apply, as in any radio group: a theme is cheap to undo.
+
+**The look.** SegmentedControl's and RadioGroup's own. Each choice has a
+16px Lucide icon before its word, `Monitor`, `Sun` and `Moon`, hidden; its
+class, `segmented-icon` or `radio-icon`, sizes it and spaces it from the
+word, so an app's icon-only option, which carries no class, is left as it
+was (settings plan, spec correction 78). Named "Theme" (`labels.label`)
+unless the app gives a `label`, an `aria-label` or an `aria-labelledby`.
+
+**In a menu.** The submenu's Theme item shows the current choice's word as
+its end value, none for `null`, and the chevron (Menu, "Submenus"); the three
+are `menuitemradio` items with the chosen one checked and the ink pill,
+`disallowEmptySelection`, so a second press on the chosen one keeps it. A
+choice calls `onChange` and closes every level, and focus goes back to the
+menu's trigger, which React Aria's root close and its focus restore do: the
+plan's Step 0 found both in react-aria-components 1.22.1, and MenuSection's
+own `selectionMode` (settings plan, spec correction 76). The submenu is named
+"Theme" by its own `aria-label`, not "Theme System" by its row.
+
+**The docs header's switch** is ThemeSwitch at `size="sm"`, named "Color
+mode", its value `next-themes`' `theme` once mounted and `null` before, so
+the docs offer System beside Light and Dark (plan open question 4). With
+System and the icons the header's two switches need 479px, so beside the
+open rail they share a short title's line from 1143px and take a line of
+their own under it below that (settings plan, spec corrections 85 and 86).
+
+**Server rendering.** A client part; its face is the server's, the given
+value checked, and hydration changes nothing. Its root is `segmented` or
+`radio-group` with `theme-switch` beside it, so Prose's guard already lists
+it.
+
+**Contrast**, gated already, so nothing is added: SegmentedControl's,
+RadioGroup's and Menu's own pairs; the words are ink and slate on the
+canvas, lifted and float, ink 16.25, 17.84 and 18.43 in light and 19.31,
+17.42 and 17.42 in dark, slate 4.84, 5.31 and 5.49 and 7.26, 6.94 and 6.94.
+
+**The size** (settings plan, spec correction 81). `{ ThemeSwitch, ThemeMenu
+}` measures 3.17 kB without React Aria, Lucide and `@internationalized/date`,
+over the spec's 2 kB budget: it composes SegmentedControl with its stacking,
+RadioGroup and Radio, and Menu with its section and submenu. The rule gives a
+4 kB limit. With React Aria not ignored it measures 44.75 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): the group read as "Theme", a choice read with its state,
+the submenu's radio items and their checked state. Not yet verified in
+Windows' contrast themes (the submenu's chosen item in `highlight`).
+
+## AccountMenu
+
+The signed-in person's menu, for a rail's footer or a header (settings spec,
+section 10; decided item 22). A `MenuTrigger` with a React Aria `Button`
+and the library's `Menu`.
+
+**The trigger.** A row as tall as its two lines or `--size-field`, whichever
+is more, padded a part step inside a transparent 1px edge: a 32px `Avatar`,
+hidden, since the name is beside it, from `avatarSrc` or the name's
+initials; the name at the action step, 500, in ink; the detail under it at
+the small step, 450, in slate; and a 16px slate `ChevronsUpDown` at its end,
+symmetric, so it does not mirror. It fills its row (`flex: 1`,
+`min-inline-size: 0`) and the name and detail wrap at any character, so a
+long email never pushes the rail wider. The 5% ink wash shows on hover,
+while pressed and while the menu is open; the focus ring is the ring's own,
+outside.
+
+**Its name** is the visible name, "Ada Lovelace", which a voice user can say
+(WCAG 2.5.3); the detail, hidden inside, describes it by its id. "Account"
+alone would hide whose account it is. The menu is named "Account"
+(`menuLabel`), by its own `aria-label` with its `aria-labelledby` pointed at
+itself, since React Aria names a menu by its trigger.
+
+**Compact.** In a folded rail, from `useSidebar`'s state unless `isCompact`
+is given, or with `isCompact` in a header: the avatar alone, centered in a
+control-sized pill (`--size-control`, 44px on a coarse pointer), with the
+name in a Tooltip at the rail's end side. It is named by a visually hidden
+copy of the name, not an `aria-label`, which would leave the initials the
+avatar draws out of its name, as axe's label-in-name check found (settings
+plan, spec correction 77). Both faces are one button, so a rail that folds
+while its menu is open keeps the trigger, and Escape gives focus back to it.
+A rail the server draws collapsed from its cookie draws the compact face from
+the first paint.
+
+**The rail's corner.** The footer is in the rail's bottom corners and its
+padding already clears them; the trigger's corner is the rail items'
+formula, `min(var(--radius-pill), max(0px, calc(var(--sidebar-corner) -
+var(--sidebar-nav-inset))))`, the rail's inside corner less the footer's
+12px gap, so its wash is concentric with the rail's curve: 27px in Rounded,
+3px in Soft, 0 in Square. It is not capped at the control corner, whose
+20px in Rounded left the wash's corner off the rail's center, which the
+concentric audit found (settings plan, spec correction 83). Outside a rail
+the two rail properties fall back to the control corner and 0, so a
+header's trigger takes `--radius-control`. `TriggerClearOfCorner` measures every point of the
+wash's corners inside the rail's curve in Rounded, comfortable and compact,
+Soft, Square, and folded.
+
+**The menu.** The app's items: Settings, a ThemeMenu, Help, a rule and Sign
+out, which is not danger, since it loses nothing. It opens `top start` in a
+Sidebar, upward from the rail's foot, and `bottom end` elsewhere; its popover
+carries `account-menu`, which caps it at 22rem or the viewport less 2rem. A
+choice closes it and React Aria gives focus back to the trigger; an item that
+navigates leaves focus to its destination's rule.
+
+**Forced colors.** The open trigger draws its edge in `canvastext`, since
+the repaint takes the wash; the detail and the chevron are `canvastext`; the
+avatar keeps its own rules.
+
+**Right to left.** Logical properties throughout: the avatar at the right,
+the chevron at the left, unmirrored. `AccountMenuMirrored` measures it with
+the Theme submenu opened by Arrow Left, in three engines.
+
+**Server rendering.** A client part. The trigger, its avatar and its name are
+in the server's HTML; the menu is not until it opens. Its outermost element
+is the trigger, which Prose's guard lists by hand (`OUTERMOST_PARTS`), since
+its stylesheet's root is the menu's `account-menu`.
+
+**Contrast**, gated already, so nothing is added: ink and slate on the
+rail's float, 18.43 and 5.49 in light and 17.42 and 6.94 in dark, and on the
+canvas of a header, 16.25 and 4.84, and 19.31 and 7.26.
+
+**The size** (settings plan, spec correction 81). `{ AccountMenu }` measures
+2.5 kB without React Aria, Lucide and `@internationalized/date`, over the
+spec's 2 kB budget: Avatar, Tooltip and Menu are most of it. The rule gives a
+3 kB limit. With React Aria not ignored it measures 42.45 kB.
+
+**Screen readers and devices.** Not yet verified with VoiceOver and NVDA
+(owner action 3): the trigger read as "Ada Lovelace, menu button" with its
+detail, the folded trigger's name and tip. Not yet verified on a real iPhone
+and an Android phone at 320px to 430px (the AccountMenu in the drawer with
+its submenu), or in Windows' contrast themes (the open trigger's edge).

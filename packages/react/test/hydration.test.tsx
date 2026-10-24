@@ -19,10 +19,20 @@ import { Prose, ProseScroll } from '../src/prose';
 import { PickerOption } from '../src/picker';
 import { SaveBar } from '../src/save-bar';
 import { SearchField } from '../src/search-field';
+import { Select } from '../src/select';
 import { SidePanel, SidePanelLayout } from '../src/side-panel';
+import { Switch } from '../src/switch';
+import { TextField } from '../src/text-field';
 import { UploadList, UploadTray, type UploadItem } from '../src/upload-tray';
 import { columnsWithTotal, groupOf, hrefOf, keyOf, TRANSACTIONS } from '../src/stories/transactions';
 import { Card, CardActions, CardBody, CardHeader, CardNote, CardTitle } from '../src/card';
+import { ConditionalFields } from '../src/conditional-fields';
+import { CopyButton } from '../src/copy-button';
+import { FieldExtras } from '../src/field-extras';
+import { Repeater } from '../src/repeater';
+import { settingsPage } from './panel-layout-fixture';
+import { accountRail } from './account-menu-fixture';
+import { ThemeSwitch } from '../src/theme-switch';
 import { DescriptionList, DescriptionListItem } from '../src/description-list';
 import { Link } from '../src/link';
 import { Gauge } from '../src/gauge';
@@ -98,6 +108,39 @@ const UPLOADS: UploadItem[] = [
   { id: 4, name: 'lease.pdf', status: 'saved', href: '/documents/lease' },
   { id: 5, name: 'corner-mart.jpg', status: 'review', reason: 'The total could not be read' },
   { id: 6, name: 'video.mov', status: 'failed', reason: 'Not a PDF, JPG or PNG' },
+];
+
+/** The consumer's three default wait tiers, as a controlled Repeater draws them, for the server suites. */
+function ServerTiers({ rows }: { rows: { id: string; amount: number; wait: string }[] }): ReactElement {
+  return (
+    <Repeater
+      label="Wait tiers"
+      description="A payment waits by its amount."
+      value={rows}
+      onChange={() => undefined}
+      createRow={() => ({ id: 'new', amount: 0, wait: 'three' })}
+      rowLabel={(index) => `Tier ${String(index + 1)}`}
+      maxRows={3}
+      labels={{ add: 'Add a tier', empty: 'No tiers. The coach never waits.' }}
+    >
+      {(tier) => (
+        <>
+          <NumberField label="Up to" money={{ symbol: '$' }} value={tier.amount} />
+          <Select label="Wait" value={tier.wait}>
+            <PickerOption id="three">3 days</PickerOption>
+            <PickerOption id="week">A week</PickerOption>
+            <PickerOption id="month">A month</PickerOption>
+          </Select>
+        </>
+      )}
+    </Repeater>
+  );
+}
+
+const DEFAULT_TIERS = [
+  { id: 'a', amount: 10000, wait: 'three' },
+  { id: 'b', amount: 50000, wait: 'week' },
+  { id: 'c', amount: 150000, wait: 'month' },
 ];
 
 const HYDRATED: [
@@ -620,6 +663,162 @@ const HYDRATED: [
     },
   ],
   [
+    // The server's button and empty status, kept as they were: nothing differs before a press.
+    'CopyButton in a DescriptionList row',
+    <DescriptionList>
+      <DescriptionListItem
+        term="Setup address"
+        actions={
+          <CopyButton value="https://hooks.example.com/ledger" labels={{ copy: 'Copy Setup address' }} />
+        }
+      >
+        https://hooks.example.com/ledger
+      </DescriptionListItem>
+    </DescriptionList>,
+    (container) => {
+      expect(container.querySelector('.copy-button button')).toHaveAttribute(
+        'aria-label',
+        'Copy Setup address',
+      );
+      expect(container.querySelector('.copy-button-status')).toBeEmptyDOMElement();
+      expect(container.querySelector('.copy-button')).not.toHaveAttribute('data-outcome');
+    },
+  ],
+  [
+    'CopyButton under an answer',
+    <article>
+      <div aria-busy="false">
+        <p>Spending on food is down 12% this month.</p>
+      </div>
+      <footer>
+        <CopyButton
+          value="Spending on food is down 12% this month."
+          look="button"
+          labels={{ copy: 'Copy answer' }}
+        />
+      </footer>
+    </article>,
+    (container) => {
+      expect(container.querySelector('footer .copy-button button')).toHaveTextContent('Copy answer');
+      expect(container.querySelector('.copy-button-status')).toBeEmptyDOMElement();
+    },
+  ],
+  [
+    // The server's offers and empty status, kept as they were: nothing is read before a take.
+    'FieldExtras on a money field',
+    <FieldExtras
+      fieldLabel="Cushion"
+      suggestion={{ value: '$2,340', reason: 'a month of your fixed bills', isCurrent: false, onTake: noop }}
+      defaultOffer={{ value: '$1,000', isCurrent: false, onTake: noop }}
+    >
+      <NumberField label="Cushion" money={{ symbol: '$' }} value={50000} />
+    </FieldExtras>,
+    (container) => {
+      expect(
+        [...container.querySelectorAll('.field-offer')].map((line) => line.getAttribute('data-kind')),
+      ).toEqual(['suggestion', 'default']);
+      const use = container.querySelector('.field-offer[data-kind="suggestion"] button');
+      expect(use).toHaveAccessibleName('Use, Cushion');
+      expect(use).toHaveAccessibleDescription('Suggested: $2,340, a month of your fixed bills');
+      expect(container.querySelector('.field-extras-status')).toBeEmptyDOMElement();
+    },
+  ],
+  [
+    // Hidden on the server, hidden after hydration, and no focus moved: the group moves focus only on a change.
+    'ConditionalFields hidden',
+    <form>
+      <Switch isSelected={false} aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown={false}>
+        <Select label="Provider" name="logoProvider" defaultValue="northwind">
+          <PickerOption id="northwind">Northwind Logos</PickerOption>
+          <PickerOption id="fabrikam">Fabrikam Marks</PickerOption>
+        </Select>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
+    (container) => {
+      const group = container.querySelector('fieldset.conditional-fields');
+      for (const name of ['hidden', 'inert', 'disabled', 'data-hidden']) expect(group).toHaveAttribute(name);
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    'ConditionalFields shown',
+    <form>
+      <Switch isSelected aria-controls="logo-fields">
+        Show bank logos
+      </Switch>
+      <ConditionalFields id="logo-fields" isShown>
+        <TextField label="API key" name="logoKey" type="password" />
+      </ConditionalFields>
+    </form>,
+    (container) => {
+      const group = container.querySelector('fieldset.conditional-fields');
+      for (const name of ['hidden', 'inert', 'disabled', 'data-hidden'])
+        expect(group).not.toHaveAttribute(name);
+    },
+  ],
+  [
+    // The index: both faces as the server drew them, Coach drawn current by data-default, and no focus moved.
+    'PanelLayout at the index',
+    settingsPage('index'),
+    (container) => {
+      expect(container.querySelector('.panel-layout')).toHaveAttribute('data-view', 'index');
+      expect(container.querySelector('[aria-current]')).toBeNull();
+      expect(container.querySelector('.panel-nav-link[data-default]')).toHaveAttribute(
+        'href',
+        '/settings/coach',
+      );
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    // A section: its link current, the region named by its heading, and no focus moved on hydration.
+    'PanelLayout at a section',
+    settingsPage('section', 'logos'),
+    (container) => {
+      expect(container.querySelector('[aria-current="page"]')).toHaveAttribute('href', '/settings/logos');
+      const region = container.querySelector('section.panel-section');
+      const heading = container.querySelector('.panel-section-heading');
+      expect(region).toHaveAttribute('aria-labelledby', heading?.id);
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    // The given choice, as the server drew it, and nothing written to the page.
+    'ThemeSwitch at light',
+    <ThemeSwitch value="light" onChange={() => undefined} />,
+    (container) => {
+      expect(container.querySelector('input[value="light"]')).toBeChecked();
+      expect(container.querySelectorAll('input:checked')).toHaveLength(1);
+      expect(document.documentElement).not.toHaveAttribute('data-theme');
+    },
+  ],
+  [
+    // The full trigger in an expanded rail, named by the visible name and described by the detail.
+    'AccountMenu in an expanded rail',
+    accountRail(false),
+    (container) => {
+      const trigger = container.querySelector('.sidebar:not(.sidebar-drawer) .account-menu-trigger');
+      expect(trigger).not.toHaveAttribute('data-compact');
+      expect(trigger).toHaveAccessibleName('Ada Lovelace');
+      expect(trigger).toHaveAccessibleDescription('ada@example.com');
+      expect(document.querySelector('[role="menu"]')).toBeNull();
+    },
+  ],
+  [
+    // The compact trigger the server drew from the rail's cookie stays compact.
+    'AccountMenu in a collapsed rail',
+    accountRail(true),
+    (container) => {
+      const trigger = container.querySelector('.sidebar:not(.sidebar-drawer) .account-menu-trigger');
+      expect(trigger).toHaveAttribute('data-compact');
+      expect(trigger).toHaveAccessibleName('Ada Lovelace');
+    },
+  ],
+  [
     // Static: nothing is drawn again, so the report and its region are the server's elements, as they were.
     'Prose with a wide table',
     <Prose as="article">
@@ -645,6 +844,27 @@ const HYDRATED: [
       expect(region).toHaveAttribute('role', 'region');
       expect(region).toHaveAttribute('tabindex', '0');
       expect(region).toHaveAttribute('aria-label', 'Spending by category, table');
+    },
+  ],
+  [
+    // Every row as the server drew it, and no focus moved and nothing said: the Repeater moves focus only after
+    // an add or a remove.
+    'Repeater three tiers',
+    <ServerTiers rows={DEFAULT_TIERS} />,
+    (container) => {
+      expect(container.querySelectorAll('li.repeater-row')).toHaveLength(3);
+      expect(container.querySelector('.repeater-status')).toBeEmptyDOMElement();
+      expect(document.activeElement).toBe(document.body);
+    },
+  ],
+  [
+    'Repeater empty',
+    <ServerTiers rows={[]} />,
+    (container) => {
+      expect(container.querySelector('.repeater-empty')).toHaveTextContent(
+        'No tiers. The coach never waits.',
+      );
+      expect(document.activeElement).toBe(document.body);
     },
   ],
 ];

@@ -1,6 +1,6 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import { useId, type ReactElement, type ReactNode, type Ref } from 'react';
 import {
   MenuItem as RACMenuItem,
@@ -40,7 +40,9 @@ export interface MenuItemProps<T extends object = object> extends Omit<
 
 /**
  * One row of a menu: an icon, a label that names it, a description under it, a value and a key hint at its
- * end, and, in a selectable menu or section, a check whose room every row keeps. With `href` it is a link that
+ * end, and, in a selectable menu or section, a check whose room every row keeps. Placed first in a
+ * `SubmenuTrigger`, it draws a chevron after its end value, in the key hint's place, and keeps its wash while the
+ * submenu it opened is open. With `href` it is a link that
  * navigates through React Aria's `RouterProvider`; its inherited `render` prop can draw a router's own link.
  *
  * The label names the item, and the end value, the description and the keys describe it, through their
@@ -70,7 +72,7 @@ export function MenuItem<T extends object = object>({
         cx('menu-item', variant === 'danger' && 'menu-item-danger', userClassName),
       )}
     >
-      {({ selectionMode }) => (
+      {({ selectionMode, hasSubmenu }) => (
         <>
           {present(icon) ? (
             <span className="menu-item-icon" aria-hidden="true">
@@ -92,7 +94,11 @@ export function MenuItem<T extends object = object>({
               {end}
             </span>
           ) : null}
-          {shortcut !== undefined && present(shortcut) ? (
+          {hasSubmenu ? (
+            <span className="menu-item-submenu" aria-hidden="true">
+              <ChevronRight />
+            </span>
+          ) : shortcut !== undefined && present(shortcut) ? (
             <Shortcut keys={shortcut} className="menu-item-shortcut" />
           ) : null}
           {selectionMode === 'none' ? null : (

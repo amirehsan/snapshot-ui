@@ -1,4 +1,6 @@
 import type { ComponentType } from 'react';
+import AccountMenuHeader from './account-menu-header';
+import AccountMenuRail from './account-menu-rail';
 import AccountsRecipe from './accounts-recipe';
 import AppShellBasic from './app-shell-basic';
 import AppShellCollapsed from './app-shell-collapsed';
@@ -42,9 +44,16 @@ import ComboBoxBasic from './combo-box-basic';
 import ComboBoxStates from './combo-box-states';
 import CommandPaletteAsync from './command-palette-async';
 import CommandPaletteBasic from './command-palette-basic';
+import ConditionalFieldsBasic from './conditional-fields-basic';
+import ConditionalFieldsEmail from './conditional-fields-email';
+import ConditionalFieldsLogo from './conditional-fields-logo';
 import ConfirmDialogBasic from './confirm-dialog-basic';
 import ConfirmDialogDanger from './confirm-dialog-danger';
 import ConfirmDialogHook from './confirm-dialog-hook';
+import CopyButtonAnswer from './copy-button-answer';
+import CopyButtonBasic from './copy-button-basic';
+import CopyButtonDescriptionList from './copy-button-description-list';
+import CopyButtonWord from './copy-button-word';
 import DataTableBasic from './data-table-basic';
 import DataTableBulkActions from './data-table-bulk-actions';
 import DataTableColumnOptions from './data-table-column-options';
@@ -81,6 +90,11 @@ import LengthCounter from './field-counter';
 import FieldParts from './field-parts';
 import FieldStates from './field-states';
 import FileButtonBasic from './file-button-basic';
+import FieldExtrasBoth from './field-extras-both';
+import FieldExtrasDefault from './field-extras-default';
+import FieldExtrasPair from './field-extras-pair';
+import FieldExtrasRows from './field-extras-rows';
+import FieldExtrasSuggestion from './field-extras-suggestion';
 import FileDropZoneErrors from './file-drop-zone-errors';
 import FileDropZonePage from './file-drop-zone-page';
 import FileDropZoneReceipt from './file-drop-zone-receipt';
@@ -113,6 +127,7 @@ import LinkStates from './link-states';
 import MenuBasic from './menu-basic';
 import MenuLinks from './menu-links';
 import MenuSelection from './menu-selection';
+import MenuSubmenu from './menu-submenu';
 import MeterBasic from './meter-basic';
 import MeterOver from './meter-over';
 import MeterPace from './meter-pace';
@@ -138,6 +153,9 @@ import PaginationNarrow from './pagination-narrow';
 import PaginationPageSize from './pagination-page-size';
 import PaginationPersian from './pagination-persian';
 import PaginationSiblings from './pagination-siblings';
+import PanelLayoutBasic from './panel-layout-basic';
+import PanelLayoutPairs from './panel-layout-pairs';
+import PanelLayoutPhone from './panel-layout-phone';
 import PopoverBasic from './popover-basic';
 import PopoverMatchWidth from './popover-match-width';
 import ProgressBarBasic from './progress-bar-basic';
@@ -153,6 +171,11 @@ import RadioGroupBasic from './radio-group-basic';
 import RadioGroupHorizontal from './radio-group-horizontal';
 import RadioGroupStates from './radio-group-states';
 import RadioGroupValidation from './radio-group-validation';
+import RepeaterBasic from './repeater-basic';
+import RepeaterCard from './repeater-card';
+import RepeaterErrors from './repeater-errors';
+import RepeaterForm from './repeater-form';
+import RepeaterLimits from './repeater-limits';
 import SaveBarForm from './save-bar-form';
 import SaveBarInSidePanel from './save-bar-in-side-panel';
 import SearchFieldBasic from './search-field-basic';
@@ -165,6 +188,7 @@ import SelectBasic from './select-basic';
 import SelectDetails from './select-details';
 import SelectFilter from './select-filter';
 import SelectStates from './select-states';
+import SettingsRecipe from './settings-recipe';
 import SheetBasic from './sheet-basic';
 import SheetMore from './sheet-more';
 import SheetSnapPoints from './sheet-snap-points';
@@ -190,6 +214,9 @@ import TabsBasic from './tabs-basic';
 import TabsChanged from './tabs-changed';
 import TabsLinks from './tabs-links';
 import TabsOverflow from './tabs-overflow';
+import ThemeSwitchBasic from './theme-switch-basic';
+import ThemeSwitchMenu from './theme-switch-menu';
+import ThemeSwitchRadio from './theme-switch-radio';
 import TextAreaBasic from './text-area-basic';
 import TextAreaCounter from './text-area-counter';
 import TextAreaStates from './text-area-states';
@@ -207,6 +234,8 @@ import UploadListStatuses from './upload-list-statuses';
 
 /** Every example a page may show with <Preview name="..." />. */
 export const examples = {
+  'account-menu-header': AccountMenuHeader,
+  'account-menu-rail': AccountMenuRail,
   'accounts-recipe': AccountsRecipe,
   'app-shell-basic': AppShellBasic,
   'app-shell-collapsed': AppShellCollapsed,
@@ -250,9 +279,16 @@ export const examples = {
   'combo-box-states': ComboBoxStates,
   'command-palette-async': CommandPaletteAsync,
   'command-palette-basic': CommandPaletteBasic,
+  'conditional-fields-basic': ConditionalFieldsBasic,
+  'conditional-fields-email': ConditionalFieldsEmail,
+  'conditional-fields-logo': ConditionalFieldsLogo,
   'confirm-dialog-basic': ConfirmDialogBasic,
   'confirm-dialog-danger': ConfirmDialogDanger,
   'confirm-dialog-hook': ConfirmDialogHook,
+  'copy-button-answer': CopyButtonAnswer,
+  'copy-button-basic': CopyButtonBasic,
+  'copy-button-description-list': CopyButtonDescriptionList,
+  'copy-button-word': CopyButtonWord,
   'data-table-basic': DataTableBasic,
   'data-table-bulk-actions': DataTableBulkActions,
   'data-table-column-options': DataTableColumnOptions,
@@ -289,6 +325,11 @@ export const examples = {
   'field-parts': FieldParts,
   'field-states': FieldStates,
   'file-button-basic': FileButtonBasic,
+  'field-extras-both': FieldExtrasBoth,
+  'field-extras-default': FieldExtrasDefault,
+  'field-extras-pair': FieldExtrasPair,
+  'field-extras-rows': FieldExtrasRows,
+  'field-extras-suggestion': FieldExtrasSuggestion,
   'file-drop-zone-errors': FileDropZoneErrors,
   'file-drop-zone-page': FileDropZonePage,
   'file-drop-zone-receipt': FileDropZoneReceipt,
@@ -321,6 +362,7 @@ export const examples = {
   'menu-basic': MenuBasic,
   'menu-links': MenuLinks,
   'menu-selection': MenuSelection,
+  'menu-submenu': MenuSubmenu,
   'meter-basic': MeterBasic,
   'meter-over': MeterOver,
   'meter-pace': MeterPace,
@@ -346,6 +388,9 @@ export const examples = {
   'pagination-page-size': PaginationPageSize,
   'pagination-persian': PaginationPersian,
   'pagination-siblings': PaginationSiblings,
+  'panel-layout-basic': PanelLayoutBasic,
+  'panel-layout-pairs': PanelLayoutPairs,
+  'panel-layout-phone': PanelLayoutPhone,
   'popover-basic': PopoverBasic,
   'popover-match-width': PopoverMatchWidth,
   'progress-bar-basic': ProgressBarBasic,
@@ -361,6 +406,11 @@ export const examples = {
   'radio-group-horizontal': RadioGroupHorizontal,
   'radio-group-states': RadioGroupStates,
   'radio-group-validation': RadioGroupValidation,
+  'repeater-basic': RepeaterBasic,
+  'repeater-card': RepeaterCard,
+  'repeater-errors': RepeaterErrors,
+  'repeater-form': RepeaterForm,
+  'repeater-limits': RepeaterLimits,
   'save-bar-form': SaveBarForm,
   'save-bar-in-side-panel': SaveBarInSidePanel,
   'search-field-basic': SearchFieldBasic,
@@ -373,6 +423,7 @@ export const examples = {
   'select-details': SelectDetails,
   'select-filter': SelectFilter,
   'select-states': SelectStates,
+  'settings-recipe': SettingsRecipe,
   'sheet-basic': SheetBasic,
   'sheet-more': SheetMore,
   'sheet-snap-points': SheetSnapPoints,
@@ -398,6 +449,9 @@ export const examples = {
   'tabs-changed': TabsChanged,
   'tabs-links': TabsLinks,
   'tabs-overflow': TabsOverflow,
+  'theme-switch-basic': ThemeSwitchBasic,
+  'theme-switch-menu': ThemeSwitchMenu,
+  'theme-switch-radio': ThemeSwitchRadio,
   'text-area-basic': TextAreaBasic,
   'text-area-counter': TextAreaCounter,
   'text-area-states': TextAreaStates,
