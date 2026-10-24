@@ -232,8 +232,10 @@ test('the workspace field is labelled, shows its Changed chip and reads it with 
   await expect(page.locator('.field').filter({ has: input }).locator('.field-changed')).toBeVisible();
   // The card is a light card on a dark frame: the edge is light signal orange in both themes.
   await expect(input).toHaveCSS('border-top-color', 'rgb(243, 115, 56)');
-  // Each axis tile has a named input of its own.
-  await expect(page.getByRole('textbox', { name: 'Search settings' })).toHaveCount(6);
+  // The Theme axes specimen has a named field of its own.
+  await expect(page.locator('.axes-stage').getByRole('textbox', { name: 'Billing email' })).toHaveValue(
+    'finance@northwind.studio',
+  );
 });
 
 test('the homepage switches are real switches: named, described, on or off as drawn, and hit at 40px', async ({
@@ -255,13 +257,13 @@ test('the homepage switches are real switches: named, described, on or off as dr
     .locator('.switch')
     .filter({ has: page.getByRole('switch', { name: 'Weekly digest', exact: true }) });
   expect((await hitSize(row)).height).toBeGreaterThanOrEqual(40);
-  // Each axis tile has one, named Sample and on.
-  const samples = page.getByRole('switch', { name: 'Sample', exact: true });
-  await expect(samples).toHaveCount(6);
-  for (const sample of await samples.all()) await expect(sample).toBeChecked();
+  // The Theme axes specimen has one, named, described and on.
+  const receipts = page.locator('.axes-stage').getByRole('switch', { name: 'Email receipts', exact: true });
+  await expect(receipts).toBeChecked();
+  await expect(receipts).toHaveAccessibleDescription('One message per invoice.');
 });
 
-test('the footer lists every component and chart page in the rail order, and a catalog chip with a page links to it', async ({
+test('the footer links the catalog groups and the charts, and a catalog chip with a page links to it', async ({
   page,
 }) => {
   await visit(page);
@@ -273,21 +275,33 @@ test('the footer lists every component and chart page in the rail order, and a c
     .evaluateAll((links) =>
       links.map((link) => ({ href: link.getAttribute('href'), name: link.textContent })),
     );
+  // Each group link lands on the catalog card of the same name; Charts opens the group's first page.
+  const groups = await page.locator('.catalog-group').evaluateAll((cards) =>
+    cards.map((card) => ({
+      href: `/#${card.id}`,
+      name: card.querySelector('.eyebrow')?.textContent ?? '',
+    })),
+  );
+  expect(groups).toHaveLength(4);
+  expect(listed).toEqual([...groups, { href: CHART_PAGES[0]?.url, name: 'Charts' }]);
   const pages = [...COMPONENT_PAGES, ...CHART_PAGES];
-  expect(listed).toEqual(pages.map(({ url, title }) => ({ href: url, name: title })));
 
   // A chip is a link when the catalog's component has a page, and plain text while it does not. A chip that
   // names a rail group, such as Charts, links the group's first page.
   const urls = new Map(pages.map(({ url, title }) => [title.toLowerCase(), url]));
-  const groups = new Map([['charts', CHART_PAGES[0]?.url]]);
-  const chips = await page
-    .locator('.catalog .chip')
-    .evaluateAll((elements) =>
-      elements.map((element) => ({ name: element.textContent.trim(), href: element.getAttribute('href') })),
-    );
+  const chartGroup = new Map([['charts', CHART_PAGES[0]?.url]]);
+  const chips = await page.locator('.catalog .chip').evaluateAll((elements) =>
+    elements.map((element) => ({
+      name: element.textContent.trim(),
+      href: element.getAttribute('href'),
+      soon: element.classList.contains('chip-soon'),
+    })),
+  );
   for (const chip of chips) {
     const name = chip.name.toLowerCase();
-    expect(chip.href, chip.name).toBe(urls.get(name) ?? groups.get(name) ?? null);
+    expect(chip.href, chip.name).toBe(urls.get(name) ?? chartGroup.get(name) ?? null);
+    // A chip with no page yet is drawn as Soon, and only then.
+    expect(chip.soon, chip.name).toBe(chip.href === null);
   }
   // Button, Icon button, the six form controls, Select, Combo box, Date picker, Date range picker, Data table, Stat
   // tile, Empty state, Dialog, Drawer, Menu, Toast, Command palette, Tooltip, Sidebar and Save bar have pages, and
@@ -300,7 +314,7 @@ test('the homepage switches corners and remembers them', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Calm interfaces for settings, dashboards and apps.',
   );
-  await page.locator('label', { hasText: 'Square' }).click();
+  await page.locator('.shape-switch label', { hasText: 'Square' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-shape', 'square');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-shape', 'square');
@@ -450,10 +464,10 @@ const CONTROLS = 'a[href], button, summary, .segmented-option, .switch';
 
 /**
  * The fewest controls the page and the open menu have on a phone and on a desktop. On a production
- * build the page has 76 on a phone, with the footer open, and 77 on a desktop, the settings card's
+ * build the page has 74 on a phone, with the footer open, and 75 on a desktop, the settings card's
  * switches aside; the floor is 3 under the smaller.
  */
-const CHECKED_ON_PAGE = 73;
+const CHECKED_ON_PAGE = 71;
 const CHECKED_IN_MENU = 6;
 
 /**
@@ -525,7 +539,7 @@ test('the homepage frame has a labelled Theme control of its own, and the hero a
 }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await visit(page);
-  const theme = page.getByRole('radiogroup', { name: 'Theme' });
+  const theme = page.locator('.frame').getByRole('radiogroup', { name: 'Theme' });
   await expect(theme.locator('.field-label')).toHaveText('Theme');
   await expect(theme.getByRole('radio')).toHaveCount(3);
   await expect(theme.getByRole('radio', { name: 'System' })).toBeChecked();
@@ -537,4 +551,32 @@ test('the homepage frame has a labelled Theme control of its own, and the hero a
   const corners = page.getByRole('radiogroup', { name: 'Corners', exact: true });
   await expect(corners).toHaveClass(/segmented-sm/);
   await expect(corners.getByRole('radio', { name: 'Rounded' })).toBeChecked();
+});
+
+test('the Theme axes controls give the specimen a theme and shape of its own, and show the attributes', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await visit(page);
+  const controls = page.locator('.axes-controls');
+  const stage = page.locator('.axes-stage');
+  await expect(stage).toHaveAttribute('data-theme', 'light');
+  await expect(stage).toHaveAttribute('data-shape', 'rounded');
+  const shape = await page.locator('html').getAttribute('data-shape');
+
+  await controls.locator('.segmented-option', { hasText: 'Dark' }).click();
+  await controls.locator('.segmented-option', { hasText: 'Square' }).click();
+  await expect(
+    controls.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: 'Dark' }),
+  ).toBeChecked();
+  await expect(stage).toHaveAttribute('data-theme', 'dark');
+  await expect(stage).toHaveAttribute('data-shape', 'square');
+  await expect(page.locator('.axes-code')).toHaveText(
+    '<section\n  data-theme="dark"\n  data-shape="square">',
+  );
+  // The card inside follows the stage, square in its corners.
+  await expect(stage.locator('.card')).toHaveCSS('border-top-left-radius', '0px');
+  // The page around it keeps its own theme and corners.
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  expect(await page.locator('html').getAttribute('data-shape')).toBe(shape);
 });

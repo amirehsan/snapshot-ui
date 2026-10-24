@@ -73,8 +73,17 @@
   }
 
   .hero h1 {
-    max-width: 11ch;
     margin-top: 24px;
+  }
+
+  /* Headings fill their column and balance their lines. A ch cap in this face is far narrower than it
+     reads, and left the hero at five lines of one or two words. */
+  .hero h1,
+  .section-head h2,
+  .portrait h3,
+  .cta h2,
+  .footer h2 {
+    text-wrap: balance;
   }
 
   .hero-side {
@@ -89,6 +98,7 @@
     font-size: 1.1875rem;
     line-height: 1.5;
     max-width: 44ch;
+    text-wrap: pretty;
   }
 
   /* A pill padded 6px inside its 1px edge: the copy button in it is concentric, a circle in Rounded and 5px in
@@ -203,7 +213,6 @@
 
   .section-head h2 {
     margin-top: 20px;
-    max-width: 16ch;
   }
 
   /* ---- Orbit: circular portraits ---------------------------------- */
@@ -340,39 +349,61 @@
     border: 1.5px solid var(--color-ink);
   }
 
-  /* ---- Theme axes grid ----------------------------------------- */
+  /* ---- Theme axes: one live specimen ----------------------------- */
   .axes {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 64px;
+    align-items: center;
   }
 
-  .axis-tile {
-    --axis-tile-pad: 28px;
-
+  .axes-controls {
     display: grid;
-    gap: 20px;
-    padding: var(--axis-tile-pad);
+    gap: 28px;
+    align-content: start;
+    justify-items: start;
+  }
+
+  .axes-code {
+    justify-self: stretch;
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    border: 1px solid var(--color-frame);
+    border-radius: var(--radius-surface);
+    background-color: var(--color-bone);
+    color: var(--color-charcoal);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.7;
+    transition: border-radius 200ms ease;
+  }
+
+  .axes-code b {
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+
+  /* The stage takes the chosen theme and shape itself, so its surface, the card and every control in it
+     change together. Its padding stays past its own radius, so the card floats clear of the stage's corner
+     curves and keeps its own shape. */
+  .axes-stage {
+    display: grid;
+    place-items: center;
+    padding: 64px 56px;
     border: 1px solid var(--color-frame);
     border-radius: var(--radius-stadium);
     background-color: var(--color-canvas);
     color: var(--color-ink);
+    transition:
+      border-radius 200ms ease,
+      background-color 200ms ease;
   }
 
-  /* The card sits in the tile's bottom corners, so it is concentric with the tile: the tile's radius less its
-     edge and padding, or the micro step where that runs out. The card is a holder too and names its own
-     corner, so this reads the tile's tokens, not the holder properties. */
-  .axis-tile .card {
-    padding: 22px;
-    border-radius: max(var(--radius-micro), calc(var(--radius-stadium) - 1px - var(--axis-tile-pad)));
-  }
-
-  .axis-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: var(--text-small);
-    color: var(--color-slate);
-    font-weight: 500;
+  .axes-stage .card {
+    width: 100%;
+    max-width: 440px;
+    box-shadow: var(--shadow-float);
   }
 
   /* ---- Catalog ---------------------------------------------------- */
@@ -383,18 +414,46 @@
   }
 
   /* The chips wrap to the group's last row, which would put a pill in the card's bottom start corner, so the
-     group pads its foot past the card's curve and no chip sits inside it. */
+     group pads its foot past the card's curve and no chip sits inside it. The footer links each group, so
+     a group lands below the floating nav, not under it. */
   .catalog-group {
     display: grid;
     gap: 18px;
     align-content: start;
     padding-block-end: max(var(--spacing-card), calc(var(--radius-stadium) - 1px));
+    scroll-margin-top: 120px;
   }
 
   .chips {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  /* A component with no page yet: an open outline in Slate, so it never reads as a link. */
+  .chip-soon {
+    border-style: dashed;
+    background-color: transparent;
+    color: var(--color-slate);
+  }
+
+  .chip-soon:hover {
+    border-color: var(--color-frame);
+  }
+
+  .chip-soon::after {
+    content: 'Soon';
+    margin-left: 2px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .catalog-legend {
+    margin-top: 20px;
+    color: var(--color-slate);
+    font-size: var(--text-small);
   }
 
   /* ---- Watermark CTA -------------------------------------------- */
@@ -447,7 +506,7 @@
   }
 
   .footer h2 {
-    max-width: 18ch;
+    max-width: 30ch;
     margin-bottom: 72px;
   }
 
@@ -527,7 +586,8 @@
 
   /* Save ends the card's body inside its bottom end curve, so the row keeps the card's corner inset under it,
      and the button keeps its own shape and its place on the column's end edge. */
-  .frame-card .push-end {
+  .frame-card .push-end,
+  .axes-stage .push-end {
     margin-block-end: calc(var(--holder-corner-inset) - var(--holder-pad));
   }
 
@@ -628,10 +688,6 @@
       padding-top: 96px;
     }
 
-    .hero h1 {
-      max-width: 14ch;
-    }
-
     .frame {
       grid-template-columns: 1fr;
       padding: 32px;
@@ -673,7 +729,18 @@
     }
 
     .axes {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: minmax(0, 1fr);
+      gap: 32px;
+    }
+
+    .axes-controls {
+      grid-template-columns: auto auto;
+      justify-content: start;
+      column-gap: 40px;
+    }
+
+    .axes-code {
+      grid-column: 1 / -1;
     }
 
     .catalog {
@@ -798,12 +865,23 @@
       font-size: 4.5rem;
     }
 
-    .axes {
-      grid-template-columns: 1fr;
+    .axes-controls {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
     }
 
-    .axis-tile {
-      --axis-tile-pad: 20px;
+    /* 40px down keeps the card's corners out of the stage's 40px curve; 16px across gives it the width. */
+    .axes-stage {
+      padding: 40px 16px;
+    }
+
+    .axes-stage .card {
+      padding: 24px 20px;
+    }
+
+    .axes-stage .card-header {
+      margin: 0 -20px 20px;
+      padding: 0 20px 20px;
     }
 
     .catalog .card {
